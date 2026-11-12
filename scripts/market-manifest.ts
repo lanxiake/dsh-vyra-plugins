@@ -145,16 +145,13 @@ export const manifest: MarketManifest = {
       },
       icon: TOOL_USAGE_ICON,
       versions: {
-        '0.1.0': {
-          // Unix seconds of commit ece9710.
-          publishTimestamp: 1794485017,
+        '0.2.0': {
+          // Unix seconds of commit 48c3a42.
+          publishTimestamp: 1794495320,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            // Pinned to the commit that published this version. A Git source
-            // must name an exact commit: a branch would make the same version
-            // mean different code over time.
-            commit: '2a280842617e0949344a0b0aa9ac9f6755609573',
+            commit: '48c3a42733f106c03e18f12a7653f45ebc656b19',
             path: 'plugins/tool-usage-stats',
           },
         },
