@@ -53,6 +53,7 @@ interface Context {
   on: (event: 'session/event', listener: (session: { id: string }, event: SessionEvent) => void) => void
   effect: (callback: () => (() => unknown) | undefined) => unknown
   get: (name: string) => unknown
+  inject: (services: string[], callback: (scoped: Context) => void) => unknown
 }
 
 /** Wire payload the Client receives. */
@@ -130,21 +131,28 @@ export function apply(ctx: Context, config: Config = {}): void {
   // the pairing map empties as results arrive.
   const pendingNames = new Map<string, Map<string, string>>()
 
-  // Durable restore is best-effort. A composition without storageDomain keeps
-  // the plugin working in memory, which is the documented degradation.
-  const storageDomain = ctx.get('storageDomain') as {
-    open: (spec: unknown) => Promise<{
-      table: (name: string) => { get: (key: string) => unknown; put: (key: string, value: unknown) => Promise<void> }
-      close: () => Promise<void>
-    }>
-  } | undefined
-
+  /** The durable table, once the storage service activates. */
   let durable: {
     get: (key: string) => unknown
     put: (key: string, value: unknown) => Promise<void>
   } | undefined
 
-  if (storageDomain !== undefined) {
+  // Durable restore is best-effort. A composition without storageDomain keeps
+  // the plugin working in memory, which is the documented degradation.
+  //
+  // `storageDomain` — like `connection` below — is provided by a fiber that may
+  // activate after this row, so it must be waited for rather than read once.
+  // Reading it eagerly leaves `undefined`, and the counters silently never
+  // persist.
+  const openDurable = (scoped: Context): void => {
+    const storageDomain = scoped.get('storageDomain') as {
+      open: (spec: unknown) => Promise<{
+        table: (name: string) => { get: (key: string) => unknown; put: (key: string, value: unknown) => Promise<void> }
+        close: () => Promise<void>
+      }>
+    } | undefined
+    if (storageDomain === undefined) return
+
     void (async () => {
       try {
         const domain = await storageDomain.open(toolUsageDomain)
@@ -152,13 +160,17 @@ export function apply(ctx: Context, config: Config = {}): void {
         durable = table
         const restored = table.get(GLOBAL_KEY)
         if (restored !== undefined) stats.restore(restored as ToolUsageState)
-        ctx.effect(() => () => { void domain.close() })
+        scoped.effect(() => () => { void domain.close() })
       } catch (error) {
         // A broken store must not prevent recording.
         logger?.warn?.(`tool-usage-stats: storage unavailable, counters are in-memory only: ${String(error)}`)
       }
     })()
   }
+
+  const initialStorageDomain = ctx.get('storageDomain')
+  if (initialStorageDomain === undefined) ctx.inject(['storageDomain'], openDurable)
+  else openDurable(ctx)
 
   // Persisting on every tool call would write thousands of times per session.
   // A coarse interval keeps the durable copy close enough to survive a crash

@@ -60,19 +60,17 @@ interface ClientContext {
 /**
  * Read the current statistics from the Host.
  *
- * `connection` is resolved at call time, not captured at mount, so a reconnect
- * that replaces the service does not leave the section reading a dead carrier.
+ * Uses the page's own `fetch` because the endpoint is same-origin under `/api`
+ * and the browser attaches the session cookie itself. The `connection`
+ * service's fetch takes a required `RequestInit` and its absence fails
+ * silently, so depending on it here would trade a working path for a fragile
+ * one.
  *
- * @param ctx - the client root context.
  * @returns the report, or `undefined` when the request cannot be served.
  */
-async function fetchStats(ctx: ClientContext): Promise<StatsResponse | undefined> {
-  const connection = ctx.get('connection') as {
-    fetch?: (path: string, init?: RequestInit) => Promise<Response>
-  } | undefined
-  if (connection?.fetch === undefined) return undefined
+async function fetchStats(): Promise<StatsResponse | undefined> {
   try {
-    const response = await connection.fetch(ENDPOINT)
+    const response = await globalThis.fetch(ENDPOINT, { credentials: 'include' })
     if (!response.ok) return undefined
     return await response.json() as StatsResponse
   } catch {
@@ -130,7 +128,7 @@ function createSection(React: ReactModule, ctx: ClientContext): () => unknown {
     React.useEffect(() => {
       let cancelled = false
       const refresh = (): void => {
-        void fetchStats(ctx).then((next) => {
+        void fetchStats().then((next) => {
           if (cancelled) return
           setData(next)
           setNow(Date.now())
