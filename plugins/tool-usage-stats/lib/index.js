@@ -118,6 +118,7 @@ var DOMAIN_NAME = "tool_usage";
 var DOMAIN_VERSION = 1;
 var TABLE_NAME = "usage";
 var SNAPSHOT_KEY = "snapshot";
+var LEGACY_KEY = "global";
 function parseEntry(tool, entry) {
   if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
     throw new TypeError(`entry '${tool}' must be an object`);
@@ -154,15 +155,15 @@ function parseSnapshot(raw) {
     throw new TypeError("snapshot must be an object");
   }
   const typed = raw;
-  const countersRaw = typed.counters;
-  if (typeof countersRaw !== "object" || countersRaw === null || Array.isArray(countersRaw)) {
+  const counterSource = typed.counters === void 0 ? typed : typed.counters;
+  if (typeof counterSource !== "object" || counterSource === null || Array.isArray(counterSource)) {
     throw new TypeError("snapshot.counters must be an object");
   }
   const counters = {};
-  for (const [tool, entry] of Object.entries(countersRaw)) {
+  for (const [tool, entry] of Object.entries(counterSource)) {
     counters[tool] = parseEntry(tool, entry);
   }
-  const failuresRaw = typed.failures ?? {};
+  const failuresRaw = typed.counters === void 0 ? {} : typed.failures ?? {};
   if (typeof failuresRaw !== "object" || failuresRaw === null || Array.isArray(failuresRaw)) {
     throw new TypeError("snapshot.failures must be an object");
   }
@@ -283,7 +284,7 @@ function apply(ctx, config = {}) {
         const domain = await storageDomain.open(toolUsageDomain);
         const table = domain.table(TABLE_NAME);
         durable = table;
-        const restored = table.get(SNAPSHOT_KEY);
+        const restored = table.get(SNAPSHOT_KEY) ?? table.get(LEGACY_KEY);
         if (restored !== void 0) stats.restore(restored);
         scoped.effect(() => () => {
           void domain.close();

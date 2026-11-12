@@ -35,6 +35,14 @@ export const TABLE_NAME = 'usage'
 /** Key of the single record holding counters and the audit. */
 export const SNAPSHOT_KEY = 'snapshot'
 
+/**
+ * Key 0.1.x stored its bare counter set under.
+ *
+ * Read only to migrate: an installation upgrading from 0.1.x has its history
+ * there, and losing it would silently reset every total the user was reading.
+ */
+export const LEGACY_KEY = 'global'
+
 /** Everything one snapshot holds. */
 export interface Snapshot {
   readonly counters: ToolUsageState
@@ -87,26 +95,32 @@ function parseEntry(tool: string, entry: unknown): ToolUsageState[string] {
  * `invalidRecords` policy, so this never returns a partially valid snapshot: a
  * counter set that failed validation would silently corrupt every later total.
  *
+ * A bare counter set — the shape 0.1.x wrote at {@link LEGACY_KEY} — is
+ * accepted and wrapped, so an upgrade keeps the history the user was reading
+ * instead of starting from zero.
+ *
  * @param raw - the value read from the medium.
  * @returns the same value, narrowed to a snapshot.
- * @throws TypeError when the value is not a snapshot.
+ * @throws TypeError when the value is neither a snapshot nor a legacy counter set.
  */
-function parseSnapshot(raw: unknown): Snapshot {
+export function parseSnapshot(raw: unknown): Snapshot {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw new TypeError('snapshot must be an object')
   }
   const typed = raw as Record<string, unknown>
 
-  const countersRaw = typed.counters
-  if (typeof countersRaw !== 'object' || countersRaw === null || Array.isArray(countersRaw)) {
+  // A legacy value has no `counters` member and maps tool names straight to
+  // entries; `failures` cannot exist because 0.1.x never recorded any.
+  const counterSource = typed.counters === undefined ? typed : typed.counters
+  if (typeof counterSource !== 'object' || counterSource === null || Array.isArray(counterSource)) {
     throw new TypeError('snapshot.counters must be an object')
   }
   const counters: ToolUsageState = {}
-  for (const [tool, entry] of Object.entries(countersRaw)) {
+  for (const [tool, entry] of Object.entries(counterSource)) {
     counters[tool] = parseEntry(tool, entry)
   }
 
-  const failuresRaw = typed.failures ?? {}
+  const failuresRaw = typed.counters === undefined ? {} : (typed.failures ?? {})
   if (typeof failuresRaw !== 'object' || failuresRaw === null || Array.isArray(failuresRaw)) {
     throw new TypeError('snapshot.failures must be an object')
   }

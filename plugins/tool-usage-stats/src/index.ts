@@ -31,7 +31,7 @@ import {
   coverage, failureDetail, readResult, record, recordFailure, report, summarize, takeName, windowed,
   type Coverage, type FailureLog, type ToolUsageReport, type ToolUsageState,
 } from './counters.ts'
-import { SNAPSHOT_KEY, TABLE_NAME, toolUsageDomain, type Snapshot } from './storage.ts'
+import { LEGACY_KEY, SNAPSHOT_KEY, TABLE_NAME, toolUsageDomain, type Snapshot } from './storage.ts'
 
 /** Plugin name. */
 export const name = 'vyra-tool-usage-stats'
@@ -217,7 +217,10 @@ export function apply(ctx: Context, config: Config = {}): void {
         const domain = await storageDomain.open(toolUsageDomain)
         const table = domain.table(TABLE_NAME)
         durable = table
-        const restored = table.get(SNAPSHOT_KEY)
+        // Read the current key first, then the 0.1.x key: an installation
+        // upgrading from 0.1.x keeps the history it was reading, and the first
+        // flush after this rewrites it under the current key.
+        const restored = table.get(SNAPSHOT_KEY) ?? table.get(LEGACY_KEY)
         if (restored !== undefined) stats.restore(restored as Snapshot)
         scoped.effect(() => () => { void domain.close() })
       } catch (error) {

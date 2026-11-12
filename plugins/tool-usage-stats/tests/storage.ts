@@ -85,3 +85,18 @@ for (const [label, value] of rejects) {
 }
 
 console.log(`storage: the plugin's hand-built spec passes defineDomain; parse rejects ${rejects.length} malformed shapes.`)
+
+// An installation upgrading from 0.1.x stored a bare counter set. Reading it
+// must keep the history rather than resetting every total.
+const legacy = {
+  bash: {
+    count: 7,
+    errorCount: 3,
+    lastUsedAt: 1_760_000_000_000,
+    lastUsedDay: '2026-06-01',
+    daily: { '2026-06-01': 7 },
+  },
+}
+assert.deepEqual(parse(legacy), { counters: legacy, failures: {} }, 'a legacy counter set must be adopted')
+
+console.log('storage: legacy 0.1.x counter sets are adopted rather than dropped.')
