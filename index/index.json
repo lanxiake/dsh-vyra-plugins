@@ -1,0 +1,54 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Veyra Plugins",
+    "zh": "Veyra 插件市场"
+  },
+  "description": {
+    "en": "Plugins and skills for DeepSeek Harness, maintained alongside the dsh-Veyra fork.",
+    "zh": "面向 DeepSeek Harness 的插件与技能，随 dsh-Veyra fork 维护。"
+  },
+  "metadata": {
+    "categories": {
+      "agent-runtime": {
+        "title": {
+          "en": "Agent runtime",
+          "zh": "智能体运行时"
+        }
+      },
+      "observability": {
+        "title": {
+          "en": "Observability",
+          "zh": "可观测性"
+        }
+      },
+      "input-output": {
+        "title": {
+          "en": "Input and output",
+          "zh": "输入与输出"
+        }
+      },
+      "integration": {
+        "title": {
+          "en": "Integrations",
+          "zh": "外部集成"
+        }
+      },
+      "browser": {
+        "title": {
+          "en": "Browser and desktop",
+          "zh": "浏览器与桌面"
+        }
+      },
+      "content": {
+        "title": {
+          "en": "Content creation",
+          "zh": "内容创作"
+        }
+      }
+    },
+    "labels": {},
+    "sortKeys": {}
+  },
+  "plugins": []
+}

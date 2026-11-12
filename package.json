@@ -1,0 +1,18 @@
+{
+  "name": "vyra-plugins",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DeepSeek Harness plugin and skill market maintained by the dsh-Veyra fork.",
+  "scripts": {
+    "build:index": "tsx scripts/build-index.ts",
+    "verify:index": "tsx scripts/verify-index.ts",
+    "verify": "pnpm run build:index && pnpm run verify:index",
+    "print:skills": "tsx scripts/print-skill-config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3"
+  }
+}
