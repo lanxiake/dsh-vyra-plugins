@@ -44,8 +44,18 @@ export interface MarketPluginSource {
   }
 }
 
-/** Install source for one exact version. */
-export type MarketVersionSource =
+/** One install source plus the moment it was published. */
+export interface MarketVersionSource {
+  /**
+   * Unix seconds this version was published. Written here rather than derived,
+   * so rebuilding the index cannot rewrite a published version's timestamp.
+   */
+  readonly publishTimestamp: number
+  readonly source: MarketInstallSource
+}
+
+/** Where one exact version installs from. */
+export type MarketInstallSource =
   | { readonly type: 'npm'; readonly registry?: string }
   | {
     readonly type: 'git'
@@ -108,9 +118,19 @@ export const manifest: MarketManifest = {
         directory: 'plugins/tool-usage-stats',
       },
       versions: {
-        // Git sources need a commit SHA, which only exists after the first
-        // push. Until then this entry has no installable version and
-        // `verify-index` fails, which is the intended signal.
+        '0.1.0': {
+          // Unix seconds of commit ece9710.
+          publishTimestamp: 1794485017,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            // Pinned to the commit that published this version. A Git source
+            // must name an exact commit: a branch would make the same version
+            // mean different code over time.
+            commit: 'ece9710b8272aa89a632ff20a83c98edc5badf1f',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
       },
       metadata: {
         category: 'observability',

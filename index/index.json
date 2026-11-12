@@ -50,5 +50,46 @@
     "labels": {},
     "sortKeys": {}
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "vyra-tool-usage-stats",
+      "title": {
+        "en": "Tool Usage Stats",
+        "zh": "工具调用统计"
+      },
+      "description": {
+        "en": "Per-tool call, failure, and last-use counters, folded from the session log, with a Settings panel.",
+        "zh": "按工具统计调用次数、失败次数与最后使用时间，数据来自会话日志，带设置页面板。"
+      },
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins",
+      "repository": {
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/tool-usage-stats"
+      },
+      "metadata": {
+        "category": "observability",
+        "keywords": [
+          "stats",
+          "tool-usage",
+          "observability"
+        ],
+        "labels": [],
+        "sortKeys": {}
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1794485017,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "ece9710b8272aa89a632ff20a83c98edc5badf1f",
+            "path": "plugins/tool-usage-stats"
+          },
+          "engines": {}
+        }
+      ]
+    }
+  ]
 }

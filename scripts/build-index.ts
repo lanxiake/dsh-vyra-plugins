@@ -3,15 +3,16 @@
  *
  * The output is the format-1 document `dsh-plugin-market` fetches. Localization
  * maps collapse to a plain string when only English is present, matching the
- * `LocalizedText` union. `publishTimestamp` comes from each version's entry in
- * the manifest, so a rebuild never rewrites a published version's timestamp.
+ * `LocalizedText` union. Everything the output needs lives in the manifest, so
+ * rebuilding produces a byte-identical file — a published version's timestamp
+ * and commit cannot drift.
  *
- * @module vyra-plugins/build-index
+ * @module dsh-vyra-plugins/build-index
  */
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { manifest, type LocalizedText, type LocaleMap, type MarketPluginSource, type MarketVersionSource } from './market-manifest.ts'
+import { manifest, type LocalizedText, type LocaleMap, type MarketInstallSource, type MarketPluginSource, type MarketVersionSource } from './market-manifest.ts'
 
 /** Collapse a locale map to the `LocalizedText` union. */
 function localized(text: LocaleMap): LocalizedText {
@@ -19,19 +20,19 @@ function localized(text: LocaleMap): LocalizedText {
 }
 
 /** Project one version's install source. */
-function source(version: MarketVersionSource): Record<string, unknown> {
-  return version.type === 'npm'
-    ? { type: 'npm', ...(version.registry === undefined ? {} : { registry: version.registry }) }
+function source(install: MarketInstallSource): Record<string, unknown> {
+  return install.type === 'npm'
+    ? { type: 'npm', ...(install.registry === undefined ? {} : { registry: install.registry }) }
     : {
       type: 'git',
-      url: version.url,
-      commit: version.commit,
-      ...(version.path === undefined ? {} : { path: version.path }),
+      url: install.url,
+      commit: install.commit,
+      ...(install.path === undefined ? {} : { path: install.path }),
     }
 }
 
-/** Project one plugin, preserving published timestamps. */
-function plugin(entry: MarketPluginSource, publishedAt: Readonly<Record<string, number>>): Record<string, unknown> {
+/** Project one plugin. */
+function plugin(entry: MarketPluginSource): Record<string, unknown> {
   return {
     name: entry.name,
     title: localized(entry.title),
@@ -46,11 +47,11 @@ function plugin(entry: MarketPluginSource, publishedAt: Readonly<Record<string, 
       labels: entry.metadata?.labels ?? [],
       sortKeys: {},
     },
-    versions: Object.keys(entry.versions)
-      .map(version => ({
+    versions: Object.entries(entry.versions)
+      .map(([version, published]: [string, MarketVersionSource]) => ({
         version,
-        publishTimestamp: publishedAt[`${entry.name}@${version}`] ?? 0,
-        source: source(entry.versions[version]!),
+        publishTimestamp: published.publishTimestamp,
+        source: source(published.source),
         engines: {},
       }))
       .sort((left, right) => right.version.localeCompare(left.version, undefined, { numeric: true })),
@@ -58,14 +59,6 @@ function plugin(entry: MarketPluginSource, publishedAt: Readonly<Record<string, 
 }
 
 const root = resolve(import.meta.dirname, '..')
-const publishedPath = resolve(root, 'index/published.json')
-
-let publishedAt: Record<string, number> = {}
-try {
-  publishedAt = JSON.parse(readFileSync(publishedPath, 'utf8')) as Record<string, number>
-} catch (error) {
-  if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-}
 
 const document = {
   format: 1,
@@ -76,7 +69,7 @@ const document = {
     labels: manifest.declarations?.labels ?? {},
     sortKeys: {},
   },
-  plugins: manifest.plugins.map(entry => plugin(entry, publishedAt)),
+  plugins: manifest.plugins.map(plugin),
 }
 
 writeFileSync(resolve(root, 'index/index.json'), `${JSON.stringify(document, undefined, 2)}\n`)
