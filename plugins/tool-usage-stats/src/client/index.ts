@@ -143,7 +143,21 @@ const COLUMNS = [
 type SortKey = (typeof COLUMNS)[number]['key']
 
 /** Shared cell styling: a fixed layout needs each cell to clip its overflow. */
-const CELL = { padding: '4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const
+const CELL = {
+  padding: '4px 0',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+} as const
+
+/**
+ * Cell padding that keeps adjacent columns visually apart.
+ *
+ * The panel sits inside a settings dialog roughly 780px wide, so percentage
+ * widths alone leave a numeric column and a timestamp column touching; the
+ * gutter is what actually separates them at any container width.
+ */
+const NUMERIC_CELL = { ...CELL, textAlign: 'right', paddingRight: '14px' } as const
 
 /**
  * Build the panel component.
@@ -247,6 +261,7 @@ function createPanel(React: ReactModule): () => unknown {
         userSelect: 'none',
         paddingBottom: '4px',
         whiteSpace: 'nowrap',
+        ...(column.numeric ? { paddingRight: '14px' } : {}),
       },
     }, `${column.label}${column.key === sortKey ? (ascending ? ' ↑' : ' ↓') : ''}`))
 
@@ -255,8 +270,8 @@ function createPanel(React: ReactModule): () => unknown {
       const open = expanded === row.tool
       const cells = h('tr', { key: row.tool },
         h('td', { style: { ...CELL, fontFamily: 'monospace' } }, row.tool),
-        h('td', { style: { ...CELL, textAlign: 'right' } }, String(row.count)),
-        h('td', { style: { ...CELL, textAlign: 'right' } },
+        h('td', { style: NUMERIC_CELL }, String(row.count)),
+        h('td', { style: NUMERIC_CELL },
           row.errorCount === 0
             ? '—'
             : h('button', {
@@ -310,10 +325,10 @@ function createPanel(React: ReactModule): () => unknown {
         },
       },
         h('colgroup', null,
-          h('col', { style: { width: '40%' } }),
-          h('col', { style: { width: '18%' } }),
-          h('col', { style: { width: '18%' } }),
-          h('col', { style: { width: '24%' } })),
+          h('col', { style: { width: '34%' } }),
+          h('col', { style: { width: '16%' } }),
+          h('col', { style: { width: '20%' } }),
+          h('col', { style: { width: '30%' } })),
         h('thead', null, h('tr', null, header)),
         h('tbody', null, body)))
   }

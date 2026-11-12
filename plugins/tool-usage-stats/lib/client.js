@@ -56,7 +56,13 @@ var COLUMNS = [
   { key: "errorCount", label: "\u5931\u8D25", numeric: true },
   { key: "lastUsedAt", label: "\u6700\u540E\u4F7F\u7528", numeric: false }
 ];
-var CELL = { padding: "4px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+var CELL = {
+  padding: "4px 0",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+var NUMERIC_CELL = { ...CELL, textAlign: "right", paddingRight: "14px" };
 function createPanel(React) {
   const h = React.createElement;
   return function ToolUsagePanel() {
@@ -147,7 +153,8 @@ function createPanel(React) {
         cursor: "pointer",
         userSelect: "none",
         paddingBottom: "4px",
-        whiteSpace: "nowrap"
+        whiteSpace: "nowrap",
+        ...column.numeric ? { paddingRight: "14px" } : {}
       }
     }, `${column.label}${column.key === sortKey ? ascending ? " \u2191" : " \u2193" : ""}`));
     const body = rows.flatMap((row) => {
@@ -157,10 +164,10 @@ function createPanel(React) {
         "tr",
         { key: row.tool },
         h("td", { style: { ...CELL, fontFamily: "monospace" } }, row.tool),
-        h("td", { style: { ...CELL, textAlign: "right" } }, String(row.count)),
+        h("td", { style: NUMERIC_CELL }, String(row.count)),
         h(
           "td",
-          { style: { ...CELL, textAlign: "right" } },
+          { style: NUMERIC_CELL },
           row.errorCount === 0 ? "\u2014" : h("button", {
             type: "button",
             onClick: () => {
@@ -231,10 +238,10 @@ function createPanel(React) {
         h(
           "colgroup",
           null,
-          h("col", { style: { width: "40%" } }),
-          h("col", { style: { width: "18%" } }),
-          h("col", { style: { width: "18%" } }),
-          h("col", { style: { width: "24%" } })
+          h("col", { style: { width: "34%" } }),
+          h("col", { style: { width: "16%" } }),
+          h("col", { style: { width: "20%" } }),
+          h("col", { style: { width: "30%" } })
         ),
         h("thead", null, h("tr", null, header)),
         h("tbody", null, body)
