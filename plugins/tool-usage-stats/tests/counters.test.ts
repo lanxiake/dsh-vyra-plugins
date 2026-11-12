@@ -7,7 +7,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { dayKey, record, resultIsError, takeName } from '../src/counters.ts'
+import { dayKey, record, report, resultIsError, takeName } from '../src/counters.ts'
 
 test('dayKey formats local time as YYYY-MM-DD', () => {
   assert.equal(dayKey(new Date(2026, 0, 5, 13, 30).getTime()), '2026-01-05')
@@ -77,4 +77,40 @@ test('takeName pairs a result with its call and consumes the entry', () => {
   assert.equal(takeName(names, 'call-1'), 'bash')
   assert.equal(takeName(names, 'call-1'), undefined)
   assert.equal(names.size, 0)
+})
+
+test('report merges matching tools across counter sets', () => {
+  const at = new Date(2026, 5, 1, 10, 0).getTime()
+  const later = new Date(2026, 5, 2, 10, 0).getTime()
+  const first = record(record({}, 'bash', false, at, 90), 'read', true, at, 90)
+  const second = record(record({}, 'bash', true, later, 90), 'grep', false, later, 90)
+
+  const merged = report([first, second])
+  assert.equal(merged.tools, 3)
+  assert.equal(merged.calls, 4)
+  assert.equal(merged.failures, 2)
+
+  const bash = merged.rows.find(row => row.tool === 'bash')!
+  assert.equal(bash.count, 2)
+  assert.equal(bash.errorCount, 1)
+  assert.equal(bash.errorRate, 0.5)
+  assert.equal(bash.lastUsedAt, later, 'the newer timestamp wins')
+})
+
+test('report orders by descending calls then by name', () => {
+  const at = new Date(2026, 5, 1, 10, 0).getTime()
+  let state = record({}, 'bash', false, at, 90)
+  state = record(state, 'bash', false, at, 90)
+  state = record(state, 'zebra', false, at, 90)
+  state = record(state, 'alpha', false, at, 90)
+
+  const { rows } = report([state])
+  assert.deepEqual(rows.map(row => row.tool), ['bash', 'alpha', 'zebra'])
+})
+
+test('report of nothing is empty rather than undefined', () => {
+  const merged = report([])
+  assert.deepEqual(merged.rows, [])
+  assert.equal(merged.tools, 0)
+  assert.equal(merged.calls, 0)
 })

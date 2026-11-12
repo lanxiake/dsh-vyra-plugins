@@ -12,13 +12,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lanxiake/vyra-plugins.git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
     "directory": "plugins/tool-usage-stats"
   },
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./client": "./lib/client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
@@ -34,6 +35,10 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
     }
   },
   "devDependencies": {

@@ -90,5 +90,32 @@ export const manifest: MarketManifest = {
       'content': { title: { en: 'Content creation', zh: '内容创作' } },
     },
   },
-  plugins: [],
+  plugins: [
+    {
+      name: 'vyra-tool-usage-stats',
+      title: {
+        en: 'Tool Usage Stats',
+        zh: '工具调用统计',
+      },
+      description: {
+        en: 'Per-tool call, failure, and last-use counters, folded from the session log, with a Settings panel.',
+        zh: '按工具统计调用次数、失败次数与最后使用时间，数据来自会话日志，带设置页面板。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/tool-usage-stats',
+      },
+      versions: {
+        // Git sources need a commit SHA, which only exists after the first
+        // push. Until then this entry has no installable version and
+        // `verify-index` fails, which is the intended signal.
+      },
+      metadata: {
+        category: 'observability',
+        keywords: ['stats', 'tool-usage', 'observability'],
+      },
+    },
+  ],
 }

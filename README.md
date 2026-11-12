@@ -1,4 +1,4 @@
-# vyra-plugins
+# dsh-vyra-plugins
 
 DeepSeek Harness 的插件与技能市场，随 [dsh-Veyra](../dsh-Veyra) fork 维护。
 
@@ -18,7 +18,7 @@ DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：
 ## 目录结构
 
 ```
-vyra-plugins/
+dsh-vyra-plugins/
 ├── index/
 │   ├── index.json          # 生成物，勿手改（build-index 产出）
 │   └── published.json      # 已发布版本的发布时间戳（跨重建保留）

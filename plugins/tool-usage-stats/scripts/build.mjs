@@ -1,10 +1,11 @@
 /**
- * Bundle `src/index.ts` into `lib/index.js`.
+ * Bundle both halves of the plugin.
  *
- * The runtime entry is plain JavaScript because a DSH profile loads plugin
- * modules directly from `node_modules`; nothing in the profile transpiles
- * TypeScript. esbuild strips the types and inlines the local `counters` import;
- * there are no runtime dependencies to leave external.
+ * `src/index.ts` becomes the ESM Host entry a DSH profile loads from
+ * `node_modules`. `src/client/index.ts` becomes the CommonJS browser entry the
+ * client bundle consumes, where `react` is supplied by the browser bundle's
+ * module map and must stay external — bundling it would ship a second React and
+ * break hooks in components rendered by the Host's own tree.
  *
  * @module vyra-tool-usage-stats/build
  */
@@ -18,6 +19,16 @@ await build({
   format: 'esm',
   platform: 'node',
   target: 'node22',
-  sourcemap: false,
+  logLevel: 'info',
+})
+
+await build({
+  entryPoints: ['src/client/index.ts'],
+  outfile: 'lib/client.js',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  target: 'es2022',
+  external: ['react', 'react-dom', 'react/jsx-runtime'],
   logLevel: 'info',
 })

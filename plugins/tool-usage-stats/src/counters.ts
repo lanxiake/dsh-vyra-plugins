@@ -1,6 +1,6 @@
 /**
- * Counter fold and event decoding, kept free of any Cordis reference so the
- * logic is testable without booting a context.
+ * Counter fold, event decoding, and aggregation, kept free of any Cordis
+ * reference so the logic is testable without booting a context.
  *
  * @module vyra-tool-usage-stats/counters
  */
@@ -27,14 +27,15 @@ export interface ToolUsageEntry {
   daily: Record<string, number>
 }
 
-/** The counter set for one installation. */
+/** The counter set for one scope: a tool name maps to its counters. */
 export type ToolUsageState = Record<string, ToolUsageEntry>
 
 /**
  * Fold one observed result into the counter set.
  *
  * Entry objects are replaced rather than mutated, so a caller that serialized
- * an earlier state never sees it change underfoot.
+ * an earlier state never sees it change underfoot — which matters because the
+ * same value is handed to the durable store.
  *
  * @param state - the current counter set.
  * @param toolName - the model-visible tool name that ran.
@@ -99,4 +100,67 @@ export function takeName(names: Map<string, string>, callId: string): string | u
   const found = names.get(callId)
   names.delete(callId)
   return found
+}
+
+/** One tool's row in a rendered report. */
+export interface ToolUsageRow {
+  readonly tool: string
+  readonly count: number
+  readonly errorCount: number
+  /** `errorCount / count`, or 0 for a tool that never ran. */
+  readonly errorRate: number
+  readonly lastUsedAt: number
+}
+
+/** A report over one or more counter sets. */
+export interface ToolUsageReport {
+  readonly rows: readonly ToolUsageRow[]
+  readonly tools: number
+  readonly calls: number
+  readonly failures: number
+}
+
+/**
+ * Merge counter sets into one report, summing matching tool names.
+ *
+ * Merging is what makes the session view and the global view the same code
+ * path: a session report is one set, a global report is every set folded
+ * together. Per-day buckets are not merged because neither view renders a
+ * trend; `lastUsedAt` takes the maximum.
+ *
+ * @param states - the counter sets to merge.
+ * @returns rows sorted by descending call count, then by name for stability.
+ */
+export function report(states: readonly ToolUsageState[]): ToolUsageReport {
+  const merged = new Map<string, { count: number; errorCount: number; lastUsedAt: number }>()
+
+  for (const state of states) {
+    for (const [tool, entry] of Object.entries(state)) {
+      const current = merged.get(tool)
+      if (current === undefined) {
+        merged.set(tool, { count: entry.count, errorCount: entry.errorCount, lastUsedAt: entry.lastUsedAt })
+        continue
+      }
+      current.count += entry.count
+      current.errorCount += entry.errorCount
+      current.lastUsedAt = Math.max(current.lastUsedAt, entry.lastUsedAt)
+    }
+  }
+
+  const rows = [...merged]
+    .map(([tool, entry]) => ({
+      tool,
+      count: entry.count,
+      errorCount: entry.errorCount,
+      errorRate: entry.count === 0 ? 0 : entry.errorCount / entry.count,
+      lastUsedAt: entry.lastUsedAt,
+    }))
+    .sort((left, right) => right.count - left.count || left.tool.localeCompare(right.tool))
+
+  return {
+    rows,
+    tools: rows.length,
+    calls: rows.reduce((sum, row) => sum + row.count, 0),
+    failures: rows.reduce((sum, row) => sum + row.errorCount, 0),
+  }
 }
