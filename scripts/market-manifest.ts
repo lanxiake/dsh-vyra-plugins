@@ -134,8 +134,8 @@ export const manifest: MarketManifest = {
         zh: '工具调用统计',
       },
       description: {
-        en: 'Per-tool call, failure, and last-use counters, folded from the session log, with a Settings panel.',
-        zh: '按工具统计调用次数、失败次数与最后使用时间，数据来自会话日志，带设置页面板。',
+        en: 'Per-tool calls, failures with their reasons, last use, time windows, and a JSON export.',
+        zh: '按工具统计调用次数、失败原因、最后使用时间，支持时间窗口与 JSON 导出。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -146,12 +146,12 @@ export const manifest: MarketManifest = {
       icon: TOOL_USAGE_ICON,
       versions: {
         '0.2.0': {
-          // Unix seconds of commit 48c3a42.
+          // Unix seconds of the commit that published it.
           publishTimestamp: 1794495320,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '48c3a42733f106c03e18f12a7653f45ebc656b19',
+            commit: '3aaa939e82edf9fbcd5a71571cc2004c2bccb896',
             path: 'plugins/tool-usage-stats',
           },
         },

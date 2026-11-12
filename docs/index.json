@@ -58,8 +58,8 @@
         "zh": "工具调用统计"
       },
       "description": {
-        "en": "Per-tool call, failure, and last-use counters, folded from the session log, with a Settings panel.",
-        "zh": "按工具统计调用次数、失败次数与最后使用时间，数据来自会话日志，带设置页面板。"
+        "en": "Per-tool calls, failures with their reasons, last use, time windows, and a JSON export.",
+        "zh": "按工具统计调用次数、失败原因、最后使用时间，支持时间窗口与 JSON 导出。"
       },
       "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZDRlZDgiLz48ZyBmaWxsPSIjZmZmIj48cmVjdCB4PSIxNiIgeT0iMzYiIHdpZHRoPSI3IiBoZWlnaHQ9IjE0IiByeD0iMiIvPjxyZWN0IHg9IjI4LjUiIHk9IjI2IiB3aWR0aD0iNyIgaGVpZ2h0PSIyNCIgcng9IjIiLz48cmVjdCB4PSI0MSIgeT0iMTYiIHdpZHRoPSI3IiBoZWlnaHQ9IjM0IiByeD0iMiIvPjwvZz48L3N2Zz4=",
       "author": "lanxiake",
@@ -75,7 +75,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "48c3a42733f106c03e18f12a7653f45ebc656b19",
+            "commit": "3aaa939e82edf9fbcd5a71571cc2004c2bccb896",
             "path": "plugins/tool-usage-stats"
           }
         }
