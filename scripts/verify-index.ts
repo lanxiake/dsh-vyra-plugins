@@ -9,9 +9,11 @@
  * @module vyra-plugins/verify-index
  */
 
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
+import { manifest } from './market-manifest.ts'
 
 interface MarketIndexError extends Error {
   readonly path?: string
@@ -51,6 +53,40 @@ for (const plugin of index.plugins) {
   const category = plugin.metadata.category
   if (category !== undefined && !declaredCategories.has(category)) {
     failures.push(`${plugin.name}: undeclared category ${JSON.stringify(category)}`)
+  }
+}
+
+// The index claims an `engines.dsh` range, but the installer reads the range
+// inside the *pinned commit's* package.json. Writing one without repinning the
+// other makes the client show the plugin as compatible and then refuse to
+// install it. Read the range out of the pinned blob so the two cannot drift.
+for (const [position, entry] of manifest.plugins.entries()) {
+  const listed = index.plugins[position]
+  for (const declared of Object.values(entry.versions)) {
+    if (declared.source.type !== 'git' || declared.source.path === undefined) continue
+    const blobPath = `${declared.source.commit}:${declared.source.path}/package.json`
+    const shown = spawnSync('git', ['show', blobPath], { cwd: root, encoding: 'utf8' })
+    if (shown.status !== 0) {
+      failures.push(`${entry.name}: cannot read ${blobPath} — is the pinned commit pushed?`)
+      continue
+    }
+    let pinned: { engines?: { dsh?: string } }
+    try {
+      pinned = JSON.parse(shown.stdout) as typeof pinned
+    } catch (error) {
+      failures.push(`${entry.name}: ${blobPath} is not valid JSON (${String(error)})`)
+      continue
+    }
+    const indexRange = listed?.versions[0]?.engines.dsh
+    if (pinned.engines?.dsh === undefined) {
+      failures.push(`${entry.name}: the pinned package declares no engines.dsh`)
+    } else if (indexRange !== undefined && pinned.engines.dsh !== indexRange) {
+      failures.push(
+        `${entry.name}: the index declares engines.dsh ${JSON.stringify(indexRange)} `
+        + `but the pinned commit declares ${JSON.stringify(pinned.engines.dsh)} — `
+        + 'repin the version to a commit whose package matches, or update the index range',
+      )
+    }
   }
 }
 

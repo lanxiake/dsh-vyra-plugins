@@ -154,7 +154,7 @@ export const manifest: MarketManifest = {
             // Pinned to the commit that published this version. A Git source
             // must name an exact commit: a branch would make the same version
             // mean different code over time.
-            commit: '41804bcad6655d1462f4ea5b3c8627df1cbfc238',
+            commit: '2a280842617e0949344a0b0aa9ac9f6755609573',
             path: 'plugins/tool-usage-stats',
           },
         },
