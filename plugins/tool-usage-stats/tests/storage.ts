@@ -47,6 +47,7 @@ const good = {
       lastUsedAt: 1_760_000_000_000,
       lastUsedDay: '2026-06-01',
       daily: { '2026-06-01': 3 },
+      dailyErrors: { '2026-06-01': 1 },
     },
   },
   failures: {
@@ -54,6 +55,25 @@ const good = {
   },
 }
 assert.deepEqual(parse(good), good)
+
+// A record written before per-day failures were tracked carries no
+// `dailyErrors`. Absent is honest — those days have no failure split — so it
+// normalizes to an empty map instead of failing the read.
+const preDailyErrors = {
+  counters: {
+    bash: {
+      count: 3,
+      errorCount: 1,
+      lastUsedAt: 1_760_000_000_000,
+      lastUsedDay: '2026-06-01',
+      daily: { '2026-06-01': 3 },
+    },
+  },
+}
+assert.deepEqual(parse(preDailyErrors), {
+  counters: { ...good.counters, bash: { ...good.counters.bash, dailyErrors: {} } },
+  failures: {},
+})
 
 // A snapshot with no audit yet is still valid: a fresh install has no failures.
 assert.deepEqual(parse({ counters: {} }), { counters: {}, failures: {} })
@@ -97,6 +117,9 @@ const legacy = {
     daily: { '2026-06-01': 7 },
   },
 }
-assert.deepEqual(parse(legacy), { counters: legacy, failures: {} }, 'a legacy counter set must be adopted')
+assert.deepEqual(parse(legacy), {
+  counters: { bash: { ...legacy.bash, dailyErrors: {} } },
+  failures: {},
+}, 'a legacy counter set must be adopted')
 
 console.log('storage: legacy 0.1.x counter sets are adopted rather than dropped.')

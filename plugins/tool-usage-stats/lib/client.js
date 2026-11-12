@@ -56,7 +56,7 @@ var COLUMNS = [
   { key: "errorCount", label: "\u5931\u8D25", numeric: true },
   { key: "lastUsedAt", label: "\u6700\u540E\u4F7F\u7528", numeric: false }
 ];
-var CELL = { padding: "4px 0" };
+var CELL = { padding: "4px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
 function createPanel(React) {
   const h = React.createElement;
   return function ToolUsagePanel() {
@@ -215,9 +215,27 @@ function createPanel(React) {
         { style: { opacity: 0.7, margin: "0 0 8px" } },
         `${report.tools} \u4E2A\u5DE5\u5177 \xB7 ${windowLabel}\u5171 ${report.calls} \u6B21\u8C03\u7528` + (report.failures > 0 ? ` \xB7 ${report.failures} \u6B21\u5931\u8D25` : "")
       ),
+      // Fixed layout with explicit widths: without them the browser sizes
+      // columns to content, and a wide failure cell pushes the last-used column
+      // into it so the two read as one run of text.
       h(
         "table",
-        { style: { width: "100%", borderCollapse: "collapse", fontSize: "0.9em" } },
+        {
+          style: {
+            width: "100%",
+            borderCollapse: "collapse",
+            fontSize: "0.9em",
+            tableLayout: "fixed"
+          }
+        },
+        h(
+          "colgroup",
+          null,
+          h("col", { style: { width: "40%" } }),
+          h("col", { style: { width: "18%" } }),
+          h("col", { style: { width: "18%" } }),
+          h("col", { style: { width: "24%" } })
+        ),
         h("thead", null, h("tr", null, header)),
         h("tbody", null, body)
       )

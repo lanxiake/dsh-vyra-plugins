@@ -79,12 +79,29 @@ function parseEntry(tool: string, entry: unknown): ToolUsageState[string] {
       throw new TypeError(`entry '${tool}'.daily['${day}'] must be a non-negative number`)
     }
   }
+
+  // Absent on records written before per-day failures were tracked, and absent
+  // is honest: those days genuinely have no failure split, and treating them as
+  // zero is the same answer the data supports.
+  const dailyErrorsRaw = typed.dailyErrors ?? {}
+  if (typeof dailyErrorsRaw !== 'object' || dailyErrorsRaw === null || Array.isArray(dailyErrorsRaw)) {
+    throw new TypeError(`entry '${tool}'.dailyErrors must be an object`)
+  }
+  const dailyErrors: Record<string, number> = {}
+  for (const [day, failures] of Object.entries(dailyErrorsRaw)) {
+    if (typeof failures !== 'number' || !Number.isFinite(failures) || failures < 0) {
+      throw new TypeError(`entry '${tool}'.dailyErrors['${day}'] must be a non-negative number`)
+    }
+    dailyErrors[day] = failures
+  }
+
   return {
     count: typed.count as number,
     errorCount: typed.errorCount as number,
     lastUsedAt: typed.lastUsedAt as number,
     lastUsedDay: typed.lastUsedDay,
     daily: { ...(daily as Record<string, number>) },
+    dailyErrors,
   }
 }
 

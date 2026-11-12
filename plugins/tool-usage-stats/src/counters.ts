@@ -27,6 +27,15 @@ export interface ToolUsageEntry {
   lastUsedDay: string
   /** Per-day call counts, keyed `YYYY-MM-DD`. */
   daily: Record<string, number>
+  /**
+   * Per-day failure counts, keyed `YYYY-MM-DD`.
+   *
+   * Split from {@link daily} because a windowed read must report the failures
+   * that happened inside the window. Showing the cumulative failure count in a
+   * short window overstates it; showing nothing claims the tool never failed,
+   * which is worse — the user is looking at the column precisely to find out.
+   */
+  dailyErrors: Record<string, number>
 }
 
 /** The counter set: a tool name maps to its counters. */
@@ -97,10 +106,16 @@ export function record(
   const previous = state[toolName]
   const day = dayKey(at)
   const daily: Record<string, number> = { ...(previous?.daily ?? {}) }
+  const dailyErrors: Record<string, number> = { ...(previous?.dailyErrors ?? {}) }
   daily[day] = (daily[day] ?? 0) + 1
+  if (isError) dailyErrors[day] = (dailyErrors[day] ?? 0) + 1
 
   const days = Object.keys(daily).sort()
-  while (days.length > retainDays) delete daily[days.shift()!]
+  while (days.length > retainDays) {
+    const oldest = days.shift()!
+    delete daily[oldest]
+    delete dailyErrors[oldest]
+  }
 
   return {
     ...state,
@@ -110,6 +125,7 @@ export function record(
       lastUsedAt: at,
       lastUsedDay: day,
       daily,
+      dailyErrors,
     },
   }
 }
@@ -282,23 +298,22 @@ export function windowed(state: ToolUsageState, days: number, from: number): Too
   const out: ToolUsageState = {}
   for (const [tool, entry] of Object.entries(state)) {
     let count = 0
+    let errorCount = 0
     let lastUsedAt = 0
     for (const [day, calls] of Object.entries(entry.daily)) {
       if (day < cutoff) continue
       count += calls
+      errorCount += entry.dailyErrors?.[day] ?? 0
       if (entry.lastUsedAt > lastUsedAt) lastUsedAt = entry.lastUsedAt
     }
     if (count === 0) continue
-    // The window cannot recover the split between successes and failures: daily
-    // buckets count calls only. Reporting the cumulative failure share here
-    // would overstate failures in a short window, so it is left at zero and the
-    // report marks the window.
     out[tool] = {
       count,
-      errorCount: 0,
+      errorCount,
       lastUsedAt,
       lastUsedDay: dayKey(lastUsedAt),
       daily: {},
+      dailyErrors: {},
     }
   }
   return out

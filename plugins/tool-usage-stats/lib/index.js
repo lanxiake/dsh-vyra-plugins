@@ -15,9 +15,15 @@ function record(state, toolName, isError, at, retainDays) {
   const previous = state[toolName];
   const day = dayKey(at);
   const daily = { ...previous?.daily ?? {} };
+  const dailyErrors = { ...previous?.dailyErrors ?? {} };
   daily[day] = (daily[day] ?? 0) + 1;
+  if (isError) dailyErrors[day] = (dailyErrors[day] ?? 0) + 1;
   const days = Object.keys(daily).sort();
-  while (days.length > retainDays) delete daily[days.shift()];
+  while (days.length > retainDays) {
+    const oldest = days.shift();
+    delete daily[oldest];
+    delete dailyErrors[oldest];
+  }
   return {
     ...state,
     [toolName]: {
@@ -25,7 +31,8 @@ function record(state, toolName, isError, at, retainDays) {
       errorCount: (previous?.errorCount ?? 0) + (isError ? 1 : 0),
       lastUsedAt: at,
       lastUsedDay: day,
-      daily
+      daily,
+      dailyErrors
     }
   };
 }
@@ -84,19 +91,22 @@ function windowed(state, days, from) {
   const out = {};
   for (const [tool, entry] of Object.entries(state)) {
     let count = 0;
+    let errorCount = 0;
     let lastUsedAt = 0;
     for (const [day, calls] of Object.entries(entry.daily)) {
       if (day < cutoff) continue;
       count += calls;
+      errorCount += entry.dailyErrors?.[day] ?? 0;
       if (entry.lastUsedAt > lastUsedAt) lastUsedAt = entry.lastUsedAt;
     }
     if (count === 0) continue;
     out[tool] = {
       count,
-      errorCount: 0,
+      errorCount,
       lastUsedAt,
       lastUsedDay: dayKey(lastUsedAt),
-      daily: {}
+      daily: {},
+      dailyErrors: {}
     };
   }
   return out;
@@ -142,12 +152,24 @@ function parseEntry(tool, entry) {
       throw new TypeError(`entry '${tool}'.daily['${day}'] must be a non-negative number`);
     }
   }
+  const dailyErrorsRaw = typed.dailyErrors ?? {};
+  if (typeof dailyErrorsRaw !== "object" || dailyErrorsRaw === null || Array.isArray(dailyErrorsRaw)) {
+    throw new TypeError(`entry '${tool}'.dailyErrors must be an object`);
+  }
+  const dailyErrors = {};
+  for (const [day, failures] of Object.entries(dailyErrorsRaw)) {
+    if (typeof failures !== "number" || !Number.isFinite(failures) || failures < 0) {
+      throw new TypeError(`entry '${tool}'.dailyErrors['${day}'] must be a non-negative number`);
+    }
+    dailyErrors[day] = failures;
+  }
   return {
     count: typed.count,
     errorCount: typed.errorCount,
     lastUsedAt: typed.lastUsedAt,
     lastUsedDay: typed.lastUsedDay,
-    daily: { ...daily }
+    daily: { ...daily },
+    dailyErrors
   };
 }
 function parseSnapshot(raw) {

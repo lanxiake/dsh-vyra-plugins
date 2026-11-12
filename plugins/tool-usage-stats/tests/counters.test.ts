@@ -26,7 +26,28 @@ test('record creates an entry on first observation', () => {
     lastUsedAt: at,
     lastUsedDay: '2026-06-01',
     daily: { '2026-06-01': 1 },
+    dailyErrors: {},
   })
+})
+
+test('record tracks failures per day alongside calls', () => {
+  const day = new Date(2026, 5, 1, 10, 0).getTime()
+  let state = record({}, 'read', false, day, 90)
+  state = record(state, 'read', true, day, 90)
+  assert.deepEqual(state.read!.daily, { '2026-06-01': 2 })
+  assert.deepEqual(state.read!.dailyErrors, { '2026-06-01': 1 })
+})
+
+test('record drops the failure bucket with its day', () => {
+  let state = {}
+  const base = new Date(2026, 5, 1, 10, 0).getTime()
+  const dayMs = 24 * 60 * 60 * 1000
+  for (let index = 0; index < 3; index += 1) {
+    state = record(state, 'bash', true, base + index * dayMs, 1)
+  }
+  assert.deepEqual(Object.keys(state.bash!.daily), ['2026-06-03'])
+  assert.deepEqual(Object.keys(state.bash!.dailyErrors), ['2026-06-03'],
+    'a trimmed day must not leave its failure count behind')
 })
 
 test('record accumulates failures separately from calls', () => {
@@ -155,6 +176,28 @@ test('windowed drops a tool whose only calls predate the window', () => {
   const now = new Date(2026, 5, 30, 12, 0).getTime()
   const state = record({}, 'gone', false, now - 40 * dayMs, 90)
   assert.deepEqual(windowed(state, 7, now), {})
+})
+
+test('windowed reports the failures inside the window, not the cumulative count', () => {
+  // A window that showed the cumulative failure count would overstate it, and a
+  // window that showed nothing would claim the tool never failed. Both mislead
+  // the reader who opened the column to find out.
+  const dayMs = 24 * 60 * 60 * 1000
+  const now = new Date(2026, 5, 30, 12, 0).getTime()
+  let state = {}
+  // 10 old failures, well outside the window.
+  for (let index = 0; index < 10; index += 1) {
+    state = record(state, 'search', true, now - 60 * dayMs, 90)
+  }
+  // 2 successes and 1 failure inside it.
+  state = record(state, 'search', false, now - dayMs, 90)
+  state = record(state, 'search', false, now - dayMs, 90)
+  state = record(state, 'search', true, now - dayMs, 90)
+
+  const week = windowed(state, 7, now)
+  assert.equal(week.search!.count, 3)
+  assert.equal(week.search!.errorCount, 1, 'the 10 old failures must not be counted')
+  assert.equal(state.search!.errorCount, 11, 'the cumulative total is unchanged')
 })
 
 test('coverage reports the retained span', () => {

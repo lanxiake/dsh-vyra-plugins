@@ -142,8 +142,8 @@ const COLUMNS = [
 /** One sortable column key. */
 type SortKey = (typeof COLUMNS)[number]['key']
 
-/** Shared cell styling. */
-const CELL = { padding: '4px 0' } as const
+/** Shared cell styling: a fixed layout needs each cell to clip its overflow. */
+const CELL = { padding: '4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const
 
 /**
  * Build the panel component.
@@ -274,7 +274,6 @@ function createPanel(React: ReactModule): () => unknown {
               },
             }, `${row.errorCount}${open ? ' ▾' : ' ▸'}`)),
         h('td', { style: CELL }, formatTime(row.lastUsedAt)))
-
       if (!open || samples.length === 0) return [cells]
 
       // Only the failures say what to fix; the count alone never does.
@@ -299,7 +298,22 @@ function createPanel(React: ReactModule): () => unknown {
       h('p', { style: { opacity: 0.7, margin: '0 0 8px' } },
         `${report.tools} 个工具 · ${windowLabel}共 ${report.calls} 次调用`
         + (report.failures > 0 ? ` · ${report.failures} 次失败` : '')),
-      h('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' } },
+      // Fixed layout with explicit widths: without them the browser sizes
+      // columns to content, and a wide failure cell pushes the last-used column
+      // into it so the two read as one run of text.
+      h('table', {
+        style: {
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '0.9em',
+          tableLayout: 'fixed',
+        },
+      },
+        h('colgroup', null,
+          h('col', { style: { width: '40%' } }),
+          h('col', { style: { width: '18%' } }),
+          h('col', { style: { width: '18%' } }),
+          h('col', { style: { width: '24%' } })),
         h('thead', null, h('tr', null, header)),
         h('tbody', null, body)))
   }
