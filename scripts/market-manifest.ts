@@ -49,7 +49,7 @@ export interface MarketPluginSource {
     readonly directory?: string
   }
   readonly author?: string
-  /** DSH SemVer range this plugin supports, e.g. `>=0.2.2-rc.2 <0.3.0`. */
+  /** DSH SemVer range this plugin supports, e.g. `>=0.2.0 <0.3.0`. */
   readonly engines: { readonly dsh: string }
   /** Where each version installs from. Keyed by exact SemVer. */
   readonly versions: Readonly<Record<string, MarketVersionSource>>
@@ -138,7 +138,12 @@ export const manifest: MarketManifest = {
         directory: 'plugins/tool-usage-stats',
       },
       icon: TOOL_USAGE_ICON,
-      engines: { dsh: '>=0.2.2-rc.2 <0.3.0' },
+      // Every API this plugin uses — `tool/result.message.toolCallId`,
+      // `connection.fetch.register`, `storageDomain`, and the
+      // `settings.section` slot — is present from 0.2.0-rc.2 onward, verified
+      // by reading those files at each released tag. The lower bound is stated
+      // conservatively as the first stable 0.2 release.
+      engines: { dsh: '>=0.2.0 <0.3.0' },
       versions: {
         '0.1.0': {
           // Unix seconds of commit ece9710.
