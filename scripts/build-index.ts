@@ -1,5 +1,5 @@
 /**
- * Project `scripts/market-manifest.ts` into `index/index.json`.
+ * Project `scripts/market-manifest.ts` into `docs/index.json`.
  *
  * The output is the format-1 document `dsh-plugin-market` fetches. Localization
  * maps collapse to a plain string when only English is present, matching the
@@ -33,6 +33,15 @@ function source(install: MarketInstallSource): Record<string, unknown> {
 
 /** Project one plugin. */
 function plugin(entry: MarketPluginSource): Record<string, unknown> {
+  // `metadata` is omitted entirely when it carries nothing, matching how
+  // published indexes write it: an empty object or empty arrays would be
+  // noise the Discover filters then have to ignore.
+  const hasMetadata = entry.metadata !== undefined && (
+    entry.metadata.category !== undefined
+    || (entry.metadata.keywords?.length ?? 0) > 0
+    || (entry.metadata.labels?.length ?? 0) > 0
+  )
+
   return {
     name: entry.name,
     title: localized(entry.title),
@@ -41,20 +50,23 @@ function plugin(entry: MarketPluginSource): Record<string, unknown> {
     ...(entry.author === undefined ? {} : { author: entry.author }),
     ...(entry.homepage === undefined ? {} : { homepage: entry.homepage }),
     ...(entry.repository === undefined ? {} : { repository: entry.repository }),
-    metadata: {
-      ...(entry.metadata?.category === undefined ? {} : { category: entry.metadata.category }),
-      keywords: entry.metadata?.keywords ?? [],
-      labels: entry.metadata?.labels ?? [],
-      sortKeys: {},
-    },
     versions: Object.entries(entry.versions)
       .map(([version, published]: [string, MarketVersionSource]) => ({
         version,
         publishTimestamp: published.publishTimestamp,
         source: source(published.source),
-        engines: {},
+        engines: { dsh: entry.engines.dsh },
       }))
       .sort((left, right) => right.version.localeCompare(left.version, undefined, { numeric: true })),
+    ...(hasMetadata
+      ? {
+        metadata: {
+          ...(entry.metadata?.category === undefined ? {} : { category: entry.metadata.category }),
+          ...((entry.metadata?.keywords?.length ?? 0) > 0 ? { keywords: entry.metadata?.keywords } : {}),
+          ...((entry.metadata?.labels?.length ?? 0) > 0 ? { labels: entry.metadata?.labels } : {}),
+        },
+      }
+      : {}),
   }
 }
 
@@ -72,5 +84,5 @@ const document = {
   plugins: manifest.plugins.map(plugin),
 }
 
-writeFileSync(resolve(root, 'index/index.json'), `${JSON.stringify(document, undefined, 2)}\n`)
-console.log(`build-index: wrote ${document.plugins.length} plugin(s) to index/index.json`)
+writeFileSync(resolve(root, 'docs/index.json'), `${JSON.stringify(document, undefined, 2)}\n`)
+console.log(`build-index: wrote ${document.plugins.length} plugin(s) to docs/index.json`)

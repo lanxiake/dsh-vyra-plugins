@@ -32,7 +32,7 @@ const { parseMarketIndex } = require(validatorEntry) as {
   parseMarketIndex: (value: unknown, indexUrl: string) => ValidatedIndex
 }
 
-const value: unknown = JSON.parse(readFileSync(resolve(root, 'index/index.json'), 'utf8'))
+const value: unknown = JSON.parse(readFileSync(resolve(root, 'docs/index.json'), 'utf8'))
 
 let index: ValidatedIndex
 try {

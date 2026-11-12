@@ -61,21 +61,12 @@
         "en": "Per-tool call, failure, and last-use counters, folded from the session log, with a Settings panel.",
         "zh": "按工具统计调用次数、失败次数与最后使用时间，数据来自会话日志，带设置页面板。"
       },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZDRlZDgiLz48ZyBmaWxsPSIjZmZmIj48cmVjdCB4PSIxNiIgeT0iMzYiIHdpZHRoPSI3IiBoZWlnaHQ9IjE0IiByeD0iMiIvPjxyZWN0IHg9IjI4LjUiIHk9IjI2IiB3aWR0aD0iNyIgaGVpZ2h0PSIyNCIgcng9IjIiLz48cmVjdCB4PSI0MSIgeT0iMTYiIHdpZHRoPSI3IiBoZWlnaHQ9IjM0IiByeD0iMiIvPjwvZz48L3N2Zz4=",
       "author": "lanxiake",
-      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
         "url": "https://github.com/lanxiake/dsh-vyra-plugins",
         "directory": "plugins/tool-usage-stats"
-      },
-      "metadata": {
-        "category": "observability",
-        "keywords": [
-          "stats",
-          "tool-usage",
-          "observability"
-        ],
-        "labels": [],
-        "sortKeys": {}
       },
       "versions": [
         {
@@ -87,9 +78,19 @@
             "commit": "41804bcad6655d1462f4ea5b3c8627df1cbfc238",
             "path": "plugins/tool-usage-stats"
           },
-          "engines": {}
+          "engines": {
+            "dsh": ">=0.2.2-rc.2 <0.3.0"
+          }
         }
-      ]
+      ],
+      "metadata": {
+        "category": "observability",
+        "keywords": [
+          "stats",
+          "tool-usage",
+          "observability"
+        ]
+      }
     }
   ]
 }
