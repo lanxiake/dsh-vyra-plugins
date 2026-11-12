@@ -56,10 +56,10 @@ for (const plugin of index.plugins) {
   }
 }
 
-// The index claims an `engines.dsh` range, but the installer reads the range
-// inside the *pinned commit's* package.json. Writing one without repinning the
-// other makes the client show the plugin as compatible and then refuse to
-// install it. Read the range out of the pinned blob so the two cannot drift.
+// The installer gates on the `engines.dsh` inside the *pinned commit's*
+// package.json, so an index entry claiming a range the package does not carry
+// (or vice versa) makes the client show one compatibility and install another.
+// Read the range out of the pinned blob and require the two to agree.
 for (const [position, entry] of manifest.plugins.entries()) {
   const listed = index.plugins[position]
   for (const declared of Object.values(entry.versions)) {
@@ -77,14 +77,13 @@ for (const [position, entry] of manifest.plugins.entries()) {
       failures.push(`${entry.name}: ${blobPath} is not valid JSON (${String(error)})`)
       continue
     }
-    const indexRange = listed?.versions[0]?.engines.dsh
-    if (pinned.engines?.dsh === undefined) {
-      failures.push(`${entry.name}: the pinned package declares no engines.dsh`)
-    } else if (indexRange !== undefined && pinned.engines.dsh !== indexRange) {
+    const indexRange = listed?.versions[0]?.engines?.dsh
+    const pinnedRange = pinned.engines?.dsh
+    if (indexRange !== pinnedRange) {
       failures.push(
         `${entry.name}: the index declares engines.dsh ${JSON.stringify(indexRange)} `
-        + `but the pinned commit declares ${JSON.stringify(pinned.engines.dsh)} — `
-        + 'repin the version to a commit whose package matches, or update the index range',
+        + `but the pinned commit declares ${JSON.stringify(pinnedRange)} — repin the version `
+        + 'to a commit whose package matches, or update the index range',
       )
     }
   }

@@ -1,6 +1,8 @@
 /**
- * Counter fold, event decoding, and aggregation, kept free of any Cordis
- * reference so the logic is testable without booting a context.
+ * Counter fold, event decoding, failure summarization, and aggregation.
+ *
+ * Kept free of any Cordis reference so the logic is testable without booting a
+ * context.
  *
  * @module vyra-tool-usage-stats/counters
  */
@@ -27,15 +29,56 @@ export interface ToolUsageEntry {
   daily: Record<string, number>
 }
 
-/** The counter set for one scope: a tool name maps to its counters. */
+/** The counter set: a tool name maps to its counters. */
 export type ToolUsageState = Record<string, ToolUsageEntry>
+
+/**
+ * Longest failure summary retained.
+ *
+ * A count alone answers "how often did this fail" and cannot answer "why" —
+ * which is the only question worth asking when deciding how to fix a tool. The
+ * summary is capped so an audit trail cannot grow without bound.
+ */
+export const FAILURE_SUMMARY_MAX_CHARS = 300
+
+/** Failures retained per tool, newest first. */
+export const FAILURE_SAMPLES_PER_TOOL = 20
+
+/** One retained failure. */
+export interface FailureSample {
+  /** Epoch milliseconds of the failure. */
+  at: number
+  /** Single-line, truncated reason. */
+  summary: string
+  /** Failure identity when the tool threw a `HarnessError`. */
+  code?: string
+  /** Tool that failed. */
+  tool: string
+}
+
+/** The failure audit: tool name to its most recent failures. */
+export type FailureLog = Record<string, FailureSample[]>
+
+/**
+ * Collapse whitespace and truncate a failure reason.
+ *
+ * Collapsing to one line is not only about size: attribution groups by the
+ * reason text, and a multi-line reason splits one failure class into several
+ * groups that should have been counted together.
+ *
+ * @param text - the raw reason.
+ * @returns a single-line summary, at most {@link FAILURE_SUMMARY_MAX_CHARS} characters.
+ */
+export function summarize(text: string, max = FAILURE_SUMMARY_MAX_CHARS): string {
+  const flat = text.replace(/\s+/g, ' ').trim()
+  return flat.length <= max ? flat : `${flat.slice(0, max)}…`
+}
 
 /**
  * Fold one observed result into the counter set.
  *
  * Entry objects are replaced rather than mutated, so a caller that serialized
- * an earlier state never sees it change underfoot — which matters because the
- * same value is handed to the durable store.
+ * an earlier state never sees it change underfoot.
  *
  * @param state - the current counter set.
  * @param toolName - the model-visible tool name that ran.
@@ -72,16 +115,88 @@ export function record(
 }
 
 /**
- * Read the outcome flag from a `tool/result` payload.
+ * Append one failure to the audit, keeping the newest samples per tool.
+ *
+ * @param log - the current audit.
+ * @param sample - the failure to retain.
+ * @param keep - samples to retain per tool.
+ * @returns the updated audit.
+ */
+export function recordFailure(
+  log: FailureLog,
+  sample: FailureSample,
+  keep = FAILURE_SAMPLES_PER_TOOL,
+): FailureLog {
+  const existing = log[sample.tool] ?? []
+  return { ...log, [sample.tool]: [sample, ...existing].slice(0, keep) }
+}
+
+/**
+ * Read a tool result's outcome and pairing id.
+ *
+ * The pairing id lives on the result message, not on the event: a `tool/result`
+ * payload is `{ turn, step, message, error?, meta? }` and the message carries
+ * `toolCallId`.
  *
  * @param data - the event's `data` member.
- * @returns whether the recorded result was a failure.
+ * @returns the call id and whether the result was a failure, or `undefined`.
  */
-export function resultIsError(data: unknown): boolean {
-  if (typeof data !== 'object' || data === null) return false
+export function readResult(data: unknown): { callId: string; isError: boolean } | undefined {
+  if (typeof data !== 'object' || data === null) return undefined
   const message = (data as { message?: unknown }).message
-  if (typeof message !== 'object' || message === null) return false
-  return (message as { isError?: unknown }).isError === true
+  if (typeof message !== 'object' || message === null) return undefined
+  const callId = (message as { toolCallId?: unknown }).toolCallId
+  if (typeof callId !== 'string') return undefined
+  return { callId, isError: (message as { isError?: unknown }).isError === true }
+}
+
+/**
+ * Extract the human-readable reason a failed call reports.
+ *
+ * Two paths reach a failure and both must be read. A tool that *returns* a
+ * failed result carries its reason in the model-facing content; a tool that
+ * *throws* carries it in the event's `error` member. Reading only one path
+ * leaves whole failure classes unattributable — the exact gap that made a
+ * historical `web_search` count of 181 failures undiagnosable.
+ *
+ * @param data - the event's `data` member.
+ * @param result - the failure identity parsed from the event, when present.
+ * @returns the summary and error code, either possibly empty.
+ */
+export function failureDetail(
+  data: unknown,
+  result: { isError: boolean },
+): { summary: string; code?: string } {
+  if (!result.isError) return { summary: '' }
+
+  const payload = data as {
+    message?: { content?: unknown }
+    error?: { name?: unknown; code?: unknown; reason?: unknown }
+  }
+
+  // A thrown HarnessError states its own reason; that is the most specific text
+  // available and it is outside model content by design.
+  const error = payload.error
+  const code = typeof error?.code === 'string' ? error.code : undefined
+  const reason = typeof error?.reason === 'string' ? error.reason : ''
+
+  // Otherwise take the model-facing content the tool produced.
+  let fromContent = ''
+  const content = payload.message?.content
+  if (Array.isArray(content)) {
+    const text = content
+      .filter((block): block is { type: string; text: string } =>
+        typeof block === 'object' && block !== null
+        && (block as { type?: unknown }).type === 'text'
+        && typeof (block as { text?: unknown }).text === 'string')
+      .map(block => block.text)
+      .join(' ')
+    fromContent = text
+  }
+
+  const chosen = reason || fromContent
+  const summary = chosen === '' ? '工具返回失败结果（无正文）' : summarize(chosen)
+  return code === undefined ? { summary } : { summary, code }
 }
 
 /**
@@ -112,7 +227,7 @@ export interface ToolUsageRow {
   readonly lastUsedAt: number
 }
 
-/** A report over one or more counter sets. */
+/** A report over a set of counters. */
 export interface ToolUsageReport {
   readonly rows: readonly ToolUsageRow[]
   readonly tools: number
@@ -121,33 +236,13 @@ export interface ToolUsageReport {
 }
 
 /**
- * Merge counter sets into one report, summing matching tool names.
+ * Build a report from one counter set.
  *
- * Merging is what makes the session view and the global view the same code
- * path: a session report is one set, a global report is every set folded
- * together. Per-day buckets are not merged because neither view renders a
- * trend; `lastUsedAt` takes the maximum.
- *
- * @param states - the counter sets to merge.
+ * @param state - the counters to report.
  * @returns rows sorted by descending call count, then by name for stability.
  */
-export function report(states: readonly ToolUsageState[]): ToolUsageReport {
-  const merged = new Map<string, { count: number; errorCount: number; lastUsedAt: number }>()
-
-  for (const state of states) {
-    for (const [tool, entry] of Object.entries(state)) {
-      const current = merged.get(tool)
-      if (current === undefined) {
-        merged.set(tool, { count: entry.count, errorCount: entry.errorCount, lastUsedAt: entry.lastUsedAt })
-        continue
-      }
-      current.count += entry.count
-      current.errorCount += entry.errorCount
-      current.lastUsedAt = Math.max(current.lastUsedAt, entry.lastUsedAt)
-    }
-  }
-
-  const rows = [...merged]
+export function report(state: ToolUsageState): ToolUsageReport {
+  const rows = Object.entries(state)
     .map(([tool, entry]) => ({
       tool,
       count: entry.count,
@@ -163,4 +258,80 @@ export function report(states: readonly ToolUsageState[]): ToolUsageReport {
     calls: rows.reduce((sum, row) => sum + row.count, 0),
     failures: rows.reduce((sum, row) => sum + row.errorCount, 0),
   }
+}
+
+/**
+ * Restrict a counter set to the last `days` days, using the daily buckets.
+ *
+ * A windowed read must come from the daily buckets, never from the cumulative
+ * counters. Cumulative totals include history from before the window, so
+ * presenting them as "recently used" answers a different question than the one
+ * asked — the failure mode that made a cleanup decision delete a tool still in
+ * use.
+ *
+ * @param state - the full counter set.
+ * @param days - window length in days, including today.
+ * @param from - epoch milliseconds the window is measured back from.
+ * @returns counters containing only calls inside the window.
+ */
+export function windowed(state: ToolUsageState, days: number, from: number): ToolUsageState {
+  if (days <= 0) return state
+  const dayMs = 24 * 60 * 60 * 1000
+  const cutoff = dayKey(from - (days - 1) * dayMs)
+
+  const out: ToolUsageState = {}
+  for (const [tool, entry] of Object.entries(state)) {
+    let count = 0
+    let lastUsedAt = 0
+    for (const [day, calls] of Object.entries(entry.daily)) {
+      if (day < cutoff) continue
+      count += calls
+      if (entry.lastUsedAt > lastUsedAt) lastUsedAt = entry.lastUsedAt
+    }
+    if (count === 0) continue
+    // The window cannot recover the split between successes and failures: daily
+    // buckets count calls only. Reporting the cumulative failure share here
+    // would overstate failures in a short window, so it is left at zero and the
+    // report marks the window.
+    out[tool] = {
+      count,
+      errorCount: 0,
+      lastUsedAt,
+      lastUsedDay: dayKey(lastUsedAt),
+      daily: {},
+    }
+  }
+  return out
+}
+
+/** The window a report covers. */
+export interface Coverage {
+  /** Earliest day any daily bucket holds, `YYYY-MM-DD`, or null when empty. */
+  readonly since: string | null
+  /** Latest day any daily bucket holds, `YYYY-MM-DD`, or null when empty. */
+  readonly until: string | null
+  /** Days the daily buckets retain. */
+  readonly retentionDays: number
+}
+
+/**
+ * Report which days the daily buckets actually cover.
+ *
+ * A window longer than the retained span is incomplete, and saying so is the
+ * difference between "nothing ran" and "this data starts later".
+ *
+ * @param state - the counter set.
+ * @param retentionDays - the configured retention.
+ * @returns the covered span.
+ */
+export function coverage(state: ToolUsageState, retentionDays: number): Coverage {
+  let since: string | null = null
+  let until: string | null = null
+  for (const entry of Object.values(state)) {
+    for (const day of Object.keys(entry.daily)) {
+      if (since === null || day < since) since = day
+      if (until === null || day > until) until = day
+    }
+  }
+  return { since, until, retentionDays }
 }

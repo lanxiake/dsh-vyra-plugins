@@ -38,32 +38,46 @@ assert.ok(TABLE_NAME in accepted.tables, `table ${TABLE_NAME} must be declared`)
 const parse = accepted.tables[TABLE_NAME]!.valueSchema.parse
 assert.equal(typeof parse, 'function', 'the table must expose a parse method')
 
-// A well-formed set round-trips.
+// A well-formed snapshot round-trips, counters and audit together.
 const good = {
-  bash: {
-    count: 3,
-    errorCount: 1,
-    lastUsedAt: 1_760_000_000_000,
-    lastUsedDay: '2026-06-01',
-    daily: { '2026-06-01': 3 },
+  counters: {
+    bash: {
+      count: 3,
+      errorCount: 1,
+      lastUsedAt: 1_760_000_000_000,
+      lastUsedDay: '2026-06-01',
+      daily: { '2026-06-01': 3 },
+    },
+  },
+  failures: {
+    bash: [{ at: 1_760_000_000_000, summary: 'exited with code 1', code: 'BASH_FAILED', tool: 'bash' }],
   },
 }
 assert.deepEqual(parse(good), good)
 
+// A snapshot with no audit yet is still valid: a fresh install has no failures.
+assert.deepEqual(parse({ counters: {} }), { counters: {}, failures: {} })
+
 // Each malformed shape must throw, because the storage service treats a throw
-// as a record failure and applies `backup-and-skip`. Returning a partial set
-// instead would silently corrupt every later total.
+// as a record failure and applies `backup-and-skip`. Returning a partial
+// snapshot instead would silently corrupt every later total.
 const rejects: [string, unknown][] = [
   ['not an object', 'nope'],
   ['null', null],
   ['an array', []],
-  ['a non-object entry', { bash: 3 }],
-  ['a missing count', { bash: { errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: {} } }],
-  ['a negative count', { bash: { count: -1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: {} } }],
-  ['a NaN count', { bash: { count: NaN, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: {} } }],
-  ['a non-string day', { bash: { count: 1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 7, daily: {} } }],
-  ['a non-object daily', { bash: { count: 1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: 3 } }],
-  ['a non-numeric daily count', { bash: { count: 1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: { d: 'many' } } }],
+  ['no counters', { failures: {} }],
+  ['counters as an array', { counters: [] }],
+  ['a non-object entry', { counters: { bash: 3 } }],
+  ['a missing count', { counters: { bash: { errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: {} } } }],
+  ['a negative count', { counters: { bash: { count: -1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: {} } } }],
+  ['a NaN count', { counters: { bash: { count: NaN, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: {} } } }],
+  ['a non-string day', { counters: { bash: { count: 1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 7, daily: {} } } }],
+  ['a non-object daily', { counters: { bash: { count: 1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: 3 } } }],
+  ['a non-numeric daily count', { counters: { bash: { count: 1, errorCount: 0, lastUsedAt: 0, lastUsedDay: 'x', daily: { d: 'many' } } } }],
+  ['failures as an array', { counters: {}, failures: [] }],
+  ['a failure list that is not an array', { counters: {}, failures: { bash: 3 } }],
+  ['a failure missing its summary', { counters: {}, failures: { bash: [{ at: 1 }] } }],
+  ['a failure with a non-numeric time', { counters: {}, failures: { bash: [{ at: 'x', summary: 's' }] } }],
 ]
 
 for (const [label, value] of rejects) {

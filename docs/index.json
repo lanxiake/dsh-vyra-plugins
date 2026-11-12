@@ -77,9 +77,6 @@
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
             "commit": "2a280842617e0949344a0b0aa9ac9f6755609573",
             "path": "plugins/tool-usage-stats"
-          },
-          "engines": {
-            "dsh": ">=0.2.0 <0.3.0"
           }
         }
       ],

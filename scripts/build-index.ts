@@ -55,7 +55,9 @@ function plugin(entry: MarketPluginSource): Record<string, unknown> {
         version,
         publishTimestamp: published.publishTimestamp,
         source: source(published.source),
-        engines: { dsh: entry.engines.dsh },
+        // An empty object here means "any DSH", which is the same as omitting
+        // the field, so it is omitted rather than written empty.
+        ...(entry.engines?.dsh === undefined ? {} : { engines: { dsh: entry.engines.dsh } }),
       }))
       .sort((left, right) => right.version.localeCompare(left.version, undefined, { numeric: true })),
     ...(hasMetadata

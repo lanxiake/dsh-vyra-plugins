@@ -1,6 +1,6 @@
 {
   "name": "vyra-tool-usage-stats",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Per-tool call, failure, and last-use statistics for DeepSeek Harness sessions.",
   "keywords": [
     "dsh",
@@ -30,7 +30,7 @@
     "README.md"
   ],
   "engines": {
-    "dsh": ">=0.2.0 <0.3.0"
+    "node": ">=22"
   },
   "dsh": {
     "bundle": {

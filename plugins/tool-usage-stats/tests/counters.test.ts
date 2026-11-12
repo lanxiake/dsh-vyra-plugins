@@ -1,13 +1,17 @@
 /**
- * Counter-fold behavior. Runs under `node --test` against the TypeScript source
- * through Node's type stripping, so no build step and no test framework.
+ * Counter fold, failure summarization, and windowing.
+ *
+ * Runs under `node --test` against the TypeScript source through Node's type
+ * stripping, so no build step and no test framework.
  *
  * @module vyra-tool-usage-stats/counters.test
  */
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { dayKey, record, report, resultIsError, takeName } from '../src/counters.ts'
+import {
+  coverage, dayKey, failureDetail, readResult, record, recordFailure, report, summarize, takeName, windowed,
+} from '../src/counters.ts'
 
 test('dayKey formats local time as YYYY-MM-DD', () => {
   assert.equal(dayKey(new Date(2026, 0, 5, 13, 30).getTime()), '2026-01-05')
@@ -16,8 +20,7 @@ test('dayKey formats local time as YYYY-MM-DD', () => {
 
 test('record creates an entry on first observation', () => {
   const at = new Date(2026, 5, 1, 10, 0).getTime()
-  const state = record({}, 'bash', false, at, 90)
-  assert.deepEqual(state.bash, {
+  assert.deepEqual(record({}, 'bash', false, at, 90).bash, {
     count: 1,
     errorCount: 0,
     lastUsedAt: at,
@@ -33,15 +36,6 @@ test('record accumulates failures separately from calls', () => {
   state = record(state, 'read', true, day, 90)
   assert.equal(state.read!.count, 3)
   assert.equal(state.read!.errorCount, 2)
-})
-
-test('record keeps separate buckets per day', () => {
-  const first = new Date(2026, 5, 1, 10, 0).getTime()
-  const second = new Date(2026, 5, 2, 10, 0).getTime()
-  let state = record({}, 'grep', false, first, 90)
-  state = record(state, 'grep', false, second, 90)
-  assert.deepEqual(state.grep!.daily, { '2026-06-01': 1, '2026-06-02': 1 })
-  assert.equal(state.grep!.lastUsedDay, '2026-06-02')
 })
 
 test('record drops buckets older than retainDays but keeps the total', () => {
@@ -63,13 +57,61 @@ test('a serialized snapshot does not change when the fold advances', () => {
   assert.equal(JSON.stringify(before), serialized)
 })
 
-test('resultIsError reads only an explicit true', () => {
-  assert.equal(resultIsError({ message: { isError: true } }), true)
-  assert.equal(resultIsError({ message: { isError: false } }), false)
-  assert.equal(resultIsError({ message: {} }), false)
-  assert.equal(resultIsError({}), false)
-  assert.equal(resultIsError(null), false)
-  assert.equal(resultIsError('not an object'), false)
+test('summarize collapses whitespace and truncates', () => {
+  assert.equal(summarize('  a\n\n  b\tc  '), 'a b c')
+  const long = 'x'.repeat(400)
+  const out = summarize(long)
+  assert.equal(out.length, 301, '300 characters plus the ellipsis')
+  assert.ok(out.endsWith('…'))
+})
+
+test('recordFailure keeps the newest samples and caps the count', () => {
+  let log = {}
+  for (let index = 0; index < 5; index += 1) {
+    log = recordFailure(log, { at: index, summary: `e${index}`, tool: 'bash' }, 3)
+  }
+  assert.deepEqual(log.bash!.map(s => s.summary), ['e4', 'e3', 'e2'])
+})
+
+test('readResult reads the pairing id from the message', () => {
+  assert.deepEqual(
+    readResult({ turn: 1, message: { toolCallId: 'c1', isError: true } }),
+    { callId: 'c1', isError: true },
+  )
+  assert.deepEqual(readResult({ message: { toolCallId: 'c1' } }), { callId: 'c1', isError: false })
+  assert.equal(readResult({ callId: 'c1' }), undefined, 'a top-level callId is not the real field')
+  assert.equal(readResult(null), undefined)
+})
+
+test('failureDetail prefers a thrown error reason over content', () => {
+  const detail = failureDetail(
+    {
+      message: { content: [{ type: 'text', text: 'from content' }] },
+      error: { name: 'HarnessError', code: 'BASH_FAILED', reason: 'from reason' },
+    },
+    { isError: true },
+  )
+  assert.equal(detail.summary, 'from reason')
+  assert.equal(detail.code, 'BASH_FAILED')
+})
+
+test('failureDetail falls back to the model-facing content', () => {
+  const detail = failureDetail(
+    { message: { content: [{ type: 'text', text: '  command   failed\n  badly ' }] } },
+    { isError: true },
+  )
+  assert.equal(detail.summary, 'command failed badly')
+  assert.equal(detail.code, undefined)
+})
+
+test('failureDetail covers a throw with neither reason nor content', () => {
+  assert.deepEqual(failureDetail({ message: {} }, { isError: true }), {
+    summary: '工具返回失败结果（无正文）',
+  })
+})
+
+test('failureDetail reports nothing for a successful call', () => {
+  assert.deepEqual(failureDetail({ message: { content: [] } }, { isError: false }), { summary: '' })
 })
 
 test('takeName pairs a result with its call and consumes the entry', () => {
@@ -79,38 +121,50 @@ test('takeName pairs a result with its call and consumes the entry', () => {
   assert.equal(names.size, 0)
 })
 
-test('report merges matching tools across counter sets', () => {
-  const at = new Date(2026, 5, 1, 10, 0).getTime()
-  const later = new Date(2026, 5, 2, 10, 0).getTime()
-  const first = record(record({}, 'bash', false, at, 90), 'read', true, at, 90)
-  const second = record(record({}, 'bash', true, later, 90), 'grep', false, later, 90)
-
-  const merged = report([first, second])
-  assert.equal(merged.tools, 3)
-  assert.equal(merged.calls, 4)
-  assert.equal(merged.failures, 2)
-
-  const bash = merged.rows.find(row => row.tool === 'bash')!
-  assert.equal(bash.count, 2)
-  assert.equal(bash.errorCount, 1)
-  assert.equal(bash.errorRate, 0.5)
-  assert.equal(bash.lastUsedAt, later, 'the newer timestamp wins')
-})
-
 test('report orders by descending calls then by name', () => {
   const at = new Date(2026, 5, 1, 10, 0).getTime()
   let state = record({}, 'bash', false, at, 90)
   state = record(state, 'bash', false, at, 90)
   state = record(state, 'zebra', false, at, 90)
   state = record(state, 'alpha', false, at, 90)
-
-  const { rows } = report([state])
-  assert.deepEqual(rows.map(row => row.tool), ['bash', 'alpha', 'zebra'])
+  assert.deepEqual(report(state).rows.map(row => row.tool), ['bash', 'alpha', 'zebra'])
 })
 
-test('report of nothing is empty rather than undefined', () => {
-  const merged = report([])
-  assert.deepEqual(merged.rows, [])
-  assert.equal(merged.tools, 0)
-  assert.equal(merged.calls, 0)
+test('windowed reads only the daily buckets, never the cumulative total', () => {
+  // A tool used 100 times 60 days ago and never since: it must not appear in a
+  // 7-day window, which is exactly the mistake that deletes live tools in
+  // reverse — a cumulative total read as "recently used".
+  const dayMs = 24 * 60 * 60 * 1000
+  const now = new Date(2026, 5, 30, 12, 0).getTime()
+  let state = {}
+  for (let index = 0; index < 100; index += 1) {
+    state = record(state, 'old-tool', false, now - 60 * dayMs, 90)
+  }
+  state = record(state, 'new-tool', false, now - dayMs, 90)
+
+  const week = windowed(state, 7, now)
+  assert.equal(week['old-tool'], undefined, 'the old tool is outside the window')
+  assert.equal(week['new-tool']?.count, 1)
+
+  const cumulative = windowed(state, 0, now)
+  assert.equal(cumulative['old-tool']?.count, 100, 'a zero window is the cumulative set')
+})
+
+test('windowed drops a tool whose only calls predate the window', () => {
+  const dayMs = 24 * 60 * 60 * 1000
+  const now = new Date(2026, 5, 30, 12, 0).getTime()
+  const state = record({}, 'gone', false, now - 40 * dayMs, 90)
+  assert.deepEqual(windowed(state, 7, now), {})
+})
+
+test('coverage reports the retained span', () => {
+  let state = {}
+  state = record(state, 'a', false, new Date(2026, 5, 10, 9, 0).getTime(), 90)
+  state = record(state, 'b', false, new Date(2026, 5, 20, 9, 0).getTime(), 90)
+  assert.deepEqual(coverage(state, 90), {
+    since: '2026-06-10',
+    until: '2026-06-20',
+    retentionDays: 90,
+  })
+  assert.deepEqual(coverage({}, 90), { since: null, until: null, retentionDays: 90 })
 })

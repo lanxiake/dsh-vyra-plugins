@@ -5,6 +5,12 @@ function dayKey(at) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
 }
+var FAILURE_SUMMARY_MAX_CHARS = 300;
+var FAILURE_SAMPLES_PER_TOOL = 20;
+function summarize(text, max = FAILURE_SUMMARY_MAX_CHARS) {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length <= max ? flat : `${flat.slice(0, max)}\u2026`;
+}
 function record(state, toolName, isError, at, retainDays) {
   const previous = state[toolName];
   const day = dayKey(at);
@@ -23,32 +29,41 @@ function record(state, toolName, isError, at, retainDays) {
     }
   };
 }
-function resultIsError(data) {
-  if (typeof data !== "object" || data === null) return false;
+function recordFailure(log, sample, keep = FAILURE_SAMPLES_PER_TOOL) {
+  const existing = log[sample.tool] ?? [];
+  return { ...log, [sample.tool]: [sample, ...existing].slice(0, keep) };
+}
+function readResult(data) {
+  if (typeof data !== "object" || data === null) return void 0;
   const message = data.message;
-  if (typeof message !== "object" || message === null) return false;
-  return message.isError === true;
+  if (typeof message !== "object" || message === null) return void 0;
+  const callId = message.toolCallId;
+  if (typeof callId !== "string") return void 0;
+  return { callId, isError: message.isError === true };
+}
+function failureDetail(data, result) {
+  if (!result.isError) return { summary: "" };
+  const payload = data;
+  const error = payload.error;
+  const code = typeof error?.code === "string" ? error.code : void 0;
+  const reason = typeof error?.reason === "string" ? error.reason : "";
+  let fromContent = "";
+  const content = payload.message?.content;
+  if (Array.isArray(content)) {
+    const text = content.filter((block) => typeof block === "object" && block !== null && block.type === "text" && typeof block.text === "string").map((block) => block.text).join(" ");
+    fromContent = text;
+  }
+  const chosen = reason || fromContent;
+  const summary = chosen === "" ? "\u5DE5\u5177\u8FD4\u56DE\u5931\u8D25\u7ED3\u679C\uFF08\u65E0\u6B63\u6587\uFF09" : summarize(chosen);
+  return code === void 0 ? { summary } : { summary, code };
 }
 function takeName(names, callId) {
   const found = names.get(callId);
   names.delete(callId);
   return found;
 }
-function report(states) {
-  const merged = /* @__PURE__ */ new Map();
-  for (const state of states) {
-    for (const [tool, entry] of Object.entries(state)) {
-      const current = merged.get(tool);
-      if (current === void 0) {
-        merged.set(tool, { count: entry.count, errorCount: entry.errorCount, lastUsedAt: entry.lastUsedAt });
-        continue;
-      }
-      current.count += entry.count;
-      current.errorCount += entry.errorCount;
-      current.lastUsedAt = Math.max(current.lastUsedAt, entry.lastUsedAt);
-    }
-  }
-  const rows = [...merged].map(([tool, entry]) => ({
+function report(state) {
+  const rows = Object.entries(state).map(([tool, entry]) => ({
     tool,
     count: entry.count,
     errorCount: entry.errorCount,
@@ -62,49 +77,115 @@ function report(states) {
     failures: rows.reduce((sum, row) => sum + row.errorCount, 0)
   };
 }
+function windowed(state, days, from) {
+  if (days <= 0) return state;
+  const dayMs = 24 * 60 * 60 * 1e3;
+  const cutoff = dayKey(from - (days - 1) * dayMs);
+  const out = {};
+  for (const [tool, entry] of Object.entries(state)) {
+    let count = 0;
+    let lastUsedAt = 0;
+    for (const [day, calls] of Object.entries(entry.daily)) {
+      if (day < cutoff) continue;
+      count += calls;
+      if (entry.lastUsedAt > lastUsedAt) lastUsedAt = entry.lastUsedAt;
+    }
+    if (count === 0) continue;
+    out[tool] = {
+      count,
+      errorCount: 0,
+      lastUsedAt,
+      lastUsedDay: dayKey(lastUsedAt),
+      daily: {}
+    };
+  }
+  return out;
+}
+function coverage(state, retentionDays) {
+  let since = null;
+  let until = null;
+  for (const entry of Object.values(state)) {
+    for (const day of Object.keys(entry.daily)) {
+      if (since === null || day < since) since = day;
+      if (until === null || day > until) until = day;
+    }
+  }
+  return { since, until, retentionDays };
+}
 
 // src/storage.ts
 var DOMAIN_NAME = "tool_usage";
 var DOMAIN_VERSION = 1;
 var TABLE_NAME = "usage";
-var GLOBAL_KEY = "global";
-function parseState(raw) {
+var SNAPSHOT_KEY = "snapshot";
+function parseEntry(tool, entry) {
+  if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+    throw new TypeError(`entry '${tool}' must be an object`);
+  }
+  const typed = entry;
+  for (const field of ["count", "errorCount", "lastUsedAt"]) {
+    const value = typed[field];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+      throw new TypeError(`entry '${tool}'.${field} must be a non-negative number`);
+    }
+  }
+  if (typeof typed.lastUsedDay !== "string") {
+    throw new TypeError(`entry '${tool}'.lastUsedDay must be a string`);
+  }
+  const daily = typed.daily;
+  if (typeof daily !== "object" || daily === null || Array.isArray(daily)) {
+    throw new TypeError(`entry '${tool}'.daily must be an object`);
+  }
+  for (const [day, calls] of Object.entries(daily)) {
+    if (typeof calls !== "number" || !Number.isFinite(calls) || calls < 0) {
+      throw new TypeError(`entry '${tool}'.daily['${day}'] must be a non-negative number`);
+    }
+  }
+  return {
+    count: typed.count,
+    errorCount: typed.errorCount,
+    lastUsedAt: typed.lastUsedAt,
+    lastUsedDay: typed.lastUsedDay,
+    daily: { ...daily }
+  };
+}
+function parseSnapshot(raw) {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    throw new TypeError("tool usage state must be an object");
+    throw new TypeError("snapshot must be an object");
   }
-  const state = {};
-  for (const [tool, entry] of Object.entries(raw)) {
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
-      throw new TypeError(`tool usage entry '${tool}' must be an object`);
-    }
-    const typed = entry;
-    for (const field of ["count", "errorCount", "lastUsedAt"]) {
-      const value = typed[field];
-      if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-        throw new TypeError(`tool usage entry '${tool}'.${field} must be a non-negative number`);
-      }
-    }
-    if (typeof typed.lastUsedDay !== "string") {
-      throw new TypeError(`tool usage entry '${tool}'.lastUsedDay must be a string`);
-    }
-    const daily = typed.daily;
-    if (typeof daily !== "object" || daily === null || Array.isArray(daily)) {
-      throw new TypeError(`tool usage entry '${tool}'.daily must be an object`);
-    }
-    for (const [day, count] of Object.entries(daily)) {
-      if (typeof count !== "number" || !Number.isFinite(count) || count < 0) {
-        throw new TypeError(`tool usage entry '${tool}'.daily['${day}'] must be a non-negative number`);
-      }
-    }
-    state[tool] = {
-      count: typed.count,
-      errorCount: typed.errorCount,
-      lastUsedAt: typed.lastUsedAt,
-      lastUsedDay: typed.lastUsedDay,
-      daily: { ...daily }
-    };
+  const typed = raw;
+  const countersRaw = typed.counters;
+  if (typeof countersRaw !== "object" || countersRaw === null || Array.isArray(countersRaw)) {
+    throw new TypeError("snapshot.counters must be an object");
   }
-  return state;
+  const counters = {};
+  for (const [tool, entry] of Object.entries(countersRaw)) {
+    counters[tool] = parseEntry(tool, entry);
+  }
+  const failuresRaw = typed.failures ?? {};
+  if (typeof failuresRaw !== "object" || failuresRaw === null || Array.isArray(failuresRaw)) {
+    throw new TypeError("snapshot.failures must be an object");
+  }
+  const failures = {};
+  for (const [tool, samples] of Object.entries(failuresRaw)) {
+    if (!Array.isArray(samples)) throw new TypeError(`snapshot.failures['${tool}'] must be an array`);
+    failures[tool] = samples.map((sample, index) => {
+      if (typeof sample !== "object" || sample === null || Array.isArray(sample)) {
+        throw new TypeError(`snapshot.failures['${tool}'][${index}] must be an object`);
+      }
+      const typedSample = sample;
+      if (typeof typedSample.at !== "number" || typeof typedSample.summary !== "string") {
+        throw new TypeError(`snapshot.failures['${tool}'][${index}] needs a numeric 'at' and a string 'summary'`);
+      }
+      return {
+        at: typedSample.at,
+        summary: typedSample.summary,
+        ...typeof typedSample.code === "string" ? { code: typedSample.code } : {},
+        tool
+      };
+    });
+  }
+  return { counters, failures };
 }
 var toolUsageDomain = {
   name: DOMAIN_NAME,
@@ -112,7 +193,7 @@ var toolUsageDomain = {
   invalidRecords: "backup-and-skip",
   tables: {
     [TABLE_NAME]: {
-      valueSchema: { parse: parseState }
+      valueSchema: { parse: parseSnapshot }
     }
   }
 };
@@ -123,49 +204,74 @@ var inject = ["sessions"];
 var ToolUsageStats = class {
   /**
    * @param retainDays - daily buckets kept per tool.
+   * @param retainFailures - failure samples kept per tool.
    */
-  constructor(retainDays) {
+  constructor(retainDays, retainFailures) {
     this.retainDays = retainDays;
+    this.retainFailures = retainFailures;
   }
-  global = {};
+  counters = {};
+  failures = {};
   sessions = /* @__PURE__ */ new Map();
-  /** @returns the persistent counter set, replaced wholesale on each fold. */
-  get globalState() {
-    return this.global;
+  /** @returns the snapshot to persist. */
+  snapshot() {
+    return { counters: this.counters, failures: this.failures };
   }
   /**
-   * Adopt a counter set loaded from durable storage.
-   * @param state - the restored counters.
+   * Adopt a snapshot loaded from durable storage.
+   * @param loaded - the restored state.
    */
-  restore(state) {
-    this.global = state;
+  restore(loaded) {
+    this.counters = loaded.counters;
+    this.failures = loaded.failures;
   }
   /**
-   * Record one tool result in both the global and the session set.
+   * Record one tool result.
    * @param sessionId - the session the call ran in.
    * @param toolName - the tool that ran.
    * @param isError - whether its result was a failure.
    * @param at - epoch milliseconds of the observation.
+   * @param failure - the reason summary and code, when it failed.
    */
-  observe(sessionId, toolName, isError, at) {
-    this.global = record(this.global, toolName, isError, at, this.retainDays);
+  observe(sessionId, toolName, isError, at, failure) {
+    this.counters = record(this.counters, toolName, isError, at, this.retainDays);
     const current = this.sessions.get(sessionId) ?? {};
     this.sessions.set(sessionId, record(current, toolName, isError, at, this.retainDays));
+    if (isError) {
+      this.failures = recordFailure(this.failures, {
+        at,
+        summary: failure.summary,
+        tool: toolName,
+        ...failure.code === void 0 ? {} : { code: failure.code }
+      }, this.retainFailures);
+    }
   }
-  /** @returns the global and per-session reports the Client renders. */
-  snapshot() {
+  /**
+   * Build the response for one request.
+   * @param windows - day counts to include, each 0 or less meaning cumulative.
+   * @returns the report set.
+   */
+  view(windows) {
+    const now = Date.now();
     return {
-      global: report([this.global]),
+      global: report(this.counters),
+      windows: Object.fromEntries(
+        windows.filter((days) => days > 0).map((days) => [String(days), report(windowed(this.counters, days, now))])
+      ),
       sessions: Object.fromEntries(
-        [...this.sessions].map(([id, state]) => [id, report([state])])
-      )
+        [...this.sessions].map(([id, state]) => [id, report(state)])
+      ),
+      failures: this.failures,
+      coverage: coverage(this.counters, this.retainDays)
     };
   }
 };
+var DEFAULT_WINDOWS = [7, 30];
+var FLUSH_MS = 15e3;
 function apply(ctx, config = {}) {
   const retainDays = config.retainDays ?? 90;
-  const endpoint = config.endpoint ?? "/api/vyra/tool-usage";
-  const stats = new ToolUsageStats(retainDays);
+  const retainFailures = config.retainFailures ?? 20;
+  const stats = new ToolUsageStats(retainDays, retainFailures);
   const logger = ctx.get("logger");
   const pendingNames = /* @__PURE__ */ new Map();
   let durable;
@@ -177,7 +283,7 @@ function apply(ctx, config = {}) {
         const domain = await storageDomain.open(toolUsageDomain);
         const table = domain.table(TABLE_NAME);
         durable = table;
-        const restored = table.get(GLOBAL_KEY);
+        const restored = table.get(SNAPSHOT_KEY);
         if (restored !== void 0) stats.restore(restored);
         scoped.effect(() => () => {
           void domain.close();
@@ -187,78 +293,114 @@ function apply(ctx, config = {}) {
       }
     })();
   };
-  const initialStorageDomain = ctx.get("storageDomain");
-  if (initialStorageDomain === void 0) ctx.inject(["storageDomain"], openDurable);
+  if (ctx.get("storageDomain") === void 0) ctx.inject(["storageDomain"], openDurable);
   else openDurable(ctx);
-  const flushMs = 15e3;
   let lastFlushed;
   const flushTimer = setInterval(() => {
-    if (durable === void 0 || stats.globalState === lastFlushed) return;
-    lastFlushed = stats.globalState;
-    void durable.put(GLOBAL_KEY, stats.globalState).catch((error) => {
+    if (durable === void 0) return;
+    const current = stats.snapshot();
+    if (current.counters === lastFlushed?.counters && current.failures === lastFlushed?.failures) return;
+    lastFlushed = current;
+    void durable.put(SNAPSHOT_KEY, current).catch((error) => {
       logger?.warn?.(`tool-usage-stats: flush failed: ${String(error)}`);
     });
-  }, flushMs);
+  }, FLUSH_MS);
   flushTimer.unref?.();
   ctx.effect(() => () => {
     clearInterval(flushTimer);
   });
   ctx.on("session/event", (session, event) => {
     if (event.type === "tool/call") {
-      const data2 = event.data;
-      if (typeof data2.callId !== "string" || typeof data2.name !== "string") return;
+      const data = event.data;
+      if (typeof data.callId !== "string" || typeof data.name !== "string") return;
       let names2 = pendingNames.get(session.id);
       if (names2 === void 0) {
         names2 = /* @__PURE__ */ new Map();
         pendingNames.set(session.id, names2);
       }
-      names2.set(data2.callId, data2.name);
+      names2.set(data.callId, data.name);
       return;
     }
     if (event.type !== "tool/result") return;
-    const data = event.data;
-    const callId = data.message?.toolCallId;
-    if (typeof callId !== "string") return;
+    const result = readResult(event.data);
+    if (result === void 0) return;
     const names = pendingNames.get(session.id);
-    const toolName = names === void 0 ? void 0 : takeName(names, callId);
+    const toolName = names === void 0 ? void 0 : takeName(names, result.callId);
     if (toolName === void 0) return;
     try {
-      stats.observe(session.id, toolName, resultIsError(data), Date.now());
+      const detail = failureDetail(event.data, result);
+      stats.observe(session.id, toolName, result.isError, Date.now(), detail);
     } catch (error) {
       logger?.warn?.(`tool-usage-stats: ${String(error)}`);
     }
   });
-  const registerRoute = () => {
+  const registerRoutes = () => {
     const connection = ctx.get("connection");
     if (connection?.fetch === void 0) return false;
+    const json = (body) => new Response(JSON.stringify(body), {
+      headers: { "content-type": "application/json" }
+    });
     try {
-      const dispose = connection.fetch.register({
-        path: endpoint,
-        methods: ["GET"],
-        requestBody: "buffered",
-        fetch: async () => new Response(JSON.stringify(stats.snapshot()), {
-          headers: { "content-type": "application/json" }
+      const disposers = [
+        connection.fetch.register({
+          path: config.endpoint ?? "/api/vyra/tool-usage",
+          methods: ["GET"],
+          requestBody: "buffered",
+          fetch: async (request) => {
+            const requested = new URL(request.url).searchParams.getAll("window").map((value) => Number.parseInt(value, 10)).filter((value) => Number.isFinite(value));
+            return json(stats.view(requested.length === 0 ? [...DEFAULT_WINDOWS] : requested));
+          }
+        }),
+        // The audit export is a separate route because it is a download, not a
+        // panel read: the Client hands it to the browser rather than rendering it.
+        connection.fetch.register({
+          path: config.endpoint === void 0 ? "/api/vyra/tool-usage/export" : `${config.endpoint}/export`,
+          methods: ["GET"],
+          requestBody: "buffered",
+          fetch: async () => new Response(JSON.stringify(buildExport(stats), void 0, 2), {
+            headers: {
+              "content-type": "application/json",
+              "content-disposition": `attachment; filename="tool-usage-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json"`
+            }
+          })
         })
-      });
+      ];
       ctx.effect(() => () => {
-        void dispose();
+        for (const dispose of disposers) void dispose();
       });
       return true;
     } catch (error) {
-      logger?.warn?.(`tool-usage-stats: cannot register ${endpoint}: ${String(error)}`);
+      logger?.warn?.(`tool-usage-stats: cannot register endpoints: ${String(error)}`);
       return true;
     }
   };
-  if (!registerRoute()) {
-    logger?.warn?.("tool-usage-stats: connection not ready, waiting");
-    const ctxWithInject = ctx;
-    ctxWithInject.inject?.(["connection"], () => {
-      registerRoute();
-    });
-  }
+  if (!registerRoutes()) ctx.inject(["connection"], () => {
+    registerRoutes();
+  });
+}
+function buildExport(stats) {
+  const view = stats.view([0]);
+  const failures = Object.values(view.failures).flat().sort((left, right) => right.at - left.at).map((sample) => ({
+    tool: sample.tool,
+    at: sample.at,
+    ...sample.code === void 0 ? {} : { code: sample.code },
+    summary: sample.summary
+  }));
+  return {
+    exportedAt: Date.now(),
+    coverage: view.coverage,
+    totals: view.global.rows.map((row) => ({
+      tool: row.tool,
+      count: row.count,
+      errorCount: row.errorCount,
+      lastUsedAt: row.lastUsedAt
+    })),
+    failures
+  };
 }
 export {
   apply,
   inject,
-  name
+  name,
+  summarize
 };

@@ -23,11 +23,16 @@ const ctx = new Context()
 const warnings: string[] = []
 ctx.provide('logger', { warn: (message: string) => warnings.push(message) } as never)
 
-let route: { path: string; methods: readonly string[]; fetch: (request: Request) => Promise<Response> } | undefined
+interface Route {
+  path: string
+  methods: readonly string[]
+  fetch: (request: Request) => Promise<Response>
+}
+const routes = new Map<string, Route>()
 ctx.provide('connection', {
   fetch: {
-    register: (registered: typeof route) => {
-      route = registered
+    register: (registered: Route) => {
+      routes.set(registered.path, registered)
       return () => {}
     },
   },
@@ -35,7 +40,8 @@ ctx.provide('connection', {
 
 const plugin = await import('../lib/index.js') as { apply: (ctx: unknown) => void }
 plugin.apply(ctx)
-assert.ok(route !== undefined)
+const route = routes.get('/api/vyra/tool-usage')
+assert.ok(route !== undefined, 'the read endpoint must be registered')
 
 const session = { id: 'e2e-session' }
 const emit = (event: unknown): void => {
