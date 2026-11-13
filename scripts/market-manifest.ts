@@ -130,12 +130,12 @@ export const manifest: MarketManifest = {
     {
       name: 'vyra-tool-usage-stats',
       title: {
-        en: 'Tool Usage Stats',
-        zh: '工具调用统计',
+        en: 'Tool Self-Evolution',
+        zh: '工具自进化',
       },
       description: {
-        en: 'Per-tool calls, failures with their reasons, last use, time windows, and a JSON export.',
-        zh: '按工具统计调用次数、失败原因、最后使用时间，支持时间窗口与 JSON 导出。',
+        en: 'Lets your tools evolve: it counts every call, records why each one failed, then asks the agent to diagnose the repeat offenders and propose a fix you can apply in one click. Fewer repeated failures, fewer wasted tokens.',
+        zh: '让 DSH 的工具自己进化：统计每次调用、记下每次失败的原因，定时交给 Agent 诊断那些反复出错的工具，给出可一键应用的修复。减少重复报错，也减少为同样错误反复烧掉的 token。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -145,22 +145,13 @@ export const manifest: MarketManifest = {
       },
       icon: TOOL_USAGE_ICON,
       versions: {
-        '0.2.2': {
+        '0.5.0': {
           // Unix seconds of the commit that published it.
-          publishTimestamp: 1794496500,
+          publishTimestamp: 1794537200,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'e513d8301e939a7f58a833f88b0c14351833c704',
-            path: 'plugins/tool-usage-stats',
-          },
-        },
-        '0.2.0': {
-          publishTimestamp: 1794495320,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '3aaa939e82edf9fbcd5a71571cc2004c2bccb896',
+            commit: 'a5dda9171cf8e21e17a96d6e90ff56395a238230',
             path: 'plugins/tool-usage-stats',
           },
         },
