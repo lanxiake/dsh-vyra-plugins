@@ -113,7 +113,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PLACEHOLDER_COMMIT",
+            "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
             "path": "plugins/vyra-agent-manager"
           }
         }
@@ -151,7 +151,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PLACEHOLDER_COMMIT",
+            "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
             "path": "plugins/vyra-smart-compaction"
           }
         }
@@ -189,7 +189,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PLACEHOLDER_COMMIT",
+            "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
             "path": "plugins/vyra-skill-mcp-manager"
           }
         }
@@ -227,7 +227,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PLACEHOLDER_COMMIT",
+            "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
             "path": "plugins/vyra-page-translator"
           }
         }
@@ -265,7 +265,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PLACEHOLDER_COMMIT",
+            "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
             "path": "plugins/vyra-ssh-terminal"
           }
         }

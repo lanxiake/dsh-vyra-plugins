@@ -45,14 +45,18 @@ const SSH_TERMINAL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cmVjdCB4PSI2IiB5PSIxMCIgd2lkdGg9IjUyIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iIzFmMjkzNyIvPgogIDxyZWN0IHg9IjYiIHk9IjEwIiB3aWR0aD0iNTIiIGhlaWdodD0iMTAiIHJ4PSI4IiBmaWxsPSIjMzc0MTUxIi8+CiAgPGNpcmNsZSBjeD0iMTQiIGN5PSIxNSIgcj0iMiIgZmlsbD0iI2Y4NzE3MSIvPgogIDxjaXJjbGUgY3g9IjIxIiBjeT0iMTUiIHI9IjIiIGZpbGw9IiNmYmJmMjQiLz4KICA8Y2lyY2xlIGN4PSIyOCIgY3k9IjE1IiByPSIyIiBmaWxsPSIjMzRkMzk5Ii8+CiAgPHBhdGggZD0iTTE1IDMxbDggNi04IDYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM0ZDM5OSIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yOSA0NGgxNCIgc3Ryb2tlPSIjZTVlN2ViIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo='
 
 /**
- * Commit every plugin published in the current release installs from.
+ * How a version's `commit` is chosen.
  *
- * A manifest cannot name the commit that publishes it — the SHA does not
- * exist until the commit is made — so this one value is the single place a
- * release is pinned, and the publish step rewrites it to the real SHA before
- * committing. Generated, along with the icons, by `sync-manifest-icons.mjs`.
+ * Each version records the commit it was published at, and a SHA cannot name
+ * the commit that publishes it — so the order is: commit the plugin files
+ * first, then write that SHA into the entries here, rebuild the index, and
+ * commit the manifest. A version already published keeps its SHA permanently;
+ * repinning it would make an install source change under a version that users
+ * have already resolved.
+ *
+ * `scripts/publish-plugins.mjs` runs those steps in that order, deriving each
+ * SHA from the commit that actually holds the plugin's files.
  */
-const PLACEHOLDER_COMMIT = 'PLACEHOLDER_COMMIT'
 
 /** The validated index's localized-text union. */
 export type LocalizedText = string | LocaleMap
@@ -213,7 +217,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: PLACEHOLDER_COMMIT,
+            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
             path: 'plugins/vyra-agent-manager',
           },
         },
@@ -246,7 +250,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: PLACEHOLDER_COMMIT,
+            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
             path: 'plugins/vyra-smart-compaction',
           },
         },
@@ -279,7 +283,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: PLACEHOLDER_COMMIT,
+            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
             path: 'plugins/vyra-skill-mcp-manager',
           },
         },
@@ -312,7 +316,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: PLACEHOLDER_COMMIT,
+            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
             path: 'plugins/vyra-page-translator',
           },
         },
@@ -345,7 +349,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: PLACEHOLDER_COMMIT,
+            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
             path: 'plugins/vyra-ssh-terminal',
           },
         },

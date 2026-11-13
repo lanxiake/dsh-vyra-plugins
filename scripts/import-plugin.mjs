@@ -26,6 +26,7 @@ const EXCLUDED = ['node_modules', '.git', 'src', 'test', 'tests', 'scripts', 'ba
 
 /** Extensions never copied: archives of the source tree, or dep manifests an install ignores. */
 const EXCLUDED_FILES = new Set(['pnpm-lock.yaml', 'pnpm-workspace.yaml', 'package-lock.json'])
+const EXCLUDED_SUFFIXES = ['.tgz', '.tar.gz']
 
 const [sourceArg, targetArg] = process.argv.slice(2)
 if (sourceArg === undefined || targetArg === undefined) {
@@ -56,7 +57,7 @@ cpSync(source, target, {
   filter: (from) => {
     const name = basename(from)
     if (EXCLUDED.includes(name)) return false
-    return !EXCLUDED_FILES.has(name)
+    return !EXCLUDED_FILES.has(name) && !EXCLUDED_SUFFIXES.some(suffix => name.endsWith(suffix))
   },
 })
 
