@@ -471,6 +471,8 @@ var ToolUsageStats = class {
   /** Set while a scheduled analysis is in flight, so one run is not stacked on another. */
   analyzing = false;
   sessions = /* @__PURE__ */ new Map();
+  /** The diagnosis settings the panel shows and edits. */
+  settings = { analyzeEveryHours: 24, minFailures: 5, cooldownDays: 7 };
   /** @returns the snapshot to persist. */
   snapshot() {
     return {
@@ -593,7 +595,8 @@ var ToolUsageStats = class {
         pending: this.diagnosis.pending,
         applied: this.applied,
         lastRunAt: this.diagnosis.lastRunAt,
-        analyzing: this.analyzing
+        analyzing: this.analyzing,
+        settings: this.settings
       }
     };
   }
@@ -728,6 +731,11 @@ function apply(ctx, config = {}) {
     minFailures: config.minFailures ?? DEFAULT_POLICY.minFailures,
     cooldownDays: config.cooldownDays ?? DEFAULT_POLICY.cooldownDays
   };
+  stats.settings = {
+    analyzeEveryHours: config.analyzeEveryHours ?? 24,
+    minFailures: policy.minFailures,
+    cooldownDays: policy.cooldownDays
+  };
   const toolDefinitions = () => {
     const tools = ctx.get("tools");
     const definitions = tools?.definitions?.() ?? [];
@@ -753,13 +761,7 @@ function apply(ctx, config = {}) {
       }
       requestedFrom.delete(sessionId);
       stats.endAnalysis();
-      const text = [
-        "\u3010\u5DE5\u5177\u8BCA\u65AD\u8BF7\u6C42\u3011",
-        "",
-        prepared.prompt,
-        "",
-        "\uFF08\u8FD9\u662F vyra \u5DE5\u5177\u7528\u91CF\u63D2\u4EF6\u81EA\u52A8\u53D1\u51FA\u7684\u8BCA\u65AD\u8BF7\u6C42\u3002\u8BF7\u53EA\u56DE\u590D\u4E0A\u9762\u8981\u6C42\u7684\u5185\u5BB9\u3002\uFF09"
-      ].join("\n");
+      const text = diagnosisMessage(prepared.prompt);
       return {
         ...decision,
         messages: [
@@ -845,10 +847,7 @@ function apply(ctx, config = {}) {
           requestBody: "buffered",
           fetch: async (request) => {
             const body = await request.json().catch(() => ({}));
-            const sessionId = typeof body.sessionId === "string" ? body.sessionId : void 0;
-            if (sessionId === void 0) {
-              return json({ ok: false, detail: "\u9700\u8981 sessionId\uFF1A\u8BCA\u65AD\u8BF7\u6C42\u8981\u53D1\u5230\u67D0\u4E2A\u4F1A\u8BDD\u91CC" }, 400);
-            }
+            const requested = typeof body.sessionId === "string" ? body.sessionId : void 0;
             const prepared = prepareRun(
               stats.currentCounters,
               stats.currentFailures,
@@ -862,9 +861,42 @@ function apply(ctx, config = {}) {
                 detail: `\u6CA1\u6709\u8FBE\u5230\u5206\u6790\u6761\u4EF6\u7684\u5DE5\u5177\uFF08\u9700\u8981\u65B0\u589E\u5931\u8D25 \u2265 ${policy.minFailures} \u6B21\uFF0C\u4E14\u8DDD\u4E0A\u6B21\u5206\u6790 \u2265 ${policy.cooldownDays} \u5929\uFF09`
               }, 409);
             }
+            let sessionId = requested;
+            let created = false;
+            if (sessionId === void 0) {
+              const agents = ctx.get("agents");
+              if (agents?.create === void 0) {
+                return json({ ok: false, detail: "\u65E0\u6CD5\u65B0\u5EFA\u4F1A\u8BDD\uFF1Aagents \u670D\u52A1\u4E0D\u53EF\u7528" }, 503);
+              }
+              try {
+                sessionId = `vyra-diagnosis-${Date.now().toString(36)}`;
+                const handle = await agents.create({ sessionId });
+                created = true;
+                const agent = handle?.agent;
+                agent?.followup?.({
+                  role: "user",
+                  content: [{ type: "text", text: diagnosisMessage(prepared.prompt) }],
+                  source: { kind: "user" }
+                });
+                stats.beginAnalysis();
+                return json({
+                  ok: true,
+                  sessionId,
+                  created,
+                  targets: prepared.targets.map((target) => target.tool)
+                });
+              } catch (error) {
+                return json({ ok: false, detail: `\u65B0\u5EFA\u4F1A\u8BDD\u5931\u8D25\uFF1A${String(error)}` }, 500);
+              }
+            }
             stats.beginAnalysis();
             requestedFrom.set(sessionId, prepared);
-            return json({ ok: true, targets: prepared.targets.map((target) => target.tool) });
+            return json({
+              ok: true,
+              sessionId,
+              created,
+              targets: prepared.targets.map((target) => target.tool)
+            });
           }
         }),
         // Applying a proposal is the only path that changes a live tool.
@@ -901,6 +933,39 @@ function apply(ctx, config = {}) {
             if (toolName === void 0) return json({ ok: false, detail: "\u9700\u8981 tool" }, 400);
             stats.dismissProposal(toolName);
             return json({ ok: true });
+          }
+        }),
+        // Configuration is edited through the Host's own config editor rather
+        // than by writing the profile file: the editor owns the file lock, the
+        // bundle reconciliation, and the reload that makes a change take effect.
+        connection.fetch.register({
+          path: `${base}/config`,
+          methods: ["POST"],
+          requestBody: "buffered",
+          fetch: async (request) => {
+            const body = await request.json().catch(() => ({}));
+            const editor = ctx.get("configEditor");
+            const entry = editor?.entries?.().find((candidate) => candidate.options.id === name);
+            if (editor?.edit === void 0 || entry === void 0) {
+              return json({ ok: false, detail: "\u8BE5 profile \u6CA1\u6709\u53EF\u7F16\u8F91\u7684\u672C\u63D2\u4EF6\u914D\u7F6E\u884C\uFF08\u9700\u8981 Web \u6216 Desktop \u5BA2\u6237\u7AEF\uFF09" }, 503);
+            }
+            const next = {};
+            const num = (value, min) => typeof value === "number" && Number.isFinite(value) && value >= min ? value : void 0;
+            const hours = num(body.analyzeEveryHours, 0);
+            const minFailures = num(body.minFailures, 1);
+            const cooldown = num(body.cooldownDays, 0);
+            if (hours !== void 0) next.analyzeEveryHours = hours;
+            if (minFailures !== void 0) next.minFailures = minFailures;
+            if (cooldown !== void 0) next.cooldownDays = cooldown;
+            if (Object.keys(next).length === 0) {
+              return json({ ok: false, detail: "\u6CA1\u6709\u53EF\u5199\u5165\u7684\u914D\u7F6E\u9879" }, 400);
+            }
+            try {
+              await editor.edit(entry, (current) => ({ ...current, ...next }));
+              return json({ ok: true, config: next });
+            } catch (error) {
+              return json({ ok: false, detail: `\u5199\u5165\u914D\u7F6E\u5931\u8D25\uFF1A${String(error)}` }, 500);
+            }
           }
         })
       ];
@@ -952,6 +1017,15 @@ function swapIn(tools, toolName, change, swaps, stats, logger) {
   });
   logger?.warn?.("tool-usage-stats: replaced " + toolName);
   return { ok: true };
+}
+function diagnosisMessage(prompt) {
+  return [
+    "\u3010\u5DE5\u5177\u8BCA\u65AD\u8BF7\u6C42\u3011",
+    "",
+    prompt,
+    "",
+    "\uFF08\u8FD9\u662F vyra \u5DE5\u5177\u7528\u91CF\u63D2\u4EF6\u81EA\u52A8\u53D1\u51FA\u7684\u8BCA\u65AD\u8BF7\u6C42\u3002\u8BF7\u53EA\u56DE\u590D\u4E0A\u9762\u8981\u6C42\u7684\u5185\u5BB9\u3002\uFF09"
+  ].join("\n");
 }
 function buildExport(stats) {
   const view = stats.view([0]);

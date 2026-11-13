@@ -466,6 +466,71 @@ function createPanel(React) {
         data.diagnosis.lastRunAt === 0 ? "\u8FD8\u6CA1\u6709\u5206\u6790\u8FC7" : `\u4E0A\u6B21\u5206\u6790 ${formatTime(data.diagnosis.lastRunAt)}`
       )
     );
+    const settingsCard = h(
+      "div",
+      { style: { ...CARD, marginTop: "12px" } },
+      h("div", { style: { fontWeight: "600", color: C.text, marginBottom: "10px", ...T.body } }, "\u81EA\u52A8\u5206\u6790\u8BBE\u7F6E"),
+      h(
+        "div",
+        { style: { display: "grid", gap: "10px" } },
+        settingRow(
+          "\u81EA\u52A8\u68C0\u67E5\u95F4\u9694",
+          "analyzeEveryHours",
+          data.diagnosis.settings.analyzeEveryHours,
+          "\u5C0F\u65F6\u30020 = \u5173\u95ED\u81EA\u52A8\u5206\u6790\uFF0C\u53EA\u7528\u300C\u7ACB\u5373\u5206\u6790\u300D\u3002"
+        ),
+        settingRow(
+          "\u89E6\u53D1\u95E8\u69DB",
+          "minFailures",
+          data.diagnosis.settings.minFailures,
+          "\u65B0\u589E\u5931\u8D25\u8FBE\u5230\u51E0\u6B21\u624D\u503C\u5F97\u8BCA\u65AD\u3002"
+        ),
+        settingRow(
+          "\u51B7\u5374\u5929\u6570",
+          "cooldownDays",
+          data.diagnosis.settings.cooldownDays,
+          "\u540C\u4E00\u4E2A\u5DE5\u5177\u9694\u51E0\u5929\u624D\u80FD\u518D\u5206\u6790\u4E00\u6B21\u3002"
+        )
+      )
+    );
+    function settingRow(label, key, value, hint) {
+      return h(
+        "div",
+        { style: { display: "grid", gridTemplateColumns: "auto 80px 1fr", gap: "10px", alignItems: "center" } },
+        h("span", { style: { color: C.textSecondary, whiteSpace: "nowrap", ...T.body } }, label),
+        h("input", {
+          type: "number",
+          defaultValue: String(value),
+          min: key === "minFailures" ? "1" : "0",
+          disabled: busy === "config",
+          onBlur: (event) => {
+            const next = Number(event.target.value);
+            if (!Number.isFinite(next) || next === value) return;
+            setBusy("config");
+            setNotice(void 0);
+            void call(`${ENDPOINT}/config`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ [key]: next })
+            }).then((result) => {
+              const typed = result;
+              setBusy(void 0);
+              setNotice(typed.ok === true ? "\u8BBE\u7F6E\u5DF2\u4FDD\u5B58\uFF0C\u63D2\u4EF6\u4F1A\u91CD\u65B0\u52A0\u8F7D" : typed.detail ?? "\u4FDD\u5B58\u5931\u8D25");
+              refresh();
+            });
+          },
+          style: {
+            padding: "4px 8px",
+            borderRadius: "6px",
+            border: `1px solid ${C.border}`,
+            background: C.card,
+            color: C.text,
+            font: "inherit"
+          }
+        }),
+        h("span", { style: { color: C.textTertiary, ...T.caption } }, hint)
+      );
+    }
     const noticeBar = notice === void 0 ? null : h("div", {
       style: {
         marginTop: "8px",
@@ -488,6 +553,7 @@ function createPanel(React) {
           emptyText(windowDays, data.coverage)
         ),
         analysisBar,
+        settingsCard,
         noticeBar
       );
     }
@@ -520,6 +586,7 @@ function createPanel(React) {
         h("tbody", null, body)
       ),
       analysisBar,
+      settingsCard,
       noticeBar
     );
   };

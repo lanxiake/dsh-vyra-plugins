@@ -182,6 +182,10 @@ class ToolUsageStats {
   private analyzing = false
   private readonly sessions = new Map<string, ToolUsageState>()
 
+  /** The diagnosis settings the panel shows and edits. */
+  settings: { analyzeEveryHours: number; minFailures: number; cooldownDays: number } =
+    { analyzeEveryHours: 24, minFailures: 5, cooldownDays: 7 }
+
   /**
    * @param retainDays - daily buckets kept per tool.
    * @param retainFailures - failure samples kept per tool.
@@ -339,6 +343,7 @@ class ToolUsageStats {
         applied: this.applied,
         lastRunAt: this.diagnosis.lastRunAt,
         analyzing: this.analyzing,
+        settings: this.settings,
       },
     }
   }
@@ -586,6 +591,11 @@ export function apply(ctx: Context, config: Config = {}): void {
     minFailures: config.minFailures ?? DEFAULT_POLICY.minFailures,
     cooldownDays: config.cooldownDays ?? DEFAULT_POLICY.cooldownDays,
   }
+  stats.settings = {
+    analyzeEveryHours: config.analyzeEveryHours ?? 24,
+    minFailures: policy.minFailures,
+    cooldownDays: policy.cooldownDays,
+  }
 
   /** Definitions of the tools the registry currently holds, by name. */
   const toolDefinitions = (): Map<string, RegisteredTool> => {
@@ -645,13 +655,7 @@ export function apply(ctx: Context, config: Config = {}): void {
       // on from blocking every later one.
       stats.endAnalysis()
 
-      const text = [
-        '【工具诊断请求】',
-        '',
-        prepared.prompt,
-        '',
-        '（这是 vyra 工具用量插件自动发出的诊断请求。请只回复上面要求的内容。）',
-      ].join('\n')
+      const text = diagnosisMessage(prepared.prompt)
 
       return {
         ...decision,
@@ -772,10 +776,8 @@ export function apply(ctx: Context, config: Config = {}): void {
           requestBody: 'buffered',
           fetch: async (request) => {
             const body = await request.json().catch(() => ({})) as { sessionId?: unknown }
-            const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined
-            if (sessionId === undefined) {
-              return json({ ok: false, detail: '需要 sessionId：诊断请求要发到某个会话里' }, 400)
-            }
+            const requested = typeof body.sessionId === 'string' ? body.sessionId : undefined
+
             const prepared = prepareRun(
               stats.currentCounters, stats.currentFailures, stats.diagnosisState, policy, Date.now(),
             )
@@ -785,11 +787,55 @@ export function apply(ctx: Context, config: Config = {}): void {
                 detail: `没有达到分析条件的工具（需要新增失败 ≥ ${policy.minFailures} 次，且距上次分析 ≥ ${policy.cooldownDays} 天）`,
               }, 409)
             }
+
+            // No session to deliver to? Make one and wake it. A diagnosis is a
+            // plain question, so it needs a conversation and nothing else, and a
+            // freshly created agent is idle — the request would sit unread
+            // forever without the follow-up.
+            let sessionId = requested
+            let created = false
+            if (sessionId === undefined) {
+              const agents = ctx.get('agents') as {
+                create?: (options: { sessionId: string }) => Promise<{ agent?: { followup?: (message: unknown) => void } }>
+              } | undefined
+              if (agents?.create === undefined) {
+                return json({ ok: false, detail: '无法新建会话：agents 服务不可用' }, 503)
+              }
+              try {
+                sessionId = `vyra-diagnosis-${Date.now().toString(36)}`
+                const handle = await agents.create({ sessionId })
+                created = true
+                const agent = (handle as { agent?: { followup?: (message: unknown) => void } })?.agent
+                // The prompt goes in as the conversation's first message so the
+                // session is not empty, and so the request is the thing being
+                // answered rather than an aside.
+                agent?.followup?.({
+                  role: 'user',
+                  content: [{ type: 'text', text: diagnosisMessage(prepared.prompt) }],
+                  source: { kind: 'user' },
+                })
+                stats.beginAnalysis()
+                return json({
+                  ok: true,
+                  sessionId,
+                  created,
+                  targets: prepared.targets.map(target => target.tool),
+                })
+              } catch (error) {
+                return json({ ok: false, detail: `新建会话失败：${String(error)}` }, 500)
+              }
+            }
+
             // Replaces any request already waiting: the user is asking for the
             // current diagnosis, and one prepared a moment ago is staler.
             stats.beginAnalysis()
             requestedFrom.set(sessionId, prepared)
-            return json({ ok: true, targets: prepared.targets.map(target => target.tool) })
+            return json({
+              ok: true,
+              sessionId,
+              created,
+              targets: prepared.targets.map(target => target.tool),
+            })
           },
         }),
         // Applying a proposal is the only path that changes a live tool.
@@ -831,6 +877,53 @@ export function apply(ctx: Context, config: Config = {}): void {
             if (toolName === undefined) return json({ ok: false, detail: '需要 tool' }, 400)
             stats.dismissProposal(toolName)
             return json({ ok: true })
+          },
+        }),
+        // Configuration is edited through the Host's own config editor rather
+        // than by writing the profile file: the editor owns the file lock, the
+        // bundle reconciliation, and the reload that makes a change take effect.
+        connection.fetch.register({
+          path: `${base}/config`,
+          methods: ['POST'],
+          requestBody: 'buffered',
+          fetch: async (request) => {
+            const body = await request.json().catch(() => ({})) as {
+              analyzeEveryHours?: unknown
+              minFailures?: unknown
+              cooldownDays?: unknown
+            }
+
+            const editor = ctx.get('configEditor') as {
+              entries?: () => readonly { options: { id: string } }[]
+              edit?: (
+                entry: unknown,
+                change: (current: Record<string, unknown>, inherited: Record<string, unknown>) => Record<string, unknown>,
+              ) => Promise<void>
+            } | undefined
+            const entry = editor?.entries?.().find(candidate => candidate.options.id === name)
+            if (editor?.edit === undefined || entry === undefined) {
+              return json({ ok: false, detail: '该 profile 没有可编辑的本插件配置行（需要 Web 或 Desktop 客户端）' }, 503)
+            }
+
+            const next: Record<string, unknown> = {}
+            const num = (value: unknown, min: number): number | undefined =>
+              typeof value === 'number' && Number.isFinite(value) && value >= min ? value : undefined
+            const hours = num(body.analyzeEveryHours, 0)
+            const minFailures = num(body.minFailures, 1)
+            const cooldown = num(body.cooldownDays, 0)
+            if (hours !== undefined) next.analyzeEveryHours = hours
+            if (minFailures !== undefined) next.minFailures = minFailures
+            if (cooldown !== undefined) next.cooldownDays = cooldown
+            if (Object.keys(next).length === 0) {
+              return json({ ok: false, detail: '没有可写入的配置项' }, 400)
+            }
+
+            try {
+              await editor.edit(entry, current => ({ ...current, ...next }))
+              return json({ ok: true, config: next })
+            } catch (error) {
+              return json({ ok: false, detail: `写入配置失败：${String(error)}` }, 500)
+            }
           },
         }),
       ]
@@ -929,6 +1022,25 @@ function swapIn(
   })
   logger?.warn?.("tool-usage-stats: replaced " + toolName)
   return { ok: true }
+}
+
+/**
+ * Wrap a prepared prompt as the message the model answers.
+ *
+ * One function for both delivery paths — a step's `decision.messages` and a
+ * fresh session's first follow-up — so the wording cannot drift between them.
+ *
+ * @param prompt - the grouped failure report.
+ * @returns the text to send.
+ */
+function diagnosisMessage(prompt: string): string {
+  return [
+    '【工具诊断请求】',
+    '',
+    prompt,
+    '',
+    '（这是 vyra 工具用量插件自动发出的诊断请求。请只回复上面要求的内容。）',
+  ].join('\n')
 }
 
 /** The exported document shape. */

@@ -101,6 +101,7 @@ interface StatsResponse {
     applied: AppliedChange[]
     lastRunAt: number
     analyzing: boolean
+    settings: { analyzeEveryHours: number; minFailures: number; cooldownDays: number }
   }
 }
 
@@ -598,6 +599,63 @@ function createPanel(React: ReactModule): () => unknown {
           ? '还没有分析过'
           : `上次分析 ${formatTime(data.diagnosis.lastRunAt)}`))
 
+    /**
+     * The settings card.
+     *
+     * Editable here rather than only in YAML because these three numbers are the
+     * difference between "asks too often and burns tokens" and "never asks" —
+     * and the person who can judge that is looking at this table, not at a
+     * profile patch.
+     */
+    const settingsCard = h('div', { style: { ...CARD, marginTop: '12px' } },
+      h('div', { style: { fontWeight: '600', color: C.text, marginBottom: '10px', ...T.body } }, '自动分析设置'),
+      h('div', { style: { display: 'grid', gap: '10px' } },
+        settingRow('自动检查间隔', 'analyzeEveryHours', data.diagnosis.settings.analyzeEveryHours,
+          '小时。0 = 关闭自动分析，只用「立即分析」。'),
+        settingRow('触发门槛', 'minFailures', data.diagnosis.settings.minFailures,
+          '新增失败达到几次才值得诊断。'),
+        settingRow('冷却天数', 'cooldownDays', data.diagnosis.settings.cooldownDays,
+          '同一个工具隔几天才能再分析一次。')))
+
+    /** One labelled number input that writes on blur. */
+    function settingRow(label: string, key: string, value: number, hint: string): unknown {
+      return h('div', { style: { display: 'grid', gridTemplateColumns: 'auto 80px 1fr', gap: '10px', alignItems: 'center' } },
+        h('span', { style: { color: C.textSecondary, whiteSpace: 'nowrap', ...T.body } }, label),
+        h('input', {
+          type: 'number',
+          defaultValue: String(value),
+          min: key === 'minFailures' ? '1' : '0',
+          disabled: busy === 'config',
+          onBlur: (event: { target: { value: string } }) => {
+            const next = Number(event.target.value)
+            if (!Number.isFinite(next) || next === value) return
+            setBusy('config')
+            setNotice(undefined)
+            void call(`${ENDPOINT}/config`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ [key]: next }),
+            }).then((result) => {
+              const typed = result as { ok?: boolean; detail?: string }
+              setBusy(undefined)
+              setNotice(typed.ok === true
+                ? '设置已保存，插件会重新加载'
+                : typed.detail ?? '保存失败')
+              refresh()
+            })
+          },
+          style: {
+            padding: '4px 8px',
+            borderRadius: '6px',
+            border: `1px solid ${C.border}`,
+            background: C.card,
+            color: C.text,
+            font: 'inherit',
+          },
+        }),
+        h('span', { style: { color: C.textTertiary, ...T.caption } }, hint))
+    }
+
     const noticeBar = notice === undefined
       ? null
       : h('div', {
@@ -623,6 +681,7 @@ function createPanel(React: ReactModule): () => unknown {
         h('div', { style: { color: C.textSecondary, marginBottom: '14px', ...T.body } },
           emptyText(windowDays, data.coverage)),
         analysisBar,
+        settingsCard,
         noticeBar)
     }
 
@@ -642,6 +701,7 @@ function createPanel(React: ReactModule): () => unknown {
         h('thead', null, h('tr', null, header)),
         h('tbody', null, body)),
       analysisBar,
+      settingsCard,
       noticeBar)
   }
 }
