@@ -319,19 +319,25 @@ function apply(ctx, config = {}) {
   if (ctx.get("storageDomain") === void 0) ctx.inject(["storageDomain"], openDurable);
   else openDurable(ctx);
   let lastFlushed;
-  const flushTimer = setInterval(() => {
-    if (durable === void 0) return;
+  const flush = () => {
+    if (durable === void 0) return Promise.resolve();
     const current = stats.snapshot();
-    if (current.counters === lastFlushed?.counters && current.failures === lastFlushed?.failures) return;
+    if (current.counters === lastFlushed?.counters && current.failures === lastFlushed?.failures) {
+      return Promise.resolve();
+    }
     lastFlushed = current;
-    void durable.put(SNAPSHOT_KEY, current).catch((error) => {
+    return durable.put(SNAPSHOT_KEY, current).catch((error) => {
       logger?.warn?.(`tool-usage-stats: flush failed: ${String(error)}`);
     });
+  };
+  const flushTimer = setInterval(() => {
+    void flush();
   }, FLUSH_MS);
   flushTimer.unref?.();
   ctx.effect(() => () => {
     clearInterval(flushTimer);
   });
+  ctx.on("session/flush", (() => flush()));
   ctx.on("session/event", (session, event) => {
     if (event.type === "tool/call") {
       const data = event.data;

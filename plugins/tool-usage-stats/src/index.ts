@@ -66,7 +66,10 @@ interface SessionEvent {
 
 /** Minimal Cordis surface this plugin uses, so the module needs no framework import. */
 interface Context {
-  on: (event: 'session/event', listener: (session: { id: string }, event: SessionEvent) => void) => void
+  on: {
+    (event: 'session/event', listener: (session: { id: string }, event: SessionEvent) => void): void
+    (event: 'session/flush', listener: () => Promise<void> | void): void
+  }
   effect: (callback: () => (() => unknown) | undefined) => unknown
   get: (name: string) => unknown
   inject: (services: string[], callback: (scoped: Context) => void) => unknown
@@ -232,21 +235,30 @@ export function apply(ctx: Context, config: Config = {}): void {
   if (ctx.get('storageDomain') === undefined) ctx.inject(['storageDomain'], openDurable)
   else openDurable(ctx)
 
-  // Persisting on every tool call would write thousands of times per session.
-  // A coarse interval keeps the durable copy close enough to survive a crash
-  // while keeping the write path off the tool-call path entirely.
+  /** The snapshot last handed to the store, so an unchanged one is not rewritten. */
   let lastFlushed: Snapshot | undefined
-  const flushTimer = setInterval(() => {
-    if (durable === undefined) return
+  const flush = (): Promise<void> => {
+    if (durable === undefined) return Promise.resolve()
     const current = stats.snapshot()
-    if (current.counters === lastFlushed?.counters && current.failures === lastFlushed?.failures) return
+    if (current.counters === lastFlushed?.counters && current.failures === lastFlushed?.failures) {
+      return Promise.resolve()
+    }
     lastFlushed = current
-    void durable.put(SNAPSHOT_KEY, current).catch((error: unknown) => {
+    return durable.put(SNAPSHOT_KEY, current).catch((error: unknown) => {
       logger?.warn?.(`tool-usage-stats: flush failed: ${String(error)}`)
     })
-  }, FLUSH_MS)
+  }
+
+  const flushTimer = setInterval(() => { void flush() }, FLUSH_MS)
   flushTimer.unref?.()
   ctx.effect(() => () => { clearInterval(flushTimer) })
+
+  // `session/flush` is the awaited durability checkpoint the store dispatches
+  // before a session's events are considered persisted, and a short-lived run
+  // drains through it on teardown. The interval alone is not enough there: a
+  // headless task finishes inside it and everything it observed is lost.
+  // A disposer cannot cover this — a returned Promise is not awaited.
+  ctx.on('session/flush' as never, (() => flush()) as never)
 
   ctx.on('session/event', (session, event) => {
     if (event.type === 'tool/call') {
