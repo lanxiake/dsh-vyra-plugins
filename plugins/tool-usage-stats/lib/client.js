@@ -27,23 +27,102 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 var ENDPOINT = "/api/vyra/tool-usage";
-var EXPORT_ENDPOINT = "/api/vyra/tool-usage/export";
 var REFRESH_MS = 5e3;
-async function fetchStats() {
-  try {
-    const response = await globalThis.fetch(ENDPOINT, { credentials: "include" });
-    if (!response.ok) return void 0;
-    return await response.json();
-  } catch {
-    return void 0;
-  }
+function token(name, fallback) {
+  return `var(--dsw-alias-${name}, ${fallback})`;
 }
-function formatTime(at, withYear = false) {
+var C = {
+  text: token("label-primary", "#1f2328"),
+  textSecondary: token("label-secondary", "#57606a"),
+  textTertiary: token("label-tertiary", "#6e7781"),
+  danger: token("state-error-primary", "#cf222e"),
+  dangerSoft: token("state-error-secondary", "#fff1f0"),
+  warn: token("state-warn-primary", "#9a6700"),
+  submission: token("state-success-primary", "#1a7f37"),
+  border: token("border-l2", "#d8dee4"),
+  borderSoft: token("border-l1", "#eaeef2"),
+  card: token("card-fill", "#ffffff"),
+  cardHover: token("card-fill-hover", "#f6f8fa"),
+  surface: token("bg-layer-2", "#f6f8fa"),
+  accent: token("brand-primary", "#2f6feb"),
+  onAccent: token("label-on-color", "#ffffff"),
+  code: token("markdown-inline-code", "#f0f3f6")
+};
+var T = {
+  caption: { fontSize: "11px", lineHeight: "16px" },
+  body: { fontSize: "13px", lineHeight: "20px" },
+  mono: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: "12px" }
+};
+var CARD = {
+  border: `1px solid ${C.borderSoft}`,
+  borderRadius: "8px",
+  background: C.card,
+  padding: "12px 14px",
+  marginBottom: "10px"
+};
+function pill(background, color) {
+  return {
+    display: "inline-block",
+    padding: "1px 7px",
+    borderRadius: "999px",
+    background,
+    color,
+    fontSize: "11px",
+    lineHeight: "17px",
+    fontWeight: "500"
+  };
+}
+function textButton(color) {
+  return {
+    background: "none",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+    color,
+    font: "inherit",
+    textDecoration: "none"
+  };
+}
+var PRIMARY_BUTTON = {
+  border: "none",
+  borderRadius: "6px",
+  padding: "5px 14px",
+  cursor: "pointer",
+  background: C.accent,
+  color: C.onAccent,
+  fontSize: "12px",
+  fontWeight: "600"
+};
+var GHOST_BUTTON = {
+  border: `1px solid ${C.border}`,
+  borderRadius: "6px",
+  padding: "4px 12px",
+  cursor: "pointer",
+  background: "transparent",
+  color: C.text,
+  fontSize: "12px"
+};
+function formatTime(at) {
   if (at === 0) return "\u2014";
   const date = new Date(at);
   const pad = (value) => String(value).padStart(2, "0");
   const md = `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  return withYear || date.getFullYear() !== (/* @__PURE__ */ new Date()).getFullYear() ? `${date.getFullYear()}-${md}` : md;
+  return date.getFullYear() !== (/* @__PURE__ */ new Date()).getFullYear() ? `${date.getFullYear()}-${md}` : md;
+}
+function percent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+async function call(path, init) {
+  try {
+    const response = await globalThis.fetch(path, { credentials: "include", ...init });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      return { ok: false, detail: body.detail ?? `HTTP ${response.status}` };
+    }
+    return await response.json();
+  } catch (error) {
+    return { ok: false, detail: String(error) };
+  }
 }
 var WINDOWS = [
   { value: "0", label: "\u7D2F\u8BA1" },
@@ -51,18 +130,11 @@ var WINDOWS = [
   { value: "30", label: "\u6700\u8FD1 30 \u5929" }
 ];
 var COLUMNS = [
-  { key: "tool", label: "\u5DE5\u5177", numeric: false },
-  { key: "count", label: "\u8C03\u7528\u6B21\u6570", numeric: true },
-  { key: "errorCount", label: "\u5931\u8D25", numeric: true },
-  { key: "lastUsedAt", label: "\u6700\u540E\u4F7F\u7528", numeric: false }
+  { key: "tool", label: "\u5DE5\u5177", numeric: false, width: "34%" },
+  { key: "count", label: "\u8C03\u7528", numeric: true, width: "16%" },
+  { key: "errorCount", label: "\u5931\u8D25", numeric: true, width: "20%" },
+  { key: "lastUsedAt", label: "\u6700\u540E\u4F7F\u7528", numeric: false, width: "30%" }
 ];
-var CELL = {
-  padding: "4px 0",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
-var NUMERIC_CELL = { ...CELL, textAlign: "right", paddingRight: "14px" };
 function createPanel(React) {
   const h = React.createElement;
   return function ToolUsagePanel() {
@@ -71,31 +143,68 @@ function createPanel(React) {
     const [sortKey, setSortKey] = React.useState("count");
     const [ascending, setAscending] = React.useState(false);
     const [expanded, setExpanded] = React.useState(void 0);
+    const [busy, setBusy] = React.useState(void 0);
+    const [notice, setNotice] = React.useState(void 0);
+    const refresh = React.useCallback(() => {
+      void call(ENDPOINT).then((body2) => {
+        if (body2 !== void 0 && typeof body2 === "object" && "global" in body2) {
+          setData(body2);
+        }
+      });
+    }, []);
     React.useEffect(() => {
-      let cancelled = false;
-      const refresh = () => {
-        void fetchStats().then((next) => {
-          if (cancelled) return;
-          setData(next);
-        });
-      };
       refresh();
       const timer = setInterval(refresh, REFRESH_MS);
-      return () => {
-        cancelled = true;
-        clearInterval(timer);
-      };
-    }, []);
-    const report = data === void 0 ? void 0 : windowDays === 0 ? data.global : data.windows[String(windowDays)];
-    const rows = React.useMemo(() => {
-      if (report === void 0) return [];
-      const sorted = [...report.rows];
-      sorted.sort((left, right) => {
-        const delta = sortKey === "tool" ? left.tool.localeCompare(right.tool) : left[sortKey] - right[sortKey];
-        return ascending ? delta : -delta;
+      return () => clearInterval(timer);
+    }, [refresh]);
+    const analyze = (sessionId) => {
+      setBusy("analyze");
+      setNotice(void 0);
+      void call(`${ENDPOINT}/diagnose`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId })
+      }).then((result) => {
+        const typed = result;
+        setBusy(void 0);
+        setNotice(typed.ok === true ? `\u5DF2\u8BF7\u6C42\u5206\u6790\uFF1A${(typed.targets ?? []).join("\u3001")}\u3002\u7ED3\u679C\u4F1A\u51FA\u73B0\u5728\u5F53\u524D\u4F1A\u8BDD\u91CC\u3002` : typed.detail ?? "\u8BF7\u6C42\u5931\u8D25");
+        refresh();
       });
-      return sorted;
-    }, [report, sortKey, ascending]);
+    };
+    const apply2 = (tool) => {
+      setBusy(tool);
+      setNotice(void 0);
+      void call(`${ENDPOINT}/apply`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tool })
+      }).then((result) => {
+        const typed = result;
+        setBusy(void 0);
+        setNotice(typed.ok === true ? `\u5DF2\u5E94\u7528 ${tool} \u7684${typed.applied === "description" ? "\u63CF\u8FF0" : "\u53C2\u6570"}\u6539\u52A8` : typed.detail ?? "\u5E94\u7528\u5931\u8D25");
+        refresh();
+      });
+    };
+    const dismiss = (tool) => {
+      setBusy(tool);
+      void call(`${ENDPOINT}/dismiss`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tool })
+      }).then(() => {
+        setBusy(void 0);
+        refresh();
+      });
+    };
+    if (data === void 0) {
+      return h("div", { style: { padding: "20px", color: C.textSecondary, ...T.body } }, "\u6B63\u5728\u8BFB\u53D6\u5DE5\u5177\u7528\u91CF\u2026");
+    }
+    const report = windowDays === 0 ? data.global : data.windows[String(windowDays)];
+    const windowLabel = WINDOWS.find((option) => Number(option.value) === windowDays)?.label ?? "\u7D2F\u8BA1";
+    const rows = [...report?.rows ?? []].sort((left, right) => {
+      const delta = sortKey === "tool" ? left.tool.localeCompare(right.tool) : left[sortKey] - right[sortKey];
+      return ascending ? delta : -delta;
+    });
     const sortBy = (key) => {
       if (key === sortKey) {
         setAscending((value) => !value);
@@ -104,45 +213,131 @@ function createPanel(React) {
       setSortKey(key);
       setAscending(false);
     };
-    if (data === void 0) return h("p", { style: { opacity: 0.7 } }, "\u6B63\u5728\u8BFB\u53D6\u5DE5\u5177\u7528\u91CF\u2026");
-    const windowLabel = WINDOWS.find((option) => Number(option.value) === windowDays)?.label ?? "\u7D2F\u8BA1";
+    const failuresFor = (tool) => data.failures[tool] ?? [];
     const toolbar = h(
       "div",
       {
-        style: { display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" }
+        style: { display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "12px" }
       },
       h(
         "label",
-        { style: { display: "flex", gap: "6px", alignItems: "center" } },
+        { style: { display: "flex", gap: "6px", alignItems: "center", color: C.textSecondary, ...T.body } },
         "\u7EDF\u8BA1\u8303\u56F4",
         h("select", {
           value: String(windowDays),
           onChange: (event) => {
             setWindowDays(Number(event.target.value));
           },
-          style: { padding: "3px 6px" }
+          style: {
+            padding: "3px 8px",
+            borderRadius: "6px",
+            border: `1px solid ${C.border}`,
+            background: C.card,
+            color: C.text,
+            font: "inherit"
+          }
         }, WINDOWS.map((option) => h("option", { key: option.value, value: option.value }, option.label)))
       ),
       h("a", {
-        href: EXPORT_ENDPOINT,
+        href: `${ENDPOINT}/export`,
         download: "",
-        style: { marginLeft: "auto", fontSize: "0.9em" }
+        style: { marginLeft: "auto", color: C.accent, ...textButton(C.accent) }
       }, "\u5BFC\u51FA JSON")
     );
     const coverageNote = data.coverage.since === null ? null : h(
-      "p",
-      { style: { opacity: 0.6, fontSize: "0.85em", margin: "0 0 10px" } },
+      "div",
+      { style: { color: C.textTertiary, marginBottom: "10px", ...T.caption } },
       `\u6309\u65E5\u6570\u636E\u8986\u76D6 ${data.coverage.since} \u81F3 ${data.coverage.until}\uFF08\u4FDD\u7559 ${data.coverage.retentionDays} \u5929\uFF09`
     );
-    if (report === void 0 || report.tools === 0) {
+    const proposals = () => {
+      if (data.diagnosis.pending.length === 0) return null;
       return h(
         "div",
-        { style: { padding: "16px" } },
-        toolbar,
-        coverageNote,
-        h("p", { style: { opacity: 0.7 } }, emptyText(windowDays, data.coverage))
+        { style: { marginBottom: "14px" } },
+        h(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+          h("span", { style: { fontWeight: "600", color: C.text, ...T.body } }, "\u6539\u8FDB\u5EFA\u8BAE"),
+          h("span", { style: pill(C.dangerSoft, C.danger) }, `${data.diagnosis.pending.length} \u6761\u5F85\u5904\u7406`)
+        ),
+        data.diagnosis.pending.map((proposal) => proposalCard(proposal))
       );
-    }
+    };
+    const proposalCard = (proposal) => {
+      const kindLabel = proposal.change.kind === "description" ? "\u6539\u63CF\u8FF0" : proposal.change.kind === "parameters" ? "\u6539\u53C2\u6570" : "\u6539\u5B9E\u73B0";
+      const working = busy === proposal.tool;
+      const diff = proposal.change.description === void 0 ? null : h(
+        "div",
+        {
+          style: {
+            background: C.surface,
+            border: `1px solid ${C.borderSoft}`,
+            borderRadius: "6px",
+            padding: "8px 10px",
+            marginBottom: "8px"
+          }
+        },
+        h("div", { style: { color: C.textTertiary, marginBottom: "4px", ...T.caption } }, "\u5F53\u524D\u63CF\u8FF0"),
+        h(
+          "div",
+          { style: { color: C.textSecondary, marginBottom: "8px", whiteSpace: "pre-wrap", ...T.mono } },
+          proposal.previousDescription || "\uFF08\u7A7A\uFF09"
+        ),
+        h("div", { style: { color: C.textTertiary, marginBottom: "4px", ...T.caption } }, "\u5EFA\u8BAE\u6539\u4E3A"),
+        h("div", { style: { color: C.text, whiteSpace: "pre-wrap", ...T.mono } }, proposal.change.description)
+      );
+      const needsHuman = proposal.change.kind === "implementation" ? h(
+        "div",
+        { style: { color: C.warn, marginBottom: "8px", ...T.caption } },
+        `\u5B9E\u73B0\u6539\u52A8\u9700\u8981\u4EBA\u5DE5\u5B8C\u6210\uFF1A${proposal.change.note ?? ""}`
+      ) : null;
+      return h(
+        "div",
+        { key: proposal.tool, style: CARD },
+        h(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" } },
+          h("code", { style: { color: C.text, fontWeight: "600", ...T.mono } }, proposal.tool),
+          h("span", { style: pill(C.surface, C.textSecondary) }, kindLabel)
+        ),
+        h("div", { style: { color: C.text, marginBottom: "6px", ...T.body } }, proposal.diagnosis),
+        h("div", { style: { color: C.textTertiary, marginBottom: "8px", ...T.caption } }, `\u4F9D\u636E\uFF1A${proposal.evidence}`),
+        needsHuman,
+        diff,
+        h(
+          "div",
+          { style: { display: "flex", gap: "8px" } },
+          h("button", {
+            type: "button",
+            disabled: working || needsHuman !== null,
+            onClick: () => {
+              apply2(proposal.tool);
+            },
+            style: { ...PRIMARY_BUTTON, opacity: working ? 0.6 : 1 }
+          }, working ? "\u5E94\u7528\u4E2D\u2026" : "\u5E94\u7528"),
+          h("button", {
+            type: "button",
+            disabled: working,
+            onClick: () => {
+              dismiss(proposal.tool);
+            },
+            style: GHOST_BUTTON
+          }, "\u5FFD\u7565")
+        )
+      );
+    };
+    const appliedList = () => {
+      if (data.diagnosis.applied.length === 0) return null;
+      return h(
+        "div",
+        { style: { marginBottom: "14px" } },
+        h("div", { style: { color: C.textTertiary, marginBottom: "6px", ...T.caption } }, "\u5DF2\u5E94\u7528\u7684\u6539\u52A8"),
+        data.diagnosis.applied.slice(0, 5).map((change) => h("div", {
+          key: `${change.tool}-${change.appliedAt}`,
+          style: { color: C.textSecondary, ...T.caption }
+        }, `${formatTime(change.appliedAt)} \xB7 ${change.tool} \xB7 ${change.kind === "description" ? "\u63CF\u8FF0" : "\u53C2\u6570"}`))
+      );
+    };
     const header = COLUMNS.map((column) => h("th", {
       key: column.key,
       onClick: () => {
@@ -152,23 +347,48 @@ function createPanel(React) {
         textAlign: column.numeric ? "right" : "left",
         cursor: "pointer",
         userSelect: "none",
-        paddingBottom: "4px",
+        paddingBottom: "6px",
+        paddingRight: column.numeric ? "14px" : 0,
         whiteSpace: "nowrap",
-        ...column.numeric ? { paddingRight: "14px" } : {}
+        color: C.textSecondary,
+        fontWeight: "500",
+        ...T.caption
       }
     }, `${column.label}${column.key === sortKey ? ascending ? " \u2191" : " \u2193" : ""}`));
     const body = rows.flatMap((row) => {
-      const samples = data.failures[row.tool] ?? [];
+      const samples = failuresFor(row.tool);
       const open = expanded === row.tool;
       const cells = h(
         "tr",
         { key: row.tool },
-        h("td", { style: { ...CELL, fontFamily: "monospace" } }, row.tool),
-        h("td", { style: NUMERIC_CELL }, String(row.count)),
+        h("td", {
+          style: {
+            padding: "5px 0",
+            borderTop: `1px solid ${C.borderSoft}`,
+            color: C.text,
+            ...T.mono
+          }
+        }, row.tool),
+        h("td", {
+          style: {
+            padding: "5px 14px 5px 0",
+            borderTop: `1px solid ${C.borderSoft}`,
+            textAlign: "right",
+            color: C.text,
+            ...T.body
+          }
+        }, String(row.count)),
         h(
           "td",
-          { style: NUMERIC_CELL },
-          row.errorCount === 0 ? "\u2014" : h("button", {
+          {
+            style: {
+              padding: "5px 14px 5px 0",
+              borderTop: `1px solid ${C.borderSoft}`,
+              textAlign: "right",
+              ...T.body
+            }
+          },
+          row.errorCount === 0 ? h("span", { style: { color: C.textTertiary } }, "\u2014") : h("button", {
             type: "button",
             onClick: () => {
               setExpanded(open ? void 0 : row.tool);
@@ -176,16 +396,20 @@ function createPanel(React) {
             disabled: samples.length === 0,
             title: samples.length === 0 ? "\u6CA1\u6709\u4FDD\u7559\u7684\u5931\u8D25\u8BB0\u5F55" : "\u5C55\u5F00\u67E5\u770B\u5931\u8D25\u539F\u56E0",
             style: {
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: samples.length === 0 ? "default" : "pointer",
-              color: "inherit",
-              textDecoration: samples.length === 0 ? "none" : "underline dotted"
+              ...textButton(C.danger),
+              color: C.danger,
+              cursor: samples.length === 0 ? "default" : "pointer"
             }
-          }, `${row.errorCount}${open ? " \u25BE" : " \u25B8"}`)
+          }, `${row.errorCount} (${percent(row.errorRate)}) ${samples.length === 0 ? "" : open ? "\u25BE" : "\u25B8"}`)
         ),
-        h("td", { style: CELL }, formatTime(row.lastUsedAt))
+        h("td", {
+          style: {
+            padding: "5px 0",
+            borderTop: `1px solid ${C.borderSoft}`,
+            color: C.textSecondary,
+            ...T.body
+          }
+        }, formatTime(row.lastUsedAt))
       );
       if (!open || samples.length === 0) return [cells];
       const detail = h(
@@ -193,59 +417,110 @@ function createPanel(React) {
         { key: `${row.tool}-detail` },
         h(
           "td",
-          { colSpan: COLUMNS.length, style: { padding: "6px 0 10px 16px" } },
+          {
+            colSpan: COLUMNS.length,
+            style: { padding: "0 0 10px 16px", background: C.surface }
+          },
           h(
             "div",
-            { style: { fontSize: "0.85em", opacity: 0.85, display: "grid", gap: "5px" } },
+            { style: { display: "grid", gap: "5px", paddingTop: "8px" } },
             samples.map((sample, index) => h(
               "div",
               {
                 key: `${sample.at}-${index}`,
-                style: { display: "grid", gridTemplateColumns: "auto auto 1fr", gap: "8px", alignItems: "baseline" }
+                style: { display: "grid", gridTemplateColumns: "auto auto 1fr", gap: "10px", alignItems: "baseline" }
               },
-              h("span", { style: { opacity: 0.7, whiteSpace: "nowrap" } }, formatTime(sample.at, true)),
-              sample.code === void 0 ? h("span") : h("code", { style: { opacity: 0.75, fontSize: "0.95em" } }, sample.code),
-              h("span", { style: { wordBreak: "break-word" } }, sample.summary)
+              h("span", { style: { color: C.textTertiary, whiteSpace: "nowrap", ...T.caption } }, formatTime(sample.at)),
+              sample.code === void 0 ? h("span") : h("code", { style: { color: C.warn, whiteSpace: "nowrap", ...T.mono } }, sample.code),
+              h("span", { style: { color: C.textSecondary, wordBreak: "break-word", ...T.mono } }, sample.summary)
             ))
           )
         )
       );
       return [cells, detail];
     });
+    const analysisBar = h(
+      "div",
+      {
+        style: {
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginTop: "4px",
+          paddingTop: "12px",
+          borderTop: `1px solid ${C.borderSoft}`
+        }
+      },
+      h("button", {
+        type: "button",
+        disabled: busy === "analyze" || data.diagnosis.analyzing,
+        onClick: () => {
+          analyze(void 0);
+        },
+        style: { ...PRIMARY_BUTTON, opacity: busy === "analyze" ? 0.6 : 1 }
+      }, busy === "analyze" || data.diagnosis.analyzing ? "\u5206\u6790\u4E2D\u2026" : "\u7ACB\u5373\u5206\u6790"),
+      h(
+        "span",
+        { style: { color: C.textTertiary, ...T.caption } },
+        data.diagnosis.lastRunAt === 0 ? "\u8FD8\u6CA1\u6709\u5206\u6790\u8FC7" : `\u4E0A\u6B21\u5206\u6790 ${formatTime(data.diagnosis.lastRunAt)}`
+      )
+    );
+    const noticeBar = notice === void 0 ? null : h("div", {
+      style: {
+        marginTop: "8px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        background: C.surface,
+        color: C.textSecondary,
+        ...T.caption
+      }
+    }, notice);
+    if (report === void 0 || report.tools === 0) {
+      return h(
+        "div",
+        { style: { padding: "20px" } },
+        toolbar,
+        coverageNote,
+        h(
+          "div",
+          { style: { color: C.textSecondary, marginBottom: "14px", ...T.body } },
+          emptyText(windowDays, data.coverage)
+        ),
+        analysisBar,
+        noticeBar
+      );
+    }
     return h(
       "div",
-      { style: { padding: "16px" } },
+      { style: { padding: "20px" } },
       toolbar,
       coverageNote,
+      proposals(),
+      appliedList(),
       h(
-        "p",
-        { style: { opacity: 0.7, margin: "0 0 8px" } },
-        `${report.tools} \u4E2A\u5DE5\u5177 \xB7 ${windowLabel}\u5171 ${report.calls} \u6B21\u8C03\u7528` + (report.failures > 0 ? ` \xB7 ${report.failures} \u6B21\u5931\u8D25` : "")
+        "div",
+        { style: { display: "flex", gap: "10px", alignItems: "baseline", marginBottom: "8px" } },
+        h(
+          "span",
+          { style: { color: C.text, fontWeight: "600", ...T.body } },
+          `${report.tools} \u4E2A\u5DE5\u5177`
+        ),
+        h(
+          "span",
+          { style: { color: C.textTertiary, ...T.caption } },
+          `${windowLabel} \xB7 ${report.calls} \u6B21\u8C03\u7528` + (report.failures > 0 ? ` \xB7 ${report.failures} \u6B21\u5931\u8D25` : "")
+        )
       ),
-      // Fixed layout with explicit widths: without them the browser sizes
-      // columns to content, and a wide failure cell pushes the last-used column
-      // into it so the two read as one run of text.
       h(
         "table",
-        {
-          style: {
-            width: "100%",
-            borderCollapse: "collapse",
-            fontSize: "0.9em",
-            tableLayout: "fixed"
-          }
-        },
-        h(
-          "colgroup",
-          null,
-          h("col", { style: { width: "34%" } }),
-          h("col", { style: { width: "16%" } }),
-          h("col", { style: { width: "20%" } }),
-          h("col", { style: { width: "30%" } })
-        ),
+        { style: { width: "100%", borderCollapse: "collapse", tableLayout: "fixed" } },
+        h("colgroup", null, COLUMNS.map((column) => h("col", { key: column.key, style: { width: column.width } }))),
         h("thead", null, h("tr", null, header)),
         h("tbody", null, body)
-      )
+      ),
+      analysisBar,
+      noticeBar
     );
   };
 }

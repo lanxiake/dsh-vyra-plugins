@@ -607,6 +607,18 @@ function apply(ctx, config = {}) {
   const pendingNames = /* @__PURE__ */ new Map();
   const awaiting = /* @__PURE__ */ new Map();
   const requestedFrom = /* @__PURE__ */ new Map();
+  const queued = [];
+  function applyQueued(agent) {
+    if (queued.length === 0) return;
+    const tools = agent?.ctx?.tools;
+    if (tools === void 0) return;
+    for (const item of queued.splice(0, queued.length)) {
+      const result = swapIn(tools, item.tool, item.change, swaps, stats, logger);
+      if (!result.ok) {
+        logger?.warn?.(`tool-usage-stats: cannot apply to ${item.tool}: ${result.detail}`);
+      }
+    }
+  }
   const swaps = /* @__PURE__ */ new Map();
   let durable;
   const openDurable = (scoped) => {
@@ -692,6 +704,7 @@ function apply(ctx, config = {}) {
   const askOnStep = async (payload, next) => {
     const decision = await next();
     const sessionId = payload?.agent?.session?.id;
+    if (sessionId !== void 0) applyQueued(payload?.agent);
     try {
       if (decision.kind === "reject" || sessionId === void 0) return decision;
       const requested = requestedFrom.get(sessionId);
@@ -831,10 +844,14 @@ function apply(ctx, config = {}) {
             if (proposal === void 0) return json({ ok: false, detail: `\u6CA1\u6709 ${toolName} \u7684\u5F85\u5904\u7406\u5EFA\u8BAE` }, 404);
             const resolved = resolveChange(proposal.change);
             if (typeof resolved === "string") return json({ ok: false, detail: resolved }, 422);
-            const result = swapTool(ctx, swaps, toolName, resolved, stats, logger);
-            if (!result.ok) return json({ ok: false, detail: result.detail }, 422);
+            queued.push({ tool: toolName, change: resolved });
             stats.dismissProposal(toolName);
-            return json({ ok: true, tool: toolName, applied: proposal.change.kind });
+            return json({
+              ok: true,
+              tool: toolName,
+              applied: proposal.change.kind,
+              note: "\u6539\u52A8\u4F1A\u5728\u8BE5\u4F1A\u8BDD\u7684\u4E0B\u4E00\u6B65\u751F\u6548"
+            });
           }
         }),
         // Dismissing costs nothing, so it succeeds even when the proposal is gone.
@@ -864,15 +881,11 @@ function apply(ctx, config = {}) {
     registerRoutes();
   });
 }
-function swapTool(ctx, swaps, toolName, change, stats, logger) {
-  const tools = ctx.get("tools");
-  if (tools?.get === void 0 || tools.register === void 0) {
-    return { ok: false, detail: "\u5DE5\u5177\u6CE8\u518C\u8868\u4E0D\u53EF\u7528" };
-  }
+function swapIn(tools, toolName, change, swaps, stats, logger) {
   const current = tools.get(toolName);
-  if (current === void 0) return { ok: false, detail: `\u5DE5\u5177 ${toolName} \u4E0D\u5728\u6CE8\u518C\u8868\u91CC` };
+  if (current === void 0) return { ok: false, detail: "\u5DE5\u5177 " + toolName + " \u4E0D\u5728\u6CE8\u518C\u8868\u91CC" };
   if (typeof current.execute !== "function") {
-    return { ok: false, detail: `\u5DE5\u5177 ${toolName} \u6CA1\u6709\u53EF\u590D\u7528\u7684\u5B9E\u73B0\uFF0C\u65E0\u6CD5\u5B89\u5168\u66FF\u6362` };
+    return { ok: false, detail: "\u5DE5\u5177 " + toolName + " \u6CA1\u6709\u53EF\u590D\u7528\u7684\u5B9E\u73B0\uFF0C\u65E0\u6CD5\u5B89\u5168\u66FF\u6362" };
   }
   const before = {
     description: typeof current.description === "string" ? current.description : "",
@@ -891,7 +904,7 @@ function swapTool(ctx, swaps, toolName, change, stats, logger) {
       output: current.output
     });
   } catch (error) {
-    return { ok: false, detail: `\u6CE8\u518C\u66FF\u6362\u7248\u672C\u5931\u8D25\uFF1A${String(error)}` };
+    return { ok: false, detail: "\u6CE8\u518C\u66FF\u6362\u7248\u672C\u5931\u8D25\uFF1A" + String(error) };
   }
   swaps.get(toolName)?.();
   swaps.set(toolName, dispose);
@@ -901,13 +914,8 @@ function swapTool(ctx, swaps, toolName, change, stats, logger) {
     appliedAt: Date.now(),
     kind: change.description === void 0 ? "parameters" : "description"
   });
-  logger?.warn?.(`tool-usage-stats: replaced ${toolName}`);
+  logger?.warn?.("tool-usage-stats: replaced " + toolName);
   return { ok: true };
-}
-function sameSnapshot(left, right) {
-  if (left === void 0) return false;
-  if (left.counters !== right.counters || left.failures !== right.failures) return false;
-  return left.diagnosis?.lastRunAt === right.diagnosis?.lastRunAt && left.diagnosis?.pending === right.diagnosis?.pending && left.diagnosis?.history === right.diagnosis?.history;
 }
 function buildExport(stats) {
   const view = stats.view([0]);

@@ -1,7 +1,7 @@
 {
   "name": "vyra-tool-usage-stats",
-  "version": "0.3.0",
-  "description": "Tool usage statistics that diagnose why tools fail and propose fixes for approval.",
+  "version": "0.4.0",
+  "description": "一个让 DSH 工具调用自我进化的插件：统计用量、诊断失败原因、给出可一键应用的修复建议，减少重复报错。",
   "keywords": [
     "dsh",
     "dsh-plugin",

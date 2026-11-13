@@ -131,6 +131,8 @@ interface Context {
       payload: PreStepPayload,
       next: () => Promise<PreStepDecision>,
     ) => Promise<PreStepDecision>): void
+    (event: 'agent/created', listener: (payload: { agent: AgentLike }) => void): void
+    (event: 'agent/disposed', listener: (payload: { agent: AgentLike }) => void): void
   }
   effect: (callback: () => (() => unknown) | undefined) => unknown
   get: (name: string) => unknown
@@ -374,6 +376,32 @@ export function apply(ctx: Context, config: Config = {}): void {
   const requestedFrom = new Map<string, { prompt: string; targets: readonly DiagnosisTarget[] }>()
 
   /**
+   * Changes the user approved, waiting for a step to apply them in.
+   *
+   * A swap has to run inside the agent's scope, and the only plugin code that
+   * runs there is a step listener. The delay is one step, and the alternative —
+   * applying from the request thread — cannot resolve the tool at all.
+   */
+  const queued: { tool: string; change: ResolvedChange }[] = []
+
+  /**
+   * Apply anything queued, from inside an agent's scope.
+   * @param agent - the agent whose step is starting.
+   */
+  function applyQueued(agent: AgentLike | undefined): void {
+    if (queued.length === 0) return
+    const tools = (agent as { ctx?: { tools?: unknown } } | undefined)?.ctx?.tools
+    if (tools === undefined) return
+
+    for (const item of queued.splice(0, queued.length)) {
+      const result = swapIn(tools as ToolRegistry, item.tool, item.change, swaps, stats, logger)
+      if (!result.ok) {
+        logger?.warn?.(`tool-usage-stats: cannot apply to ${item.tool}: ${result.detail}`)
+      }
+    }
+  }
+
+  /**
    * What this plugin has replaced, by tool name. A second change replaces this
    * registration rather than stacking another one on the original.
    */
@@ -525,6 +553,11 @@ export function apply(ctx: Context, config: Config = {}): void {
     // `payload.session` here threw on every step once, and the contained catch
     // turned that into a silently absent diagnosis.
     const sessionId = payload?.agent?.session?.id
+    // A pending change is applied here, not from the HTTP request that queued
+    // it. Tool resolution is scope-bound: the plugin's own view returns
+    // `undefined` for every tool, and only the agent's scope — live here —
+    // resolves one. Measured in both places.
+    if (sessionId !== undefined) applyQueued(payload?.agent)
     try {
       if (decision.kind === 'reject' || sessionId === undefined) return decision
       const requested = requestedFrom.get(sessionId)
@@ -704,11 +737,16 @@ export function apply(ctx: Context, config: Config = {}): void {
             const resolved = resolveChange(proposal.change)
             if (typeof resolved === 'string') return json({ ok: false, detail: resolved }, 422)
 
-            const result = swapTool(ctx, swaps, toolName, resolved, stats, logger)
-            if (!result.ok) return json({ ok: false, detail: result.detail }, 422)
-
+            // Queued, not applied here: a swap must run inside the agent's
+            // scope, which no request thread is. The next step applies it.
+            queued.push({ tool: toolName, change: resolved })
             stats.dismissProposal(toolName)
-            return json({ ok: true, tool: toolName, applied: proposal.change.kind })
+            return json({
+              ok: true,
+              tool: toolName,
+              applied: proposal.change.kind,
+              note: '改动会在该会话的下一步生效',
+            })
           },
         }),
         // Dismissing costs nothing, so it succeeds even when the proposal is gone.
@@ -738,11 +776,22 @@ export function apply(ctx: Context, config: Config = {}): void {
   if (!registerRoutes()) ctx.inject(['connection'], () => { registerRoutes() })
 }
 
+/** A tool registry, as much of it as this plugin uses. */
+interface ToolRegistry {
+  get: (name: string) => unknown
+  register: (definition: unknown) => () => void
+}
+
 /**
  * Replace a tool's definition with one carrying a proposed change.
  *
- * The registry borrows definitions and exposes a disposer per registration, so
- * a swap is dispose-then-register. Two things make this safe to do at all:
+ * The registry must come from an agent's scope, because tool resolution is
+ * scope-bound: the plugin's own view returns `undefined` for every tool, and an
+ * agent's view resolves one only while that agent's step is running. Both were
+ * measured — the same `get('pwsh')` returned `undefined` from an HTTP request
+ * and `FOUND` from a step listener.
+ *
+ * Two things make the replacement safe:
  *
  * - The original definition is readable, including its `execute`, so the
  *   replacement delegates to the original body. A plugin cannot reimplement a
@@ -750,40 +799,31 @@ export function apply(ctx: Context, config: Config = {}): void {
  * - The replacement is registered before the previous one is disposed, so the
  *   tool is never missing from the catalogue the model reads.
  *
- * @param ctx - the plugin context, which owns the new registration.
- * @param swaps - the per-instance table of what this plugin has replaced.
+ * @param tools - the agent-scoped registry.
  * @param toolName - the tool to replace.
  * @param change - the description and/or parameter schema to put in force.
+ * @param swaps - the per-instance table of what this plugin has replaced.
  * @param stats - the statistics, which record what changed.
  * @param logger - optional logger.
  * @returns whether the swap happened, and why not when it did not.
  */
-function swapTool(
-  ctx: Context,
-  swaps: Map<string, () => void>,
+function swapIn(
+  tools: ToolRegistry,
   toolName: string,
-  change: { description?: string; parameters?: Record<string, unknown> },
+  change: ResolvedChange,
+  swaps: Map<string, () => void>,
   stats: ToolUsageStats,
   logger: { warn?: (message: string) => void } | undefined,
 ): { ok: true } | { ok: false; detail: string } {
-  const tools = ctx.get('tools') as {
-    get?: (name: string) => unknown
-    register?: (definition: unknown) => () => void
-  } | undefined
-
-  if (tools?.get === undefined || tools.register === undefined) {
-    return { ok: false, detail: '工具注册表不可用' }
-  }
-
   const current = tools.get(toolName) as {
     description?: unknown
     parameters?: unknown
     output?: unknown
     execute?: unknown
   } | undefined
-  if (current === undefined) return { ok: false, detail: `工具 ${toolName} 不在注册表里` }
+  if (current === undefined) return { ok: false, detail: "工具 " + toolName + " 不在注册表里" }
   if (typeof current.execute !== 'function') {
-    return { ok: false, detail: `工具 ${toolName} 没有可复用的实现，无法安全替换` }
+    return { ok: false, detail: "工具 " + toolName + " 没有可复用的实现，无法安全替换" }
   }
 
   const before = {
@@ -804,7 +844,7 @@ function swapTool(
       output: current.output,
     })
   } catch (error) {
-    return { ok: false, detail: `注册替换版本失败：${String(error)}` }
+    return { ok: false, detail: "注册替换版本失败：" + String(error) }
   }
 
   swaps.get(toolName)?.()
@@ -816,28 +856,8 @@ function swapTool(
     appliedAt: Date.now(),
     kind: change.description === undefined ? 'parameters' : 'description',
   })
-  logger?.warn?.(`tool-usage-stats: replaced ${toolName}`)
+  logger?.warn?.("tool-usage-stats: replaced " + toolName)
   return { ok: true }
-}
-
-/**
- * Whether two snapshots hold the same content.
- *
- * `snapshot()` builds a fresh object each call, so the outer references always
- * differ and comparing them would write on every tick. The diagnosis half is
- * compared by the revision of its parts, which is what changes when a run
- * finishes or a proposal is decided.
- *
- * @param left - one snapshot.
- * @param right - the other.
- * @returns whether persisting `right` after `left` would change anything.
- */
-function sameSnapshot(left: Snapshot | undefined, right: Snapshot): boolean {
-  if (left === undefined) return false
-  if (left.counters !== right.counters || left.failures !== right.failures) return false
-  return left.diagnosis?.lastRunAt === right.diagnosis?.lastRunAt
-    && left.diagnosis?.pending === right.diagnosis?.pending
-    && left.diagnosis?.history === right.diagnosis?.history
 }
 
 /** The exported document shape. */
