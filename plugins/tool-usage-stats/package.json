@@ -1,7 +1,7 @@
 {
   "name": "vyra-tool-usage-stats",
-  "version": "0.2.3",
-  "description": "Per-tool call, failure, and last-use statistics for DeepSeek Harness sessions.",
+  "version": "0.3.0",
+  "description": "Tool usage statistics that diagnose why tools fail and propose fixes for approval.",
   "keywords": [
     "dsh",
     "dsh-plugin",

@@ -211,3 +211,12 @@ test('coverage reports the retained span', () => {
   })
   assert.deepEqual(coverage({}, 90), { since: null, until: null, retentionDays: 90 })
 })
+
+test('summarize strips the Native Error envelope', () => {
+  // The canonical failure message excludes this prefix, so keeping it would
+  // stop the same reason recorded two ways from grouping together.
+  assert.equal(summarize('Error: cannot read "a.txt": not found'), 'cannot read "a.txt": not found')
+  assert.equal(summarize('  Error:   spaced out  '), 'spaced out')
+  assert.equal(summarize('ENOENT: no such file'), 'ENOENT: no such file',
+    'a reason that merely contains Error later keeps it')
+})

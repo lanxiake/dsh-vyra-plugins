@@ -75,11 +75,16 @@ export type FailureLog = Record<string, FailureSample[]>
  * reason text, and a multi-line reason splits one failure class into several
  * groups that should have been counted together.
  *
+ * A leading `Error: ` is the Native renderer's envelope, not part of the
+ * reason. The canonical failure message is documented to exclude it, so it is
+ * stripped here too — otherwise the same reason recorded two ways would not
+ * group together.
+ *
  * @param text - the raw reason.
  * @returns a single-line summary, at most {@link FAILURE_SUMMARY_MAX_CHARS} characters.
  */
 export function summarize(text: string, max = FAILURE_SUMMARY_MAX_CHARS): string {
-  const flat = text.replace(/\s+/g, ' ').trim()
+  const flat = text.replace(/\s+/g, ' ').trim().replace(/^Error:\s*/u, '')
   return flat.length <= max ? flat : `${flat.slice(0, max)}…`
 }
 

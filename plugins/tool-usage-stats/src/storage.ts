@@ -43,10 +43,36 @@ export const SNAPSHOT_KEY = 'snapshot'
  */
 export const LEGACY_KEY = 'global'
 
+/** One proposal awaiting a decision, as stored. */
+interface StoredDiagnosis {
+  readonly tool: string
+  readonly diagnosis: string
+  readonly evidence: string
+  readonly change: {
+    readonly kind: string
+    readonly description?: string
+    readonly parameters?: Record<string, unknown>
+    readonly note?: string
+  }
+  readonly proposedAt: number
+  readonly previousDescription: string
+}
+
 /** Everything one snapshot holds. */
 export interface Snapshot {
   readonly counters: ToolUsageState
   readonly failures: FailureLog
+  /**
+   * Analysis history and pending proposals.
+   *
+   * Persisted because losing it would re-ask about failures already diagnosed,
+   * spending a model request to learn the same answer.
+   */
+  readonly diagnosis?: {
+    readonly history: Readonly<Record<string, { readonly analyzedAt: number; readonly failuresAtAnalysis: number }>>
+    readonly pending: readonly StoredDiagnosis[]
+    readonly lastRunAt: number
+  }
 }
 
 /**
@@ -161,7 +187,70 @@ export function parseSnapshot(raw: unknown): Snapshot {
     })
   }
 
-  return { counters, failures }
+  return { counters, failures, ...diagnosisOf(typed) }
+}
+
+/**
+ * Validate the optional diagnosis block.
+ *
+ * Absent on records written before diagnosis existed, and absent is honest:
+ * those installations have no analysis history, so treating them as empty is
+ * the same answer the data supports. A stored block that is malformed is
+ * dropped rather than failing the whole snapshot — losing counters to a bad
+ * proposal record would be the worse outcome.
+ *
+ * @param raw - the snapshot object read from the medium.
+ * @returns the block to keep, or an empty object.
+ */
+function diagnosisOf(raw: Record<string, unknown>): { diagnosis?: Snapshot['diagnosis'] } {
+  const block = raw.diagnosis
+  if (typeof block !== 'object' || block === null || Array.isArray(block)) return {}
+  const typed = block as Record<string, unknown>
+
+  const history: Record<string, { analyzedAt: number; failuresAtAnalysis: number }> = {}
+  if (typeof typed.history === 'object' && typed.history !== null && !Array.isArray(typed.history)) {
+    for (const [tool, entry] of Object.entries(typed.history as Record<string, unknown>)) {
+      if (typeof entry !== 'object' || entry === null) continue
+      const record = entry as Record<string, unknown>
+      if (typeof record.analyzedAt !== 'number' || typeof record.failuresAtAnalysis !== 'number') continue
+      history[tool] = { analyzedAt: record.analyzedAt, failuresAtAnalysis: record.failuresAtAnalysis }
+    }
+  }
+
+  const pending: StoredDiagnosis[] = []
+  if (Array.isArray(typed.pending)) {
+    for (const entry of typed.pending) {
+      if (typeof entry !== 'object' || entry === null) continue
+      const record = entry as Record<string, unknown>
+      const change = record.change
+      if (typeof record.tool !== 'string' || typeof change !== 'object' || change === null) continue
+      const typedChange = change as Record<string, unknown>
+      if (typeof typedChange.kind !== 'string') continue
+      pending.push({
+        tool: record.tool,
+        diagnosis: typeof record.diagnosis === 'string' ? record.diagnosis : '',
+        evidence: typeof record.evidence === 'string' ? record.evidence : '',
+        change: {
+          kind: typedChange.kind,
+          ...(typeof typedChange.description === 'string' ? { description: typedChange.description } : {}),
+          ...(typeof typedChange.parameters === 'object' && typedChange.parameters !== null
+            ? { parameters: typedChange.parameters as Record<string, unknown> }
+            : {}),
+          ...(typeof typedChange.note === 'string' ? { note: typedChange.note } : {}),
+        },
+        proposedAt: typeof record.proposedAt === 'number' ? record.proposedAt : 0,
+        previousDescription: typeof record.previousDescription === 'string' ? record.previousDescription : '',
+      })
+    }
+  }
+
+  return {
+    diagnosis: {
+      history,
+      pending,
+      lastRunAt: typeof typed.lastRunAt === 'number' ? typed.lastRunAt : 0,
+    },
+  }
 }
 
 /**

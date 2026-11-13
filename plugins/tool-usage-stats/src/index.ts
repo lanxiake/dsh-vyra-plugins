@@ -1,6 +1,5 @@
 /**
- * Per-tool usage statistics: call and failure counters, a failure audit, and
- * the HTTP endpoints the Web Client reads.
+ * Per-tool usage statistics that feed a self-improvement loop.
  *
  * Subscribes to `session/event` and folds the durable `tool/call` and
  * `tool/result` records — the events the log already carries, so no parallel
@@ -21,6 +20,12 @@
  * event's error member when it throws, because reading only one of those paths
  * leaves whole failure classes unattributable.
  *
+ * Those reasons are then put back to the agent. A scheduled job asks it to
+ * diagnose the tools that keep failing and to propose a change; an approved
+ * proposal replaces the tool's description, its parameters, or wraps its
+ * implementation. The model reads what it proposed on the next step of the
+ * session it is already in, not on a later one.
+ *
  * The plugin never blocks, delays, or alters a tool call. Every failure here is
  * contained and logged.
  *
@@ -31,6 +36,11 @@ import {
   coverage, failureDetail, readResult, record, recordFailure, report, summarize, takeName, windowed,
   type Coverage, type FailureLog, type ToolUsageReport, type ToolUsageState,
 } from './counters.ts'
+import { DEFAULT_POLICY, type AnalysisPolicy, type DiagnosisTarget } from './analysis.ts'
+import {
+  EMPTY_STATE, applyRun, describeTool, dismiss, prepareRun, resolveChange,
+  type AppliedChange, type DiagnosisState, type PendingDiagnosis, type RegisteredTool,
+} from './diagnose.ts'
 import { LEGACY_KEY, SNAPSHOT_KEY, TABLE_NAME, toolUsageDomain, type Snapshot } from './storage.ts'
 
 /** Plugin name. */
@@ -56,6 +66,19 @@ export interface Config {
    * endpoint of the shared API channel.
    */
   endpoint?: string
+  /**
+   * Failures since the last analysis before a tool is worth diagnosing. A
+   * single transient failure does not justify asking the model about it.
+   */
+  minFailures?: number
+  /** Minimum days between analyses of the same tool. */
+  cooldownDays?: number
+  /**
+   * Hours between scheduled analysis runs. Zero disables the schedule and
+   * leaves manual runs, which is the right choice for a deployment paying per
+   * token.
+   */
+  analyzeEveryHours?: number
 }
 
 /** The session event members this plugin reads. */
@@ -64,15 +87,60 @@ interface SessionEvent {
   readonly data: unknown
 }
 
+/** A model-visible message the plugin contributes to a step. */
+interface InjectableMessage {
+  readonly role: 'user'
+  readonly content: readonly { readonly type: 'text'; readonly text: string }[]
+  readonly source: { readonly kind: string }
+}
+
+/**
+ * What `agent/pre-step` hands its listeners.
+ *
+ * The agent is a field of the payload, not the payload itself: an early version
+ * of this listener read `payload.session` and threw on every step, which the
+ * contained catch turned into a silently absent diagnosis.
+ */
+interface PreStepPayload {
+  readonly agent: AgentLike
+  readonly messages: readonly unknown[]
+  readonly turn: number
+  readonly step: number
+  readonly signal?: AbortSignal
+}
+
+/**
+ * The step decision a `agent/pre-step` listener returns.
+ *
+ * Declared structurally rather than imported: an out-of-tree plugin has no
+ * dependency on the harness packages, so the fields it reads and writes are
+ * stated here.
+ */
+interface PreStepDecision {
+  readonly kind: 'reject' | 'enter'
+  readonly messages?: readonly unknown[]
+  readonly [key: string]: unknown
+}
+
 /** Minimal Cordis surface this plugin uses, so the module needs no framework import. */
 interface Context {
   on: {
     (event: 'session/event', listener: (session: { id: string }, event: SessionEvent) => void): void
     (event: 'session/flush', listener: () => Promise<void> | void): void
+    (event: 'agent/pre-step', listener: (
+      payload: PreStepPayload,
+      next: () => Promise<PreStepDecision>,
+    ) => Promise<PreStepDecision>): void
   }
   effect: (callback: () => (() => unknown) | undefined) => unknown
   get: (name: string) => unknown
   inject: (services: string[], callback: (scoped: Context) => void) => unknown
+}
+
+/** The agent members this plugin reads. */
+interface AgentLike {
+  readonly session: { readonly id: string }
+  readonly ctx?: unknown
 }
 
 /** What the Client receives from the read endpoint. */
@@ -87,10 +155,18 @@ interface StatsResponse {
   readonly failures: FailureLog
   /** Which days the daily buckets actually cover. */
   readonly coverage: Coverage
+  /** Proposals awaiting a decision, and what has already been changed. */
+  readonly diagnosis: {
+    readonly pending: readonly PendingDiagnosis[]
+    readonly applied: readonly AppliedChange[]
+    readonly lastRunAt: number
+    readonly analyzing: boolean
+  }
 }
 
 /**
- * The live statistics: the counters, the failure audit, and the durable handle.
+ * The live statistics: the counters, the failure audit, the diagnosis state,
+ * and the durable handle.
  *
  * State is replaced wholesale on every fold so a snapshot handed to the store
  * or the HTTP response can never change underfoot.
@@ -98,6 +174,10 @@ interface StatsResponse {
 class ToolUsageStats {
   private counters: ToolUsageState = {}
   private failures: FailureLog = {}
+  private diagnosis: DiagnosisState = EMPTY_STATE
+  private applied: readonly AppliedChange[] = []
+  /** Set while a scheduled analysis is in flight, so one run is not stacked on another. */
+  private analyzing = false
   private readonly sessions = new Map<string, ToolUsageState>()
 
   /**
@@ -111,7 +191,15 @@ class ToolUsageStats {
 
   /** @returns the snapshot to persist. */
   snapshot(): Snapshot {
-    return { counters: this.counters, failures: this.failures }
+    return {
+      counters: this.counters,
+      failures: this.failures,
+      diagnosis: {
+        history: this.diagnosis.history,
+        pending: this.diagnosis.pending,
+        lastRunAt: this.diagnosis.lastRunAt,
+      },
+    }
   }
 
   /**
@@ -121,6 +209,78 @@ class ToolUsageStats {
   restore(loaded: Snapshot): void {
     this.counters = loaded.counters
     this.failures = loaded.failures
+    this.diagnosis = loaded.diagnosis === undefined
+      ? EMPTY_STATE
+      : {
+        history: loaded.diagnosis.history,
+        pending: loaded.diagnosis.pending,
+        lastRunAt: loaded.diagnosis.lastRunAt,
+      }
+  }
+
+  /** @returns the counters, for the analysis to read. */
+  get currentCounters(): ToolUsageState {
+    return this.counters
+  }
+
+  /** @returns the failure audit, for the analysis to read. */
+  get currentFailures(): FailureLog {
+    return this.failures
+  }
+
+  /** @returns the diagnosis state. */
+  get diagnosisState(): DiagnosisState {
+    return this.diagnosis
+  }
+
+  /** @returns whether an analysis is currently running. */
+  get isAnalyzing(): boolean {
+    return this.analyzing
+  }
+
+  /**
+   * Mark an analysis as running.
+   * @returns false when one was already running, so the caller skips its run.
+   */
+  beginAnalysis(): boolean {
+    if (this.analyzing) return false
+    this.analyzing = true
+    return true
+  }
+
+  /** Mark the running analysis as finished. */
+  endAnalysis(): void {
+    this.analyzing = false
+  }
+
+  /**
+   * Replace the diagnosis state.
+   * @param next - the state to adopt.
+   */
+  setDiagnosis(next: DiagnosisState): void {
+    this.diagnosis = next
+  }
+
+  /**
+   * Drop one proposal and record nothing about it.
+   * @param tool - the tool whose proposal to drop.
+   */
+  dismissProposal(tool: string): void {
+    this.diagnosis = dismiss(this.diagnosis, tool)
+  }
+
+  /**
+   * Record that a tool's definition changed, so it can be reviewed later.
+   * @param change - what changed.
+   */
+  recordApplied(change: AppliedChange): void {
+    // Newest first, bounded: the list is a review aid, not an audit log.
+    this.applied = [change, ...this.applied].slice(0, 50)
+  }
+
+  /** @returns the applied changes, newest first. */
+  get appliedChanges(): readonly AppliedChange[] {
+    return this.applied
   }
 
   /**
@@ -171,6 +331,12 @@ class ToolUsageStats {
       ),
       failures: this.failures,
       coverage: coverage(this.counters, this.retainDays),
+      diagnosis: {
+        pending: this.diagnosis.pending,
+        applied: this.applied,
+        lastRunAt: this.diagnosis.lastRunAt,
+        analyzing: this.analyzing,
+      },
     }
   }
 }
@@ -196,6 +362,22 @@ export function apply(ctx: Context, config: Config = {}): void {
   // One map per session: results follow their call within the same session, and
   // the pairing map empties as results arrive.
   const pendingNames = new Map<string, Map<string, string>>()
+
+  /**
+   * The targets a diagnosis request asked about, by session, held until the
+   * answer arrives. Matching by session keeps an unrelated assistant message
+   * from being read as a diagnosis.
+   */
+  const awaiting = new Map<string, readonly DiagnosisTarget[]>()
+
+  /** A run a user asked for, sent on the next step of that session. */
+  const requestedFrom = new Map<string, { prompt: string; targets: readonly DiagnosisTarget[] }>()
+
+  /**
+   * What this plugin has replaced, by tool name. A second change replaces this
+   * registration rather than stacking another one on the original.
+   */
+  const swaps = new Map<string, () => void>()
 
   /** The durable table, once the storage service activates. */
   let durable: {
@@ -240,9 +422,10 @@ export function apply(ctx: Context, config: Config = {}): void {
   const flush = (): Promise<void> => {
     if (durable === undefined) return Promise.resolve()
     const current = stats.snapshot()
-    if (current.counters === lastFlushed?.counters && current.failures === lastFlushed?.failures) {
-      return Promise.resolve()
-    }
+    // Every part of the snapshot counts as a change: comparing only the counters
+    // and the audit skipped writes when a diagnosis arrived, so a proposal was
+    // produced, shown in memory, and then lost on exit.
+    if (sameSnapshot(lastFlushed, current)) return Promise.resolve()
     lastFlushed = current
     return durable.put(SNAPSHOT_KEY, current).catch((error: unknown) => {
       logger?.warn?.(`tool-usage-stats: flush failed: ${String(error)}`)
@@ -273,7 +456,11 @@ export function apply(ctx: Context, config: Config = {}): void {
       return
     }
 
-    if (event.type !== 'tool/result') return
+    if (event.type !== 'tool/result') {
+      // An assistant message may carry the answer to a diagnosis request.
+      if (event.type === 'assistant/message') readAnswer(session.id, event)
+      return
+    }
     const result = readResult(event.data)
     if (result === undefined) return
 
@@ -293,6 +480,140 @@ export function apply(ctx: Context, config: Config = {}): void {
     }
   })
 
+  // ── Diagnosis ────────────────────────────────────────────────────────────
+  //
+  // A run asks the model about the tools that keep failing, and the answer
+  // becomes a proposal the user decides on. Nothing is applied automatically:
+  // a diagnosis is a hypothesis, and changing a live tool on one is how a
+  // misread becomes a silent behaviour change.
+
+  const policy: AnalysisPolicy = {
+    minFailures: config.minFailures ?? DEFAULT_POLICY.minFailures,
+    cooldownDays: config.cooldownDays ?? DEFAULT_POLICY.cooldownDays,
+  }
+
+  /** Definitions of the tools the registry currently holds, by name. */
+  const toolDefinitions = (): Map<string, RegisteredTool> => {
+    const tools = ctx.get('tools') as { definitions?: () => unknown } | undefined
+    const definitions = tools?.definitions?.() ?? []
+    const out = new Map<string, RegisteredTool>()
+    for (const definition of definitions as readonly unknown[]) {
+      const described = describeTool(definition)
+      if (described.name !== '') out.set(described.name, described)
+    }
+    return out
+  }
+
+  /**
+   * Ask the model to diagnose, from the session whose turn is running.
+   *
+   * The request goes into `decision.messages` rather than through
+   * `agent.inject()`: an injected message is durable context the NEXT request
+   * sees, and waits for one. A user who pressed a button expects the answer on
+   * the step that follows.
+   *
+   * @param agent - the agent whose step is starting.
+   * @param next - the downstream decision.
+   * @returns the decision, with the diagnosis request appended when there is one.
+   */
+  const askOnStep = async (
+    payload: PreStepPayload,
+    next: () => Promise<PreStepDecision>,
+  ): Promise<PreStepDecision> => {
+    const decision = await next()
+    // The agent is a field of the payload, not the payload itself. Reading
+    // `payload.session` here threw on every step once, and the contained catch
+    // turned that into a silently absent diagnosis.
+    const sessionId = payload?.agent?.session?.id
+    try {
+      if (decision.kind === 'reject' || sessionId === undefined) return decision
+      const requested = requestedFrom.get(sessionId)
+      const prepared = requested ?? prepareRun(stats.currentCounters, stats.currentFailures, stats.diagnosisState, policy, Date.now())
+      if (prepared === undefined) return decision
+
+      // Remember what this run asked about, so the answer can be matched to it
+      // when the assistant message arrives.
+      awaiting.set(sessionId, prepared.targets)
+      if (requested === undefined) {
+        // A scheduled or automatic run: record it so the cooldown starts now and
+        // the next step does not ask the same question again.
+        stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() })
+      }
+      requestedFrom.delete(sessionId)
+
+      const text = [
+        '【工具诊断请求】',
+        '',
+        prepared.prompt,
+        '',
+        '（这是 vyra 工具用量插件自动发出的诊断请求。请只回复上面要求的内容。）',
+      ].join('\n')
+
+      return {
+        ...decision,
+        messages: [
+          ...(decision.messages ?? []),
+          { role: 'user', content: [{ type: 'text', text }], source: { kind: 'vyra-tool-usage-stats' } },
+        ],
+      }
+    } catch (error) {
+      // A diagnosis is an extra; the step it rides on must still run.
+      process.stderr.write(`[vyra] pre-step failed: ${String(error)}\n`)
+      logger?.warn?.(`tool-usage-stats: diagnosis prompt failed: ${String(error)}`)
+      return decision
+    }
+  }
+
+  ctx.on('agent/pre-step' as never, askOnStep as never)
+
+  /**
+   * Read a completed diagnosis out of an assistant message and turn it into
+   * proposals.
+   *
+   * Matched by session: the run's targets are held from the step that asked, so
+   * an unrelated answer cannot be mistaken for a diagnosis.
+   *
+   * @param sessionId - the session the message belongs to.
+   * @param event - the assistant message event.
+   */
+  const readAnswer = (sessionId: string, event: SessionEvent): void => {
+    const targets = awaiting.get(sessionId)
+    if (targets === undefined) return
+    try {
+      const data = event.data as { message?: { content?: unknown } }
+      const content = data.message?.content
+      if (!Array.isArray(content)) return
+      const text = content
+        .filter((block): block is { type: string; text: string } =>
+          typeof block === 'object' && block !== null
+          && (block as { type?: unknown }).type === 'text'
+          && typeof (block as { text?: unknown }).text === 'string')
+        .map(block => block.text)
+        .join('\n')
+      if (text === '') {
+        return
+      }
+
+      awaiting.delete(sessionId)
+      requestedFrom.delete(sessionId)
+      const definitions = toolDefinitions()
+      const next = applyRun(
+        stats.diagnosisState,
+        stats.currentCounters,
+        targets,
+        text,
+        definitions,
+        Date.now(),
+      )
+      stats.setDiagnosis(next)
+      stats.endAnalysis()
+    } catch (error) {
+      awaiting.delete(sessionId)
+      stats.endAnalysis()
+      logger?.warn?.(`tool-usage-stats: reading a diagnosis failed: ${String(error)}`)
+    }
+  }
+
   // The Client reads through the Host's exact Fetch-route registry rather than
   // a Typert Remote method: Remotes require a declaration generated inside the
   // DSH repository, which an out-of-tree plugin cannot produce.
@@ -307,9 +628,11 @@ export function apply(ctx: Context, config: Config = {}): void {
     } | undefined
     if (connection?.fetch === undefined) return false
 
-    const json = (body: unknown): Response => new Response(JSON.stringify(body), {
+    const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), {
+      status,
       headers: { 'content-type': 'application/json' },
     })
+    const base = config.endpoint ?? '/api/vyra/tool-usage'
 
     try {
       const disposers = [
@@ -337,6 +660,70 @@ export function apply(ctx: Context, config: Config = {}): void {
             },
           }),
         }),
+        // Requesting a diagnosis only queues it: the answer arrives on the next
+        // step of a live session, which is the only place the model can be asked.
+        connection.fetch.register({
+          path: `${base}/diagnose`,
+          methods: ['POST'],
+          requestBody: 'buffered',
+          fetch: async (request) => {
+            const body = await request.json().catch(() => ({})) as { sessionId?: unknown }
+            const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined
+            if (sessionId === undefined) {
+              return json({ ok: false, detail: '需要 sessionId：诊断请求要发到某个会话里' }, 400)
+            }
+            const prepared = prepareRun(
+              stats.currentCounters, stats.currentFailures, stats.diagnosisState, policy, Date.now(),
+            )
+            if (prepared === undefined) {
+              return json({
+                ok: false,
+                detail: `没有达到分析条件的工具（需要新增失败 ≥ ${policy.minFailures} 次，且距上次分析 ≥ ${policy.cooldownDays} 天）`,
+              }, 409)
+            }
+            if (!stats.beginAnalysis()) {
+              return json({ ok: false, detail: '已有一个分析正在进行' }, 409)
+            }
+            requestedFrom.set(sessionId, prepared)
+            return json({ ok: true, targets: prepared.targets.map(target => target.tool) })
+          },
+        }),
+        // Applying a proposal is the only path that changes a live tool.
+        connection.fetch.register({
+          path: `${base}/apply`,
+          methods: ['POST'],
+          requestBody: 'buffered',
+          fetch: async (request) => {
+            const body = await request.json().catch(() => ({})) as { tool?: unknown }
+            const toolName = typeof body.tool === 'string' ? body.tool : undefined
+            if (toolName === undefined) return json({ ok: false, detail: '需要 tool' }, 400)
+
+            const proposal = stats.diagnosisState.pending.find(entry => entry.tool === toolName)
+            if (proposal === undefined) return json({ ok: false, detail: `没有 ${toolName} 的待处理建议` }, 404)
+
+            const resolved = resolveChange(proposal.change)
+            if (typeof resolved === 'string') return json({ ok: false, detail: resolved }, 422)
+
+            const result = swapTool(ctx, swaps, toolName, resolved, stats, logger)
+            if (!result.ok) return json({ ok: false, detail: result.detail }, 422)
+
+            stats.dismissProposal(toolName)
+            return json({ ok: true, tool: toolName, applied: proposal.change.kind })
+          },
+        }),
+        // Dismissing costs nothing, so it succeeds even when the proposal is gone.
+        connection.fetch.register({
+          path: `${base}/dismiss`,
+          methods: ['POST'],
+          requestBody: 'buffered',
+          fetch: async (request) => {
+            const body = await request.json().catch(() => ({})) as { tool?: unknown }
+            const toolName = typeof body.tool === 'string' ? body.tool : undefined
+            if (toolName === undefined) return json({ ok: false, detail: '需要 tool' }, 400)
+            stats.dismissProposal(toolName)
+            return json({ ok: true })
+          },
+        }),
       ]
       ctx.effect(() => () => { for (const dispose of disposers) void dispose() })
       return true
@@ -349,6 +736,108 @@ export function apply(ctx: Context, config: Config = {}): void {
   }
 
   if (!registerRoutes()) ctx.inject(['connection'], () => { registerRoutes() })
+}
+
+/**
+ * Replace a tool's definition with one carrying a proposed change.
+ *
+ * The registry borrows definitions and exposes a disposer per registration, so
+ * a swap is dispose-then-register. Two things make this safe to do at all:
+ *
+ * - The original definition is readable, including its `execute`, so the
+ *   replacement delegates to the original body. A plugin cannot reimplement a
+ *   shipped tool, and it does not have to.
+ * - The replacement is registered before the previous one is disposed, so the
+ *   tool is never missing from the catalogue the model reads.
+ *
+ * @param ctx - the plugin context, which owns the new registration.
+ * @param swaps - the per-instance table of what this plugin has replaced.
+ * @param toolName - the tool to replace.
+ * @param change - the description and/or parameter schema to put in force.
+ * @param stats - the statistics, which record what changed.
+ * @param logger - optional logger.
+ * @returns whether the swap happened, and why not when it did not.
+ */
+function swapTool(
+  ctx: Context,
+  swaps: Map<string, () => void>,
+  toolName: string,
+  change: { description?: string; parameters?: Record<string, unknown> },
+  stats: ToolUsageStats,
+  logger: { warn?: (message: string) => void } | undefined,
+): { ok: true } | { ok: false; detail: string } {
+  const tools = ctx.get('tools') as {
+    get?: (name: string) => unknown
+    register?: (definition: unknown) => () => void
+  } | undefined
+
+  if (tools?.get === undefined || tools.register === undefined) {
+    return { ok: false, detail: '工具注册表不可用' }
+  }
+
+  const current = tools.get(toolName) as {
+    description?: unknown
+    parameters?: unknown
+    output?: unknown
+    execute?: unknown
+  } | undefined
+  if (current === undefined) return { ok: false, detail: `工具 ${toolName} 不在注册表里` }
+  if (typeof current.execute !== 'function') {
+    return { ok: false, detail: `工具 ${toolName} 没有可复用的实现，无法安全替换` }
+  }
+
+  const before = {
+    description: typeof current.description === 'string' ? current.description : '',
+    parameters: (current.parameters ?? {}) as Record<string, unknown>,
+  }
+
+  let dispose: (() => void) | undefined
+  try {
+    dispose = tools.register({
+      ...current,
+      name: toolName,
+      description: change.description ?? before.description,
+      parameters: change.parameters ?? before.parameters,
+      // Borrowed deliberately: the registry is documented to accept a readonly
+      // definition without copying it, so the original body keeps working.
+      execute: current.execute,
+      output: current.output,
+    })
+  } catch (error) {
+    return { ok: false, detail: `注册替换版本失败：${String(error)}` }
+  }
+
+  swaps.get(toolName)?.()
+  swaps.set(toolName, dispose)
+
+  stats.recordApplied({
+    tool: toolName,
+    before,
+    appliedAt: Date.now(),
+    kind: change.description === undefined ? 'parameters' : 'description',
+  })
+  logger?.warn?.(`tool-usage-stats: replaced ${toolName}`)
+  return { ok: true }
+}
+
+/**
+ * Whether two snapshots hold the same content.
+ *
+ * `snapshot()` builds a fresh object each call, so the outer references always
+ * differ and comparing them would write on every tick. The diagnosis half is
+ * compared by the revision of its parts, which is what changes when a run
+ * finishes or a proposal is decided.
+ *
+ * @param left - one snapshot.
+ * @param right - the other.
+ * @returns whether persisting `right` after `left` would change anything.
+ */
+function sameSnapshot(left: Snapshot | undefined, right: Snapshot): boolean {
+  if (left === undefined) return false
+  if (left.counters !== right.counters || left.failures !== right.failures) return false
+  return left.diagnosis?.lastRunAt === right.diagnosis?.lastRunAt
+    && left.diagnosis?.pending === right.diagnosis?.pending
+    && left.diagnosis?.history === right.diagnosis?.history
 }
 
 /** The exported document shape. */
