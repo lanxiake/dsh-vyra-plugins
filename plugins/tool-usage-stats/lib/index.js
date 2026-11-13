@@ -508,20 +508,21 @@ var ToolUsageStats = class {
   get diagnosisState() {
     return this.diagnosis;
   }
-  /** @returns whether an analysis is currently running. */
+  /** @returns whether a prepared run is waiting for a step to carry it. */
   get isAnalyzing() {
     return this.analyzing;
   }
   /**
-   * Mark an analysis as running.
-   * @returns false when one was already running, so the caller skips its run.
+   * Record that a request is prepared and waiting to be delivered.
+   *
+   * Not a lock: a second request replaces the first, which is the honest
+   * behaviour for "prepare the current diagnosis". A lock would strand the flag
+   * whenever a user asked and then never sent a message.
    */
   beginAnalysis() {
-    if (this.analyzing) return false;
     this.analyzing = true;
-    return true;
   }
-  /** Mark the running analysis as finished. */
+  /** Record that the prepared request has been delivered and settled. */
   endAnalysis() {
     this.analyzing = false;
   }
@@ -598,6 +599,11 @@ var ToolUsageStats = class {
   }
 };
 var DEFAULT_WINDOWS = [7, 30];
+function sameSnapshot(left, right) {
+  if (left === void 0) return false;
+  if (left.counters !== right.counters || left.failures !== right.failures) return false;
+  return left.diagnosis?.lastRunAt === right.diagnosis?.lastRunAt && left.diagnosis?.pending === right.diagnosis?.pending && left.diagnosis?.history === right.diagnosis?.history;
+}
 var FLUSH_MS = 15e3;
 function apply(ctx, config = {}) {
   const retainDays = config.retainDays ?? 90;
@@ -620,6 +626,37 @@ function apply(ctx, config = {}) {
     }
   }
   const swaps = /* @__PURE__ */ new Map();
+  const analyzeEveryHours = config.analyzeEveryHours ?? 24;
+  if (analyzeEveryHours > 0) {
+    const timer = setInterval(() => {
+      try {
+        if (requestedFrom.size > 0) return;
+        const agents = ctx.get("agents");
+        const live = agents?.list?.() ?? [];
+        if (live.length === 0) return;
+        const prepared = prepareRun(
+          stats.currentCounters,
+          stats.currentFailures,
+          stats.diagnosisState,
+          policy,
+          Date.now()
+        );
+        if (prepared === void 0) return;
+        for (const agent of live) {
+          const id = agent?.session?.id;
+          if (id !== void 0) requestedFrom.set(id, prepared);
+        }
+        stats.beginAnalysis();
+        logger?.warn?.(`tool-usage-stats: scheduled diagnosis queued for ${live.length} session(s)`);
+      } catch (error) {
+        logger?.warn?.(`tool-usage-stats: scheduled analysis failed: ${String(error)}`);
+      }
+    }, analyzeEveryHours * 60 * 60 * 1e3);
+    timer.unref?.();
+    ctx.effect(() => () => {
+      clearInterval(timer);
+    });
+  }
   let durable;
   const openDurable = (scoped) => {
     const storageDomain = scoped.get("storageDomain");
@@ -715,6 +752,7 @@ function apply(ctx, config = {}) {
         stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() });
       }
       requestedFrom.delete(sessionId);
+      stats.endAnalysis();
       const text = [
         "\u3010\u5DE5\u5177\u8BCA\u65AD\u8BF7\u6C42\u3011",
         "",
@@ -824,9 +862,7 @@ function apply(ctx, config = {}) {
                 detail: `\u6CA1\u6709\u8FBE\u5230\u5206\u6790\u6761\u4EF6\u7684\u5DE5\u5177\uFF08\u9700\u8981\u65B0\u589E\u5931\u8D25 \u2265 ${policy.minFailures} \u6B21\uFF0C\u4E14\u8DDD\u4E0A\u6B21\u5206\u6790 \u2265 ${policy.cooldownDays} \u5929\uFF09`
               }, 409);
             }
-            if (!stats.beginAnalysis()) {
-              return json({ ok: false, detail: "\u5DF2\u6709\u4E00\u4E2A\u5206\u6790\u6B63\u5728\u8FDB\u884C" }, 409);
-            }
+            stats.beginAnalysis();
             requestedFrom.set(sessionId, prepared);
             return json({ ok: true, targets: prepared.targets.map((target) => target.tool) });
           }

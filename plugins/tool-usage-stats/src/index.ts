@@ -235,22 +235,23 @@ class ToolUsageStats {
     return this.diagnosis
   }
 
-  /** @returns whether an analysis is currently running. */
+  /** @returns whether a prepared run is waiting for a step to carry it. */
   get isAnalyzing(): boolean {
     return this.analyzing
   }
 
   /**
-   * Mark an analysis as running.
-   * @returns false when one was already running, so the caller skips its run.
+   * Record that a request is prepared and waiting to be delivered.
+   *
+   * Not a lock: a second request replaces the first, which is the honest
+   * behaviour for "prepare the current diagnosis". A lock would strand the flag
+   * whenever a user asked and then never sent a message.
    */
-  beginAnalysis(): boolean {
-    if (this.analyzing) return false
+  beginAnalysis(): void {
     this.analyzing = true
-    return true
   }
 
-  /** Mark the running analysis as finished. */
+  /** Record that the prepared request has been delivered and settled. */
   endAnalysis(): void {
     this.analyzing = false
   }
@@ -346,6 +347,26 @@ class ToolUsageStats {
 /** Day counts the read endpoint reports by default. */
 const DEFAULT_WINDOWS = [7, 30] as const
 
+/**
+ * Whether two snapshots hold the same content.
+ *
+ * `snapshot()` builds a fresh object each call, so the outer references always
+ * differ and comparing them would write on every tick. The diagnosis half is
+ * compared by the revision of its parts, which is what changes when a run
+ * finishes or a proposal is decided.
+ *
+ * @param left - the snapshot last written.
+ * @param right - the candidate.
+ * @returns whether persisting `right` after `left` would change anything.
+ */
+function sameSnapshot(left: Snapshot | undefined, right: Snapshot): boolean {
+  if (left === undefined) return false
+  if (left.counters !== right.counters || left.failures !== right.failures) return false
+  return left.diagnosis?.lastRunAt === right.diagnosis?.lastRunAt
+    && left.diagnosis?.pending === right.diagnosis?.pending
+    && left.diagnosis?.history === right.diagnosis?.history
+}
+
 /** How often the durable snapshot is written. */
 const FLUSH_MS = 15_000
 
@@ -407,8 +428,54 @@ export function apply(ctx: Context, config: Config = {}): void {
    */
   const swaps = new Map<string, () => void>()
 
-  /** The durable table, once the storage service activates. */
-  let durable: {
+  /**
+   * The scheduled run.
+   *
+   * A plain interval rather than a job or a schedule record: `ctx.jobs` needs a
+   * tool controller and a session owner, and `ctx.schedule` delivers a prompt to
+   * a conversation rather than calling back into a plugin. Neither fits, and the
+   * work here is only to decide whether a diagnosis is due — the request itself
+   * still rides on a step.
+   *
+   * Zero disables it, which leaves manual runs and is the right choice for a
+   * deployment paying per token.
+   */
+  const analyzeEveryHours = config.analyzeEveryHours ?? 24
+  if (analyzeEveryHours > 0) {
+    const timer = setInterval(() => {
+      try {
+        // Already waiting for a step to carry one: preparing again would only
+        // replace an identical request and log the same line every tick.
+        if (requestedFrom.size > 0) return
+        // Nothing to deliver to until a session exists; the next tick retries.
+        const agents = (ctx.get('agents') as { list?: () => readonly AgentLike[] } | undefined)
+        const live = agents?.list?.() ?? []
+        if (live.length === 0) return
+
+        const prepared = prepareRun(
+          stats.currentCounters, stats.currentFailures, stats.diagnosisState, policy, Date.now(),
+        )
+        if (prepared === undefined) return
+
+        // Every live session may deliver it; whichever takes a step first does.
+        // A session that never does costs nothing — the entry is replaced on the
+        // next tick and dropped when that session's next step consumes it.
+        for (const agent of live) {
+          const id = agent?.session?.id
+          if (id !== undefined) requestedFrom.set(id, prepared)
+        }
+        stats.beginAnalysis()
+        logger?.warn?.(`tool-usage-stats: scheduled diagnosis queued for ${live.length} session(s)`)
+      } catch (error) {
+        // A scheduled extra must never take the process down.
+        logger?.warn?.(`tool-usage-stats: scheduled analysis failed: ${String(error)}`)
+      }
+    }, analyzeEveryHours * 60 * 60 * 1000)
+    timer.unref?.()
+    ctx.effect(() => () => { clearInterval(timer) })
+  }
+
+  /** The durable table, once the storage service activates. */  let durable: {
     get: (key: string) => unknown
     put: (key: string, value: unknown) => Promise<void>
   } | undefined
@@ -573,6 +640,10 @@ export function apply(ctx: Context, config: Config = {}): void {
         stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() })
       }
       requestedFrom.delete(sessionId)
+      // The request is out, which is what the flag guarded. Releasing it here
+      // rather than only on the answer keeps a request the user never follows up
+      // on from blocking every later one.
+      stats.endAnalysis()
 
       const text = [
         '【工具诊断请求】',
@@ -714,9 +785,9 @@ export function apply(ctx: Context, config: Config = {}): void {
                 detail: `没有达到分析条件的工具（需要新增失败 ≥ ${policy.minFailures} 次，且距上次分析 ≥ ${policy.cooldownDays} 天）`,
               }, 409)
             }
-            if (!stats.beginAnalysis()) {
-              return json({ ok: false, detail: '已有一个分析正在进行' }, 409)
-            }
+            // Replaces any request already waiting: the user is asking for the
+            // current diagnosis, and one prepared a moment ago is staler.
+            stats.beginAnalysis()
             requestedFrom.set(sessionId, prepared)
             return json({ ok: true, targets: prepared.targets.map(target => target.tool) })
           },
