@@ -862,41 +862,21 @@ function apply(ctx, config = {}) {
               }, 409);
             }
             let sessionId = requested;
-            let created = false;
             if (sessionId === void 0) {
               const agents = ctx.get("agents");
-              if (agents?.create === void 0) {
-                return json({ ok: false, detail: "\u65E0\u6CD5\u65B0\u5EFA\u4F1A\u8BDD\uFF1Aagents \u670D\u52A1\u4E0D\u53EF\u7528" }, 503);
-              }
-              try {
-                sessionId = `vyra-diagnosis-${Date.now().toString(36)}`;
-                const handle = await agents.create({ sessionId });
-                created = true;
-                const agent = handle?.agent;
-                awaiting.set(sessionId, prepared.targets);
-                agent?.followup?.({
-                  role: "user",
-                  content: [{ type: "text", text: diagnosisMessage(prepared.prompt) }],
-                  source: { kind: "user" }
-                });
-                stats.beginAnalysis();
-                stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() });
-                return json({
-                  ok: true,
-                  sessionId,
-                  created,
-                  targets: prepared.targets.map((target) => target.tool)
-                });
-              } catch (error) {
-                return json({ ok: false, detail: `\u65B0\u5EFA\u4F1A\u8BDD\u5931\u8D25\uFF1A${String(error)}` }, 500);
-              }
+              sessionId = agents?.list?.()[0]?.session?.id;
+            }
+            if (sessionId === void 0) {
+              return json({
+                ok: false,
+                detail: "\u6CA1\u6709\u53EF\u6295\u9012\u7684\u4F1A\u8BDD\uFF1A\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u5BF9\u8BDD\uFF0C\u518D\u70B9\u300C\u7ACB\u5373\u5206\u6790\u300D"
+              }, 409);
             }
             stats.beginAnalysis();
             requestedFrom.set(sessionId, prepared);
             return json({
               ok: true,
               sessionId,
-              created,
               targets: prepared.targets.map((target) => target.tool)
             });
           }

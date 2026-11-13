@@ -788,48 +788,21 @@ export function apply(ctx: Context, config: Config = {}): void {
               }, 409)
             }
 
-            // No session to deliver to? Make one and wake it. A diagnosis is a
-            // plain question, so it needs a conversation and nothing else, and a
-            // freshly created agent is idle — the request would sit unread
-            // forever without the follow-up.
+            // Deliver to a session that is already running one. A freshly
+            // created agent accepts `followup` and records only its header —
+            // measured, twice, with and without a message id — so the request
+            // never reaches a step. An existing session is the path that works,
+            // and whoever pressed the button in the panel has one open.
             let sessionId = requested
-            let created = false
             if (sessionId === undefined) {
-              const agents = ctx.get('agents') as {
-                create?: (options: { sessionId: string }) => Promise<{ agent?: { followup?: (message: unknown) => void } }>
-              } | undefined
-              if (agents?.create === undefined) {
-                return json({ ok: false, detail: '无法新建会话：agents 服务不可用' }, 503)
-              }
-              try {
-                sessionId = `vyra-diagnosis-${Date.now().toString(36)}`
-                const handle = await agents.create({ sessionId })
-                created = true
-                const agent = (handle as { agent?: { followup?: (message: unknown) => void } })?.agent
-                // The answer is read by `readAnswer`, which only looks at
-                // sessions whose targets it recorded. Delivering straight into a
-                // fresh session skips `askOnStep`, so the record has to be made
-                // here or the reply arrives with nothing to match it to.
-                awaiting.set(sessionId, prepared.targets)
-                // The prompt goes in as the conversation's first message so the
-                // session is not empty, and so the request is the thing being
-                // answered rather than an aside.
-                agent?.followup?.({
-                  role: 'user',
-                  content: [{ type: 'text', text: diagnosisMessage(prepared.prompt) }],
-                  source: { kind: 'user' },
-                })
-                stats.beginAnalysis()
-                stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() })
-                return json({
-                  ok: true,
-                  sessionId,
-                  created,
-                  targets: prepared.targets.map(target => target.tool),
-                })
-              } catch (error) {
-                return json({ ok: false, detail: `新建会话失败：${String(error)}` }, 500)
-              }
+              const agents = ctx.get('agents') as { list?: () => readonly AgentLike[] } | undefined
+              sessionId = agents?.list?.()[0]?.session?.id
+            }
+            if (sessionId === undefined) {
+              return json({
+                ok: false,
+                detail: '没有可投递的会话：请先打开一个对话，再点「立即分析」',
+              }, 409)
             }
 
             // Replaces any request already waiting: the user is asking for the
@@ -839,7 +812,6 @@ export function apply(ctx: Context, config: Config = {}): void {
             return json({
               ok: true,
               sessionId,
-              created,
               targets: prepared.targets.map(target => target.tool),
             })
           },
