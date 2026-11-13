@@ -1,0 +1,4 @@
+- insert:
+    - id: ssh-terminal
+      name: 'vyra-ssh-terminal'
+      config: {}

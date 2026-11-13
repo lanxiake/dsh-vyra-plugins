@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "SSH terminal and file manager",
+    "description": "Connect to remote servers in DSH: secure terminal UI, agent SSH execution, SFTP file operations. Credentials stay local, supports password/key/agent auth."
+  }
+}

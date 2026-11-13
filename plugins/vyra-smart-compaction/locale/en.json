@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Smart compaction",
+    "description": "Tiered context compaction for long sessions: deterministic pruning inside the pressure band, a live pressure readout, and context_report / compact_context tools so the agent decides when and how much history to compact."
+  }
+}

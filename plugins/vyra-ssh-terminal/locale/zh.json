@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "SSH 终端与文件管理",
+    "description": "在 DSH 中连接远程服务器:安全的终端界面、Agent SSH 命令执行、SFTP 文件读写,凭据不离开本机,支持密码/密钥/agent 认证。"
+  }
+}

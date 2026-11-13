@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-agent-manager
+      name: 'vyra-agent-manager'

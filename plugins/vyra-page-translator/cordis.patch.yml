@@ -1,0 +1,4 @@
+- insert:
+    - id: page-translator
+      name: 'vyra-page-translator'
+      config: {}

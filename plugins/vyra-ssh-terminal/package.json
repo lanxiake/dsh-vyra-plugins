@@ -1,0 +1,72 @@
+{
+  "name": "vyra-ssh-terminal",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build-client.mjs"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "routes.js",
+    "terminals.js",
+    "connections.js",
+    "ssh-session.js",
+    "sftp.js",
+    "monitor.js",
+    "history.js",
+    "gate.js",
+    "audit.js",
+    "import.js",
+    "localnet.js",
+    "backup.js",
+    "sealed.js",
+    "sshconfig.js",
+    "passwordless.js",
+    "finalshell.js",
+    "vendor/",
+    "locale/",
+    "icon.svg",
+    "cordis.patch.yml"
+  ],
+  "dependencies": {
+    "ssh-config": "^5.3.0",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/xterm": "^6.0.0",
+    "esbuild": "^0.28.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "description": "内置 SSH 终端：连接档案、跳板、SFTP、端口转发与主机密钥固定，密码只进 DSH 凭据服务。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "ssh",
+    "terminal",
+    "sftp"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-ssh-terminal"
+  }
+}

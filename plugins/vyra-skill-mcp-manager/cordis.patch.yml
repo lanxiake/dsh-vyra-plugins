@@ -1,0 +1,4 @@
+- insert:
+    - id: skill-mcp-manager
+      name: 'vyra-skill-mcp-manager'
+      config: {}

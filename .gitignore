@@ -1,1 +1,5 @@
 node_modules/
+# Touched by an incidental `pnpm install` in this repository, which owns no
+# dependencies of its own; the plugin packages are installed by their consumers.
+pnpm-lock.yaml
+pnpm-workspace.yaml

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Page Translator",
+    "description": "Translate the whole page like a browser does, with Bing, Google or the configured LLM, and restore the original in one click"
+  }
+}

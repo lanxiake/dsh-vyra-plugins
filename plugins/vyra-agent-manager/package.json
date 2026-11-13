@@ -1,0 +1,46 @@
+{
+  "name": "vyra-agent-manager",
+  "version": "1.1.0",
+  "type": "module",
+  "description": "可视化智能体管理：为每个智能体定制自己的提示词、工具与技能，也可以让主智能体自己创建它们。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./tool-policy": "./tool-policy.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "core.js",
+    "tool.js",
+    "tool-policy.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent",
+    "preset"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-agent-manager"
+  }
+}

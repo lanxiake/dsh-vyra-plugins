@@ -1,0 +1,49 @@
+# The smart-compaction row, inserted at the host plane so one mount serves every
+# agent and every agent preset (the preset's own compaction realm is read per
+# agent through `ctx.get('compaction')`, never by mounting a second backend).
+#
+# Every field below is optional; the defaults are restated here so the installed
+# row documents its own policy. Delete a key to fall back to the code default.
+- insert:
+    - id: smart-compaction
+      name: 'vyra-smart-compaction'
+      config:
+        # Lumii's threshold ladder, mapped onto the shipped meter.
+        #   pruneRatio 0.48   -> deterministic prune band [0.48, triggerRatio)
+        #   triggerRatio 0.72 -> advisory "compact now" band; the shipped
+        #                        backend keeps its own 0.80 automatic trigger
+        pruneRatio: 0.48
+        triggerRatio: 0.72
+        emergencyRatio: 0.9
+        # Only commit a pass that reclaims at least this many tokens
+        # (Hermes proactive_prune_min_reclaim_tokens): a smaller pass would churn
+        # the request prefix and cost more in cache misses than it saves.
+        pruneMinReclaimTokens: 4096
+        # Only results at least this long become deterministic micro-summaries.
+        # Lumii's own floor is 8000; lowered to 3000 so the mid-sized results
+        # that actually accumulate in a long session are eligible too.
+        # headChars + tailChars must stay below this (checked at activation).
+        pruneMinResultChars: 3000
+        # Duplicate detection floor: a hash header on a shorter result costs more
+        # than the text it replaces (Hermes _PRUNE_MIN_CHARS).
+        dedupMinChars: 200
+        # Re-arm runway: after a committed pass, skip scanning until pressure
+        # climbs past `after + max(reclaimed, triggerTokens, minReclaim)`.
+        pruneRearm: true
+        # Nothing in the newest N surface nodes is ever rewritten.
+        protectLastN: 20
+        # Recent conversation kept verbatim by an agent-decided compaction.
+        keepRecentTurns: 6
+        # Upper bound on replacements per pass.
+        maxNodesPerPass: 40
+        # Budgets used when microSummary is false. They must leave room below
+        # pruneMinResultChars, or a head/tail rewrite could grow a result.
+        headChars: 1500
+        tailChars: 600
+        microSummary: true
+        # Fallback capacity when the routed model has not declared one yet.
+        defaultContextWindow: 128000
+        # Rows `context_report` prints for the biggest surface consumers.
+        reportTopNodes: 8
+        # One runtime-context line once pressure leaves the calm band.
+        pressureContextLine: true

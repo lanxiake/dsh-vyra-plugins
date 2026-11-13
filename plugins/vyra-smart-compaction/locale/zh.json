@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "智能上下文压缩",
+    "description": "长会话的分级上下文压缩：在压力区间内做确定性剪枝、实时显示上下文占用，并提供 context_report / compact_context 工具，让 Agent 自己决定何时压缩、压缩到什么程度。"
+  }
+}
