@@ -873,12 +873,14 @@ function apply(ctx, config = {}) {
                 const handle = await agents.create({ sessionId });
                 created = true;
                 const agent = handle?.agent;
+                awaiting.set(sessionId, prepared.targets);
                 agent?.followup?.({
                   role: "user",
                   content: [{ type: "text", text: diagnosisMessage(prepared.prompt) }],
                   source: { kind: "user" }
                 });
                 stats.beginAnalysis();
+                stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() });
                 return json({
                   ok: true,
                   sessionId,

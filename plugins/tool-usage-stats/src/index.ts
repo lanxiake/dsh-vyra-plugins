@@ -806,6 +806,11 @@ export function apply(ctx: Context, config: Config = {}): void {
                 const handle = await agents.create({ sessionId })
                 created = true
                 const agent = (handle as { agent?: { followup?: (message: unknown) => void } })?.agent
+                // The answer is read by `readAnswer`, which only looks at
+                // sessions whose targets it recorded. Delivering straight into a
+                // fresh session skips `askOnStep`, so the record has to be made
+                // here or the reply arrives with nothing to match it to.
+                awaiting.set(sessionId, prepared.targets)
                 // The prompt goes in as the conversation's first message so the
                 // session is not empty, and so the request is the thing being
                 // answered rather than an aside.
@@ -815,6 +820,7 @@ export function apply(ctx: Context, config: Config = {}): void {
                   source: { kind: 'user' },
                 })
                 stats.beginAnalysis()
+                stats.setDiagnosis({ ...stats.diagnosisState, lastRunAt: Date.now() })
                 return json({
                   ok: true,
                   sessionId,
