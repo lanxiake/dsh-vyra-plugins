@@ -4,13 +4,40 @@ DeepSeek Harness 的插件与技能市场，随 [dsh-Veyra](../dsh-Veyra) fork �
 
 上游 `deepseek-ai/deepseek-harness` 不接受外部 PR，因此这里所有内容都是独立于上游仓库独立演进的。
 
+## 安装
+
+在 DSH 客户端里打开 **设置 → 插件 → 索引源**，加入这一行：
+
+```
+https://lanxiake.github.io/dsh-vyra-plugins/index.json
+```
+
+然后在插件市场里搜索下面的中文名或包名安装。索引是实时拉取的，**这个仓库更新后客户端重新打开插件页就能看到**，不需要改上面的 URL。
+
+想只用某一个插件也可以，每个插件都是独立的 npm 包，按包名从 Git 安装即可（安装源见各条目的 `version.source`）。
+
+## 已发布的插件
+
+| 插件 | 名称 | 介绍 |
+|---|---|---|
+| `vyra-tool-usage-stats` | 工具自进化 | 统计每次工具调用、记下每次失败的原因，定时交给 Agent 诊断那些反复出错的工具，给出可一键应用的修复。减少重复报错，也减少为同样错误反复烧掉的 token |
+| `vyra-agent-manager` | 智能体管理 | 用面板而不是配置文件来创建和管理智能体：每个智能体有自己的提示词、能力集、工具限制与优选技能，主智能体也能替你创建它们 |
+| `vyra-smart-compaction` | 智能压缩 | 分层、由智能体决定的高质量上下文压缩：压力阶梯、以「真的回收了多少」为门槛的确定性预剪枝，以及模型可自行调用的压缩工具。让长会话活得下去，又不会反复冲掉提示缓存 |
+| `vyra-skill-mcp-manager` | 技能与 MCP 管理 | 在一个面板里浏览、搜索、安装技能与 MCP 服务器，不必为每一件都手改 profile 配置行 |
+| `vyra-ssh-terminal` | SSH 终端 | 把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密 |
+| `vyra-system-selection` | 系统级划词 | 在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。**仅 Windows** |
+| `vyra-theme-styles` | 主题风格 | 把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」 |
+| `vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
+
+插件的版本、图标、分类与安装来源以 [`docs/index.json`](docs/index.json) 为准——那份是生成物，改的是 [`scripts/market-manifest.ts`](scripts/market-manifest.ts)。
+
 ## 两个入口
 
 DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：
 
 | 通道 | 内容 | 用户怎么用 |
 |---|---|---|
-| **插件市场索引** | `docs/index.json`（format 1） | 客户端「设置 → 插件 → 索引源」加入 URL |
+| **插件市场索引** | `docs/index.json`（format 1） | 客户端「设置 → 插件 → 索引源」加入上面的 URL |
 | **技能目录** | `skills/<name>/SKILL.md` | profile 的 `skill-filesystem` 行加 `customSkillDirs` 指向本目录 |
 
 技能不需要打包成插件——DSH 的 `dsh-skill-filesystem` 在任意本地目录扫描 `SKILL.md` 并**监听变更**，改技能无需重启。
@@ -32,16 +59,6 @@ dsh-vyra-plugins/
 │   └── print-skill-config.ts
 └── LICENSE                 # MIT，各插件目录下另有一份
 ```
-
-## 已发布的插件
-
-| 插件 | 做什么 |
-|---|---|
-| `vyra-tool-usage-stats` | 工具自进化：统计调用与失败原因，交 Agent 诊断并给出可一键应用的修复 |
-| `vyra-agent-manager` | 智能体管理：面板化创建智能体，各自的提示词、能力、工具限制与技能 |
-| `vyra-smart-compaction` | 智能压缩：压力感知 + 有回收门槛的预剪枝 + 模型可调用的压缩工具 |
-| `vyra-skill-mcp-manager` | 技能与 MCP 管理：一个面板里浏览、搜索、安装 |
-| `vyra-ssh-terminal` | SSH 终端：连接档案、跳板、SFTP、端口转发、主机密钥固定 |
 
 ## 工作流
 
