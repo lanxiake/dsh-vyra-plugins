@@ -471,6 +471,19 @@
       },
       "versions": [
         {
+          "version": "1.0.1",
+          "publishTimestamp": 1795053600,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "9e44f9320564ca5923085b80c90cceca25b83d78",
+            "path": "plugins/dsh-tool-ocr"
+          },
+          "engines": {
+            "dsh": ">=0.2.0-rc.2"
+          }
+        },
+        {
           "version": "1.0.0",
           "publishTimestamp": 1794967200,
           "source": {

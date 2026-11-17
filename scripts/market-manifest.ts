@@ -559,12 +559,23 @@ export const manifest: MarketManifest = {
       // the install then refuses.
       engines: { dsh: '>=0.2.0-rc.2' },
       versions: {
+        // 1.0.0 shipped a tree with no `lib/` — see 1.0.1 below. Kept so a
+        // client that already resolved it keeps installing what it resolved.
         '1.0.0': {
           publishTimestamp: 1794967200,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'bfcecfa25ca5cc0781580a12a267b7f277abe7d3',
+            path: 'plugins/dsh-tool-ocr',
+          },
+        },
+        '1.0.1': {
+          publishTimestamp: 1795053600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9e44f9320564ca5923085b80c90cceca25b83d78',
             path: 'plugins/dsh-tool-ocr',
           },
         },
