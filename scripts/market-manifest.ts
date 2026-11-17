@@ -533,6 +533,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-agent-cli-manager',
           },
         },
+        // 1.1.0 is uninstallable: its package.json carries `prepare: lefthook install`, which
+        // pnpm runs on a git install, and there is no .git in the fetched tarball. The fix is a
+        // new version, not a repin — 1.1.0's bytes are already out.
+        '1.1.1': {
+          publishTimestamp: 1795226400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f7ae30421c544f62d3ed6c39aaf42e6c79be5f56',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
