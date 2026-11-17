@@ -88,14 +88,29 @@ function wanted(relative, declared) {
   if (ALWAYS_PACKED.has(head)) return true
   return declared.some(entry => {
     const named = entry.replace(/\/$/, '')
-    // The entry itself, or the whole subtree when it names a directory.
-    if (relative === named || relative.startsWith(`${named}/`)) return true
+
+    // A declared directory admits its whole subtree. A declared *glob* has to
+    // admit a path prefix too: `filter` runs for the directories on the way
+    // down, so an entry naming `lib/**/*.js` that refuses `lib` and `lib/cli`
+    // is an entry whose files are never reached — the glob matches nothing
+    // because the walk stopped above it.
+    const literalPrefix = named.slice(0, named.search(/[*?]/) === -1 ? named.length : named.lastIndexOf('/', named.search(/[*?]/)))
+    if (literalPrefix !== '' && (relative === literalPrefix || relative.startsWith(`${literalPrefix}/`))) return true
     // A directory an entry lives under: `assets/logo.png` publishes `assets`
-    // as a way through, and `filter` must admit it or the copy never descends.
+    // as a way through.
     if (named.startsWith(`${relative}/`)) return true
-    // A glob in the last segment matches this entry alone.
-    if (!named.includes('*')) return false
-    return new RegExp(`^${named.replaceAll('.', '\\.').replaceAll('*', '.*')}$`).test(relative)
+
+    if (!named.includes('*')) return relative === named
+    // `**` spans directories, `*` does not, and `**/` also matches zero
+    // directories — npm's own `files` semantics, which a plain `.*` gets wrong
+    // by demanding at least one path segment (`lib/**/*.js` must match
+    // `lib/index.js`).
+    const pattern = named
+      .replaceAll('.', '\\.')
+      .replaceAll('**/', '(?:.*/)?')
+      .replaceAll('**', '.*')
+      .replaceAll('*', '[^/]*')
+    return new RegExp(`^${pattern}$`).test(relative)
   })
 }
 
