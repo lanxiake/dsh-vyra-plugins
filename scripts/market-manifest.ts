@@ -311,6 +311,15 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-skill-mcp-manager',
           },
         },
+        '1.2.0': {
+          publishTimestamp: 1795050000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'bc6d008cff2159893013e375d158277f43d495f4',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
       },
       metadata: {
         category: 'integration',
