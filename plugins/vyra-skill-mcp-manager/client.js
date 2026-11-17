@@ -629,11 +629,12 @@ window.__ModuleLoader__.load({
       const [searchQuery, setSearchQuery] = useState('');
       const debouncedQuery = useDebounce(searchQuery, 500);
       
-      const [source, setSource] = useState('skills.sh');
+      // skillhub first: measured ~0.3s from CN, while skills.sh takes ~10s here.
+      const [source, setSource] = useState('skillhub');
       const [mcpSource, setMcpSource] = useState('registry');
       
       const [category, setCategory] = useState('all');
-      const [categories, setCategories] = useState([]);
+      const [disabledSkills, setDisabledSkills] = useState([]);
       
       const [page, setPage] = useState(1);
       const [hasMore, setHasMore] = useState(true);
@@ -645,7 +646,7 @@ window.__ModuleLoader__.load({
       const [previewView, setPreviewView] = useState(null);
 
       // upload / manual config / custom market
-      const [uploadPath, setUploadPath] = useState('');
+      const dirInputRef = useRef(null);
       const [showMcpForm, setShowMcpForm] = useState(false);
       const [mcpForm, setMcpForm] = useState({ serverName: '', transport: 'stdio', command: '', args: '', url: '', env: '' });
       const [customSkillMarket, setCustomSkillMarket] = useState('');
@@ -656,6 +657,9 @@ window.__ModuleLoader__.load({
       const [jsonText, setJsonText] = useState('');
       const [jsonEditName, setJsonEditName] = useState('');
       const [usage, setUsage] = useState({ tools: {}, skills: {}, mcp: {} });
+      const [toolInfo, setToolInfo] = useState({ tools: [], servers: {}, disabled: [] });
+      const [expandedServers, setExpandedServers] = useState(() => new Set());
+      const [configEditor, setConfigEditor] = useState(null);
 
       const isMySkills = tab === 'my-skills';
       const isMyMcp = tab === 'my-mcp';
@@ -665,9 +669,12 @@ window.__ModuleLoader__.load({
 
       const loadInstalled = useCallback(async () => {
         try {
-          const [s, m] = await Promise.all([call('skills.list'), call('mcp.list')]);
+          const [s, m, cfg] = await Promise.all([call('skills.list'), call('mcp.list'), call('settings.get')]);
           setInstalled((s && s.items) || []);
           setMounted((m && m.items) || []);
+          // skills.list has no enabled flag; the market plugin keeps disabled slugs in settings.
+          const disabled = cfg && cfg.settings && Array.isArray(cfg.settings.disabledSkills) ? cfg.settings.disabledSkills : [];
+          setDisabledSkills(disabled.map((x) => String(x).toLowerCase()));
         } catch (e) {
           console.error('加载已安装列表失败:', e);
         }
@@ -678,6 +685,63 @@ window.__ModuleLoader__.load({
           /* usage is optional */
         }
       }, []);
+
+      const loadTools = useCallback(async () => {
+        try {
+          const r = await post('/api/skill-mcp-manager/tools', {}, AbortSignal.timeout(20000));
+          if (r && r.ok) setToolInfo({ tools: r.tools || [], servers: r.servers || {}, disabled: r.disabled || [] });
+        } catch (e) {
+          /* tool catalog is optional */
+        }
+      }, []);
+
+      const toggleTool = useCallback(async (name, enabled) => {
+        setBusy(`tool:${name}`);
+        setError('');
+        try {
+          const r = await post('/api/skill-mcp-manager/tools/toggle', { name, enabled }, AbortSignal.timeout(20000));
+          if (!r.ok) throw new Error(r.error || '切换失败');
+          const rows = r.tools || [];
+          const servers = {};
+          for (const t of rows) {
+            const b = servers[t.server] || { count: 0, tokens: 0, disabled: 0 };
+            b.count += 1; b.tokens += t.tokens; if (t.disabled) b.disabled += 1;
+            servers[t.server] = b;
+          }
+          setToolInfo({ tools: rows, servers, disabled: r.disabled || [] });
+        } catch (e) {
+          setError(`切换工具失败: ${e.message || e}`);
+        } finally {
+          setBusy('');
+        }
+      }, []);
+
+      const openConfigFile = useCallback(async (path) => {
+        if (!path) { setError('找不到 MCP 配置文件路径'); return; }
+        setError('');
+        try {
+          const r = await post('/api/skill-mcp-manager/mcp-config', { action: 'read', path }, AbortSignal.timeout(20000));
+          if (!r.ok) throw new Error(r.error || '读取失败');
+          setConfigEditor({ path: r.path, text: r.content, busy: false, error: '' });
+        } catch (e) {
+          setError(`读取配置文件失败: ${e.message || e}`);
+        }
+      }, []);
+
+      const saveConfigFile = useCallback(async () => {
+        if (!configEditor) return;
+        setConfigEditor({ ...configEditor, busy: true, error: '' });
+        try {
+          const r = await post('/api/skill-mcp-manager/mcp-config', { action: 'write', path: configEditor.path, content: configEditor.text }, AbortSignal.timeout(20000));
+          if (!r.ok) throw new Error(r.error || '保存失败');
+          setNotice('配置文件已保存，切换一次开关或重连后生效');
+          setConfigEditor(null);
+          await loadInstalled();
+          await loadTools();
+        } catch (e) {
+          setConfigEditor({ ...configEditor, busy: false, error: String(e.message || e) });
+        }
+      }, [configEditor, loadInstalled, loadTools]);
 
       const openDir = useCallback(async (item, kind) => {
         setError('');
@@ -856,10 +920,6 @@ window.__ModuleLoader__.load({
           setHasMore(Boolean(result && result.hasMore));
           setPage(targetPage);
           
-          if (result && result.categories && result.categories.length > 0) {
-            setCategories(result.categories);
-          }
-          
           if (result && result.hint) {
             setNotice(result.hint);
           } else {
@@ -913,10 +973,6 @@ window.__ModuleLoader__.load({
           setHasMore(lobehub ? (result && result.page < result.totalPages) : Boolean(result && result.hasMore));
           setPage(targetPage);
           
-          if (result && result.categories && result.categories.length > 0) {
-            setCategories(result.categories);
-          }
-          
           if (result && result.hint) {
             setNotice(result.hint);
           } else {
@@ -951,15 +1007,38 @@ window.__ModuleLoader__.load({
       }, [loadInstalled]);
 
       useEffect(() => {
+        if (isMyMcp) loadTools();
+      }, [isMyMcp, loadTools]);
+
+      // Live status polling: re-read installed lists (and the MCP tool catalog) every 5s
+      // while a "my" tab is open, so mounted/connected changes show up without a reload.
+      useEffect(() => {
+        if (!isMySkills && !isMyMcp) return;
+        const id = setInterval(() => {
+          if (busy) return;
+          loadInstalled();
+          if (isMyMcp) loadTools();
+        }, 5000);
+        return () => clearInterval(id);
+      }, [tab, busy, isMySkills, isMyMcp, loadInstalled, loadTools]);
+
+      // webkitdirectory must be an attribute (React won't render it from props reliably),
+      // otherwise the "folder picker" opens a plain file dialog instead.
+      useEffect(() => {
+        const input = dirInputRef.current;
+        if (!input) return;
+        input.setAttribute('webkitdirectory', '');
+        input.setAttribute('directory', '');
+      }, [isMySkills]);
+
+      useEffect(() => {
         if (isSkillMarket) {
           setCategory('all');
-          setCategories([]);
           setPage(1);
           setHasMore(true);
           if (!customSkillMarket) searchSkills(debouncedQuery);
         } else if (isMcpMarket) {
           setCategory('all');
-          setCategories([]);
           setPage(1);
           setHasMore(true);
           if (!customMcpMarket) searchMcps(debouncedQuery);
@@ -994,15 +1073,10 @@ window.__ModuleLoader__.load({
       }, [customSkillMarket, customMcpMarket, isMarket, loadCustomMarket]);
 
       const handleCategoryChange = useCallback((cat) => {
+        // Categories are derived from the already-loaded page, so filtering is local:
+        // no refetch, no page reset.
         setCategory(cat);
-        setPage(1);
-        setHasMore(true);
-        if (isSkillMarket && !customItems) {
-          searchSkills(debouncedQuery, { category: cat, page: 1, source });
-        } else if (isMcpMarket && !customItems) {
-          searchMcps(debouncedQuery, { category: cat, page: 1, source: mcpSource });
-        }
-      }, [tab, isSkillMarket, isMcpMarket, customItems, debouncedQuery, source, mcpSource, searchSkills, searchMcps]);
+      }, []);
 
       const installSkill = async (item) => {
         const key = item.slug || item.id;
@@ -1107,20 +1181,35 @@ window.__ModuleLoader__.load({
         }
       };
 
-      const uploadSkills = async () => {
-        const path = uploadPath.trim();
-        if (!path) {
-          setError('请填写技能文件夹路径');
+      // Click-through picker: the browser file input carries webkitdirectory so the OS opens a
+      // folder chooser; every selected file is posted as skills.upload's files array.
+      const handlePickedFiles = async (fileList) => {
+        const files = Array.from(fileList || []).filter((f) => !/\.zip$/i.test(f.name || ''));
+        if (files.length === 0) {
+          setError('没有选中可上传的文件，请选择包含 SKILL.md 的文件夹');
           return;
         }
-        setBusy('upload');
+        setBusy('drop');
         setError('');
         setNotice('');
         try {
-          const r = await call('skills.upload', { path, force: true });
-          const count = (r.items && r.items.length) || 0;
-          setNotice(count > 0 ? `已上传 ${count} 个技能` : '没有找到可上传的技能（目录里需要 SKILL.md）');
-          setUploadPath('');
+          const entries = [];
+          for (const f of files) {
+            entries.push({ path: f.webkitRelativePath || f.name, content: await f.text() });
+          }
+          const zip = Array.from(fileList || []).find((f) => /\.zip$/i.test(f.name || ''));
+          if (zip) {
+            const bytes = new Uint8Array(await zip.arrayBuffer());
+            let bin = '';
+            for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+            const r = await post('/api/skill-mcp-manager/import-zip', { zipBase64: btoa(bin), name: zip.name.replace(/\.zip$/i, '') }, AbortSignal.timeout(180000));
+            if (!r.ok) throw new Error(r.error || '导入失败');
+            setNotice(`已从 ${zip.name} 安装技能 ${r.slug}`);
+          } else {
+            const r = await call('skills.upload', { files: entries, force: true });
+            const n = (r.items && r.items.length) || r.count || 0;
+            setNotice(n > 0 ? `已上传 ${n} 个技能` : '没有找到可安装的技能（目录里需要有 SKILL.md）');
+          }
           await loadInstalled();
         } catch (e) {
           setError(`上传失败: ${e.message || e}`);
@@ -1201,9 +1290,9 @@ window.__ModuleLoader__.load({
         let items;
 
         if (isMySkills) {
-          // skills.list has no enabled flag; disabled skills are tracked by the market plugin,
-          // so treat everything listed as installed and enabled.
-          items = installed.map(s => ({ ...s, type: 'skill', installed: true, key: s.slug, enabled: s.enabled !== false, source: s.source || '本地' }));
+          // skills.list has no enabled flag: disabled slugs come from settings.disabledSkills.
+          const disabled = new Set(disabledSkills);
+          items = installed.map(s => ({ ...s, type: 'skill', installed: true, key: s.slug, enabled: !disabled.has(String(s.slug).toLowerCase()), source: s.source || '本地' }));
         } else if (isMyMcp) {
           items = mounted.map(m => ({ ...m, type: 'mcp', installed: true, key: m.serverName, name: m.title || m.serverName, enabled: m.enabled !== false }));
         } else if (customItems) {
@@ -1213,11 +1302,24 @@ window.__ModuleLoader__.load({
         }
 
         items = items.filter(match);
+        if (category !== 'all') items = items.filter(item => String(item.category || '').trim() === category);
 
         return items;
-      }, [tab, isMySkills, isMyMcp, isSkillMarket, isMarket, skills, mcps, installed, mounted, customItems, searchQuery, installedSkillSet, installedMcpSet]);
+      }, [tab, isMySkills, isMyMcp, isSkillMarket, isMarket, skills, mcps, installed, mounted, customItems, searchQuery, category, disabledSkills, installedSkillSet, installedMcpSet]);
 
-      const showSidebar = isMarket && !customItems && categories.length > 0;
+      // skills.search has no top-level categories; build them from the loaded items instead.
+      const categoryList = useMemo(() => {
+        const base = isMySkills ? installed : isMyMcp ? mounted : (customItems || (isSkillMarket ? skills : mcps));
+        const counts = new Map();
+        for (const item of base || []) {
+          const name = String(item.category || '').trim();
+          if (!name) continue;
+          counts.set(name, (counts.get(name) || 0) + 1);
+        }
+        return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 24);
+      }, [tab, isMySkills, isMyMcp, isSkillMarket, installed, mounted, customItems, skills, mcps]);
+
+      const showSidebar = isMarket && !customItems && categoryList.length >= 2;
 
       return h('div', { style: S.container },
         h('div', { style: S.header },
@@ -1234,12 +1336,12 @@ window.__ModuleLoader__.load({
               style: S.categoryItem(category === 'all'),
               onClick: () => handleCategoryChange('all')
             }, '全部'),
-            categories.slice(0, 20).map(cat => 
+            categoryList.map(([cat, count]) =>
               h('div', {
                 key: cat,
                 style: S.categoryItem(category === cat),
                 onClick: () => handleCategoryChange(cat)
-              }, cat)
+              }, cat, h('span', { style: S.categoryCount }, String(count)))
             )
           ),
 
@@ -1256,12 +1358,12 @@ window.__ModuleLoader__.load({
                 })
               ),
               isSkillMarket && h('div', { style: S.filterChips },
-                ['skills.sh', 'skillhub', 'browse.sh'].map(src =>
+                [['skillhub', 'SkillHub'], ['browse.sh', 'browse.sh'], ['clawhub', 'ClawHub'], ['skills.sh', 'skills.sh']].map(([src, label]) =>
                   h('button', {
                     key: src,
                     style: S.chip(source === src && !customItems),
                     onClick: () => { setCustomSkillMarket(''); setCustomItems(null); setSource(src) }
-                  }, src)
+                  }, label)
                 )
               ),
               isMcpMarket && h('div', { style: S.filterChips },
@@ -1293,40 +1395,44 @@ window.__ModuleLoader__.load({
             ),
 
             isMySkills && h('div', { style: S.toolbar },
+              h('input', {
+                type: 'file',
+                multiple: true,
+                ref: dirInputRef,
+                onChange: (e) => { handlePickedFiles(e.target.files); e.target.value = '' },
+                style: { display: 'none' },
+              }),
               h('div', {
-                onDragOver: (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' },
-                onDrop: (e) => { e.preventDefault(); handleDrop(e.dataTransfer) },
-                onClick: () => {},
+                onClick: () => { if (busy !== 'drop' && dirInputRef.current) dirInputRef.current.click() },
+                onDragOver: (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; if (!dropActive) setDropActive(true) },
+                onDragEnter: (e) => { e.preventDefault(); setDropActive(true) },
+                onDragLeave: (e) => { e.preventDefault(); setDropActive(false) },
+                onDrop: (e) => { e.preventDefault(); e.stopPropagation(); setDropActive(false); handleDrop(e.dataTransfer) },
+                role: 'button',
+                tabIndex: 0,
+                onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (dirInputRef.current) dirInputRef.current.click() } },
                 style: {
-                  flex: '1 1 340px', minWidth: '240px', padding: '18px', borderRadius: '12px',
+                  flex: '1 1 100%', padding: '22px 18px', borderRadius: '12px',
                   border: `2px dashed ${dropActive ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l1)'}`,
                   background: dropActive ? 'var(--dsw-alias-bg-layer-2)' : 'transparent',
                   textAlign: 'center', fontSize: '13px', color: 'var(--dsw-alias-label-secondary)',
-                  cursor: 'pointer', transition: 'all 0.15s',
+                  cursor: busy === 'drop' ? 'progress' : 'pointer', transition: 'all 0.15s',
                 },
-                onDragEnter: () => setDropActive(true),
-                onDragLeave: () => setDropActive(false),
               },
-                h('div', { style: { fontWeight: 600, color: 'var(--dsw-alias-label-primary)', marginBottom: '4px' } }, busy === 'drop' ? '正在导入...' : '拖入技能文件夹或 .zip 压缩包'),
-                h('div', null, '文件夹会整包上传；压缩包会自动解包安装')
-              ),
-              h('div', { style: { display: 'flex', gap: '8px', flex: '1 1 280px', minWidth: '200px' } },
-                h('input', {
-                  type: 'text',
-                  placeholder: '或填本地文件夹路径',
-                  value: uploadPath,
-                  onChange: (e) => setUploadPath(e.target.value),
-                  onKeyDown: (e) => { if (e.key === 'Enter') uploadSkills() },
-                  style: S.searchInput,
-                }),
-                h('button', { style: S.btn('primary', busy === 'upload'), disabled: busy === 'upload', onClick: uploadSkills }, busy === 'upload' ? '上传中...' : '上传')
+                h('div', { style: { fontWeight: 600, color: 'var(--dsw-alias-label-primary)', marginBottom: '4px' } },
+                  busy === 'drop' ? '正在导入...' : (dropActive ? '松开即可导入' : '拖入技能文件夹或 .zip 压缩包，或点击选择')),
+                h('div', null, '文件夹整包上传；压缩包自动解包安装；点击则打开本地文件夹选择器')
               )
             ),
 
             isMyMcp && h('div', { style: S.toolbar },
               h('button', { style: S.btn(showMcpForm ? 'default' : 'primary', false), onClick: () => setShowMcpForm(!showMcpForm) }, showMcpForm ? '收起配置' : '手动配置 MCP'),
               h('button', { style: S.btn(showJsonForm ? 'default' : 'primary', false), onClick: () => { setShowJsonForm(!showJsonForm); setShowMcpForm(false) } }, showJsonForm ? '收起 JSON' : '粘贴 MCP JSON'),
-              h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, '支持直接粘贴 mcpServers JSON，或编辑已装 MCP')
+              h('button', {
+                style: S.btn('default', false),
+                onClick: () => openConfigFile((mounted[0] && mounted[0].path) || (mcps[0] && mcps[0].path)),
+              }, '编辑配置文件'),
+              h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, '支持粘贴 mcpServers JSON、编辑已装 MCP 或直接改 mcp.json')
             ),
 
             isMyMcp && showJsonForm && h('div', { style: { padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '10px' } },
@@ -1396,6 +1502,11 @@ window.__ModuleLoader__.load({
                   const isBusy = busy.includes(key);
                   const isLast = i === displayItems.length - 1;
                   const enabled = item.enabled !== false && item.mounted !== false;
+                  const serverKey = item.serverName || item.slug;
+                  const serverStats = isMyMcp ? toolInfo.servers[serverKey] : null;
+                  const serverTools = isMyMcp ? toolInfo.tools.filter(t => t.server === serverKey) : [];
+                  const isExpanded = expandedServers.has(serverKey);
+                  const fmtTokens = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n));
                   
                   return h('div', { 
                     key: i,
@@ -1484,11 +1595,69 @@ window.__ModuleLoader__.load({
                           openPreview(item);
                         }
                       }, '预览')
+                    ),
+                    serverStats && serverStats.count > 0 && h('div', null,
+                      h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' } },
+                        h('button', {
+                          style: { ...S.btn('default', false), padding: '4px 10px', fontSize: '12px', flex: 'none' },
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            setExpandedServers(prev => {
+                              const next = new Set(prev);
+                              if (next.has(serverKey)) next.delete(serverKey); else next.add(serverKey);
+                              return next;
+                            });
+                          },
+                        }, isExpanded ? '收起工具' : `查看工具（${serverStats.count}）`),
+                        h('span', { style: S.usageTag },
+                          `${serverStats.count} 个工具 · 约 ${fmtTokens(serverStats.tokens)} 上下文`),
+                        serverStats.disabled > 0 && h('span', { style: S.usageTag }, `已禁用 ${serverStats.disabled}`)
+                      ),
+                      isExpanded && h('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' } },
+                        serverTools.map(tool =>
+                          h('div', { key: tool.name, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 9px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border-l1)' } },
+                            h('div', { style: { flex: 1, minWidth: 0 } },
+                              h('div', { style: { fontSize: '12.5px', fontWeight: 600, color: tool.disabled ? 'var(--dsw-alias-label-secondary)' : 'var(--dsw-alias-label-primary)', fontFamily: 'ui-monospace, Consolas, monospace' } }, tool.label),
+                              h('div', { style: { fontSize: '11.5px', color: 'var(--dsw-alias-label-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, tool.description || '无描述'),
+                              h('div', { style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, `约 ${fmtTokens(tool.tokens)} 上下文`)
+                            ),
+                            h('button', {
+                              style: { ...S.btn(tool.disabled ? 'primary' : 'default', false), flex: 'none', padding: '4px 10px', fontSize: '12px' },
+                              disabled: busy === `tool:${tool.name}`,
+                              onClick: (e) => { e.stopPropagation(); toggleTool(tool.name, tool.disabled) },
+                            }, busy === `tool:${tool.name}` ? '...' : (tool.disabled ? '启用' : '禁用'))
+                          )
+                        )
+                      )
                     )
                   );
                 })
               ),
               loadingMore && h('div', { style: S.loadingMore }, '加载更多...')
+            )
+          )
+        ),
+        configEditor && h('div', { style: S.modalBackdrop, onClick: () => { if (!configEditor.busy) setConfigEditor(null) } },
+          h('div', { style: S.modalContent, onClick: (e) => e.stopPropagation() },
+            h('div', { style: S.modalHeader },
+              h('div', { style: { flex: 1, minWidth: 0 } },
+                h('div', { style: S.modalTitle }, '编辑 MCP 配置文件'),
+                h('div', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, configEditor.path)
+              ),
+              h('button', { style: S.closeBtn, disabled: configEditor.busy, onClick: () => setConfigEditor(null) }, h(XIcon, { size: 16 }))
+            ),
+            h('div', { style: { flex: 1, overflow: 'auto', padding: '16px 20px' } },
+              h('textarea', {
+                style: { ...S.jsonArea, minHeight: '360px' },
+                value: configEditor.text,
+                spellCheck: false,
+                onChange: (e) => setConfigEditor({ ...configEditor, text: e.target.value, error: '' }),
+              }),
+              configEditor.error && h('div', { style: { marginTop: '10px', color: 'var(--dsw-alias-state-error-primary)', fontSize: '13px' } }, configEditor.error)
+            ),
+            h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '12px 20px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
+              h('button', { style: S.btn('default', configEditor.busy), disabled: configEditor.busy, onClick: () => setConfigEditor(null) }, '取消'),
+              h('button', { style: S.btn('primary', configEditor.busy), disabled: configEditor.busy, onClick: saveConfigFile }, configEditor.busy ? '保存中...' : '保存')
             )
           )
         ),
@@ -1530,3 +1699,4 @@ window.__ModuleLoader__.load({
     };
   },
 });
+

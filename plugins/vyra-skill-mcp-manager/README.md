@@ -39,6 +39,27 @@ https://lanxiake.github.io/dsh-vyra-plugins/index.json
 - 面板展示的是**配置状态**，不替代对技能本身内容的编写
 - MCP 服务器的实际连接由 DSH 的 MCP 插件负责，这里只管理配置
 
+## 变更
+
+### 1.1.0
+
+**修掉一个会让整个 DSH 起不来的缺陷。** 恢复工具开关时读了 `ctx.agents`：
+
+```js
+const direct = ctx.agents && typeof ctx.agents.list === 'function' ? ctx.agents : null
+```
+
+在 cordis 里，读一个没写进 `inject` 的服务名，抛错发生在**求值操作数**的时候
+（`vendor/cordis/src/reflect.ts`），所以 `typeof` 守卫根本来不及生效。这段代码又是从
+顶层 Promise 和 `agent/created` 监听器里调用的，抛错绕过了文件里所有 try/catch，
+直接把 host 拉崩：
+
+```
+dsh: fatal load failure: Error: cannot get property "agents" without inject
+```
+
+改成只走 `ctx.get('agents')`（该方法在 Context 类上，属性读取不会触发反射守卫）。
+
 ## 开发
 
 宿主端 `index.js` 提供读写技能目录与 MCP 配置的 RPC；浏览器端 `client.js` 是面板。

@@ -342,28 +342,255 @@ async function importZip(base64, name) {
   }
 }
 
+// ---- tool-level switches + context-estimate + raw MCP config file ----
+const TOOL_PREFS_FILE = join(USAGE_DIR, 'tools.json')
+const MCP_CONFIG_ROOTS = [
+  join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'market', 'mcp'),
+  join(homedir(), '.dsh', 'market', 'mcp'),
+]
+
+let disabledTools = []
+let prefsTouched = false
+let lastRestrictError = ''
+/** agent.id -> { deny, disposer }. Restriction must be applied per agent (agent.ctx). */
+const agentRestrictions = new Map()
+const applyingRestrictions = new Set()
+
+async function readToolPrefs() {
+  try {
+    const { readFile } = await import('node:fs/promises')
+    const parsed = JSON.parse(await readFile(TOOL_PREFS_FILE, 'utf8'))
+    return Array.isArray(parsed.disabled) ? parsed.disabled.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+async function writeToolPrefs() {
+  try {
+    const { mkdir, writeFile } = await import('node:fs/promises')
+    await mkdir(USAGE_DIR, { recursive: true })
+    await writeFile(TOOL_PREFS_FILE, JSON.stringify({ disabled: disabledTools, updatedAt: Date.now() }), 'utf8')
+  } catch {
+    /* best effort */
+  }
+}
+
+// Rough model-facing size of one tool: name + description + JSON parameters.
+// 3.5 chars/token matches mixed Chinese/English tool text well enough for a ranking.
+function catalogOf(ctx) {
+  const tools = ctx.get('tools')
+  if (!tools || typeof tools.schemas !== 'function') return null
+  let schemas = []
+  try {
+    schemas = tools.schemas() || []
+  } catch {
+    return null
+  }
+  const rows = []
+  for (const schema of schemas) {
+    const name = String(schema && schema.name ? schema.name : '')
+    if (!name.startsWith('mcp__')) continue
+    const rest = name.slice(5)
+    const cut = rest.indexOf('__')
+    const server = cut > 0 ? rest.slice(0, cut) : rest
+    const json = JSON.stringify({ name, description: schema.description || '', parameters: schema.parameters || {} })
+    rows.push({
+      name,
+      server,
+      label: cut > 0 ? rest.slice(cut + 2) : name,
+      description: String(schema.description || '').slice(0, 240),
+      chars: json.length,
+      tokens: Math.max(1, Math.ceil(json.length / 3.5)),
+      disabled: disabledTools.includes(name),
+    })
+  }
+  rows.sort((a, b) => a.server.localeCompare(b.server) || a.label.localeCompare(b.label))
+  return rows
+}
+
+function knownToolNames(ctx) {
+  try {
+    const tools = ctx.get('tools')
+    return tools && typeof tools.schemas === 'function' ? (tools.schemas() || []).map((s) => String(s && s.name ? s.name : '')) : []
+  } catch {
+    return []
+  }
+}
+
+function applyAgentRestriction(ctx, agent) {
+  const id = agent && agent.id
+  if (!id || typeof id !== 'string') return
+  // restrict() emits tools/change SYNCHRONOUSLY and our listener re-enters here;
+  // without this guard the same deny set would be recomputed recursively.
+  if (applyingRestrictions.has(id)) return
+  applyingRestrictions.add(id)
+  try {
+    const deny = disabledTools.filter((name) => knownToolNames(ctx).includes(name))
+    const current = agentRestrictions.get(id)
+    if (current !== undefined && current.deny.join('\u0000') === deny.join('\u0000')) return
+    if (current !== undefined) {
+      // Drop the map entry BEFORE disposing: the disposer also emits tools/change.
+      agentRestrictions.delete(id)
+      try {
+        current.disposer()
+      } catch {
+        /* already lifted */
+      }
+    }
+    if (deny.length === 0) return
+    const tools = agent.ctx && typeof agent.ctx.get === 'function' ? agent.ctx.get('tools') : undefined
+    if (tools === undefined || typeof tools.restrict !== 'function') return
+    const disposer = tools.restrict({ deny })
+    agentRestrictions.set(id, { deny, disposer })
+    lastRestrictError = ''
+  } catch (error) {
+    lastRestrictError = String(error && error.message ? error.message : error)
+  } finally {
+    applyingRestrictions.delete(id)
+  }
+}
+
+function agentsOf(ctx) {
+  // `ctx.get('agents')` only: reading `ctx.agents` as a property throws when the
+  // plugin does not declare `agents` in its `inject` list (cordis reflect.ts
+  // "cannot get property … without inject"), and a `typeof` guard cannot catch
+  // that because the throw happens while the operand is evaluated. This runs
+  // from a top-level promise and an `agent/created` listener, so the throw
+  // escapes every try/catch in this file and fails the whole host load.
+  const service = typeof ctx.get === 'function' ? ctx.get('agents') : undefined
+  if (!service || typeof service.list !== 'function') return []
+  try {
+    return service.list() || []
+  } catch {
+    return []
+  }
+}
+
+function refreshAgentRestrictions(ctx) {
+  const agents = agentsOf(ctx)
+  for (const agent of agents) applyAgentRestriction(ctx, agent)
+  return agents.length
+}
+
+function safeMcpConfigPath(raw) {
+  const target = join(String(raw || ''))
+  const resolved = target
+  const ok = MCP_CONFIG_ROOTS.some((root) => resolved.toLowerCase().startsWith(join(root).toLowerCase()))
+  if (!ok) throw new Error('只允许编辑 MCP 配置目录下的 JSON 文件')
+  if (!/\.json$/i.test(resolved)) throw new Error('只允许编辑 .json 文件')
+  return resolved
+}
+
+async function readMcpConfig(raw) {
+  const { readFile } = await import('node:fs/promises')
+  const file = safeMcpConfigPath(raw)
+  const text = await readFile(file, 'utf8')
+  return { ok: true, path: file, content: text }
+}
+
+async function writeMcpConfig(raw, content) {
+  const { writeFile } = await import('node:fs/promises')
+  const file = safeMcpConfigPath(raw)
+  const text = String(content || '')
+  let parsed
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('内容不是合法 JSON，未写入')
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('JSON 顶层必须是对象')
+  await writeFile(file, text, 'utf8')
+  return { ok: true, path: file }
+}
+
 export const name = 'vyra-skill-mcp-manager'
 
 export function apply(ctx) {
-  const webServer = ctx.get('webServer')
-  if (!webServer || typeof webServer.register !== 'function') return
-  route(webServer, ctx, '/api/skill-mcp-manager/skill-preview', 'skill-mcp-manager.skill-preview', async (body) =>
-    body.path ? previewLocal(body.path) : previewRemote(body.item || {}))
-  route(webServer, ctx, '/api/skill-mcp-manager/custom-market', 'skill-mcp-manager.custom-market', async (body) => ({
-    ok: true,
-    items: await loadCustomMarket(body.kind === 'mcp' ? 'mcp' : 'skill', body.url),
-  }))
-  route(webServer, ctx, '/api/skill-mcp-manager/import-zip', 'skill-mcp-manager.import-zip', async (body) =>
-    importZip(body.zipBase64, body.name))
-  route(webServer, ctx, '/api/skill-mcp-manager/usage', 'skill-mcp-manager.usage', async (body) => {
-    if (body && body.reset) {
-      usageState = emptyUsage()
-      await flushUsage()
+  let registered = false
+  // webServer may not exist yet when this plugin is applied (load order varies), and the
+  // service announce arrives later. Registering once, and retrying on the announce, is the
+  // difference between "routes exist" and every request falling through to a 401/404.
+  const registerRoutes = () => {
+    if (registered) return
+    const webServer = ctx.get('webServer')
+    if (!webServer || typeof webServer.register !== 'function') return
+    registered = true
+    route(webServer, ctx, '/api/skill-mcp-manager/skill-preview', 'skill-mcp-manager.skill-preview', async (body) =>
+      body.path ? previewLocal(body.path) : previewRemote(body.item || {}))
+    route(webServer, ctx, '/api/skill-mcp-manager/custom-market', 'skill-mcp-manager.custom-market', async (body) => ({
+      ok: true,
+      items: await loadCustomMarket(body.kind === 'mcp' ? 'mcp' : 'skill', body.url),
+    }))
+    route(webServer, ctx, '/api/skill-mcp-manager/import-zip', 'skill-mcp-manager.import-zip', async (body) =>
+      importZip(body.zipBase64, body.name))
+    route(webServer, ctx, '/api/skill-mcp-manager/health', 'skill-mcp-manager.health', async () => ({ ok: true, plugin: name }))
+    route(webServer, ctx, '/api/skill-mcp-manager/usage', 'skill-mcp-manager.usage', async (body) => {
+      if (body && body.reset) {
+        usageState = emptyUsage()
+        await flushUsage()
+        return { ok: true, usage: usageState }
+      }
+      if (!usageState) usageState = await readUsage()
       return { ok: true, usage: usageState }
-    }
-    if (!usageState) usageState = await readUsage()
-    return { ok: true, usage: usageState }
-  })
+    })
+    route(webServer, ctx, '/api/skill-mcp-manager/tools', 'skill-mcp-manager.tools', async () => {
+      const rows = catalogOf(ctx)
+      if (rows === null) return { ok: false, error: 'tools 服务不可用，暂时读不到工具列表' }
+      const servers = {}
+      for (const row of rows) {
+        const bucket = servers[row.server] || { count: 0, tokens: 0, disabled: 0 }
+        bucket.count += 1
+        bucket.tokens += row.tokens
+        if (row.disabled) bucket.disabled += 1
+        servers[row.server] = bucket
+      }
+      return { ok: true, tools: rows, servers, disabled: disabledTools }
+    })
+    route(webServer, ctx, '/api/skill-mcp-manager/tools/toggle', 'skill-mcp-manager.tools-toggle', async (body) => {
+      const name = String(body.name || '')
+      if (!name.startsWith('mcp__')) throw new Error('只能切换 MCP 工具')
+      const wantEnabled = Boolean(body.enabled)
+      prefsTouched = true
+      disabledTools = wantEnabled
+        ? disabledTools.filter((x) => x !== name)
+        : [...new Set([...disabledTools, name])]
+      await writeToolPrefs()
+      const agents = refreshAgentRestrictions(ctx)
+      return { ok: true, applied: agents > 0 && !lastRestrictError, agents, disabled: disabledTools, tools: catalogOf(ctx), restrictError: lastRestrictError || undefined }
+    })
+    route(webServer, ctx, '/api/skill-mcp-manager/mcp-config', 'skill-mcp-manager.mcp-config', async (body) => {
+      if (body.action === 'write') return writeMcpConfig(body.path, body.content)
+      return readMcpConfig(body.path)
+    })
+    ctx.effect(
+      () =>
+        webServer.register({
+          kind: 'exact',
+          path: '/api/skill-mcp-manager/lobehub-register',
+          handler: async (_req, res) => {
+            let status = 200
+            let payload
+            try {
+              payload = { ok: true, ...(await ensureRegistered()) }
+            } catch (error) {
+              status = 500
+              payload = { ok: false, error: String(error && error.message ? error.message : error) }
+            }
+            res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            res.end(JSON.stringify(payload))
+          },
+        }),
+      'skill-mcp-manager.lobehub-register',
+    )
+  }
+
+  registerRoutes()
+  if (!registered) {
+    ctx.on('internal/service', (serviceName) => {
+      if (serviceName === 'webServer' || serviceName === 'httpServer') registerRoutes()
+    })
+  }
 
   // Count every dispatched tool call so the panel can show what is actually used.
   readUsage().then((loaded) => {
@@ -376,24 +603,39 @@ export function apply(ctx) {
       /* never break a tool call for a counter */
     }
   })
-  ctx.effect(
-    () =>
-      webServer.register({
-        kind: 'exact',
-        path: '/api/skill-mcp-manager/lobehub-register',
-        handler: async (_req, res) => {
-          let status = 200
-          let payload
-          try {
-            payload = { ok: true, ...(await ensureRegistered()) }
-          } catch (error) {
-            status = 500
-            payload = { ok: false, error: String(error && error.message ? error.message : error) }
-          }
-          res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          res.end(JSON.stringify(payload))
-        },
-      }),
-    'skill-mcp-manager.lobehub-register',
-  )
+
+  // Restore persisted tool-level switches once agents exist, and keep them applied as
+  // agents come and go (restriction lives on agent.ctx, so every agent needs its own).
+  const restoreToolSwitches = () => refreshAgentRestrictions(ctx)
+  readToolPrefs().then((saved) => {
+    // A toggle may arrive before the disk read settles; never clobber that newer state.
+    if (prefsTouched) return
+    disabledTools = saved
+    restoreToolSwitches()
+  })
+  ctx.on('agent/created', () => restoreToolSwitches())
+  ctx.on('tools/change', () => restoreToolSwitches())
+  ctx.on('agent/disposed', ({ agent }) => {
+    const id = agent && agent.id
+    if (!id) return
+    const current = agentRestrictions.get(id)
+    agentRestrictions.delete(id)
+    if (current) {
+      try {
+        current.disposer()
+      } catch {
+        /* fiber already gone */
+      }
+    }
+  })
+  ctx.effect(() => () => {
+    for (const { disposer } of agentRestrictions.values()) {
+      try {
+        disposer()
+      } catch {
+        /* ignore */
+      }
+    }
+    agentRestrictions.clear()
+  }, 'skill-mcp-manager.tool-restrictions')
 }

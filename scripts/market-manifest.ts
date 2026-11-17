@@ -278,12 +278,23 @@ export const manifest: MarketManifest = {
       },
       icon: SKILL_MCP_ICON,
       versions: {
+        // 1.0.0 keeps its original commit: a version whose source moved under
+        // users who already resolved it is not a version anymore.
         '1.0.0': {
           publishTimestamp: 1794551488,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
+        '1.1.0': {
+          publishTimestamp: 1794900000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
             path: 'plugins/vyra-skill-mcp-manager',
           },
         },

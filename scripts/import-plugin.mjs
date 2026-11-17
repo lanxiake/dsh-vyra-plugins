@@ -50,6 +50,26 @@ function rewriteIdentity(file, replacements) {
   return true
 }
 
+/**
+ * Files this repository authors for the plugin rather than copying from the
+ * source. The source directory is a working copy that carries none of them, so
+ * a re-import has to carry the existing ones across its wipe — otherwise the
+ * README and LICENSE the market shows disappear the second time someone
+ * imports an updated build.
+ */
+const REPO_AUTHORED = ['README.md', 'LICENSE']
+
+/** Read the repo-authored files before the wipe that preserves them across it. */
+function preservedFiles() {
+  const kept = new Map()
+  for (const file of REPO_AUTHORED) {
+    const path = join(target, file)
+    if (existsSync(path)) kept.set(file, readFileSync(path))
+  }
+  return kept
+}
+
+const preserved = preservedFiles()
 rmSync(target, { recursive: true, force: true })
 mkdirSync(target, { recursive: true })
 cpSync(source, target, {
@@ -60,6 +80,15 @@ cpSync(source, target, {
     return !EXCLUDED_FILES.has(name) && !EXCLUDED_SUFFIXES.some(suffix => name.endsWith(suffix))
   },
 })
+
+const restored = []
+for (const [file, bytes] of preserved) {
+  // Only restore what the copy did not bring, so a source that does ship its
+  // own README wins over the stale copy this repository held.
+  if (existsSync(join(target, file))) continue
+  writeFileSync(join(target, file), bytes)
+  restored.push(file)
+}
 
 // A hand-written manifest can carry a BOM (`ssh-terminal`'s does), which
 // JSON.parse rejects. Dropping it here also strips it from the copy.
