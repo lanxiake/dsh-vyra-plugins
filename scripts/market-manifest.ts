@@ -415,6 +415,15 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        '1.3.0': {
+          publishTimestamp: 1795219200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6b7b215d39a1ae8ad0ec7ef4efc3602b2b3cefff',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
