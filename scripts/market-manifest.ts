@@ -471,12 +471,26 @@ export const manifest: MarketManifest = {
       // so an older client cannot load it.
       engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
       versions: {
+        // 1.0.0's package.json carried `prepare: lefthook install`, copied in
+        // from the source working copy. A git install runs `prepare`, there is
+        // no .git in the fetched tarball, and lefthook exits 128 — so 1.0.0
+        // fails to install for everyone. It keeps its pinned commit: the fix is
+        // 1.0.1, not a repin of a version users already resolved.
         '1.0.0': {
           publishTimestamp: 1794963600,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'c0a2f398ded5e79da81334b2b0d18b5e81520ba1',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
+        '1.0.1': {
+          publishTimestamp: 1794900000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9c77cc23b9c296c36d57edce8955c06565d30ca2',
             path: 'plugins/vyra-agent-cli-manager',
           },
         },

@@ -378,6 +378,19 @@
       },
       "versions": [
         {
+          "version": "1.0.1",
+          "publishTimestamp": 1794900000,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "9c77cc23b9c296c36d57edce8955c06565d30ca2",
+            "path": "plugins/vyra-agent-cli-manager"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
+        {
           "version": "1.0.0",
           "publishTimestamp": 1794963600,
           "source": {
