@@ -1,0 +1,36 @@
+# Each entry under `agents` becomes a provider named `cli-<id>`, which adds the CLI to
+# the composer's switcher and the model menu. The names and their order follow
+# desktop-cc-gui, whose experience this plugin brings to DSH.
+- insert:
+    - id: vyra-agent-cli-manager
+      name: vyra-agent-cli-manager
+      config:
+        agents:
+          - id: claude
+            name: Claude Code
+            command: npx
+            args: [-y, '@agentclientprotocol/claude-agent-acp@0.101.0']
+          - id: kimi
+            name: Kimi CLI
+            command: npx
+            args: [-y, '@moonshot-ai/kimi-code@2.5.2', acp]
+          - id: codex
+            name: Codex CLI
+            command: npx
+            args: [-y, '@agentclientprotocol/codex-acp@2.5.0']
+          - id: pi
+            name: PI CLI
+            command: npx
+            args: [-y, 'pi-acp@0.0.34']
+          - id: omp
+            name: OMP CLI
+            command: omp
+            args: [acp]
+          - id: opencode
+            name: OpenCode
+            command: opencode
+            args: [acp]
+          - id: codebuddy
+            name: CodeBuddy CLI
+            command: codebuddy
+            args: [--acp]

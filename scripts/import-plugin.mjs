@@ -1,14 +1,20 @@
 /**
  * Import a plugin maintained outside this repository into `plugins/<name>/`.
  *
- * The source packages are hand-written ESM/IIFE bundles with no build step of
- * their own, so this copies them verbatim and rewrites only the identity
- * strings that must agree for the package to load: `package.json`'s `name`,
- * the host half's `export const name`, the cordis row's `name`, and the client
- * bundle's `__ModuleLoader__.load({ id })`. The client id must equal the
- * package name (packages/client/tsdown.client.ts:187) because the module
- * system matches rows by package name; a bundle registering the old name never
- * satisfies the row and the plugin silently never mounts.
+ * Two shapes of source come through here. A hand-written bundle carries its
+ * whole distribution in the package root, so the copy is filtered by a
+ * denylist. A package with a real build step declares `files`, which is
+ * already the exact publish set — its `lib/` alone can be a megabyte of
+ * emitted modules, and its tests, docs, and configs are large and useless to
+ * an install — so that manifest wins and the denylist does not apply.
+ *
+ * Only the identity strings that must agree for the package to load are
+ * rewritten: `package.json`'s `name`, the host half's `export const name`, the
+ * cordis row's `name`, and the client bundle's
+ * `__ModuleLoader__.load({ id })`. The client id must equal the package name
+ * (packages/client/tsdown.client.ts:187) because the module system matches
+ * rows by package name; a bundle registering the old name never satisfies the
+ * row and the plugin silently never mounts.
  *
  * Not published, and kept out of the plugin's own `files`: this repo builds
  * each plugin from source, and an importer belongs to the act of importing.
@@ -18,15 +24,18 @@
  * @module dsh-vyra-plugins/import-plugin
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { basename, join, relative, resolve, sep } from 'node:path'
 
-/** Directories never copied: build inputs a marketplace install cannot use. */
+/** Directories never copied from a denylist-filtered source. */
 const EXCLUDED = ['node_modules', '.git', 'src', 'test', 'tests', 'scripts', 'backups', 'ui']
 
 /** Extensions never copied: archives of the source tree, or dep manifests an install ignores. */
 const EXCLUDED_FILES = new Set(['pnpm-lock.yaml', 'pnpm-workspace.yaml', 'package-lock.json'])
 const EXCLUDED_SUFFIXES = ['.tgz', '.tar.gz']
+
+/** Entries npm packs regardless of `files`, so a filtered copy must carry them too. */
+const ALWAYS_PACKED = new Set(['package.json', 'README.md', 'LICENSE'])
 
 const [sourceArg, targetArg] = process.argv.slice(2)
 if (sourceArg === undefined || targetArg === undefined) {
@@ -38,10 +47,54 @@ const source = resolve(sourceArg)
 const target = resolve(import.meta.dirname, '..', 'plugins', targetArg)
 if (!existsSync(join(source, 'package.json'))) throw new Error(`${source} holds no package.json`)
 
+/**
+ * Whether one entry of the source belongs in the copy.
+ *
+ * `filter` runs for every entry at every depth, so the decision is made on the
+ * entry's first path segment relative to the source root — a nested
+ * `lib/adapter.js` is admitted because `lib` is published, not rejected
+ * because `adapter.js` names nothing in `files`.
+ *
+ * A package declaring `files` is taken at its word: that declaration is the
+ * publish set, and second-guessing it with the denylist is how an import
+ * silently drops a directory the package needs.
+ * @param relative - the entry's path relative to the source root, POSIX-separated.
+ * @param declared - the source's `files`, when it declares any.
+ * @returns whether to copy the entry.
+ */
+function wanted(relative, declared) {
+  const head = relative.split('/')[0]
+  if (head === '' || head === '.') return true
+  if (head === 'node_modules' || head === '.git') return false
+  if (relative.endsWith('.tgz') || relative.endsWith('.tar.gz')) return false
+  if (declared === undefined) {
+    return !EXCLUDED.includes(head)
+      && !EXCLUDED_FILES.has(head)
+      && !EXCLUDED_SUFFIXES.some(suffix => head.endsWith(suffix))
+  }
+  // npm packs these regardless of `files`: the manifest is the package, and
+  // the licence text has to travel with the code it covers.
+  if (ALWAYS_PACKED.has(head)) return true
+  return declared.some(entry => {
+    const named = entry.replace(/\/$/, '')
+    // The entry itself, or the whole subtree when it names a directory.
+    if (relative === named || relative.startsWith(`${named}/`)) return true
+    // A directory an entry lives under: `assets/logo.png` publishes `assets`
+    // as a way through, and `filter` must admit it or the copy never descends.
+    if (named.startsWith(`${relative}/`)) return true
+    // A glob in the last segment matches this entry alone.
+    if (!named.includes('*')) return false
+    return new RegExp(`^${named.replaceAll('.', '\\.').replaceAll('*', '.*')}$`).test(relative)
+  })
+}
+
 /** Every string standing for the package's identity, replaced in one pass. */
 function rewriteIdentity(file, replacements) {
   const path = join(target, file)
   if (!existsSync(path)) return false
+  // `files` may name a directory (`lib`, `assets`), which carries no identity
+  // string of its own.
+  if (!statSync(path).isFile()) return false
   const before = readFileSync(path, 'utf8')
   let after = before
   for (const [from, to] of replacements) after = after.replaceAll(from, to)
@@ -69,16 +122,23 @@ function preservedFiles() {
   return kept
 }
 
+// Read from the SOURCE: `files` and the old name must be known before the copy
+// that filters and renames by them, and the target does not exist yet.
+// A hand-written manifest can carry a BOM (`ssh-terminal`'s does), which
+// JSON.parse rejects.
+const sourceManifest = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8').replace(/^﻿/u, ''))
+const previous = sourceManifest.name
+const declaredFiles = Array.isArray(sourceManifest.files) ? sourceManifest.files : undefined
+
 const preserved = preservedFiles()
 rmSync(target, { recursive: true, force: true })
 mkdirSync(target, { recursive: true })
 cpSync(source, target, {
   recursive: true,
-  filter: (from) => {
-    const name = basename(from)
-    if (EXCLUDED.includes(name)) return false
-    return !EXCLUDED_FILES.has(name) && !EXCLUDED_SUFFIXES.some(suffix => name.endsWith(suffix))
-  },
+  // Decided on the path relative to the source root: the root itself has no
+  // relative form (the `''` case `wanted` admits), and nested entries are
+  // judged by their first segment rather than their base name.
+  filter: from => wanted(relative(source, from).split(sep).join('/'), declaredFiles),
 })
 
 const restored = []
@@ -90,11 +150,6 @@ for (const [file, bytes] of preserved) {
   restored.push(file)
 }
 
-// A hand-written manifest can carry a BOM (`ssh-terminal`'s does), which
-// JSON.parse rejects. Dropping it here also strips it from the copy.
-const manifestPath = join(target, 'package.json')
-const manifest = JSON.parse(readFileSync(manifestPath, 'utf8').replace(/^﻿/u, ''))
-const previous = manifest.name
 const replacements = [
   [previous, targetArg],
   // The client bundle's id and the cordis row both spell the same name; a
@@ -104,14 +159,20 @@ const replacements = [
   [`"${previous}"`, `"${targetArg}"`],
 ]
 
-const touched = [
+// Every file the copy may have placed an identity string in: the root halves,
+// the emitted modules under `lib/`, and whatever `files` declared.
+const candidates = [
   'package.json', 'index.js', 'client.js', 'cordis.patch.yml',
-  'core.js', 'tool.js', 'tool-policy.js', 'translate-core.js',
-].filter(file => rewriteIdentity(file, replacements))
+  'core.js', 'tool.js', 'tool-policy.js', 'translate-core.js', 'themes.js',
+  ...(declaredFiles ?? []).flatMap(entry => entry.includes('*') ? [] : [entry]),
+  ...['lib/index.js', 'lib/client.js', 'lib/index.d.ts'],
+]
+const touched = [...new Set(candidates)].filter(file => rewriteIdentity(file, replacements))
 
 // `package.json` is rewritten as a parsed value so the copy keeps its own formatting.
-manifest.name = targetArg
-writeFileSync(join(target, 'package.json'), `${JSON.stringify(manifest, undefined, 2)}\n`)
+const copyManifest = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8').replace(/^﻿/u, ''))
+copyManifest.name = targetArg
+writeFileSync(join(target, 'package.json'), `${JSON.stringify(copyManifest, undefined, 2)}\n`)
 
 console.log(`${previous} -> ${targetArg}`)
 console.log(`  touched: ${touched.join(', ')}`)

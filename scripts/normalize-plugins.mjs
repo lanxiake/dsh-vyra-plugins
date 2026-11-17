@@ -47,6 +47,14 @@ const PUBLISHED = {
     description: '系统级划词助手：在任何应用里划词，弹出原生工具条做 AI 搜索、翻译、总结、解释与复制。仅 Windows。',
     keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'selection', 'translate', 'clipboard'],
   },
+  'vyra-theme-styles': {
+    description: '主题风格切换：把整个客户端配色换成第三方主题（暖感有机风 / macOS 毛玻璃）。',
+    keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'theme', 'style', 'ui'],
+  },
+  'vyra-agent-cli-manager': {
+    description: 'Agent CLI 管理器：安装、升级、配置 Claude Code / Codex / OpenCode 等 Agent CLI，统一管理它们的 MCP、技能与提示词。',
+    keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'agent-cli', 'claude-code', 'codex', 'opencode', 'acp'],
+  },
 }
 
 for (const [name, meta] of Object.entries(PUBLISHED)) {

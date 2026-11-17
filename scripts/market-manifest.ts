@@ -41,6 +41,8 @@ const TOOL_USAGE_ICON =
 
 
 
+
+
 /** Inline icon for `vyra-agent-manager`. */
 const AGENT_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM0RjQ2RTU7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzdDM0FFRDtzdG9wLW9wYWNpdHk6MSIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjEyIiBmaWxsPSJ1cmwoI2dyYWQpIi8+CiAgPGcgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOTUiPgogICAgPGNpcmNsZSBjeD0iMjIiIGN5PSIyNCIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iNDIiIGN5PSIyNCIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iMzIiIGN5PSI0NCIgcj0iNiIvPgogICAgPHBhdGggZD0iTTIyIDMwIEwzMiAzOCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICAgIDxwYXRoIGQ9Ik00MiAzMCBMMzIgMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgb3BhY2l0eT0iMC42Ii8+CiAgPC9nPgo8L3N2Zz4NCg=='
@@ -55,7 +57,7 @@ const SKILL_MCP_ICON =
 
 /** Inline icon for `vyra-page-translator`. */
 const PAGE_TRANSLATOR_ICON =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8cGF0aCBkPSJNMyA1LjVBMS41IDEuNSAwIDAgMSA0LjUgNEgxMmExLjUgMS41IDAgMCAxIDEuNSAxLjVWMTFhMS41IDEuNSAwIDAgMS0xLjUgMS41SDhMNSAxNXYtMi41SDQuNUExLjUgMS41IDAgMCAxIDMgMTF6Ii8+CiAgPHBhdGggZD0iTTUuNSAxMCA4LjI1IDYgMTEgMTAiLz4KICA8cGF0aCBkPSJNNi41IDguNmgzLjUiLz4KICA8cGF0aCBkPSJNMTAuNSAxMy41VjE4YTEuNSAxLjUgMCAwIDAgMS41IDEuNWg0bDMgMi41di0yLjVoLjVhMS41IDEuNSAwIDAgMCAxLjUtMS41di01YTEuNSAxLjUgMCAwIDAtMS41LTEuNWgtNCIvPgogIDxwYXRoIGQ9Ik0xNSAxNC41aDUiLz4KICA8cGF0aCBkPSJNMTcuNSAxMy41djEiLz4KICA8cGF0aCBkPSJNMTYgMThjMS42LS42IDIuNi0xLjggMy0zLjUiLz4KPC9zdmc+Cg=='
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4NCiAgPHBhdGggZD0iTTMgNS41QTEuNSAxLjUgMCAwIDEgNC41IDRIMTJhMS41IDEuNSAwIDAgMSAxLjUgMS41VjExYTEuNSAxLjUgMCAwIDEtMS41IDEuNUg4TDUgMTV2LTIuNUg0LjVBMS41IDEuNSAwIDAgMSAzIDExeiIvPg0KICA8cGF0aCBkPSJNNS41IDEwIDguMjUgNiAxMSAxMCIvPg0KICA8cGF0aCBkPSJNNi41IDguNmgzLjUiLz4NCiAgPHBhdGggZD0iTTEwLjUgMTMuNVYxOGExLjUgMS41IDAgMCAwIDEuNSAxLjVoNGwzIDIuNXYtMi41aC41YTEuNSAxLjUgMCAwIDAgMS41LTEuNXYtNWExLjUgMS41IDAgMCAwLTEuNS0xLjVoLTQiLz4NCiAgPHBhdGggZD0iTTE1IDE0LjVoNSIvPg0KICA8cGF0aCBkPSJNMTcuNSAxMy41djEiLz4NCiAgPHBhdGggZD0iTTE2IDE4YzEuNi0uNiAyLjYtMS44IDMtMy41Ii8+DQo8L3N2Zz4NCg=='
 
 /** Inline icon for `vyra-ssh-terminal`. */
 const SSH_TERMINAL_ICON =
@@ -64,6 +66,14 @@ const SSH_TERMINAL_ICON =
 /** Inline icon for `vyra-system-selection`. */
 const SYSTEM_SELECTION_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KICA8cGF0aCBkPSJNNCAzaDRNNCAzdjRNMjAgM2gtNE0yMCAzdjRNNCAyMWg0TTQgMjF2LTRNMjAgMjFoLTRNMjAgMjF2LTQiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05IDEyaDdNMTMgOWwzIDMtMyAzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=='
+
+/** Inline icon for `vyra-theme-styles`. */
+const THEME_STYLES_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTEyIDNhOSA5IDAgMCAxIDAgMThjLTEuNCAwLTIuMi0uOS0yLjItMiAwLS42LjItMSAuNi0xLjQuNC0uNC42LS44LjYtMS4zIDAtMS0uOC0xLjgtMS44LTEuOEg3LjZBNC42IDQuNiAwIDAgMSAzIDkuOUMzIDYuMSA3IDMgMTIgM1oiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICA8Y2lyY2xlIGN4PSIxNS44IiBjeT0iOS40IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgo8L3N2Zz4K'
+
+/** Inline icon for `vyra-agent-cli-manager`. */
+const AGENT_CLI_MANAGER_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4KICA8dGl0bGU+QWdlbnQgQ0xJIE1hbmFnZXI8L3RpdGxlPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjMGY3NjZlIi8+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cmVjdCB4PSIxNCIgeT0iMTYiIHdpZHRoPSIzNiIgaGVpZ2h0PSIzMiIgcng9IjUiIG9wYWNpdHk9IjAuODUiLz4KICAgIDxwYXRoIGQ9Ik0yMiAyN2w1IDUtNSA1Ii8+CiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4KICA8L2c+Cjwvc3ZnPgo='
 
 /** The validated index's localized-text union. */
 export type LocalizedText = string | LocaleMap
@@ -408,6 +418,76 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'browser',
         keywords: ['selection', 'translate', 'clipboard', 'windows'],
+      },
+    },
+    {
+      name: 'vyra-theme-styles',
+      title: {
+        en: 'Theme Styles',
+        zh: '主题风格',
+      },
+      description: {
+        en: 'Swap the whole client colour scheme for a third-party theme: a warm organic palette, or macOS frosted glass. Recolours the existing components through their own tokens, so nothing is left half-switched.',
+        zh: '把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-theme-styles',
+      },
+      icon: THEME_STYLES_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1794963600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/vyra-theme-styles',
+          },
+        },
+      },
+      metadata: {
+        category: 'browser',
+        keywords: ['theme', 'style', 'ui'],
+      },
+    },
+    {
+      name: 'vyra-agent-cli-manager',
+      title: {
+        en: 'Agent CLI Manager',
+        zh: 'Agent CLI 管理',
+      },
+      description: {
+        en: 'Drive Claude Code, Codex, OpenCode and other agent CLIs from DSH: install and upgrade them, and manage their MCP servers, skills and prompts in one place.',
+        zh: '在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-agent-cli-manager',
+      },
+      icon: AGENT_CLI_MANAGER_ICON,
+      // Declared because this plugin genuinely needs it: it imports DSH
+      // packages directly instead of reading every service through `ctx.get`,
+      // so an older client cannot load it.
+      engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
+      versions: {
+        '1.0.0': {
+          publishTimestamp: 1794963600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
+      },
+      metadata: {
+        category: 'agent-runtime',
+        keywords: ['agent-cli', 'claude-code', 'codex', 'opencode', 'acp'],
       },
     },
   ],

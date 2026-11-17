@@ -1,0 +1,141 @@
+{
+  "name": "vyra-agent-cli-manager",
+  "version": "1.0.0",
+  "description": "Agent CLI 管理器：安装、升级、配置 Claude Code / Codex / OpenCode 等 Agent CLI，统一管理它们的 MCP、技能与提示词。",
+  "icon": "./icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-agent-cli-manager"
+  },
+  "homepage": "https://github.com/lanxiake/dsh-vyra-plugins/tree/main/plugins/vyra-agent-cli-manager",
+  "bugs": {
+    "url": "https://github.com/lanxiake/dsh-vyra-plugins/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "assets/logo.png",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "icon.svg"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-cli",
+    "claude-code",
+    "codex",
+    "opencode",
+    "acp"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "knip": "knip",
+    "arch": "depcruise src --config .dependency-cruiser.cjs",
+    "type-coverage": "type-coverage --strict --at-least 99 --ignore-files \"tests/**\"",
+    "mutation": "stryker run",
+    "check": "pnpm format:check && pnpm typecheck && pnpm lint && pnpm arch && pnpm knip && pnpm type-coverage && pnpm coverage",
+    "prepublishOnly": "pnpm build",
+    "prepare": "lefthook install",
+    "size": "node scripts/size-report.mjs"
+  },
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.2-rc.1 <0.3.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-api-terminal-controller",
+        "@deepseek-ai/dsh-client-ui-context-menu",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-model-selection",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "1.4.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.1.0",
+    "@deepseek-ai/dsh-agent": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-agent-preset-registry": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-llm": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-session": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-subprocess": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-user-approval": ">=0.2.2-rc.1 <0.3.0",
+    "@deepseek-ai/schemastery": "^3.19.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-agent-preset-registry": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-subprocess": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-user-approval": "0.2.2-rc.1",
+    "@deepseek-ai/schemastery": "3.19.0",
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+    "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.3.7",
+    "@vitest/coverage-v8": "^3.2.0",
+    "dependency-cruiser": "^18.7.2",
+    "esbuild": "^0.25.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "jsdom": "^31.0.0",
+    "knip": "^6.44.2",
+    "lefthook": "^2.2.2",
+    "prettier": "^3.9.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.3.1",
+    "type-coverage": "^2.31.2",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^3.2.0",
+    "yaml": "^2.9.1"
+  }
+}

@@ -30,6 +30,8 @@ const ICONS = {
   'vyra-page-translator': 'PAGE_TRANSLATOR_ICON',
   'vyra-ssh-terminal': 'SSH_TERMINAL_ICON',
   'vyra-system-selection': 'SYSTEM_SELECTION_ICON',
+  'vyra-theme-styles': 'THEME_STYLES_ICON',
+  'vyra-agent-cli-manager': 'AGENT_CLI_MANAGER_ICON',
 }
 
 const lines = []
