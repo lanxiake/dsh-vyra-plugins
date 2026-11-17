@@ -424,6 +424,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.4.0 fixes what 1.3.0 shipped: the koffi type declarations ran at
+        // module load and koffi registers those names process-wide, so loading
+        // the module a second time — a re-enable, or an update inside a running
+        // Host — failed with "Duplicate type name 'POINT'" and the entry never
+        // activated. Installing from scratch happened to work, which is why it
+        // looked like an install problem.
+        '1.4.0': {
+          publishTimestamp: 1795305600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
@@ -553,6 +568,20 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '3d7d778e623384e45df66dd225ae4b3ce5091216',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.1.2 fixes three things 0.1.1 shipped: the primary button paired
+        // `brand-primary` with `brand-text`, whose near-black label vanished on
+        // a light theme's dark fill; a failed change only reached a summary bar
+        // that the next action cleared, so the reason was gone before it could
+        // be read; and `Card` read a `copied` prop it never declared.
+        '0.1.2': {
+          publishTimestamp: 1795305600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
             path: 'plugins/vyra-plugin-market',
           },
         },
