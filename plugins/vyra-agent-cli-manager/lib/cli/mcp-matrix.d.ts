@@ -15,6 +15,8 @@ interface McpMatrixColumn {
     readonly readable: boolean;
     /** Why the column is unreadable, shown on the header and on each of its cells. */
     readonly problem?: string | undefined;
+    /** A fault in the CLI's config that does not stop this plugin reading it but does stop writes. */
+    readonly note?: string | undefined;
 }
 /** One cell: whether this CLI has the server, and why it cannot be changed. */
 interface McpMatrixCell {

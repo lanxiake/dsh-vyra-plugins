@@ -3,8 +3,7 @@
  * session registry to the harness.
  * @module vyra-agent-cli-manager
  */
-import { readFile, readdir } from 'node:fs/promises';
-import { mkdir } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, rm, rmdir, symlink, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Service } from '@deepseek-ai/cordis';
@@ -20,6 +19,7 @@ import { registerModeRoute } from "./mode-routes.js";
 import { probeModels } from "./model-probe.js";
 import { npxCacheDir, startFromNpxCache } from "./npx-cache.js";
 import { cliHandler, registerCliRoutes } from "./cli/cli-routes.js";
+import { fetchRepositoryFile } from "./cli/github-file.js";
 import { writeFileAtomically } from "./cli/atomic-write.js";
 import { hostOfSubprocess } from "./cli/detect.js";
 import { npmLatestVersion } from "./cli/registry-status.js";
@@ -142,6 +142,8 @@ export default class CliBridge extends Service {
                 run: runnerOfSpawn((spec) => child.subprocess.spawn(spec)),
                 home: homedir(),
                 ...this.cliFileAccess(),
+                skills: this.cliSkillLinks(),
+                skillInstall: this.cliSkillInstall(),
             }, child.connection, (message) => child.logger.warn(message));
             child.effect(() => registerCliRoutes(child.webServer, cli), 'vyra-agent-cli-manager: cli routes');
             child.effect(() => registerModeRoute(child.webServer, {
@@ -178,6 +180,113 @@ export default class CliBridge extends Service {
             // Renamed over the target rather than written in place: a CLI reads this file on every
             // start, and a half-written one would lose every server the user configured.
             writeFile: (path, text) => writeFileAtomically(path, text),
+        };
+    }
+    /**
+     * The disk work a skill link needs: create one, remove one, and say what an entry is.
+     * Kept apart from {@link cliFileAccess} because these are the only operations here that write
+     * a filesystem entry rather than a file's contents.
+     */
+    cliSkillLinks() {
+        return {
+            kindOf: async (path) => {
+                try {
+                    const info = await lstat(path);
+                    if (info.isSymbolicLink())
+                        return 'link';
+                    return info.isDirectory() ? 'dir' : 'other';
+                }
+                catch {
+                    // Absent is the ordinary case: that skill is simply not turned on for this CLI.
+                    return undefined;
+                }
+            },
+            readFile: async (path) => {
+                try {
+                    return await readFile(path, 'utf8');
+                }
+                catch {
+                    return undefined;
+                }
+            },
+            listDirectory: async (path) => {
+                try {
+                    return await readdir(path);
+                }
+                catch {
+                    return undefined;
+                }
+            },
+            // A junction is the one link Windows can make without administrator rights, and it needs
+            // an absolute target, which is what the caller passes on both platforms.
+            link: (source, path) => process.platform === 'win32' ? symlink(source, path, 'junction') : symlink(source, path),
+            // A junction is removed as a directory and a symlink as a file; trying both beats
+            // branching on the platform, since which one it is depends on how the entry was made.
+            remove: async (path) => {
+                try {
+                    await unlink(path);
+                }
+                catch {
+                    await rmdir(path);
+                }
+            },
+            mkdir: async (path) => {
+                await mkdir(path, { recursive: true });
+            },
+        };
+    }
+    /**
+     * The disk work installing a skill needs, plus the one network read it makes.
+     *
+     * The repository read goes through the GitHub contents API rather than a clone: a skill is one
+     * small text file, and cloning a repository to read one of them would download everything else
+     * with it and leave a checkout to clean up. The API answers base64, and an unauthenticated call
+     * is rate-limited per IP — acceptable here, because this runs when a user presses a button, not
+     * in a loop, and the failure is reported rather than retried.
+     */
+    cliSkillInstall() {
+        return {
+            readFile: async (path) => {
+                try {
+                    return await readFile(path, 'utf8');
+                }
+                catch {
+                    return undefined;
+                }
+            },
+            writeFile: (path, text) => writeFileAtomically(path, text),
+            listDirectory: async (path) => {
+                try {
+                    return await readdir(path);
+                }
+                catch {
+                    return undefined;
+                }
+            },
+            link: (source, path) => process.platform === 'win32' ? symlink(source, path, 'junction') : symlink(source, path),
+            kindOf: async (path) => {
+                try {
+                    const info = await lstat(path);
+                    if (info.isSymbolicLink())
+                        return 'link';
+                    return info.isDirectory() ? 'dir' : 'other';
+                }
+                catch {
+                    return undefined;
+                }
+            },
+            removeEntry: async (path) => {
+                try {
+                    await unlink(path);
+                }
+                catch {
+                    await rmdir(path);
+                }
+            },
+            removeTree: async (path) => {
+                await rm(path, { recursive: true, force: true });
+            },
+            fetchRepositoryFile: (repository, path) => fetchRepositoryFile(repository, path),
         };
     }
     /**

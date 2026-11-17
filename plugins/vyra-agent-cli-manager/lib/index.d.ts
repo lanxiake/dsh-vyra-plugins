@@ -74,6 +74,22 @@ export default class CliBridge extends Service {
      */
     private cliFileAccess;
     /**
+     * The disk work a skill link needs: create one, remove one, and say what an entry is.
+     * Kept apart from {@link cliFileAccess} because these are the only operations here that write
+     * a filesystem entry rather than a file's contents.
+     */
+    private cliSkillLinks;
+    /**
+     * The disk work installing a skill needs, plus the one network read it makes.
+     *
+     * The repository read goes through the GitHub contents API rather than a clone: a skill is one
+     * small text file, and cloning a repository to read one of them would download everything else
+     * with it and leave a checkout to clean up. The API answers base64, and an unauthenticated call
+     * is rate-limited per IP — acceptable here, because this runs when a user presses a button, not
+     * in a loop, and the failure is reported rather than retried.
+     */
+    private cliSkillInstall;
+    /**
      * The native modes to show for a session. A live CLI's own report wins; before it starts,
      * the catalog's last answer for that route fills in.
      */

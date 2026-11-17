@@ -18,6 +18,9 @@ import { BadRequest, BodyTooLarge } from "./errors.js";
 import { listMcpServers } from "./mcp.js";
 import { mcpMatrix } from "./mcp-matrix.js";
 import { McpWriteError, addMcpServer, addRequestOf, copyMcpServer, copyRequestOf, removeMcpServer, removeRequestOf, } from "./mcp-write.js";
+import { disableSkill, enableSkill, SkillLinkError } from "./skill-links.js";
+import { skillsMatrix } from "./skills-matrix.js";
+import { installSkill, skillInstallRequestOf } from "./skill-install.js";
 import { CliUpgradeError, upgradeCli } from "./upgrade.js";
 import { cliStatuses } from "./registry-status.js";
 /** The operations this route accepts, by the last segment of their path. */
@@ -30,6 +33,10 @@ const CLI_OPERATIONS = [
     'mcp-copy',
     'mcp-remove',
     'skills',
+    'skills-matrix',
+    'skill-enable',
+    'skill-disable',
+    'skill-install',
     'prompt',
 ];
 /** `upgrade` names one CLI and nothing else; anything near this size is a caller mistake. */
@@ -76,7 +83,7 @@ function entryOf(id) {
 function writeHostOf(routes) {
     return { readFile: routes.readFile, writeFile: routes.writeFile, run: routes.run };
 }
-/** The operations that change a CLI's config, each delegated to that CLI. */
+/** The two operations that change a CLI's config, each delegated to that CLI. */
 async function writeAnswer(routes, operation, body) {
     const host = writeHostOf(routes);
     if (operation === 'mcp-remove') {
@@ -92,6 +99,17 @@ async function writeAnswer(routes, operation, body) {
             home: routes.home,
             name: request.name,
         });
+    }
+    if (operation === 'skill-install') {
+        const request = skillInstallRequestOf(body);
+        return await installSkill(routes.skillInstall, routes.home, request.source);
+    }
+    if (operation === 'skill-enable' || operation === 'skill-disable') {
+        const request = removeRequestOf(body);
+        const entry = entryOf(request.id);
+        return operation === 'skill-enable'
+            ? await enableSkill({ entry, host: routes.skills, home: routes.home, name: request.name })
+            : await disableSkill({ entry, host: routes.skills, home: routes.home, name: request.name });
     }
     const request = addRequestOf(body);
     return await addMcpServer(entryOf(request.id), host, request.spec);
@@ -113,14 +131,21 @@ async function readAnswer(routes, operation, entry) {
         return await listSkills(entry, assetHost, routes.home);
     return await readPrompt(entry, assetHost, routes.home);
 }
-/** `status` and the matrix read nothing and answer every CLI; the rest name one CLI. */
+/** `status` and the two matrices read nothing and answer every CLI; the rest name one CLI. */
 async function answer(routes, operation, body) {
     if (operation === 'status')
         return { clis: await cliStatuses(routes.host, routes.latest) };
     // Reading every CLI's config needs no named CLI, and starts no process.
     if (operation === 'mcp-matrix')
         return await mcpMatrix({ readFile: routes.readFile }, routes.home);
-    if (operation === 'mcp-add' || operation === 'mcp-copy' || operation === 'mcp-remove') {
+    if (operation === 'skills-matrix')
+        return await skillsMatrix(routes.skills, routes.home);
+    if (operation === 'mcp-add' ||
+        operation === 'mcp-copy' ||
+        operation === 'mcp-remove' ||
+        operation === 'skill-enable' ||
+        operation === 'skill-disable' ||
+        operation === 'skill-install') {
         return await writeAnswer(routes, operation, body);
     }
     return await readAnswer(routes, operation, entryOf(idOf(body)));
@@ -140,6 +165,9 @@ function statusOf(error) {
     // The write was refused, or the CLI it was delegated to could not be run.
     if (error instanceof McpWriteError)
         return error.status;
+    // A skill link this plugin will not make or break: the request asked for the impossible.
+    if (error instanceof SkillLinkError)
+        return 400;
     // The updater never started or ran past its deadline: the message names which.
     if (error instanceof CliUpgradeError)
         return 502;

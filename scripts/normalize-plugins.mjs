@@ -28,7 +28,7 @@ const PUBLISHED = {
     keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'agent', 'preset'],
   },
   'vyra-skill-mcp-manager': {
-    description: '技能与 MCP 的一体化管理界面：浏览、搜索、安装，不必再手改 profile 配置。',
+    description: '技能与 MCP 的一体化管理界面：浏览、搜索、安装，不必再手改 profile 配置。数据层内联，装完即用。',
     keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'skill', 'mcp'],
   },
   'vyra-smart-compaction': {

@@ -14,6 +14,23 @@ import { mcpServersOfToml } from "./toml-mcp.js";
 /** A CLI's config a TOML reader has to go through, keyed by the table it keeps servers in. */
 const CODEX_TABLE = 'mcp_servers';
 const CODEX_FILE = 'config.toml';
+/**
+ * A Codex entry that declares stdio and still carries a `url`.
+ *
+ * Codex refuses to load its entire config in that case, so every `codex mcp` subcommand fails
+ * with a message about one unrelated server. Naming the entry here turns that into something
+ * the user can act on, and it is checkable from the file this plugin already reads.
+ */
+function stdioWithUrlOf(entry, tables) {
+    for (const [name, definition] of Object.entries(tables)) {
+        const url = definition.url;
+        const kind = definition.type ?? definition.transport;
+        if (typeof url === 'string' && url !== '' && kind === 'stdio') {
+            return ` ${entry.name} 的 config.toml 里 mcp_servers.${name} 声明了 stdio 却带 url，${entry.name} 会因此拒绝加载整份配置；删掉 type/command，改用「${entry.name} mcp add ${name} --url ${url}」重新添加即可。`;
+        }
+    }
+    return undefined;
+}
 /** Where one CLI keeps its server list, and what to call that file in a message. */
 function fileOf(entry) {
     if (entry.mcpFile !== undefined)
@@ -74,7 +91,9 @@ async function serversOfCli(entry, host, home) {
     try {
         if (entry.mcpFile === undefined) {
             const tables = mcpServersOfToml(text);
-            return { entry, servers: serversOf({ [CODEX_TABLE]: tables }, CODEX_TABLE) };
+            const note = stdioWithUrlOf(entry, tables);
+            const servers = serversOf({ [CODEX_TABLE]: tables }, CODEX_TABLE);
+            return { entry, servers, ...(note === undefined ? {} : { note }) };
         }
         return { entry, servers: serversOf(JSON.parse(text), entry.mcpKey ?? 'mcpServers') };
     }
@@ -103,15 +122,15 @@ function removeProblemOf(entry) {
 }
 /** One cell of the matrix. */
 function cellOf(read, name, transport) {
-    const { entry, problem } = read;
+    const { entry, problem, note } = read;
     if (problem !== undefined)
         return { id: entry.id, state: 'unknown', blocked: problem };
+    // A config the CLI itself rejects blocks every write, whichever direction the cell would go.
     const found = read.servers.find((server) => server.name === name);
-    if (found === undefined) {
-        const blocked = addProblemOf(entry, transport);
+    const reason = found === undefined ? addProblemOf(entry, transport) : removeProblemOf(entry);
+    const blocked = note ?? reason;
+    if (found === undefined)
         return { id: entry.id, state: 'off', ...(blocked === undefined ? {} : { blocked }) };
-    }
-    const blocked = removeProblemOf(entry);
     return { id: entry.id, state: 'on', detail: found.detail, ...(blocked === undefined ? {} : { blocked }) };
 }
 /** Every server any CLI has, in the order the first CLI that has it lists them. */
@@ -138,6 +157,7 @@ export async function mcpMatrix(host, home) {
         name: read.entry.name,
         readable: read.problem === undefined,
         ...(read.problem === undefined ? {} : { problem: read.problem }),
+        ...(read.note === undefined ? {} : { note: read.note }),
     }));
     const rows = unionOf(reads).map((server) => ({
         name: server.name,

@@ -12,8 +12,10 @@
  * @module vyra-agent-cli-manager/cli/cli-routes
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { SkillInstallHost } from './skill-install.ts';
 import type { CliHost } from './detect.ts';
 import type { LatestVersionSource } from './registry-status.ts';
+import type { SkillLinkHost } from './skill-links.ts';
 import type { CliRunner } from './upgrade.ts';
 /** The parts of the harness's `webServer` service this module uses. */
 export interface CliWebServer {
@@ -42,6 +44,10 @@ export interface CliRoutes {
     readonly listDirectory: (path: string) => Promise<readonly string[] | undefined>;
     /** Replace one file, for the MCP entries this plugin edits rather than delegates. */
     readonly writeFile: (path: string, text: string) => Promise<void>;
+    /** The disk operations a skill link needs, which only the Host can do. */
+    readonly skills: SkillLinkHost;
+    /** The disk and repository access installing a skill needs. */
+    readonly skillInstall: SkillInstallHost;
 }
 /**
  * Build the handler for every CLI route.

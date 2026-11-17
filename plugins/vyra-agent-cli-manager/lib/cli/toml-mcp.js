@@ -28,9 +28,39 @@ function withoutComment(line) {
     return line;
 }
 /** A quoted TOML string, with the escapes its own format allows inside it. */
+/**
+ * One TOML string, in either of the two forms the format defines.
+ *
+ * They are not interchangeable. A basic string (`"…"`) processes escapes, so a Windows path
+ * inside one has to be written `C:\\Users`. A literal string (`'…'`) processes none — every
+ * backslash stands for itself, which is exactly why Codex's own config uses it for `command`:
+ * `command = 'C:\Users\…\server.exe'` is the readable spelling, and the crate's `mcp add` writes
+ * it that way.
+ *
+ * Reading only the basic form is what broke this reader on a real config: it reached
+ * `command = 'C:\…'`, found no leading `"`, and threw — so the failure surfaced as "cannot parse"
+ * on a column the user could see was fine, and every entry after the offending line was lost
+ * with it.
+ *
+ * @param text - the raw token, including its quotes.
+ * @returns the string's value.
+ * @throws {TomlMcpError} when the quotes are not the same kind, or absent.
+ */
 function unquote(text) {
+    const quote = text[0];
+    if (text.length < 2 || (quote !== '"' && quote !== "'") || !text.endsWith(quote)) {
+        throw new TomlMcpError(`引号未闭合或不成对：${text}`);
+    }
     const body = text.slice(1, -1);
+    // A literal string is verbatim — decoding it would corrupt every Windows path in the file.
+    if (quote === "'")
+        return body;
     return body.replace(/\\(.)/g, (_all, escaped) => (escaped === 'n' ? '\n' : escaped === 't' ? '\t' : escaped));
+}
+/** Whether a token is a quoted string of either form. */
+function isQuoted(text) {
+    const quote = text[0];
+    return (quote === '"' || quote === "'") && text.length >= 2 && text.endsWith(quote);
 }
 /** One array of quoted strings, which is the only array form Codex writes for `args`. */
 function stringArray(text) {
@@ -42,7 +72,7 @@ function stringArray(text) {
         .map((item) => item.trim())
         .filter((item) => item !== '');
     for (const item of items) {
-        if (!item.startsWith('"') || !item.endsWith('"')) {
+        if (!isQuoted(item)) {
             throw new TomlMcpError(`TOML 数组里只有字符串是被支持的：${item}`);
         }
     }
@@ -50,11 +80,13 @@ function stringArray(text) {
 }
 /** A scalar value. Only the shapes a server definition uses are accepted. */
 function scalarOf(text) {
-    if (text.startsWith('"')) {
-        if (!text.endsWith('"') || text.length < 2)
-            throw new TomlMcpError(`引号未闭合：${text}`);
+    if (isQuoted(text))
         return unquote(text);
-    }
+    // A token that opens a quote and never closes it is a different failure from a value this
+    // reader does not understand, and the message has to say which: an unclosed string is a typo
+    // in the file, a bare word is a construct this reader does not cover.
+    if (text.startsWith('"') || text.startsWith("'"))
+        throw new TomlMcpError(`引号未闭合：${text}`);
     if (text.startsWith('['))
         return stringArray(text);
     if (text === 'true')

@@ -135,8 +135,13 @@ function rewriteIdentity(file, replacements) {
  * a re-import has to carry the existing ones across its wipe — otherwise the
  * README and LICENSE the market shows disappear the second time someone
  * imports an updated build.
+ *
+ * `icon.svg` belongs here for the same reason: the market card's icon has to be
+ * a small SVG (the inline limit is 32 KiB decoded), so a source package whose
+ * own icon is a large PNG gets one authored in this repository instead. Left
+ * unprotected, the next import deleted it.
  */
-const REPO_AUTHORED = ['README.md', 'LICENSE']
+const REPO_AUTHORED = ['README.md', 'LICENSE', 'icon.svg']
 
 /** Read the repo-authored files before the wipe that preserves them across it. */
 function preservedFiles() {
