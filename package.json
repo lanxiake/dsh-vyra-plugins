@@ -9,6 +9,7 @@
     "verify:index": "tsx scripts/verify-index.ts",
     "verify": "pnpm run build:index && pnpm run verify:index",
     "print:skills": "tsx scripts/print-skill-config.ts",
+    "test:market": "node plugins/vyra-plugin-market/test.mjs && node plugins/vyra-plugin-market/render-check.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

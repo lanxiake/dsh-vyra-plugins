@@ -357,12 +357,15 @@ window.__ModuleLoader__.load({
       h('circle', { key: 'e', cx: 16, cy: 8, r: 2 }),
       h('circle', { key: 'f', cx: 11, cy: 16, r: 2 }),
     ])
+    const RefreshIcon = ({ size = 15 }) => icon(size, [
+      h('path', { key: 'a', d: 'M20 11a8 8 0 1 0-2.34 6.34' }),
+      h('path', { key: 'b', d: 'M20 5v6h-6' }),
+    ])
     const BoxIcon = ({ size = 20 }) => icon(size, [
       h('path', { key: 'a', d: 'M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' }),
       h('path', { key: 'b', d: 'M3.3 7L12 12l8.7-5' }),
       h('path', { key: 'c', d: 'M12 22V12' }),
     ])
-
     // ---------------------------------------------------------------------------
     // Styles, expressed as DSH alias tokens so every theme repaints us
     // ---------------------------------------------------------------------------
@@ -630,10 +633,16 @@ window.__ModuleLoader__.load({
         }, t(update ? 'update' : 'install')))
       }
       if (installed) {
-        actions.push(h('button', {
-          key: 'remove', style: S.btn(false, busy), disabled: busy,
-          onClick: () => { onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
-        }, t('uninstall')))
+        // The bulk plan already decides what may be removed and switched; a
+        // card offers exactly the same actions, so the two never disagree about
+        // a bundle the Host reports as unreadable or shipped.
+        const removable = bundle !== undefined && bundle.removable !== false
+        if (removable) {
+          actions.push(h('button', {
+            key: 'remove', style: S.btn(false, busy), disabled: busy,
+            onClick: () => { onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
+          }, t('uninstall')))
+        }
         if (bundle !== undefined && bundle.readOnlyReason === undefined) {
           const disable = bundle.enabled
           actions.push(h('button', {
@@ -795,16 +804,21 @@ window.__ModuleLoader__.load({
         if (activeUrl !== null) void load(activeUrl, query, 0, PAGE, undefined)
       }, [activeUrl])
 
-      // Typing is debounced, and the order follows the text.
+      // Typing is debounced. The effect reads the listing and loader through
+      // refs, so a page settling mid-typing does not restart the pause and the
+      // query never waits on events it has nothing to do with.
+      const liveRef = useRef(null)
+      liveRef.current = { listing, load, query }
       useEffect(() => {
         if (draft === query.text) return undefined
         const timer = setTimeout(() => {
-          const next = withText(query, draft)
+          const live = liveRef.current
+          const next = withText(live.query, draft)
           setQuery(next)
-          if (listing !== null) void load(listing.url, next, 0, PAGE, undefined)
+          if (live.listing !== null) void live.load(live.listing.url, next, 0, PAGE, undefined)
         }, TEXT_DELAY_MS)
         return () => { clearTimeout(timer) }
-      }, [draft, query, listing, load])
+      }, [draft, query.text])
 
       const entries = listing === null || listing.value === null ? [] : listing.value.entries
       const declarations = listing === null || listing.value === null ? undefined : listing.value.metadata
@@ -1086,11 +1100,6 @@ window.__ModuleLoader__.load({
           onClose: () => { setSourcesOpen(false) },
         }) : null)
     }
-
-    const RefreshIcon = ({ size = 15 }) => icon(size, [
-      h('path', { key: 'a', d: 'M20 11a8 8 0 1 0-2.34 6.34' }),
-      h('path', { key: 'b', d: 'M20 5v6h-6' }),
-    ])
 
     return {
       __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText },
