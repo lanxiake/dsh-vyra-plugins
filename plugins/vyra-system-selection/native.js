@@ -10,7 +10,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { bodyBlocks, clampScroll, menuHitTest, menuLayout, placeMenu } from './core.js'
+import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, placeMenu } from './core.js'
 
 function loadKoffi() {
   // The Host runs from an asar; koffi's native binary is shipped unpacked beside it. Resolve
@@ -264,6 +264,9 @@ const IDC_ARROW = 32512
 
 const VK_CONTROL = 0x11
 const VK_MENU = 0x12
+const VK_SHIFT = 0x10
+const VK_LWIN = 0x5B
+const VK_RWIN = 0x5C
 const VK_C = 0x43
 const VK_INSERT = 0x2D
 const VK_LBUTTON = 0x01
@@ -460,15 +463,38 @@ function foregroundClass() {
 }
 
 /**
+ * Which modifier keys are physically down right now.
+ *
+ * `GetAsyncKeyState`'s high bit is "down as of this call", which is the question that matters: the
+ * capture is about to inject a chord, and what the user's own fingers are doing decides whether
+ * that chord is safe to send.
+ */
+export function heldModifiers() {
+  const down = (vk) => (F.GetAsyncKeyState(vk) & 0x8000) !== 0
+  return {
+    control: down(VK_CONTROL),
+    alt: down(VK_MENU),
+    shift: down(VK_SHIFT),
+    // Either Windows key reports through its own virtual key.
+    win: down(VK_LWIN) || down(VK_RWIN),
+  }
+}
+
+/**
  * Copy the current selection of the foreground window into the clipboard.
  *
  * Ctrl+C is the only way to read another application's selection without injecting into it or
  * requiring UI Automation. Terminals are sent Ctrl+Insert instead: there Ctrl+C is SIGINT, and
  * interrupting whatever the user was running would be far worse than a missed capture.
  *
- * @returns the captured text, or null when nothing was selected.
+ * Refuses while any modifier is held — see `maySynthesizeCopy`. The caller treats a null return as
+ * "nothing selected", which is the right outcome: the menu does not open and nothing is touched.
+ *
+ * @returns the captured text, or null when nothing was selected or the capture was refused.
  */
 export function captureSelection() {
+  if (!maySynthesizeCopy(heldModifiers())) return null
+
   const isTerminal = TERMINAL_CLASSES.has(foregroundClass())
   const copyKey = isTerminal ? VK_INSERT : VK_C
 
@@ -485,22 +511,27 @@ export function captureSelection() {
   // The clipboard sequence number only advances when something is actually put on the clipboard.
   // If it has not moved, the copy did not happen — there was no selection — and the clipboard's
   // current contents are the user's own, not ours to return.
-  let changed = false
+  let ours = 0
   const until = Date.now() + 220
   while (Date.now() < until) {
-    if (F.GetClipboardSequenceNumber() !== sequenceBefore) { changed = true; break }
+    ours = F.GetClipboardSequenceNumber()
+    if (ours !== sequenceBefore) break
     const spin = Date.now() + 10
     while (Date.now() < spin) { /* spin */ }
   }
-  if (!changed) return null
+  if (ours === sequenceBefore) return null
 
   const captured = readClipboardText()
   // Put the previous clipboard back so a swipe over some text does not silently replace whatever
   // the user was carrying. Only the text format is restored: rich formats (HTML, RTF, images) are
   // left as the copy left them.
-  // ponytail: text-only restore. Implement EnumClipboardFormats round-tripping if users report
-  // losing formatted clipboard content.
-  if (before !== null && before !== captured) writeClipboardText(before)
+  //
+  // The sequence number is re-checked first: reading the clipboard above takes time, and if the
+  // user copied something himself in that gap, restoring would overwrite the newer copy with the
+  // older text this function happened to save. Only a clipboard still holding our capture is ours
+  // to put back.
+  const stillOurs = F.GetClipboardSequenceNumber() === ours
+  if (stillOurs && before !== null && before !== captured) writeClipboardText(before)
 
   if (captured === null) return null
   const core = captured.replace(/\r\n/g, '\n').replace(/\n$/, '')

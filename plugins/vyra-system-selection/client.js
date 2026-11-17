@@ -23,20 +23,40 @@ window.__ModuleLoader__.load({
       return data
     }
 
+    // The token names here are DSH's real aliases (`--dsw-alias-*`), not the `--dsw-color-*` ones
+    // this file used first: those do not exist anywhere in the client, so every fallback below was
+    // what actually rendered — a dark palette on a light theme, and a select whose popup list the
+    // browser painted in the UA's light colours because nothing set `color-scheme` on it.
+    //
+    // The select is styled the way the platform styles its own (`ui-primitives/ConfigField`):
+    // layer-3 fill, border-l4 stroke, label-primary text. A bare `<option>` list cannot be styled
+    // from CSS, so the select carries `colorScheme: 'inherit'` and inherits the root's scheme —
+    // DSH sets it on `documentElement` from the active theme — which is what makes the popup match
+    // the app instead of the OS default.
     const S = {
       wrap: { padding: '4px 0', display: 'flex', flexDirection: 'column', gap: '18px' },
-      card: { border: '1px solid var(--dsw-color-border, #3a4149)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' },
+      card: { border: '1px solid var(--dsw-alias-border-l4, #d0d0d0)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' },
       row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' },
       label: { fontSize: '14px', fontWeight: 500 },
       hint: { fontSize: '12px', opacity: 0.6, lineHeight: 1.6, marginTop: '4px' },
-      select: { minWidth: '220px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--dsw-color-border, #3a4149)', background: 'var(--dsw-color-bg-elevated, #22262b)', color: 'inherit', fontSize: '13px' },
+      select: {
+        minWidth: '220px', padding: '6px 8px', borderRadius: 'var(--dsw-radius-sm, 8px)',
+        border: '1px solid var(--dsw-alias-border-l4, #d0d0d0)',
+        background: 'var(--dsw-alias-bg-layer-3, #fff)',
+        color: 'var(--dsw-alias-label-primary, #1a1a1a)',
+        colorScheme: 'inherit', fontSize: '13px',
+      },
       badge: (ok, warn) => ({
         fontSize: '12px', padding: '2px 8px', borderRadius: '99px',
-        background: ok ? 'rgba(77,154,255,.15)' : warn ? 'rgba(255,196,0,.15)' : 'rgba(255,123,114,.15)',
-        color: ok ? '#4d9aff' : warn ? '#ffc400' : '#ff7b72',
+        background: ok ? 'color-mix(in srgb, var(--dsw-alias-state-success-primary, #2f9e44) 15%, transparent)'
+          : warn ? 'color-mix(in srgb, var(--dsw-alias-state-warn-primary, #e8a33d) 15%, transparent)'
+            : 'color-mix(in srgb, var(--dsw-alias-state-error-primary, #d1242f) 15%, transparent)',
+        color: ok ? 'var(--dsw-alias-state-success-primary, #2f9e44)'
+          : warn ? 'var(--dsw-alias-state-warn-primary, #e8a33d)'
+            : 'var(--dsw-alias-state-error-primary, #d1242f)',
       }),
-      btn: { padding: '7px 14px', borderRadius: '6px', border: '1px solid var(--dsw-color-border, #3a4149)', background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: '13px' },
-      toggle: (on) => ({ width: '42px', height: '24px', borderRadius: '99px', border: 'none', cursor: 'pointer', background: on ? '#4d9aff' : 'rgba(128,128,128,.35)', position: 'relative', flex: '0 0 auto' }),
+      btn: { padding: '7px 14px', borderRadius: 'var(--dsw-radius-sm, 8px)', border: '1px solid var(--dsw-alias-border-l4, #d0d0d0)', background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: '13px' },
+      toggle: (on) => ({ width: '42px', height: '24px', borderRadius: '99px', border: 'none', cursor: 'pointer', background: on ? 'var(--dsw-alias-brand-primary, #4d9aff)' : 'color-mix(in srgb, currentColor 35%, transparent)', position: 'relative', flex: '0 0 auto' }),
       knob: (on) => ({ position: 'absolute', top: '3px', left: on ? '21px' : '3px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left .15s' }),
     }
 

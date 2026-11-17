@@ -27,6 +27,22 @@ export const ACTIONS = [
   { id: 'copy', label: '复制', kind: 'local', icon: 0xE8C8 },
 ]
 
+/**
+ * Whether a synthetic copy may be sent right now.
+ *
+ * `captureSelection` presses Ctrl+C through `SendInput`. If the user is holding a modifier at that
+ * moment — which is exactly what they are doing while pressing Ctrl+C or Ctrl+V themselves — the
+ * injected chord interleaves with the real one: the injected Ctrl-up ends the user's chord early,
+ * and the restore that follows puts the *previous* clipboard back on top of the copy they just
+ * made. That reads as "copy and paste stopped working", in every application at once.
+ *
+ * So any held modifier vetoes the capture. A missed capture costs one menu that does not open; a
+ * corrupted chord costs the user the text they were carrying.
+ */
+export function maySynthesizeCopy(held = {}) {
+  return !held.control && !held.alt && !held.shift && !held.win
+}
+
 export function findAction(id) {
   return ACTIONS.find((a) => a.id === id) ?? null
 }

@@ -377,6 +377,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.1.0 fixes two things 1.0.0 shipped: the settings page painted itself from
+        // `--dsw-color-*` token names that do not exist in the client, so it rendered its dark
+        // fallbacks on every theme; and the capture path injected Ctrl+C while the user was
+        // holding Ctrl himself, which broke his own copy and paste everywhere.
+        '1.1.0': {
+          publishTimestamp: 1795046400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
