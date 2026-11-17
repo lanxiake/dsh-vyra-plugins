@@ -399,3 +399,12 @@ MIT。`src/stdio-transport.ts` 改编自 DSH 的 `subagent-acp`（同为 MIT）�
 [forks-shield]: https://img.shields.io/github/forks/zhukunpenglinyutong/vyra-agent-cli-manager?color=8ae8ff&labelColor=black&style=flat-square
 [issues-shield]: https://img.shields.io/github/issues/zhukunpenglinyutong/vyra-agent-cli-manager?color=ff80eb&labelColor=black&style=flat-square
 [contributors-shield]: https://img.shields.io/github/contributors/zhukunpenglinyutong/vyra-agent-cli-manager?color=c4f042&labelColor=black&style=flat-square
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

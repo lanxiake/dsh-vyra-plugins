@@ -25,7 +25,7 @@
  */
 
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { basename, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 
 /** Directories never copied from a denylist-filtered source. */
 const EXCLUDED = ['node_modules', '.git', 'src', 'test', 'tests', 'scripts', 'backups', 'ui']
@@ -136,19 +136,29 @@ function rewriteIdentity(file, replacements) {
  * README and LICENSE the market shows disappear the second time someone
  * imports an updated build.
  *
- * `icon.svg` belongs here for the same reason: the market card's icon has to be
- * a small SVG (the inline limit is 32 KiB decoded), so a source package whose
- * own icon is a large PNG gets one authored in this repository instead. Left
- * unprotected, the next import deleted it.
+ * `icon.svg` and `assets/qq-group.png` belong here for the same reason. The
+ * market's card needs a small inline SVG (limit: 32 KiB decoded), so a source
+ * whose own icon is a large PNG gets one authored here; and the contact code
+ * every README links is authored here too, because the sources have no reason
+ * to carry it. Left unprotected, the next import deleted both — `assets/` is a
+ * directory, so protecting files alone did not cover it.
+ *
+ * `README.md` is deliberately NOT in this list. An import treats the source as
+ * authoritative for documentation, and the contact block is appended by
+ * `add-contact-block.mjs` afterwards — two rules that cannot both apply to one
+ * file. Protecting it here would freeze a plugin's own README against upstream;
+ * leaving it out costs the appended block, which the next publish restores.
  */
-const REPO_AUTHORED = ['README.md', 'LICENSE', 'icon.svg']
+const REPO_AUTHORED = ['LICENSE', 'icon.svg', 'assets/qq-group.png']
 
 /** Read the repo-authored files before the wipe that preserves them across it. */
 function preservedFiles() {
   const kept = new Map()
   for (const file of REPO_AUTHORED) {
     const path = join(target, file)
-    if (existsSync(path)) kept.set(file, readFileSync(path))
+    // `assets/qq-group.png` lives under a directory the source may also own
+    // (`assets/logo.png`), so it is copied file by file rather than wholesale.
+    if (existsSync(path) && statSync(path).isFile()) kept.set(file, readFileSync(path))
   }
   return kept
 }
@@ -176,8 +186,12 @@ const restored = []
 for (const [file, bytes] of preserved) {
   // Only restore what the copy did not bring, so a source that does ship its
   // own README wins over the stale copy this repository held.
-  if (existsSync(join(target, file))) continue
-  writeFileSync(join(target, file), bytes)
+  const path = join(target, file)
+  if (existsSync(path)) continue
+  // A nested entry (`assets/qq-group.png`) may find its parent gone: the source
+  // is not required to have an `assets/` at all.
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, bytes)
   restored.push(file)
 }
 

@@ -173,3 +173,12 @@ const originX = event.screenX - event.clientX   // 视口原点，精确
 - **终端用 Ctrl+Insert**。有些终端两者都不支持，那种情况下取不到词（不会误发 SIGINT）。
 - **`koffi.encode` 的最后一个参数是元素个数，不是字节数**。传字节数会写出两倍于分配的 UTF-16 单元、破坏堆 —— 短字符串靠对齐余量侥幸不崩，长文本必崩。改剪贴板相关代码后，手动测一次长文本（复制几千字再划词）确认没崩。
 - **`UnhookWindowsHookEx` 返回成功不等于钩子已摘除**，摘除要等本线程处理完队列。`destroy()` 里因此先摘钩子、泵到摘除生效、最后才停泵 —— 顺序反了钩子会留下来继续吞全机的右键。手动清单第 8 条守的就是这个。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

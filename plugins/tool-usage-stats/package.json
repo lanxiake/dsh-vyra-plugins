@@ -27,7 +27,8 @@
     "lib",
     "src",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "assets/qq-group.png"
   ],
   "engines": {
     "node": ">=22"

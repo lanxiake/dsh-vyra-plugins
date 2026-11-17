@@ -40,3 +40,12 @@ https://lanxiake.github.io/dsh-vyra-plugins/index.json
 ## 开发
 
 宿主端 `index.js` 只是一个空的挂载行（两套配色都在客户端），`client.js` 里放令牌表并注册到设置区。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

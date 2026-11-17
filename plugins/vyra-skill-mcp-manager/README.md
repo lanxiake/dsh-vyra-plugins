@@ -103,3 +103,12 @@ dsh: fatal load failure: Error: cannot get property "agents" without inject
 `index.js` 是面板那一半（9 个路由 + 工具开关）；`vendor/dsh-skill-mcp-market/` 是数据那一半
 （技能提供者 + RPC + 12 个工具），**按上游原样保留**，只在 `market-host.js` 里改了 `mcp.init()`
 的错误处理，改动处有 `VENDORED PATCH (vyra)` 注释标明。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

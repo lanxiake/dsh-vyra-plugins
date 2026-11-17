@@ -589,3 +589,12 @@ dsh web --trusted-host dsh.example.com
 名单和贡献类型统一维护在 [`.all-contributorsrc`](.all-contributorsrc) 中。若有遗漏，欢迎通过 [Issue](https://github.com/xmanrui/dsh-im/issues) 或 PR 补充，非代码贡献同样欢迎。
 
 维护者可运行 `npx --yes --package=all-contributors-cli@6.26.1 all-contributors add <username> <type[,type...]>` 添加贡献者及贡献类型；手动修改配置后，运行 `npx --yes --package=all-contributors-cli@6.26.1 all-contributors generate` 同步更新中英文 README。也可在仓库安装 [All Contributors Bot](https://allcontributors.org/en/bot/installation/) 后，通过 Issue 或 PR 评论中的 `@all-contributors please add @username for code, doc, test` 更新名单。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

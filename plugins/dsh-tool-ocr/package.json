@@ -12,7 +12,8 @@
     "lib/**/*.js",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "assets/qq-group.png"
   ],
   "keywords": [
     "dsh-plugin",

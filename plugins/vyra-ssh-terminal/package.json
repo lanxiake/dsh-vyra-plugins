@@ -30,7 +30,8 @@
     "vendor/",
     "locale/",
     "icon.svg",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "assets/qq-group.png"
   ],
   "dependencies": {
     "ssh-config": "^5.3.0",

@@ -18,7 +18,8 @@
     "client.js",
     "cordis.patch.yml",
     "locale/*.json",
-    "icon.svg"
+    "icon.svg",
+    "assets/qq-group.png"
   ],
   "dsh": {
     "bundle": {

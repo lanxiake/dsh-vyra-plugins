@@ -16,7 +16,8 @@
     "client.js",
     "cordis.patch.yml",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "assets/qq-group.png"
   ],
   "dsh": {
     "bundle": {

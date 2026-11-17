@@ -16,7 +16,8 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "vendor"
+    "vendor",
+    "assets/qq-group.png"
   ],
   "dsh": {
     "bundle": {

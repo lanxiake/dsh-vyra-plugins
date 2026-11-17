@@ -166,3 +166,12 @@ node tests/check.ts           # 全部检查
 | `storage.ts` | 存储域 spec、非法记录拒绝、旧数据迁移 |
 | `session-e2e.ts` | 生产形状的事件折叠 |
 | `boot-timers.ts` | **加载真实产物、跑过定时器**——抓"服务启动后崩溃"这类只有真跑才暴露的缺陷 |
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

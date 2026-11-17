@@ -61,3 +61,12 @@ pnpm run test:market        # 纯逻辑自检 + 用桩 React/Remote 渲染一遍
 ```
 
 `test.mjs` 覆盖卡片状态、批量计划、安装/更新分派这些纯决策；`render-check.mjs` 用桩把标签页真正渲染一次，验证注册进 `plugins.tab`、空源时自动加源、卡片的 Install 走 `installBundle`。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

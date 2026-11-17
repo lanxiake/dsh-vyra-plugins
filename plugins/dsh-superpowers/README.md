@@ -58,3 +58,12 @@ When `injectBootstrap` is `false`, skills still mount but the bootstrap prompt s
 ## Do not mount twice
 
 Install this plugin **once** per profile. Do not also copy Superpowers skills into `~/.dsh/skills` or mount a second skill-filesystem provider for the same content — that duplicates skill names and confuses the catalog.
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

@@ -56,3 +56,12 @@ https://lanxiake.github.io/dsh-vyra-plugins/index.json
 ## 开发
 
 宿主端 `index.js` 装配 `connections.js` / `ssh-session.js` / `sftp.js` / `routes.js` 等模块；浏览器端 `client.js` 由 `build-client.mjs` 从 `src/` 打包产出。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>
