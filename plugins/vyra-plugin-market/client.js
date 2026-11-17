@@ -905,6 +905,19 @@ window.__ModuleLoader__.load({
         await loadBundles()
       }, [remote, running, t, loadBundles])
 
+      // Every hook runs before any early return, so the count never changes
+      // between the first render and the loaded one (React error #310).
+      const busy = running !== null
+      const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
+      const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
+      const active = sources === null ? undefined : sources.find((source) => source.url === activeUrl)
+      const market = active === undefined
+        ? (activeUrl ?? t('noSources'))
+        : (active.title === undefined ? activeUrl : text(active.title))
+      const pagePicked = entries.length > 0 && entries.every((entry) => picked.has(entry.name))
+      const directed = query.sort.kind === 'published' || query.sort.kind === 'key'
+      const buildable = plan.install.length + plan.update.length
+
       if (sources === null && sourcesFailure === null) return h('div', { style: S.state }, t('loading'))
       if (sourcesFailure !== null) {
         return h('div', { style: S.state },
@@ -912,17 +925,6 @@ window.__ModuleLoader__.load({
           h('p', { style: S.meta }, sourcesFailure),
           h('button', { style: S.btn(false, false), onClick: () => { setSourcesFailure(null); void loadSources(true) } }, t('retry')))
       }
-
-      const busy = running !== null
-      const active = sources.find((source) => source.url === activeUrl)
-      const market = active === undefined
-        ? (activeUrl ?? t('noSources'))
-        : (active.title === undefined ? activeUrl : text(active.title))
-      const pagePicked = entries.length > 0 && entries.every((entry) => picked.has(entry.name))
-      const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
-      const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
-      const directed = query.sort.kind === 'published' || query.sort.kind === 'key'
-      const buildable = plan.install.length + plan.update.length
 
       const rows = []
       if (outcome !== null) {

@@ -73,8 +73,17 @@ function makeReact() {
       pending = []
       return { outer, record }
     },
-    /** End it, queueing the render's effects. */
+    /** End it, queueing the render's effects and checking the hook count. */
     end(handle) {
+      // React's own rule: a component must call the same hooks on every render.
+      // A hook behind an early return changes this count, which React reports
+      // as error #310 — the exact failure this guard exists to catch.
+      if (handle.record.hooks === undefined) handle.record.hooks = handle.record.cursor
+      else assert.equal(
+        handle.record.cursor, handle.record.hooks,
+        `a render called ${handle.record.cursor} hooks, an earlier one called ${handle.record.hooks}`
+        + ' — a hook likely sits behind an early return',
+      )
       // This stub reruns every effect on every render rather than comparing a
       // dependency list, so a component that should react to a changed value
       // does; one that must not rerun would show up as extra Host reads only.
