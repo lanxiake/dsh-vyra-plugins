@@ -2,9 +2,6 @@
   "name": "vyra-ssh-terminal",
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "build": "node build-client.mjs"
-  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

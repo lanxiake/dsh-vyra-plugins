@@ -204,11 +204,33 @@ const touched = keepName ? [] : [...new Set(candidates)].filter(file => rewriteI
 
 // `package.json` is rewritten as a parsed value so the copy keeps its own
 // formatting. A vendored copy keeps its own name, and therefore its manifest.
+//
+// `scripts` is dropped on every copy, ours and vendored alike.
+//
+// A published plugin is installed, not developed, and pnpm runs two of those hooks by itself:
+// `prepare` runs on a git install, and the failure is `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED` —
+// whose suggested fix, allowlisting the build, would run a hook whose job (installing git hooks)
+// has no `.git` to work on. The rest name build steps whose inputs (`tsconfig.build.json`,
+// `scripts/build-client.mjs`, `eslint.config.js`) the `files` allowlist never publishes, so they
+// could not run here even if they were allowed to.
+//
+// Nothing depends on them: `dsh.bundle` and `dsh.client` point at files.
+function dropScripts(file) {
+  const path = join(target, file)
+  if (!existsSync(path)) return false
+  const manifest = JSON.parse(readFileSync(path, 'utf8').replace(/^﻿/u, ''))
+  if (manifest.scripts === undefined) return false
+  delete manifest.scripts
+  writeFileSync(path, `${JSON.stringify(manifest, undefined, 2)}\n`)
+  return true
+}
+
 if (!keepName) {
   const copyManifest = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8').replace(/^﻿/u, ''))
   copyManifest.name = targetArg
   writeFileSync(join(target, 'package.json'), `${JSON.stringify(copyManifest, undefined, 2)}\n`)
 }
+dropScripts('package.json')
 
 console.log(keepName ? `vendored ${targetArg} (name kept)` : `${previous} -> ${targetArg}`)
 console.log(`  touched: ${touched.join(', ') || '(nothing)'}`)

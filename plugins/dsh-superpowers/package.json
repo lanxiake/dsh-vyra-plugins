@@ -15,7 +15,9 @@
   ],
   "type": "module",
   "license": "MIT",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/anht3889/dsh-superpowers.git"
@@ -44,13 +46,6 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run",
-    "vendor:skills": "node scripts/vendor-skills.mjs",
-    "prepack": "node scripts/vendor-skills.mjs"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"
