@@ -103,6 +103,17 @@ function makeReact() {
   return api
 }
 
+/** The browser surface the bundle touches: a stylesheet insert and two listeners. */
+function makeDocument() {
+  return {
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    querySelector: () => null,
+    createElement: () => ({ dataset: {}, textContent: '' }),
+    head: { appendChild: () => {} },
+  }
+}
+
 /** Load the bundle under a stubbed loader. */
 function loadBundle(react) {
   let exports
@@ -110,7 +121,7 @@ function loadBundle(react) {
     assert.equal(specifier, 'react', `the bundle requires only react, got ${specifier}`)
     return react
   }) } } }
-  new Function('window', 'document', source)(window, undefined)
+  new Function('window', 'document', source)(window, makeDocument())
   return exports
 }
 
@@ -154,7 +165,7 @@ function makeRemote(state) {
     pluginMarket: {
       listIndexes: () => { calls.push(['listIndexes']); return ok(state.sources) },
       setIndexes: (urls) => { calls.push(['setIndexes', urls]); return ok(undefined) },
-      search: (url, query) => { calls.push(['search', query]); return ok(state.page) },
+      search: (url, query) => { calls.push(['search', url, query]); return ok(state.page) },
     },
     pluginManager: {
       listBundles: () => { calls.push(['listBundles']); return ok(state.bundles) },
@@ -266,6 +277,38 @@ await (async () => {
   const set = remote.calls.find(([name]) => name === 'setIndexes')
   assert.ok(set !== undefined, 'an unconfigured profile gets a source added')
   assert.deepEqual(set[1], ['https://lanxiake.github.io/dsh-vyra-plugins/index.json'])
+}
+
+// --- this plugin's own market leads, whatever the configured order ----------
+{
+  // A profile often lists a third-party index ahead of ours, which is exactly
+  // the case the tab has to get right: it opens on our market, and our market
+  // is the first row of the menu.
+  const ours = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
+  const other = 'https://cdn.example.invalid/market/index.json'
+  const { remote } = await mount({ sources: [{ url: other }, { url: ours }], entries: [entry('alpha')] })
+  const searched = remote.calls.filter(([name]) => name === 'search').map(([, url]) => url)
+  assert.ok(searched.length > 0, 'the tab searched something')
+  assert.deepEqual([...new Set(searched)], [ours], 'the tab opened on our own market, not the first configured source')
+  // The sources it read are the configured ones, in their own order: the tab
+  // leads with ours for display only and never rewrites someone else's list.
+  assert.equal(remote.calls.some(([name]) => name === 'setIndexes'), false, 'opening the tab wrote no source list')
+}
+
+// --- our market is the first row of the source menu -------------------------
+{
+  const ours = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
+  const other = 'https://cdn.example.invalid/market/index.json'
+  const { tree, settle } = await mount({ sources: [{ url: other }, { url: ours }], entries: [entry('alpha')] })
+  const anchor = findAll(tree, (node) => node.props?.['aria-haspopup'] === 'menu' && node.props?.['aria-expanded'] !== undefined)[0]
+  assert.ok(anchor !== undefined, 'the toolbar has a source menu button')
+  anchor.props.onClick()
+  const opened = await settle()
+  const menu = findAll(opened, (node) => node.props?.role === 'menu')[0]
+  assert.ok(menu !== undefined, 'the source menu opened')
+  const rowTexts = (menu.children ?? []).flatMap((row) => texts(row))
+  assert.ok(rowTexts[0]?.includes('lanxiake.github.io'), `our market leads the menu, got: ${JSON.stringify(rowTexts)}`)
+  assert.ok(rowTexts.some((line) => line.includes('cdn.example.invalid')), 'the other source is still listed')
 }
 
 // --- Install on a card reaches installBundle, not updateBundle ----------------

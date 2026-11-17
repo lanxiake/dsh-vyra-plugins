@@ -775,7 +775,15 @@ window.__ModuleLoader__.load({
           }
         }
         setSources(list)
-        setActiveUrl((current) => list.some((item) => item.url === current) ? current : (list[0]?.url ?? null))
+        // The tab opens on this plugin's own market rather than whichever source
+        // happens to be configured first: a profile typically lists a
+        // third-party index ahead of ours, and this tab exists to browse ours.
+        // The menu still switches to any other source, and a choice already
+        // made is kept.
+        setActiveUrl((current) => {
+          if (list.some((item) => item.url === current)) return current
+          return list.find((item) => item.url === HOME_SOURCE)?.url ?? list[0]?.url ?? null
+        })
       }, [remote])
 
       /** Read the installed bundles: enabled state, removability, and read-only reason. */
@@ -984,6 +992,14 @@ window.__ModuleLoader__.load({
       const busy = running !== null
       const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
       const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
+      // This plugin's own market leads the source menu, without touching the
+      // configured order: the list belongs to Settings, and reordering it here
+      // would silently rewrite a preference the user set elsewhere.
+      const orderedSources = sources === null ? [] : [...sources].sort((left, right) => {
+        if (left.url === HOME_SOURCE) return -1
+        if (right.url === HOME_SOURCE) return 1
+        return 0
+      })
       const active = sources === null ? undefined : sources.find((source) => source.url === activeUrl)
       const market = active === undefined
         ? (activeUrl ?? t('noSources'))
@@ -1054,7 +1070,7 @@ window.__ModuleLoader__.load({
               onClick: () => { setMenu(menu === 'source' ? null : 'source') },
             }, h('span', { style: S.ellipsis }, market), h(ChevronIcon, {})),
             menu !== 'source' ? null : h('div', { style: S.menu(false), role: 'menu' },
-              sources.map((source) => h('button', {
+              orderedSources.map((source) => h('button', {
                 key: source.url, role: 'menuitem', title: source.url,
                 style: S.menuItem(source.url === activeUrl),
                 onClick: () => { setMenu(null); setActiveUrl(source.url) },
