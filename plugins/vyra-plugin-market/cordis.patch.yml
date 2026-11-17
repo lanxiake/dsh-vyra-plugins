@@ -1,0 +1,7 @@
+# The plugin-market row, inserted at the host plane.
+#
+# No config: the whole feature is a browser-side view. The row exists so the
+# plugin is a real bundle the profile can enable and the client half gets loaded.
+- insert:
+    - id: dsh-plugin-market
+      name: 'vyra-plugin-market'
