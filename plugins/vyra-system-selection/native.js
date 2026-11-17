@@ -1153,6 +1153,18 @@ export function createOverlay(handlers = {}) {
     return Date.now() - lastSelection.at < 4000 ? lastSelection.text : ''
   }
 
+  /**
+   * The selection primed by the release that just happened, or ''.
+   *
+   * The window is deliberately far tighter than {@link cachedSelection}'s: this answer decides
+   * whether the auto-open path needs its own capture, and a stale entry would make it open the menu
+   * on text from an earlier gesture. `CAPTURE_DELAY_MS` plus the poll's own cadence lands well
+   * inside it, so a release that primed always qualifies and an older one never does.
+   */
+  function freshSelection() {
+    return Date.now() - lastSelection.at < 400 ? lastSelection.text : ''
+  }
+
   // --- public surface -------------------------------------------------------------------------
 
   return {
@@ -1176,6 +1188,8 @@ export function createOverlay(handlers = {}) {
     readSelection: refreshSelection,
     /** The selection captured at the last left-button release, or ''. */
     cachedSelection,
+    /** The selection primed by the release that just happened, or ''. Never captures. */
+    freshSelection,
     /** Screen rect of the popup, or null. Used to ignore clicks on our own surface. */
     rect() {
       if (!state.hwnd || state.mode === 'hidden') return null

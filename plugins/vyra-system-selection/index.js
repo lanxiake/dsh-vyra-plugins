@@ -14,7 +14,7 @@ import {
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveSettings } from './store.js'
 
-export const name = 'vyra-system-selection'
+export const name = '@local/system-selection'
 
 // Deliberately no module-level `inject`: the gesture loop should start with the Host rather than
 // wait for the web server. The route attaches through `ctx.inject` below whenever it appears.
@@ -29,10 +29,12 @@ export function apply(ctx) {
 
   let lastResult = ''
   let lastSources = []
+  /** The selection whose menu the user closed, so the poll does not reopen it. See `alreadyDismissed`. */
+  let dismissed = ''
   const overlay = createOverlay({
     onAction: (id, anchor) => runAction(id, anchor),
-    onDismiss: () => hideAll(),
-    onPanelClose: () => hideAll(),
+    onDismiss: () => dismiss(),
+    onPanelClose: () => dismiss(),
     onPanelCopy: () => {
       copyResult()
       overlay.setStatus('已复制到剪贴板', 'info')
@@ -88,6 +90,8 @@ export function apply(ctx) {
     generation++
     lastResult = ''
     lastSources = []
+    // An explicit right-click is a fresh request, so it may reopen text the user closed the menu on.
+    dismissed = ''
     pending = { text, anchor: { x: pt.x, y: pt.y } }
     // Deferred: showing a window inside the hook callback would run window management on the
     // input path, which is exactly what the timeout forbids.
@@ -111,12 +115,19 @@ export function apply(ctx) {
    *
    * @param args - `{ text, x, y }` where x/y are screen coordinates.
    */
-  function openInApp({ text, x, y }) {
+  function openInApp({ text, x, y, auto = false }) {
     if (!enabled) return { shown: false, error: '插件已关闭' }
+    // The in-page auto path runs in the renderer, which does not hold the settings; the decision
+    // stays here so the toggle means the same thing on both halves.
+    if (auto && !settings.openOnSelect) return { shown: false, reason: 'auto-disabled' }
     const core = typeof text === 'string' ? text.trim() : ''
     if (!core) return { shown: false, error: '没有选中文字' }
     const problem = selectionProblem(core)
     if (problem) return { shown: false, error: problem }
+    // Same guard as the system-wide path: a pointer release over text whose menu was already
+    // dismissed must not bring it straight back. The right-click path clears `dismissed` itself,
+    // so this only ever refuses the auto gesture.
+    if (auto && alreadyDismissed(core)) return { shown: false, reason: 'dismissed' }
 
     const at = { x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0) }
     stats.inApp++
@@ -146,9 +157,27 @@ export function apply(ctx) {
     // popping a menu after every swipe is the behaviour the toolbar had, and it fights the
     // right-click flow this plugin is built around.
     if (fire && settings.openOnSelect && !overlay.modifierHeld?.()) {
-      stats.gestures++
-      scheduleCapture(pt)
+      // Over the DSH window the poll must not capture: the page owns that surface and reports its
+      // own selection (see `installInAppAutoSelect` in the client half). Capturing here would
+      // inject Ctrl+C into a Chromium renderer that ignores it, costing the full 220 ms wait to
+      // learn nothing.
+      if (!overlay.windowUnderPoint?.(pt)) {
+        stats.gestures++
+        scheduleCapture(pt)
+      }
     }
+  }
+
+  /**
+   * Whether this selection was already dismissed, so the poll must not reopen it.
+   *
+   * The selection outlives the menu: the user picks text, the menu appears, they close it — and
+   * every later poll tick still sees the same drag and would pop it straight back up. Closing a
+   * menu that refuses to stay closed is worse than not opening it. A new drag, or a different
+   * text, is a new intent and opens normally.
+   */
+  function alreadyDismissed(text) {
+    return dismissed === text
   }
 
   function scheduleCapture(pt) {
@@ -157,8 +186,15 @@ export function apply(ctx) {
     if (captureTimer) clearTimeout(captureTimer)
     captureTimer = setTimeout(() => {
       captureTimer = null
-      const text = captureSelection()
-      if (!text || selectionProblem(text)) { hideAll(); return }
+      // The hook primed this selection on the same left-button release, ~10-40 ms earlier, and a
+      // prime costs a 220 ms injected Ctrl+C. `cachedSelection` is a read of that result, not a new
+      // capture, so reusing it keeps auto-open at one synthetic copy per gesture.
+      //
+      // Only a fresh entry qualifies: a stale one belongs to an earlier gesture, and opening the
+      // menu on text the user has since replaced would be worse than a second capture.
+      const primed = overlay.freshSelection?.() || ''
+      const text = primed || captureSelection()
+      if (!text || selectionProblem(text) || alreadyDismissed(text)) { hideAll(); return }
       stats.captured++
       stats.lastCapture = text.slice(0, 120)
       generation++
@@ -173,6 +209,19 @@ export function apply(ctx) {
     generation++
     pending = null
     overlay.hide()
+  }
+
+  /**
+   * The user closed the popup themselves, so the selection underneath must not reopen it.
+   *
+   * Distinct from {@link hideAll}: that one also runs when an action finishes and the panel goes
+   * away on its own, and remembering the text there would stop the very next auto-open on the same
+   * selection — the user would pick text, watch the answer render, close it, and then find the menu
+   * refusing to come back.
+   */
+  function dismiss() {
+    if (pending) dismissed = pending.text
+    hideAll()
   }
 
   // --- actions -------------------------------------------------------------------------------
@@ -448,6 +497,12 @@ export function apply(ctx) {
       return { started: true, actionId, panel: overlay.visible, mode: overlay.mode }
     },
     clipboard: () => ({ text: readClipboardText() ?? '' }),
+    /**
+     * Close the popup the way the user does — the same entry point the window's own close paths
+     * call. Exists for the same reason as `runActionWith`: the real gesture needs a synthesized
+     * click on the native popup, which no test can do.
+     */
+    dismiss: () => { dismiss(); return { visible: overlay.visible } },
   })
 }
 

@@ -390,6 +390,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.2.0 makes selecting text the trigger. The capability existed but was off by default
+        // and unreachable inside the DSH window, whose surface the poll skips on purpose.
+        '1.2.0': {
+          publishTimestamp: 1795132800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',

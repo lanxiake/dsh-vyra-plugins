@@ -146,8 +146,8 @@ window.__ModuleLoader__.load({
         h('div', { style: S.card },
           h('div', { style: S.row },
             h('div', null,
-              h('div', { style: S.label }, '划选后也自动弹出'),
-              h('div', { style: S.hint }, '开启后，拖动选中文字并松手就会弹出菜单，不必再点右键。'),
+              h('div', { style: S.label }, '划选后自动弹出'),
+              h('div', { style: S.hint }, '选中文字松手即弹出菜单，不必再点右键。关掉后只有右键才弹（右键始终可用）。'),
             ),
             h(Toggle, { on: Boolean(settings.openOnSelect), onChange: (v) => patch({ openOnSelect: v }), label: '划选后自动弹出' }))),
 
@@ -234,6 +234,7 @@ window.__ModuleLoader__.load({
           Icon)))
 
         track(() => installInAppSelection())
+        track(() => installInAppAutoSelect())
 
         return () => { for (const d of disposers) d() }
       },
@@ -268,16 +269,6 @@ function selectionFromDom(win, doc) {
  * Take over right-clicks on a selection inside the DSH window.
  *
  * The page already knows the selection and the screen coordinates, so nothing is captured from
- * the clipboard here — the gesture is handed to the Host, which shows the same menu the system
- * path shows. Capture phase is required: the chat surface stops propagation on its own handlers.
- *
- * A right-click with no selection is deliberately left alone, so the browser's menu still works
- * for links, inputs and empty space.
- */
-/**
- * Take over right-clicks on a selection inside the DSH window.
- *
- * The page already knows the selection and the screen coordinates, so nothing is captured from
  * the clipboard: the gesture is handed to the Host, which shows the same menu the system path
  * shows. Capture phase is required — the chat surface stops propagation on its own handlers.
  *
@@ -286,7 +277,7 @@ function selectionFromDom(win, doc) {
  * therefore removes one menu without providing the other — which is why the failure path reports
  * itself on screen instead of failing silently.
  *
- * A right-click with no selection is left alone, so the browser's menu still works for links,
+ * A right-click with no selection is left alone, so the browser menu still works for links,
  * inputs and empty space.
  */
 function installInAppSelection() {
@@ -326,6 +317,54 @@ function installInAppSelection() {
 
   doc.addEventListener('contextmenu', onContextMenu, true)
   return () => doc.removeEventListener('contextmenu', onContextMenu, true)
+}
+
+/**
+ * Open the menu from a selection made inside the DSH window, with no right-click.
+ *
+ * The system-wide poll covers every other application, but it deliberately skips the DSH window:
+ * that surface is a Chromium renderer, which ignores the injected Ctrl+C, so the poll cannot read
+ * a selection made here. The page can, and for free — `getSelection()` is already in hand — so the
+ * auto-open gesture is wired here instead.
+ *
+ * `pointerup` rather than `selectionchange`: the latter fires continuously while the mouse is still
+ * down, so a menu would appear mid-drag and then chase the selection around. One release is one
+ * gesture.
+ *
+ * A zero-length or shifted click is not a selection: `selectionFromDom` returns '' for a collapsed
+ * range, and the empty result is simply not sent. The Host decides whether auto-open is enabled —
+ * the toggle lives in its settings, and this half holds no copy of them.
+ */
+function installInAppAutoSelect() {
+  const win = window
+  const doc = win.document
+
+  const onPointerUp = (event) => {
+    // Left button only: a right-click is the other trigger, and a middle-click is a paste.
+    if (event.button !== 0) return
+    const target = event.target
+    if (target instanceof Element && target.closest('[data-system-selection-ui]')) return
+
+    const text = selectionFromDom(win, doc)
+    if (!text) return
+
+    // The pointer position is a better anchor than the selection's own rect: it is where the user's
+    // attention is, and it exists even when the selection is inside a scrolled container.
+    const x = Math.round(event.screenX)
+    const y = Math.round(event.screenY)
+    void fetch(RPC, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ op: 'openInApp', value: { text, x, y, auto: true } }),
+    }).catch(() => {
+      // Auto-open is a convenience: a failure here is silent, because the right-click path is still
+      // there and a transient fetch error is not something to interrupt the user over.
+    })
+  }
+
+  doc.addEventListener('pointerup', onPointerUp, true)
+  return () => doc.removeEventListener('pointerup', onPointerUp, true)
 }
 
 /** Let the user know a right-click was swallowed without a replacement menu appearing. */

@@ -13,8 +13,10 @@ export const DEFAULTS = {
     provider: '',
     model: '',
     modelProvider: '',
-    // Right-click is the trigger; drag-select opening a menu after every swipe is opt-in.
-    openOnSelect: false,
+    // Selecting text is the trigger: the menu appears on release, with no right-click. Right-click
+    // still works and still opens the same menu, so nobody has to learn the new gesture to keep
+    // using the plugin.
+    openOnSelect: true,
     maxResults: 6,
   },
 }
