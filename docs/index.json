@@ -416,6 +416,45 @@
       }
     },
     {
+      "name": "vyra-plugin-market",
+      "title": {
+        "en": "Plugin Market",
+        "zh": "插件市场"
+      },
+      "description": {
+        "en": "A card-style market tab beside Installed: switch between index sources, search, and install, update, uninstall, enable or disable many plugins in one batch. It reads and changes plugins through the client's own Remote interfaces, so the source list is the same one Settings edits.",
+        "zh": "在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTMgOS41IDEyIDRsOSA1LjV2NUwxMiAyMGwtOS01LjV2LTVaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMyA5LjUgMTIgMTVsOS01LjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMiAyMHYtNSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNy42IDYuOSAxNi40IDEyIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K",
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
+      "repository": {
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/vyra-plugin-market"
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1794873600,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "b44c1b71a9384ac581969996dced89f3baecd74c",
+            "path": "plugins/vyra-plugin-market"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "integration",
+        "keywords": [
+          "market",
+          "marketplace",
+          "plugin",
+          "batch"
+        ]
+      }
+    },
+    {
       "name": "@xmanrui/dsh-im",
       "title": {
         "en": "Instant Messaging Bridge",
