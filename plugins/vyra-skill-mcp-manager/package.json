@@ -1,8 +1,8 @@
 {
   "name": "vyra-skill-mcp-manager",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
-  "description": "技能与 MCP 的一体化管理界面：浏览、搜索、安装，不必再手改 profile 配置。",
+  "description": "技能与 MCP 的一体化管理界面：浏览、搜索、安装，不必再手改 profile 配置。数据层内联，装完即用。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -15,7 +15,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "vendor"
   ],
   "dsh": {
     "bundle": {

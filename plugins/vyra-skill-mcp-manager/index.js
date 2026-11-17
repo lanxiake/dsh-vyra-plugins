@@ -6,6 +6,7 @@ import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { apply as applyMarketHost } from './vendor/dsh-skill-mcp-market/market-host.js'
 
 const BASE_URL = 'https://market.lobehub.com'
 const CREDENTIALS = join(homedir(), '.lobehub-market', 'credentials.json')
@@ -506,7 +507,29 @@ async function writeMcpConfig(raw, content) {
 
 export const name = 'vyra-skill-mcp-manager'
 
+/**
+ * Services this plugin needs before `apply` runs.
+ *
+ * `tools` is not read by this file — it is what the vendored data half needs to
+ * register its twelve `skill_market_*` / `mcp_market_*` tools, and declaring it
+ * here is what lets that half run at all. `webServer` and `skills` are still
+ * read through `ctx.get`, because their providers activate at a different time
+ * and a hard injection would fail the whole plugin on a slow boot.
+ */
+export const inject = ['tools']
+
 export function apply(ctx) {
+  // The vendored half owns the data: it mounts the skill provider that makes
+  // installed skills visible, serves the panel's RPC at `/api/dsh-market/rpc`,
+  // and registers the agent-facing tools. This half owns the panel routes the
+  // UI calls beyond that RPC. They are one plugin because the panel is useless
+  // without the provider behind it, and shipping them separately is what left
+  // this plugin reading from an endpoint nobody served.
+  applyMarketHost(ctx)
+  applyPanel(ctx)
+}
+
+function applyPanel(ctx) {
   let registered = false
   // webServer may not exist yet when this plugin is applied (load order varies), and the
   // service announce arrives later. Registering once, and retrying on the announce, is the
