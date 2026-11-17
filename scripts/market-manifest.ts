@@ -523,6 +523,8 @@ export const manifest: MarketManifest = {
       },
       icon: PLUGIN_MARKET_ICON,
       versions: {
+        // 0.1.0 is published: it is what the index already carried, and its
+        // source stays pinned where users resolved it.
         '0.1.0': {
           // Unix seconds of the commit that published it.
           publishTimestamp: 1794873600,
@@ -530,6 +532,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '4bc08a2465719a0f08221a274988daf52d533584',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.1.1 fixes what 0.1.0 shipped: the tab drew nothing, because its
+        // loading branch returned before two of its hooks ran and React refused
+        // the render. There was no earlier version of the tab to fall back to.
+        '0.1.1': {
+          publishTimestamp: 1794960000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
             path: 'plugins/vyra-plugin-market',
           },
         },
