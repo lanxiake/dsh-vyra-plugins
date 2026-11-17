@@ -29,6 +29,7 @@ const ICONS = {
   'vyra-skill-mcp-manager': 'SKILL_MCP_ICON',
   'vyra-page-translator': 'PAGE_TRANSLATOR_ICON',
   'vyra-ssh-terminal': 'SSH_TERMINAL_ICON',
+  'vyra-system-selection': 'SYSTEM_SELECTION_ICON',
 }
 
 const lines = []
@@ -46,13 +47,23 @@ for (const [plugin, constant] of Object.entries(ICONS)) {
 }
 
 const file = join(root, 'scripts', 'market-manifest.ts')
-const source = readFileSync(file, 'utf8')
-const START = "\n/** The validated index's localized-text union. */"
+let source = readFileSync(file, 'utf8')
+
+// Remove the constants this script owns before writing fresh ones. It used to
+// insert before the marker only, so a second run left the first copy in place
+// and the manifest stopped compiling on a duplicate declaration.
+for (const constant of Object.values(ICONS)) {
+  const declared = new RegExp(
+    `(?:/\\*\\* Inline icon for \`[^\`]+\`\\. \\*/\r?\n)?const ${constant} =\r?\n  '[^']*'\r?\n\r?\n?`,
+    'gu',
+  )
+  source = source.replace(declared, '')
+}
+
 const END = "/** The validated index's localized-text union. */"
-const start = source.indexOf(START)
 const end = source.indexOf(END)
-if (start === -1 || end === -1 || end < start) throw new Error('icon block markers not found in market-manifest.ts')
+if (end === -1) throw new Error('icon block marker not found in market-manifest.ts')
 
 const block = `\n${lines.join('\n').trimEnd()}\n\n`
-writeFileSync(file, `${source.slice(0, start)}${block}${source.slice(end)}`)
+writeFileSync(file, `${source.slice(0, end)}${block}${source.slice(end)}`)
 console.log(`sync-manifest-icons: wrote ${Object.keys(ICONS).length} icon(s)`)

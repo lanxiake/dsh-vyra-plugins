@@ -43,6 +43,10 @@ const PUBLISHED = {
     description: '内置 SSH 终端：连接档案、跳板、SFTP、端口转发与主机密钥固定，密码只进 DSH 凭据服务。',
     keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'ssh', 'terminal', 'sftp'],
   },
+  'vyra-system-selection': {
+    description: '系统级划词助手：在任何应用里划词，弹出原生工具条做 AI 搜索、翻译、总结、解释与复制。仅 Windows。',
+    keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'selection', 'translate', 'clipboard'],
+  },
 }
 
 for (const [name, meta] of Object.entries(PUBLISHED)) {

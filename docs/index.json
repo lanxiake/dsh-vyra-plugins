@@ -289,6 +289,45 @@
           "remote"
         ]
       }
+    },
+    {
+      "name": "vyra-system-selection",
+      "title": {
+        "en": "System Selection",
+        "zh": "系统级划词"
+      },
+      "description": {
+        "en": "Select text in any application and get a native toolbar: AI search, translate, summarize, explain, copy. It takes over the right mouse button, so the application menu you would otherwise get does not appear in front of it.",
+        "zh": "在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。仅 Windows。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KICA8cGF0aCBkPSJNNCAzaDRNNCAzdjRNMjAgM2gtNE0yMCAzdjRNNCAyMWg0TTQgMjF2LTRNMjAgMjFoLTRNMjAgMjF2LTQiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05IDEyaDdNMTMgOWwzIDMtMyAzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==",
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
+      "repository": {
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/vyra-system-selection"
+      },
+      "versions": [
+        {
+          "version": "1.0.0",
+          "publishTimestamp": 1794960000,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "PENDING",
+            "path": "plugins/vyra-system-selection"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "browser",
+        "keywords": [
+          "selection",
+          "translate",
+          "clipboard",
+          "windows"
+        ]
+      }
     }
   ]
 }

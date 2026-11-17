@@ -1,9 +1,8 @@
 {
   "name": "vyra-system-selection",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "description": "系统级划词助手：在任何应用里划词，弹出原生工具条翻译、解释、润色、总结",
+  "description": "系统级划词助手：在任何应用里划词，弹出原生工具条做 AI 搜索、翻译、总结、解释与复制。仅 Windows。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -32,5 +31,19 @@
         "@deepseek-ai/dsh-client-ui-plugin-manager"
       ]
     }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "selection",
+    "translate",
+    "clipboard"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-system-selection"
   }
 }
