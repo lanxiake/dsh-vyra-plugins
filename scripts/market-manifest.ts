@@ -443,7 +443,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'PENDING',
+            commit: 'c0a2f398ded5e79da81334b2b0d18b5e81520ba1',
             path: 'plugins/vyra-theme-styles',
           },
         },
@@ -480,7 +480,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'PENDING',
+            commit: 'c0a2f398ded5e79da81334b2b0d18b5e81520ba1',
             path: 'plugins/vyra-agent-cli-manager',
           },
         },
