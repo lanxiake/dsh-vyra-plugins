@@ -27,7 +27,6 @@ const ICONS = {
   'vyra-agent-manager': 'AGENT_MANAGER_ICON',
   'vyra-smart-compaction': 'SMART_COMPACTION_ICON',
   'vyra-skill-mcp-manager': 'SKILL_MCP_ICON',
-  'vyra-page-translator': 'PAGE_TRANSLATOR_ICON',
   'vyra-ssh-terminal': 'SSH_TERMINAL_ICON',
   'vyra-system-selection': 'SYSTEM_SELECTION_ICON',
   'vyra-theme-styles': 'THEME_STYLES_ICON',

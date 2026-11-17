@@ -41,7 +41,6 @@ dsh-vyra-plugins/
 | `vyra-agent-manager` | 智能体管理：面板化创建智能体，各自的提示词、能力、工具限制与技能 |
 | `vyra-smart-compaction` | 智能压缩：压力感知 + 有回收门槛的预剪枝 + 模型可调用的压缩工具 |
 | `vyra-skill-mcp-manager` | 技能与 MCP 管理：一个面板里浏览、搜索、安装 |
-| `vyra-page-translator` | 整页翻译：按 DOM 切分、批量提交、译文原位写回 |
 | `vyra-ssh-terminal` | SSH 终端：连接档案、跳板、SFTP、端口转发、主机密钥固定 |
 
 ## 工作流

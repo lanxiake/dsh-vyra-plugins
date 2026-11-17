@@ -214,44 +214,6 @@
       }
     },
     {
-      "name": "vyra-page-translator",
-      "title": {
-        "en": "Page Translator",
-        "zh": "整页翻译"
-      },
-      "description": {
-        "en": "Translate a whole page the way a browser does: split by DOM structure, batch the text nodes, and write translations back in place so layout, links and inline formatting survive.",
-        "zh": "像浏览器那样翻译整个页面：按 DOM 结构切分、批量提交文本节点、把译文原位写回，排版、链接与行内格式都不丢。"
-      },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4NCiAgPHBhdGggZD0iTTMgNS41QTEuNSAxLjUgMCAwIDEgNC41IDRIMTJhMS41IDEuNSAwIDAgMSAxLjUgMS41VjExYTEuNSAxLjUgMCAwIDEtMS41IDEuNUg4TDUgMTV2LTIuNUg0LjVBMS41IDEuNSAwIDAgMSAzIDExeiIvPg0KICA8cGF0aCBkPSJNNS41IDEwIDguMjUgNiAxMSAxMCIvPg0KICA8cGF0aCBkPSJNNi41IDguNmgzLjUiLz4NCiAgPHBhdGggZD0iTTEwLjUgMTMuNVYxOGExLjUgMS41IDAgMCAwIDEuNSAxLjVoNGwzIDIuNXYtMi41aC41YTEuNSAxLjUgMCAwIDAgMS41LTEuNXYtNWExLjUgMS41IDAgMCAwLTEuNS0xLjVoLTQiLz4NCiAgPHBhdGggZD0iTTE1IDE0LjVoNSIvPg0KICA8cGF0aCBkPSJNMTcuNSAxMy41djEiLz4NCiAgPHBhdGggZD0iTTE2IDE4YzEuNi0uNiAyLjYtMS44IDMtMy41Ii8+DQo8L3N2Zz4NCg==",
-      "author": "lanxiake",
-      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
-      "repository": {
-        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
-        "directory": "plugins/vyra-page-translator"
-      },
-      "versions": [
-        {
-          "version": "1.0.0",
-          "publishTimestamp": 1794551488,
-          "source": {
-            "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
-            "path": "plugins/vyra-page-translator"
-          }
-        }
-      ],
-      "metadata": {
-        "category": "browser",
-        "keywords": [
-          "translate",
-          "i18n",
-          "page"
-        ]
-      }
-    },
-    {
       "name": "vyra-ssh-terminal",
       "title": {
         "en": "SSH Terminal",

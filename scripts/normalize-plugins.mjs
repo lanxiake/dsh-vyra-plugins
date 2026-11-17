@@ -27,10 +27,6 @@ const PUBLISHED = {
     description: '可视化智能体管理：为每个智能体定制自己的提示词、工具与技能，也可以让主智能体自己创建它们。',
     keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'agent', 'preset'],
   },
-  'vyra-page-translator': {
-    description: '像浏览器那样翻译整个页面：按段落切分、批量提交、保留原有的排版与链接。',
-    keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'translate', 'i18n'],
-  },
   'vyra-skill-mcp-manager': {
     description: '技能与 MCP 的一体化管理界面：浏览、搜索、安装，不必再手改 profile 配置。',
     keywords: ['dsh', 'dsh-plugin', 'deepseek-harness', 'skill', 'mcp'],

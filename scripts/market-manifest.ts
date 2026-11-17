@@ -55,10 +55,6 @@ const SMART_COMPACTION_ICON =
 const SKILL_MCP_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8cGF0aCBkPSJNMjEgMTZWOGEyIDIgMCAwIDAtMS0xLjczbC03LTRhMiAyIDAgMCAwLTIgMGwtNyA0QTIgMiAwIDAgMCAzIDh2OGEyIDIgMCAwIDAgMSAxLjczbDcgNGEyIDIgMCAwIDAgMiAwbDctNEEyIDIgMCAwIDAgMjEgMTZ6Ii8+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPgogIDxwYXRoIGQ9Ik0xMiA5djYiLz4KICA8cGF0aCBkPSJNOSAxMmg2Ii8+Cjwvc3ZnPgo='
 
-/** Inline icon for `vyra-page-translator`. */
-const PAGE_TRANSLATOR_ICON =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4NCiAgPHBhdGggZD0iTTMgNS41QTEuNSAxLjUgMCAwIDEgNC41IDRIMTJhMS41IDEuNSAwIDAgMSAxLjUgMS41VjExYTEuNSAxLjUgMCAwIDEtMS41IDEuNUg4TDUgMTV2LTIuNUg0LjVBMS41IDEuNSAwIDAgMSAzIDExeiIvPg0KICA8cGF0aCBkPSJNNS41IDEwIDguMjUgNiAxMSAxMCIvPg0KICA8cGF0aCBkPSJNNi41IDguNmgzLjUiLz4NCiAgPHBhdGggZD0iTTEwLjUgMTMuNVYxOGExLjUgMS41IDAgMCAwIDEuNSAxLjVoNGwzIDIuNXYtMi41aC41YTEuNSAxLjUgMCAwIDAgMS41LTEuNXYtNWExLjUgMS41IDAgMCAwLTEuNS0xLjVoLTQiLz4NCiAgPHBhdGggZD0iTTE1IDE0LjVoNSIvPg0KICA8cGF0aCBkPSJNMTcuNSAxMy41djEiLz4NCiAgPHBhdGggZD0iTTE2IDE4YzEuNi0uNiAyLjYtMS44IDMtMy41Ii8+DQo8L3N2Zz4NCg=='
-
 /** Inline icon for `vyra-ssh-terminal`. */
 const SSH_TERMINAL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cmVjdCB4PSI2IiB5PSIxMCIgd2lkdGg9IjUyIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iIzFmMjkzNyIvPgogIDxyZWN0IHg9IjYiIHk9IjEwIiB3aWR0aD0iNTIiIGhlaWdodD0iMTAiIHJ4PSI4IiBmaWxsPSIjMzc0MTUxIi8+CiAgPGNpcmNsZSBjeD0iMTQiIGN5PSIxNSIgcj0iMiIgZmlsbD0iI2Y4NzE3MSIvPgogIDxjaXJjbGUgY3g9IjIxIiBjeT0iMTUiIHI9IjIiIGZpbGw9IiNmYmJmMjQiLz4KICA8Y2lyY2xlIGN4PSIyOCIgY3k9IjE1IiByPSIyIiBmaWxsPSIjMzRkMzk5Ii8+CiAgPHBhdGggZD0iTTE1IDMxbDggNi04IDYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM0ZDM5OSIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yOSA0NGgxNCIgc3Ryb2tlPSIjZTVlN2ViIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo='
@@ -319,39 +315,6 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'integration',
         keywords: ['skill', 'mcp', 'market'],
-      },
-    },
-    {
-      name: 'vyra-page-translator',
-      title: {
-        en: 'Page Translator',
-        zh: '整页翻译',
-      },
-      description: {
-        en: 'Translate a whole page the way a browser does: split by DOM structure, batch the text nodes, and write translations back in place so layout, links and inline formatting survive.',
-        zh: '像浏览器那样翻译整个页面：按 DOM 结构切分、批量提交文本节点、把译文原位写回，排版、链接与行内格式都不丢。',
-      },
-      author: 'lanxiake',
-      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
-      repository: {
-        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
-        directory: 'plugins/vyra-page-translator',
-      },
-      icon: PAGE_TRANSLATOR_ICON,
-      versions: {
-        '1.0.0': {
-          publishTimestamp: 1794551488,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
-            path: 'plugins/vyra-page-translator',
-          },
-        },
-      },
-      metadata: {
-        category: 'browser',
-        keywords: ['translate', 'i18n', 'page'],
       },
     },
     {
