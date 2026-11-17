@@ -545,6 +545,15 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-agent-cli-manager',
           },
         },
+        '1.1.2': {
+          publishTimestamp: 1795230000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
