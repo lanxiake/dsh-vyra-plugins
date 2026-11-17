@@ -10,7 +10,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, placeMenu } from './core.js'
+import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection } from './core.js'
 
 function loadKoffi() {
   // The Host runs from an asar; koffi's native binary is shipped unpacked beside it. Resolve
@@ -929,15 +929,6 @@ export function createOverlay(handlers = {}) {
     return state.hwnd
   }
 
-  function clampToWork(anchor, width, height) {
-    const work = workAreaAt(anchor.x, anchor.y)
-    const gap = Math.round(10 * state.dpi)
-    const above = anchor.y - height - gap
-    const y = above >= work.top ? above : Math.min(anchor.y + gap, work.bottom - height)
-    const x = Math.max(work.left, Math.min(anchor.x - Math.round(width / 2), work.right - width))
-    return { x, y: Math.max(work.top, y) }
-  }
-
   function showAt(width, height, x, y) {
     const hwnd = ensureWindow()
     refreshTheme() // the user may have switched theme since the last show
@@ -971,7 +962,13 @@ export function createOverlay(handlers = {}) {
       F.DeleteDC(hdc)
       const m = panelMetrics()
       const height = panelHeight()
-      const pos = clampToWork(state.anchor, m.width, height)
+      // Re-place against the selection, holding the side chosen when the panel opened, so growth
+      // extends away from the selection instead of sliding the panel across it.
+      const rect = state.selectionRect ?? {
+        left: state.anchor.x, top: state.anchor.y, right: state.anchor.x, bottom: state.anchor.y,
+      }
+      const work = workAreaAt(rect.left, rect.top)
+      const pos = placePanelAtSelection(rect, { width: m.width, height }, work, state.panelSide)
       F.SetWindowPos(state.hwnd, null, pos.x, pos.y, m.width, height, SWP_NOZORDER | SWP_NOACTIVATE)
       F.InvalidateRect(state.hwnd, null, false)
     }
@@ -1197,20 +1194,20 @@ export function createOverlay(handlers = {}) {
       if (!F.GetWindowRect(state.hwnd, r)) return null
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
     },
-    showMenu({ x, y, actions }) {
+    showMenu({ anchor, actions }) {
       // Sizing is pure arithmetic, so the first paint is already correct: no measure-then-place
       // pass and no frame at the wrong size.
       state.mode = 'menu'
       state.actions = actions
       state.hover = -1
-      state.anchor = { x, y }
+      state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.bottom }
       state.textDirty = false
       const layout = menuLayout(actions.length, state.dpi)
       state.layout = layout
-      const pos = placeMenu({ x, y }, layout, workAreaAt(x, y))
+      const pos = placeMenuAtSelection(anchor, layout, workAreaAt(anchor.left, anchor.top))
       showAt(layout.width, layout.height, pos.x, pos.y)
     },
-    showPanel({ x, y, title, status }) {
+    showPanel({ anchor, title, status }) {
       state.mode = 'panel'
       state.title = title
       state.blocks = []
@@ -1219,14 +1216,21 @@ export function createOverlay(handlers = {}) {
       state.statusKind = 'info'
       state.scroll = 0
       state.hoverPanel = 0
-      state.anchor = { x, y }
+      // The rect the panel is anchored to, kept so every later resize re-places against the same
+      // selection rather than against wherever the panel happens to be.
+      state.selectionRect = anchor
+      state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.top }
       state.textDirty = true
       ensureWindow()
       const m = panelMetrics()
       const hdc = F.CreateCompatibleDC(null)
       layoutPanel(hdc)
       F.DeleteDC(hdc)
-      const pos = clampToWork(state.anchor, m.width, panelHeight())
+      const work = workAreaAt(anchor.left, anchor.top)
+      // Chosen once, from the first size, and held for the panel's life. A streaming answer grows
+      // the window many times; re-deciding each time would make it jump across the selection.
+      state.panelSide = panelSideFor(anchor, { width: m.width, height: panelHeight() }, work)
+      const pos = placePanelAtSelection(anchor, { width: m.width, height: panelHeight() }, work, state.panelSide)
       showAt(m.width, panelHeight(), pos.x, pos.y)
     },
     setContent(answer, sources) {

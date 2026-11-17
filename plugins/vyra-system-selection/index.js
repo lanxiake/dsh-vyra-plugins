@@ -92,13 +92,18 @@ export function apply(ctx) {
     lastSources = []
     // An explicit right-click is a fresh request, so it may reopen text the user closed the menu on.
     dismissed = ''
-    pending = { text, anchor: { x: pt.x, y: pt.y } }
+    // The system-wide path has no selection rect — the text came from the clipboard, and the
+    // application it belonged to is not ours to measure. The pointer is all there is, and for a
+    // right-click that is the same end of the selection the user just clicked, which is the anchor
+    // the menu wants anyway.
+    const anchor = { left: pt.x, top: pt.y, right: pt.x, bottom: pt.y }
+    pending = { text, anchor }
     // Deferred: showing a window inside the hook callback would run window management on the
     // input path, which is exactly what the timeout forbids.
     const mine = generation
     setTimeout(() => {
       if (mine !== generation || !pending) return
-      overlay.showMenu({ x: pt.x, y: pt.y, actions: ACTIONS })
+      overlay.showMenu({ anchor, actions: ACTIONS })
     }, 0)
     return true
   }
@@ -115,7 +120,7 @@ export function apply(ctx) {
    *
    * @param args - `{ text, x, y }` where x/y are screen coordinates.
    */
-  function openInApp({ text, x, y, auto = false }) {
+  function openInApp({ text, x, y, rect, auto = false }) {
     if (!enabled) return { shown: false, error: '插件已关闭' }
     // The in-page auto path runs in the renderer, which does not hold the settings; the decision
     // stays here so the toggle means the same thing on both halves.
@@ -130,15 +135,24 @@ export function apply(ctx) {
     if (auto && alreadyDismissed(core)) return { shown: false, reason: 'dismissed' }
 
     const at = { x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0) }
+
+    // Where to put the windows: under the selection, not under the pointer.
+    //
+    // The pointer is at whichever end the drag finished, so anchoring there puts the menu over
+    // the text below the selection on a right-to-left drag and gives the panel no idea what it
+    // must not cover. The renderer measures the selection in screen coordinates and sends that;
+    // when it cannot (an exotic selection, or an older client half), fall back to the pointer,
+    // which at least keeps the gesture working.
+    const anchor = saneRect(rect) ?? { left: at.x, top: at.y, right: at.x, bottom: at.y }
+
     stats.inApp++
     stats.captured++
     stats.lastCapture = core.slice(0, 120)
     generation++
     lastResult = ''
     lastSources = []
-    pending = { text: core, anchor: at }
-    // A small offset so the menu does not open under the cursor and cover the selection.
-    overlay.showMenu({ x: at.x + 2, y: at.y + 2, actions: ACTIONS })
+    pending = { text: core, anchor, pointer: at }
+    overlay.showMenu({ anchor, actions: ACTIONS })
     return { shown: true, at }
   }
 
@@ -200,8 +214,11 @@ export function apply(ctx) {
       generation++
       lastResult = ''
       lastSources = []
-      pending = { text, anchor: { x: pt.x, y: pt.y } }
-      overlay.showMenu({ x: pt.x, y: pt.y, actions: ACTIONS })
+      // The paste-triggered path shares the system-wide limitation: the text came from the
+      // clipboard, so there is no rectangle to anchor to. The pointer stands in.
+      const anchor = { left: pt.x, top: pt.y, right: pt.x, bottom: pt.y }
+      pending = { text, anchor }
+      overlay.showMenu({ anchor, actions: ACTIONS })
     }, CAPTURE_DELAY_MS)
   }
 
@@ -261,7 +278,9 @@ export function apply(ctx) {
     const action = findAction(actionId)
     if (!action || !pending) return
     const { text } = pending
-    const at = anchor && typeof anchor.x === 'number' ? anchor : pending.anchor
+    // `anchor` arrives from the menu's click handler as `{x, y}`; the stored one is the selection
+    // rect. Normalising here keeps the four call sites below on one shape.
+    const at = saneRect(anchor) ?? pending.anchor
 
     if (action.kind === 'local') {
       writeClipboardText(text)
@@ -277,7 +296,7 @@ export function apply(ctx) {
     const llm = ctx.get('llm')
     const picked = resolveModel()
     if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
-      overlay.showPanel({ x: at.x, y: at.y, title: action.label, status: '' })
+      overlay.showPanel({ anchor: at, title: action.label, status: '' })
       overlay.setStatus(!llm ? 'LLM 服务不可用，请检查模型配置' : '没有可用的模型，请先在设置里选择', 'error')
       return
     }
@@ -285,7 +304,7 @@ export function apply(ctx) {
     const mine = ++generation
     lastResult = ''
     lastSources = []
-    overlay.showPanel({ x: at.x, y: at.y, title: `${action.label} · ${preview(text)}`, status: '正在生成…' })
+    overlay.showPanel({ anchor: at, title: `${action.label} · ${preview(text)}`, status: '正在生成…' })
 
     const request = buildRequest(action.id, text, { targetLanguage: settings.targetLanguage })
     try {
@@ -327,7 +346,7 @@ export function apply(ctx) {
     const mine = ++generation
     lastResult = ''
     lastSources = []
-    overlay.showPanel({ x: at.x, y: at.y, title: `AI 搜索 · ${preview(text)}`, status: '正在搜索…' })
+    overlay.showPanel({ anchor: at, title: `AI 搜索 · ${preview(text)}`, status: '正在搜索…' })
     stats.searches++
 
     if (!web || typeof web.search !== 'function') {

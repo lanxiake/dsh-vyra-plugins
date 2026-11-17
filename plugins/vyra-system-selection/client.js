@@ -2,14 +2,24 @@
 //
 // The feature itself lives entirely in the Host process — it reads other applications, which a
 // browser page cannot do. This half only configures it and reports whether it is alive.
+
+/**
+ * The Host RPC endpoint.
+ *
+ * Module scope, not the factory's: the pointer and context-menu handlers installed by
+ * `installInAppSelection` / `installInAppAutoSelect` below are module-level functions, so a
+ * binding declared inside the factory is not in their scope. When it lived there, both
+ * handlers threw `ReferenceError: RPC is not defined` on their first line — before the fetch —
+ * which is why selecting text opened nothing and the translate action never responded.
+ */
+const RPC = '/api/system-selection/rpc'
+
 window.__ModuleLoader__.load({
   id: 'vyra-system-selection',
   factory(require) {
     const React = require('react')
     const { useCallback, useEffect, useState } = React
     const h = React.createElement
-
-    const RPC = '/api/system-selection/rpc'
 
     async function call(op, value) {
       const res = await fetch(RPC, {
@@ -250,19 +260,60 @@ window.__ModuleLoader__.load({
  * the user asking for cut/copy/paste, not for an AI action, and it is the one place the browser's
  * own menu is genuinely more useful.
  */
-function selectionFromDom(win, doc) {
+/**
+ * Convert a viewport rectangle to screen coordinates.
+ *
+ * The Host positions a Win32 window in screen space, so the selection's viewport rect is useless
+ * without the viewport's own origin. `event.screenX - event.clientX` yields that origin exactly:
+ * both are the same point measured from two origins, so the difference is the offset between
+ * them. Deriving it from `outerWidth - innerWidth` instead confines one to guess how much of the
+ * frame is title bar and how much is border, which no API reports separately.
+ *
+ * @param box - the selection's `DOMRect` in viewport coordinates.
+ * @param event - the gesture that produced the selection.
+ * @returns the rounded screen-space rectangle.
+ */
+function rectToScreen(box, event) {
+  const originX = event.screenX - event.clientX
+  const originY = event.screenY - event.clientY
+  return {
+    left: Math.round(originX + box.left),
+    top: Math.round(originY + box.top),
+    right: Math.round(originX + box.right),
+    bottom: Math.round(originY + box.bottom),
+  }
+}
+
+function selectionFromDom(win, doc, event) {
   const selection = win.getSelection()
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return ''
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null
   const text = selection.toString().trim()
-  if (!text) return ''
+  if (!text) return null
 
   const node = selection.anchorNode
   const element = node && (node.nodeType === 1 ? node : node.parentElement)
   // `parentElement` is null for a detached node and for the document itself, neither of which has
   // `closest`; checking the method rather than the node covers both.
   if (element && typeof element.closest === 'function' &&
-      element.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return ''
-  return text
+      element.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return null
+
+  // Where the selection actually is, so the Host can put its windows beside the text rather than
+  // at the pointer — which sits at whichever end the drag finished.
+  let rect = null
+  try {
+    const box = selection.getRangeAt(0).getBoundingClientRect()
+    // Measured from the edges rather than from `box.width`: a real DOMRect carries both, but a
+    // stub or a cross-realm rect may expose only the four coordinates, and a zero-area result
+    // means the range is empty or lies in a hidden node.
+    const wide = Math.abs(Number(box.right) - Number(box.left)) > 0
+    const tall = Math.abs(Number(box.bottom) - Number(box.top)) > 0
+    if (box && (wide || tall) && event) rect = rectToScreen(box, event)
+  } catch {
+    // A range that cannot be measured (detached node, exotic selection) still has usable text.
+    rect = null
+  }
+
+  return { text, rect }
 }
 
 /**
@@ -289,8 +340,8 @@ function installInAppSelection() {
     const target = event.target
     if (target instanceof Element && target.closest('[data-system-selection-ui]')) return
 
-    const text = selectionFromDom(win, doc)
-    if (!text) return // no selection: the browser menu is what the user wants
+    const picked = selectionFromDom(win, doc, event)
+    if (!picked) return // no selection: the browser menu is what the user wants
 
     // Hold the event open while the Host decides. A synchronous preventDefault here would drop the
     // browser menu even when the request never lands.
@@ -301,7 +352,10 @@ function installInAppSelection() {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ op: 'openInApp', value: { text, x: event.screenX, y: event.screenY } }),
+      body: JSON.stringify({
+        op: 'openInApp',
+        value: { text: picked.text, x: event.screenX, y: event.screenY, rect: picked.rect },
+      }),
     }).then((res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return res.json()
@@ -345,18 +399,23 @@ function installInAppAutoSelect() {
     const target = event.target
     if (target instanceof Element && target.closest('[data-system-selection-ui]')) return
 
-    const text = selectionFromDom(win, doc)
-    if (!text) return
+    const picked = selectionFromDom(win, doc, event)
+    if (!picked) return
 
-    // The pointer position is a better anchor than the selection's own rect: it is where the user's
-    // attention is, and it exists even when the selection is inside a scrolled container.
-    const x = Math.round(event.screenX)
-    const y = Math.round(event.screenY)
     void fetch(RPC, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ op: 'openInApp', value: { text, x, y, auto: true } }),
+      body: JSON.stringify({
+        op: 'openInApp',
+        value: {
+          text: picked.text,
+          x: Math.round(event.screenX),
+          y: Math.round(event.screenY),
+          rect: picked.rect,
+          auto: true,
+        },
+      }),
     }).catch(() => {
       // Auto-open is a convenience: a failure here is silent, because the right-click path is still
       // there and a transient fetch error is not something to interrupt the user over.

@@ -211,29 +211,103 @@ export function menuLayout(count, scale = 1) {
  * Place a context menu at the pointer, the way a native menu opens: down-right of the cursor,
  * flipped when that would leave the work area.
  */
-export function placeMenu(cursor, size, work) {
-  const gap = 2
-  let x = cursor.x + gap
-  let y = cursor.y + gap
-  if (x + size.width > work.right) x = cursor.x - size.width - gap
-  if (y + size.height > work.bottom) y = cursor.y - size.height - gap
+/**
+ * Accept a selection rectangle from the renderer, or reject it.
+ *
+ * The rect crosses a process boundary, so it is validated rather than trusted: a missing field,
+ * a non-finite number or an inverted pair would place a window at NaN. Rejection returns null and
+ * the caller falls back to the pointer.
+ *
+ * @param value - candidate `{left, top, right, bottom}` in screen coordinates.
+ * @returns the rounded rectangle, or null when it is not usable.
+ */
+export function saneRect(value) {
+  if (!value || typeof value !== 'object') return null
+  const nums = ['left', 'top', 'right', 'bottom'].map((k) => Number(value[k]))
+  if (nums.some((n) => !Number.isFinite(n))) return null
+  const [left, top, right, bottom] = nums.map(Math.round)
+  if (right < left || bottom < top) return null
+  return { left, top, right, bottom }
+}
+
+/**
+ * Place the action menu under the selection, never over it.
+ *
+ * Preference order, always outside the selection's own box:
+ *   1. below it, horizontally centred on it — the normal case, and the one the user reads
+ *      against while deciding which action to pick;
+ *   2. above it, when the selection sits too low for the menu to fit below;
+ *   3. whichever of the two has more room, when neither fits — the menu is short, so this only
+ *      happens when the selection itself spans most of the screen.
+ *
+ * Centring on the selection rather than on the pointer is what makes the two drag directions
+ * behave the same: the pointer ends at either edge, the selection's box does not move.
+ *
+ * @param rect - the selection rectangle in screen coordinates.
+ * @param size - the menu's `{ width, height }`.
+ * @param work - the work area `{ left, top, right, bottom }` to stay inside.
+ * @returns the window's `{ x, y }`.
+ */
+export function placeMenuAtSelection(rect, size, work) {
+  const gap = 6
+  const below = rect.bottom + gap
+  const above = rect.top - size.height - gap
+  const roomBelow = work.bottom - below
+  const roomAbove = rect.top - gap - work.top
+  const fitsBelow = roomBelow >= size.height
+  const fitsAbove = roomAbove >= size.height
+
+  let y
+  if (fitsBelow) y = below
+  else if (fitsAbove) y = above
+  else y = roomBelow >= roomAbove ? below : above
+
+  const x = Math.round((rect.left + rect.right) / 2 - size.width / 2)
   return {
     x: Math.max(work.left, Math.min(x, work.right - size.width)),
     y: Math.max(work.top, Math.min(y, work.bottom - size.height)),
   }
 }
 
-/** Place a result panel near an anchor, preferring above it so it never covers the selection. */
-export function placePanel(anchor, size, work) {
+/**
+ * Place the result panel under the selection so the user can read the two together.
+ *
+ * This is the whole point of the panel — comparing an answer against the text it came from — so
+ * it goes below the selection and grows downward, unlike the menu, which is transient.
+ *
+ * Above is the fallback when there is no room below, and the panel then grows upward, which keeps
+ * its bottom edge (the part nearest the selection) in place as content streams in. Snapping to
+ * whichever side merely has more room would make a streaming panel jump across the selection.
+ *
+ * @param rect - the selection rectangle in screen coordinates.
+ * @param size - the panel's `{ width, height }` for the current content.
+ * @param work - the work area to stay inside.
+ * @param mode - `'below'` or `'above'`, chosen once per panel and held while it streams.
+ * @returns the window's `{ x, y }`.
+ */
+export function placePanelAtSelection(rect, size, work, mode) {
   const gap = 10
-  const above = anchor.y - size.height - gap
-  const y = above >= work.top ? above : Math.min(anchor.y + gap, work.bottom - size.height)
-  const x = anchor.x - Math.round(size.width / 2)
+  const below = rect.bottom + gap
+  const above = rect.top - size.height - gap
+  const picked = mode === 'above' ? above : below
+  const x = Math.round((rect.left + rect.right) / 2 - size.width / 2)
   return {
     x: Math.max(work.left, Math.min(x, work.right - size.width)),
-    y: Math.max(work.top, Math.min(y, work.bottom - size.height)),
+    y: Math.max(work.top, Math.min(picked, work.bottom - size.height)),
   }
 }
+
+/**
+ * Which side a panel anchored to `rect` should use, decided from its first size and then held.
+ * @param rect - the selection rectangle in screen coordinates.
+ * @param size - the panel's initial `{ width, height }`.
+ * @param work - the work area to stay inside.
+ * @returns `'below'` when the panel fits under the selection, otherwise `'above'`.
+ */
+export function panelSideFor(rect, size, work) {
+  return work.bottom - (rect.bottom + 10) >= size.height ? 'below' : 'above'
+}
+
 
 /** Index of the menu tile under a client-area point, or -1. */
 export function menuHitTest(layout, x, y) {
