@@ -585,6 +585,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.1.3 makes the tab open on this repository's own market and lead the
+        // source menu with it, instead of whichever index a profile happens to
+        // list first. The configured order is untouched.
+        '0.1.3': {
+          publishTimestamp: 1795392000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
