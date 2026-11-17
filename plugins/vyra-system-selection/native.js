@@ -109,118 +109,128 @@ function ownImageName() {
 }
 
 // --- structs ---------------------------------------------------------------------------------
-// POINT/RECT must be declared before any signature that names them.
+// Every name registered below lives in koffi's process-wide type table, so this block
+// runs once per process and its result is cached on globalThis. Re-loading the module —
+// which is what installing, updating or re-enabling this plugin does inside a running
+// Host — would otherwise register POINT and the rest a second time and throw
+// "Duplicate type name". The library handles are cached for the same reason: the FFI
+// table is built from them, and rebuilding it would drop the bound functions.
+const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() => {
+  // POINT/RECT must be declared before any signature that names them.
+  
+  const POINT = koffi.struct('POINT', { x: 'long', y: 'long' })
+  const RECT = koffi.struct('RECT', { left: 'long', top: 'long', right: 'long', bottom: 'long' })
+  const MONITORINFO = koffi.struct('MONITORINFO', { cbSize: 'uint32', rcMonitor: RECT, rcWork: RECT, dwFlags: 'uint32' })
+  const KEYBDINPUT = koffi.struct('KEYBDINPUT', { wVk: 'uint16', wScan: 'uint16', dwFlags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t' })
+  const MOUSEINPUT = koffi.struct('MOUSEINPUT', { dx: 'long', dy: 'long', mouseData: 'uint32', dwFlags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t' })
+  const HARDWAREINPUT = koffi.struct('HARDWAREINPUT', { uMsg: 'uint32', wParamL: 'uint16', wParamH: 'uint16' })
+  const INPUT = koffi.struct('INPUT', { type: 'uint32', u: koffi.union('INPUTU', { mi: MOUSEINPUT, ki: KEYBDINPUT, hi: HARDWAREINPUT }) })
+  const WNDCLASSEXW = koffi.struct('WNDCLASSEXW', {
+    cbSize: 'uint32', style: 'uint32', lpfnWndProc: 'void*', cbClsExtra: 'int', cbWndExtra: 'int',
+    hInstance: 'void*', hIcon: 'void*', hCursor: 'void*', hbrBackground: 'void*',
+    // str16, not void*: koffi converts the JavaScript string into the buffer the struct points at,
+    // and a void* field would receive the string itself and register a class with a garbage name.
+    lpszMenuName: 'str16', lpszClassName: 'str16', hIconSm: 'void*',
+  })
+  const WNDPROC = koffi.proto('intptr_t WNDPROC(void *hwnd, uint32_t msg, uintptr_t wParam, intptr_t lParam)')
+  // Toolhelp process entry. Declared at module load because the FFI table below names it.
+  const PROCESSENTRY32W = koffi.struct('PROCESSENTRY32W', {
+    dwSize: 'uint32', cntUsage: 'uint32', th32ProcessID: 'uint32', th32DefaultHeapID: 'uintptr_t',
+    th32ModuleID: 'uint32', cntThreads: 'uint32', th32ParentProcessID: 'uint32', pcPriClassBase: 'long',
+    dwFlags: 'uint32', szExeFile: 'char16_t[260]',
+  })
+  // Low-level mouse hook payload. 32 bytes on x64: the trailing uintptr_t pads the struct.
+  const MSLLHOOKSTRUCT = koffi.struct('MSLLHOOKSTRUCT', {
+    pt: 'POINT', mouseData: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
+  })
+  const HOOKPROC = koffi.proto('intptr_t HOOKPROC(int code, uintptr_t wParam, void *lParam)')
+  
+  // --- bindings --------------------------------------------------------------------------------
+  
+  const u = koffi.load('user32.dll')
+  const g = koffi.load('gdi32.dll')
+  const k = koffi.load('kernel32.dll')
+  const advapi = koffi.load('advapi32.dll')
+  
+  const F = {
+    RegisterClassExW: u.func('uint16 __stdcall RegisterClassExW(WNDCLASSEXW *wc)'),
+    CreateWindowExW: u.func('void* __stdcall CreateWindowExW(uint32 exStyle, str16 cls, str16 name, uint32 style, int x, int y, int w, int h, void* parent, void* menu, void* inst, void* param)'),
+    DefWindowProcW: u.func('intptr_t __stdcall DefWindowProcW(void *h, uint32 m, uintptr_t w, intptr_t l)'),
+    DestroyWindow: u.func('bool __stdcall DestroyWindow(void *h)'),
+    ShowWindow: u.func('bool __stdcall ShowWindow(void *h, int cmd)'),
+    SetWindowPos: u.func('bool __stdcall SetWindowPos(void *h, void *after, int x, int y, int cx, int cy, uint32 flags)'),
+    SetWindowRgn: u.func('int __stdcall SetWindowRgn(void *h, void *rgn, bool redraw)'),
+    InvalidateRect: u.func('bool __stdcall InvalidateRect(void *h, void *r, bool erase)'),
+    GetWindowRect: u.func('bool __stdcall GetWindowRect(void *h, _Out_ RECT *r)'),
+    PeekMessageW: u.func('bool __stdcall PeekMessageW(void *msg, void *h, uint32 min, uint32 max, uint32 remove)'),
+    TranslateMessage: u.func('bool __stdcall TranslateMessage(void *msg)'),
+    DispatchMessageW: u.func('intptr_t __stdcall DispatchMessageW(void *msg)'),
+    BeginPaint: u.func('void* __stdcall BeginPaint(void *h, void *ps)'),
+    EndPaint: u.func('bool __stdcall EndPaint(void *h, void *ps)'),
+    FillRect: u.func('int __stdcall FillRect(void *hdc, RECT *r, void *brush)'),
+    DrawTextW: u.func('int __stdcall DrawTextW(void *hdc, str16 text, int count, _Inout_ RECT *r, uint32 fmt)'),
+    // The cursor name parameter is a MAKEINTRESOURCE pointer, not a string: passing "32512" asks for
+    // a *named* resource, which does not exist, and LoadCursor returns null. A null cursor handed to
+    // SetCursor means "draw no cursor", which is why the pointer vanished over the popup.
+    LoadCursorW: u.func('void* __stdcall LoadCursorW(void *inst, void *name)'),
+    SetCursor: u.func('void* __stdcall SetCursor(void *cur)'),
+    GetCursorPos: u.func('bool __stdcall GetCursorPos(_Out_ POINT *p)'),
+    GetAsyncKeyState: u.func('short __stdcall GetAsyncKeyState(int vk)'),
+    SendInput: u.func('uint32 __stdcall SendInput(uint32 n, INPUT *inputs, int size)'),
+    MapVirtualKeyW: u.func('uint32 __stdcall MapVirtualKeyW(uint32 code, uint32 type)'),
+    MonitorFromPoint: u.func('void* __stdcall MonitorFromPoint(POINT pt, uint32 flags)'),
+    GetMonitorInfoW: u.func('bool __stdcall GetMonitorInfoW(void *mon, _Inout_ MONITORINFO *info)'),
+    GetForegroundWindow: u.func('void* __stdcall GetForegroundWindow()'),
+    GetClassNameW: u.func('int __stdcall GetClassNameW(void *h, void *buf, int max)'),
+    GetWindowThreadProcessId: u.func('uint32 __stdcall GetWindowThreadProcessId(void *h, _Out_ uint32 *pid)'),
+    WindowFromPoint: u.func('void* __stdcall WindowFromPoint(POINT pt)'),
+    GetDpiForWindow: u.func('uint32 __stdcall GetDpiForWindow(void *h)'),
+    OpenClipboard: u.func('bool __stdcall OpenClipboard(void *owner)'),
+    CloseClipboard: u.func('bool __stdcall CloseClipboard()'),
+    EmptyClipboard: u.func('bool __stdcall EmptyClipboard()'),
+    GetClipboardData: u.func('void* __stdcall GetClipboardData(uint fmt)'),
+    SetClipboardData: u.func('void* __stdcall SetClipboardData(uint fmt, void *mem)'),
+    IsClipboardFormatAvailable: u.func('bool __stdcall IsClipboardFormatAvailable(uint fmt)'),
+    GetClipboardSequenceNumber: u.func('uint32 __stdcall GetClipboardSequenceNumber()'),
+    CreateCompatibleDC: g.func('void* __stdcall CreateCompatibleDC(void *hdc)'),
+    CreateCompatibleBitmap: g.func('void* __stdcall CreateCompatibleBitmap(void *hdc, int w, int h)'),
+    BitBlt: g.func('bool __stdcall BitBlt(void *dst, int x, int y, int w, int h, void *src, int sx, int sy, uint32 rop)'),
+    SelectObject: g.func('void* __stdcall SelectObject(void *hdc, void *obj)'),
+    DeleteObject: g.func('bool __stdcall DeleteObject(void *obj)'),
+    DeleteDC: g.func('bool __stdcall DeleteDC(void *hdc)'),
+    CreateSolidBrush: g.func('void* __stdcall CreateSolidBrush(uint32 color)'),
+    CreatePen: g.func('void* __stdcall CreatePen(int style, int width, uint32 color)'),
+    RoundRect: g.func('bool __stdcall RoundRect(void *hdc, int l, int t, int r, int b, int ew, int eh)'),
+    MoveToEx: g.func('bool __stdcall MoveToEx(void *hdc, int x, int y, void *prev)'),
+    LineTo: g.func('bool __stdcall LineTo(void *hdc, int x, int y)'),
+    SetTextColor: g.func('uint32 __stdcall SetTextColor(void *hdc, uint32 color)'),
+    SetBkMode: g.func('int __stdcall SetBkMode(void *hdc, int mode)'),
+    CreateFontW: g.func('void* __stdcall CreateFontW(int h, int w, int esc, int orient, int weight, uint32 italic, uint32 underline, uint32 strike, uint32 charset, uint32 prec, uint32 clip, uint32 quality, uint32 pitch, str16 face)'),
+    CreateRoundRectRgn: g.func('void* __stdcall CreateRoundRectRgn(int l, int t, int r, int b, int ew, int eh)'),
+    GetModuleHandleW: k.func('void* __stdcall GetModuleHandleW(str16 name)'),
+    CreateToolhelp32Snapshot: k.func('void* __stdcall CreateToolhelp32Snapshot(uint32 flags, uint32 pid)'),
+    Process32FirstW: k.func('bool __stdcall Process32FirstW(void *snapshot, _Inout_ PROCESSENTRY32W *entry)'),
+    Process32NextW: k.func('bool __stdcall Process32NextW(void *snapshot, _Inout_ PROCESSENTRY32W *entry)'),
+    CloseHandle: k.func('bool __stdcall CloseHandle(void *h)'),
+    SetWindowsHookExW: u.func('void* __stdcall SetWindowsHookExW(int idHook, void *proc, void *inst, uint32 threadId)'),
+    CallNextHookEx: u.func('intptr_t __stdcall CallNextHookEx(void *hook, int code, uintptr_t wParam, void *lParam)'),
+    UnhookWindowsHookEx: u.func('bool __stdcall UnhookWindowsHookEx(void *hook)'),
+    GetKeyState: u.func('short __stdcall GetKeyState(int vk)'),
+    GlobalAlloc: k.func('void* __stdcall GlobalAlloc(uint flags, uintptr_t bytes)'),
+    GlobalSize: k.func('uintptr_t __stdcall GlobalSize(void *mem)'),
+    GlobalFree: k.func('void* __stdcall GlobalFree(void *mem)'),
+    GlobalLock: k.func('void* __stdcall GlobalLock(void *mem)'),
+    GlobalUnlock: k.func('bool __stdcall GlobalUnlock(void *mem)'),
+    RegGetValueW: advapi.func('int __stdcall RegGetValueW(void *key, str16 subkey, str16 value, uint32 flags, uint32 *type, void *data, _Inout_ uint32 *size)'),
+    RegCloseKey: advapi.func('int __stdcall RegCloseKey(void *key)'),
+    // Themes and the high-contrast flag live in user32 as plain values; no registry read needed.
+    GetSysColor: u.func('uint32 __stdcall GetSysColor(int index)'),
+    SystemParametersInfoW: u.func('bool __stdcall SystemParametersInfoW(uint32 action, uint32 param, void *data, uint32 winIni)'),
+  }
+  return { u, g, k, advapi, F, POINT, RECT, MONITORINFO, KEYBDINPUT, MOUSEINPUT, HARDWAREINPUT, INPUT, WNDCLASSEXW, WNDPROC, PROCESSENTRY32W, MSLLHOOKSTRUCT, HOOKPROC }
+})()
 
-const POINT = koffi.struct('POINT', { x: 'long', y: 'long' })
-const RECT = koffi.struct('RECT', { left: 'long', top: 'long', right: 'long', bottom: 'long' })
-const MONITORINFO = koffi.struct('MONITORINFO', { cbSize: 'uint32', rcMonitor: RECT, rcWork: RECT, dwFlags: 'uint32' })
-const KEYBDINPUT = koffi.struct('KEYBDINPUT', { wVk: 'uint16', wScan: 'uint16', dwFlags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t' })
-const MOUSEINPUT = koffi.struct('MOUSEINPUT', { dx: 'long', dy: 'long', mouseData: 'uint32', dwFlags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t' })
-const HARDWAREINPUT = koffi.struct('HARDWAREINPUT', { uMsg: 'uint32', wParamL: 'uint16', wParamH: 'uint16' })
-const INPUT = koffi.struct('INPUT', { type: 'uint32', u: koffi.union('INPUTU', { mi: MOUSEINPUT, ki: KEYBDINPUT, hi: HARDWAREINPUT }) })
-const WNDCLASSEXW = koffi.struct('WNDCLASSEXW', {
-  cbSize: 'uint32', style: 'uint32', lpfnWndProc: 'void*', cbClsExtra: 'int', cbWndExtra: 'int',
-  hInstance: 'void*', hIcon: 'void*', hCursor: 'void*', hbrBackground: 'void*',
-  // str16, not void*: koffi converts the JavaScript string into the buffer the struct points at,
-  // and a void* field would receive the string itself and register a class with a garbage name.
-  lpszMenuName: 'str16', lpszClassName: 'str16', hIconSm: 'void*',
-})
-const WNDPROC = koffi.proto('intptr_t WNDPROC(void *hwnd, uint32_t msg, uintptr_t wParam, intptr_t lParam)')
-// Toolhelp process entry. Declared at module load because the FFI table below names it.
-const PROCESSENTRY32W = koffi.struct('PROCESSENTRY32W', {
-  dwSize: 'uint32', cntUsage: 'uint32', th32ProcessID: 'uint32', th32DefaultHeapID: 'uintptr_t',
-  th32ModuleID: 'uint32', cntThreads: 'uint32', th32ParentProcessID: 'uint32', pcPriClassBase: 'long',
-  dwFlags: 'uint32', szExeFile: 'char16_t[260]',
-})
-// Low-level mouse hook payload. 32 bytes on x64: the trailing uintptr_t pads the struct.
-const MSLLHOOKSTRUCT = koffi.struct('MSLLHOOKSTRUCT', {
-  pt: 'POINT', mouseData: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
-})
-const HOOKPROC = koffi.proto('intptr_t HOOKPROC(int code, uintptr_t wParam, void *lParam)')
-
-// --- bindings --------------------------------------------------------------------------------
-
-const u = koffi.load('user32.dll')
-const g = koffi.load('gdi32.dll')
-const k = koffi.load('kernel32.dll')
-const advapi = koffi.load('advapi32.dll')
-
-const F = {
-  RegisterClassExW: u.func('uint16 __stdcall RegisterClassExW(WNDCLASSEXW *wc)'),
-  CreateWindowExW: u.func('void* __stdcall CreateWindowExW(uint32 exStyle, str16 cls, str16 name, uint32 style, int x, int y, int w, int h, void* parent, void* menu, void* inst, void* param)'),
-  DefWindowProcW: u.func('intptr_t __stdcall DefWindowProcW(void *h, uint32 m, uintptr_t w, intptr_t l)'),
-  DestroyWindow: u.func('bool __stdcall DestroyWindow(void *h)'),
-  ShowWindow: u.func('bool __stdcall ShowWindow(void *h, int cmd)'),
-  SetWindowPos: u.func('bool __stdcall SetWindowPos(void *h, void *after, int x, int y, int cx, int cy, uint32 flags)'),
-  SetWindowRgn: u.func('int __stdcall SetWindowRgn(void *h, void *rgn, bool redraw)'),
-  InvalidateRect: u.func('bool __stdcall InvalidateRect(void *h, void *r, bool erase)'),
-  GetWindowRect: u.func('bool __stdcall GetWindowRect(void *h, _Out_ RECT *r)'),
-  PeekMessageW: u.func('bool __stdcall PeekMessageW(void *msg, void *h, uint32 min, uint32 max, uint32 remove)'),
-  TranslateMessage: u.func('bool __stdcall TranslateMessage(void *msg)'),
-  DispatchMessageW: u.func('intptr_t __stdcall DispatchMessageW(void *msg)'),
-  BeginPaint: u.func('void* __stdcall BeginPaint(void *h, void *ps)'),
-  EndPaint: u.func('bool __stdcall EndPaint(void *h, void *ps)'),
-  FillRect: u.func('int __stdcall FillRect(void *hdc, RECT *r, void *brush)'),
-  DrawTextW: u.func('int __stdcall DrawTextW(void *hdc, str16 text, int count, _Inout_ RECT *r, uint32 fmt)'),
-  // The cursor name parameter is a MAKEINTRESOURCE pointer, not a string: passing "32512" asks for
-  // a *named* resource, which does not exist, and LoadCursor returns null. A null cursor handed to
-  // SetCursor means "draw no cursor", which is why the pointer vanished over the popup.
-  LoadCursorW: u.func('void* __stdcall LoadCursorW(void *inst, void *name)'),
-  SetCursor: u.func('void* __stdcall SetCursor(void *cur)'),
-  GetCursorPos: u.func('bool __stdcall GetCursorPos(_Out_ POINT *p)'),
-  GetAsyncKeyState: u.func('short __stdcall GetAsyncKeyState(int vk)'),
-  SendInput: u.func('uint32 __stdcall SendInput(uint32 n, INPUT *inputs, int size)'),
-  MapVirtualKeyW: u.func('uint32 __stdcall MapVirtualKeyW(uint32 code, uint32 type)'),
-  MonitorFromPoint: u.func('void* __stdcall MonitorFromPoint(POINT pt, uint32 flags)'),
-  GetMonitorInfoW: u.func('bool __stdcall GetMonitorInfoW(void *mon, _Inout_ MONITORINFO *info)'),
-  GetForegroundWindow: u.func('void* __stdcall GetForegroundWindow()'),
-  GetClassNameW: u.func('int __stdcall GetClassNameW(void *h, void *buf, int max)'),
-  GetWindowThreadProcessId: u.func('uint32 __stdcall GetWindowThreadProcessId(void *h, _Out_ uint32 *pid)'),
-  WindowFromPoint: u.func('void* __stdcall WindowFromPoint(POINT pt)'),
-  GetDpiForWindow: u.func('uint32 __stdcall GetDpiForWindow(void *h)'),
-  OpenClipboard: u.func('bool __stdcall OpenClipboard(void *owner)'),
-  CloseClipboard: u.func('bool __stdcall CloseClipboard()'),
-  EmptyClipboard: u.func('bool __stdcall EmptyClipboard()'),
-  GetClipboardData: u.func('void* __stdcall GetClipboardData(uint fmt)'),
-  SetClipboardData: u.func('void* __stdcall SetClipboardData(uint fmt, void *mem)'),
-  IsClipboardFormatAvailable: u.func('bool __stdcall IsClipboardFormatAvailable(uint fmt)'),
-  GetClipboardSequenceNumber: u.func('uint32 __stdcall GetClipboardSequenceNumber()'),
-  CreateCompatibleDC: g.func('void* __stdcall CreateCompatibleDC(void *hdc)'),
-  CreateCompatibleBitmap: g.func('void* __stdcall CreateCompatibleBitmap(void *hdc, int w, int h)'),
-  BitBlt: g.func('bool __stdcall BitBlt(void *dst, int x, int y, int w, int h, void *src, int sx, int sy, uint32 rop)'),
-  SelectObject: g.func('void* __stdcall SelectObject(void *hdc, void *obj)'),
-  DeleteObject: g.func('bool __stdcall DeleteObject(void *obj)'),
-  DeleteDC: g.func('bool __stdcall DeleteDC(void *hdc)'),
-  CreateSolidBrush: g.func('void* __stdcall CreateSolidBrush(uint32 color)'),
-  CreatePen: g.func('void* __stdcall CreatePen(int style, int width, uint32 color)'),
-  RoundRect: g.func('bool __stdcall RoundRect(void *hdc, int l, int t, int r, int b, int ew, int eh)'),
-  MoveToEx: g.func('bool __stdcall MoveToEx(void *hdc, int x, int y, void *prev)'),
-  LineTo: g.func('bool __stdcall LineTo(void *hdc, int x, int y)'),
-  SetTextColor: g.func('uint32 __stdcall SetTextColor(void *hdc, uint32 color)'),
-  SetBkMode: g.func('int __stdcall SetBkMode(void *hdc, int mode)'),
-  CreateFontW: g.func('void* __stdcall CreateFontW(int h, int w, int esc, int orient, int weight, uint32 italic, uint32 underline, uint32 strike, uint32 charset, uint32 prec, uint32 clip, uint32 quality, uint32 pitch, str16 face)'),
-  CreateRoundRectRgn: g.func('void* __stdcall CreateRoundRectRgn(int l, int t, int r, int b, int ew, int eh)'),
-  GetModuleHandleW: k.func('void* __stdcall GetModuleHandleW(str16 name)'),
-  CreateToolhelp32Snapshot: k.func('void* __stdcall CreateToolhelp32Snapshot(uint32 flags, uint32 pid)'),
-  Process32FirstW: k.func('bool __stdcall Process32FirstW(void *snapshot, _Inout_ PROCESSENTRY32W *entry)'),
-  Process32NextW: k.func('bool __stdcall Process32NextW(void *snapshot, _Inout_ PROCESSENTRY32W *entry)'),
-  CloseHandle: k.func('bool __stdcall CloseHandle(void *h)'),
-  SetWindowsHookExW: u.func('void* __stdcall SetWindowsHookExW(int idHook, void *proc, void *inst, uint32 threadId)'),
-  CallNextHookEx: u.func('intptr_t __stdcall CallNextHookEx(void *hook, int code, uintptr_t wParam, void *lParam)'),
-  UnhookWindowsHookEx: u.func('bool __stdcall UnhookWindowsHookEx(void *hook)'),
-  GetKeyState: u.func('short __stdcall GetKeyState(int vk)'),
-  GlobalAlloc: k.func('void* __stdcall GlobalAlloc(uint flags, uintptr_t bytes)'),
-  GlobalSize: k.func('uintptr_t __stdcall GlobalSize(void *mem)'),
-  GlobalFree: k.func('void* __stdcall GlobalFree(void *mem)'),
-  GlobalLock: k.func('void* __stdcall GlobalLock(void *mem)'),
-  GlobalUnlock: k.func('bool __stdcall GlobalUnlock(void *mem)'),
-  RegGetValueW: advapi.func('int __stdcall RegGetValueW(void *key, str16 subkey, str16 value, uint32 flags, uint32 *type, void *data, _Inout_ uint32 *size)'),
-  RegCloseKey: advapi.func('int __stdcall RegCloseKey(void *key)'),
-  // Themes and the high-contrast flag live in user32 as plain values; no registry read needed.
-  GetSysColor: u.func('uint32 __stdcall GetSysColor(int index)'),
-  SystemParametersInfoW: u.func('bool __stdcall SystemParametersInfoW(uint32 action, uint32 param, void *data, uint32 winIni)'),
-}
-
+const { u, g, k, advapi, F, POINT, RECT, MONITORINFO, KEYBDINPUT, MOUSEINPUT, HARDWAREINPUT, INPUT, WNDCLASSEXW, WNDPROC, PROCESSENTRY32W, MSLLHOOKSTRUCT, HOOKPROC } = native
 // --- constants -------------------------------------------------------------------------------
 
 const WM_DESTROY = 0x0002
