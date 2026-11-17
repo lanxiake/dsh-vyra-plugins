@@ -506,7 +506,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'PENDING',
+            commit: 'bfcecfa25ca5cc0781580a12a267b7f277abe7d3',
             path: 'plugins/dsh-im',
           },
         },
@@ -531,13 +531,17 @@ export const manifest: MarketManifest = {
       repository: {
         url: 'https://github.com/yuehancn/dsh-tool-ocr',
       },
+      // The vendored manifest declares this; the index must agree with the
+      // package a client actually installs, or the card shows a compatibility
+      // the install then refuses.
+      engines: { dsh: '>=0.2.0-rc.2' },
       versions: {
         '1.0.0': {
           publishTimestamp: 1794967200,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'PENDING',
+            commit: 'bfcecfa25ca5cc0781580a12a267b7f277abe7d3',
             path: 'plugins/dsh-tool-ocr',
           },
         },
@@ -568,7 +572,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'PENDING',
+            commit: 'bfcecfa25ca5cc0781580a12a267b7f277abe7d3',
             path: 'plugins/dsh-superpowers',
           },
         },

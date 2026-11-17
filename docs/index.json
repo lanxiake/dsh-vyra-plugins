@@ -414,7 +414,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PENDING",
+            "commit": "bfcecfa25ca5cc0781580a12a267b7f277abe7d3",
             "path": "plugins/dsh-im"
           }
         }
@@ -453,8 +453,11 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PENDING",
+            "commit": "bfcecfa25ca5cc0781580a12a267b7f277abe7d3",
             "path": "plugins/dsh-tool-ocr"
+          },
+          "engines": {
+            "dsh": ">=0.2.0-rc.2"
           }
         }
       ],
@@ -490,7 +493,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PENDING",
+            "commit": "bfcecfa25ca5cc0781580a12a267b7f277abe7d3",
             "path": "plugins/dsh-superpowers"
           }
         }
