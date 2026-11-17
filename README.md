@@ -69,6 +69,7 @@ dsh-vyra-plugins/
 │   ├── import-plugin.mjs   # 把仓库外维护的插件搬进来并改名
 │   ├── normalize-plugins.mjs   # 补发布所需字段（去 private、加 license/repository）
 │   ├── sync-manifest-icons.mjs # 从各插件 icon.svg 生成清单里的内联图标
+│   ├── pin-version.mjs     # 把某个版本的占位 commit 换成真实 SHA
 │   └── print-skill-config.ts
 └── LICENSE                 # MIT，各插件目录下另有一份
 ```
