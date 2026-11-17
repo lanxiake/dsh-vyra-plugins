@@ -1,0 +1,36 @@
+{
+  "name": "vyra-system-selection",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "系统级划词助手：在任何应用里划词，弹出原生工具条翻译、解释、润色、总结",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "core.js",
+    "native.js",
+    "store.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg"
+  ],
+  "scripts": {
+    "test": "./verify-run.sh"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ]
+    }
+  }
+}

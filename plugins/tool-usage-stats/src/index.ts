@@ -32,6 +32,7 @@
  * @module vyra-tool-usage-stats
  */
 
+import { randomUUID } from 'node:crypto'
 import {
   coverage, failureDetail, readResult, record, recordFailure, report, summarize, takeName, windowed,
   type Coverage, type FailureLog, type ToolUsageReport, type ToolUsageState,
@@ -90,6 +91,13 @@ interface SessionEvent {
 /** A model-visible message the plugin contributes to a step. */
 interface InjectableMessage {
   readonly role: 'user'
+  /**
+   * Stable identity. The harness's append path does not check for one, but its
+   * load path refuses any stored message event without it — so a message
+   * contributed without an id is written happily and only fails when the
+   * session is reopened, as a corrupt log.
+   */
+  readonly id: string
   readonly content: readonly { readonly type: 'text'; readonly text: string }[]
   readonly source: { readonly kind: string }
 }
@@ -661,7 +669,12 @@ export function apply(ctx: Context, config: Config = {}): void {
         ...decision,
         messages: [
           ...(decision.messages ?? []),
-          { role: 'user', content: [{ type: 'text', text }], source: { kind: 'vyra-tool-usage-stats' } },
+          {
+            role: 'user',
+            id: randomUUID(),
+            content: [{ type: 'text', text }],
+            source: { kind: 'vyra-tool-usage-stats' },
+          },
         ],
       }
     } catch (error) {

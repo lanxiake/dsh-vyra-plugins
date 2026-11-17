@@ -30,7 +30,7 @@ if (!existsSync(sourceRoot)) {
   process.exit(0)
 }
 
-for (const test of ['integration.ts', 'storage.ts', 'session-e2e.ts', 'boot-timers.ts']) {
+for (const test of ['integration.ts', 'storage.ts', 'session-e2e.ts', 'pre-step-message-id.ts', 'boot-timers.ts']) {
   console.log(`\n=== ${test} ===`)
   run('npx', ['tsx', resolve(here, test)], sourceRoot)
 }

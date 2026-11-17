@@ -1,3 +1,6 @@
+// src/index.ts
+import { randomUUID } from "node:crypto";
+
 // src/counters.ts
 function dayKey(at) {
   const date = new Date(at);
@@ -766,7 +769,12 @@ function apply(ctx, config = {}) {
         ...decision,
         messages: [
           ...decision.messages ?? [],
-          { role: "user", content: [{ type: "text", text }], source: { kind: "vyra-tool-usage-stats" } }
+          {
+            role: "user",
+            id: randomUUID(),
+            content: [{ type: "text", text }],
+            source: { kind: "vyra-tool-usage-stats" }
+          }
         ]
       };
     } catch (error) {
