@@ -397,7 +397,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'PENDING',
+            commit: 'fa2db0587b5bd1f668234a89ce2b44be329babeb',
             path: 'plugins/vyra-system-selection',
           },
         },
