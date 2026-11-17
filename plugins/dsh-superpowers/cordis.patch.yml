@@ -1,0 +1,4 @@
+# Out-of-tree Superpowers skills + session bootstrap for DeepSeek Harness.
+- insert:
+    - id: dsh-superpowers
+      name: '@anht3889/dsh-superpowers'

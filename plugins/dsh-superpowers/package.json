@@ -1,0 +1,76 @@
+{
+  "name": "@anht3889/dsh-superpowers",
+  "version": "0.0.4",
+  "description": "DeepSeek Harness profile plugin: obra Superpowers skills + session bootstrap",
+  "keywords": [
+    "superpowers",
+    "skills",
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "tdd",
+    "debugging",
+    "workflows"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anht3889/dsh-superpowers.git"
+  },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/bootstrap.js",
+    "lib/resolve-skills-root.js",
+    "lib/strip-frontmatter.js",
+    "lib/types/**/*.d.ts",
+    "vendor/superpowers/**",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "vendor:skills": "node scripts/vendor-skills.mjs",
+    "prepack": "node scripts/vendor-skills.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.5-alpha.1",
+    "@deepseek-ai/dsh-skill-filesystem": "^0.2.1-alpha.1",
+    "@deepseek-ai/dsh-system-prompt": "^0.2.1-alpha.1"
+  },
+  "devDependencies": {
+    "superpowers": "github:obra/superpowers#8ca22dba9a94f28898bbce59f2537ff4d87c747d",
+    "@deepseek-ai/cordis": "4.0.5-alpha.1",
+    "@deepseek-ai/dsh-skill-filesystem": "0.2.1-alpha.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-alpha.1",
+    "@types/node": "^22.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": "^22.19 || >=24"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

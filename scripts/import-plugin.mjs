@@ -37,9 +37,20 @@ const EXCLUDED_SUFFIXES = ['.tgz', '.tar.gz']
 /** Entries npm packs regardless of `files`, so a filtered copy must carry them too. */
 const ALWAYS_PACKED = new Set(['package.json', 'README.md', 'LICENSE'])
 
-const [sourceArg, targetArg] = process.argv.slice(2)
+/**
+ * `--keep-name` vendors somebody else's package instead of publishing our own.
+ *
+ * A plugin this repository owns is renamed onto the `vyra-` scope, which is
+ * what makes the client bundle's registration id, the cordis row and the
+ * manifest agree. A third-party package must keep its own name: renaming it
+ * would strip the attribution off code we did not write, and the copy stays a
+ * vendored snapshot rather than a fork we maintain.
+ */
+const keepName = process.argv.includes('--keep-name')
+const args = process.argv.slice(2).filter(arg => arg !== '--keep-name')
+const [sourceArg, targetArg] = args
 if (sourceArg === undefined || targetArg === undefined) {
-  console.error('usage: node scripts/import-plugin.mjs <source-dir> <target-name>')
+  console.error('usage: node scripts/import-plugin.mjs [--keep-name] <source-dir> <target-name>')
   process.exit(2)
 }
 
@@ -167,12 +178,17 @@ const candidates = [
   ...(declaredFiles ?? []).flatMap(entry => entry.includes('*') ? [] : [entry]),
   ...['lib/index.js', 'lib/client.js', 'lib/index.d.ts'],
 ]
-const touched = [...new Set(candidates)].filter(file => rewriteIdentity(file, replacements))
+// A vendored third-party copy keeps its name, so there is nothing to rewrite
+// and no risk of renaming an inner reference that merely looks like the name.
+const touched = keepName ? [] : [...new Set(candidates)].filter(file => rewriteIdentity(file, replacements))
 
-// `package.json` is rewritten as a parsed value so the copy keeps its own formatting.
-const copyManifest = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8').replace(/^﻿/u, ''))
-copyManifest.name = targetArg
-writeFileSync(join(target, 'package.json'), `${JSON.stringify(copyManifest, undefined, 2)}\n`)
+// `package.json` is rewritten as a parsed value so the copy keeps its own
+// formatting. A vendored copy keeps its own name, and therefore its manifest.
+if (!keepName) {
+  const copyManifest = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8').replace(/^﻿/u, ''))
+  copyManifest.name = targetArg
+  writeFileSync(join(target, 'package.json'), `${JSON.stringify(copyManifest, undefined, 2)}\n`)
+}
 
-console.log(`${previous} -> ${targetArg}`)
-console.log(`  touched: ${touched.join(', ')}`)
+console.log(keepName ? `vendored ${targetArg} (name kept)` : `${previous} -> ${targetArg}`)
+console.log(`  touched: ${touched.join(', ') || '(nothing)'}`)

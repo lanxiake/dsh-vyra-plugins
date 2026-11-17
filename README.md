@@ -31,6 +31,18 @@ https://lanxiake.github.io/dsh-vyra-plugins/index.json
 
 插件的版本、图标、分类与安装来源以 [`docs/index.json`](docs/index.json) 为准——那份是生成物，改的是 [`scripts/market-manifest.ts`](scripts/market-manifest.ts)。
 
+### 收录的第三方插件
+
+下面三个**不是本仓库开发的**，代码由原作者以 MIT 许可发布，这里只是把一份快照放进 `plugins/` 以便市场能装到。包名、LICENSE、介绍都保持原样，**没有改名**——改名会抹掉出处。上游发新版需要重新收录，本仓库不会自动跟。
+
+| 包 | 名称 | 介绍 | 作者 |
+|---|---|---|---|
+| `@xmanrui/dsh-im` | 即时通讯桥接 | 把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH | [xmanrui](https://github.com/xmanrui/dsh-im) |
+| `@yuehancn/dsh-tool-ocr` | 图像文字识别 | 从图片和 PDF 里取文字：数字版 PDF 直接读文字层，扫描件走 OCR | [yuehancn](https://github.com/yuehancn/dsh-tool-ocr) |
+| `@anht3889/dsh-superpowers` | Superpowers 技能集 | obra Superpowers 技能集，附带会话引导 | [anht3889](https://github.com/anht3889/dsh-superpowers) |
+
+`dsh-h3-video`（[kingcharleslzy-ai](https://github.com/kingcharleslzy-ai/dsh-h3-video)）**没有收录**：它未声明任何许可证，既没有 `license` 字段也没有 LICENSE 文件，默认保留全部权利。要收录得先取得作者授权，或等它补上许可证。
+
 ## 两个入口
 
 DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：

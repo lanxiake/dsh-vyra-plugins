@@ -477,5 +477,106 @@ export const manifest: MarketManifest = {
         keywords: ['agent-cli', 'claude-code', 'codex', 'opencode', 'acp'],
       },
     },
+    // ── Vendored third-party plugins ──
+    //
+    // Not ours: each keeps its upstream package name, its own LICENSE, and its
+    // upstream `description`. Renaming one onto `vyra-` would strip the
+    // attribution off code we did not write, so `import-plugin.mjs --keep-name`
+    // copies these verbatim and the install source pins the commit that holds
+    // the snapshot. An upstream release is picked up by re-vendoring, never by
+    // a version bump here.
+    {
+      name: '@xmanrui/dsh-im',
+      title: {
+        en: 'Instant Messaging Bridge',
+        zh: '即时通讯桥接',
+      },
+      description: {
+        en: 'Connect WeChat, Feishu, WeCom, DingTalk, QQ, Telegram, WhatsApp, Slack, Discord and Matrix to DSH.',
+        zh: '把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH。',
+      },
+      author: 'xmanrui',
+      homepage: 'https://github.com/xmanrui/dsh-im#readme',
+      repository: {
+        url: 'https://github.com/xmanrui/dsh-im',
+      },
+      versions: {
+        '5.10.0': {
+          publishTimestamp: 1794967200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/dsh-im',
+          },
+        },
+      },
+      metadata: {
+        category: 'integration',
+        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord'],
+      },
+    },
+    {
+      name: '@yuehancn/dsh-tool-ocr',
+      title: {
+        en: 'OCR',
+        zh: '图像文字识别',
+      },
+      description: {
+        en: 'Extract text from images and PDFs: read a born-digital text layer, or OCR a scan with any configured engine.',
+        zh: '从图片和 PDF 里取文字：数字版 PDF 直接读文字层，扫描件走 OCR。',
+      },
+      author: 'yuehancn',
+      homepage: 'https://github.com/yuehancn/dsh-tool-ocr#readme',
+      repository: {
+        url: 'https://github.com/yuehancn/dsh-tool-ocr',
+      },
+      versions: {
+        '1.0.0': {
+          publishTimestamp: 1794967200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/dsh-tool-ocr',
+          },
+        },
+      },
+      metadata: {
+        category: 'input-output',
+        keywords: ['ocr', 'text-extraction', 'pdf', 'image'],
+      },
+    },
+    {
+      name: '@anht3889/dsh-superpowers',
+      title: {
+        en: 'Superpowers',
+        zh: 'Superpowers 技能集',
+      },
+      description: {
+        en: 'The obra Superpowers skill collection plus session bootstrap for a DSH profile.',
+        zh: 'obra Superpowers 技能集，附带会话引导。',
+      },
+      author: 'anht3889',
+      homepage: 'https://github.com/anht3889/dsh-superpowers',
+      repository: {
+        url: 'https://github.com/anht3889/dsh-superpowers',
+      },
+      versions: {
+        '0.0.4': {
+          publishTimestamp: 1794967200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING',
+            path: 'plugins/dsh-superpowers',
+          },
+        },
+      },
+      metadata: {
+        category: 'agent-runtime',
+        keywords: ['skills', 'superpowers', 'tdd', 'debugging'],
+      },
+    },
   ],
 }
