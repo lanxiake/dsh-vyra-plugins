@@ -389,7 +389,7 @@
         "en": "Drive Claude Code, Codex, OpenCode and other agent CLIs from DSH: install and upgrade them, and manage their MCP servers, skills and prompts in one place.",
         "zh": "在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词。"
       },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4KICA8dGl0bGU+QWdlbnQgQ0xJIE1hbmFnZXI8L3RpdGxlPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjMGY3NjZlIi8+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cmVjdCB4PSIxNCIgeT0iMTYiIHdpZHRoPSIzNiIgaGVpZ2h0PSIzMiIgcng9IjUiIG9wYWNpdHk9IjAuODUiLz4KICAgIDxwYXRoIGQ9Ik0yMiAyN2w1IDUtNSA1Ii8+CiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4KICA8L2c+Cjwvc3ZnPgo=",
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4NCiAgPHRpdGxlPkFnZW50IENMSSBNYW5hZ2VyPC90aXRsZT4NCiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz4NCiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+DQogICAgPHJlY3QgeD0iMTQiIHk9IjE2IiB3aWR0aD0iMzYiIGhlaWdodD0iMzIiIHJ4PSI1IiBvcGFjaXR5PSIwLjg1Ii8+DQogICAgPHBhdGggZD0iTTIyIDI3bDUgNS01IDUiLz4NCiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4NCiAgPC9nPg0KPC9zdmc+DQo=",
       "author": "lanxiake",
       "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
@@ -397,6 +397,19 @@
         "directory": "plugins/vyra-agent-cli-manager"
       },
       "versions": [
+        {
+          "version": "1.1.0",
+          "publishTimestamp": 1795222800,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "d94ed5e632ad80ea42e5a731d57f351b75f2fb60",
+            "path": "plugins/vyra-agent-cli-manager"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
         {
           "version": "1.0.1",
           "publishTimestamp": 1794900000,
