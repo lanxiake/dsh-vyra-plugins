@@ -141,10 +141,13 @@ function makePage(entries) {
   }
 }
 
-/** A Host Remote that records every call and answers from mutable state. */
+/** A Host Remote that records every call and answers from mutable state.
+ *  `state.answers` may override any method's answer, to drive a failure path. */
 function makeRemote(state) {
   const calls = []
   const ok = (value) => Promise.resolve({ ok: true, value })
+  const answers = state.answers ?? {}
+  const answer = (name, fallback) => answers[name] ?? fallback
   return {
     calls,
     $on: (event) => { calls.push(['$on', event]); return () => {} },
@@ -155,10 +158,10 @@ function makeRemote(state) {
     },
     pluginManager: {
       listBundles: () => { calls.push(['listBundles']); return ok(state.bundles) },
-      installBundle: (spec, options) => { calls.push(['installBundle', spec, options]); return ok({ application: 'applied' }) },
-      updateBundle: (name, version, options) => { calls.push(['updateBundle', name, version, options]); return ok({ result: { application: 'applied' } }) },
-      removeBundle: (name) => { calls.push(['removeBundle', name]); return ok({ application: 'applied' }) },
-      setBundleEnabled: (name, enabled) => { calls.push(['setBundleEnabled', name, enabled]); return ok({ application: 'applied' }) },
+      installBundle: (spec, options) => { calls.push(['installBundle', spec, options]); return answer('installBundle', ok({ application: 'applied' })) },
+      updateBundle: (name, version, options) => { calls.push(['updateBundle', name, version, options]); return answer('updateBundle', ok({ result: { application: 'applied' } })) },
+      removeBundle: (name) => { calls.push(['removeBundle', name]); return answer('removeBundle', ok({ application: 'applied' })) },
+      setBundleEnabled: (name, enabled) => { calls.push(['setBundleEnabled', name, enabled]); return answer('setBundleEnabled', ok({ application: 'applied' })) },
     },
   }
 }
@@ -187,7 +190,7 @@ function buttonByText(tree, label) {
 }
 
 /** Mount the tab, settle its reads, and return the drawn tree with its Remote. */
-async function mount({ sources = [{ url: 'https://example.invalid/index.json' }], entries = [entry('alpha'), entry('beta')], bundles = [] } = {}) {
+async function mount({ sources = [{ url: 'https://example.invalid/index.json' }], entries = [entry('alpha'), entry('beta')], bundles = [], answers = {} } = {}) {
   const react = makeReact()
   const bundle = loadBundle(react)
   assert.deepEqual(
@@ -195,7 +198,7 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
     ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
     'the bundle declares every service it reads',
   )
-  const remote = makeRemote({ sources, bundles, page: makePage(entries) })
+  const remote = makeRemote({ sources, bundles, page: makePage(entries), answers })
   let Component = null
   bundle.apply({
     effect: (fn) => fn(),
@@ -213,15 +216,20 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
   }
   // The stub has no scheduler, so render and settle several turns by hand: a
   // read sets state, which the next render reads, which loads the page, and so
-  // on until the tab reaches its loaded state.
+  // on until the tab reaches its loaded state. `settle` re-runs that loop after
+  // a press, which is how a test follows an action to what it drew.
   let tree = null
-  for (let turn = 0; turn < 8; turn += 1) {
-    const handle = react.begin(Component)
-    tree = Component(props, {})
-    react.end(handle)
-    await react.flush()
+  const render = async (turns = 1) => {
+    for (let turn = 0; turn < turns; turn += 1) {
+      const handle = react.begin(Component)
+      tree = Component(props, {})
+      react.end(handle)
+      await react.flush()
+    }
+    return tree
   }
-  return { tree, remote }
+  tree = await render(8)
+  return { tree, remote, settle: () => render(3) }
 }
 
 // --- the registration targets the tab slot beside Installed ------------------
@@ -280,6 +288,29 @@ await (async () => {
   const remove = buttonByText(tree, 'uninstall')
   assert.ok(remove !== undefined, 'an installed card offers Uninstall')
   remove.props.onClick()
+}
+
+// --- a failed update leaves its reason on the card ---------------------------
+{
+  // The very failure this plugin hid before: the Host answers `failed` with a
+  // diagnostic and the run's own output, and the card has to carry both.
+  const reason = "Duplicate type name 'POINT'"
+  const output = 'dsh: warning: 1 entry did not activate'
+  const { tree, settle } = await mount({
+    entries: [entry('alpha', { installation: { status: 'installed' }, versions: [{ version: '2.0.0', publishTimestamp: 1, source: { type: 'git', url: 'https://e/r.git', commit: 'a'.repeat(40) }, install: { spec: 'git+https://e/r.git#aaa' }, compatibility: { compatible: true }, update: true }] })],
+    bundles: [{ name: 'alpha', installed: true, enabled: true, removable: true, update: 'git', rows: [], overrides: [] }],
+    answers: {
+      updateBundle: Promise.resolve({ ok: true, value: { result: { application: 'failed', error: { diagnostic: reason, code: 'operation-error' }, packageResult: { output } } } }),
+    },
+  })
+  const update = buttonByText(tree, 'update')
+  assert.ok(update !== undefined, 'an updatable card offers Update')
+  update.props.onClick()
+  const after = await settle()
+  const tag = findAll(after, (node) => node.type === 'button' && typeof node.props.title === 'string' && node.props.title.includes(reason))[0]
+  assert.ok(tag !== undefined, 'the card carries a tag whose tooltip holds the failure')
+  assert.ok(tag.props.title.includes(output), 'the tooltip holds the run output too, not just the code')
+  assert.ok(texts(tag).join('').includes('failedTag'), 'the tag renders the Failed label')
 }
 
 // --- a Host change re-reads the bundles --------------------------------------

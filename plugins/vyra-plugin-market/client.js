@@ -250,6 +250,11 @@ window.__ModuleLoader__.load({
       failed: '失败 {n} 项',
       needRestart: '{n} 项需要重启客户端才生效',
       needBuilds: '{n} 项需要先允许构建脚本，请到「已安装」页安装',
+      failedTag: '失败',
+      failureHint: '失败原因在卡片的「失败」标签上，悬停可看，点击可复制',
+      copyError: '复制错误',
+      copied: '已复制',
+      clearError: '忽略',
       sourcesTitle: '市场源',
       manageSources: '管理市场源…',
       addSource: '添加',
@@ -318,6 +323,11 @@ window.__ModuleLoader__.load({
       failed: '{n} failed',
       needRestart: '{n} need a client restart to take effect',
       needBuilds: '{n} need their build scripts allowed first — install them from the Installed tab',
+      failedTag: 'Failed',
+      failureHint: 'The reason is on each card\'s Failed tag — hover to read it, click to copy',
+      copyError: 'Copy error',
+      copied: 'Copied',
+      clearError: 'Dismiss',
       sourcesTitle: 'Market sources',
       manageSources: 'Manage sources…',
       addSource: 'Add',
@@ -392,12 +402,16 @@ window.__ModuleLoader__.load({
         flex: 1, minWidth: 0, height: '32px', padding: '0 10px', borderRadius: '8px', font: 'inherit', fontSize: '12.5px',
         border: BORDER, background: 'var(--dsw-alias-bg-layer-1)', color: 'var(--dsw-alias-label-primary)', outline: 'none',
       },
+      // The button tokens are the ones the client's own Button uses:
+      // `brand-primary` is a colour for text and strokes, never a filled
+      // surface, and `brand-text` is near-black — pairing them painted a dark
+      // button whose label matched its own fill and could not be read.
       btn: (primary, disabled) => ({
         display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 11px', borderRadius: '8px',
         font: 'inherit', fontSize: '12.5px', flex: 'none', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
-        border: `1px solid ${primary ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l2)'}`,
-        background: primary ? 'var(--dsw-alias-brand-primary)' : 'transparent',
-        color: primary ? 'var(--dsw-alias-brand-text)' : 'var(--dsw-alias-label-primary)',
+        border: `1px solid ${primary ? 'transparent' : 'var(--dsw-alias-border-l2)'}`,
+        background: primary ? 'var(--dsw-alias-button-primary-fill)' : 'transparent',
+        color: primary ? 'var(--dsw-alias-label-primary-foreground)' : 'var(--dsw-alias-label-primary)',
       }),
       squareBtn: {
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', padding: 0,
@@ -417,11 +431,13 @@ window.__ModuleLoader__.load({
       }),
       menuSep: { height: '1px', background: 'var(--dsw-alias-border-l2)', margin: '4px 2px' },
       pills: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
+      // The client's own Pill marks its active member with the ghost-active
+      // pair; a brand-primary border and text is for links, not selections.
       pill: (active) => ({
         padding: '3px 11px', borderRadius: '999px', font: 'inherit', fontSize: '12px', cursor: 'pointer',
-        border: `1px solid ${active ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l2)'}`,
-        background: active ? 'var(--dsw-alias-bg-layer-2)' : 'transparent',
-        color: active ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
+        border: `1px solid ${active ? 'var(--dsw-alias-button-ghost-active-border)' : 'var(--dsw-alias-border-l2)'}`,
+        background: active ? 'var(--dsw-alias-button-ghost-active-fill)' : 'var(--dsw-alias-bg-layer-2)',
+        color: active ? 'var(--dsw-alias-label-primary)' : 'var(--dsw-alias-label-secondary)',
       }),
       scroll: { flex: 1, minHeight: 0, overflowY: 'auto' },
       grid: {
@@ -430,7 +446,7 @@ window.__ModuleLoader__.load({
       },
       card: (picked) => ({
         display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', minWidth: 0,
-        border: `1px solid ${picked ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l2)'}`,
+        border: `1px solid ${picked ? 'var(--dsw-alias-border-selected)' : 'var(--dsw-alias-border-l2)'}`,
         background: picked ? 'var(--dsw-alias-bg-multi-select)' : 'var(--dsw-alias-card-fill)',
       }),
       cardTop: { display: 'flex', alignItems: 'flex-start', gap: '9px', minWidth: 0 },
@@ -450,8 +466,9 @@ window.__ModuleLoader__.load({
       tags: { display: 'flex', gap: '5px', flexWrap: 'wrap' },
       tag: (tone) => ({
         padding: '1px 8px', borderRadius: '999px', fontSize: '11px', lineHeight: '17px', flex: 'none',
-        border: `1px solid ${tone === 'warn' ? 'var(--dsw-alias-state-warn-primary)' : tone === 'ok' ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-border-l2)'}`,
-        color: tone === 'warn' ? 'var(--dsw-alias-state-warn-primary)' : tone === 'ok' ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-label-tertiary)',
+        border: `1px solid ${tone === 'warn' ? 'var(--dsw-alias-state-warn-primary)' : tone === 'ok' ? 'var(--dsw-alias-state-success-primary)' : tone === 'error' ? 'var(--dsw-alias-state-error-primary)' : 'var(--dsw-alias-border-l2)'}`,
+        color: tone === 'warn' ? 'var(--dsw-alias-state-warn-primary)' : tone === 'ok' ? 'var(--dsw-alias-state-success-primary)' : tone === 'error' ? 'var(--dsw-alias-state-error-primary)' : 'var(--dsw-alias-label-tertiary)',
+        background: 'transparent',
       }),
       meta: { fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', margin: 0 },
       actions: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginTop: 'auto' },
@@ -463,7 +480,7 @@ window.__ModuleLoader__.load({
         border: BORDER, background: 'var(--dsw-alias-bg-layer-2)', flex: 'none', fontSize: '12.5px',
         color: 'var(--dsw-alias-label-primary)',
       },
-      bulkBar: { borderColor: 'var(--dsw-alias-brand-primary)' },
+      bulkBar: { borderColor: 'var(--dsw-alias-border-selected)' },
       grow: { marginRight: 'auto' },
       spinner: {
         width: '13px', height: '13px', flex: 'none', borderRadius: '50%', border: '2px solid var(--dsw-alias-border-l2)',
@@ -615,8 +632,12 @@ window.__ModuleLoader__.load({
       h('p', { style: { ...S.bar, margin: 0, fontSize: '12px' } }, t('sourceTrust')))
     }
 
-    /** One entry: artwork, title, state, description, and its single-entry actions. */
-    function Card({ entry, bundle, lang, t, text, busy, picked, onPick, onRun, onConfirm, onOpen }) {
+    /**
+     * One entry: artwork, title, state, description, and its actions. A failure
+     * this session left on the entry stays here as a tag whose tooltip holds the
+     * whole reason and whose press copies it.
+     */
+    function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, onPick, onRun, onConfirm, onOpen, onCopyFailure, onClearFailure }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
       const state = entryState(entry)
       const shown = presentedVersion(entry)
@@ -658,6 +679,20 @@ window.__ModuleLoader__.load({
         }
       }
       const tags = []
+      if (failure !== undefined) {
+        // Hover reads the whole reason; a press copies it; the × drops the tag
+        // once it has been dealt with, so a card is not marked forever.
+        tags.push(h('button', {
+          key: 'f', type: 'button', title: failure, 'aria-label': `${t('failedTag')}: ${failure}`,
+          style: { ...S.tag('error'), cursor: 'pointer', font: 'inherit', margin: 0 },
+          onClick: () => { void onCopyFailure(entry.name, failure) },
+        }, copied === entry.name ? t('copied') : t('failedTag')))
+        tags.push(h('button', {
+          key: 'fc', type: 'button', title: t('clearError'), 'aria-label': t('clearError'),
+          style: { ...S.tag('error'), cursor: 'pointer', font: 'inherit', margin: 0, padding: '1px 6px' },
+          onClick: () => { onClearFailure(entry.name) },
+        }, '×'))
+      }
       if (state === 'provided') tags.push(h('span', { key: 'p', style: S.tag('neutral') }, t('tagProvided')))
       if (state === 'updatable') tags.push(h('span', { key: 'u', style: S.tag('warn') }, t('tagUpdate')))
       if (state === 'installed') tags.push(h('span', { key: 'i', style: S.tag('ok') }, t(bundle !== undefined && bundle.enabled === false ? 'tagDisabled' : 'tagInstalled')))
@@ -707,6 +742,10 @@ window.__ModuleLoader__.load({
       const [confirm, setConfirm] = useState(null)
       const [running, setRunning] = useState(null)
       const [outcome, setOutcome] = useState(null)
+      /** Per-entry failure text, kept on the card after the summary bar is gone. */
+      const [failures, setFailures] = useState(() => new Map())
+      /** The entry whose failure text was just copied, for the tag's own feedback. */
+      const [copied, setCopied] = useState(null)
 
       const alive = useRef(true)
       useEffect(() => () => { alive.current = false }, [])
@@ -843,6 +882,33 @@ window.__ModuleLoader__.load({
       }, [listing, load])
 
       /**
+       * Copy a failure's text, so it can be pasted into a report. The clipboard
+       * is optional (an insecure origin has none), so a refusal is swallowed
+       * rather than thrown at a person who only pressed a tag.
+       * @param {string} name - the entry whose failure this is.
+       * @param {string} reason - the text to copy.
+       */
+      const copyFailure = useCallback(async (name, reason) => {
+        try {
+          await navigator.clipboard.writeText(reason)
+          setCopied(name)
+          setTimeout(() => { if (alive.current) setCopied((current) => current === name ? null : current) }, 1600)
+        } catch {
+          /* No clipboard here; the tag's tooltip still shows the whole text. */
+        }
+      }, [])
+
+      /** Drop one entry's failure tag once it has been read. */
+      const clearFailure = useCallback((name) => {
+        setFailures((current) => {
+          if (!current.has(name)) return current
+          const next = new Map(current)
+          next.delete(name)
+          return next
+        })
+      }, [])
+
+      /**
        * Run a batch: every order is attempted in turn, so one failure never
        * hides the entries that follow it.
        * @param {ReadonlyArray<object>} list - orders from {@link orders}.
@@ -851,10 +917,13 @@ window.__ModuleLoader__.load({
         if (list.length === 0 || running !== null) return
         setOutcome(null)
         setConfirm(null)
+        setFailures(new Map())
         let ok = 0
         let restart = 0
         let builds = 0
-        const failures = []
+        // Keyed by entry, so the card that failed keeps its reason after the
+        // summary bar is gone — which is where the person looks for it.
+        const failed = new Map()
         for (let index = 0; index < list.length; index += 1) {
           const order = list[index]
           if (!alive.current) return
@@ -879,19 +948,23 @@ window.__ModuleLoader__.load({
               answer = await remote.pluginManager.setBundleEnabled(order.entry.name, order.action === 'enable')
             }
           } catch (error) {
-            failures.push(`${order.entry.name}: ${String(error?.message ?? error)}`)
+            failed.set(order.entry.name, String(error?.message ?? error))
             continue
           }
           if (!alive.current) return
           if (!answer.ok) {
-            failures.push(`${order.entry.name}: ${answer.error.message}`)
+            failed.set(order.entry.name, answer.error.message)
             continue
           }
           // An update answers with its own step result and restores the removed
           // version when the replacement fails; both wrap one change result.
           const result = order.action === 'update' ? answer.value.result : answer.value
           if (result === undefined || result.application === 'failed') {
-            failures.push(`${order.entry.name}: ${result?.error?.diagnostic ?? t('loadFailed')}`)
+            // The run's own output says more than the code does — a failed
+            // import, a refused build script — so it is part of the reason.
+            const detail = result?.error?.diagnostic
+            const output = result?.packageResult?.output
+            failed.set(order.entry.name, [detail, output].filter(Boolean).join('\n') || t('loadFailed'))
             continue
           }
           ok += 1
@@ -901,7 +974,8 @@ window.__ModuleLoader__.load({
         if (!alive.current) return
         setRunning(null)
         setPicked(new Set())
-        setOutcome({ ok, failures, restart, builds })
+        setFailures(failed)
+        setOutcome({ ok, failed: [...failed.keys()].length, restart, builds })
         await loadBundles()
       }, [remote, running, t, loadBundles])
 
@@ -930,13 +1004,13 @@ window.__ModuleLoader__.load({
       if (outcome !== null) {
         rows.push(h('p', {
           key: 'outcome', role: 'status',
-          style: { ...S.bar, ...outcome.failures.length > 0 ? S.error : {} },
+          style: { ...S.bar, ...outcome.failed > 0 ? S.error : {} },
         }, [
           t('done', { ok: outcome.ok }),
-          outcome.failures.length === 0 ? null : t('failed', { n: outcome.failures.length }),
+          outcome.failed === 0 ? null : t('failed', { n: outcome.failed }),
           outcome.restart === 0 ? null : t('needRestart', { n: outcome.restart }),
           outcome.builds === 0 ? null : t('needBuilds', { n: outcome.builds }),
-          outcome.failures.length === 0 ? null : h('span', { key: 'why', title: outcome.failures.join('\n'), style: { cursor: 'help' } }, 'ⓘ'),
+          outcome.failed === 0 ? null : t('failureHint'),
         ].filter(Boolean)))
       }
       if (running !== null) {
@@ -1055,6 +1129,10 @@ window.__ModuleLoader__.load({
                     entries.map((entry) => h(Card, {
                       key: entry.name, entry, bundle: bundles.get(entry.name), lang, t, text, busy,
                       picked: picked.has(entry.name),
+                      failure: failures.get(entry.name),
+                      copied,
+                      onCopyFailure: copyFailure,
+                      onClearFailure: clearFailure,
                       onPick: () => {
                         setPicked((current) => {
                           const next = new Set(current)
