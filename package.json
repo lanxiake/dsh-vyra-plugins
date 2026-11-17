@@ -7,10 +7,11 @@
   "scripts": {
     "build:index": "tsx scripts/build-index.ts",
     "verify:index": "tsx scripts/verify-index.ts",
-    "verify": "pnpm run build:index && pnpm run verify:index",
+    "verify": "pnpm run check:installable && pnpm run build:index && pnpm run verify:index",
     "print:skills": "tsx scripts/print-skill-config.ts",
     "test:market": "node plugins/vyra-plugin-market/test.mjs && node plugins/vyra-plugin-market/render-check.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:installable": "node scripts/check-installable.mjs"
   },
   "devDependencies": {
     "tsx": "^4.23.13",
