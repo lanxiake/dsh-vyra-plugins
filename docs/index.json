@@ -276,7 +276,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "PENDING",
+            "commit": "28f63b7243a7e07555312c509f7fade6828d25dc",
             "path": "plugins/vyra-system-selection"
           }
         },
