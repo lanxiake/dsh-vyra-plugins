@@ -56,7 +56,11 @@ export function npmLatestVersion(fetchImpl = fetch) {
  * @returns the row.
  */
 async function statusOf(entry, host, source) {
-    const latest = source.latestVersion(entry.npmPackage, AbortSignal.timeout(NPM_TIMEOUT_MS)).catch(() => undefined);
+    // A CLI with no npm package has no registry to ask; a lookup would request a package named
+    // "undefined". The harness's own binary is the case this covers.
+    const latest = entry.npmPackage === undefined
+        ? Promise.resolve(undefined)
+        : source.latestVersion(entry.npmPackage, AbortSignal.timeout(NPM_TIMEOUT_MS)).catch(() => undefined);
     const detection = await detectCli(entry, host);
     const latestVersion = await latest;
     const updateAvailable = detection.version === undefined || latestVersion === undefined

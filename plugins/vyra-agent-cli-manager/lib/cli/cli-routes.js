@@ -24,6 +24,7 @@ import { installSkill, skillInstallRequestOf } from "./skill-install.js";
 import { consolidateSkills } from "./skill-consolidate.js";
 import { CliUpgradeError, upgradeCli } from "./upgrade.js";
 import { cliStatuses } from "./registry-status.js";
+import { PromptWriteError, promptWriteHostOf, promptWriteRequestOf, writePrompt } from "./prompt-write.js";
 /** The operations this route accepts, by the last segment of their path. */
 const CLI_OPERATIONS = [
     'status',
@@ -40,6 +41,7 @@ const CLI_OPERATIONS = [
     'skill-install',
     'skill-consolidate',
     'prompt',
+    'prompt-write',
 ];
 /** `upgrade` names one CLI and nothing else; anything near this size is a caller mistake. */
 const MAX_BODY_BYTES = 8 * 1024;
@@ -118,6 +120,11 @@ async function writeAnswer(routes, operation, body) {
             ? await enableSkill({ entry, host: routes.skills, home: routes.home, name: request.name })
             : await disableSkill({ entry, host: routes.skills, home: routes.home, name: request.name });
     }
+    if (operation === 'prompt-write') {
+        // `idOf`, not `removeRequestOf`: a prompt write names no server, so requiring a `name`
+        // would refuse the request for a field it has no use for.
+        return await writePrompt(entryOf(idOf(body)), promptWriteHostOf(routes), routes.home, promptWriteRequestOf(body));
+    }
     const request = addRequestOf(body);
     return await addMcpServer(entryOf(request.id), host, request.spec);
 }
@@ -153,7 +160,8 @@ async function answer(routes, operation, body) {
         operation === 'skill-enable' ||
         operation === 'skill-disable' ||
         operation === 'skill-install' ||
-        operation === 'skill-consolidate') {
+        operation === 'skill-consolidate' ||
+        operation === 'prompt-write') {
         return await writeAnswer(routes, operation, body);
     }
     return await readAnswer(routes, operation, entryOf(idOf(body)));
@@ -172,6 +180,9 @@ function statusOf(error) {
         return 400;
     // The write was refused, or the CLI it was delegated to could not be run.
     if (error instanceof McpWriteError)
+        return error.status;
+    // A prompt write this plugin refused, or one the filesystem rejected.
+    if (error instanceof PromptWriteError)
         return error.status;
     // A skill link this plugin will not make or break: the request asked for the impossible.
     if (error instanceof SkillLinkError)

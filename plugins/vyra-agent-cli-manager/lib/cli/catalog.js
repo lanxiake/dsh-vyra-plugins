@@ -4,6 +4,7 @@
  * on 2026-11-16; nothing here is inferred from a CLI's name or from habit.
  * @module vyra-agent-cli-manager/cli/catalog
  */
+import { dirname, join } from 'node:path';
 /**
  * Every CLI, in the order `cordis.patch.yml` lists them. Codex and OpenCode also install
  * natively, but the npm package is still what answers "is there a newer version", so it is
@@ -157,7 +158,53 @@ export const CLI_CATALOG = [
         promptFile: '.codebuddy/CODEBUDDY.md',
         verified: false,
     },
+    {
+        id: 'dsh',
+        name: 'DeepSeek Harness',
+        vendor: 'DeepSeek',
+        // The desktop application ships its own launcher rather than an npm bin, and puts it
+        // beside the running executable instead of on PATH — measured on this machine as
+        // `<app>/resources/runtime/cli/bin/dsh.cmd`. `process.execPath` is that executable
+        // because this plugin runs inside the harness, so the candidates are derived from it.
+        binary: 'dsh',
+        binaryCandidates: dshLaunchers(),
+        versionArgs: ['--version'],
+        // Not an npm-installed CLI: it is the harness this plugin runs inside, so there is
+        // nothing to upgrade or uninstall from here and no MCP syntax of its own to drive.
+        npmPackage: undefined,
+        upgradeArgs: undefined,
+        uninstallArgs: undefined,
+        configDir: '.dsh',
+        mcp: { viaSubcommands: false },
+        mcpFile: undefined,
+        mcpKey: undefined,
+        // Measured against skill-filesystem's roots (`packages/skill/skill-filesystem`): the
+        // user-level directory is `~/.dsh/skills`, and `~/.agents/skills` is shared with the
+        // other agent tools, which is why both are listed.
+        skillsDirs: ['.dsh/skills', '.agents/skills'],
+        // The harness ships no global instruction file, so this is a path to create rather
+        // than one to read; the panel offers it as a new file.
+        promptFile: '.dsh/AGENTS.md',
+        verified: true,
+    },
 ];
+/**
+ * The launcher paths a desktop installation of the harness uses, most specific first.
+ * @returns absolute candidate paths, or none when this is not the desktop build.
+ */
+function dshLaunchers() {
+    const execPath = process.execPath;
+    if (typeof execPath !== 'string' || execPath === '')
+        return [];
+    const appDir = dirname(execPath);
+    const launcher = process.platform === 'win32' ? 'dsh.cmd' : 'dsh';
+    // `resources/runtime/cli/bin` is where the desktop build keeps it; a plain checkout keeps
+    // it a level up. Both are cheap to try, and a miss costs one failed resolve.
+    return [
+        join(appDir, 'resources', 'runtime', 'cli', 'bin', launcher),
+        join(appDir, 'resources', 'runtime', 'cli', launcher),
+    ];
+}
 /**
  * Look one CLI up by the id the panel sends back.
  * @param id - a catalog id.

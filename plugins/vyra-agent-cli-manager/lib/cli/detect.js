@@ -79,7 +79,10 @@ export function hostOfSubprocess(subprocess) {
  */
 export async function detectCli(entry, host, timeoutMs = DETECT_TIMEOUT_MS) {
     const signal = AbortSignal.timeout(timeoutMs);
-    const binaryPath = await host.resolveExecutable(entry.binary, signal).catch(() => undefined);
+    // A CLI shipped inside an application rather than installed on PATH — the harness itself —
+    // names the absolute places its launcher lives; those are tried before the PATH lookup.
+    const candidates = entry.binaryCandidates ?? [];
+    const binaryPath = await resolveFirst(host, [...candidates, entry.binary], signal);
     if (binaryPath === undefined)
         return { installed: false };
     const printed = await host.capture([binaryPath, ...entry.versionArgs], signal).catch(() => '');
@@ -87,4 +90,19 @@ export async function detectCli(entry, host, timeoutMs = DETECT_TIMEOUT_MS) {
     // Installed without a readable version is a real state: the binary is there, and it either
     // printed something unexpected or would not answer before the deadline.
     return version === undefined ? { installed: true, binaryPath } : { installed: true, binaryPath, version };
+}
+/**
+ * The first candidate that resolves, in order.
+ * @param host - the process world to resolve in.
+ * @param commands - absolute paths first, then the name to look for on PATH.
+ * @param signal - the shared deadline.
+ * @returns the resolved path, or undefined when none resolve.
+ */
+async function resolveFirst(host, commands, signal) {
+    for (const command of commands) {
+        const resolved = await host.resolveExecutable(command, signal).catch(() => undefined);
+        if (resolved !== undefined)
+            return resolved;
+    }
+    return undefined;
 }

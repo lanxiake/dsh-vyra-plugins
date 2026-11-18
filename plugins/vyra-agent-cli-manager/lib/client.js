@@ -2790,7 +2790,15 @@ var LABELS = {
   promptLoading: "\u6B63\u5728\u8BFB\u53D6\u63D0\u793A\u8BCD\u2026",
   promptEmpty: "\u8BE5 CLI \u6CA1\u6709\u5168\u5C40\u63D0\u793A\u8BCD\u6587\u4EF6\u3002",
   promptFailed: "\u63D0\u793A\u8BCD\u8BFB\u53D6\u5931\u8D25",
-  promptFrom: "\u8DEF\u5F84\uFF1A"
+  promptFrom: "\u8DEF\u5F84\uFF1A",
+  promptEdit: "\u7F16\u8F91",
+  promptCreate: "\u65B0\u5EFA",
+  promptSave: "\u4FDD\u5B58",
+  promptSaving: "\u4FDD\u5B58\u4E2D\u2026",
+  promptCancel: "\u53D6\u6D88",
+  promptSaved: "\u5DF2\u4FDD\u5B58\u3002",
+  promptSaveFailed: "\u4FDD\u5B58\u5931\u8D25",
+  promptPlaceholder: "\u5199\u7ED9\u8FD9\u4E2A CLI \u7684\u5168\u5C40\u6307\u4EE4\uFF0C\u6BCF\u6B21\u4F1A\u8BDD\u90FD\u4F1A\u5E26\u4E0A\u3002"
 };
 function Note({ text }) {
   return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: `${CLASS}-meta`, children: text });
@@ -2813,18 +2821,70 @@ function SkillsPanel({ state }) {
     /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: `${CLASS}-mcp-row`, children: state.skills.map((skill) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: skill.loadable ? `${CLASS}-mcp-name` : void 0, children: skill.loadable ? skill.name : `${skill.name}${LABELS.skillsBlocked}` }, skill.name)) })
   ] });
 }
-function PromptPanel({ state }) {
+function PromptPanel({ state, id }) {
+  const [editing, setEditing] = (0, import_react12.useState)(false);
+  const [draft, setDraft] = (0, import_react12.useState)("");
+  const [busy, setBusy] = (0, import_react12.useState)(false);
+  const [failure, setFailure] = (0, import_react12.useState)(void 0);
+  // The text shown after a save, because the fold's own snapshot is the one that was read when
+  // it was opened and would otherwise keep showing the replaced document.
+  const [savedText, setSavedText] = (0, import_react12.useState)(void 0);
   if (state === void 0) return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: LABELS.promptLoading });
   if (state.error !== void 0) return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Problem, { text: `${LABELS.promptFailed}\uFF1A${state.error}` });
-  if (state.text === "") {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: `${LABELS.promptFrom}${state.path}` }),
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: LABELS.promptEmpty })
-    ] });
-  }
+  const text = savedText === void 0 ? state.text : savedText;
+  const exists = text !== "";
+  const begin = () => {
+    setDraft(text);
+    setEditing(true);
+    setFailure(void 0);
+  };
+  const cancel = () => {
+    setEditing(false);
+    setDraft("");
+    setFailure(void 0);
+  };
+  const save = () => {
+    setBusy(true);
+    setFailure(void 0);
+    void writePrompt(id, draft).then(() => {
+      setSavedText(draft);
+      setEditing(false);
+      setBusy(false);
+    }).catch((error) => {
+      setFailure(error instanceof Error ? error.message : String(error));
+      setBusy(false);
+    });
+  };
+  const meta = /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: exists ? `${LABELS.promptFrom}${state.path}\uFF08${String(text.length)} \u5B57\uFF09` : `${LABELS.promptFrom}${state.path}` });
+  // The buttons live in the fold body, so the row's own \u6280\u80FD / \u63D0\u793A\u8BCD buttons above never move.
+  const controls = /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: `${CLASS}-prompt-actions`, children: [
+    editing ? /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: `${CLASS}-prompt-button`, disabled: busy, onClick: cancel, children: LABELS.promptCancel }),
+      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: `${CLASS}-prompt-button`, "data-primary": "true", disabled: busy, onClick: save, children: busy ? LABELS.promptSaving : LABELS.promptSave })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: `${CLASS}-prompt-button`, onClick: begin, children: exists ? LABELS.promptEdit : LABELS.promptCreate })
+  ] });
+  const body = editing
+    ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("textarea", {
+      className: `${CLASS}-prompt-editor`,
+      value: draft,
+      spellCheck: false,
+      autoCapitalize: "off",
+      autoCorrect: "off",
+      "aria-label": LABELS.prompt,
+      placeholder: LABELS.promptPlaceholder,
+      onChange: (event) => {
+        setDraft(event.currentTarget.value);
+      }
+    })
+    : exists
+      ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("pre", { className: `${CLASS}-raw`, children: text })
+      : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: LABELS.promptEmpty });
   return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: `${LABELS.promptFrom}${state.path}\uFF08${String(state.text.length)} \u5B57\uFF09` }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("pre", { className: `${CLASS}-raw`, children: state.text })
+    meta,
+    savedText !== void 0 && !editing ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Note, { text: LABELS.promptSaved }) : null,
+    body,
+    failure === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Problem, { text: `${LABELS.promptSaveFailed}\uFF1A${failure}` }),
+    controls
   ] });
 }
 
@@ -2840,6 +2900,7 @@ var SKILL_DISABLE_URL = "/vyra-agent-cli-manager/cli/skill-disable";
 var SKILL_INSTALL_URL = "/vyra-agent-cli-manager/cli/skill-install";
 var SKILL_CONSOLIDATE_URL = "/vyra-agent-cli-manager/cli/skill-consolidate";
 var PROMPT_URL = "/vyra-agent-cli-manager/cli/prompt";
+var PROMPT_WRITE_URL = "/vyra-agent-cli-manager/cli/prompt-write";
 async function readJson(response) {
   const text = await response.text();
   try {
@@ -2958,6 +3019,10 @@ async function fetchPrompt(id) {
     error: textOf2(data.error) === "" ? void 0 : textOf2(data.error)
   };
 }
+/** Replace a CLI's global instruction file; resolves once the write reached disk. */
+async function writePrompt(id, text) {
+  await post(PROMPT_WRITE_URL, { id, text });
+}
 
 // src/client/cli-status-section.tsx
 var import_jsx_runtime16 = require("react/jsx-runtime");
@@ -3012,6 +3077,16 @@ var CLI_STATUS_STYLES = `
 .${SECTION_CLASS2}-mcp-row { display: flex; gap: 8px; flex-wrap: wrap; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
 .${SECTION_CLASS2}-mcp-name { color: var(--dsw-alias-label-primary); }
 .${SECTION_CLASS2}-raw { margin: 6px 0 0; padding: 10px; max-height: 220px; overflow: auto; border-radius: 10px; background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 16px; white-space: pre-wrap; word-break: break-all; }
+.${SECTION_CLASS2}-prompt-editor { margin: 6px 0 0; padding: 10px; min-height: 220px; box-sizing: border-box; width: 100%; resize: vertical; border-radius: 10px; border: 0.5px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-primary); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 18px; }
+.${SECTION_CLASS2}-prompt-editor:focus { outline: none; border-color: var(--dsw-alias-state-business-primary); }
+.${SECTION_CLASS2}-prompt-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.${SECTION_CLASS2}-prompt-button { height: 28px; padding: 0 12px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; cursor: pointer; }
+.${SECTION_CLASS2}-prompt-button:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
+.${SECTION_CLASS2}-prompt-button:disabled { color: var(--dsw-alias-label-secondary); cursor: default; }
+/* The save control is the one filled button here, so the primary action of the editor reads
+   at a glance without turning the row's own buttons into a second competing pair. */
+.${SECTION_CLASS2}-prompt-button[data-primary="true"] { background: var(--dsw-alias-button-primary-fill); border-color: transparent; color: var(--dsw-alias-label-primary-foreground); }
+.${SECTION_CLASS2}-prompt-button[data-primary="true"]:hover:not(:disabled) { background: var(--dsw-alias-button-primary-hover); }
 `;
 function isCliStatus(value) {
   if (typeof value !== "object" || value === null) return false;
@@ -3101,9 +3176,9 @@ function RowActions2({
     ))
   ] });
 }
-function FoldBody({ kind, data }) {
+function FoldBody({ kind, data, id }) {
   if (kind === "skills") return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(SkillsPanel, { state: data.skills });
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(PromptPanel, { state: data.prompt });
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(PromptPanel, { state: data.prompt, id });
 }
 function Row({
   row,
@@ -3120,7 +3195,7 @@ function Row({
         row.verified ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Badge, { tone: "muted", text: LABELS2.unverified })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(RowFacts, { row }),
-      fold === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: `${SECTION_CLASS2}-fold`, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(FoldBody, { kind: fold.kind, data: fold.data }) })
+      fold === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: `${SECTION_CLASS2}-fold`, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(FoldBody, { kind: fold.kind, data: fold.data, id: row.id }) })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(RowActions2, { row, busy, openKind: fold?.kind, onUpgrade, onToggle })
   ] });

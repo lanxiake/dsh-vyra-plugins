@@ -62,6 +62,11 @@ export function runnerOfSpawn(spawn) {
  * @throws CliUpgradeError when the command could not be started or the deadline passed.
  */
 export async function upgradeCli(entry, run, timeoutMs = UPGRADE_TIMEOUT_MS) {
+    // A CLI the harness itself provides has no updater of its own: refuse rather than run the
+    // binary with no arguments, which would launch a session instead of upgrading anything.
+    if (entry.upgradeArgs === undefined) {
+        throw new CliUpgradeError(`${entry.name} 不由本插件升级`);
+    }
     const signal = AbortSignal.timeout(timeoutMs);
     let result;
     try {

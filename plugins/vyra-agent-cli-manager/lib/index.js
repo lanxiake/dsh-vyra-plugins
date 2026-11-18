@@ -182,6 +182,9 @@ export default class CliBridge extends Service {
             // Renamed over the target rather than written in place: a CLI reads this file on every
             // start, and a half-written one would lose every server the user configured.
             writeFile: (path, text) => writeFileAtomically(path, text),
+            // A prompt file the panel offers to create may have no directory yet — the harness
+            // ships no global instruction file at all — so the write creates what it needs.
+            ensureDirectory: async (path) => { await mkdir(path, { recursive: true }); },
         };
     }
     /**
