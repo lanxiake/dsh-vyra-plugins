@@ -464,6 +464,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.4.2 makes the actions actually run: the model was resolved as the first
+        // provider paired with an empty model id, so every action took the "no model
+        // selected" branch and the menu buttons looked dead with no visible error.
+        '1.4.2': {
+          publishTimestamp: 1795392000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
