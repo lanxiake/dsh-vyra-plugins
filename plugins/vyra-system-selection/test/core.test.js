@@ -10,7 +10,7 @@ import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
 import {
-  MAX_TEXT_CHARS, buildRequest, menuLayout, menuHitTest, panelSideFor, placeMenuAtSelection,
+  MAX_TEXT_CHARS, buildRequest, menuLayout, menuHitTest, panelSideFor, pickModel, placeMenuAtSelection,
   placePanelAtSelection, reduceMouse, saneRect, searchQuery, selectionProblem, systemPrompt,
 } from '../core.js'
 
@@ -133,4 +133,29 @@ test('reduceMouse fires on a drag and on a multi-click, but not on a plain click
   const first = reduceMouse(down.state, { down: false, x: 100, y: 100, t: 10 })
   const again = reduceMouse(first.state, { down: true, x: 101, y: 100, t: 100 })
   assert.equal(reduceMouse(again.state, { down: false, x: 101, y: 100, t: 150 }).fire, true)
+})
+
+test('pickModel returns a real model, never a provider with an empty model', async () => {
+  // The defect this covers: the action path used to take the first provider and pair it with
+  // `model: ''`, so every action reported "no model selected" and the menu buttons did nothing.
+  const picked = await pickModel([{ id: 'p1' }, { id: 'p2' }], async (provider) =>
+    provider === 'p1' ? [{ id: 'm-one' }, { id: 'm-two' }] : [{ id: 'other' }])
+  assert.deepEqual(picked, { provider: 'p1', model: 'm-one' }, 'the first provider with a model wins')
+})
+
+test('pickModel skips a provider whose catalog is empty, unreadable or malformed', async () => {
+  const picked = await pickModel([{ id: 'empty' }, { id: 'throws' }, { id: 'bad' }, { id: 'good' }], async (provider) => {
+    if (provider === 'empty') return []
+    if (provider === 'throws') throw new Error('catalog unreachable')
+    if (provider === 'bad') return [{ id: '' }, { name: 'no id' }]
+    return [{ id: 'ok' }]
+  })
+  assert.deepEqual(picked, { provider: 'good', model: 'ok' }, 'the first usable provider is chosen')
+})
+
+test('pickModel answers null when no provider offers a model', async () => {
+  assert.equal(await pickModel([], async () => []), null)
+  assert.equal(await pickModel([{ id: 'a' }], async () => []), null)
+  // A provider list with no usable id is not a provider.
+  assert.equal(await pickModel([{ name: 'no id' }], async () => [{ id: 'x' }]), null)
 })

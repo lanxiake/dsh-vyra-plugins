@@ -340,3 +340,32 @@ export function bodyBlocks(answer, sources) {
   }
   return blocks
 }
+
+/**
+ * Pick the first provider that advertises a usable model.
+ *
+ * `listProviders()` names providers but not their models, so a provider by itself cannot answer
+ * an action: `llm.stream` needs a concrete model id. Treating the first provider as usable with
+ * an empty model — which is what the action path used to do — reported "no model selected" on a
+ * machine that had working models, and the user saw a menu whose buttons did nothing.
+ *
+ * @param providers - provider route ids, in the order the service lists them.
+ * @param modelsOf - reads one provider's models; may throw, and a provider that throws is skipped.
+ * @returns the first provider and model pair, or null when none advertises a model.
+ */
+export async function pickModel(providers, modelsOf) {
+  for (const provider of providers) {
+    if (typeof provider?.id !== 'string' || provider.id === '') continue
+    let models
+    try {
+      models = await modelsOf(provider.id)
+    } catch {
+      continue
+    }
+    const model = Array.isArray(models)
+      ? models.find((candidate) => typeof candidate?.id === 'string' && candidate.id !== '')
+      : undefined
+    if (model !== undefined) return { provider: provider.id, model: model.id }
+  }
+  return null
+}

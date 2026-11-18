@@ -8,7 +8,7 @@
 // low-level mouse hook (see native.js for why). This file owns the trigger policy, the actions,
 // and the small HTTP surface the settings page uses.
 import {
-  ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, findAction, reduceMouse,
+  ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, findAction, pickModel, reduceMouse,
   saneRect, searchQuery, selectionProblem,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
@@ -259,7 +259,15 @@ export function apply(ctx) {
     }
   }
 
-  function resolveModel() {
+  /**
+   * The provider and model an action runs on, or null when none can be determined.
+   *
+   * A provider alone is not enough: `llm.stream` needs a concrete model id, and the provider
+   * list carries names rather than models, so the catalog is asked for one. Returning
+   * `{ provider, model: '' }` — which this used to do — made every action report "no model
+   * selected" even though a usable default existed, which reads to the user as a dead button.
+   */
+  async function resolveModel() {
     const llm = ctx.get('llm')
     if (settings.model) return { provider: settings.modelProvider || settings.provider, model: settings.model }
     const agentDefault = ctx.get('agentDefaultModel')
@@ -267,11 +275,9 @@ export function apply(ctx) {
       ? agentDefault.currentSelection()
       : null
     if (current && current.provider && current.model) return current
-    if (llm && typeof llm.listProviders === 'function') {
-      const providers = llm.listProviders()
-      if (providers.length > 0) return { provider: providers[0].id, model: '' }
-    }
-    return null
+    if (!llm || typeof llm.listProviders !== 'function') return null
+    return pickModel(llm.listProviders(), (provider) =>
+      typeof llm.listModels === 'function' ? llm.listModels(provider) : [])
   }
 
   async function runAction(actionId, anchor) {
@@ -294,7 +300,7 @@ export function apply(ctx) {
   /** One assistant turn over `ctx.llm`, streaming into the panel. */
   async function runModel(action, text, at) {
     const llm = ctx.get('llm')
-    const picked = resolveModel()
+    const picked = await resolveModel()
     if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
       overlay.showPanel({ anchor: at, title: action.label, status: '' })
       overlay.setStatus(!llm ? 'LLM 服务不可用，请检查模型配置' : '没有可用的模型，请先在设置里选择', 'error')
@@ -371,7 +377,7 @@ export function apply(ctx) {
     }
 
     const llm = ctx.get('llm')
-    const picked = resolveModel()
+    const picked = await resolveModel()
     if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
       // No model: the provider's own summary is still worth showing, with its sources.
       const fallback = (result.content || '').trim()
@@ -478,12 +484,12 @@ export function apply(ctx) {
     /** Called by the client half when the user right-clicks a selection inside DSH. */
     openInApp,
     /** Report whether the retrieval half is usable, so the settings page can say so up front. */
-    capability: () => {
+    capability: async () => {
       const web = ctx.get('web')
       return {
         search: Boolean(web && typeof web.search === 'function'),
         searchReady: typeof web?.searchReady === 'function' ? Boolean(web.searchReady()) : null,
-        model: resolveModel() !== null,
+        model: (await resolveModel()) !== null,
       }
     },
     /** Trigger the menu for the current selection. Used by tests and the settings page. */
