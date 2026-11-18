@@ -587,6 +587,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-agent-cli-manager',
           },
         },
+        // 1.3.0 lists the harness itself as one of the managed CLIs, and lets the
+        // 提示词 fold replace the instruction file instead of only showing it.
+        '1.3.0': {
+          publishTimestamp: 1795392000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
