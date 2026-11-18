@@ -9,7 +9,7 @@
 // and the small HTTP surface the settings page uses.
 import {
   ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, findAction, reduceMouse,
-  searchQuery, selectionProblem,
+  saneRect, searchQuery, selectionProblem,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveSettings } from './store.js'
