@@ -2838,6 +2838,7 @@ var SKILLS_MATRIX_URL = "/vyra-agent-cli-manager/cli/skills-matrix";
 var SKILL_ENABLE_URL = "/vyra-agent-cli-manager/cli/skill-enable";
 var SKILL_DISABLE_URL = "/vyra-agent-cli-manager/cli/skill-disable";
 var SKILL_INSTALL_URL = "/vyra-agent-cli-manager/cli/skill-install";
+var SKILL_CONSOLIDATE_URL = "/vyra-agent-cli-manager/cli/skill-consolidate";
 var PROMPT_URL = "/vyra-agent-cli-manager/cli/prompt";
 async function readJson(response) {
   const text = await response.text();
@@ -2915,6 +2916,14 @@ async function installSkill(source) {
     name: typeof data.name === "string" ? data.name : "",
     path: typeof data.path === "string" ? data.path : "",
     replaced: data.replaced === true
+  };
+}
+async function consolidateSkills() {
+  const data = await post(SKILL_CONSOLIDATE_URL, {});
+  return {
+    consolidated: Array.isArray(data.consolidated) ? data.consolidated : [],
+    replaced: Array.isArray(data.replaced) ? data.replaced : [],
+    failed: Array.isArray(data.failed) ? data.failed : []
   };
 }
 function isSkillRow(value) {
@@ -3538,7 +3547,8 @@ function Toolbar({
   countText,
   onReload,
   addLabel,
-  onAdd
+  onAdd,
+  actions
 }) {
   return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("div", { className: `${className}-bar`, children: [
     /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(
@@ -3554,6 +3564,7 @@ function Toolbar({
       }
     ),
     addLabel === void 0 || onAdd === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("button", { type: "button", className: `${className}-button`, onClick: onAdd, children: addLabel }),
+    actions,
     /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: `${className}-count`, children: countText }),
     /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("button", { type: "button", className: `${className}-button`, onClick: onReload, children: LABELS4.refresh })
   ] });
@@ -3576,7 +3587,8 @@ function MatrixShell(props) {
         countText: props.countText,
         onReload: props.onReload,
         addLabel: props.addLabel,
-        onAdd: props.onAdd
+        onAdd: props.onAdd,
+        actions: props.actions
       }
     ),
     props.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("p", { className: `${className}-error`, children: props.error }),
@@ -3964,9 +3976,25 @@ function SkillsTab() {
   const matrix = useSkillsMatrix();
   const [notice, setNotice] = (0, import_react18.useState)("");
   const [adding, setAdding] = (0, import_react18.useState)(false);
+  const [consolidating, setConsolidating] = (0, import_react18.useState)(false);
   const close = (0, import_react18.useCallback)(() => {
     setAdding(false);
   }, []);
+  const consolidate = (0, import_react18.useCallback)(() => {
+    setConsolidating(true);
+    setNotice("");
+    void consolidateSkills().then((outcome) => {
+      const parts = [`\u6574\u7406 ${String(outcome.consolidated.length)} \u4E2A\u6280\u80FD`];
+      if (outcome.replaced.length > 0) parts.push(`\u66FF\u6362 ${String(outcome.replaced.length)} \u4EFD\u65E7\u7248\u672C`);
+      if (outcome.failed.length > 0) parts.push(`${String(outcome.failed.length)} \u9879\u672A\u5B8C\u6210`);
+      setNotice(parts.join(" \xB7 "));
+      matrix.reload();
+    }).catch((error) => {
+      setNotice(`\u6574\u7406\u5931\u8D25\uFF1A${error instanceof Error ? error.message : String(error)}`);
+    }).finally(() => {
+      setConsolidating(false);
+    });
+  }, [matrix]);
   return /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
     MatrixShell,
     {
@@ -3992,6 +4020,17 @@ function SkillsTab() {
       onAdd: () => {
         setAdding(true);
       },
+      actions: /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+        "button",
+        {
+          type: "button",
+          className: `${SKILL_TAB_CLASS}-button`,
+          disabled: consolidating || matrix.loading,
+          onClick: consolidate,
+          title: "\u628A\u6563\u843D\u5728\u5404 CLI \u76EE\u5F55\u91CC\u7684\u526F\u672C\u6536\u8FDB\u5171\u4EAB\u76EE\u5F55\uFF0C\u5176\u4F59\u4F4D\u7F6E\u6539\u6210\u94FE\u63A5\u3002\u5185\u5BB9\u4E0D\u540C\u7684\u65E7\u7248\u4F1A\u539F\u5730\u6539\u540D\u4FDD\u7559\u3002",
+          children: consolidating ? "\u6574\u7406\u4E2D\u2026" : "\u6574\u7406\u6280\u80FD"
+        }
+      ),
       extra: /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("div", { className: `${SKILL_TAB_CLASS}-stack`, children: [
         notice === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime23.jsx)("p", { className: `${SKILL_TAB_CLASS}-count`, children: notice }),
         matrix.rows.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime23.jsxs)("p", { className: `${SKILL_TAB_CLASS}-count`, children: [

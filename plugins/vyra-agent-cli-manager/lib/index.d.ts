@@ -90,6 +90,16 @@ export default class CliBridge extends Service {
      */
     private cliSkillInstall;
     /**
+     * The disk work consolidating scattered skill copies needs.
+     *
+     * `copyTree` deletes the destination first: `cp` merges into an existing directory rather than
+     * replacing it, so a library copy that is already there would keep files the incoming version
+     * no longer has — two versions mixed in one directory, which is the failure this operation
+     * exists to prevent. `link` uses a junction on Windows, the one link kind that needs no
+     * administrator rights and accepts a directory target.
+     */
+    private cliSkillConsolidate;
+    /**
      * The native modes to show for a session. A live CLI's own report wins; before it starts,
      * the catalog's last answer for that route fills in.
      */

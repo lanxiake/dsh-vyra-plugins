@@ -12,6 +12,7 @@
  * @module vyra-agent-cli-manager/cli/cli-routes
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { SkillConsolidateHost } from './skill-consolidate.ts';
 import type { SkillInstallHost } from './skill-install.ts';
 import type { CliHost } from './detect.ts';
 import type { LatestVersionSource } from './registry-status.ts';
@@ -48,6 +49,8 @@ export interface CliRoutes {
     readonly skills: SkillLinkHost;
     /** The disk and repository access installing a skill needs. */
     readonly skillInstall: SkillInstallHost;
+    /** The disk access consolidating scattered skill copies needs. */
+    readonly skillConsolidate: SkillConsolidateHost;
 }
 /**
  * Build the handler for every CLI route.

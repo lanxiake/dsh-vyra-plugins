@@ -3,7 +3,8 @@
  * session registry to the harness.
  * @module vyra-agent-cli-manager
  */
-import { lstat, mkdir, readFile, readdir, rm, rmdir, symlink, unlink } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { cp, lstat, mkdir, readFile, readdir, rename, rm, rmdir, symlink, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Service } from '@deepseek-ai/cordis';
@@ -144,6 +145,7 @@ export default class CliBridge extends Service {
                 ...this.cliFileAccess(),
                 skills: this.cliSkillLinks(),
                 skillInstall: this.cliSkillInstall(),
+                skillConsolidate: this.cliSkillConsolidate(),
             }, child.connection, (message) => child.logger.warn(message));
             child.effect(() => registerCliRoutes(child.webServer, cli), 'vyra-agent-cli-manager: cli routes');
             child.effect(() => registerModeRoute(child.webServer, {
@@ -287,6 +289,61 @@ export default class CliBridge extends Service {
                 await rm(path, { recursive: true, force: true });
             },
             fetchRepositoryFile: (repository, path) => fetchRepositoryFile(repository, path),
+        };
+    }
+    /**
+     * The disk work consolidating scattered skill copies needs.
+     *
+     * `copyTree` deletes the destination first: `cp` merges into an existing directory rather than
+     * replacing it, so a library copy that is already there would keep files the incoming version
+     * no longer has — two versions mixed in one directory, which is the failure this operation
+     * exists to prevent. `link` uses a junction on Windows, the one link kind that needs no
+     * administrator rights and accepts a directory target.
+     */
+    cliSkillConsolidate() {
+        return {
+            listCopies: async (root) => {
+                let entries;
+                try {
+                    entries = await readdir(root, { withFileTypes: true });
+                }
+                catch {
+                    // A CLI that has never been installed has no skills directory.
+                    return [];
+                }
+                const found = [];
+                for (const entry of entries) {
+                    if (!entry.isDirectory())
+                        continue;
+                    const dir = join(root, entry.name);
+                    // A directory without the entry file is not a skill: a backup, or the user's notes.
+                    if ((await readFile(join(dir, SKILL_ENTRY), 'utf8').catch(() => undefined)) === undefined)
+                        continue;
+                    found.push({ name: entry.name, copy: { owner: '', path: dir, ...(await fingerprintTree(dir)) } });
+                }
+                return found;
+            },
+            kindOf: async (path) => {
+                try {
+                    const info = await lstat(path);
+                    if (info.isSymbolicLink())
+                        return 'link';
+                    return info.isDirectory() ? 'dir' : 'file';
+                }
+                catch {
+                    return undefined;
+                }
+            },
+            copyTree: async (from, to) => {
+                await rm(to, { recursive: true, force: true });
+                await mkdir(to, { recursive: true });
+                await cp(from, to, { recursive: true });
+            },
+            rename: (from, to) => rename(from, to),
+            removeTree: async (path) => {
+                await rm(path, { recursive: true, force: true });
+            },
+            link: (target, path) => process.platform === 'win32' ? symlink(target, path, 'junction') : symlink(target, path),
         };
     }
     /**
@@ -487,4 +544,50 @@ export default class CliBridge extends Service {
             openTransport: (handlers) => this.openTransport(agent, cwd, handlers),
         });
     }
+}
+/** A skill's entry file lives under this name, whatever the CLI. */
+const SKILL_ENTRY = 'SKILL.md';
+/**
+ * Fingerprint a skill directory: every file's relative path and content hash, folded into one
+ * digest, plus the totals a tie-break needs.
+ *
+ * Hashing the tree rather than the entry file is what makes "identical" mean identical — a skill
+ * can carry scripts and references, and two copies whose instructions match while their resources
+ * differ would lose something if one were linked over the other.
+ * @param root - the skill's directory.
+ * @returns the digest and the two numbers used to rank it against its peers.
+ */
+async function fingerprintTree(root) {
+    const parts = [];
+    let bytes = 0;
+    let newest = 0;
+    const walk = async (dir, prefix) => {
+        let entries;
+        try {
+            entries = await readdir(dir, { withFileTypes: true });
+        }
+        catch {
+            return;
+        }
+        for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+            const path = join(dir, entry.name);
+            const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`;
+            if (entry.isDirectory()) {
+                await walk(path, relative);
+            }
+            else if (entry.isFile()) {
+                try {
+                    const bytes_ = await readFile(path);
+                    parts.push(`${relative}:${createHash('md5').update(bytes_).digest('hex')}`);
+                    bytes += bytes_.length;
+                    newest = Math.max(newest, (await lstat(path)).mtimeMs);
+                }
+                catch {
+                    // A file that vanished mid-walk is left out rather than failing the whole fingerprint.
+                }
+            }
+        }
+    };
+    await walk(root, '');
+    return { digest: createHash('md5').update(parts.join('|')).digest('hex'), bytes, newest };
 }

@@ -21,6 +21,7 @@ import { McpWriteError, addMcpServer, addRequestOf, copyMcpServer, copyRequestOf
 import { disableSkill, enableSkill, SkillLinkError } from "./skill-links.js";
 import { skillsMatrix } from "./skills-matrix.js";
 import { installSkill, skillInstallRequestOf } from "./skill-install.js";
+import { consolidateSkills } from "./skill-consolidate.js";
 import { CliUpgradeError, upgradeCli } from "./upgrade.js";
 import { cliStatuses } from "./registry-status.js";
 /** The operations this route accepts, by the last segment of their path. */
@@ -37,6 +38,7 @@ const CLI_OPERATIONS = [
     'skill-enable',
     'skill-disable',
     'skill-install',
+    'skill-consolidate',
     'prompt',
 ];
 /** `upgrade` names one CLI and nothing else; anything near this size is a caller mistake. */
@@ -100,6 +102,11 @@ async function writeAnswer(routes, operation, body) {
             name: request.name,
         });
     }
+    if (operation === 'skill-consolidate') {
+        // No arguments: the operation reads every root itself, and naming a subset would mean the
+        // caller had to know which directories count as roots.
+        return await consolidateSkills(routes.skillConsolidate, routes.home);
+    }
     if (operation === 'skill-install') {
         const request = skillInstallRequestOf(body);
         return await installSkill(routes.skillInstall, routes.home, request.source);
@@ -145,7 +152,8 @@ async function answer(routes, operation, body) {
         operation === 'mcp-remove' ||
         operation === 'skill-enable' ||
         operation === 'skill-disable' ||
-        operation === 'skill-install') {
+        operation === 'skill-install' ||
+        operation === 'skill-consolidate') {
         return await writeAnswer(routes, operation, body);
     }
     return await readAnswer(routes, operation, entryOf(idOf(body)));

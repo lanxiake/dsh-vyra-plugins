@@ -1,6 +1,6 @@
 {
   "name": "vyra-agent-cli-manager",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Agent CLI 管理器：安装、升级、配置 Claude Code / Codex / OpenCode 等 Agent CLI，统一管理它们的 MCP、技能与提示词。",
   "icon": "./assets/logo.png",
   "license": "MIT",
@@ -31,7 +31,8 @@
     "cordis.patch.yml",
     "assets/logo.png",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "assets/qq-group.png"
   ],
   "keywords": [
     "dsh",
