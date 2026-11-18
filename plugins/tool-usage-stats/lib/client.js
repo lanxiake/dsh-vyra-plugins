@@ -60,18 +60,6 @@ var CARD = {
   padding: "12px 14px",
   marginBottom: "10px"
 };
-function pill(background, color) {
-  return {
-    display: "inline-block",
-    padding: "1px 7px",
-    borderRadius: "999px",
-    background,
-    color,
-    fontSize: "11px",
-    lineHeight: "17px",
-    fontWeight: "500"
-  };
-}
 function textButton(color) {
   return {
     background: "none",
@@ -125,9 +113,11 @@ async function call(path, init) {
   }
 }
 var WINDOWS = [
-  { value: "0", label: "\u7D2F\u8BA1" },
+  { value: "0", label: "\u6240\u6709" },
+  { value: "30", label: "\u6700\u8FD1 30 \u5929" },
   { value: "7", label: "\u6700\u8FD1 7 \u5929" },
-  { value: "30", label: "\u6700\u8FD1 30 \u5929" }
+  { value: "3", label: "\u6700\u8FD1 3 \u5929" },
+  { value: "1", label: "\u4ECA\u5929" }
 ];
 var COLUMNS = [
   { key: "tool", label: "\u5DE5\u5177", numeric: false, width: "34%" },
@@ -137,14 +127,15 @@ var COLUMNS = [
 ];
 function createPanel(React) {
   const h = React.createElement;
-  return function ToolUsagePanel() {
+  return function ToolAnalysisPanel() {
     const [data, setData] = React.useState(void 0);
     const [windowDays, setWindowDays] = React.useState(0);
     const [sortKey, setSortKey] = React.useState("count");
     const [ascending, setAscending] = React.useState(false);
+    const [selected, setSelected] = React.useState(() => /* @__PURE__ */ new Set());
     const [expanded, setExpanded] = React.useState(void 0);
-    const [busy, setBusy] = React.useState(void 0);
     const [notice, setNotice] = React.useState(void 0);
+    const [copied, setCopied] = React.useState(false);
     const refresh = React.useCallback(() => {
       void call(ENDPOINT).then((body2) => {
         if (body2 !== void 0 && typeof body2 === "object" && "global" in body2) {
@@ -157,50 +148,12 @@ function createPanel(React) {
       const timer = setInterval(refresh, REFRESH_MS);
       return () => clearInterval(timer);
     }, [refresh]);
-    const analyze = (sessionId) => {
-      setBusy("analyze");
-      setNotice(void 0);
-      void call(`${ENDPOINT}/diagnose`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId })
-      }).then((result) => {
-        const typed = result;
-        setBusy(void 0);
-        setNotice(typed.ok === true ? `\u5DF2\u8BF7\u6C42\u5206\u6790\uFF1A${(typed.targets ?? []).join("\u3001")}\u3002\u7ED3\u679C\u4F1A\u51FA\u73B0\u5728\u5F53\u524D\u4F1A\u8BDD\u91CC\u3002` : typed.detail ?? "\u8BF7\u6C42\u5931\u8D25");
-        refresh();
-      });
-    };
-    const apply2 = (tool) => {
-      setBusy(tool);
-      setNotice(void 0);
-      void call(`${ENDPOINT}/apply`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tool })
-      }).then((result) => {
-        const typed = result;
-        setBusy(void 0);
-        setNotice(typed.ok === true ? `\u5DF2\u5E94\u7528 ${tool} \u7684${typed.applied === "description" ? "\u63CF\u8FF0" : "\u53C2\u6570"}\u6539\u52A8` : typed.detail ?? "\u5E94\u7528\u5931\u8D25");
-        refresh();
-      });
-    };
-    const dismiss = (tool) => {
-      setBusy(tool);
-      void call(`${ENDPOINT}/dismiss`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tool })
-      }).then(() => {
-        setBusy(void 0);
-        refresh();
-      });
-    };
     if (data === void 0) {
       return h("div", { style: { padding: "20px", color: C.textSecondary, ...T.body } }, "\u6B63\u5728\u8BFB\u53D6\u5DE5\u5177\u7528\u91CF\u2026");
     }
     const report = windowDays === 0 ? data.global : data.windows[String(windowDays)];
-    const windowLabel = WINDOWS.find((option) => Number(option.value) === windowDays)?.label ?? "\u7D2F\u8BA1";
+    const windowLabel = WINDOWS.find((option) => Number(option.value) === windowDays)?.label ?? "\u6240\u6709";
+    const failuresFor = (tool) => data.failures[tool] ?? [];
     const rows = [...report?.rows ?? []].sort((left, right) => {
       const delta = sortKey === "tool" ? left.tool.localeCompare(right.tool) : left[sortKey] - right[sortKey];
       return ascending ? delta : -delta;
@@ -213,7 +166,60 @@ function createPanel(React) {
       setSortKey(key);
       setAscending(false);
     };
-    const failuresFor = (tool) => data.failures[tool] ?? [];
+    const selectedRows = rows.filter((row) => selected.has(row.tool));
+    const toggle = (tool) => {
+      setSelected((current) => {
+        const next = new Set(current);
+        if (next.has(tool)) next.delete(tool);
+        else next.add(tool);
+        return next;
+      });
+    };
+    const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.tool));
+    const toggleAll = () => {
+      setSelected(allSelected ? /* @__PURE__ */ new Set() : new Set(rows.map((row) => row.tool)));
+    };
+    const buildCopyText = () => {
+      const parts = [
+        "\u8BF7\u5206\u6790\u4E0B\u9762\u8FD9\u4E9B\u5DE5\u5177\u8C03\u7528\u5931\u8D25\uFF0C\u627E\u51FA\u53CD\u590D\u51FA\u9519\u7684\u539F\u56E0\uFF0C\u5E76\u7ED9\u51FA\u5177\u4F53\u7684\u4FEE\u590D\u5EFA\u8BAE\u3002",
+        "",
+        `\u7EDF\u8BA1\u8303\u56F4\uFF1A${windowLabel}`
+      ];
+      for (const row of selectedRows) {
+        parts.push(
+          "",
+          `## ${row.tool}`,
+          `\u8C03\u7528 ${row.count} \u6B21\uFF0C\u5931\u8D25 ${row.errorCount} \u6B21\uFF08${percent(row.errorRate)}\uFF09\uFF0C\u6700\u540E\u4F7F\u7528 ${formatTime(row.lastUsedAt)}`
+        );
+        const samples = failuresFor(row.tool);
+        if (samples.length === 0) {
+          parts.push("\uFF08\u6CA1\u6709\u4FDD\u7559\u7684\u5931\u8D25\u8BB0\u5F55\uFF09");
+          continue;
+        }
+        parts.push("\u6700\u8FD1\u7684\u5931\u8D25\uFF1A");
+        for (const sample of samples) {
+          const code = sample.code === void 0 ? "" : ` [${sample.code}]`;
+          parts.push(`- ${formatTime(sample.at)}${code} ${sample.summary}`);
+        }
+      }
+      return parts.join("\n");
+    };
+    const copySelected = () => {
+      if (selectedRows.length === 0) return;
+      const text = buildCopyText();
+      setNotice(void 0);
+      void globalThis.navigator?.clipboard?.writeText(text).then(
+        () => {
+          setCopied(true);
+          setTimeout(() => {
+            setCopied(false);
+          }, 2e3);
+        },
+        () => {
+          setNotice(`\u526A\u8D34\u677F\u4E0D\u53EF\u7528\uFF0C\u5DF2\u4E0B\u8F7D\u4E3A ${downloadText(text, "tool-usage-failures.txt")}`);
+        }
+      );
+    };
     const toolbar = h(
       "div",
       {
@@ -244,100 +250,38 @@ function createPanel(React) {
         style: { marginLeft: "auto", color: C.accent, ...textButton(C.accent) }
       }, "\u5BFC\u51FA JSON")
     );
+    const actionBar = h(
+      "div",
+      {
+        style: { display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "12px" }
+      },
+      h("button", {
+        type: "button",
+        disabled: selectedRows.length === 0,
+        onClick: copySelected,
+        style: { ...PRIMARY_BUTTON, opacity: selectedRows.length === 0 ? 0.5 : 1 }
+      }, copied ? "\u5DF2\u590D\u5236" : `\u590D\u5236\u9519\u8BEF\u65E5\u5FD7\uFF08${selectedRows.length}\uFF09`),
+      h(
+        "span",
+        { style: { color: C.textTertiary, ...T.caption } },
+        selectedRows.length === 0 ? "\u52FE\u9009\u4E0B\u9762\u7684\u5DE5\u5177\uFF0C\u628A\u5B83\u4EEC\u7684\u5931\u8D25\u8BB0\u5F55\u548C\u5206\u6790\u63D0\u793A\u8BCD\u590D\u5236\u8D70\uFF0C\u7C98\u8D34\u5230\u5BF9\u8BDD\u91CC\u8BA9\u6A21\u578B\u5904\u7406\u3002" : "\u7C98\u8D34\u5230\u5BF9\u8BDD\u8F93\u5165\u6846\u5373\u53EF\u3002"
+      )
+    );
     const coverageNote = data.coverage.since === null ? null : h(
       "div",
       { style: { color: C.textTertiary, marginBottom: "10px", ...T.caption } },
       `\u6309\u65E5\u6570\u636E\u8986\u76D6 ${data.coverage.since} \u81F3 ${data.coverage.until}\uFF08\u4FDD\u7559 ${data.coverage.retentionDays} \u5929\uFF09`
     );
-    const proposals = () => {
-      if (data.diagnosis.pending.length === 0) return null;
-      return h(
-        "div",
-        { style: { marginBottom: "14px" } },
-        h(
-          "div",
-          { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
-          h("span", { style: { fontWeight: "600", color: C.text, ...T.body } }, "\u6539\u8FDB\u5EFA\u8BAE"),
-          h("span", { style: pill(C.dangerSoft, C.danger) }, `${data.diagnosis.pending.length} \u6761\u5F85\u5904\u7406`)
-        ),
-        data.diagnosis.pending.map((proposal) => proposalCard(proposal))
-      );
-    };
-    const proposalCard = (proposal) => {
-      const kindLabel = proposal.change.kind === "description" ? "\u6539\u63CF\u8FF0" : proposal.change.kind === "parameters" ? "\u6539\u53C2\u6570" : "\u6539\u5B9E\u73B0";
-      const working = busy === proposal.tool;
-      const diff = proposal.change.description === void 0 ? null : h(
-        "div",
-        {
-          style: {
-            background: C.surface,
-            border: `1px solid ${C.borderSoft}`,
-            borderRadius: "6px",
-            padding: "8px 10px",
-            marginBottom: "8px"
-          }
-        },
-        h("div", { style: { color: C.textTertiary, marginBottom: "4px", ...T.caption } }, "\u5F53\u524D\u63CF\u8FF0"),
-        h(
-          "div",
-          { style: { color: C.textSecondary, marginBottom: "8px", whiteSpace: "pre-wrap", ...T.mono } },
-          proposal.previousDescription || "\uFF08\u7A7A\uFF09"
-        ),
-        h("div", { style: { color: C.textTertiary, marginBottom: "4px", ...T.caption } }, "\u5EFA\u8BAE\u6539\u4E3A"),
-        h("div", { style: { color: C.text, whiteSpace: "pre-wrap", ...T.mono } }, proposal.change.description)
-      );
-      const needsHuman = proposal.change.kind === "implementation" ? h(
-        "div",
-        { style: { color: C.warn, marginBottom: "8px", ...T.caption } },
-        `\u5B9E\u73B0\u6539\u52A8\u9700\u8981\u4EBA\u5DE5\u5B8C\u6210\uFF1A${proposal.change.note ?? ""}`
-      ) : null;
-      return h(
-        "div",
-        { key: proposal.tool, style: CARD },
-        h(
-          "div",
-          { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" } },
-          h("code", { style: { color: C.text, fontWeight: "600", ...T.mono } }, proposal.tool),
-          h("span", { style: pill(C.surface, C.textSecondary) }, kindLabel)
-        ),
-        h("div", { style: { color: C.text, marginBottom: "6px", ...T.body } }, proposal.diagnosis),
-        h("div", { style: { color: C.textTertiary, marginBottom: "8px", ...T.caption } }, `\u4F9D\u636E\uFF1A${proposal.evidence}`),
-        needsHuman,
-        diff,
-        h(
-          "div",
-          { style: { display: "flex", gap: "8px" } },
-          h("button", {
-            type: "button",
-            disabled: working || needsHuman !== null,
-            onClick: () => {
-              apply2(proposal.tool);
-            },
-            style: { ...PRIMARY_BUTTON, opacity: working ? 0.6 : 1 }
-          }, working ? "\u5E94\u7528\u4E2D\u2026" : "\u5E94\u7528"),
-          h("button", {
-            type: "button",
-            disabled: working,
-            onClick: () => {
-              dismiss(proposal.tool);
-            },
-            style: GHOST_BUTTON
-          }, "\u5FFD\u7565")
-        )
-      );
-    };
-    const appliedList = () => {
-      if (data.diagnosis.applied.length === 0) return null;
-      return h(
-        "div",
-        { style: { marginBottom: "14px" } },
-        h("div", { style: { color: C.textTertiary, marginBottom: "6px", ...T.caption } }, "\u5DF2\u5E94\u7528\u7684\u6539\u52A8"),
-        data.diagnosis.applied.slice(0, 5).map((change) => h("div", {
-          key: `${change.tool}-${change.appliedAt}`,
-          style: { color: C.textSecondary, ...T.caption }
-        }, `${formatTime(change.appliedAt)} \xB7 ${change.tool} \xB7 ${change.kind === "description" ? "\u63CF\u8FF0" : "\u53C2\u6570"}`))
-      );
-    };
+    const noticeBar = notice === void 0 ? null : h("div", {
+      style: {
+        marginBottom: "10px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        background: C.surface,
+        color: C.textSecondary,
+        ...T.caption
+      }
+    }, notice);
     const header = COLUMNS.map((column) => h("th", {
       key: column.key,
       onClick: () => {
@@ -361,14 +305,27 @@ function createPanel(React) {
       const cells = h(
         "tr",
         { key: row.tool },
-        h("td", {
-          style: {
-            padding: "5px 0",
-            borderTop: `1px solid ${C.borderSoft}`,
-            color: C.text,
-            ...T.mono
-          }
-        }, row.tool),
+        h(
+          "td",
+          {
+            style: {
+              padding: "5px 0 5px 2px",
+              borderTop: `1px solid ${C.borderSoft}`,
+              color: C.text,
+              ...T.mono
+            }
+          },
+          h("input", {
+            type: "checkbox",
+            checked: selected.has(row.tool),
+            onChange: () => {
+              toggle(row.tool);
+            },
+            style: { marginRight: "8px", cursor: "pointer", verticalAlign: "middle" },
+            "aria-label": `\u9009\u62E9 ${row.tool}`
+          }),
+          row.tool
+        ),
         h("td", {
           style: {
             padding: "5px 14px 5px 0",
@@ -418,7 +375,7 @@ function createPanel(React) {
         h(
           "td",
           {
-            colSpan: COLUMNS.length,
+            colSpan: COLUMNS.length + 1,
             style: { padding: "0 0 10px 16px", background: C.surface }
           },
           h(
@@ -439,134 +396,43 @@ function createPanel(React) {
       );
       return [cells, detail];
     });
-    const analysisBar = h(
-      "div",
-      {
-        style: {
-          display: "flex",
-          gap: "10px",
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginTop: "4px",
-          paddingTop: "12px",
-          borderTop: `1px solid ${C.borderSoft}`
-        }
-      },
-      h("button", {
-        type: "button",
-        disabled: busy === "analyze" || data.diagnosis.analyzing,
-        onClick: () => {
-          analyze(void 0);
-        },
-        style: { ...PRIMARY_BUTTON, opacity: busy === "analyze" ? 0.6 : 1 }
-      }, busy === "analyze" || data.diagnosis.analyzing ? "\u5206\u6790\u4E2D\u2026" : "\u7ACB\u5373\u5206\u6790"),
-      h(
-        "span",
-        { style: { color: C.textTertiary, ...T.caption } },
-        data.diagnosis.lastRunAt === 0 ? "\u8FD8\u6CA1\u6709\u5206\u6790\u8FC7" : `\u4E0A\u6B21\u5206\u6790 ${formatTime(data.diagnosis.lastRunAt)}`
-      )
-    );
-    const settingsCard = h(
-      "div",
-      { style: { ...CARD, marginTop: "12px" } },
-      h("div", { style: { fontWeight: "600", color: C.text, marginBottom: "10px", ...T.body } }, "\u81EA\u52A8\u5206\u6790\u8BBE\u7F6E"),
-      h(
-        "div",
-        { style: { display: "grid", gap: "10px" } },
-        settingRow(
-          "\u81EA\u52A8\u68C0\u67E5\u95F4\u9694",
-          "analyzeEveryHours",
-          data.diagnosis.settings.analyzeEveryHours,
-          "\u5C0F\u65F6\u30020 = \u5173\u95ED\u81EA\u52A8\u5206\u6790\uFF0C\u53EA\u7528\u300C\u7ACB\u5373\u5206\u6790\u300D\u3002"
-        ),
-        settingRow(
-          "\u89E6\u53D1\u95E8\u69DB",
-          "minFailures",
-          data.diagnosis.settings.minFailures,
-          "\u65B0\u589E\u5931\u8D25\u8FBE\u5230\u51E0\u6B21\u624D\u503C\u5F97\u8BCA\u65AD\u3002"
-        ),
-        settingRow(
-          "\u51B7\u5374\u5929\u6570",
-          "cooldownDays",
-          data.diagnosis.settings.cooldownDays,
-          "\u540C\u4E00\u4E2A\u5DE5\u5177\u9694\u51E0\u5929\u624D\u80FD\u518D\u5206\u6790\u4E00\u6B21\u3002"
-        )
-      )
-    );
-    function settingRow(label, key, value, hint) {
-      return h(
-        "div",
-        { style: { display: "grid", gridTemplateColumns: "auto 80px 1fr", gap: "10px", alignItems: "center" } },
-        h("span", { style: { color: C.textSecondary, whiteSpace: "nowrap", ...T.body } }, label),
-        h("input", {
-          type: "number",
-          defaultValue: String(value),
-          min: key === "minFailures" ? "1" : "0",
-          disabled: busy === "config",
-          onBlur: (event) => {
-            const next = Number(event.target.value);
-            if (!Number.isFinite(next) || next === value) return;
-            setBusy("config");
-            setNotice(void 0);
-            void call(`${ENDPOINT}/config`, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ [key]: next })
-            }).then((result) => {
-              const typed = result;
-              setBusy(void 0);
-              setNotice(typed.ok === true ? "\u8BBE\u7F6E\u5DF2\u4FDD\u5B58\uFF0C\u63D2\u4EF6\u4F1A\u91CD\u65B0\u52A0\u8F7D" : typed.detail ?? "\u4FDD\u5B58\u5931\u8D25");
-              refresh();
-            });
-          },
-          style: {
-            padding: "4px 8px",
-            borderRadius: "6px",
-            border: `1px solid ${C.border}`,
-            background: C.card,
-            color: C.text,
-            font: "inherit"
-          }
-        }),
-        h("span", { style: { color: C.textTertiary, ...T.caption } }, hint)
-      );
-    }
-    const noticeBar = notice === void 0 ? null : h("div", {
-      style: {
-        marginTop: "8px",
-        padding: "8px 10px",
-        borderRadius: "6px",
-        background: C.surface,
-        color: C.textSecondary,
-        ...T.caption
-      }
-    }, notice);
     if (report === void 0 || report.tools === 0) {
       return h(
         "div",
         { style: { padding: "20px" } },
         toolbar,
+        actionBar,
         coverageNote,
+        noticeBar,
         h(
           "div",
           { style: { color: C.textSecondary, marginBottom: "14px", ...T.body } },
           emptyText(windowDays, data.coverage)
-        ),
-        analysisBar,
-        settingsCard,
-        noticeBar
+        )
       );
     }
     return h(
       "div",
       { style: { padding: "20px" } },
       toolbar,
+      actionBar,
       coverageNote,
-      proposals(),
-      appliedList(),
+      noticeBar,
       h(
         "div",
         { style: { display: "flex", gap: "10px", alignItems: "baseline", marginBottom: "8px" } },
+        h(
+          "label",
+          { style: { display: "flex", gap: "6px", alignItems: "center", color: C.textTertiary, cursor: "pointer", ...T.caption } },
+          h("input", {
+            type: "checkbox",
+            checked: allSelected,
+            onChange: toggleAll,
+            style: { cursor: "pointer" },
+            "aria-label": "\u9009\u62E9\u5168\u90E8"
+          }),
+          "\u5168\u9009"
+        ),
         h(
           "span",
           { style: { color: C.text, fontWeight: "600", ...T.body } },
@@ -584,19 +450,25 @@ function createPanel(React) {
         h("colgroup", null, COLUMNS.map((column) => h("col", { key: column.key, style: { width: column.width } }))),
         h("thead", null, h("tr", null, header)),
         h("tbody", null, body)
-      ),
-      analysisBar,
-      settingsCard,
-      noticeBar
+      )
     );
   };
+}
+function downloadText(text, name) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+  return name;
 }
 function emptyText(windowDays, coverage) {
   if (windowDays === 0) return "\u8FD8\u6CA1\u6709\u4EFB\u4F55\u5DE5\u5177\u8C03\u7528\u8BB0\u5F55\u2014\u2014\u5148\u8BA9 Agent \u5E72\u70B9\u6D3B\u3002";
   if (coverage.since === null) {
     return `\u6700\u8FD1 ${windowDays} \u5929\u6CA1\u6709\u5DE5\u5177\u8C03\u7528\u8BB0\u5F55\u3002\u6309\u65E5\u7EDF\u8BA1\u9700\u8981\u5148\u6709\u8C03\u7528\u624D\u4F1A\u5F00\u59CB\u7D2F\u79EF\u3002`;
   }
-  return `\u6700\u8FD1 ${windowDays} \u5929\u6CA1\u6709\u5DE5\u5177\u8C03\u7528\u8BB0\u5F55\u3002\u6309\u65E5\u6570\u636E\u6700\u65E9\u53EA\u5230 ${coverage.since}\uFF0C\u66F4\u65E9\u7684\u5386\u53F2\u5728\u300C\u7D2F\u8BA1\u300D\u91CC\u3002`;
+  return `\u6700\u8FD1 ${windowDays} \u5929\u6CA1\u6709\u5DE5\u5177\u8C03\u7528\u8BB0\u5F55\u3002\u6309\u65E5\u6570\u636E\u6700\u65E9\u53EA\u5230 ${coverage.since}\uFF0C\u66F4\u65E9\u7684\u5386\u53F2\u5728\u300C\u6240\u6709\u300D\u91CC\u3002`;
 }
 function apply(ctx) {
   const React = require("react");
@@ -605,7 +477,7 @@ function apply(ctx) {
     name: "settings.section",
     id: "vyra-tool-usage",
     order: 50,
-    label: () => "\u5DE5\u5177\u7528\u91CF"
+    label: () => "\u5DE5\u5177\u5206\u6790"
   }, Panel));
 }
 var inject = ["slots"];

@@ -1,7 +1,7 @@
 {
   "name": "vyra-tool-usage-stats",
-  "version": "0.6.0",
-  "description": "一个让 DSH 工具调用自我进化的插件：统计用量、诊断失败原因、给出可一键应用的修复建议，减少重复报错。",
+  "version": "0.7.0",
+  "description": "统计每次工具调用与失败原因；勾选出问题的工具，一键复制其失败日志与分析提示词粘进对话。",
   "keywords": [
     "dsh",
     "dsh-plugin",

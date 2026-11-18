@@ -5,15 +5,15 @@
  * the numbers span every session, so a per-session tab would present them in
  * the wrong place.
  *
- * Three things this panel must do, each for a reason:
+ * Two things this panel must do, each for a reason:
  *
  * - **A window selector.** Cumulative counts answer "was this ever used";
  *   daily buckets answer "is it still in use". A cleanup decision needs the
  *   second, and reading the first as if it answered it deletes live tools.
- * - **Expandable failures.** A count says a tool failed; only the reason says
- *   what to fix.
- * - **Proposals with a decision.** A diagnosis the user cannot act on is just
- *   another wall of text.
+ * - **Copyable evidence.** A count says a tool failed; only the reason says what
+ *   to fix. The selected tools' statistics and failure samples go to the
+ *   clipboard, so the model that can act on them is the one already in the
+ *   conversation, with its own context.
  *
  * Styling uses the theme's own semantic tokens, so the panel follows light and
  * dark with the rest of the interface. A fallback follows each token: an
@@ -66,29 +66,6 @@ interface Coverage {
   retentionDays: number
 }
 
-/** One proposal awaiting a decision. */
-interface PendingDiagnosis {
-  tool: string
-  diagnosis: string
-  evidence: string
-  change: {
-    kind: 'description' | 'parameters' | 'implementation'
-    description?: string
-    parameters?: Record<string, unknown>
-    note?: string
-  }
-  proposedAt: number
-  previousDescription: string
-}
-
-/** One change already applied. */
-interface AppliedChange {
-  tool: string
-  before: { description: string; parameters: Record<string, unknown> }
-  appliedAt: number
-  kind: string
-}
-
 /** The Host's response body. */
 interface StatsResponse {
   global: ToolUsageReport
@@ -96,13 +73,6 @@ interface StatsResponse {
   sessions: Record<string, ToolUsageReport>
   failures: Record<string, FailureSample[]>
   coverage: Coverage
-  diagnosis: {
-    pending: PendingDiagnosis[]
-    applied: AppliedChange[]
-    lastRunAt: number
-    analyzing: boolean
-    settings: { analyzeEveryHours: number; minFailures: number; cooldownDays: number }
-  }
 }
 
 /** Client root context members this plugin uses. */
@@ -246,9 +216,11 @@ async function call(path: string, init?: RequestInit): Promise<unknown> {
 
 /** Windows the selector offers. */
 const WINDOWS = [
-  { value: '0', label: '累计' },
-  { value: '7', label: '最近 7 天' },
+  { value: '0', label: '所有' },
   { value: '30', label: '最近 30 天' },
+  { value: '7', label: '最近 7 天' },
+  { value: '3', label: '最近 3 天' },
+  { value: '1', label: '今天' },
 ] as const
 
 /** Sortable columns, in header order. */
@@ -271,14 +243,15 @@ type SortKey = (typeof COLUMNS)[number]['key']
 function createPanel(React: ReactModule): () => unknown {
   const h = React.createElement
 
-  return function ToolUsagePanel(): unknown {
+  return function ToolAnalysisPanel(): unknown {
     const [data, setData] = React.useState<StatsResponse | undefined>(undefined)
     const [windowDays, setWindowDays] = React.useState(0)
     const [sortKey, setSortKey] = React.useState<SortKey>('count')
     const [ascending, setAscending] = React.useState(false)
+    const [selected, setSelected] = React.useState<ReadonlySet<string>>(() => new Set())
     const [expanded, setExpanded] = React.useState<string | undefined>(undefined)
-    const [busy, setBusy] = React.useState<string | undefined>(undefined)
     const [notice, setNotice] = React.useState<string | undefined>(undefined)
+    const [copied, setCopied] = React.useState(false)
 
     const refresh = React.useCallback((): void => {
       void call(ENDPOINT).then((body) => {
@@ -294,59 +267,13 @@ function createPanel(React: ReactModule): () => unknown {
       return () => clearInterval(timer)
     }, [refresh])
 
-    /** Ask the Host to run a diagnosis in the session that owns the page. */
-    const analyze = (sessionId: string | undefined): void => {
-      setBusy('analyze')
-      setNotice(undefined)
-      void call(`${ENDPOINT}/diagnose`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
-      }).then((result) => {
-        const typed = result as { ok?: boolean; detail?: string; targets?: string[] }
-        setBusy(undefined)
-        setNotice(typed.ok === true
-          ? `已请求分析：${(typed.targets ?? []).join('、')}。结果会出现在当前会话里。`
-          : typed.detail ?? '请求失败')
-        refresh()
-      })
-    }
-
-    /** Apply one proposal. */
-    const apply = (tool: string): void => {
-      setBusy(tool)
-      setNotice(undefined)
-      void call(`${ENDPOINT}/apply`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tool }),
-      }).then((result) => {
-        const typed = result as { ok?: boolean; detail?: string; applied?: string }
-        setBusy(undefined)
-        setNotice(typed.ok === true ? `已应用 ${tool} 的${typed.applied === 'description' ? '描述' : '参数'}改动` : typed.detail ?? '应用失败')
-        refresh()
-      })
-    }
-
-    /** Drop one proposal. */
-    const dismiss = (tool: string): void => {
-      setBusy(tool)
-      void call(`${ENDPOINT}/dismiss`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tool }),
-      }).then(() => {
-        setBusy(undefined)
-        refresh()
-      })
-    }
-
     if (data === undefined) {
       return h('div', { style: { padding: '20px', color: C.textSecondary, ...T.body } }, '正在读取工具用量…')
     }
 
     const report = windowDays === 0 ? data.global : data.windows[String(windowDays)]
-    const windowLabel = WINDOWS.find(option => Number(option.value) === windowDays)?.label ?? '累计'
+    const windowLabel = WINDOWS.find(option => Number(option.value) === windowDays)?.label ?? '所有'
+    const failuresFor = (tool: string): FailureSample[] => data.failures[tool] ?? []
 
     const rows = [...(report?.rows ?? [])].sort((left, right) => {
       const delta = sortKey === 'tool'
@@ -364,7 +291,67 @@ function createPanel(React: ReactModule): () => unknown {
       setAscending(false)
     }
 
-    const failuresFor = (tool: string): FailureSample[] => data.failures[tool] ?? []
+    // The selection holds tool names rather than rows, so a refresh that
+    // reorders or drops rows cannot leave it pointing at a row that is gone.
+    const selectedRows = rows.filter(row => selected.has(row.tool))
+    const toggle = (tool: string): void => {
+      setSelected((current) => {
+        const next = new Set(current)
+        if (next.has(tool)) next.delete(tool)
+        else next.add(tool)
+        return next
+      })
+    }
+    const allSelected = rows.length > 0 && rows.every(row => selected.has(row.tool))
+    const toggleAll = (): void => { setSelected(allSelected ? new Set() : new Set(rows.map(row => row.tool))) }
+
+    // ── Copy ────────────────────────────────────────────────────────────────
+    //
+    // The plugin used to ask a model itself, which needed a live session, a
+    // configured model, and three numbers deciding when asking was worth it.
+    // Handing the text over instead removes all of them: the model that can act
+    // on it is the one already in the conversation, with its own context.
+
+    const buildCopyText = (): string => {
+      const parts: string[] = [
+        '请分析下面这些工具调用失败，找出反复出错的原因，并给出具体的修复建议。',
+        '',
+        `统计范围：${windowLabel}`,
+      ]
+      for (const row of selectedRows) {
+        parts.push(
+          '',
+          `## ${row.tool}`,
+          `调用 ${row.count} 次，失败 ${row.errorCount} 次（${percent(row.errorRate)}），最后使用 ${formatTime(row.lastUsedAt)}`,
+        )
+        const samples = failuresFor(row.tool)
+        if (samples.length === 0) {
+          parts.push('（没有保留的失败记录）')
+          continue
+        }
+        parts.push('最近的失败：')
+        for (const sample of samples) {
+          const code = sample.code === undefined ? '' : ` [${sample.code}]`
+          parts.push(`- ${formatTime(sample.at)}${code} ${sample.summary}`)
+        }
+      }
+      return parts.join('\n')
+    }
+
+    const copySelected = (): void => {
+      if (selectedRows.length === 0) return
+      const text = buildCopyText()
+      setNotice(undefined)
+      // A clipboard write rejects on an insecure origin, so a refusal offers the
+      // text as a download rather than appearing to have done nothing.
+      void globalThis.navigator?.clipboard?.writeText(text).then(
+        () => {
+          setCopied(true)
+          setTimeout(() => { setCopied(false) }, 2_000)
+        },
+        () => { setNotice(`剪贴板不可用，已下载为 ${downloadText(text, 'tool-usage-failures.txt')}`) },
+      )
+    }
 
     // ── Toolbar ─────────────────────────────────────────────────────────────
 
@@ -391,6 +378,26 @@ function createPanel(React: ReactModule): () => unknown {
         style: { marginLeft: 'auto', color: C.accent, ...textButton(C.accent) },
       }, '导出 JSON'))
 
+    // ── Actions ─────────────────────────────────────────────────────────────
+    //
+    // Above the table, where the work starts: pick what looks wrong, then take
+    // its evidence somewhere a model can see it. The buttons do not move when a
+    // selection changes, because nothing below them changes what they do.
+
+    const actionBar = h('div', {
+      style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' },
+    },
+    h('button', {
+      type: 'button',
+      disabled: selectedRows.length === 0,
+      onClick: copySelected,
+      style: { ...PRIMARY_BUTTON, opacity: selectedRows.length === 0 ? 0.5 : 1 },
+    }, copied ? '已复制' : `复制错误日志（${selectedRows.length}）`),
+    h('span', { style: { color: C.textTertiary, ...T.caption } },
+      selectedRows.length === 0
+        ? '勾选下面的工具，把它们的失败记录和分析提示词复制走，粘贴到对话里让模型处理。'
+        : '粘贴到对话输入框即可。'))
+
     // ── Coverage ────────────────────────────────────────────────────────────
     //
     // A window longer than the recorded span is incomplete, and saying so is the
@@ -401,84 +408,18 @@ function createPanel(React: ReactModule): () => unknown {
       : h('div', { style: { color: C.textTertiary, marginBottom: '10px', ...T.caption } },
         `按日数据覆盖 ${data.coverage.since} 至 ${data.coverage.until}（保留 ${data.coverage.retentionDays} 天）`)
 
-    // ── Proposals ───────────────────────────────────────────────────────────
-    //
-    // The point of the whole plugin: a diagnosis the user can act on.
-
-    /** The pending list, or nothing when there is none. */
-    const proposals = (): unknown => {
-      if (data.diagnosis.pending.length === 0) return null
-      return h('div', { style: { marginBottom: '14px' } },
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' } },
-          h('span', { style: { fontWeight: '600', color: C.text, ...T.body } }, '改进建议'),
-          h('span', { style: pill(C.dangerSoft, C.danger) }, `${data.diagnosis.pending.length} 条待处理`)),
-        data.diagnosis.pending.map(proposal => proposalCard(proposal)))
-    }
-
-    /** One proposal, with the before/after and its two actions. */
-    const proposalCard = (proposal: PendingDiagnosis): unknown => {
-      const kindLabel = proposal.change.kind === 'description'
-        ? '改描述'
-        : proposal.change.kind === 'parameters' ? '改参数' : '改实现'
-      const working = busy === proposal.tool
-
-      const diff = proposal.change.description === undefined
-        ? null
-        : h('div', {
-          style: {
-            background: C.surface,
-            border: `1px solid ${C.borderSoft}`,
-            borderRadius: '6px',
-            padding: '8px 10px',
-            marginBottom: '8px',
-          },
+    const noticeBar = notice === undefined
+      ? null
+      : h('div', {
+        style: {
+          marginBottom: '10px',
+          padding: '8px 10px',
+          borderRadius: '6px',
+          background: C.surface,
+          color: C.textSecondary,
+          ...T.caption,
         },
-        h('div', { style: { color: C.textTertiary, marginBottom: '4px', ...T.caption } }, '当前描述'),
-        h('div', { style: { color: C.textSecondary, marginBottom: '8px', whiteSpace: 'pre-wrap', ...T.mono } },
-          proposal.previousDescription || '（空）'),
-        h('div', { style: { color: C.textTertiary, marginBottom: '4px', ...T.caption } }, '建议改为'),
-        h('div', { style: { color: C.text, whiteSpace: 'pre-wrap', ...T.mono } }, proposal.change.description))
-
-      const needsHuman = proposal.change.kind === 'implementation'
-        ? h('div', { style: { color: C.warn, marginBottom: '8px', ...T.caption } },
-          `实现改动需要人工完成：${proposal.change.note ?? ''}`)
-        : null
-
-      return h('div', { key: proposal.tool, style: CARD },
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' } },
-          h('code', { style: { color: C.text, fontWeight: '600', ...T.mono } }, proposal.tool),
-          h('span', { style: pill(C.surface, C.textSecondary) }, kindLabel)),
-        h('div', { style: { color: C.text, marginBottom: '6px', ...T.body } }, proposal.diagnosis),
-        h('div', { style: { color: C.textTertiary, marginBottom: '8px', ...T.caption } }, `依据：${proposal.evidence}`),
-        needsHuman,
-        diff,
-        h('div', { style: { display: 'flex', gap: '8px' } },
-          h('button', {
-            type: 'button',
-            disabled: working || needsHuman !== null,
-            onClick: () => { apply(proposal.tool) },
-            style: { ...PRIMARY_BUTTON, opacity: working ? 0.6 : 1 },
-          }, working ? '应用中…' : '应用'),
-          h('button', {
-            type: 'button',
-            disabled: working,
-            onClick: () => { dismiss(proposal.tool) },
-            style: GHOST_BUTTON,
-          }, '忽略')))
-    }
-
-    // ── Applied ─────────────────────────────────────────────────────────────
-
-    /** What has already been changed, newest first. */
-    const appliedList = (): unknown => {
-      if (data.diagnosis.applied.length === 0) return null
-      return h('div', { style: { marginBottom: '14px' } },
-        h('div', { style: { color: C.textTertiary, marginBottom: '6px', ...T.caption } }, '已应用的改动'),
-        data.diagnosis.applied.slice(0, 5).map(change => h('div', {
-          key: `${change.tool}-${change.appliedAt}`,
-          style: { color: C.textSecondary, ...T.caption },
-        }, `${formatTime(change.appliedAt)} · ${change.tool} · ${change.kind === 'description' ? '描述' : '参数'}`)))
-    }
+      }, notice)
 
     // ── Table ───────────────────────────────────────────────────────────────
 
@@ -505,12 +446,20 @@ function createPanel(React: ReactModule): () => unknown {
       const cells = h('tr', { key: row.tool },
         h('td', {
           style: {
-            padding: '5px 0',
+            padding: '5px 0 5px 2px',
             borderTop: `1px solid ${C.borderSoft}`,
             color: C.text,
             ...T.mono,
           },
-        }, row.tool),
+        },
+        h('input', {
+          type: 'checkbox',
+          checked: selected.has(row.tool),
+          onChange: () => { toggle(row.tool) },
+          style: { marginRight: '8px', cursor: 'pointer', verticalAlign: 'middle' },
+          'aria-label': `选择 ${row.tool}`,
+        }),
+        row.tool),
         h('td', {
           style: {
             padding: '5px 14px 5px 0',
@@ -553,10 +502,9 @@ function createPanel(React: ReactModule): () => unknown {
       if (!open || samples.length === 0) return [cells]
 
       // Only the failures say what to fix; the count alone never does.
-      // Only the failures say what to fix; the count alone never does.
       const detail = h('tr', { key: `${row.tool}-detail` },
         h('td', {
-          colSpan: COLUMNS.length,
+          colSpan: COLUMNS.length + 1,
           style: { padding: '0 0 10px 16px', background: C.surface },
         },
         h('div', { style: { display: 'grid', gap: '5px', paddingTop: '8px' } },
@@ -575,100 +523,6 @@ function createPanel(React: ReactModule): () => unknown {
       return [cells, detail]
     })
 
-    // ── Analysis actions ────────────────────────────────────────────────────
-
-    const analysisBar = h('div', {
-      style: {
-        display: 'flex',
-        gap: '10px',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        marginTop: '4px',
-        paddingTop: '12px',
-        borderTop: `1px solid ${C.borderSoft}`,
-      },
-    },
-      h('button', {
-        type: 'button',
-        disabled: busy === 'analyze' || data.diagnosis.analyzing,
-        onClick: () => { analyze(undefined) },
-        style: { ...PRIMARY_BUTTON, opacity: busy === 'analyze' ? 0.6 : 1 },
-      }, busy === 'analyze' || data.diagnosis.analyzing ? '分析中…' : '立即分析'),
-      h('span', { style: { color: C.textTertiary, ...T.caption } },
-        data.diagnosis.lastRunAt === 0
-          ? '还没有分析过'
-          : `上次分析 ${formatTime(data.diagnosis.lastRunAt)}`))
-
-    /**
-     * The settings card.
-     *
-     * Editable here rather than only in YAML because these three numbers are the
-     * difference between "asks too often and burns tokens" and "never asks" —
-     * and the person who can judge that is looking at this table, not at a
-     * profile patch.
-     */
-    const settingsCard = h('div', { style: { ...CARD, marginTop: '12px' } },
-      h('div', { style: { fontWeight: '600', color: C.text, marginBottom: '10px', ...T.body } }, '自动分析设置'),
-      h('div', { style: { display: 'grid', gap: '10px' } },
-        settingRow('自动检查间隔', 'analyzeEveryHours', data.diagnosis.settings.analyzeEveryHours,
-          '小时。0 = 关闭自动分析，只用「立即分析」。'),
-        settingRow('触发门槛', 'minFailures', data.diagnosis.settings.minFailures,
-          '新增失败达到几次才值得诊断。'),
-        settingRow('冷却天数', 'cooldownDays', data.diagnosis.settings.cooldownDays,
-          '同一个工具隔几天才能再分析一次。')))
-
-    /** One labelled number input that writes on blur. */
-    function settingRow(label: string, key: string, value: number, hint: string): unknown {
-      return h('div', { style: { display: 'grid', gridTemplateColumns: 'auto 80px 1fr', gap: '10px', alignItems: 'center' } },
-        h('span', { style: { color: C.textSecondary, whiteSpace: 'nowrap', ...T.body } }, label),
-        h('input', {
-          type: 'number',
-          defaultValue: String(value),
-          min: key === 'minFailures' ? '1' : '0',
-          disabled: busy === 'config',
-          onBlur: (event: { target: { value: string } }) => {
-            const next = Number(event.target.value)
-            if (!Number.isFinite(next) || next === value) return
-            setBusy('config')
-            setNotice(undefined)
-            void call(`${ENDPOINT}/config`, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ [key]: next }),
-            }).then((result) => {
-              const typed = result as { ok?: boolean; detail?: string }
-              setBusy(undefined)
-              setNotice(typed.ok === true
-                ? '设置已保存，插件会重新加载'
-                : typed.detail ?? '保存失败')
-              refresh()
-            })
-          },
-          style: {
-            padding: '4px 8px',
-            borderRadius: '6px',
-            border: `1px solid ${C.border}`,
-            background: C.card,
-            color: C.text,
-            font: 'inherit',
-          },
-        }),
-        h('span', { style: { color: C.textTertiary, ...T.caption } }, hint))
-    }
-
-    const noticeBar = notice === undefined
-      ? null
-      : h('div', {
-        style: {
-          marginTop: '8px',
-          padding: '8px 10px',
-          borderRadius: '6px',
-          background: C.surface,
-          color: C.textSecondary,
-          ...T.caption,
-        },
-      }, notice)
-
     // ── Empty states ────────────────────────────────────────────────────────
     //
     // Two causes look identical in the data and mean opposite things: nothing
@@ -677,20 +531,28 @@ function createPanel(React: ReactModule): () => unknown {
     if (report === undefined || report.tools === 0) {
       return h('div', { style: { padding: '20px' } },
         toolbar,
+        actionBar,
         coverageNote,
+        noticeBar,
         h('div', { style: { color: C.textSecondary, marginBottom: '14px', ...T.body } },
-          emptyText(windowDays, data.coverage)),
-        analysisBar,
-        settingsCard,
-        noticeBar)
+          emptyText(windowDays, data.coverage)))
     }
 
     return h('div', { style: { padding: '20px' } },
       toolbar,
+      actionBar,
       coverageNote,
-      proposals(),
-      appliedList(),
+      noticeBar,
       h('div', { style: { display: 'flex', gap: '10px', alignItems: 'baseline', marginBottom: '8px' } },
+        h('label', { style: { display: 'flex', gap: '6px', alignItems: 'center', color: C.textTertiary, cursor: 'pointer', ...T.caption } },
+          h('input', {
+            type: 'checkbox',
+            checked: allSelected,
+            onChange: toggleAll,
+            style: { cursor: 'pointer' },
+            'aria-label': '选择全部',
+          }),
+          '全选'),
         h('span', { style: { color: C.text, fontWeight: '600', ...T.body } },
           `${report.tools} 个工具`),
         h('span', { style: { color: C.textTertiary, ...T.caption } },
@@ -699,11 +561,24 @@ function createPanel(React: ReactModule): () => unknown {
       h('table', { style: { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' } },
         h('colgroup', null, COLUMNS.map(column => h('col', { key: column.key, style: { width: column.width } }))),
         h('thead', null, h('tr', null, header)),
-        h('tbody', null, body)),
-      analysisBar,
-      settingsCard,
-      noticeBar)
+        h('tbody', null, body)))
   }
+}
+
+/**
+ * Offer `text` as a download, for a clipboard that refused.
+ * @param text - the document.
+ * @param name - the file name to offer.
+ * @returns the file name, so the caller can name it in its message.
+ */
+function downloadText(text: string, name: string): string {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(url)
+  return name
 }
 
 /**
@@ -718,7 +593,7 @@ function emptyText(windowDays: number, coverage: Coverage): string {
   if (coverage.since === null) {
     return `最近 ${windowDays} 天没有工具调用记录。按日统计需要先有调用才会开始累积。`
   }
-  return `最近 ${windowDays} 天没有工具调用记录。按日数据最早只到 ${coverage.since}，更早的历史在「累计」里。`
+  return `最近 ${windowDays} 天没有工具调用记录。按日数据最早只到 ${coverage.since}，更早的历史在「所有」里。`
 }
 
 /**
@@ -733,7 +608,7 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.section',
     id: 'vyra-tool-usage',
     order: 50,
-    label: () => '工具用量',
+    label: () => '工具分析',
   }, Panel))
 }
 

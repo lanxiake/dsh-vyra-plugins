@@ -22,7 +22,7 @@ function run(command: string, args: string[], cwd: string): void {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
-run('node', ['--test', 'tests/counters.test.ts'], packageRoot)
+run('node', ['--test', 'tests/counters.test.ts', 'tests/panel-copy.test.ts'], packageRoot)
 
 if (!existsSync(sourceRoot)) {
   console.log(`check: harness checks skipped — no dsh-Veyra checkout at ${sourceRoot}`)
@@ -30,7 +30,7 @@ if (!existsSync(sourceRoot)) {
   process.exit(0)
 }
 
-for (const test of ['integration.ts', 'storage.ts', 'session-e2e.ts', 'pre-step-message-id.ts', 'boot-timers.ts']) {
+for (const test of ['integration.ts', 'storage.ts', 'session-e2e.ts', 'boot-timers.ts']) {
   console.log(`\n=== ${test} ===`)
   run('npx', ['tsx', resolve(here, test)], sourceRoot)
 }
