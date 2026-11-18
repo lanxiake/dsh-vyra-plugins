@@ -449,6 +449,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.4.1 fixes two things the earlier versions shipped: 1.3.0 called
+        // `saneRect` from an action handler without importing it, which took the
+        // whole Host down with a ReferenceError the first time the toolbar was
+        // used; and the package exported neither `locale/*.json` nor
+        // `package.json`, so the installed-plugins list had no description to
+        // show.
+        '1.4.1': {
+          publishTimestamp: 1795392000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
