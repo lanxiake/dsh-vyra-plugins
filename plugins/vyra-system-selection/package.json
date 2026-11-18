@@ -1,12 +1,14 @@
 {
   "name": "vyra-system-selection",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "type": "module",
   "description": "系统级划词助手：在任何应用里划词，弹出原生工具条做 AI 搜索、翻译、总结、解释与复制。仅 Windows。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
-    "./icon": "./icon.svg"
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
   },
   "files": [
     "index.js",
@@ -15,6 +17,7 @@
     "store.js",
     "client.js",
     "cordis.patch.yml",
+    "locale/*.json",
     "icon.svg",
     "README.md",
     "assets/qq-group.png"
