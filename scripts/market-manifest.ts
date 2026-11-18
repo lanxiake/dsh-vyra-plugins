@@ -191,12 +191,12 @@ export const manifest: MarketManifest = {
     {
       name: 'vyra-tool-usage-stats',
       title: {
-        en: 'Tool Self-Evolution',
-        zh: '工具自进化',
+        en: 'Tool Analysis',
+        zh: '工具分析',
       },
       description: {
-        en: 'Lets your tools evolve: it counts every call, records why each one failed, then asks the agent to diagnose the repeat offenders and propose a fix you can apply in one click. Fewer repeated failures, fewer wasted tokens.',
-        zh: '让 DSH 的工具自己进化：统计每次调用、记下每次失败的原因，定时交给 Agent 诊断那些反复出错的工具，给出可一键应用的修复。减少重复报错，也减少为同样错误反复烧掉的 token。',
+        en: 'Counts every tool call and records why each failure happened, then hands you the ones you pick as text to paste into a conversation — statistics and the recent failure samples, with a prompt that asks the model to find the repeat offender and fix it.',
+        zh: '统计每次工具调用、记下每次失败的原因。勾选出问题的工具，一键把统计与近期失败样本连同分析提示词复制走，粘进对话就能让模型找出反复出错的那一个并给出修复。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -213,6 +213,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
+        // 0.7.0 is 工具分析: the model-analysis half is gone (no schedule, no
+        // threshold or cooldown, no diagnose/apply/dismiss routes), and the panel
+        // copies the selected tools' evidence to the clipboard instead.
+        '0.7.0': {
+          publishTimestamp: 1795392000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
             path: 'plugins/tool-usage-stats',
           },
         },
