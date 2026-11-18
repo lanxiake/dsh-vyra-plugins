@@ -36,6 +36,15 @@ const TOOL_USAGE_ICON =
  *
  * `scripts/publish-plugins.mjs` runs those steps in that order, deriving each
  * SHA from the commit that actually holds the plugin's files.
+ *
+ * The one exception is a repin that changes nothing a client reads: the commit
+ * the market's detail page fetches (README and its images) is the pinned one,
+ * not the default branch, so a plugin pinned before a README fix shows the old
+ * README forever. Repinning such a version to a later commit is safe exactly
+ * when no file other than the README, its images and the matching `files` entry
+ * changed — those three change what the detail page renders and nothing a
+ * running install reads. Verify that before repinning, and never repin to pick
+ * up plugin code.
  */
 
 
@@ -203,7 +212,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'b519c6bf160190313b15e1af891d04250d54a10e',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/tool-usage-stats',
           },
         },
@@ -236,7 +245,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-agent-manager',
           },
         },
@@ -269,7 +278,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-smart-compaction',
           },
         },
@@ -322,7 +331,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'bc6d008cff2159893013e375d158277f43d495f4',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-skill-mcp-manager',
           },
         },
@@ -355,7 +364,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '54bd6c6be93723ddeda71f5802eb23fdd9fb3204',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-ssh-terminal',
           },
         },
@@ -436,7 +445,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '7420a72571be09aad7bee2e132fdbd335a5c4409',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-system-selection',
           },
         },
@@ -469,7 +478,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'c0a2f398ded5e79da81334b2b0d18b5e81520ba1',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-theme-styles',
           },
         },
@@ -633,7 +642,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '0e37d275751e00fbe3d940615073a0b8acaa316d',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/vyra-plugin-market',
           },
         },
@@ -672,7 +681,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'bfcecfa25ca5cc0781580a12a267b7f277abe7d3',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/dsh-im',
           },
         },
@@ -718,7 +727,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '9e44f9320564ca5923085b80c90cceca25b83d78',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/dsh-tool-ocr',
           },
         },
@@ -749,7 +758,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'bfcecfa25ca5cc0781580a12a267b7f277abe7d3',
+            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
             path: 'plugins/dsh-superpowers',
           },
         },
