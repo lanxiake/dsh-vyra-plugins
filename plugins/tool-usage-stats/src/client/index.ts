@@ -223,6 +223,18 @@ const WINDOWS = [
   { value: '1', label: '今天' },
 ] as const
 
+/**
+ * The windows the host must answer, as the query that asks for them.
+ *
+ * The host answers only the windows a request names, and its default
+ * (`[7, 30]`) is narrower than this selector. Asking for every window offered
+ * here is what keeps "最近 3 天" and "今天" from being permanently empty.
+ */
+const WINDOW_QUERY = WINDOWS
+  .filter(option => option.value !== '0')
+  .map(option => `window=${option.value}`)
+  .join('&')
+
 /** Sortable columns, in header order. */
 const COLUMNS = [
   { key: 'tool', label: '工具', numeric: false, width: '34%' },
@@ -254,7 +266,7 @@ function createPanel(React: ReactModule): () => unknown {
     const [copied, setCopied] = React.useState(false)
 
     const refresh = React.useCallback((): void => {
-      void call(ENDPOINT).then((body) => {
+      void call(`${ENDPOINT}?${WINDOW_QUERY}`).then((body) => {
         if (body !== undefined && typeof body === 'object' && 'global' in (body as object)) {
           setData(body as StatsResponse)
         }

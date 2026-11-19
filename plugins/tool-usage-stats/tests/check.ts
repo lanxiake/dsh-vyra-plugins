@@ -9,12 +9,25 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import assert from 'node:assert/strict'
 
 const here = import.meta.dirname
 const packageRoot = resolve(here, '..')
 const sourceRoot = process.env.DSH_SOURCE ?? resolve(packageRoot, '..', '..', '..', 'dsh-Veyra')
+
+// The window selector and the request must name the same windows. The host
+// answers only the windows a request names, so an offered entry the request
+// omits renders as a permanently empty tab — which is exactly how "最近 3 天"
+// and "今天" were blank while "所有" worked.
+const clientSource = readFileSync(resolve(packageRoot, 'lib', 'client.js'), 'utf8')
+const offered = [...clientSource.matchAll(/\{ value: "(\d+)", label: /g)]
+  .map(match => match[1])
+  .filter(value => value !== '0')
+assert.ok(offered.length >= 2, 'the selector still offers windowed views')
+assert.match(clientSource, /WINDOW_QUERY = WINDOWS\.filter/, 'the query is built from the selector')
+assert.match(clientSource, /call\(`\$\{ENDPOINT\}\?\$\{WINDOW_QUERY\}`\)/, 'the request sends the built query')
 
 /** Run one command, exiting with its status on failure. */
 function run(command: string, args: string[], cwd: string): void {

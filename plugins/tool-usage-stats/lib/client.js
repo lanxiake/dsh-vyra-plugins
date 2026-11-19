@@ -119,6 +119,10 @@ var WINDOWS = [
   { value: "3", label: "\u6700\u8FD1 3 \u5929" },
   { value: "1", label: "\u4ECA\u5929" }
 ];
+// The host answers only the windows a request names, and its default is
+// narrower than this selector. Asking for every window offered here is what
+// keeps "\u6700\u8FD1 3 \u5929" and "\u4ECA\u5929" from being permanently empty.
+var WINDOW_QUERY = WINDOWS.filter((option) => option.value !== "0").map((option) => `window=${option.value}`).join("&");
 var COLUMNS = [
   { key: "tool", label: "\u5DE5\u5177", numeric: false, width: "34%" },
   { key: "count", label: "\u8C03\u7528", numeric: true, width: "16%" },
@@ -137,7 +141,7 @@ function createPanel(React) {
     const [notice, setNotice] = React.useState(void 0);
     const [copied, setCopied] = React.useState(false);
     const refresh = React.useCallback(() => {
-      void call(ENDPOINT).then((body2) => {
+      void call(`${ENDPOINT}?${WINDOW_QUERY}`).then((body2) => {
         if (body2 !== void 0 && typeof body2 === "object" && "global" in body2) {
           setData(body2);
         }
