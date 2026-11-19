@@ -248,6 +248,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/tool-usage-stats',
           },
         },
+        // 0.7.2 asks the endpoint for every window its selector offers. It
+        // requested none, so the host answered its default pair and the
+        // 3-day and 1-day tabs rendered empty.
+        '0.7.2': {
+          publishTimestamp: 1795062600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'ab5079897989fa2a0a1178fd825112ac88b2ec41',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
       },
       metadata: {
         category: 'observability',
@@ -672,6 +684,17 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'af6111f2e50be335ff13c69e57240f2a8d88309c',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
+        // 0.2.1 replies through the DSH agent (ctx.agents) and binds each item
+        // to skills instead of a plugin-local knowledge field.
+        '0.2.1': {
+          publishTimestamp: 1795066164,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4d3e6e727ed0b0c2fe9dc849c58abf7642bf16f8',
             path: 'plugins/vyra-xianyu-delivery',
           },
         },

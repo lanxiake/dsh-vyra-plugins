@@ -70,6 +70,16 @@
       },
       "versions": [
         {
+          "version": "0.7.2",
+          "publishTimestamp": 1795062600,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "ab5079897989fa2a0a1178fd825112ac88b2ec41",
+            "path": "plugins/tool-usage-stats"
+          }
+        },
+        {
           "version": "0.7.1",
           "publishTimestamp": 1795060200,
           "source": {
@@ -516,6 +526,16 @@
         "directory": "plugins/vyra-xianyu-delivery"
       },
       "versions": [
+        {
+          "version": "0.2.1",
+          "publishTimestamp": 1795066164,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "4d3e6e727ed0b0c2fe9dc849c58abf7642bf16f8",
+            "path": "plugins/vyra-xianyu-delivery"
+          }
+        },
         {
           "version": "0.2.0",
           "publishTimestamp": 1795065592,
