@@ -361,6 +361,16 @@
       },
       "versions": [
         {
+          "version": "1.5.2",
+          "publishTimestamp": 1795075200,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "8f19338d97a945bc10d8c7307c06cc301041e5ae",
+            "path": "plugins/vyra-system-selection"
+          }
+        },
+        {
           "version": "1.5.1",
           "publishTimestamp": 1795074360,
           "source": {

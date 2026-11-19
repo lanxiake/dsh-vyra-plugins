@@ -618,6 +618,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.5.2 shortens the latency the hook imposes on every mouse event: Windows delivers a
+        // WH_MOUSE_LL callback only when the installing thread pumps, so a 16 ms pump added up to
+        // 8 ms to each event machine-wide. The queue is now drained every 4 ms while the hook is
+        // installed (and every 16 ms for a plain popup), and both timers stop when idle.
+        '1.5.2': {
+          publishTimestamp: 1795075200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '8f19338d97a945bc10d8c7307c06cc301041e5ae',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
