@@ -991,16 +991,33 @@ export function createOverlay(handlers = {}) {
   }
   let lastThemeCheck = 0
 
+  /**
+   * How often the queue is drained.
+   *
+   * This is the plugin's input latency, not just a timer: Windows delivers a WH_MOUSE_LL
+   * callback only when the installing thread pumps, so every mouse event on the machine waits
+   * for the next tick before it continues to its window. At 16 ms that is ~8 ms of added latency
+   * per event — the "鼠标好像变慢了" that survives after the click-time stalls are gone. A popup
+   * on screen needs nothing faster than a frame, so the cadence follows the hook.
+   */
+  const PUMP_MS_HOOKED = 4
+  const PUMP_MS_IDLE = 16
+
   let timer = null
+  let timerMs = 0
   function startPump() {
-    if (timer) return
-    timer = setInterval(pump, 16)
+    const ms = hook ? PUMP_MS_HOOKED : PUMP_MS_IDLE
+    if (timer && timerMs === ms) return
+    stopPump()
+    timerMs = ms
+    timer = setInterval(pump, ms)
     if (timer.unref) timer.unref()
   }
   function stopPump() {
     if (!timer) return
     clearInterval(timer)
     timer = null
+    timerMs = 0
   }
 
   // --- low-level mouse hook -------------------------------------------------------------------
@@ -1159,6 +1176,10 @@ export function createOverlay(handlers = {}) {
     // harmless, a dangling one is a crash.
     if (primeTimer) clearTimeout(primeTimer)
     primeTimer = null
+    // The pump exists to deliver hook callbacks; with no hook and nothing on screen it is 60
+    // wake-ups per second for nothing. `showAt` restarts it when a popup appears.
+    if (state.mode === 'hidden') stopPump()
+    else startPump() // recompute the cadence: no hook means no input latency to keep short
     return removed
   }
 

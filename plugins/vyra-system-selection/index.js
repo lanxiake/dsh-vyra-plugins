@@ -556,9 +556,15 @@ export function apply(ctx) {
     // plugin's own on/off switch. The selection trigger needs no hook at all.
     if (settings.interceptRightClick !== false) overlay.installHook()
     else overlay.uninstallHook()
+    // The poll only serves the drag trigger: a drag makes no click, so the hook cannot see it and
+    // there is nothing else watching the button. With that trigger off there is nothing to poll
+    // for, and 33 wake-ups per second stop being free.
+    if (!settings.openOnSelect) {
+      if (pollTimer) clearInterval(pollTimer)
+      pollTimer = null
+      return
+    }
     if (pollTimer) return
-    // The poll only serves the optional drag-trigger mode; the hook does the real work. It runs
-    // anyway so the pump keeps servicing the hook's message queue.
     pollTimer = setInterval(tick, POLL_MS)
     if (pollTimer.unref) pollTimer.unref()
   }
