@@ -301,6 +301,16 @@
       },
       "versions": [
         {
+          "version": "1.4.3",
+          "publishTimestamp": 1795062317,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "274cc8b3c066d78c8fee290960c985feb9305322",
+            "path": "plugins/vyra-system-selection"
+          }
+        },
+        {
           "version": "1.4.2",
           "publishTimestamp": 1795392000,
           "source": {
@@ -437,6 +447,19 @@
         "directory": "plugins/vyra-wechat-local"
       },
       "versions": [
+        {
+          "version": "0.1.1",
+          "publishTimestamp": 1795062317,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "274cc8b3c066d78c8fee290960c985feb9305322",
+            "path": "plugins/vyra-wechat-local"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
         {
           "version": "0.1.0",
           "publishTimestamp": 1795046400,

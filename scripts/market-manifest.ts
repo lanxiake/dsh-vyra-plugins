@@ -508,6 +508,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.4.3 leaves the shared client lexical scope alone: the bundle is IIFE-wrapped
+        // and its endpoint is package-prefixed, so it no longer collides with any other
+        // plugin's top-level `const RPC`.
+        '1.4.3': {
+          publishTimestamp: 1795062317,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '274cc8b3c066d78c8fee290960c985feb9305322',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
@@ -572,6 +584,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'b5345a639f6f26b8d1235546318b7af1b1f6041b',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
+        // 0.1.1 keeps the settings page from taking down the shared client scope:
+        // a top-level `const RPC` collided with the same name in the system-selection
+        // bundle, and the combined script failed to compile, so neither registered.
+        '0.1.1': {
+          publishTimestamp: 1795062317,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '274cc8b3c066d78c8fee290960c985feb9305322',
             path: 'plugins/vyra-wechat-local',
           },
         },
