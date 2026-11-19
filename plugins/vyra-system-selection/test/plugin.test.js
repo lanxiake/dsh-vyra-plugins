@@ -9,6 +9,8 @@
 // That is fine at runtime and impossible here, so the geometry it would produce is checked
 // through `core.js` instead — the same functions `native.js` calls.
 import { strict as assert } from 'node:assert'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import test from 'node:test'
 
 import { ACTIONS, findAction, placeMenuAtSelection, placePanelAtSelection, saneRect } from '../core.js'
@@ -54,6 +56,17 @@ test('an anchor with no width still yields a usable menu position', () => {
   const pos = placeMenuAtSelection(point, { width: 260, height: 44 }, WORK)
   assert.ok(Number.isFinite(pos.x) && Number.isFinite(pos.y))
   assert.ok(pos.x >= WORK.left && pos.x + 260 <= WORK.right)
+})
+
+// The hook used to prime a capture on every left release. Priming injects Ctrl+C and waits up to
+// 220 ms with a busy loop, and the mouse hook is delivered through the same message loop — so
+// every ordinary click anywhere on the desktop stalled input. The gesture machine has to have
+// said "this could have selected something" before a prime is allowed.
+test('the hook only primes a selection for a gesture that could have selected', () => {
+  const source = readFileSync(join(import.meta.dirname, '..', 'native.js'), 'utf8')
+  const branch = source.slice(source.indexOf('if (wParam === WM_LBUTTONUP)'))
+  assert.match(branch.slice(0, 400), /if \(fire && !windowUnderPoint\(pt\)\) primeSelection\(\)/,
+    'the left-release branch must gate priming on a drag or multi-click')
 })
 
 test('the panel anchors to the selection, not to a point', () => {

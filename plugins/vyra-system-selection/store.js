@@ -45,4 +45,24 @@ export function saveSettings(value) {
   }
 }
 
-export { FILE as settingsPath }
+/** Where the last action's diagnostics land, so a silent failure leaves a trace to read. */
+const RUN_FILE = join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'storages', 'system-selection', 'last-run.json')
+
+/**
+ * Persist what the last action did.
+ *
+ * The user cannot see the Host log, and an action that dies before its panel opens leaves no
+ * trace at all — which is exactly the "点了没有反应" report. One small file per action is the
+ * cheapest way to make the next report actionable.
+ */
+export function saveLastRun(value) {
+  try {
+    mkdirSync(dirname(RUN_FILE), { recursive: true })
+    writeFileSync(RUN_FILE, JSON.stringify(value, null, 2))
+    return true
+  } catch {
+    return false
+  }
+}
+
+export { FILE as settingsPath, RUN_FILE as lastRunPath }

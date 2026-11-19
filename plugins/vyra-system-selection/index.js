@@ -12,7 +12,7 @@ import {
   saneRect, searchQuery, selectionProblem,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
-import { loadSettings, saveSettings } from './store.js'
+import { loadSettings, saveLastRun, saveSettings } from './store.js'
 
 export const name = '@local/system-selection'
 
@@ -29,6 +29,18 @@ export function apply(ctx) {
 
   let lastResult = ''
   let lastSources = []
+  /**
+   * What the last action did.
+   *
+   * The user reports "点了没有反应" and cannot see this process's log, so every action leaves a
+   * record: the chunk types the model actually emitted, the finish reason, and the error that
+   * ended it. `status` exposes it and it is written to `storages/system-selection/last-run.json`.
+   */
+  let lastRun = null
+  function recordRun(entry) {
+    lastRun = { at: new Date().toISOString(), ...entry }
+    saveLastRun(lastRun)
+  }
   /** The selection whose menu the user closed, so the poll does not reopen it. See `alreadyDismissed`. */
   let dismissed = ''
   const overlay = createOverlay({
@@ -293,17 +305,85 @@ export function apply(ctx) {
       hideAll()
       return
     }
-    if (actionId === 'search') return runSearch(text, at)
-    return runModel(action, text, at)
+    // A rejection here used to escape as an unhandled promise: no panel, no message, nothing —
+    // which is exactly the "点了没有反应" the user reported. Whatever breaks, the panel opens and
+    // says so.
+    try {
+      if (actionId === 'search') await runSearch(text, at)
+      else await runModel(action, text, at)
+    } catch (error) {
+      const message = describe(error)
+      overlay.showPanel({ anchor: at, title: action.label, status: '' })
+      overlay.setStatus(message, 'error')
+      recordRun({ action: actionId, error: message })
+    }
+  }
+
+  /**
+   * Read one model stream into text.
+   *
+   * Text can arrive three ways: as `text-delta` chunks, as a whole `block-end` block, or not at
+   * all (the model spent everything on reasoning). Ignoring `block-end` — which this did — turns
+   * every adapter that assembles before emitting into a permanently blank panel.
+   *
+   * @returns what the stream actually produced, so the caller can report an empty answer instead
+   *   of painting nothing.
+   */
+  async function readStream(llm, picked, request, mine, onText) {
+    const parts = new Map()
+    const counts = { text: 0, reasoning: 0, other: 0 }
+    let reasoning = ''
+    let finish = null
+    const render = () => [...parts.entries()].sort((a, b) => a[0] - b[0]).map(([, part]) => part).join('')
+
+    for await (const chunk of llm.stream({
+      provider: picked.provider,
+      model: picked.model,
+      system: request.system,
+      messages: request.messages,
+    })) {
+      if (mine !== generation) return { superseded: true }
+      if (chunk.type === 'text-delta') {
+        counts.text++
+        parts.set(chunk.index, (parts.get(chunk.index) || '') + chunk.text)
+        onText(render())
+      } else if (chunk.type === 'reasoning-delta') {
+        counts.reasoning++
+        reasoning += chunk.text
+      } else if (chunk.type === 'block-end') {
+        if (chunk.block && chunk.block.type === 'text' && !parts.has(chunk.index)) {
+          parts.set(chunk.index, chunk.block.text || '')
+          onText(render())
+        }
+      } else if (chunk.type === 'finish') {
+        finish = chunk.reason
+      } else {
+        counts.other++
+      }
+    }
+    return { text: render(), reasoning, finish, counts }
   }
 
   /** One assistant turn over `ctx.llm`, streaming into the panel. */
   async function runModel(action, text, at) {
     const llm = ctx.get('llm')
-    const picked = await resolveModel()
-    if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
+    let picked = null
+    try {
+      picked = await resolveModel()
+    } catch (error) {
+      // Enumeration can throw (an adapter's catalog fetch); without this the action dies
+      // silently before the panel exists.
+      const message = `无法选择模型：${describe(error)}`
       overlay.showPanel({ anchor: at, title: action.label, status: '' })
-      overlay.setStatus(!llm ? 'LLM 服务不可用，请检查模型配置' : '没有可用的模型，请先在设置里选择', 'error')
+      overlay.setStatus(message, 'error')
+      recordRun({ action: action.id, error: message })
+      return
+    }
+    if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
+      const message = !llm ? 'LLM 服务不可用，请检查模型配置' : '没有可用的模型，请先在设置里选择'
+      overlay.showPanel({ anchor: at, title: action.label, status: '' })
+      overlay.setStatus(message, 'error')
+      recordRun({ action: action.id, error: message })
       return
     }
 
@@ -312,32 +392,45 @@ export function apply(ctx) {
     lastSources = []
     overlay.showPanel({ anchor: at, title: `${action.label} · ${preview(text)}`, status: '正在生成…' })
 
+    const startedAt = Date.now()
     const request = buildRequest(action.id, text, { targetLanguage: settings.targetLanguage })
     try {
-      for await (const chunk of llm.stream({
-        provider: picked.provider,
-        model: picked.model,
-        system: request.system,
-        messages: request.messages,
-      })) {
-        if (mine !== generation) return // superseded by a newer gesture or an explicit close
-        if (chunk.type === 'text-delta') {
-          lastResult += chunk.text
-          overlay.setContent(lastResult, [])
-        } else if (chunk.type === 'finish') {
-          const reason = chunk.reason
-          if (reason && reason.kind === 'error') {
-            overlay.setStatus((reason.failure && reason.failure.message) || '模型返回错误', 'error')
-            return
-          }
-          if (reason && reason.kind === 'aborted') return
-        }
+      const seen = await readStream(llm, picked, request, mine, (answer) => {
+        lastResult = answer
+        overlay.setContent(lastResult, [])
+      })
+      if (seen.superseded) return
+      const base = { action: action.id, provider: picked.provider, model: picked.model, counts: seen.counts, ms: Date.now() - startedAt }
+      const reason = seen.finish
+      if (reason && reason.kind === 'error') {
+        const message = (reason.failure && reason.failure.message) || '模型返回错误'
+        overlay.setStatus(message, 'error')
+        recordRun({ ...base, finish: 'error', error: message })
+        return
       }
-      if (mine !== generation) return
+      if (reason && reason.kind === 'aborted') {
+        recordRun({ ...base, finish: 'aborted' })
+        return
+      }
+      lastResult = seen.text
+      if (!lastResult.trim()) {
+        // An empty body is not "no response" — say what the model actually sent.
+        const message = seen.reasoning.trim()
+          ? `模型只返回了思考过程（${seen.reasoning.length} 字），没有正文`
+          : '模型没有返回任何内容'
+        if (seen.reasoning.trim()) lastResult = seen.reasoning
+        overlay.setContent(lastResult, [])
+        overlay.setStatus(message, 'error')
+        recordRun({ ...base, finish: reason && reason.kind, reasoning: seen.reasoning.slice(0, 4000), error: message })
+        return
+      }
       overlay.setStatus(`${picked.provider} / ${picked.model}`, 'info')
+      recordRun({ ...base, finish: reason && reason.kind, answer: lastResult.slice(0, 4000) })
     } catch (error) {
       if (mine !== generation) return
-      overlay.setStatus(String(error && error.message ? error.message : error), 'error')
+      const message = describe(error)
+      overlay.setStatus(message, 'error')
+      recordRun({ action: action.id, provider: picked.provider, model: picked.model, ms: Date.now() - startedAt, error: message })
     }
   }
 
@@ -354,70 +447,93 @@ export function apply(ctx) {
     lastSources = []
     overlay.showPanel({ anchor: at, title: `AI 搜索 · ${preview(text)}`, status: '正在搜索…' })
     stats.searches++
+    const startedAt = Date.now()
 
     if (!web || typeof web.search !== 'function') {
-      overlay.setStatus('联网搜索服务不可用（未启用网页搜索插件）', 'error')
+      const message = '联网搜索服务不可用（未启用网页搜索插件）'
+      overlay.setStatus(message, 'error')
+      recordRun({ action: 'search', error: message })
       return
     }
 
     let result
+    const query = searchQuery(text)
     try {
-      result = await web.search({ query: searchQuery(text), maxResults: settings.maxResults || 6 })
+      result = await web.search({ query, maxResults: settings.maxResults || 6 })
     } catch (error) {
       if (mine !== generation) return
-      overlay.setStatus(`搜索失败：${error && error.message ? error.message : error}`, 'error')
+      const message = `搜索失败：${describe(error)}`
+      overlay.setStatus(message, 'error')
+      recordRun({ action: 'search', query, ms: Date.now() - startedAt, error: message })
       return
     }
     if (mine !== generation) return
 
     lastSources = Array.isArray(result && result.sources) ? result.sources : []
     if (lastSources.length === 0) {
-      overlay.setStatus('没有检索到结果', 'error')
+      const message = '没有检索到结果'
+      overlay.setStatus(message, 'error')
+      recordRun({ action: 'search', query, ms: Date.now() - startedAt, error: message, content: (result && result.content || '').slice(0, 400) })
       return
     }
 
     const llm = ctx.get('llm')
-    const picked = await resolveModel()
+    let picked = null
+    try {
+      picked = await resolveModel()
+    } catch {
+      picked = null // the provider's own summary below still stands in
+    }
     if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
       // No model: the provider's own summary is still worth showing, with its sources.
       const fallback = (result.content || '').trim()
       lastResult = fallback || `检索到 ${lastSources.length} 条来源`
       overlay.setContent(lastResult, lastSources)
       overlay.setStatus(fallback ? '搜索服务摘要（未配置模型，无 AI 总结）' : '检索到来源（未配置模型，无 AI 总结）', 'info')
+      recordRun({ action: 'search', query, sources: lastSources.length, ms: Date.now() - startedAt, answer: lastResult.slice(0, 4000) })
       return
     }
 
     overlay.setStatus(`检索到 ${lastSources.length} 条来源，正在总结…`, 'info')
     const request = buildSearchRequest(text, lastSources, { targetLanguage: settings.targetLanguage })
+    const base = { action: 'search', query, provider: picked.provider, model: picked.model, sources: lastSources.length, ms: 0 }
     try {
-      for await (const chunk of llm.stream({
-        provider: picked.provider,
-        model: picked.model,
-        system: request.system,
-        messages: request.messages,
-      })) {
-        if (mine !== generation) return
-        if (chunk.type === 'text-delta') {
-          lastResult += chunk.text
-          overlay.setContent(lastResult, lastSources)
-        } else if (chunk.type === 'finish') {
-          const reason = chunk.reason
-          if (reason && reason.kind === 'error') {
-            const message = (reason.failure && reason.failure.message) || '模型返回错误'
-            // Keep whatever sources were retrieved: they are still the useful half of the answer.
-            overlay.setContent(lastResult || '（总结失败）', lastSources)
-            overlay.setStatus(message, 'error')
-            return
-          }
-          if (reason && reason.kind === 'aborted') return
-        }
+      const seen = await readStream(llm, picked, request, mine, (answer) => {
+        lastResult = answer
+        overlay.setContent(lastResult, lastSources)
+      })
+      if (seen.superseded) return
+      base.ms = Date.now() - startedAt
+      const reason = seen.finish
+      if (reason && reason.kind === 'error') {
+        const message = (reason.failure && reason.failure.message) || '模型返回错误'
+        // Keep whatever sources were retrieved: they are still the useful half of the answer.
+        overlay.setContent(lastResult || '（总结失败）', lastSources)
+        overlay.setStatus(message, 'error')
+        recordRun({ ...base, counts: seen.counts, finish: 'error', error: message })
+        return
       }
-      if (mine !== generation) return
+      if (reason && reason.kind === 'aborted') {
+        recordRun({ ...base, finish: 'aborted' })
+        return
+      }
+      lastResult = seen.text
+      if (!lastResult.trim()) {
+        // Sources without a summary are still a result; saying so beats an empty body.
+        lastResult = seen.reasoning.trim() || `检索到 ${lastSources.length} 条来源（模型没有输出总结）`
+        overlay.setContent(lastResult, lastSources)
+        overlay.setStatus('模型没有输出总结，仅展示检索到的来源', 'error')
+        recordRun({ ...base, counts: seen.counts, finish: reason && reason.kind, error: '模型没有输出总结' })
+        return
+      }
       overlay.setStatus(`${picked.provider} / ${picked.model} · ${lastSources.length} 条来源`, 'info')
+      recordRun({ ...base, counts: seen.counts, finish: reason && reason.kind, answer: lastResult.slice(0, 4000) })
     } catch (error) {
       if (mine !== generation) return
+      const message = describe(error)
       overlay.setContent(lastResult || '（总结失败）', lastSources)
-      overlay.setStatus(String(error && error.message ? error.message : error), 'error')
+      overlay.setStatus(message, 'error')
+      recordRun({ ...base, ms: Date.now() - startedAt, error: message })
     }
   }
 
@@ -459,6 +575,7 @@ export function apply(ctx) {
       maxChars: MAX_TEXT_CHARS,
       hookActive: overlay.hookActive,
       stats: { ...stats },
+      lastRun,
       overlayVisible: overlay.visible,
       overlayRect: overlay.rect(),
     }),
@@ -516,7 +633,10 @@ export function apply(ctx) {
       if (!findAction(actionId)) throw new Error(`unknown action: ${actionId}`)
       const problem = selectionProblem(text)
       if (problem) throw new Error(problem)
-      const at = overlay.cursor()
+      // A point, not a rectangle: this path has no selection to anchor to, and a rect with
+      // undefined edges used to place the panel at NaN — which Windows rounds to (0,0).
+      const pt = overlay.cursor()
+      const at = { left: pt.x, top: pt.y, right: pt.x, bottom: pt.y }
       pending = { text, anchor: at }
       await runAction(actionId, at)
       return { started: true, actionId, panel: overlay.visible, mode: overlay.mode }
@@ -529,6 +649,17 @@ export function apply(ctx) {
      */
     dismiss: () => { dismiss(); return { visible: overlay.visible } },
   })
+}
+
+/** One line of text for an error, whatever shape the throwable has. */
+function describe(error) {
+  if (error && error.message) return String(error.message)
+  if (typeof error === 'string') return error
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
 }
 
 /** First line of the selection, short enough for a title bar. */

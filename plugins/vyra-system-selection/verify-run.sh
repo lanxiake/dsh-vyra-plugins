@@ -33,8 +33,13 @@ run() {
 
 run test/core.test.js
 run test/client.test.js
+run test/imports.test.js
 run test/plugin.test.js
 run test/process-tree.test.js
+
+# native-once rewrites `process.resourcesPath`, which Electron makes read-only, so it runs on
+# plain Node instead of on the desktop executable.
+node --test "$here/test/native-once.test.js" >/dev/null || failed=1
 
 if [ "$failed" -ne 0 ]; then
   echo ""

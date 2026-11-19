@@ -170,38 +170,42 @@ export function reduceMouse(state, sample) {
 }
 
 /**
- * Geometry of the horizontal action menu, in device pixels. `scale` is monitor DPI / 96.
+ * Geometry of the horizontal action bar, in device pixels. `scale` is monitor DPI / 96.
  *
- * Five actions laid out vertically would be a tall column over the text being read; a single
- * horizontal strip stays out of the way. Each entry is a square tile with the icon above its
- * label, which is the shape a one-word action needs.
+ * One row, icon left of its label, item width derived from the label: the shape every
+ * selection toolbar on Windows uses (Doubao's included). A fixed tile width was the older
+ * icon-over-label grid; it wastes a row of height for one-word actions and reads as a dialog
+ * rather than a toolbar.
  *
- * A pointer-anchored menu needs no measure-then-place pass: every tile is a fixed size, so the
- * window size is known before it is shown and the first paint is already correct.
+ * `measure(label)` returns the label's pixel width with the font the bar paints with — the
+ * layout cannot be computed without it, so it is a parameter rather than a guess. The default
+ * estimate keeps this function pure for tests that only care about hit-testing.
  */
-export function menuLayout(count, scale = 1) {
-  const pad = Math.round(5 * scale)
+export function menuLayout(actions, scale = 1, measure = (label) => label.length * 7 * scale) {
+  const pad = Math.round(4 * scale)
   const gap = Math.round(2 * scale)
-  const tileW = Math.round(62 * scale)
-  const tileH = Math.round(52 * scale)
-  const iconTop = pad + Math.round(8 * scale)
-  const iconH = Math.round(20 * scale)
-  const labelTop = pad + Math.round(30 * scale)
+  const itemH = Math.round(30 * scale)
+  const itemPad = Math.round(9 * scale)
+  const iconW = Math.round(16 * scale)
+  const iconGap = Math.round(5 * scale)
   const items = []
-  for (let i = 0; i < count; i++) {
+  let x = pad
+  for (const action of actions) {
+    const labelW = Math.round(measure(action.label || ''))
+    const w = itemPad * 2 + iconW + iconGap + labelW
     items.push({
-      x: pad + i * (tileW + gap),
+      x,
       y: pad,
-      w: tileW,
-      h: tileH,
-      iconTop,
-      iconH,
-      labelTop,
+      w,
+      h: itemH,
+      icon: { left: x + itemPad, right: x + itemPad + iconW },
+      label: { left: x + itemPad + iconW + iconGap, right: x + w - itemPad },
     })
+    x += w + gap
   }
   return {
-    width: pad * 2 + count * tileW + Math.max(0, count - 1) * gap,
-    height: pad * 2 + tileH,
+    width: Math.max(pad * 2, x - gap + pad),
+    height: pad * 2 + itemH,
     pad,
     items,
   }

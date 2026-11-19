@@ -10,7 +10,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection } from './core.js'
+import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse } from './core.js'
 
 function loadKoffi() {
   // The Host runs from an asar; koffi's native binary is shipped unpacked beside it. Resolve
@@ -521,6 +521,13 @@ export function captureSelection() {
   // The clipboard sequence number only advances when something is actually put on the clipboard.
   // If it has not moved, the copy did not happen — there was no selection — and the clipboard's
   // current contents are the user's own, not ours to return.
+  //
+  // This wait blocks the Host's event loop, and the mouse hook is delivered through that same
+  // loop: for as long as it spins, the system's input chain waits behind this process. That is
+  // why callers must only reach here for a gesture that could have selected text — see the
+  // left-release branch in `installHook`.
+  // ponytail: sync spin of up to 220 ms; make the capture await instead of spin if it ever runs
+  // on more than a drag or a double-click.
   let ours = 0
   const until = Date.now() + 220
   while (Date.now() < until) {
@@ -650,28 +657,27 @@ export function createOverlay(handlers = {}) {
 
   function drawMenu(hdc) {
     const { width, height, items } = state.layout
-    roundRect(hdc, { left: 0, top: 0, right: width, bottom: height }, THEME.bg, THEME.border, Math.round(9 * state.dpi))
+    roundRect(hdc, { left: 0, top: 0, right: width, bottom: height }, THEME.bg, THEME.border, Math.round(10 * state.dpi))
     for (let i = 0; i < state.actions.length; i++) {
       const tile = items[i]
       const action = state.actions[i]
       if (i === state.hover) {
         const inset = Math.round(2 * state.dpi)
-        roundRect(hdc, { left: tile.x + inset, top: tile.y, right: tile.x + tile.w - inset, bottom: tile.y + tile.h },
+        roundRect(hdc, { left: tile.x + inset, top: tile.y + inset, right: tile.x + tile.w - inset, bottom: tile.y + tile.h - inset },
           THEME.hover, THEME.hover, Math.round(7 * state.dpi))
       }
-      // Icon on top: the icon face only carries glyphs, so a missing font degrades to blanks here
-      // rather than breaking the labels below.
+      // Icon and label share one row, icon first: that is the shape the user already knows from
+      // every other selection toolbar, and it keeps the bar one line tall.
       F.SelectObject(hdc, state.fontIcon)
-      F.SetTextColor(hdc, i === state.hover ? THEME.accent : THEME.dim)
+      F.SetTextColor(hdc, THEME.text)
       F.DrawTextW(hdc, String.fromCharCode(action.icon), -1,
-        { left: tile.x, top: tile.iconTop, right: tile.x + tile.w, bottom: tile.iconTop + tile.iconH },
+        { left: tile.icon.left, top: tile.y, right: tile.icon.right, bottom: tile.y + tile.h },
         DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
-      // Label underneath, centred in the tile.
       F.SelectObject(hdc, state.fontUI)
       F.SetTextColor(hdc, THEME.text)
       F.DrawTextW(hdc, action.label, -1,
-        { left: tile.x, top: tile.labelTop, right: tile.x + tile.w, bottom: tile.y + tile.h },
-        DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
+        { left: tile.label.left, top: tile.y, right: tile.label.right, bottom: tile.y + tile.h },
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
     }
   }
 
@@ -1046,15 +1052,30 @@ export function createOverlay(handlers = {}) {
 
   function installHook() {
     if (hook) return true
+    // Drag / multi-click bookkeeping for the left button. A click that neither travelled nor
+    // repeated cannot have selected anything, and priming it anyway costs a 220 ms clipboard
+    // wait — see `primeSelection`. The state machine is the same one the poll uses.
+    let pressState = null
     hookProc = koffi.register((code, wParam, lParam) => {
       if (code < 0) return F.CallNextHookEx(null, code, wParam, lParam)
+
+      // Mouse moves and wheel events are the overwhelming majority of what this hook sees, and
+      // they decide nothing. A low-level hook callback serializes the system's input pipeline, so
+      // anything spent here is felt as cursor stutter at 500–1000 Hz: leave through the cheapest
+      // possible path before touching lParam.
+      if (wParam !== WM_LBUTTONDOWN && wParam !== WM_LBUTTONUP
+        && wParam !== WM_RBUTTONDOWN && wParam !== WM_RBUTTONUP && wParam !== WM_MBUTTONDOWN) {
+        return F.CallNextHookEx(null, code, wParam, lParam)
+      }
+
+      const info = koffi.decode(lParam, 'MSLLHOOKSTRUCT')
+      const pt = { x: info.pt.x, y: info.pt.y }
+      const now = Date.now()
 
       // A click anywhere outside the popup dismisses it, the way every other menu behaves. The
       // click itself is NOT swallowed: the user aimed it at the application behind, and eating it
       // would make the first click after a menu feel broken.
       if (wParam === WM_LBUTTONDOWN || wParam === WM_RBUTTONDOWN || wParam === WM_MBUTTONDOWN) {
-        const info = koffi.decode(lParam, 'MSLLHOOKSTRUCT')
-        const pt = { x: info.pt.x, y: info.pt.y }
         if (!containsPoint(pt)) {
           if (state.mode !== 'hidden' && handlers.onDismiss) {
             try {
@@ -1067,27 +1088,31 @@ export function createOverlay(handlers = {}) {
           // A right-click on our own popup: close it rather than letting the hook fall through to
           // the right-click branch, which would open a second menu on top of this one.
           if (handlers.onDismiss) handlers.onDismiss()
-          suppressedAt = Date.now()
+          suppressedAt = now
           return 1
         }
       }
 
+      if (wParam === WM_LBUTTONDOWN) {
+        pressState = reduceMouse(pressState, { down: true, x: pt.x, y: pt.y, t: now }).state
+        return F.CallNextHookEx(null, code, wParam, lParam)
+      }
+
       // Observe left releases to keep the cached selection warm; these are never swallowed.
       //
+      // Only a gesture that could have selected something primes: a plain click places a caret,
+      // and priming it injected Ctrl+C and spun for the full 220 ms timeout on every ordinary
+      // click in every application — which blocks the message pump and is what made the whole
+      // desktop feel sticky.
+      //
       // Skipped over the DSH window: that surface is read by the page's own `getSelection()`, not
-      // by Ctrl+C, and priming there would fire a copy into a Chromium renderer that ignores it —
-      // costing a 220 ms busy-wait on every click the user makes in the app.
+      // by Ctrl+C, and priming there would fire a copy into a Chromium renderer that ignores it.
       if (wParam === WM_LBUTTONUP) {
-        if (!windowUnderPoint({ x: koffi.decode(lParam, 'MSLLHOOKSTRUCT').pt.x, y: koffi.decode(lParam, 'MSLLHOOKSTRUCT').pt.y })) {
-          primeSelection()
-        }
+        const { state: next, fire } = reduceMouse(pressState, { down: false, x: pt.x, y: pt.y, t: now })
+        pressState = next
+        if (fire && !windowUnderPoint(pt)) primeSelection()
         return F.CallNextHookEx(null, code, wParam, lParam)
       }
-      if (wParam !== WM_RBUTTONDOWN && wParam !== WM_RBUTTONUP) {
-        return F.CallNextHookEx(null, code, wParam, lParam)
-      }
-      const info = koffi.decode(lParam, 'MSLLHOOKSTRUCT')
-      const pt = { x: info.pt.x, y: info.pt.y }
       // Never swallow a click aimed at our own popup, or the menu could not be dismissed.
       const own = containsPoint(pt)
       if (wParam === WM_RBUTTONDOWN && !own && handlers.onRightClick) {
@@ -1099,13 +1124,13 @@ export function createOverlay(handlers = {}) {
           swallow = false // a failing handler must not eat the user's right-click
         }
         if (swallow) {
-          suppressedAt = Date.now()
+          suppressedAt = now
           return 1
         }
       }
       // Swallow the matching release too: an up-event without its down-event makes some
       // applications open their menu anyway.
-      if (wParam === WM_RBUTTONUP && Date.now() - suppressedAt < 400) {
+      if (wParam === WM_RBUTTONUP && now - suppressedAt < 400) {
         suppressedAt = 0
         return 1
       }
@@ -1205,14 +1230,23 @@ export function createOverlay(handlers = {}) {
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
     },
     showMenu({ anchor, actions }) {
-      // Sizing is pure arithmetic, so the first paint is already correct: no measure-then-place
-      // pass and no frame at the wrong size.
+      // Item widths come from the labels, so the bar must be measured before it is shown: a
+      // guessed width would either clip a label or leave a gap that looks like a broken button.
       state.mode = 'menu'
       state.actions = actions
       state.hover = -1
       state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.bottom }
       state.textDirty = false
-      const layout = menuLayout(actions.length, state.dpi)
+      ensureWindow()
+      const hdc = F.CreateCompatibleDC(null)
+      const measure = (label) => {
+        F.SelectObject(hdc, state.fontUI)
+        const box = { left: 0, top: 0, right: 0, bottom: 0 }
+        F.DrawTextW(hdc, label, -1, box, DT_SINGLELINE | DT_CALCRECT | DT_NOPREFIX)
+        return box.right - box.left
+      }
+      const layout = menuLayout(actions, state.dpi, measure)
+      F.DeleteDC(hdc)
       state.layout = layout
       const pos = placeMenuAtSelection(anchor, layout, workAreaAt(anchor.left, anchor.top))
       showAt(layout.width, layout.height, pos.x, pos.y)

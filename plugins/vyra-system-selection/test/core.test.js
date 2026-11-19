@@ -114,12 +114,18 @@ test('searchQuery shortens a long selection at a sentence boundary', () => {
   assert.ok(query.endsWith('。'), `expected a sentence cut, got ${JSON.stringify(query)}`)
 })
 
-test('the menu layout places one tile per action and hit-tests them', () => {
-  const layout = menuLayout(5, 1)
-  assert.equal(layout.items.length, 5)
+test('the menu lays the actions out in one row, each as wide as its own label', () => {
+  const actions = [{ label: 'AI 搜索' }, { label: '翻译' }, { label: '总结' }]
+  // A deterministic stand-in for GDI measurement: wide labels make wide items.
+  const layout = menuLayout(actions, 1, (label) => label.length * 10)
+  assert.equal(layout.items.length, 3)
   for (const item of layout.items) {
+    assert.ok(item.label.left > item.icon.left, 'the icon sits left of its label')
     assert.equal(menuHitTest(layout, item.x + item.w / 2, item.y + item.h / 2), layout.items.indexOf(item))
   }
+  assert.ok(layout.items[0].w > layout.items[1].w, 'a longer label makes a wider item')
+  assert.ok(layout.items[1].x > layout.items[0].x + layout.items[0].w, 'items do not overlap')
+  assert.ok(layout.height < 48, 'one row, not an icon-over-label grid')
   assert.equal(menuHitTest(layout, -10, -10), -1)
 })
 

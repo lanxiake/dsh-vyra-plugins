@@ -75,6 +75,21 @@ window.__ModuleLoader__.load({
       knob: (on) => ({ position: 'absolute', top: '3px', left: on ? '21px' : '3px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left .15s' }),
     }
 
+    const ACTION_NAMES = { search: 'AI 搜索', translate: '翻译', summarize: '总结', explain: '解释', copy: '复制' }
+
+    /** One readable line about the last action, so a dead button reports itself. */
+    function describeRun(run) {
+      if (!run) return '还没有执行过动作。'
+      const name = ACTION_NAMES[run.action] || '动作'
+      const counts = run.counts
+        ? ` · 文本 ${run.counts.text} 段 / 思考 ${run.counts.reasoning} 段 / 其他 ${run.counts.other} 块`
+        : ''
+      if (run.error) return `${name}失败：${run.error}${counts}`
+      const seconds = Number.isFinite(run.ms) ? ` · ${(run.ms / 1000).toFixed(1)} 秒` : ''
+      const out = typeof run.answer === 'string' ? ` · 输出 ${run.answer.length} 字` : ''
+      return `${name} · ${run.provider || '?'} / ${run.model || '?'}${seconds}${out}${counts}`
+    }
+
     function Toggle({ on, onChange, label }) {
       return h('button', {
         type: 'button', style: S.toggle(on), onClick: () => onChange(!on),
@@ -211,6 +226,15 @@ window.__ModuleLoader__.load({
           [h('option', { key: '', value: '' }, defaultLabel)].concat(
             models.groups.flatMap((group) => group.models.map((m) =>
               h('option', { key: `${group.id}::${m.id}`, value: `${group.id}::${m.id}` }, `${group.name} / ${m.name}`)))))),
+
+        // What the last action actually did. Without it a dead button is indistinguishable from a
+        // model that answered with nothing, and the user has no log to show anyone.
+        h('div', { style: S.card },
+          h('div', { style: S.row },
+            h('div', null,
+              h('div', { style: S.label }, '最近一次调用'),
+              h('div', { style: S.hint }, describeRun(state.lastRun))),
+            h('button', { type: 'button', style: S.btn, disabled: busy, onClick: () => { setError(''); load() } }, '刷新'))),
         error ? h('div', { style: { ...S.hint, color: '#ff7b72' } }, error) : null)
     }
 
