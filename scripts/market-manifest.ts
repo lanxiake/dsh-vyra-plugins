@@ -696,6 +696,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.1.4 makes a bulk action end in the state it asked for: the batch is
+        // guarded by a ref instead of state, and after the orders run the
+        // market re-reads the profile and puts back any entry a concurrent
+        // writer stripped between two orders.
+        '0.1.4': {
+          publishTimestamp: 1795056212,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '8f63f5583d5c20fd54764be31dd656aae29a86b2',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
