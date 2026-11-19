@@ -49,13 +49,16 @@ test('a burst waits for the merge window, then the reply cooldown batches what f
   const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
   const queue = [msg('在吗', 100)]
   const prompts = []
+  const created = []
   const controller = {
-    create: async () => ({ sessionId: 'session-1' }),
+    create: async (request) => { created.push(request); return { sessionId: 'session-1' } },
     rename: async () => {},
     prompt: async (request) => { prompts.push(request.content[0].text) },
   }
   const watcher = createWatcher({
+    getWorkspace: async () => 'workspace-pc-wechat',
     callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: true, db_ok: true, deps: { ok: true } }
       if (tool === 'list_accounts') return { active: 'wxid_1', accounts: [{ wxid: 'wxid_1' }] }
       if (tool === 'poll_new') {
         const messages = queue.splice(0)
@@ -76,6 +79,7 @@ test('a burst waits for the merge window, then the reply cooldown batches what f
     assert.match(prompts[0], /在吗/)
     assert.match(prompts[0], /dry_run=false/)
     assert.match(prompts[0], /talker="friend"/)
+    assert.deepEqual(created[0], { workspaceId: 'workspace-pc-wechat' })
 
     // A second message arrives after the first batch was delivered and the agent replied.
     queue.push(msg('还在吗', 101))
@@ -91,6 +95,33 @@ test('a burst waits for the merge window, then the reply cooldown batches what f
   }
 })
 
+test('a closed WeChat is reported and polling stops', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
+  let polls = 0
+  const watcher = createWatcher({
+    callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: false, ok: false, reason: '微信没运行' }
+      if (tool === 'poll_new') { polls += 1; return { messages: [], next_since_ts: 0 } }
+      return {}
+    },
+    readPolicy: async () => ({ rules: { enabled: true } }),
+    restoreAccount: async () => {},
+    getController: () => ({ create: async () => ({ sessionId: 's' }), prompt: async () => {} }),
+    statePath: join(dir, 'watch.json'),
+    config: { watchSeconds: 0.02, mergeWindowSeconds: 0.05, replyTimeoutSeconds: 1 },
+  })
+  try {
+    watcher.start()
+    await waitFor(() => watcher.status().lastError !== '')
+    await sleep(80)
+    assert.match(watcher.status().lastError, /微信未运行/)
+    assert.equal(polls, 0, 'polling must not run while WeChat is closed')
+  } finally {
+    watcher.stop()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('notify peers are recorded but never wake the model', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
   const prompts = []
@@ -98,6 +129,7 @@ test('notify peers are recorded but never wake the model', async () => {
   let delivered = false
   const watcher = createWatcher({
     callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: true, db_ok: true, deps: { ok: true } }
       if (tool === 'list_accounts') return { active: 'wxid_1', accounts: [{ wxid: 'wxid_1' }] }
       if (tool === 'poll_new') {
         if (delivered) return { messages: [], next_since_ts: 100 }

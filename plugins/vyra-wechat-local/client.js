@@ -624,6 +624,7 @@ window.__ModuleLoader__.load({
               primary: active.toLowerCase() === account.wxid.toLowerCase(),
               onClick: () => switchAccount(account.wxid),
               disabled: loading,
+              title: '每个微信号独立配置名单与档位',
             }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
               h(Avatar, { account: account.wxid, talker: account.wxid, name: accountName(account.wxid) || account.wxid, size: 18 }),
               (() => {
@@ -642,21 +643,29 @@ window.__ModuleLoader__.load({
               options: DEFAULT_MODE_OPTIONS,
               onChange: (event) => mutateCurrent((draft) => ({ ...draft, defaultMode: event.target.value })),
               disabled: loading,
+              title: '名单外的人不叫模型；只能不处理或只提醒。',
             })),
           touched.has(active.toLowerCase())
-            ? h(Button, { quiet: true, onClick: resetAccount, disabled: loading }, '清空这个号的名单')
+            ? h(Button, {
+              quiet: true,
+              onClick: resetAccount,
+              disabled: loading,
+              title: '清空这个账号的名单与档位',
+            }, '清空这个号的名单')
             : null),
-
-        h('p', { style: S.hint },
-          '每个微信号一个页签，名单与档位各配各的（工作号只提醒、生活号直接代回）。',
-          '名单外的人一律不叫模型——最多弹条通知。配置保存在侧车，保存后即启用。'),
 
         h('div', { style: S.divider },
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
-            h('span', { style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' } },
-              `谁可以被代回（${current.rows.length}）`),
+            h('span', {
+              style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' },
+              title: '只对当前账号生效；名单外的人不叫模型。',
+            }, `谁可以被代回（${current.rows.length}）`),
             active ? h('span', { style: S.badge }, `当前：${accountName(active) || active}`) : null,
-            h(Button, { onClick: openPicker, disabled: loading }, pickerOpen ? '收起' : '从微信里挑人')),
+            h(Button, {
+              onClick: openPicker,
+              disabled: loading,
+              title: '从微信通讯录挑人，勾选后加入名单',
+            }, pickerOpen ? '收起' : '从微信里挑人')),
             current.rows.length > 0
               ? h(Button, {
                 quiet: true,
@@ -664,7 +673,6 @@ window.__ModuleLoader__.load({
                 disabled: loading,
               }, checked.size === current.rows.length ? '取消全选' : `全选（${current.rows.length}）`)
               : null,
-            h('span', { style: S.hint }, '挑完记得点下面的「保存」'),
 
           pickerOpen
             ? h('div', { style: S.panel },
@@ -716,7 +724,7 @@ window.__ModuleLoader__.load({
 
           h('div', { style: S.list },
             current.rows.length === 0
-              ? h('div', { style: S.hint }, '名单还是空的。点上面的「从微信里挑人」，勾选允许助手代聊的好友——名单外的人一律不动。')
+              ? h('div', { style: S.hint }, '名单为空。点「从微信里挑人」加入允许代回的好友。')
               : current.rows.map((row) => {
                 const patch = (next) => setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, ...next } : item)))
                 const group = isGroupId(row.id)
@@ -735,11 +743,13 @@ window.__ModuleLoader__.load({
                         value: row.mode,
                         options: MODE_OPTIONS,
                         onChange: (event) => patch({ mode: event.target.value }),
+                        title: '直接代回 / 起草确认 / 只提醒 / 黑名单',
                       })),
                     h('div', { style: { flex: '0 1 120px', minWidth: 108 } },
                       h('span', { style: S.label }, '冷却（秒）'),
                       h(TextInput, {
                         'aria-label': `${nameOf(row)} 的冷却秒数`,
+                        title: '同一人两次自动动作的最小间隔；留空按 60 秒。',
                         value: row.cooldownSeconds,
                         placeholder: '60',
                         onChange: (event) => patch({ cooldownSeconds: event.target.value }),
@@ -750,6 +760,7 @@ window.__ModuleLoader__.load({
                         value: row.trigger,
                         options: group ? TRIGGER_OPTIONS : PRIVATE_TRIGGER_OPTIONS,
                         onChange: (event) => patch({ trigger: event.target.value }),
+                        title: '不满足条件的消息不叫模型。',
                       })),
                     needsKeywords
                       ? h('div', { style: { flex: '1 1 100%' } },
@@ -764,14 +775,7 @@ window.__ModuleLoader__.load({
                 )
               })),
 
-          h('div', { style: { ...S.explanation, marginTop: '10px' } },
-            h('div', null,
-              h('strong', null, '怎么处理'), '：',
-              '直接代回 用你的口吻直接回；起草给我确认 先写好放进那个会话等你点头；只提醒我 不叫模型、只弹通知；不处理 当没看见。'),
-            h('div', null,
-              h('strong', null, '什么消息才惊动助手'), '：不满足条件的消息不叫模型（只有「只提醒我」那档照旧提醒）。'),
-            h('div', null,
-              h('strong', null, '冷却'), '：同一个人两次自动动作至少隔多少秒（留空按 60）。'))))
+        ))
     }
 
     // ---------------------------------------------------------------------------
@@ -853,13 +857,18 @@ window.__ModuleLoader__.load({
           h('div', { style: S.row },
             h('span', { style: S.icon }, h(WechatMark)),
             h('div', { style: S.text },
-              h('div', { style: S.name }, 'PC微信'),
+              h('div', {
+                style: S.name,
+                title: '以你本人身份，跟这台电脑上登录的微信好友说话。',
+              }, 'PC微信'),
               h('div', { style: S.descRow },
-                h('span', { style: S.description }, '以你本人身份，跟你微信里的好友说话'),
                 h('span', { style: S.capability }, '只对名单里的人'))),
             h(StatusPill, { tone, label }),
             h('div', { style: S.actions },
-              h(Button, { onClick: () => setOpen(true) }, '配置'))),
+              h(Button, {
+                onClick: () => setOpen(true),
+                title: '按人设置：直接代回 / 起草确认 / 只提醒 / 黑名单',
+              }, '配置'))),
 
           error
             ? h('div', { style: S.error }, error)
@@ -868,52 +877,88 @@ window.__ModuleLoader__.load({
           h('dl', { style: S.meta },
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '助手'),
-              h('dd', { style: S.metaValue }, status?.version ? `PC微信侧车 v${status.version}` : 'PC微信侧车')),
+              h('dd', {
+                style: S.metaValue,
+                title: '本地 Python 侧车版本；「状态信息」里有依赖与自检。',
+              }, status?.version ? `v${status.version}` : '侧车')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '在线'),
-              h('dd', { style: S.metaValue }, connected ? 'PC微信已就绪' : env?.reason || status?.error || '检测中…')),
+              h('dd', {
+                style: S.metaValue,
+                title: watch?.lastError || env?.reason || status?.error || '',
+              }, connected ? '已就绪' : '未就绪')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '可代回'),
-              h('dd', { style: S.metaValue },
+              h('dd', {
+                style: S.metaValue,
+                title: detail.summary,
+              },
                 (detail.sendable.length === 0 ? '还没有人' : `${detail.sendable.length} 人`)
                 + (accountCount > 1 ? ` · ${accountCount} 个号` : ''))),
             h('div', { style: S.metaItem },
-              h('dt', { style: S.metaLabel }, '名单外的人'),
-              h('dd', { style: S.metaValue }, MODE_LABELS.get(detail.defaultMode) ?? detail.defaultMode)),
+              h('dt', { style: S.metaLabel }, '名单外'),
+              h('dd', {
+                style: S.metaValue,
+                title: '名单外的人不叫模型；只能「不处理」或「只提醒」。',
+              }, MODE_LABELS.get(detail.defaultMode) ?? detail.defaultMode)),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '监听'),
-              h('dd', { style: S.metaValue },
+              h('dd', {
+                style: S.metaValue,
+                title: `每 ${watch?.pollSeconds ?? 2}s 检查；合并窗口 ${watch?.mergeWindowSeconds ?? 20}s；回复后按名单冷却。`,
+              },
                 watch === undefined
                   ? '未启动'
-                  : watch.enabled === false ? '已关闭' : watch.running ? `运行中 · 每 ${watch.pollSeconds}s` : '已暂停'))),
+                  : watch.enabled === false ? '已关闭' : watch.running ? '运行中' : '已暂停'))),
 
           h('div', { style: S.children },
-            h('p', { style: S.summary }, detail.summary),
-            h('p', { style: { ...S.hint, margin: 0 } },
-              '点「配置」按人设置：直接代回 / 起草给我确认 / 只提醒我 / 黑名单。',
-              '环境与工具状态在「状态信息」页。'),
-
             h('div', { style: S.divider },
               h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
-                h('span', { style: S.chipsLabel },
-                  `实时监听：${watch?.enabled === false ? '已关闭' : watch?.running ? '运行中' : '已暂停'} · 合并窗口 ${watch?.mergeWindowSeconds ?? 20}s · 回复后按名单冷却`),
+                h('span', {
+                  style: S.chipsLabel,
+                  title: `合并窗口 ${watch?.mergeWindowSeconds ?? 20}s；同一个人再来消息会重新计时；回复后按名单冷却。`,
+                }, watch?.enabled === false ? '实时监听已关闭' : watch?.running ? '实时监听中' : '实时监听已暂停'),
                 h('span', { style: { display: 'flex', gap: '6px' } },
-                  h(Button, { quiet: true, onClick: () => void watchAction('watch.tick') }, '立即检查'),
+                  h(Button, {
+                    quiet: true,
+                    onClick: () => void watchAction('watch.tick'),
+                    title: '立即执行一次检查和交付',
+                  }, '立即检查'),
                   h(Button, {
                     onClick: () => void watchAction(watch?.running ? 'watch.stop' : 'watch.start'),
                     disabled: watch?.enabled === false,
+                    title: '暂停/继续轮询新消息',
                   }, watch?.enabled === false ? '监听已关闭' : watch?.running ? '暂停监听' : '开始监听'))),
-              watch?.lastError ? h('p', { style: S.note }, watch.lastError) : null,
+              watch?.lastError
+                ? h('p', {
+                  style: { ...S.note, color: 'var(--dsw-alias-state-error-primary, #d1242f)' },
+                }, watch.lastError)
+                : null,
               watch?.pending?.length
-                ? h('div', { style: S.hint },
-                  `等待合并：${watch.pending.map((peer) => `${peer.key.split('|')[1]} ${peer.count} 条`).join('，')}`)
+                ? h('div', { style: S.hint, title: '每条会话独立合并；冷却结束后整批交付给 Agent。' },
+                  watch.pending.map((peer) => {
+                    const talker = peer.key.split('|')[1]
+                    const now = Date.now()
+                    const cooling = Number(peer.cooldownUntil) > now
+                    const waiting = Number(peer.awaitingUntil) > now
+                    const timing = cooling
+                      ? `冷却中 ${Math.max(1, Math.ceil((peer.cooldownUntil - now) / 1000))}s`
+                      : waiting ? '等回复' : '合并中'
+                    return `${talker} · ${peer.count} 条 · ${timing}`
+                  }).join('，'))
+                : null,
+              watch?.lastDelivery
+                ? h('div', {
+                  style: { ...S.chipsLabel, cursor: 'default' },
+                  title: `会话 ${watch.lastDelivery.sessionId}`,
+                }, `最近交付：${watch.lastDelivery.name} · ${watch.lastDelivery.count} 条 · ${new Date(watch.lastDelivery.at).toLocaleTimeString()}`)
                 : null,
               notifications.length > 0
-                ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: '3px' } },
-                  h('div', { style: S.chipsLabel }, `最近提醒 · ${notifications.length}`),
+                ? h('details', { style: S.chipsLabel },
+                  h('summary', null, `最近提醒 · ${notifications.length}`),
                   notifications.slice(0, 8).map((item, index) => h('div', {
                     key: index,
-                    style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere' },
+                    style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere', marginTop: '3px' },
                   }, `${item.name} · ${new Date(item.ts * 1000).toLocaleTimeString()} · ${item.text}`)))
                 : null))),
 
@@ -1116,10 +1161,10 @@ window.__ModuleLoader__.load({
     function WechatPage() {
       const [tab, setTab] = useState('policy')
       return h('div', { 'data-wechat-local-ui': '', style: S.page },
-        h('div', null,
-          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, 'PC微信'),
-          h('p', { style: { ...S.hint, margin: 0 } },
-            '用这台电脑上登录的微信读写消息；在这里配置回复策略、查看运行状态。')),
+        h('h2', {
+          style: { fontSize: '18px', fontWeight: 600, margin: '0' },
+          title: '用这台电脑上登录的微信读写消息。',
+        }, 'PC微信'),
         h('div', {
           style: {
             display: 'flex',

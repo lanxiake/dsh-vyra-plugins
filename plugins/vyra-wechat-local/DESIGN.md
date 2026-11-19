@@ -270,12 +270,19 @@ Host 每 `watchSeconds`（默认 2s）对每个账号调 `poll_new`，按**该�
    `cooldown_seconds`（默认 60s）进入冷却；冷却期内到达的消息合并成一批，冷却结束时整批交付；
 4. 用户自己从手机回复（`from_me` 且非 `agent_sent`）→ 清空该会话的待办，避免抢答。
 
-**交给 Agent 的方式**：每个 peer 一个 DSH 会话（标题「微信 · 名字」），用
-`ctx.sessionController.create/prompt` 投递合并后的消息。提示词包含 talker/account、策略与
-`send_text(..., dry_run=false)` 的调用要求；`draft` 策略只要求写草稿，不调用发送工具。
-Agent 的发送经过本插件的工具，Host 因此能观察到成功发送并启动冷却。
+**交给 Agent 的方式**：每个 peer 一个 DSH 会话（标题「PC微信 · 名字」），用
+`ctx.sessionController.create/prompt` 投递合并后的消息。会话建在专用的 **PC微信**
+workspace（`~/.dsh/wechat-local/workspace`）里，会话列表按 workspace 分组，不会和
+项目会话混在一起。提示词包含 talker/account、策略与 `send_text(..., dry_run=false)`
+的调用要求；`draft` 策略只要求写草稿，不调用发送工具。Agent 的发送经过本插件的工具，
+Host 因此能观察到成功发送并启动冷却。
 
-监听状态、待合并数量、最近提醒通过设置页 RPC 暴露；`watch: false` 可关闭整条监听。
+**连接监测**：监听启动时和之后每 60 秒（异常时每 10 秒）跑一次 `check_env`。微信没运行、
+数据目录找不到或依赖缺失时，直接把可操作的错误写进 `watch.lastError` 并暂停轮询——
+不会静默空转；微信恢复后自动继续。
+
+监听状态、待合并数量、冷却倒计时、最近交付与最近提醒通过设置页 RPC 暴露；
+`watch: false` 可关闭整条监听。
 
 | 配置 | 默认 | 含义 |
 |---|---|---|

@@ -13,7 +13,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createBatchScheduler } from './batch.js'
 
-const STATE_VERSION = 1
+const STATE_VERSION = 2
 const MAX_NOTIFICATIONS = 100
 
 function stateFile() {
@@ -180,7 +180,7 @@ function promptFor(peer, batch, decision) {
  * @param {object} [options.config]
  * @param {(line: string) => void} [options.log]
  */
-export function createWatcher({ callJson, readPolicy, restoreAccount, getController, config = {}, log = () => {}, statePath = stateFile() }) {
+export function createWatcher({ callJson, readPolicy, restoreAccount, getController, getWorkspace = async () => '', config = {}, log = () => {}, statePath = stateFile() }) {
   const pollSeconds = Math.max(0.01, Number(config.watchSeconds) || 2)
   const mergeWindowMs = Math.max(1, Number(config.mergeWindowSeconds) * 1000 || 20_000)
   const replyTimeoutMs = Math.max(1, Number(config.replyTimeoutSeconds) * 1000 || 120_000)
@@ -188,6 +188,13 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
   const enabled = config.watch !== false
 
   const state = readState(statePath)
+  // Version 2 groups sessions under the PC微信 workspace. Sessions created before
+  // that have a different cwd and cannot be attached, so start fresh per peer; the
+  // old sessions stay in the list for the user to archive.
+  if (Number(state.version) < 2) {
+    state.sessions = {}
+    state.lastDelivery = null
+  }
   state.version = STATE_VERSION
   state.cursors = state.cursors ?? {}
   state.sessions = state.sessions ?? {}
@@ -207,6 +214,8 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
   let ticking = false
   let lastTickAt = 0
   let lastError = ''
+  let lastDelivery = state.lastDelivery ?? null
+  let connection = { at: 0, ok: true }
 
   function save() {
     state.peers = scheduler.snapshot()
@@ -238,7 +247,8 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     if (existing) return existing
     const controller = getController()
     if (!controller) throw new Error('DSH 会话服务不可用')
-    const created = await controller.create({})
+    const workspaceId = await Promise.resolve(getWorkspace()).catch(() => '')
+    const created = await controller.create(workspaceId ? { workspaceId } : {})
     state.sessions[key] = created.sessionId
     save()
     try {
@@ -273,6 +283,15 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       // delivery. An auto reply starts it when send_text actually succeeds.
       if (decision.mode === 'draft') scheduler.reply(key)
       lastError = ''
+      lastDelivery = {
+        at: Date.now(),
+        sessionId,
+        name: peer.name || peer.talker,
+        talker: peer.talker,
+        count: batch.length,
+        mode: decision.mode,
+      }
+      state.lastDelivery = lastDelivery
       log(`watch: delivered ${batch.length} message(s) from ${peer.name || peer.talker} to ${sessionId}`)
     } catch (error) {
       // A deleted session is re-created on the next batch; keep the messages queued.
@@ -344,11 +363,44 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     }
   }
 
+  /**
+   * Watch the WeChat connection itself, not just messages: a closed WeChat or a
+   * missing data directory is a user-actionable error, not a silent empty poll.
+   */
+  async function checkConnection(force = false) {
+    const ttl = connection.ok ? 60_000 : 10_000
+    if (!force && Date.now() - connection.at < ttl) return connection.ok
+    connection = { at: Date.now(), ok: true }
+    try {
+      const env = await callJson('check_env')
+      if (env?.weixin_running !== true) {
+        connection.ok = false
+        lastError = '微信未运行：请打开并登录微信'
+      } else if (env?.db_ok !== true) {
+        connection.ok = false
+        lastError = '找不到微信数据目录：确认微信已登录'
+      } else if (env?.deps?.ok !== true) {
+        connection.ok = false
+        lastError = '缺少依赖：需要 pycryptodome 与 zstandard'
+      } else if (/微信未运行|数据目录|缺少依赖/.test(lastError)) {
+        lastError = ''
+      }
+    } catch (error) {
+      connection.ok = false
+      lastError = `读取微信环境失败：${String(error?.message ?? error)}`
+    }
+    return connection.ok
+  }
+
   async function tick(force = false) {
     if ((!running && !force) || ticking) return
     ticking = true
     lastTickAt = Date.now()
     try {
+      if (!(await checkConnection())) {
+        save()
+        return
+      }
       let accounts = []
       let activeBefore = ''
       try {
@@ -439,7 +491,15 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
         replyTimeoutSeconds: replyTimeoutMs / 1000,
         lastTickAt,
         lastError,
-        pending: scheduler.snapshot().map((peer) => ({ key: peer.key, count: peer.messages.length })),
+        connection,
+        lastDelivery,
+        pending: scheduler.snapshot().map((peer) => ({
+          key: peer.key,
+          count: peer.messages.length,
+          cooldownUntil: peer.cooldownUntil,
+          awaitingUntil: peer.awaitingUntil,
+          cooldownMs: peer.cooldownMs,
+        })),
         notifications: state.notifications.slice(0, 20),
       }
     },

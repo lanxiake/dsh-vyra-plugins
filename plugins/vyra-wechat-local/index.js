@@ -5,6 +5,8 @@
 // 设计见 DESIGN.md；工具白名单见 lib/tools.js。
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { homedir } from 'node:os'
+import { mkdirSync } from 'node:fs'
 import { createSidecar } from './lib/sidecar.js'
 import { resolveRuntime } from './lib/runtime.js'
 import { createToolRegistrar, TOOL_WHITELIST } from './lib/tools.js'
@@ -46,6 +48,32 @@ export function apply(ctx, config = {}) {
   ctx.inject(['sessionController'], (owner) => {
     sessionController = owner.sessionController
   })
+  let workspaceRegistry
+  ctx.inject(['workspaceRegistry'], (owner) => {
+    workspaceRegistry = owner.workspaceRegistry
+  })
+  let workspaceId = ''
+  let workspacePromise = null
+
+  /** Sessions created by the watch loop live in one "PC微信" workspace. */
+  function ensureWorkspace() {
+    if (workspaceId) return Promise.resolve(workspaceId)
+    if (workspaceRegistry === undefined) return Promise.resolve('')
+    if (workspacePromise === null) {
+      workspacePromise = (async () => {
+        const dir = join(homedir(), '.dsh', 'wechat-local', 'workspace')
+        mkdirSync(dir, { recursive: true })
+        const workspace = await workspaceRegistry.create(dir, 'PC微信')
+        workspaceId = workspace.id
+        return workspaceId
+      })().catch((err) => {
+        workspacePromise = null
+        log(`workspace unavailable: ${err?.message ?? err}`)
+        return ''
+      })
+    }
+    return workspacePromise
+  }
 
   const sidecar = createSidecar({ runtime, vendorDir, log })
   const avatarCache = new Map()
@@ -225,6 +253,7 @@ export function apply(ctx, config = {}) {
     readPolicy,
     restoreAccount: bindAccount,
     getController: () => sessionController,
+    getWorkspace: ensureWorkspace,
     config: {
       watch: config.watch !== false,
       watchSeconds: config.watchSeconds ?? 2,
