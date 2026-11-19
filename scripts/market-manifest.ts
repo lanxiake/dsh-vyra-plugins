@@ -815,6 +815,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.3.0 shows the signed-in account, adds an in-panel chat tab, picks
+        // shop items from a dropdown, scans installed skills for multi-select,
+        // and lets the panel bind an Agent preset.
+        '0.3.0': {
+          publishTimestamp: 1795074092,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6cf26ca9a09f5b40a48ce7d4795f7d437e481f6f',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
