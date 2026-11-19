@@ -1,9 +1,9 @@
 // Client half — two settings pages.
 //
-// "本机微信" is the reply policy, laid out like the local-WeChat channel card in the
+// "回复策略" is the reply policy, laid out like the local-WeChat channel card in the
 // Lumii client: the channel card summarises who may be answered, and its 配置 button
 // opens the per-person policy dialog (direct reply / draft / notify / blacklist).
-// "本机微信状态" is the environment card: sidecar state, check_env, repair, tool chips.
+// "状态信息" is the environment card: sidecar state, check_env, repair, tool chips.
 //
 // Everything stays inside the factory: plugin client bundles are concatenated into
 // classic scripts, which share one lexical scope, so a top-level `const` here would

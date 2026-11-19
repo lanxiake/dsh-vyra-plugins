@@ -242,7 +242,7 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     state.sessions[key] = created.sessionId
     save()
     try {
-      await controller.rename({ sessionId: created.sessionId, title: `微信 · ${peer.name || peer.talker}` })
+      await controller.rename({ sessionId: created.sessionId, title: `PC微信 · ${peer.name || peer.talker}` })
     } catch {
       // A deployment without the title service still gets a working session.
     }
