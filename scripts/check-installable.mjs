@@ -19,6 +19,7 @@
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { Script } from 'node:vm'
 
 /**
  * Package-manager hooks that run on the consumer's machine.
@@ -50,6 +51,8 @@ function clientOf(manifest) {
 
 const problems = []
 const failures = (name, what) => problems.push(`${name}: ${what}`)
+/** Client bundles in load order, for the shared-lexical-scope compile check. */
+const clientBundles = []
 
 for (const dir of readdirSync(join(root, 'plugins'))) {
   const packageRoot = join(root, 'plugins', dir)
@@ -79,6 +82,7 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
     const client = clientOf(manifest)
     if (client === undefined) failures(name, 'declares dsh.client but exports no "./client"')
     else if (!existsSync(at(client.replace(/^\.\//, '')))) failures(name, `"./client" "${client}" does not exist`)
+    else clientBundles.push({ name, file: client, text: readFileSync(at(client.replace(/^\.\//, '')), 'utf8') })
   }
 
   // Every literal entry `files` promises. A glob is checked by `npm pack`, not here.
@@ -102,6 +106,28 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
   })
   if (!existsSync(at(qr))) failures(name, `missing ${qr} (contact QR)`)
   else if (!shipsQr) failures(name, `files does not include ${qr}`)
+}
+
+// Every plugin client bundle executes as a classic script on the same page, so their
+// top-level lexical declarations (`const`, `let`, `class`) share ONE scope even when they
+// arrive in different batches. Two plugins that both declare `const RPC` therefore throw
+// "Identifier 'RPC' has already been declared" for every later bundle, and the loader
+// reports each as "loaded without registering". Compiling the concatenation reproduces
+// exactly that collision without a browser; wrap each bundle in an IIFE to keep its names
+// private, or move the declarations inside the factory.
+if (clientBundles.length > 0) {
+  try {
+    new Script(clientBundles.map((bundle) => `${bundle.text}\n;\n`).join(''))
+  } catch (error) {
+    const culprit = /Identifier '([^']+)' has already been declared/u.exec(String(error.message))?.[1]
+    const owners = culprit === undefined
+      ? clientBundles.map((bundle) => bundle.name).join(', ')
+      : clientBundles
+        .filter((bundle) => new RegExp(`\\b(?:const|let|class)\\s+${culprit}\\b`, 'u').test(bundle.text))
+        .map((bundle) => bundle.name)
+        .join(', ')
+    failures('client bundles', `do not compile together (${String(error.message)}); shared top-level name${culprit === undefined ? '' : ` "${culprit}"`}; wrap each bundle in an IIFE or move declarations inside the factory. Declared by: ${owners}`)
+  }
 }
 
 if (problems.length > 0) {

@@ -1,10 +1,13 @@
 // Client half: the settings page. All work is in the Host + Python sidecar; this page
 // only reports state and lets the user restart / run the environment self-check.
-const RPC = '/api/wechat-local/rpc'
-
+//
+// Everything stays inside the factory: plugin client bundles are concatenated into
+// classic scripts, which share one lexical scope, so a top-level `const` here would
+// collide with any other plugin that picked the same name.
 window.__ModuleLoader__.load({
   id: 'vyra-wechat-local',
   factory(require) {
+    const RPC = '/api/wechat-local/rpc'
     const React = require('react')
     const h = React.createElement
     const { useCallback, useEffect, useState } = React

@@ -1,5 +1,10 @@
 // Client half of vyra-system-selection: the settings page.
 //
+// Wrapped in an IIFE: plugin client bundles are concatenated into one classic script per
+// startup batch, so a top-level `const` here would share a lexical scope with every other
+// plugin and collide on any common name (two `const RPC` = SyntaxError, neither registers).
+;(() => {
+//
 // The feature itself lives entirely in the Host process — it reads other applications, which a
 // browser page cannot do. This half only configures it and reports whether it is alive.
 
@@ -12,7 +17,7 @@
  * handlers threw `ReferenceError: RPC is not defined` on their first line — before the fetch —
  * which is why selecting text opened nothing and the translate action never responded.
  */
-const RPC = '/api/system-selection/rpc'
+const SYSTEM_SELECTION_RPC = '/api/system-selection/rpc'
 
 window.__ModuleLoader__.load({
   id: 'vyra-system-selection',
@@ -22,7 +27,7 @@ window.__ModuleLoader__.load({
     const h = React.createElement
 
     async function call(op, value) {
-      const res = await fetch(RPC, {
+      const res = await fetch(SYSTEM_SELECTION_RPC, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'same-origin',
@@ -248,7 +253,7 @@ window.__ModuleLoader__.load({
 
         return () => { for (const d of disposers) d() }
       },
-      __internal: { SettingsBody, RPC, selectionFromDom },
+      __internal: { SettingsBody, SYSTEM_SELECTION_RPC, selectionFromDom },
     }
   },
 })
@@ -348,7 +353,7 @@ function installInAppSelection() {
     event.preventDefault()
     event.stopPropagation()
 
-    void fetch(RPC, {
+    void fetch(SYSTEM_SELECTION_RPC, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
@@ -402,7 +407,7 @@ function installInAppAutoSelect() {
     const picked = selectionFromDom(win, doc, event)
     if (!picked) return
 
-    void fetch(RPC, {
+    void fetch(SYSTEM_SELECTION_RPC, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       credentials: 'same-origin',
@@ -441,3 +446,4 @@ function reportInAppFailure(win, error) {
   doc.body.appendChild(note)
   win.setTimeout(() => note.remove(), 4000)
 }
+})()

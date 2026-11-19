@@ -43,13 +43,15 @@ test('the bundle registers under its package name', () => {
   assert.equal(typeof face.apply, 'function')
 })
 
-// The regression this file exists for: `RPC` was declared inside the factory while the
-// pointer/context-menu handlers are module-level, so both handlers threw on their first line —
-// before the fetch — and selecting text did nothing.
-test('the module-scope handlers can reach RPC', () => {
-  assert.match(SOURCE, /^const RPC = /m, 'RPC must be a module-level binding')
+// The regression this file exists for: the endpoint used to be declared inside the factory while
+// the pointer/context-menu handlers are module-level, so both handlers threw on their first line —
+// before the fetch — and selecting text did nothing. The name is package-prefixed and the whole
+// bundle is IIFE-wrapped so it cannot collide with another plugin's top-level constants, which
+// are concatenated into the same classic-script scope.
+test('the module-scope handlers can reach the RPC endpoint', () => {
+  assert.match(SOURCE, /^const SYSTEM_SELECTION_RPC = /m, 'the endpoint must be a module-scope binding')
   const factoryBody = SOURCE.slice(SOURCE.indexOf('factory(require) {'), SOURCE.indexOf('__internal:'))
-  assert.ok(!/const RPC = /.test(factoryBody), 'RPC must not be re-declared inside the factory')
+  assert.ok(!/const SYSTEM_SELECTION_RPC = /.test(factoryBody), 'the endpoint must not be re-declared inside the factory')
 })
 
 test('selectionFromDom rejects a collapsed or missing selection', () => {

@@ -1,6 +1,6 @@
 {
   "name": "vyra-system-selection",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "type": "module",
   "description": "系统级划词助手：在任何应用里划词，弹出原生工具条做 AI 搜索、翻译、总结、解释与复制。仅 Windows。",
   "exports": {
