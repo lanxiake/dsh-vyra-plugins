@@ -318,7 +318,11 @@ function apply(ctx, config = {}) {
         const domain = await storageDomain.open(toolUsageDomain);
         const table = domain.table(TABLE_NAME);
         durable = table;
-        const restored = table.get(SNAPSHOT_KEY) ?? table.get(LEGACY_KEY);
+        // Only the current key is read. The 0.1.x key is not consulted: a
+        // profile that once held both showed whichever record the code named
+        // rather than whichever had the history, and a stale record beside a
+        // live one is worse than no record at all.
+        const restored = table.get(SNAPSHOT_KEY);
         if (restored !== void 0) stats.restore(restored);
         scoped.effect(() => () => {
           void domain.close();
