@@ -442,6 +442,23 @@ export function apply(ctx, config = {}) {
         return authSnapshot()
       case 'shopItems':
         return cli.items(Number(body.limit) || 50)
+      case 'remoteOrders': {
+        const page = await cli.soldList(1, String(body.queryCode || 'ALL'))
+        const local = new Map(store.recentOrders(500).map((o) => [o.order_no, o]))
+        return {
+          total: page.total,
+          orders: (page.orders || []).map((o) => {
+            const l = local.get(o.order_no)
+            return {
+              ...o,
+              local_state: l ? l.state : '',
+              delivered: l ? l.delivered : 0,
+              fail_reason: l ? l.fail_reason : '',
+              updated_at: l ? l.updated_at : '',
+            }
+          }),
+        }
+      }
       case 'chats':
         return cli.chats(Number(body.fetchNum) || 50)
       case 'history':
