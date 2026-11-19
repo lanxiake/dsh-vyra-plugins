@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS ix_orders_state ON orders(state, updated_at);
 
+CREATE TABLE IF NOT EXISTS items (
+  item_id    TEXT PRIMARY KEY,
+  title      TEXT NOT NULL DEFAULT '',
+  knowledge  TEXT NOT NULL DEFAULT '',
+  skills     TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS deliveries (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   order_no   TEXT NOT NULL,
@@ -124,6 +132,18 @@ export function createStore(file) {
     listCards: db.prepare(
       'SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds FROM cards ORDER BY id',
     ),
+    getItem: db.prepare('SELECT * FROM items WHERE item_id = ?'),
+    lastItemForBuyer: db.prepare(
+      'SELECT item_id FROM orders WHERE buyer_id = ? ORDER BY updated_at DESC LIMIT 1',
+    ),
+    upsertItem: db.prepare(
+      `INSERT INTO items (item_id, title, knowledge, skills, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(item_id) DO UPDATE SET
+         title = excluded.title, knowledge = excluded.knowledge,
+         skills = excluded.skills, updated_at = datetime('now')`,
+    ),
+    listItems: db.prepare('SELECT * FROM items ORDER BY updated_at DESC'),
     countCards: db.prepare("SELECT COUNT(*) AS n FROM cards WHERE enabled = 1 AND content <> ''"),
   }
 
@@ -198,5 +218,15 @@ export function createStore(file) {
 
     listCards: () => q.listCards.all(),
     availableCards: () => q.countCards.get().n,
+
+    getItem: (itemId) => q.getItem.get(String(itemId)) ?? null,
+    lastItemForBuyer: (buyerId) => {
+      const row = q.lastItemForBuyer.get(String(buyerId))
+      return row ? row.item_id : ''
+    },
+    setItem({ itemId, title = '', knowledge = '', skills = '' }) {
+      q.upsertItem.run(String(itemId), title, knowledge, skills)
+    },
+    listItems: () => q.listItems.all(),
   }
 }

@@ -167,6 +167,15 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
   }
 
   return {
+    // 实时监听命中订单号后调用：从待发货列表里取出这一单并处理。
+    async reconcile(orderNo) {
+      if (!orderNo || guard.isPaused?.()) return null
+      const page = await cli.soldList(1, 'NOT_SHIP')
+      const order = (page.orders ?? []).find((o) => o.order_no === String(orderNo))
+      if (!order) return { order: String(orderNo), skip: 'not_pending' }
+      return handleOrder(order)
+    },
+
     async tick() {
       if (ticking) return { skipped: true }
       if (guard.isPaused?.()) return { paused: true }

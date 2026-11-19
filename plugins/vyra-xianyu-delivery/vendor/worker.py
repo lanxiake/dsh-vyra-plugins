@@ -144,6 +144,20 @@ def status() -> dict[str, Any]:
     return {"unb": session.unb, "tracknick": session.tracknick, "valid": True}
 
 
+def history(cid: str, limit: int = 10) -> list[dict[str, Any]]:
+    from goofish_cli.commands.message.history import history as cli_history
+
+    return cli_history(cid, limit=limit)
+
+
+def watch() -> None:
+    """常驻 IM 监听，事件以 JSONL 写到 stdout（每行一个 JSON）。"""
+    from goofish_cli.commands.message.watch import watch as cli_watch
+
+    # cli_watch 内部自己写 stdout；不要外层再包 JSON。
+    cli_watch()
+
+
 def _emit(obj: dict[str, Any]) -> None:
     print(json.dumps(obj, ensure_ascii=False), flush=True)
 
@@ -231,6 +245,7 @@ COMMANDS = {
     "confirm": lambda a: confirm(a["orderId"], a.get("tradeText", "")),
     "send": lambda a: send(a.get("cid", "0"), a["toid"], a["text"], a.get("itemId", "")),
     "status": lambda a: status(),
+    "history": lambda a: history(a["cid"], int(a.get("limit", 10))),
 }
 
 
@@ -246,6 +261,16 @@ def main() -> None:
         # 流式事件，自己负责输出；不要外层再包一层 JSON。
         try:
             asyncio.run(_login_qr(int(args.get("timeout", 180))))
+        except Exception as e:  # noqa: BLE001
+            _emit({"event": "error", "message": str(e)})
+        return
+
+    if command == "watch":
+        # 常驻进程，事件行由 cli_watch 自己输出。
+        try:
+            watch()
+        except KeyboardInterrupt:
+            pass
         except Exception as e:  # noqa: BLE001
             _emit({"event": "error", "message": str(e)})
         return

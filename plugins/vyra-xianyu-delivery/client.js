@@ -128,6 +128,38 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function ItemsTab(props) {
+      const { items, draft, setDraft, saveItem, busy } = props
+      return h('div', null,
+        h('div', { style: S.card },
+          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '商品资料与回复技能'),
+          h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
+            h('div', null,
+              h('label', { style: S.label }, '商品 ID'),
+              h('input', { style: S.input, value: draft.itemId, onChange: (e) => setDraft({ ...draft, itemId: e.target.value }) })),
+            h('div', null,
+              h('label', { style: S.label }, '商品标题（可选）'),
+              h('input', { style: S.input, value: draft.title, onChange: (e) => setDraft({ ...draft, title: e.target.value }) }))),
+          h('label', { style: S.label }, '商品资料 / FAQ（AI 回复时会带上）'),
+          h('textarea', { style: S.area, value: draft.knowledge, onChange: (e) => setDraft({ ...draft, knowledge: e.target.value }) }),
+          h('label', { style: { ...S.label, marginTop: '10px' } }, '常用回复 / 技能（话术、政策、议价底线）'),
+          h('textarea', { style: S.area, value: draft.skills, onChange: (e) => setDraft({ ...draft, skills: e.target.value }) }),
+          h('div', { style: { marginTop: '10px' } },
+            h('button', { style: S.btn, onClick: saveItem, disabled: !!busy }, busy === 'item' ? '保存中…' : '保存'))),
+        items.length === 0
+          ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有商品资料')
+          : h('div', null,
+            h('div', { style: { ...S.row, ...S.th } },
+              h('span', null, '商品'), h('span', null, '标题'), h('span', null, '资料'), h('span', null, '技能'), h('span', null, '更新时间')),
+            items.map((it) =>
+              h('div', { key: it.item_id, style: S.row },
+                h('span', { style: S.mono }, it.item_id),
+                h('span', null, it.title || '-'),
+                h('span', null, it.knowledge ? `${it.knowledge.length} 字` : '-'),
+                h('span', null, it.skills ? `${it.skills.length} 字` : '-'),
+                h('span', { style: { fontSize: '12px', opacity: 0.8 } }, it.updated_at)))))
+    }
+
     function LoginDialog(props) {
       const { login, onClose } = props
       let body
@@ -156,6 +188,8 @@ window.__ModuleLoader__.load({
       const [orders, setOrders] = useState([])
       const [deliveries, setDeliveries] = useState([])
       const [cards, setCards] = useState([])
+      const [items, setItems] = useState([])
+      const [itemDraft, setItemDraft] = useState({ itemId: '', title: '', knowledge: '', skills: '' })
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
@@ -170,11 +204,13 @@ window.__ModuleLoader__.load({
             rpc({ op: 'orders', limit: 50 }),
             rpc({ op: 'deliveries', limit: 100 }),
             rpc({ op: 'cards' }),
+            rpc({ op: 'items' }),
           ])
           setStatus(results[0])
           setOrders(results[1])
           setDeliveries(results[2])
           setCards(results[3])
+          setItems(results[4])
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -228,6 +264,30 @@ window.__ModuleLoader__.load({
         }
       }
 
+      async function saveItem() {
+        if (!itemDraft.itemId.trim()) {
+          setNotice('商品 ID 必填')
+          return
+        }
+        setBusy('item')
+        setNotice('')
+        try {
+          await rpc({
+            op: 'setItem',
+            itemId: itemDraft.itemId.trim(),
+            title: itemDraft.title.trim(),
+            knowledge: itemDraft.knowledge,
+            skills: itemDraft.skills,
+          })
+          setNotice('商品资料已保存')
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
+
       async function openLogin() {
         setLoginOpen(true)
         setLogin({ state: 'starting' })
@@ -270,7 +330,7 @@ window.__ModuleLoader__.load({
       }, [loginOpen, refresh])
 
       const meta = status
-        ? `轮询 ${status.config.pollSeconds}s · 模式 ${status.config.mode} · 可用卡密 ${status.cards} 张`
+        ? `轮询 ${status.config.pollSeconds}s · 实时 ${status.watch ? '开' : '关'} · AI 客服 ${status.ai ? '开' : '关'} · 可用卡密 ${status.cards} 张`
         : '正在读取状态…'
 
       return h('div', { style: S.page },
@@ -283,11 +343,12 @@ window.__ModuleLoader__.load({
         error ? h('div', { style: S.err }, error) : null,
         notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null,
         h('div', { style: S.tabs },
-          ['orders', 'cards', 'deliveries'].map((k) =>
+          ['orders', 'cards', 'items', 'deliveries'].map((k) =>
             h('div', { key: k, style: S.tab(tab === k), onClick: () => setTab(k) },
-              { orders: '订单', cards: '卡券', deliveries: '发货记录' }[k]))),
+              { orders: '订单', cards: '卡券', items: '商品资料', deliveries: '发货记录' }[k]))),
         tab === 'orders' ? h(OrdersTab, { orders }) : null,
         tab === 'cards' ? h(CardsTab, { cards, draft, setDraft, addCard, busy }) : null,
+        tab === 'items' ? h(ItemsTab, { items, draft: itemDraft, setDraft: setItemDraft, saveItem, busy }) : null,
         tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
         loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null
       )

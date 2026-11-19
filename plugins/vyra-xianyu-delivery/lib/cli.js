@@ -48,5 +48,7 @@ export function createCli({
       run('send', { cid, toid, itemId, text }),
 
     status: () => run('status', {}),
+
+    history: (cid, limit = 10) => run('history', { cid, limit }),
   }
 }

@@ -7,3 +7,11 @@
         blockRefund: true
         blockZeroAmount: true
         sendIntervalMs: 60000
+        watchEnabled: true
+        ai:
+          enabled: false
+          baseUrl: 'https://api.deepseek.com/v1'
+          apiKey: ''
+          model: 'deepseek-chat'
+          cooldownSeconds: 8
+          maxRepliesPerChat: 8
