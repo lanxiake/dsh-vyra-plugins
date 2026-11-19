@@ -444,6 +444,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-ssh-terminal',
           },
         },
+        // 0.1.1 fixes the credential key grammar: a colon-separated key made the
+        // whole credentials document unparseable at the next Host start.
+        '0.1.1': {
+          publishTimestamp: 1795074249,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'c55e166864ba3d279b71eaeea4b2a75c9f756338',
+            path: 'plugins/vyra-ssh-terminal',
+          },
+        },
       },
       metadata: {
         category: 'integration',
