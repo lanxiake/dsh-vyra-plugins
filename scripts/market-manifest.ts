@@ -779,6 +779,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.5.0 transcribes voice and attaches images before delivery, sends a
+        // compact raw message instead of assistant prose, and gives new watch
+        // sessions the built-in 代聊模式 preset.
+        '0.5.0': {
+          publishTimestamp: 1795076698,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '7f634d515de374a3b67dafe5617943cb0d09d218',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
