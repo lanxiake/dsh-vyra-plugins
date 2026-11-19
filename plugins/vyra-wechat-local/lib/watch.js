@@ -13,7 +13,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createBatchScheduler } from './batch.js'
 
-const STATE_VERSION = 3
+const STATE_VERSION = 4
 const MAX_NOTIFICATIONS = 100
 
 function stateFile() {
@@ -157,7 +157,7 @@ function imageMediaType(buffer) {
  * @param {object} [options.config]
  * @param {(line: string) => void} [options.log]
  */
-export function createWatcher({ callJson, readPolicy, restoreAccount, getController, getWorkspace = async () => '', getPreset = async () => '', config = {}, log = () => {}, statePath = stateFile() }) {
+export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, config = {}, log = () => {}, statePath = stateFile() }) {
   const pollSeconds = Math.max(0.01, Number(config.watchSeconds) || 2)
   const mergeWindowMs = Math.max(1, Number(config.mergeWindowSeconds) * 1000 || 20_000)
   const replyTimeoutMs = Math.max(1, Number(config.replyTimeoutSeconds) * 1000 || 120_000)
@@ -168,8 +168,16 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
   const enabled = config.watch !== false
 
   const state = readState(statePath)
-  // Version 3 selects the built-in 代聊模式 preset for new sessions.
-  if (Number(state.version) < 3) {
+  // Version 4 moves the 代聊 persona from a global preset to a scoped prompt
+  // section; old peer sessions are archived and start fresh with it.
+  if (Number(state.version) < 4) {
+    for (const sessionId of Object.values(state.sessions ?? {})) {
+      try {
+        Promise.resolve(retireSession(sessionId)).catch(() => {})
+      } catch {
+        // Best-effort cleanup; the new session is unaffected.
+      }
+    }
     state.sessions = {}
     state.lastDelivery = null
   }
@@ -220,25 +228,22 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     save()
   }
 
-  async function ensureSession(key, peer) {
+  async function openSession(key, peer) {
     const existing = state.sessions[key]
-    if (existing) return existing
-    const controller = getController()
-    if (!controller) throw new Error('DSH 会话服务不可用')
-    const workspaceId = await Promise.resolve(getWorkspace()).catch(() => '')
-    const agentPreset = await Promise.resolve(getPreset()).catch(() => '')
-    const created = await controller.create({
-      ...(workspaceId ? { workspaceId } : {}),
-      ...(agentPreset ? { agentPreset } : {}),
-    })
-    state.sessions[key] = created.sessionId
+    if (existing) {
+      await ensureSession(existing)
+      return existing
+    }
+    const sessionId = await createSession(peer.name || peer.talker)
+    state.sessions[key] = sessionId
     save()
+    const controller = getController()
     try {
-      await controller.rename({ sessionId: created.sessionId, title: `PC微信 · ${peer.name || peer.talker}` })
+      await controller?.rename({ sessionId, title: `PC微信 · ${peer.name || peer.talker}` })
     } catch {
       // A deployment without the title service still gets a working session.
     }
-    return created.sessionId
+    return sessionId
   }
 
   /** Transcribe one voice message, downloading the model once when it is missing. */
@@ -294,32 +299,58 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
           ? `[语音] ${answer.text}`
           : `[语音，未能转写：${answer?.detail || answer?.hint || answer?.reason || '未知原因'}]`
       }
-      if (message.type === 3 && message.image_path) {
+      if (message.type === 3) {
         if (images.length >= maxImages) {
           message.text = `${message.text || '[图片]'}（图片未附加：单批最多 ${maxImages} 张）`
           continue
         }
-        try {
-          const buffer = readFileSync(message.image_path)
-          const mediaType = imageMediaType(buffer)
-          if (buffer.length === 0 || mediaType === '') {
-            message.text = `${message.text || '[图片]'}（图片读不到或格式不支持）`
-            continue
+        let buffer = null
+        let mediaType = ''
+        if (message.image_path) {
+          try {
+            const candidate = readFileSync(message.image_path)
+            if (candidate.length > 0) {
+              buffer = candidate
+              mediaType = imageMediaType(candidate)
+            }
+          } catch {
+            // fall through to read_image
           }
-          if (imageBytes + buffer.length > maxImageBytes) {
-            message.text = `${message.text || '[图片]'}（图片未附加：单批图片体积上限）`
-            continue
-          }
-          images.push({
-            type: 'image',
-            mediaType,
-            data: buffer.toString('base64'),
-            name: message.image_name || 'wechat-image',
-          })
-          imageBytes += buffer.length
-        } catch {
-          message.text = `${message.text || '[图片]'}（图片文件读不到）`
         }
+        if (buffer === null && typeof readImage === 'function') {
+          // poll_new only adds image_path when the decrypted file is already on
+          // disk; read_image resolves the message's local_id directly.
+          const answer = await readImage(
+            peer.account,
+            message.talker,
+            message.local_id,
+            message.ts,
+          ).catch(() => ({ image: null, text: '' }))
+          if (answer?.image) {
+            buffer = Buffer.from(answer.image.data, 'base64')
+            mediaType = answer.image.mediaType || imageMediaType(buffer)
+            if (answer.text) message.text = `${message.text || '[图片]'}（${answer.text}）`
+          }
+        }
+        if (buffer === null || buffer.length === 0) {
+          message.text = `${message.text || '[图片]'}（图片未能读取）`
+          continue
+        }
+        if (!mediaType) {
+          message.text = `${message.text || '[图片]'}（图片格式不支持）`
+          continue
+        }
+        if (imageBytes + buffer.length > maxImageBytes) {
+          message.text = `${message.text || '[图片]'}（图片未附加：单批图片体积上限）`
+          continue
+        }
+        images.push({
+          type: 'image',
+          mediaType,
+          data: buffer.toString('base64'),
+          name: message.image_name || 'wechat-image',
+        })
+        imageBytes += buffer.length
       }
       if (message.type === 43) {
         message.text = message.text === '[视频]' ? '[视频]' : `${message.text || '[视频]'}`
@@ -349,7 +380,7 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     }
     try {
       const prepared = await prepareBatch(peer, batch, decision)
-      const sessionId = await ensureSession(key, peer)
+      const sessionId = await openSession(key, peer)
       await controller.prompt({
         requestId: randomUUID(),
         sessionId,

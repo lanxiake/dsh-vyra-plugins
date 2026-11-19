@@ -271,16 +271,20 @@ Host 每 `watchSeconds`（默认 2s）对每个账号调 `poll_new`，按**该�
 4. 用户自己从手机回复（`from_me` 且非 `agent_sent`）→ 清空该会话的待办，避免抢答。
 
 **交给 Agent 的方式**：每个 peer 一个 DSH 会话（标题「PC微信 · 名字」），用
-`ctx.sessionController.create/prompt` 投递合并后的消息。会话建在专用的 **PC微信**
-workspace（`~/.dsh/wechat-local/workspace`）里，会话列表按 workspace 分组，不会和
-项目会话混在一起。新会话自动选择内置的 **代聊模式** 预设
-（`vyra-wechat-proxy`）：系统提示词写明 `send_text(..., dry_run=false)`、历史检索
-工具、图片/语音说明和回答规范，用户消息只保留一行紧凑元信息 + 原始消息正文。
+`ctx.agents.create/resume` + `ctx.sessionController.prompt` 投递合并后的消息。会话建在
+专用的 **PC微信** workspace（`~/.dsh/wechat-local/workspace`）里，会话列表按 workspace
+分组，不会和项目会话混在一起。每个会话在自己的作用域里注册 `vyra-wechat-proxy`
+系统提示段（`systemPrompt.section`）：写明 `send_text(..., dry_run=false)`、历史检索
+工具、图片/语音说明和回答规范。它是**会话级作用域**，不是全局预设，普通会话的预设列表
+里看不到它；旧版监听会话在升级时归档，新会话带这段提示。
 
-**媒体在交付前处理**：`poll_new` 已附带图片本地路径与语音 SILK 路径。Host 在
-prompt 前把图片读成原生 `image` 内容块；语音调用侧车的 `transcribe_voice`
-（本地 `pilk` + `sherpa-onnx` Paraformer，模型首次自动下载）写成 `[语音] 文字`。
-Agent 不需要额外调用 `read_image` 或转写工具。
+**媒体在交付前处理**：`poll_new` 已附带图片本地路径与语音 SILK 路径。Host 在 prompt 前
+把图片读成原生 `image` 内容块；本地没有 `image_path` 时调用本地的
+`wechat_image_fetch`——先读微信的已解码显示缓存
+（`cache/<月>/Message/<hash>/Bubble/<name>_b.dat`，WXGF 原图也能读），再退回附件
+`.dat`，密钥优先取 `~/.lumii/wechat-cache/image_key.json` 的账号键。语音调用侧车
+`transcribe_voice`（本地 `pilk` + `sherpa-onnx` Paraformer，模型首次自动下载）写成
+`[语音] 文字`。Agent 不需要额外调用 `read_image` 或转写工具。
 
 **连接监测**：监听启动时和之后每 60 秒（异常时每 10 秒）跑一次 `check_env`。微信没运行、
 数据目录找不到或依赖缺失时，直接把可操作的错误写进 `watch.lastError` 并暂停轮询——

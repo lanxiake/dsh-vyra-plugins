@@ -6,6 +6,7 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { createSidecar } from './lib/sidecar.js'
 import { resolveRuntime } from './lib/runtime.js'
@@ -52,36 +53,27 @@ export function apply(ctx, config = {}) {
   ctx.inject(['workspaceRegistry'], (owner) => {
     workspaceRegistry = owner.workspaceRegistry
   })
-  let workspaceId = ''
+  let workspace = null
   let workspacePromise = null
 
   /** Sessions created by the watch loop live in one "PC微信" workspace. */
   function ensureWorkspace() {
-    if (workspaceId) return Promise.resolve(workspaceId)
-    if (workspaceRegistry === undefined) return Promise.resolve('')
+    if (workspace !== null) return Promise.resolve(workspace)
+    if (workspaceRegistry === undefined) return Promise.resolve(null)
     if (workspacePromise === null) {
       workspacePromise = (async () => {
         const dir = join(homedir(), '.dsh', 'wechat-local', 'workspace')
         mkdirSync(dir, { recursive: true })
-        const workspace = await workspaceRegistry.create(dir, 'PC微信')
-        workspaceId = workspace.id
-        return workspaceId
+        workspace = await workspaceRegistry.create(dir, 'PC微信')
+        return workspace
       })().catch((err) => {
         workspacePromise = null
         log(`workspace unavailable: ${err?.message ?? err}`)
-        return ''
+        return null
       })
     }
     return workspacePromise
   }
-
-  let presetRegistry
-  ctx.inject(['agentPresets'], (owner) => {
-    presetRegistry = owner.agentPresets
-  })
-  let presetId = ''
-  let presetPromise = null
-  let presetDispose = null
 
   const WECHAT_PROXY_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。
 
@@ -97,31 +89,96 @@ export function apply(ctx, config = {}) {
 - 需要更多上下文时可以用 read_history / search_messages / list_sessions。
   图片和语音已经随消息提供，不要再调用 read_image 或转写工具。`
 
-  /** Register the built-in 代聊模式 preset once; watch sessions select it. */
-  function ensurePreset() {
-    if (presetId) return Promise.resolve(presetId)
-    if (presetRegistry === undefined) return Promise.resolve('')
-    if (presetPromise === null) {
-      presetPromise = presetRegistry.register({
-        id: 'vyra-wechat-proxy',
-        name: '代聊模式',
-        description: 'PC微信代聊：读取合并后的微信消息，按策略起草或直接回复',
-        plugins: [
-          { id: 'persona', name: '@deepseek-ai/dsh-persona', config: { prefix: WECHAT_PROXY_PROMPT } },
-          { id: 'agent-instructions', name: '@deepseek-ai/dsh-agent-instructions', config: { maxBytes: 65536 } },
-          { id: 'time-context', name: '@deepseek-ai/dsh-time-context' },
-        ],
-      }).then((dispose) => {
-        presetId = 'vyra-wechat-proxy'
-        presetDispose = dispose
-        return presetId
-      }).catch((err) => {
-        presetPromise = null
-        log(`preset unavailable: ${err?.message ?? err}`)
-        return ''
+  /**
+   * The watch sessions are scoped, not a global preset: each agent gets this
+   * persona-prefix section in its own context, so normal conversations never
+   * see or select 代聊模式.
+   */
+  const promptScopes = new WeakSet()
+
+  function installProxyPrompt(agentCtx) {
+    if (promptScopes.has(agentCtx)) return
+    promptScopes.add(agentCtx)
+    try {
+      agentCtx.systemPrompt.section({
+        // Unique name: a preset's own persona section must not shadow this one.
+        name: 'vyra-wechat-proxy',
+        order: 1,
+        text: WECHAT_PROXY_PROMPT,
       })
+    } catch (err) {
+      log(`proxy prompt section failed: ${err?.message ?? err}`)
     }
-    return presetPromise
+  }
+
+  function defaultAgentOptions() {
+    try {
+      const selection = ctx.agentDefaultModel?.currentSelection?.()
+      if (!selection?.provider || !selection?.model) return undefined
+      return {
+        provider: selection.provider,
+        model: selection.model,
+        ...(selection.reasoningEffort === undefined ? {} : { reasoningEffort: selection.reasoningEffort }),
+      }
+    } catch {
+      return undefined
+    }
+  }
+
+  const watchHandles = new Map()
+
+  /** Create one watch session in the PC微信 workspace with the scoped persona. */
+  async function createWatchSession() {
+    const ws = await ensureWorkspace()
+    const sessionId = randomUUID()
+    const selection = defaultAgentOptions()
+    const handle = await ctx.agents.create({
+      sessionId,
+      meta: { cwd: ws?.path ?? process.cwd() },
+      ...(selection === undefined ? {} : { agentOptions: selection }),
+      setup: (agentCtx) => installProxyPrompt(agentCtx),
+    })
+    watchHandles.set(sessionId, handle)
+    if (ws) {
+      try {
+        await ws.attachSession(sessionId)
+      } catch (err) {
+        log(`attach watch session failed: ${err?.message ?? err}`)
+      }
+    }
+    return sessionId
+  }
+
+  /** A cold watch session is resumed with the same scoped persona. */
+  async function ensureWatchSession(sessionId) {
+    const live = ctx.agents.get(sessionId)
+    if (live !== undefined) {
+      // The session controller may have resumed it on its own; add the persona
+      // to that live scope before the next step.
+      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx)
+      return
+    }
+    const selection = defaultAgentOptions()
+    const handle = await ctx.agents.resume({
+      resumeSessionId: sessionId,
+      ...(selection === undefined ? {} : { agentOptions: selection }),
+      setup: (agentCtx) => installProxyPrompt(agentCtx),
+    })
+    watchHandles.set(sessionId, handle)
+  }
+
+  /** Retire a pre-0.6 watch session: stop it if live and hide it from the list. */
+  async function retireWatchSession(sessionId) {
+    const handle = watchHandles.get(sessionId)
+    if (handle !== undefined) {
+      watchHandles.delete(sessionId)
+      await handle.dispose().catch(() => {})
+    }
+    try {
+      await workspaceRegistry?.archiveSession(sessionId, { stopActivity: true })
+    } catch (err) {
+      log(`retire watch session ${sessionId} failed: ${err?.message ?? err}`)
+    }
   }
 
   const sidecar = createSidecar({ runtime, vendorDir, log })
@@ -170,7 +227,8 @@ export function apply(ctx, config = {}) {
       disposed = true
       watcher?.stop()
       tools.dispose()
-      if (presetDispose) void presetDispose()
+      for (const handle of watchHandles.values()) void handle.dispose()
+      watchHandles.clear()
       void sidecar.stop()
     },
     'wechat-local.lifecycle',
@@ -303,8 +361,10 @@ export function apply(ctx, config = {}) {
     readPolicy,
     restoreAccount: bindAccount,
     getController: () => sessionController,
-    getWorkspace: ensureWorkspace,
-    getPreset: ensurePreset,
+    createSession: createWatchSession,
+    ensureSession: ensureWatchSession,
+    readImage,
+    retireSession: retireWatchSession,
     config: {
       watch: config.watch !== false,
       watchSeconds: config.watchSeconds ?? 2,
@@ -315,6 +375,39 @@ export function apply(ctx, config = {}) {
     log,
   })
   watcher.start()
+
+  /** Fetch one image message through the sidecar so the prompt can attach it. */
+  async function readImage(account, talker, local_id, ts) {
+    const args = {
+      talker,
+      ...(local_id === undefined ? {} : { local_id }),
+      ...(ts === undefined ? {} : { ts }),
+      ...(account ? { account } : {}),
+    }
+    try {
+      // Our tool reads the decoded display cache first, which handles WXGF
+      // originals the vendored read_image cannot return.
+      const answer = await callJson('wechat_image_fetch', args)
+      if (answer?.ok === true && typeof answer.data === 'string') {
+        return {
+          image: { mediaType: answer.mime || 'image/png', data: answer.data },
+          text: `${answer.source || 'image'} ${answer.bytes || ''}`.trim(),
+        }
+      }
+      // Fallback: the upstream reader for any layout our cache lookup missed.
+      const blocks = await sidecar.rawCall('read_image', args)
+      const image = blocks.find((block) => block?.type === 'image' && typeof block.data === 'string')
+      const text = blocks
+        .filter((block) => block?.type === 'text')
+        .map((block) => String(block.text ?? ''))
+        .join('\n')
+      return image
+        ? { image: { mediaType: image.mimeType || 'image/png', data: image.data }, text }
+        : { image: null, text: answer?.detail || text }
+    } catch (err) {
+      return { image: null, text: String(err?.message ?? err) }
+    }
+  }
 
   /** Contact avatars, cached as bytes for the settings page's `<img>` tags. */
   async function avatarOf(account, talker) {

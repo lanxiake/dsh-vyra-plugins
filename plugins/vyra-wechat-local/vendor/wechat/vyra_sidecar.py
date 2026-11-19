@@ -9,9 +9,11 @@ entry before entering its unchanged main loop.
 import app
 import sidecar
 import vyra_avatar
+import vyra_image
 import vyra_voice
 
 sidecar.DISPATCH.update(vyra_avatar.DISPATCH)
+sidecar.DISPATCH.update(vyra_image.DISPATCH)
 sidecar.DISPATCH.update(vyra_voice.DISPATCH)
 # The snapshot removed this tool because its dependencies were not bundled.
 # They are installed by uv now, and the Host needs it to pre-transcribe voice

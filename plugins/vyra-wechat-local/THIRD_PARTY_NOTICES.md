@@ -40,6 +40,9 @@ SOFTWARE.
 - `vendor/wechat/vyra_avatar.py`：从微信 `db_storage/head_image/head_image.db` 读联系人/群头像。
   用 `wechat_core._mirror` 已有的解密镜像，不新增解密路径。
 - `vendor/wechat/vyra_voice.py`：语音模型的下载/状态工具。
+- `vendor/wechat/vyra_image.py`：优先读取微信的已解码显示缓存
+  （`cache/<月>/Message/<hash>/Bubble/<name>_b.dat`），再退回附件的 `.dat`；
+  使用 `~/.lumii/wechat-cache/image_key.json` 里的账号级图片密钥。
 - `vendor/wechat/wechat_asr.py`：本仓库自己写的本地语音转写（MIT）。运行时依赖
   [`pilk`](https://pypi.org/project/pilk/)（SILK 解码）与
   [`sherpa-onnx`](https://github.com/k2-fsa/sherpa-onnx)（Apache-2.0），识别模型为
