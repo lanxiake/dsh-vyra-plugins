@@ -813,7 +813,7 @@ window.__ModuleLoader__.load({
 
       /** Load one page of a source, replacing the results it answers. */
       const loadRef = useRef(null)
-      const load = useCallback(async (url, next, offset, limit, fetchedAt, depth = 0) => {
+      const load = useCallback(async (url, next, offset, limit, fetchedAt, depth = 0, refresh = false) => {
         setListing((current) => ({
           url, query: next, status: 'loading',
           value: current !== null && current.url === url ? current.value : null, failure: null,
@@ -823,6 +823,10 @@ window.__ModuleLoader__.load({
           ...next.category === null ? {} : { category: next.category },
           sort: next.sort, offset, limit,
           ...fetchedAt === undefined ? {} : { fetchedAt },
+          // The Host reuses one index document for ten minutes unless a read says
+          // otherwise. The refresh button exists to see a just-published plugin,
+          // so it has to bypass that cache; without this it silently re-reads it.
+          ...refresh ? { refresh: true } : {},
         })
         if (!alive.current) return
         if (!answer.ok) {
@@ -1199,7 +1203,7 @@ window.__ModuleLoader__.load({
           h('button', {
             style: S.squareBtn, title: t('refresh'), 'aria-label': t('refresh'),
             disabled: busy || activeUrl === null,
-            onClick: () => { if (listing !== null) void load(listing.url, query, 0, PAGE, undefined) },
+            onClick: () => { if (listing !== null) void load(listing.url, query, 0, PAGE, undefined, 0, true) },
           }, h(RefreshIcon, {}))),
         categories.length === 0 ? null : h('div', { style: S.pills, role: 'group', 'aria-label': t('all') },
           h('button', {
@@ -1216,7 +1220,7 @@ window.__ModuleLoader__.load({
             : listing.status === 'error' ? h('div', { style: S.state },
               h('p', { style: S.error, role: 'alert' }, t('loadFailed')),
               h('p', { style: S.meta }, listing.failure),
-              h('button', { style: S.btn(false, false), onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined) } }, t('retry')))
+              h('button', { style: S.btn(false, false), onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined, 0, true) } }, t('retry')))
               : entries.length === 0 ? h('div', { style: S.state },
                 t(listing.status === 'loading' ? 'loading' : listing.query.text.trim() === '' && listing.query.category === null ? 'empty' : 'noMatch'))
                 : h('div', null,
