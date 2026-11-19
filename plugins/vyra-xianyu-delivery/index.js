@@ -581,9 +581,10 @@ export function apply(ctx, config = {}) {
         return listAgents()
       case 'settings':
         return {
-          agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
+          agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || '') || 'builtin',
           aiMode: String(cfg.ai?.mode || (dshAgent.available ? 'dsh' : 'api')),
           agentAvailable: dshAgent.available,
+          builtin: dshAgent.builtin,
         }
       case 'setSetting':
         store.setSetting(String(body.key || ''), String(body.value ?? ''))

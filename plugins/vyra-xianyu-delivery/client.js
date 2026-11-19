@@ -194,10 +194,10 @@ window.__ModuleLoader__.load({
               h('label', { style: S.label }, '绑定 Agent（Agent Manager 里创建的 preset；留空用 DSH 默认）'),
               h('select', {
                 style: S.input,
-                value: (settings && settings.agentPreset) || '',
+                value: (settings && settings.agentPreset) || 'builtin',
                 onChange: (e) => setAgentPreset(e.target.value),
               },
-                h('option', { value: '' }, '默认（不指定 preset）'),
+                h('option', { value: 'builtin' }, '内置客服（插件自带，默认）'),
                 agentList.map((a) => h('option', { key: a.id, value: a.id }, `${a.name}（${a.id}）`)))),
             h('div', { style: { ...S.muted, width: '220px' } },
               agentList.length === 0 ? '没有找到已创建的 Agent' : `${agentList.length} 个可用`))),

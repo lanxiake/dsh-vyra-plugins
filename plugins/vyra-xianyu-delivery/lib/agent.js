@@ -7,6 +7,9 @@ import { randomUUID } from 'node:crypto'
 
 const REPLY_TOOL = 'send_buyer_reply'
 
+/** 插件自带的客服 agent：不依赖 Agent Manager 里的 preset。 */
+export const BUILTIN_AGENT = 'builtin'
+
 function userMessage(text) {
   return {
     id: randomUUID(),
@@ -22,7 +25,11 @@ export function createDshAgent({ agents, config = {}, logger = () => {}, getPres
   const model = String(ai.model || '').trim()
   const timeoutMs = Number(ai.timeoutMs) || 90000
 
-  const currentPreset = () => String(getPreset?.() ?? ai.agentPreset ?? '').trim()
+  const currentPreset = () => {
+    const raw = String(getPreset?.() ?? ai.agentPreset ?? '').trim()
+    // "builtin" 表示用插件内置的客服 prompt，不传 agentPreset。
+    return raw === BUILTIN_AGENT ? '' : raw
+  }
 
   async function ask({ prompt, sessionKey }) {
     if (!agents?.create) throw new Error('DSH agents 服务不可用')
@@ -78,6 +85,9 @@ export function createDshAgent({ agents, config = {}, logger = () => {}, getPres
     available: Boolean(agents?.create),
     get agentPreset() {
       return currentPreset()
+    },
+    get builtin() {
+      return String(getPreset?.() ?? ai.agentPreset ?? '').trim() === BUILTIN_AGENT
     },
     provider,
     model,

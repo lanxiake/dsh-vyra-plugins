@@ -113,13 +113,15 @@ WS 事件（卡片/提示） → message history → 找 orderId → 立即发�
 ai:
   enabled: true
   mode: dsh            # dsh = DSH agent；api = 直连 OpenAI 兼容接口
-  agentPreset: 'customer-service'   # Agent Manager 里创建的 agent id，留空用默认
+  agentPreset: 'builtin'   # builtin = 插件内置客服；也可填 Agent Manager 里的 agent id
   provider: ''         # 留空用 profile 默认模型
   model: ''
   skillsDir: ''        # 默认 ~/.dsh/skills
   cooldownSeconds: 8
   maxRepliesPerChat: 8
 ```
+
+**内置客服 Agent**：默认使用插件自带的客服配置（角色、议价底线、发货/退款规则），不需要先在 Agent Manager 里创建任何东西。需要更定制化时，在 Agent Manager 建一个 preset，面板里选它即可。Agent 选择是全局的，所有账号共用同一个。
 
 买家发文本消息时，插件会：
 
