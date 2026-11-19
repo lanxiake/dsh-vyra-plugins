@@ -390,6 +390,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-skill-mcp-manager',
           },
         },
+        // 1.3.1 keeps only the QQ group text at the end of a preview.
+        '1.3.1': {
+          publishTimestamp: 1795067593,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '7f72ea171649065cef2c4efaae71b2d658e97834',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
       },
       metadata: {
         category: 'integration',
@@ -954,6 +964,17 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '575d1f707c56ae444e0b23fa32afe233a55724a8',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.1.8 reads the plugin's own README (repository.directory/README.md)
+        // and keeps only the QQ group text, no QR image.
+        '0.1.8': {
+          publishTimestamp: 1795067593,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '7f72ea171649065cef2c4efaae71b2d658e97834',
             path: 'plugins/vyra-plugin-market',
           },
         },
