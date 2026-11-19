@@ -680,6 +680,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.3.1 starts the draft cooldown at delivery, lets 立即检查 poll while
+        // paused, and polls only running accounts.
+        '0.3.1': {
+          publishTimestamp: 1795068385,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'cd84a027452f5d5bbf77a289090723a193b1622f',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
