@@ -750,6 +750,12 @@ window.__ModuleLoader__.load({
       const alive = useRef(true)
       useEffect(() => () => { alive.current = false }, [])
 
+      // One batch at a time. `running` below is state, so two presses landing
+      // before React re-renders would both pass its check and interleave two
+      // batches; a ref cannot be raced that way. It is released at the end of
+      // the run, and never on unmount because nothing is left to press.
+      const batch = useRef(false)
+
       /** Read the configured sources; an empty list adopts our own market. */
       const loadSources = useCallback(async (adopt) => {
         const answer = await remote.pluginMarket.listIndexes()
@@ -922,7 +928,8 @@ window.__ModuleLoader__.load({
        * @param {ReadonlyArray<object>} list - orders from {@link orders}.
        */
       const run = useCallback(async (list) => {
-        if (list.length === 0 || running !== null) return
+        if (list.length === 0 || batch.current) return
+        batch.current = true
         setOutcome(null)
         setConfirm(null)
         setFailures(new Map())
@@ -979,6 +986,53 @@ window.__ModuleLoader__.load({
           if (result.application === 'restart-required') restart += 1
           if ((result.pendingBuilds?.length ?? 0) > 0) builds += 1
         }
+        // A writer outside this batch — another tab, the Host's own plugin
+        // page, the third-party console's maintenance run — can rewrite
+        // `package.json` between two orders. The next pnpm run then prunes the
+        // package it no longer finds declared, so a batch silently loses a
+        // plugin it had just installed. Assert the state the batch meant to
+        // leave and put each lost entry back once; a second failure is
+        // reported like any other instead of retried forever.
+        if (alive.current) {
+          const kept = list.filter((order) => !failed.has(order.entry.name)
+            && order.action !== 'uninstall' && order.action !== 'disable')
+          if (kept.length > 0) {
+            const answer = await remote.pluginManager.listBundles()
+            if (answer.ok) {
+              const present = new Map(answer.value.map((bundle) => [bundle.name, bundle]))
+              let repaired = false
+              for (const order of kept) {
+                if (present.get(order.entry.name)?.enabled === true) continue
+                repaired = true
+                try {
+                  if (order.action === 'install' || order.action === 'update') {
+                    await remote.pluginManager.installBundle(order.version.install.spec, { enabled: true, saveExact: true })
+                  } else {
+                    await remote.pluginManager.setBundleEnabled(order.entry.name, true)
+                  }
+                } catch (error) {
+                  // Installed but switched off: re-enabling is all it needs.
+                  try { await remote.pluginManager.setBundleEnabled(order.entry.name, true) }
+                  catch (again) { failed.set(order.entry.name, String(again?.message ?? again)) }
+                }
+              }
+              // Only a second read tells whether the repair landed. A package
+              // that is back is not a failure, whatever the attempt said —
+              // `listBundles` omits plain dependencies, so an absence there is
+              // reported only when the re-enable that follows also failed.
+              if (repaired) {
+                const settled = await remote.pluginManager.listBundles()
+                if (settled.ok) {
+                  const now = new Map(settled.value.map((bundle) => [bundle.name, bundle]))
+                  for (const order of kept) {
+                    if (now.get(order.entry.name)?.enabled === true) failed.delete(order.entry.name)
+                  }
+                }
+              }
+            }
+          }
+        }
+        batch.current = false
         if (!alive.current) return
         setRunning(null)
         setPicked(new Set())
