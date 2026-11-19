@@ -1,6 +1,6 @@
 {
   "name": "vyra-xianyu-delivery",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "icon": "./icon.svg",
   "type": "module",
   "description": "闲鱼虚拟商品自动发货：轮询待发货订单，匹配卡密，确认发货并发送内容",

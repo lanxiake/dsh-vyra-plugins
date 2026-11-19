@@ -132,7 +132,7 @@ window.__ModuleLoader__.load({
       const { items, draft, setDraft, saveItem, busy } = props
       return h('div', null,
         h('div', { style: S.card },
-          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '商品资料与回复技能'),
+          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '商品绑定技能'),
           h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
             h('div', null,
               h('label', { style: S.label }, '商品 ID'),
@@ -140,24 +140,23 @@ window.__ModuleLoader__.load({
             h('div', null,
               h('label', { style: S.label }, '商品标题（可选）'),
               h('input', { style: S.input, value: draft.title, onChange: (e) => setDraft({ ...draft, title: e.target.value }) }))),
-          h('label', { style: S.label }, '商品资料 / FAQ（AI 回复时会带上）'),
-          h('textarea', { style: S.area, value: draft.knowledge, onChange: (e) => setDraft({ ...draft, knowledge: e.target.value }) }),
-          h('label', { style: { ...S.label, marginTop: '10px' } }, '常用回复 / 技能（话术、政策、议价底线）'),
-          h('textarea', { style: S.area, value: draft.skills, onChange: (e) => setDraft({ ...draft, skills: e.target.value }) }),
+          h('label', { style: S.label }, '技能名（逗号分隔，正文从 skillsDir 下的 <name>/SKILL.md 读取）'),
+          h('input', { style: S.input, value: draft.skills, onChange: (e) => setDraft({ ...draft, skills: e.target.value }), placeholder: 'xianyu-weflow, refund-policy' }),
+          h('div', { style: { ...S.muted, marginTop: '8px' } }, '商品图片、文件、参数都写在技能里，回复时整段注入。'),
           h('div', { style: { marginTop: '10px' } },
             h('button', { style: S.btn, onClick: saveItem, disabled: !!busy }, busy === 'item' ? '保存中…' : '保存'))),
         items.length === 0
-          ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有商品资料')
+          ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有绑定技能的商品')
           : h('div', null,
             h('div', { style: { ...S.row, ...S.th } },
-              h('span', null, '商品'), h('span', null, '标题'), h('span', null, '资料'), h('span', null, '技能'), h('span', null, '更新时间')),
+              h('span', null, '商品'), h('span', null, '标题'), h('span', null, '技能'), h('span', null, '更新时间'), h('span', null, '')),
             items.map((it) =>
               h('div', { key: it.item_id, style: S.row },
                 h('span', { style: S.mono }, it.item_id),
                 h('span', null, it.title || '-'),
-                h('span', null, it.knowledge ? `${it.knowledge.length} 字` : '-'),
-                h('span', null, it.skills ? `${it.skills.length} 字` : '-'),
-                h('span', { style: { fontSize: '12px', opacity: 0.8 } }, it.updated_at)))))
+                h('span', null, it.skills || '-'),
+                h('span', { style: { fontSize: '12px', opacity: 0.8 } }, it.updated_at),
+                h('span', null)))))
     }
 
     function LoginDialog(props) {
@@ -189,7 +188,7 @@ window.__ModuleLoader__.load({
       const [deliveries, setDeliveries] = useState([])
       const [cards, setCards] = useState([])
       const [items, setItems] = useState([])
-      const [itemDraft, setItemDraft] = useState({ itemId: '', title: '', knowledge: '', skills: '' })
+      const [itemDraft, setItemDraft] = useState({ itemId: '', title: '', skills: '' })
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
@@ -276,8 +275,7 @@ window.__ModuleLoader__.load({
             op: 'setItem',
             itemId: itemDraft.itemId.trim(),
             title: itemDraft.title.trim(),
-            knowledge: itemDraft.knowledge,
-            skills: itemDraft.skills,
+            skills: itemDraft.skills.trim(),
           })
           setNotice('商品资料已保存')
           await refresh()

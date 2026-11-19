@@ -97,26 +97,31 @@ WS 事件（卡片/提示） → message history → 找 orderId → 立即发�
 
 ## AI 客服
 
-可选。在插件配置里打开：
+可选。默认走 **DSH 自己的 agent**，复用 profile 里配置的模型：
 
 ```yaml
 ai:
   enabled: true
-  baseUrl: 'https://api.deepseek.com/v1'
-  apiKey: 'sk-...'
-  model: 'deepseek-chat'
-  cooldownSeconds: 8      # 同一会话回复冷却
-  maxRepliesPerChat: 8    # 同会话最多连续回复条数
+  mode: dsh            # dsh = DSH agent；api = 直连 OpenAI 兼容接口
+  agentPreset: 'customer-service'   # Agent Manager 里创建的 agent id，留空用默认
+  provider: ''         # 留空用 profile 默认模型
+  model: ''
+  skillsDir: ''        # 默认 ~/.dsh/skills
+  cooldownSeconds: 8
+  maxRepliesPerChat: 8
 ```
 
 买家发文本消息时，插件会：
 
-1. 拉最近 10 条消息作为上下文
+1. 拉最近 10 条消息
 2. 用订单表反查这个买家最近买的商品
-3. 取该商品的「资料 / FAQ」和「常用回复」拼进 system prompt
-4. 调 OpenAI 兼容接口生成回复，发出去
+3. 读取该商品绑定的**技能**（`<skillsDir>/<name>/SKILL.md`），整段注入 prompt
+4. 创建一次 DSH agent 会话，让它生成回复并通过 `send_buyer_reply` 工具交回
+5. 把回复发给买家
 
-「商品资料」在面板的 **商品资料** 标签页里维护。回复风格、议价底线、退换政策都写进「常用回复」那一栏。
+**知识库就是技能**：商品的图片、文件、参数、FAQ 都写在技能里，面板只维护「商品 ID → 技能名」的映射。
+
+`mode: api` 时改用插件自己的 OpenAI 兼容配置（`baseUrl` / `apiKey` / `model`），作为没有 DSH agent 服务时的兜底。
 
 注意：
 

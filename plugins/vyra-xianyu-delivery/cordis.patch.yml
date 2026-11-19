@@ -10,8 +10,10 @@
         watchEnabled: true
         ai:
           enabled: false
-          baseUrl: 'https://api.deepseek.com/v1'
-          apiKey: ''
-          model: 'deepseek-chat'
+          mode: dsh            # dsh = 用 DSH 的 agent；api = 直连 OpenAI 兼容接口
+          agentPreset: ''      # Agent Manager 里创建的 agent id；留空用默认
+          provider: ''         # 留空用 profile 默认模型
+          model: ''
+          skillsDir: ''        # 默认 ~/.dsh/skills
           cooldownSeconds: 8
           maxRepliesPerChat: 8

@@ -7,6 +7,7 @@ import { createCli, defaultPrefix } from './lib/cli.js'
 import { createGuard } from './lib/guard.js'
 import { createDispatcher } from './lib/dispatch.js'
 import { createAi } from './lib/ai.js'
+import { createDshAgent } from './lib/agent.js'
 
 export const name = 'vyra-xianyu-delivery'
 export const inject = []
@@ -44,7 +45,9 @@ export function apply(ctx, config = {}) {
   const cli = createCli({ command: cfg.cliCommand, prefix: cfg.cliPrefix })
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
   const dispatcher = createDispatcher({ store, cli, guard, config: cfg, logger: log })
-  const ai = createAi({ config: cfg, store, logger: log })
+  const agents = typeof ctx.get === 'function' ? ctx.get('agents') : undefined
+  const dshAgent = createDshAgent({ agents, config: cfg, logger: log })
+  const ai = createAi({ config: cfg, store, agent: dshAgent, logger: log })
   let selfUserId = ''
   let watchProc = null
   let watchRetry = null
