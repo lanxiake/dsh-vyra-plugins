@@ -10,8 +10,8 @@
 import { readFileSync } from 'node:fs'
 
 import {
-  ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, findAction, pickModel, reduceMouse,
-  saneRect, searchQuery, selectionProblem,
+  ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, explainAuthFailure, findAction, pickModel,
+  reduceMouse, saneRect, searchQuery, selectionProblem,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveLastRun, saveSettings } from './store.js'
@@ -50,6 +50,19 @@ export function apply(ctx) {
   function recordRun(entry) {
     lastRun = { at: new Date().toISOString(), version: VERSION, ...entry }
     saveLastRun(lastRun)
+  }
+
+  /** Show a model-call failure, in the panel body when it is one the user has to go fix. */
+  function showModelFailure(error) {
+    const message = describe(error)
+    const hint = explainAuthFailure(message, 'model')
+    if (hint) {
+      overlay.setContent(hint.body, [])
+      overlay.setStatus(hint.short, 'error')
+    } else {
+      overlay.setStatus(message, 'error')
+    }
+    return message
   }
   /** The selection whose menu the user closed, so the poll does not reopen it. See `alreadyDismissed`. */
   let dismissed = ''
@@ -417,8 +430,7 @@ export function apply(ctx) {
       const base = { action: action.id, provider: picked.provider, model: picked.model, counts: seen.counts, ms: Date.now() - startedAt }
       const reason = seen.finish
       if (reason && reason.kind === 'error') {
-        const message = (reason.failure && reason.failure.message) || '模型返回错误'
-        overlay.setStatus(message, 'error')
+        const message = showModelFailure((reason.failure && reason.failure.message) || '模型返回错误')
         recordRun({ ...base, finish: 'error', error: message })
         return
       }
@@ -442,8 +454,7 @@ export function apply(ctx) {
       recordRun({ ...base, finish: reason && reason.kind, answer: lastResult.slice(0, 4000) })
     } catch (error) {
       if (mine !== generation) return
-      const message = describe(error)
-      overlay.setStatus(message, 'error')
+      const message = showModelFailure(error)
       recordRun({ action: action.id, provider: picked.provider, model: picked.model, ms: Date.now() - startedAt, error: message })
     }
   }
@@ -476,9 +487,17 @@ export function apply(ctx) {
       result = await web.search({ query, maxResults: settings.maxResults || 6 })
     } catch (error) {
       if (mine !== generation) return
-      const message = `搜索失败：${describe(error)}`
-      overlay.setStatus(message, 'error')
-      recordRun({ action: 'search', query, ms: Date.now() - startedAt, error: message })
+      const message = describe(error)
+      const hint = explainAuthFailure(message, 'search')
+      if (hint) {
+        // Wrapped in the panel body: the provider appends a paragraph about endpoint config that
+        // the one-line footer would truncate into uselessness.
+        overlay.setContent(hint.body, [])
+        overlay.setStatus(hint.short, 'error')
+      } else {
+        overlay.setStatus(`搜索失败：${message}`, 'error')
+      }
+      recordRun({ action: 'search', query, ms: Date.now() - startedAt, error: message, hint: hint && hint.short })
       return
     }
     if (mine !== generation) return
@@ -522,8 +541,14 @@ export function apply(ctx) {
       if (reason && reason.kind === 'error') {
         const message = (reason.failure && reason.failure.message) || '模型返回错误'
         // Keep whatever sources were retrieved: they are still the useful half of the answer.
-        overlay.setContent(lastResult || '（总结失败）', lastSources)
-        overlay.setStatus(message, 'error')
+        const hint = explainAuthFailure(message, 'model')
+        if (hint) {
+          overlay.setContent(`${hint.body}\n\n${lastResult}`.trim(), lastSources)
+          overlay.setStatus(hint.short, 'error')
+        } else {
+          overlay.setContent(lastResult || '（总结失败）', lastSources)
+          overlay.setStatus(message, 'error')
+        }
         recordRun({ ...base, counts: seen.counts, finish: 'error', error: message })
         return
       }
@@ -545,8 +570,14 @@ export function apply(ctx) {
     } catch (error) {
       if (mine !== generation) return
       const message = describe(error)
-      overlay.setContent(lastResult || '（总结失败）', lastSources)
-      overlay.setStatus(message, 'error')
+      const hint = explainAuthFailure(message, 'model')
+      if (hint) {
+        overlay.setContent(`${hint.body}\n\n${lastResult}`.trim(), lastSources)
+        overlay.setStatus(hint.short, 'error')
+      } else {
+        overlay.setContent(lastResult || '（总结失败）', lastSources)
+        overlay.setStatus(message, 'error')
+      }
       recordRun({ ...base, ms: Date.now() - startedAt, error: message })
     }
   }

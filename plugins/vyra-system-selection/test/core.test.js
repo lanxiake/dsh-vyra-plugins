@@ -10,8 +10,9 @@ import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
 import {
-  MAX_TEXT_CHARS, buildRequest, menuLayout, menuHitTest, panelSideFor, pickModel, placeMenuAtSelection,
-  placePanelAtSelection, reduceMouse, saneRect, searchQuery, selectionProblem, systemPrompt,
+  ACTIONS, MAX_TEXT_CHARS, bodyBlocks, buildRequest, explainAuthFailure, menuLayout, menuHitTest,
+  panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection, reduceMouse, saneRect,
+  searchQuery, selectionProblem, systemPrompt,
 } from '../core.js'
 
 test('saneRect accepts a real rectangle and rounds it', () => {
@@ -139,6 +140,30 @@ test('reduceMouse fires on a drag and on a multi-click, but not on a plain click
   const first = reduceMouse(down.state, { down: false, x: 100, y: 100, t: 10 })
   const again = reduceMouse(first.state, { down: true, x: 101, y: 100, t: 100 })
   assert.equal(reduceMouse(again.state, { down: false, x: 101, y: 100, t: 150 }).fire, true)
+})
+
+test('copy sits before summarize, because it is the action people actually use', () => {
+  const order = ACTIONS.map((action) => action.id)
+  assert.ok(order.indexOf('copy') < order.indexOf('summarize'), `unexpected menu order: ${order.join(', ')}`)
+})
+
+test('the body is split into paragraphs so the panel can space them apart', () => {
+  const blocks = bodyBlocks('第一段。\n\n第二段。\n\n\n第三段。', [])
+  assert.deepEqual(blocks.map((block) => block.text), ['第一段。', '第二段。', '第三段。'])
+  assert.ok(blocks.every((block) => block.kind === 'text'))
+  // A single newline is a line break inside one paragraph, not a new block.
+  assert.equal(bodyBlocks('行一\n行二', []).length, 1)
+  assert.equal(bodyBlocks('', []).length, 1, 'an empty answer still paints one (empty) block')
+})
+
+test('a 401 names the service it came from', () => {
+  const search = explainAuthFailure('DeepSeek API error (HTTP 401): Authentication Fails', 'search')
+  assert.match(search.short, /联网搜索/)
+  assert.match(search.body, /联网搜索/)
+  const model = explainAuthFailure('Authentication Fails, Your api key: ****imOx is invalid', 'model')
+  assert.match(model.short, /模型/)
+  assert.equal(explainAuthFailure('no model selected', 'model'), null)
+  assert.equal(explainAuthFailure('HTTP 500', 'search'), null)
 })
 
 test('pickModel returns a real model, never a provider with an empty model', async () => {

@@ -721,7 +721,9 @@ export function createOverlay(handlers = {}) {
       } else {
         const h = measureText(hdc, block.text, width, state.fontText)
         ops.push({ ...block, y, h, font: state.fontText, color: state.statusKind === 'error' ? THEME.danger : THEME.text })
-        y += h + m.lineGap
+        // Paragraphs are separate blocks, so the gap between them is the only thing that makes a
+        // structured answer read as structure rather than as line noise.
+        y += h + m.lineGap * 2
       }
     }
     state.layoutBlocks = ops

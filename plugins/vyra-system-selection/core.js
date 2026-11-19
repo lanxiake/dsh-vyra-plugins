@@ -22,9 +22,10 @@ export const MULTI_CLICK_PX = 6
 export const ACTIONS = [
   { id: 'search', label: 'AI 搜索', kind: 'search', icon: 0xE721 },
   { id: 'translate', label: '翻译', kind: 'llm', icon: 0xE774 },
-  { id: 'summarize', label: '总结', kind: 'llm', icon: 0xE8A5 },
-  { id: 'explain', label: '解释', kind: 'llm', icon: 0xEA80 },
+  // Copy sits third because it is the most used action of the five; summarize is the least.
   { id: 'copy', label: '复制', kind: 'local', icon: 0xE8C8 },
+  { id: 'explain', label: '解释', kind: 'llm', icon: 0xEA80 },
+  { id: 'summarize', label: '总结', kind: 'llm', icon: 0xE8A5 },
 ]
 
 /**
@@ -47,10 +48,16 @@ export function findAction(id) {
   return ACTIONS.find((a) => a.id === id) ?? null
 }
 
-/** Plain text only: the result is painted by GDI, which renders no markup. */
+/**
+ * Plain text only: the result is painted by GDI, which renders no markup.
+ *
+ * Structure is still asked for, in the only vocabulary that survives: short paragraphs separated
+ * by a blank line and plain `1.` / `- ` items. That is what makes a 200-word answer readable in a
+ * 420-pixel panel; a single block of prose is not.
+ */
 const PLAIN_TEXT_RULE =
-  '只输出纯文本，不要使用 Markdown 标题、星号、反引号或列表符号。回答保持简短，' +
-  '通常不超过 200 字，除非用户明确要求展开。'
+  '只输出纯文本：不要 Markdown 标题、星号、反引号、加粗或表格。用短段落，段落之间空一行；' +
+  '需要列举时每项单独一行，用「1. 」「2. 」或「- 」开头。整体保持简短，通常不超过 200 字，除非用户明确要求展开。'
 
 const PROMPTS = {
   translate: (target) => `你是翻译引擎。把用户给的文本翻译成${target}。只输出译文本身，不要解释、不要加引号。${PLAIN_TEXT_RULE}`,
@@ -329,13 +336,48 @@ export function clampScroll(offset, contentH, viewH) {
 }
 
 /**
+ * Say which service answered 401.
+ *
+ * Search and the answer model are two different credentials: the DeepSeek search provider spends
+ * the DeepSeek account or API key, while the answer runs on whatever model this plugin is set to.
+ * A bare "401" reads as "the model is broken" and sends the user to change the wrong setting.
+ *
+ * @param message - the failure text from either path.
+ * @param where - `'search'` or `'model'`.
+ * @returns a short status label plus the body explaining what to do, or null for other errors.
+ */
+export function explainAuthFailure(message, where) {
+  if (!/(^|\D)401(\D|$)|unauthor|authentication fails?|invalid (api[ -]?)?key/i.test(String(message))) return null
+  if (where === 'search') {
+    return {
+      short: '联网搜索被拒绝（401）',
+      body: '联网搜索失败：搜索服务返回 401，它用的是 DeepSeek 的账号或 API Key —— 不是划词这里选的模型。\n\n' +
+        '到「设置 → 插件 → 内置插件设置 → 联网搜索」更换密钥，或换一个搜索提供方。\n\n' +
+        '翻译、总结、解释、复制都不经过搜索，不受影响。',
+    }
+  }
+  return {
+    short: '模型接口被拒绝（401）',
+    body: '模型调用失败：提供方返回 401，当前模型的 API Key 无效或被停用。\n\n' +
+      '到「设置 → 模型」换一个可用的模型，或在划词设置里改选其他模型。',
+  }
+}
+
+/**
  * Split a scrollable body into the blocks the panel paints: the answer text, then the source list.
  *
  * Sources carry their `[n]` marker so the answer can cite them by number without the panel having
  * to parse anything back out of the prose.
  */
 export function bodyBlocks(answer, sources) {
-  const blocks = [{ kind: 'text', text: answer }]
+  // One block per paragraph, not one block for the whole answer: the panel draws a gap between
+  // blocks, and a model that follows the plain-text rule returns paragraphs separated by a blank
+  // line. Painted as a single run, all that structure collapses into an unreadable wall.
+  const paragraphs = String(answer ?? '')
+    .split(/\n[ \t]*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph !== '')
+  const blocks = (paragraphs.length > 0 ? paragraphs : ['']).map((text) => ({ kind: 'text', text }))
   if (sources.length > 0) {
     blocks.push({ kind: 'heading', text: `来源 · ${sources.length}` })
     sources.forEach((source, i) => {
