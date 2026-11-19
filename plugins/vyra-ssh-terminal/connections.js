@@ -54,7 +54,10 @@ function saveState(state, file = stateFile()) {
 
 /** 凭据记录的 key。每个连接最多两条:密码、私钥口令。 */
 export function credentialKeyFor(connectionId, kind) {
-  return `ssh-terminal:${connectionId}:${kind}`
+  // The credentials store requires "<scope>/<id>". A colon-separated key
+  // ("ssh-terminal:<id>:password") makes the whole credentials document
+  // unparseable at the next Host start — one bad record takes DSH down.
+  return `ssh-terminal/${connectionId}:${kind}`
 }
 
 const newId = () => randomBytes(8).toString('hex')
