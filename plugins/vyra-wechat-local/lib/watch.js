@@ -344,8 +344,8 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     }
   }
 
-  async function tick() {
-    if (!running || ticking) return
+  async function tick(force = false) {
+    if ((!running && !force) || ticking) return
     ticking = true
     lastTickAt = Date.now()
     try {
@@ -355,7 +355,8 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
         const answer = await callJson('list_accounts')
         activeBefore = answer?.active || ''
         accounts = (Array.isArray(answer?.accounts) ? answer.accounts : [])
-          .map((account) => account?.wxid)
+          .filter((account) => account && account.running !== false)
+          .map((account) => account.wxid)
           .filter(Boolean)
       } catch (error) {
         lastError = String(error?.message ?? error)
@@ -386,9 +387,9 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       scheduler.stop()
       save()
     },
-    /** One manual poll, for the settings page's "立即检查". */
+    /** One manual poll, for the settings page's "立即检查" (works while paused). */
     tickNow() {
-      return tick()
+      return tick(true)
     },
     /** Observe a successful real send so the peer's cooldown starts. */
     onToolResult(tool, args, blocks) {

@@ -885,7 +885,7 @@ window.__ModuleLoader__.load({
               h('dd', { style: S.metaValue },
                 watch === undefined
                   ? '未启动'
-                  : watch.running ? `运行中 · 每 ${watch.pollSeconds}s` : '已暂停'))),
+                  : watch.enabled === false ? '已关闭' : watch.running ? `运行中 · 每 ${watch.pollSeconds}s` : '已暂停'))),
 
           h('div', { style: S.children },
             h('p', { style: S.summary }, detail.summary),
@@ -896,11 +896,13 @@ window.__ModuleLoader__.load({
             h('div', { style: S.divider },
               h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
                 h('span', { style: S.chipsLabel },
-                  `实时监听：${watch?.running ? '运行中' : '已暂停'} · 合并窗口 ${watch?.mergeWindowSeconds ?? 20}s · 回复后按名单冷却`),
+                  `实时监听：${watch?.enabled === false ? '已关闭' : watch?.running ? '运行中' : '已暂停'} · 合并窗口 ${watch?.mergeWindowSeconds ?? 20}s · 回复后按名单冷却`),
                 h('span', { style: { display: 'flex', gap: '6px' } },
                   h(Button, { quiet: true, onClick: () => void watchAction('watch.tick') }, '立即检查'),
-                  h(Button, { onClick: () => void watchAction(watch?.running ? 'watch.stop' : 'watch.start') },
-                    watch?.running ? '暂停监听' : '开始监听'))),
+                  h(Button, {
+                    onClick: () => void watchAction(watch?.running ? 'watch.stop' : 'watch.start'),
+                    disabled: watch?.enabled === false,
+                  }, watch?.enabled === false ? '监听已关闭' : watch?.running ? '暂停监听' : '开始监听'))),
               watch?.lastError ? h('p', { style: S.note }, watch.lastError) : null,
               watch?.pending?.length
                 ? h('div', { style: S.hint },
