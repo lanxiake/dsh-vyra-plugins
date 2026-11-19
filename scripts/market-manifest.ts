@@ -591,6 +591,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.5.1 makes the one part that touches every mouse event optional. The right-click
+        // takeover needs a WH_MOUSE_LL hook, which puts this process in the system's input path;
+        // the switch removes it entirely (selection-trigger and the in-window right-click keep
+        // working). Disabling the whole plugin used to leave that hook swallowing right-clicks,
+        // and the settings page now prints the version the Host actually loaded, so an install
+        // without a restart is visible instead of looking like a fix that did nothing.
+        '1.5.1': {
+          publishTimestamp: 1795074360,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f5267ac1c0373031d13db1b1f06d556e8246aed5',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
