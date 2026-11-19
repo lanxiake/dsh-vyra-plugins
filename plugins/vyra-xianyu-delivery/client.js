@@ -27,7 +27,9 @@ window.__ModuleLoader__.load({
       area: { padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(127,127,127,.35)', background: 'transparent', color: 'inherit', font: 'inherit', width: '100%', boxSizing: 'border-box', minHeight: '110px', resize: 'vertical' },
       label: { fontSize: '12px', opacity: 0.65, marginBottom: '4px', display: 'block' },
       err: { color: '#d9534f', fontSize: '13px', marginBottom: '10px' },
-      muted: { opacity: 0.6, fontSize: '13px' },
+      mask:{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
+      modal: { background: 'Canvas', color: 'CanvasText', borderRadius: '14px', padding: '22px 24px', width: '320px', boxShadow: '0 18px 50px rgba(0,0,0,.35)', textAlign: 'center' },
+      qr: { width: '220px', height: '220px', display: 'block', margin: '12px auto', borderRadius: '8px' },
       mono: { fontFamily: 'monospace', fontSize: '12px' },
       tag: (state) => ({
         display: 'inline-block', padding: '1px 8px', borderRadius: '999px', fontSize: '12px',
@@ -126,6 +128,28 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function LoginDialog(props) {
+      const { login, onClose } = props
+      let body
+      if (login.state === 'waiting' && login.qr) {
+        body = h('img', { style: S.qr, src: login.qr, alt: '闲鱼登录二维码' })
+      } else if (login.state === 'done') {
+        body = h('div', { style: { padding: '40px 0', color: '#2ea043' } }, '登录成功')
+      } else if (login.state === 'error') {
+        body = h('div', { style: { padding: '20px 0', color: '#d9534f', fontSize: '13px' } }, login.message || '登录失败')
+      } else {
+        body = h('div', { style: { padding: '40px 0' } }, '正在准备二维码…')
+      }
+
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', { style: S.modal, onClick: (e) => e.stopPropagation() },
+          h('div', { style: { fontWeight: 600 } }, '扫码登录闲鱼'),
+          body,
+          h('div', { style: { ...S.muted, marginTop: 8 } }, '用闲鱼 App 扫码，手机端确认'),
+          h('div', { style: { marginTop: 12 } },
+            h('button', { style: S.btn, onClick: onClose }, '关闭'))))
+    }
+
     function XianyuDelivery() {
       const [tab, setTab] = useState('orders')
       const [status, setStatus] = useState(null)
@@ -136,6 +160,8 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
       const [draft, setDraft] = useState(EMPTY_CARD)
+      const [loginOpen, setLoginOpen] = useState(false)
+      const [login, setLogin] = useState({ state: 'idle' })
 
       const refresh = useCallback(async () => {
         try {
@@ -202,6 +228,47 @@ window.__ModuleLoader__.load({
         }
       }
 
+      async function openLogin() {
+        setLoginOpen(true)
+        setLogin({ state: 'starting' })
+        try {
+          const st = await rpc({ op: 'login-start' }, 30000)
+          setLogin(st || { state: 'starting' })
+        } catch (err) {
+          setLogin({ state: 'error', message: String(err.message || err) })
+        }
+      }
+
+      async function closeLogin() {
+        try {
+          await rpc({ op: 'login-cancel' })
+        } catch {
+          // 取消失败不影响关闭弹层
+        }
+        setLoginOpen(false)
+        setLogin({ state: 'idle' })
+      }
+
+      useEffect(() => {
+        if (!loginOpen) return
+        const timer = setInterval(async () => {
+          try {
+            const st = await rpc({ op: 'login-status' })
+            setLogin(st)
+            if (st.state === 'done') {
+              await refresh()
+              setTimeout(() => {
+                setLoginOpen(false)
+                setLogin({ state: 'idle' })
+              }, 1200)
+            }
+          } catch {
+            // 轮询失败不打扰用户
+          }
+        }, 1000)
+        return () => clearInterval(timer)
+      }, [loginOpen, refresh])
+
       const meta = status
         ? `轮询 ${status.config.pollSeconds}s · 模式 ${status.config.mode} · 可用卡密 ${status.cards} 张`
         : '正在读取状态…'
@@ -209,6 +276,7 @@ window.__ModuleLoader__.load({
       return h('div', { style: S.page },
         h('div', { style: S.head },
           h('h2', { style: S.title }, '闲鱼自动发货'),
+          h('button', { style: S.btn, onClick: openLogin }, '扫码登录'),
           h('button', { style: S.btn, onClick: runTick, disabled: !!busy },
             busy === 'tick' ? '处理中…' : '立即处理一轮')),
         h('div', { style: { ...S.muted, marginBottom: '12px' } }, meta),
@@ -220,7 +288,8 @@ window.__ModuleLoader__.load({
               { orders: '订单', cards: '卡券', deliveries: '发货记录' }[k]))),
         tab === 'orders' ? h(OrdersTab, { orders }) : null,
         tab === 'cards' ? h(CardsTab, { cards, draft, setDraft, addCard, busy }) : null,
-        tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null
+        tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
+        loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null
       )
     }
 

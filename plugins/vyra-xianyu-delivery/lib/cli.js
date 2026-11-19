@@ -8,7 +8,10 @@ import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
 const execFileP = promisify(execFile)
-const DEFAULT_WORKER = fileURLToPath(new URL('../vendor/worker.py', import.meta.url))
+export const WORKER_PATH = fileURLToPath(new URL('../vendor/worker.py', import.meta.url))
+export const defaultPrefix = () => ['run', '--with', 'goofish-cli', 'python', WORKER_PATH]
+
+const DEFAULT_WORKER = WORKER_PATH
 
 export function createCli({
   command = 'uv',

@@ -5,14 +5,25 @@
 ## 依赖
 
 - **uv** — 插件通过 `uv run --with goofish-cli` 拉起自带的 worker
-- **登录态** — 先登录一次闲鱼
+- **浏览器** — 扫码登录优先用系统 Edge；没有就退回 Playwright 自带的 Chromium
+
+## 登录
+
+点面板顶部的「扫码登录」，会弹出二维码：
+
+- 面板里显示一份
+- 同时右下角会打开一个浏览器窗口（闲鱼对 headless 指纹有风控，必须真实窗口）
+
+用闲鱼 App 扫码并在手机上确认，登录态写入 `~/.goofish-cli/cookies.json`，弹层自动关闭。
+
+也可以在终端登录：
 
 ```bash
-uvx goofish-cli auth login --qr          # 扫码
+uvx goofish-cli auth login --qr
 uvx goofish-cli auth status --format json
 ```
 
-登录态写在 `~/.goofish-cli/cookies.json`，插件只读它。`sold-list` / `confirm` 由插件自带的 `vendor/worker.py` 实现，不依赖上游 CLI 的版本。
+`sold-list` / `confirm` 由插件自带的 `vendor/worker.py` 实现，不依赖上游 CLI 的版本。
 
 ## 配置
 

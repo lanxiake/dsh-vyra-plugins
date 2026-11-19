@@ -1,7 +1,9 @@
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { spawn } from 'node:child_process'
+import { createInterface } from 'node:readline'
 import { createStore } from './lib/db.js'
-import { createCli } from './lib/cli.js'
+import { createCli, defaultPrefix } from './lib/cli.js'
 import { createGuard } from './lib/guard.js'
 import { createDispatcher } from './lib/dispatch.js'
 
@@ -41,6 +43,61 @@ export function apply(ctx, config = {}) {
   const cli = createCli({ command: cfg.cliCommand, prefix: cfg.cliPrefix })
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
   const dispatcher = createDispatcher({ store, cli, guard, config: cfg, logger: log })
+
+  // 扫码登录：worker 是长进程，二维码和最终结果都以一行 JSON 流式输出。
+  let loginProc = null
+  let loginState = { state: 'idle' }
+
+  function startLogin(timeoutSeconds = 180) {
+    if (loginProc) return loginState
+    loginState = { state: 'starting' }
+    const prefix = cfg.cliPrefix ?? defaultPrefix()
+    let child
+    try {
+      child = spawn(cfg.cliCommand, [...prefix, 'login-qr', JSON.stringify({ timeout: timeoutSeconds })], {
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, NO_COLOR: '1', PYTHONIOENCODING: 'utf-8' },
+      })
+    } catch (err) {
+      loginState = { state: 'error', message: String(err?.message || err) }
+      return loginState
+    }
+
+    loginProc = child
+    let stderr = ''
+    createInterface({ input: child.stdout }).on('line', (line) => {
+      try {
+        const msg = JSON.parse(line)
+        if (msg.event === 'qr') loginState = { state: 'waiting', qr: msg.image }
+        else if (msg.event === 'done') loginState = { state: 'done', unb: msg.unb }
+        else if (msg.event === 'error') loginState = { state: 'error', message: msg.message }
+      } catch {
+        // 非 JSON 行（uv 的提示）忽略
+      }
+    })
+    child.stderr.on('data', (chunk) => {
+      stderr = (stderr + String(chunk)).slice(-2000)
+    })
+    child.on('exit', () => {
+      if (!['done', 'error'].includes(loginState.state)) {
+        loginState = { state: 'error', message: stderr.trim() || '登录进程意外退出' }
+      }
+      loginProc = null
+    })
+    return loginState
+  }
+
+  function cancelLogin() {
+    if (loginProc) {
+      loginProc.kill()
+      loginProc = null
+    }
+    loginState = { state: 'idle' }
+    return loginState
+  }
+
+  ctx.effect(() => () => cancelLogin(), 'xianyu-delivery.login')
 
   const status = () => ({
     config: {
@@ -124,6 +181,12 @@ export function apply(ctx, config = {}) {
         }
       case 'tick':
         return dispatcher.tick()
+      case 'login-start':
+        return startLogin(Number(body.timeout) || 180)
+      case 'login-status':
+        return loginState
+      case 'login-cancel':
+        return cancelLogin()
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }
