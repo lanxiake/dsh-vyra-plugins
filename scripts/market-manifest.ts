@@ -928,6 +928,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.4.0 adds logout and multi-account switching: each login is archived
+        // under ~/.goofish-cli/accounts/<unb>.json and the panel can switch.
+        '0.4.0': {
+          publishTimestamp: 1795078362,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9ca4d192ac2fb8c045ff0d5674e206056088a871',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
