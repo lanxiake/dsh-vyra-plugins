@@ -878,6 +878,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.3.1: the orders tab reads the real Xianyu order list, each panel
+        // request fails independently instead of blanking the whole refresh,
+        // chats show avatars/unread/recent time, and the panel gets color.
+        '0.3.1': {
+          publishTimestamp: 1795075917,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b6c3d14e224b2d041f3affc9a0b16313f3cfaeaf',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
