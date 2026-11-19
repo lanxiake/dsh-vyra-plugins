@@ -596,6 +596,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.1.1 ships vendor/worker.py: sold-list and confirm no longer need a
+        // forked goofish-cli, so a market install works with the PyPI package.
+        '0.1.1': {
+          publishTimestamp: 1795059215,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '7defa10ea77d7bb17385772242210643821805d2',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
@@ -793,6 +804,19 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '86c76d84343b4124d7b677e0d027d67c32fd80f5',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.1.6 makes the refresh button do what it says: the Host reuses one
+        // index document for ten minutes, and the button re-read it without
+        // `refresh`, so a just-published plugin stayed invisible until the TTL
+        // ran out.
+        '0.1.6': {
+          publishTimestamp: 1795059216,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'fcb4faab935dd14cfd94d476fe2514d0bed2db8c',
             path: 'plugins/vyra-plugin-market',
           },
         },
