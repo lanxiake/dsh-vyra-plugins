@@ -4,19 +4,15 @@
 
 ## 依赖
 
-需要带 `order` 命令的 `goofish-cli`（上游 v0.4 尚未发布）：
+- **uv** — 插件通过 `uv run --with goofish-cli` 拉起自带的 worker
+- **登录态** — 先登录一次闲鱼
 
 ```bash
-# 本地 fork
-uv run --directory /path/to/goofish-cli goofish auth login --qr
+uvx goofish-cli auth login --qr          # 扫码
+uvx goofish-cli auth status --format json
 ```
 
-插件默认调用 `uvx goofish-cli`；指向本地 fork时改配置：
-
-```yaml
-cliCommand: uv
-cliPrefix: ['run', '--directory', 'C:/path/to/goofish-cli', 'goofish']
-```
+登录态写在 `~/.goofish-cli/cookies.json`，插件只读它。`sold-list` / `confirm` 由插件自带的 `vendor/worker.py` 实现，不依赖上游 CLI 的版本。
 
 ## 配置
 

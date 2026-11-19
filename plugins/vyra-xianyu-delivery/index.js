@@ -23,8 +23,8 @@ export function apply(ctx, config = {}) {
     blockZeroAmount: true,
     sendIntervalMs: 60000,
     dataFile: join(homedir(), '.dsh', 'xianyu-delivery', 'data.sqlite'),
-    cliCommand: 'uvx',
-    cliPrefix: ['goofish-cli'],
+    cliCommand: 'uv',
+    cliPrefix: undefined, // 默认用 lib/cli.js 里的 worker 路径
     ...config,
   }
 
