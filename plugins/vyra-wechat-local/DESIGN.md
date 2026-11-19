@@ -208,7 +208,7 @@ plugins/vyra-wechat-local/
 ├── package.json           # dsh.bundle + dsh.client（inject: dsh-client-ui-plugin-manager）
 ├── cordis.patch.yml
 ├── index.js               # host：侧车生命周期、工具注册、HTTP 路由
-├── client.js              # 设置页：Python 状态、环境自检、工具清单
+├── client.js              # 设置页：按 Lumii 渠道卡片还原（状态徽章 / meta 条 / 环境自检 / 工具 chips）
 ├── lib/
 │   ├── sidecar.js         # JSONL 协议客户端（spawn / 写行 / 读行 / 进度帧 / 重启）
 │   ├── runtime.js         # 解释器定位：uv run（自动取依赖）或配置的 python

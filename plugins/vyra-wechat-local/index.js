@@ -97,8 +97,9 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  async function diagnose() {
-    const blocks = await sidecar.rawCall('check_env', {})
+  /** Sidecar tools answer with content blocks; these diagnostics are JSON text. */
+  async function callJson(tool) {
+    const blocks = await sidecar.rawCall(tool, {})
     const text = blocks
       .filter((block) => block?.type === 'text')
       .map((block) => String(block.text ?? ''))
@@ -108,6 +109,16 @@ export function apply(ctx, config = {}) {
     } catch {
       return { raw: text }
     }
+  }
+
+  function diagnose() {
+    return callJson('check_env')
+  }
+
+  /** Restore the window, normalize its size and re-probe the data directory, then re-check. */
+  async function repair() {
+    const result = await callJson('repair_env')
+    return { repair: result, env: await diagnose(), status: status() }
   }
 
   async function dispatch(body) {
@@ -125,6 +136,8 @@ export function apply(ctx, config = {}) {
       }
       case 'diagnose':
         return { env: await diagnose(), status: status() }
+      case 'repair':
+        return repair()
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }
