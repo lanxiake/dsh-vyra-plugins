@@ -208,7 +208,7 @@ plugins/vyra-wechat-local/
 ├── package.json           # dsh.bundle + dsh.client（inject: dsh-client-ui-plugin-manager）
 ├── cordis.patch.yml
 ├── index.js               # host：侧车生命周期、工具注册、HTTP 路由
-├── client.js              # 设置页：按 Lumii 渠道卡片还原（状态徽章 / meta 条 / 环境自检 / 工具 chips）
+├── client.js              # 设置页：本机微信（回复策略，还原 Lumii PolicyModal）+ 本机微信状态（渠道卡片 + 自检）
 ├── lib/
 │   ├── sidecar.js         # JSONL 协议客户端（spawn / 写行 / 读行 / 进度帧 / 重启）
 │   ├── runtime.js         # 解释器定位：uv run（自动取依赖）或配置的 python
@@ -229,6 +229,20 @@ plugins/vyra-wechat-local/
 
 **不硬编码工具的 schema**——全部来自 `initialize`。上游加工具时我们自动跟上；
 白名单里新增一个名字即可启用。
+
+### 6.1 设置页（两个入口）
+
+| 设置入口 | 内容 |
+|---|---|
+| **本机微信** | 渠道卡片 + 回复策略弹窗：按账号页签、每人一档（直接代回 / 起草给我确认 / 只提醒我 / 黑名单）、触发条件（每条 / @我 / 关键字）、冷却、从通讯录挑人、批量改档、移出名单。保存到侧车的 `autoreply_rules`（`~/.lumii/` 下按账号分目录的 `rules.json`），与 `autoreply_rules check` 是同一份。 |
+| **本机微信状态** | 侧车版本/状态、运行方式、环境自检（数据目录及来源 / 微信 / 依赖 / 版本 / 账号）、重新检测、一键修复、已注册工具 chips、侧车 stderr。 |
+
+设置页通过 `list_accounts` / `list_contacts` / `autoreply_rules` 取数据；这些调用会把侧车
+切到目标账号，Host 在每次设置调用后把账号切回原值，避免一次「看策略」把后续
+`send_text` 的默认身份换掉。
+
+> 回复策略的**执行**不属于本插件：侧车 `autoreply_rules check` 是闸门，真正起草/发送
+> 由调用方 Agent 做。插件只负责把策略配置好并存进同一份规则。
 
 ## 7. Python 运行时
 

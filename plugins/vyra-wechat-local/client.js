@@ -1,6 +1,9 @@
-// Client half: the settings page, laid out like the local-WeChat channel card in the
-// Lumii client — one wide card with a title row, a status pill, a meta strip, and an
-// environment self-check block below it.
+// Client half — two settings pages.
+//
+// "本机微信" is the reply policy, laid out like the local-WeChat channel card in the
+// Lumii client: the channel card summarises who may be answered, and its 配置 button
+// opens the per-person policy dialog (direct reply / draft / notify / blacklist).
+// "本机微信状态" is the environment card: sidecar state, check_env, repair, tool chips.
 //
 // Everything stays inside the factory: plugin client bundles are concatenated into
 // classic scripts, which share one lexical scope, so a top-level `const` here would
@@ -10,32 +13,107 @@ window.__ModuleLoader__.load({
   factory(require) {
     const RPC = '/api/wechat-local/rpc'
     const React = require('react')
-    const { useCallback, useEffect, useState } = React
+    const { useCallback, useEffect, useMemo, useState } = React
     const h = React.createElement
 
-    async function call(op) {
+    async function call(op, extra) {
       const res = await fetch(RPC, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ op }),
+        body: JSON.stringify(extra === undefined ? { op } : { op, ...extra }),
       })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || '请求失败')
       return data.data
     }
 
-    /** 数据目录来源 → 人话（与 wechat_core 的探测来源对齐）。 */
-    const DB_SOURCE_LABELS = {
-      env: '环境变量',
-      ini: '微信设置',
-      registry: '注册表',
-      default: '默认路径',
-      scan: '磁盘扫描',
+    // ---------------------------------------------------------------------------
+    // Policy vocabulary — mirrors lumen's channel policy and the sidecar's rules.json.
+    // ---------------------------------------------------------------------------
+
+    const MODE_OPTIONS = [
+      { value: 'auto', label: '直接代回' },
+      { value: 'draft', label: '起草给我确认' },
+      { value: 'notify', label: '只提醒我' },
+      { value: 'ignore', label: '不处理（黑名单）' },
+    ]
+    const MODE_LABELS = new Map(MODE_OPTIONS.map((option) => [option.value, option.label]))
+
+    /** 名单外的人只能「不处理」或「只提醒」：名单外的消息不叫模型。 */
+    const DEFAULT_MODE_OPTIONS = MODE_OPTIONS.filter(
+      (option) => option.value === 'ignore' || option.value === 'notify',
+    )
+
+    const TRIGGER_OPTIONS = [
+      { value: 'all', label: '每条都回' },
+      { value: 'mention', label: '只回 @我的' },
+      { value: 'keyword', label: '命中关键字才回' },
+      { value: 'mention_or_keyword', label: '@我 或 命中关键字' },
+    ]
+    const PRIVATE_TRIGGER_OPTIONS = TRIGGER_OPTIONS.filter(
+      (option) => option.value !== 'mention' && option.value !== 'mention_or_keyword',
+    )
+    const KEYWORD_TRIGGERS = ['keyword', 'mention_or_keyword']
+    const GROUP_ONLY_TRIGGERS = ['mention', 'mention_or_keyword']
+    const VISIBLE_LIMIT = 100
+
+    const splitKeywords = (value) =>
+      String(value ?? '')
+        .split(/[,，、\s]+/)
+        .map((word) => word.trim())
+        .filter(Boolean)
+
+    const isGroupId = (id) => String(id ?? '').trim().toLowerCase().endsWith('@chatroom')
+    const nameOf = (row) => String(row.label ?? '').trim() || row.id
+
+    const emptyDraft = (defaultMode = 'notify') => ({ defaultMode, rows: [] })
+
+    const toDraftRows = (peers) =>
+      (Array.isArray(peers) ? peers : []).map((peer) => ({
+        id: String(peer.id ?? ''),
+        label: String(peer.label ?? ''),
+        mode: String(peer.mode ?? 'draft'),
+        cooldownSeconds:
+          peer.cooldown_seconds === null || peer.cooldown_seconds === undefined
+            ? ''
+            : String(peer.cooldown_seconds),
+        trigger: String(peer.trigger ?? 'all'),
+        keywords: (Array.isArray(peer.keywords) ? peer.keywords : []).join('，'),
+      }))
+
+    const toPeers = (rows) => {
+      const out = []
+      for (const row of rows) {
+        if (!String(row.id).trim()) continue
+        const cooldown = Number.parseInt(String(row.cooldownSeconds).trim(), 10)
+        const keywords = splitKeywords(row.keywords)
+        out.push({
+          id: row.id.trim(),
+          label: String(row.label ?? '').trim(),
+          mode: row.mode,
+          trigger: row.trigger,
+          keywords: KEYWORD_TRIGGERS.includes(row.trigger) ? keywords : [],
+          cooldownSeconds: Number.isFinite(cooldown) && cooldown >= 0 ? cooldown : null,
+        })
+      }
+      return out
     }
 
+    /** 账号键大小写不敏感（wxid 常混写）。 */
+    const findDraftKey = (drafts, key) => {
+      if (!key) return Object.hasOwn(drafts, '') ? '' : undefined
+      if (Object.hasOwn(drafts, key)) return key
+      return Object.keys(drafts).find((candidate) => candidate && candidate.toLowerCase() === key.toLowerCase())
+    }
+
+    // ---------------------------------------------------------------------------
+    // Styles — DSH theme tokens, spacing from the Lumii channel card.
+    // ---------------------------------------------------------------------------
+
     const S = {
-      page: { padding: '8px 4px', maxWidth: '720px', display: 'flex', flexDirection: 'column', gap: '16px' },
+      page: { padding: '8px 4px', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '16px' },
+      hint: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)' },
       card: {
         display: 'flex',
         flexDirection: 'column',
@@ -44,19 +122,13 @@ window.__ModuleLoader__.load({
         borderRadius: '12px',
         background: 'var(--dsw-alias-bg-layer-1, #fff)',
         overflow: 'hidden',
-        transition: 'border-color .2s, box-shadow .2s',
       },
       row: { display: 'flex', alignItems: 'center', gap: '14px', padding: '16px', minWidth: 0, flexWrap: 'wrap' },
       icon: { display: 'inline-flex', flexShrink: 0 },
       text: { display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 },
       name: { fontSize: '14px', fontWeight: 500, lineHeight: '20px', color: 'var(--dsw-alias-label-primary, #1a1a1a)' },
       descRow: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 },
-      description: {
-        fontSize: '12px',
-        lineHeight: '16px',
-        color: 'var(--dsw-alias-label-secondary, #666)',
-        overflowWrap: 'anywhere',
-      },
+      description: { fontSize: '12px', lineHeight: '16px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere' },
       capability: {
         flexShrink: 0,
         padding: '3px 8px',
@@ -88,21 +160,14 @@ window.__ModuleLoader__.load({
       },
       metaItem: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 },
       metaLabel: { fontSize: '11px', lineHeight: '14px', color: 'var(--dsw-alias-label-secondary, #666)', opacity: 0.7 },
-      metaValue: {
-        margin: 0,
-        fontSize: '12px',
-        fontWeight: 500,
-        lineHeight: '16px',
-        color: 'var(--dsw-alias-label-primary, #1a1a1a)',
-        overflowWrap: 'anywhere',
-      },
+      metaValue: { margin: 0, fontSize: '12px', fontWeight: 500, lineHeight: '16px', color: 'var(--dsw-alias-label-primary, #1a1a1a)', overflowWrap: 'anywhere' },
       children: { padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: '10px' },
       summary: { margin: 0, fontSize: '13px', lineHeight: '20px', color: 'var(--dsw-alias-label-secondary, #666)' },
+      divider: { borderTop: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', paddingTop: '10px' },
       envHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
       envTitle: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary, #666)' },
       envBody: { display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere' },
       note: { margin: 0, fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-state-warn-primary, #e8a33d)' },
-      divider: { borderTop: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', paddingTop: '10px' },
       chipsLabel: { fontSize: '11px', lineHeight: '14px', color: 'var(--dsw-alias-label-secondary, #666)', opacity: 0.7 },
       chips: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
       chip: {
@@ -117,19 +182,23 @@ window.__ModuleLoader__.load({
         lineHeight: '16px',
         color: 'var(--dsw-alias-label-secondary, #666)',
       },
-      chipDot: {
-        width: '6px',
-        height: '6px',
-        borderRadius: '50%',
-        background: 'var(--dsw-alias-state-success-primary, #2f9e44)',
-        flexShrink: 0,
-      },
+      chipDot: { width: '6px', height: '6px', borderRadius: '50%', background: 'var(--dsw-alias-state-success-primary, #2f9e44)', flexShrink: 0 },
       btn: {
         padding: '6px 12px',
         borderRadius: 'var(--dsw-radius-sm, 8px)',
         border: '1px solid var(--dsw-alias-border-l4, #d0d0d0)',
         background: 'transparent',
         color: 'inherit',
+        cursor: 'pointer',
+        fontSize: '12px',
+        lineHeight: '16px',
+      },
+      btnPrimary: {
+        padding: '6px 12px',
+        borderRadius: 'var(--dsw-radius-sm, 8px)',
+        border: '1px solid var(--dsw-alias-brand-primary, #4d9aff)',
+        background: 'var(--dsw-alias-brand-primary, #4d9aff)',
+        color: '#fff',
         cursor: 'pointer',
         fontSize: '12px',
         lineHeight: '16px',
@@ -144,6 +213,54 @@ window.__ModuleLoader__.load({
         fontSize: '12px',
         lineHeight: '16px',
       },
+      input: {
+        width: '100%',
+        boxSizing: 'border-box',
+        padding: '6px 8px',
+        borderRadius: 'var(--dsw-radius-sm, 8px)',
+        border: '1px solid var(--dsw-alias-border-l4, #d0d0d0)',
+        background: 'var(--dsw-alias-bg-layer-3, #fff)',
+        color: 'var(--dsw-alias-label-primary, #1a1a1a)',
+        fontSize: '13px',
+      },
+      label: { fontSize: '12px', lineHeight: '16px', color: 'var(--dsw-alias-label-secondary, #666)', marginBottom: '4px', display: 'block' },
+      field: { display: 'flex', flexDirection: 'column', minWidth: 0 },
+      overlay: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: 'rgba(0, 0, 0, 0.45)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      },
+      dialog: {
+        width: 'min(720px, 100%)',
+        maxHeight: '86vh',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: '14px',
+        border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)',
+        background: 'var(--dsw-alias-bg-layer-1, #fff)',
+        color: 'var(--dsw-alias-label-primary, #1a1a1a)',
+        overflow: 'hidden',
+        boxShadow: '0 18px 60px rgba(0,0,0,.28)',
+      },
+      dialogHead: { display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderBottom: '1px solid var(--dsw-alias-border-l1, #e5e5e5)' },
+      dialogTitle: { fontSize: '15px', fontWeight: 600, flex: 1 },
+      dialogBody: { padding: '14px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' },
+      dialogFoot: { display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid var(--dsw-alias-border-l1, #e5e5e5)' },
+      tabs: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
+      panel: { marginTop: '10px', border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', borderRadius: '10px', padding: '10px' },
+      list: { marginTop: '10px', maxHeight: '46vh', overflowY: 'auto', paddingRight: '4px' },
+      peerRow: { border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', borderRadius: '10px', padding: '10px 12px', marginTop: '8px' },
+      peerHead: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
+      peerName: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' },
+      badge: { fontSize: '11px', padding: '1px 6px', borderRadius: '999px', border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', color: 'var(--dsw-alias-label-secondary, #666)' },
+      mono: { fontFamily: 'monospace', fontSize: '11px', color: 'var(--dsw-alias-label-secondary, #666)' },
+      rowInputs: { display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' },
+      explanation: { padding: '8px 10px', borderRadius: '10px', background: 'var(--dsw-alias-bg-layer-3, #fff)', fontSize: '12px', lineHeight: '1.7', color: 'var(--dsw-alias-label-secondary, #666)' },
     }
 
     const TONES = {
@@ -188,18 +305,561 @@ window.__ModuleLoader__.load({
     function WechatMark() {
       return h('svg', { width: 28, height: 28, viewBox: '0 0 64 64', 'aria-hidden': true },
         h('rect', { width: 64, height: 64, rx: 14, fill: '#07c160' }),
-        h('path', {
-          d: 'M18 20h28a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H32l-9 7v-7h-5a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4z',
-          fill: '#fff',
-        }),
+        h('path', { d: 'M18 20h28a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H32l-9 7v-7h-5a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4z', fill: '#fff' }),
         h('circle', { cx: 25, cy: 31, r: 2.6, fill: '#07c160' }),
         h('circle', { cx: 32, cy: 31, r: 2.6, fill: '#07c160' }),
         h('circle', { cx: 39, cy: 31, r: 2.6, fill: '#07c160' }))
     }
 
-    /** 「微信」「数据目录」等自检行，语义与 Lumii 的 pcwechat 卡片一致。 */
+    function TextInput(props) {
+      return h('input', { ...props, style: { ...S.input, ...(props.style ?? {}) } })
+    }
+
+    function Select({ label, options, ...props }) {
+      return h('label', { style: S.field },
+        label === undefined ? null : h('span', { style: S.label }, label),
+        h('select', { ...props, style: { ...S.input, colorScheme: 'inherit', ...(props.style ?? {}) } },
+          options.map((option) => h('option', { key: option.value, value: option.value }, option.label))))
+    }
+
+    function Checkbox({ checked, onChange, label }) {
+      return h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', color: 'var(--dsw-alias-label-secondary, #666)' } },
+        h('input', {
+          type: 'checkbox',
+          checked,
+          'aria-label': label,
+          onChange: (event) => onChange(event.target.checked),
+        }),
+        label)
+    }
+
+    function Button({ primary, quiet, ...props }) {
+      const style = primary ? S.btnPrimary : quiet ? S.btnQuiet : S.btn
+      return h('button', { type: 'button', ...props, style: { ...style, ...(props.style ?? {}) } })
+    }
+
+    function Modal({ open, title, onClose, footer, children }) {
+      if (!open) return null
+      return h('div', { style: S.overlay, role: 'presentation', onMouseDown: (event) => { if (event.target === event.currentTarget) onClose() } },
+        h('div', { style: S.dialog, role: 'dialog', 'aria-modal': true, 'aria-label': title },
+          h('div', { style: S.dialogHead },
+            h('span', { style: S.dialogTitle }, title),
+            h(Button, { quiet: true, onClick: onClose, 'aria-label': '关闭' }, '×')),
+          h('div', { style: S.dialogBody }, children),
+          footer === undefined ? null : h('div', { style: S.dialogFoot }, footer)))
+    }
+
+    // ---------------------------------------------------------------------------
+    // Reply-policy dialog — the Lumii pcwechat PolicyModal, adapted to the sidecar's
+    // per-account rules store. One tab per WeChat account, one row per peer.
+    // ---------------------------------------------------------------------------
+
+    function PolicyModal({ open, onClose, onSaved }) {
+      const [accounts, setAccounts] = useState([])
+      const [contactsByAccount, setContactsByAccount] = useState({})
+      const [active, setActive] = useState('')
+      const [drafts, setDrafts] = useState({})
+      const [touched, setTouched] = useState(new Set())
+      const [checked, setChecked] = useState(new Set())
+      const [batchMode, setBatchMode] = useState('draft')
+      const [pickerOpen, setPickerOpen] = useState(false)
+      const [search, setSearch] = useState('')
+      const [pickerChecked, setPickerChecked] = useState(new Set())
+      const [loading, setLoading] = useState(false)
+      const [saving, setSaving] = useState(false)
+      const [error, setError] = useState('')
+
+      const draftOf = (key) => {
+        const found = findDraftKey(drafts, key)
+        return (found !== undefined ? drafts[found] : undefined) ?? emptyDraft()
+      }
+
+      const loadContacts = useCallback(async (wxid) => {
+        try {
+          const res = await call('contacts', wxid ? { account: wxid } : {})
+          if (res) setContactsByAccount((prev) => ({ ...prev, [wxid]: res }))
+          return res
+        } catch {
+          return undefined
+        }
+      }, [])
+
+      const applyPolicy = useCallback((wxid, policy) => {
+        const rules = policy?.rules
+        if (!rules) return undefined
+        return {
+          defaultMode: rules.default_mode === 'ignore' ? 'ignore' : 'notify',
+          rows: toDraftRows(rules.peers),
+        }
+      }, [])
+
+      useEffect(() => {
+        if (!open) return undefined
+        let cancelled = false
+        setLoading(true)
+        setError('')
+        setPickerOpen(false)
+        setPickerChecked(new Set())
+        setChecked(new Set())
+        void (async () => {
+          try {
+            const accountRes = await call('accounts')
+            const list = (accountRes?.accounts ?? []).map((account) => ({
+              wxid: account.wxid,
+              running: Boolean(account.running),
+            }))
+            const targets = list.length > 0 ? list.map((account) => account.wxid) : ['']
+            const policies = await Promise.all(
+              targets.map((wxid) => call('policy', wxid ? { account: wxid } : {}).catch(() => undefined)),
+            )
+            if (cancelled) return
+            const next = {}
+            for (let index = 0; index < targets.length; index += 1) {
+              next[targets[index]] = applyPolicy(targets[index], policies[index]) ?? emptyDraft()
+            }
+            setAccounts(list)
+            setDrafts(next)
+            setTouched(new Set())
+            const first = list[0]?.wxid ?? ''
+            setActive(first)
+            if (first) void loadContacts(first)
+          } catch (err) {
+            if (!cancelled) setError(String(err?.message ?? err))
+          } finally {
+            if (!cancelled) setLoading(false)
+          }
+        })()
+        return () => {
+          cancelled = true
+        }
+      }, [open, applyPolicy, loadContacts])
+
+      const current = draftOf(active)
+
+      const mutateCurrent = useCallback((mutator) => {
+        const key = active
+        setDrafts((prev) => {
+          const found = findDraftKey(prev, key)
+          const seed = (found !== undefined ? prev[found] : undefined) ?? emptyDraft()
+          const next = { ...prev }
+          for (const candidate of Object.keys(next)) {
+            if (candidate && candidate.toLowerCase() === key.toLowerCase() && candidate !== key) delete next[candidate]
+          }
+          next[key] = mutator(seed)
+          return next
+        })
+        setTouched((prev) => {
+          const keyName = key.toLowerCase()
+          return prev.has(keyName) ? prev : new Set(prev).add(keyName)
+        })
+      }, [active])
+
+      const setRows = useCallback((updater) => {
+        mutateCurrent((draft) => ({ ...draft, rows: updater(draft.rows) }))
+      }, [mutateCurrent])
+
+      const switchAccount = (wxid) => {
+        setActive(wxid)
+        setChecked(new Set())
+        setPickerOpen(false)
+        setSearch('')
+        setPickerChecked(new Set())
+        if (Object.hasOwn(contactsByAccount, wxid)) return
+        void loadContacts(wxid)
+      }
+
+      const resetAccount = () => {
+        if (!active) return
+        mutateCurrent(() => emptyDraft('notify'))
+      }
+
+      const accountName = (wxid) => {
+        const self = contactsByAccount[wxid]?.self
+        return self?.name && self.name.toLowerCase() !== wxid.toLowerCase() ? self.name : ''
+      }
+
+      const accountTabs = useMemo(() => {
+        const out = [...accounts]
+        const seen = new Set(accounts.map((account) => account.wxid.toLowerCase()))
+        for (const key of Object.keys(drafts)) {
+          if (!key || seen.has(key.toLowerCase())) continue
+          out.push({ wxid: key, running: false })
+          seen.add(key.toLowerCase())
+        }
+        return out
+      }, [accounts, drafts])
+
+      const candidates = (contactsByAccount[active]?.contacts ?? []).map((contact) => ({
+        id: String(contact.talker),
+        label: String(contact.name || contact.talker),
+        isGroup: contact.kind === 'group',
+      }))
+      const inList = new Set(current.rows.map((row) => row.id.toLowerCase()))
+      const selectable = candidates
+        .filter((candidate) => !inList.has(candidate.id.toLowerCase()))
+        .filter((candidate) => {
+          const query = search.trim().toLowerCase()
+          return query === '' || candidate.label.toLowerCase().includes(query) || candidate.id.toLowerCase().includes(query)
+        })
+      const visible = selectable.slice(0, VISIBLE_LIMIT)
+
+      const openPicker = () => {
+        setPickerOpen(true)
+        setSearch('')
+        setPickerChecked(new Set())
+        if (!Object.hasOwn(contactsByAccount, active)) void loadContacts(active)
+      }
+
+      const addChecked = () => {
+        // Resolve against the full candidate list, not the search-filtered one: the checked
+        // set accumulates across searches, and the earlier picks may not be visible now.
+        const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]))
+        const resolved = [...pickerChecked].map((id) => byId.get(id)).filter(Boolean)
+        if (resolved.length === 0) return
+        setRows((prev) => prev.concat(resolved.map((candidate) => ({
+          id: candidate.id,
+          label: candidate.label,
+          mode: 'draft',
+          cooldownSeconds: '',
+          trigger: candidate.isGroup ? 'mention' : 'all',
+          keywords: '',
+        }))))
+        setPickerOpen(false)
+        setPickerChecked(new Set())
+      }
+
+      const toggleChecked = (id, on) => {
+        setChecked((prev) => {
+          const next = new Set(prev)
+          if (on) next.add(id)
+          else next.delete(id)
+          return next
+        })
+      }
+
+      const applyBatchMode = () => {
+        setRows((prev) => prev.map((row) => (checked.has(row.id) ? { ...row, mode: batchMode } : row)))
+      }
+
+      const removeChecked = () => {
+        setRows((prev) => prev.filter((row) => !checked.has(row.id)))
+        setChecked(new Set())
+      }
+
+      const save = async () => {
+        setSaving(true)
+        setError('')
+        try {
+          for (const key of touched) {
+            const found = findDraftKey(drafts, key)
+            const draft = (found !== undefined ? drafts[found] : undefined) ?? emptyDraft()
+            // `touched` holds lower-cased keys; send the account exactly as the rules store
+            // spelled it, or the sidecar would write a second directory for the same account.
+            const account = found !== undefined ? found : key
+            await call('policy.save', {
+              ...(account ? { account } : {}),
+              rules: { defaultMode: draft.defaultMode, peers: toPeers(draft.rows) },
+            })
+          }
+          if (onSaved) onSaved()
+          onClose()
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setSaving(false)
+        }
+      }
+
+      const footer = [
+        h(Button, { key: 'cancel', quiet: true, onClick: onClose, disabled: saving }, '取消'),
+        h(Button, { key: 'save', primary: true, onClick: () => void save(), disabled: loading || saving }, saving ? '保存中…' : '保存'),
+      ]
+
+      return h(Modal, { open, title: '本机微信 · 回复策略', onClose, footer },
+        error ? h('div', { style: { color: 'var(--dsw-alias-state-error-primary, #d1242f)', fontSize: '13px' } }, error) : null,
+
+        h('div', null,
+          h('div', { style: S.label }, '按账号配置'),
+          h('div', { style: S.tabs },
+            accountTabs.map((account) => h(Button, {
+              key: account.wxid,
+              primary: active.toLowerCase() === account.wxid.toLowerCase(),
+              onClick: () => switchAccount(account.wxid),
+              disabled: loading,
+            }, (() => {
+              const name = accountName(account.wxid)
+              return name ? `${name}（${account.wxid}）` : account.wxid
+            })() + (account.running ? '' : ' · 离线'))),
+            accountTabs.length === 0 && !loading
+              ? h('span', { style: S.hint }, '没读到本机微信账号；确认微信已登录后再打开这个页面')
+              : null)),
+
+        h('div', { style: { display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' } },
+          h('div', { style: { flex: '1 1 200px', minWidth: 180 } },
+            h(Select, {
+              label: '名单外的人怎么处理',
+              value: current.defaultMode,
+              options: DEFAULT_MODE_OPTIONS,
+              onChange: (event) => mutateCurrent((draft) => ({ ...draft, defaultMode: event.target.value })),
+              disabled: loading,
+            })),
+          touched.has(active.toLowerCase())
+            ? h(Button, { quiet: true, onClick: resetAccount, disabled: loading }, '清空这个号的名单')
+            : null),
+
+        h('p', { style: S.hint },
+          '每个微信号一个页签，名单与档位各配各的（工作号只提醒、生活号直接代回）。',
+          '名单外的人一律不叫模型——最多弹条通知。配置保存在侧车，保存后即启用。'),
+
+        h('div', { style: S.divider },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
+            h('span', { style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' } },
+              `谁可以被代回（${current.rows.length}）`),
+            active ? h('span', { style: S.badge }, `当前：${accountName(active) || active}`) : null,
+            h(Button, { onClick: openPicker, disabled: loading }, pickerOpen ? '收起' : '从微信里挑人')),
+            current.rows.length > 0
+              ? h(Button, {
+                quiet: true,
+                onClick: () => setChecked((prev) => (prev.size === current.rows.length ? new Set() : new Set(current.rows.map((row) => row.id)))),
+                disabled: loading,
+              }, checked.size === current.rows.length ? '取消全选' : `全选（${current.rows.length}）`)
+              : null,
+            h('span', { style: S.hint }, '挑完记得点下面的「保存」'),
+
+          pickerOpen
+            ? h('div', { style: S.panel },
+              h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+                h('div', { style: { flex: '1 1 220px', minWidth: 180 } },
+                  h(TextInput, {
+                    value: search,
+                    onChange: (event) => setSearch(event.target.value),
+                    placeholder: '搜名字或 wxid',
+                  })),
+                h(Button, {
+                  quiet: true,
+                  disabled: loading || visible.length === 0,
+                  onClick: () => setPickerChecked((prev) => new Set([...prev, ...visible.map((candidate) => candidate.id)])),
+                }, '全选'),
+                h(Button, { quiet: true, onClick: () => setPickerChecked(new Set()), disabled: pickerChecked.size === 0 }, '清空勾选'),
+                h(Button, { primary: true, onClick: addChecked, disabled: pickerChecked.size === 0 }, `加入名单（${pickerChecked.size}）`)),
+              h('div', { style: { maxHeight: '240px', overflowY: 'auto', marginTop: '8px' } },
+                loading ? h('div', { style: S.hint }, '正在读微信通讯录…') : null,
+                !loading && selectable.length === 0
+                  ? h('div', { style: S.hint }, search.trim() ? '没有匹配的人' : '没有可选的人（可能都已经在名单里了）')
+                  : null,
+                visible.map((candidate) => h('div', { key: candidate.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' } },
+                  h(Checkbox, {
+                    checked: pickerChecked.has(candidate.id),
+                    label: '',
+                    onChange: (on) => setPickerChecked((prev) => {
+                      const next = new Set(prev)
+                      if (on) next.add(candidate.id)
+                      else next.delete(candidate.id)
+                      return next
+                    }),
+                  }),
+                  h('span', { style: { fontSize: '13px', color: 'var(--dsw-alias-label-primary, #1a1a1a)' } }, candidate.label),
+                  candidate.isGroup ? h('span', { style: S.badge }, '群') : null,
+                  h('span', { style: S.mono }, candidate.id))))
+              )
+            : null,
+
+          checked.size > 0
+            ? h('div', { style: { ...S.panel, display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' } },
+              h('span', { style: { fontSize: '13px', color: 'var(--dsw-alias-label-secondary, #666)' } }, `已勾选 ${checked.size} 人：`),
+              h('div', { style: { flex: '0 1 190px', minWidth: 160 } },
+                h(Select, { value: batchMode, options: MODE_OPTIONS, onChange: (event) => setBatchMode(event.target.value) })),
+              h(Button, { onClick: applyBatchMode }, '应用'),
+              h(Button, { quiet: true, onClick: removeChecked }, '移出名单'))
+            : null,
+
+          h('div', { style: S.list },
+            current.rows.length === 0
+              ? h('div', { style: S.hint }, '名单还是空的。点上面的「从微信里挑人」，勾选允许助手代聊的好友——名单外的人一律不动。')
+              : current.rows.map((row) => {
+                const patch = (next) => setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, ...next } : item)))
+                const group = isGroupId(row.id)
+                const needsKeywords = KEYWORD_TRIGGERS.includes(row.trigger)
+                return h('div', { key: row.id, style: { ...S.peerRow, background: checked.has(row.id) ? 'var(--dsw-alias-bg-layer-3, #fff)' : undefined } },
+                  h('div', { style: S.peerHead },
+                    h(Checkbox, { label: '', checked: checked.has(row.id), onChange: (on) => toggleChecked(row.id, on) }),
+                    h('span', { style: S.peerName }, nameOf(row)),
+                    h('span', { style: S.badge }, group ? '群' : '私聊'),
+                    h('span', { style: { ...S.mono, marginLeft: 'auto' } }, row.id)),
+                  h('div', { style: S.rowInputs },
+                    h('div', { style: { flex: '1 1 170px', minWidth: 150 } },
+                      h(Select, {
+                        label: '怎么处理',
+                        value: row.mode,
+                        options: MODE_OPTIONS,
+                        onChange: (event) => patch({ mode: event.target.value }),
+                      })),
+                    h('div', { style: { flex: '0 1 120px', minWidth: 108 } },
+                      h('span', { style: S.label }, '冷却（秒）'),
+                      h(TextInput, {
+                        'aria-label': `${nameOf(row)} 的冷却秒数`,
+                        value: row.cooldownSeconds,
+                        placeholder: '60',
+                        onChange: (event) => patch({ cooldownSeconds: event.target.value }),
+                      })),
+                    h('div', { style: { flex: '1 1 170px', minWidth: 150 } },
+                      h(Select, {
+                        label: '什么消息才惊动助手',
+                        value: row.trigger,
+                        options: group ? TRIGGER_OPTIONS : PRIVATE_TRIGGER_OPTIONS,
+                        onChange: (event) => patch({ trigger: event.target.value }),
+                      })),
+                    needsKeywords
+                      ? h('div', { style: { flex: '1 1 100%' } },
+                        h('span', { style: S.label }, '关键字（出现任一个才回，逗号分隔）'),
+                        h(TextInput, {
+                          'aria-label': `${nameOf(row)} 的关键字`,
+                          value: row.keywords,
+                          placeholder: '报错，上线，帮我看下',
+                          onChange: (event) => patch({ keywords: event.target.value }),
+                        }))
+                      : null)
+                )
+              })),
+
+          h('div', { style: { ...S.explanation, marginTop: '10px' } },
+            h('div', null,
+              h('strong', null, '怎么处理'), '：',
+              '直接代回 用你的口吻直接回；起草给我确认 先写好放进那个会话等你点头；只提醒我 不叫模型、只弹通知；不处理 当没看见。'),
+            h('div', null,
+              h('strong', null, '什么消息才惊动助手'), '：不满足条件的消息不叫模型（只有「只提醒我」那档照旧提醒）。'),
+            h('div', null,
+              h('strong', null, '冷却'), '：同一个人两次自动动作至少隔多少秒（留空按 60）。'))))
+    }
+
+    // ---------------------------------------------------------------------------
+    // Main settings page — the channel card plus the policy dialog.
+    // ---------------------------------------------------------------------------
+
+    function policySummary(policy) {
+      const rules = policy?.rules ?? {}
+      const peers = Array.isArray(rules.peers) ? rules.peers : []
+      const sendable = peers.filter((peer) => peer.mode !== 'ignore')
+      const defaultMode = rules.default_mode === 'ignore' ? 'ignore' : 'notify'
+      return {
+        sendable,
+        defaultMode,
+        summary:
+          sendable.length === 0
+            ? '还没配人：助手不会替任何人回消息'
+            : sendable
+              .slice(0, 4)
+              .map((peer) => `${peer.label || peer.id}·${MODE_LABELS.get(peer.mode) ?? peer.mode}`)
+              .join('，') + (sendable.length > 4 ? ` 等 ${sendable.length} 人` : ''),
+      }
+    }
+
+    function MainPage() {
+      const [status, setStatus] = useState(null)
+      const [env, setEnv] = useState(null)
+      const [accounts, setAccounts] = useState(null)
+      const [policy, setPolicy] = useState(null)
+      const [open, setOpen] = useState(false)
+      const [error, setError] = useState('')
+
+      const load = useCallback(async () => {
+        setError('')
+        try {
+          const nextStatus = await call('status')
+          setStatus(nextStatus)
+          const [nextEnv, accountRes] = await Promise.all([
+            call('diagnose').then((answer) => answer.env).catch(() => undefined),
+            call('accounts').catch(() => undefined),
+          ])
+          setEnv(nextEnv)
+          setAccounts(accountRes)
+          const wxid = nextEnv?.active_account || accountRes?.active || accountRes?.accounts?.[0]?.wxid || ''
+          const nextPolicy = await call('policy', wxid ? { account: wxid } : {}).catch(() => undefined)
+          setPolicy(nextPolicy)
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        }
+      }, [])
+
+      useEffect(() => {
+        void load()
+        const timer = setInterval(() => void call('status').then(setStatus).catch(() => undefined), 5000)
+        return () => clearInterval(timer)
+      }, [load])
+
+      const state = status?.state ?? 'idle'
+      const ready = state === 'ready'
+      const connected = ready && env?.ok === true && env?.weixin_running === true && env?.db_ok === true
+      const tone = connected ? 'connected' : state === 'failed' ? 'error' : state === 'starting' ? 'pending' : 'idle'
+      const label = connected ? '已连接' : state === 'starting' ? '启动中' : state === 'failed' ? '未就绪' : ready ? '未就绪' : '未启动'
+      const accountCount = accounts?.accounts?.length ?? 0
+      const detail = policySummary(policy)
+
+      return h('div', { 'data-wechat-local-policy': '', style: S.page },
+        h('div', null,
+          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, '本机微信'),
+          h('p', { style: { ...S.hint, margin: 0 } },
+            '以你本人身份，跟这台电脑上登录的微信好友说话。谁可以被代回、怎么回，在这里配置。')),
+
+        h('section', { style: S.card },
+          h('div', { style: S.row },
+            h('span', { style: S.icon }, h(WechatMark)),
+            h('div', { style: S.text },
+              h('div', { style: S.name }, '本机微信'),
+              h('div', { style: S.descRow },
+                h('span', { style: S.description }, '以你本人身份，跟你微信里的好友说话'),
+                h('span', { style: S.capability }, '只对名单里的人'))),
+            h(StatusPill, { tone, label }),
+            h('div', { style: S.actions },
+              h(Button, { onClick: () => setOpen(true) }, '配置'))),
+
+          error
+            ? h('div', { style: S.error }, error)
+            : null,
+
+          h('dl', { style: S.meta },
+            h('div', { style: S.metaItem },
+              h('dt', { style: S.metaLabel }, '助手'),
+              h('dd', { style: S.metaValue }, status?.version ? `本机微信侧车 v${status.version}` : '本机微信侧车')),
+            h('div', { style: S.metaItem },
+              h('dt', { style: S.metaLabel }, '在线'),
+              h('dd', { style: S.metaValue }, connected ? '本机微信已就绪' : env?.reason || status?.error || '检测中…')),
+            h('div', { style: S.metaItem },
+              h('dt', { style: S.metaLabel }, '可代回'),
+              h('dd', { style: S.metaValue },
+                (detail.sendable.length === 0 ? '还没有人' : `${detail.sendable.length} 人`)
+                + (accountCount > 1 ? ` · ${accountCount} 个号` : ''))),
+            h('div', { style: S.metaItem },
+              h('dt', { style: S.metaLabel }, '名单外的人'),
+              h('dd', { style: S.metaValue }, MODE_LABELS.get(detail.defaultMode) ?? detail.defaultMode))),
+
+          h('div', { style: S.children },
+            h('p', { style: S.summary }, detail.summary),
+            h('p', { style: { ...S.hint, margin: 0 } },
+              '点「配置」按人设置：直接代回 / 起草给我确认 / 只提醒我 / 黑名单。',
+              '环境与工具状态在「本机微信状态」里。'))),
+
+        h(PolicyModal, {
+          open,
+          onClose: () => setOpen(false),
+          onSaved: () => void load(),
+        }))
+    }
+
+    // ---------------------------------------------------------------------------
+    // Status settings page — sidecar state, environment self-check, tool chips.
+    // ---------------------------------------------------------------------------
+
+    const DB_SOURCE_LABELS = {
+      env: '环境变量',
+      ini: '微信设置',
+      registry: '注册表',
+      default: '默认路径',
+      scan: '磁盘扫描',
+    }
+
     function environmentLines(env, state) {
-      if (!env) return { lines: ['环境自检：检测中…'], actions: [] }
+      if (!env) return { lines: ['环境自检：检测中…'], actions: [], versionHint: '' }
       const db = env.db_ok
         ? `数据目录：${env.db_root}（来源：${DB_SOURCE_LABELS[env.db_source] || env.db_source || '自动探测'}）`
         : '数据目录：未找到（确认微信已登录；换机后在微信「设置 → 文件管理」核对路径）'
@@ -224,7 +884,7 @@ window.__ModuleLoader__.load({
       if (!env.weixin_running) actions.push('打开并登录微信')
       if (env.weixin_running && !env.db_ok) actions.push('确认微信数据目录')
       if (missing.length > 0) actions.push(`安装依赖：${missing.join('、')}`)
-      if (state !== 'ready') actions.push('侧车未就绪：在下方重启侧车')
+      if (state !== 'ready') actions.push('侧车未就绪：重启侧车')
       return {
         lines: [db, wechat, deps, version, account].filter(Boolean),
         actions,
@@ -232,7 +892,7 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function Page() {
+    function StatusPage() {
       const [status, setStatus] = useState(null)
       const [env, setEnv] = useState(null)
       const [error, setError] = useState('')
@@ -295,28 +955,24 @@ window.__ModuleLoader__.load({
       const registered = status?.registered ?? []
       const available = status?.tools?.length ?? 0
 
-      return h('div', { 'data-wechat-local-ui': '', style: S.page },
+      return h('div', { 'data-wechat-local-status': '', style: S.page },
         h('div', null,
-          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, '本机微信'),
-          h('p', { style: { ...S.summary, margin: 0 } },
-            '用这台电脑上登录的微信读写你自己的会话；只读路径不抢前台，发送会抢前台。仅 Windows。')),
+          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, '本机微信状态'),
+          h('p', { style: { ...S.hint, margin: 0 } },
+            '侧车、Python、环境自检与工具注册情况。只读路径不抢前台，发送会抢前台。')),
 
         h('section', { style: S.card },
           h('div', { style: S.row },
             h('span', { style: S.icon }, h(WechatMark)),
             h('div', { style: S.text },
-              h('div', { style: S.name }, '本机微信'),
+              h('div', { style: S.name }, '本机微信状态'),
               h('div', { style: S.descRow },
-                h('span', { style: S.description }, '以你本人身份，跟你微信里的好友说话'),
+                h('span', { style: S.description }, '侧车与环境自检'),
                 h('span', { style: S.capability }, '读取 · 发送 · 导出'))),
             h(StatusPill, { tone, label }),
             h('div', { style: S.actions },
-              h('button', {
-                type: 'button',
-                style: S.btn,
-                disabled: busy !== '',
-                onClick: () => void run('restart', 'restart'),
-              }, busy === 'restart' ? '重启中…' : '重启侧车'))),
+              h(Button, { onClick: () => void run('restart', 'restart'), disabled: busy !== '' },
+                busy === 'restart' ? '重启中…' : '重启侧车'))),
 
           error || status?.error
             ? h('div', { style: S.error }, error || status.error)
@@ -328,8 +984,7 @@ window.__ModuleLoader__.load({
               h('dd', { style: S.metaValue }, status?.version ? `本机微信侧车 v${status.version}` : '本机微信侧车')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '在线'),
-              h('dd', { style: S.metaValue },
-                connected ? '本机微信已就绪' : env?.reason || status?.error || '检测中…')),
+              h('dd', { style: S.metaValue }, connected ? '本机微信已就绪' : env?.reason || status?.error || '检测中…')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '工具'),
               h('dd', { style: S.metaValue }, `${registered.length} 个已注册 · ${available} 个可用`)),
@@ -339,27 +994,14 @@ window.__ModuleLoader__.load({
                 runtime?.error ? '未找到解释器' : runtime?.source === 'uv' ? 'uv（依赖自动获取）' : '自定义 Python'))),
 
           h('div', { style: S.children },
-            h('p', { style: S.summary },
-              registered.length === 0
-                ? '侧车还没交出工具：先看下面的自检，再重启侧车。'
-                : `已向 Agent 开放 ${registered.length} 个工具；${registered.slice(0, 6).join('、')}${registered.length > 6 ? ` 等 ${registered.length} 个` : ''}。`),
-
             h('div', { style: S.divider },
               h('div', { style: S.envHead },
                 h('span', { style: S.envTitle }, '环境自检'),
                 h('span', { style: { display: 'flex', gap: '6px' } },
-                  h('button', {
-                    type: 'button',
-                    style: S.btnQuiet,
-                    disabled: busy !== '',
-                    onClick: () => void run('diagnose', 'check'),
-                  }, busy === 'check' ? '检测中…' : '重新检测'),
-                  h('button', {
-                    type: 'button',
-                    style: S.btn,
-                    disabled: busy !== '',
-                    onClick: () => void run('repair', 'repair'),
-                  }, busy === 'repair' ? '修复中…' : '一键修复'))),
+                  h(Button, { quiet: true, onClick: () => void run('diagnose', 'check'), disabled: busy !== '' },
+                    busy === 'check' ? '检测中…' : '重新检测'),
+                  h(Button, { onClick: () => void run('repair', 'repair'), disabled: busy !== '' },
+                    busy === 'repair' ? '修复中…' : '一键修复'))),
               h('div', { style: S.envBody },
                 environment.lines.map((line, index) => h('div', { key: index }, line)),
                 environment.actions.length > 0
@@ -396,19 +1038,18 @@ window.__ModuleLoader__.load({
                     wordBreak: 'break-word',
                   },
                 }, status.stderrTail.join('\n')))
-              : null)),
-      )
+              : null)))
     }
 
-    function Icon() {
+    function ChatIcon() {
       return h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
-        h('path', {
-          d: 'M2 3.5h12v8H6.5L3.5 14v-2.5H2z',
-          stroke: 'currentColor',
-          strokeWidth: 1.5,
-          strokeLinejoin: 'round',
-        }),
+        h('path', { d: 'M2 3.5h12v8H6.5L3.5 14v-2.5H2z', stroke: 'currentColor', strokeWidth: 1.5, strokeLinejoin: 'round' }),
         h('path', { d: 'M5 6.5h6M5 9h4', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }))
+    }
+
+    function PulseIcon() {
+      return h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M1.5 8h3l2-4.5 3 9 2-4.5h3', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }))
     }
 
     return {
@@ -423,13 +1064,26 @@ window.__ModuleLoader__.load({
           ctx.slots.inject('settings.section', () =>
             ctx.slots.register(
               { name: 'settings.section', id: 'wechat-local', order: 41, label: '本机微信' },
-              Page,
+              MainPage,
             ),
           ),
         )
         track(() =>
           ctx.slots.inject('settings.section.icon', () =>
-            ctx.slots.register({ name: 'settings.section.icon', id: 'wechat-local' }, Icon),
+            ctx.slots.register({ name: 'settings.section.icon', id: 'wechat-local' }, ChatIcon),
+          ),
+        )
+        track(() =>
+          ctx.slots.inject('settings.section', () =>
+            ctx.slots.register(
+              { name: 'settings.section', id: 'wechat-local-status', order: 42, label: '本机微信状态' },
+              StatusPage,
+            ),
+          ),
+        )
+        track(() =>
+          ctx.slots.inject('settings.section.icon', () =>
+            ctx.slots.register({ name: 'settings.section.icon', id: 'wechat-local-status' }, PulseIcon),
           ),
         )
         return () => {

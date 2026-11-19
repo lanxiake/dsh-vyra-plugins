@@ -97,9 +97,9 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  /** Sidecar tools answer with content blocks; these diagnostics are JSON text. */
-  async function callJson(tool) {
-    const blocks = await sidecar.rawCall(tool, {})
+  /** Sidecar tools answer with content blocks; these settings calls answer with JSON text. */
+  async function callJson(tool, args = {}) {
+    const blocks = await sidecar.rawCall(tool, args)
     const text = blocks
       .filter((block) => block?.type === 'text')
       .map((block) => String(block.text ?? ''))
@@ -121,6 +121,81 @@ export function apply(ctx, config = {}) {
     return { repair: result, env: await diagnose(), status: status() }
   }
 
+  /**
+   * The reply policy lives in the sidecar's per-account `rules.json`, the same store its
+   * `autoreply_rules` gate reads. The settings page reads and writes it through that tool
+   * instead of inventing a second file.
+   */
+  /**
+   * The sidecar binds the process-wide account on any call that names one, so reading
+   * each account's policy would silently leave the last one selected — and a later
+   * send without `account` would go out from the wrong identity. Restore the account
+   * that was selected before a settings call.
+   */
+  async function keepAccount(account, operation) {
+    if (!account) return operation()
+    let before = ''
+    try {
+      before = (await callJson('list_accounts'))?.active || ''
+    } catch {
+      before = ''
+    }
+    try {
+      return await operation()
+    } finally {
+      if (before && before.toLowerCase() !== account.toLowerCase()) {
+        await callJson('autoreply_rules', { action: 'get', account: before }).catch(() => {})
+      }
+    }
+  }
+
+  function readPolicy(account) {
+    return keepAccount(account, () =>
+      callJson('autoreply_rules', { action: 'get', ...(account ? { account } : {}) }),
+    )
+  }
+
+  async function writePolicy(account, rules) {
+    return keepAccount(account, async () => {
+      const current = await callJson('autoreply_rules', {
+        action: 'get',
+        ...(account ? { account } : {}),
+      })
+      const existing = current.rules ?? {}
+      const patch = {
+        action: 'set',
+        ...(account ? { account } : {}),
+        version: 2,
+        // Configuring a list is the user saying they want it in force; the gate reads this flag.
+        enabled: true,
+        mode: existing.mode ?? 'draft',
+        private: existing.private ?? true,
+        reply_self: existing.reply_self ?? false,
+        groups: existing.groups ?? 'at_me',
+        default_mode: rules?.defaultMode === 'ignore' ? 'ignore' : 'notify',
+        peers: (Array.isArray(rules?.peers) ? rules.peers : []).map((peer) => ({
+          id: String(peer.id ?? ''),
+          label: String(peer.label ?? ''),
+          mode: String(peer.mode ?? 'draft'),
+          trigger: String(peer.trigger ?? 'all'),
+          keywords: Array.isArray(peer.keywords) ? peer.keywords.map(String) : [],
+          cooldown_seconds:
+            Number.isInteger(peer.cooldownSeconds) && peer.cooldownSeconds >= 0
+              ? peer.cooldownSeconds
+              : null,
+        })),
+      }
+      const result = await callJson('autoreply_rules', patch)
+      if (result && result.ok === false) {
+        throw new Error(result.detail || result.error_code || '保存回复策略失败')
+      }
+      return callJson('autoreply_rules', {
+        action: 'get',
+        ...(account ? { account } : {}),
+      })
+    })
+  }
+
   async function dispatch(body) {
     switch (String(body.op || '')) {
       case 'status':
@@ -138,6 +213,19 @@ export function apply(ctx, config = {}) {
         return { env: await diagnose(), status: status() }
       case 'repair':
         return repair()
+      case 'accounts':
+        return callJson('list_accounts')
+      case 'contacts':
+        return keepAccount(body.account, () =>
+          callJson('list_contacts', {
+            query: body.query ?? '',
+            ...(body.account ? { account: body.account } : {}),
+          }),
+        )
+      case 'policy':
+        return readPolicy(body.account)
+      case 'policy.save':
+        return writePolicy(body.account, body.rules)
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }
