@@ -133,7 +133,10 @@ function createPanel(React) {
   const h = React.createElement;
   return function ToolAnalysisPanel() {
     const [data, setData] = React.useState(void 0);
-    const [windowDays, setWindowDays] = React.useState(0);
+    // The panel opens on the recent window: "what did my tools do lately" is
+    // the question it exists to answer, and the cumulative totals are one
+    // selection away.
+    const [windowDays, setWindowDays] = React.useState(3);
     const [sortKey, setSortKey] = React.useState("count");
     const [ascending, setAscending] = React.useState(false);
     const [selected, setSelected] = React.useState(() => /* @__PURE__ */ new Set());

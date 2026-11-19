@@ -1,6 +1,6 @@
 {
   "name": "vyra-tool-usage-stats",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "统计每次工具调用与失败原因；勾选出问题的工具，一键复制其失败日志与分析提示词粘进对话。",
   "keywords": [
     "dsh",
