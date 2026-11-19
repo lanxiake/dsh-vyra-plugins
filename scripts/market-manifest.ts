@@ -916,6 +916,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.3.2: conversations come from the IM pagination endpoint the web IM
+        // uses (25 vs 5), the composer is pinned to the bottom, and reloaded
+        // plugin instances no longer leave watcher processes fighting over IM.
+        '0.3.2': {
+          publishTimestamp: 1795077859,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'e03fe1b02d58345477b4cf2418e28f2b06429b71',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
