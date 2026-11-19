@@ -818,6 +818,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.6.0 scopes 代聊 to watch sessions (no global preset), reads WeChat's
+        // decoded image cache (WXGF originals included), and archives the old
+        // preset-based watch sessions on upgrade.
+        '0.6.0': {
+          publishTimestamp: 1795078687,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '04932926568e618e663a00df694570dead8f7d8a',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
