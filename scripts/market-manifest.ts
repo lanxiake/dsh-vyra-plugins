@@ -939,6 +939,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.4.1 scopes cards, orders, deliveries and item skills by account.
+        '0.4.1': {
+          publishTimestamp: 1795078661,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'fa32e8ef6b6b5eb7de718e5018f4fe92130d7d5f',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
