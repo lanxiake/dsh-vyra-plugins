@@ -1003,13 +1003,16 @@ window.__ModuleLoader__.load({
       const account = env.active_account
         ? `账号：${env.active_account}${(env.accounts?.length ?? 0) > 1 ? `（共 ${env.accounts.length} 个）` : ''}`
         : ''
+      const voice = env.asr
+        ? env.asr.ready ? '语音转写：就绪' : `语音转写：${env.asr.hint || '未就绪'}`
+        : ''
       const actions = []
       if (!env.weixin_running) actions.push('打开并登录微信')
       if (env.weixin_running && !env.db_ok) actions.push('确认微信数据目录')
       if (missing.length > 0) actions.push(`安装依赖：${missing.join('、')}`)
       if (state !== 'ready') actions.push('侧车未就绪：重启侧车')
       return {
-        lines: [db, wechat, deps, version, account].filter(Boolean),
+        lines: [db, wechat, deps, voice, version, account].filter(Boolean),
         actions,
         versionHint: env.wechat_version?.hint || '',
       }

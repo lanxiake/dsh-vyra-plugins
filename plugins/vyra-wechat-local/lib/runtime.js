@@ -34,7 +34,17 @@ export function resolveRuntime({ pythonPath = '', pythonArgs = [] } = {}) {
   }
   return {
     command: uv,
-    args: ['run', '--quiet', '--with', 'pycryptodome', '--with', 'zstandard', '--python', '>=3.10', 'python', '-u', 'vyra_sidecar.py'],
+    args: [
+    'run',
+    '--quiet',
+    '--with', 'pycryptodome',
+    '--with', 'zstandard',
+    '--with', 'pilk',
+    '--with', 'sherpa-onnx',
+    '--with', 'numpy',
+    '--python', '3.12',
+    'python', '-u', 'vyra_sidecar.py',
+  ],
     source: 'uv',
   }
 }

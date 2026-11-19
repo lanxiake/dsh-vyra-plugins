@@ -1,6 +1,6 @@
 // End-to-end timing of the watch loop with a fake sidecar and session controller.
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -77,8 +77,8 @@ test('a burst waits for the merge window, then the reply cooldown batches what f
     watcher.start()
     await waitFor(() => prompts.length === 1)
     assert.match(prompts[0], /在吗/)
-    assert.match(prompts[0], /dry_run=false/)
-    assert.match(prompts[0], /talker="friend"/)
+    assert.match(prompts[0], /\[好友（friend） · 账号 wxid_1 · 直接代回\]/)
+    assert.doesNotMatch(prompts[0], /你是用户的微信助理/)
     assert.deepEqual(created[0], { workspaceId: 'workspace-pc-wechat' })
 
     // A second message arrives after the first batch was delivered and the agent replied.
@@ -151,6 +151,58 @@ test('notify peers are recorded but never wake the model', async () => {
     assert.equal(prompts.length, 0)
     assert.equal(watcher.status().notifications[0].name, '好友')
     assert.equal(watcher.status().notifications[0].text, 'hi')
+  } finally {
+    watcher.stop()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('voice is transcribed and images are attached before delivery', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
+  const imagePath = join(dir, 'image.png')
+  writeFileSync(imagePath, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n0sAAAAASUVORK5CYII=', 'base64'))
+  const requests = []
+  const controller = {
+    create: async () => ({ sessionId: 'session-media' }),
+    rename: async () => {},
+    prompt: async (request) => { requests.push(request) },
+  }
+  let delivered = false
+  const watcher = createWatcher({
+    callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: true, db_ok: true, deps: { ok: true } }
+      if (tool === 'list_accounts') return { active: 'wxid_1', accounts: [{ wxid: 'wxid_1', running: true }] }
+      if (tool === 'transcribe_voice') return { ok: true, text: '你好呀' }
+      if (tool === 'poll_new') {
+        if (delivered) return { messages: [], next_since_ts: 101 }
+        delivered = true
+        return {
+          messages: [
+            { talker: 'friend', name: '好友', type: 34, ts: 100, time: 't100', text: '[语音 3秒]', voice_path: 'fake.silk', account: 'wxid_1' },
+            { talker: 'friend', name: '好友', type: 3, ts: 101, time: 't101', text: '[图片]', image_path: imagePath, account: 'wxid_1' },
+          ],
+          next_since_ts: 101,
+        }
+      }
+      return {}
+    },
+    readPolicy: async () => policy([{ id: 'friend', label: '好友', mode: 'auto', trigger: 'all', cooldown_seconds: 1 }]),
+    restoreAccount: async () => {},
+    getController: () => controller,
+    getWorkspace: async () => 'ws',
+    getPreset: async () => 'vyra-wechat-proxy',
+    statePath: join(dir, 'watch.json'),
+    config: { watchSeconds: 0.02, mergeWindowSeconds: 0.05, replyTimeoutSeconds: 1 },
+  })
+  try {
+    watcher.start()
+    await waitFor(() => requests.length === 1)
+    const content = requests[0].content
+    const text = content.find((part) => part.type === 'text').text
+    assert.match(text, /\[好友（friend） · 账号 wxid_1 · 直接代回\]/)
+    assert.match(text, /\[语音\] 你好呀/)
+    assert.match(text, /\[图片\]/)
+    assert.ok(content.some((part) => part.type === 'image' && part.mediaType === 'image/png' && part.data.length > 0))
   } finally {
     watcher.stop()
     rmSync(dir, { recursive: true, force: true })

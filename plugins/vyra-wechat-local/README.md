@@ -46,8 +46,14 @@ Python 里保留但不对模型暴露。
 一批交给 Agent 后，等它回复；真实发送成功后按该人的「冷却」秒数进入冷却，
 冷却期内来的消息合并成一批，冷却结束时一次交付。用户自己从手机回复会清空待办。
 
+**图片与语音在交付前就处理好**：图片以原生图片块随消息附带；语音用本地
+Paraformer（sherpa-onnx）转写成文字，首次需要下载约 78MB 模型（自动下载）。
+Agent 不需要再调用 `read_image` 或转写工具。
+
 每个好友/群对应一个 DSH 会话，统一放在 **PC微信** 分组（workspace：
 `~/.dsh/wechat-local/workspace`），不会和你平时的项目会话混在一起。
+新会话自动使用内置的 **代聊模式** Agent 预设，系统提示词里已经写好
+`send_text` 用法、历史消息工具、图片/语音说明和回答规范。
 
 可配置（`cordis.patch.yml` 的 `config`）：
 
@@ -58,6 +64,9 @@ Python 里保留但不对模型暴露。
 | `mergeWindowSeconds` | `20` | 合并窗口（秒） |
 | `replyTimeoutSeconds` | `120` | 交付后等回复的上限（秒） |
 | `backlogSeconds` | `300` | 重启后最多补读多久的消息 |
+| `voiceAutoDownload` | `true` | 首次遇到语音时自动下载 78MB 本地语音模型 |
+| `maxImagesPerBatch` | `4` | 一批消息最多附带的图片数 |
+| `maxImageBytes` | `8000000` | 一批图片的总字节上限 |
 
 ## 行为边界
 

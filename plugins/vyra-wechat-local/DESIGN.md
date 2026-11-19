@@ -273,9 +273,14 @@ Host 每 `watchSeconds`（默认 2s）对每个账号调 `poll_new`，按**该�
 **交给 Agent 的方式**：每个 peer 一个 DSH 会话（标题「PC微信 · 名字」），用
 `ctx.sessionController.create/prompt` 投递合并后的消息。会话建在专用的 **PC微信**
 workspace（`~/.dsh/wechat-local/workspace`）里，会话列表按 workspace 分组，不会和
-项目会话混在一起。提示词包含 talker/account、策略与 `send_text(..., dry_run=false)`
-的调用要求；`draft` 策略只要求写草稿，不调用发送工具。Agent 的发送经过本插件的工具，
-Host 因此能观察到成功发送并启动冷却。
+项目会话混在一起。新会话自动选择内置的 **代聊模式** 预设
+（`vyra-wechat-proxy`）：系统提示词写明 `send_text(..., dry_run=false)`、历史检索
+工具、图片/语音说明和回答规范，用户消息只保留一行紧凑元信息 + 原始消息正文。
+
+**媒体在交付前处理**：`poll_new` 已附带图片本地路径与语音 SILK 路径。Host 在
+prompt 前把图片读成原生 `image` 内容块；语音调用侧车的 `transcribe_voice`
+（本地 `pilk` + `sherpa-onnx` Paraformer，模型首次自动下载）写成 `[语音] 文字`。
+Agent 不需要额外调用 `read_image` 或转写工具。
 
 **连接监测**：监听启动时和之后每 60 秒（异常时每 10 秒）跑一次 `check_env`。微信没运行、
 数据目录找不到或依赖缺失时，直接把可操作的错误写进 `watch.lastError` 并暂停轮询——

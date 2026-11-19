@@ -75,6 +75,55 @@ export function apply(ctx, config = {}) {
     return workspacePromise
   }
 
+  let presetRegistry
+  ctx.inject(['agentPresets'], (owner) => {
+    presetRegistry = owner.agentPresets
+  })
+  let presetId = ''
+  let presetPromise = null
+  let presetDispose = null
+
+  const WECHAT_PROXY_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。
+
+用户消息是合并后的微信消息批次：
+- 第一行是 "[对方（talker）· 账号 · 直接代回|起草]"；
+- 后面每条是 "时间 内容"；图片会以图片块附在消息里，语音已经转写成 [语音] 文字。
+
+回复规则：
+- 直接代回：必须调用 send_text(talker=<第一行的 talker>, account=<账号>, dry_run=false, text=<回复正文>) 发送。
+  不要只在回复里说“已发送”，不要向对方暴露你是 AI，也不要提及工具。
+- 起草：只起草一条回复，不要调用任何发送工具；把草稿正文直接输出，等用户确认。
+- 用用户平时的口吻；微信里不要用 Markdown，不要长篇；不确定就简短确认。
+- 需要更多上下文时可以用 read_history / search_messages / list_sessions。
+  图片和语音已经随消息提供，不要再调用 read_image 或转写工具。`
+
+  /** Register the built-in 代聊模式 preset once; watch sessions select it. */
+  function ensurePreset() {
+    if (presetId) return Promise.resolve(presetId)
+    if (presetRegistry === undefined) return Promise.resolve('')
+    if (presetPromise === null) {
+      presetPromise = presetRegistry.register({
+        id: 'vyra-wechat-proxy',
+        name: '代聊模式',
+        description: 'PC微信代聊：读取合并后的微信消息，按策略起草或直接回复',
+        plugins: [
+          { id: 'persona', name: '@deepseek-ai/dsh-persona', config: { prefix: WECHAT_PROXY_PROMPT } },
+          { id: 'agent-instructions', name: '@deepseek-ai/dsh-agent-instructions', config: { maxBytes: 65536 } },
+          { id: 'time-context', name: '@deepseek-ai/dsh-time-context' },
+        ],
+      }).then((dispose) => {
+        presetId = 'vyra-wechat-proxy'
+        presetDispose = dispose
+        return presetId
+      }).catch((err) => {
+        presetPromise = null
+        log(`preset unavailable: ${err?.message ?? err}`)
+        return ''
+      })
+    }
+    return presetPromise
+  }
+
   const sidecar = createSidecar({ runtime, vendorDir, log })
   const avatarCache = new Map()
   let watcher = null
@@ -121,6 +170,7 @@ export function apply(ctx, config = {}) {
       disposed = true
       watcher?.stop()
       tools.dispose()
+      if (presetDispose) void presetDispose()
       void sidecar.stop()
     },
     'wechat-local.lifecycle',
@@ -254,6 +304,7 @@ export function apply(ctx, config = {}) {
     restoreAccount: bindAccount,
     getController: () => sessionController,
     getWorkspace: ensureWorkspace,
+    getPreset: ensurePreset,
     config: {
       watch: config.watch !== false,
       watchSeconds: config.watchSeconds ?? 2,

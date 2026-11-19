@@ -13,7 +13,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createBatchScheduler } from './batch.js'
 
-const STATE_VERSION = 2
+const STATE_VERSION = 3
 const MAX_NOTIFICATIONS = 100
 
 function stateFile() {
@@ -42,6 +42,7 @@ function writeState(file, data) {
   }
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const lower = (value) => String(value ?? '').trim().toLowerCase()
 const isGroup = (talker) => lower(talker).endsWith('@chatroom')
 
@@ -127,48 +128,24 @@ export function summarize(message) {
     at_me: message.at_me === true,
     local_id: message.local_id,
     image_name: message.image_name,
+    image_path: message.image_path,
+    voice_path: message.voice_path,
     sender: message.sender,
     name: message.name,
     talker: message.talker,
+    account: message.account,
   }
 }
 
-function promptFor(peer, batch, decision) {
-  const lines = batch.map((message, index) => {
-    const parts = [`${index + 1}. [${message.time || message.ts}] ${message.text || '(无文字内容)'}`]
-    if (message.type === 3) {
-      parts.push(`（图片${message.local_id === undefined ? '' : ` local_id=${message.local_id} ts=${message.ts}`}，可用 read_image 查看）`)
-    } else if (message.type === 34) {
-      parts.push('（语音；本机未打包转写模型，听不到内容）')
-    } else if (message.type === 43) {
-      parts.push('（视频）')
-    }
-    if (message.at_me) parts.push('（@了我）')
-    return parts.join(' ')
-  })
-  const first = batch[0]?.time ?? ''
-  const last = batch[batch.length - 1]?.time ?? ''
-  const mode = decision.mode === 'auto' ? '直接代回' : '起草给我确认'
-  const sendArgs = [`talker="${peer.talker}"`, ...(peer.account ? [`account="${peer.account}"`] : []), 'dry_run=false', 'text="<回复正文>"'].join(', ')
-  const instruction = decision.mode === 'auto'
-    ? [
-        '请以用户本人的口吻直接回复，并调用工具发送：',
-        `send_text(${sendArgs})`,
-        '必须真正调用该工具，不要只在回复里说“已发送”；不要向对方暴露你是 AI，也不要提及工具。',
-      ].join('\n')
-    : [
-        '当前策略是「起草给我确认」：只起草一条回复，不要调用任何发送工具。',
-        '把草稿正文直接作为你的回复输出，等用户确认。',
-        '信息不足以回复时，直接说明需要确认什么。',
-      ].join('\n')
-  return [
-    `你是用户的微信助理，正在代表用户本人处理「${peer.name || peer.talker}」${isGroup(peer.talker) ? '（群聊）' : '（私聊）'}的新消息。`,
-    `本批合并了 ${batch.length} 条消息（${first} ~ ${last}），当前策略：${mode}。`,
-    '',
-    ...lines,
-    '',
-    instruction,
-  ].join('\n')
+/** Image media type from the decrypted file's first bytes. */
+function imageMediaType(buffer) {
+  if (buffer.length < 4) return ''
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'image/png'
+  if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg'
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) return 'image/gif'
+  if (buffer.length >= 12 && buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46
+    && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'image/webp'
+  return ''
 }
 
 /**
@@ -180,18 +157,19 @@ function promptFor(peer, batch, decision) {
  * @param {object} [options.config]
  * @param {(line: string) => void} [options.log]
  */
-export function createWatcher({ callJson, readPolicy, restoreAccount, getController, getWorkspace = async () => '', config = {}, log = () => {}, statePath = stateFile() }) {
+export function createWatcher({ callJson, readPolicy, restoreAccount, getController, getWorkspace = async () => '', getPreset = async () => '', config = {}, log = () => {}, statePath = stateFile() }) {
   const pollSeconds = Math.max(0.01, Number(config.watchSeconds) || 2)
   const mergeWindowMs = Math.max(1, Number(config.mergeWindowSeconds) * 1000 || 20_000)
   const replyTimeoutMs = Math.max(1, Number(config.replyTimeoutSeconds) * 1000 || 120_000)
   const backlogSeconds = Math.max(0, Number(config.backlogSeconds) || 300)
+  const voiceAutoDownload = config.voiceAutoDownload !== false
+  const maxImages = Math.max(0, Number(config.maxImagesPerBatch) || 4)
+  const maxImageBytes = Math.max(0, Number(config.maxImageBytes) || 8_000_000)
   const enabled = config.watch !== false
 
   const state = readState(statePath)
-  // Version 2 groups sessions under the PC微信 workspace. Sessions created before
-  // that have a different cwd and cannot be attached, so start fresh per peer; the
-  // old sessions stay in the list for the user to archive.
-  if (Number(state.version) < 2) {
+  // Version 3 selects the built-in 代聊模式 preset for new sessions.
+  if (Number(state.version) < 3) {
     state.sessions = {}
     state.lastDelivery = null
   }
@@ -248,7 +226,11 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     const controller = getController()
     if (!controller) throw new Error('DSH 会话服务不可用')
     const workspaceId = await Promise.resolve(getWorkspace()).catch(() => '')
-    const created = await controller.create(workspaceId ? { workspaceId } : {})
+    const agentPreset = await Promise.resolve(getPreset()).catch(() => '')
+    const created = await controller.create({
+      ...(workspaceId ? { workspaceId } : {}),
+      ...(agentPreset ? { agentPreset } : {}),
+    })
     state.sessions[key] = created.sessionId
     save()
     try {
@@ -257,6 +239,100 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       // A deployment without the title service still gets a working session.
     }
     return created.sessionId
+  }
+
+  /** Transcribe one voice message, downloading the model once when it is missing. */
+  async function transcribeVoice(message, account) {
+    if (!message.voice_path) {
+      return { ok: false, error_code: 'voice_unavailable', detail: '语音文件不在本地' }
+    }
+    const request = {
+      talker: message.talker,
+      local_id: message.local_id,
+      ts: message.ts,
+      ...(account ? { account } : {}),
+    }
+    try {
+      let answer = await callJson('transcribe_voice', request)
+      if (answer?.ok !== false && typeof answer?.text === 'string') return answer
+      if (voiceAutoDownload && answer?.error_code === 'asr_unavailable') {
+        log('watch: downloading the local voice model')
+        await callJson('wechat_voice_model', { action: 'download' })
+        // The download runs in the sidecar's background thread; wait for it here
+        // instead of blocking the sidecar's request loop.
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          await sleep(3_000)
+          const status = await callJson('wechat_voice_model', { action: 'status' })
+          if (status?.download?.error) {
+            return { ok: false, detail: `语音模型下载失败：${status.download.error}` }
+          }
+          if (status?.ok === true) {
+            answer = await callJson('transcribe_voice', request)
+            break
+          }
+        }
+      }
+      return answer
+    } catch (error) {
+      return { ok: false, detail: String(error?.message ?? error) }
+    }
+  }
+
+  /**
+   * Turn a batch into the compact user message the agent sees: one header line
+   * with the peer and policy, then the raw message lines. Voice is transcribed
+   * and images are attached as native image parts, so the agent does not need
+   * extra tool calls to understand them.
+   */
+  async function prepareBatch(peer, batch, decision) {
+    const images = []
+    let imageBytes = 0
+    for (const message of batch) {
+      if (message.type === 34) {
+        const answer = await transcribeVoice(message, message.account || peer.account)
+        message.text = answer?.ok !== false && typeof answer?.text === 'string' && answer.text
+          ? `[语音] ${answer.text}`
+          : `[语音，未能转写：${answer?.detail || answer?.hint || answer?.reason || '未知原因'}]`
+      }
+      if (message.type === 3 && message.image_path) {
+        if (images.length >= maxImages) {
+          message.text = `${message.text || '[图片]'}（图片未附加：单批最多 ${maxImages} 张）`
+          continue
+        }
+        try {
+          const buffer = readFileSync(message.image_path)
+          const mediaType = imageMediaType(buffer)
+          if (buffer.length === 0 || mediaType === '') {
+            message.text = `${message.text || '[图片]'}（图片读不到或格式不支持）`
+            continue
+          }
+          if (imageBytes + buffer.length > maxImageBytes) {
+            message.text = `${message.text || '[图片]'}（图片未附加：单批图片体积上限）`
+            continue
+          }
+          images.push({
+            type: 'image',
+            mediaType,
+            data: buffer.toString('base64'),
+            name: message.image_name || 'wechat-image',
+          })
+          imageBytes += buffer.length
+        } catch {
+          message.text = `${message.text || '[图片]'}（图片文件读不到）`
+        }
+      }
+      if (message.type === 43) {
+        message.text = message.text === '[视频]' ? '[视频]' : `${message.text || '[视频]'}`
+      }
+    }
+    const mode = decision.mode === 'auto' ? '直接代回' : '起草'
+    const who = peer.name && peer.name !== peer.talker ? `${peer.name}（${peer.talker}）` : peer.talker
+    const header = `[${who}${peer.account ? ` · 账号 ${peer.account}` : ''} · ${mode}]`
+    const lines = batch.map((message) => {
+      const at = message.at_me ? '（@我）' : ''
+      return `${message.time || message.ts} ${message.text || '(无文字内容)'}${at}`
+    })
+    return { text: [header, ...lines].join('\n'), images }
   }
 
   async function deliver(key, batch, decision) {
@@ -272,12 +348,13 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       return
     }
     try {
+      const prepared = await prepareBatch(peer, batch, decision)
       const sessionId = await ensureSession(key, peer)
       await controller.prompt({
         requestId: randomUUID(),
         sessionId,
         mode: 'queue',
-        content: [{ type: 'text', text: promptFor(peer, batch, decision) }],
+        content: [{ type: 'text', text: prepared.text }, ...prepared.images],
       }, new AbortController().signal)
       // A draft is already the response the user reviews, so its cooldown starts at
       // delivery. An auto reply starts it when send_text actually succeeds.
