@@ -44,16 +44,19 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 CREATE TABLE IF NOT EXISTS items (
-  item_id    TEXT PRIMARY KEY,
+  item_id    TEXT NOT NULL DEFAULT '',
+  account_id TEXT NOT NULL DEFAULT '',
   title      TEXT NOT NULL DEFAULT '',
   knowledge  TEXT NOT NULL DEFAULT '',
   skills     TEXT NOT NULL DEFAULT '',
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (item_id, account_id)
 );
 
 CREATE TABLE IF NOT EXISTS deliveries (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   order_no   TEXT NOT NULL,
+  account_id TEXT NOT NULL DEFAULT '',
   card_id    INTEGER,
   seq        INTEGER NOT NULL DEFAULT 1,
   content    TEXT NOT NULL DEFAULT '',
@@ -89,6 +92,8 @@ export function createStore(file) {
   ensureColumn(db, 'cards', 'template', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'orders', 'spec_name', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'orders', 'spec_value', "TEXT NOT NULL DEFAULT ''")
+  ensureColumn(db, 'deliveries', 'account_id', "TEXT NOT NULL DEFAULT ''")
+  ensureColumn(db, 'items', 'account_id', "TEXT NOT NULL DEFAULT ''")
 
   const tx = (fn) => {
     db.exec('BEGIN IMMEDIATE')
@@ -113,18 +118,26 @@ export function createStore(file) {
        WHERE order_no = ?`,
     ),
     pendingConfirm: db.prepare(
-      `SELECT * FROM orders WHERE state = 'confirm_failed' ORDER BY updated_at LIMIT 20`,
+      `SELECT * FROM orders WHERE state = 'confirm_failed'
+       AND (account_id = ? OR account_id = '') ORDER BY updated_at LIMIT 20`,
     ),
-    recentOrders: db.prepare('SELECT * FROM orders ORDER BY updated_at DESC LIMIT ?'),
+    recentOrders: db.prepare(
+      `SELECT * FROM orders WHERE (account_id = ? OR account_id = '')
+       ORDER BY updated_at DESC LIMIT ?`,
+    ),
     insertDelivery: db.prepare(
-      `INSERT INTO deliveries (order_no, card_id, seq, content, send_state, error)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO deliveries (order_no, account_id, card_id, seq, content, send_state, error)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ),
-    recentDeliveries: db.prepare('SELECT * FROM deliveries ORDER BY id DESC LIMIT ?'),
+    recentDeliveries: db.prepare(
+      `SELECT * FROM deliveries WHERE (account_id = ? OR account_id = '')
+       ORDER BY id DESC LIMIT ?`,
+    ),
     matchCard: db.prepare(
       `SELECT * FROM cards WHERE enabled = 1 AND item_id = ?
+       AND (account_id = ? OR account_id = '')
        AND ((spec_name = ? AND spec_value = ?) OR (spec_name = '' AND spec_value = ''))
-       ORDER BY CASE WHEN spec_name = '' THEN 1 ELSE 0 END, id`,
+       ORDER BY CASE WHEN spec_name = '' THEN 1 ELSE 0 END, account_id DESC, id`,
     ),
     cardById: db.prepare('SELECT * FROM cards WHERE id = ?'),
     updateCardContent: db.prepare(
@@ -135,26 +148,37 @@ export function createStore(file) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     listCards: db.prepare(
-      'SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds FROM cards ORDER BY id',
+      `SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds
+       FROM cards WHERE (account_id = ? OR account_id = '') ORDER BY id`,
     ),
-    getItem: db.prepare('SELECT * FROM items WHERE item_id = ?'),
+    getItem: db.prepare(
+      `SELECT * FROM items WHERE item_id = ? AND (account_id = ? OR account_id = '')
+       ORDER BY account_id DESC LIMIT 1`,
+    ),
     lastItemForBuyer: db.prepare(
-      'SELECT item_id FROM orders WHERE buyer_id = ? ORDER BY updated_at DESC LIMIT 1',
+      `SELECT item_id FROM orders WHERE buyer_id = ? AND (account_id = ? OR account_id = '')
+       ORDER BY updated_at DESC LIMIT 1`,
     ),
     upsertItem: db.prepare(
-      `INSERT INTO items (item_id, title, knowledge, skills, updated_at)
-       VALUES (?, ?, ?, ?, datetime('now'))
-       ON CONFLICT(item_id) DO UPDATE SET
+      `INSERT INTO items (item_id, account_id, title, knowledge, skills, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(item_id, account_id) DO UPDATE SET
          title = excluded.title, knowledge = excluded.knowledge,
          skills = excluded.skills, updated_at = datetime('now')`,
     ),
-    listItems: db.prepare('SELECT * FROM items ORDER BY updated_at DESC'),
+    listItems: db.prepare(
+      `SELECT * FROM items WHERE (account_id = ? OR account_id = '')
+       ORDER BY updated_at DESC`,
+    ),
     getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
     setSetting: db.prepare(
       `INSERT INTO settings (key, value) VALUES (?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
     ),
-    countCards: db.prepare("SELECT COUNT(*) AS n FROM cards WHERE enabled = 1 AND content <> ''"),
+    countCards: db.prepare(
+      `SELECT COUNT(*) AS n FROM cards WHERE enabled = 1 AND content <> ''
+       AND (account_id = ? OR account_id = '')`,
+    ),
   }
 
   return {
@@ -183,14 +207,14 @@ export function createStore(file) {
       q.updateOrder.run(state, failReason, delivered, orderNo)
     },
 
-    pendingConfirm: () => q.pendingConfirm.all(),
-    recentOrders: (limit = 50) => q.recentOrders.all(limit),
-    recentDeliveries: (limit = 100) => q.recentDeliveries.all(limit),
+    pendingConfirm: (accountId = '') => q.pendingConfirm.all(String(accountId)),
+    recentOrders: (limit = 50, accountId = '') => q.recentOrders.all(String(accountId), limit),
+    recentDeliveries: (limit = 100, accountId = '') => q.recentDeliveries.all(String(accountId), limit),
 
     // 商品必须唯一匹配一张卡券；0 张或多张都算配置错误，宁可不发。
     // 规格精确匹配优先，匹配不到再退回该商品的无规格通用卡券。
-    matchCard(itemId, specName = '', specValue = '') {
-      const rows = q.matchCard.all(String(itemId), String(specName), String(specValue))
+    matchCard(itemId, specName = '', specValue = '', accountId = '') {
+      const rows = q.matchCard.all(String(itemId), String(accountId), String(specName), String(specValue))
       if (!rows.length) return { error: 'no_card', count: 0 }
       const exact = rows.filter((r) => r.spec_name === specName && r.spec_value === specValue)
       if (exact.length === 1) return exact[0]
@@ -213,8 +237,8 @@ export function createStore(file) {
       })
     },
 
-    addDelivery({ orderNo, cardId, seq, content, state, error = null }) {
-      q.insertDelivery.run(orderNo, cardId ?? null, seq ?? 1, content, state, error)
+    addDelivery({ orderNo, accountId = '', cardId, seq, content, state, error = null }) {
+      q.insertDelivery.run(orderNo, String(accountId), cardId ?? null, seq ?? 1, content, state, error)
     },
 
     addCard({
@@ -226,18 +250,18 @@ export function createStore(file) {
       ).lastInsertRowid
     },
 
-    listCards: () => q.listCards.all(),
-    availableCards: () => q.countCards.get().n,
+    listCards: (accountId = '') => q.listCards.all(String(accountId)),
+    availableCards: (accountId = '') => q.countCards.get(String(accountId)).n,
 
-    getItem: (itemId) => q.getItem.get(String(itemId)) ?? null,
-    lastItemForBuyer: (buyerId) => {
-      const row = q.lastItemForBuyer.get(String(buyerId))
+    getItem: (itemId, accountId = '') => q.getItem.get(String(itemId), String(accountId)) ?? null,
+    lastItemForBuyer: (buyerId, accountId = '') => {
+      const row = q.lastItemForBuyer.get(String(buyerId), String(accountId))
       return row ? row.item_id : ''
     },
-    setItem({ itemId, title = '', knowledge = '', skills = '' }) {
-      q.upsertItem.run(String(itemId), title, knowledge, skills)
+    setItem({ itemId, accountId = '', title = '', knowledge = '', skills = '' }) {
+      q.upsertItem.run(String(itemId), String(accountId), title, knowledge, skills)
     },
-    listItems: () => q.listItems.all(),
+    listItems: (accountId = '') => q.listItems.all(String(accountId)),
 
     getSetting(key) {
       const row = q.getSetting.get(String(key))

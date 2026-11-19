@@ -33,6 +33,8 @@ uvx goofish-cli auth status --format json
 
 切换账号后会清空面板里的会话与远程订单缓存，再按新账号重新拉取。
 
+**数据按账号隔离**：卡券、订单、发货记录、商品技能绑定都带 `account_id`，切换后只看到当前账号的数据。升级前写入的旧记录 `account_id` 为空，作为共享历史对所有账号可见，不会被隐藏。
+
 ## 配置
 
 `cordis.patch.yml`：

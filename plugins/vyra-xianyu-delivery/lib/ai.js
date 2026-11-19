@@ -50,8 +50,8 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
     return body
   }
 
-  async function buildPrompt({ text, itemId, history, selfUserId }) {
-    const item = itemId ? store.getItem(itemId) : null
+  async function buildPrompt({ text, itemId, history, selfUserId, accountId = '' }) {
+    const item = itemId ? store.getItem(itemId, accountId) : null
     const names = String(item?.skills || '')
       .split(/[,，\s]+/)
       .map((s) => s.trim())
@@ -117,12 +117,12 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
     return Date.now() - last < cooldownSeconds * 1000
   }
 
-  async function reply({ cid, itemId, text, history = [], selfUserId = '' }) {
+  async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '' }) {
     if (!enabled) return null
     if (coolingDown(cid)) return null
     if ((counts.get(cid) || 0) >= maxRepliesPerChat) return null
 
-    const prompt = await buildPrompt({ text, itemId, history, selfUserId })
+    const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId })
     const out = mode === 'dsh' ? await agent.ask({ prompt, sessionKey: cid }) : await apiReply(prompt)
     if (!out) return null
 

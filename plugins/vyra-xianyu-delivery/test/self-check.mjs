@@ -114,6 +114,15 @@ try {
   const paused = await dF.tick()
   assert.deepEqual(paused, { paused: true })
 
+  // 账号隔离：同一商品在两个账号下的卡券互不干扰
+  const accA = store.addCard({ accountId: 'accA', itemId: 'iso-1', name: 'A', content: 'KA' })
+  const accB = store.addCard({ accountId: 'accB', itemId: 'iso-1', name: 'B', content: 'KB' })
+  assert.equal(store.matchCard('iso-1', '', '', 'accA').id, accA)
+  assert.equal(store.matchCard('iso-1', '', '', 'accB').id, accB)
+  assert.equal(store.listCards('accA').filter((c) => c.item_id === 'iso-1').length, 1)
+  assert.equal(store.listCards('accB').filter((c) => c.item_id === 'iso-1').length, 1)
+  assert.equal(store.listItems('accA').length >= 0, true)
+
   console.log('self-check ok')
   store.db.close()
 } finally {

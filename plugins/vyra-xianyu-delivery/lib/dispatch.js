@@ -27,7 +27,8 @@ function splitMessages(text) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export function createDispatcher({ store, cli, guard, config = {}, logger = () => {} }) {
+export function createDispatcher({ store, cli, guard, config = {}, logger = () => {}, getAccount = () => '' }) {
+  const account = () => String(getAccount() || '')
   const blockRefund = config.blockRefund !== false
   const blockZeroAmount = config.blockZeroAmount !== false
   const confirmFirst = config.mode === 'confirm_then_send'
@@ -73,6 +74,7 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
 
     const { created } = store.beginOrder({
       order_no: order.order_no,
+      account_id: account(),
       item_id: order.item_id,
       spec_name: order.spec_name,
       spec_value: order.spec_value,
@@ -82,7 +84,7 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
     })
     if (!created) return { order: order.order_no, skip: 'duplicate' }
 
-    const card = store.matchCard(order.item_id, order.spec_name, order.spec_value)
+    const card = store.matchCard(order.item_id, order.spec_name, order.spec_value, account())
     if (card.error) {
       logger(`order ${order.order_no}: ${card.error} (item ${order.item_id} spec ${order.spec_value})`)
       return fail(order.order_no, card.error)
@@ -121,7 +123,7 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
       if (!textVerdict.ok) {
         lastError = `sensitive:${textVerdict.hit}`
         store.addDelivery({
-          orderNo: order.order_no, cardId: card.id, seq,
+          orderNo: order.order_no, accountId: account(), cardId: card.id, seq,
           content, state: 'failed', error: lastError,
         })
         break
@@ -135,14 +137,14 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
         lastError = err.message
         // 卡密已消费但没发出去：内容留在 deliveries 里供人工补发。
         store.addDelivery({
-          orderNo: order.order_no, cardId: card.id, seq,
+          orderNo: order.order_no, accountId: account(), cardId: card.id, seq,
           content, state: 'failed', error: err.message,
         })
         break
       }
 
       store.addDelivery({
-        orderNo: order.order_no, cardId: card.id, seq, content, state: 'success',
+        orderNo: order.order_no, accountId: account(), cardId: card.id, seq, content, state: 'success',
       })
       delivered += 1
     }
@@ -182,7 +184,7 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
       ticking = true
       try {
         // 先补上「卡密已发、确认失败」的订单，再拉新单。
-        for (const row of store.pendingConfirm()) {
+        for (const row of store.pendingConfirm(account())) {
           await retryConfirm(row.order_no, row.delivered)
         }
 

@@ -45,7 +45,11 @@ export function apply(ctx, config = {}) {
   const store = createStore(cfg.dataFile)
   const cli = createCli({ command: cfg.cliCommand, prefix: cfg.cliPrefix })
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
-  const dispatcher = createDispatcher({ store, cli, guard, config: cfg, logger: log })
+  const account = () => String(authCache.unb || selfUserId || '')
+  const dispatcher = createDispatcher({
+    store, cli, guard, config: cfg, logger: log,
+    getAccount: account,
+  })
   const agents = typeof ctx.get === 'function' ? ctx.get('agents') : undefined
   const dshAgent = createDshAgent({
     agents,
@@ -63,6 +67,8 @@ export function apply(ctx, config = {}) {
 
   // 自己的 unb 用来区分"买家发的"和"自己发的"。
   cli.status().then((s) => { selfUserId = String(s?.unb || '') }).catch(() => {})
+  // 启动时就填好登录态缓存，tick 才不会在拿到账号前写共享数据。
+  void authSnapshot()
 
   function firstLine(md) {
     const text = String(md || '')
@@ -332,12 +338,12 @@ export function apply(ctx, config = {}) {
     // 会话对应的商品：优先买家最近的订单，其次历史里出现的订单。
     let itemId = ''
     try {
-      itemId = store.lastItemForBuyer(String(evt.send_user_id || '')) || ''
+      itemId = store.lastItemForBuyer(String(evt.send_user_id || ''), account()) || ''
     } catch {
       itemId = ''
     }
 
-    const answer = await ai.reply({ cid, itemId, text: question, history, selfUserId })
+    const answer = await ai.reply({ cid, itemId, text: question, history, selfUserId, accountId: account() })
     if (!answer) return
 
     try {
@@ -490,15 +496,15 @@ export function apply(ctx, config = {}) {
       case 'status':
         return status()
       case 'orders':
-        return store.recentOrders(Number(body.limit) || 50)
+        return store.recentOrders(Number(body.limit) || 50, account())
       case 'deliveries':
-        return store.recentDeliveries(Number(body.limit) || 100)
+        return store.recentDeliveries(Number(body.limit) || 100, account())
       case 'cards':
-        return store.listCards()
+        return store.listCards(account())
       case 'addCard':
         return {
           id: store.addCard({
-            accountId: String(body.accountId || ''),
+            accountId: account(),
             itemId: String(body.itemId || ''),
             specName: String(body.specName || ''),
             specValue: String(body.specValue || ''),
@@ -518,9 +524,10 @@ export function apply(ctx, config = {}) {
       case 'login-cancel':
         return cancelLogin()
       case 'itemLinks':
-        return store.listItems()
+        return store.listItems(account())
       case 'setItem':
         store.setItem({
+          accountId: account(),
           itemId: String(body.itemId || ''),
           title: String(body.title || ''),
           knowledge: String(body.knowledge || ''),
@@ -541,7 +548,7 @@ export function apply(ctx, config = {}) {
         return cli.items(Number(body.limit) || 50)
       case 'remoteOrders': {
         const page = await cli.soldList(1, String(body.queryCode || 'ALL'))
-        const local = new Map(store.recentOrders(500).map((o) => [o.order_no, o]))
+        const local = new Map(store.recentOrders(500, account()).map((o) => [o.order_no, o]))
         return {
           total: page.total,
           orders: (page.orders || []).map((o) => {
