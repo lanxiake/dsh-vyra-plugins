@@ -978,6 +978,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.1.9 makes the refresh button observable: disabled while loading,
+        // "已刷新" for 2.5s, and it also re-reads the installed bundles.
+        '0.1.9': {
+          publishTimestamp: 1795068052,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'bfda1b975d8d19eabbb1eec6d28483db6a10f22a',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
