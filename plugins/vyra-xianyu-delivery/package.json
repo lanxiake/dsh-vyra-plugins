@@ -1,9 +1,9 @@
 {
   "name": "vyra-xianyu-delivery",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "icon": "./icon.svg",
   "type": "module",
-  "description": "闲鱼虚拟商品自动发货：轮询待发货订单，匹配卡密，确认发货并发送内容",
+  "description": "闲鱼虚拟商品自动客服：实时监听买家消息，自动发货，并用 DSH agent + 技能回答买家问题",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js"

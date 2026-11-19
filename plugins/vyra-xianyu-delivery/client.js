@@ -1,4 +1,4 @@
-// 闲鱼自动发货面板：侧边栏入口 + 订单/卡券/发货记录三个标签页。
+// 闲鱼自动客服面板：侧边栏入口 + 订单/卡券/商品技能/发货记录四个标签页。
 //
 // 所有读写都走 host 的 /api/xianyu-delivery/rpc，前端不直接碰数据库或子进程。
 window.__ModuleLoader__.load({
@@ -333,7 +333,7 @@ window.__ModuleLoader__.load({
 
       return h('div', { style: S.page },
         h('div', { style: S.head },
-          h('h2', { style: S.title }, '闲鱼自动发货'),
+          h('h2', { style: S.title }, '闲鱼自动客服'),
           h('button', { style: S.btn, onClick: openLogin }, '扫码登录'),
           h('button', { style: S.btn, onClick: runTick, disabled: !!busy },
             busy === 'tick' ? '处理中…' : '立即处理一轮')),
@@ -367,7 +367,7 @@ window.__ModuleLoader__.load({
       apply(ctx) {
         ctx.slots.inject('sidebar.panellist', () =>
           ctx.slots.register(
-            { name: 'sidebar.panellist', id: 'xianyu-delivery', order: 60, label: () => '闲鱼发货' },
+            { name: 'sidebar.panellist', id: 'xianyu-delivery', order: 60, label: () => '闲鱼客服' },
             Icon
           )
         )

@@ -1,4 +1,4 @@
-# 闲鱼自动发货 DSH 插件 — 设计文档
+# 闲鱼自动客服 DSH 插件 — 设计文档
 
 > 状态：设计稿 · 2026-11-19
 > 调研来源：`zhinianboke/xianyu-auto-reply`（发货链路逐行核对）、`fancyboi999/goofish-cli`（传输层）、`11273/goofish-client`（TS 备选）
