@@ -599,6 +599,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.1.2 rebuilds the settings page as the Lumii pcwechat channel card:
+        // status pill, meta strip, environment self-check with repair, tool chips.
+        '0.1.2': {
+          publishTimestamp: 1795065751,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f7ce15abf8288948d1de89b457199f4b2b981207',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
