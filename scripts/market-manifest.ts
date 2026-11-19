@@ -607,6 +607,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.1.2 adds scan-to-login: the panel shows the passport QR itself.
+        '0.1.2': {
+          publishTimestamp: 1795061218,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'ed18b769b1791668d706423e713460040f455b5e',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
