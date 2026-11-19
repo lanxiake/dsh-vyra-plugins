@@ -564,6 +564,22 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.5.0 is the toolbar reshape and the two silent failures behind it: the menu is one
+        // row with the icon left of its label (the shape Doubao and every other selection
+        // toolbar uses), an empty model answer now says what came back instead of painting a
+        // blank panel, and the whole action path reports instead of dying as an unhandled
+        // rejection. It also stops priming a capture on every plain click — that injected
+        // Ctrl+C and busy-waited 220 ms with the system's input queue behind it, which is what
+        // made the desktop feel sticky once the plugin was on.
+        '1.5.0': {
+          publishTimestamp: 1795069344,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '287a29b406e136eeff4f5e3441cbacc5a9986c1d',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
