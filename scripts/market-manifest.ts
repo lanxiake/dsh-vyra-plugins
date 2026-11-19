@@ -974,6 +974,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.4.2 ships a built-in customer-service agent ("builtin") so the AI
+        // reply works without creating an Agent Manager preset first.
+        '0.4.2': {
+          publishTimestamp: 1795078899,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '1290d8473290843477da63a241c5440460f8621e',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
