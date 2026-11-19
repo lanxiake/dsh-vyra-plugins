@@ -69,6 +69,19 @@ test('the hook only primes a selection for a gesture that could have selected', 
     'the left-release branch must gate priming on a drag or multi-click')
 })
 
+// The answer was rendered, and the panel was blank anyway: `setContent` follows the stream by
+// setting `scroll` to MAX_SAFE_INTEGER, and nothing clamped it back, so every line was laid out
+// at -1.7e308 and skipped as "above the viewport".
+test('laying the panel out clamps the streaming scroll position', () => {
+  const source = readFileSync(join(import.meta.dirname, '..', 'native.js'), 'utf8')
+  const start = source.indexOf('function layoutPanel')
+  assert.ok(start >= 0, 'layoutPanel still exists')
+  const body = source.slice(start, source.indexOf('\n  }', start))
+  assert.match(body, /state\.scroll = clampScroll\(state\.scroll/,
+    'layoutPanel must clamp the scroll it just made meaningful')
+  assert.match(body, /state\.viewH = /, 'viewH is computed in the same place')
+})
+
 test('the panel anchors to the selection, not to a point', () => {
   const rect = { left: 400, top: 300, right: 700, bottom: 320 }
   const pos = placePanelAtSelection(rect, { width: 420, height: 300 }, WORK, 'below')

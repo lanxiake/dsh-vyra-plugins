@@ -727,6 +727,10 @@ export function createOverlay(handlers = {}) {
     state.layoutBlocks = ops
     state.contentH = Math.max(Math.round(m.maxBody * 0.35), y)
     state.viewH = Math.min(state.contentH, m.maxBody)
+    // Streaming sets `scroll` to MAX_SAFE_INTEGER to follow the tail, and only a wheel event ever
+    // clamped it — so every line was drawn at `-1.7e308` and skipped as "above the viewport".
+    // That is the blank panel: the answer was there, off-screen, from the first chunk on.
+    state.scroll = clampScroll(state.scroll, state.contentH, state.viewH)
   }
 
   function drawPanel(hdc) {

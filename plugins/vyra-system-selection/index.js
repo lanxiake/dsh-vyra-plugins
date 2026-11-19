@@ -58,8 +58,10 @@ export function apply(ctx) {
     onDismiss: () => dismiss(),
     onPanelClose: () => dismiss(),
     onPanelCopy: () => {
-      copyResult()
-      overlay.setStatus('已复制到剪贴板', 'info')
+      // Say what actually happened: a copy that failed because another program is holding the
+      // clipboard used to report success, so a dead button looked the same as a working one.
+      const ok = copyResult()
+      overlay.setStatus(ok ? '已复制到剪贴板' : '复制失败：剪贴板正被其他程序占用', ok ? 'info' : 'error')
     },
     onOpenUrl: (url) => openUrl(ctx, url),
     onRightClick: (pt, cached) => onRightClick(pt, cached),
@@ -265,9 +267,11 @@ export function apply(ctx) {
 
   // --- actions -------------------------------------------------------------------------------
 
+  /** Copy what the panel shows (or, from the menu, the selected text). @returns whether it landed. */
   function copyResult() {
     const text = overlay.visible && overlay.mode === 'panel' ? lastResult : pending?.text
-    if (text) writeClipboardText(text)
+    if (!text) return false
+    return writeClipboardText(text) === true
   }
 
   async function openUrl(ctx, url) {
