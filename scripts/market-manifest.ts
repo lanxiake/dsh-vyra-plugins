@@ -946,6 +946,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.1.7 opens a details dialog from every card, installed or not, and
+        // ends it with the QQ group card.
+        '0.1.7': {
+          publishTimestamp: 1795066951,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '575d1f707c56ae444e0b23fa32afe233a55724a8',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
