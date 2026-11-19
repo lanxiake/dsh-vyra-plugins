@@ -717,6 +717,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.4.0 groups watch sessions under a PC微信 workspace, monitors the
+        // WeChat connection itself, and moves the UI hints into hover titles.
+        '0.4.0': {
+          publishTimestamp: 1795070486,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a1214b80d06663b22d5c99c5521a675c6c00f231',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',

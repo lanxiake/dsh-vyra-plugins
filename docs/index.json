@@ -498,6 +498,19 @@
       },
       "versions": [
         {
+          "version": "0.4.0",
+          "publishTimestamp": 1795070486,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "a1214b80d06663b22d5c99c5521a675c6c00f231",
+            "path": "plugins/vyra-wechat-local"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
+        {
           "version": "0.3.2",
           "publishTimestamp": 1795068488,
           "source": {
