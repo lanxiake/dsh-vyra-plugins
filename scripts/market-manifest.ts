@@ -260,6 +260,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/tool-usage-stats',
           },
         },
+        // 0.7.3 opens the panel on 最近 3 天; the cumulative totals stay one
+        // selection away.
+        '0.7.3': {
+          publishTimestamp: 1795065600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3d318c9dc1f0e4e81463c38f96b209189a01f06c',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
       },
       metadata: {
         category: 'observability',
@@ -595,12 +606,12 @@ export const manifest: MarketManifest = {
     {
       name: 'vyra-wechat-local',
       title: {
-        en: 'Local WeChat',
-        zh: '本机微信',
+        en: 'PC WeChat',
+        zh: 'PC微信',
       },
       description: {
-        en: 'Read the user’s own WeChat on this machine — sessions, chat history, images, unread, search and export — and send as that account when asked. Windows only; the read path never grabs the foreground.',
-        zh: '读取用户本人微信的会话、聊天记录、图片、未读、检索与导出，必要时以本人身份发送。仅 Windows；只读路径不抢前台。',
+        en: 'Read the user’s own PC WeChat — sessions, history, images, unread, search and export — and reply per a per-person policy: direct, draft, notify or blacklist. New messages are merged per conversation before they reach the agent. Windows only.',
+        zh: '读取用户本人的 PC 微信：会话、聊天记录、图片、未读、检索与导出；按每人策略回复（直接代回 / 起草确认 / 只提醒 / 黑名单），同一好友/群的新消息合并后再交给 Agent。仅 Windows。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -653,6 +664,19 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '5c057fecb8e853791c07cde4378cdf65675fc7ad',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
+        // 0.3.0 is the real-time one: watch new messages, apply the per-person
+        // policy, merge bursts (20s, reset by each message) and the post-reply
+        // cooldown, deliver to a DSH session per conversation, show contact
+        // avatars, and fold the settings into one PC微信 page with tabs.
+        '0.3.0': {
+          publishTimestamp: 1795068286,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '781e4f143ecf2224862dac0952af99e9e8d4423f',
             path: 'plugins/vyra-wechat-local',
           },
         },
