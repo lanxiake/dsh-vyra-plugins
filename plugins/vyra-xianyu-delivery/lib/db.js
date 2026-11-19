@@ -38,6 +38,11 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 CREATE INDEX IF NOT EXISTS ix_orders_state ON orders(state, updated_at);
 
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS items (
   item_id    TEXT PRIMARY KEY,
   title      TEXT NOT NULL DEFAULT '',
@@ -144,6 +149,11 @@ export function createStore(file) {
          skills = excluded.skills, updated_at = datetime('now')`,
     ),
     listItems: db.prepare('SELECT * FROM items ORDER BY updated_at DESC'),
+    getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
+    setSetting: db.prepare(
+      `INSERT INTO settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    ),
     countCards: db.prepare("SELECT COUNT(*) AS n FROM cards WHERE enabled = 1 AND content <> ''"),
   }
 
@@ -228,5 +238,13 @@ export function createStore(file) {
       q.upsertItem.run(String(itemId), title, knowledge, skills)
     },
     listItems: () => q.listItems.all(),
+
+    getSetting(key) {
+      const row = q.getSetting.get(String(key))
+      return row ? row.value : ''
+    },
+    setSetting(key, value) {
+      q.setSetting.run(String(key), String(value ?? ''))
+    },
   }
 }

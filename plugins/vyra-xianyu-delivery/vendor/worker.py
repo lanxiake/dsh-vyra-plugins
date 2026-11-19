@@ -144,6 +144,20 @@ def status() -> dict[str, Any]:
     return {"unb": session.unb, "tracknick": session.tracknick, "valid": True}
 
 
+def items(limit: int = 50) -> dict[str, Any]:
+    """当前账号在售商品。"""
+    from goofish_cli.commands.item.list import list_items
+
+    return list_items(int(limit))
+
+
+def chats(fetch_num: int = 50) -> dict[str, Any]:
+    """最近会话列表（不额外等 WS）。"""
+    from goofish_cli.commands.message.list_chats import list_chats
+
+    return list_chats(fetch_num=int(fetch_num), watch_secs=0)
+
+
 def history(cid: str, limit: int = 10) -> list[dict[str, Any]]:
     from goofish_cli.commands.message.history import history as cli_history
 
@@ -236,8 +250,16 @@ async def _login_qr(timeout: int = 180) -> None:
                 await asyncio.sleep(1)
             _emit({"event": "error", "message": f"{timeout}s 内未完成扫码"})
         finally:
-            await context.close()
-            await browser.close()
+            # 扫码完成后一定要把浏览器窗口关掉：先 context 再 browser，
+            # 各限时 8 秒，避免 Playwright 在 Windows 上卡住留下窗口。
+            try:
+                await asyncio.wait_for(context.close(), timeout=8)
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                await asyncio.wait_for(browser.close(), timeout=8)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 COMMANDS = {
@@ -246,10 +268,19 @@ COMMANDS = {
     "send": lambda a: send(a.get("cid", "0"), a["toid"], a["text"], a.get("itemId", "")),
     "status": lambda a: status(),
     "history": lambda a: history(a["cid"], int(a.get("limit", 10))),
+    "items": lambda a: items(int(a.get("limit", 50))),
+    "chats": lambda a: chats(int(a.get("fetchNum", 50))),
 }
 
 
 def main() -> None:
+    # 中文 Windows 默认 stdout 是 GBK，商品标题里的 ¥ 会直接编码失败。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+
     command = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
         args = json.loads(sys.argv[2]) if len(sys.argv) > 2 else {}

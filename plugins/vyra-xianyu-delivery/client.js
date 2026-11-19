@@ -129,19 +129,62 @@ window.__ModuleLoader__.load({
     }
 
     function ItemsTab(props) {
-      const { items, draft, setDraft, saveItem, busy } = props
+      const { items, shopItems, skillList, agentList, settings, draft, setDraft, saveItem, setAgentPreset, busy } = props
+      const picked = new Set(String(draft.skills || '').split(/[,，\s]+/).filter(Boolean))
+
+      const toggleSkill = (name) => {
+        const next = new Set(picked)
+        if (next.has(name)) next.delete(name)
+        else next.add(name)
+        setDraft({ ...draft, skills: [...next].join(', ') })
+      }
+
+      const pickShopItem = (id) => {
+        const hit = shopItems.find((it) => it.item_id === id)
+        setDraft({ ...draft, itemId: id, title: hit ? hit.title : draft.title })
+      }
+
       return h('div', null,
+        h('div', { style: S.card },
+          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, 'AI 客服 AGENT'),
+          h('div', { style: { display: 'flex', gap: '10px', alignItems: 'flex-end' } },
+            h('div', { style: { flex: 1 } },
+              h('label', { style: S.label }, '绑定 Agent（Agent Manager 里创建的 preset；留空用 DSH 默认）'),
+              h('select', {
+                style: S.input,
+                value: (settings && settings.agentPreset) || '',
+                onChange: (e) => setAgentPreset(e.target.value),
+              },
+                h('option', { value: '' }, '默认（不指定 preset）'),
+                agentList.map((a) => h('option', { key: a.id, value: a.id }, `${a.name}（${a.id}）`)))),
+            h('div', { style: { ...S.muted, width: '220px' } },
+              agentList.length === 0 ? '没有找到已创建的 Agent' : `${agentList.length} 个可用`))),
         h('div', { style: S.card },
           h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '商品绑定技能'),
           h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
             h('div', null,
-              h('label', { style: S.label }, '商品 ID'),
-              h('input', { style: S.input, value: draft.itemId, onChange: (e) => setDraft({ ...draft, itemId: e.target.value }) })),
+              h('label', { style: S.label }, '选择商品'),
+              h('select', {
+                style: S.input,
+                value: draft.itemId,
+                onChange: (e) => pickShopItem(e.target.value),
+              },
+                h('option', { value: '' }, shopItems.length ? '请选择…' : '暂无在售商品，手动输入 ID'),
+                shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`)))),
             h('div', null,
-              h('label', { style: S.label }, '商品标题（可选）'),
-              h('input', { style: S.input, value: draft.title, onChange: (e) => setDraft({ ...draft, title: e.target.value }) }))),
-          h('label', { style: S.label }, '技能名（逗号分隔，正文从 skillsDir 下的 <name>/SKILL.md 读取）'),
-          h('input', { style: S.input, value: draft.skills, onChange: (e) => setDraft({ ...draft, skills: e.target.value }), placeholder: 'xianyu-weflow, refund-policy' }),
+              h('label', { style: S.label }, '商品 ID（可手动输入）'),
+              h('input', { style: S.input, value: draft.itemId, onChange: (e) => setDraft({ ...draft, itemId: e.target.value }) }))),
+          h('label', { style: S.label }, `勾选技能（已选 ${picked.size}，正文从技能的 SKILL.md 读取）`),
+          skillList.length === 0
+            ? h('div', { style: S.muted }, '没有扫描到已安装的技能')
+            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '220px', overflow: 'auto', padding: '4px 0' } },
+              skillList.map((s) => h('label', {
+                key: s.name,
+                title: s.description || s.name,
+                style: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', border: '1px solid rgba(127,127,127,.3)', background: picked.has(s.name) ? 'rgba(127,127,127,.16)' : 'transparent', fontSize: '13px' },
+              },
+                h('input', { type: 'checkbox', checked: picked.has(s.name), onChange: () => toggleSkill(s.name) }),
+                s.name))),
           h('div', { style: { ...S.muted, marginTop: '8px' } }, '商品图片、文件、参数都写在技能里，回复时整段注入。'),
           h('div', { style: { marginTop: '10px' } },
             h('button', { style: S.btn, onClick: saveItem, disabled: !!busy }, busy === 'item' ? '保存中…' : '保存'))),
@@ -156,7 +199,43 @@ window.__ModuleLoader__.load({
                 h('span', null, it.title || '-'),
                 h('span', null, it.skills || '-'),
                 h('span', { style: { fontSize: '12px', opacity: 0.8 } }, it.updated_at),
-                h('span', null)))))
+                h('span', null,
+                  h('button', {
+                    style: { ...S.btn, padding: '3px 8px', fontSize: '12px' },
+                    onClick: () => setDraft({ itemId: it.item_id, title: it.title || '', skills: it.skills || '' }),
+                  }, '编辑'))))))
+    }
+
+    function ChatTab(props) {
+      const { chats, activeChat, messages, replyText, setReplyText, onPick, onSend, onRefresh, busy, selfUserId } = props
+      return h('div', { style: { display: 'grid', gridTemplateColumns: '260px 1fr', gap: '14px', minHeight: '420px' } },
+        h('div', { style: { border: '1px solid rgba(127,127,127,.25)', borderRadius: '10px', overflow: 'auto', maxHeight: '560px' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderBottom: '1px solid rgba(127,127,127,.2)' } },
+            h('span', { style: { fontWeight: 600, fontSize: '13px' } }, '会话'),
+            h('button', { style: { ...S.btn, padding: '2px 8px', fontSize: '12px' }, onClick: onRefresh, disabled: busy === 'chats' }, busy === 'chats' ? '…' : '刷新')),
+          chats.length === 0 ? h('div', { style: { ...S.muted, padding: '12px' } }, '暂无会话') : null,
+          chats.map((c) => h('div', {
+            key: c.session_id,
+            onClick: () => onPick(c),
+            style: { padding: '9px 10px', borderBottom: '1px solid rgba(127,127,127,.12)', cursor: 'pointer', background: activeChat && activeChat.session_id === c.session_id ? 'rgba(127,127,127,.16)' : 'transparent' },
+          },
+            h('div', { style: { fontSize: '13px', fontWeight: 600 } }, c.peer_nick || c.peer_user_id || c.session_id),
+            h('div', { style: { ...S.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, c.last_msg || '')))),
+        h('div', { style: { display: 'flex', flexDirection: 'column', border: '1px solid rgba(127,127,127,.25)', borderRadius: '10px', minHeight: 0 } },
+          activeChat === null
+            ? h('div', { style: { ...S.muted, padding: '20px' } }, '选择左侧会话查看聊天记录')
+            : h('div', { style: { flex: 1, overflow: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '480px' } },
+              messages.map((m) => {
+                const mine = String(m.send_user_id) === String(selfUserId)
+                const text = (m.message && m.message.text && m.message.text.text) || (m.message && m.message.tip && m.message.tip.tip) || ''
+                if (!text) return null
+                return h('div', { key: m.message_id || `${m.created_at}-${text.length}`, style: { alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '72%' } },
+                  h('div', { style: { padding: '7px 11px', borderRadius: '10px', background: mine ? 'rgba(46,160,67,.18)' : 'rgba(127,127,127,.14)', fontSize: '13px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, text),
+                  h('div', { style: { fontSize: '11px', opacity: 0.55, textAlign: mine ? 'right' : 'left', marginTop: '2px' } }, new Date(Number(m.created_at) || 0).toLocaleString()))
+              })),
+          activeChat === null ? null : h('div', { style: { display: 'flex', gap: '8px', padding: '10px', borderTop: '1px solid rgba(127,127,127,.2)' } },
+            h('input', { style: S.input, value: replyText, placeholder: '回复买家…', onChange: (e) => setReplyText(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSend() } } }),
+            h('button', { style: S.btn, onClick: onSend, disabled: busy === 'send' || !replyText.trim() }, busy === 'send' ? '发送中…' : '发送'))))
     }
 
     function LoginDialog(props) {
@@ -189,6 +268,15 @@ window.__ModuleLoader__.load({
       const [cards, setCards] = useState([])
       const [items, setItems] = useState([])
       const [itemDraft, setItemDraft] = useState({ itemId: '', title: '', skills: '' })
+      const [auth, setAuth] = useState(null)
+      const [settings, setSettings] = useState(null)
+      const [skillList, setSkillList] = useState([])
+      const [agentList, setAgentList] = useState([])
+      const [shopItems, setShopItems] = useState([])
+      const [chats, setChats] = useState([])
+      const [activeChat, setActiveChat] = useState(null)
+      const [chatMessages, setChatMessages] = useState([])
+      const [replyText, setReplyText] = useState('')
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
@@ -203,13 +291,17 @@ window.__ModuleLoader__.load({
             rpc({ op: 'orders', limit: 50 }),
             rpc({ op: 'deliveries', limit: 100 }),
             rpc({ op: 'cards' }),
-            rpc({ op: 'items' }),
+            rpc({ op: 'itemLinks' }),
+            rpc({ op: 'auth' }),
+            rpc({ op: 'settings' }),
           ])
           setStatus(results[0])
           setOrders(results[1])
           setDeliveries(results[2])
           setCards(results[3])
           setItems(results[4])
+          setAuth(results[5])
+          setSettings(results[6])
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -286,6 +378,60 @@ window.__ModuleLoader__.load({
         }
       }
 
+      async function setAgentPreset(value) {
+        try {
+          await rpc({ op: 'setSetting', key: 'ai.agentPreset', value })
+          setSettings((s) => ({ ...(s || {}), agentPreset: value }))
+          setNotice(value ? `AGENT 已切换为 ${value}` : 'AGENT 已恢复默认')
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+
+      async function loadChats() {
+        setBusy('chats')
+        try {
+          const data = await rpc({ op: 'chats', fetchNum: 50 }, 60000)
+          setChats((data && data.sessions) || [])
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      async function loadChat(chat) {
+        setActiveChat(chat)
+        setChatMessages([])
+        try {
+          const list = await rpc({ op: 'history', cid: chat.session_id, limit: 30 }, 60000)
+          setChatMessages(list || [])
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+
+      async function sendReply() {
+        const text = replyText.trim()
+        if (!text || !activeChat) return
+        setBusy('send')
+        try {
+          await rpc({
+            op: 'sendMessage',
+            cid: activeChat.session_id,
+            toid: activeChat.peer_user_id,
+            itemId: activeChat.item_id || '',
+            text,
+          }, 60000)
+          setReplyText('')
+          await loadChat(activeChat)
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
+
       async function openLogin() {
         setLoginOpen(true)
         setLogin({ state: 'starting' })
@@ -308,6 +454,33 @@ window.__ModuleLoader__.load({
       }
 
       useEffect(() => {
+        // 技能和 Agent 是本地扫描，只在挂载时读一次。
+        void (async () => {
+          try {
+            const [s, a] = await Promise.all([rpc({ op: 'skills' }), rpc({ op: 'agents' })])
+            setSkillList(s || [])
+            setAgentList(a || [])
+          } catch {
+            // 扫描失败不影响其它面板
+          }
+        })()
+      }, [])
+
+      useEffect(() => {
+        if (tab === 'chat' && chats.length === 0 && busy !== 'chats') void loadChats()
+      }, [tab])
+
+      useEffect(() => {
+        // 商品列表要走闲鱼接口，只在第一次打开商品页时拉。
+        if (tab !== 'items' || shopItems.length > 0 || busy === 'shop') return
+        setBusy('shop')
+        rpc({ op: 'shopItems', limit: 50 }, 60000)
+          .then((r) => setShopItems((r && r.items) || []))
+          .catch((err) => setError(String(err.message || err)))
+          .finally(() => setBusy(''))
+      }, [tab])
+
+      useEffect(() => {
         if (!loginOpen) return
         const timer = setInterval(async () => {
           try {
@@ -327,8 +500,14 @@ window.__ModuleLoader__.load({
         return () => clearInterval(timer)
       }, [loginOpen, refresh])
 
+      const authLine = auth
+        ? (auth.valid
+          ? `已登录 ${auth.tracknick || auth.unb}${auth.tracknick && auth.unb ? `（unb ${auth.unb}）` : ''}`
+          : (auth.error ? `未登录：${auth.error}` : '未登录'))
+        : '正在读取登录态…'
+
       const meta = status
-        ? `轮询 ${status.config.pollSeconds}s · 实时 ${status.watch ? '开' : '关'} · AI 客服 ${status.ai ? '开' : '关'} · 可用卡密 ${status.cards} 张`
+        ? `${authLine} · 轮询 ${status.config.pollSeconds}s · 实时 ${status.watch ? '开' : '关'} · AI 客服 ${status.ai ? '开' : '关'} · 可用卡密 ${status.cards} 张`
         : '正在读取状态…'
 
       return h('div', { style: S.page },
@@ -341,12 +520,20 @@ window.__ModuleLoader__.load({
         error ? h('div', { style: S.err }, error) : null,
         notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null,
         h('div', { style: S.tabs },
-          ['orders', 'cards', 'items', 'deliveries'].map((k) =>
+          ['chat', 'orders', 'cards', 'items', 'deliveries'].map((k) =>
             h('div', { key: k, style: S.tab(tab === k), onClick: () => setTab(k) },
-              { orders: '订单', cards: '卡券', items: '商品资料', deliveries: '发货记录' }[k]))),
+              { chat: '聊天', orders: '订单', cards: '卡券', items: '商品资料', deliveries: '发货记录' }[k]))),
+        tab === 'chat' ? h(ChatTab, {
+          chats, activeChat, messages: chatMessages, replyText, setReplyText,
+          onPick: loadChat, onSend: sendReply, onRefresh: loadChats, busy,
+          selfUserId: (auth && auth.unb) || '',
+        }) : null,
         tab === 'orders' ? h(OrdersTab, { orders }) : null,
         tab === 'cards' ? h(CardsTab, { cards, draft, setDraft, addCard, busy }) : null,
-        tab === 'items' ? h(ItemsTab, { items, draft: itemDraft, setDraft: setItemDraft, saveItem, busy }) : null,
+        tab === 'items' ? h(ItemsTab, {
+          items, shopItems, skillList, agentList, settings,
+          draft: itemDraft, setDraft: setItemDraft, saveItem, setAgentPreset, busy,
+        }) : null,
         tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
         loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null
       )

@@ -16,16 +16,18 @@ function userMessage(text) {
   }
 }
 
-export function createDshAgent({ agents, config = {}, logger = () => {} }) {
+export function createDshAgent({ agents, config = {}, logger = () => {}, getPreset }) {
   const ai = config.ai || {}
-  const preset = String(ai.agentPreset || '').trim()
   const provider = String(ai.provider || '').trim()
   const model = String(ai.model || '').trim()
   const timeoutMs = Number(ai.timeoutMs) || 90000
 
+  const currentPreset = () => String(getPreset?.() ?? ai.agentPreset ?? '').trim()
+
   async function ask({ prompt, sessionKey }) {
     if (!agents?.create) throw new Error('DSH agents 服务不可用')
 
+    const preset = currentPreset()
     let reply = ''
     const handle = await agents.create({
       sessionId: `xianyu-${sessionKey || 'chat'}-${randomUUID()}`,
@@ -74,7 +76,9 @@ export function createDshAgent({ agents, config = {}, logger = () => {} }) {
 
   return {
     available: Boolean(agents?.create),
-    agentPreset: preset,
+    get agentPreset() {
+      return currentPreset()
+    },
     provider,
     model,
     ask,

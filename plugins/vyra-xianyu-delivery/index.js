@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { spawn } from 'node:child_process'
+import { readdir, readFile } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { createStore } from './lib/db.js'
 import { createCli, defaultPrefix } from './lib/cli.js'
@@ -46,9 +47,15 @@ export function apply(ctx, config = {}) {
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
   const dispatcher = createDispatcher({ store, cli, guard, config: cfg, logger: log })
   const agents = typeof ctx.get === 'function' ? ctx.get('agents') : undefined
-  const dshAgent = createDshAgent({ agents, config: cfg, logger: log })
+  const dshAgent = createDshAgent({
+    agents,
+    config: cfg,
+    logger: log,
+    getPreset: () => store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
+  })
   const ai = createAi({ config: cfg, store, agent: dshAgent, logger: log })
   let selfUserId = ''
+  let authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
   let watchProc = null
   let watchRetry = null
   let watchBackoff = 1000
@@ -56,6 +63,98 @@ export function apply(ctx, config = {}) {
 
   // 自己的 unb 用来区分"买家发的"和"自己发的"。
   cli.status().then((s) => { selfUserId = String(s?.unb || '') }).catch(() => {})
+
+  function firstLine(md) {
+    const text = String(md || '')
+    const fm = text.match(/^---\s*\n([\s\S]*?)\n---/m)
+    if (fm) {
+      const line = fm[1].match(/description:\s*(.+)/)
+      if (line) return line[1].trim().replace(/^['"]|['"]$/g, '')
+    }
+    const plain = text.split(/\r?\n/).find((l) => l.trim() && !l.trim().startsWith('#'))
+    return plain ? plain.trim().slice(0, 120) : ''
+  }
+
+  async function listSkills() {
+    const roots = [
+      String(cfg.ai?.skillsDir || join(homedir(), '.dsh', 'skills')),
+      join(homedir(), '.agents', 'skills'),
+      join(homedir(), '.claude', 'skills'),
+    ]
+    const out = []
+    const seen = new Set()
+    for (const root of roots) {
+      let entries = []
+      try {
+        entries = await readdir(root, { withFileTypes: true })
+      } catch {
+        continue
+      }
+      for (const entry of entries) {
+        if (seen.has(entry.name)) continue
+        try {
+          if (entry.isDirectory()) {
+            const md = await readFile(join(root, entry.name, 'SKILL.md'), 'utf8')
+            seen.add(entry.name)
+            out.push({ name: entry.name, root, description: firstLine(md) })
+          } else if (entry.name.endsWith('.md')) {
+            const name = entry.name.replace(/\.md$/, '')
+            const md = await readFile(join(root, entry.name), 'utf8')
+            seen.add(entry.name)
+            out.push({ name, root, description: firstLine(md) })
+          }
+        } catch {
+          // 不是技能，跳过
+        }
+      }
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  async function listAgents() {
+    const root = join(homedir(), '.dsh', 'agent-manager', 'presets')
+    let entries = []
+    try {
+      entries = await readdir(root, { withFileTypes: true })
+    } catch {
+      return []
+    }
+    const out = []
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      try {
+        const json = JSON.parse(await readFile(join(root, entry.name, 'agent.json'), 'utf8'))
+        out.push({
+          id: String(json.id || entry.name),
+          name: String(json.name || entry.name),
+          description: String(json.description || ''),
+        })
+      } catch {
+        out.push({ id: entry.name, name: entry.name, description: '' })
+      }
+    }
+    return out.sort((a, b) => a.id.localeCompare(b.id))
+  }
+
+  // 登录态缓存 30 秒：面板每 5 秒刷新一次，不能每次都拉起 worker。
+  async function authSnapshot() {
+    if (!authCache.loading && Date.now() - authCache.checkedAt < 30000) return authCache
+    authCache = { ...authCache, loading: true }
+    try {
+      const s = await cli.status()
+      selfUserId = String(s?.unb || selfUserId)
+      authCache = {
+        loading: false, valid: Boolean(s?.valid), unb: String(s?.unb || ''),
+        tracknick: String(s?.tracknick || ''), checkedAt: Date.now(),
+      }
+    } catch (err) {
+      authCache = {
+        loading: false, valid: false, unb: '', tracknick: '',
+        error: String(err?.message || err), checkedAt: Date.now(),
+      }
+    }
+    return authCache
+  }
 
   // 扫码登录：worker 是长进程，二维码和最终结果都以一行 JSON 流式输出。
   let loginProc = null
@@ -327,7 +426,7 @@ export function apply(ctx, config = {}) {
         return loginState
       case 'login-cancel':
         return cancelLogin()
-      case 'items':
+      case 'itemLinks':
         return store.listItems()
       case 'setItem':
         store.setItem({
@@ -339,6 +438,35 @@ export function apply(ctx, config = {}) {
         return { ok: true }
       case 'ai-status':
         return { enabled: ai.enabled, model: cfg.ai?.model || '', watch: Boolean(watchProc) }
+      case 'auth':
+        return authSnapshot()
+      case 'shopItems':
+        return cli.items(Number(body.limit) || 50)
+      case 'chats':
+        return cli.chats(Number(body.fetchNum) || 50)
+      case 'history':
+        return cli.history(String(body.cid || ''), Number(body.limit) || 20)
+      case 'sendMessage':
+        await cli.send({
+          cid: String(body.cid || '0'),
+          toid: String(body.toid || ''),
+          itemId: String(body.itemId || ''),
+          text: String(body.text || ''),
+        })
+        return { ok: true }
+      case 'skills':
+        return listSkills()
+      case 'agents':
+        return listAgents()
+      case 'settings':
+        return {
+          agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
+          aiMode: String(cfg.ai?.mode || (dshAgent.available ? 'dsh' : 'api')),
+          agentAvailable: dshAgent.available,
+        }
+      case 'setSetting':
+        store.setSetting(String(body.key || ''), String(body.value ?? ''))
+        return { ok: true }
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }

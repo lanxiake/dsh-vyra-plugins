@@ -50,5 +50,7 @@ export function createCli({
     status: () => run('status', {}),
 
     history: (cid, limit = 10) => run('history', { cid, limit }),
+    items: (limit = 50) => run('items', { limit }),
+    chats: (fetchNum = 50) => run('chats', { fetchNum }),
   }
 }
