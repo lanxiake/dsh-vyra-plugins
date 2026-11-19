@@ -379,6 +379,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-skill-mcp-manager',
           },
         },
+        // 1.3.0: market skill cards open their SKILL.md detail (installed or
+        // not), and every preview ends with the QQ group card.
+        '1.3.0': {
+          publishTimestamp: 1795066681,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a20c4bdea5b9e60677d392a621545d16ae8bbe8d',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
       },
       metadata: {
         category: 'integration',
