@@ -33,6 +33,15 @@ SOFTWARE.
 `sunhanaix/pc_wechat_exp` 的 `config_cipher_extract.py`（去掉了其 `engine.*` 依赖）。
 本仓库按上游原样保留这段说明与代码，不删除该出处。
 
+## 本插件自己的 Python 文件（不属于 Lumii 快照）
+
+- `vendor/wechat/vyra_sidecar.py`：十行包装，导入未改动的 `sidecar.py`，只往
+  `DISPATCH` 里加一个头像工具，然后进入它原来的主循环。
+- `vendor/wechat/vyra_avatar.py`：从微信 `db_storage/head_image/head_image.db` 读联系人/群头像。
+  用 `wechat_core._mirror` 已有的解密镜像，不新增解密路径。
+
+这两个文件由本仓库维护，MIT；Lumii 的 `sidecar.py`、`app.py` 等保持原样。
+
 ## Python 依赖（运行时由 uv 获取，不随本插件分发）
 
 - `pycryptodome`（BSD-2-Clause / public domain 混合，见其发行包）

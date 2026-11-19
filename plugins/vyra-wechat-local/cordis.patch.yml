@@ -6,6 +6,14 @@
 #   - id: wechat-local
 #     config:
 #       pythonPath: C:/Python311/python.exe
+# Real-time watch knobs (defaults shown):
+#
+#   config:
+#     watch: true              # poll for new messages and apply the reply policy
+#     watchSeconds: 2          # poll interval
+#     mergeWindowSeconds: 20   # per-peer debounce; each new message restarts it
+#     replyTimeoutSeconds: 120 # after delivery, wait this long for the agent's reply
+#     backlogSeconds: 300      # on restart, replay at most this much history
 - insert:
     - id: wechat-local
       name: 'vyra-wechat-local'

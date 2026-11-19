@@ -38,7 +38,11 @@ lumii 已经把这件事做完了，而且**接口就是为跨宿主复用设计
 | `sidecar.py` | **集成接口**：JSONL over stdin/stdout |
 | `app.py` | 工具实现与 `DISPATCH` 表 |
 
-### 2.2 侧车协议（`sidecar.py`，一行不改）
+### 2.2 侧车协议（沿用 `sidecar.py` 的协议；入口是本地的 `vyra_sidecar.py` 包装）
+
+`sidecar.py` 本身仍原样保留；我们启动的是 `vyra_sidecar.py`——它 import 未改动的
+`sidecar.py`，只往 `DISPATCH` 里加一个 `wechat_avatar`（头像查询），然后进入原来的
+主循环。协议、工具清单、错误信封都不变。
 
 协议是**每行一个 UTF-8 JSON**，不是 MCP 的 JSON-RPC：
 
@@ -208,13 +212,17 @@ plugins/vyra-wechat-local/
 ├── package.json           # dsh.bundle + dsh.client（inject: dsh-client-ui-plugin-manager）
 ├── cordis.patch.yml
 ├── index.js               # host：侧车生命周期、工具注册、HTTP 路由
-├── client.js              # 设置页：本机微信（回复策略，还原 Lumii PolicyModal）+ 本机微信状态（渠道卡片 + 自检）
+├── client.js              # 设置页：PC微信（回复策略 + 状态信息两个标签）
 ├── lib/
 │   ├── sidecar.js         # JSONL 协议客户端（spawn / 写行 / 读行 / 进度帧 / 重启）
 │   ├── runtime.js         # 解释器定位：uv run（自动取依赖）或配置的 python
-│   └── tools.js           # 把 initialize 的 tools 按白名单注册进 ctx.tools
+│   ├── tools.js           # 把 initialize 的 tools 按白名单注册进 ctx.tools
+│   ├── watch.js           # 实时监听：按名单决定是否唤醒 Agent，交给会话
+│   └── batch.js           # 每会话 20s 合并窗口 + 回复后冷却合并
 ├── test/                  # 协议与注册的 node:test 检查
 ├── vendor/wechat/         # 从 lumii 拷来的 .py，原样，含 LICENSE
+│   ├── vyra_sidecar.py    # 本地包装：在未改动的 sidecar.py 上加头像工具
+│   └── vyra_avatar.py     # 头像查询（head_image.db）
 ├── .gitignore             # vendor 下的 __pycache__
 ├── README.md
 └── THIRD_PARTY_NOTICES.md # lumii (MIT) + 其二次来源（见 §9）
@@ -222,7 +230,7 @@ plugins/vyra-wechat-local/
 
 **宿主端的四件事**：
 
-1. **定位并启动侧车**：`uv run --with pycryptodome --with zstandard python -u vendor/wechat/sidecar.py`
+1. **定位并启动侧车**：`uv run --with pycryptodome --with zstandard python -u vendor/wechat/vyra_sidecar.py`
 2. **握手**：发 `initialize`，拿工具清单与 `instructions`
 3. **注册工具**：只注册 §3.4 白名单里的 12 个，`execute` 转发到侧车
 4. **生命周期**：插件卸载时 `shutdown` + 收尸；进程意外退出时报明确的错误，不静默重试
@@ -232,10 +240,12 @@ plugins/vyra-wechat-local/
 
 ### 6.1 设置页（两个入口）
 
-| 设置入口 | 内容 |
+设置里只有一个入口 **PC微信**，页内用两个标签分开：
+
+| 标签 | 内容 |
 |---|---|
-| **本机微信** | 渠道卡片 + 回复策略弹窗：按账号页签、每人一档（直接代回 / 起草给我确认 / 只提醒我 / 黑名单）、触发条件（每条 / @我 / 关键字）、冷却、从通讯录挑人、批量改档、移出名单。保存到侧车的 `autoreply_rules`（`~/.lumii/` 下按账号分目录的 `rules.json`），与 `autoreply_rules check` 是同一份。 |
-| **本机微信状态** | 侧车版本/状态、运行方式、环境自检（数据目录及来源 / 微信 / 依赖 / 版本 / 账号）、重新检测、一键修复、已注册工具 chips、侧车 stderr。 |
+| **回复策略** | 渠道卡片 + 回复策略弹窗：按账号页签、每人一档（直接代回 / 起草给我确认 / 只提醒我 / 黑名单）、触发条件（每条 / @我 / 关键字）、冷却、从通讯录挑人（带微信头像）、批量改档、移出名单。保存到侧车的 `autoreply_rules`（`~/.lumii/` 下按账号分目录的 `rules.json`），与 `autoreply_rules check` 是同一份。 |
+| **状态信息** | 侧车版本/状态、运行方式、环境自检（数据目录及来源 / 微信 / 依赖 / 版本 / 账号）、重新检测、一键修复、已注册工具 chips、侧车 stderr。 |
 
 设置页通过 `list_accounts` / `list_contacts` / `autoreply_rules` 取数据；这些调用会把侧车
 切到目标账号，Host 在每次设置调用后把账号切回原值，避免一次「看策略」把后续
@@ -244,12 +254,43 @@ plugins/vyra-wechat-local/
 > 回复策略的**执行**不属于本插件：侧车 `autoreply_rules check` 是闸门，真正起草/发送
 > 由调用方 Agent 做。插件只负责把策略配置好并存进同一份规则。
 
+### 6.2 实时监听与消息合并（`lib/watch.js` + `lib/batch.js`）
+
+Host 每 `watchSeconds`（默认 2s）对每个账号调 `poll_new`，按**该账号的名单**逐条判定：
+
+- `ignore` / 名单外且默认 `ignore` / 触发条件不满足 / 静默时段 → 丢弃；
+- `notify` / 名单外且默认 `notify` → 不叫模型，记入设置页的「最近提醒」；
+- `auto` / `draft` → 进入该会话的合并队列。
+
+**合并规则（按同一个微信好友/群）**：
+
+1. 一条新消息先等 `mergeWindowSeconds`（默认 20s）；窗口内再来消息就把计时**重置为 20s**；
+2. 一批交给 Agent 后，进入「等回复」状态；这期间的新消息继续攒着，不再开新批次；
+3. Agent **真实发送**成功（`dry_run=false` 且 `ok=true`）后，按该 peer 的
+   `cooldown_seconds`（默认 60s）进入冷却；冷却期内到达的消息合并成一批，冷却结束时整批交付；
+4. 用户自己从手机回复（`from_me` 且非 `agent_sent`）→ 清空该会话的待办，避免抢答。
+
+**交给 Agent 的方式**：每个 peer 一个 DSH 会话（标题「微信 · 名字」），用
+`ctx.sessionController.create/prompt` 投递合并后的消息。提示词包含 talker/account、策略与
+`send_text(..., dry_run=false)` 的调用要求；`draft` 策略只要求写草稿，不调用发送工具。
+Agent 的发送经过本插件的工具，Host 因此能观察到成功发送并启动冷却。
+
+监听状态、待合并数量、最近提醒通过设置页 RPC 暴露；`watch: false` 可关闭整条监听。
+
+| 配置 | 默认 | 含义 |
+|---|---|---|
+| `watchSeconds` | 2 | 轮询间隔（秒） |
+| `mergeWindowSeconds` | 20 | 合并窗口；每条新消息重置 |
+| `replyTimeoutSeconds` | 120 | 交付后等回复的上限；超时后允许下一批 |
+| `backlogSeconds` | 300 | 重启后最多补读多久的消息，超过就从现在开始 |
+| `watch` | true | 是否启用实时监听 |
+
 ## 7. Python 运行时
 
 ### 方案：`uv run`（已装即用，缺了自动取）
 
 本仓库的 `vyra-xianyu-delivery` 已经把 `uvx` 作为运行外部 CLI 的约定。这里沿用同一
-条路：`uv run --with pycryptodome --with zstandard python -u sidecar.py`。
+条路：`uv run --with pycryptodome --with zstandard python -u vyra_sidecar.py`。
 
 - 解释器与两个依赖由 uv 在首次运行时取好并缓存，不把 10MB 运行时塞进 Git；
 - 用户机器上没有 uv → 设置页明确报错，并允许在配置里指定已有的 `pythonPath`；

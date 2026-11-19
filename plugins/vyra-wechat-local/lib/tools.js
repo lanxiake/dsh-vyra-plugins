@@ -55,10 +55,11 @@ async function toDshContent(blocks, attachments) {
  * @param {any} options.ctx
  * @param {{call: Function}} options.sidecar
  * @param {() => any} [options.getAttachments]
+ * @param {(tool: string, args: object, blocks: any[]) => void} [options.onResult]
  * @param {string[]} [options.whitelist]
  * @param {(line: string) => void} [options.log]
  */
-export function createToolRegistrar({ ctx, sidecar, getAttachments = () => undefined, whitelist = TOOL_WHITELIST, log = () => {} }) {
+export function createToolRegistrar({ ctx, sidecar, getAttachments = () => undefined, onResult = () => {}, whitelist = TOOL_WHITELIST, log = () => {} }) {
   const disposers = new Map()
 
   function registerFrom(tools) {
@@ -77,6 +78,11 @@ export function createToolRegistrar({ ctx, sidecar, getAttachments = () => undef
         },
         async execute(args, exec) {
           const blocks = await sidecar.call(tool.name, args, exec.signal)
+          try {
+            onResult(tool.name, args, blocks)
+          } catch (err) {
+            log(`result hook failed for ${tool.name}: ${err?.message ?? err}`)
+          }
           return toDshContent(blocks, getAttachments())
         },
       }

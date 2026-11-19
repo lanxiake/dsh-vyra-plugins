@@ -24,7 +24,7 @@ export function whichSync(name) {
  */
 export function resolveRuntime({ pythonPath = '', pythonArgs = [] } = {}) {
   if (pythonPath) {
-    return { command: pythonPath, args: [...pythonArgs, '-u', 'sidecar.py'], source: 'config' }
+    return { command: pythonPath, args: [...pythonArgs, '-u', 'vyra_sidecar.py'], source: 'config' }
   }
   const uv = whichSync('uv')
   if (!uv) {
@@ -34,7 +34,7 @@ export function resolveRuntime({ pythonPath = '', pythonArgs = [] } = {}) {
   }
   return {
     command: uv,
-    args: ['run', '--quiet', '--with', 'pycryptodome', '--with', 'zstandard', '--python', '>=3.10', 'python', '-u', 'sidecar.py'],
+    args: ['run', '--quiet', '--with', 'pycryptodome', '--with', 'zstandard', '--python', '>=3.10', 'python', '-u', 'vyra_sidecar.py'],
     source: 'uv',
   }
 }

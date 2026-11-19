@@ -8,11 +8,13 @@ import { dirname, join } from 'node:path'
 import { createSidecar } from './lib/sidecar.js'
 import { resolveRuntime } from './lib/runtime.js'
 import { createToolRegistrar, TOOL_WHITELIST } from './lib/tools.js'
+import { createWatcher } from './lib/watch.js'
 
 export const name = 'vyra-wechat-local'
 export const inject = ['tools']
 
 const RPC_PATH = '/api/wechat-local/rpc'
+const AVATAR_PATH = '/api/wechat-local/avatar'
 
 async function readJson(req) {
   const chunks = []
@@ -40,12 +42,26 @@ export function apply(ctx, config = {}) {
     attachments = owner.attachments
   })
 
+  let sessionController
+  ctx.inject(['sessionController'], (owner) => {
+    sessionController = owner.sessionController
+  })
+
   const sidecar = createSidecar({ runtime, vendorDir, log })
+  const avatarCache = new Map()
+  let watcher = null
   const tools = createToolRegistrar({
     ctx,
     sidecar,
     getAttachments: () => attachments,
     whitelist: Array.isArray(config.whitelist) && config.whitelist.length > 0 ? config.whitelist : TOOL_WHITELIST,
+    onResult: (tool, args, blocks) => {
+      try {
+        watcher?.onToolResult(tool, args, blocks)
+      } catch (err) {
+        log(`watch callback failed: ${err?.message ?? err}`)
+      }
+    },
     log,
   })
 
@@ -75,6 +91,7 @@ export function apply(ctx, config = {}) {
   ctx.effect(
     () => () => {
       disposed = true
+      watcher?.stop()
       tools.dispose()
       void sidecar.stop()
     },
@@ -94,6 +111,7 @@ export function apply(ctx, config = {}) {
       whitelist: Array.isArray(config.whitelist) && config.whitelist.length > 0 ? config.whitelist : TOOL_WHITELIST,
       registered: tools.registered(),
       runtime: runtimeInfo,
+      watch: watcher?.status() ?? { enabled: false, running: false, pending: [], notifications: [] },
     }
   }
 
@@ -196,6 +214,47 @@ export function apply(ctx, config = {}) {
     })
   }
 
+  /** Bind the sidecar's process-wide account without restoring it. */
+  async function bindAccount(account) {
+    if (!account) return
+    await callJson('autoreply_rules', { action: 'get', account }).catch(() => {})
+  }
+
+  watcher = createWatcher({
+    callJson,
+    readPolicy,
+    restoreAccount: bindAccount,
+    getController: () => sessionController,
+    config: {
+      watch: config.watch !== false,
+      watchSeconds: config.watchSeconds ?? 2,
+      mergeWindowSeconds: config.mergeWindowSeconds ?? 20,
+      replyTimeoutSeconds: config.replyTimeoutSeconds ?? 120,
+      backlogSeconds: config.backlogSeconds ?? 300,
+    },
+    log,
+  })
+  watcher.start()
+
+  /** Contact avatars, cached as bytes for the settings page's `<img>` tags. */
+  async function avatarOf(account, talker) {
+    if (!talker) return { ok: false }
+    const key = `${account}|${talker}`
+    const cached = avatarCache.get(key)
+    if (cached && Date.now() - cached.at < (cached.ok ? 10 * 60_000 : 2 * 60_000)) return cached
+    let entry
+    try {
+      const answer = await callJson('wechat_avatar', { talker, ...(account ? { account } : {}) })
+      entry = answer?.ok === true && typeof answer.data === 'string'
+        ? { ok: true, at: Date.now(), mime: answer.mime || 'image/png', data: Buffer.from(answer.data, 'base64') }
+        : { ok: false, at: Date.now() }
+    } catch {
+      entry = { ok: false, at: Date.now() }
+    }
+    avatarCache.set(key, entry)
+    return entry
+  }
+
   async function dispatch(body) {
     switch (String(body.op || '')) {
       case 'status':
@@ -226,32 +285,65 @@ export function apply(ctx, config = {}) {
         return readPolicy(body.account)
       case 'policy.save':
         return writePolicy(body.account, body.rules)
+      case 'watch.status':
+        return watcher.status()
+      case 'watch.start':
+        watcher.start()
+        return watcher.status()
+      case 'watch.stop':
+        watcher.stop()
+        return watcher.status()
+      case 'watch.tick':
+        await watcher.tickNow()
+        return watcher.status()
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }
   }
 
   ctx.inject(['webServer'], (owner) => {
-    owner.effect(
-      () =>
-        owner.webServer.register({
-          kind: 'exact',
-          path: RPC_PATH,
-          handler: async (req, res) => {
-            let payload
-            try {
-              payload = { ok: true, data: await dispatch(await readJson(req)) }
-            } catch (err) {
-              payload = { ok: false, error: String(err?.message ?? err) }
-            }
-            res.writeHead(200, {
-              'content-type': 'application/json; charset=utf-8',
-              'cache-control': 'no-store',
-            })
-            res.end(JSON.stringify(payload))
-          },
-        }),
-      'wechat-local.route',
-    )
+    owner.effect(() => {
+      const disposeRpc = owner.webServer.register({
+        kind: 'exact',
+        path: RPC_PATH,
+        handler: async (req, res) => {
+          let payload
+          try {
+            payload = { ok: true, data: await dispatch(await readJson(req)) }
+          } catch (err) {
+            payload = { ok: false, error: String(err?.message ?? err) }
+          }
+          res.writeHead(200, {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+          })
+          res.end(JSON.stringify(payload))
+        },
+      })
+      const disposeAvatar = owner.webServer.register({
+        kind: 'exact',
+        path: AVATAR_PATH,
+        handler: async (req, res) => {
+          const url = new URL(req.url || '/', 'http://dsh.invalid')
+          const talker = url.searchParams.get('talker') || ''
+          const account = url.searchParams.get('account') || ''
+          const entry = talker ? await avatarOf(account, talker) : { ok: false }
+          if (!entry.ok) {
+            res.writeHead(404, { 'cache-control': 'no-store' })
+            res.end()
+            return
+          }
+          res.writeHead(200, {
+            'content-type': entry.mime,
+            'cache-control': 'private, max-age=600',
+          })
+          res.end(entry.data)
+        },
+      })
+      return () => {
+        disposeRpc()
+        disposeAvatar()
+      }
+    }, 'wechat-local.routes')
   })
 }

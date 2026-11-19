@@ -311,6 +311,44 @@ window.__ModuleLoader__.load({
         h('circle', { cx: 39, cy: 31, r: 2.6, fill: '#07c160' }))
     }
 
+    /** Contact avatar from the Host's cached endpoint, with a letter fallback. */
+    function Avatar({ account, talker, name, size = 28 }) {
+      const [failed, setFailed] = useState(false)
+      const letter = String(name || talker || '?').trim().slice(0, 1).toUpperCase()
+      const src = `/api/wechat-local/avatar?account=${encodeURIComponent(account || '')}&talker=${encodeURIComponent(talker || '')}`
+      return h('span', {
+        title: name || talker,
+        style: {
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          flexShrink: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          background: 'color-mix(in srgb, var(--dsw-alias-brand-primary, #4d9aff) 16%, transparent)',
+          color: 'var(--dsw-alias-brand-primary, #4d9aff)',
+          fontSize: Math.round(size * 0.42),
+          fontWeight: 600,
+          lineHeight: 1,
+        },
+      },
+        // The letter shows while the image loads and stays if it fails.
+        letter,
+        failed || !talker
+          ? null
+          : h('img', {
+            src,
+            alt: '',
+            width: size,
+            height: size,
+            style: { position: 'absolute', inset: 0, width: size, height: size, objectFit: 'cover', display: 'block' },
+            onError: () => setFailed(true),
+          }))
+    }
+
     function TextInput(props) {
       return h('input', { ...props, style: { ...S.input, ...(props.style ?? {}) } })
     }
@@ -575,7 +613,7 @@ window.__ModuleLoader__.load({
         h(Button, { key: 'save', primary: true, onClick: () => void save(), disabled: loading || saving }, saving ? '保存中…' : '保存'),
       ]
 
-      return h(Modal, { open, title: '本机微信 · 回复策略', onClose, footer },
+      return h(Modal, { open, title: 'PC微信 · 回复策略', onClose, footer },
         error ? h('div', { style: { color: 'var(--dsw-alias-state-error-primary, #d1242f)', fontSize: '13px' } }, error) : null,
 
         h('div', null,
@@ -586,12 +624,14 @@ window.__ModuleLoader__.load({
               primary: active.toLowerCase() === account.wxid.toLowerCase(),
               onClick: () => switchAccount(account.wxid),
               disabled: loading,
-            }, (() => {
-              const name = accountName(account.wxid)
-              return name ? `${name}（${account.wxid}）` : account.wxid
-            })() + (account.running ? '' : ' · 离线'))),
+            }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+              h(Avatar, { account: account.wxid, talker: account.wxid, name: accountName(account.wxid) || account.wxid, size: 18 }),
+              (() => {
+                const name = accountName(account.wxid)
+                return name ? `${name}（${account.wxid}）` : account.wxid
+              })() + (account.running ? '' : ' · 离线')))),
             accountTabs.length === 0 && !loading
-              ? h('span', { style: S.hint }, '没读到本机微信账号；确认微信已登录后再打开这个页面')
+              ? h('span', { style: S.hint }, '没读到 PC 微信账号；确认微信已登录后再打开这个页面')
               : null)),
 
         h('div', { style: { display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' } },
@@ -658,6 +698,7 @@ window.__ModuleLoader__.load({
                       return next
                     }),
                   }),
+                  h(Avatar, { account: active, talker: candidate.id, name: candidate.label, size: 24 }),
                   h('span', { style: { fontSize: '13px', color: 'var(--dsw-alias-label-primary, #1a1a1a)' } }, candidate.label),
                   candidate.isGroup ? h('span', { style: S.badge }, '群') : null,
                   h('span', { style: S.mono }, candidate.id))))
@@ -683,6 +724,7 @@ window.__ModuleLoader__.load({
                 return h('div', { key: row.id, style: { ...S.peerRow, background: checked.has(row.id) ? 'var(--dsw-alias-bg-layer-3, #fff)' : undefined } },
                   h('div', { style: S.peerHead },
                     h(Checkbox, { label: '', checked: checked.has(row.id), onChange: (on) => toggleChecked(row.id, on) }),
+                    h(Avatar, { account: active, talker: row.id, name: nameOf(row), size: 28 }),
                     h('span', { style: S.peerName }, nameOf(row)),
                     h('span', { style: S.badge }, group ? '群' : '私聊'),
                     h('span', { style: { ...S.mono, marginLeft: 'auto' } }, row.id)),
@@ -754,7 +796,7 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function MainPage() {
+    function PolicyView() {
       const [status, setStatus] = useState(null)
       const [env, setEnv] = useState(null)
       const [accounts, setAccounts] = useState(null)
@@ -787,6 +829,17 @@ window.__ModuleLoader__.load({
         return () => clearInterval(timer)
       }, [load])
 
+      const watch = status?.watch
+      const notifications = watch?.notifications ?? []
+      const watchAction = async (op) => {
+        try {
+          const next = await call(op)
+          setStatus((current) => (current ? { ...current, watch: next } : current))
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        }
+      }
+
       const state = status?.state ?? 'idle'
       const ready = state === 'ready'
       const connected = ready && env?.ok === true && env?.weixin_running === true && env?.db_ok === true
@@ -795,17 +848,12 @@ window.__ModuleLoader__.load({
       const accountCount = accounts?.accounts?.length ?? 0
       const detail = policySummary(policy)
 
-      return h('div', { 'data-wechat-local-policy': '', style: S.page },
-        h('div', null,
-          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, '本机微信'),
-          h('p', { style: { ...S.hint, margin: 0 } },
-            '以你本人身份，跟这台电脑上登录的微信好友说话。谁可以被代回、怎么回，在这里配置。')),
-
+      return h(React.Fragment, null,
         h('section', { style: S.card },
           h('div', { style: S.row },
             h('span', { style: S.icon }, h(WechatMark)),
             h('div', { style: S.text },
-              h('div', { style: S.name }, '本机微信'),
+              h('div', { style: S.name }, 'PC微信'),
               h('div', { style: S.descRow },
                 h('span', { style: S.description }, '以你本人身份，跟你微信里的好友说话'),
                 h('span', { style: S.capability }, '只对名单里的人'))),
@@ -820,10 +868,10 @@ window.__ModuleLoader__.load({
           h('dl', { style: S.meta },
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '助手'),
-              h('dd', { style: S.metaValue }, status?.version ? `本机微信侧车 v${status.version}` : '本机微信侧车')),
+              h('dd', { style: S.metaValue }, status?.version ? `PC微信侧车 v${status.version}` : 'PC微信侧车')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '在线'),
-              h('dd', { style: S.metaValue }, connected ? '本机微信已就绪' : env?.reason || status?.error || '检测中…')),
+              h('dd', { style: S.metaValue }, connected ? 'PC微信已就绪' : env?.reason || status?.error || '检测中…')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '可代回'),
               h('dd', { style: S.metaValue },
@@ -831,13 +879,41 @@ window.__ModuleLoader__.load({
                 + (accountCount > 1 ? ` · ${accountCount} 个号` : ''))),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '名单外的人'),
-              h('dd', { style: S.metaValue }, MODE_LABELS.get(detail.defaultMode) ?? detail.defaultMode))),
+              h('dd', { style: S.metaValue }, MODE_LABELS.get(detail.defaultMode) ?? detail.defaultMode)),
+            h('div', { style: S.metaItem },
+              h('dt', { style: S.metaLabel }, '监听'),
+              h('dd', { style: S.metaValue },
+                watch === undefined
+                  ? '未启动'
+                  : watch.running ? `运行中 · 每 ${watch.pollSeconds}s` : '已暂停'))),
 
           h('div', { style: S.children },
             h('p', { style: S.summary }, detail.summary),
             h('p', { style: { ...S.hint, margin: 0 } },
               '点「配置」按人设置：直接代回 / 起草给我确认 / 只提醒我 / 黑名单。',
-              '环境与工具状态在「本机微信状态」里。'))),
+              '环境与工具状态在「状态信息」页。'),
+
+            h('div', { style: S.divider },
+              h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
+                h('span', { style: S.chipsLabel },
+                  `实时监听：${watch?.running ? '运行中' : '已暂停'} · 合并窗口 ${watch?.mergeWindowSeconds ?? 20}s · 回复后按名单冷却`),
+                h('span', { style: { display: 'flex', gap: '6px' } },
+                  h(Button, { quiet: true, onClick: () => void watchAction('watch.tick') }, '立即检查'),
+                  h(Button, { onClick: () => void watchAction(watch?.running ? 'watch.stop' : 'watch.start') },
+                    watch?.running ? '暂停监听' : '开始监听'))),
+              watch?.lastError ? h('p', { style: S.note }, watch.lastError) : null,
+              watch?.pending?.length
+                ? h('div', { style: S.hint },
+                  `等待合并：${watch.pending.map((peer) => `${peer.key.split('|')[1]} ${peer.count} 条`).join('，')}`)
+                : null,
+              notifications.length > 0
+                ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: '3px' } },
+                  h('div', { style: S.chipsLabel }, `最近提醒 · ${notifications.length}`),
+                  notifications.slice(0, 8).map((item, index) => h('div', {
+                    key: index,
+                    style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere' },
+                  }, `${item.name} · ${new Date(item.ts * 1000).toLocaleTimeString()} · ${item.text}`)))
+                : null))),
 
         h(PolicyModal, {
           open,
@@ -892,7 +968,7 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function StatusPage() {
+    function StatusView() {
       const [status, setStatus] = useState(null)
       const [env, setEnv] = useState(null)
       const [error, setError] = useState('')
@@ -955,17 +1031,11 @@ window.__ModuleLoader__.load({
       const registered = status?.registered ?? []
       const available = status?.tools?.length ?? 0
 
-      return h('div', { 'data-wechat-local-status': '', style: S.page },
-        h('div', null,
-          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, '本机微信状态'),
-          h('p', { style: { ...S.hint, margin: 0 } },
-            '侧车、Python、环境自检与工具注册情况。只读路径不抢前台，发送会抢前台。')),
-
-        h('section', { style: S.card },
+      return h('section', { style: S.card },
           h('div', { style: S.row },
             h('span', { style: S.icon }, h(WechatMark)),
             h('div', { style: S.text },
-              h('div', { style: S.name }, '本机微信状态'),
+              h('div', { style: S.name }, '状态信息'),
               h('div', { style: S.descRow },
                 h('span', { style: S.description }, '侧车与环境自检'),
                 h('span', { style: S.capability }, '读取 · 发送 · 导出'))),
@@ -981,10 +1051,10 @@ window.__ModuleLoader__.load({
           h('dl', { style: S.meta },
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '助手'),
-              h('dd', { style: S.metaValue }, status?.version ? `本机微信侧车 v${status.version}` : '本机微信侧车')),
+              h('dd', { style: S.metaValue }, status?.version ? `PC微信侧车 v${status.version}` : 'PC微信侧车')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '在线'),
-              h('dd', { style: S.metaValue }, connected ? '本机微信已就绪' : env?.reason || status?.error || '检测中…')),
+              h('dd', { style: S.metaValue }, connected ? 'PC微信已就绪' : env?.reason || status?.error || '检测中…')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '工具'),
               h('dd', { style: S.metaValue }, `${registered.length} 个已注册 · ${available} 个可用`)),
@@ -1038,18 +1108,33 @@ window.__ModuleLoader__.load({
                     wordBreak: 'break-word',
                   },
                 }, status.stderrTail.join('\n')))
-              : null)))
+              : null))
+    }
+
+    function WechatPage() {
+      const [tab, setTab] = useState('policy')
+      return h('div', { 'data-wechat-local-ui': '', style: S.page },
+        h('div', null,
+          h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, 'PC微信'),
+          h('p', { style: { ...S.hint, margin: 0 } },
+            '用这台电脑上登录的微信读写消息；在这里配置回复策略、查看运行状态。')),
+        h('div', {
+          style: {
+            display: 'flex',
+            gap: '6px',
+            paddingBottom: '8px',
+            borderBottom: '1px solid var(--dsw-alias-border-l1, #e5e5e5)',
+          },
+        },
+          h(Button, { primary: tab === 'policy', onClick: () => setTab('policy') }, '回复策略'),
+          h(Button, { primary: tab === 'status', onClick: () => setTab('status') }, '状态信息')),
+        tab === 'policy' ? h(PolicyView) : h(StatusView))
     }
 
     function ChatIcon() {
       return h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
         h('path', { d: 'M2 3.5h12v8H6.5L3.5 14v-2.5H2z', stroke: 'currentColor', strokeWidth: 1.5, strokeLinejoin: 'round' }),
         h('path', { d: 'M5 6.5h6M5 9h4', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }))
-    }
-
-    function PulseIcon() {
-      return h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
-        h('path', { d: 'M1.5 8h3l2-4.5 3 9 2-4.5h3', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }))
     }
 
     return {
@@ -1063,27 +1148,14 @@ window.__ModuleLoader__.load({
         track(() =>
           ctx.slots.inject('settings.section', () =>
             ctx.slots.register(
-              { name: 'settings.section', id: 'wechat-local', order: 41, label: '本机微信' },
-              MainPage,
+              { name: 'settings.section', id: 'wechat-local', order: 41, label: 'PC微信' },
+              WechatPage,
             ),
           ),
         )
         track(() =>
           ctx.slots.inject('settings.section.icon', () =>
             ctx.slots.register({ name: 'settings.section.icon', id: 'wechat-local' }, ChatIcon),
-          ),
-        )
-        track(() =>
-          ctx.slots.inject('settings.section', () =>
-            ctx.slots.register(
-              { name: 'settings.section', id: 'wechat-local-status', order: 42, label: '本机微信状态' },
-              StatusPage,
-            ),
-          ),
-        )
-        track(() =>
-          ctx.slots.inject('settings.section.icon', () =>
-            ctx.slots.register({ name: 'settings.section.icon', id: 'wechat-local-status' }, PulseIcon),
           ),
         )
         return () => {
