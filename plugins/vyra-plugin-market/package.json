@@ -1,6 +1,6 @@
 {
   "name": "vyra-plugin-market",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "description": "在我们自己的插件页里加一个「插件市场」标签页：卡片式浏览多个市场源，搜索、多选，并批量安装、卸载、启用或停用。",
   "exports": {

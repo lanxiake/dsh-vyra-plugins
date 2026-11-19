@@ -853,6 +853,7 @@ window.__ModuleLoader__.load({
       const [sourceFailure, setSourceFailure] = useState(null)
       const [confirm, setConfirm] = useState(null)
       const [detailEntry, setDetailEntry] = useState(null)
+      const [refreshed, setRefreshed] = useState(false)
       const [running, setRunning] = useState(null)
       const [outcome, setOutcome] = useState(null)
       /** Per-entry failure text, kept on the card after the summary bar is gone. */
@@ -1182,6 +1183,13 @@ window.__ModuleLoader__.load({
       // Every hook runs before any early return, so the count never changes
       // between the first render and the loaded one (React error #310).
       const busy = running !== null
+      const loadingPage = listing !== null && listing.status === 'loading'
+
+      useEffect(() => {
+        if (!refreshed) return undefined
+        const timer = setTimeout(() => setRefreshed(false), 2500)
+        return () => clearTimeout(timer)
+      }, [refreshed])
       const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
       const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
       // This plugin's own market leads the source menu, without touching the
@@ -1302,10 +1310,22 @@ window.__ModuleLoader__.load({
             onClick: () => { search({ ...query, sort: { ...query.sort, direction: query.sort.direction === 'asc' ? 'desc' : 'asc' } }) },
           }, t('switchDirection', { dir: t(query.sort.direction === 'asc' ? 'ascending' : 'descending') })) : null,
           h('button', {
-            style: S.squareBtn, title: t('refresh'), 'aria-label': t('refresh'),
-            disabled: busy || activeUrl === null,
-            onClick: () => { if (listing !== null) void load(listing.url, query, 0, PAGE, undefined, 0, true) },
-          }, h(RefreshIcon, {}))),
+            style: { ...S.squareBtn, opacity: loadingPage ? 0.45 : 1 },
+            title: t('refresh'), 'aria-label': t('refresh'),
+            disabled: busy || listing === null || loadingPage,
+            onClick: async () => {
+              if (listing === null) return
+              try {
+                // refresh=true 让 Host 绕过十分钟的索引缓存；顺带刷新安装状态。
+                await load(listing.url, query, 0, PAGE, undefined, 0, true)
+                await loadBundles()
+                setRefreshed(true)
+              } catch {
+                // load 已经把失败写进 listing.failure
+              }
+            },
+          }, h(RefreshIcon, {})),
+          refreshed ? h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, lang === 'zh' ? '已刷新' : 'Refreshed') : null),
         categories.length === 0 ? null : h('div', { style: S.pills, role: 'group', 'aria-label': t('all') },
           h('button', {
             style: S.pill(query.category === null), 'aria-pressed': query.category === null,
