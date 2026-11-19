@@ -691,6 +691,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.3.2 titles each watched conversation "PC微信 · 名字".
+        '0.3.2': {
+          publishTimestamp: 1795068488,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4159ff0ee420143515b12970e357e26bdd721d23',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
