@@ -25,6 +25,14 @@ uvx goofish-cli auth status --format json
 
 `sold-list` / `confirm` 由插件自带的 `vendor/worker.py` 实现，不依赖上游 CLI 的版本。
 
+## 多账号与退出
+
+- **扫码登录后自动归档**：每次登录成功，账号的 cookie 和昵称会存到 `~/.goofish-cli/accounts/<unb>.json`
+- **账号下拉框**：面板顶部列出所有归档过的账号，选中即切换（覆盖 `cookies.json`、清掉 IM token、重启监听）
+- **退出登录**：删除当前 `cookies.json` 与 IM token，停止监听；已归档的账号仍保留，随时可切回
+
+切换账号后会清空面板里的会话与远程订单缓存，再按新账号重新拉取。
+
 ## 配置
 
 `cordis.patch.yml`：

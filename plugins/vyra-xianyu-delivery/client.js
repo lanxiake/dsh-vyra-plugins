@@ -390,6 +390,7 @@ window.__ModuleLoader__.load({
       const [replyText, setReplyText] = useState('')
       const [remoteOrders, setRemoteOrders] = useState([])
       const [remoteOrdersLoading, setRemoteOrdersLoading] = useState(false)
+      const [accounts, setAccounts] = useState([])
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
@@ -401,7 +402,7 @@ window.__ModuleLoader__.load({
         try {
           // 每项单独容错：auth 拉起 worker 慢或失败时，不能把订单和发货记录一起清空。
           const safe = (p) => p.catch((err) => ({ __error: String(err.message || err) }))
-          const [st, od, dl, cd, il, au, se] = await Promise.all([
+          const [st, od, dl, cd, il, au, se, ac] = await Promise.all([
             safe(rpc({ op: 'status' })),
             safe(rpc({ op: 'orders', limit: 50 })),
             safe(rpc({ op: 'deliveries', limit: 100 })),
@@ -409,6 +410,7 @@ window.__ModuleLoader__.load({
             safe(rpc({ op: 'itemLinks' })),
             safe(rpc({ op: 'auth' })),
             safe(rpc({ op: 'settings' })),
+            safe(rpc({ op: 'accounts' })),
           ])
           if (st && !st.__error) setStatus(st)
           if (od && !od.__error) setOrders(od)
@@ -417,6 +419,7 @@ window.__ModuleLoader__.load({
           if (il && !il.__error) setItems(il)
           if (au && !au.__error) setAuth(au)
           if (se && !se.__error) setSettings(se)
+          if (ac && !ac.__error && Array.isArray(ac)) setAccounts(ac)
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -486,6 +489,43 @@ window.__ModuleLoader__.load({
           })
           setNotice('商品资料已保存')
           await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      async function switchAccount(unb) {
+        if (!unb) return
+        setBusy('switch')
+        setNotice('')
+        try {
+          await rpc({ op: 'switchAccount', unb }, 60000)
+          setRemoteOrders([])
+          setChats([])
+          setActiveChat(null)
+          setChatMessages([])
+          await refresh()
+          setNotice(`已切换到 ${unb}`)
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      async function doLogout() {
+        setBusy('logout')
+        setNotice('')
+        try {
+          await rpc({ op: 'logout' }, 30000)
+          setAuth({ loading: false, valid: false, unb: '', tracknick: '' })
+          setChats([])
+          setActiveChat(null)
+          setChatMessages([])
+          await refresh()
+          setNotice('已退出登录')
         } catch (err) {
           setError(String(err.message || err))
         } finally {
@@ -648,8 +688,28 @@ window.__ModuleLoader__.load({
             title: auth && auth.valid ? '已登录' : '未登录',
             style: { width: '8px', height: '8px', borderRadius: '50%', background: auth && auth.valid ? '#16a34a' : '#dc2626', flex: 'none' },
           }),
+          accounts.length > 0 || (auth && auth.valid)
+            ? h('select', {
+              style: { padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(127,127,127,.3)', background: 'transparent', color: 'inherit', font: 'inherit', fontSize: '13px' },
+              value: (auth && auth.unb) || '',
+              disabled: busy === 'switch',
+              title: '切换账号',
+              onChange: (e) => switchAccount(e.target.value),
+            },
+              (auth && auth.valid) ? null : h('option', { value: '' }, '未登录'),
+              accounts.map((a) => h('option', { key: a.unb, value: a.unb }, `${a.tracknick || a.unb}${a.unb === (auth && auth.unb) ? '（当前）' : ''}`)),
+              (auth && auth.valid && auth.unb && !accounts.some((a) => a.unb === auth.unb))
+                ? h('option', { value: auth.unb }, `${auth.tracknick || auth.unb}（当前）`)
+                : null)
+            : null,
           h('div', { style: { flex: 1 } }),
           h('button', { style: S.btn, onClick: openLogin }, '扫码登录'),
+          (auth && auth.valid)
+            ? h('button', {
+              style: { ...S.btn, color: '#dc2626', borderColor: 'rgba(220,38,38,.4)' },
+              onClick: doLogout, disabled: busy === 'logout',
+            }, busy === 'logout' ? '退出中…' : '退出')
+            : null,
           h('button', {
             style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
             onClick: runTick, disabled: !!busy,

@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { spawn, execFile } from 'node:child_process'
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile, copyFile, writeFile, mkdir, rm } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { createStore } from './lib/db.js'
 import { createCli, defaultPrefix } from './lib/cli.js'
@@ -136,6 +136,69 @@ export function apply(ctx, config = {}) {
     return out.sort((a, b) => a.id.localeCompare(b.id))
   }
 
+  // ---- 多账号：每个账号一份 cookie，切换时覆盖 goofish-cli 的默认文件。 ----
+  const cliHome = join(homedir(), '.goofish-cli')
+  const accountsDir = join(cliHome, 'accounts')
+  const activeCookie = join(cliHome, 'cookies.json')
+
+  async function accountList() {
+    let entries = []
+    try {
+      entries = await readdir(accountsDir, { withFileTypes: true })
+    } catch {
+      return []
+    }
+    const out = []
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json') || entry.name.endsWith('.meta.json')) continue
+      const unb = entry.name.replace(/\.json$/i, '')
+      let nick = ''
+      try {
+        const meta = JSON.parse(await readFile(join(accountsDir, `${unb}.meta.json`), 'utf8'))
+        nick = String(meta.tracknick || '')
+      } catch {
+        // 没有 meta 时只显示 unb
+      }
+      out.push({ unb, tracknick: nick })
+    }
+    return out.sort((a, b) => a.unb.localeCompare(b.unb))
+  }
+
+  async function archiveCurrent(unb, tracknick) {
+    if (!unb) return
+    await mkdir(accountsDir, { recursive: true })
+    try {
+      await copyFile(activeCookie, join(accountsDir, `${unb}.json`))
+      await writeFile(
+        join(accountsDir, `${unb}.meta.json`),
+        JSON.stringify({ unb, tracknick: tracknick || '', savedAt: Date.now() }, null, 2),
+        'utf8',
+      )
+    } catch (err) {
+      log(`archive account failed: ${err?.message || err}`)
+    }
+  }
+
+  async function switchAccount(unb) {
+    if (!unb) throw new Error('缺少账号 unb')
+    await copyFile(join(accountsDir, `${unb}.json`), activeCookie)
+    // IM token 是按账号缓存的，换账号后必须丢掉，否则会拿旧账号的 token。
+    await rm(join(cliHome, 'im_token.json'), { force: true })
+    authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
+    stopWatch()
+    setTimeout(() => startWatch(), 600)
+    return { ok: true, unb }
+  }
+
+  async function logout() {
+    await rm(activeCookie, { force: true })
+    await rm(join(cliHome, 'im_token.json'), { force: true })
+    authCache = { loading: false, unb: '', tracknick: '', valid: false, checkedAt: 0, error: '已退出登录' }
+    selfUserId = ''
+    stopWatch()
+    return { ok: true }
+  }
+
   // 登录态缓存 30 秒：面板每 5 秒刷新一次，不能每次都拉起 worker。
   async function authSnapshot() {
     if (!authCache.loading && Date.now() - authCache.checkedAt < 30000) return authCache
@@ -182,8 +245,11 @@ export function apply(ctx, config = {}) {
       try {
         const msg = JSON.parse(line)
         if (msg.event === 'qr') loginState = { state: 'waiting', qr: msg.image }
-        else if (msg.event === 'done') loginState = { state: 'done', unb: msg.unb }
-        else if (msg.event === 'error') loginState = { state: 'error', message: msg.message }
+        else if (msg.event === 'done') {
+          loginState = { state: 'done', unb: msg.unb }
+          // 扫码成功后把这个账号归档，之后可以在面板里直接切换回来。
+          void authSnapshot().then((a) => archiveCurrent(msg.unb, a.tracknick))
+        } else if (msg.event === 'error') loginState = { state: 'error', message: msg.message }
       } catch {
         // 非 JSON 行（uv 的提示）忽略
       }
@@ -465,6 +531,12 @@ export function apply(ctx, config = {}) {
         return { enabled: ai.enabled, model: cfg.ai?.model || '', watch: Boolean(watchProc) }
       case 'auth':
         return authSnapshot()
+      case 'accounts':
+        return accountList()
+      case 'switchAccount':
+        return switchAccount(String(body.unb || ''))
+      case 'logout':
+        return logout()
       case 'shopItems':
         return cli.items(Number(body.limit) || 50)
       case 'remoteOrders': {
