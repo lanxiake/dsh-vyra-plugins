@@ -622,6 +622,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.2.0 adds the core feature: the per-person reply-policy dialog
+        // (direct / draft / notify / blacklist, triggers, cooldown, contact picker)
+        // backed by the sidecar's per-account rules; the status card moves to its
+        // own 本机微信状态 settings entry.
+        '0.2.0': {
+          publishTimestamp: 1795066581,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '5c057fecb8e853791c07cde4378cdf65675fc7ad',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
