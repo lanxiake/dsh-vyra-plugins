@@ -631,12 +631,12 @@ export const manifest: MarketManifest = {
     {
       name: 'vyra-xianyu-delivery',
       title: {
-        en: 'Xianyu Auto Delivery',
-        zh: '闲鱼自动发货',
+        en: 'Xianyu Auto Service',
+        zh: '闲鱼自动客服',
       },
       description: {
-        en: 'Deliver virtual goods on Xianyu (Goofish) automatically: poll paid orders, match card stock, send the content, then confirm shipment. Ships with a panel for cards, orders and delivery logs.',
-        zh: '闲鱼虚拟商品自动发货：轮询待发货订单，匹配卡密，发送内容并确认发货。附带卡券、订单与发货记录面板。',
+        en: 'An automatic customer-service desk for virtual goods on Xianyu (Goofish): watch buyer messages in real time, ship the card stock the moment an order is placed, and answer questions through the DSH agent with per-item skills. Ships with a panel for cards, orders, delivery logs and skill binding.',
+        zh: '闲鱼虚拟商品自动客服：实时监听买家消息，拍下即发卡密，并用 DSH 的 agent 与技能回答买家问题。附带卡券、订单、发货记录与技能绑定面板。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -695,6 +695,17 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '4d3e6e727ed0b0c2fe9dc849c58abf7642bf16f8',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
+        // 0.2.2 renames the plugin to 闲鱼自动客服; the package name stays
+        // vyra-xianyu-delivery so installed copies keep their install source.
+        '0.2.2': {
+          publishTimestamp: 1795066500,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '86656eab0bc7c9af403f1d00c46512e135d2c1a6',
             path: 'plugins/vyra-xianyu-delivery',
           },
         },

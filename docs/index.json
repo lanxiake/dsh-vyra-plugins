@@ -511,12 +511,12 @@
     {
       "name": "vyra-xianyu-delivery",
       "title": {
-        "en": "Xianyu Auto Delivery",
-        "zh": "闲鱼自动发货"
+        "en": "Xianyu Auto Service",
+        "zh": "闲鱼自动客服"
       },
       "description": {
-        "en": "Deliver virtual goods on Xianyu (Goofish) automatically: poll paid orders, match card stock, send the content, then confirm shipment. Ships with a panel for cards, orders and delivery logs.",
-        "zh": "闲鱼虚拟商品自动发货：轮询待发货订单，匹配卡密，发送内容并确认发货。附带卡券、订单与发货记录面板。"
+        "en": "An automatic customer-service desk for virtual goods on Xianyu (Goofish): watch buyer messages in real time, ship the card stock the moment an order is placed, and answer questions through the DSH agent with per-item skills. Ships with a panel for cards, orders, delivery logs and skill binding.",
+        "zh": "闲鱼虚拟商品自动客服：实时监听买家消息，拍下即发卡密，并用 DSH 的 agent 与技能回答买家问题。附带卡券、订单、发货记录与技能绑定面板。"
       },
       "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjlkNmUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTMgMjRsMTktMTAgMTkgMTB2MTlhNSA1IDAgMCAxLTUgNUgxOGE1IDUgMCAwIDEtNS01eiIvPjxwYXRoIGQ9Ik0yNCAzNGgxNk0yNCA0MmgxMCIvPjwvZz48L3N2Zz4K",
       "author": "lanxiake",
@@ -526,6 +526,16 @@
         "directory": "plugins/vyra-xianyu-delivery"
       },
       "versions": [
+        {
+          "version": "0.2.2",
+          "publishTimestamp": 1795066500,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "86656eab0bc7c9af403f1d00c46512e135d2c1a6",
+            "path": "plugins/vyra-xianyu-delivery"
+          }
+        },
         {
           "version": "0.2.1",
           "publishTimestamp": 1795066164,
