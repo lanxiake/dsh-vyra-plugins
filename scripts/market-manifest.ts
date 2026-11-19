@@ -78,6 +78,10 @@ const SYSTEM_SELECTION_ICON =
 const THEME_STYLES_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTEyIDNhOSA5IDAgMCAxIDAgMThjLTEuNCAwLTIuMi0uOS0yLjItMiAwLS42LjItMSAuNi0xLjQuNC0uNC42LS44LjYtMS4zIDAtMS0uOC0xLjgtMS44LTEuOEg3LjZBNC42IDQuNiAwIDAgMSAzIDkuOUMzIDYuMSA3IDMgMTIgM1oiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICA8Y2lyY2xlIGN4PSIxNS44IiBjeT0iOS40IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgo8L3N2Zz4K'
 
+/** Inline icon for `vyra-wechat-local`: a green chat bubble. */
+const WECHAT_LOCAL_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwN2MxNjAiLz48cGF0aCBkPSJNMTggMjBoMjhhNCA0IDAgMCAxIDQgNHYxNGE0IDQgMCAwIDEtNCA0SDMybC05IDd2LTdoLTVhNCA0IDAgMCAxLTQtNFYyNGE0IDQgMCAwIDEgNC00eiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjI1IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjM5IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjwvc3ZnPg=='
+
 /** Inline icon for `vyra-agent-cli-manager`. */
 const AGENT_CLI_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4NCiAgPHRpdGxlPkFnZW50IENMSSBNYW5hZ2VyPC90aXRsZT4NCiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz4NCiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+DQogICAgPHJlY3QgeD0iMTQiIHk9IjE2IiB3aWR0aD0iMzYiIGhlaWdodD0iMzIiIHJ4PSI1IiBvcGFjaXR5PSIwLjg1Ii8+DQogICAgPHBhdGggZD0iTTIyIDI3bDUgNS01IDUiLz4NCiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4NCiAgPC9nPg0KPC9zdmc+DQo='
@@ -525,6 +529,40 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'browser',
         keywords: ['theme', 'style', 'ui'],
+      },
+    },
+    {
+      name: 'vyra-wechat-local',
+      title: {
+        en: 'Local WeChat',
+        zh: '本机微信',
+      },
+      description: {
+        en: 'Read the user’s own WeChat on this machine — sessions, chat history, images, unread, search and export — and send as that account when asked. Windows only; the read path never grabs the foreground.',
+        zh: '读取用户本人微信的会话、聊天记录、图片、未读、检索与导出，必要时以本人身份发送。仅 Windows；只读路径不抢前台。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-wechat-local',
+      },
+      icon: WECHAT_LOCAL_ICON,
+      engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795046400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b5345a639f6f26b8d1235546318b7af1b1f6041b',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
+      },
+      metadata: {
+        category: 'integration',
+        keywords: ['wechat', 'weixin', 'local', 'chat', 'windows'],
       },
     },
     {
