@@ -78,6 +78,10 @@ const SYSTEM_SELECTION_ICON =
 const THEME_STYLES_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTEyIDNhOSA5IDAgMCAxIDAgMThjLTEuNCAwLTIuMi0uOS0yLjItMiAwLS42LjItMSAuNi0xLjQuNC0uNC42LS44LjYtMS4zIDAtMS0uOC0xLjgtMS44LTEuOEg3LjZBNC42IDQuNiAwIDAgMSAzIDkuOUMzIDYuMSA3IDMgMTIgM1oiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICA8Y2lyY2xlIGN4PSIxNS44IiBjeT0iOS40IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgo8L3N2Zz4K'
 
+/** Inline icon for `vyra-xianyu-delivery`: a white parcel on green. */
+const XIANYU_DELIVERY_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjlkNmUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTMgMjRsMTktMTAgMTkgMTB2MTlhNSA1IDAgMCAxLTUgNUgxOGE1IDUgMCAwIDEtNS01eiIvPjxwYXRoIGQ9Ik0yNCAzNGgxNk0yNCA0MmgxMCIvPjwvZz48L3N2Zz4K'
+
 /** Inline icon for `vyra-wechat-local`: a green chat bubble. */
 const WECHAT_LOCAL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwN2MxNjAiLz48cGF0aCBkPSJNMTggMjBoMjhhNCA0IDAgMCAxIDQgNHYxNGE0IDQgMCAwIDEtNCA0SDMybC05IDd2LTdoLTVhNCA0IDAgMCAxLTQtNFYyNGE0IDQgMCAwIDEgNC00eiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjI1IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjM5IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjwvc3ZnPg=='
@@ -563,6 +567,39 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'integration',
         keywords: ['wechat', 'weixin', 'local', 'chat', 'windows'],
+      },
+    },
+    {
+      name: 'vyra-xianyu-delivery',
+      title: {
+        en: 'Xianyu Auto Delivery',
+        zh: '闲鱼自动发货',
+      },
+      description: {
+        en: 'Deliver virtual goods on Xianyu (Goofish) automatically: poll paid orders, match card stock, send the content, then confirm shipment. Ships with a panel for cards, orders and delivery logs.',
+        zh: '闲鱼虚拟商品自动发货：轮询待发货订单，匹配卡密，发送内容并确认发货。附带卡券、订单与发货记录面板。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-xianyu-delivery',
+      },
+      icon: XIANYU_DELIVERY_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795058652,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '129421592badb4bf8a07ecfe9fbd3036f28b93ec',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
+      },
+      metadata: {
+        category: 'integration',
+        keywords: ['xianyu', 'goofish', 'auto-delivery', 'virtual-goods'],
       },
     },
     {
