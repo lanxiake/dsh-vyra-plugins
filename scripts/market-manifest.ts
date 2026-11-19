@@ -709,6 +709,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.1.5 retries a bulk order across a flaky GitHub: transport failures
+        // earn up to three more runs with a pause between them, and pnpm's
+        // content-addressed store makes each retry resume what was fetched.
+        '0.1.5': {
+          publishTimestamp: 1795057200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '86c76d84343b4124d7b677e0d027d67c32fd80f5',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
