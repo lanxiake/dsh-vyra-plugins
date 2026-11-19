@@ -1,0 +1,9 @@
+- insert:
+    - id: xianyu-delivery
+      name: 'vyra-xianyu-delivery'
+      config:
+        pollSeconds: 60
+        mode: send_then_confirm
+        blockRefund: true
+        blockZeroAmount: true
+        sendIntervalMs: 60000
