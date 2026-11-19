@@ -87,3 +87,12 @@ npx tsx tests/check.ts            # 全部检查（需要同级 dsh-Veyra checko
 ```
 
 `check.ts` 跑单测，再从 `dsh-Veyra` checkout 里跑四个 harness 检查：HTTP 端点、存储校验、会话端到端、以及**启动定时器存活**（后者存在的理由见 `tests/boot-timers.ts` 顶部注释——曾有一个定时器调用已被删除的函数，宿主在启动 15 秒后崩溃，而所有同步检查都是通过的）。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

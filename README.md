@@ -119,6 +119,21 @@ node scripts/sync-manifest-icons.mjs              # 生成内联图标
 
 **安装来源只能是 npm 或 Git**（`MarketSource` 类型限定）。本地目录、分支名都不是有效的市场来源。
 
+### 每个插件的必备项（开发规范）
+
+以下三项**所有插件都必须有**，缺一项 `pnpm run check:installable` 会直接失败：
+
+1. **`README.md` 末尾的交流群块**：QQ 群号 **1121362543** + 二维码图片。不要手抄，跑
+   `pnpm run contact`（`scripts/add-contact-block.mjs`，幂等）自动追加。
+2. **`assets/qq-group.png`**：二维码图片本身。README 的 `<picture>` 指向它，缺图会让插件详情页
+   渲染出裂图。
+3. **`package.json` 的 `files` 里带上 `assets/qq-group.png`**，否则发布出去的包里没有这张图。
+
+```sh
+cp plugins/<已有插件>/assets/qq-group.png plugins/<新插件>/assets/
+pnpm run contact
+```
+
 ## 加一个技能
 
 1. 在 `skills/<name>/SKILL.md` 写 frontmatter（`name` + `description` 必需）

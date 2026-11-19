@@ -86,6 +86,22 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
     if (entry.includes('*')) continue
     if (!existsSync(at(entry.replace(/\/$/, '')))) failures(name, `files names "${entry}", which does not exist`)
   }
+
+  // The contact block is a repository-wide development rule: every plugin README names
+  // the group, and the QR it renders ships in `files` — otherwise the market detail
+  // page renders a broken image. `pnpm run contact` writes the README half.
+  const readme = at('README.md')
+  if (!existsSync(readme)) failures(name, 'missing README.md (the contact block lives there)')
+  else if (!readFileSync(readme, 'utf8').includes('1121362543')) {
+    failures(name, 'README.md has no contact block (QQ group 1121362543); run "pnpm run contact"')
+  }
+  const qr = 'assets/qq-group.png'
+  const shipsQr = (manifest.files ?? []).some((entry) => {
+    const value = String(entry).replace(/\/$/, '')
+    return value === 'assets' || (value.startsWith('assets/') && (value === qr || value.includes('*')))
+  })
+  if (!existsSync(at(qr))) failures(name, `missing ${qr} (contact QR)`)
+  else if (!shipsQr) failures(name, `files does not include ${qr}`)
 }
 
 if (problems.length > 0) {

@@ -1,0 +1,12 @@
+# One row: the host half spawns the vendored Python sidecar and registers its tools.
+#
+# The interpreter comes from uv (`uv run --with pycryptodome --with zstandard`) by default.
+# Point `pythonPath` at an existing Python that already has pycryptodome to override:
+#
+#   - id: wechat-local
+#     config:
+#       pythonPath: C:/Python311/python.exe
+- insert:
+    - id: wechat-local
+      name: 'vyra-wechat-local'
+      config: {}
