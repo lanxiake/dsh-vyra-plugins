@@ -455,6 +455,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-ssh-terminal',
           },
         },
+        // 0.1.2 fixes a startup-killing bug: credential keys used a colon
+        // ("ssh-terminal/<id>:password"), which the credentials store rejects,
+        // so one saved SSH password made the whole Host crash on next start.
+        '0.1.2': {
+          publishTimestamp: 1795074609,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3e35a33964fc538665b2c480debd9787b8744a42',
+            path: 'plugins/vyra-ssh-terminal',
+          },
+        },
       },
       metadata: {
         category: 'integration',
