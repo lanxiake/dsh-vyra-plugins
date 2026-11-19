@@ -42,7 +42,31 @@ function loadBundle() {
 const { __internal } = loadBundle()
 const {
   marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
+  TRANSIENT_FAILURE, RETRY_DELAY_MS,
 } = __internal
+
+// A transport hiccup earns another run; a verdict about the package does not.
+// Getting this backwards would either give up on a flaky line or hammer the
+// Host with answers that cannot change.
+for (const text of [
+  'Error: read ECONNRESET',
+  'connect ETIMEDOUT 140.82.112.4:443',
+  'getaddrinfo ENOTFOUND github.com',
+  'socket hang up',
+  'ERR_PNPM_META_FETCH_FAIL GET https://github.com/…',
+  'ERR_PNPM_FETCH_TIMEOUT',
+  'The operation timed out',
+]) assert.match(text, TRANSIENT_FAILURE, `retried: ${text}`)
+
+for (const text of [
+  'not-bundle：package.json 没有 dsh.bundle 声明',
+  'incompatible-version',
+  'already-installed',
+  'ERR_PNPM_FETCH_404 Not Found',
+  '',
+]) assert.doesNotMatch(text, TRANSIENT_FAILURE, `not retried: ${text || '(empty)'}`)
+
+assert.deepEqual(RETRY_DELAY_MS, [1000, 3000, 8000], 'three retries, backing off')
 
 /** One market version with sensible defaults. */
 const version = (value, extra = {}) => ({

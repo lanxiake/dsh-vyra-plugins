@@ -171,6 +171,18 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Answers worth asking again. pnpm's store is content-addressed, so a
+     * retry resumes from whatever the failed run already fetched instead of
+     * starting over — which is why a transport hiccup costs a pause, not the
+     * whole download. A permanent answer (not a bundle, a refused version, a
+     * missing package) is never retried: only the road to GitHub is.
+     */
+    const TRANSIENT_FAILURE = /ECONNRESET|ETIMEDOUT|ENOTFOUND|ECONNREFUSED|EAI_AGAIN|FETCH_ERROR|socket hang up|Could not resolve host|unable to access|ERR_PNPM_META_FETCH_FAIL|ERR_PNPM_FETCH_(?:5\d\d|TIMEOUT)|timed out/i
+
+    /** Pause before each retry, in order; the last attempt is the last entry plus one. */
+    const RETRY_DELAY_MS = [1000, 3000, 8000]
+
+    /**
      * Turn what a batch will touch into the orders one press issues.
      *
      * An install and an update reach different Host methods: `installBundle`
@@ -923,6 +935,48 @@ window.__ModuleLoader__.load({
       }, [])
 
       /**
+       * Issue one order and read the Host's answer without judging it.
+       * @param {object} order - one order from {@link orders}.
+       * @param {object} remote - the injected Host namespaces.
+       * @returns {Promise<{pass: boolean, reason?: string, result?: object}>} the outcome.
+       */
+      async function perform(order, remote) {
+        let answer
+        try {
+          if (order.action === 'install') {
+            answer = await remote.pluginManager.installBundle(order.version.install.spec, {
+              enabled: true, saveExact: true,
+              ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
+            })
+          } else if (order.action === 'update') {
+            answer = await remote.pluginManager.updateBundle(order.entry.name, order.version.version, {
+              spec: order.version.install.spec,
+            })
+          } else if (order.action === 'uninstall') {
+            answer = await remote.pluginManager.removeBundle(order.entry.name)
+          } else {
+            answer = await remote.pluginManager.setBundleEnabled(order.entry.name, order.action === 'enable')
+          }
+        } catch (error) {
+          return { pass: false, reason: String(error?.message ?? error) }
+        }
+        if (!answer.ok) return { pass: false, reason: answer.error.message }
+        // An update answers with its own step result and restores the removed
+        // version when the replacement fails; both wrap one change result.
+        const result = order.action === 'update' ? answer.value.result : answer.value
+        if (result === undefined || result.application === 'failed') {
+          // The run's own output says more than the code does — a failed
+          // import, a refused build script — so it is part of the reason.
+          return {
+            pass: false,
+            reason: [result?.error?.diagnostic, result?.packageResult?.output].filter(Boolean).join('\n'),
+            result,
+          }
+        }
+        return { pass: true, result }
+      }
+
+      /**
        * Run a batch: every order is attempted in turn, so one failure never
        * hides the entries that follow it.
        * @param {ReadonlyArray<object>} list - orders from {@link orders}.
@@ -946,45 +1000,24 @@ window.__ModuleLoader__.load({
             action: t(`act${order.action[0].toUpperCase()}${order.action.slice(1)}`),
             done: index, total: list.length, name: order.entry.name,
           })
-          let answer
-          try {
-            if (order.action === 'install') {
-              answer = await remote.pluginManager.installBundle(order.version.install.spec, {
-                enabled: true, saveExact: true,
-                ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
-              })
-            } else if (order.action === 'update') {
-              answer = await remote.pluginManager.updateBundle(order.entry.name, order.version.version, {
-                spec: order.version.install.spec,
-              })
-            } else if (order.action === 'uninstall') {
-              answer = await remote.pluginManager.removeBundle(order.entry.name)
-            } else {
-              answer = await remote.pluginManager.setBundleEnabled(order.entry.name, order.action === 'enable')
-            }
-          } catch (error) {
-            failed.set(order.entry.name, String(error?.message ?? error))
-            continue
+          let outcome = null
+          for (let attempt = 0; attempt <= RETRY_DELAY_MS.length; attempt += 1) {
+            outcome = await perform(order, remote)
+            if (outcome.pass) break
+            // A permanent answer is the run's verdict, not the road's: retrying
+            // "not a bundle" or a refused version only wastes the person's time.
+            if (attempt === RETRY_DELAY_MS.length || !TRANSIENT_FAILURE.test(outcome.reason ?? '')) break
+            if (!alive.current) return
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS[attempt]))
           }
           if (!alive.current) return
-          if (!answer.ok) {
-            failed.set(order.entry.name, answer.error.message)
-            continue
-          }
-          // An update answers with its own step result and restores the removed
-          // version when the replacement fails; both wrap one change result.
-          const result = order.action === 'update' ? answer.value.result : answer.value
-          if (result === undefined || result.application === 'failed') {
-            // The run's own output says more than the code does — a failed
-            // import, a refused build script — so it is part of the reason.
-            const detail = result?.error?.diagnostic
-            const output = result?.packageResult?.output
-            failed.set(order.entry.name, [detail, output].filter(Boolean).join('\n') || t('loadFailed'))
+          if (!outcome.pass) {
+            failed.set(order.entry.name, outcome.reason === '' ? t('loadFailed') : outcome.reason)
             continue
           }
           ok += 1
-          if (result.application === 'restart-required') restart += 1
-          if ((result.pendingBuilds?.length ?? 0) > 0) builds += 1
+          if (outcome.result.application === 'restart-required') restart += 1
+          if ((outcome.result.pendingBuilds?.length ?? 0) > 0) builds += 1
         }
         // A writer outside this batch — another tab, the Host's own plugin
         // page, the third-party console's maintenance run — can rewrite
@@ -1252,7 +1285,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText },
+      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText, TRANSIENT_FAILURE, RETRY_DELAY_MS },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), `${NS}: dictionaries`)
