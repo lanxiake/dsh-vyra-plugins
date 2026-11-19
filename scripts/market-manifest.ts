@@ -653,6 +653,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.2.0 adds realtime IM watch (order tips ship immediately) and an
+        // optional AI buyer-reply engine driven by per-item knowledge.
+        '0.2.0': {
+          publishTimestamp: 1795065592,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'af6111f2e50be335ff13c69e57240f2a8d88309c',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
