@@ -645,6 +645,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.6.0 reads better and explains itself: the answer is split into paragraphs with a gap
+        // between them (one painted run collapsed any structure the model produced), a 401 now
+        // names the service that rejected it — the DeepSeek search credential is not the answer
+        // model chosen here — and copy moves ahead of summarize in the toolbar.
+        '1.6.0': {
+          publishTimestamp: 1795077600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'c00a826eb5354dfd02149b38f47ee7922f3c1b5f',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
