@@ -631,6 +631,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 1.5.3 is the blank panel, and it was here since the first version: `setContent` follows
+        // the stream by setting `scroll` to MAX_SAFE_INTEGER and nothing clamped it back, so every
+        // line was laid out at -1.7e308 and skipped — title and status painted, body empty while
+        // the answer sat in memory. The footer's copy button now reports whether the clipboard
+        // write actually happened instead of always claiming success.
+        '1.5.3': {
+          publishTimestamp: 1795076400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9958b681e82db647d3f2755a4468645b9f531f74',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
