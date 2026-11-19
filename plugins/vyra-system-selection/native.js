@@ -1213,6 +1213,8 @@ export function createOverlay(handlers = {}) {
       return state.mode
     },
     installHook,
+    /** Remove the hook (the settings page's takeover switch). Safe when none is installed. */
+    uninstallHook: removeHook,
     /**
      * Read the current selection now. Used by the drag trigger and by the settings page; never
      * call it from inside the mouse hook.

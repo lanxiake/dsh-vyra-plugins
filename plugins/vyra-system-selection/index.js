@@ -7,12 +7,22 @@
 // The popup is a Win32 window painted with GDI, and the native context menu is suppressed by a
 // low-level mouse hook (see native.js for why). This file owns the trigger policy, the actions,
 // and the small HTTP surface the settings page uses.
+import { readFileSync } from 'node:fs'
+
 import {
   ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, findAction, pickModel, reduceMouse,
   saneRect, searchQuery, selectionProblem,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveLastRun, saveSettings } from './store.js'
+
+/** The version this Host actually loaded, not the one on disk: a stale process is otherwise invisible. */
+let VERSION = ''
+try {
+  VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
+} catch {
+  // A package.json that cannot be read is not worth failing the plugin over.
+}
 
 export const name = '@local/system-selection'
 
@@ -38,7 +48,7 @@ export function apply(ctx) {
    */
   let lastRun = null
   function recordRun(entry) {
-    lastRun = { at: new Date().toISOString(), ...entry }
+    lastRun = { at: new Date().toISOString(), version: VERSION, ...entry }
     saveLastRun(lastRun)
   }
   /** The selection whose menu the user closed, so the poll does not reopen it. See `alreadyDismissed`. */
@@ -540,7 +550,12 @@ export function apply(ctx) {
   // --- lifecycle -----------------------------------------------------------------------------
 
   function start() {
-    overlay.installHook()
+    // The right-click takeover is the one part of this plugin that sits in the system's input
+    // path — every mouse event crosses into this process through it. It is worth its cost only
+    // while the user wants our menu on right-click, so it follows that setting instead of the
+    // plugin's own on/off switch. The selection trigger needs no hook at all.
+    if (settings.interceptRightClick !== false) overlay.installHook()
+    else overlay.uninstallHook()
     if (pollTimer) return
     // The poll only serves the optional drag-trigger mode; the hook does the real work. It runs
     // anyway so the pump keeps servicing the hook's message queue.
@@ -551,6 +566,9 @@ export function apply(ctx) {
     if (pollTimer) clearInterval(pollTimer)
     pollTimer = null
     mouse = null
+    // Disabling the plugin used to leave the hook installed, which kept swallowing right-clicks
+    // for an overlay that could no longer show anything.
+    overlay.uninstallHook()
   }
 
   if (enabled) start()
@@ -568,6 +586,7 @@ export function apply(ctx) {
   registerRoute(ctx, {
     status: () => ({
       supported: true,
+      version: VERSION,
       enabled,
       settings,
       actions: ACTIONS.map((a) => ({ id: a.id, label: a.label })),
@@ -592,9 +611,12 @@ export function apply(ctx) {
           if (typeof patch[key] === 'string') settings[key] = patch[key]
         }
         if (typeof patch.openOnSelect === 'boolean') settings.openOnSelect = patch.openOnSelect
+        if (typeof patch.interceptRightClick === 'boolean') settings.interceptRightClick = patch.interceptRightClick
         if (Number.isFinite(patch.maxResults)) settings.maxResults = Math.max(1, Math.min(10, patch.maxResults))
       }
       persist()
+      // Apply the takeover change now rather than at the next start.
+      if (enabled) start()
       return { ok: true, settings }
     },
     models: async () => listModels(ctx),

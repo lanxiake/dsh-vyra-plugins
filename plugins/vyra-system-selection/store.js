@@ -17,6 +17,10 @@ export const DEFAULTS = {
     // still works and still opens the same menu, so nobody has to learn the new gesture to keep
     // using the plugin.
     openOnSelect: true,
+    // Taking over the right button is what puts this plugin in the system's input path: every
+    // mouse event crosses into the Host through the low-level hook. On by default because that is
+    // the menu people expect; the switch exists for machines where the crossing is felt.
+    interceptRightClick: true,
     maxResults: 6,
   },
 }
