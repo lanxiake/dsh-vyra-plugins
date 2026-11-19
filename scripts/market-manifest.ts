@@ -236,6 +236,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/tool-usage-stats',
           },
         },
+        // 0.7.1 reads only the current record. A profile that once held both the
+        // legacy counter set and the snapshot could show the older one; the
+        // legacy key is no longer consulted.
+        '0.7.1': {
+          publishTimestamp: 1795060200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9ea34cf6d81662e126a62e4720c26f5daca4696b',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
       },
       metadata: {
         category: 'observability',
