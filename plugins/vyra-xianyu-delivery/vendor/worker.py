@@ -151,8 +151,112 @@ def items(limit: int = 50) -> dict[str, Any]:
     return list_items(int(limit))
 
 
-def chats(fetch_num: int = 50) -> dict[str, Any]:
-    """最近会话列表（不额外等 WS）。"""
+async def _list_conversations(limit: int = 200) -> list[dict[str, Any]]:
+    """网页版 IM 用的会话分页接口，比 HTTP session.sync 全得多。
+
+    `/r/Conversation/listNewestPagination` 返回 userConvs；每页最多 50，
+    hasMore/nextCursor 翻页。
+    """
+    from goofish_cli.core.message_history import history_connection
+    from goofish_cli.core.session import Session
+    from goofish_cli.core.sign import generate_mid
+    from goofish_cli.core.ws import recv_ack
+
+    session = Session.load()
+    myid = session.unb
+    out: list[dict[str, Any]] = []
+    cursor: Any = 9007199254740991
+
+    async with history_connection(session) as ws:
+        while len(out) < limit:
+            mid = generate_mid()
+            await ws.send(
+                json.dumps(
+                    {
+                        "lwp": "/r/Conversation/listNewestPagination",
+                        "headers": {"mid": mid},
+                        "body": [cursor, min(50, limit - len(out))],
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            ack = await recv_ack(ws, mid, timeout=10)
+            body = (ack or {}).get("body") or {}
+            items = body.get("userConvs") or []
+            for raw in items:
+                conv = raw.get("singleChatUserConversation") or raw
+                single = conv.get("singleChatConversation") or {}
+                cid = str(single.get("cid") or "").split("@")[0]
+                if not cid:
+                    continue
+                first = str(single.get("pairFirst") or "").split("@")[0]
+                second = str(single.get("pairSecond") or "").split("@")[0]
+                peer = second if first == myid else first
+                # 对方 ID 为空或 "0" 的是系统/通知会话，网页版也不把它们当聊天。
+                if not peer or peer == "0":
+                    continue
+
+                ext_raw = single.get("extension") or {}
+                if isinstance(ext_raw, str):
+                    try:
+                        ext_raw = json.loads(ext_raw)
+                    except (ValueError, TypeError):
+                        ext_raw = {}
+                item_title = str((ext_raw or {}).get("itemTitle") or "") if isinstance(ext_raw, dict) else ""
+
+                last = (conv.get("lastMessage") or {}).get("message") or {}
+                last_ext = last.get("extension") or {}
+                if isinstance(last_ext, str):
+                    try:
+                        last_ext = json.loads(last_ext)
+                    except (ValueError, TypeError):
+                        last_ext = {}
+                sender = str((last_ext or {}).get("senderUserId") or "").split("@")[0]
+                nick = str((last_ext or {}).get("reminderTitle") or "")
+                # 只有最后一条是对方发的，reminderTitle 才是对方昵称
+                peer_nick = nick if sender == peer and nick else ""
+
+                content = last.get("content") or {}
+                custom = content.get("custom") or {}
+                text = str(custom.get("summary") or "")
+                if not text and custom.get("data"):
+                    try:
+                        payload = json.loads(base64.b64decode(custom["data"]))
+                        text_obj = payload.get("text") or {}
+                        text = text_obj.get("text", "") if isinstance(text_obj, dict) else str(text_obj)
+                    except (ValueError, TypeError, UnicodeDecodeError):
+                        text = ""
+
+                out.append(
+                    {
+                        "session_id": cid,
+                        "peer_user_id": peer,
+                        "peer_nick": peer_nick,
+                        "last_msg": text[:60],
+                        "ts": int(conv.get("modifyTime") or 0) or None,
+                        "unread": int(conv.get("redPoint") or 0),
+                        "item_id": "",
+                        "item_title": item_title,
+                        "source": "im",
+                    }
+                )
+            if body.get("hasMore") not in (1, "1", True) or not items:
+                break
+            nxt = body.get("nextCursor")
+            if nxt is None:
+                break
+            cursor = nxt
+    return out
+
+
+def chats(fetch_num: int = 200) -> dict[str, Any]:
+    """全量会话列表：先走 IM 分页接口，失败回退到 goofish-cli 的 HTTP 版本。"""
+    try:
+        rows = asyncio.run(_list_conversations(int(fetch_num)))
+        if rows:
+            return {"sessions": rows, "total": len(rows)}
+    except Exception:  # noqa: BLE001 — 回退到有界版本
+        pass
     from goofish_cli.commands.message.list_chats import list_chats
 
     return list_chats(fetch_num=int(fetch_num), watch_secs=0)
@@ -161,7 +265,8 @@ def chats(fetch_num: int = 50) -> dict[str, Any]:
 def history(cid: str, limit: int = 10) -> list[dict[str, Any]]:
     from goofish_cli.commands.message.history import history as cli_history
 
-    return cli_history(cid, limit=limit)
+    # 每页 50 条，整体最多 90 秒：网页版的会话历史常常几百条，30 秒不够。
+    return cli_history(cid, limit_per_page=50, limit=int(limit), timeout=90.0)
 
 
 def watch() -> None:

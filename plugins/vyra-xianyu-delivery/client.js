@@ -6,7 +6,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
-    const { useState, useEffect, useCallback } = React
+    const { useState, useEffect, useCallback, useRef } = React
 
     const RPC = '/api/xianyu-delivery/rpc'
 
@@ -280,7 +280,12 @@ window.__ModuleLoader__.load({
 
     function ChatTab(props) {
       const { chats, activeChat, messages, replyText, setReplyText, onPick, onSend, onRefresh, busy, selfUserId } = props
-      return h('div', { style: { display: 'grid', gridTemplateColumns: '280px 1fr', gap: '14px', minHeight: '440px' } },
+      const bodyRef = useRef(null)
+      useEffect(() => {
+        const el = bodyRef.current
+        if (el) el.scrollTop = el.scrollHeight
+      }, [messages, activeChat])
+      return h('div', { style: { display: 'grid', gridTemplateColumns: '280px 1fr', gap: '14px', height: 'calc(100vh - 280px)', minHeight: '440px' } },
         h('div', { style: { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '600px' } },
           h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid rgba(127,127,127,.18)' } },
             h('span', { style: { fontWeight: 600, fontSize: '13px' } }, `会话（${chats.length}）`),
@@ -311,12 +316,12 @@ window.__ModuleLoader__.load({
         h('div', { style: { display: 'flex', flexDirection: 'column', border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', overflow: 'hidden', minHeight: 0 } },
           activeChat === null
             ? h('div', { style: { ...S.empty, padding: '60px 0' } }, '选择左侧会话查看聊天记录')
-            : h('div', null,
-              h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: '1px solid rgba(127,127,127,.18)' } },
+            : [
+              h('div', { key: 'head', style: { flex: 'none', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: '1px solid rgba(127,127,127,.18)' } },
                 h(Avatar, { name: activeChat.peer_nick || activeChat.peer_user_id, size: 28 }),
                 h('span', { style: { fontWeight: 600, fontSize: '14px' } }, activeChat.peer_nick || activeChat.peer_user_id),
                 h('span', { style: { ...S.muted, marginLeft: 'auto' } }, fmtTime(activeChat.ts))),
-              h('div', { style: { flex: 1, overflow: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '440px' } },
+              h('div', { key: 'body', ref: bodyRef, style: { flex: 1, minHeight: 0, overflow: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' } },
                 messages.length === 0 ? h('div', { style: S.empty }, '没有可显示的消息') : null,
                 messages.map((m) => {
                   const mine = String(m.send_user_id) === String(selfUserId)
@@ -329,7 +334,7 @@ window.__ModuleLoader__.load({
                       h('div', { style: { fontSize: '11px', opacity: 0.5, textAlign: mine ? 'right' : 'left', marginTop: '3px' } }, fmtTime(m.created_at)))
                   )
                 })),
-              h('div', { style: { display: 'flex', gap: '8px', padding: '12px', borderTop: '1px solid rgba(127,127,127,.18)' } },
+              h('div', { key: 'compose', style: { flex: 'none', display: 'flex', gap: '8px', padding: '12px', borderTop: '1px solid rgba(127,127,127,.18)' } },
                 h('input', {
                   style: S.input, value: replyText, placeholder: '回复买家…',
                   onChange: (e) => setReplyText(e.target.value),
@@ -338,7 +343,8 @@ window.__ModuleLoader__.load({
                 h('button', {
                   style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', padding: '6px 16px', fontWeight: 600 },
                   onClick: onSend, disabled: busy === 'send' || !replyText.trim(),
-                }, busy === 'send' ? '发送中…' : '发送')))
+                }, busy === 'send' ? '发送中…' : '发送')),
+            ]
         )
       )
     }
@@ -513,7 +519,7 @@ window.__ModuleLoader__.load({
         setActiveChat(chat)
         setChatMessages([])
         try {
-          const list = await rpc({ op: 'history', cid: chat.session_id, limit: 50 }, 60000)
+          const list = await rpc({ op: 'history', cid: chat.session_id, limit: 200 }, 120000)
           setChatMessages(list || [])
         } catch (err) {
           setError(String(err.message || err))

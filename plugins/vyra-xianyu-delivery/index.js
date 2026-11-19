@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { spawn } from 'node:child_process'
+import { spawn, execFile } from 'node:child_process'
 import { readdir, readFile } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { createStore } from './lib/db.js'
@@ -284,8 +284,33 @@ export function apply(ctx, config = {}) {
     }
   }
 
+  // Windows: uv 启动的 python 是子进程，只 kill 父 PID 会留下孤儿继续占着
+  // 同一个 IM 连接。taskkill /T 连进程树一起结束。
+  function killTree(child) {
+    if (!child || child.exitCode !== null) return
+    try {
+      if (process.platform === 'win32') {
+        execFile('taskkill', ['/PID', String(child.pid), '/T', '/F'], () => {})
+      } else {
+        child.kill('SIGTERM')
+      }
+    } catch {
+      try { child.kill() } catch { /* 已退出 */ }
+    }
+  }
+
+  // 插件重载后旧实例的 watch 进程会活下来，多开几个就会互相把 IM 连接踢掉。
+  let staleSwept = false
+  function sweepStaleWatchers() {
+    if (staleSwept || process.platform !== 'win32') return
+    staleSwept = true
+    const script = "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*vyra-xianyu-delivery*worker.py watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    execFile('powershell', ['-NoProfile', '-Command', script], () => {})
+  }
+
   function startWatch() {
     if (watchProc || watchRetry || cfg.watchEnabled === false) return
+    sweepStaleWatchers()
     const prefix = cfg.cliPrefix ?? defaultPrefix()
     let child
     try {
@@ -326,7 +351,7 @@ export function apply(ctx, config = {}) {
       watchRetry = null
     }
     if (watchProc) {
-      watchProc.kill()
+      killTree(watchProc)
       watchProc = null
     }
   }
