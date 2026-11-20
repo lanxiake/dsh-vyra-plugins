@@ -1161,6 +1161,10 @@ window.__ModuleLoader__.load({
                   : null),
               environment.versionHint
                 ? h('p', { style: S.note }, environment.versionHint)
+                : null,
+              status?.proxyPrompt && status.proxyPrompt !== 'ok'
+                ? h('p', { style: { ...S.note, color: 'var(--dsw-alias-state-error-primary, #d1242f)' } },
+                  `代聊提示注入失败：${status.proxyPrompt}`)
                 : null),
 
             h('div', { style: S.divider },

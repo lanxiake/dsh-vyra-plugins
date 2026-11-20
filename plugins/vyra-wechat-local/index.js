@@ -77,16 +77,18 @@ export function apply(ctx, config = {}) {
     return workspacePromise
   }
 
-  const WECHAT_PROXY_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。
+  const WECHAT_PROXY_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。这是自动代聊，不是聊天窗口：
+你的输出不会自动发给对方，必须调用发送工具才会真正发出。
 
 用户消息是合并后的微信消息批次：
 - 第一行是 "[对方（talker）· 账号 · 直接代回|起草]"；
 - 后面每条是 "时间 内容"；图片会以图片块附在消息里，语音已经转写成 [语音] 文字。
 
 回复规则：
-- 直接代回：必须调用 send_text(talker=<第一行的 talker>, account=<账号>, dry_run=false, text=<回复正文>) 发送。
-  不要只在回复里说“已发送”，不要向对方暴露你是 AI，也不要提及工具。
-- 起草：只起草一条回复，不要调用任何发送工具；把草稿正文直接输出，等用户确认。
+- 第一行是「直接代回」：必须调用 wechat_send_reply(text=<回复正文>)，且只调用一次。
+  它会把 text 原样发给当前对话的对方。不要调用 send_text，不要在正文里说“已发送”，
+  不要向对方暴露你是 AI，也不要提及工具。
+- 第一行是「起草」：只输出一条草稿正文，不要调用任何发送工具，等用户确认。
 - 用用户平时的口吻；微信里不要用 Markdown，不要长篇；不确定就简短确认。
 - 需要更多上下文时可以用 read_history / search_messages / list_sessions。
   图片和语音已经随消息提供，不要再调用 read_image 或转写工具。`
@@ -97,19 +99,95 @@ export function apply(ctx, config = {}) {
    * see or select 代聊模式.
    */
   const promptScopes = new WeakSet()
+  let proxyPromptError = ''
 
-  function installProxyPrompt(agentCtx) {
+  /**
+   * A send tool that takes only the reply text and binds the peer here. It is
+   * far more reliable than asking a small model to fill talker/account into the
+   * generic send_text, and a wrong target is impossible.
+   */
+  function replyToolDefinition(peer) {
+    let lastText = ''
+    let lastAt = 0
+    return {
+      name: 'wechat_send_reply',
+      description: `把回复真正发送给当前微信会话（${peer.name || peer.talker}）。仅当消息第一行是「直接代回」时调用；text 就是要发出去的原话，不要带解释、引号或“已发送”。`,
+      parameters: {
+        type: 'object',
+        properties: {
+          text: { type: 'string', description: '发给对方的完整回复正文' },
+        },
+        required: ['text'],
+      },
+      output: {
+        schema: {
+          type: 'object',
+          properties: { ok: { type: 'boolean' }, detail: { type: 'string' } },
+          required: ['ok'],
+        },
+        render: (_args, value) => [{
+          type: 'text',
+          text: value?.ok === false ? `发送失败：${value.detail || '未知原因'}` : '已发送',
+        }],
+      },
+      async execute(args, exec) {
+        const text = String(args?.text ?? '').trim()
+        if (!text) return { ok: false, detail: 'text 不能为空' }
+        if (text.length > 4000) return { ok: false, detail: 'text 太长（上限 4000 字）' }
+        // A model that repeats the call must not send the same line twice.
+        if (text === lastText && Date.now() - lastAt < 60_000) return { ok: true }
+        try {
+          const blocks = await sidecar.call('send_text', {
+            talker: peer.talker,
+            ...(peer.account ? { account: peer.account } : {}),
+            text,
+            dry_run: false,
+          }, exec.signal)
+          try {
+            watcher?.onToolResult('send_text', { talker: peer.talker, account: peer.account }, blocks)
+          } catch {
+            // Cooldown bookkeeping must not turn a successful send into an error.
+          }
+          const raw = (Array.isArray(blocks) ? blocks : [])
+            .filter((block) => block?.type === 'text')
+            .map((block) => String(block.text ?? ''))
+            .join('\n')
+          let result
+          try {
+            result = JSON.parse(raw)
+          } catch {
+            result = { ok: true }
+          }
+          if (result?.ok === false) {
+            return { ok: false, detail: result.detail || result.error_code || '发送失败' }
+          }
+          lastText = text
+          lastAt = Date.now()
+          return { ok: true }
+        } catch (err) {
+          return { ok: false, detail: String(err?.message ?? err) }
+        }
+      },
+    }
+  }
+
+  function installProxyPrompt(agentCtx, peer) {
     if (promptScopes.has(agentCtx)) return
     promptScopes.add(agentCtx)
     try {
       agentCtx.systemPrompt.section({
         // Unique name: a preset's own persona section must not shadow this one.
         name: 'vyra-wechat-proxy',
-        order: 1,
+        // After the generic first-party guidance, right before the persona suffix:
+        // the send rule must not be buried at the top of the prompt.
+        order: 10150,
         text: WECHAT_PROXY_PROMPT,
       })
+      if (peer?.talker) agentCtx.tools.register(replyToolDefinition(peer))
+      proxyPromptError = ''
     } catch (err) {
-      log(`proxy prompt section failed: ${err?.message ?? err}`)
+      proxyPromptError = String(err?.message ?? err)
+      log(`proxy prompt/install failed: ${proxyPromptError}`)
     }
   }
 
@@ -131,7 +209,7 @@ export function apply(ctx, config = {}) {
   const watchHandles = new Map()
 
   /** Create one watch session in the PC微信 workspace with the scoped persona. */
-  async function createWatchSession() {
+  async function createWatchSession(name, peer) {
     const ws = await ensureWorkspace()
     const sessionId = randomUUID()
     const selection = defaultAgentOptions()
@@ -139,7 +217,7 @@ export function apply(ctx, config = {}) {
       sessionId,
       meta: { cwd: ws?.path ?? process.cwd() },
       ...(selection === undefined ? {} : { agentOptions: selection }),
-      setup: (agentCtx) => installProxyPrompt(agentCtx),
+      setup: (agentCtx) => installProxyPrompt(agentCtx, peer),
     })
     watchHandles.set(sessionId, handle)
     if (ws) {
@@ -153,19 +231,19 @@ export function apply(ctx, config = {}) {
   }
 
   /** A cold watch session is resumed with the same scoped persona. */
-  async function ensureWatchSession(sessionId) {
+  async function ensureWatchSession(sessionId, peer) {
     const live = ctx.agents.get(sessionId)
     if (live !== undefined) {
       // The session controller may have resumed it on its own; add the persona
       // to that live scope before the next step.
-      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx)
+      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx, peer)
       return
     }
     const selection = defaultAgentOptions()
     const handle = await ctx.agents.resume({
       resumeSessionId: sessionId,
       ...(selection === undefined ? {} : { agentOptions: selection }),
-      setup: (agentCtx) => installProxyPrompt(agentCtx),
+      setup: (agentCtx) => installProxyPrompt(agentCtx, peer),
     })
     watchHandles.set(sessionId, handle)
   }
@@ -250,6 +328,7 @@ export function apply(ctx, config = {}) {
       whitelist: Array.isArray(config.whitelist) && config.whitelist.length > 0 ? config.whitelist : TOOL_WHITELIST,
       registered: tools.registered(),
       runtime: runtimeInfo,
+      proxyPrompt: proxyPromptError === '' ? 'ok' : proxyPromptError,
       watch: watcher?.status() ?? { enabled: false, running: false, pending: [], notifications: [] },
     }
   }

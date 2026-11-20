@@ -270,10 +270,10 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
   async function openSession(key, peer) {
     const existing = state.sessions[key]
     if (existing) {
-      await ensureSession(existing)
+      await ensureSession(existing, peer)
       return existing
     }
-    const sessionId = await createSession(peer.name || peer.talker)
+    const sessionId = await createSession(peer.name || peer.talker, peer)
     state.sessions[key] = sessionId
     save()
     const controller = getController()

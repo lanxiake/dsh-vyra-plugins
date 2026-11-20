@@ -274,9 +274,11 @@ Host 每 `watchSeconds`（默认 2s）对每个账号调 `poll_new`，按**该�
 `ctx.agents.create/resume` + `ctx.sessionController.prompt` 投递合并后的消息。会话建在
 专用的 **PC微信** workspace（`~/.dsh/wechat-local/workspace`）里，会话列表按 workspace
 分组，不会和项目会话混在一起。每个会话在自己的作用域里注册 `vyra-wechat-proxy`
-系统提示段（`systemPrompt.section`）：写明 `send_text(..., dry_run=false)`、历史检索
-工具、图片/语音说明和回答规范。它是**会话级作用域**，不是全局预设，普通会话的预设列表
-里看不到它；旧版监听会话在升级时归档，新会话带这段提示。
+系统提示段（`systemPrompt.section`，order `10150`，排在通用指导之后）和历史检索、
+图片/语音说明与回答规范。同时注册一个只接收 `text` 的 `wechat_send_reply` 工具，
+talker/account 由插件按 peer 绑定：小模型不必自己填目标，也不会发错人；发送成功仍
+走同一条 `onToolResult` 冷却路径。它是**会话级作用域**，不是全局预设，普通会话的
+预设列表里看不到它；旧版监听会话在升级时归档，新会话带这段提示。
 
 **媒体在交付前处理**：`poll_new` 已附带图片本地路径与语音 SILK 路径。Host 在 prompt 前
 把图片读成原生 `image` 内容块；本地没有 `image_path` 时调用本地的
