@@ -1280,6 +1280,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.2 makes the default profile a real weflow example, adds a model
+        // picker fed by the DSH providers, and shows tool descriptions on hover.
+        '0.6.2': {
+          publishTimestamp: 1795162546,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '96860b0281100f30e5fb4c8637141383f6267fec',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
