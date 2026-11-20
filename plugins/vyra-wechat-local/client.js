@@ -40,6 +40,19 @@ window.__ModuleLoader__.load({
     ]
     const MODE_LABELS = new Map(MODE_OPTIONS.map((option) => [option.value, option.label]))
 
+    /** Why a message the watcher saw was not handed to the agent. */
+    const SKIP_LABELS = new Map([
+      ['from_me', '你自己发的'],
+      ['trigger_miss', '触发条件不匹配'],
+      ['not_whitelisted', '名单外'],
+      ['blacklisted', '黑名单'],
+      ['private_off', '关闭了私聊'],
+      ['quiet_hours', '静默时段'],
+      ['self_skip', '文件传输助手'],
+      ['disabled', '回复策略未启用'],
+      ['legacy_rules', '旧版规则'],
+    ])
+
     /** 名单外的人只能「不处理」或「只提醒」：名单外的消息不叫模型。 */
     const DEFAULT_MODE_OPTIONS = MODE_OPTIONS.filter(
       (option) => option.value === 'ignore' || option.value === 'notify',
@@ -835,6 +848,7 @@ window.__ModuleLoader__.load({
 
       const watch = status?.watch
       const notifications = watch?.notifications ?? []
+      const skips = watch?.skips ?? []
       const watchAction = async (op) => {
         try {
           const next = await call(op)
@@ -962,6 +976,14 @@ window.__ModuleLoader__.load({
                     key: index,
                     style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere', marginTop: '3px' },
                   }, `${item.name} · ${new Date(item.ts * 1000).toLocaleTimeString()} · ${item.text}`)))
+                : null,
+              skips.length > 0
+                ? h('details', { style: S.chipsLabel, title: '监听看到了这些消息，但按回复策略没有交给 Agent。' },
+                  h('summary', null, `最近跳过 · ${skips.length}`),
+                  skips.slice(0, 8).map((item, index) => h('div', {
+                    key: index,
+                    style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary, #666)', overflowWrap: 'anywhere', marginTop: '3px' },
+                  }, `${item.name} · ${new Date(item.ts * 1000).toLocaleTimeString()} · ${item.text || '(无文字)'}（${SKIP_LABELS.get(item.reason) || item.reason}）`)))
                 : null))),
 
         h(PolicyModal, {

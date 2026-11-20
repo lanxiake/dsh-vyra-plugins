@@ -265,6 +265,41 @@ test('a failed delivery retries the same batch without repeating image notes', a
   }
 })
 
+test('a message the policy drops is recorded with its reason', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
+  let delivered = false
+  const watcher = createWatcher({
+    callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: true, db_ok: true, deps: { ok: true } }
+      if (tool === 'list_accounts') return { active: 'wxid_1', accounts: [{ wxid: 'wxid_1', running: true }] }
+      if (tool === 'poll_new') {
+        if (delivered) return { messages: [], next_since_ts: 101 }
+        delivered = true
+        return { messages: [msg('你好', 100)], next_since_ts: 100 }
+      }
+      return {}
+    },
+    readPolicy: async () => policy([{
+      id: 'friend', label: '好友', mode: 'auto', trigger: 'keyword', keywords: ['报错'], cooldown_seconds: 60,
+    }]),
+    restoreAccount: async () => {},
+    getController: () => ({ prompt: async () => {} }),
+    statePath: join(dir, 'watch.json'),
+    config: { watchSeconds: 0.02, mergeWindowSeconds: 0.05, replyTimeoutSeconds: 1 },
+  })
+  try {
+    watcher.start()
+    await waitFor(() => watcher.status().skips.length === 1)
+    const skip = watcher.status().skips[0]
+    assert.equal(skip.reason, 'trigger_miss')
+    assert.equal(skip.text, '你好')
+    assert.equal(watcher.status().pending.length, 0)
+  } finally {
+    watcher.stop()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('an image without a local path is fetched through read_image', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n0sAAAAASUVORK5CYII='

@@ -15,6 +15,7 @@ import { createBatchScheduler } from './batch.js'
 
 const STATE_VERSION = 4
 const MAX_NOTIFICATIONS = 100
+const MAX_SKIPS = 30
 
 function stateFile() {
   return join(homedir(), '.dsh', 'wechat-local', 'watch.json')
@@ -201,6 +202,7 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
   state.cursors = state.cursors ?? {}
   state.sessions = state.sessions ?? {}
   state.notifications = Array.isArray(state.notifications) ? state.notifications : []
+  state.skips = Array.isArray(state.skips) ? state.skips : []
 
   const scheduler = createBatchScheduler({
     mergeWindowMs,
@@ -245,6 +247,24 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     })
     state.notifications = state.notifications.slice(0, MAX_NOTIFICATIONS)
     save()
+  }
+
+  /**
+   * Remember a message the watcher saw but did not hand to the agent. Without
+   * this, a policy that silently drops (keyword miss, blacklist) looks exactly
+   * like "the watcher never saw my message" in the settings page.
+   */
+  function skip(account, message, reason) {
+    state.skips.unshift({
+      ts: Number(message.ts) || Math.floor(Date.now() / 1000),
+      time: message.time || '',
+      account,
+      talker: message.talker,
+      name: message.name || message.talker,
+      text: String(message.text ?? '').slice(0, 120),
+      reason,
+    })
+    state.skips = state.skips.slice(0, MAX_SKIPS)
   }
 
   async function openSession(key, peer) {
@@ -479,6 +499,7 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       if (message.from_me === true) {
         // The user answered from their own phone: cancel the pending auto-reply.
         scheduler.userSpoke(key)
+        skip(account, message, 'from_me')
         changed = true
         continue
       }
@@ -488,7 +509,11 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
         changed = true
         continue
       }
-      if (decision.action === 'drop') continue
+      if (decision.action === 'drop') {
+        skip(account, message, decision.reason)
+        changed = true
+        continue
+      }
       scheduler.push(key, summarize(message), decision)
       changed = true
     }
@@ -641,6 +666,7 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
           cooldownMs: peer.cooldownMs,
         })),
         notifications: state.notifications.slice(0, 20),
+        skips: state.skips.slice(0, 10),
       }
     },
   }
