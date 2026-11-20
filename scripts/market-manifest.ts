@@ -719,6 +719,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 3.0.1 stops the card shivering while an answer streams: it was re-placed against the
+        // selection on every layout (moving the window ~20 times a second), and now keeps the
+        // corner it opened at, grows with SWP_NOREDRAW, and repaints once per frame. The pin
+        // button is gone — it toggled state nothing acted on.
+        '3.0.1': {
+          publishTimestamp: 1795088400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '99a1d5e1d779d3f708c8e79270878287107014cc',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
         // timer and took the whole host process down on the first selection capture.
         '2.0.1': {
