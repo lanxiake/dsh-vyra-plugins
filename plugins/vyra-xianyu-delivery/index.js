@@ -13,7 +13,7 @@ import { createDshAgent } from './lib/agent.js'
 import { createXianyuTools } from './lib/tools.js'
 
 export const name = 'vyra-xianyu-delivery'
-export const inject = ['tools']
+export const inject = ['tools', 'agents']
 
 async function readJson(req) {
   const chunks = []
@@ -59,11 +59,11 @@ export function apply(ctx, config = {}) {
     return () => { for (const dispose of disposers) dispose() }
   }, 'xianyu-delivery.tools')
 
-  const agents = typeof ctx.get === 'function' ? ctx.get('agents') : undefined
-  const sessionTitle = typeof ctx.get === 'function' ? ctx.get('sessionTitle') : undefined
+  // 服务按需现取：apply 时 agents 可能还没注册。
+  const getService = (name) => (typeof ctx.get === 'function' ? ctx.get(name) : undefined)
   const dshAgent = createDshAgent({
-    agents,
-    sessionTitle,
+    getAgents: () => getService('agents'),
+    sessionTitle: getService('sessionTitle'),
     config: cfg,
     logger: log,
     getPreset: () => store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),

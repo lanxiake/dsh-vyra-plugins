@@ -24,12 +24,15 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
   const skillsDir = String(ai.skillsDir || join(homedir(), '.dsh', 'skills'))
   const cooldownSeconds = Number(ai.cooldownSeconds) || 8
   const maxRepliesPerChat = Number(ai.maxRepliesPerChat) || 8
-  const mode = String(ai.mode || (agent?.available ? 'dsh' : 'api'))
+  // 空 = auto：DSH agent 可用就用它，否则退回直连接口。
+  // 不在构造时固化，agents 服务可能稍后才注册。
+  const mode = String(ai.mode || '')
   const apiReady = Boolean(ai.baseUrl && ai.apiKey && ai.model)
 
   // 是否回复由商品绑定的客服配置决定；这里只检查运行环境是否具备。
   function isEnabled() {
-    return mode === 'dsh' ? Boolean(agent?.available) : apiReady
+    if (mode === 'api') return apiReady
+    return Boolean(agent?.available) || apiReady
   }
 
   const cooldowns = new Map()
@@ -160,7 +163,7 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
       ? { provider: routeProvider, model: routeModel.join(':') }
       : null
     let out = null
-    if (mode === 'dsh') {
+    if (mode !== 'api' && agent?.available) {
       const result = await agent.ask({ prompt, sessionKey: cid, title, model: modelChoice })
       if (!result.text) return { reason: result.error || 'agent-empty' }
       out = result.text

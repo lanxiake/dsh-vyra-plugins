@@ -19,7 +19,10 @@ function userMessage(text) {
   }
 }
 
-export function createDshAgent({ agents, sessionTitle, config = {}, logger = () => {}, getPreset }) {
+export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset }) {
+  // Cordis 的服务在插件 apply 时可能还没注册（注入顺序），必须每次现取；
+  // 在 apply 时取一次会永久拿到 undefined，AI 客服就一直是关的。
+  const liveAgents = () => (typeof getAgents === 'function' ? getAgents() : agents)
   const ai = config.ai || {}
   const provider = String(ai.provider || '').trim()
   const model = String(ai.model || '').trim()
@@ -32,7 +35,7 @@ export function createDshAgent({ agents, sessionTitle, config = {}, logger = () 
   }
 
   async function ask({ prompt, sessionKey, title = '', model = null }) {
-    if (!agents?.create) return { text: null, error: 'agents-unavailable' }
+    if (!liveAgents()?.create) return { text: null, error: 'agents-unavailable' }
     try {
       return await askOnce({ prompt, sessionKey, title, model })
     } catch (err) {
@@ -47,9 +50,12 @@ export function createDshAgent({ agents, sessionTitle, config = {}, logger = () 
       ? { provider: model.provider, model: model.model }
       : null
     let reply = ''
-    const handle = await agents.create({
+    const handle = await liveAgents().create({
       sessionId: `xianyu-${sessionKey || 'chat'}-${randomUUID()}`,
-      meta: preset ? { origin: 'subagent', agentPreset: preset } : { origin: 'subagent' },
+      meta: {
+        delegationDepth: 0,
+        ...(preset ? { agentPreset: preset } : {}),
+      },
       agentOptions: route ?? (provider ? { provider, model } : undefined),
       setup: (agentCtx) => {
         agentCtx.tools.register({
@@ -103,7 +109,9 @@ export function createDshAgent({ agents, sessionTitle, config = {}, logger = () 
   }
 
   return {
-    available: Boolean(agents?.create),
+    get available() {
+      return Boolean(liveAgents()?.create)
+    },
     get agentPreset() {
       return currentPreset()
     },
