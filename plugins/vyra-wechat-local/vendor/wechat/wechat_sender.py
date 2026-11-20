@@ -2703,15 +2703,19 @@ def _dlg_fill_and_open(dlg, path, verbose=False):
 # ⚠️ **不能按名字找**：图标没有文字、微信也没暴露 UIA（本机整棵树只剩 2 个 Pane），
 # 悬停才出中文提示。实测把锚点定在「会话列右边界 +103、发送按钮上方/同高 +7」处，即那排
 # 5 个图标（x≈337/373/407/443/494，y≈777）里**第 3 个＝发送文件**（左「发送收藏」右「截图」）。
-ATTACH_BTN_DX = 103
+# 布局平移时固定锚点可能落到第 2 个图标（实测用户窗口里 103 就是第 2 个）：
+# 默认按第 3 个算，并保留相邻候选，由 _attach_via_dialog 逐个验证文件对话框是否真的出现。
+ATTACH_BTN_DX = 137
 ATTACH_BTN_DY = 7
+ATTACH_BTN_DX_CANDIDATES = (137, 103, 171, 69)
 
 
-def _attach_button_pt(h):
+def _attach_button_pt(h, dx=None):
     """工具栏「发送文件」图标在窗口内的坐标；读不到帧就返回 None。
 
     图标本身**没有文字、也没有 UIA 名字**（鼠标悬停才出提示），所以只能**按位置**点。
-    锚点取**相对量**，随实际布局自适应：x = 会话列右边界 + 103，y = 「发送」按钮 y + 7。
+    锚点取**相对量**，随实际布局自适应：x = 会话列右边界 + dx（默认 137，即第 3 个图标），
+    y = 「发送」按钮 y + 7。调用方按候选偏移逐个验证文件对话框。
     2026-10-12 实测（1280×820，微信 4.1.15）：那排图标 y≈777，从左到右 x≈337/373/**407**/443/494，
     第 3 个是「发送文件」（左「发送收藏」、右「截图」，用户逐一点名核对过）。
     """
@@ -2719,27 +2723,40 @@ def _attach_button_pt(h):
     if not lines:
         return None
     ly = layout(lines, ww, wh)
-    return ly["session_right"] + ATTACH_BTN_DX, ly["send_btn"][1] + ATTACH_BTN_DY
+    return ly["session_right"] + (ATTACH_BTN_DX if dx is None else dx), ly["send_btn"][1] + ATTACH_BTN_DY
 
 
 def _attach_via_dialog(h, path, verbose=False):
     """投递点工具栏的「发送文件」图标 → 驱动弹出的文件对话框。返回 (ok, detail)。"""
     pids = set(weixin_pids())
     before = set(_weixin_dialog(pids))
-    p = _attach_button_pt(h)
-    if not p:
-        return False, "读不到界面帧，无法定位工具栏「发送文件」（fail-closed）"
-    post_click(h, *p)
     dlg = 0
-    t0 = time.time()
-    while time.time() - t0 < 10:
-        time.sleep(0.5)
-        new = [w for w in _weixin_dialog(pids) if w not in before]
-        if new:
-            dlg = new[0]
+    tried = []
+    for dx in ATTACH_BTN_DX_CANDIDATES:
+        p = _attach_button_pt(h, dx)
+        if not p:
+            continue
+        tried.append(dx)
+        post_click(h, *p)
+        t0 = time.time()
+        while time.time() - t0 < 4:
+            time.sleep(0.5)
+            new = [w for w in _weixin_dialog(pids) if w not in before]
+            if new:
+                dlg = new[0]
+                break
+        if dlg:
+            print(f"wechat_sender: attach button dx={dx}", file=sys.stderr)
             break
+        # 点到了相邻图标（收藏/截图等）：Esc 关掉浮层再试下一个偏移。
+        try:
+            press(VK_ESC)
+        except Exception:
+            pass
+        time.sleep(0.4)
     if not dlg:
-        return False, "点了「发送文件」但文件对话框没出现（fail-closed）"
+        return False, ("点了工具栏但文件对话框没出现（fail-closed；"
+                       f"已尝试偏移 {tried or '无（读不到界面帧）'}）")
     try:
         return _dlg_fill_and_open(dlg, path, verbose)
     finally:

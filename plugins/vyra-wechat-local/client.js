@@ -1256,6 +1256,173 @@ window.__ModuleLoader__.load({
               : null))
     }
 
+    // ---------------------------------------------------------------------------
+    // Distilled profiles — Lumii's white-box Markdown, editable in place.
+    // ---------------------------------------------------------------------------
+
+    function DistillView() {
+      const [list, setList] = useState(null)
+      const [scope, setScope] = useState('self')
+      const [content, setContent] = useState('')
+      const [meta, setMeta] = useState(null)
+      const [busy, setBusy] = useState('')
+      const [error, setError] = useState('')
+      const [notice, setNotice] = useState('')
+
+      const loadList = useCallback(async () => {
+        try {
+          setList(await call('distill.list'))
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        }
+      }, [])
+
+      const loadContent = useCallback(async (target) => {
+        setBusy('load')
+        setError('')
+        try {
+          const data = await call('distill.get', { scope: target })
+          setContent(String(data?.content ?? ''))
+          setMeta(data ?? null)
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }, [])
+
+      useEffect(() => {
+        void loadList()
+        void loadContent('self')
+      }, [loadList, loadContent])
+
+      const select = (target) => {
+        setScope(target)
+        setNotice('')
+        void loadContent(target)
+      }
+
+      const save = async () => {
+        setBusy('save')
+        setError('')
+        setNotice('')
+        try {
+          const saved = await call('distill.save', { scope, content })
+          setNotice(`已保存：${saved?.path ?? scope}`)
+          await loadList()
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const remove = async () => {
+        if (!window.confirm(`删除「${scope === 'self' ? '用户本人' : scope}」的画像？`)) return
+        setBusy('clear')
+        setError('')
+        setNotice('')
+        try {
+          await call('distill.clear', { scope })
+          setContent('')
+          setMeta(null)
+          setNotice('已删除')
+          await loadList()
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const clearAll = async () => {
+        if (!window.confirm('清空全部画像（含备份与水位）？')) return
+        setBusy('clear-all')
+        setError('')
+        setNotice('')
+        try {
+          await call('distill.clear', { everything: true })
+          setContent('')
+          setMeta(null)
+          setNotice('已清空全部画像')
+          await loadList()
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const distill = async (target) => {
+        setBusy('distill')
+        setError('')
+        setNotice('')
+        try {
+          const answer = await call('distill.request', target ? { scope: target } : {})
+          setNotice(`已创建「PC微信 · 画像蒸馏」会话${answer?.sessionId ? `（${answer.sessionId}）` : ''}，可在 PC微信 分组查看进度。`)
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const profiles = list?.profiles ?? []
+      const hasSelf = profiles.some((item) => String(item.scope).toLowerCase() === 'self' || item.rel === 'self.md')
+      const entries = hasSelf
+        ? profiles
+        : [{ scope: 'self', rel: 'self.md', updated: null, age_days: null, stale: false, bytes: 0 }, ...profiles]
+      const currentLabel = scope === 'self' ? '用户本人' : scope
+
+      return h('section', { style: S.card },
+        h('div', { style: S.row },
+          h('div', { style: S.text },
+            h('div', { style: S.name }, '画像蒸馏'),
+            h('div', { style: S.descRow },
+              h('span', { style: S.description }, '本机 Markdown 画像，可手动修改'),
+              h('span', { style: S.capability }, '本人 · 好友 · 群'))),
+          h('div', { style: S.actions },
+            h(Button, { quiet: true, onClick: () => void loadList(), disabled: busy !== '', title: '重新读取画像清单' }, '刷新'),
+            h(Button, { quiet: true, onClick: () => void call('distill.reveal').catch(() => {}), disabled: busy !== '', title: '在文件资源管理器中打开 ~/.lumii/wechat-distill/' }, '打开目录'),
+            h(Button, { primary: true, onClick: () => void distill(''), disabled: busy !== '', title: '新建一个 PC微信 会话，让助手蒸馏本人画像和最近活跃的好友' }, '让助手蒸馏'))),
+
+        error ? h('div', { style: S.error }, error) : null,
+        notice ? h('div', { style: { ...S.note, padding: '0 16px 10px' } }, notice) : null,
+
+        h('div', { style: S.children },
+          h('div', { style: S.chips, role: 'tablist' },
+            entries.map((item) => h(Button, {
+              key: item.scope,
+              primary: String(item.scope).toLowerCase() === String(scope).toLowerCase(),
+              onClick: () => select(String(item.scope)),
+              title: item.path || item.rel || '',
+              disabled: busy !== '',
+            }, `${String(item.scope).toLowerCase() === 'self' ? '本人' : item.scope}${item.stale ? ' · 过期' : ''}`))),
+
+          h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
+            h('span', { style: S.chipsLabel }, `编辑：${currentLabel}`),
+            h('span', { style: S.mono }, meta?.path || meta?.updated || ''),
+            meta?.stale ? h('span', { style: { ...S.badge, color: 'var(--dsw-alias-state-warn-primary, #b26a00)' } }, '超过 30 天') : null),
+
+          h('textarea', {
+            'aria-label': `${currentLabel} 的画像`,
+            style: { ...S.input, minHeight: '300px', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', lineHeight: '1.6' },
+            value: content,
+            placeholder: '## 身份与关系\n## 沟通风格\n## 常聊话题\n## 关键事实',
+            onChange: (event) => setContent(event.target.value),
+          }),
+
+          h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
+            h(Button, { primary: true, onClick: () => void save(), disabled: busy !== '' }, busy === 'save' ? '保存中…' : '保存'),
+            h(Button, { quiet: true, onClick: () => void distill(scope === 'self' ? '' : scope), disabled: busy !== '', title: '让助手用 wechat_digest 重新提炼这一份' }, '蒸馏这个'),
+            h(Button, { quiet: true, onClick: () => void loadContent(scope), disabled: busy !== '', title: '放弃未保存的修改，重新读取' }, '重新读取'),
+            h(Button, { quiet: true, onClick: () => void remove(), disabled: busy !== '' }, '删除'),
+            h(Button, { quiet: true, onClick: () => void clearAll(), disabled: busy !== '', title: '删除 ~/.lumii/wechat-distill/ 下的全部画像、备份与水位' }, '清空全部')),
+
+          h('p', { style: S.chipsLabel, title: '画像文件就在本机，可直接编辑。' },
+            '保存时自动保留上一版（.prev）；本人画像用于模仿口吻，好友会话只注入风格段，避免隐私被套取。')))
+    }
+
     function WechatPage() {
       const [tab, setTab] = useState('policy')
       return h('div', { 'data-wechat-local-ui': '', style: S.page },
@@ -1272,8 +1439,9 @@ window.__ModuleLoader__.load({
           },
         },
           h(Button, { primary: tab === 'policy', onClick: () => setTab('policy') }, '回复策略'),
+          h(Button, { primary: tab === 'distill', onClick: () => setTab('distill') }, '画像蒸馏'),
           h(Button, { primary: tab === 'status', onClick: () => setTab('status') }, '状态信息')),
-        tab === 'policy' ? h(PolicyView) : h(StatusView))
+        tab === 'policy' ? h(PolicyView) : tab === 'distill' ? h(DistillView) : h(StatusView))
     }
 
     function ChatIcon() {

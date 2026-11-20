@@ -205,7 +205,7 @@ function imageMediaType(buffer) {
  * @param {object} [options.config]
  * @param {(line: string) => void} [options.log]
  */
-export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, setMode = () => {}, config = {}, log = () => {}, statePath = stateFile() }) {
+export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, prepareSession = async () => {}, config = {}, log = () => {}, statePath = stateFile() }) {
   const pollSeconds = Math.max(0.01, Number(config.watchSeconds) || 2)
   const mergeWindowMs = Math.max(1, Number(config.mergeWindowSeconds) * 1000 || 20_000)
   const replyTimeoutMs = Math.max(1, Number(config.replyTimeoutSeconds) * 1000 || 120_000)
@@ -460,9 +460,9 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       // a hung service must fail this delivery so the batch is retried instead
       // of disappearing once the awaiting window expires.
       const sessionId = await withTimeout(openSession(key, peer), 30_000, '建立会话')
-      // The bound reply tool only sends when the batch explicitly allows it;
-      // a draft must never turn into a real message because the model guessed.
-      setMode(sessionId, decision.mode === 'auto' ? 'auto' : 'draft')
+      // The bound reply tool only sends when the batch explicitly allows it,
+      // and the session prompt is refreshed with the latest distilled profiles.
+      await prepareSession(sessionId, decision.mode === 'auto' ? 'auto' : 'draft', peer)
       await withTimeout(controller.prompt({
         requestId: randomUUID(),
         sessionId,

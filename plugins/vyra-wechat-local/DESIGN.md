@@ -2,7 +2,7 @@
 
 把 [lumii](../../lumii) 项目里的**本机微信能力**集成成一个独立的 DSH 插件。
 
-> 状态：已实现（12 个工具全部注册）。读取链路已在真机验证（`check_env` /
+> 状态：已实现（18 个工具全部注册）。读取链路已在真机验证（`check_env` /
 > `list_sessions` / `list_unread`）；发送类默认 `dry_run=true`，尚未真发验证。
 
 ## 1. 为什么是独立插件
@@ -146,28 +146,36 @@ _UNAVAILABLE_TOOLS = {"transcribe_voice"}
 
 > `transcribe_voice` 不在此表——上游已摘掉（§3.1）。
 
-### 3.4 注册白名单：只向 Agent 暴露 12 个
+### 3.4 注册白名单：向 Agent 暴露 18 个
 
-侧车交出 31 个，但**插件只注册 12 个核心工具**。其余 19 个在 Python 里原样保留，
-只是不出现在模型面前——每多一个工具，模型的选择成本就多一分。以后要开哪个，
-改 `lib/tools.js` 的白名单一行即可。
+侧车交出 31 个，插件注册 18 个：原来的 12 个核心工具，加上 `list_accounts`（多开确认）
+和 5 个画像/蒸馏工具。其余 13 个在 Python 里原样保留，只是不出现在模型面前。
+以后要开哪个，改 `lib/tools.js` 的白名单一行即可。
 
 | 类 | 工具 |
 |---|---|
+| 账号 | `list_accounts` |
 | 读 | `list_sessions` `read_history` `search_messages` `poll_new` `list_unread` `read_image` |
 | 发 | `send_text` `send_file` `send_batch` `reply_to` |
 | 诊断 | `check_env` |
 | 导出 | `export_chat` |
+| 蒸馏 | `wechat_digest` `wechat_profile_save` `wechat_profile_get` `wechat_distill_state` `wechat_distill_clear` |
 
-**为什么砍掉这 19 个**（按实现判定，不按名字）：
+**多账号**：上游 schema 没写 `account`，但实现普遍读它，读类工具用的是进程级当前账号
+（`poll_new` 甚至直接忽略参数）。Host 在注册时给每个工具补上可选 `account`，侧车
+`vyra_sidecar.py` 在 dispatch 前 `core.set_account(args.account)`，并靠 `set_account`
+清缓存避免两个号的会话混在一起。真机验证：两个运行账号分别 `list_sessions` 得到
+89 / 6 条，互不串。
+
+**为什么砍掉这 13 个**（按实现判定，不按名字）：
 
 - `tag_plan` ≡ `tag_start(confirm=false)`：`wechat_tags.mcp_start` 在 `!confirm` 时
   直接调用 `mcp_plan`，输出相同，后者还多给 `dry_run/need_confirm/hint`。
 - `locate_db` ⊂ `check_env`：`check_env` 已返回 `db_root/db_source/db_ok`，
   `locate_db` 只多一个 `accounts`。
 - `preview_export`：导出前的只读预演，让 Agent 直接 `export_chat` 更省一次往返。
-- 画像/蒸馏（5）、通讯录打标签（4）、自动回复（3）、知识库（3）：完整产品功能，
-  对「看微信、发消息」属于长尾。
+- 通讯录打标签（4）、自动回复（3）、知识库（3）：完整产品功能，
+  对「看微信、发消息、学着像本人」属于长尾。
 - `repair_env`：开局修复用的可逆操作，不是日常工具。
 
 **保留但功能有重叠的两组**（不砍，因为分页/错误语义不同）：
@@ -212,7 +220,7 @@ plugins/vyra-wechat-local/
 ├── package.json           # dsh.bundle + dsh.client（inject: dsh-client-ui-plugin-manager）
 ├── cordis.patch.yml
 ├── index.js               # host：侧车生命周期、工具注册、HTTP 路由
-├── client.js              # 设置页：PC微信（回复策略 + 状态信息两个标签）
+├── client.js              # 设置页：PC微信（回复策略 / 画像蒸馏 / 状态信息）
 ├── lib/
 │   ├── sidecar.js         # JSONL 协议客户端（spawn / 写行 / 读行 / 进度帧 / 重启）
 │   ├── runtime.js         # 解释器定位：uv run（自动取依赖）或配置的 python
@@ -232,19 +240,20 @@ plugins/vyra-wechat-local/
 
 1. **定位并启动侧车**：`uv run --with pycryptodome --with zstandard python -u vendor/wechat/vyra_sidecar.py`
 2. **握手**：发 `initialize`，拿工具清单与 `instructions`
-3. **注册工具**：只注册 §3.4 白名单里的 12 个，`execute` 转发到侧车
+3. **注册工具**：只注册 §3.4 白名单里的 18 个，`execute` 转发到侧车
 4. **生命周期**：插件卸载时 `shutdown` + 收尸；进程意外退出时报明确的错误，不静默重试
 
-**不硬编码工具的 schema**——全部来自 `initialize`。上游加工具时我们自动跟上；
-白名单里新增一个名字即可启用。
+**不硬编码工具的 schema**——全部来自 `initialize`，Host 只在注册时补一个可选
+`account`（上游 schema 漏了它）。上游加工具时我们自动跟上；白名单里新增一个名字即可启用。
 
-### 6.1 设置页（两个入口）
+### 6.1 设置页（一个入口，三个标签）
 
-设置里只有一个入口 **PC微信**，页内用两个标签分开：
+设置里只有一个入口 **PC微信**，页内用三个标签分开：
 
 | 标签 | 内容 |
 |---|---|
 | **回复策略** | 渠道卡片 + 回复策略弹窗：按账号页签、每人一档（直接代回 / 起草给我确认 / 只提醒我 / 黑名单）、触发条件（每条 / @我 / 关键字）、冷却、从通讯录挑人（带微信头像）、批量改档、移出名单。保存到侧车的 `autoreply_rules`（`~/.lumii/` 下按账号分目录的 `rules.json`），与 `autoreply_rules check` 是同一份。 |
+| **画像蒸馏** | 本人/好友/群画像清单（更新时间、过期提示）、Markdown 编辑器（保存/删除/重新读取）、「让助手蒸馏」、打开目录。 |
 | **状态信息** | 侧车版本/状态、运行方式、环境自检（数据目录及来源 / 微信 / 依赖 / 版本 / 账号）、重新检测、一键修复、已注册工具 chips、侧车 stderr。 |
 
 设置页通过 `list_accounts` / `list_contacts` / `autoreply_rules` 取数据；这些调用会把侧车
@@ -309,6 +318,21 @@ talker/account 由插件按 peer 绑定：小模型不必自己填目标，也�
 "cannot get property … without inject" 会让每次交付都失败，消息永远停在「合并中」）。
 建会话与入队各有 30 秒上限；失败时整批放回合并队列重试，错误写进 `watch.lastError`。
 重试前用 `base_text` 重建图片/语音那一行，避免同一条说明被重复追加。
+
+**画像蒸馏与注入**：暴露侧车已有的 `wechat_digest` / `wechat_profile_save/get` /
+`wechat_distill_state/clear`。画像全在 `~/.lumii/wechat-distill/`：`self.md`（本人）与
+`contacts/<talker>.md`（好友/群），覆盖前留 `.prev`，均为白盒 Markdown，设置页可直接编辑。
+监听会话的系统提示段是动态函数，交付前 `refreshProfiles` 读一次（60 秒缓存），所以手改
+下一轮就生效。控制通道注入完整本人 + 对方画像；不可信好友会话只注入
+「沟通风格 / 常聊话题 / 习惯」段落，身份与关键事实不进这类会话的上下文。
+设置页的「让助手蒸馏」会建一个 PC微信 workspace 会话（标题「PC微信 · 画像蒸馏」），
+给它带上蒸馏提示和全量工具，由模型执行 digest → 写 Markdown → save → 记水位。
+
+**文件发送按钮**：`send_file` 走工具栏图标投递，图标没有文字/UIA，只能按几何位置点。
+旧锚点 `session_right + 103` 在部分缩放/窗口布局下落到**第 2 个图标**，文件对话框不会出现。
+现在默认 `+137`（第 3 个），并依次尝试 `(137, 103, 171, 69)`；每次点击后等最多 4 秒验证
+是否弹出 `#32770 '选择文件'`，失败就 `Esc` 关掉误开的浮层再试下一个偏移；全部失败才
+fail-closed 并报告尝试过的偏移。
 
 监听状态、待合并数量、冷却倒计时、最近交付、最近提醒通过设置页 RPC 暴露。
 被策略丢弃的消息（触发条件不匹配、名单外、黑名单、静默时段、用户自己发的）也会

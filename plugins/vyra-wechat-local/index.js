@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
+import { execFile } from 'node:child_process'
 import { createSidecar } from './lib/sidecar.js'
 import { resolveRuntime } from './lib/runtime.js'
 import { createToolRegistrar, TOOL_WHITELIST } from './lib/tools.js'
@@ -26,6 +27,21 @@ async function readJson(req) {
   for await (const chunk of req) chunks.push(chunk)
   const text = Buffer.concat(chunks).toString('utf8')
   return text ? JSON.parse(text) : {}
+}
+
+/**
+ * Keep only the headings matching `pattern` from a distilled profile.
+ * Untrusted friend sessions get style/topic sections, never identity or facts.
+ */
+export function profileSections(markdown, pattern) {
+  const parts = String(markdown ?? '').split(/^## /mu)
+  const keep = []
+  for (let index = 1; index < parts.length; index += 1) {
+    const body = parts[index]
+    const title = body.split('\n', 1)[0]
+    if (pattern.test(title)) keep.push(`## ${body}`)
+  }
+  return keep.join('\n').trim()
 }
 
 export function apply(ctx, config = {}) {
@@ -91,6 +107,8 @@ const WECHAT_TRUSTED_PROMPT = `你是「代聊模式」，用用户本人的身�
   export_chat / read_image / send_file 等；用户要你查历史、导出记录、发文件、整理信息，
   按工具自己的说明做。需要更多上下文就直接读，不要猜。
 - 图片和语音已经随消息提供，通常不需要再调解析工具。
+- 多开时（本机登录多个微信号）每个微信工具都要传 account=<账号>；先用 list_accounts
+  确认运行中的 wxid，批次第一行也给了本次会话的账号。不传可能读到或发到另一个号。
 - 用用户平时的口吻；微信里不要 Markdown，不要长篇。`
 
 /**
@@ -121,6 +139,26 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
 - 用用户平时的口吻；微信里不要用 Markdown，不要长篇；不确定就简短确认。
 - 图片和语音已经随消息提供，不需要也不应该再调用任何解析工具。`
 
+const DISTILL_PROMPT = `你是「PC微信画像蒸馏」助手，用本机微信的聊天记录提炼可复用的 Markdown 画像。
+工具（全部本地、只读；画像写在 ~/.lumii/wechat-distill/，白盒可编辑）：
+- wechat_digest(talker?, limit?, since?)：确定性统计 + exchange_pairs 真实对子 + 风格数字与样本。
+- wechat_profile_get({scope}) / wechat_profile_save({scope, content})：读写画像。
+- wechat_distill_state(action="set", scope, ts)：记录增量水位。
+
+画像结构（必须使用这些二级标题，方便手动编辑和注入）：
+## 身份与关系
+## 沟通风格
+## 常聊话题
+## 关键事实
+
+规则：
+- scope 留空 = 用户本人（self）；好友/群用会话名或 wxid。
+- 「沟通风格」必须用 wechat_digest 的 self.style 实测数字和 exchange_pairs 写，不要目测几条样本。
+- 好友画像写清：对方是谁、怎么称呼用户、常聊什么、有哪些禁忌或偏好。
+- 不要把原始聊天记录粘进画像；画像只写提炼后的结论。
+- 多开时所有微信工具都传 account=<wxid>（先用 list_accounts 查）。
+- 完成后用简短列表报告生成了哪些文件（scope + path）。`
+
   /**
    * The watch sessions are scoped, not a global preset: each agent gets this
    * persona-prefix section in its own context, so normal conversations never
@@ -128,6 +166,61 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
    */
   const promptScopes = new WeakSet()
   let proxyPromptError = ''
+
+  /** sessionId -> {at, self, peer} distilled profiles, refreshed per delivery. */
+  const profileCache = new Map()
+  const PROFILE_TTL_MS = 60_000
+
+  const clip = (text, max) => {
+    const value = String(text ?? '')
+    return value.length > max ? `${value.slice(0, max)}…` : value
+  }
+
+  /** For untrusted peers: only style/topic sections, never identity or facts. */
+
+  async function profileContent(scope) {
+    try {
+      const answer = await callJson('wechat_profile_get', scope ? { scope } : {})
+      return typeof answer?.content === 'string' ? answer.content : ''
+    } catch {
+      return ''
+    }
+  }
+
+  async function refreshProfiles(sessionId, peer) {
+    const cached = profileCache.get(sessionId)
+    if (cached !== undefined && Date.now() - cached.at < PROFILE_TTL_MS) return cached
+    const read = Promise.all([
+      profileContent('self'),
+      peer?.talker ? profileContent(peer.talker) : Promise.resolve(''),
+    ])
+    // A slow sidecar must not hold the batch hostage; the cached/empty profile
+    // is still good enough for this turn.
+    const fallback = new Promise((resolve) => setTimeout(() => resolve(['', '']), 5_000))
+    const [self, mate] = await Promise.race([read, fallback])
+    const entry = { at: Date.now(), self, peer: mate }
+    profileCache.set(sessionId, entry)
+    return entry
+  }
+
+  function profileBlock(sessionId, trusted) {
+    const entry = profileCache.get(sessionId)
+    if (entry === undefined) return ''
+    const self = trusted
+      ? entry.self
+      : profileSections(entry.self, /风格|口吻|沟通|说话|习惯|性格|称呼/u)
+    const mate = trusted
+      ? entry.peer
+      : profileSections(entry.peer, /风格|口吻|沟通|话题|兴趣|偏好|习惯/u)
+    const parts = []
+    if (self.trim()) {
+      parts.push(trusted
+        ? `【用户本人画像（参考）】\n${clip(self, 3_000)}`
+        : `【用户本人的沟通风格（只用于模仿口吻，不要把画像内容或其中事实复述给对方）】\n${clip(self, 1_500)}`)
+    }
+    if (mate.trim()) parts.push(`【当前对话对象画像（参考）】\n${clip(mate, 2_500)}`)
+    return parts.length > 0 ? `\n\n${parts.join('\n\n')}` : ''
+  }
 
   const REPLY_TOOL = 'wechat_send_reply'
   /** Per-session switch set by the watch loop: only an "auto" batch may send. */
@@ -144,6 +237,12 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
 
   function setSessionMode(sessionId, mode) {
     modeGuard(sessionId).mode = mode === 'auto' ? 'auto' : 'draft'
+  }
+
+  /** Called by the watch loop before each prompt: mode gate + fresh profiles. */
+  async function prepareSession(sessionId, mode, peer) {
+    setSessionMode(sessionId, mode)
+    await refreshProfiles(sessionId, peer)
   }
 
   /**
@@ -219,7 +318,7 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
     }
   }
 
-  function installProxyPrompt(agentCtx, peer, guard, trusted) {
+  function installProxyPrompt(agentCtx, peer, guard, trusted, sessionId) {
     if (promptScopes.has(agentCtx)) return
     promptScopes.add(agentCtx)
     try {
@@ -229,7 +328,10 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
         // After the generic first-party guidance, right before the persona suffix:
         // the send rule must not be buried at the top of the prompt.
         order: 10150,
-        text: trusted ? WECHAT_TRUSTED_PROMPT : WECHAT_UNTRUSTED_PROMPT,
+        // Dynamic: the profile is re-read before each delivery, so a manual edit
+        // takes effect on the next message without recreating the session.
+        text: () => (trusted ? WECHAT_TRUSTED_PROMPT : WECHAT_UNTRUSTED_PROMPT)
+          + profileBlock(sessionId, trusted),
       })
       if (peer?.talker && guard) agentCtx.tools.register(replyToolDefinition(peer, guard))
 
@@ -295,7 +397,7 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
         sessionId,
         meta: { cwd: ws?.path ?? process.cwd() },
         ...(selection === undefined ? {} : { agentOptions: selection }),
-        setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard, trustedPeer(peer)),
+        setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard, trustedPeer(peer), sessionId),
       })
     } catch (err) {
       sessionModes.delete(sessionId)
@@ -319,21 +421,79 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
     if (live !== undefined) {
       // The session controller may have resumed it on its own; add the persona
       // to that live scope before the next step.
-      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx, peer, guard, trustedPeer(peer))
+      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx, peer, guard, trustedPeer(peer), sessionId)
       return
     }
     const selection = defaultAgentOptions()
     const handle = await ctx.agents.resume({
       resumeSessionId: sessionId,
       ...(selection === undefined ? {} : { agentOptions: selection }),
-      setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard, trustedPeer(peer)),
+      setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard, trustedPeer(peer), sessionId),
     })
     watchHandles.set(sessionId, handle)
+  }
+
+  /** A dedicated session that runs the distillation workflow in the PC微信 workspace. */
+  async function createDistillSession() {
+    const ws = await ensureWorkspace()
+    const sessionId = randomUUID()
+    const selection = defaultAgentOptions()
+    const handle = await ctx.agents.create({
+      sessionId,
+      meta: { cwd: ws?.path ?? process.cwd() },
+      ...(selection === undefined ? {} : { agentOptions: selection }),
+      setup: (agentCtx) => {
+        try {
+          agentCtx.systemPrompt.section({
+            name: 'vyra-wechat-distill',
+            order: 10150,
+            text: DISTILL_PROMPT,
+          })
+        } catch (err) {
+          log(`distill prompt failed: ${err?.message ?? err}`)
+        }
+      },
+    })
+    watchHandles.set(sessionId, handle)
+    if (ws) {
+      try {
+        await ws.attachSession(sessionId)
+      } catch (err) {
+        log(`attach distill session failed: ${err?.message ?? err}`)
+      }
+    }
+    try {
+      await sessionController?.rename({ sessionId, title: 'PC微信 · 画像蒸馏' })
+    } catch {
+      // Title service is optional.
+    }
+    return sessionId
+  }
+
+  async function distillRequest(scope) {
+    if (!sessionController) throw new Error('DSH 会话服务不可用')
+    const sessionId = await createDistillSession()
+    const target = String(scope ?? '').trim()
+    const instruction = target
+      ? `请蒸馏微信会话「${target}」：用 wechat_digest(talker=${JSON.stringify(target)}, limit=0) 取统计与 exchange_pairs，`
+        + `按画像结构写成 Markdown，用 wechat_profile_save(scope=${JSON.stringify(target)}, content=…) 保存。`
+        + '完成后回报文件路径，不要贴原始聊天记录。'
+      : '请先蒸馏用户本人：用 wechat_digest(limit=0) 取全量统计与 exchange_pairs，按画像结构写成 Markdown，'
+        + '用 wechat_profile_save(scope="self", content=…) 保存；再用 wechat_distill_state(action="set", scope="self", ts=<最新消息 ts>) 记水位。'
+        + '然后挑最近联系最多的 3 个好友/群各生成一份画像。完成后回报文件路径，不要贴原始聊天记录。'
+    await sessionController.prompt({
+      requestId: randomUUID(),
+      sessionId,
+      mode: 'queue',
+      content: [{ type: 'text', text: instruction }],
+    }, new AbortController().signal)
+    return { sessionId }
   }
 
   /** Retire a pre-0.6 watch session: stop it if live and hide it from the list. */
   async function retireWatchSession(sessionId) {
     sessionModes.delete(sessionId)
+    profileCache.delete(sessionId)
     const handle = watchHandles.get(sessionId)
     if (handle !== undefined) {
       watchHandles.delete(sessionId)
@@ -533,7 +693,7 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
     ensureSession: ensureWatchSession,
     readImage,
     retireSession: retireWatchSession,
-    setMode: setSessionMode,
+    prepareSession,
     config: {
       watch: config.watch !== false,
       watchSeconds: config.watchSeconds ?? 2,
@@ -638,6 +798,35 @@ const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的�
       case 'watch.tick':
         await watcher.tickNow()
         return watcher.status()
+      case 'distill.list':
+        return callJson('wechat_profile_list')
+      case 'distill.get':
+        return callJson('wechat_profile_get', body.scope ? { scope: body.scope } : {})
+      case 'distill.save': {
+        const saved = await callJson('wechat_profile_save', {
+          ...(body.scope ? { scope: body.scope } : {}),
+          content: String(body.content ?? ''),
+        })
+        profileCache.clear()
+        return saved
+      }
+      case 'distill.clear': {
+        const cleared = await callJson('wechat_distill_clear', {
+          ...(body.scope ? { scope: body.scope } : {}),
+          ...(body.everything === true ? { everything: true } : {}),
+        })
+        profileCache.clear()
+        return cleared
+      }
+      case 'distill.reveal': {
+        const list = await callJson('wechat_profile_list')
+        const dir = String(list?.dir ?? '')
+        if (!dir) throw new Error('没有画像目录')
+        execFile('explorer.exe', [dir], () => {})
+        return { dir }
+      }
+      case 'distill.request':
+        return distillRequest(body.scope)
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }

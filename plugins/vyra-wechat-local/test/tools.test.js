@@ -11,15 +11,20 @@ function harness(call, attachments) {
   return { defs, registrar }
 }
 
-test('only whitelisted tools are registered, schema stays verbatim', () => {
+test('only whitelisted tools are registered; the account field is advertised', () => {
   const { defs, registrar } = harness(async () => [])
   const schema = { type: 'object', properties: { talker: { type: 'string' } }, required: ['talker'] }
   registrar.registerFrom([
     { name: 'read_history', description: 'read', inputSchema: schema },
+    { name: 'list_accounts', description: 'accounts', inputSchema: { type: 'object', properties: {} } },
     { name: 'kb_search', description: 'not whitelisted', inputSchema: schema },
   ])
-  assert.deepEqual(defs.map((definition) => definition.name), ['read_history'])
-  assert.deepEqual(defs[0].parameters, schema)
+  assert.deepEqual(defs.map((definition) => definition.name), ['read_history', 'list_accounts'])
+  assert.equal(defs[0].parameters.properties.talker.type, 'string')
+  assert.equal(defs[0].parameters.properties.account.type, 'string')
+  assert.deepEqual(defs[0].parameters.required, ['talker'])
+  // list_accounts takes no account: it is how the model discovers them.
+  assert.equal(defs[1].parameters.properties.account, undefined)
 })
 
 test('text and image blocks become DSH content', async () => {

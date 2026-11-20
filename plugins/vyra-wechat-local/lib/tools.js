@@ -2,6 +2,7 @@
 //
 // 只注册白名单（DESIGN §3.4）：侧车会交出 30 个，模型面前只放 12 个。
 export const TOOL_WHITELIST = [
+  'list_accounts',
   'list_sessions',
   'read_history',
   'search_messages',
@@ -14,7 +15,32 @@ export const TOOL_WHITELIST = [
   'reply_to',
   'check_env',
   'export_chat',
+  'wechat_digest',
+  'wechat_profile_save',
+  'wechat_profile_get',
+  'wechat_distill_state',
+  'wechat_distill_clear',
 ]
+
+/**
+ * The upstream schemas omit `account` even though most implementations read it
+ * (and the read tools use the process-selected account). With two WeChat
+ * instances logged in, an unqualified call reads or sends from whichever
+ * account happens to be selected. Advertise it on every tool except
+ * `list_accounts` itself.
+ */
+function withAccount(name, schema) {
+  if (name === 'list_accounts') return schema
+  const base = schema && schema.type === 'object' ? schema : { type: 'object', properties: {} }
+  const properties = { ...(base.properties ?? {}) }
+  if (properties.account === undefined) {
+    properties.account = {
+      type: 'string',
+      description: '多开时指定账号 wxid（先用 list_accounts 查运行中的账号）。省略则用当前选中账号；多开时务必传，否则可能读到或发到另一个号。',
+    }
+  }
+  return { ...base, properties }
+}
 
 /**
  * 侧车的 image 块是 MCP 形状（base64 + mimeType）；DSH 的 image 块要附件引用。
@@ -68,7 +94,7 @@ export function createToolRegistrar({ ctx, sidecar, getAttachments = () => undef
       const definition = {
         name: tool.name,
         description: tool.description || tool.name,
-        parameters: tool.inputSchema ?? { type: 'object', properties: {} },
+        parameters: withAccount(tool.name, tool.inputSchema),
         output: {
           // 侧车已经把结果拼成 content 块；canonical value 就是这串块。
           schema: { type: 'array' },
