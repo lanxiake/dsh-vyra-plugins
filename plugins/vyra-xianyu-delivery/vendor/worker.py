@@ -16,8 +16,11 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
+import signal
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 SELLER_HEADERS = {"origin": "https://seller.goofish.com", "referer": "https://seller.goofish.com/"}
@@ -399,12 +402,73 @@ def history(cid: str, limit: int = 10) -> list[dict[str, Any]]:
     return cli_history(cid, limit_per_page=50, limit=int(limit), timeout=90.0)
 
 
+WATCH_PID = Path.home() / ".goofish-cli" / "watch.pid"
+
+
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def _claim_watch_slot(token: int) -> bool:
+    """同一时间只留一个 watch，返回 False 表示自己该退出。
+
+    插件热重载/多开会留下没人管的旧 watch；多个实例同时连 IM 会互相把连接
+    踢掉，表现就是"买家发了消息但插件收不到事件"。token 是插件实例的启动
+    时间戳：更新的实例杀旧的；旧实例的重试则让位并退出，不会来回互杀。
+    """
+    cur_token, cur_pid = 0, 0
+    try:
+        parts = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
+        cur_token, cur_pid = int(parts[0]), int(parts[1])
+    except Exception:  # noqa: BLE001 — 没有文件/格式坏了都当没有
+        pass
+
+    if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
+        if cur_token < token:
+            try:
+                os.kill(cur_pid, signal.SIGTERM)
+            except Exception:  # noqa: BLE001 — 旧进程刚好退出
+                pass
+            time.sleep(0.6)  # 等旧连接释放
+        elif cur_token >= token:
+            return False  # 已有更新（或同代）的 watch 在跑
+
+    WATCH_PID.parent.mkdir(parents=True, exist_ok=True)
+    WATCH_PID.write_text(f"{token}|{os.getpid()}", encoding="utf-8")
+    return True
+
+
 def watch() -> None:
     """常驻 IM 监听，事件以 JSONL 写到 stdout（每行一个 JSON）。"""
     from goofish_cli.commands.message.watch import watch as cli_watch
 
     # cli_watch 内部自己写 stdout；不要外层再包 JSON。
     cli_watch()
+
+
+def _release_watch_slot() -> None:
+    try:
+        _, pid = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
+        if int(pid) == os.getpid():
+            WATCH_PID.unlink()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _emit(obj: dict[str, Any]) -> None:
@@ -537,12 +601,18 @@ def main() -> None:
 
     if command == "watch":
         # 常驻进程，事件行由 cli_watch 自己输出。
+        token = int(args.get("token") or 0)
+        if not _claim_watch_slot(token):
+            _emit({"event": "superseded"})
+            return
         try:
             watch()
         except KeyboardInterrupt:
             pass
         except Exception as e:  # noqa: BLE001
             _emit({"event": "error", "message": str(e)})
+        finally:
+            _release_watch_slot()
         return
 
     handler = COMMANDS.get(command)

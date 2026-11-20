@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
-import { spawn, execFile } from 'node:child_process'
+import { spawn, execFile, execFileSync } from 'node:child_process'
 import { readdir, readFile, copyFile, writeFile, mkdir, rm } from 'node:fs/promises'
 import { createInterface } from 'node:readline'
 import { createStore } from './lib/db.js'
@@ -439,22 +439,35 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  // 插件重载后旧实例的 watch 进程会活下来，多开几个就会互相把 IM 连接踢掉。
-  let staleSwept = false
-  function sweepStaleWatchers() {
-    if (staleSwept || process.platform !== 'win32') return
-    staleSwept = true
-    const script = "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*vyra-xianyu-delivery*worker.py watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
-    execFile('powershell', ['-NoProfile', '-Command', script], () => {})
+  // 多个 watch 同时连 IM 会互相把连接踢掉（买家发消息但收不到事件）。
+  // 单例由 worker 端维护（~/.goofish-cli/watch.pid）：token 是插件实例的
+  // 启动时间戳，新实例杀旧的；旧实例的重试拿到 superseded 后不再重启。
+  let watchToken = Date.now()
+  let watchSuperseded = false
+  let watchEnabled = (store.getSetting('watch.enabled') ?? (cfg.watchEnabled === false ? '0' : '1')) !== '0'
+
+  // 升级前的 watch 没有 pid 文件，单例管不到，只有首次启动时按命令行清一遍。
+  // 同步执行：清扫必须在 spawn 之前完成，否则会连自己刚拉起的进程一起杀掉。
+  let legacySwept = false
+  function sweepLegacyWatchers() {
+    if (legacySwept || process.platform !== 'win32') return
+    legacySwept = true
+    const script = "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*worker.py watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    try {
+      execFileSync('powershell', ['-NoProfile', '-Command', script], { timeout: 8000, windowsHide: true })
+    } catch {
+      // 清扫失败就让单例兜底，不阻塞启动
+    }
   }
 
   function startWatch() {
-    if (watchProc || watchRetry || cfg.watchEnabled === false) return
-    sweepStaleWatchers()
+    if (watchProc || watchRetry || !watchEnabled) return
+    watchSuperseded = false
+    sweepLegacyWatchers()
     const prefix = cfg.cliPrefix ?? defaultPrefix()
     let child
     try {
-      child = spawn(cfg.cliCommand, [...prefix, 'watch', '{}'], {
+      child = spawn(cfg.cliCommand, [...prefix, 'watch', JSON.stringify({ token: watchToken })], {
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: { ...process.env, NO_COLOR: '1', PYTHONIOENCODING: 'utf-8' },
@@ -472,11 +485,16 @@ export function apply(ctx, config = {}) {
       } catch {
         return
       }
+      if (evt.event === 'superseded') {
+        watchSuperseded = true
+        log('watch superseded by a newer plugin instance')
+        return
+      }
       handleImEvent(evt).catch((err) => log(`watch handler: ${err?.message || err}`))
     })
     child.on('exit', () => {
       watchProc = null
-      if (cfg.watchEnabled === false) return
+      if (watchSuperseded || !watchEnabled) return
       watchRetry = setTimeout(() => {
         watchRetry = null
         startWatch()
@@ -486,6 +504,9 @@ export function apply(ctx, config = {}) {
   }
 
   function stopWatch() {
+    // 主动停止（切账号/关开关）后重启要用更大的 token，
+    // 否则还是同一个 token，会误判为"同代实例在跑"而让位退出。
+    watchToken = Math.max(watchToken + 1, Date.now())
     if (watchRetry) {
       clearTimeout(watchRetry)
       watchRetry = null
@@ -512,6 +533,7 @@ export function apply(ctx, config = {}) {
     cards: store.availableCards(),
     ai: ai.enabled,
     watch: Boolean(watchProc),
+    watchEnabled,
     recentOrders: store.recentOrders(20),
   })
 
@@ -598,6 +620,13 @@ export function apply(ctx, config = {}) {
         }
       case 'tick':
         return dispatcher.tick()
+      case 'setWatch': {
+        watchEnabled = Boolean(body.enabled)
+        store.setSetting('watch.enabled', watchEnabled ? '1' : '0')
+        if (watchEnabled) startWatch()
+        else stopWatch()
+        return { watch: Boolean(watchProc), watchEnabled }
+      }
       case 'login-start':
         return startLogin(Number(body.timeout) || 180)
       case 'login-status':

@@ -1322,8 +1322,31 @@ window.__ModuleLoader__.load({
         : '正在读取登录态…'
 
       const meta = status
-        ? `${authLine} · 轮询 ${status.config.pollSeconds}s · 实时 ${status.watch ? '开' : '关'} · AI 客服 ${status.ai ? '开' : '关'} · 可用卡密 ${status.cards} 张`
+        ? `${authLine} · 轮询 ${status.config.pollSeconds}s · AI 客服 ${status.ai ? '开' : '关'} · 可用卡密 ${status.cards} 张`
         : '正在读取状态…'
+
+      const toggleWatch = async () => {
+        try {
+          await rpc({ op: 'setWatch', enabled: !status.watchEnabled })
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+      const watchChip = status
+        ? h('span', {
+          role: 'button',
+          title: status.watchEnabled ? '点击关闭实时监听（只用轮询）' : '点击开启实时监听',
+          onClick: toggleWatch,
+          style: {
+            cursor: 'pointer', padding: '1px 8px', borderRadius: '999px', marginLeft: '6px',
+            border: '1px solid ' + (status.watch ? 'rgba(15,157,110,.45)' : 'rgba(127,127,127,.35)'),
+            background: status.watch ? 'rgba(15,157,110,.14)' : 'transparent',
+            color: status.watch ? '#0f9d6e' : 'inherit',
+            fontWeight: 600,
+          },
+        }, `实时 ${status.watch ? '开' : '关'}`)
+        : null
 
       return h('div', { style: S.page },
         h('div', { style: S.head },
@@ -1361,7 +1384,7 @@ window.__ModuleLoader__.load({
             title: '立即轮询一次待发货订单并发货，不用等下一次自动轮询',
             onClick: runTick, disabled: !!busy,
           }, busy === 'tick' ? '处理中…' : '立即处理一轮')),
-        h('div', { style: { ...S.muted, marginBottom: '14px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(127,127,127,.08)' } }, meta),
+        h('div', { style: { ...S.muted, marginBottom: '14px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(127,127,127,.08)', display: 'flex', alignItems: 'center', flexWrap: 'wrap' } }, meta, watchChip),
         error ? h('div', { style: S.err }, error) : null,
         notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null,
         h('div', { style: S.tabs },

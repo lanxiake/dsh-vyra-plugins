@@ -3,3 +3,7 @@ node_modules/
 # dependencies of its own; the plugin packages are installed by their consumers.
 pnpm-lock.yaml
 pnpm-workspace.yaml
+
+# Python bytecode from local worker tests
+__pycache__/
+*.pyc
