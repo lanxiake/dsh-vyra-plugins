@@ -1219,6 +1219,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.0 introduces customer-service entities shared across items,
+        // exposes 10 xianyu_* tools to the main agent, and names the agent
+        // sessions "[service] item-buyer".
+        '0.6.0': {
+          publishTimestamp: 1795160002,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'c616c79d4a9c283e6f83784b560d22912c781595',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
