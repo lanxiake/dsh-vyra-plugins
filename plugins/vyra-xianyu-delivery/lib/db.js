@@ -204,6 +204,10 @@ export function createStore(file) {
 
   const q = {
     order: db.prepare('SELECT * FROM orders WHERE order_no = ?'),
+    resetOrder: db.prepare(
+      `UPDATE orders SET state = 'processing', fail_reason = NULL, updated_at = datetime('now','localtime')
+       WHERE order_no = ?`,
+    ),
     insertOrder: db.prepare(
       `INSERT INTO orders (order_no, account_id, item_id, spec_name, spec_value, buyer_id, quantity, amount, state)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'processing')`,
@@ -235,6 +239,10 @@ export function createStore(file) {
        ORDER BY CASE WHEN spec_name = '' THEN 1 ELSE 0 END, account_id DESC, id`,
     ),
     cardById: db.prepare('SELECT * FROM cards WHERE id = ?'),
+    allEnabledCards: db.prepare(
+      `SELECT * FROM cards WHERE enabled = 1 AND item_id = ?
+       AND (account_id = ? OR account_id = '') ORDER BY id`,
+    ),
     updateCard: db.prepare(
       `UPDATE cards SET name = ?, type = ?, content = ?, template = ?, spec_name = ?, spec_value = ?, enabled = ? WHERE id = ?`,
     ),
@@ -306,7 +314,14 @@ export function createStore(file) {
     // 返回 { created, order }。同一订单号只会有一列，并发/重复触发都靠主键兜住。
     beginOrder(meta) {
       const existing = q.order.get(meta.order_no)
-      if (existing) return { created: false, order: existing }
+      if (existing) {
+        // 没卡券/卡密耗尽导致的 blocked，补齐卡券后允许重试；其它 blocked 不重试。
+        if (existing.state === 'blocked' && /^(no_card|card_exhausted)$/.test(existing.fail_reason || '')) {
+          q.resetOrder.run(meta.order_no)
+          return { created: true, order: q.order.get(meta.order_no) }
+        }
+        return { created: false, order: existing }
+      }
       q.insertOrder.run(
         meta.order_no,
         meta.account_id ?? '',
@@ -332,12 +347,18 @@ export function createStore(file) {
     // 规格精确匹配优先，匹配不到再退回该商品的无规格通用卡券。
     matchCard(itemId, specName = '', specValue = '', accountId = '') {
       const rows = q.matchCard.all(String(itemId), String(accountId), String(specName), String(specValue))
-      if (!rows.length) return { error: 'no_card', count: 0 }
-      const exact = rows.filter((r) => r.spec_name === specName && r.spec_value === specValue)
-      if (exact.length === 1) return exact[0]
-      if (exact.length > 1) return { error: 'ambiguous_card', count: exact.length }
-      if (rows.length === 1) return rows[0]
-      return { error: 'ambiguous_card', count: rows.length }
+      if (rows.length) {
+        const exact = rows.filter((r) => r.spec_name === specName && r.spec_value === specValue)
+        if (exact.length === 1) return exact[0]
+        if (exact.length > 1) return { error: 'ambiguous_card', count: exact.length }
+        if (rows.length === 1) return rows[0]
+        return { error: 'ambiguous_card', count: rows.length }
+      }
+      // 规格没对上时，该商品只有一张启用卡券就直接用——单卡券商品不需要规格。
+      const all = q.allEnabledCards.all(String(itemId), String(accountId))
+      if (all.length === 1) return all[0]
+      if (all.length > 1) return { error: 'ambiguous_card', count: all.length }
+      return { error: 'no_card', count: 0 }
     },
 
     // CAS 消费：只有 content 仍是读到的旧值时才更新成功，防止并发重复派发。
