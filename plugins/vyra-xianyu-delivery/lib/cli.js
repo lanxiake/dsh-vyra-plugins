@@ -19,22 +19,31 @@ export function createCli({
   cwd,
   timeout = 120000,
 } = {}) {
-  async function run(op, args) {
+  async function run(op, args, retried = false) {
     const argv = [...prefix, op, JSON.stringify(args ?? {})]
-    const { stdout } = await execFileP(command, argv, {
-      cwd,
-      timeout,
-      maxBuffer: 8 * 1024 * 1024,
-      windowsHide: true,
-      env: { ...process.env, NO_COLOR: '1', PYTHONIOENCODING: 'utf-8' },
-    })
-    const text = String(stdout).trim()
-    if (!text) throw new Error(`worker 无输出：${op}`)
-    // worker 只打印一行 JSON；前面的日志（如果有）会走 stderr。
-    const line = text.split(/\r?\n/).filter(Boolean).pop()
-    const json = JSON.parse(line)
-    if (!json.ok) throw new Error(json.error || `worker ${op} failed`)
-    return json.data
+    try {
+      const { stdout } = await execFileP(command, argv, {
+        cwd,
+        timeout,
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true,
+        env: { ...process.env, NO_COLOR: '1', PYTHONIOENCODING: 'utf-8' },
+      })
+      const text = String(stdout).trim()
+      if (!text) throw new Error(`worker 无输出：${op}`)
+      // worker 只打印一行 JSON；前面的日志（如果有）会走 stderr。
+      const line = text.split(/\r?\n/).filter(Boolean).pop()
+      const json = JSON.parse(line)
+      if (!json.ok) throw new Error(json.error || `worker ${op} failed`)
+      return json.data
+    } catch (err) {
+      // _m_h5_tk 只有约十分钟有效期；过期时先免密刷新一次再重试原命令。
+      if (!retried && /FAIL_SYS_TOKEN_EXOIRED|FAIL_SYS_TOKEN_EMPTY|FAIL_SYS_SESSION_EXPIRED|令牌过期/i.test(String(err?.message || err))) {
+        try { await run('refresh', {}, true) } catch { /* 刷新失败就抛原错误 */ }
+        return run(op, args, true)
+      }
+      throw err
+    }
   }
 
   return {

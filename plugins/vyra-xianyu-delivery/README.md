@@ -25,6 +25,16 @@ uvx goofish-cli auth status --format json
 
 `sold-list` / `confirm` 由插件自带的 `vendor/worker.py` 实现，不依赖上游 CLI 的版本。
 
+## 令牌续期
+
+`_m_h5_tk` 只有约十分钟有效期，需要浏览器活跃访问才会续。任何接口返回「令牌过期」时，插件会自动：
+
+1. 用 Playwright 打开闲鱼首页，点「快速进入」走免密记忆登录
+2. 等 cookie 刷新并写回 `~/.goofish-cli/cookies.json`
+3. 重试原请求
+
+刷新期间会短暂弹出一个浏览器窗口（约 10 秒），不需要重新扫码。只有免密登录也失效（cookie 被清空）时才需要重新扫码。
+
 ## 多账号与退出
 
 - **扫码登录后自动归档**：每次登录成功，账号的 cookie 和昵称会存到 `~/.goofish-cli/accounts/<unb>.json`

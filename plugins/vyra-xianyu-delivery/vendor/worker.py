@@ -262,6 +262,88 @@ def chats(fetch_num: int = 200) -> dict[str, Any]:
     return list_chats(fetch_num=int(fetch_num), watch_secs=0)
 
 
+async def _refresh_session() -> dict[str, Any]:
+    """用 Playwright 走"快速进入"免密登录，刷新过期令牌并写回 cookies.json。
+
+    goofish-cli 自带的 refresh 写死 system Chrome，多数机器没有；这里复用它的
+    _try_quick_enter 流程，但用我们自己挑的浏览器（Edge / bundled Chromium）。
+    """
+    from playwright.async_api import async_playwright
+
+    from goofish_cli.core.refresh import AUTH_PROBE_URL, _try_quick_enter
+    from goofish_cli.core.session import Session, resolve_cookie_path, write_cookies_json
+
+    session = Session.load()
+    path = resolve_cookie_path()
+
+    async with async_playwright() as pw:
+        browser = await _launch_browser(pw)
+        context = await browser.new_context(locale="zh-CN", timezone_id="Asia/Shanghai")
+        try:
+            # 用 cookie_records 而不是 http.cookies：前者保留了 domain/path，
+            # 否则 add_cookies 会报 "Cookie should have a url or a domain/path pair"。
+            # 记录可能是 dict 也可能是 CookieRecord，两种都兼容。
+            def _pick(record: Any, key: str) -> str:
+                if isinstance(record, dict):
+                    return str(record.get(key) or "")
+                return str(getattr(record, key, "") or "")
+
+            records = getattr(session, "cookie_records", None) or []
+            current = []
+            for r in records:
+                name = _pick(r, "name")
+                value = _pick(r, "value")
+                if not name or not value:
+                    continue
+                current.append({
+                    "name": name,
+                    "value": value,
+                    "domain": _pick(r, "domain") or ".goofish.com",
+                    "path": _pick(r, "path") or "/",
+                })
+            if not current:
+                current = [
+                    {"name": c.name, "value": c.value, "domain": c.domain or ".goofish.com", "path": "/"}
+                    for c in session.http.cookies
+                ]
+            await context.add_cookies(current)
+            page = await context.new_page()
+            await page.goto("https://www.goofish.com", wait_until="domcontentloaded")
+            await page.wait_for_timeout(1500)
+            await _try_quick_enter(page)
+            await page.goto(AUTH_PROBE_URL, wait_until="domcontentloaded")
+            await page.wait_for_timeout(2500)
+
+            fresh = await context.cookies()
+            names = {c["name"] for c in fresh if c.get("value")}
+            missing = [k for k in ("_m_h5_tk", "unb", "cookie2") if k not in names]
+            if missing:
+                raise RuntimeError(f"刷新后仍缺少关键 cookie：{', '.join(missing)}")
+
+            write_cookies_json(
+                path,
+                [
+                    {"name": c["name"], "value": c["value"], "domain": c.get("domain", ""), "path": c.get("path", "/")}
+                    for c in fresh
+                    if c.get("name") and c.get("value")
+                ],
+            )
+            return {"ok": True, "unb": next((c["value"] for c in fresh if c["name"] == "unb"), "")}
+        finally:
+            try:
+                await asyncio.wait_for(context.close(), timeout=8)
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                await asyncio.wait_for(browser.close(), timeout=8)
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def refresh_session() -> dict[str, Any]:
+    return asyncio.run(_refresh_session())
+
+
 def user_info(cid: str, owner: bool = False) -> dict[str, Any]:
     """会话对方的头像与昵称（网页版 IM 用的 user.query 接口）。"""
     from goofish_cli.core import Session
@@ -416,6 +498,7 @@ COMMANDS = {
     "user-info": lambda a: user_info(a["cid"], bool(a.get("owner"))),
     "item-detail": lambda a: item_detail(a["itemId"]),
     "order-detail": lambda a: order_detail(a["orderId"]),
+    "refresh": lambda a: refresh_session(),
 }
 
 
