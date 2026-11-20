@@ -732,6 +732,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 3.0.2 makes the card movable: the header is a drag handle (grip drawn, move cursor,
+        // SetCapture so the pointer can leave the window), the position is clamped to the work
+        // area, and a card that would grow past the bottom slides up to stay whole.
+        '3.0.2': {
+          publishTimestamp: 1795089000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b60d6bd3f62f9e5ce7b40be3fddb7ab94cc99ea8',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
         // timer and took the whole host process down on the first selection capture.
         '2.0.1': {
