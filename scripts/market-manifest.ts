@@ -1361,6 +1361,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.6 falls back to the only enabled card when specs differ, and
+        // retries orders that were blocked for no_card once a card exists.
+        '0.6.6': {
+          publishTimestamp: 1795175555,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'ea217ec194e08f3b8ecf2b04cb7e26da35642b6d',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
