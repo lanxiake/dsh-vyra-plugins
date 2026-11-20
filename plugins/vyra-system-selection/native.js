@@ -277,6 +277,7 @@ const WS_EX_NOACTIVATE = 0x08000000
 const SW_HIDE = 0
 const SW_SHOWNA = 8
 const SWP_NOZORDER = 0x0004
+const SWP_NOREDRAW = 0x0008
 const SWP_NOACTIVATE = 0x0010
 const SWP_SHOWWINDOW = 0x0040
 
@@ -633,20 +634,20 @@ export function createOverlay(handlers = {}) {
     contentH: 0,
     viewH: 0,
     hoverPanel: 0,
-    // Card chrome (Doubao-shaped): what produced this answer, the follow-ups it suggests, and
-    // whether the card is pinned against outside clicks.
+    // Card chrome (Doubao-shaped): what produced this answer and the follow-ups it suggests.
     action: null,
     source: '',
     suggestions: [],
-    pinned: false,
     langOpen: false,
     targetLanguage: '',
     edit: null,
     editProc: null,
     editBrush: null,
     focusInput: false,
-    // Body height the user asked for with 展开, in pixels; null means "fit the default".
-    userBody: null,
+    // Where the card was placed when it opened, and its current size. Growth keeps the corner.
+    winPos: null,
+    winW: 0,
+    winH: 0,
     work: null,
     // selection, as character offsets into the block text rather than pixels
     sel: null,
@@ -815,9 +816,8 @@ export function createOverlay(handlers = {}) {
     const headerTop = 0
     const avatarSize = Math.round(24 * s)
     const avatar = { left: m.pad, top: headerTop + Math.round((m.headerH - avatarSize) / 2), size: avatarSize }
-    const pin = { left: m.width - m.pad - m.iconSize, top: headerTop + Math.round((m.headerH - m.iconSize) / 2), right: m.width - m.pad, bottom: 0 }
-    pin.bottom = pin.top + m.iconSize
-    const close = { left: pin.left - m.iconSize - Math.round(4 * s), top: pin.top, right: pin.left - Math.round(4 * s), bottom: pin.bottom }
+    const close = { left: m.width - m.pad - m.iconSize, top: headerTop + Math.round((m.headerH - m.iconSize) / 2), right: m.width - m.pad, bottom: 0 }
+    close.bottom = close.top + m.iconSize
     const langTop = m.headerH
     const lang = isTranslate() ? {
       source: { left: m.pad, top: langTop + Math.round(4 * s), right: m.pad + m.langW, bottom: langTop + Math.round(4 * s) + Math.round(28 * s) },
@@ -842,7 +842,7 @@ export function createOverlay(handlers = {}) {
     const send = { left: m.width - m.pad - m.sendW, top: inputTop, right: m.width - m.pad, bottom: inputTop + m.inputH }
     const input = { left: m.pad, top: inputTop, right: send.left - Math.round(6 * s), bottom: send.bottom }
     const height = input.bottom + m.pad
-    return { m, avatar, pin, close, lang, bodyTop, chips, actionsTop, copy, regen, input, send, height, drop: languageDropdown(m, langTop) }
+    return { m, avatar, close, lang, bodyTop, chips, actionsTop, copy, regen, input, send, height, drop: languageDropdown(m, langTop) }
   }
 
   /** The open language list, or null. Drawn over the body, so it must be hit-tested first. */
@@ -1048,7 +1048,6 @@ export function createOverlay(handlers = {}) {
     F.DrawTextW(hdc, state.title, -1,
       { left: avatar.right + Math.round(10 * s), top: 0, right: r.close.left - Math.round(6 * s), bottom: m.headerH },
       DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
-    drawIcon(hdc, 0xE840, r.pin, state.pinned ? THEME.accent : state.hoverPanel === 'pin' ? THEME.text : THEME.dim)
     drawIcon(hdc, 0xE711, r.close, state.hoverPanel === 'close' ? THEME.text : THEME.dim)
 
     // --- language row (translate only) --------------------------------------------------------
@@ -1233,7 +1232,6 @@ export function createOverlay(handlers = {}) {
       for (let i = 0; i < r.drop.length; i++) if (inside(r.drop[i])) return `lang${i}`
     }
     if (inside(r.close)) return 'close'
-    if (inside(r.pin)) return 'pin'
     if (r.lang && inside(r.lang.target)) return 'lang'
     for (let i = 0; i < r.chips.length; i++) if (inside(r.chips[i])) return `chip${i}`
     if (inside(r.copy)) return 'copy'
@@ -1340,10 +1338,6 @@ export function createOverlay(handlers = {}) {
               F.InvalidateRect(hwnd, null, false)
             }
             if (z === 'close') { if (handlers.onPanelClose) handlers.onPanelClose() }
-            else if (z === 'pin') {
-              state.pinned = !state.pinned
-              F.InvalidateRect(hwnd, null, false)
-            }
             else if (z === 'copy') { if (handlers.onPanelCopy) handlers.onPanelCopy() }
             else if (z === 'regen') { if (handlers.onPanelRegenerate) handlers.onPanelRegenerate() }
             else if (z === 'send') { submitInput() }
@@ -1468,8 +1462,8 @@ export function createOverlay(handlers = {}) {
    * clipped to, so a window that grows without it keeps its old outline and the new rows are
    * never composited.
    */
-  function applyRoundedRegion(hwnd, width, height, radius) {
-    F.SetWindowRgn(hwnd, F.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2), true)
+  function applyRoundedRegion(hwnd, width, height, radius, redraw = true) {
+    F.SetWindowRgn(hwnd, F.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2), redraw)
   }
 
   function showAt(width, height, x, y) {
@@ -1509,16 +1503,22 @@ export function createOverlay(handlers = {}) {
       F.DeleteDC(hdc)
       const m = panelMetrics()
       const height = panelHeight()
-      // Re-place against the selection, holding the side chosen when the panel opened, so growth
-      // extends away from the selection instead of sliding the panel across it.
-      const rect = state.selectionRect ?? {
-        left: state.anchor.x, top: state.anchor.y, right: state.anchor.x, bottom: state.anchor.y,
+      // The card grows at the position it opened at. Re-placing it against the selection on every
+      // streamed chunk made it walk up the screen ~20 times a second, which reads as flicker; a
+      // fixed top-left means growth is the only thing that moves.
+      if (m.width !== state.winW || height !== state.winH) {
+        state.winW = m.width
+        state.winH = height
+        // Redraw off: the InvalidateRect below repaints the whole card once, instead of the
+        // region change asking for its own redraw on top of it.
+        applyRoundedRegion(state.hwnd, m.width, height, m.radius, false)
+        // NOREDRAW: growing must not copy bits or paint the newly exposed strip separately —
+        // the InvalidateRect below repaints the whole card in one pass, which is what keeps a
+        // streaming answer from flashing on every line it gains.
+        F.SetWindowPos(state.hwnd, null, state.winPos.x, state.winPos.y, m.width, height,
+          SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW)
+        positionEdit()
       }
-      const work = workAreaAt(rect.left, rect.top)
-      const pos = placePanelAtSelection(rect, { width: m.width, height }, work, state.panelSide)
-      applyRoundedRegion(state.hwnd, m.width, height, m.radius)
-      F.SetWindowPos(state.hwnd, null, pos.x, pos.y, m.width, height, SWP_NOZORDER | SWP_NOACTIVATE)
-      positionEdit()
       F.InvalidateRect(state.hwnd, null, false)
     }
   }
@@ -1643,7 +1643,7 @@ export function createOverlay(handlers = {}) {
         if (!containsPoint(pt)) {
           // Pinned keeps the card on screen while the user works elsewhere; the close button is
           // still there, so it cannot get stuck.
-          if (state.mode !== 'hidden' && !state.pinned && handlers.onDismiss) {
+          if (state.mode !== 'hidden' && handlers.onDismiss) {
             try {
               handlers.onDismiss()
             } catch {
@@ -1807,7 +1807,6 @@ export function createOverlay(handlers = {}) {
       state.mode = 'menu'
       if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
       state.langOpen = false
-      state.pinned = false
       state.actions = actions
       state.hover = -1
       state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.bottom }
@@ -1836,7 +1835,6 @@ export function createOverlay(handlers = {}) {
       state.suggestions = []
       state.targetLanguage = targetLanguage
       state.langOpen = false
-      state.pinned = false
       state.status = status || '正在生成…'
       state.statusKind = 'info'
       state.scroll = 0
@@ -1857,6 +1855,9 @@ export function createOverlay(handlers = {}) {
       // the window many times; re-deciding each time would make it jump across the selection.
       state.panelSide = panelSideFor(anchor, { width: m.width, height: panelHeight() }, work)
       const pos = placePanelAtSelection(anchor, { width: m.width, height: panelHeight() }, work, state.panelSide)
+      state.winPos = { x: pos.x, y: pos.y }
+      state.winW = m.width
+      state.winH = panelHeight()
       showAt(m.width, panelHeight(), pos.x, pos.y)
       positionEdit()
       if (state.edit) F.ShowWindow(state.edit, SW_SHOWNA)
@@ -1890,7 +1891,6 @@ export function createOverlay(handlers = {}) {
       state.hoverPanel = null
       state.sel = null
       state.dragging = false
-      state.pinned = false
       state.langOpen = false
       if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
       if (state.hwnd) F.ShowWindow(state.hwnd, SW_HIDE)
