@@ -1256,6 +1256,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.1 ships three built-in skills (two drive skills with no credentials,
+        // plus the customer-service playbook), pre-fills a default service
+        // profile, and lets each service pick its tools.
+        '0.6.1': {
+          publishTimestamp: 1795160579,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '596c6c2bbe669b8f065912b45884ba37c5a6da5a',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
