@@ -997,6 +997,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.0: newest-first conversations with real avatars, message cards
+        // and images, click-through order and item details, and a hover hint
+        // on the manual-delivery button.
+        '0.5.0': {
+          publishTimestamp: 1795138821,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'e894a78059214292aff0caced2ec5eeafa6698af',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
