@@ -892,6 +892,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.6.2 records messages the policy skipped (keyword miss, not on the
+        // list, blacklist, quiet hours, the user's own sends) and shows them in
+        // the settings card, so a silent drop no longer looks like "not seen".
+        '0.6.2': {
+          publishTimestamp: 1795143741,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a2a5e0129e8a9a401f6cfd282fce084af8e52769',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
