@@ -1015,6 +1015,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.8.1 rebuilds the 画像蒸馏 tab around the friend list (names, avatars,
+        // search, multi-select) and adds 自动蒸馏: auto friend batches refresh a
+        // missing/stale peer profile before replying, via peer-bound tools.
+        '0.8.1': {
+          publishTimestamp: 1795165435,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '1c91d81cf89558dba2d7983d89128e15c1928b01',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
