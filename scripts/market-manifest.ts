@@ -990,6 +990,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.8.0: every tool advertises account + list_accounts (two instances
+        // no longer mix), Lumii's digest/profile tools with an editable 画像蒸馏
+        // tab and per-delivery profile injection, and send_file targets the
+        // third toolbar icon with a verified-offset fallback.
+        '0.8.0': {
+          publishTimestamp: 1795164339,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '09ad8de91d9014cfc673eab16992ef6f5551f884',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
