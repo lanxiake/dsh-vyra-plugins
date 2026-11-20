@@ -842,10 +842,15 @@ window.__ModuleLoader__.load({
     // Main settings page — the channel card plus the policy dialog.
     // ---------------------------------------------------------------------------
 
-    function policySummary(policy) {
+    function policySummary(policy, wxid) {
       const rules = policy?.rules ?? {}
       const peers = Array.isArray(rules.peers) ? rules.peers : []
       const sendable = peers.filter((peer) => peer.mode !== 'ignore')
+      // Mirror the watcher's trusted defaults so the card does not say "nobody"
+      // while self/filehelper are actually allowed.
+      const has = (id) => peers.some((peer) => String(peer.id ?? '').toLowerCase() === String(id).toLowerCase())
+      if (wxid && !has(wxid)) sendable.push({ id: wxid, label: '我自己', mode: 'auto' })
+      if (!has('filehelper')) sendable.push({ id: 'filehelper', label: '文件传输助手', mode: 'auto' })
       const defaultMode = rules.default_mode === 'ignore' ? 'ignore' : 'notify'
       return {
         sendable,
@@ -913,7 +918,8 @@ window.__ModuleLoader__.load({
       const tone = connected ? 'connected' : state === 'failed' ? 'error' : state === 'starting' ? 'pending' : 'idle'
       const label = connected ? '已连接' : state === 'starting' ? '启动中' : state === 'failed' ? '未就绪' : ready ? '未就绪' : '未启动'
       const accountCount = accounts?.accounts?.length ?? 0
-      const detail = policySummary(policy)
+      const activeWxid = env?.active_account || accounts?.active || accounts?.accounts?.[0]?.wxid || ''
+      const detail = policySummary(policy, activeWxid)
 
       return h(React.Fragment, null,
         h('section', { style: S.card },
