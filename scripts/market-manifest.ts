@@ -978,6 +978,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.7.2 treats self-chat and 文件传输助手 as the owner's control channel
+        // (full toolset); only third-party friend sessions keep the restricted
+        // mask. Newly added contacts default to direct reply.
+        '0.7.2': {
+          publishTimestamp: 1795160992,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '79a3e313eee9f0902d6b2ec3634154b644161288',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
