@@ -953,6 +953,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.7.0 is the security release: only self-chat and 文件传输助手 are
+        // whitelisted by default; a watched friend's agent is masked down to
+        // wechat_send_reply + check_env (no files, shell, web, other chats or
+        // export), and draft batches cannot send. The policy dialog has a
+        // fixed height and a forced light palette.
+        '0.7.0': {
+          publishTimestamp: 1795160433,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '113b35d8032830b313acdd1f22d18ae0537e9c03',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
