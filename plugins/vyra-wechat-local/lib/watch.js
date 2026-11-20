@@ -205,7 +205,7 @@ function imageMediaType(buffer) {
  * @param {object} [options.config]
  * @param {(line: string) => void} [options.log]
  */
-export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, prepareSession = async () => {}, config = {}, log = () => {}, statePath = stateFile() }) {
+export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, prepareSession = async () => {}, isAutoDistill = () => false, config = {}, log = () => {}, statePath = stateFile() }) {
   const pollSeconds = Math.max(0.01, Number(config.watchSeconds) || 2)
   const mergeWindowMs = Math.max(1, Number(config.mergeWindowSeconds) * 1000 || 20_000)
   const replyTimeoutMs = Math.max(1, Number(config.replyTimeoutSeconds) * 1000 || 120_000)
@@ -432,8 +432,11 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       }
     }
     const mode = decision.mode === 'auto' ? '直接代回' : '起草'
+    const autoDistill = decision.mode === 'auto'
+      && !isTrustedChannel(peer.talker, peer.account)
+      && isAutoDistill()
     const who = peer.name && peer.name !== peer.talker ? `${peer.name}（${peer.talker}）` : peer.talker
-    const header = `[${who}${peer.account ? ` · 账号 ${peer.account}` : ''} · ${mode}]`
+    const header = `[${who}${peer.account ? ` · 账号 ${peer.account}` : ''} · ${mode}${autoDistill ? ' · 自动蒸馏' : ''}]`
     const lines = batch.map((message) => {
       const at = message.at_me ? '（@我）' : ''
       return `${message.time || message.ts} ${message.text || '(无文字内容)'}${at}`

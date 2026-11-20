@@ -1261,6 +1261,12 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------------
 
     function DistillView() {
+      const [accounts, setAccounts] = useState([])
+      const [account, setAccount] = useState('')
+      const [contactsByAccount, setContactsByAccount] = useState({})
+      const [search, setSearch] = useState('')
+      const [picked, setPicked] = useState(new Set())
+      const [auto, setAuto] = useState(false)
       const [list, setList] = useState(null)
       const [scope, setScope] = useState('self')
       const [content, setContent] = useState('')
@@ -1268,6 +1274,16 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
+
+      const loadContacts = useCallback(async (wxid) => {
+        if (!wxid) return
+        try {
+          const res = await call('contacts', { account: wxid })
+          setContactsByAccount((prev) => ({ ...prev, [wxid]: res }))
+        } catch {
+          // A contact list failure must not break the whole tab.
+        }
+      }, [])
 
       const loadList = useCallback(async () => {
         try {
@@ -1292,14 +1308,120 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
-        void loadList()
-        void loadContent('self')
-      }, [loadList, loadContent])
+        let cancelled = false
+        void (async () => {
+          try {
+            const [accountRes, autoRes, listRes] = await Promise.all([
+              call('accounts').catch(() => undefined),
+              call('distill.auto').catch(() => undefined),
+              call('distill.list').catch(() => undefined),
+            ])
+            if (cancelled) return
+            const rows = (accountRes?.accounts ?? []).map((item) => ({
+              wxid: item.wxid,
+              running: Boolean(item.running),
+            }))
+            setAccounts(rows)
+            setAuto(autoRes?.enabled === true)
+            setList(listRes ?? null)
+            const first = accountRes?.active || rows[0]?.wxid || ''
+            setAccount(first)
+            for (const row of rows) void loadContacts(row.wxid)
+            if (first) void loadContacts(first)
+            void loadContent('self')
+          } catch (err) {
+            if (!cancelled) setError(String(err?.message ?? err))
+          }
+        })()
+        return () => {
+          cancelled = true
+        }
+      }, [loadContacts, loadContent])
 
-      const select = (target) => {
-        setScope(target)
+      const switchAccount = (wxid) => {
+        setAccount(wxid)
+        setSearch('')
+        if (!contactsByAccount[wxid]) void loadContacts(wxid)
+      }
+
+      const accountLabel = (wxid) => {
+        const info = contactsByAccount[wxid]?.self
+        const name = String(info?.name ?? '').trim()
+        return name && name.toLowerCase() !== String(wxid).toLowerCase() ? name : String(wxid)
+      }
+      const selfInfo = contactsByAccount[account]?.self
+      const selfName = selfInfo?.name || account
+      const contactRows = contactsByAccount[account]?.contacts ?? []
+      const people = [
+        { key: `${account}|self`, scope: 'self', account, talker: account, label: `我（${selfName}）`, kind: 'self' },
+        ...contactRows.map((item) => ({
+          key: `${account}|${item.talker}`,
+          scope: String(item.talker),
+          account,
+          talker: String(item.talker),
+          label: String(item.name || item.talker),
+          kind: item.kind,
+        })),
+      ]
+      const query = search.trim().toLowerCase()
+      const matched = people.filter((person) => {
+        if (query === '') return true
+        return person.label.toLowerCase().includes(query) || String(person.scope).toLowerCase().includes(query)
+      })
+      const visible = matched.slice(0, 120)
+      const pickedTargets = [...picked].map((key) => {
+        const cut = key.indexOf('|')
+        return { account: key.slice(0, cut), scope: key.slice(cut + 1) }
+      })
+
+      const togglePicked = (key, on) => {
+        setPicked((prev) => {
+          const next = new Set(prev)
+          if (on) next.add(key)
+          else next.delete(key)
+          return next
+        })
+      }
+
+      const toggleAuto = async () => {
+        setBusy('auto')
+        setError('')
+        try {
+          const answer = await call('distill.auto', { enabled: !auto })
+          setAuto(answer?.enabled === true)
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const distillTargets = async (targets) => {
+        if (targets.length === 0) return
+        setBusy('distill')
+        setError('')
         setNotice('')
-        void loadContent(target)
+        try {
+          const answer = await call('distill.request', { targets })
+          setNotice(`已创建「PC微信 · 画像蒸馏」会话（${answer?.sessionId ?? ''}），共 ${targets.length} 个目标；可在 PC微信 分组查看进度。`)
+        } catch (err) {
+          setError(String(err?.message ?? err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const resolvePerson = (target) => {
+        const needle = String(target).toLowerCase()
+        if (needle === 'self') {
+          const info = contactsByAccount[account]
+          return { account, talker: account, label: info?.self?.name || account }
+        }
+        for (const [wxid, data] of Object.entries(contactsByAccount)) {
+          const found = (data?.contacts ?? []).find((item) => String(item.talker).toLowerCase() === needle)
+          if (found) return { account: wxid, talker: String(found.talker), label: String(found.name || found.talker) }
+        }
+        return { account, talker: target, label: target }
       }
 
       const save = async () => {
@@ -1353,74 +1475,132 @@ window.__ModuleLoader__.load({
         }
       }
 
-      const distill = async (target) => {
-        setBusy('distill')
-        setError('')
-        setNotice('')
-        try {
-          const answer = await call('distill.request', target ? { scope: target } : {})
-          setNotice(`已创建「PC微信 · 画像蒸馏」会话${answer?.sessionId ? `（${answer.sessionId}）` : ''}，可在 PC微信 分组查看进度。`)
-        } catch (err) {
-          setError(String(err?.message ?? err))
-        } finally {
-          setBusy('')
-        }
-      }
-
       const profiles = list?.profiles ?? []
-      const hasSelf = profiles.some((item) => String(item.scope).toLowerCase() === 'self' || item.rel === 'self.md')
-      const entries = hasSelf
-        ? profiles
-        : [{ scope: 'self', rel: 'self.md', updated: null, age_days: null, stale: false, bytes: 0 }, ...profiles]
-      const currentLabel = scope === 'self' ? '用户本人' : scope
+      const currentLabel = scope === 'self' ? `用户本人（${accountLabel(account)}）` : scope
 
-      return h('section', { style: S.card },
-        h('div', { style: S.row },
-          h('div', { style: S.text },
-            h('div', { style: S.name }, '画像蒸馏'),
-            h('div', { style: S.descRow },
-              h('span', { style: S.description }, '本机 Markdown 画像，可手动修改'),
-              h('span', { style: S.capability }, '本人 · 好友 · 群'))),
-          h('div', { style: S.actions },
-            h(Button, { quiet: true, onClick: () => void loadList(), disabled: busy !== '', title: '重新读取画像清单' }, '刷新'),
-            h(Button, { quiet: true, onClick: () => void call('distill.reveal').catch(() => {}), disabled: busy !== '', title: '在文件资源管理器中打开 ~/.lumii/wechat-distill/' }, '打开目录'),
-            h(Button, { primary: true, onClick: () => void distill(''), disabled: busy !== '', title: '新建一个 PC微信 会话，让助手蒸馏本人画像和最近活跃的好友' }, '让助手蒸馏'))),
+      return React.createElement(React.Fragment, null,
+        h('section', { style: S.card },
+          h('div', { style: S.row },
+            h('div', { style: S.text },
+              h('div', { style: S.name }, '画像蒸馏'),
+              h('div', { style: S.descRow },
+                h('span', { style: S.description }, '先选好友，再蒸馏；画像可手动编辑'))),
+            h('div', { style: S.actions },
+              h(Button, { quiet: true, onClick: () => void loadList(), disabled: busy !== '', title: '重新读取画像清单' }, '刷新'),
+              h(Button, { quiet: true, onClick: () => void call('distill.reveal').catch(() => {}), disabled: busy !== '', title: '打开 ~/.lumii/wechat-distill/' }, '打开目录'))),
 
-        error ? h('div', { style: S.error }, error) : null,
-        notice ? h('div', { style: { ...S.note, padding: '0 16px 10px' } }, notice) : null,
+          error ? h('div', { style: S.error }, error) : null,
+          notice ? h('div', { style: { ...S.note, padding: '0 16px 10px' } }, notice) : null,
 
-        h('div', { style: S.children },
-          h('div', { style: S.chips, role: 'tablist' },
-            entries.map((item) => h(Button, {
-              key: item.scope,
-              primary: String(item.scope).toLowerCase() === String(scope).toLowerCase(),
-              onClick: () => select(String(item.scope)),
-              title: item.path || item.rel || '',
-              disabled: busy !== '',
-            }, `${String(item.scope).toLowerCase() === 'self' ? '本人' : item.scope}${item.stale ? ' · 过期' : ''}`))),
+          h('div', { style: S.children },
+            accounts.length > 1
+              ? h('div', { style: S.tabs },
+                accounts.map((item) => h(Button, {
+                  key: item.wxid,
+                  primary: item.wxid.toLowerCase() === account.toLowerCase(),
+                  onClick: () => switchAccount(item.wxid),
+                  disabled: busy !== '',
+                  title: '每个微信号独立选择好友；蒸馏工具会带上这个账号',
+                }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+                  h(Avatar, { account: item.wxid, talker: item.wxid, name: accountLabel(item.wxid), size: 18 }),
+                  `${accountLabel(item.wxid)}（${item.wxid}）${item.running ? '' : ' · 离线'}`))))
+              : null,
 
-          h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
-            h('span', { style: S.chipsLabel }, `编辑：${currentLabel}`),
-            h('span', { style: S.mono }, meta?.path || meta?.updated || ''),
-            meta?.stale ? h('span', { style: { ...S.badge, color: 'var(--dsw-alias-state-warn-primary, #b26a00)' } }, '超过 30 天') : null),
+            h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+              h('div', { style: { flex: '1 1 240px', minWidth: 180 } },
+                h(TextInput, {
+                  value: search,
+                  onChange: (event) => setSearch(event.target.value),
+                  placeholder: '搜好友名字或 wxid',
+                })),
+              h(Button, {
+                quiet: true,
+                disabled: busy !== '' || visible.length === 0,
+                onClick: () => setPicked((prev) => new Set([...prev, ...visible.map((person) => person.key)])),
+              }, '全选当前'),
+              h(Button, { quiet: true, disabled: picked.size === 0, onClick: () => setPicked(new Set()) }, '清空勾选'),
+              h(Button, {
+                primary: true,
+                disabled: busy !== '' || picked.size === 0,
+                onClick: () => void distillTargets(pickedTargets),
+              }, `蒸馏选中（${picked.size}）`)),
 
-          h('textarea', {
-            'aria-label': `${currentLabel} 的画像`,
-            style: { ...S.input, minHeight: '300px', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', lineHeight: '1.6' },
-            value: content,
-            placeholder: '## 身份与关系\n## 沟通风格\n## 常聊话题\n## 关键事实',
-            onChange: (event) => setContent(event.target.value),
-          }),
+            h('div', { style: { maxHeight: '320px', overflowY: 'auto', border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', borderRadius: '10px', padding: '4px 8px' } },
+              busy === 'contacts' ? h('div', { style: S.hint }, '正在读微信通讯录…') : null,
+              !busy && contactRows.length === 0 && account
+                ? h('div', { style: S.hint }, '没读到通讯录；确认微信已登录后再试')
+                : null,
+              visible.map((person) => h('div', {
+                key: person.key,
+                style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0' },
+              },
+                h(Checkbox, {
+                  checked: picked.has(person.key),
+                  label: '',
+                  onChange: (on) => togglePicked(person.key, on),
+                }),
+                h(Avatar, { account: person.account, talker: person.talker, name: person.label, size: 26 }),
+                h('span', { style: { fontSize: '13px', color: 'var(--dsw-alias-label-primary, #1a1a1a)' } }, person.label),
+                person.kind === 'group' ? h('span', { style: S.badge }, '群') : null,
+                h('span', { style: S.mono }, person.scope))),
+              matched.length > visible.length
+                ? h('div', { style: S.hint }, `还有 ${matched.length - visible.length} 个匹配项，输入关键词缩小范围`)
+                : null),
 
-          h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
-            h(Button, { primary: true, onClick: () => void save(), disabled: busy !== '' }, busy === 'save' ? '保存中…' : '保存'),
-            h(Button, { quiet: true, onClick: () => void distill(scope === 'self' ? '' : scope), disabled: busy !== '', title: '让助手用 wechat_digest 重新提炼这一份' }, '蒸馏这个'),
-            h(Button, { quiet: true, onClick: () => void loadContent(scope), disabled: busy !== '', title: '放弃未保存的修改，重新读取' }, '重新读取'),
-            h(Button, { quiet: true, onClick: () => void remove(), disabled: busy !== '' }, '删除'),
-            h(Button, { quiet: true, onClick: () => void clearAll(), disabled: busy !== '', title: '删除 ~/.lumii/wechat-distill/ 下的全部画像、备份与水位' }, '清空全部')),
+            h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } },
+              h(Checkbox, {
+                checked: auto,
+                label: '自动蒸馏',
+                onChange: () => void toggleAuto(),
+              }),
+              h('span', { style: S.hint, title: '自动回复前先检查这个人的画像；不存在或超过 30 天就先蒸馏，再回复。' },
+                '开启后，自动回复前先检查对方画像：缺失或过期就先蒸馏，再回复。'))),
 
-          h('p', { style: S.chipsLabel, title: '画像文件就在本机，可直接编辑。' },
-            '保存时自动保留上一版（.prev）；本人画像用于模仿口吻，好友会话只注入风格段，避免隐私被套取。')))
+          h('div', { style: S.divider },
+            h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+              h('span', { style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' } },
+                `已生成的画像（${profiles.length}）`),
+              h(Button, { quiet: true, onClick: () => void loadContent('self'), disabled: busy !== '' }, '编辑本人画像'),
+              h(Button, { quiet: true, onClick: () => void clearAll(), disabled: busy !== '', title: '删除全部画像、备份与水位' }, '清空全部')),
+
+            profiles.length === 0
+              ? h('div', { style: S.hint }, '还没有画像。勾选好友后点「蒸馏选中」，或打开上面的「自动蒸馏」。')
+              : h('div', { style: S.chips },
+                profiles.map((item) => {
+                  const person = resolvePerson(item.scope)
+                  const selected = String(item.scope).toLowerCase() === String(scope).toLowerCase()
+                  return h(Button, {
+                    key: item.rel || item.scope,
+                    primary: selected,
+                    onClick: () => { setScope(String(item.scope)); void loadContent(String(item.scope)) },
+                    title: `${item.path || item.rel}${item.updated ? `\n更新：${item.updated}` : ''}`,
+                    disabled: busy !== '',
+                  }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+                    h(Avatar, { account: person.account, talker: person.talker, name: person.label, size: 18 }),
+                    `${String(item.scope).toLowerCase() === 'self' ? `我（${person.label}）` : person.label}${item.stale ? ' · 过期' : ''}`))
+                })),
+
+            h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '8px' } },
+              h('span', { style: S.chipsLabel }, `编辑：${currentLabel}`),
+              h('span', { style: S.mono }, meta?.path || meta?.updated || ''),
+              meta?.stale ? h('span', { style: { ...S.badge, color: 'var(--dsw-alias-state-warn-primary, #b26a00)' } }, '超过 30 天') : null),
+
+            h('textarea', {
+              'aria-label': `${currentLabel} 的画像`,
+              style: { ...S.input, minHeight: '300px', resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', lineHeight: '1.6' },
+              value: content,
+              placeholder: '## 身份与关系\n## 沟通风格\n## 常聊话题\n## 关键事实',
+              onChange: (event) => setContent(event.target.value),
+            }),
+
+            h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' } },
+              h(Button, { primary: true, onClick: () => void save(), disabled: busy !== '' }, busy === 'save' ? '保存中…' : '保存'),
+              h(Button, { quiet: true, onClick: () => void loadContent(scope), disabled: busy !== '', title: '放弃未保存的修改，重新读取' }, '重新读取'),
+              h(Button, { quiet: true, onClick: () => void remove(), disabled: busy !== '' }, '删除')),
+
+            h('p', { style: S.chipsLabel, title: '画像文件就在本机，可直接编辑。' },
+              '保存时自动保留上一版（.prev）；普通好友会话只注入风格/话题段，避免隐私被套取。')))
+      )
     }
 
     function WechatPage() {

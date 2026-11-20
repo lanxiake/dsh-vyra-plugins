@@ -170,6 +170,48 @@ test('a message you send to filehelper reaches the agent by default', async () =
   }
 })
 
+test('auto-distill marks auto batches for friends, not trusted channels', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
+  const prompts = []
+  const queue = [msg('帮我看看', 100)]
+  const watcher = createWatcher({
+    callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: true, db_ok: true, deps: { ok: true } }
+      if (tool === 'list_accounts') return { active: 'wxid_1', accounts: [{ wxid: 'wxid_1', running: true }] }
+      if (tool === 'poll_new') {
+        const messages = queue.splice(0)
+        return { messages, next_since_ts: messages.length ? messages[messages.length - 1].ts : 100 }
+      }
+      return {}
+    },
+    readPolicy: async () => policy([{ id: 'friend', label: '好友', mode: 'auto', trigger: 'all', cooldown_seconds: 1 }]),
+    restoreAccount: async () => {},
+    getController: () => ({
+      create: async () => ({ sessionId: 's' }),
+      rename: async () => {},
+      prompt: async (request) => { prompts.push(request.content[0].text) },
+    }),
+    createSession: async () => 'session-auto',
+    ensureSession: async () => {},
+    isAutoDistill: () => true,
+    statePath: join(dir, 'watch.json'),
+    config: { watchSeconds: 0.02, mergeWindowSeconds: 0.02, replyTimeoutSeconds: 1 },
+  })
+  try {
+    watcher.start()
+    await waitFor(() => prompts.length === 1)
+    assert.match(prompts[0], /直接代回 · 自动蒸馏\]/)
+
+    // A trusted control channel never gets auto-distill.
+    queue.push({ ...msg('记一下', 101), talker: 'filehelper', name: '文件传输助手', from_me: true })
+    await waitFor(() => prompts.length === 2)
+    assert.doesNotMatch(prompts[1], /自动蒸馏/)
+  } finally {
+    watcher.stop()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('notify peers are recorded but never wake the model', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
   const prompts = []
