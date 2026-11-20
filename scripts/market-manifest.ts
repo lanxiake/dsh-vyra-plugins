@@ -1372,6 +1372,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.7 treats custom-wrapped (101) text as text, logs the card
+        // contentType, and records the 3s cooldown skips.
+        '0.6.7': {
+          publishTimestamp: 1795176031,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '029a64de0800bd9e4abd95dd855370c5ea95ce7c',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
