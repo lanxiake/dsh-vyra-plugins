@@ -1338,6 +1338,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.5 returns card content on edit, merges the toggle into one
+        // button, and labels why a message got no reply.
+        '0.6.5': {
+          publishTimestamp: 1795164978,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '7d004c02c58e8b3365cbf112a3bc86dafa991b99',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
