@@ -1071,6 +1071,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.2 restores the avatar helpers (their removal threw during render
+        // and left the panel blank) and adds a render smoke test.
+        '0.5.2': {
+          publishTimestamp: 1795143511,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'dbcfdda4c6cdbea19d30c65582ec9afd30b4d771',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
