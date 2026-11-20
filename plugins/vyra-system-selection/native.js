@@ -192,6 +192,9 @@ const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() =>
     // IME, and typing Chinese is exactly what this field is for.
     SetFocus: u.func('void* __stdcall SetFocus(void *h)'),
     GetFocus: u.func('void* __stdcall GetFocus()'),
+    // Dragging the card by its header must keep tracking once the pointer leaves the window.
+    SetCapture: u.func('void* __stdcall SetCapture(void *h)'),
+    ReleaseCapture: u.func('bool __stdcall ReleaseCapture()'),
     SetWindowLongPtrW: u.func('intptr_t __stdcall SetWindowLongPtrW(void *h, int index, intptr_t value)'),
     CallWindowProcW: u.func('intptr_t __stdcall CallWindowProcW(void *proc, void *h, uint32 m, uintptr_t w, intptr_t l)'),
     SendMessageW: u.func('intptr_t __stdcall SendMessageW(void *h, uint32 m, uintptr_t w, intptr_t l)'),
@@ -276,6 +279,7 @@ const WS_EX_TOOLWINDOW = 0x00000080
 const WS_EX_NOACTIVATE = 0x08000000
 const SW_HIDE = 0
 const SW_SHOWNA = 8
+const SWP_NOSIZE = 0x0001
 const SWP_NOZORDER = 0x0004
 const SWP_NOREDRAW = 0x0008
 const SWP_NOACTIVATE = 0x0010
@@ -304,6 +308,7 @@ const VK_ESCAPE = 0x1B
 const IDC_HAND = 32649
 const IDC_ARROW = 32512
 const IDC_IBEAM = 32513
+const IDC_SIZEALL = 32646
 
 /** Targets offered by the card's language row; the settings page offers the same list. */
 const TARGET_LANGUAGES = ['简体中文', '繁體中文', 'English', '日本語', '한국어', 'Français', 'Deutsch', 'Español', 'Русский']
@@ -644,10 +649,12 @@ export function createOverlay(handlers = {}) {
     editProc: null,
     editBrush: null,
     focusInput: false,
-    // Where the card was placed when it opened, and its current size. Growth keeps the corner.
+    // Where the card was placed when it opened, and its current size. Growth keeps the corner,
+    // and a header drag rewrites it so growth follows the user's chosen position.
     winPos: null,
     winW: 0,
     winH: 0,
+    dragWindow: null,
     work: null,
     // selection, as character offsets into the block text rather than pixels
     sel: null,
@@ -669,6 +676,7 @@ export function createOverlay(handlers = {}) {
   const HAND_CURSOR = F.LoadCursorW(null, IDC_HAND)
   const ARROW_CURSOR = F.LoadCursorW(null, IDC_ARROW)
   const TEXT_CURSOR = F.LoadCursorW(null, IDC_IBEAM)
+  const MOVE_CURSOR = F.LoadCursorW(null, IDC_SIZEALL)
   if (!ARROW_CURSOR) ctxWarn('标准箭头光标加载失败，弹窗上可能看不到鼠标指针')
 
   // --- painting ------------------------------------------------------------------------------
@@ -1049,6 +1057,12 @@ export function createOverlay(handlers = {}) {
       { left: avatar.right + Math.round(10 * s), top: 0, right: r.close.left - Math.round(6 * s), bottom: m.headerH },
       DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
     drawIcon(hdc, 0xE711, r.close, state.hoverPanel === 'close' ? THEME.text : THEME.dim)
+    // A grip at the top centre: the header is a drag handle and nothing else says so.
+    const gripW = Math.round(28 * s)
+    fill(hdc, {
+      left: Math.round((m.width - gripW) / 2), top: Math.round(5 * s),
+      right: Math.round((m.width + gripW) / 2), bottom: Math.round(8 * s),
+    }, THEME.border)
 
     // --- language row (translate only) --------------------------------------------------------
     if (r.lang) {
@@ -1232,6 +1246,9 @@ export function createOverlay(handlers = {}) {
       for (let i = 0; i < r.drop.length; i++) if (inside(r.drop[i])) return `lang${i}`
     }
     if (inside(r.close)) return 'close'
+    // The header is the drag handle: the body selects text and the footer has controls, so the
+    // title bar is the one strip that can hold a move gesture.
+    if (y >= 0 && y < r.m.headerH) return 'header'
     if (r.lang && inside(r.lang.target)) return 'lang'
     for (let i = 0; i < r.chips.length; i++) if (inside(r.chips[i])) return `chip${i}`
     if (inside(r.copy)) return 'copy'
@@ -1303,6 +1320,25 @@ export function createOverlay(handlers = {}) {
               state.hover = idx
               F.InvalidateRect(hwnd, null, false)
             }
+          } else if (state.dragWindow) {
+            // Absolute pointer position, not the client x/y: the window is moving underneath.
+            const pt = {}
+            F.GetCursorPos(pt)
+            const dx = pt.x - state.dragWindow.sx
+            const dy = pt.y - state.dragWindow.sy
+            if (Math.abs(dx) >= 2 || Math.abs(dy) >= 2) {
+              const work = state.work ?? workAreaAt(pt.x, pt.y)
+              const maxX = Math.max(work.left, work.right - state.winW)
+              const maxY = Math.max(work.top, work.bottom - state.winH)
+              state.winPos = {
+                x: Math.max(work.left, Math.min(state.dragWindow.wx + dx, maxX)),
+                y: Math.max(work.top, Math.min(state.dragWindow.wy + dy, maxY)),
+              }
+              F.SetWindowPos(hwnd, null, state.winPos.x, state.winPos.y, 0, 0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
+            }
+            F.SetCursor(MOVE_CURSOR)
+            return 0
           } else {
             // Dragging over the answer extends the selection; the body is the only place where a
             // drag means "select text" rather than "click a control".
@@ -1321,8 +1357,9 @@ export function createOverlay(handlers = {}) {
               state.hoverPanel = zone
               F.InvalidateRect(hwnd, null, false)
             }
-            const overControl = zone !== null && zone !== 'input'
-            F.SetCursor(overControl ? HAND_CURSOR : hitTestText(x, y, state.measureDC) ? TEXT_CURSOR : ARROW_CURSOR)
+            if (zone === 'header') F.SetCursor(MOVE_CURSOR)
+            else if (zone !== null && zone !== 'input') F.SetCursor(HAND_CURSOR)
+            else F.SetCursor(hitTestText(x, y, state.measureDC) ? TEXT_CURSOR : ARROW_CURSOR)
           }
           return 0
         }
@@ -1338,6 +1375,13 @@ export function createOverlay(handlers = {}) {
               F.InvalidateRect(hwnd, null, false)
             }
             if (z === 'close') { if (handlers.onPanelClose) handlers.onPanelClose() }
+            else if (z === 'header') {
+              // Drag handle. Capture keeps the gesture alive when the pointer outruns the card.
+              const pt = {}
+              F.GetCursorPos(pt)
+              state.dragWindow = { sx: pt.x, sy: pt.y, wx: state.winPos ? state.winPos.x : 0, wy: state.winPos ? state.winPos.y : 0 }
+              F.SetCapture(hwnd)
+            }
             else if (z === 'copy') { if (handlers.onPanelCopy) handlers.onPanelCopy() }
             else if (z === 'regen') { if (handlers.onPanelRegenerate) handlers.onPanelRegenerate() }
             else if (z === 'send') { submitInput() }
@@ -1367,6 +1411,11 @@ export function createOverlay(handlers = {}) {
           return 0
         }
         case WM_LBUTTONUP: {
+          if (state.dragWindow) {
+            state.dragWindow = null
+            F.ReleaseCapture()
+            return 0
+          }
           if (state.mode === 'panel' && state.dragging) {
             state.dragging = false
             const text = selectionText()
@@ -1509,6 +1558,9 @@ export function createOverlay(handlers = {}) {
       if (m.width !== state.winW || height !== state.winH) {
         state.winW = m.width
         state.winH = height
+        // A card that grew past the bottom of the screen slides up just enough to stay whole.
+        const work = state.work ?? workAreaAt(state.winPos.x, state.winPos.y)
+        state.winPos.y = Math.min(state.winPos.y, Math.max(work.top, work.bottom - height))
         // Redraw off: the InvalidateRect below repaints the whole card once, instead of the
         // region change asking for its own redraw on top of it.
         applyRoundedRegion(state.hwnd, m.width, height, m.radius, false)
@@ -1676,7 +1728,10 @@ export function createOverlay(handlers = {}) {
       if (wParam === WM_LBUTTONUP) {
         const { state: next, fire } = reduceMouse(pressState, { down: false, x: pt.x, y: pt.y, t: now })
         pressState = next
-        if (fire && !windowUnderPoint(pt)) primeSelection()
+        // Never prime for a gesture that happened on our own card: dragging the card by its
+        // header is a drag like any other, and a synthesized Ctrl+C would go to whatever
+        // application is underneath.
+        if (fire && !containsPoint(pt) && !windowUnderPoint(pt)) primeSelection()
         return F.CallNextHookEx(null, code, wParam, lParam)
       }
       // Never swallow a click aimed at our own popup, or the menu could not be dismissed.
@@ -1858,6 +1913,7 @@ export function createOverlay(handlers = {}) {
       state.winPos = { x: pos.x, y: pos.y }
       state.winW = m.width
       state.winH = panelHeight()
+      state.dragWindow = null
       showAt(m.width, panelHeight(), pos.x, pos.y)
       positionEdit()
       if (state.edit) F.ShowWindow(state.edit, SW_SHOWNA)
@@ -1892,6 +1948,10 @@ export function createOverlay(handlers = {}) {
       state.sel = null
       state.dragging = false
       state.langOpen = false
+      if (state.dragWindow) {
+        state.dragWindow = null
+        F.ReleaseCapture()
+      }
       if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
       if (state.hwnd) F.ShowWindow(state.hwnd, SW_HIDE)
       // The pump keeps running while the hook is installed: it is how the hook's callbacks reach
