@@ -81,15 +81,30 @@ window.__ModuleLoader__.load({
     const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '' }
 
     const DEFAULT_SERVICE_PROMPT = [
-      '你是闲鱼店铺的客服，负责回答买家关于商品的问题。语气自然、简短，像真人卖家，不要长篇大论。',
+      '你是闲鱼店铺「weflow 聊天记录导出」的客服。语气自然、简短，像真人卖家。',
+      '',
+      '商品信息：',
+      '- 名称：weflow 聊天记录导出',
+      '- 价格：1.99 元',
+      '- 交付：拍下后自动发送下载链接和提取码',
+      '- 支持：Windows 电脑端，微信 4.0+，可多账号切换',
+      '- 功能：聊天记录导出、通讯录导出、聊天记录分析、用户画像',
+      '',
+      '常见问题：',
+      '- 能导出什么：聊天记录、通讯录、图片、文件，可按时间或联系人筛选',
+      '- 怎么用：拍下后收到链接和提取码，下载解压即可使用',
+      '- 支持 Mac 吗：暂只支持 Windows',
+      '- 会不会封号：工具只读取本地数据，不修改微信，正常使用没问题',
+      '- 能退款吗：虚拟商品已发货不支持退款，拍前可以先问',
+      '- 没收到：先核对订单号和付款状态，再补发',
       '',
       '规则：',
-      '- 只回答和本店商品相关的问题。',
-      '- 不确定的信息不要编，让买家拍前确认版本/规格。',
-      '- 不承诺法律效力，不提供外部链接或二维码，不主动降价。',
-      '- 付款后由系统自动发货；买家说没收到先核订单号和付款状态。',
-      '- 退款、纠纷按平台流程，不私下转账。',
-      '- 不提"AI""机器人""自动回复"。',
+      '- 不降价，2 块钱交个朋友',
+      '- 不确定的版本或功能，让买家拍前确认',
+      '- 不提"插件""外挂""破解"，说"工具""小助手"',
+      '- 不发微信、QQ 等外部联系方式',
+      '- 不承诺法律效力',
+      '- 不提"AI""机器人""自动回复"',
     ].join('\n')
 
     const DEFAULT_DELIVER_TEMPLATE = '{card}\n有效期 7 天，过期联系我补。'
@@ -494,7 +509,7 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function ServiceDialog({ service, skills, toolNames = [], onSave, onDelete, onClose, busy }) {
+    function ServiceDialog({ service, skills, toolNames = [], models = [], onSave, onDelete, onClose, busy }) {
       const fallback = {
         name: '闲鱼客服',
         system_prompt: DEFAULT_SERVICE_PROMPT,
@@ -513,9 +528,10 @@ window.__ModuleLoader__.load({
       const [autoDeliver, setAutoDeliver] = useState(draft.auto_deliver !== 0)
       const [enabled, setEnabled] = useState(draft.enabled !== 0)
       const [picked, setPicked] = useState(new Set(String(draft.skills || '').split(/[,，\s]+/).filter(Boolean)))
+      const toolName = (tool) => (typeof tool === 'string' ? tool : tool.name)
       const [toolPicked, setToolPicked] = useState(() => {
         const fromDraft = String(draft.tools || '').split(/[,，\s]+/).filter(Boolean)
-        return new Set(fromDraft.length ? fromDraft : toolNames)
+        return new Set(fromDraft.length ? fromDraft : toolNames.map(toolName))
       })
       const [query, setQuery] = useState('')
       const [saving, setSaving] = useState(false)
@@ -558,8 +574,11 @@ window.__ModuleLoader__.load({
                 h('input', { type: 'checkbox', checked: autoDeliver, onChange: (e) => setAutoDeliver(e.target.checked) }), '自动发货')),
             field('系统提示词（留空用内置客服）',
               h('textarea', { style: S.area, value: prompt, placeholder: '角色、议价底线、发货/退款规则…', onChange: (e) => setPrompt(e.target.value) })),
-            field('模型（可选，留空用 profile 默认）',
-              h('input', { style: S.input, value: model, placeholder: '例如 deepseek-chat', onChange: (e) => setModel(e.target.value) })),
+            field('模型（留空用 profile 默认）',
+              h('select', { style: S.input, value: model, onChange: (e) => setModel(e.target.value) },
+                h('option', { value: '' }, '默认（profile 模型）'),
+                models.map((m) => h('option', { key: `${m.provider}:${m.id}`, value: `${m.provider}:${m.id}` },
+                  `${m.name}（${m.provider}）`)))),
             field('发货文案模板（可选，留空直接发卡券原文）',
               h('textarea', { style: S.area, value: template, placeholder: '可用 {card} {order_no} {buyer_nick}', onChange: (e) => setTemplate(e.target.value) })),
             h('label', { style: S.label }, `技能（已选 ${picked.size} / 共 ${skills.length}）`),
@@ -583,16 +602,20 @@ window.__ModuleLoader__.load({
           h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' } },
             toolNames.length === 0
               ? h('div', { style: S.muted }, '没有可用工具')
-              : toolNames.map((n) => h('label', {
-                key: n,
-                style: {
-                  display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 8px',
-                  borderRadius: '6px', border: '1px solid rgba(127,127,127,.3)',
-                  background: toolPicked.has(n) ? 'rgba(15,157,110,.12)' : 'transparent',
+              : toolNames.map((tool) => {
+                const name = toolName(tool)
+                return h('label', {
+                  key: name,
+                  title: tool.description || name,
+                  style: {
+                    display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 8px',
+                    borderRadius: '6px', border: '1px solid rgba(127,127,127,.3)',
+                    background: toolPicked.has(name) ? 'rgba(15,157,110,.12)' : 'transparent',
+                  },
                 },
-              },
-                h('input', { type: 'checkbox', checked: toolPicked.has(n), onChange: () => toggleTool(n) }),
-                n))),
+                  h('input', { type: 'checkbox', checked: toolPicked.has(name), onChange: () => toggleTool(name) }),
+                  name)
+              })),
           h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },
             service ? h('button', {
               style: { ...S.btn, color: '#dc2626', marginRight: 'auto' },
@@ -801,6 +824,7 @@ window.__ModuleLoader__.load({
       const [settings, setSettings] = useState(null)
       const [skillList, setSkillList] = useState([])
       const [agentList, setAgentList] = useState([])
+      const [models, setModels] = useState([])
       const [shopItems, setShopItems] = useState([])
       const [chats, setChats] = useState([])
       const [activeChat, setActiveChat] = useState(null)
@@ -1101,9 +1125,14 @@ window.__ModuleLoader__.load({
         // 技能和 Agent 是本地扫描，只在挂载时读一次。
         void (async () => {
           try {
-            const [s, a] = await Promise.all([rpc({ op: 'skills' }), rpc({ op: 'agents' })])
+            const [s, a, m] = await Promise.all([
+              rpc({ op: 'skills' }),
+              rpc({ op: 'agents' }),
+              rpc({ op: 'models' }, 60000),
+            ])
             setSkillList(s || [])
             setAgentList(a || [])
+            setModels(m || [])
           } catch {
             // 扫描失败不影响其它面板
           }
@@ -1285,6 +1314,7 @@ window.__ModuleLoader__.load({
           service: serviceDialog.service,
           skills: skillList,
           toolNames: (settings && settings.tools) || [],
+          models,
           onSave: saveService,
           onDelete: removeService,
           onClose: () => setServiceDialog(null),

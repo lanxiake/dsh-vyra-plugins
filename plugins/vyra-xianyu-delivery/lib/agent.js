@@ -31,15 +31,18 @@ export function createDshAgent({ agents, sessionTitle, config = {}, logger = () 
     return raw === BUILTIN_AGENT ? '' : raw
   }
 
-  async function ask({ prompt, sessionKey, title = '' }) {
+  async function ask({ prompt, sessionKey, title = '', model = null }) {
     if (!agents?.create) throw new Error('DSH agents 服务不可用')
 
     const preset = currentPreset()
+    const route = model && model.provider && model.model
+      ? { provider: model.provider, model: model.model }
+      : null
     let reply = ''
     const handle = await agents.create({
       sessionId: `xianyu-${sessionKey || 'chat'}-${randomUUID()}`,
       meta: preset ? { origin: 'subagent', agentPreset: preset } : { origin: 'subagent' },
-      agentOptions: provider ? { provider, model } : undefined,
+      agentOptions: route ?? (provider ? { provider, model } : undefined),
       setup: (agentCtx) => {
         agentCtx.tools.register({
           name: REPLY_TOOL,

@@ -644,6 +644,27 @@ export function apply(ctx, config = {}) {
       case 'setItemService':
         store.setItemService(String(body.itemId || ''), Number(body.serviceId) || 0, account())
         return { ok: true }
+      case 'models': {
+        const llm = typeof ctx.get === 'function' ? ctx.get('llm') : undefined
+        if (!llm?.listProviders) return []
+        const out = []
+        for (const providerInfo of llm.listProviders()) {
+          try {
+            const models = await llm.listModels(providerInfo.id)
+            for (const model of models) {
+              out.push({
+                provider: providerInfo.id,
+                id: model.id,
+                name: model.name || model.id,
+                description: model.description || '',
+              })
+            }
+          } catch {
+            // 单个 provider 读不到就跳过
+          }
+        }
+        return out
+      }
       case 'settings':
         return {
           agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || '') || 'builtin',
@@ -651,7 +672,7 @@ export function apply(ctx, config = {}) {
           aiMode: String(cfg.ai?.mode || (dshAgent.available ? 'dsh' : 'api')),
           agentAvailable: dshAgent.available,
           builtin: dshAgent.builtin,
-          tools: xianyuTools.map((tool) => tool.name),
+          tools: xianyuTools.map((tool) => ({ name: tool.name, description: tool.description })),
         }
       case 'setSetting':
         store.setSetting(String(body.key || ''), String(body.value ?? ''))

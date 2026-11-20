@@ -150,7 +150,14 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
     const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId, item, service })
     const short = (value) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 10)
     const title = `[${service.name}] ${short(item?.title || itemId)}-${short(buyerNick || '买家')}`
-    const out = mode === 'dsh' ? await agent.ask({ prompt, sessionKey: cid, title }) : await apiReply(prompt)
+    // 客服可以单独指定模型，格式 provider:model。
+    const [routeProvider, ...routeModel] = String(service.model || '').split(':')
+    const modelChoice = routeProvider && routeModel.length
+      ? { provider: routeProvider, model: routeModel.join(':') }
+      : null
+    const out = mode === 'dsh'
+      ? await agent.ask({ prompt, sessionKey: cid, title, model: modelChoice })
+      : await apiReply(prompt)
     if (!out) return null
 
     cooldowns.set(cid, Date.now())
