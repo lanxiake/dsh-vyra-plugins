@@ -10,9 +10,9 @@ import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
 import {
-  ACTIONS, MAX_TEXT_CHARS, bodyBlocks, buildRequest, explainAuthFailure, menuLayout, menuHitTest,
-  panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection, reduceMouse, saneRect,
-  selectionProblem, systemPrompt, wrapLines,
+  ACTIONS, MAX_TEXT_CHARS, bodyBlocks, buildFollowUpRequest, buildRequest, explainAuthFailure,
+  menuLayout, menuHitTest, panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection,
+  reduceMouse, saneRect, selectionProblem, splitSuggestions, systemPrompt, wrapLines,
 } from '../core.js'
 
 test('saneRect accepts a real rectangle and rounds it', () => {
@@ -176,6 +176,27 @@ test('a fenced code block keeps its lines and loses the fence', () => {
 test('an empty answer still yields one block to measure', () => {
   const blocks = bodyBlocks('')
   assert.equal(blocks.length, 0, 'an empty answer has nothing to draw')
+})
+
+test('follow-up suggestions are split off the answer', () => {
+  const { answer, suggestions } = splitSuggestions('正文第一段。\n\n>> 追问一\n>> 追问二\n\n正文第二段。')
+  assert.equal(answer, '正文第一段。\n\n正文第二段。')
+  assert.deepEqual(suggestions, ['追问一', '追问二'])
+})
+
+test('suggestions stop at three, and a clean answer yields none', () => {
+  const four = ['>> a', '>> b', '>> c', '>> d'].join('\n')
+  assert.equal(splitSuggestions(four).suggestions.length, 3)
+  assert.deepEqual(splitSuggestions('只有正文。').suggestions, [])
+})
+
+test('a follow-up request carries the original text and the previous answer', () => {
+  const request = buildFollowUpRequest('原文内容', '之前的回答', '那是什么意思？')
+  assert.match(request.system, /追问/)
+  const text = request.messages[0].content[0].text
+  assert.match(text, /原文内容/)
+  assert.match(text, /之前的回答/)
+  assert.match(text, /那是什么意思/)
 })
 
 test('a 401 names the failure and the setting to fix', () => {

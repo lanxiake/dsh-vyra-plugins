@@ -10,7 +10,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse, wrapLines } from './core.js'
+import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse, splitSuggestions, wrapLines } from './core.js'
 
 function loadKoffi() {
   // The Host runs from an asar; koffi's native binary is shipped unpacked beside it. Resolve
@@ -188,6 +188,16 @@ const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() =>
     GetWindowThreadProcessId: u.func('uint32 __stdcall GetWindowThreadProcessId(void *h, _Out_ uint32 *pid)'),
     WindowFromPoint: u.func('void* __stdcall WindowFromPoint(POINT pt)'),
     GetDpiForWindow: u.func('uint32 __stdcall GetDpiForWindow(void *h)'),
+    // The follow-up field is a real EDIT control: a hand-drawn input would have to reimplement an
+    // IME, and typing Chinese is exactly what this field is for.
+    SetFocus: u.func('void* __stdcall SetFocus(void *h)'),
+    GetFocus: u.func('void* __stdcall GetFocus()'),
+    SetWindowLongPtrW: u.func('intptr_t __stdcall SetWindowLongPtrW(void *h, int index, intptr_t value)'),
+    CallWindowProcW: u.func('intptr_t __stdcall CallWindowProcW(void *proc, void *h, uint32 m, uintptr_t w, intptr_t l)'),
+    SendMessageW: u.func('intptr_t __stdcall SendMessageW(void *h, uint32 m, uintptr_t w, intptr_t l)'),
+    SendMessageTextW: u.func('intptr_t __stdcall SendMessageW(void *h, uint32 m, uintptr_t w, str16 text)'),
+    SendMessageBufW: u.func('intptr_t __stdcall SendMessageW(void *h, uint32 m, uintptr_t w, void *buf)'),
+    SendMessageFontW: u.func('intptr_t __stdcall SendMessageW(void *h, uint32 m, void *font, intptr_t l)'),
     OpenClipboard: u.func('bool __stdcall OpenClipboard(void *owner)'),
     CloseClipboard: u.func('bool __stdcall CloseClipboard()'),
     EmptyClipboard: u.func('bool __stdcall EmptyClipboard()'),
@@ -207,6 +217,7 @@ const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() =>
     MoveToEx: g.func('bool __stdcall MoveToEx(void *hdc, int x, int y, void *prev)'),
     LineTo: g.func('bool __stdcall LineTo(void *hdc, int x, int y)'),
     SetTextColor: g.func('uint32 __stdcall SetTextColor(void *hdc, uint32 color)'),
+    SetBkColor: g.func('uint32 __stdcall SetBkColor(void *hdc, uint32 color)'),
     SetBkMode: g.func('int __stdcall SetBkMode(void *hdc, int mode)'),
     CreateFontW: g.func('void* __stdcall CreateFontW(int h, int w, int esc, int orient, int weight, uint32 italic, uint32 underline, uint32 strike, uint32 charset, uint32 prec, uint32 clip, uint32 quality, uint32 pitch, str16 face)'),
     CreateRoundRectRgn: g.func('void* __stdcall CreateRoundRectRgn(int l, int t, int r, int b, int ew, int eh)'),
@@ -240,6 +251,11 @@ const { u, g, k, advapi, F, POINT, RECT, MONITORINFO, KEYBDINPUT, MOUSEINPUT, HA
 const WM_DESTROY = 0x0002
 const WM_PAINT = 0x000F
 const WM_CLOSE = 0x0010
+const WM_ACTIVATE = 0x0006
+const WM_SETFOCUS = 0x0007
+const WM_COMMAND = 0x0111
+const WM_CTLCOLOREDIT = 0x0133
+const WM_KEYDOWN = 0x0100
 const WM_ERASEBKGND = 0x0014
 const WM_SETCURSOR = 0x0020
 const WM_MOUSEACTIVATE = 0x0021
@@ -253,6 +269,8 @@ const WM_MBUTTONDOWN = 0x0207
 const MA_NOACTIVATE = 3
 
 const WS_POPUP = 0x80000000
+const WS_CHILD = 0x40000000
+const WS_VISIBLE = 0x10000000
 const WS_EX_TOPMOST = 0x00000008
 const WS_EX_TOOLWINDOW = 0x00000080
 const WS_EX_NOACTIVATE = 0x08000000
@@ -273,9 +291,23 @@ const DT_NOPREFIX = 0x0800
 
 const TRANSPARENT = 1
 const SRCCOPY = 0x00CC0020
+const CS_DROPSHADOW = 0x00020000
+const ES_AUTOHSCROLL = 0x0080
+const GWLP_WNDPROC = -4
+const WM_GETTEXT = 0x000D
+const WM_SETTEXT = 0x000C
+const WM_SETFONT = 0x0030
+const EM_SETCUEBANNER = 0x1501
+const VK_RETURN = 0x0D
+const VK_ESCAPE = 0x1B
 const IDC_HAND = 32649
 const IDC_ARROW = 32512
 const IDC_IBEAM = 32513
+
+/** Targets offered by the card's language row; the settings page offers the same list. */
+const TARGET_LANGUAGES = ['简体中文', '繁體中文', 'English', '日本語', '한국어', 'Français', 'Deutsch', 'Español', 'Русский']
+
+const MA_ACTIVATE = 1
 
 const VK_CONTROL = 0x11
 const VK_MENU = 0x12
@@ -314,6 +346,9 @@ const THEMES = {
     danger: rgb(0xff, 0x7b, 0x72),
     // Solid fill: GDI has no alpha here, so the selection tint is chosen to sit under light text.
     selection: rgb(0x2c, 0x45, 0x66),
+    chip: rgb(0x2b, 0x30, 0x37),
+    input: rgb(0x1b, 0x1f, 0x24),
+    onAccent: rgb(0xff, 0xff, 0xff),
   },
   light: {
     bg: rgb(0xff, 0xff, 0xff),
@@ -325,6 +360,9 @@ const THEMES = {
     accent: rgb(0x1a, 0x73, 0xe8),
     danger: rgb(0xd1, 0x24, 0x2f),
     selection: rgb(0xcc, 0xdf, 0xff),
+    chip: rgb(0xf2, 0xf4, 0xf7),
+    input: rgb(0xf5, 0xf6, 0xf8),
+    onAccent: rgb(0xff, 0xff, 0xff),
   },
 }
 
@@ -595,6 +633,18 @@ export function createOverlay(handlers = {}) {
     contentH: 0,
     viewH: 0,
     hoverPanel: 0,
+    // Card chrome (Doubao-shaped): what produced this answer, the follow-ups it suggests, and
+    // whether the card is pinned against outside clicks.
+    action: null,
+    source: '',
+    suggestions: [],
+    pinned: false,
+    langOpen: false,
+    targetLanguage: '',
+    edit: null,
+    editProc: null,
+    editBrush: null,
+    focusInput: false,
     // Body height the user asked for with 展开, in pixels; null means "fit the default".
     userBody: null,
     work: null,
@@ -720,34 +770,97 @@ export function createOverlay(handlers = {}) {
     const scale = state.dpi
     return {
       scale,
-      width: Math.round(420 * scale),
-      headerH: Math.round(36 * scale),
-      footerH: Math.round(42 * scale),
-      pad: Math.round(14 * scale),
-      // 展开 replaces the default body height with one that uses the screen.
-      maxBody: state.userBody ?? Math.round(320 * scale),
+      width: Math.round(440 * scale),
+      headerH: Math.round(42 * scale),
+      pad: Math.round(16 * scale),
       lineGap: Math.round(5 * scale),
-      closeW: Math.round(26 * scale),
-      copyW: Math.round(60 * scale),
-      expandW: Math.round(52 * scale),
       indent: Math.round(22 * scale),
+      langH: Math.round(40 * scale),
+      langW: Math.round(132 * scale),
+      actionRowH: Math.round(34 * scale),
+      chipH: Math.round(32 * scale),
+      chipGap: Math.round(6 * scale),
+      inputH: Math.round(38 * scale),
+      sendW: Math.round(34 * scale),
+      iconSize: Math.round(26 * scale),
+      gap: Math.round(8 * scale),
+      radius: Math.round(12 * scale),
     }
   }
 
-  /** Footer control rectangles, shared by the paint pass and the click router. */
-  function panelChrome() {
+  /** True when the card shows the language row (translate is the only action with a target). */
+  function isTranslate() {
+    return state.action !== null && state.action !== undefined && state.action.id === 'translate'
+  }
+
+  /** Everything above and below the scrolling body, in pixels. */
+  function chromeHeight() {
     const m = panelMetrics()
-    const footTop = m.headerH + state.viewH
-    const buttonH = Math.round(26 * m.scale)
-    const top = footTop + Math.round((m.footerH - buttonH) / 2)
-    const copy = { left: m.width - m.pad - m.copyW, top, right: m.width - m.pad, bottom: top + buttonH }
-    const expand = { left: copy.left - 8 - m.expandW, top, right: copy.left - 8, bottom: top + buttonH }
-    return { m, footTop, copy, expand }
+    let h = m.headerH + m.actionRowH + m.gap + m.inputH + m.pad
+    if (isTranslate()) h += m.langH
+    if (state.suggestions.length > 0) h += state.suggestions.length * (m.chipH + m.chipGap) + m.chipGap
+    return h
+  }
+
+  /**
+   * Every clickable rectangle in the card, computed once per paint and per click.
+   *
+   * The card is laid out from the top: header, language row (translate only), body, suggestion
+   * chips, action row, input row. Sharing one geometry function is what keeps a hover highlight
+   * and the click it belongs to in the same place.
+   */
+  function cardRects() {
+    const m = panelMetrics()
+    const s = state.dpi
+    const headerTop = 0
+    const avatarSize = Math.round(24 * s)
+    const avatar = { left: m.pad, top: headerTop + Math.round((m.headerH - avatarSize) / 2), size: avatarSize }
+    const pin = { left: m.width - m.pad - m.iconSize, top: headerTop + Math.round((m.headerH - m.iconSize) / 2), right: m.width - m.pad, bottom: 0 }
+    pin.bottom = pin.top + m.iconSize
+    const close = { left: pin.left - m.iconSize - Math.round(4 * s), top: pin.top, right: pin.left - Math.round(4 * s), bottom: pin.bottom }
+    const langTop = m.headerH
+    const lang = isTranslate() ? {
+      source: { left: m.pad, top: langTop + Math.round(4 * s), right: m.pad + m.langW, bottom: langTop + Math.round(4 * s) + Math.round(28 * s) },
+      arrow: { left: m.pad + m.langW + Math.round(8 * s), right: m.pad + m.langW + Math.round(32 * s) },
+      target: { left: m.pad + m.langW + Math.round(40 * s), top: langTop + Math.round(4 * s), right: m.pad + m.langW * 2 + Math.round(40 * s), bottom: langTop + Math.round(4 * s) + Math.round(28 * s) },
+    } : null
+    if (lang) lang.target.right = Math.min(lang.target.right, m.width - m.pad)
+    const bodyTop = langTop + (isTranslate() ? m.langH : 0)
+    const chipsTop = bodyTop + state.viewH
+    const chips = state.suggestions.map((_, i) => ({
+      left: m.pad,
+      top: chipsTop + i * (m.chipH + m.chipGap),
+      right: m.width - m.pad,
+      bottom: chipsTop + i * (m.chipH + m.chipGap) + m.chipH,
+    }))
+    const chipsH = state.suggestions.length > 0 ? state.suggestions.length * (m.chipH + m.chipGap) + m.chipGap : 0
+    const actionsTop = chipsTop + chipsH
+    const iconTop = actionsTop + Math.round((m.actionRowH - m.iconSize) / 2)
+    const regen = { left: m.width - m.pad - m.iconSize, top: iconTop, right: m.width - m.pad, bottom: iconTop + m.iconSize }
+    const copy = { left: regen.left - m.iconSize - Math.round(4 * s), top: iconTop, right: regen.left - Math.round(4 * s), bottom: iconTop + m.iconSize }
+    const inputTop = actionsTop + m.actionRowH + m.gap
+    const send = { left: m.width - m.pad - m.sendW, top: inputTop, right: m.width - m.pad, bottom: inputTop + m.inputH }
+    const input = { left: m.pad, top: inputTop, right: send.left - Math.round(6 * s), bottom: send.bottom }
+    const height = input.bottom + m.pad
+    return { m, avatar, pin, close, lang, bodyTop, chips, actionsTop, copy, regen, input, send, height, drop: languageDropdown(m, langTop) }
+  }
+
+  /** The open language list, or null. Drawn over the body, so it must be hit-tested first. */
+  function languageDropdown(m, langTop) {
+    if (!state.langOpen) return null
+    const itemH = Math.round(28 * m.scale)
+    const top = langTop + m.langH
+    return TARGET_LANGUAGES.map((language, i) => ({
+      label: language,
+      left: m.pad,
+      top: top + i * itemH,
+      right: m.pad + m.langW * 2,
+      bottom: top + (i + 1) * itemH,
+    }))
   }
 
   function panelHeight() {
-    const m = panelMetrics()
-    return m.headerH + state.viewH + m.footerH
+    return cardRects().height
   }
 
   /** Flatten the content blocks into draw ops: one entry per line, with measured heights. */
@@ -764,6 +877,15 @@ export function createOverlay(handlers = {}) {
       return h
     }
     let y = 0
+    // The selected text the answer is about, quoted at the top the way Doubao does it: a bar and
+    // grey text, three lines at most. It scrolls with the answer, not above it.
+    if (state.source) {
+      const quoteLines = wrapLines(state.source.replace(/\s+/g, ' '), width - m.indent, (part) => measureRun(hdc, part, state.fontText))
+      const shown = quoteLines.slice(0, 3)
+      const lh = lineHeight(hdc, state.fontText)
+      ops.push({ kind: 'quote', text: state.source, font: state.fontText, color: THEME.dim, y, h: shown.length * lh, lineH: lh, lines: shown, indent: m.indent })
+      y += shown.length * lh + m.lineGap * 2
+    }
     for (let i = 0; i < state.blocks.length; i++) {
       const block = state.blocks[i]
       const extra = { blockIndex: i }
@@ -783,8 +905,13 @@ export function createOverlay(handlers = {}) {
       }
     }
     state.layoutBlocks = ops
-    state.contentH = Math.max(Math.round(m.maxBody * 0.35), y)
-    state.viewH = Math.min(state.contentH, m.maxBody)
+    state.contentH = Math.max(1, y)
+    // The card hugs its answer and only starts scrolling when the answer would take more than
+    // 60% of the screen. That is Doubao's behaviour and it removed the need for a 展开 button:
+    // a long answer is simply shown.
+    const workH = state.work ? state.work.bottom - state.work.top : 1080
+    const cap = Math.max(Math.round(120 * m.scale), Math.round(workH * 0.6) - chromeHeight())
+    state.viewH = Math.min(state.contentH, cap)
     // Streaming sets `scroll` to MAX_SAFE_INTEGER to follow the tail, and only a wheel event ever
     // clamped it — so every line was drawn at `-1.7e308` and skipped as "above the viewport".
     // That is the blank panel: the answer was there, off-screen, from the first chunk on.
@@ -831,14 +958,14 @@ export function createOverlay(handlers = {}) {
 
   /** Map a client-area point to a character position, or null when it is not over text. */
   function hitTestText(x, y, hdc) {
-    const m = panelMetrics()
-    const rel = y - m.headerH + state.scroll
+    const r = cardRects()
+    const rel = y - r.bodyTop + state.scroll
     for (const op of state.layoutBlocks) {
       if (op.blockIndex === undefined) continue
       if (rel < op.y || rel >= op.y + op.h) continue
       const index = Math.max(0, Math.min(op.lines.length - 1, Math.floor((rel - op.y) / op.lineH)))
       const line = op.lines[index]
-      const target = x - m.pad
+      const target = x - (r.m.pad + op.indent)
       // Longest prefix whose width stays left of the click.
       let lo = 0
       let hi = line.end - line.start
@@ -857,34 +984,97 @@ export function createOverlay(handlers = {}) {
     return null
   }
 
-  function drawPanel(hdc) {
-    const m = panelMetrics()
-    const height = panelHeight()
-    roundRect(hdc, { left: 0, top: 0, right: m.width, bottom: height }, THEME.bg, THEME.border, Math.round(10 * m.scale))
+  /** Read what the follow-up field holds. */
+  function editText() {
+    if (!state.edit) return ''
+    const buffer = Buffer.alloc(4096)
+    const length = Number(F.SendMessageBufW(state.edit, WM_GETTEXT, 2048, buffer))
+    return length > 0 ? buffer.toString('ucs2', 0, length * 2).trim() : ''
+  }
 
+  /** Send the typed question, if any, and clear the field. */
+  function submitInput() {
+    const text = editText()
+    if (!text) return
+    F.SendMessageTextW(state.edit, WM_SETTEXT, 0, '')
+    if (handlers.onPanelFollowUp) handlers.onPanelFollowUp(text)
+  }
+
+  /** Keep the EDIT child sitting in the input row as the card grows and shrinks. */
+  function positionEdit() {
+    if (!state.edit || state.mode !== 'panel') return
+    const r = cardRects()
+    const s = state.dpi
+    const insetX = Math.round(8 * s)
+    const insetY = Math.round(6 * s)
+    F.SetWindowPos(state.edit, null,
+      r.input.left + insetX, r.input.top + insetY,
+      Math.max(20, r.input.right - r.input.left - insetX * 2),
+      Math.max(14, r.input.bottom - r.input.top - insetY * 2),
+      SWP_NOZORDER | SWP_NOACTIVATE)
+  }
+
+  /** One glyph from the icon font, centred in `rect`. */
+  function drawIcon(hdc, code, rect, color) {
+    F.SelectObject(hdc, state.fontIcon)
+    F.SetTextColor(hdc, color)
+    F.DrawTextW(hdc, String.fromCharCode(code), -1, rect,
+      DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
+  }
+
+  /** A rounded pill with centred, ellipsized text — the language and chip shape. */
+  function pill(hdc, rect, text, fillColor, borderColor, color) {
+    roundRect(hdc, rect, fillColor, borderColor, Math.round((rect.bottom - rect.top) / 2))
+    const inset = Math.round(10 * state.dpi)
+    F.SelectObject(hdc, state.fontUI)
+    F.SetTextColor(hdc, color)
+    F.DrawTextW(hdc, text, -1,
+      { left: rect.left + inset, top: rect.top, right: rect.right - inset, bottom: rect.bottom },
+      DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
+  }
+
+  function drawPanel(hdc) {
+    const r = cardRects()
+    const m = r.m
+    const s = m.scale
+    roundRect(hdc, { left: 0, top: 0, right: m.width, bottom: r.height }, THEME.bg, THEME.border, m.radius)
+
+    // --- header: avatar, title, pin, close ---------------------------------------------------
+    const avatar = { left: r.avatar.left, top: r.avatar.top, right: r.avatar.left + r.avatar.size, bottom: r.avatar.top + r.avatar.size }
+    roundRect(hdc, avatar, THEME.accent, THEME.accent, Math.round(r.avatar.size / 2))
+    drawIcon(hdc, (state.action && state.action.icon) || 0xE72C, avatar, THEME.onAccent)
     F.SelectObject(hdc, state.fontBold)
     F.SetTextColor(hdc, THEME.text)
     F.DrawTextW(hdc, state.title, -1,
-      { left: m.pad, top: 0, right: m.width - m.pad - m.closeW, bottom: m.headerH },
+      { left: avatar.right + Math.round(10 * s), top: 0, right: r.close.left - Math.round(6 * s), bottom: m.headerH },
       DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
-    F.SelectObject(hdc, state.fontIcon)
-    F.SetTextColor(hdc, state.hoverPanel === -1 ? THEME.text : THEME.dim)
-    F.DrawTextW(hdc, String.fromCharCode(0xE711), -1, // ChromeClose
-      { left: m.width - m.pad - m.closeW, top: 0, right: m.width - m.pad, bottom: m.headerH },
-      DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
-    hline(hdc, m.pad, m.headerH, m.width - m.pad, THEME.separator)
+    drawIcon(hdc, 0xE840, r.pin, state.pinned ? THEME.accent : state.hoverPanel === 'pin' ? THEME.text : THEME.dim)
+    drawIcon(hdc, 0xE711, r.close, state.hoverPanel === 'close' ? THEME.text : THEME.dim)
 
-    // Body: clipped and scrolled, so a long answer scrolls instead of growing the window.
-    const bodyTop = m.headerH
-    const gutter = Math.round(6 * m.scale)
+    // --- language row (translate only) --------------------------------------------------------
+    if (r.lang) {
+      pill(hdc, r.lang.source, '自动检测', THEME.chip, THEME.chip, THEME.dim)
+      F.SelectObject(hdc, state.fontUI)
+      F.SetTextColor(hdc, THEME.dim)
+      F.DrawTextW(hdc, '→', -1,
+        { left: r.lang.arrow.left, top: r.lang.source.top, right: r.lang.arrow.right, bottom: r.lang.source.bottom },
+        DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
+      pill(hdc, r.lang.target, `${state.targetLanguage || '简体中文'}  ▾`, THEME.chip, THEME.border, THEME.text)
+    }
+
+    // --- body: quote, then the markdown blocks -----------------------------------------------
+    const gutter = Math.round(6 * s)
     const bodyRight = m.width - m.pad - gutter
     const clip = g.func('int __stdcall IntersectClipRect(void *hdc, int l, int t, int r, int b)')
-    clip(hdc, m.pad, bodyTop, m.width - m.pad, bodyTop + state.viewH)
+    clip(hdc, m.pad, r.bodyTop, m.width - m.pad, r.bodyTop + state.viewH)
     for (const op of state.layoutBlocks) {
-      const top = bodyTop + op.y - state.scroll
-      if (top > bodyTop + state.viewH || top + op.h < bodyTop) continue
+      const top = r.bodyTop + op.y - state.scroll
+      if (top > r.bodyTop + state.viewH || top + op.h < r.bodyTop) continue
       const slice = selectedSlice(op)
       const textLeft = m.pad + op.indent
+      if (op.kind === 'quote') {
+        fill(hdc, { left: m.pad, top, right: m.pad + Math.round(2 * s), bottom: top + op.h }, THEME.border)
+      }
       if (op.prefix) {
         F.SelectObject(hdc, op.font)
         F.SetTextColor(hdc, op.color)
@@ -918,32 +1108,60 @@ export function createOverlay(handlers = {}) {
 
     // A visible scrollbar is also the only hint that a long answer continues below the fold.
     if (state.contentH > state.viewH) {
-      const trackW = Math.round(4 * m.scale)
-      const trackX = m.width - m.pad - gutter + Math.round(2 * m.scale)
-      const trackTop = bodyTop + Math.round(4 * m.scale)
-      const trackH = state.viewH - Math.round(8 * m.scale)
+      const trackW = Math.round(4 * s)
+      const trackX = m.width - m.pad - gutter + Math.round(2 * s)
+      const trackTop = r.bodyTop + Math.round(4 * s)
+      const trackH = state.viewH - Math.round(8 * s)
       const maxScroll = state.contentH - state.viewH
-      const thumbH = Math.max(Math.round(18 * m.scale), Math.round(trackH * state.viewH / state.contentH))
+      const thumbH = Math.max(Math.round(18 * s), Math.round(trackH * state.viewH / state.contentH))
       const thumbTop = trackTop + Math.round((trackH - thumbH) * (maxScroll > 0 ? state.scroll / maxScroll : 0))
       fill(hdc, { left: trackX, top: trackTop, right: trackX + trackW, bottom: trackTop + trackH }, THEME.separator)
       roundRect(hdc, { left: trackX, top: thumbTop, right: trackX + trackW, bottom: thumbTop + thumbH },
-        THEME.dim, THEME.dim, Math.round(2 * m.scale))
+        THEME.dim, THEME.dim, Math.round(2 * s))
     }
 
-    const { footTop, copy: copyRect, expand: expandRect } = panelChrome()
+    // --- follow-up suggestions ----------------------------------------------------------------
+    state.suggestions.forEach((text, i) => {
+      const chip = r.chips[i]
+      roundRect(hdc, chip, state.hoverPanel === `chip${i}` ? THEME.hover : THEME.chip, THEME.border, Math.round(8 * s))
+      F.SelectObject(hdc, state.fontUI)
+      F.SetTextColor(hdc, THEME.text)
+      F.DrawTextW(hdc, text, -1,
+        { left: chip.left + Math.round(12 * s), top: chip.top, right: chip.right - Math.round(28 * s), bottom: chip.bottom },
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
+      drawIcon(hdc, 0xE72A,
+        { left: chip.right - Math.round(28 * s), top: chip.top, right: chip.right - Math.round(10 * s), bottom: chip.bottom }, THEME.dim)
+    })
+
+    // --- action row: status on the left, icons on the right -----------------------------------
     F.SelectObject(hdc, state.fontUI)
     F.SetTextColor(hdc, state.statusKind === 'error' ? THEME.danger : THEME.dim)
     F.DrawTextW(hdc, state.status, -1,
-      { left: m.pad, top: footTop, right: expandRect.left - 8, bottom: footTop + m.footerH },
+      { left: m.pad, top: r.actionsTop, right: r.copy.left - Math.round(8 * s), bottom: r.actionsTop + m.actionRowH },
       DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
-    const radius = Math.round(6 * m.scale)
-    roundRect(hdc, expandRect, state.hoverPanel === 2 ? THEME.hover : THEME.bg, THEME.border, radius)
-    F.SetTextColor(hdc, state.hoverPanel === 2 ? THEME.text : THEME.dim)
-    F.DrawTextW(hdc, state.userBody === null ? '展开' : '收起', -1, expandRect,
-      DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
-    roundRect(hdc, copyRect, state.hoverPanel === 1 ? THEME.hover : THEME.bg, THEME.border, radius)
-    F.SetTextColor(hdc, state.hoverPanel === 1 ? THEME.text : THEME.dim)
-    F.DrawTextW(hdc, '复制', -1, copyRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
+    drawIcon(hdc, 0xE8C8, r.copy, state.hoverPanel === 'copy' ? THEME.text : THEME.dim)
+    drawIcon(hdc, 0xE72C, r.regen, state.hoverPanel === 'regen' ? THEME.text : THEME.dim)
+
+    // --- input row: the EDIT child paints itself; only the send button is ours -----------------
+    roundRect(hdc, { left: r.input.left, top: r.input.top, right: r.input.right, bottom: r.input.bottom },
+      THEME.input, THEME.border, Math.round(8 * s))
+    roundRect(hdc, r.send, state.hoverPanel === 'send' ? THEME.accent : THEME.chip,
+      state.hoverPanel === 'send' ? THEME.accent : THEME.border, Math.round((r.send.bottom - r.send.top) / 2))
+    drawIcon(hdc, 0xE724, r.send, state.hoverPanel === 'send' ? THEME.onAccent : THEME.text)
+
+    // --- open language list, drawn last so it covers the body ---------------------------------
+    if (r.drop) {
+      const box = { left: r.drop[0].left, top: r.drop[0].top, right: r.drop[0].right, bottom: r.drop[r.drop.length - 1].bottom }
+      roundRect(hdc, box, THEME.bg, THEME.border, Math.round(8 * s))
+      r.drop.forEach((item, i) => {
+        if (state.hoverPanel === `lang${i}`) fill(hdc, item, THEME.hover)
+        F.SelectObject(hdc, state.fontUI)
+        F.SetTextColor(hdc, item.label === state.targetLanguage ? THEME.accent : THEME.text)
+        F.DrawTextW(hdc, item.label, -1,
+          { left: item.left + Math.round(12 * s), top: item.top, right: item.right - Math.round(8 * s), bottom: item.bottom },
+          DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
+      })
+    }
   }
 
   function paint(hwnd) {
@@ -1008,12 +1226,21 @@ export function createOverlay(handlers = {}) {
 
   /** Which part of the panel a client-area point falls on, for hover and click routing. */
   function panelZone(x, y) {
-    const { m, copy, expand } = panelChrome()
-    const inside = (rect) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom
-    if (inside(copy)) return 1
-    if (inside(expand)) return 2
-    if (y < m.headerH && x >= m.width - m.pad - m.closeW) return -1
-    return 0
+    const r = cardRects()
+    const inside = (rect) => rect && x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom
+    // The open language list is drawn on top of the body, so it wins the hit test.
+    if (r.drop) {
+      for (let i = 0; i < r.drop.length; i++) if (inside(r.drop[i])) return `lang${i}`
+    }
+    if (inside(r.close)) return 'close'
+    if (inside(r.pin)) return 'pin'
+    if (r.lang && inside(r.lang.target)) return 'lang'
+    for (let i = 0; i < r.chips.length; i++) if (inside(r.chips[i])) return `chip${i}`
+    if (inside(r.copy)) return 'copy'
+    if (inside(r.regen)) return 'regen'
+    if (inside(r.send)) return 'send'
+    if (inside(r.input)) return 'input'
+    return null
   }
 
   function ensureWindow() {
@@ -1025,16 +1252,47 @@ export function createOverlay(handlers = {}) {
       const x = lParam & 0xffff
       const y = (lParam >> 16) & 0xffff
       switch (msg) {
-        case WM_MOUSEACTIVATE:
-          return MA_NOACTIVATE // never take focus away from the app being read
+        case WM_MOUSEACTIVATE: {
+          // A click on the follow-up field is a request to type: only that one activates the card
+          // and takes focus from the application being read. Everything else leaves focus alone.
+          if (state.mode !== 'panel') return MA_NOACTIVATE
+          const pt = {}
+          F.GetCursorPos(pt)
+          const rect = {}
+          if (!F.GetWindowRect(hwnd, rect)) return MA_NOACTIVATE
+          const r = cardRects()
+          const cx = pt.x - rect.left
+          const cy = pt.y - rect.top
+          const overInput = cy >= r.input.top - 4 && cy < r.input.bottom + 4 && cx >= r.input.left && cx < r.send.right
+          if (!overInput) return MA_NOACTIVATE
+          state.focusInput = true
+          return MA_ACTIVATE
+        }
+        case WM_ACTIVATE: {
+          const active = (wParam & 0xffff) !== 0
+          if (active && state.focusInput && state.edit) {
+            state.focusInput = false
+            F.SetFocus(state.edit)
+          }
+          return 0
+        }
+        case WM_SETFOCUS:
+          if (state.edit) F.SetFocus(state.edit)
+          return 0
+        case WM_CTLCOLOREDIT: {
+          // The EDIT child draws itself; its colours come from here.
+          F.SetTextColor(wParam, THEME.text)
+          F.SetBkColor(wParam, THEME.input)
+          if (!state.editBrush) state.editBrush = F.CreateSolidBrush(THEME.input)
+          return Number(koffi.address(state.editBrush))
+        }
         case WM_ERASEBKGND:
           return 1 // fully repainted in WM_PAINT
         case WM_SETCURSOR: {
           // Always set a cursor inside the popup. Returning without setting one lets the window
           // inherit whatever the window underneath last used, which can leave no cursor at all
           // over a layered window.
-          const over = state.mode === 'menu' ? state.hover >= 0 : state.hoverPanel > 0
-          F.SetCursor(over ? HAND_CURSOR : ARROW_CURSOR)
+          F.SetCursor(ARROW_CURSOR)
           return 1
         }
         case WM_PAINT:
@@ -1063,10 +1321,10 @@ export function createOverlay(handlers = {}) {
             const zone = panelZone(x, y)
             if (zone !== state.hoverPanel) {
               state.hoverPanel = zone
-              F.SetCursor(zone >= 100 ? HAND_CURSOR : ARROW_CURSOR)
               F.InvalidateRect(hwnd, null, false)
             }
-            F.SetCursor(zone >= 100 ? HAND_CURSOR : hitTestText(x, y, state.measureDC) ? TEXT_CURSOR : ARROW_CURSOR)
+            const overControl = zone !== null && zone !== 'input'
+            F.SetCursor(overControl ? HAND_CURSOR : hitTestText(x, y, state.measureDC) ? TEXT_CURSOR : ARROW_CURSOR)
           }
           return 0
         }
@@ -1075,22 +1333,34 @@ export function createOverlay(handlers = {}) {
             const idx = menuHitTest(state.layout, x, y)
             if (idx >= 0 && handlers.onAction) handlers.onAction(state.actions[idx].id, state.anchor)
           } else {
-            const zone = panelZone(x, y)
-            if (zone === 1) { if (handlers.onPanelCopy) handlers.onPanelCopy() }
-            else if (zone === 2) {
-              // 展开 uses the screen instead of the default body height; 收起 goes back to it.
-              const m = panelMetrics()
-              if (state.userBody === null) {
-                const work = state.work ?? workAreaAt(0, 0)
-                const room = work.bottom - work.top - m.headerH - m.footerH - Math.round(40 * state.dpi)
-                state.userBody = Math.max(Math.round(200 * state.dpi), room)
-              } else {
-                state.userBody = null
-              }
-              state.textDirty = true
+            const z = panelZone(x, y)
+            // A click anywhere else closes the open language list first.
+            if (state.langOpen && z !== 'lang' && !(typeof z === 'string' && z.startsWith('lang'))) {
+              state.langOpen = false
               F.InvalidateRect(hwnd, null, false)
             }
-            else if (zone === -1) { if (handlers.onPanelClose) handlers.onPanelClose() }
+            if (z === 'close') { if (handlers.onPanelClose) handlers.onPanelClose() }
+            else if (z === 'pin') {
+              state.pinned = !state.pinned
+              F.InvalidateRect(hwnd, null, false)
+            }
+            else if (z === 'copy') { if (handlers.onPanelCopy) handlers.onPanelCopy() }
+            else if (z === 'regen') { if (handlers.onPanelRegenerate) handlers.onPanelRegenerate() }
+            else if (z === 'send') { submitInput() }
+            else if (z === 'lang') {
+              state.langOpen = !state.langOpen
+              F.InvalidateRect(hwnd, null, false)
+            }
+            else if (typeof z === 'string' && z.startsWith('lang')) {
+              const language = TARGET_LANGUAGES[Number(z.slice(4))]
+              state.langOpen = false
+              F.InvalidateRect(hwnd, null, false)
+              if (language && handlers.onTargetLanguage) handlers.onTargetLanguage(language)
+            }
+            else if (typeof z === 'string' && z.startsWith('chip')) {
+              const question = state.suggestions[Number(z.slice(4))]
+              if (question && handlers.onPanelFollowUp) handlers.onPanelFollowUp(question)
+            }
             else {
               // Start a selection. A press with no drag ends as a plain click, which clears it.
               const hit = hitTestText(x, y, state.measureDC)
@@ -1141,13 +1411,16 @@ export function createOverlay(handlers = {}) {
     }, koffi.pointer(WNDPROC))
 
     F.RegisterClassExW({
-      cbSize: koffi.sizeof(WNDCLASSEXW), style: 0, lpfnWndProc: proc, cbClsExtra: 0, cbWndExtra: 0,
+      cbSize: koffi.sizeof(WNDCLASSEXW), style: CS_DROPSHADOW, lpfnWndProc: proc, cbClsExtra: 0, cbWndExtra: 0,
       hInstance: hInst, hIcon: null, hCursor: ARROW_CURSOR, hbrBackground: null,
       lpszMenuName: null, lpszClassName: className, hIconSm: null,
     })
 
+    // No WS_EX_NOACTIVATE any more: the follow-up field needs keyboard focus, and a NOACTIVATE
+    // window can never take it. Focus is still protected by WM_MOUSEACTIVATE, which answers
+    // MA_NOACTIVATE for everything except a click on the input row.
     state.hwnd = F.CreateWindowExW(
-      WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+      WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
       className, 'DSH', WS_POPUP,
       0, 0, 10, 10, null, null, hInst, null,
     )
@@ -1157,14 +1430,57 @@ export function createOverlay(handlers = {}) {
     // One DC kept for measuring text: hit-testing needs a font-aware width on every mouse move,
     // and creating a compatible DC per event would cost more than the measurement itself.
     state.measureDC = F.CreateCompatibleDC(null)
+    createFollowUpField(hInst)
     return state.hwnd
+  }
+
+  /**
+   * The follow-up input: a real EDIT control, because typing Chinese means using an IME and a
+   * hand-drawn field would have to reimplement one.
+   */
+  function createFollowUpField(hInst) {
+    state.edit = F.CreateWindowExW(
+      0, 'EDIT', '',
+      WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+      0, 0, 10, 10, state.hwnd, null, hInst, null,
+    )
+    if (!state.edit) {
+      ctxWarn('追问输入框创建失败，卡片仍然可用')
+      return
+    }
+    F.SendMessageFontW(state.edit, WM_SETFONT, state.fontUI, 1)
+    F.SendMessageTextW(state.edit, EM_SETCUEBANNER, 1, '继续提问')
+    let previous = null
+    const proc = koffi.register((h, msg, wParam, lParam) => {
+      if (msg === WM_KEYDOWN) {
+        if (wParam === VK_RETURN) { submitInput(); return 0 }
+        if (wParam === VK_ESCAPE) { if (handlers.onDismiss) handlers.onDismiss(); return 0 }
+      }
+      return previous ? F.CallWindowProcW(previous, h, msg, wParam, lParam) : 0
+    }, koffi.pointer(WNDPROC))
+    previous = F.SetWindowLongPtrW(state.edit, GWLP_WNDPROC, proc)
+  }
+
+  /**
+   * Clip the window to a rounded rectangle.
+   *
+   * Must be re-applied whenever the card is resized: the region is what windows are actually
+   * clipped to, so a window that grows without it keeps its old outline and the new rows are
+   * never composited.
+   */
+  function applyRoundedRegion(hwnd, width, height, radius) {
+    F.SetWindowRgn(hwnd, F.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2), true)
   }
 
   function showAt(width, height, x, y) {
     const hwnd = ensureWindow()
-    refreshTheme() // the user may have switched theme since the last show
-    const radius = Math.round(9 * state.dpi)
-    F.SetWindowRgn(hwnd, F.CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2), true)
+    // The user may have switched theme since the last show; the EDIT's brush is themed too.
+    if (refreshTheme() && state.editBrush) {
+      F.DeleteObject(state.editBrush)
+      state.editBrush = null
+    }
+    const radius = Math.round(12 * state.dpi)
+    applyRoundedRegion(hwnd, width, height, radius)
     F.SetWindowPos(hwnd, null, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW)
     startPump()
   }
@@ -1200,7 +1516,9 @@ export function createOverlay(handlers = {}) {
       }
       const work = workAreaAt(rect.left, rect.top)
       const pos = placePanelAtSelection(rect, { width: m.width, height }, work, state.panelSide)
+      applyRoundedRegion(state.hwnd, m.width, height, m.radius)
       F.SetWindowPos(state.hwnd, null, pos.x, pos.y, m.width, height, SWP_NOZORDER | SWP_NOACTIVATE)
+      positionEdit()
       F.InvalidateRect(state.hwnd, null, false)
     }
   }
@@ -1323,7 +1641,9 @@ export function createOverlay(handlers = {}) {
       // would make the first click after a menu feel broken.
       if (wParam === WM_LBUTTONDOWN || wParam === WM_RBUTTONDOWN || wParam === WM_MBUTTONDOWN) {
         if (!containsPoint(pt)) {
-          if (state.mode !== 'hidden' && handlers.onDismiss) {
+          // Pinned keeps the card on screen while the user works elsewhere; the close button is
+          // still there, so it cannot get stuck.
+          if (state.mode !== 'hidden' && !state.pinned && handlers.onDismiss) {
             try {
               handlers.onDismiss()
             } catch {
@@ -1485,6 +1805,9 @@ export function createOverlay(handlers = {}) {
       // Item widths come from the labels, so the bar must be measured before it is shown: a
       // guessed width would either clip a label or leave a gap that looks like a broken button.
       state.mode = 'menu'
+      if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
+      state.langOpen = false
+      state.pinned = false
       state.actions = actions
       state.hover = -1
       state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.bottom }
@@ -1503,21 +1826,25 @@ export function createOverlay(handlers = {}) {
       const pos = placeMenuAtSelection(anchor, layout, workAreaAt(anchor.left, anchor.top))
       showAt(layout.width, layout.height, pos.x, pos.y)
     },
-    showPanel({ anchor, title, status }) {
+    showPanel({ anchor, title, status, action = null, source = '', targetLanguage = '' }) {
       state.mode = 'panel'
       state.title = title
       state.blocks = []
       state.layoutBlocks = []
+      state.action = action
+      state.source = source
+      state.suggestions = []
+      state.targetLanguage = targetLanguage
+      state.langOpen = false
+      state.pinned = false
       state.status = status || '正在生成…'
       state.statusKind = 'info'
       state.scroll = 0
-      state.hoverPanel = 0
+      state.hoverPanel = null
       // The rect the panel is anchored to, kept so every later resize re-places against the same
       // selection rather than against wherever the panel happens to be.
       state.selectionRect = anchor
       state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.top }
-      // Each action starts at the default height; 展开 is a decision about one answer, not a mode.
-      state.userBody = null
       state.textDirty = true
       ensureWindow()
       const m = panelMetrics()
@@ -1531,10 +1858,15 @@ export function createOverlay(handlers = {}) {
       state.panelSide = panelSideFor(anchor, { width: m.width, height: panelHeight() }, work)
       const pos = placePanelAtSelection(anchor, { width: m.width, height: panelHeight() }, work, state.panelSide)
       showAt(m.width, panelHeight(), pos.x, pos.y)
+      positionEdit()
+      if (state.edit) F.ShowWindow(state.edit, SW_SHOWNA)
     },
     setContent(answer) {
       if (state.mode !== 'panel') return
-      state.blocks = bodyBlocks(answer)
+      // The model appends its follow-up suggestions as `>> …` lines; they become the chips.
+      const split = splitSuggestions(answer)
+      state.suggestions = split.suggestions
+      state.blocks = bodyBlocks(split.answer)
       // Character offsets belong to the text that was laid out; new text invalidates them all.
       state.sel = null
       state.dragging = false
@@ -1555,9 +1887,12 @@ export function createOverlay(handlers = {}) {
       if (state.mode === 'hidden') return
       state.mode = 'hidden'
       state.hover = -1
-      state.hoverPanel = 0
+      state.hoverPanel = null
       state.sel = null
       state.dragging = false
+      state.pinned = false
+      state.langOpen = false
+      if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
       if (state.hwnd) F.ShowWindow(state.hwnd, SW_HIDE)
       // The pump keeps running while the hook is installed: it is how the hook's callbacks reach
       // this thread, so stopping it here would silently disable right-click detection.
@@ -1583,6 +1918,9 @@ export function createOverlay(handlers = {}) {
       state.memBitmap = state.memDC = null
       if (state.measureDC) F.DeleteDC(state.measureDC)
       state.measureDC = null
+      if (state.editBrush) F.DeleteObject(state.editBrush)
+      state.editBrush = null
+      state.edit = null // destroyed with the parent window
       lineHeights.clear()
       if (state.hwnd) {
         F.DestroyWindow(state.hwnd)

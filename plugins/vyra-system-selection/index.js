@@ -10,8 +10,8 @@
 import { readFileSync } from 'node:fs'
 
 import {
-  ACTIONS, MAX_TEXT_CHARS, buildRequest, explainAuthFailure, findAction, pickModel,
-  reduceMouse, saneRect, selectionProblem,
+  ACTIONS, MAX_TEXT_CHARS, buildFollowUpRequest, buildRequest, explainAuthFailure, findAction, pickModel,
+  reduceMouse, saneRect, selectionProblem, splitSuggestions,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveLastRun, saveSettings } from './store.js'
@@ -82,6 +82,19 @@ export function apply(ctx) {
     onPanelSelection: (text) => {
       const ok = writeClipboardText(text) === true
       overlay.setStatus(ok ? `已复制选中的 ${text.length} 字` : '复制失败：剪贴板正被其他程序占用', ok ? 'info' : 'error')
+    },
+    /** The refresh icon: ask the same question again. */
+    onPanelRegenerate: () => regenerate(),
+    /** A suggestion chip or the input box. */
+    onPanelFollowUp: (question) => { void runFollowUp(question) },
+    /** The translation card's target pill; changing it re-translates immediately. */
+    onTargetLanguage: (language) => {
+      if (typeof language !== 'string' || language === settings.targetLanguage) return
+      settings.targetLanguage = language
+      persist()
+      if (lastRequest && lastRequest.action && lastRequest.action.id === 'translate') {
+        void runModel(lastRequest.action, lastRequest.text, lastRequest.at)
+      }
     },
     onRightClick: (pt, cached) => onRightClick(pt, cached),
   })
@@ -285,7 +298,9 @@ export function apply(ctx) {
 
   /** Copy what the panel shows (or, from the menu, the selected text). @returns whether it landed. */
   function copyResult() {
-    const text = overlay.visible && overlay.mode === 'panel' ? lastResult : pending?.text
+    // The follow-up suggestions are chrome, not part of the answer: copying them would paste
+    // questions into whatever the user is writing.
+    const text = overlay.visible && overlay.mode === 'panel' ? splitSuggestions(lastResult).answer : pending?.text
     if (!text) return false
     return writeClipboardText(text) === true
   }
@@ -383,7 +398,43 @@ export function apply(ctx) {
   }
 
   /** One assistant turn over `ctx.llm`, streaming into the panel. */
+  /** What the card is currently about, so 重新生成 and the chips can re-ask or continue it. */
+  let lastRequest = null
+
   async function runModel(action, text, at) {
+    await runTurn({
+      action,
+      text,
+      at,
+      title: `${action.label} · ${preview(text)}`,
+      question: null,
+      request: () => buildRequest(action.id, text, { targetLanguage: settings.targetLanguage }),
+    })
+  }
+
+  /** A chip or the input box asked something about the answer already on screen. */
+  async function runFollowUp(question) {
+    if (!lastRequest) return
+    const base = lastRequest
+    const previous = lastResult
+    await runTurn({
+      action: base.action,
+      text: base.text,
+      at: base.at,
+      title: `追问 · ${preview(question)}`,
+      question,
+      request: () => buildFollowUpRequest(base.text, previous, question, { targetLanguage: settings.targetLanguage }),
+    })
+  }
+
+  /** Re-run whatever the card is showing. */
+  function regenerate() {
+    if (!lastRequest) return
+    if (lastRequest.question) void runFollowUp(lastRequest.question)
+    else void runModel(lastRequest.action, lastRequest.text, lastRequest.at)
+  }
+
+  async function runTurn({ action, text, at, title, question, request }) {
     const llm = ctx.get('llm')
     let picked = null
     try {
@@ -392,14 +443,14 @@ export function apply(ctx) {
       // Enumeration can throw (an adapter's catalog fetch); without this the action dies
       // silently before the panel exists.
       const message = `无法选择模型：${describe(error)}`
-      overlay.showPanel({ anchor: at, title: action.label, status: '' })
+      overlay.showPanel({ anchor: at, title: action.label, status: '', action, source: text, targetLanguage: settings.targetLanguage })
       overlay.setStatus(message, 'error')
       recordRun({ action: action.id, error: message })
       return
     }
     if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
       const message = !llm ? 'LLM 服务不可用，请检查模型配置' : '没有可用的模型，请先在设置里选择'
-      overlay.showPanel({ anchor: at, title: action.label, status: '' })
+      overlay.showPanel({ anchor: at, title: action.label, status: '', action, source: text, targetLanguage: settings.targetLanguage })
       overlay.setStatus(message, 'error')
       recordRun({ action: action.id, error: message })
       return
@@ -407,12 +458,21 @@ export function apply(ctx) {
 
     const mine = ++generation
     lastResult = ''
-    overlay.showPanel({ anchor: at, title: `${action.label} · ${preview(text)}`, status: '正在生成…' })
+    lastRequest = { action, text, at, question }
+    overlay.showPanel({
+      anchor: at,
+      title,
+      status: '正在生成…',
+      action,
+      // The card quotes the selection it is about, so a follow-up still shows its subject.
+      source: text,
+      targetLanguage: settings.targetLanguage,
+    })
 
     const startedAt = Date.now()
-    const request = buildRequest(action.id, text, { targetLanguage: settings.targetLanguage })
+    const built = request()
     try {
-      const seen = await readStream(llm, picked, request, mine, (answer) => {
+      const seen = await readStream(llm, picked, built, mine, (answer) => {
         lastResult = answer
         overlay.setContent(lastResult)
       })

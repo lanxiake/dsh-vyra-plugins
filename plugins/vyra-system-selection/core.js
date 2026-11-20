@@ -56,12 +56,37 @@ export function findAction(id) {
  */
 const MARKDOWN_RULE =
   '用 Markdown 输出：标题用 #，要点用 - 列表或 1. 编号，重点可以用 **加粗**。' +
-  '不要输出表格和图片。整体保持紧凑，通常不超过 200 字，除非用户明确要求展开。'
+  '不要输出表格和图片。整体保持紧凑，通常不超过 200 字，除非用户明确要求展开。' +
+  '最后用 2–3 行「>> 追问」给出用户可以接着问的问题，每行一个，不要编号。'
+
+/** Lines the model uses for follow-up suggestions; `>>` never appears in normal prose. */
+const SUGGESTION = /^>>\s*(.+)$/
+
+/**
+ * Split the model's answer into the body and its follow-up suggestions.
+ *
+ * The suggestions are asked for as `>> 问题` lines at the end because the panel renders them as
+ * buttons rather than text. Keeping them in the same stream means no second model call: the
+ * answer is parsed once, and the lines never reach the rendered body.
+ *
+ * @returns `{ answer, suggestions }` with at most three suggestions.
+ */
+export function splitSuggestions(text) {
+  const suggestions = []
+  const kept = []
+  for (const line of String(text ?? '').split('\n')) {
+    const match = SUGGESTION.exec(line.trim())
+    if (match && suggestions.length < 3) suggestions.push(match[1].trim())
+    else kept.push(line)
+  }
+  return { answer: kept.join('\n').replace(/\n{3,}/g, '\n\n').trim(), suggestions }
+}
 
 const PROMPTS = {
   translate: (target) => `你是翻译引擎。把用户给的文本翻译成${target}。只输出译文本身，不要解释、不要加引号。${MARKDOWN_RULE}`,
   explain: () => `你是讲解助手。用通俗的中文解释用户给出的文本：它是什么意思、涉及什么概念、什么场景下会用到。${MARKDOWN_RULE}`,
   summarize: () => `你是摘要助手。用中文概括用户给出文本的要点。${MARKDOWN_RULE}`,
+  followup: () => `用户在追问下面这段文字。结合原文和你之前的回答直接回答追问，不要复述原文。${MARKDOWN_RULE}`,
 }
 
 export function systemPrompt(actionId, options = {}) {
@@ -88,6 +113,25 @@ export function buildRequest(actionId, text, options = {}) {
   return {
     system: systemPrompt(actionId, options),
     messages: [{ role: 'user', content: [{ type: 'text', text: text.trim() }] }],
+  }
+}
+
+/**
+ * A follow-up question about the same selection.
+ *
+ * The conversation is replayed inside one user message rather than as assistant turns: the
+ * selection is the context, and the panel has no session to attach a message history to.
+ */
+export function buildFollowUpRequest(original, previous, question, options = {}) {
+  return {
+    system: systemPrompt('followup', options),
+    messages: [{
+      role: 'user',
+      content: [{
+        type: 'text',
+        text: `原文：\n${String(original).trim()}\n\n之前的回答：\n${String(previous).trim()}\n\n追问：${String(question).trim()}`,
+      }],
+    }],
   }
 }
 
