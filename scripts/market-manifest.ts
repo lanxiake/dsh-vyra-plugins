@@ -695,6 +695,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
+        // timer and took the whole host process down on the first selection capture.
+        '2.0.1': {
+          publishTimestamp: 1795143607,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'ad533f50952ac4249c652d249c4946aa95925499',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
       },
       metadata: {
         category: 'browser',
