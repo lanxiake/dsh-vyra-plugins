@@ -1383,6 +1383,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.8 keeps exactly one IM watcher (orphans kicked each other off
+        // the socket) and turns 实时 into a clickable, remembered toggle.
+        '0.6.8': {
+          publishTimestamp: 1795190400,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'f117085dd1a636c02bb3c8de9bb7cf056bf9b8c0',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
