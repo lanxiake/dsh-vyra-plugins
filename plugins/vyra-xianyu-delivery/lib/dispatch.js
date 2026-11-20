@@ -84,6 +84,13 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
     })
     if (!created) return { order: order.order_no, skip: 'duplicate' }
 
+    // 商品绑定了客服时，发货行为跟随客服配置（可以关掉自动发货、换文案模板）。
+    const item = order.item_id ? store.getItem(order.item_id, account()) : null
+    const service = item && item.service_id ? store.getService(item.service_id) : null
+    if (service && service.enabled === 1 && service.auto_deliver === 0) {
+      return fail(order.order_no, 'service_auto_deliver_off')
+    }
+
     const card = store.matchCard(order.item_id, order.spec_name, order.spec_value, account())
     if (card.error) {
       logger(`order ${order.order_no}: ${card.error} (item ${order.item_id} spec ${order.spec_value})`)
@@ -118,7 +125,7 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
         break
       }
 
-      const text = renderText(card.template, content, order)
+      const text = renderText(card.template || service?.deliver_template || '', content, order)
       const textVerdict = guard.check(text)
       if (!textVerdict.ok) {
         lastError = `sensitive:${textVerdict.hit}`

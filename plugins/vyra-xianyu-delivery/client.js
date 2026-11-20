@@ -205,7 +205,7 @@ window.__ModuleLoader__.load({
     }
 
     function ItemsTab(props) {
-      const { items, shopItems, agentList, settings, onDetail, onConfigure, loading } = props
+      const { items, shopItems, services = [], onDetail, onConfigure, loading } = props
       const linked = new Map(items.map((it) => [it.item_id, it]))
       return h('div', null,
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
@@ -216,7 +216,7 @@ window.__ModuleLoader__.load({
           : h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' } },
             shopItems.map((it) => {
               const cfg = linked.get(it.item_id)
-              const skillCount = cfg && cfg.skills ? String(cfg.skills).split(/[,，\s]+/).filter(Boolean).length : 0
+              const svc = cfg && cfg.service_id ? services.find((x) => x.id === cfg.service_id) : null
               return h('div', {
                 key: it.item_id,
                 style: { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', overflow: 'hidden', background: 'rgba(127,127,127,.04)', cursor: 'pointer' },
@@ -232,12 +232,12 @@ window.__ModuleLoader__.load({
                     h('span', { style: { color: '#ff5000', fontWeight: 700, fontSize: '15px' } }, it.price || ''),
                     h('span', { style: { fontSize: '12px', opacity: 0.6 } }, it.status || '')),
                   h('div', { style: { display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'center' } },
-                    h('span', { style: S.tag(cfg && cfg.ai_enabled === 1 ? 'completed' : '') },
-              cfg && cfg.ai_enabled === 1 ? `AI 开 · 技能 ${skillCount}` : 'AI 关'),
+                    h('span', { style: S.tag(svc && svc.enabled ? 'completed' : '') },
+              svc ? svc.name : '未绑客服'),
                     h('button', {
                       style: { marginLeft: 'auto', ...S.btn, padding: '3px 10px', fontSize: '12px' },
                       onClick: (e) => { e.stopPropagation(); onConfigure(it) },
-                    }, 'AI 配置'))))
+                    }, '绑定客服'))))
             }))
       )
     }
@@ -452,6 +452,145 @@ window.__ModuleLoader__.load({
       }, letter)
     }
 
+    function ServicesTab(props) {
+      const { services, items, onEdit, onCreate, onDelete } = props
+      const countOf = (id) => items.filter((it) => it.service_id === id).length
+      return h('div', null,
+        h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' } },
+          h('span', { style: S.muted }, `客服配置 ${services.length} 个（全局共享，所有账号通用）`),
+          h('button', {
+            style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
+            onClick: onCreate,
+          }, '新建客服')),
+        services.length === 0
+          ? h('div', { style: S.empty }, '还没有客服配置')
+          : h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' } },
+            services.map((s) => h('div', {
+              key: s.id,
+              style: { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', padding: '14px 16px', background: 'rgba(127,127,127,.04)' },
+            },
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                h('span', { style: { fontWeight: 700, fontSize: '15px' } }, s.name),
+                h('span', { style: S.tag(s.enabled ? 'completed' : '') }, s.enabled ? '启用' : '停用')),
+              h('div', { style: { ...S.muted, marginTop: '8px' } },
+                `技能 ${String(s.skills || '').split(/[,，\s]+/).filter(Boolean).length} · 商品 ${countOf(s.id)} · ${s.auto_deliver ? '自动发货' : '不自动发货'}`),
+              h('div', { style: { display: 'flex', gap: '6px', marginTop: '12px' } },
+                h('button', { style: S.btn, onClick: () => onEdit(s) }, '编辑'),
+                h('button', { style: { ...S.btn, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }, onClick: () => onDelete(s) }, '删除')))))
+      )
+    }
+
+    function ServiceDialog({ service, skills, onSave, onDelete, onClose, busy }) {
+      const draft = service || { name: '', system_prompt: '', skills: '', model: '', auto_deliver: 1, deliver_template: '', enabled: 1 }
+      const [name, setName] = useState(draft.name || '')
+      const [prompt, setPrompt] = useState(draft.system_prompt || '')
+      const [model, setModel] = useState(draft.model || '')
+      const [template, setTemplate] = useState(draft.deliver_template || '')
+      const [autoDeliver, setAutoDeliver] = useState(draft.auto_deliver !== 0)
+      const [enabled, setEnabled] = useState(draft.enabled !== 0)
+      const [picked, setPicked] = useState(new Set(String(draft.skills || '').split(/[,，\s]+/).filter(Boolean)))
+      const [query, setQuery] = useState('')
+      const [saving, setSaving] = useState(false)
+      const q = query.trim().toLowerCase()
+      const filtered = skills.filter((s) => !q
+        || String(s.name || '').toLowerCase().includes(q)
+        || String(s.description || '').toLowerCase().includes(q))
+
+      const toggle = (key) => {
+        const next = new Set(picked)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+        setPicked(next)
+      }
+
+      const field = (label, node) => h('div', { style: { marginBottom: '10px' } },
+        h('label', { style: S.label }, label), node)
+
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', {
+          style: { ...S.modal, width: 'min(760px, 92vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column', textAlign: 'left' },
+          onClick: (e) => e.stopPropagation(),
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' } },
+            h('h3', { style: { ...S.title, fontSize: '16px', flex: 1 } }, service ? '编辑客服' : '新建客服'),
+            h('button', { style: S.btn, onClick: onClose }, '关闭')),
+          h('div', { style: { overflow: 'auto', flex: 1 } },
+            field('名称', h('input', { style: S.input, value: name, placeholder: '例如：闲鱼客服·主号', onChange: (e) => setName(e.target.value) })),
+            h('div', { style: { display: 'flex', gap: '16px', marginBottom: '10px' } },
+              h('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' } },
+                h('input', { type: 'checkbox', checked: enabled, onChange: (e) => setEnabled(e.target.checked) }), '启用'),
+              h('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' } },
+                h('input', { type: 'checkbox', checked: autoDeliver, onChange: (e) => setAutoDeliver(e.target.checked) }), '自动发货')),
+            field('系统提示词（留空用内置客服）',
+              h('textarea', { style: S.area, value: prompt, placeholder: '角色、议价底线、发货/退款规则…', onChange: (e) => setPrompt(e.target.value) })),
+            field('模型（可选，留空用 profile 默认）',
+              h('input', { style: S.input, value: model, placeholder: '例如 deepseek-chat', onChange: (e) => setModel(e.target.value) })),
+            field('发货文案模板（可选，留空直接发卡券原文）',
+              h('textarea', { style: S.area, value: template, placeholder: '可用 {card} {order_no} {buyer_nick}', onChange: (e) => setTemplate(e.target.value) })),
+            h('label', { style: S.label }, `技能（已选 ${picked.size} / 共 ${skills.length}）`),
+            h('input', { style: { ...S.input, marginTop: '6px' }, placeholder: '搜索技能名称或描述…', value: query, onChange: (e) => setQuery(e.target.value) }),
+            h('div', { style: { marginTop: '8px', border: '1px solid rgba(127,127,127,.2)', borderRadius: '8px', maxHeight: '220px', overflow: 'auto' } },
+              filtered.length === 0
+                ? h('div', { style: { ...S.muted, padding: '12px' } }, skills.length === 0 ? '没有扫描到已安装的技能' : '没有匹配的技能')
+                : filtered.map((s) => h('div', {
+                  key: s.name,
+                  style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderBottom: '1px solid rgba(127,127,127,.1)' },
+                },
+                  h('input', { type: 'checkbox', checked: picked.has(s.name), onChange: () => toggle(s.name) }),
+                  h('div', { style: { flex: 1, minWidth: 0 } },
+                    h('div', { style: { fontSize: '13px', fontWeight: 600 } }, s.name),
+                    h('div', { style: { fontSize: '12px', opacity: 0.6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.description || '无描述')),
+                  h('button', {
+                    style: { ...S.btn, padding: '2px 8px', fontSize: '12px', flex: 'none' },
+                    onClick: () => { rpc({ op: 'openSkillDir', name: s.name }).catch(() => {}) },
+                  }, '打开'))))),
+          h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },
+            service ? h('button', {
+              style: { ...S.btn, color: '#dc2626', marginRight: 'auto' },
+              disabled: saving,
+              onClick: async () => { setSaving(true); try { await onDelete(service) } finally { setSaving(false) } },
+            }, '删除') : null,
+            h('button', { style: S.btn, onClick: onClose }, '取消'),
+            h('button', {
+              style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
+              disabled: saving || !name.trim(),
+              onClick: async () => {
+                setSaving(true)
+                try {
+                  await onSave({
+                    id: service ? service.id : 0,
+                    name: name.trim(),
+                    systemPrompt: prompt,
+                    skills: [...picked].join(', '),
+                    model,
+                    autoDeliver,
+                    deliverTemplate: template,
+                    enabled,
+                  })
+                } finally {
+                  setSaving(false)
+                }
+              },
+            }, saving ? '保存中…' : '保存')))
+      )
+    }
+    function BindServiceDialog({ item, services, current, onSave, onClose }) {
+      const [serviceId, setServiceId] = useState(Number(current.service_id) || 0)
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', { style: { ...S.modal, width: '440px', textAlign: 'left' }, onClick: (e) => e.stopPropagation() },
+          h('h3', { style: { ...S.title, fontSize: '16px', marginBottom: '12px' } }, `绑定客服 · ${item.title || item.item_id}`),
+          h('select', { style: S.input, value: serviceId, onChange: (e) => setServiceId(Number(e.target.value)) },
+            h('option', { value: 0 }, '不绑定（不自动回复）'),
+            services.map((s) => h('option', { key: s.id, value: s.id }, s.name))),
+          h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' } },
+            h('button', { style: S.btn, onClick: onClose }, '取消'),
+            h('button', {
+              style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
+              onClick: () => onSave(item, serviceId),
+            }, '保存')))
+      )
+    }
+
     function MessageContent({ message, mine }) {
       const c = message || {}
       const bubble = {
@@ -620,6 +759,9 @@ window.__ModuleLoader__.load({
       const [remoteOrders, setRemoteOrders] = useState([])
       const [remoteOrdersLoading, setRemoteOrdersLoading] = useState(false)
       const [accounts, setAccounts] = useState([])
+      const [services, setServices] = useState([])
+      const [serviceDialog, setServiceDialog] = useState(null)
+      const [bindItem, setBindItem] = useState(null)
       const [avatars, setAvatars] = useState({})
       const [selfAvatar, setSelfAvatar] = useState('')
       const [orderDetailId, setOrderDetailId] = useState(null)
@@ -636,7 +778,7 @@ window.__ModuleLoader__.load({
         try {
           // 每项单独容错：auth 拉起 worker 慢或失败时，不能把订单和发货记录一起清空。
           const safe = (p) => p.catch((err) => ({ __error: String(err.message || err) }))
-          const [st, od, dl, cd, il, au, se, ac] = await Promise.all([
+          const [st, od, dl, cd, il, au, se, ac, sv] = await Promise.all([
             safe(rpc({ op: 'status' })),
             safe(rpc({ op: 'orders', limit: 50 })),
             safe(rpc({ op: 'deliveries', limit: 100 })),
@@ -645,6 +787,7 @@ window.__ModuleLoader__.load({
             safe(rpc({ op: 'auth' })),
             safe(rpc({ op: 'settings' })),
             safe(rpc({ op: 'accounts' })),
+            safe(rpc({ op: 'services' })),
           ])
           if (st && !st.__error) setStatus(st)
           if (od && !od.__error) setOrders(od)
@@ -654,6 +797,7 @@ window.__ModuleLoader__.load({
           if (au && !au.__error) setAuth(au)
           if (se && !se.__error) setSettings(se)
           if (ac && !ac.__error && Array.isArray(ac)) setAccounts(ac)
+          if (sv && !sv.__error && Array.isArray(sv)) setServices(sv)
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -733,6 +877,39 @@ window.__ModuleLoader__.load({
       function openOrderDetail(order) { setOrderDetailId(order.order_no) }
 
       function openItemDetail(item) { setItemDetailItem(item) }
+
+      async function saveService(data) {
+        try {
+          await rpc({ op: 'saveService', ...data })
+          setServiceDialog(null)
+          setNotice('客服配置已保存')
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+
+      async function removeService(service) {
+        if (!service) return
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm(`删除客服「${service.name}」？绑定它的商品会解除绑定。`)) return
+        try {
+          await rpc({ op: 'deleteService', id: service.id })
+          setServiceDialog(null)
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+
+      async function bindService(item, serviceId) {
+        try {
+          await rpc({ op: 'setItemService', itemId: item.item_id, serviceId })
+          setBindItem(null)
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
 
       async function saveAgentConfig(item, agent, skills, aiEnabled = 0) {
         try {
@@ -1017,9 +1194,9 @@ window.__ModuleLoader__.load({
         error ? h('div', { style: S.err }, error) : null,
         notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null,
         h('div', { style: S.tabs },
-          ['chat', 'orders', 'cards', 'items', 'deliveries'].map((k) =>
+          ['chat', 'orders', 'cards', 'items', 'services', 'deliveries'].map((k) =>
             h('div', { key: k, style: S.tab(tab === k), onClick: () => setTab(k) },
-              { chat: '聊天', orders: '订单', cards: '卡券', items: '商品资料', deliveries: '发货记录' }[k]))),
+              { chat: '聊天', orders: '订单', cards: '卡券', items: '商品', services: '客服', deliveries: '发货记录' }[k]))),
         tab === 'chat' ? h(ChatTab, {
           chats, activeChat, messages: chatMessages, replyText, setReplyText,
           onPick: loadChat, onSend: sendReply, onRefresh: loadChats, busy,
@@ -1032,13 +1209,15 @@ window.__ModuleLoader__.load({
         }) : null,
         tab === 'cards' ? h(CardsTab, { cards, shopItems, draft, setDraft, addCard, busy }) : null,
         tab === 'items' ? h(ItemsTab, {
-          items, shopItems, agentList, settings, loading: busy === 'shop',
+          items, shopItems, agentList, settings, services, loading: busy === 'shop',
           onDetail: openItemDetail,
-          onConfigure: (it) => setAgentConfig({
-            item: it,
-            current: items.find((x) => x.item_id === it.item_id) || {},
-            agentPreset: (settings && settings.agentPreset) || 'builtin',
-          }),
+          onConfigure: (it) => setBindItem(it),
+        }) : null,
+        tab === 'services' ? h(ServicesTab, {
+          services, items,
+          onCreate: () => setServiceDialog({ service: null }),
+          onEdit: (s) => setServiceDialog({ service: s }),
+          onDelete: removeService,
         }) : null,
         tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
         loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null,
@@ -1051,6 +1230,20 @@ window.__ModuleLoader__.load({
           current: { agentPreset: agentConfig.agentPreset, skills: agentConfig.current.skills || '' },
           onSave: saveAgentConfig,
           onClose: () => setAgentConfig(null),
+        }) : null,
+        serviceDialog ? h(ServiceDialog, {
+          service: serviceDialog.service,
+          skills: skillList,
+          onSave: saveService,
+          onDelete: removeService,
+          onClose: () => setServiceDialog(null),
+        }) : null,
+        bindItem ? h(BindServiceDialog, {
+          item: bindItem,
+          services,
+          current: items.find((x) => x.item_id === bindItem.item_id) || {},
+          onSave: bindService,
+          onClose: () => setBindItem(null),
         }) : null
       )
     }

@@ -19,7 +19,7 @@ function userMessage(text) {
   }
 }
 
-export function createDshAgent({ agents, config = {}, logger = () => {}, getPreset }) {
+export function createDshAgent({ agents, sessionTitle, config = {}, logger = () => {}, getPreset }) {
   const ai = config.ai || {}
   const provider = String(ai.provider || '').trim()
   const model = String(ai.model || '').trim()
@@ -31,7 +31,7 @@ export function createDshAgent({ agents, config = {}, logger = () => {}, getPres
     return raw === BUILTIN_AGENT ? '' : raw
   }
 
-  async function ask({ prompt, sessionKey }) {
+  async function ask({ prompt, sessionKey, title = '' }) {
     if (!agents?.create) throw new Error('DSH agents 服务不可用')
 
     const preset = currentPreset()
@@ -63,6 +63,15 @@ export function createDshAgent({ agents, config = {}, logger = () => {}, getPres
         })
       },
     })
+
+    // DSH 会话列表没有分组，用标题前缀当分组：[客服名] 商品简称-客户名
+    if (title && sessionTitle?.rename) {
+      try {
+        sessionTitle.rename(handle.agent.session, title)
+      } catch (err) {
+        logger(`rename session failed: ${err?.message || err}`)
+      }
+    }
 
     try {
       handle.agent.followup(userMessage(prompt))

@@ -49,7 +49,8 @@ const main = registered.find((r) => r.config.name === 'main')
 if (!main) throw new Error('没有注册主页面')
 
 const shopItem = { item_id: '1095', title: '测试商品', price: '1.99', image_url: 'http://x/y.png', status: '在线' }
-const linked = { item_id: '1095', title: '测试商品', skills: 's1, s2' }
+const service = { id: 1, name: '客服A', skills: 's1', enabled: 1, auto_deliver: 1 }
+const linked = { item_id: '1095', title: '测试商品', service_id: 1 }
 
 const scenarios = {
   orders: { 1: ['orders', () => {}] },
@@ -61,6 +62,20 @@ const scenarios = {
     10: [[{ name: 's1', description: '技能一' }, { name: 's2', description: '技能二' }], () => {}],
     11: [[{ id: 'customer-service', name: '客服 Agent' }], () => {}],
     12: [[shopItem], () => {}],
+    20: [[service], () => {}],
+  },
+  services: {
+    1: ['services', () => {}],
+    6: [[linked], () => {}],
+    20: [[service], () => {}],
+    21: [{ service: null }, () => {}],
+  },
+  'bind-dialog': {
+    1: ['items', () => {}],
+    6: [[linked], () => {}],
+    12: [[shopItem], () => {}],
+    20: [[service], () => {}],
+    22: [shopItem, () => {}],
   },
   'items+agent-dialog': {
     1: ['items', () => {}],
@@ -68,12 +83,12 @@ const scenarios = {
     10: [[{ name: 's1', description: '技能一' }], () => {}],
     11: [[{ id: 'customer-service', name: '客服 Agent' }], () => {}],
     12: [[shopItem], () => {}],
-    24: [{ item: shopItem, current: linked, agentPreset: 'builtin' }, () => {}],
+    27: [{ item: shopItem, current: linked, agentPreset: 'builtin' }, () => {}],
   },
-  'order-detail': { 1: ['orders', () => {}], 22: ['5127944941190007915', () => {}] },
-  'item-detail': { 1: ['items', () => {}], 23: [shopItem, () => {}] },
+  'order-detail': { 1: ['orders', () => {}], 25: ['5127944941190007915', () => {}] },
+  'item-detail': { 1: ['items', () => {}], 26: [shopItem, () => {}] },
   deliveries: { 1: ['deliveries', () => {}] },
-  login: { 1: ['chat', () => {}], 28: [true, () => {}], 29: [{ state: 'waiting', qr: '' }, () => {}] },
+  login: { 1: ['chat', () => {}], 32: [true, () => {}], 33: [{ state: 'waiting', qr: '' }, () => {}] },
 }
 
 for (const [name, forced] of Object.entries(scenarios)) {

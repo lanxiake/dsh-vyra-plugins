@@ -9,9 +9,10 @@ import { createGuard } from './lib/guard.js'
 import { createDispatcher } from './lib/dispatch.js'
 import { createAi } from './lib/ai.js'
 import { createDshAgent } from './lib/agent.js'
+import { createXianyuTools } from './lib/tools.js'
 
 export const name = 'vyra-xianyu-delivery'
-export const inject = []
+export const inject = ['tools']
 
 async function readJson(req) {
   const chunks = []
@@ -50,9 +51,18 @@ export function apply(ctx, config = {}) {
     store, cli, guard, config: cfg, logger: log,
     getAccount: account,
   })
+  // 把闲鱼能力注册成主 Agent 可调用的工具。
+  const xianyuTools = createXianyuTools({ cli, store, dispatcher, getAccount: account })
+  ctx.effect(() => {
+    const disposers = xianyuTools.map((def) => ctx.tools.register(def))
+    return () => { for (const dispose of disposers) dispose() }
+  }, 'xianyu-delivery.tools')
+
   const agents = typeof ctx.get === 'function' ? ctx.get('agents') : undefined
+  const sessionTitle = typeof ctx.get === 'function' ? ctx.get('sessionTitle') : undefined
   const dshAgent = createDshAgent({
     agents,
+    sessionTitle,
     config: cfg,
     logger: log,
     getPreset: () => store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
@@ -346,7 +356,10 @@ export function apply(ctx, config = {}) {
       itemId = ''
     }
 
-    const answer = await ai.reply({ cid, itemId, text: question, history, selfUserId, accountId: account() })
+    const answer = await ai.reply({
+      cid, itemId, text: question, history, selfUserId,
+      accountId: account(), buyerNick: String(evt.send_user_name || ''),
+    })
     if (!answer) return
 
     try {
@@ -602,6 +615,25 @@ export function apply(ctx, config = {}) {
         }
         return { ok: true }
       }
+      case 'services':
+        return store.listServices()
+      case 'saveService':
+        return { id: store.saveService({
+          id: Number(body.id) || 0,
+          name: String(body.name || '未命名客服'),
+          systemPrompt: String(body.systemPrompt || ''),
+          skills: String(body.skills || ''),
+          model: String(body.model || ''),
+          autoDeliver: body.autoDeliver !== false,
+          deliverTemplate: String(body.deliverTemplate || ''),
+          enabled: body.enabled !== false,
+        }) }
+      case 'deleteService':
+        store.deleteService(Number(body.id))
+        return { ok: true }
+      case 'setItemService':
+        store.setItemService(String(body.itemId || ''), Number(body.serviceId) || 0, account())
+        return { ok: true }
       case 'settings':
         return {
           agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || '') || 'builtin',

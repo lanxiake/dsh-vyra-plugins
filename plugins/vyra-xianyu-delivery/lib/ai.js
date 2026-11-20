@@ -27,11 +27,9 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
   const mode = String(ai.mode || (agent?.available ? 'dsh' : 'api'))
   const apiReady = Boolean(ai.baseUrl && ai.apiKey && ai.model)
 
-  // 面板开关写在 settings；没有设置时回落到配置文件里的 ai.enabled。
+  // 是否回复由商品绑定的客服配置决定；这里只检查运行环境是否具备。
   function isEnabled() {
-    const override = store.getSetting('ai.enabled')
-    const on = override ? override === '1' : ai.enabled === true
-    return on && (mode === 'dsh' ? Boolean(agent?.available) : apiReady)
+    return mode === 'dsh' ? Boolean(agent?.available) : apiReady
   }
 
   const cooldowns = new Map()
@@ -56,9 +54,9 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
     return body
   }
 
-  async function buildPrompt({ text, itemId, history, selfUserId, accountId = '', item: known = null }) {
+  async function buildPrompt({ text, itemId, history, selfUserId, accountId = '', item: known = null, service = null }) {
     const item = known ?? (itemId ? store.getItem(itemId, accountId) : null)
-    const names = String(item?.skills || '')
+    const names = String(service?.skills || '')
       .split(/[,，\s]+/)
       .map((s) => s.trim())
       .filter(Boolean)
@@ -78,7 +76,7 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
     }
 
     return [
-      '你是闲鱼店铺的客服，负责回答买家关于商品的问题。语气自然、简短，像真人卖家，不要长篇大论。',
+      service?.system_prompt || '你是闲鱼店铺的客服，负责回答买家关于商品的问题。语气自然、简短，像真人卖家，不要长篇大论。',
       [
         '规则：',
         '- 只回答和本店商品相关的问题；与商品无关的私人话题礼貌带过。',
@@ -131,16 +129,19 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
     return Date.now() - last < cooldownSeconds * 1000
   }
 
-  async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '' }) {
+  async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '', buyerNick = '' }) {
     if (!isEnabled()) return null
-    // AI 开关按商品：没绑定或没打开的商品一律不回。
+    // 商品绑定客服、客服启用才回复。
     const item = itemId ? store.getItem(itemId, accountId) : null
-    if (!item || item.ai_enabled !== 1) return null
+    const service = item && item.service_id ? store.getService(item.service_id) : null
+    if (!service || service.enabled !== 1) return null
     if (coolingDown(cid)) return null
     if ((counts.get(cid) || 0) >= maxRepliesPerChat) return null
 
-    const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId, item })
-    const out = mode === 'dsh' ? await agent.ask({ prompt, sessionKey: cid }) : await apiReply(prompt)
+    const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId, item, service })
+    const short = (value) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 10)
+    const title = `[${service.name}] ${short(item?.title || itemId)}-${short(buyerNick || '买家')}`
+    const out = mode === 'dsh' ? await agent.ask({ prompt, sessionKey: cid, title }) : await apiReply(prompt)
     if (!out) return null
 
     cooldowns.set(cid, Date.now())

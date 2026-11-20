@@ -54,6 +54,19 @@ CREATE TABLE IF NOT EXISTS items (
   PRIMARY KEY (item_id, account_id)
 );
 
+CREATE TABLE IF NOT EXISTS customer_services (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT NOT NULL,
+  system_prompt    TEXT NOT NULL DEFAULT '',
+  skills           TEXT NOT NULL DEFAULT '',
+  model            TEXT NOT NULL DEFAULT '',
+  auto_deliver     INTEGER NOT NULL DEFAULT 1,
+  deliver_template TEXT NOT NULL DEFAULT '',
+  enabled          INTEGER NOT NULL DEFAULT 1,
+  created_at       TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at       TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
 CREATE TABLE IF NOT EXISTS deliveries (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   order_no   TEXT NOT NULL,
@@ -113,6 +126,39 @@ function migrateItems(db) {
   db.exec('DROP TABLE items_legacy')
 }
 
+/**
+ * 把旧版「商品自带 skills」迁移成一个默认客服「内置客服」，并把商品指过去。
+ * 迁移只做一次：已经有 service 的商品不再处理。
+ */
+function migrateServices(db) {
+  const legacy = db
+    .prepare("SELECT item_id, account_id, skills, ai_enabled FROM items WHERE service_id = 0 AND skills <> ''")
+    .all()
+  if (!legacy.length) return
+
+  const skills = new Set()
+  let aiOn = false
+  for (const row of legacy) {
+    for (const name of String(row.skills || '').split(/[,，\s]+/)) {
+      if (name) skills.add(name.trim())
+    }
+    if (row.ai_enabled === 1) aiOn = true
+  }
+
+  const existing = db.prepare('SELECT id FROM customer_services WHERE name = ?').get('内置客服')
+  let serviceId = existing && existing.id
+  if (!serviceId) {
+    const info = db
+      .prepare(
+        `INSERT INTO customer_services (name, system_prompt, skills, model, auto_deliver, deliver_template, enabled)
+         VALUES (?, '', ?, '', 1, '', ?)`,
+      )
+      .run('内置客服', [...skills].join(', '), aiOn ? 1 : 0)
+    serviceId = info.lastInsertRowid
+  }
+  db.prepare('UPDATE items SET service_id = ? WHERE service_id = 0 AND skills <> \'\'').run(serviceId)
+}
+
 export function createStore(file) {
   mkdirSync(dirname(file), { recursive: true })
   const db = new DatabaseSync(file)
@@ -124,10 +170,13 @@ export function createStore(file) {
   ensureColumn(db, 'orders', 'spec_name', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'orders', 'spec_value', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'deliveries', 'account_id', "TEXT NOT NULL DEFAULT ''")
-  ensureColumn(db, 'items', 'ai_enabled', 'INTEGER NOT NULL DEFAULT 0')
   // 必须放在 SCHEMA 之后、prepare 之前：旧表主键不对会让 upsertItem 的
   // ON CONFLICT 在 prepare 时抛错，整个插件加载失败。
   migrateItems(db)
+  // 先重建 items（补 account_id），再做客服迁移，否则旧表没有这两列。
+  ensureColumn(db, 'items', 'ai_enabled', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'items', 'service_id', 'INTEGER NOT NULL DEFAULT 0')
+  migrateServices(db)
 
   // 旧库的时间列是 datetime('now')（UTC），比本地少 8 小时。只迁移一次；
   // 中国无夏令时，固定 +8 是安全的。
@@ -214,6 +263,23 @@ export function createStore(file) {
     listItems: db.prepare(
       `SELECT * FROM items WHERE (account_id = ? OR account_id = '')
        ORDER BY updated_at DESC`,
+    ),
+    listServices: db.prepare('SELECT * FROM customer_services ORDER BY id'),
+    getService: db.prepare('SELECT * FROM customer_services WHERE id = ?'),
+    insertService: db.prepare(
+      `INSERT INTO customer_services (name, system_prompt, skills, model, auto_deliver, deliver_template, enabled)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ),
+    updateService: db.prepare(
+      `UPDATE customer_services SET name = ?, system_prompt = ?, skills = ?, model = ?,
+         auto_deliver = ?, deliver_template = ?, enabled = ?, updated_at = datetime('now','localtime')
+       WHERE id = ?`,
+    ),
+    deleteService: db.prepare('DELETE FROM customer_services WHERE id = ?'),
+    clearServiceItems: db.prepare('UPDATE items SET service_id = 0 WHERE service_id = ?'),
+    itemsOfService: db.prepare('SELECT item_id, account_id, title, service_id FROM items WHERE service_id = ?'),
+    setItemService: db.prepare(
+      `UPDATE items SET service_id = ? WHERE item_id = ? AND (account_id = ? OR account_id = '')`,
     ),
     getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
     setSetting: db.prepare(
@@ -307,6 +373,38 @@ export function createStore(file) {
       q.upsertItem.run(String(itemId), String(accountId), title, knowledge, skills, aiEnabled ? 1 : 0)
     },
     listItems: (accountId = '') => q.listItems.all(String(accountId)),
+
+    listServices: () => q.listServices.all(),
+    getService(id) {
+      const row = q.getService.get(Number(id))
+      return row ?? null
+    },
+    saveService(data) {
+      const id = Number(data.id) || 0
+      if (id) {
+        q.updateService.run(
+          data.name, data.systemPrompt ?? '', data.skills ?? '', data.model ?? '',
+          data.autoDeliver ? 1 : 0, data.deliverTemplate ?? '', data.enabled === false ? 0 : 1,
+          id,
+        )
+        return id
+      }
+      return q.insertService.run(
+        data.name, data.systemPrompt ?? '', data.skills ?? '', data.model ?? '',
+        data.autoDeliver ? 1 : 0, data.deliverTemplate ?? '', data.enabled === false ? 0 : 1,
+      ).lastInsertRowid
+    },
+    deleteService(id) {
+      const serviceId = Number(id)
+      q.clearServiceItems.run(serviceId)
+      q.deleteService.run(serviceId)
+    },
+    itemsOfService(id) {
+      return q.itemsOfService.all(Number(id))
+    },
+    setItemService(itemId, serviceId, accountId = '') {
+      q.setItemService.run(Number(serviceId) || 0, String(itemId), String(accountId))
+    },
 
     getSetting(key) {
       const row = q.getSetting.get(String(key))
