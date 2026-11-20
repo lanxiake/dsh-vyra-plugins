@@ -1394,6 +1394,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.9: a new_msg push carries no text, so body-less events now read
+        // the history and answer the latest buyer message from there.
+        '0.6.9': {
+          publishTimestamp: 1795193400,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '417d453928e2279f42780b982fc294b55fa99f71',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
