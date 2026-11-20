@@ -1,6 +1,6 @@
 {
   "name": "vyra-wechat-local",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "type": "module",
   "description": "PC微信：读取用户本人 PC 微信的会话与聊天记录，按名单策略合并消息并交给 Agent，必要时以本人身份发送。仅 Windows。",
   "main": "index.js",

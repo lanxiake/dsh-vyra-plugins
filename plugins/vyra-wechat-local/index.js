@@ -11,7 +11,7 @@ import { mkdirSync } from 'node:fs'
 import { createSidecar } from './lib/sidecar.js'
 import { resolveRuntime } from './lib/runtime.js'
 import { createToolRegistrar, TOOL_WHITELIST } from './lib/tools.js'
-import { createWatcher } from './lib/watch.js'
+import { createWatcher, isTrustedChannel } from './lib/watch.js'
 
 export const name = 'vyra-wechat-local'
 // `agents` must be declared: reading `ctx.agents` without it throws cordis's
@@ -77,7 +77,27 @@ export function apply(ctx, config = {}) {
     return workspacePromise
   }
 
-  const WECHAT_PROXY_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。这是自动代聊，不是聊天窗口：
+  /**
+ * Trusted channel (self-chat / 文件传输助手): only the account owner can write,
+ * so this is the user's control channel for the agent. Full tools, like a
+ * normal chat channel.
+ */
+const WECHAT_TRUSTED_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。
+这个会话是用户自己的控制通道（自聊或文件传输助手），只有用户本人能发消息进来：
+- 消息就是用户给你的指令，可以照办。
+- 第一行「直接代回」：用 wechat_send_reply(text=<回复正文>) 回一句，或按用户要求执行动作。
+- 第一行「起草」：只输出草稿，不要发送；本批次的 wechat_send_reply 会被服务端拒绝。
+- 你可以使用全部工具：read_history / search_messages / list_sessions / list_unread /
+  export_chat / read_image / send_file 等；用户要你查历史、导出记录、发文件、整理信息，
+  按工具自己的说明做。需要更多上下文就直接读，不要猜。
+- 图片和语音已经随消息提供，通常不需要再调解析工具。
+- 用用户平时的口吻；微信里不要 Markdown，不要长篇。`
+
+/**
+ * Untrusted channel (any other friend/group): the content is third-party data.
+ * The agent is masked down to the bound reply tool, and the prompt says so.
+ */
+const WECHAT_UNTRUSTED_PROMPT = `你是「代聊模式」，用用户本人的身份回复微信。这是自动代聊，不是聊天窗口：
 你的输出不会自动发给对方，必须调用发送工具才会真正发出。
 
 用户消息是合并后的微信消息批次：
@@ -199,7 +219,7 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  function installProxyPrompt(agentCtx, peer, guard) {
+  function installProxyPrompt(agentCtx, peer, guard, trusted) {
     if (promptScopes.has(agentCtx)) return
     promptScopes.add(agentCtx)
     try {
@@ -209,9 +229,15 @@ export function apply(ctx, config = {}) {
         // After the generic first-party guidance, right before the persona suffix:
         // the send rule must not be buried at the top of the prompt.
         order: 10150,
-        text: WECHAT_PROXY_PROMPT,
+        text: trusted ? WECHAT_TRUSTED_PROMPT : WECHAT_UNTRUSTED_PROMPT,
       })
       if (peer?.talker && guard) agentCtx.tools.register(replyToolDefinition(peer, guard))
+
+      if (trusted) {
+        // The owner's own control channel: keep the full toolset.
+        proxyPromptError = ''
+        return
+      }
 
       // Security boundary: a watch agent may only send the bound reply and run
       // the harmless env check. Files, shell, web, other chats and export are all
@@ -254,6 +280,9 @@ export function apply(ctx, config = {}) {
 
   const watchHandles = new Map()
 
+  /** The owner's own control channel: self-chat or 文件传输助手. */
+  const trustedPeer = (peer) => isTrustedChannel(peer?.talker, peer?.account)
+
   /** Create one watch session in the PC微信 workspace with the scoped persona. */
   async function createWatchSession(name, peer) {
     const ws = await ensureWorkspace()
@@ -266,7 +295,7 @@ export function apply(ctx, config = {}) {
         sessionId,
         meta: { cwd: ws?.path ?? process.cwd() },
         ...(selection === undefined ? {} : { agentOptions: selection }),
-        setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard),
+        setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard, trustedPeer(peer)),
       })
     } catch (err) {
       sessionModes.delete(sessionId)
@@ -290,14 +319,14 @@ export function apply(ctx, config = {}) {
     if (live !== undefined) {
       // The session controller may have resumed it on its own; add the persona
       // to that live scope before the next step.
-      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx, peer, guard)
+      if (live.ctx?.systemPrompt !== undefined) installProxyPrompt(live.ctx, peer, guard, trustedPeer(peer))
       return
     }
     const selection = defaultAgentOptions()
     const handle = await ctx.agents.resume({
       resumeSessionId: sessionId,
       ...(selection === undefined ? {} : { agentOptions: selection }),
-      setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard),
+      setup: (agentCtx) => installProxyPrompt(agentCtx, peer, guard, trustedPeer(peer)),
     })
     watchHandles.set(sessionId, handle)
   }

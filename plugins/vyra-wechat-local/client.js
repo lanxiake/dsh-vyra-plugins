@@ -610,7 +610,9 @@ window.__ModuleLoader__.load({
         setRows((prev) => prev.concat(resolved.map((candidate) => ({
           id: candidate.id,
           label: candidate.label,
-          mode: 'draft',
+          // Adding a person is the high-frequency path: reply directly unless
+          // the user switches the row later.
+          mode: 'auto',
           cooldownSeconds: '',
           trigger: candidate.isGroup ? 'mention' : 'all',
           keywords: '',
@@ -711,7 +713,7 @@ window.__ModuleLoader__.load({
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
             h('span', {
               style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' },
-              title: '本人和文件传输助手默认允许（只有你能往那里发）。其他好友必须在这里明确加入，且监听会话只能发送回复，不能读文件、其他会话或执行命令。',
+              title: '本人/文件传输助手是控制通道：完整工具权限，只有你能发消息。其他好友必须在这里明确加入，且监听会话只能发送回复，不能读文件、其他会话或执行命令。',
             }, `谁可以被代回（${current.rows.length}）`),
             active ? h('span', { style: S.badge }, `当前：${accountName(active) || active}`) : null,
             h(Button, {
@@ -792,8 +794,8 @@ window.__ModuleLoader__.load({
                     trusted
                       ? h('span', {
                         style: { ...S.badge, color: 'var(--dsw-alias-state-success-primary, #1a7f37)', borderColor: 'currentColor' },
-                        title: '只有你自己能往这里发消息，所以默认允许直接代回。',
-                      }, '默认白名单')
+                        title: '只有你自己能往这里发消息，所以它是你的控制通道：完整工具权限，消息就是指令。',
+                      }, '控制通道')
                       : h('span', { style: S.badge }, group ? '群' : '私聊'),
                     h('span', { style: { ...S.mono, marginLeft: 'auto' } }, row.id)),
                   h('div', { style: S.rowInputs },
