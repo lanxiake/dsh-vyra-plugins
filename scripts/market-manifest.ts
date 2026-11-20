@@ -1117,6 +1117,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.3 refreshes the short-lived _m_h5_tk through Edge's quick-login
+        // and retries the failed call, instead of surfacing "token expired".
+        '0.5.3': {
+          publishTimestamp: 1795149354,
+          source: {
+            type: 'git',
+            url: 'https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'c306a285f9c423a24ac50d5bfcc2f5dba0cf0584',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
