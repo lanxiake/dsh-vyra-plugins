@@ -46,6 +46,22 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const lower = (value) => String(value ?? '').trim().toLowerCase()
 const isGroup = (talker) => lower(talker).endsWith('@chatroom')
 
+/** Collapse a note that a failed delivery appended repeatedly, e.g. `（attach 1）` × 100. */
+function collapseRepeats(text) {
+  return String(text ?? '').replace(/(（[^（）]{1,40}）)\1+/gu, '$1')
+}
+
+/** Reject instead of leaving a delivery half-done when a service never answers. */
+function withTimeout(promise, ms, label) {
+  let timer
+  return Promise.race([
+    promise,
+    new Promise((_resolve, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label}超时`)), ms)
+    }),
+  ]).finally(() => clearTimeout(timer))
+}
+
 /** Same matching rule as the sidecar: id or display label, first entry wins. */
 function matchPeer(peers, talker, name) {
   const candidates = new Set([lower(talker), lower(name)])
@@ -200,6 +216,9 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
   let ticking = false
   let lastTickAt = 0
   let lastError = ''
+  // Delivery failures are separate from poll failures: a successful poll must
+  // not erase "the agent session is unavailable" from the settings card.
+  let lastDeliveryError = String(state.lastError ?? '')
   let lastDelivery = state.lastDelivery ?? null
   let connection = { at: 0, ok: true }
 
@@ -293,6 +312,11 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     const images = []
     let imageBytes = 0
     for (const message of batch) {
+      // Deliveries retry the same batch; always rebuild the line from the
+      // original text so a failure cannot append the same note again.
+      if (message.base_text === undefined) message.base_text = message.text ?? ''
+      const base = collapseRepeats(message.base_text)
+      message.text = base
       if (message.type === 34) {
         const answer = await transcribeVoice(message, message.account || peer.account)
         message.text = answer?.ok !== false && typeof answer?.text === 'string' && answer.text
@@ -301,7 +325,7 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       }
       if (message.type === 3) {
         if (images.length >= maxImages) {
-          message.text = `${message.text || '[图片]'}（图片未附加：单批最多 ${maxImages} 张）`
+          message.text = `${base || '[图片]'}（图片未附加：单批最多 ${maxImages} 张）`
           continue
         }
         let buffer = null
@@ -329,19 +353,19 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
           if (answer?.image) {
             buffer = Buffer.from(answer.image.data, 'base64')
             mediaType = answer.image.mediaType || imageMediaType(buffer)
-            if (answer.text) message.text = `${message.text || '[图片]'}（${answer.text}）`
+            if (answer.text) message.text = `${base || '[图片]'}（${answer.text}）`
           }
         }
         if (buffer === null || buffer.length === 0) {
-          message.text = `${message.text || '[图片]'}（图片未能读取）`
+          message.text = `${base || '[图片]'}（图片未能读取）`
           continue
         }
         if (!mediaType) {
-          message.text = `${message.text || '[图片]'}（图片格式不支持）`
+          message.text = `${base || '[图片]'}（图片格式不支持）`
           continue
         }
         if (imageBytes + buffer.length > maxImageBytes) {
-          message.text = `${message.text || '[图片]'}（图片未附加：单批图片体积上限）`
+          message.text = `${base || '[图片]'}（图片未附加：单批图片体积上限）`
           continue
         }
         images.push({
@@ -373,24 +397,30 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     const controller = getController()
     if (!controller) {
       log(`watch: no session controller; ${batch.length} message(s) for ${peer.talker} stay queued`)
-      state.lastError = 'DSH 会话服务不可用'
+      lastDeliveryError = 'DSH 会话服务不可用'
+      state.lastError = lastDeliveryError
       scheduler.retry(key, batch, decision)
       save()
       return
     }
     try {
       const prepared = await prepareBatch(peer, batch, decision)
-      const sessionId = await openSession(key, peer)
-      await controller.prompt({
+      // Both calls should answer quickly (create a session, enqueue a prompt);
+      // a hung service must fail this delivery so the batch is retried instead
+      // of disappearing once the awaiting window expires.
+      const sessionId = await withTimeout(openSession(key, peer), 30_000, '建立会话')
+      await withTimeout(controller.prompt({
         requestId: randomUUID(),
         sessionId,
         mode: 'queue',
         content: [{ type: 'text', text: prepared.text }, ...prepared.images],
-      }, new AbortController().signal)
+      }, new AbortController().signal), 30_000, '交付消息')
       // A draft is already the response the user reviews, so its cooldown starts at
       // delivery. An auto reply starts it when send_text actually succeeds.
       if (decision.mode === 'draft') scheduler.reply(key)
       lastError = ''
+      lastDeliveryError = ''
+      state.lastError = ''
       lastDelivery = {
         at: Date.now(),
         sessionId,
@@ -404,8 +434,9 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     } catch (error) {
       // A deleted session is re-created on the next batch; keep the messages queued.
       if (String(error?.message ?? error).includes('not-found')) delete state.sessions[key]
-      state.lastError = String(error?.message ?? error)
-      log(`watch: delivery failed for ${peer.talker}: ${state.lastError}`)
+      lastDeliveryError = String(error?.message ?? error)
+      state.lastError = lastDeliveryError
+      log(`watch: delivery failed for ${peer.talker}: ${lastDeliveryError}`)
       scheduler.retry(key, batch, decision)
     } finally {
       save()
@@ -598,7 +629,8 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
         mergeWindowSeconds: mergeWindowMs / 1000,
         replyTimeoutSeconds: replyTimeoutMs / 1000,
         lastTickAt,
-        lastError,
+        lastError: lastError || lastDeliveryError,
+        lastDeliveryError,
         connection,
         lastDelivery,
         pending: scheduler.snapshot().map((peer) => ({

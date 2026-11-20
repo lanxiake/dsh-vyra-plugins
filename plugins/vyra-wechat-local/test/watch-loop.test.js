@@ -209,6 +209,62 @@ test('voice is transcribed and images are attached before delivery', async () =>
     rmSync(dir, { recursive: true, force: true })
   }
 })
+test('a failed delivery retries the same batch without repeating image notes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
+  const prompts = []
+  let attempts = 0
+  const controller = {
+    create: async () => ({ sessionId: 'session-retry' }),
+    rename: async () => {},
+    prompt: async (request) => {
+      attempts += 1
+      if (attempts === 1) throw new Error('agent unavailable')
+      prompts.push(request.content.find((part) => part.type === 'text').text)
+    },
+  }
+  let delivered = false
+  const watcher = createWatcher({
+    callJson: async (tool) => {
+      // A hidden (tray) window is still connected: keep polling and delivering.
+      if (tool === 'check_env') {
+        return {
+          weixin_running: true, db_ok: true, deps: { ok: true }, ok: false,
+          reason: '主窗口不可见（已收进托盘；发送时会先自动还原一次）',
+        }
+      }
+      if (tool === 'list_accounts') return { active: 'wxid_1', accounts: [{ wxid: 'wxid_1', running: true }] }
+      if (tool === 'poll_new') {
+        if (delivered) return { messages: [], next_since_ts: 101 }
+        delivered = true
+        return {
+          messages: [{ talker: 'friend', name: '好友', type: 3, ts: 101, time: 't101', text: '[图片 734KB]', local_id: 7, account: 'wxid_1' }],
+          next_since_ts: 101,
+        }
+      }
+      return {}
+    },
+    readPolicy: async () => policy([{ id: 'friend', label: '好友', mode: 'auto', trigger: 'all', cooldown_seconds: 1 }]),
+    restoreAccount: async () => {},
+    getController: () => controller,
+    createSession: async () => 'session-retry',
+    ensureSession: async () => {},
+    readImage: async () => ({
+      image: { mediaType: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n0sAAAAASUVORK5CYII=' },
+      text: 'attach 3053',
+    }),
+    statePath: join(dir, 'watch.json'),
+    config: { watchSeconds: 0.02, mergeWindowSeconds: 0.05, replyTimeoutSeconds: 1 },
+  })
+  try {
+    watcher.start()
+    await waitFor(() => prompts.length === 1, 3_000)
+    assert.equal(prompts[0].split('attach 3053').length - 1, 1, 'the retry must not append the note twice')
+  } finally {
+    watcher.stop()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('an image without a local path is fetched through read_image', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
   const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n0sAAAAASUVORK5CYII='

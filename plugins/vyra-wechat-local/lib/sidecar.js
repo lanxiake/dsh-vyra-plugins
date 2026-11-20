@@ -252,7 +252,10 @@ export function createSidecar({ runtime, vendorDir, log = () => {} }) {
     return {
       state,
       version: info?.version ?? null,
-      tools: (info?.tools ?? []).map((tool) => tool.name),
+      tools: (info?.tools ?? []).map((tool) => ({
+        name: tool.name,
+        description: tool.description || '',
+      })),
       error: error || null,
       stderrTail: stderrTail.slice(-10),
     }

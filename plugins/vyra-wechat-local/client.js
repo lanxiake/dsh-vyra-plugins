@@ -846,7 +846,9 @@ window.__ModuleLoader__.load({
 
       const state = status?.state ?? 'idle'
       const ready = state === 'ready'
-      const connected = ready && env?.ok === true && env?.weixin_running === true && env?.db_ok === true
+      // A hidden/tray window is still a live connection: the sender wakes it on
+      // demand, so only the process and the data directory decide "connected".
+      const connected = ready && env?.weixin_running === true && env?.db_ok === true
       const tone = connected ? 'connected' : state === 'failed' ? 'error' : state === 'starting' ? 'pending' : 'idle'
       const label = connected ? '已连接' : state === 'starting' ? '启动中' : state === 'failed' ? '未就绪' : ready ? '未就绪' : '未启动'
       const accountCount = accounts?.accounts?.length ?? 0
@@ -990,7 +992,7 @@ window.__ModuleLoader__.load({
         ? '微信：未运行（打开并登录微信后重新检测）'
         : env.ok
           ? '微信：就绪'
-          : `微信：${env.reason || '不可用'}`
+          : `微信：已登录 · ${env.reason || '窗口不在前台'}`
       const missing = env.deps && !env.deps.ok
         ? ['pycryptodome', 'zstandard'].filter((name) => env.deps[name] === false)
         : []
@@ -1074,12 +1076,18 @@ window.__ModuleLoader__.load({
       const state = status?.state ?? 'idle'
       const runtime = status?.runtime
       const ready = state === 'ready'
-      const connected = ready && env?.ok === true && env?.weixin_running === true && env?.db_ok === true
+      // A hidden/tray window is still a live connection: the sender wakes it on
+      // demand, so only the process and the data directory decide "connected".
+      const connected = ready && env?.weixin_running === true && env?.db_ok === true
       const tone = connected ? 'connected' : state === 'failed' ? 'error' : state === 'starting' ? 'pending' : 'idle'
       const label = connected ? '已连接' : state === 'starting' ? '启动中' : state === 'failed' ? '未就绪' : ready ? '未就绪' : '未启动'
       const environment = environmentLines(env, state)
       const registered = status?.registered ?? []
       const available = status?.tools?.length ?? 0
+      // Sidecar status carries {name, description}; older hosts may still send names.
+      const toolNotes = new Map((status?.tools ?? []).map((tool) => (
+        typeof tool === 'string' ? [tool, ''] : [tool?.name ?? '', tool?.description || '']
+      )))
 
       return h('section', { style: S.card },
           h('div', { style: S.row },
@@ -1104,7 +1112,9 @@ window.__ModuleLoader__.load({
               h('dd', { style: S.metaValue }, status?.version ? `PC微信侧车 v${status.version}` : 'PC微信侧车')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '在线'),
-              h('dd', { style: S.metaValue }, connected ? 'PC微信已就绪' : env?.reason || status?.error || '检测中…')),
+              h('dd', { style: S.metaValue }, connected
+                ? env?.ok === true ? 'PC微信已就绪' : '已连接 · 窗口未显示（发送时自动唤醒）'
+                : env?.reason || status?.error || '检测中…')),
             h('div', { style: S.metaItem },
               h('dt', { style: S.metaLabel }, '工具'),
               h('dd', { style: S.metaValue }, `${registered.length} 个已注册 · ${available} 个可用`)),
@@ -1136,7 +1146,11 @@ window.__ModuleLoader__.load({
               registered.length === 0
                 ? h('div', { style: S.chipsLabel }, '侧车未就绪，暂时没有工具')
                 : h('div', { style: S.chips },
-                  registered.map((tool) => h('span', { key: tool, style: S.chip },
+                  registered.map((tool) => h('span', {
+                    key: tool,
+                    style: S.chip,
+                    title: toolNotes.get(tool) || '无描述',
+                  },
                     h('span', { style: S.chipDot }),
                     tool)))),
 

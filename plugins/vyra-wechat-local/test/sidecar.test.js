@@ -14,6 +14,10 @@ test('initialize, call, progress, error and shutdown', async () => {
   const info = await sidecar.start()
   assert.equal(info.version, 'test')
   assert.equal(info.tools[0].name, 'list_sessions')
+  assert.deepEqual(sidecar.status().tools[0], {
+    name: 'list_sessions',
+    description: '列出微信会话',
+  })
 
   const content = await sidecar.call('list_sessions', { query: '张三' })
   assert.deepEqual(JSON.parse(content[0].text), { query: '张三' })

@@ -14,7 +14,9 @@ import { createToolRegistrar, TOOL_WHITELIST } from './lib/tools.js'
 import { createWatcher } from './lib/watch.js'
 
 export const name = 'vyra-wechat-local'
-export const inject = ['tools']
+// `agents` must be declared: reading `ctx.agents` without it throws cordis's
+// "cannot get property … without inject", and the watch loop retried forever.
+export const inject = ['tools', 'agents']
 
 const RPC_PATH = '/api/wechat-local/rpc'
 const AVATAR_PATH = '/api/wechat-local/avatar'
@@ -113,7 +115,8 @@ export function apply(ctx, config = {}) {
 
   function defaultAgentOptions() {
     try {
-      const selection = ctx.agentDefaultModel?.currentSelection?.()
+      // Same rule as `ctx.agents`: an undeclared property read throws; `get` does not.
+      const selection = ctx.get('agentDefaultModel')?.currentSelection?.()
       if (!selection?.provider || !selection?.model) return undefined
       return {
         provider: selection.provider,

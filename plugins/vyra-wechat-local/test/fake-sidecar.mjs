@@ -13,7 +13,14 @@ createInterface({ input: process.stdin }).on('line', (line) => {
     send({
       id: req.id,
       ok: true,
-      data: { version: 'test', tools: [{ name: 'list_sessions', inputSchema: { type: 'object', properties: {} } }] },
+      data: {
+        version: 'test',
+        tools: [{
+          name: 'list_sessions',
+          description: '列出微信会话',
+          inputSchema: { type: 'object', properties: {} },
+        }],
+      },
     })
     return
   }
