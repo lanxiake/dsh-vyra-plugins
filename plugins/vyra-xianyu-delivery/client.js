@@ -130,14 +130,24 @@ window.__ModuleLoader__.load({
     }
 
     function CardsTab(props) {
-      const { cards, draft, setDraft, addCard, busy } = props
+      const { cards, shopItems = [], draft, setDraft, addCard, busy } = props
+      const titleOf = (itemId) => {
+        const hit = shopItems.find((it) => it.item_id === itemId)
+        return hit ? (hit.title || hit.item_id) : itemId
+      }
       return h('div', null,
         h('div', { style: S.card },
           h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '添加卡券'),
-          h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' } },
+          h('div', { style: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px', marginBottom: '10px' } },
             h('div', null,
-              h('label', { style: S.label }, '商品 ID'),
-              h('input', { style: S.input, value: draft.itemId, onChange: (e) => setDraft({ ...draft, itemId: e.target.value }) })),
+              h('label', { style: S.label }, '商品'),
+              h('select', {
+                style: S.input,
+                value: draft.itemId,
+                onChange: (e) => setDraft({ ...draft, itemId: e.target.value }),
+              },
+                h('option', { value: '' }, shopItems.length ? '请选择商品…' : '暂无在售商品'),
+                shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`)))),
             h('div', null,
               h('label', { style: S.label }, '规格名（可选）'),
               h('input', { style: S.input, value: draft.specName, onChange: (e) => setDraft({ ...draft, specName: e.target.value }) })),
@@ -145,8 +155,14 @@ window.__ModuleLoader__.load({
               h('label', { style: S.label }, '规格值（可选）'),
               h('input', { style: S.input, value: draft.specValue, onChange: (e) => setDraft({ ...draft, specValue: e.target.value }) }))
           ),
-          h('label', { style: S.label }, '卡券内容（多条用单独一行 --- 分隔）'),
-          h('textarea', { style: S.area, value: draft.content, onChange: (e) => setDraft({ ...draft, content: e.target.value }) }),
+          h('label', { style: S.label }, '卡券内容（发买家的话；多条用单独一行 --- 分隔）'),
+          h('textarea', {
+            style: S.area,
+            value: draft.content,
+            placeholder: '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd\n有效期 7 天，过期联系我补。',
+            onChange: (e) => setDraft({ ...draft, content: e.target.value }),
+          }),
+          h('div', { style: { ...S.muted, marginTop: '6px' } }, '一个商品只绑一张启用的卡券；不配卡券，自动发货会跳过。'),
           h('div', { style: { marginTop: '10px' } },
             h('button', { style: S.btn, onClick: addCard, disabled: !!busy }, busy === 'add' ? '保存中…' : '添加'))
         ),
@@ -157,7 +173,7 @@ window.__ModuleLoader__.load({
               h('span', null, '商品'), h('span', null, '规格'), h('span', null, '名称'), h('span', null, '类型'), h('span', null, '状态')),
             cards.map((c) =>
               h('div', { key: c.id, style: S.row() },
-                h('span', { style: S.mono }, c.item_id),
+                h('span', { title: c.item_id, style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, titleOf(c.item_id)),
                 h('span', null, c.spec_value || '通用'),
                 h('span', null, c.name),
                 h('span', null, c.type),
@@ -923,7 +939,7 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         // 商品列表要走闲鱼接口，只在第一次打开商品页时拉。
-        if (tab !== 'items' || shopItems.length > 0 || busy === 'shop') return
+        if ((tab !== 'items' && tab !== 'cards') || shopItems.length > 0 || busy === 'shop') return
         setBusy('shop')
         rpc({ op: 'shopItems', limit: 50 }, 60000)
           .then((r) => setShopItems((r && r.items) || []))
@@ -1014,7 +1030,7 @@ window.__ModuleLoader__.load({
           onRefresh: loadRemoteOrders, loading: remoteOrdersLoading,
           onDetail: openOrderDetail,
         }) : null,
-        tab === 'cards' ? h(CardsTab, { cards, draft, setDraft, addCard, busy }) : null,
+        tab === 'cards' ? h(CardsTab, { cards, shopItems, draft, setDraft, addCard, busy }) : null,
         tab === 'items' ? h(ItemsTab, {
           items, shopItems, agentList, settings, loading: busy === 'shop',
           onDetail: openItemDetail,

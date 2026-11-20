@@ -72,6 +72,24 @@ uvx goofish-cli auth status --format json
 
 不配卡券，订单页仍能看到订单，但自动发货会因为「无卡券」跳过。
 
+**网盘商品示例**（内容里不要写「网盘」「微信」等敏感词）：
+
+```
+链接：https://pan.quark.cn/s/1cc79adb8f0e?pwd=xfrJ
+提取码：xfrJ
+有效期 7 天，过期联系我补。
+```
+
+多条库存这样分隔：
+
+```
+链接：https://pan.quark.cn/s/aaaa?pwd=1111
+提取码：1111
+---
+链接：https://pan.quark.cn/s/bbbb?pwd=2222
+提取码：2222
+```
+
 通过面板 RPC 或直接写库：
 
 ```bash
