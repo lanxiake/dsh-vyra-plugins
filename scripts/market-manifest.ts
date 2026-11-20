@@ -1209,6 +1209,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.8 replaces the card's item-ID input with a shop-item dropdown.
+        '0.5.8': {
+          publishTimestamp: 1795156621,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'd685957b5752fb33f0a7e25aa51c1ea1d4ac2978',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
