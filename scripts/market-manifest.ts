@@ -701,7 +701,7 @@ export const manifest: MarketManifest = {
           publishTimestamp: 1795143607,
           source: {
             type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            url: 'https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
             commit: 'ad533f50952ac4249c652d249c4946aa95925499',
             path: 'plugins/vyra-system-selection',
           },
@@ -1112,7 +1112,7 @@ export const manifest: MarketManifest = {
           publishTimestamp: 1795143511,
           source: {
             type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            url: 'https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
             commit: 'dbcfdda4c6cdbea19d30c65582ec9afd30b4d771',
             path: 'plugins/vyra-xianyu-delivery',
           },
