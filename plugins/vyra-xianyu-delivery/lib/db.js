@@ -82,6 +82,35 @@ function ensureColumn(db, table, column, ddl) {
   }
 }
 
+/**
+ * 0.4.1 之前 items 的主键只有 item_id。多账号后需要 (item_id, account_id)，
+ * 而 SQLite 不能改主键：升级时重建表并保留旧数据（account_id 记为空，即共享）。
+ */
+function migrateItems(db) {
+  const cols = db.prepare('PRAGMA table_info(items)').all()
+  if (!cols.length) return
+  const pk = cols.filter((c) => c.pk > 0).map((c) => c.name)
+  if (pk.length > 1) return
+  const hasAccount = cols.some((c) => c.name === 'account_id')
+  db.exec('ALTER TABLE items RENAME TO items_legacy')
+  db.exec(`
+    CREATE TABLE items (
+      item_id    TEXT NOT NULL DEFAULT '',
+      account_id TEXT NOT NULL DEFAULT '',
+      title      TEXT NOT NULL DEFAULT '',
+      knowledge  TEXT NOT NULL DEFAULT '',
+      skills     TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (item_id, account_id)
+    )`)
+  db.exec(
+    `INSERT INTO items (item_id, account_id, title, knowledge, skills, updated_at)
+     SELECT item_id, ${hasAccount ? "IFNULL(account_id, '')" : "''"}, title, knowledge, skills, updated_at
+     FROM items_legacy`,
+  )
+  db.exec('DROP TABLE items_legacy')
+}
+
 export function createStore(file) {
   mkdirSync(dirname(file), { recursive: true })
   const db = new DatabaseSync(file)
@@ -93,7 +122,9 @@ export function createStore(file) {
   ensureColumn(db, 'orders', 'spec_name', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'orders', 'spec_value', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'deliveries', 'account_id', "TEXT NOT NULL DEFAULT ''")
-  ensureColumn(db, 'items', 'account_id', "TEXT NOT NULL DEFAULT ''")
+  // 必须放在 SCHEMA 之后、prepare 之前：旧表主键不对会让 upsertItem 的
+  // ON CONFLICT 在 prepare 时抛错，整个插件加载失败。
+  migrateItems(db)
 
   const tx = (fn) => {
     db.exec('BEGIN IMMEDIATE')
