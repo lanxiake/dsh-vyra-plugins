@@ -1128,6 +1128,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.4 refreshes headlessly first and only falls back to a visible
+        // window when the headless fingerprint is rejected.
+        '0.5.4': {
+          publishTimestamp: 1795149649,
+          source: {
+            type: 'git',
+            url: 'https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '5f0b7366586609f23a674f50b15f6e9a6c39c886',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
