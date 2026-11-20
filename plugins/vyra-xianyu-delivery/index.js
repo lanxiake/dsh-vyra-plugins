@@ -564,7 +564,13 @@ export function apply(ctx, config = {}) {
         }
       }
       case 'chats':
-        return cli.chats(Number(body.fetchNum) || 50)
+        return cli.chats(Number(body.fetchNum) || 200)
+      case 'userInfo':
+        return cli.userInfo(String(body.cid || ''), Boolean(body.owner))
+      case 'itemDetail':
+        return cli.itemDetail(String(body.itemId || ''))
+      case 'orderDetail':
+        return cli.orderDetail(String(body.orderId || ''))
       case 'history':
         return cli.history(String(body.cid || ''), Number(body.limit) || 20)
       case 'sendMessage':

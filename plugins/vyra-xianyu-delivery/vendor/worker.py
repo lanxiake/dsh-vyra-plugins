@@ -262,6 +262,44 @@ def chats(fetch_num: int = 200) -> dict[str, Any]:
     return list_chats(fetch_num=int(fetch_num), watch_secs=0)
 
 
+def user_info(cid: str, owner: bool = False) -> dict[str, Any]:
+    """会话对方的头像与昵称（网页版 IM 用的 user.query 接口）。"""
+    from goofish_cli.core import Session
+    from goofish_cli.core.mtop import call
+
+    session = Session.load()
+    raw = call(
+        session,
+        api="mtop.taobao.idlemessage.pc.user.query",
+        data={"type": 0, "sessionType": 1, "sessionId": str(cid), "isOwner": bool(owner)},
+        version="4.0",
+        spm_cnt="a21ybx.im.0.0",
+    )
+    info = (raw.get("data") or {}).get("userInfo") or {}
+    return {"avatar": str(info.get("logo") or ""), "nick": str(info.get("nick") or "")}
+
+
+def item_detail(item_id: str) -> dict[str, Any]:
+    from goofish_cli.commands.item.get import get as get_item
+
+    return get_item(str(item_id))
+
+
+def order_detail(order_id: str) -> dict[str, Any]:
+    from goofish_cli.core import Session
+    from goofish_cli.core.mtop import call
+
+    session = Session.load()
+    raw = call(
+        session,
+        api="mtop.idle.web.trade.order.detail",
+        data={"tid": str(order_id)},
+        version="1.0",
+        spm_cnt="a21ybx.order-detail.0.0",
+    )
+    return raw.get("data") or {}
+
+
 def history(cid: str, limit: int = 10) -> list[dict[str, Any]]:
     from goofish_cli.commands.message.history import history as cli_history
 
@@ -374,7 +412,10 @@ COMMANDS = {
     "status": lambda a: status(),
     "history": lambda a: history(a["cid"], int(a.get("limit", 10))),
     "items": lambda a: items(int(a.get("limit", 50))),
-    "chats": lambda a: chats(int(a.get("fetchNum", 50))),
+    "chats": lambda a: chats(int(a.get("fetchNum", 200))),
+    "user-info": lambda a: user_info(a["cid"], bool(a.get("owner"))),
+    "item-detail": lambda a: item_detail(a["itemId"]),
+    "order-detail": lambda a: order_detail(a["orderId"]),
 }
 
 

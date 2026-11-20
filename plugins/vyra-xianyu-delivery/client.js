@@ -81,7 +81,7 @@ window.__ModuleLoader__.load({
     const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '' }
 
     function OrdersTab(props) {
-      const { orders, localOrders, onRefresh, loading } = props
+      const { orders, localOrders, onRefresh, loading, onDetail } = props
       const list = orders.length ? orders : localOrders
       const stateOf = (o) => o.local_state || o.state || ''
       const when = (o) => o.updated_at || o.created_at || ''
@@ -97,7 +97,12 @@ window.__ModuleLoader__.load({
               h('span', null, '订单号'), h('span', null, '买家'), h('span', null, '金额'),
               h('span', null, '数量'), h('span', null, '发货状态'), h('span', null, '时间')),
             list.map((o) =>
-              h('div', { key: o.order_no, style: S.row(6) },
+              h('div', {
+                key: o.order_no,
+                style: { ...S.row(6), cursor: 'pointer' },
+                title: '点击查看订单详情',
+                onClick: () => onDetail && onDetail(o),
+              },
                 h('span', { style: S.mono, title: o.order_no }, o.order_no),
                 h('span', { title: o.buyer_nick || o.buyer_id || '' }, o.buyer_nick || o.buyer_id || '-'),
                 h('span', null, o.amount ? `¥${o.amount}` : '-'),
@@ -154,8 +159,10 @@ window.__ModuleLoader__.load({
 
     function DeliveriesTab(props) {
       const { deliveries } = props
-      if (!deliveries.length) return h('div', { style: { ...S.muted, padding: '16px 0' } }, '暂无发货记录')
-      return h('div', null,
+      const note = h('div', { style: { ...S.muted, marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(127,127,127,.06)' } },
+        '这里只显示插件自动发货发出的消息；你在闲鱼 App 里手动发出的消息不在其中。')
+      if (!deliveries.length) return h('div', null, note, h('div', { style: S.empty }, '暂无发货记录'))
+      return h('div', null, note,
         h('div', { style: { ...S.row(), ...S.th } },
           h('span', null, '订单'), h('span', null, '序号'), h('span', null, '结果'), h('span', null, '内容'), h('span', null, '时间')),
         deliveries.map((d) =>
@@ -171,7 +178,7 @@ window.__ModuleLoader__.load({
     }
 
     function ItemsTab(props) {
-      const { items, shopItems, skillList, agentList, settings, draft, setDraft, saveItem, setAgentPreset, busy } = props
+      const { items, shopItems, skillList, agentList, settings, draft, setDraft, saveItem, setAgentPreset, onDetail, busy } = props
       const picked = new Set(String(draft.skills || '').split(/[,，\s]+/).filter(Boolean))
 
       const toggleSkill = (name) => {
@@ -241,7 +248,11 @@ window.__ModuleLoader__.load({
                 h('span', null, it.title || '-'),
                 h('span', null, it.skills || '-'),
                 h('span', { style: { fontSize: '12px', opacity: 0.8 } }, it.updated_at),
-                h('span', null,
+                h('span', { style: { display: 'flex', gap: '6px' } },
+                  h('button', {
+                    style: { ...S.btn, padding: '3px 8px', fontSize: '12px' },
+                    onClick: () => onDetail && onDetail(it),
+                  }, '详情'),
                   h('button', {
                     style: { ...S.btn, padding: '3px 8px', fontSize: '12px' },
                     onClick: () => setDraft({ itemId: it.item_id, title: it.title || '', skills: it.skills || '' }),
@@ -267,7 +278,14 @@ window.__ModuleLoader__.load({
         : d.toLocaleDateString()
     }
 
-    function Avatar({ name, size = 34 }) {
+    function Avatar({ name, src, size = 34 }) {
+      if (src) {
+        return h('img', {
+          src, alt: name || '', loading: 'lazy',
+          style: { width: `${size}px`, height: `${size}px`, borderRadius: '50%', flex: 'none', objectFit: 'cover', background: 'rgba(127,127,127,.15)' },
+          onError: (e) => { e.currentTarget.style.display = 'none' },
+        })
+      }
       const { letter, color } = avatarOf(name)
       return h('div', {
         style: {
@@ -278,8 +296,31 @@ window.__ModuleLoader__.load({
       }, letter)
     }
 
+    function MessageContent({ message, mine }) {
+      const c = message || {}
+      const bubble = {
+        padding: '8px 12px', borderRadius: '12px', fontSize: '13px', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        background: mine ? '#0f9d6e' : 'rgba(127,127,127,.13)', color: mine ? '#fff' : 'inherit',
+      }
+      if (c.text && c.text.text) return h('div', { style: bubble }, c.text.text)
+      if (c.tip && c.tip.tip) return h('div', { style: { fontSize: '12px', opacity: 0.6, textAlign: 'center', padding: '4px 0' } }, c.tip.tip)
+      if (c.dxCard) {
+        const main = (c.dxCard.item && c.dxCard.item.main) || {}
+        const ex = main.exContent || {}
+        const title = main.title || ex.title || ex.text || '卡片消息'
+        const pic = main.picUrl || ex.picUrl || ''
+        return h('div', { style: { border: '1px solid rgba(127,127,127,.25)', borderRadius: '10px', overflow: 'hidden', maxWidth: '240px', background: 'rgba(127,127,127,.06)' } },
+          pic ? h('img', { src: pic, alt: title, style: { width: '100%', display: 'block' } }) : null,
+          h('div', { style: { padding: '8px 10px', fontSize: '13px' } }, title))
+      }
+      const img = (c.image && (c.image.picUrl || c.image.url)) || c.picUrl || c.imageUrl
+      if (img) return h('img', { src: img, alt: '图片', style: { maxWidth: '220px', borderRadius: '10px', display: 'block' } })
+      return h('div', { style: { ...bubble, opacity: 0.6 } }, '[暂不支持的消息类型]')
+    }
+
     function ChatTab(props) {
-      const { chats, activeChat, messages, replyText, setReplyText, onPick, onSend, onRefresh, busy, selfUserId } = props
+      const { chats: rawChats, activeChat, messages, replyText, setReplyText, onPick, onSend, onRefresh, busy, selfUserId, avatars = {} } = props
+      const chats = [...rawChats].sort((a, b) => (b.ts || 0) - (a.ts || 0))
       const bodyRef = useRef(null)
       useEffect(() => {
         const el = bodyRef.current
@@ -303,7 +344,7 @@ window.__ModuleLoader__.load({
                   background: active ? 'rgba(15,157,110,.10)' : 'transparent',
                 },
               },
-                h(Avatar, { name: c.peer_nick || c.peer_user_id }),
+                h(Avatar, { name: c.peer_nick || c.peer_user_id, src: avatars[c.session_id] }),
                 h('div', { style: { flex: 1, minWidth: 0 } },
                   h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '8px' } },
                     h('span', { style: { fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, c.peer_nick || c.peer_user_id || c.session_id),
@@ -318,19 +359,23 @@ window.__ModuleLoader__.load({
             ? h('div', { style: { ...S.empty, padding: '60px 0' } }, '选择左侧会话查看聊天记录')
             : [
               h('div', { key: 'head', style: { flex: 'none', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: '1px solid rgba(127,127,127,.18)' } },
-                h(Avatar, { name: activeChat.peer_nick || activeChat.peer_user_id, size: 28 }),
+                h(Avatar, { name: activeChat.peer_nick || activeChat.peer_user_id, src: avatars[activeChat.session_id], size: 28 }),
                 h('span', { style: { fontWeight: 600, fontSize: '14px' } }, activeChat.peer_nick || activeChat.peer_user_id),
                 h('span', { style: { ...S.muted, marginLeft: 'auto' } }, fmtTime(activeChat.ts))),
               h('div', { key: 'body', ref: bodyRef, style: { flex: 1, minHeight: 0, overflow: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' } },
                 messages.length === 0 ? h('div', { style: S.empty }, '没有可显示的消息') : null,
                 messages.map((m) => {
                   const mine = String(m.send_user_id) === String(selfUserId)
-                  const text = (m.message && m.message.text && m.message.text.text) || (m.message && m.message.tip && m.message.tip.tip) || ''
-                  if (!text) return null
-                  return h('div', { key: m.message_id || `${m.created_at}-${text.length}`, style: { display: 'flex', gap: '8px', flexDirection: mine ? 'row-reverse' : 'row', alignItems: 'flex-start' } },
-                    h(Avatar, { name: mine ? '我' : (m.send_user_name || activeChat.peer_nick), size: 28 }),
+                  const c = m.message || {}
+                  const isTip = Boolean(c.tip && c.tip.tip) && !(c.text && c.text.text)
+                  const key = m.message_id || `${m.created_at}-${Object.keys(c).join('')}`
+                  if (isTip) {
+                    return h('div', { key, style: { textAlign: 'center' } }, h(MessageContent, { message: c, mine }))
+                  }
+                  return h('div', { key, style: { display: 'flex', gap: '8px', flexDirection: mine ? 'row-reverse' : 'row', alignItems: 'flex-start' } },
+                    h(Avatar, { name: mine ? '我' : (m.send_user_name || activeChat.peer_nick), src: mine ? '' : avatars[activeChat.session_id], size: 28 }),
                     h('div', { style: { maxWidth: '70%' } },
-                      h('div', { style: { padding: '8px 12px', borderRadius: '12px', background: mine ? '#0f9d6e' : 'rgba(127,127,127,.14)', color: mine ? '#fff' : 'inherit', fontSize: '13px', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, text),
+                      h(MessageContent, { message: c, mine }),
                       h('div', { style: { fontSize: '11px', opacity: 0.5, textAlign: mine ? 'right' : 'left', marginTop: '3px' } }, fmtTime(m.created_at)))
                   )
                 })),
@@ -347,6 +392,27 @@ window.__ModuleLoader__.load({
             ]
         )
       )
+    }
+
+    function InfoDialog({ title, loading, error, data, onClose }) {
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', {
+          style: { ...S.modal, width: 'min(720px, 92vw)', maxHeight: '82vh', display: 'flex', flexDirection: 'column', textAlign: 'left' },
+          onClick: (e) => e.stopPropagation(),
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '10px' } },
+            h('h3', { style: { ...S.title, fontSize: '16px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, title),
+            h('button', { style: S.btn, onClick: onClose }, '关闭')),
+          loading
+            ? h('div', { style: S.empty }, '读取中…')
+            : error
+              ? h('div', { style: { color: '#dc2626', fontSize: '13px' } }, error)
+              : h('pre', {
+                style: {
+                  flex: 1, overflow: 'auto', margin: 0, fontSize: '12px', lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word', background: 'rgba(127,127,127,.06)', borderRadius: '8px', padding: '12px',
+                },
+              }, JSON.stringify(data, null, 2))))
     }
 
     function LoginDialog(props) {
@@ -391,6 +457,9 @@ window.__ModuleLoader__.load({
       const [remoteOrders, setRemoteOrders] = useState([])
       const [remoteOrdersLoading, setRemoteOrdersLoading] = useState(false)
       const [accounts, setAccounts] = useState([])
+      const [avatars, setAvatars] = useState({})
+      const [selfAvatar, setSelfAvatar] = useState('')
+      const [info, setInfo] = useState(null)
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
@@ -493,6 +562,26 @@ window.__ModuleLoader__.load({
           setError(String(err.message || err))
         } finally {
           setBusy('')
+        }
+      }
+
+      async function openOrderDetail(order) {
+        setInfo({ title: `订单 ${order.order_no}`, loading: true, error: '', data: null })
+        try {
+          const data = await rpc({ op: 'orderDetail', orderId: order.order_no }, 60000)
+          setInfo((prev) => (prev ? { ...prev, loading: false, data } : prev))
+        } catch (err) {
+          setInfo((prev) => (prev ? { ...prev, loading: false, error: String(err.message || err) } : prev))
+        }
+      }
+
+      async function openItemDetail(item) {
+        setInfo({ title: `商品 ${item.item_id}`, loading: true, error: '', data: null })
+        try {
+          const data = await rpc({ op: 'itemDetail', itemId: item.item_id }, 60000)
+          setInfo((prev) => (prev ? { ...prev, loading: false, data } : prev))
+        } catch (err) {
+          setInfo((prev) => (prev ? { ...prev, loading: false, error: String(err.message || err) } : prev))
         }
       }
 
@@ -625,6 +714,40 @@ window.__ModuleLoader__.load({
         if (tab === 'chat' && chats.length === 0 && busy !== 'chats') void loadChats()
       }, [tab])
 
+      // 头像走 user.query 接口，逐个补；先补列表前 15 个，串行避免风控。
+      useEffect(() => {
+        if (tab !== 'chat' || chats.length === 0) return undefined
+        let alive = true
+        void (async () => {
+          for (const c of chats.slice(0, 15)) {
+            if (!c.session_id) continue
+            try {
+              const info = await rpc({ op: 'userInfo', cid: c.session_id }, 30000)
+              if (!alive) return
+              if (info && info.avatar) setAvatars((prev) => ({ ...prev, [c.session_id]: info.avatar }))
+            } catch {
+              // 单个头像失败不影响列表
+            }
+          }
+        })()
+        return () => { alive = false }
+      }, [tab, chats.length])
+
+      // 当前账号头像：借任意一个会话查 owner 资料。
+      useEffect(() => {
+        if (!(auth && auth.valid) || chats.length === 0 || selfAvatar) return undefined
+        let alive = true
+        void (async () => {
+          try {
+            const info = await rpc({ op: 'userInfo', cid: chats[0].session_id, owner: true }, 30000)
+            if (alive && info && info.avatar) setSelfAvatar(info.avatar)
+          } catch {
+            // 查不到就继续用首字头像
+          }
+        })()
+        return () => { alive = false }
+      }, [auth && auth.unb, chats.length])
+
       async function loadRemoteOrders() {
         setRemoteOrdersLoading(true)
         try {
@@ -684,10 +807,12 @@ window.__ModuleLoader__.load({
       return h('div', { style: S.page },
         h('div', { style: S.head },
           h('h2', { style: S.title }, '闲鱼自动客服'),
-          h('span', {
-            title: auth && auth.valid ? '已登录' : '未登录',
-            style: { width: '8px', height: '8px', borderRadius: '50%', background: auth && auth.valid ? '#16a34a' : '#dc2626', flex: 'none' },
-          }),
+          (auth && auth.valid)
+            ? h(Avatar, { name: auth.tracknick || auth.unb, src: selfAvatar, size: 28 })
+            : h('span', {
+              title: '未登录',
+              style: { width: '8px', height: '8px', borderRadius: '50%', background: '#dc2626', flex: 'none' },
+            }),
           accounts.length > 0 || (auth && auth.valid)
             ? h('select', {
               style: { padding: '5px 10px', borderRadius: '8px', border: '1px solid rgba(127,127,127,.3)', background: 'transparent', color: 'inherit', font: 'inherit', fontSize: '13px' },
@@ -712,6 +837,7 @@ window.__ModuleLoader__.load({
             : null,
           h('button', {
             style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
+            title: '立即轮询一次待发货订单并发货，不用等下一次自动轮询',
             onClick: runTick, disabled: !!busy,
           }, busy === 'tick' ? '处理中…' : '立即处理一轮')),
         h('div', { style: { ...S.muted, marginBottom: '14px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(127,127,127,.08)' } }, meta),
@@ -724,19 +850,25 @@ window.__ModuleLoader__.load({
         tab === 'chat' ? h(ChatTab, {
           chats, activeChat, messages: chatMessages, replyText, setReplyText,
           onPick: loadChat, onSend: sendReply, onRefresh: loadChats, busy,
-          selfUserId: (auth && auth.unb) || '',
+          selfUserId: (auth && auth.unb) || '', avatars,
         }) : null,
         tab === 'orders' ? h(OrdersTab, {
           orders: remoteOrders, localOrders: orders,
           onRefresh: loadRemoteOrders, loading: remoteOrdersLoading,
+          onDetail: openOrderDetail,
         }) : null,
         tab === 'cards' ? h(CardsTab, { cards, draft, setDraft, addCard, busy }) : null,
         tab === 'items' ? h(ItemsTab, {
           items, shopItems, skillList, agentList, settings,
-          draft: itemDraft, setDraft: setItemDraft, saveItem, setAgentPreset, busy,
+          draft: itemDraft, setDraft: setItemDraft, saveItem, setAgentPreset,
+          onDetail: openItemDetail, busy,
         }) : null,
         tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
-        loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null
+        loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null,
+        info ? h(InfoDialog, {
+          title: info.title, loading: info.loading, error: info.error, data: info.data,
+          onClose: () => setInfo(null),
+        }) : null
       )
     }
 

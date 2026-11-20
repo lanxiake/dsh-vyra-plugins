@@ -51,6 +51,9 @@ export function createCli({
 
     history: (cid, limit = 10) => run('history', { cid, limit }),
     items: (limit = 50) => run('items', { limit }),
-    chats: (fetchNum = 50) => run('chats', { fetchNum }),
+    chats: (fetchNum = 200) => run('chats', { fetchNum }),
+    userInfo: (cid, owner = false) => run('user-info', { cid, owner }),
+    itemDetail: (itemId) => run('item-detail', { itemId }),
+    orderDetail: (orderId) => run('order-detail', { orderId }),
   }
 }
