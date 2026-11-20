@@ -366,6 +366,43 @@ window.__ModuleLoader__.load({
       )
     }
 
+    const AVATAR_COLORS = ['#0f9d6e', '#2563eb', '#7c3aed', '#db2777', '#d97706', '#0891b2']
+
+    function avatarOf(name) {
+      const text = String(name || '?')
+      let hash = 0
+      for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0
+      return { letter: text.slice(0, 1).toUpperCase(), color: AVATAR_COLORS[hash % AVATAR_COLORS.length] }
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return ''
+      const d = new Date(Number(ts))
+      if (Number.isNaN(d.getTime())) return ''
+      const now = new Date()
+      return d.toDateString() === now.toDateString()
+        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : d.toLocaleDateString()
+    }
+
+    function Avatar({ name, src, size = 34 }) {
+      if (src) {
+        return h('img', {
+          src, alt: name || '', loading: 'lazy',
+          style: { width: `${size}px`, height: `${size}px`, borderRadius: '50%', flex: 'none', objectFit: 'cover', background: 'rgba(127,127,127,.15)' },
+          onError: (e) => { e.currentTarget.style.display = 'none' },
+        })
+      }
+      const { letter, color } = avatarOf(name)
+      return h('div', {
+        style: {
+          width: `${size}px`, height: `${size}px`, borderRadius: '50%', flex: 'none',
+          background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: `${Math.round(size * 0.42)}px`, fontWeight: 600,
+        },
+      }, letter)
+    }
+
     function MessageContent({ message, mine }) {
       const c = message || {}
       const bubble = {

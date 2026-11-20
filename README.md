@@ -12,6 +12,12 @@ DeepSeek Harness 的插件与技能市场，随 [dsh-Veyra](../dsh-Veyra) fork �
 https://lanxiake.github.io/dsh-vyra-plugins/index.json
 ```
 
+国内网络访问 GitHub Pages 慢或打不开时，用 AtomGit 镜像：
+
+```
+https://raw.atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins/raw/master/docs/index.json
+```
+
 然后在插件市场里搜索下面的中文名或包名安装。索引是实时拉取的，**这个仓库更新后客户端重新打开插件页就能看到**，不需要改上面的 URL。
 
 想只用某一个插件也可以，每个插件都是独立的 npm 包，按包名从 Git 安装即可（安装源见各条目的 `version.source`）。
