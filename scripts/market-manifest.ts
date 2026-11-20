@@ -271,6 +271,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/tool-usage-stats',
           },
         },
+        // 0.7.4 ships the icon the market card already draws: without an `./icon` export the
+        // installed plugin list fell back to a generic glyph.
+        '0.7.4': {
+          publishTimestamp: 1795080600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '92dc3e408b046e087608dd22491a19b2b2915c7d',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
       },
       metadata: {
         category: 'observability',
@@ -655,6 +666,19 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'c00a826eb5354dfd02149b38f47ee7922f3c1b5f',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
+        // 1.7.0 makes a long answer usable: the mouse hook forwards wheel events over the panel
+        // (a no-activate window never receives them, which is why it could not scroll), a
+        // scrollbar shows the overflow, and the answer is laid out line by line so a drag selects
+        // a character range and copies it on release.
+        '1.7.0': {
+          publishTimestamp: 1795081200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3f17c72599689e0fa593ef583b9c8dd2f7b2ccd0',
             path: 'plugins/vyra-system-selection',
           },
         },
@@ -1107,6 +1131,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '2eef8b722e0cabc1e5d790a8a78c08772fab50ff',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
+        // 1.3.1 drops the package's own `icon` field, which pointed at assets/logo.png while the
+        // market card renders this index's icon — the installed list and the market showed two
+        // different pictures for the same plugin.
+        '1.3.1': {
+          publishTimestamp: 1795080000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '92dc3e408b046e087608dd22491a19b2b2915c7d',
             path: 'plugins/vyra-agent-cli-manager',
           },
         },
