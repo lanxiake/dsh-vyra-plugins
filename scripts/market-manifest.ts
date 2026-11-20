@@ -1173,6 +1173,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.6 adds a searchable skill list with "open in place" and an
+        // AI on/off switch in the panel.
+        '0.5.6': {
+          publishTimestamp: 1795154453,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '1acf8030731e145ccaef8f8b35da7ce752ee174f',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
