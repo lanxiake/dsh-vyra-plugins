@@ -262,12 +262,7 @@ def chats(fetch_num: int = 200) -> dict[str, Any]:
     return list_chats(fetch_num=int(fetch_num), watch_secs=0)
 
 
-async def _refresh_session() -> dict[str, Any]:
-    """用 Playwright 走"快速进入"免密登录，刷新过期令牌并写回 cookies.json。
-
-    goofish-cli 自带的 refresh 写死 system Chrome，多数机器没有；这里复用它的
-    _try_quick_enter 流程，但用我们自己挑的浏览器（Edge / bundled Chromium）。
-    """
+async def _refresh_session_once(headless: bool) -> dict[str, Any]:
     from playwright.async_api import async_playwright
 
     from goofish_cli.core.refresh import AUTH_PROBE_URL, _try_quick_enter
@@ -277,7 +272,7 @@ async def _refresh_session() -> dict[str, Any]:
     path = resolve_cookie_path()
 
     async with async_playwright() as pw:
-        browser = await _launch_browser(pw)
+        browser = await _launch_browser(pw, headless=headless)
         context = await browser.new_context(locale="zh-CN", timezone_id="Asia/Shanghai")
         try:
             # 用 cookie_records 而不是 http.cookies：前者保留了 domain/path，
@@ -328,7 +323,11 @@ async def _refresh_session() -> dict[str, Any]:
                     if c.get("name") and c.get("value")
                 ],
             )
-            return {"ok": True, "unb": next((c["value"] for c in fresh if c["name"] == "unb"), "")}
+            return {
+                "ok": True,
+                "unb": next((c["value"] for c in fresh if c["name"] == "unb"), ""),
+                "headless": headless,
+            }
         finally:
             try:
                 await asyncio.wait_for(context.close(), timeout=8)
@@ -338,6 +337,17 @@ async def _refresh_session() -> dict[str, Any]:
                 await asyncio.wait_for(browser.close(), timeout=8)
             except Exception:  # noqa: BLE001
                 pass
+
+
+async def _refresh_session() -> dict[str, Any]:
+    """先无头刷新，失败再回退有头（headless 指纹被拒时才会弹窗）。"""
+    errors: list[str] = []
+    for headless in (True, False):
+        try:
+            return await _refresh_session_once(headless)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{'headless' if headless else 'headful'}: {e}")
+    raise RuntimeError("；".join(errors))
 
 
 def refresh_session() -> dict[str, Any]:
@@ -401,16 +411,16 @@ def _emit(obj: dict[str, Any]) -> None:
     print(json.dumps(obj, ensure_ascii=False), flush=True)
 
 
-async def _launch_browser(pw: Any) -> Any:
+async def _launch_browser(pw: Any, headless: bool = False) -> Any:
     """优先系统 Edge，其次 bundled Chromium，最后系统 Chrome。
 
-    必须 headful：实测 headless 下页面指纹会被闲鱼判掉，passport 二维码不渲染。
-    窗口放到屏幕右下角，不遮住 DSH 面板。
+    扫码登录必须 headful（headless 指纹会让 passport 二维码不渲染）；
+    令牌续期先试 headless，失败由调用方回退 headful。
     """
     args = ["--window-position=1200,600", "--window-size=520,700"]
     for kwargs in ({"channel": "msedge"}, {}, {"channel": "chrome"}):
         try:
-            return await pw.chromium.launch(headless=False, args=args, **kwargs)
+            return await pw.chromium.launch(headless=headless, args=args, **kwargs)
         except Exception:  # noqa: BLE001 — 逐个降级
             continue
     raise RuntimeError("没有可用的浏览器：请安装 Edge，或运行 playwright install chromium")
