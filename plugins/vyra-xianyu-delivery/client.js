@@ -218,6 +218,11 @@ window.__ModuleLoader__.load({
       const [agent, setAgent] = useState(current.agentPreset || 'builtin')
       const [picked, setPicked] = useState(new Set(String(current.skills || '').split(/[,，\s]+/).filter(Boolean)))
       const [busy, setBusy] = useState(false)
+      const [skillQuery, setSkillQuery] = useState('')
+      const q = skillQuery.trim().toLowerCase()
+      const filtered = skills.filter((s) => !q
+        || String(s.name || '').toLowerCase().includes(q)
+        || String(s.description || '').toLowerCase().includes(q))
       const toggle = (name) => {
         const next = new Set(picked)
         if (next.has(name)) next.delete(name)
@@ -242,17 +247,29 @@ window.__ModuleLoader__.load({
             h('option', { value: 'builtin' }, '内置客服（插件自带）'),
             agents.map((a) => h('option', { key: a.id, value: a.id }, `${a.name}（${a.id}）`))),
           h('div', { style: { ...S.muted, marginTop: '6px' } }, '需要新的 Agent 可以到「智能体管理」创建，再回这里选择。'),
-          h('label', { style: { ...S.label, marginTop: '14px' } }, `技能（已选 ${picked.size}）`),
-          h('div', { style: { flex: 1, overflow: 'auto', display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '4px 0', maxHeight: '320px' } },
-            skills.length === 0
-              ? h('div', { style: S.muted }, '没有扫描到已安装的技能')
-              : skills.map((s) => h('label', {
+          h('label', { style: { ...S.label, marginTop: '14px' } }, `技能（已选 ${picked.size} / 共 ${skills.length}）`),
+          h('input', {
+            style: { ...S.input, marginTop: '6px' },
+            placeholder: '搜索技能名称或描述…',
+            value: skillQuery,
+            onChange: (e) => setSkillQuery(e.target.value),
+          }),
+          h('div', { style: { flex: 1, overflow: 'auto', marginTop: '8px', border: '1px solid rgba(127,127,127,.2)', borderRadius: '8px', maxHeight: '320px' } },
+            filtered.length === 0
+              ? h('div', { style: { ...S.muted, padding: '12px' } }, skills.length === 0 ? '没有扫描到已安装的技能' : '没有匹配的技能')
+              : filtered.map((s) => h('div', {
                 key: s.name,
-                title: s.description || s.name,
-                style: { ...chip, background: picked.has(s.name) ? 'rgba(15,157,110,.12)' : 'transparent', borderColor: picked.has(s.name) ? '#0f9d6e' : 'rgba(127,127,127,.3)' },
+                style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderBottom: '1px solid rgba(127,127,127,.1)' },
               },
                 h('input', { type: 'checkbox', checked: picked.has(s.name), onChange: () => toggle(s.name) }),
-                s.name))),
+                h('div', { style: { flex: 1, minWidth: 0 } },
+                  h('div', { style: { fontSize: '13px', fontWeight: 600 } }, s.name),
+                  h('div', { style: { fontSize: '12px', opacity: 0.6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.description || '无描述')),
+                h('button', {
+                  style: { ...S.btn, padding: '2px 8px', fontSize: '12px', flex: 'none' },
+                  title: '打开技能所在位置',
+                  onClick: () => { rpc({ op: 'openSkillDir', name: s.name }).catch(() => {}) },
+                }, '打开')))),
           h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },
             h('button', { style: S.btn, onClick: onClose }, '取消'),
             h('button', {
@@ -698,6 +715,17 @@ window.__ModuleLoader__.load({
         }
       }
 
+      async function toggleAi() {
+        const next = status && status.ai ? '0' : '1'
+        try {
+          await rpc({ op: 'setSetting', key: 'ai.enabled', value: next })
+          setStatus((s) => (s ? { ...s, ai: next === '1' } : s))
+          setNotice(next === '1' ? 'AI 客服已开启' : 'AI 客服已关闭')
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+
       async function switchAccount(unb) {
         if (!unb) return
         setBusy('switch')
@@ -941,6 +969,13 @@ window.__ModuleLoader__.load({
                 : null)
             : null,
           h('div', { style: { flex: 1 } }),
+          h('button', {
+            style: status && status.ai
+              ? { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 }
+              : S.btn,
+            title: status && status.ai ? '点击关闭 AI 自动回复' : '点击开启 AI 自动回复（内置客服）',
+            onClick: toggleAi,
+          }, status && status.ai ? 'AI 客服 开' : 'AI 客服 关'),
           h('button', { style: S.btn, onClick: openLogin }, '扫码登录'),
           (auth && auth.valid)
             ? h('button', {

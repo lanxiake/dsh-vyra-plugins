@@ -26,7 +26,13 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
   const maxRepliesPerChat = Number(ai.maxRepliesPerChat) || 8
   const mode = String(ai.mode || (agent?.available ? 'dsh' : 'api'))
   const apiReady = Boolean(ai.baseUrl && ai.apiKey && ai.model)
-  const enabled = ai.enabled === true && (mode === 'dsh' ? Boolean(agent?.available) : apiReady)
+
+  // 面板开关写在 settings；没有设置时回落到配置文件里的 ai.enabled。
+  function isEnabled() {
+    const override = store.getSetting('ai.enabled')
+    const on = override ? override === '1' : ai.enabled === true
+    return on && (mode === 'dsh' ? Boolean(agent?.available) : apiReady)
+  }
 
   const cooldowns = new Map()
   const counts = new Map()
@@ -126,7 +132,7 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
   }
 
   async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '' }) {
-    if (!enabled) return null
+    if (!isEnabled()) return null
     if (coolingDown(cid)) return null
     if ((counts.get(cid) || 0) >= maxRepliesPerChat) return null
 
@@ -140,7 +146,9 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
   }
 
   return {
-    enabled,
+    get enabled() {
+      return isEnabled()
+    },
     mode,
     reply,
     resetChat(cid) {

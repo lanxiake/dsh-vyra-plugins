@@ -100,14 +100,16 @@ export function apply(ctx, config = {}) {
         if (seen.has(entry.name)) continue
         try {
           if (entry.isDirectory()) {
-            const md = await readFile(join(root, entry.name, 'SKILL.md'), 'utf8')
+            const dir = join(root, entry.name)
+            const md = await readFile(join(dir, 'SKILL.md'), 'utf8')
             seen.add(entry.name)
-            out.push({ name: entry.name, root, description: firstLine(md) })
+            out.push({ name: entry.name, root, path: dir, description: firstLine(md) })
           } else if (entry.name.endsWith('.md')) {
             const name = entry.name.replace(/\.md$/, '')
-            const md = await readFile(join(root, entry.name), 'utf8')
+            const file = join(root, entry.name)
+            const md = await readFile(file, 'utf8')
             seen.add(entry.name)
-            out.push({ name, root, description: firstLine(md) })
+            out.push({ name, root, path: file, description: firstLine(md) })
           }
         } catch {
           // 不是技能，跳过
@@ -585,9 +587,18 @@ export function apply(ctx, config = {}) {
         return listSkills()
       case 'agents':
         return listAgents()
+      case 'openSkillDir': {
+        const name = String(body.name || '')
+        const hit = (await listSkills()).find((s) => s.name === name)
+        if (!hit || !hit.path) throw new Error('技能不存在')
+        const args = hit.path.endsWith('.md') ? [`/select,${hit.path}`] : [hit.path]
+        spawn('explorer', args, { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+        return { ok: true }
+      }
       case 'settings':
         return {
           agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || '') || 'builtin',
+          aiEnabled: ai.enabled,
           aiMode: String(cfg.ai?.mode || (dshAgent.available ? 'dsh' : 'api')),
           agentAvailable: dshAgent.available,
           builtin: dshAgent.builtin,
