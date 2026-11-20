@@ -47,6 +47,19 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const lower = (value) => String(value ?? '').trim().toLowerCase()
 const isGroup = (talker) => lower(talker).endsWith('@chatroom')
 
+/**
+ * The only channels a third party cannot write into: messages you send to
+ * yourself or to 文件传输助手. They are the trusted control channel for the
+ * assistant; every other talker is another person and must stay out of the
+ * agent unless explicitly configured.
+ */
+export function isTrustedChannel(talker, account) {
+  const name = lower(talker)
+  if (!name) return false
+  if (name === 'filehelper') return true
+  return Boolean(account) && name === lower(account)
+}
+
 /** Collapse a note that a failed delivery appended repeatedly, e.g. `（attach 1）` × 100. */
 function collapseRepeats(text) {
   return String(text ?? '').replace(/(（[^（）]{1,40}）)\1+/gu, '$1')
@@ -105,12 +118,30 @@ function inQuietHours(quiet, now = new Date()) {
  * @returns {{action: 'auto'|'draft'|'notify'|'drop', mode?: string, cooldownMs?: number, reason: string}}
  */
 export function decideMessage(rules, message) {
-  if (!rules || rules.enabled !== true) return { action: 'drop', reason: 'disabled' }
-  if (Number(rules.version ?? 1) < 2) return { action: 'drop', reason: 'legacy_rules' }
-  if (lower(message.talker) === 'filehelper' && !rules.reply_self) return { action: 'drop', reason: 'self_skip' }
+  // Self-chat and 文件传输助手 are the trusted control channel: only the account
+  // owner can write there. They are allowed by default, even with no rules file;
+  // every other talker needs an explicit entry.
+  const trusted = isTrustedChannel(message.talker, message.account)
+  const trustedDefault = {
+    action: 'auto',
+    mode: 'auto',
+    cooldownMs: 60_000,
+    reason: '',
+  }
+  if (!rules || rules.enabled !== true) {
+    return trusted ? trustedDefault : { action: 'drop', reason: 'disabled' }
+  }
+  if (Number(rules.version ?? 1) < 2) {
+    return trusted ? trustedDefault : { action: 'drop', reason: 'legacy_rules' }
+  }
 
   const peer = matchPeer(rules.peers, message.talker, message.name)
   if (peer === undefined) {
+    if (trusted) {
+      if (!isGroup(message.talker) && rules.private === false) return { action: 'drop', reason: 'private_off' }
+      if (inQuietHours(rules.quiet_hours)) return { action: 'drop', reason: 'quiet_hours' }
+      return trustedDefault
+    }
     return rules.default_mode === 'notify'
       ? { action: 'notify', reason: 'not_whitelisted' }
       : { action: 'drop', reason: 'not_whitelisted' }
@@ -174,7 +205,7 @@ function imageMediaType(buffer) {
  * @param {object} [options.config]
  * @param {(line: string) => void} [options.log]
  */
-export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, config = {}, log = () => {}, statePath = stateFile() }) {
+export function createWatcher({ callJson, readPolicy, restoreAccount, getController, createSession, ensureSession, readImage, retireSession = async () => {}, setMode = () => {}, config = {}, log = () => {}, statePath = stateFile() }) {
   const pollSeconds = Math.max(0.01, Number(config.watchSeconds) || 2)
   const mergeWindowMs = Math.max(1, Number(config.mergeWindowSeconds) * 1000 || 20_000)
   const replyTimeoutMs = Math.max(1, Number(config.replyTimeoutSeconds) * 1000 || 120_000)
@@ -429,6 +460,9 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
       // a hung service must fail this delivery so the batch is retried instead
       // of disappearing once the awaiting window expires.
       const sessionId = await withTimeout(openSession(key, peer), 30_000, '建立会话')
+      // The bound reply tool only sends when the batch explicitly allows it;
+      // a draft must never turn into a real message because the model guessed.
+      setMode(sessionId, decision.mode === 'auto' ? 'auto' : 'draft')
       await withTimeout(controller.prompt({
         requestId: randomUUID(),
         sessionId,
@@ -494,9 +528,14 @@ export function createWatcher({ callJson, readPolicy, restoreAccount, getControl
     for (const message of messages) {
       const talker = message.talker
       if (!talker) continue
+      // `poll_new` normally tags every message with its account; keep the
+      // trusted-channel check working if an older sidecar omits it.
+      if (!message.account) message.account = account
       const key = `${account}|${talker}`
       if (message.agent_sent === true) continue
-      if (message.from_me === true) {
+      // Writing to yourself or 文件传输助手 is how the owner talks to the
+      // assistant; from_me there is the input, not an answer to someone else.
+      if (message.from_me === true && !isTrustedChannel(talker, account)) {
         // The user answered from their own phone: cancel the pending auto-reply.
         scheduler.userSpoke(key)
         skip(account, message, 'from_me')

@@ -1,7 +1,7 @@
 // Policy decisions the watch loop applies before waking the model.
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decideMessage, summarize } from '../lib/watch.js'
+import { decideMessage, isTrustedChannel, summarize } from '../lib/watch.js'
 
 function rules(overrides = {}) {
   return {
@@ -27,6 +27,26 @@ const message = (overrides = {}) => ({
 
 test('a disabled gate drops everything', () => {
   assert.equal(decideMessage(rules({ enabled: false }), message()).action, 'drop')
+})
+
+test('only self and filehelper are trusted channels', () => {
+  assert.equal(isTrustedChannel('filehelper', 'wxid_me'), true)
+  assert.equal(isTrustedChannel('wxid_me', 'wxid_me'), true)
+  assert.equal(isTrustedChannel('friend', 'wxid_me'), false)
+  assert.equal(isTrustedChannel('wxid_me', 'wxid_other'), false)
+})
+
+test('self and filehelper are whitelisted by default, other friends are not', () => {
+  const self = message({ talker: 'wxid_me', account: 'wxid_me' })
+  const helper = message({ talker: 'filehelper', account: 'wxid_me' })
+  // Even with no rules / the gate disabled: the control channel still works.
+  assert.equal(decideMessage(undefined, self).action, 'auto')
+  assert.equal(decideMessage(rules({ enabled: false, peers: [] }), helper).action, 'auto')
+  assert.equal(decideMessage(rules({ peers: [] }), message({ account: 'wxid_me' })).action, 'drop')
+
+  // An explicit entry still wins, so the user can silence them.
+  const peers = [{ id: 'filehelper', mode: 'ignore', trigger: 'all' }]
+  assert.equal(decideMessage(rules({ peers }), helper).action, 'drop')
 })
 
 test('an unlisted peer follows default_mode', () => {

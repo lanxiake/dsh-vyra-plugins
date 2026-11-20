@@ -95,6 +95,25 @@ window.__ModuleLoader__.load({
         keywords: (Array.isArray(peer.keywords) ? peer.keywords : []).join('，'),
       }))
 
+    /** The trusted control channel: your own account and 文件传输助手. */
+    const trustedRow = (id, label) => ({
+      id,
+      label,
+      mode: 'auto',
+      cooldownSeconds: '60',
+      trigger: 'all',
+      keywords: '',
+    })
+
+    const withTrustedRows = (wxid, draft) => {
+      const lowerId = (value) => String(value ?? '').trim().toLowerCase()
+      const rows = [...draft.rows]
+      const has = (id) => rows.some((row) => lowerId(row.id) === lowerId(id))
+      if (!has('filehelper')) rows.unshift(trustedRow('filehelper', '文件传输助手'))
+      if (wxid && !has(wxid)) rows.unshift(trustedRow(wxid, '我自己'))
+      return { ...draft, rows }
+    }
+
     const toPeers = (rows) => {
       const out = []
       for (const row of rows) {
@@ -123,6 +142,23 @@ window.__ModuleLoader__.load({
     // ---------------------------------------------------------------------------
     // Styles — DSH theme tokens, spacing from the Lumii channel card.
     // ---------------------------------------------------------------------------
+
+    // The policy dialog is always light, independent of the app theme: it is a
+    // dense form and the user asked for a stable, easy-to-read surface.
+    const LIGHT_DIALOG = {
+      colorScheme: 'light',
+      '--dsw-alias-bg-layer-1': '#ffffff',
+      '--dsw-alias-bg-layer-2': '#f6f7f9',
+      '--dsw-alias-bg-layer-3': '#f2f4f7',
+      '--dsw-alias-label-primary': '#1f2328',
+      '--dsw-alias-label-secondary': '#5b6470',
+      '--dsw-alias-border-l1': '#e4e7eb',
+      '--dsw-alias-border-l4': '#cdd3da',
+      '--dsw-alias-brand-primary': '#07c160',
+      '--dsw-alias-state-error-primary': '#d1242f',
+      '--dsw-alias-state-warn-primary': '#b26a00',
+      '--dsw-alias-state-success-primary': '#1a7f37',
+    }
 
     const S = {
       page: { padding: '8px 4px', maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -249,7 +285,10 @@ window.__ModuleLoader__.load({
         padding: '20px',
       },
       dialog: {
-        width: 'min(720px, 100%)',
+        width: 'min(760px, 100%)',
+        // Fixed box: switching accounts or opening the picker must not resize
+        // (and visually jump) the dialog. Only the body scrolls.
+        height: 'min(760px, 86vh)',
         maxHeight: '86vh',
         display: 'flex',
         flexDirection: 'column',
@@ -258,7 +297,7 @@ window.__ModuleLoader__.load({
         background: 'var(--dsw-alias-bg-layer-1, #fff)',
         color: 'var(--dsw-alias-label-primary, #1a1a1a)',
         overflow: 'hidden',
-        boxShadow: '0 18px 60px rgba(0,0,0,.28)',
+        boxShadow: '0 18px 60px rgba(0,0,0,.22)',
       },
       dialogHead: { display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderBottom: '1px solid var(--dsw-alias-border-l1, #e5e5e5)' },
       dialogTitle: { fontSize: '15px', fontWeight: 600, flex: 1 },
@@ -266,7 +305,8 @@ window.__ModuleLoader__.load({
       dialogFoot: { display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid var(--dsw-alias-border-l1, #e5e5e5)' },
       tabs: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
       panel: { marginTop: '10px', border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', borderRadius: '10px', padding: '10px' },
-      list: { marginTop: '10px', maxHeight: '46vh', overflowY: 'auto', paddingRight: '4px' },
+      // The dialog body owns the scrolling; no second nested scroller here.
+      list: { marginTop: '10px', paddingRight: '4px' },
       peerRow: { border: '1px solid var(--dsw-alias-border-l1, #e5e5e5)', borderRadius: '10px', padding: '10px 12px', marginTop: '8px' },
       peerHead: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
       peerName: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' },
@@ -392,7 +432,7 @@ window.__ModuleLoader__.load({
     function Modal({ open, title, onClose, footer, children }) {
       if (!open) return null
       return h('div', { style: S.overlay, role: 'presentation', onMouseDown: (event) => { if (event.target === event.currentTarget) onClose() } },
-        h('div', { style: S.dialog, role: 'dialog', 'aria-modal': true, 'aria-label': title },
+        h('div', { style: { ...S.dialog, ...LIGHT_DIALOG }, role: 'dialog', 'aria-modal': true, 'aria-label': title },
           h('div', { style: S.dialogHead },
             h('span', { style: S.dialogTitle }, title),
             h(Button, { quiet: true, onClick: onClose, 'aria-label': '关闭' }, '×')),
@@ -437,11 +477,11 @@ window.__ModuleLoader__.load({
 
       const applyPolicy = useCallback((wxid, policy) => {
         const rules = policy?.rules
-        if (!rules) return undefined
-        return {
-          defaultMode: rules.default_mode === 'ignore' ? 'ignore' : 'notify',
-          rows: toDraftRows(rules.peers),
+        const base = {
+          defaultMode: rules?.default_mode === 'ignore' ? 'ignore' : 'notify',
+          rows: toDraftRows(rules?.peers),
         }
+        return withTrustedRows(wxid, base)
       }, [])
 
       useEffect(() => {
@@ -521,7 +561,7 @@ window.__ModuleLoader__.load({
 
       const resetAccount = () => {
         if (!active) return
-        mutateCurrent(() => emptyDraft('notify'))
+        mutateCurrent(() => withTrustedRows(active, emptyDraft('notify')))
       }
 
       const accountName = (wxid) => {
@@ -671,7 +711,7 @@ window.__ModuleLoader__.load({
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } },
             h('span', {
               style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary, #1a1a1a)' },
-              title: '只对当前账号生效；名单外的人不叫模型。',
+              title: '本人和文件传输助手默认允许（只有你能往那里发）。其他好友必须在这里明确加入，且监听会话只能发送回复，不能读文件、其他会话或执行命令。',
             }, `谁可以被代回（${current.rows.length}）`),
             active ? h('span', { style: S.badge }, `当前：${accountName(active) || active}`) : null,
             h(Button, {
@@ -741,13 +781,20 @@ window.__ModuleLoader__.load({
               : current.rows.map((row) => {
                 const patch = (next) => setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, ...next } : item)))
                 const group = isGroupId(row.id)
+                const trusted = row.id.toLowerCase() === 'filehelper'
+                  || (active && row.id.toLowerCase() === active.toLowerCase())
                 const needsKeywords = KEYWORD_TRIGGERS.includes(row.trigger)
                 return h('div', { key: row.id, style: { ...S.peerRow, background: checked.has(row.id) ? 'var(--dsw-alias-bg-layer-3, #fff)' : undefined } },
                   h('div', { style: S.peerHead },
                     h(Checkbox, { label: '', checked: checked.has(row.id), onChange: (on) => toggleChecked(row.id, on) }),
                     h(Avatar, { account: active, talker: row.id, name: nameOf(row), size: 28 }),
                     h('span', { style: S.peerName }, nameOf(row)),
-                    h('span', { style: S.badge }, group ? '群' : '私聊'),
+                    trusted
+                      ? h('span', {
+                        style: { ...S.badge, color: 'var(--dsw-alias-state-success-primary, #1a7f37)', borderColor: 'currentColor' },
+                        title: '只有你自己能往这里发消息，所以默认允许直接代回。',
+                      }, '默认白名单')
+                      : h('span', { style: S.badge }, group ? '群' : '私聊'),
                     h('span', { style: { ...S.mono, marginLeft: 'auto' } }, row.id)),
                   h('div', { style: S.rowInputs },
                     h('div', { style: { flex: '1 1 170px', minWidth: 150 } },

@@ -123,6 +123,53 @@ test('a closed WeChat is reported and polling stops', async () => {
   }
 })
 
+test('a message you send to filehelper reaches the agent by default', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
+  const prompts = []
+  const controller = {
+    create: async () => ({ sessionId: 'session-self' }),
+    rename: async () => {},
+    prompt: async (request) => { prompts.push(request.content[0].text) },
+  }
+  let delivered = false
+  const watcher = createWatcher({
+    callJson: async (tool) => {
+      if (tool === 'check_env') return { weixin_running: true, db_ok: true, deps: { ok: true } }
+      if (tool === 'list_accounts') return { active: 'wxid_me', accounts: [{ wxid: 'wxid_me', running: true }] }
+      if (tool === 'poll_new') {
+        if (delivered) return { messages: [], next_since_ts: 101 }
+        delivered = true
+        return {
+          messages: [{
+            talker: 'filehelper', name: '文件传输助手', type: 1, ts: 100, time: 't100',
+            text: '帮我记一下明天开会', from_me: true, agent_sent: false, account: 'wxid_me',
+          }],
+          next_since_ts: 100,
+        }
+      }
+      return {}
+    },
+    // The gate is disabled and the list is empty: the trusted channel still works.
+    readPolicy: async () => ({ rules: { version: 2, enabled: false, peers: [] } }),
+    restoreAccount: async () => {},
+    getController: () => controller,
+    createSession: async () => 'session-self',
+    ensureSession: async () => {},
+    statePath: join(dir, 'watch.json'),
+    config: { watchSeconds: 0.02, mergeWindowSeconds: 0.02, replyTimeoutSeconds: 1 },
+  })
+  try {
+    watcher.start()
+    await waitFor(() => prompts.length === 1)
+    assert.match(prompts[0], /文件传输助手/)
+    assert.match(prompts[0], /帮我记一下明天开会/)
+    assert.match(prompts[0], /直接代回/)
+  } finally {
+    watcher.stop()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('notify peers are recorded but never wake the model', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'vyra-watch-'))
   const prompts = []
