@@ -10,11 +10,13 @@
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
+    "./icon": "./icon.svg",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
     "client.js",
+    "icon.svg",
     "lib",
     "vendor",
     "assets/qq-group.png",

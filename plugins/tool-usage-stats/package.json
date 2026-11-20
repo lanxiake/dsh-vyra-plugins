@@ -1,6 +1,6 @@
 {
   "name": "vyra-tool-usage-stats",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "统计每次工具调用与失败原因；勾选出问题的工具，一键复制其失败日志与分析提示词粘进对话。",
   "keywords": [
     "dsh",
@@ -20,12 +20,14 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
+    "./icon": "./icon.svg",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "files": [
     "lib",
     "src",
+    "icon.svg",
     "cordis.patch.yml",
     "README.md",
     "assets/qq-group.png"
