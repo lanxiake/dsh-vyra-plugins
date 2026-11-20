@@ -6,19 +6,27 @@ DeepSeek Harness 的插件与技能市场，随 [dsh-Veyra](../dsh-Veyra) fork �
 
 ## 安装
 
-在 DSH 客户端里打开 **设置 → 插件 → 索引源**，国内网络推荐用 AtomGit（无需代理）：
+在 DSH 客户端里打开 **设置 → 插件 → 索引源**，按网络情况选一个：
+
+国内推荐（ghproxy 代理 GitHub raw，实时更新）：
 
 ```
-https://raw.atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins/raw/master/docs/index.json
+https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json
 ```
 
-海外或能直连 GitHub 时也可以用 GitHub Pages：
+备用（jsDelivr CDN，可能有几小时缓存）：
+
+```
+https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json
+```
+
+海外或能直连 GitHub 时用 GitHub Pages：
 
 ```
 https://lanxiake.github.io/dsh-vyra-plugins/index.json
 ```
 
-最新版本的插件安装源已经指向 AtomGit，国内安装不必经过 GitHub。
+最新版本的插件安装源指向 AtomGit（`git clone` 国内可达），安装时不经过 GitHub。仓库本身同时镜像在 GitHub、GitCode、AtomGit。
 
 然后在插件市场里搜索下面的中文名或包名安装。索引是实时拉取的，**这个仓库更新后客户端重新打开插件页就能看到**，不需要改上面的 URL。
 
