@@ -341,8 +341,13 @@ export function apply(ctx, config = {}) {
       String(evt.send_user_id || '') !== '' && String(evt.send_user_id) === selfUserId
     const now = Date.now()
 
+    const messageText = String(evt.send_message || '').trim()
+    // 文本消息：contentType=1，或 101（custom 包装）但解析出了文字。
+    // 只有真正的卡片/系统提示才走发货分支。
+    const isText = Boolean(messageText) && (evt.content_type === 1 || evt.content_type === 101)
+
     // 卡片 / 系统提示：可能是付款通知，拉最近消息找订单号后立即发货。
-    if (evt.content_type !== 1) {
+    if (!isText) {
       if ((eventCooldown.get(cid) || 0) > now - 3000) return
       eventCooldown.set(cid, now)
       let history = []
@@ -358,23 +363,26 @@ export function apply(ctx, config = {}) {
         recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
         if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)
       } else {
-        recordEvent({ cid, kind: 'card', orderNo: '', action: 'no-order' })
+        recordEvent({ cid, kind: `card:${evt.content_type}`, orderNo: '', action: 'no-order' })
       }
       return
     }
 
     if (fromSelf) {
-      recordEvent({ cid, kind: 'text', action: 'skip-self' })
+      recordEvent({ cid, kind: 'text', action: 'skip-self', text: messageText.slice(0, 40) })
       return
     }
     if (!ai.enabled) {
-      recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: String(evt.send_message || '').slice(0, 40) })
+      recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: messageText.slice(0, 40) })
       return
     }
-    if ((eventCooldown.get(cid) || 0) > now - 3000) return
+    if ((eventCooldown.get(cid) || 0) > now - 3000) {
+      recordEvent({ cid, kind: 'text', action: 'skip-cooldown', text: messageText.slice(0, 40) })
+      return
+    }
     eventCooldown.set(cid, now)
 
-    const question = String(evt.send_message || '').trim()
+    const question = messageText
     if (!question) return
 
     let history = []
