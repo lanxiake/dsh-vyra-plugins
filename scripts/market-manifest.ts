@@ -695,6 +695,30 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 2.0.1 drops a leftover `lastSources` assignment that crashed the Host on the
+        // drag-trigger path (search was removed in 2.0.0, the assignment was not).
+        '2.0.1': {
+          publishTimestamp: 1795086600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'ad533f50952ac4249c652d249c4946aa95925499',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
+        // 3.0.0 rebuilds the popup as Doubao's selection card: avatar, pin/close, a quoted block
+        // of the selection, follow-up chips parsed from `>>` lines, an icon row, and a real EDIT
+        // follow-up field (the only part that takes focus). The card grows with its answer to
+        // 60% of the screen, so the 展开 button is gone.
+        '3.0.0': {
+          publishTimestamp: 1795087800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b31aa60894c63f4fa870a968368574e43b374d2d',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
         // timer and took the whole host process down on the first selection capture.
         '2.0.1': {
