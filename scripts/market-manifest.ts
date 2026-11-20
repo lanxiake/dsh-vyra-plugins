@@ -1047,6 +1047,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.1 replaces the item form with product cards, turns the order
+        // detail into Xianyu-style cards, and adds an "AI 配置" dialog per item.
+        '0.5.1': {
+          publishTimestamp: 1795141417,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6597e84e7e9cbca7efcc41aff5b59bbc1a29c981',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
