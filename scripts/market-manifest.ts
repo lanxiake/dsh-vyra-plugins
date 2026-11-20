@@ -904,6 +904,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.6.3 gives each watch session a bound wechat_send_reply(text) tool:
+        // the peer is fixed by the plugin, so a small model no longer has to
+        // fill talker/account into send_text (and no longer forgets to send).
+        '0.6.3': {
+          publishTimestamp: 1795144208,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4469d19ef6c3ea9ff0478923b61e03871f4f2cae',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
