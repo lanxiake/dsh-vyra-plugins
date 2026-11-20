@@ -985,6 +985,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.4.3 rebuilds the legacy items table on upgrade. Without it the
+        // per-account ON CONFLICT fails at prepare time and the whole host
+        // plugin never activates (every RPC answers "not found").
+        '0.4.3': {
+          publishTimestamp: 1795137523,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '8be61de4c7ec9cd8b1024945610a5e1f770647fb',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
