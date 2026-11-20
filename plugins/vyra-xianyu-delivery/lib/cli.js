@@ -37,9 +37,16 @@ export function createCli({
       if (!json.ok) throw new Error(json.error || `worker ${op} failed`)
       return json.data
     } catch (err) {
+      const msg = String(err?.message || err)
       // _m_h5_tk 只有约十分钟有效期；过期时先免密刷新一次再重试原命令。
-      if (!retried && /FAIL_SYS_TOKEN_EXOIRED|FAIL_SYS_TOKEN_EMPTY|FAIL_SYS_SESSION_EXPIRED|令牌过期/i.test(String(err?.message || err))) {
+      if (!retried && /FAIL_SYS_TOKEN_EXOIRED|FAIL_SYS_TOKEN_EMPTY|FAIL_SYS_SESSION_EXPIRED|令牌过期/i.test(msg)) {
         try { await run('refresh', {}, true) } catch { /* 刷新失败就抛原错误 */ }
+        return run(op, args, true)
+      }
+      // uv 在 Windows 上偶发 "Failed to update Windows PE resources"（杀毒/权限），
+      // 稍等重试一次通常就好。
+      if (!retried && /Failed to update Windows PE resources/i.test(msg)) {
+        await new Promise((resolve) => setTimeout(resolve, 800))
         return run(op, args, true)
       }
       throw err

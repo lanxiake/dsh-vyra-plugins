@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS cards (
   template      TEXT NOT NULL DEFAULT '',
   delay_seconds INTEGER NOT NULL DEFAULT 0,
   enabled       INTEGER NOT NULL DEFAULT 1,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS ix_cards_item ON cards(item_id, enabled);
 
@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS orders (
   state         TEXT NOT NULL,
   fail_reason   TEXT,
   delivered     INTEGER NOT NULL DEFAULT 0,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS ix_orders_state ON orders(state, updated_at);
 
@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS items (
   title      TEXT NOT NULL DEFAULT '',
   knowledge  TEXT NOT NULL DEFAULT '',
   skills     TEXT NOT NULL DEFAULT '',
-  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  ai_enabled INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   PRIMARY KEY (item_id, account_id)
 );
 
@@ -62,7 +63,7 @@ CREATE TABLE IF NOT EXISTS deliveries (
   content    TEXT NOT NULL DEFAULT '',
   send_state TEXT NOT NULL,
   error      TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS ix_deliveries_order ON deliveries(order_no, id);
 `
@@ -100,7 +101,8 @@ function migrateItems(db) {
       title      TEXT NOT NULL DEFAULT '',
       knowledge  TEXT NOT NULL DEFAULT '',
       skills     TEXT NOT NULL DEFAULT '',
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ai_enabled INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       PRIMARY KEY (item_id, account_id)
     )`)
   db.exec(
@@ -122,9 +124,20 @@ export function createStore(file) {
   ensureColumn(db, 'orders', 'spec_name', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'orders', 'spec_value', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'deliveries', 'account_id', "TEXT NOT NULL DEFAULT ''")
+  ensureColumn(db, 'items', 'ai_enabled', 'INTEGER NOT NULL DEFAULT 0')
   // 必须放在 SCHEMA 之后、prepare 之前：旧表主键不对会让 upsertItem 的
   // ON CONFLICT 在 prepare 时抛错，整个插件加载失败。
   migrateItems(db)
+
+  // 旧库的时间列是 datetime('now')（UTC），比本地少 8 小时。只迁移一次；
+  // 中国无夏令时，固定 +8 是安全的。
+  const tzDone = db.prepare("SELECT value FROM settings WHERE key = 'migration.local_time'").get()
+  if (!tzDone) {
+    db.exec("UPDATE orders SET created_at = datetime(created_at, '+8 hours'), updated_at = datetime(updated_at, '+8 hours')")
+    db.exec("UPDATE deliveries SET created_at = datetime(created_at, '+8 hours')")
+    db.exec("UPDATE items SET updated_at = datetime(updated_at, '+8 hours')")
+    db.exec("INSERT INTO settings (key, value) VALUES ('migration.local_time', '1')")
+  }
 
   const tx = (fn) => {
     db.exec('BEGIN IMMEDIATE')
@@ -145,7 +158,7 @@ export function createStore(file) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'processing')`,
     ),
     updateOrder: db.prepare(
-      `UPDATE orders SET state = ?, fail_reason = ?, delivered = ?, updated_at = datetime('now')
+      `UPDATE orders SET state = ?, fail_reason = ?, delivered = ?, updated_at = datetime('now','localtime')
        WHERE order_no = ?`,
     ),
     pendingConfirm: db.prepare(
@@ -191,11 +204,12 @@ export function createStore(file) {
        ORDER BY updated_at DESC LIMIT 1`,
     ),
     upsertItem: db.prepare(
-      `INSERT INTO items (item_id, account_id, title, knowledge, skills, updated_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))
+      `INSERT INTO items (item_id, account_id, title, knowledge, skills, ai_enabled, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now','localtime'))
        ON CONFLICT(item_id, account_id) DO UPDATE SET
          title = excluded.title, knowledge = excluded.knowledge,
-         skills = excluded.skills, updated_at = datetime('now')`,
+         skills = excluded.skills, ai_enabled = excluded.ai_enabled,
+         updated_at = datetime('now','localtime')`,
     ),
     listItems: db.prepare(
       `SELECT * FROM items WHERE (account_id = ? OR account_id = '')
@@ -289,8 +303,8 @@ export function createStore(file) {
       const row = q.lastItemForBuyer.get(String(buyerId), String(accountId))
       return row ? row.item_id : ''
     },
-    setItem({ itemId, accountId = '', title = '', knowledge = '', skills = '' }) {
-      q.upsertItem.run(String(itemId), String(accountId), title, knowledge, skills)
+    setItem({ itemId, accountId = '', title = '', knowledge = '', skills = '', aiEnabled = 0 }) {
+      q.upsertItem.run(String(itemId), String(accountId), title, knowledge, skills, aiEnabled ? 1 : 0)
     },
     listItems: (accountId = '') => q.listItems.all(String(accountId)),
 

@@ -56,8 +56,8 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
     return body
   }
 
-  async function buildPrompt({ text, itemId, history, selfUserId, accountId = '' }) {
-    const item = itemId ? store.getItem(itemId, accountId) : null
+  async function buildPrompt({ text, itemId, history, selfUserId, accountId = '', item: known = null }) {
+    const item = known ?? (itemId ? store.getItem(itemId, accountId) : null)
     const names = String(item?.skills || '')
       .split(/[,，\s]+/)
       .map((s) => s.trim())
@@ -133,10 +133,13 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
 
   async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '' }) {
     if (!isEnabled()) return null
+    // AI 开关按商品：没绑定或没打开的商品一律不回。
+    const item = itemId ? store.getItem(itemId, accountId) : null
+    if (!item || item.ai_enabled !== 1) return null
     if (coolingDown(cid)) return null
     if ((counts.get(cid) || 0) >= maxRepliesPerChat) return null
 
-    const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId })
+    const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId, item })
     const out = mode === 'dsh' ? await agent.ask({ prompt, sessionKey: cid }) : await apiReply(prompt)
     if (!out) return null
 

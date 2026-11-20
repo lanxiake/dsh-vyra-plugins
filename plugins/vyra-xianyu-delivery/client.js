@@ -83,8 +83,22 @@ window.__ModuleLoader__.load({
     function OrdersTab(props) {
       const { orders, localOrders, onRefresh, loading, onDetail } = props
       const list = orders.length ? orders : localOrders
-      const stateOf = (o) => o.local_state || o.state || ''
       const when = (o) => o.updated_at || o.created_at || ''
+
+      // 平台状态优先：用户手动在闲鱼发货后，本地 blocked 不应盖过「已发货」。
+      const renderState = (o) => {
+        const platform = String(o.status || '')
+        const local = String(o.local_state || o.state || '')
+        const platformDone = /已发货|交易成功|已完成/.test(platform)
+        if (platformDone) {
+          return h('span', { style: S.tag('completed') },
+            `${platform}${local && local !== 'completed' ? ` · 插件 ${local}` : ''}`)
+        }
+        if (local) {
+          return h('span', { style: S.tag(local) }, `${local}${o.delivered ? ` ${o.delivered}张` : ''}`)
+        }
+        return h('span', { style: S.tag(platform) }, platform || '未处理')
+      }
 
       return h('div', null,
         h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
@@ -107,10 +121,7 @@ window.__ModuleLoader__.load({
                 h('span', { title: o.buyer_nick || o.buyer_id || '' }, o.buyer_nick || o.buyer_id || '-'),
                 h('span', null, o.amount ? `¥${o.amount}` : '-'),
                 h('span', null, String(o.quantity || 1)),
-                h('span', null,
-                  stateOf(o)
-                    ? h('span', { style: S.tag(stateOf(o)) }, o.local_state ? `${o.local_state} ${o.delivered || 0}张` : stateOf(o))
-                    : h('span', { style: S.tag(o.status === '已发货' ? 'completed' : '') }, o.status || '未处理')),
+                h('span', null, renderState(o)),
                 h('span', { style: { fontSize: '12px', opacity: 0.7 } }, when(o))
               )
             )
@@ -205,7 +216,8 @@ window.__ModuleLoader__.load({
                     h('span', { style: { color: '#ff5000', fontWeight: 700, fontSize: '15px' } }, it.price || ''),
                     h('span', { style: { fontSize: '12px', opacity: 0.6 } }, it.status || '')),
                   h('div', { style: { display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'center' } },
-                    h('span', { style: S.tag(skillCount ? 'completed' : '') }, skillCount ? `技能 ${skillCount}` : '未配 AI'),
+                    h('span', { style: S.tag(cfg && cfg.ai_enabled === 1 ? 'completed' : '') },
+              cfg && cfg.ai_enabled === 1 ? `AI 开 · 技能 ${skillCount}` : 'AI 关'),
                     h('button', {
                       style: { marginLeft: 'auto', ...S.btn, padding: '3px 10px', fontSize: '12px' },
                       onClick: (e) => { e.stopPropagation(); onConfigure(it) },
@@ -216,6 +228,7 @@ window.__ModuleLoader__.load({
 
     function AgentConfigDialog({ item, agents, skills, current, onSave, onClose }) {
       const [agent, setAgent] = useState(current.agentPreset || 'builtin')
+      const [aiOn, setAiOn] = useState(current.ai_enabled === 1)
       const [picked, setPicked] = useState(new Set(String(current.skills || '').split(/[,，\s]+/).filter(Boolean)))
       const [busy, setBusy] = useState(false)
       const [skillQuery, setSkillQuery] = useState('')
@@ -242,6 +255,9 @@ window.__ModuleLoader__.load({
             h('h3', { style: { ...S.title, fontSize: '16px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
               `AI 配置 · ${item.title || item.item_id}`),
             h('button', { style: S.btn, onClick: onClose }, '关闭')),
+          h('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '12px' } },
+            h('input', { type: 'checkbox', checked: aiOn, onChange: (e) => setAiOn(e.target.checked) }),
+            '为该商品开启 AI 自动回复'),
           h('label', { style: S.label }, 'AGENT'),
           h('select', { style: S.input, value: agent, onChange: (e) => setAgent(e.target.value) },
             h('option', { value: 'builtin' }, '内置客服（插件自带）'),
@@ -277,7 +293,7 @@ window.__ModuleLoader__.load({
               disabled: busy,
               onClick: async () => {
                 setBusy(true)
-                try { await onSave(item, agent, [...picked].join(', ')) } finally { setBusy(false) }
+                try { await onSave(item, agent, [...picked].join(', '), aiOn ? 1 : 0) } finally { setBusy(false) }
               },
             }, busy ? '保存中…' : '保存')))
       )
@@ -702,10 +718,10 @@ window.__ModuleLoader__.load({
 
       function openItemDetail(item) { setItemDetailItem(item) }
 
-      async function saveAgentConfig(item, agent, skills) {
+      async function saveAgentConfig(item, agent, skills, aiEnabled = 0) {
         try {
           await rpc({ op: 'setSetting', key: 'ai.agentPreset', value: agent })
-          await rpc({ op: 'setItem', itemId: item.item_id, title: item.title || '', skills })
+          await rpc({ op: 'setItem', itemId: item.item_id, title: item.title || '', skills, aiEnabled })
           setSettings((s) => ({ ...(s || {}), agentPreset: agent }))
           setAgentConfig(null)
           setNotice('AI 配置已保存')
@@ -969,13 +985,6 @@ window.__ModuleLoader__.load({
                 : null)
             : null,
           h('div', { style: { flex: 1 } }),
-          h('button', {
-            style: status && status.ai
-              ? { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 }
-              : S.btn,
-            title: status && status.ai ? '点击关闭 AI 自动回复' : '点击开启 AI 自动回复（内置客服）',
-            onClick: toggleAi,
-          }, status && status.ai ? 'AI 客服 开' : 'AI 客服 关'),
           h('button', { style: S.btn, onClick: openLogin }, '扫码登录'),
           (auth && auth.valid)
             ? h('button', {

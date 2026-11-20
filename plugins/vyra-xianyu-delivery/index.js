@@ -84,6 +84,7 @@ export function apply(ctx, config = {}) {
   async function listSkills() {
     const roots = [
       String(cfg.ai?.skillsDir || join(homedir(), '.dsh', 'skills')),
+      join(homedir(), '.dsh', 'market', 'skills'),
       join(homedir(), '.agents', 'skills'),
       join(homedir(), '.claude', 'skills'),
     ]
@@ -534,6 +535,7 @@ export function apply(ctx, config = {}) {
           title: String(body.title || ''),
           knowledge: String(body.knowledge || ''),
           skills: String(body.skills || ''),
+          aiEnabled: body.aiEnabled ? 1 : 0,
         })
         return { ok: true }
       case 'ai-status':
@@ -591,8 +593,13 @@ export function apply(ctx, config = {}) {
         const name = String(body.name || '')
         const hit = (await listSkills()).find((s) => s.name === name)
         if (!hit || !hit.path) throw new Error('技能不存在')
-        const args = hit.path.endsWith('.md') ? [`/select,${hit.path}`] : [hit.path]
-        spawn('explorer', args, { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+        // explorer 直接 spawn 在部分环境里不会弹窗；md 文件用 /select 定位，
+        // 目录用 cmd start 打开，两者都经过 shell 解析。
+        if (hit.path.endsWith('.md')) {
+          spawn('explorer', [`/select,${hit.path}`], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+        } else {
+          spawn('cmd', ['/c', 'start', '', hit.path], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+        }
         return { ok: true }
       }
       case 'settings':
