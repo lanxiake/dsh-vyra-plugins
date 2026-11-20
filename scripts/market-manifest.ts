@@ -1291,6 +1291,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.3 falls back to the first enabled service when the buyer has no
+        // order yet, and logs each handled message so "no reply" is diagnosable.
+        '0.6.3': {
+          publishTimestamp: 1795163956,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '4212b795834184e4d7f3a75c50cfac46e590a5dd',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
