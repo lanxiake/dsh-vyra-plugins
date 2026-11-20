@@ -201,6 +201,18 @@ ai:
 
 注意：只回**文本**消息；自己发的不回；同一会话 3 秒内的连发合并；回复失败只记日志。
 
+聊天页底部「最近消息处理」会写明没回复的原因：
+
+| action | 含义 |
+|---|---|
+| `replied` | 已生成并发送 |
+| `no-reply:agent-unavailable` | DSH agents 服务不可用 |
+| `no-reply:no-service` | 没有启用的客服 |
+| `no-reply:cooldown` / `max-replies` | 触发冷却或条数上限 |
+| `no-reply:agents-unavailable` | 创建 Agent 会话失败 |
+| `no-reply:empty-reply` | Agent 没调用回复工具 |
+| `no-reply:<其它错误>` | 具体的接口/模型错误 |
+
 ## Agent 工具
 
 插件把闲鱼能力注册成主 Agent 可调用的工具：

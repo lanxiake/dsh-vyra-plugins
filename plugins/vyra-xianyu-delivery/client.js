@@ -213,9 +213,14 @@ window.__ModuleLoader__.load({
                 h('span', null, c.name),
                 h('span', null, c.type),
                 h('span', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
-                  h('span', { style: S.tag(c.enabled ? 'completed' : '') }, c.enabled ? '启用' : '停用'),
                   h('button', { style: small, onClick: () => onEdit(c) }, '编辑'),
-                  h('button', { style: small, onClick: () => onToggle(c) }, c.enabled ? '停用' : '启用'),
+                  h('button', {
+                    style: c.enabled
+                      ? { ...small, color: '#d97706', borderColor: 'rgba(217,119,6,.35)' }
+                      : { ...small, color: '#16a34a', borderColor: 'rgba(22,163,74,.35)' },
+                    title: c.enabled ? '停用后该商品不再自动发货' : '启用后该商品恢复自动发货',
+                    onClick: () => onToggle(c),
+                  }, c.enabled ? '停用' : '启用'),
                   h('button', { style: { ...small, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }, onClick: () => onRemove(c) }, '删除'))
               )
             )

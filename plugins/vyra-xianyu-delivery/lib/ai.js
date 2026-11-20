@@ -139,7 +139,7 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
   }
 
   async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '', buyerNick = '' }) {
-    if (!isEnabled()) return null
+    if (!isEnabled()) return { reason: 'agent-unavailable' }
     // 商品绑定了客服就按商品走；买家还没下过单、或商品没绑定时，
     // 用第一个启用的客服兜底，避免「发你好没人理」。
     const item = itemId ? store.getItem(itemId, accountId) : null
@@ -147,9 +147,9 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
     if (!service) {
       service = store.listServices().find((candidate) => candidate.enabled === 1) || null
     }
-    if (!service) return null
-    if (coolingDown(cid)) return null
-    if ((counts.get(cid) || 0) >= maxRepliesPerChat) return null
+    if (!service) return { reason: 'no-service' }
+    if (coolingDown(cid)) return { reason: 'cooldown' }
+    if ((counts.get(cid) || 0) >= maxRepliesPerChat) return { reason: 'max-replies' }
 
     const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId, item, service })
     const short = (value) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 10)
@@ -159,14 +159,19 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
     const modelChoice = routeProvider && routeModel.length
       ? { provider: routeProvider, model: routeModel.join(':') }
       : null
-    const out = mode === 'dsh'
-      ? await agent.ask({ prompt, sessionKey: cid, title, model: modelChoice })
-      : await apiReply(prompt)
-    if (!out) return null
+    let out = null
+    if (mode === 'dsh') {
+      const result = await agent.ask({ prompt, sessionKey: cid, title, model: modelChoice })
+      if (!result.text) return { reason: result.error || 'agent-empty' }
+      out = result.text
+    } else {
+      out = await apiReply(prompt)
+      if (!out) return { reason: 'api-empty' }
+    }
 
     cooldowns.set(cid, Date.now())
     counts.set(cid, (counts.get(cid) || 0) + 1)
-    return out
+    return { text: out }
   }
 
   return {

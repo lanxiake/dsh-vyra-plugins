@@ -32,8 +32,16 @@ export function createDshAgent({ agents, sessionTitle, config = {}, logger = () 
   }
 
   async function ask({ prompt, sessionKey, title = '', model = null }) {
-    if (!agents?.create) throw new Error('DSH agents 服务不可用')
+    if (!agents?.create) return { text: null, error: 'agents-unavailable' }
+    try {
+      return await askOnce({ prompt, sessionKey, title, model })
+    } catch (err) {
+      logger(`agent ask failed: ${err?.message || err}`)
+      return { text: null, error: String(err?.message || err) }
+    }
+  }
 
+  async function askOnce({ prompt, sessionKey, title, model }) {
     const preset = currentPreset()
     const route = model && model.provider && model.model
       ? { provider: model.provider, model: model.model }
@@ -86,11 +94,12 @@ export function createDshAgent({ agents, sessionTitle, config = {}, logger = () 
       ])
     } catch (err) {
       logger(`agent ask failed: ${err?.message || err}`)
+      return { text: null, error: String(err?.message || err) }
     } finally {
       await handle.dispose().catch(() => {})
     }
 
-    return reply || null
+    return { text: reply || null, error: reply ? '' : 'empty-reply' }
   }
 
   return {

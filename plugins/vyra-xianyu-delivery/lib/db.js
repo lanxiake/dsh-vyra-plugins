@@ -247,7 +247,7 @@ export function createStore(file) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     listCards: db.prepare(
-      `SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds
+      `SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds, content, template
        FROM cards WHERE (account_id = ? OR account_id = '') ORDER BY id`,
     ),
     getItem: db.prepare(

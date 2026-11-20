@@ -393,15 +393,16 @@ export function apply(ctx, config = {}) {
     }
     if (!itemId) itemId = findItemId(history)
 
-    const answer = await ai.reply({
+    const result = await ai.reply({
       cid, itemId, text: question, history, selfUserId,
       accountId: account(), buyerNick: String(evt.send_user_name || ''),
     })
+    const answer = result?.text || ''
     recordEvent({
       cid, kind: 'text', itemId,
       from: String(evt.send_user_name || evt.send_user_id || ''),
       text: question.slice(0, 40),
-      action: answer ? 'replied' : 'no-reply',
+      action: answer ? 'replied' : `no-reply:${result?.reason || 'unknown'}`,
     })
     if (!answer) return
 
