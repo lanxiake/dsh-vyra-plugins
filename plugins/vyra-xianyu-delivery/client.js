@@ -178,122 +178,192 @@ window.__ModuleLoader__.load({
     }
 
     function ItemsTab(props) {
-      const { items, shopItems, skillList, agentList, settings, draft, setDraft, saveItem, setAgentPreset, onDetail, busy } = props
-      const picked = new Set(String(draft.skills || '').split(/[,，\s]+/).filter(Boolean))
+      const { items, shopItems, agentList, settings, onDetail, onConfigure, loading } = props
+      const linked = new Map(items.map((it) => [it.item_id, it]))
+      return h('div', null,
+        h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
+          h('span', { style: S.muted }, `在售商品 ${shopItems.length} 个`),
+          loading ? h('span', { style: S.muted }, '读取中…') : null),
+        shopItems.length === 0
+          ? h('div', { style: S.empty }, '暂无在售商品')
+          : h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' } },
+            shopItems.map((it) => {
+              const cfg = linked.get(it.item_id)
+              const skillCount = cfg && cfg.skills ? String(cfg.skills).split(/[,，\s]+/).filter(Boolean).length : 0
+              return h('div', {
+                key: it.item_id,
+                style: { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', overflow: 'hidden', background: 'rgba(127,127,127,.04)', cursor: 'pointer' },
+                onClick: () => onDetail(it),
+              },
+                h('div', { style: { aspectRatio: '1 / 1', background: 'rgba(127,127,127,.12)', overflow: 'hidden' } },
+                  it.image_url
+                    ? h('img', { src: it.image_url, alt: it.title, loading: 'lazy', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } })
+                    : h('div', { style: { height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.4 } }, '无图')),
+                h('div', { style: { padding: '10px 12px' } },
+                  h('div', { style: { fontSize: '13px', fontWeight: 600, lineHeight: 1.35, height: '2.7em', overflow: 'hidden' } }, it.title || '(无标题)'),
+                  h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' } },
+                    h('span', { style: { color: '#ff5000', fontWeight: 700, fontSize: '15px' } }, it.price || ''),
+                    h('span', { style: { fontSize: '12px', opacity: 0.6 } }, it.status || '')),
+                  h('div', { style: { display: 'flex', gap: '6px', marginTop: '8px', alignItems: 'center' } },
+                    h('span', { style: S.tag(skillCount ? 'completed' : '') }, skillCount ? `技能 ${skillCount}` : '未配 AI'),
+                    h('button', {
+                      style: { marginLeft: 'auto', ...S.btn, padding: '3px 10px', fontSize: '12px' },
+                      onClick: (e) => { e.stopPropagation(); onConfigure(it) },
+                    }, 'AI 配置'))))
+            }))
+      )
+    }
 
-      const toggleSkill = (name) => {
+    function AgentConfigDialog({ item, agents, skills, current, onSave, onClose }) {
+      const [agent, setAgent] = useState(current.agentPreset || 'builtin')
+      const [picked, setPicked] = useState(new Set(String(current.skills || '').split(/[,，\s]+/).filter(Boolean)))
+      const [busy, setBusy] = useState(false)
+      const toggle = (name) => {
         const next = new Set(picked)
         if (next.has(name)) next.delete(name)
         else next.add(name)
-        setDraft({ ...draft, skills: [...next].join(', ') })
+        setPicked(next)
       }
-
-      const pickShopItem = (id) => {
-        const hit = shopItems.find((it) => it.item_id === id)
-        setDraft({ ...draft, itemId: id, title: hit ? hit.title : draft.title })
+      const chip = {
+        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '8px',
+        cursor: 'pointer', border: '1px solid rgba(127,127,127,.3)', fontSize: '13px', background: 'transparent',
       }
-
-      return h('div', null,
-        h('div', { style: S.card },
-          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, 'AI 客服 AGENT'),
-          h('div', { style: { display: 'flex', gap: '10px', alignItems: 'flex-end' } },
-            h('div', { style: { flex: 1 } },
-              h('label', { style: S.label }, '绑定 Agent（Agent Manager 里创建的 preset；留空用 DSH 默认）'),
-              h('select', {
-                style: S.input,
-                value: (settings && settings.agentPreset) || 'builtin',
-                onChange: (e) => setAgentPreset(e.target.value),
-              },
-                h('option', { value: 'builtin' }, '内置客服（插件自带，默认）'),
-                agentList.map((a) => h('option', { key: a.id, value: a.id }, `${a.name}（${a.id}）`)))),
-            h('div', { style: { ...S.muted, width: '220px' } },
-              agentList.length === 0 ? '没有找到已创建的 Agent' : `${agentList.length} 个可用`))),
-        h('div', { style: S.card },
-          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '商品绑定技能'),
-          h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' } },
-            h('div', null,
-              h('label', { style: S.label }, '选择商品'),
-              h('select', {
-                style: S.input,
-                value: draft.itemId,
-                onChange: (e) => pickShopItem(e.target.value),
-              },
-                h('option', { value: '' }, shopItems.length ? '请选择…' : '暂无在售商品，手动输入 ID'),
-                shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`)))),
-            h('div', null,
-              h('label', { style: S.label }, '商品 ID（可手动输入）'),
-              h('input', { style: S.input, value: draft.itemId, onChange: (e) => setDraft({ ...draft, itemId: e.target.value }) }))),
-          h('label', { style: S.label }, `勾选技能（已选 ${picked.size}，正文从技能的 SKILL.md 读取）`),
-          skillList.length === 0
-            ? h('div', { style: S.muted }, '没有扫描到已安装的技能')
-            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '220px', overflow: 'auto', padding: '4px 0' } },
-              skillList.map((s) => h('label', {
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', {
+          style: { ...S.modal, width: 'min(720px, 92vw)', maxHeight: '84vh', display: 'flex', flexDirection: 'column', textAlign: 'left' },
+          onClick: (e) => e.stopPropagation(),
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' } },
+            h('h3', { style: { ...S.title, fontSize: '16px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+              `AI 配置 · ${item.title || item.item_id}`),
+            h('button', { style: S.btn, onClick: onClose }, '关闭')),
+          h('label', { style: S.label }, 'AGENT'),
+          h('select', { style: S.input, value: agent, onChange: (e) => setAgent(e.target.value) },
+            h('option', { value: 'builtin' }, '内置客服（插件自带）'),
+            agents.map((a) => h('option', { key: a.id, value: a.id }, `${a.name}（${a.id}）`))),
+          h('div', { style: { ...S.muted, marginTop: '6px' } }, '需要新的 Agent 可以到「智能体管理」创建，再回这里选择。'),
+          h('label', { style: { ...S.label, marginTop: '14px' } }, `技能（已选 ${picked.size}）`),
+          h('div', { style: { flex: 1, overflow: 'auto', display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '4px 0', maxHeight: '320px' } },
+            skills.length === 0
+              ? h('div', { style: S.muted }, '没有扫描到已安装的技能')
+              : skills.map((s) => h('label', {
                 key: s.name,
                 title: s.description || s.name,
-                style: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', border: '1px solid rgba(127,127,127,.3)', background: picked.has(s.name) ? 'rgba(127,127,127,.16)' : 'transparent', fontSize: '13px' },
+                style: { ...chip, background: picked.has(s.name) ? 'rgba(15,157,110,.12)' : 'transparent', borderColor: picked.has(s.name) ? '#0f9d6e' : 'rgba(127,127,127,.3)' },
               },
-                h('input', { type: 'checkbox', checked: picked.has(s.name), onChange: () => toggleSkill(s.name) }),
+                h('input', { type: 'checkbox', checked: picked.has(s.name), onChange: () => toggle(s.name) }),
                 s.name))),
-          h('div', { style: { ...S.muted, marginTop: '8px' } }, '商品图片、文件、参数都写在技能里，回复时整段注入。'),
-          h('div', { style: { marginTop: '10px' } },
-            h('button', { style: S.btn, onClick: saveItem, disabled: !!busy }, busy === 'item' ? '保存中…' : '保存'))),
-        items.length === 0
-          ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有绑定技能的商品')
-          : h('div', null,
-            h('div', { style: { ...S.row(), ...S.th } },
-              h('span', null, '商品'), h('span', null, '标题'), h('span', null, '技能'), h('span', null, '更新时间'), h('span', null, '')),
-            items.map((it) =>
-              h('div', { key: it.item_id, style: S.row() },
-                h('span', { style: S.mono }, it.item_id),
-                h('span', null, it.title || '-'),
-                h('span', null, it.skills || '-'),
-                h('span', { style: { fontSize: '12px', opacity: 0.8 } }, it.updated_at),
-                h('span', { style: { display: 'flex', gap: '6px' } },
-                  h('button', {
-                    style: { ...S.btn, padding: '3px 8px', fontSize: '12px' },
-                    onClick: () => onDetail && onDetail(it),
-                  }, '详情'),
-                  h('button', {
-                    style: { ...S.btn, padding: '3px 8px', fontSize: '12px' },
-                    onClick: () => setDraft({ itemId: it.item_id, title: it.title || '', skills: it.skills || '' }),
-                  }, '编辑'))))))
+          h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },
+            h('button', { style: S.btn, onClick: onClose }, '取消'),
+            h('button', {
+              style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
+              disabled: busy,
+              onClick: async () => {
+                setBusy(true)
+                try { await onSave(item, agent, [...picked].join(', ')) } finally { setBusy(false) }
+              },
+            }, busy ? '保存中…' : '保存')))
+      )
     }
 
-    const AVATAR_COLORS = ['#0f9d6e', '#2563eb', '#7c3aed', '#db2777', '#d97706', '#0891b2']
-
-    function avatarOf(name) {
-      const text = String(name || '?')
-      let hash = 0
-      for (let i = 0; i < text.length; i += 1) hash = (hash * 31 + text.charCodeAt(i)) >>> 0
-      return { letter: text.slice(0, 1).toUpperCase(), color: AVATAR_COLORS[hash % AVATAR_COLORS.length] }
-    }
-
-    function fmtTime(ts) {
-      if (!ts) return ''
-      const d = new Date(Number(ts))
-      if (Number.isNaN(d.getTime())) return ''
-      const now = new Date()
-      return d.toDateString() === now.toDateString()
-        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : d.toLocaleDateString()
-    }
-
-    function Avatar({ name, src, size = 34 }) {
-      if (src) {
-        return h('img', {
-          src, alt: name || '', loading: 'lazy',
-          style: { width: `${size}px`, height: `${size}px`, borderRadius: '50%', flex: 'none', objectFit: 'cover', background: 'rgba(127,127,127,.15)' },
-          onError: (e) => { e.currentTarget.style.display = 'none' },
-        })
-      }
-      const { letter, color } = avatarOf(name)
-      return h('div', {
-        style: {
-          width: `${size}px`, height: `${size}px`, borderRadius: '50%', flex: 'none',
-          background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: `${Math.round(size * 0.42)}px`, fontWeight: 600,
+    function ItemDetailDialog({ item, onClose }) {
+      const [state, setState] = useState({ loading: true, error: '', data: null })
+      useEffect(() => {
+        let alive = true
+        rpc({ op: 'itemDetail', itemId: item.item_id }, 60000)
+          .then((data) => { if (alive) setState({ loading: false, error: '', data }) })
+          .catch((err) => { if (alive) setState({ loading: false, error: String(err.message || err), data: null }) })
+        return () => { alive = false }
+      }, [item.item_id])
+      const d = state.data || {}
+      const raw = (d.raw && d.raw.data) || {}
+      const it = raw.itemDO || {}
+      const img = (it.imageInfos && it.imageInfos[0] && it.imageInfos[0].url) || item.image_url || ''
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', {
+          style: { ...S.modal, width: 'min(760px, 92vw)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', textAlign: 'left' },
+          onClick: (e) => e.stopPropagation(),
         },
-      }, letter)
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' } },
+            h('h3', { style: { ...S.title, fontSize: '16px', flex: 1 } }, '商品详情'),
+            h('button', { style: S.btn, onClick: onClose }, '关闭')),
+          state.loading
+            ? h('div', { style: S.empty }, '读取中…')
+            : state.error
+              ? h('div', { style: { color: '#dc2626', fontSize: '13px' } }, state.error)
+              : h('div', { style: { overflow: 'auto' } },
+                h('div', { style: { display: 'flex', gap: '14px' } },
+                  img ? h('img', { src: img, alt: d.title, style: { width: '220px', height: '220px', objectFit: 'cover', borderRadius: '10px', flex: 'none' } }) : null,
+                  h('div', { style: { flex: 1, minWidth: 0 } },
+                    h('div', { style: { fontSize: '16px', fontWeight: 700, lineHeight: 1.4 } }, d.title || item.title),
+                    h('div', { style: { color: '#ff5000', fontSize: '22px', fontWeight: 700, marginTop: '8px' } }, d.price ? `¥${d.price}` : ''),
+                    h('div', { style: { ...S.muted, marginTop: '6px' } }, [d.status, d.category, d.location].filter(Boolean).join(' · ')),
+                    h('div', { style: { ...S.muted, marginTop: '4px' } },
+                      `库存 ${it.quantity ?? '-'} · 想要 ${it.wantCnt ?? 0} · 浏览 ${it.browseCnt ?? 0}`))),
+                h('div', { style: { marginTop: '14px', fontSize: '13px', lineHeight: 1.7, whiteSpace: 'pre-wrap', color: 'var(--dsw-alias-label-primary)' } },
+                  d.description || it.desc || '暂无描述'))
+        ))
+    }
+    function OrderDetailDialog({ orderId, onClose }) {
+      const [state, setState] = useState({ loading: true, error: '', data: null })
+      useEffect(() => {
+        let alive = true
+        rpc({ op: 'orderDetail', orderId }, 60000)
+          .then((data) => { if (alive) setState({ loading: false, error: '', data }) })
+          .catch((err) => { if (alive) setState({ loading: false, error: String(err.message || err), data: null }) })
+        return () => { alive = false }
+      }, [orderId])
+
+      const d = state.data || {}
+      const comps = d.components || []
+      const statusInfo = (comps[0] && comps[0].data && comps[0].data.orderStatusInfo) || {}
+      const itemData = (comps[1] && comps[1].data) || {}
+      const item = itemData.itemInfo || {}
+      const orderInfo = itemData.orderInfoList || []
+      const priceInfo = itemData.priceInfo || {}
+      const countdown = (statusInfo.descRichText || []).map((x) => x.text || '').join('')
+
+      const card = (children) => h('div', {
+        style: {
+          border: '1px solid rgba(127,127,127,.18)', borderRadius: '12px', padding: '14px 16px',
+          marginBottom: '12px', background: 'rgba(127,127,127,.03)',
+        },
+      }, children)
+
+      return h('div', { style: S.mask, onClick: onClose },
+        h('div', {
+          style: { ...S.modal, width: 'min(680px, 92vw)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '18px 20px' },
+          onClick: (e) => e.stopPropagation(),
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' } },
+            h('h3', { style: { ...S.title, fontSize: '16px', flex: 1 } }, '订单详情'),
+            h('button', { style: S.btn, onClick: onClose }, '关闭')),
+          h('div', { style: { overflow: 'auto', flex: 1 } },
+            state.loading ? h('div', { style: S.empty }, '读取中…')
+              : state.error ? h('div', { style: { color: '#dc2626', fontSize: '13px' } }, state.error)
+                : [
+                  card(h('div', { style: { display: 'flex', gap: '16px', alignItems: 'center' } },
+                    h('div', { style: { flex: 1 } },
+                      h('div', { style: { fontSize: '17px', fontWeight: 700, color: '#ff6a00' } }, statusInfo.title || '订单状态未知'),
+                      countdown ? h('div', { style: { fontSize: '13px', color: '#ff8c00', marginTop: '6px' } }, countdown) : null),
+                    statusInfo.rightImageUrl ? h('img', { src: statusInfo.rightImageUrl, alt: '', style: { width: '54px', height: '54px', flex: 'none' } }) : null)),
+                  card(h('div', { style: { display: 'flex', gap: '12px' } },
+                    item.itemMainPictCdnUrl ? h('img', { src: item.itemMainPictCdnUrl, alt: item.title, style: { width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', flex: 'none' } }) : null,
+                    h('div', { style: { flex: 1, minWidth: 0 } },
+                      h('div', { style: { fontSize: '14px', fontWeight: 600, lineHeight: 1.4 } }, item.title || ''),
+                      item.skuInfo ? h('div', { style: { ...S.muted, marginTop: '4px' } }, item.skuInfo) : null,
+                      h('div', { style: { marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' } },
+                        h('span', { style: { color: '#ff5000', fontWeight: 700 } }, item.price ? `¥${item.price}` : ''),
+                        h('span', { style: S.muted }, `× ${item.buyAmount || 1}`))),
+                    h('div', { style: { width: '110px', textAlign: 'right', flex: 'none' } },
+                      h('div', { style: { ...S.muted } }, (priceInfo.amount && priceInfo.amount.title) || '成交价'),
+                      h('div', { style: { fontSize: '16px', fontWeight: 700, marginTop: '4px' } }, (priceInfo.amount && priceInfo.amount.value) || item.price || '')))),
+                  card(h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+                    orderInfo.map((row, i) => h('div', { key: i, style: { display: 'flex', gap: '12px', fontSize: '13px' } },
+                      h('span', { style: { width: '84px', flex: 'none', opacity: 0.6 } }, row.title || ''),
+                      h('span', { style: { flex: 1, wordBreak: 'break-all' } }, row.value || ''))))),
+                ]))
+      )
     }
 
     function MessageContent({ message, mine }) {
@@ -360,8 +430,10 @@ window.__ModuleLoader__.load({
             : [
               h('div', { key: 'head', style: { flex: 'none', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: '1px solid rgba(127,127,127,.18)' } },
                 h(Avatar, { name: activeChat.peer_nick || activeChat.peer_user_id, src: avatars[activeChat.session_id], size: 28 }),
-                h('span', { style: { fontWeight: 600, fontSize: '14px' } }, activeChat.peer_nick || activeChat.peer_user_id),
-                h('span', { style: { ...S.muted, marginLeft: 'auto' } }, fmtTime(activeChat.ts))),
+                h('div', { style: { flex: 1, minWidth: 0 } },
+                  h('div', { style: { fontWeight: 600, fontSize: '14px' } }, activeChat.peer_nick || activeChat.peer_user_id),
+                  activeChat.item_title ? h('div', { style: { ...S.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, activeChat.item_title) : null),
+                h('span', { style: { ...S.muted, flex: 'none' } }, fmtTime(activeChat.ts))),
               h('div', { key: 'body', ref: bodyRef, style: { flex: 1, minHeight: 0, overflow: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' } },
                 messages.length === 0 ? h('div', { style: S.empty }, '没有可显示的消息') : null,
                 messages.map((m) => {
@@ -380,6 +452,11 @@ window.__ModuleLoader__.load({
                   )
                 })),
               h('div', { key: 'compose', style: { flex: 'none', display: 'flex', gap: '8px', padding: '12px', borderTop: '1px solid rgba(127,127,127,.18)' } },
+                h('button', {
+                  style: { ...S.btn, padding: '6px 10px', flex: 'none' },
+                  title: '插入表情（闲鱼把 [表情名] 当表情渲染）',
+                  onClick: () => setReplyText(`${replyText}[微笑]`),
+                }, '😊'),
                 h('input', {
                   style: S.input, value: replyText, placeholder: '回复买家…',
                   onChange: (e) => setReplyText(e.target.value),
@@ -459,7 +536,9 @@ window.__ModuleLoader__.load({
       const [accounts, setAccounts] = useState([])
       const [avatars, setAvatars] = useState({})
       const [selfAvatar, setSelfAvatar] = useState('')
-      const [info, setInfo] = useState(null)
+      const [orderDetailId, setOrderDetailId] = useState(null)
+      const [itemDetailItem, setItemDetailItem] = useState(null)
+      const [agentConfig, setAgentConfig] = useState(null)
       const [busy, setBusy] = useState('')
       const [error, setError] = useState('')
       const [notice, setNotice] = useState('')
@@ -565,23 +644,20 @@ window.__ModuleLoader__.load({
         }
       }
 
-      async function openOrderDetail(order) {
-        setInfo({ title: `订单 ${order.order_no}`, loading: true, error: '', data: null })
-        try {
-          const data = await rpc({ op: 'orderDetail', orderId: order.order_no }, 60000)
-          setInfo((prev) => (prev ? { ...prev, loading: false, data } : prev))
-        } catch (err) {
-          setInfo((prev) => (prev ? { ...prev, loading: false, error: String(err.message || err) } : prev))
-        }
-      }
+      function openOrderDetail(order) { setOrderDetailId(order.order_no) }
 
-      async function openItemDetail(item) {
-        setInfo({ title: `商品 ${item.item_id}`, loading: true, error: '', data: null })
+      function openItemDetail(item) { setItemDetailItem(item) }
+
+      async function saveAgentConfig(item, agent, skills) {
         try {
-          const data = await rpc({ op: 'itemDetail', itemId: item.item_id }, 60000)
-          setInfo((prev) => (prev ? { ...prev, loading: false, data } : prev))
+          await rpc({ op: 'setSetting', key: 'ai.agentPreset', value: agent })
+          await rpc({ op: 'setItem', itemId: item.item_id, title: item.title || '', skills })
+          setSettings((s) => ({ ...(s || {}), agentPreset: agent }))
+          setAgentConfig(null)
+          setNotice('AI 配置已保存')
+          await refresh()
         } catch (err) {
-          setInfo((prev) => (prev ? { ...prev, loading: false, error: String(err.message || err) } : prev))
+          setError(String(err.message || err))
         }
       }
 
@@ -859,15 +935,25 @@ window.__ModuleLoader__.load({
         }) : null,
         tab === 'cards' ? h(CardsTab, { cards, draft, setDraft, addCard, busy }) : null,
         tab === 'items' ? h(ItemsTab, {
-          items, shopItems, skillList, agentList, settings,
-          draft: itemDraft, setDraft: setItemDraft, saveItem, setAgentPreset,
-          onDetail: openItemDetail, busy,
+          items, shopItems, agentList, settings, loading: busy === 'shop',
+          onDetail: openItemDetail,
+          onConfigure: (it) => setAgentConfig({
+            item: it,
+            current: items.find((x) => x.item_id === it.item_id) || {},
+            agentPreset: (settings && settings.agentPreset) || 'builtin',
+          }),
         }) : null,
         tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
         loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null,
-        info ? h(InfoDialog, {
-          title: info.title, loading: info.loading, error: info.error, data: info.data,
-          onClose: () => setInfo(null),
+        orderDetailId ? h(OrderDetailDialog, { orderId: orderDetailId, onClose: () => setOrderDetailId(null) }) : null,
+        itemDetailItem ? h(ItemDetailDialog, { item: itemDetailItem, onClose: () => setItemDetailItem(null) }) : null,
+        agentConfig ? h(AgentConfigDialog, {
+          item: agentConfig.item,
+          agents: agentList,
+          skills: skillList,
+          current: { agentPreset: agentConfig.agentPreset, skills: agentConfig.current.skills || '' },
+          onSave: saveAgentConfig,
+          onClose: () => setAgentConfig(null),
         }) : null
       )
     }
