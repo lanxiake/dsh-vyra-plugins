@@ -854,6 +854,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.6.1 fixes the watch loop: `ctx.agents` was read without `inject`,
+        // so deliveries failed and messages sat in "合并中" forever. A tray
+        // window now counts as connected (the sender wakes it), failed
+        // deliveries surface their error, and image notes stop repeating on
+        // retry. Tool chips carry their descriptions as hover titles.
+        '0.6.1': {
+          publishTimestamp: 1795140376,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'cfe7a621914dd105b61a6f5fdf94b5ede2d74423',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
