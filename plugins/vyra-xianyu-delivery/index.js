@@ -219,6 +219,7 @@ export function apply(ctx, config = {}) {
     // IM token 是按账号缓存的，换账号后必须丢掉，否则会拿旧账号的 token。
     await rm(join(cliHome, 'im_token.json'), { force: true })
     authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
+    handledMsg.clear()
     stopWatch()
     setTimeout(() => startWatch(), 600)
     return { ok: true, unb }
@@ -334,68 +335,32 @@ export function apply(ctx, config = {}) {
     return ''
   }
 
-  async function handleImEvent(evt) {
-    if (!evt || evt.event === 'error' || !evt.cid) return
-    const cid = String(evt.cid)
-    const fromSelf =
-      String(evt.send_user_id || '') !== '' && String(evt.send_user_id) === selfUserId
-    const now = Date.now()
+  // 已经处理过的最新买家消息 id（每个会话），避免 new_msg 通知反复触发同一条。
+  const handledMsg = new Map()
 
-    const messageText = String(evt.send_message || '').trim()
-    // 文本消息：contentType=1，或 101（custom 包装）但解析出了文字。
-    // 只有真正的卡片/系统提示才走发货分支。
-    const isText = Boolean(messageText) && (evt.content_type === 1 || evt.content_type === 101)
-
-    // 卡片 / 系统提示：可能是付款通知，拉最近消息找订单号后立即发货。
-    if (!isText) {
-      if ((eventCooldown.get(cid) || 0) > now - 3000) return
-      eventCooldown.set(cid, now)
-      let history = []
-      try {
-        history = await cli.history(cid, 6)
-      } catch (err) {
-        log(`history failed: ${err?.message || err}`)
-        return
-      }
-      const orderNo = findOrderId(history)
-      if (orderNo) {
-        const result = await dispatcher.reconcile(orderNo)
-        recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
-        if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)
-      } else {
-        recordEvent({ cid, kind: `card:${evt.content_type}`, orderNo: '', action: 'no-order' })
-      }
-      return
+  // 最新一条消息是不是买家发的文本。new_msg 通知没有正文，只能从历史里取；
+  // 最后一条是自己发的，说明已经回过了。
+  function latestBuyerText(history, self = '') {
+    const last = history[history.length - 1]
+    if (!last) return null
+    // unb 有时带后缀，只比数字部分。
+    const digits = (v) => String(v || '').replace(/\D/g, '')
+    if (digits(self) && digits(self) === digits(last.send_user_id)) return null
+    const text = String(last?.message?.text?.text || '').trim()
+    if (!text) return null
+    return {
+      id: String(last.message_id || ''),
+      text,
+      userId: String(last.send_user_id || ''),
+      nick: String(last.send_user_name || ''),
     }
+  }
 
-    if (fromSelf) {
-      recordEvent({ cid, kind: 'text', action: 'skip-self', text: messageText.slice(0, 40) })
-      return
-    }
-    if (!ai.enabled) {
-      recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: messageText.slice(0, 40) })
-      return
-    }
-    if ((eventCooldown.get(cid) || 0) > now - 3000) {
-      recordEvent({ cid, kind: 'text', action: 'skip-cooldown', text: messageText.slice(0, 40) })
-      return
-    }
-    eventCooldown.set(cid, now)
-
-    const question = messageText
-    if (!question) return
-
-    let history = []
-    try {
-      history = await cli.history(cid, 10)
-    } catch {
-      // 历史拿不到也能回，只是少了上下文
-    }
-
+  async function replyToBuyer(cid, question, history, meta = {}) {
     // 会话对应的商品：优先买家最近的订单，其次会话消息里的商品卡片。
     let itemId = ''
     try {
-      itemId = store.lastItemForBuyer(String(evt.send_user_id || ''), account()) || ''
+      itemId = store.lastItemForBuyer(String(meta.send_user_id || ''), account()) || ''
     } catch {
       itemId = ''
     }
@@ -403,25 +368,100 @@ export function apply(ctx, config = {}) {
 
     const result = await ai.reply({
       cid, itemId, text: question, history, selfUserId,
-      accountId: account(), buyerNick: String(evt.send_user_name || ''),
+      accountId: account(), buyerNick: String(meta.send_user_name || ''),
     })
     const answer = result?.text || ''
     recordEvent({
       cid, kind: 'text', itemId,
-      from: String(evt.send_user_name || evt.send_user_id || ''),
+      from: String(meta.send_user_name || meta.send_user_id || ''),
       text: question.slice(0, 40),
       action: answer ? 'replied' : `no-reply:${result?.reason || 'unknown'}`,
     })
-    if (!answer) return
+    if (!answer) return false
 
     try {
-      await cli.send({ toid: String(evt.send_user_id), itemId, text: answer })
+      await cli.send({ toid: String(meta.send_user_id), itemId, text: answer })
       guard.recordSuccess?.()
-      log(`ai replied to ${evt.send_user_name || evt.send_user_id}`)
+      log(`ai replied to ${meta.send_user_name || meta.send_user_id}`)
+      return true
     } catch (err) {
       guard.recordFailure?.()
       log(`ai reply send failed: ${err?.message || err}`)
+      return false
     }
+  }
+
+  async function handleImEvent(evt) {
+    if (!evt || evt.event === 'error' || evt.event === 'read' || !evt.cid) return
+    const cid = String(evt.cid)
+    const now = Date.now()
+
+    const messageText = String(evt.send_message || '').trim()
+    // 文本消息：contentType=1，或 101（custom 包装）但解析出了文字。
+    const isText = Boolean(messageText) && (evt.content_type === 1 || evt.content_type === 101)
+
+    if (isText) {
+      const fromSelf =
+        String(evt.send_user_id || '') !== '' && String(evt.send_user_id) === selfUserId
+      if (fromSelf) {
+        recordEvent({ cid, kind: 'text', action: 'skip-self', text: messageText.slice(0, 40) })
+        return
+      }
+      if (!ai.enabled) {
+        recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: messageText.slice(0, 40) })
+        return
+      }
+      if ((eventCooldown.get(cid) || 0) > now - 3000) {
+        recordEvent({ cid, kind: 'text', action: 'skip-cooldown', text: messageText.slice(0, 40) })
+        return
+      }
+      eventCooldown.set(cid, now)
+
+      let history = []
+      try {
+        history = await cli.history(cid, 10)
+      } catch {
+        // 历史拿不到也能回，只是少了上下文
+      }
+      await replyToBuyer(cid, messageText, history, evt)
+      return
+    }
+
+    // 无正文事件：new_msg 轻量通知（只有 msg_id）、卡片、系统提示。
+    // 统一拉历史：先找订单号立刻发货；没有订单就看最新一条是不是买家提问。
+    if ((eventCooldown.get(cid) || 0) > now - 3000) return
+    eventCooldown.set(cid, now)
+
+    let history = []
+    try {
+      history = await cli.history(cid, 6)
+    } catch (err) {
+      log(`history failed: ${err?.message || err}`)
+      return
+    }
+
+    const orderNo = findOrderId(history)
+    if (orderNo) {
+      const result = await dispatcher.reconcile(orderNo)
+      recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
+      if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)
+      return
+    }
+
+    const latest = latestBuyerText(history, selfUserId)
+    if (latest && latest.text && latest.id !== handledMsg.get(cid)) {
+      if (!ai.enabled) {
+        recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: latest.text.slice(0, 40) })
+        return
+      }
+      handledMsg.set(cid, latest.id)
+      await replyToBuyer(cid, latest.text, history, {
+        ...evt, send_user_id: latest.userId, send_user_name: latest.nick,
+      })
+      return
+    }
+
+    recordEvent({ cid, kind: `hint:${evt.event || 'card'}`, orderNo: '', action: 'no-order' })
   }
 
   // Windows: uv 启动的 python 是子进程，只 kill 父 PID 会留下孤儿继续占着

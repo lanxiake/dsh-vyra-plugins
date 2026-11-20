@@ -1160,9 +1160,9 @@ window.__ModuleLoader__.load({
         }
       }
 
-      async function loadChat(chat) {
+      async function loadChat(chat, keepMessages = false) {
         setActiveChat(chat)
-        setChatMessages([])
+        if (!keepMessages) setChatMessages([])
         try {
           const list = await rpc({ op: 'history', cid: chat.session_id, limit: 200 }, 120000)
           setChatMessages(list || [])
@@ -1232,8 +1232,18 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
-        if (tab === 'chat' && chats.length === 0 && busy !== 'chats') void loadChats()
+        if (tab !== 'chat') return undefined
+        void loadChats()
+        const timer = setInterval(() => { void loadChats() }, 10000)
+        return () => clearInterval(timer)
       }, [tab])
+
+      // 会话列表刷新后，当前打开的会话有新消息就重拉正文（不清空，避免闪）。
+      useEffect(() => {
+        if (!activeChat) return
+        const next = chats.find((c) => c.session_id === activeChat.session_id)
+        if (next && next.ts !== activeChat.ts) void loadChat(next, true)
+      }, [chats])
 
       // 头像走 user.query 接口，逐个补；先补列表前 15 个，串行避免风控。
       useEffect(() => {
