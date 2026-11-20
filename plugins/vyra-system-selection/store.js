@@ -21,7 +21,6 @@ export const DEFAULTS = {
     // mouse event crosses into the Host through the low-level hook. On by default because that is
     // the menu people expect; the switch exists for machines where the crossing is felt.
     interceptRightClick: true,
-    maxResults: 6,
   },
 }
 

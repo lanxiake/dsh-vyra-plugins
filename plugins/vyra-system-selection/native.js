@@ -595,6 +595,9 @@ export function createOverlay(handlers = {}) {
     contentH: 0,
     viewH: 0,
     hoverPanel: 0,
+    // Body height the user asked for with 展开, in pixels; null means "fit the default".
+    userBody: null,
+    work: null,
     // selection, as character offsets into the block text rather than pixels
     sel: null,
     dragging: false,
@@ -721,11 +724,25 @@ export function createOverlay(handlers = {}) {
       headerH: Math.round(36 * scale),
       footerH: Math.round(42 * scale),
       pad: Math.round(14 * scale),
-      maxBody: Math.round(320 * scale),
+      // 展开 replaces the default body height with one that uses the screen.
+      maxBody: state.userBody ?? Math.round(320 * scale),
       lineGap: Math.round(5 * scale),
       closeW: Math.round(26 * scale),
       copyW: Math.round(60 * scale),
+      expandW: Math.round(52 * scale),
+      indent: Math.round(22 * scale),
     }
+  }
+
+  /** Footer control rectangles, shared by the paint pass and the click router. */
+  function panelChrome() {
+    const m = panelMetrics()
+    const footTop = m.headerH + state.viewH
+    const buttonH = Math.round(26 * m.scale)
+    const top = footTop + Math.round((m.footerH - buttonH) / 2)
+    const copy = { left: m.width - m.pad - m.copyW, top, right: m.width - m.pad, bottom: top + buttonH }
+    const expand = { left: copy.left - 8 - m.expandW, top, right: copy.left - 8, bottom: top + buttonH }
+    return { m, footTop, copy, expand }
   }
 
   function panelHeight() {
@@ -739,25 +756,30 @@ export function createOverlay(handlers = {}) {
     // The right edge keeps a gutter so the scrollbar never sits on top of a character.
     const width = m.width - m.pad * 2 - Math.round(6 * m.scale)
     const ops = []
-    const add = (top, text, font, color, extra) => {
-      const lines = wrapLines(text, width, (part) => measureRun(hdc, part, font))
+    const add = (top, text, font, color, extra, indent = 0) => {
+      const lines = wrapLines(text, Math.max(20, width - indent), (part) => measureRun(hdc, part, font))
       const lh = lineHeight(hdc, font)
       const h = Math.max(lh, lines.length * lh)
-      ops.push({ ...extra, text, font, color, y: top, h, lineH: lh, lines })
+      ops.push({ ...extra, text, font, color, y: top, h, lineH: lh, lines, indent })
       return h
     }
     let y = 0
     for (let i = 0; i < state.blocks.length; i++) {
       const block = state.blocks[i]
+      const extra = { blockIndex: i }
       if (block.kind === 'heading') {
-        y += add(y, block.text, state.fontBold, THEME.dim, { kind: 'heading', blockIndex: i }) + m.lineGap * 2
-      } else if (block.kind === 'source') {
-        const labelH = add(y, block.label, state.fontUI, THEME.accent, { kind: 'source', index: block.index })
-        const urlH = add(y + labelH, block.url, state.fontText, THEME.dim, { kind: 'url', index: block.index })
-        y += labelH + urlH + m.lineGap * 2
+        // A heading opens a section, so it gets room above as well as below — the only block
+        // that does, which is what makes the structure visible at a glance.
+        if (y > 0) y += Math.round(4 * m.scale)
+        y += add(y, block.text, state.fontBold, THEME.text, extra) + m.lineGap * 2
+      } else if (block.kind === 'bullet') {
+        y += add(y, block.text, state.fontText, THEME.text, { ...extra, prefix: '•' }, m.indent) + m.lineGap
+      } else if (block.kind === 'number') {
+        y += add(y, block.text, state.fontText, THEME.text, { ...extra, prefix: block.marker }, m.indent) + m.lineGap
+      } else if (block.kind === 'code') {
+        y += add(y, block.text, state.fontText, THEME.dim, extra) + m.lineGap * 2
       } else {
-        y += add(y, block.text, state.fontText, state.statusKind === 'error' ? THEME.danger : THEME.text,
-          { kind: 'text', blockIndex: i }) + m.lineGap * 2
+        y += add(y, block.text, state.fontText, state.statusKind === 'error' ? THEME.danger : THEME.text, extra) + m.lineGap * 2
       }
     }
     state.layoutBlocks = ops
@@ -862,6 +884,14 @@ export function createOverlay(handlers = {}) {
       const top = bodyTop + op.y - state.scroll
       if (top > bodyTop + state.viewH || top + op.h < bodyTop) continue
       const slice = selectedSlice(op)
+      const textLeft = m.pad + op.indent
+      if (op.prefix) {
+        F.SelectObject(hdc, op.font)
+        F.SetTextColor(hdc, op.color)
+        F.DrawTextW(hdc, op.prefix, -1,
+          { left: m.pad, top, right: textLeft, bottom: top + op.lineH },
+          DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
+      }
       for (let i = 0; i < op.lines.length; i++) {
         const line = op.lines[i]
         const lineTop = top + i * op.lineH
@@ -869,17 +899,17 @@ export function createOverlay(handlers = {}) {
           const from = Math.max(line.start, slice.start)
           const to = Math.min(line.end, slice.end)
           if (to > from) {
-            const x1 = m.pad + measureRun(hdc, op.text.slice(line.start, from), op.font)
-            const x2 = m.pad + measureRun(hdc, op.text.slice(line.start, to), op.font)
+            const x1 = textLeft + measureRun(hdc, op.text.slice(line.start, from), op.font)
+            const x2 = textLeft + measureRun(hdc, op.text.slice(line.start, to), op.font)
             F.SelectObject(hdc, op.font)
             fill(hdc, { left: Math.floor(x1), top: lineTop, right: Math.ceil(x2), bottom: lineTop + op.lineH }, THEME.selection)
           }
         }
         if (line.text) {
           F.SelectObject(hdc, op.font)
-          F.SetTextColor(hdc, op.kind === 'source' && state.hoverPanel === 100 + op.index ? THEME.text : op.color)
+          F.SetTextColor(hdc, op.color)
           F.DrawTextW(hdc, line.text, -1,
-            { left: m.pad, top: lineTop, right: bodyRight, bottom: lineTop + op.lineH },
+            { left: textLeft, top: lineTop, right: bodyRight, bottom: lineTop + op.lineH },
             DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX)
         }
       }
@@ -900,16 +930,18 @@ export function createOverlay(handlers = {}) {
         THEME.dim, THEME.dim, Math.round(2 * m.scale))
     }
 
-    const footTop = bodyTop + state.viewH
+    const { footTop, copy: copyRect, expand: expandRect } = panelChrome()
     F.SelectObject(hdc, state.fontUI)
     F.SetTextColor(hdc, state.statusKind === 'error' ? THEME.danger : THEME.dim)
     F.DrawTextW(hdc, state.status, -1,
-      { left: m.pad, top: footTop, right: m.width - m.pad - m.copyW - 8, bottom: footTop + m.footerH },
+      { left: m.pad, top: footTop, right: expandRect.left - 8, bottom: footTop + m.footerH },
       DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX)
-    const copyH = Math.round(26 * m.scale)
-    const copyTop = footTop + Math.round((m.footerH - copyH) / 2)
-    const copyRect = { left: m.width - m.pad - m.copyW, top: copyTop, right: m.width - m.pad, bottom: copyTop + copyH }
-    roundRect(hdc, copyRect, state.hoverPanel === 1 ? THEME.hover : THEME.bg, THEME.border, Math.round(6 * m.scale))
+    const radius = Math.round(6 * m.scale)
+    roundRect(hdc, expandRect, state.hoverPanel === 2 ? THEME.hover : THEME.bg, THEME.border, radius)
+    F.SetTextColor(hdc, state.hoverPanel === 2 ? THEME.text : THEME.dim)
+    F.DrawTextW(hdc, state.userBody === null ? '展开' : '收起', -1, expandRect,
+      DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
+    roundRect(hdc, copyRect, state.hoverPanel === 1 ? THEME.hover : THEME.bg, THEME.border, radius)
     F.SetTextColor(hdc, state.hoverPanel === 1 ? THEME.text : THEME.dim)
     F.DrawTextW(hdc, '复制', -1, copyRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
   }
@@ -976,15 +1008,11 @@ export function createOverlay(handlers = {}) {
 
   /** Which part of the panel a client-area point falls on, for hover and click routing. */
   function panelZone(x, y) {
-    const m = panelMetrics()
-    const footTop = m.headerH + state.viewH
-    if (y >= footTop && x >= m.width - m.pad - m.copyW) return 1
+    const { m, copy, expand } = panelChrome()
+    const inside = (rect) => x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom
+    if (inside(copy)) return 1
+    if (inside(expand)) return 2
     if (y < m.headerH && x >= m.width - m.pad - m.closeW) return -1
-    // A source line behaves as a link: report its index so the click opens the right URL.
-    const rel = y - m.headerH + state.scroll
-    for (const op of state.layoutBlocks) {
-      if (op.kind === 'source' && rel >= op.y - 2 && rel < op.y + op.h + Math.round(16 * state.dpi)) return 100 + op.index
-    }
     return 0
   }
 
@@ -1049,11 +1077,21 @@ export function createOverlay(handlers = {}) {
           } else {
             const zone = panelZone(x, y)
             if (zone === 1) { if (handlers.onPanelCopy) handlers.onPanelCopy() }
+            else if (zone === 2) {
+              // 展开 uses the screen instead of the default body height; 收起 goes back to it.
+              const m = panelMetrics()
+              if (state.userBody === null) {
+                const work = state.work ?? workAreaAt(0, 0)
+                const room = work.bottom - work.top - m.headerH - m.footerH - Math.round(40 * state.dpi)
+                state.userBody = Math.max(Math.round(200 * state.dpi), room)
+              } else {
+                state.userBody = null
+              }
+              state.textDirty = true
+              F.InvalidateRect(hwnd, null, false)
+            }
             else if (zone === -1) { if (handlers.onPanelClose) handlers.onPanelClose() }
-            else if (zone >= 100) {
-              const op = state.layoutBlocks.find((b) => b.kind === 'source' && b.index === zone - 100)
-              if (op && handlers.onOpenUrl) handlers.onOpenUrl(op.url)
-            } else {
+            else {
               // Start a selection. A press with no drag ends as a plain click, which clears it.
               const hit = hitTestText(x, y, state.measureDC)
               state.sel = hit ? { anchor: hit, focus: hit } : null
@@ -1478,6 +1516,8 @@ export function createOverlay(handlers = {}) {
       // selection rather than against wherever the panel happens to be.
       state.selectionRect = anchor
       state.anchor = { x: Math.round((anchor.left + anchor.right) / 2), y: anchor.top }
+      // Each action starts at the default height; 展开 is a decision about one answer, not a mode.
+      state.userBody = null
       state.textDirty = true
       ensureWindow()
       const m = panelMetrics()
@@ -1485,15 +1525,16 @@ export function createOverlay(handlers = {}) {
       layoutPanel(hdc)
       F.DeleteDC(hdc)
       const work = workAreaAt(anchor.left, anchor.top)
+      state.work = work
       // Chosen once, from the first size, and held for the panel's life. A streaming answer grows
       // the window many times; re-deciding each time would make it jump across the selection.
       state.panelSide = panelSideFor(anchor, { width: m.width, height: panelHeight() }, work)
       const pos = placePanelAtSelection(anchor, { width: m.width, height: panelHeight() }, work, state.panelSide)
       showAt(m.width, panelHeight(), pos.x, pos.y)
     },
-    setContent(answer, sources) {
+    setContent(answer) {
       if (state.mode !== 'panel') return
-      state.blocks = bodyBlocks(answer, sources || [])
+      state.blocks = bodyBlocks(answer)
       // Character offsets belong to the text that was laid out; new text invalidates them all.
       state.sel = null
       state.dragging = false

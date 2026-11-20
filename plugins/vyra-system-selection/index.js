@@ -1,8 +1,8 @@
 // System-wide selection assistant for the DSH desktop client.
 //
-// Right-click a selection in any application and a native menu appears next to it: AI search,
-// translate, summarize, explain, copy. The reading half never touches the DSH window; only an
-// explicitly chosen action reaches the network.
+// Right-click a selection in any application and a native menu appears next to it: translate,
+// copy, explain, summarize. The reading half never touches the DSH window; only an explicitly
+// chosen action reaches the network.
 //
 // The popup is a Win32 window painted with GDI, and the native context menu is suppressed by a
 // low-level mouse hook (see native.js for why). This file owns the trigger policy, the actions,
@@ -10,8 +10,8 @@
 import { readFileSync } from 'node:fs'
 
 import {
-  ACTIONS, MAX_TEXT_CHARS, buildRequest, buildSearchRequest, explainAuthFailure, findAction, pickModel,
-  reduceMouse, saneRect, searchQuery, selectionProblem,
+  ACTIONS, MAX_TEXT_CHARS, buildRequest, explainAuthFailure, findAction, pickModel,
+  reduceMouse, saneRect, selectionProblem,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveLastRun, saveSettings } from './store.js'
@@ -38,7 +38,6 @@ export function apply(ctx) {
   setWarnSink((message) => ctx.logger?.warn?.(`system-selection: ${message}`))
 
   let lastResult = ''
-  let lastSources = []
   /**
    * What the last action did.
    *
@@ -55,9 +54,9 @@ export function apply(ctx) {
   /** Show a model-call failure, in the panel body when it is one the user has to go fix. */
   function showModelFailure(error) {
     const message = describe(error)
-    const hint = explainAuthFailure(message, 'model')
+    const hint = explainAuthFailure(message)
     if (hint) {
-      overlay.setContent(hint.body, [])
+      overlay.setContent(hint.body)
       overlay.setStatus(hint.short, 'error')
     } else {
       overlay.setStatus(message, 'error')
@@ -84,7 +83,6 @@ export function apply(ctx) {
       const ok = writeClipboardText(text) === true
       overlay.setStatus(ok ? `已复制选中的 ${text.length} 字` : '复制失败：剪贴板正被其他程序占用', ok ? 'info' : 'error')
     },
-    onOpenUrl: (url) => openUrl(ctx, url),
     onRightClick: (pt, cached) => onRightClick(pt, cached),
   })
 
@@ -105,7 +103,7 @@ export function apply(ctx) {
   let pollTimer = null
   let captureTimer = null
   let mouse = null
-  const stats = { ticks: 0, rightClicks: 0, gestures: 0, captured: 0, empty: 0, searches: 0, inApp: 0, lastCapture: '' }
+  const stats = { ticks: 0, rightClicks: 0, gestures: 0, captured: 0, empty: 0, inApp: 0, lastCapture: '' }
 
   // --- triggers ------------------------------------------------------------------------------
 
@@ -134,7 +132,6 @@ export function apply(ctx) {
     stats.lastCapture = text.slice(0, 120)
     generation++
     lastResult = ''
-    lastSources = []
     // An explicit right-click is a fresh request, so it may reopen text the user closed the menu on.
     dismissed = ''
     // The system-wide path has no selection rect — the text came from the clipboard, and the
@@ -195,7 +192,6 @@ export function apply(ctx) {
     stats.lastCapture = core.slice(0, 120)
     generation++
     lastResult = ''
-    lastSources = []
     pending = { text: core, anchor, pointer: at }
     overlay.showMenu({ anchor, actions: ACTIONS })
     return { shown: true, at }
@@ -295,17 +291,6 @@ export function apply(ctx) {
     return writeClipboardText(text) === true
   }
 
-  async function openUrl(ctx, url) {
-    try {
-      await ctx.get('shell')?.openExternal?.(url)
-    } catch {
-      // No shell service: fall back to the OS handler through a child process, which is what the
-      // client would have done anyway.
-      const { spawn } = await import('node:child_process')
-      spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
-    }
-  }
-
   /**
    * The provider and model an action runs on, or null when none can be determined.
    *
@@ -344,8 +329,7 @@ export function apply(ctx) {
     // which is exactly the "点了没有反应" the user reported. Whatever breaks, the panel opens and
     // says so.
     try {
-      if (actionId === 'search') await runSearch(text, at)
-      else await runModel(action, text, at)
+      await runModel(action, text, at)
     } catch (error) {
       const message = describe(error)
       overlay.showPanel({ anchor: at, title: action.label, status: '' })
@@ -424,7 +408,6 @@ export function apply(ctx) {
 
     const mine = ++generation
     lastResult = ''
-    lastSources = []
     overlay.showPanel({ anchor: at, title: `${action.label} · ${preview(text)}`, status: '正在生成…' })
 
     const startedAt = Date.now()
@@ -432,7 +415,7 @@ export function apply(ctx) {
     try {
       const seen = await readStream(llm, picked, request, mine, (answer) => {
         lastResult = answer
-        overlay.setContent(lastResult, [])
+        overlay.setContent(lastResult)
       })
       if (seen.superseded) return
       const base = { action: action.id, provider: picked.provider, model: picked.model, counts: seen.counts, ms: Date.now() - startedAt }
@@ -453,7 +436,7 @@ export function apply(ctx) {
           ? `模型只返回了思考过程（${seen.reasoning.length} 字），没有正文`
           : '模型没有返回任何内容'
         if (seen.reasoning.trim()) lastResult = seen.reasoning
-        overlay.setContent(lastResult, [])
+        overlay.setContent(lastResult)
         overlay.setStatus(message, 'error')
         recordRun({ ...base, finish: reason && reason.kind, reasoning: seen.reasoning.slice(0, 4000), error: message })
         return
@@ -467,128 +450,6 @@ export function apply(ctx) {
     }
   }
 
-  /**
-   * AI search: retrieve with `ctx.web.search`, then answer over the retrieved pages.
-   *
-   * The answer is written by the model rather than pasted from the provider so it reads as an
-   * explanation of the selection; the sources are listed separately and stay clickable.
-   */
-  async function runSearch(text, at) {
-    const web = ctx.get('web')
-    const mine = ++generation
-    lastResult = ''
-    lastSources = []
-    overlay.showPanel({ anchor: at, title: `AI 搜索 · ${preview(text)}`, status: '正在搜索…' })
-    stats.searches++
-    const startedAt = Date.now()
-
-    if (!web || typeof web.search !== 'function') {
-      const message = '联网搜索服务不可用（未启用网页搜索插件）'
-      overlay.setStatus(message, 'error')
-      recordRun({ action: 'search', error: message })
-      return
-    }
-
-    let result
-    const query = searchQuery(text)
-    try {
-      result = await web.search({ query, maxResults: settings.maxResults || 6 })
-    } catch (error) {
-      if (mine !== generation) return
-      const message = describe(error)
-      const hint = explainAuthFailure(message, 'search')
-      if (hint) {
-        // Wrapped in the panel body: the provider appends a paragraph about endpoint config that
-        // the one-line footer would truncate into uselessness.
-        overlay.setContent(hint.body, [])
-        overlay.setStatus(hint.short, 'error')
-      } else {
-        overlay.setStatus(`搜索失败：${message}`, 'error')
-      }
-      recordRun({ action: 'search', query, ms: Date.now() - startedAt, error: message, hint: hint && hint.short })
-      return
-    }
-    if (mine !== generation) return
-
-    lastSources = Array.isArray(result && result.sources) ? result.sources : []
-    if (lastSources.length === 0) {
-      const message = '没有检索到结果'
-      overlay.setStatus(message, 'error')
-      recordRun({ action: 'search', query, ms: Date.now() - startedAt, error: message, content: (result && result.content || '').slice(0, 400) })
-      return
-    }
-
-    const llm = ctx.get('llm')
-    let picked = null
-    try {
-      picked = await resolveModel()
-    } catch {
-      picked = null // the provider's own summary below still stands in
-    }
-    if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
-      // No model: the provider's own summary is still worth showing, with its sources.
-      const fallback = (result.content || '').trim()
-      lastResult = fallback || `检索到 ${lastSources.length} 条来源`
-      overlay.setContent(lastResult, lastSources)
-      overlay.setStatus(fallback ? '搜索服务摘要（未配置模型，无 AI 总结）' : '检索到来源（未配置模型，无 AI 总结）', 'info')
-      recordRun({ action: 'search', query, sources: lastSources.length, ms: Date.now() - startedAt, answer: lastResult.slice(0, 4000) })
-      return
-    }
-
-    overlay.setStatus(`检索到 ${lastSources.length} 条来源，正在总结…`, 'info')
-    const request = buildSearchRequest(text, lastSources, { targetLanguage: settings.targetLanguage })
-    const base = { action: 'search', query, provider: picked.provider, model: picked.model, sources: lastSources.length, ms: 0 }
-    try {
-      const seen = await readStream(llm, picked, request, mine, (answer) => {
-        lastResult = answer
-        overlay.setContent(lastResult, lastSources)
-      })
-      if (seen.superseded) return
-      base.ms = Date.now() - startedAt
-      const reason = seen.finish
-      if (reason && reason.kind === 'error') {
-        const message = (reason.failure && reason.failure.message) || '模型返回错误'
-        // Keep whatever sources were retrieved: they are still the useful half of the answer.
-        const hint = explainAuthFailure(message, 'model')
-        if (hint) {
-          overlay.setContent(`${hint.body}\n\n${lastResult}`.trim(), lastSources)
-          overlay.setStatus(hint.short, 'error')
-        } else {
-          overlay.setContent(lastResult || '（总结失败）', lastSources)
-          overlay.setStatus(message, 'error')
-        }
-        recordRun({ ...base, counts: seen.counts, finish: 'error', error: message })
-        return
-      }
-      if (reason && reason.kind === 'aborted') {
-        recordRun({ ...base, finish: 'aborted' })
-        return
-      }
-      lastResult = seen.text
-      if (!lastResult.trim()) {
-        // Sources without a summary are still a result; saying so beats an empty body.
-        lastResult = seen.reasoning.trim() || `检索到 ${lastSources.length} 条来源（模型没有输出总结）`
-        overlay.setContent(lastResult, lastSources)
-        overlay.setStatus('模型没有输出总结，仅展示检索到的来源', 'error')
-        recordRun({ ...base, counts: seen.counts, finish: reason && reason.kind, error: '模型没有输出总结' })
-        return
-      }
-      overlay.setStatus(`${picked.provider} / ${picked.model} · ${lastSources.length} 条来源`, 'info')
-      recordRun({ ...base, counts: seen.counts, finish: reason && reason.kind, answer: lastResult.slice(0, 4000) })
-    } catch (error) {
-      if (mine !== generation) return
-      const message = describe(error)
-      const hint = explainAuthFailure(message, 'model')
-      if (hint) {
-        overlay.setContent(`${hint.body}\n\n${lastResult}`.trim(), lastSources)
-        overlay.setStatus(hint.short, 'error')
-      } else {
-        overlay.setContent(lastResult || '（总结失败）', lastSources)
-        overlay.setStatus(message, 'error')
-      }
-      recordRun({ ...base, ms: Date.now() - startedAt, error: message })
-    }
-  }
 
   // --- lifecycle -----------------------------------------------------------------------------
 
@@ -661,7 +522,6 @@ export function apply(ctx) {
         }
         if (typeof patch.openOnSelect === 'boolean') settings.openOnSelect = patch.openOnSelect
         if (typeof patch.interceptRightClick === 'boolean') settings.interceptRightClick = patch.interceptRightClick
-        if (Number.isFinite(patch.maxResults)) settings.maxResults = Math.max(1, Math.min(10, patch.maxResults))
       }
       persist()
       // Apply the takeover change now rather than at the next start.
@@ -671,15 +531,8 @@ export function apply(ctx) {
     models: async () => listModels(ctx),
     /** Called by the client half when the user right-clicks a selection inside DSH. */
     openInApp,
-    /** Report whether the retrieval half is usable, so the settings page can say so up front. */
-    capability: async () => {
-      const web = ctx.get('web')
-      return {
-        search: Boolean(web && typeof web.search === 'function'),
-        searchReady: typeof web?.searchReady === 'function' ? Boolean(web.searchReady()) : null,
-        model: (await resolveModel()) !== null,
-      }
-    },
+    /** Report whether a model is usable, so the settings page can say so up front. */
+    capability: async () => ({ model: (await resolveModel()) !== null }),
     /** Trigger the menu for the current selection. Used by tests and the settings page. */
     probe: () => {
       const pt = overlay.cursor()

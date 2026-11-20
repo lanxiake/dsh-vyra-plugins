@@ -12,7 +12,7 @@ import test from 'node:test'
 import {
   ACTIONS, MAX_TEXT_CHARS, bodyBlocks, buildRequest, explainAuthFailure, menuLayout, menuHitTest,
   panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection, reduceMouse, saneRect,
-  searchQuery, selectionProblem, systemPrompt, wrapLines,
+  selectionProblem, systemPrompt, wrapLines,
 } from '../core.js'
 
 test('saneRect accepts a real rectangle and rounds it', () => {
@@ -108,15 +108,8 @@ test('buildRequest carries the selection as a user message', () => {
   assert.ok(request.system.includes('讲解'))
 })
 
-test('searchQuery shortens a long selection at a sentence boundary', () => {
-  const long = '第一句话。第二句话。'.repeat(20)
-  const query = searchQuery(long, 40)
-  assert.ok(query.length <= 40)
-  assert.ok(query.endsWith('。'), `expected a sentence cut, got ${JSON.stringify(query)}`)
-})
-
 test('the menu lays the actions out in one row, each as wide as its own label', () => {
-  const actions = [{ label: 'AI 搜索' }, { label: '翻译' }, { label: '总结' }]
+  const actions = [{ label: '翻译' }, { label: '复制这一段' }, { label: '总结' }]
   // A deterministic stand-in for GDI measurement: wide labels make wide items.
   const layout = menuLayout(actions, 1, (label) => label.length * 10)
   assert.equal(layout.items.length, 3)
@@ -124,7 +117,7 @@ test('the menu lays the actions out in one row, each as wide as its own label', 
     assert.ok(item.label.left > item.icon.left, 'the icon sits left of its label')
     assert.equal(menuHitTest(layout, item.x + item.w / 2, item.y + item.h / 2), layout.items.indexOf(item))
   }
-  assert.ok(layout.items[0].w > layout.items[1].w, 'a longer label makes a wider item')
+  assert.ok(layout.items[1].w > layout.items[0].w, 'a longer label makes a wider item')
   assert.ok(layout.items[1].x > layout.items[0].x + layout.items[0].w, 'items do not overlap')
   assert.ok(layout.height < 48, 'one row, not an icon-over-label grid')
   assert.equal(menuHitTest(layout, -10, -10), -1)
@@ -160,23 +153,37 @@ test('copy sits before summarize, because it is the action people actually use',
   assert.ok(order.indexOf('copy') < order.indexOf('summarize'), `unexpected menu order: ${order.join(', ')}`)
 })
 
-test('the body is split into paragraphs so the panel can space them apart', () => {
-  const blocks = bodyBlocks('第一段。\n\n第二段。\n\n\n第三段。', [])
-  assert.deepEqual(blocks.map((block) => block.text), ['第一段。', '第二段。', '第三段。'])
-  assert.ok(blocks.every((block) => block.kind === 'text'))
-  // A single newline is a line break inside one paragraph, not a new block.
-  assert.equal(bodyBlocks('行一\n行二', []).length, 1)
-  assert.equal(bodyBlocks('', []).length, 1, 'an empty answer still paints one (empty) block')
+test('markdown becomes blocks the panel can style', () => {
+  const blocks = bodyBlocks('# 标题\n\n正文第一行\n正文第二行\n\n- 一条\n- 二条\n\n1. 第一\n2. 第二')
+  assert.deepEqual(blocks.map((block) => block.kind), ['heading', 'paragraph', 'bullet', 'bullet', 'number', 'number'])
+  assert.equal(blocks[0].text, '标题')
+  assert.equal(blocks[1].text, '正文第一行\n正文第二行', 'consecutive prose lines stay one paragraph')
+  assert.equal(blocks[2].text, '一条')
+  assert.equal(blocks[4].marker, '1.')
 })
 
-test('a 401 names the service it came from', () => {
-  const search = explainAuthFailure('DeepSeek API error (HTTP 401): Authentication Fails', 'search')
-  assert.match(search.short, /联网搜索/)
-  assert.match(search.body, /联网搜索/)
-  const model = explainAuthFailure('Authentication Fails, Your api key: ****imOx is invalid', 'model')
-  assert.match(model.short, /模型/)
-  assert.equal(explainAuthFailure('no model selected', 'model'), null)
-  assert.equal(explainAuthFailure('HTTP 500', 'search'), null)
+test('inline markers are stripped, because the panel draws no emphasis', () => {
+  const blocks = bodyBlocks('这是 **重点** 和 `代码`，还有 [链接](https://example.com)。')
+  assert.equal(blocks[0].text, '这是 重点 和 代码，还有 链接。')
+})
+
+test('a fenced code block keeps its lines and loses the fence', () => {
+  const blocks = bodyBlocks('前\n\n```\nconst a = 1\nconst b = 2\n```\n\n后')
+  assert.deepEqual(blocks.map((block) => block.kind), ['paragraph', 'code', 'paragraph'])
+  assert.equal(blocks[1].text, 'const a = 1\nconst b = 2')
+})
+
+test('an empty answer still yields one block to measure', () => {
+  const blocks = bodyBlocks('')
+  assert.equal(blocks.length, 0, 'an empty answer has nothing to draw')
+})
+
+test('a 401 names the failure and the setting to fix', () => {
+  const hint = explainAuthFailure('Authentication Fails, Your api key: ****imOx is invalid')
+  assert.match(hint.short, /401/)
+  assert.match(hint.body, /设置 → 模型/)
+  assert.equal(explainAuthFailure('no model selected'), null)
+  assert.equal(explainAuthFailure('HTTP 500'), null)
 })
 
 test('pickModel returns a real model, never a provider with an empty model', async () => {

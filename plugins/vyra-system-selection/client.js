@@ -75,7 +75,7 @@ window.__ModuleLoader__.load({
       knob: (on) => ({ position: 'absolute', top: '3px', left: on ? '21px' : '3px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left .15s' }),
     }
 
-    const ACTION_NAMES = { search: 'AI 搜索', translate: '翻译', summarize: '总结', explain: '解释', copy: '复制' }
+    const ACTION_NAMES = { translate: '翻译', summarize: '总结', explain: '解释', copy: '复制' }
 
     /** One readable line about the last action, so a dead button reports itself. */
     function describeRun(run) {
@@ -100,7 +100,6 @@ window.__ModuleLoader__.load({
     function SettingsBody() {
       const [state, setState] = useState(null)
       const [models, setModels] = useState({ groups: [], default: null })
-      const [capability, setCapability] = useState(null)
       const [error, setError] = useState('')
       const [busy, setBusy] = useState(false)
 
@@ -108,7 +107,6 @@ window.__ModuleLoader__.load({
         try {
           setState(await call('status'))
           setModels(await call('models'))
-          setCapability(await call('capability'))
         } catch (e) {
           setError(String(e.message || e))
         }
@@ -159,7 +157,7 @@ window.__ModuleLoader__.load({
           h('div', { style: S.row },
             h('div', null,
               h('div', { style: S.label }, '启用系统级划词'),
-              h('div', { style: S.hint }, '在任意应用里选中文字后点右键，弹出 AI 搜索、翻译、总结、解释、复制。'),
+              h('div', { style: S.hint }, '在任意应用里选中文字后点右键，弹出翻译、复制、解释、总结。'),
             ),
             h(Toggle, { on: state.enabled, onChange: toggleEnabled, label: '启用系统级划词' })),
           h('div', { style: S.row },
@@ -177,7 +175,7 @@ window.__ModuleLoader__.load({
           h('div', { style: S.row },
             h('div', { style: S.label }, '运行状态'),
             h('span', { style: S.badge(state.enabled) },
-              `已捕获 ${stats.captured || 0} 次 · AI 搜索 ${stats.searches || 0} 次 · v${state.version || '?'}`))),
+              `已捕获 ${stats.captured || 0} 次 · v${state.version || '?'}`))),
 
         h('div', { style: S.card },
           h('div', { style: S.row },
@@ -186,24 +184,6 @@ window.__ModuleLoader__.load({
               h('div', { style: S.hint }, '选中文字松手即弹出菜单，不必再点右键。关掉后只有右键才弹（右键始终可用）。'),
             ),
             h(Toggle, { on: Boolean(settings.openOnSelect), onChange: (v) => patch({ openOnSelect: v }), label: '划选后自动弹出' }))),
-
-        h('div', { style: S.card },
-          h('div', { style: S.row },
-            h('div', { style: S.label }, 'AI 搜索'),
-            h('span', { style: S.badge(Boolean(capability?.search), !capability?.search) },
-              capability?.search ? (capability.searchReady === false ? '服务未就绪' : '可用') : '不可用')),
-          capability?.search ? null : h('div', { style: S.hint },
-            '联网搜索不可用，需要在「插件」页启用网页搜索。其余四个动作不受影响。'),
-          h('div', { style: S.row },
-            h('div', null,
-              h('div', { style: S.label }, '检索来源条数'),
-              h('div', { style: S.hint }, 'AI 搜索会先检索这些条数的网页，再据此作答。'),
-            ),
-            h('select', {
-              style: S.select, disabled: busy,
-              value: String(settings.maxResults || 6),
-              onChange: (e) => patch({ maxResults: Number(e.target.value) }),
-            }, [3, 5, 6, 8, 10].map((n) => h('option', { key: n, value: String(n) }, `${n} 条`))))),
 
         h('div', { style: S.card },
           h('div', null,
@@ -258,7 +238,7 @@ window.__ModuleLoader__.load({
       return h('div', { 'data-system-selection-ui': '', style: { padding: '8px 4px', maxWidth: '640px' } },
         h('h2', { style: { fontSize: '18px', fontWeight: 600, margin: '0 0 6px' } }, '系统级划词'),
         h('p', { style: { ...S.hint, marginBottom: '20px' } },
-          '在任意应用里选中文字后点右键，弹出 AI 搜索、翻译、总结、解释、复制。DSH 窗口内同样可用。'),
+          '在任意应用里选中文字后点右键，弹出翻译、复制、解释、总结。DSH 窗口内同样可用。'),
         h(SettingsBody))
     }
 
