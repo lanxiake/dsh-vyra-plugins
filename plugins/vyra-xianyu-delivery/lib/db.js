@@ -235,6 +235,10 @@ export function createStore(file) {
        ORDER BY CASE WHEN spec_name = '' THEN 1 ELSE 0 END, account_id DESC, id`,
     ),
     cardById: db.prepare('SELECT * FROM cards WHERE id = ?'),
+    updateCard: db.prepare(
+      `UPDATE cards SET name = ?, type = ?, content = ?, template = ?, spec_name = ?, spec_value = ?, enabled = ? WHERE id = ?`,
+    ),
+    deleteCard: db.prepare('DELETE FROM cards WHERE id = ?'),
     updateCardContent: db.prepare(
       'UPDATE cards SET content = ? WHERE id = ? AND content = ?',
     ),
@@ -338,6 +342,24 @@ export function createStore(file) {
 
     // CAS 消费：只有 content 仍是读到的旧值时才更新成功，防止并发重复派发。
     // 条目之间用单独一行 `---` 分隔；条目内部可以多行（网盘链接 + 提取码 + 说明）。
+    updateCard(id, data) {
+      const current = q.cardById.get(Number(id))
+      if (!current) throw new Error('卡券不存在')
+      q.updateCard.run(
+        data.name ?? current.name,
+        data.type ?? current.type,
+        data.content ?? current.content,
+        data.template ?? current.template,
+        data.specName ?? current.spec_name,
+        data.specValue ?? current.spec_value,
+        data.enabled === undefined ? current.enabled : (data.enabled ? 1 : 0),
+        Number(id),
+      )
+    },
+    deleteCard(id) {
+      q.deleteCard.run(Number(id))
+    },
+
     consumeCard(cardId) {
       return tx(() => {
         const row = q.cardById.get(cardId)

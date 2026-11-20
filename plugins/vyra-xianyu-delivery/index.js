@@ -322,6 +322,18 @@ export function apply(ctx, config = {}) {
     return ''
   }
 
+  // 会话里的商品卡片会带 itemId（字段或 targetUrl 两种形态），没下单也能定位商品。
+  function findItemId(messages) {
+    for (const m of messages || []) {
+      const raw = JSON.stringify(m?.message || {})
+      const direct = raw.match(/"itemId"\s*:\s*"?(\d{6,})"?/)
+      if (direct) return direct[1]
+      const fromUrl = raw.match(/itemId=(\d{6,})/)
+      if (fromUrl) return fromUrl[1]
+    }
+    return ''
+  }
+
   async function handleImEvent(evt) {
     if (!evt || evt.event === 'error' || !evt.cid) return
     const cid = String(evt.cid)
@@ -372,13 +384,14 @@ export function apply(ctx, config = {}) {
       // 历史拿不到也能回，只是少了上下文
     }
 
-    // 会话对应的商品：优先买家最近的订单，其次历史里出现的订单。
+    // 会话对应的商品：优先买家最近的订单，其次会话消息里的商品卡片。
     let itemId = ''
     try {
       itemId = store.lastItemForBuyer(String(evt.send_user_id || ''), account()) || ''
     } catch {
       itemId = ''
     }
+    if (!itemId) itemId = findItemId(history)
 
     const answer = await ai.reply({
       cid, itemId, text: question, history, selfUserId,
@@ -547,6 +560,19 @@ export function apply(ctx, config = {}) {
         return store.recentDeliveries(Number(body.limit) || 100, account())
       case 'cards':
         return store.listCards(account())
+      case 'updateCard':
+        store.updateCard(Number(body.id), {
+          name: body.name,
+          content: body.content,
+          template: body.template,
+          specName: body.specName,
+          specValue: body.specValue,
+          enabled: body.enabled,
+        })
+        return { ok: true }
+      case 'deleteCard':
+        store.deleteCard(Number(body.id))
+        return { ok: true }
       case 'addCard':
         return {
           id: store.addCard({

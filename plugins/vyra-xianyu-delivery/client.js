@@ -159,14 +159,19 @@ window.__ModuleLoader__.load({
     }
 
     function CardsTab(props) {
-      const { cards, shopItems = [], draft, setDraft, addCard, busy } = props
+      const { cards, shopItems = [], draft, setDraft, saveCard, editingId, onEdit, onToggle, onRemove, onCancelEdit, busy } = props
       const titleOf = (itemId) => {
         const hit = shopItems.find((it) => it.item_id === itemId)
         return hit ? (hit.title || hit.item_id) : itemId
       }
+      const rowStyle = {
+        display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr .7fr 2.2fr', gap: '10px',
+        padding: '9px 12px', borderBottom: '1px solid rgba(127,127,127,.12)', fontSize: '13px', alignItems: 'center',
+      }
+      const small = { ...S.btn, padding: '3px 8px', fontSize: '12px', flex: 'none' }
       return h('div', null,
         h('div', { style: S.card },
-          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, '添加卡券'),
+          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, editingId ? '编辑卡券' : '添加卡券'),
           h('div', { style: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px', marginBottom: '10px' } },
             h('div', null,
               h('label', { style: S.label }, '商品'),
@@ -192,21 +197,26 @@ window.__ModuleLoader__.load({
             onChange: (e) => setDraft({ ...draft, content: e.target.value }),
           }),
           h('div', { style: { ...S.muted, marginTop: '6px' } }, '一个商品只绑一张启用的卡券；不配卡券，自动发货会跳过。'),
-          h('div', { style: { marginTop: '10px' } },
-            h('button', { style: S.btn, onClick: addCard, disabled: !!busy }, busy === 'add' ? '保存中…' : '添加'))
+          h('div', { style: { marginTop: '10px', display: 'flex', gap: '8px' } },
+            h('button', { style: S.btn, onClick: saveCard, disabled: !!busy }, busy === 'add' ? '保存中…' : (editingId ? '保存修改' : '添加')),
+            editingId ? h('button', { style: S.btn, onClick: onCancelEdit }, '取消编辑') : null)
         ),
         cards.length === 0
           ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有卡券')
           : h('div', null,
-            h('div', { style: { ...S.row(), ...S.th } },
-              h('span', null, '商品'), h('span', null, '规格'), h('span', null, '名称'), h('span', null, '类型'), h('span', null, '状态')),
+            h('div', { style: { ...rowStyle, ...S.th } },
+              h('span', null, '商品'), h('span', null, '规格'), h('span', null, '名称'), h('span', null, '类型'), h('span', null, '状态 / 操作')),
             cards.map((c) =>
-              h('div', { key: c.id, style: S.row() },
+              h('div', { key: c.id, style: rowStyle },
                 h('span', { title: c.item_id, style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, titleOf(c.item_id)),
                 h('span', null, c.spec_value || '通用'),
                 h('span', null, c.name),
                 h('span', null, c.type),
-                h('span', null, c.enabled ? '启用' : '停用')
+                h('span', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
+                  h('span', { style: S.tag(c.enabled ? 'completed' : '') }, c.enabled ? '启用' : '停用'),
+                  h('button', { style: small, onClick: () => onEdit(c) }, '编辑'),
+                  h('button', { style: small, onClick: () => onToggle(c) }, c.enabled ? '停用' : '启用'),
+                  h('button', { style: { ...small, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }, onClick: () => onRemove(c) }, '删除'))
               )
             )
           )
@@ -848,6 +858,7 @@ window.__ModuleLoader__.load({
       const [remoteOrdersLoading, setRemoteOrdersLoading] = useState(false)
       const [accounts, setAccounts] = useState([])
       const [services, setServices] = useState([])
+      const [editingCard, setEditingCard] = useState(null)
       const [events, setEvents] = useState([])
       const [serviceDialog, setServiceDialog] = useState(null)
       const [bindItem, setBindItem] = useState(null)
@@ -968,6 +979,65 @@ window.__ModuleLoader__.load({
       function openOrderDetail(order) { setOrderDetailId(order.order_no) }
 
       function openItemDetail(item) { setItemDetailItem(item) }
+
+      function editCard(card) {
+        setEditingCard(card.id)
+        setDraft({
+          itemId: card.item_id,
+          specName: card.spec_name || '',
+          specValue: card.spec_value || '',
+          content: card.content || '',
+        })
+        setTab('cards')
+      }
+
+      async function saveCard() {
+        if (!draft.itemId || !draft.content.trim()) {
+          setNotice('商品和卡券内容必填')
+          return
+        }
+        setBusy('add')
+        try {
+          if (editingCard) {
+            await rpc({ op: 'updateCard', id: editingCard, name: draft.itemId, content: draft.content, specName: draft.specName, specValue: draft.specValue })
+            setEditingCard(null)
+            setDraft(EMPTY_CARD)
+            setNotice('卡券已更新')
+          } else {
+            await rpc({ op: 'addCard', itemId: draft.itemId, specName: draft.specName, specValue: draft.specValue, name: draft.itemId, type: 'data', content: draft.content })
+            setDraft(EMPTY_CARD)
+            setNotice('卡券已添加')
+          }
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      async function toggleCard(card) {
+        try {
+          await rpc({ op: 'updateCard', id: card.id, enabled: card.enabled ? 0 : 1 })
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
+
+      async function removeCard(card) {
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('删除这张卡券？')) return
+        try {
+          await rpc({ op: 'deleteCard', id: card.id })
+          if (editingCard === card.id) {
+            setEditingCard(null)
+            setDraft(EMPTY_CARD)
+          }
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        }
+      }
 
       async function saveService(data) {
         try {
@@ -1303,7 +1373,15 @@ window.__ModuleLoader__.load({
           onRefresh: loadRemoteOrders, loading: remoteOrdersLoading,
           onDetail: openOrderDetail,
         }) : null,
-        tab === 'cards' ? h(CardsTab, { cards, shopItems, draft, setDraft, addCard, busy }) : null,
+        tab === 'cards' ? h(CardsTab, {
+          cards, shopItems, draft, setDraft,
+          saveCard, editingId: editingCard,
+          onEdit: editCard,
+          onToggle: toggleCard,
+          onRemove: removeCard,
+          onCancelEdit: () => { setEditingCard(null); setDraft(EMPTY_CARD) },
+          busy,
+        }) : null,
         tab === 'items' ? h(ItemsTab, {
           items, shopItems, agentList, settings, services, loading: busy === 'shop',
           onDetail: openItemDetail,
