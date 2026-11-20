@@ -807,6 +807,16 @@
       },
       "versions": [
         {
+          "version": "0.5.7",
+          "publishTimestamp": 1795156180,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "c50cad67bf9f880ddce0097e0970e2ee060f9124",
+            "path": "plugins/vyra-xianyu-delivery"
+          }
+        },
+        {
           "version": "0.5.6",
           "publishTimestamp": 1795154453,
           "source": {

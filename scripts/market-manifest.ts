@@ -1184,6 +1184,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.7 stores local time, lets the platform state win over a stale
+        // local "blocked", adds the market skills dir, and moves the AI switch
+        // onto each item.
+        '0.5.7': {
+          publishTimestamp: 1795156180,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'c50cad67bf9f880ddce0097e0970e2ee060f9124',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
