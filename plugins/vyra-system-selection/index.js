@@ -254,7 +254,6 @@ export function apply(ctx) {
       stats.lastCapture = text.slice(0, 120)
       generation++
       lastResult = ''
-      lastSources = []
       // The paste-triggered path shares the system-wide limitation: the text came from the
       // clipboard, so there is no rectangle to anchor to. The pointer stands in.
       const anchor = { left: pt.x, top: pt.y, right: pt.x, bottom: pt.y }
