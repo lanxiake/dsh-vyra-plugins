@@ -1315,6 +1315,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.4 adds card edit/disable/delete and reads the item id from the
+        // chat's product card when the buyer has not ordered yet.
+        '0.6.4': {
+          publishTimestamp: 1795164403,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '5d03fbe1305f5fc1d8ec4b23465c96d7a579267c',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
