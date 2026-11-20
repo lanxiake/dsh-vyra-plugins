@@ -967,6 +967,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-wechat-local',
           },
         },
+        // 0.7.1 mirrors the trusted defaults (self-chat + 文件传输助手) in the
+        // channel card, which otherwise claimed nobody could be replied to.
+        '0.7.1': {
+          publishTimestamp: 1795160538,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4188a58abe94b473007f325630214a43ae0a1314',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
       },
       metadata: {
         category: 'integration',
