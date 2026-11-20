@@ -80,6 +80,20 @@ window.__ModuleLoader__.load({
 
     const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '' }
 
+    const DEFAULT_SERVICE_PROMPT = [
+      '你是闲鱼店铺的客服，负责回答买家关于商品的问题。语气自然、简短，像真人卖家，不要长篇大论。',
+      '',
+      '规则：',
+      '- 只回答和本店商品相关的问题。',
+      '- 不确定的信息不要编，让买家拍前确认版本/规格。',
+      '- 不承诺法律效力，不提供外部链接或二维码，不主动降价。',
+      '- 付款后由系统自动发货；买家说没收到先核订单号和付款状态。',
+      '- 退款、纠纷按平台流程，不私下转账。',
+      '- 不提"AI""机器人""自动回复"。',
+    ].join('\n')
+
+    const DEFAULT_DELIVER_TEMPLATE = '{card}\n有效期 7 天，过期联系我补。'
+
     function OrdersTab(props) {
       const { orders, localOrders, onRefresh, loading, onDetail } = props
       const list = orders.length ? orders : localOrders
@@ -480,8 +494,18 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function ServiceDialog({ service, skills, onSave, onDelete, onClose, busy }) {
-      const draft = service || { name: '', system_prompt: '', skills: '', model: '', auto_deliver: 1, deliver_template: '', enabled: 1 }
+    function ServiceDialog({ service, skills, toolNames = [], onSave, onDelete, onClose, busy }) {
+      const fallback = {
+        name: '闲鱼客服',
+        system_prompt: DEFAULT_SERVICE_PROMPT,
+        skills: 'baidu-drive, quarkclouddrive, xianyu-customer-service',
+        model: '',
+        auto_deliver: 1,
+        deliver_template: DEFAULT_DELIVER_TEMPLATE,
+        tools: '',
+        enabled: 1,
+      }
+      const draft = service || fallback
       const [name, setName] = useState(draft.name || '')
       const [prompt, setPrompt] = useState(draft.system_prompt || '')
       const [model, setModel] = useState(draft.model || '')
@@ -489,6 +513,10 @@ window.__ModuleLoader__.load({
       const [autoDeliver, setAutoDeliver] = useState(draft.auto_deliver !== 0)
       const [enabled, setEnabled] = useState(draft.enabled !== 0)
       const [picked, setPicked] = useState(new Set(String(draft.skills || '').split(/[,，\s]+/).filter(Boolean)))
+      const [toolPicked, setToolPicked] = useState(() => {
+        const fromDraft = String(draft.tools || '').split(/[,，\s]+/).filter(Boolean)
+        return new Set(fromDraft.length ? fromDraft : toolNames)
+      })
       const [query, setQuery] = useState('')
       const [saving, setSaving] = useState(false)
       const q = query.trim().toLowerCase()
@@ -501,6 +529,13 @@ window.__ModuleLoader__.load({
         if (next.has(key)) next.delete(key)
         else next.add(key)
         setPicked(next)
+      }
+
+      const toggleTool = (key) => {
+        const next = new Set(toolPicked)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+        setToolPicked(next)
       }
 
       const field = (label, node) => h('div', { style: { marginBottom: '10px' } },
@@ -544,6 +579,20 @@ window.__ModuleLoader__.load({
                     style: { ...S.btn, padding: '2px 8px', fontSize: '12px', flex: 'none' },
                     onClick: () => { rpc({ op: 'openSkillDir', name: s.name }).catch(() => {}) },
                   }, '打开'))))),
+          h('label', { style: { ...S.label, marginTop: '14px' } }, `可调用工具（已选 ${toolPicked.size} / 共 ${toolNames.length}）`),
+          h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' } },
+            toolNames.length === 0
+              ? h('div', { style: S.muted }, '没有可用工具')
+              : toolNames.map((n) => h('label', {
+                key: n,
+                style: {
+                  display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 8px',
+                  borderRadius: '6px', border: '1px solid rgba(127,127,127,.3)',
+                  background: toolPicked.has(n) ? 'rgba(15,157,110,.12)' : 'transparent',
+                },
+              },
+                h('input', { type: 'checkbox', checked: toolPicked.has(n), onChange: () => toggleTool(n) }),
+                n))),
           h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },
             service ? h('button', {
               style: { ...S.btn, color: '#dc2626', marginRight: 'auto' },
@@ -565,6 +614,7 @@ window.__ModuleLoader__.load({
                     model,
                     autoDeliver,
                     deliverTemplate: template,
+                    tools: [...toolPicked].join(', '),
                     enabled,
                   })
                 } finally {
@@ -1234,6 +1284,7 @@ window.__ModuleLoader__.load({
         serviceDialog ? h(ServiceDialog, {
           service: serviceDialog.service,
           skills: skillList,
+          toolNames: (settings && settings.tools) || [],
           onSave: saveService,
           onDelete: removeService,
           onClose: () => setServiceDialog(null),

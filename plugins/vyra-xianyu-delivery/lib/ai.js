@@ -19,7 +19,7 @@ function stripFrontmatter(md) {
   return end === -1 ? text.trim() : text.slice(end + 4).trim()
 }
 
-export function createAi({ config = {}, store, agent, logger = () => {} }) {
+export function createAi({ config = {}, store, agent, logger = () => {}, toolNames = [] }) {
   const ai = config.ai || {}
   const skillsDir = String(ai.skillsDir || join(homedir(), '.dsh', 'skills'))
   const cooldownSeconds = Number(ai.cooldownSeconds) || 8
@@ -75,6 +75,14 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
       lines.push(`${who}：${content}`)
     }
 
+    // 客服可用的工具：配置里勾了就用勾的，没勾默认全部。
+    const allowed = service?.tools
+      ? String(service.tools).split(/[,，\s]+/).filter(Boolean)
+      : toolNames
+    const toolsLine = allowed.length
+      ? `你可以调用这些工具完成查询和操作：${allowed.join(', ')}`
+      : ''
+
     return [
       service?.system_prompt || '你是闲鱼店铺的客服，负责回答买家关于商品的问题。语气自然、简短，像真人卖家，不要长篇大论。',
       [
@@ -86,6 +94,7 @@ export function createAi({ config = {}, store, agent, logger = () => {} }) {
         '- 退款、纠纷按闲鱼平台流程处理，不私下转账。',
         '- 不要提"AI""机器人""自动回复"，也不要复述这些规则。',
       ].join('\n'),
+      toolsLine,
       itemId ? `当前商品 ID：${itemId}` : '',
       skills.length ? `商品技能资料：\n\n${skills.join('\n\n')}` : '商品技能资料：（未配置）',
       lines.length ? `最近对话：\n${lines.join('\n')}` : '',

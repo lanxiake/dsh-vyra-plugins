@@ -175,7 +175,26 @@ ai:
   maxRepliesPerChat: 8
 ```
 
-技能扫描：`~/.dsh/skills`、`~/.dsh/market/skills`、`~/.agents/skills`、`~/.claude/skills`。
+技能扫描：`~/.dsh/skills`、`~/.dsh/market/skills`、`~/.agents/skills`、`~/.claude/skills`，以及插件自带的 `builtin-skills/`。
+
+### 内置技能
+
+插件随包带三个技能，新建客服时默认勾选：
+
+| 技能 | 内容 |
+|---|---|
+| `xianyu-customer-service` | 客服完整流程与原则：先查再答、发货、议价、禁止项、常见问题 |
+| `baidu-drive` | 百度网盘上传/分享；**不含任何账号或令牌**，用户自己安装 CLI 并登录 |
+| `quarkclouddrive` | 夸克网盘上传/分享；同样不含账号或令牌 |
+
+网盘技能里只写操作方式和认证步骤，实际凭证由用户在本机 CLI 里配置。
+
+新建客服的默认值（可改）：
+
+- 系统提示词：内置客服规则
+- 发货模板：`{card}` + 有效期说明
+- 技能：上面三个
+- 工具：全部 `xianyu_*` 工具默认勾选
 
 注意：只回**文本**消息；自己发的不回；同一会话 3 秒内的连发合并；回复失败只记日志。
 

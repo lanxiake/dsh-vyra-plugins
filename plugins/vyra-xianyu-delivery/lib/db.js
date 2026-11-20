@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS customer_services (
   model            TEXT NOT NULL DEFAULT '',
   auto_deliver     INTEGER NOT NULL DEFAULT 1,
   deliver_template TEXT NOT NULL DEFAULT '',
+  tools            TEXT NOT NULL DEFAULT '',
   enabled          INTEGER NOT NULL DEFAULT 1,
   created_at       TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   updated_at       TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -176,6 +177,7 @@ export function createStore(file) {
   // 先重建 items（补 account_id），再做客服迁移，否则旧表没有这两列。
   ensureColumn(db, 'items', 'ai_enabled', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'items', 'service_id', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'customer_services', 'tools', "TEXT NOT NULL DEFAULT ''")
   migrateServices(db)
 
   // 旧库的时间列是 datetime('now')（UTC），比本地少 8 小时。只迁移一次；
@@ -267,12 +269,12 @@ export function createStore(file) {
     listServices: db.prepare('SELECT * FROM customer_services ORDER BY id'),
     getService: db.prepare('SELECT * FROM customer_services WHERE id = ?'),
     insertService: db.prepare(
-      `INSERT INTO customer_services (name, system_prompt, skills, model, auto_deliver, deliver_template, enabled)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO customer_services (name, system_prompt, skills, model, auto_deliver, deliver_template, tools, enabled)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     updateService: db.prepare(
       `UPDATE customer_services SET name = ?, system_prompt = ?, skills = ?, model = ?,
-         auto_deliver = ?, deliver_template = ?, enabled = ?, updated_at = datetime('now','localtime')
+         auto_deliver = ?, deliver_template = ?, tools = ?, enabled = ?, updated_at = datetime('now','localtime')
        WHERE id = ?`,
     ),
     deleteService: db.prepare('DELETE FROM customer_services WHERE id = ?'),
@@ -384,14 +386,14 @@ export function createStore(file) {
       if (id) {
         q.updateService.run(
           data.name, data.systemPrompt ?? '', data.skills ?? '', data.model ?? '',
-          data.autoDeliver ? 1 : 0, data.deliverTemplate ?? '', data.enabled === false ? 0 : 1,
+          data.autoDeliver ? 1 : 0, data.deliverTemplate ?? '', data.tools ?? '', data.enabled === false ? 0 : 1,
           id,
         )
         return id
       }
       return q.insertService.run(
         data.name, data.systemPrompt ?? '', data.skills ?? '', data.model ?? '',
-        data.autoDeliver ? 1 : 0, data.deliverTemplate ?? '', data.enabled === false ? 0 : 1,
+        data.autoDeliver ? 1 : 0, data.deliverTemplate ?? '', data.tools ?? '', data.enabled === false ? 0 : 1,
       ).lastInsertRowid
     },
     deleteService(id) {

@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
 import { spawn, execFile } from 'node:child_process'
 import { readdir, readFile, copyFile, writeFile, mkdir, rm } from 'node:fs/promises'
@@ -67,7 +68,13 @@ export function apply(ctx, config = {}) {
     logger: log,
     getPreset: () => store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
   })
-  const ai = createAi({ config: cfg, store, agent: dshAgent, logger: log })
+  const ai = createAi({
+    config: cfg,
+    store,
+    agent: dshAgent,
+    logger: log,
+    toolNames: xianyuTools.map((tool) => tool.name),
+  })
   let selfUserId = ''
   let authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
   let watchProc = null
@@ -97,6 +104,8 @@ export function apply(ctx, config = {}) {
       join(homedir(), '.dsh', 'market', 'skills'),
       join(homedir(), '.agents', 'skills'),
       join(homedir(), '.claude', 'skills'),
+      // 插件自带的技能（网盘、客服流程），随包分发。
+      fileURLToPath(new URL('./builtin-skills', import.meta.url)),
     ]
     const out = []
     const seen = new Set()
@@ -626,6 +635,7 @@ export function apply(ctx, config = {}) {
           model: String(body.model || ''),
           autoDeliver: body.autoDeliver !== false,
           deliverTemplate: String(body.deliverTemplate || ''),
+          tools: String(body.tools || ''),
           enabled: body.enabled !== false,
         }) }
       case 'deleteService':
@@ -641,6 +651,7 @@ export function apply(ctx, config = {}) {
           aiMode: String(cfg.ai?.mode || (dshAgent.available ? 'dsh' : 'api')),
           agentAvailable: dshAgent.available,
           builtin: dshAgent.builtin,
+          tools: xianyuTools.map((tool) => tool.name),
         }
       case 'setSetting':
         store.setSetting(String(body.key || ''), String(body.value ?? ''))
