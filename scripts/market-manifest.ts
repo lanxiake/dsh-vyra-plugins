@@ -1163,6 +1163,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.5.5 is the same code installed from GitCode, which clones faster in CN.
+        '0.5.5': {
+          publishTimestamp: 1795152931,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '6379365ed14f1e05c6213c8f386d5fd4712da4b5',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
