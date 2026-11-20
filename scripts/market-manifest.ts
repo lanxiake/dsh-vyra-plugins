@@ -1405,6 +1405,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.10: the agents service is read lazily; asking for it during apply
+        // left AI mode permanently disabled.
+        '0.6.10': {
+          publishTimestamp: 1795196400,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '12d8e8904c60913da1baff433297c00c65250b5a',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
