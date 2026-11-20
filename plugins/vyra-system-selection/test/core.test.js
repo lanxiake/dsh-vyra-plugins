@@ -12,7 +12,7 @@ import test from 'node:test'
 import {
   ACTIONS, MAX_TEXT_CHARS, bodyBlocks, buildRequest, explainAuthFailure, menuLayout, menuHitTest,
   panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection, reduceMouse, saneRect,
-  searchQuery, selectionProblem, systemPrompt,
+  searchQuery, selectionProblem, systemPrompt, wrapLines,
 } from '../core.js'
 
 test('saneRect accepts a real rectangle and rounds it', () => {
@@ -140,6 +140,19 @@ test('reduceMouse fires on a drag and on a multi-click, but not on a plain click
   const first = reduceMouse(down.state, { down: false, x: 100, y: 100, t: 10 })
   const again = reduceMouse(first.state, { down: true, x: 101, y: 100, t: 100 })
   assert.equal(reduceMouse(again.state, { down: false, x: 101, y: 100, t: 150 }).fire, true)
+})
+
+test('wrapLines breaks at the width and keeps character offsets', () => {
+  const measure = (part) => part.length * 10
+  const lines = wrapLines('abcdefgh', 30, measure)
+  assert.deepEqual(lines.map((line) => line.text), ['abc', 'def', 'gh'])
+  assert.deepEqual(lines.map((line) => [line.start, line.end]), [[0, 3], [3, 6], [6, 8]])
+})
+
+test('wrapLines breaks after a space and honours explicit line breaks', () => {
+  const measure = (part) => part.length * 10
+  assert.deepEqual(wrapLines('ab cd ef', 50, measure).map((line) => line.text), ['ab ', 'cd ef'])
+  assert.deepEqual(wrapLines('ab\n\ncd', 50, measure).map((line) => line.text), ['ab', '', 'cd'])
 })
 
 test('copy sits before summarize, because it is the action people actually use', () => {

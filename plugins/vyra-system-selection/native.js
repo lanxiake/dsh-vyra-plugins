@@ -10,7 +10,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse } from './core.js'
+import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse, wrapLines } from './core.js'
 
 function loadKoffi() {
   // The Host runs from an asar; koffi's native binary is shipped unpacked beside it. Resolve
@@ -143,6 +143,9 @@ const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() =>
   const MSLLHOOKSTRUCT = koffi.struct('MSLLHOOKSTRUCT', {
     pt: 'POINT', mouseData: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
   })
+  // Prefixed: koffi registers type names process-wide, and a plain 'SIZE' is a name any other
+  // plugin in this Host could already have taken.
+  const SSSIZE = koffi.struct('VYRA_SELECTION_SIZE', { cx: 'long', cy: 'long' })
   const HOOKPROC = koffi.proto('intptr_t HOOKPROC(int code, uintptr_t wParam, void *lParam)')
   
   // --- bindings --------------------------------------------------------------------------------
@@ -207,6 +210,7 @@ const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() =>
     SetBkMode: g.func('int __stdcall SetBkMode(void *hdc, int mode)'),
     CreateFontW: g.func('void* __stdcall CreateFontW(int h, int w, int esc, int orient, int weight, uint32 italic, uint32 underline, uint32 strike, uint32 charset, uint32 prec, uint32 clip, uint32 quality, uint32 pitch, str16 face)'),
     CreateRoundRectRgn: g.func('void* __stdcall CreateRoundRectRgn(int l, int t, int r, int b, int ew, int eh)'),
+    GetTextExtentPoint32W: g.func('bool __stdcall GetTextExtentPoint32W(void *hdc, str16 text, int len, _Out_ VYRA_SELECTION_SIZE *size)'),
     GetModuleHandleW: k.func('void* __stdcall GetModuleHandleW(str16 name)'),
     CreateToolhelp32Snapshot: k.func('void* __stdcall CreateToolhelp32Snapshot(uint32 flags, uint32 pid)'),
     Process32FirstW: k.func('bool __stdcall Process32FirstW(void *snapshot, _Inout_ PROCESSENTRY32W *entry)'),
@@ -271,6 +275,7 @@ const TRANSPARENT = 1
 const SRCCOPY = 0x00CC0020
 const IDC_HAND = 32649
 const IDC_ARROW = 32512
+const IDC_IBEAM = 32513
 
 const VK_CONTROL = 0x11
 const VK_MENU = 0x12
@@ -307,6 +312,8 @@ const THEMES = {
     hover: rgb(0x2f, 0x35, 0x3c),
     accent: rgb(0x4d, 0x9a, 0xff),
     danger: rgb(0xff, 0x7b, 0x72),
+    // Solid fill: GDI has no alpha here, so the selection tint is chosen to sit under light text.
+    selection: rgb(0x2c, 0x45, 0x66),
   },
   light: {
     bg: rgb(0xff, 0xff, 0xff),
@@ -317,6 +324,7 @@ const THEMES = {
     hover: rgb(0xf1, 0xf3, 0xf5),
     accent: rgb(0x1a, 0x73, 0xe8),
     danger: rgb(0xd1, 0x24, 0x2f),
+    selection: rgb(0xcc, 0xdf, 0xff),
   },
 }
 
@@ -587,6 +595,10 @@ export function createOverlay(handlers = {}) {
     contentH: 0,
     viewH: 0,
     hoverPanel: 0,
+    // selection, as character offsets into the block text rather than pixels
+    sel: null,
+    dragging: false,
+    measureDC: null,
     // painting
     memDC: null,
     memBitmap: null,
@@ -602,6 +614,7 @@ export function createOverlay(handlers = {}) {
 
   const HAND_CURSOR = F.LoadCursorW(null, IDC_HAND)
   const ARROW_CURSOR = F.LoadCursorW(null, IDC_ARROW)
+  const TEXT_CURSOR = F.LoadCursorW(null, IDC_IBEAM)
   if (!ARROW_CURSOR) ctxWarn('标准箭头光标加载失败，弹窗上可能看不到鼠标指针')
 
   // --- painting ------------------------------------------------------------------------------
@@ -610,6 +623,8 @@ export function createOverlay(handlers = {}) {
     for (const key of ['fontUI', 'fontText', 'fontBold', 'fontIcon']) {
       if (state[key]) F.DeleteObject(state[key])
     }
+    // Line heights are measured with the old faces; a new DPI means new ones.
+    lineHeights.clear()
     // A negative height requests a character height rather than a cell height.
     const face = 'Microsoft YaHei UI'
     state.fontUI = F.CreateFontW(-Math.round(14 * scale), 0, 0, 0, 400, 0, 0, 0, 134, 0, 0, 5, 0, face)
@@ -647,12 +662,29 @@ export function createOverlay(handlers = {}) {
     F.DeleteObject(pen)
   }
 
-  function measureText(hdc, text, width, font) {
+  /** Pixel width of one run of text with `font`. */
+  function measureRun(hdc, text, font) {
+    if (!text) return 0
     const old = F.SelectObject(hdc, font)
-    const rect = { left: 0, top: 0, right: width, bottom: 0 }
-    F.DrawTextW(hdc, text, -1, rect, DT_WORDBREAK | DT_CALCRECT | DT_NOPREFIX)
+    const size = { cx: 0, cy: 0 }
+    F.GetTextExtentPoint32W(hdc, text, text.length, size)
     F.SelectObject(hdc, old)
-    return rect.bottom - rect.top
+    return Number(size.cx)
+  }
+
+  /** Line height of a font, cached per font handle: it never changes between layouts. */
+  const lineHeights = new Map()
+  function lineHeight(hdc, font) {
+    let h = lineHeights.get(font)
+    if (h === undefined) {
+      const old = F.SelectObject(hdc, font)
+      const size = { cx: 0, cy: 0 }
+      F.GetTextExtentPoint32W(hdc, '汉Ag', 3, size)
+      F.SelectObject(hdc, old)
+      h = Math.max(1, Number(size.cy))
+      lineHeights.set(font, h)
+    }
+    return h
   }
 
   function drawMenu(hdc) {
@@ -701,29 +733,31 @@ export function createOverlay(handlers = {}) {
     return m.headerH + state.viewH + m.footerH
   }
 
-  /** Flatten the content blocks into draw ops with measured heights. */
+  /** Flatten the content blocks into draw ops: one entry per line, with measured heights. */
   function layoutPanel(hdc) {
     const m = panelMetrics()
-    const width = m.width - m.pad * 2
+    // The right edge keeps a gutter so the scrollbar never sits on top of a character.
+    const width = m.width - m.pad * 2 - Math.round(6 * m.scale)
     const ops = []
+    const add = (top, text, font, color, extra) => {
+      const lines = wrapLines(text, width, (part) => measureRun(hdc, part, font))
+      const lh = lineHeight(hdc, font)
+      const h = Math.max(lh, lines.length * lh)
+      ops.push({ ...extra, text, font, color, y: top, h, lineH: lh, lines })
+      return h
+    }
     let y = 0
-    for (const block of state.blocks) {
+    for (let i = 0; i < state.blocks.length; i++) {
+      const block = state.blocks[i]
       if (block.kind === 'heading') {
-        const h = measureText(hdc, block.text, width, state.fontBold)
-        ops.push({ ...block, y, h, font: state.fontBold, color: THEME.dim })
-        y += h + m.lineGap * 2
+        y += add(y, block.text, state.fontBold, THEME.dim, { kind: 'heading', blockIndex: i }) + m.lineGap * 2
       } else if (block.kind === 'source') {
-        const h = measureText(hdc, block.label, width, state.fontUI)
-        ops.push({ ...block, y, h, font: state.fontUI, color: THEME.accent })
-        const uh = measureText(hdc, block.url, width, state.fontText)
-        ops.push({ kind: 'url', text: block.url, y: y + h, h: uh, font: state.fontText, color: THEME.dim })
-        y += h + uh + m.lineGap * 2
+        const labelH = add(y, block.label, state.fontUI, THEME.accent, { kind: 'source', index: block.index })
+        const urlH = add(y + labelH, block.url, state.fontText, THEME.dim, { kind: 'url', index: block.index })
+        y += labelH + urlH + m.lineGap * 2
       } else {
-        const h = measureText(hdc, block.text, width, state.fontText)
-        ops.push({ ...block, y, h, font: state.fontText, color: state.statusKind === 'error' ? THEME.danger : THEME.text })
-        // Paragraphs are separate blocks, so the gap between them is the only thing that makes a
-        // structured answer read as structure rather than as line noise.
-        y += h + m.lineGap * 2
+        y += add(y, block.text, state.fontText, state.statusKind === 'error' ? THEME.danger : THEME.text,
+          { kind: 'text', blockIndex: i }) + m.lineGap * 2
       }
     }
     state.layoutBlocks = ops
@@ -733,6 +767,72 @@ export function createOverlay(handlers = {}) {
     // clamped it — so every line was drawn at `-1.7e308` and skipped as "above the viewport".
     // That is the blank panel: the answer was there, off-screen, from the first chunk on.
     state.scroll = clampScroll(state.scroll, state.contentH, state.viewH)
+  }
+
+  // --- selection -----------------------------------------------------------------------------
+
+  /** The selected character range, ordered, or null when nothing is selected. */
+  function selectionRange() {
+    const sel = state.sel
+    if (!sel) return null
+    const a = sel.anchor
+    const b = sel.focus
+    if (!a || !b) return null
+    const forward = a.blockIndex < b.blockIndex || (a.blockIndex === b.blockIndex && a.offset <= b.offset)
+    const from = forward ? a : b
+    const to = forward ? b : a
+    if (from.blockIndex === to.blockIndex && from.offset === to.offset) return null
+    return { from, to }
+  }
+
+  /** The part of one op's text that the selection covers, as offsets into that op's text. */
+  function selectedSlice(op) {
+    const range = selectionRange()
+    if (!range || op.blockIndex === undefined) return null
+    if (op.blockIndex < range.from.blockIndex || op.blockIndex > range.to.blockIndex) return null
+    const start = op.blockIndex === range.from.blockIndex ? range.from.offset : 0
+    const end = op.blockIndex === range.to.blockIndex ? range.to.offset : op.text.length
+    return end > start ? { start, end } : null
+  }
+
+  /** The selected text, as the model wrote it — wrapped lines never leak into the copy. */
+  function selectionText() {
+    const range = selectionRange()
+    if (!range) return ''
+    const parts = []
+    for (const op of state.layoutBlocks) {
+      const slice = selectedSlice(op)
+      if (slice) parts.push(op.text.slice(slice.start, slice.end))
+    }
+    return parts.join('\n\n').trim()
+  }
+
+  /** Map a client-area point to a character position, or null when it is not over text. */
+  function hitTestText(x, y, hdc) {
+    const m = panelMetrics()
+    const rel = y - m.headerH + state.scroll
+    for (const op of state.layoutBlocks) {
+      if (op.blockIndex === undefined) continue
+      if (rel < op.y || rel >= op.y + op.h) continue
+      const index = Math.max(0, Math.min(op.lines.length - 1, Math.floor((rel - op.y) / op.lineH)))
+      const line = op.lines[index]
+      const target = x - m.pad
+      // Longest prefix whose width stays left of the click.
+      let lo = 0
+      let hi = line.end - line.start
+      let best = 0
+      while (lo <= hi) {
+        const mid = (lo + hi) >>> 1
+        if (measureRun(hdc, op.text.slice(line.start, line.start + mid), op.font) <= target) {
+          best = mid
+          lo = mid + 1
+        } else {
+          hi = mid - 1
+        }
+      }
+      return { blockIndex: op.blockIndex, offset: line.start + best }
+    }
+    return null
   }
 
   function drawPanel(hdc) {
@@ -754,18 +854,51 @@ export function createOverlay(handlers = {}) {
 
     // Body: clipped and scrolled, so a long answer scrolls instead of growing the window.
     const bodyTop = m.headerH
+    const gutter = Math.round(6 * m.scale)
+    const bodyRight = m.width - m.pad - gutter
     const clip = g.func('int __stdcall IntersectClipRect(void *hdc, int l, int t, int r, int b)')
     clip(hdc, m.pad, bodyTop, m.width - m.pad, bodyTop + state.viewH)
     for (const op of state.layoutBlocks) {
       const top = bodyTop + op.y - state.scroll
       if (top > bodyTop + state.viewH || top + op.h < bodyTop) continue
-      F.SelectObject(hdc, op.font)
-      F.SetTextColor(hdc, op.kind === 'source' && state.hoverPanel === 100 + op.index ? THEME.text : op.color)
-      F.DrawTextW(hdc, op.text, -1,
-        { left: m.pad, top, right: m.width - m.pad, bottom: top + op.h },
-        DT_WORDBREAK | DT_NOPREFIX)
+      const slice = selectedSlice(op)
+      for (let i = 0; i < op.lines.length; i++) {
+        const line = op.lines[i]
+        const lineTop = top + i * op.lineH
+        if (slice) {
+          const from = Math.max(line.start, slice.start)
+          const to = Math.min(line.end, slice.end)
+          if (to > from) {
+            const x1 = m.pad + measureRun(hdc, op.text.slice(line.start, from), op.font)
+            const x2 = m.pad + measureRun(hdc, op.text.slice(line.start, to), op.font)
+            F.SelectObject(hdc, op.font)
+            fill(hdc, { left: Math.floor(x1), top: lineTop, right: Math.ceil(x2), bottom: lineTop + op.lineH }, THEME.selection)
+          }
+        }
+        if (line.text) {
+          F.SelectObject(hdc, op.font)
+          F.SetTextColor(hdc, op.kind === 'source' && state.hoverPanel === 100 + op.index ? THEME.text : op.color)
+          F.DrawTextW(hdc, line.text, -1,
+            { left: m.pad, top: lineTop, right: bodyRight, bottom: lineTop + op.lineH },
+            DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_NOPREFIX)
+        }
+      }
     }
     g.func('int __stdcall SelectClipRgn(void *hdc, void *rgn)')(hdc, null)
+
+    // A visible scrollbar is also the only hint that a long answer continues below the fold.
+    if (state.contentH > state.viewH) {
+      const trackW = Math.round(4 * m.scale)
+      const trackX = m.width - m.pad - gutter + Math.round(2 * m.scale)
+      const trackTop = bodyTop + Math.round(4 * m.scale)
+      const trackH = state.viewH - Math.round(8 * m.scale)
+      const maxScroll = state.contentH - state.viewH
+      const thumbH = Math.max(Math.round(18 * m.scale), Math.round(trackH * state.viewH / state.contentH))
+      const thumbTop = trackTop + Math.round((trackH - thumbH) * (maxScroll > 0 ? state.scroll / maxScroll : 0))
+      fill(hdc, { left: trackX, top: trackTop, right: trackX + trackW, bottom: trackTop + trackH }, THEME.separator)
+      roundRect(hdc, { left: trackX, top: thumbTop, right: trackX + trackW, bottom: thumbTop + thumbH },
+        THEME.dim, THEME.dim, Math.round(2 * m.scale))
+    }
 
     const footTop = bodyTop + state.viewH
     F.SelectObject(hdc, state.fontUI)
@@ -887,12 +1020,25 @@ export function createOverlay(handlers = {}) {
               F.InvalidateRect(hwnd, null, false)
             }
           } else {
+            // Dragging over the answer extends the selection; the body is the only place where a
+            // drag means "select text" rather than "click a control".
+            if (state.dragging) {
+              const hit = hitTestText(x, y, state.measureDC)
+              const anchor = state.sel && state.sel.anchor
+              if (hit && anchor && (hit.blockIndex !== state.sel.focus.blockIndex || hit.offset !== state.sel.focus.offset)) {
+                state.sel = { anchor, focus: hit }
+                F.InvalidateRect(hwnd, null, false)
+              }
+              F.SetCursor(TEXT_CURSOR)
+              return 0
+            }
             const zone = panelZone(x, y)
             if (zone !== state.hoverPanel) {
               state.hoverPanel = zone
               F.SetCursor(zone >= 100 ? HAND_CURSOR : ARROW_CURSOR)
               F.InvalidateRect(hwnd, null, false)
             }
+            F.SetCursor(zone >= 100 ? HAND_CURSOR : hitTestText(x, y, state.measureDC) ? TEXT_CURSOR : ARROW_CURSOR)
           }
           return 0
         }
@@ -907,6 +1053,28 @@ export function createOverlay(handlers = {}) {
             else if (zone >= 100) {
               const op = state.layoutBlocks.find((b) => b.kind === 'source' && b.index === zone - 100)
               if (op && handlers.onOpenUrl) handlers.onOpenUrl(op.url)
+            } else {
+              // Start a selection. A press with no drag ends as a plain click, which clears it.
+              const hit = hitTestText(x, y, state.measureDC)
+              state.sel = hit ? { anchor: hit, focus: hit } : null
+              state.dragging = hit !== null
+              F.SetCursor(hit ? TEXT_CURSOR : ARROW_CURSOR)
+              F.InvalidateRect(hwnd, null, false)
+            }
+          }
+          return 0
+        }
+        case WM_LBUTTONUP: {
+          if (state.mode === 'panel' && state.dragging) {
+            state.dragging = false
+            const text = selectionText()
+            if (!text) {
+              state.sel = null
+              F.InvalidateRect(hwnd, null, false)
+            } else if (handlers.onPanelSelection) {
+              // The window never takes focus, so there is no Ctrl+C to offer: the gesture itself
+              // completes the copy, which is what selecting text in this panel is for.
+              handlers.onPanelSelection(text)
             }
           }
           return 0
@@ -948,6 +1116,9 @@ export function createOverlay(handlers = {}) {
     if (!state.hwnd) throw new Error('CreateWindowExW failed')
     state.dpi = (F.GetDpiForWindow(state.hwnd) || 96) / 96
     createFonts(state.dpi)
+    // One DC kept for measuring text: hit-testing needs a font-aware width on every mouse move,
+    // and creating a compatible DC per event would cost more than the measurement itself.
+    state.measureDC = F.CreateCompatibleDC(null)
     return state.hwnd
   }
 
@@ -1088,12 +1259,26 @@ export function createOverlay(handlers = {}) {
       // possible path before touching lParam.
       if (wParam !== WM_LBUTTONDOWN && wParam !== WM_LBUTTONUP
         && wParam !== WM_RBUTTONDOWN && wParam !== WM_RBUTTONUP && wParam !== WM_MBUTTONDOWN) {
-        return F.CallNextHookEx(null, code, wParam, lParam)
+        if (wParam !== WM_MOUSEWHEEL) return F.CallNextHookEx(null, code, wParam, lParam)
       }
 
       const info = koffi.decode(lParam, 'MSLLHOOKSTRUCT')
       const pt = { x: info.pt.x, y: info.pt.y }
       const now = Date.now()
+
+      // A wheel event is addressed to the focused window, and this panel deliberately never takes
+      // focus — so without forwarding it here, a long answer simply cannot be scrolled.
+      if (wParam === WM_MOUSEWHEEL) {
+        if (state.mode !== 'panel' || !containsPoint(pt)) return F.CallNextHookEx(null, code, wParam, lParam)
+        const raw = (info.mouseData >>> 16) & 0xffff
+        const delta = raw >= 0x8000 ? raw - 0x10000 : raw
+        const next = clampScroll(state.scroll - Math.round(delta / 120) * Math.round(52 * state.dpi), state.contentH, state.viewH)
+        if (next !== state.scroll) {
+          state.scroll = next
+          if (state.hwnd) F.InvalidateRect(state.hwnd, null, false)
+        }
+        return 1
+      }
 
       // A click anywhere outside the popup dismisses it, the way every other menu behaves. The
       // click itself is NOT swallowed: the user aimed it at the application behind, and eating it
@@ -1309,6 +1494,9 @@ export function createOverlay(handlers = {}) {
     setContent(answer, sources) {
       if (state.mode !== 'panel') return
       state.blocks = bodyBlocks(answer, sources || [])
+      // Character offsets belong to the text that was laid out; new text invalidates them all.
+      state.sel = null
+      state.dragging = false
       state.textDirty = true
       // Follow the tail while the model streams, so the newest line stays visible.
       state.scroll = Number.MAX_SAFE_INTEGER
@@ -1327,6 +1515,8 @@ export function createOverlay(handlers = {}) {
       state.mode = 'hidden'
       state.hover = -1
       state.hoverPanel = 0
+      state.sel = null
+      state.dragging = false
       if (state.hwnd) F.ShowWindow(state.hwnd, SW_HIDE)
       // The pump keeps running while the hook is installed: it is how the hook's callbacks reach
       // this thread, so stopping it here would silently disable right-click detection.
@@ -1350,6 +1540,9 @@ export function createOverlay(handlers = {}) {
         state[key] = null
       }
       state.memBitmap = state.memDC = null
+      if (state.measureDC) F.DeleteDC(state.measureDC)
+      state.measureDC = null
+      lineHeights.clear()
       if (state.hwnd) {
         F.DestroyWindow(state.hwnd)
         state.hwnd = null

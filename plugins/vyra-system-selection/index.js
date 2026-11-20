@@ -76,6 +76,14 @@ export function apply(ctx) {
       const ok = copyResult()
       overlay.setStatus(ok ? '已复制到剪贴板' : '复制失败：剪贴板正被其他程序占用', ok ? 'info' : 'error')
     },
+    /**
+     * A mouse selection was released. The window never takes focus, so there is no Ctrl+C to
+     * press: the drag itself completes the copy, and the footer says what was copied.
+     */
+    onPanelSelection: (text) => {
+      const ok = writeClipboardText(text) === true
+      overlay.setStatus(ok ? `已复制选中的 ${text.length} 字` : '复制失败：剪贴板正被其他程序占用', ok ? 'info' : 'error')
+    },
     onOpenUrl: (url) => openUrl(ctx, url),
     onRightClick: (pt, cached) => onRightClick(pt, cached),
   })

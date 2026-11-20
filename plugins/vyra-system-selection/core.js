@@ -336,6 +336,64 @@ export function clampScroll(offset, contentH, viewH) {
 }
 
 /**
+ * Break one paragraph into the lines the panel draws, and remember where each line came from.
+ *
+ * The panel has to know the lines, not just their total height: mouse selection is a character
+ * range, and a highlight can only be drawn when the pixel position of every character boundary is
+ * known. Drawing with `DT_WORDBREAK` hides that layout inside GDI, so it is computed here instead
+ * and the paint pass draws one measured line at a time.
+ *
+ * `start`/`end` index the original text, so a selection maps straight back to the characters the
+ * model wrote — wrapped lines are a display detail and never leak into the copied text.
+ *
+ * @param text - the paragraph.
+ * @param width - the available pixel width.
+ * @param measure - width in pixels of a substring.
+ * @returns one entry per line, including empty lines for blank source lines.
+ */
+export function wrapLines(text, width, measure) {
+  const source = String(text ?? '')
+  const lines = []
+  let at = 0
+  for (;;) {
+    const newline = source.indexOf('\n', at)
+    const hardEnd = newline === -1 ? source.length : newline
+    if (hardEnd === at) {
+      lines.push({ start: at, end: at, text: '' })
+    } else {
+      let from = at
+      while (from < hardEnd) {
+        // Longest prefix that fits. A single character always makes progress, even when it is
+        // wider than the line, so this loop cannot stall.
+        let lo = 1
+        let hi = hardEnd - from
+        let best = 1
+        while (lo <= hi) {
+          const mid = (lo + hi) >>> 1
+          if (measure(source.slice(from, from + mid)) <= width) {
+            best = mid
+            lo = mid + 1
+          } else {
+            hi = mid - 1
+          }
+        }
+        let end = from + best
+        // Prefer breaking after a space, and keep the space on this line.
+        if (end < hardEnd) {
+          const space = source.lastIndexOf(' ', end - 1)
+          if (space > from) end = space + 1
+        }
+        lines.push({ start: from, end, text: source.slice(from, end) })
+        from = end
+      }
+    }
+    if (newline === -1) break
+    at = newline + 1
+  }
+  return lines
+}
+
+/**
  * Say which service answered 401.
  *
  * Search and the answer model are two different credentials: the DeepSeek search provider spends
@@ -352,7 +410,7 @@ export function explainAuthFailure(message, where) {
     return {
       short: '联网搜索被拒绝（401）',
       body: '联网搜索失败：搜索服务返回 401，它用的是 DeepSeek 的账号或 API Key —— 不是划词这里选的模型。\n\n' +
-        '到「设置 → 插件 → 内置插件设置 → 联网搜索」更换密钥，或换一个搜索提供方。\n\n' +
+        '到「设置 → 插件 → 内置插件设置 → 网页搜索与获取」更换密钥，或换一个搜索提供方。\n\n' +
         '翻译、总结、解释、复制都不经过搜索，不受影响。',
     }
   }
