@@ -491,8 +491,8 @@ export const manifest: MarketManifest = {
         zh: '系统级划词',
       },
       description: {
-        en: 'Select text in any application and get a native toolbar: AI search, translate, summarize, explain, copy. It takes over the right mouse button, so the application menu you would otherwise get does not appear in front of it.',
-        zh: '在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。仅 Windows。',
+        en: 'Select text in any application and get a native toolbar: translate, copy, explain, summarize. Answers render as Markdown, scroll, expand, and copy on drag-select. It takes over the right mouse button, so the application menu you would otherwise get does not appear in front of it.',
+        zh: '在任何应用里划词，弹出原生工具条：翻译、复制、解释、总结。结果按 Markdown 渲染，可滚动、可展开、可拖选复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。仅 Windows。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -679,6 +679,19 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '3f17c72599689e0fa593ef583b9c8dd2f7b2ccd0',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
+        // 2.0.0 removes AI search — it needed the DeepSeek web-search credential, unrelated to the
+        // model this plugin runs, and its failures read as "the selection plugin is broken".
+        // Answers are Markdown now (headings, bullets, numbering, code blocks), and the footer
+        // gains 展开/收起 so a long answer can use the screen instead of being scrolled forever.
+        '2.0.0': {
+          publishTimestamp: 1795086000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0ac2ff80f0873c2e7586587edde7b2d25934f009',
             path: 'plugins/vyra-system-selection',
           },
         },

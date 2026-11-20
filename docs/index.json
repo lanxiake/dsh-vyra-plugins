@@ -359,8 +359,8 @@
         "zh": "系统级划词"
       },
       "description": {
-        "en": "Select text in any application and get a native toolbar: AI search, translate, summarize, explain, copy. It takes over the right mouse button, so the application menu you would otherwise get does not appear in front of it.",
-        "zh": "在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。仅 Windows。"
+        "en": "Select text in any application and get a native toolbar: translate, copy, explain, summarize. Answers render as Markdown, scroll, expand, and copy on drag-select. It takes over the right mouse button, so the application menu you would otherwise get does not appear in front of it.",
+        "zh": "在任何应用里划词，弹出原生工具条：翻译、复制、解释、总结。结果按 Markdown 渲染，可滚动、可展开、可拖选复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。仅 Windows。"
       },
       "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KICA8cGF0aCBkPSJNNCAzaDRNNCAzdjRNMjAgM2gtNE0yMCAzdjRNNCAyMWg0TTQgMjF2LTRNMjAgMjFoLTRNMjAgMjF2LTQiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05IDEyaDdNMTMgOWwzIDMtMyAzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg==",
       "author": "lanxiake",
@@ -370,6 +370,16 @@
         "directory": "plugins/vyra-system-selection"
       },
       "versions": [
+        {
+          "version": "2.0.0",
+          "publishTimestamp": 1795086000,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "0ac2ff80f0873c2e7586587edde7b2d25934f009",
+            "path": "plugins/vyra-system-selection"
+          }
+        },
         {
           "version": "1.7.0",
           "publishTimestamp": 1795081200,
