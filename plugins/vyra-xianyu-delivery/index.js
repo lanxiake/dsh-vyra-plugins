@@ -81,6 +81,12 @@ export function apply(ctx, config = {}) {
   let watchRetry = null
   let watchBackoff = 1000
   const eventCooldown = new Map()
+  // 最近的消息处理记录，面板用它诊断「发了消息为什么没回」。
+  const eventLog = []
+  function recordEvent(entry) {
+    eventLog.unshift({ at: new Date().toLocaleTimeString(), ...entry })
+    if (eventLog.length > 60) eventLog.pop()
+  }
 
   // 自己的 unb 用来区分"买家发的"和"自己发的"。
   cli.status().then((s) => { selfUserId = String(s?.unb || '') }).catch(() => {})
@@ -337,13 +343,22 @@ export function apply(ctx, config = {}) {
       const orderNo = findOrderId(history)
       if (orderNo) {
         const result = await dispatcher.reconcile(orderNo)
+        recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
         if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)
+      } else {
+        recordEvent({ cid, kind: 'card', orderNo: '', action: 'no-order' })
       }
       return
     }
 
-    if (fromSelf) return
-    if (!ai.enabled) return
+    if (fromSelf) {
+      recordEvent({ cid, kind: 'text', action: 'skip-self' })
+      return
+    }
+    if (!ai.enabled) {
+      recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: String(evt.send_message || '').slice(0, 40) })
+      return
+    }
     if ((eventCooldown.get(cid) || 0) > now - 3000) return
     eventCooldown.set(cid, now)
 
@@ -368,6 +383,12 @@ export function apply(ctx, config = {}) {
     const answer = await ai.reply({
       cid, itemId, text: question, history, selfUserId,
       accountId: account(), buyerNick: String(evt.send_user_name || ''),
+    })
+    recordEvent({
+      cid, kind: 'text', itemId,
+      from: String(evt.send_user_name || evt.send_user_id || ''),
+      text: question.slice(0, 40),
+      action: answer ? 'replied' : 'no-reply',
     })
     if (!answer) return
 
@@ -665,6 +686,8 @@ export function apply(ctx, config = {}) {
         }
         return out
       }
+      case 'events':
+        return eventLog
       case 'settings':
         return {
           agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || '') || 'builtin',

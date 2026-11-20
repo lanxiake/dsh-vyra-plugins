@@ -140,10 +140,14 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
 
   async function reply({ cid, itemId, text, history = [], selfUserId = '', accountId = '', buyerNick = '' }) {
     if (!isEnabled()) return null
-    // 商品绑定客服、客服启用才回复。
+    // 商品绑定了客服就按商品走；买家还没下过单、或商品没绑定时，
+    // 用第一个启用的客服兜底，避免「发你好没人理」。
     const item = itemId ? store.getItem(itemId, accountId) : null
-    const service = item && item.service_id ? store.getService(item.service_id) : null
-    if (!service || service.enabled !== 1) return null
+    let service = item && item.service_id ? store.getService(item.service_id) : null
+    if (!service) {
+      service = store.listServices().find((candidate) => candidate.enabled === 1) || null
+    }
+    if (!service) return null
     if (coolingDown(cid)) return null
     if ((counts.get(cid) || 0) >= maxRepliesPerChat) return null
 

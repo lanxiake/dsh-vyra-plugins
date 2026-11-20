@@ -694,7 +694,8 @@ window.__ModuleLoader__.load({
         const el = bodyRef.current
         if (el) el.scrollTop = el.scrollHeight
       }, [messages, activeChat])
-      return h('div', { style: { display: 'grid', gridTemplateColumns: '280px 1fr', gap: '14px', height: 'calc(100vh - 280px)', minHeight: '440px' } },
+      return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '12px' } },
+        h('div', { style: { display: 'grid', gridTemplateColumns: '280px 1fr', gap: '14px', height: 'calc(100vh - 400px)', minHeight: '400px' } },
         h('div', { style: { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '600px' } },
           h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid rgba(127,127,127,.18)' } },
             h('span', { style: { fontWeight: 600, fontSize: '13px' } }, `会话（${chats.length}）`),
@@ -766,7 +767,20 @@ window.__ModuleLoader__.load({
                 }, busy === 'send' ? '发送中…' : '发送')),
             ]
         )
-      )
+      ),
+        h('div', { style: { border: '1px solid rgba(127,127,127,.18)', borderRadius: '8px', padding: '10px 12px' } },
+          h('div', { style: { fontWeight: 600, fontSize: '13px', marginBottom: '6px' } }, '最近消息处理（诊断）'),
+          (props.events || []).length === 0
+            ? h('div', { style: S.muted }, '还没有收到消息事件；如果刚发过消息，看顶部「实时」是否为「开」')
+            : h('div', null,
+              props.events.slice(0, 8).map((e, i) => h('div', {
+                key: i,
+                style: { display: 'grid', gridTemplateColumns: '.8fr .6fr 1.2fr 1.4fr', gap: '10px', padding: '5px 0', fontSize: '12px', opacity: 0.8, borderTop: i ? '1px solid rgba(127,127,127,.08)' : 'none' },
+              },
+                h('span', null, e.at),
+                h('span', null, e.kind),
+                h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, e.from || e.cid || ''),
+                h('span', null, e.action))))))
     }
 
     function InfoDialog({ title, loading, error, data, onClose }) {
@@ -834,6 +848,7 @@ window.__ModuleLoader__.load({
       const [remoteOrdersLoading, setRemoteOrdersLoading] = useState(false)
       const [accounts, setAccounts] = useState([])
       const [services, setServices] = useState([])
+      const [events, setEvents] = useState([])
       const [serviceDialog, setServiceDialog] = useState(null)
       const [bindItem, setBindItem] = useState(null)
       const [avatars, setAvatars] = useState({})
@@ -852,7 +867,7 @@ window.__ModuleLoader__.load({
         try {
           // 每项单独容错：auth 拉起 worker 慢或失败时，不能把订单和发货记录一起清空。
           const safe = (p) => p.catch((err) => ({ __error: String(err.message || err) }))
-          const [st, od, dl, cd, il, au, se, ac, sv] = await Promise.all([
+          const [st, od, dl, cd, il, au, se, ac, sv, ev] = await Promise.all([
             safe(rpc({ op: 'status' })),
             safe(rpc({ op: 'orders', limit: 50 })),
             safe(rpc({ op: 'deliveries', limit: 100 })),
@@ -862,6 +877,7 @@ window.__ModuleLoader__.load({
             safe(rpc({ op: 'settings' })),
             safe(rpc({ op: 'accounts' })),
             safe(rpc({ op: 'services' })),
+            safe(rpc({ op: 'events' })),
           ])
           if (st && !st.__error) setStatus(st)
           if (od && !od.__error) setOrders(od)
@@ -872,6 +888,7 @@ window.__ModuleLoader__.load({
           if (se && !se.__error) setSettings(se)
           if (ac && !ac.__error && Array.isArray(ac)) setAccounts(ac)
           if (sv && !sv.__error && Array.isArray(sv)) setServices(sv)
+          if (ev && !ev.__error && Array.isArray(ev)) setEvents(ev)
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -1279,7 +1296,7 @@ window.__ModuleLoader__.load({
         tab === 'chat' ? h(ChatTab, {
           chats, activeChat, messages: chatMessages, replyText, setReplyText,
           onPick: loadChat, onSend: sendReply, onRefresh: loadChats, busy,
-          selfUserId: (auth && auth.unb) || '', avatars,
+          selfUserId: (auth && auth.unb) || '', avatars, events,
         }) : null,
         tab === 'orders' ? h(OrdersTab, {
           orders: remoteOrders, localOrders: orders,
