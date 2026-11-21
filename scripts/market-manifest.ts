@@ -1890,6 +1890,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.3.0 moves the batch runner out of the tab component: installs and updates keep
+        // going when the page is switched, the tab subscribes to the run's state on return,
+        // and a progress-bar button cancels the rest of a batch (the order already on the
+        // Host finishes; pnpm/git cannot be aborted from the client).
+        '0.3.0': {
+          publishTimestamp: 1795336200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '193ba61966386344caaa81a35009f93a1e8df5c5',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
