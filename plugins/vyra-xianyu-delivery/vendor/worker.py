@@ -219,8 +219,12 @@ async def _list_conversations(limit: int = 200) -> list[dict[str, Any]]:
                         last_ext = {}
                 sender = str((last_ext or {}).get("senderUserId") or "").split("@")[0]
                 nick = str((last_ext or {}).get("reminderTitle") or "")
-                # 只有最后一条是对方发的，reminderTitle 才是对方昵称
-                peer_nick = nick if sender == peer and nick else ""
+                # 最后一条是对方发的，reminderTitle 才是对方昵称；
+                # 否则用会话扩展里的 squadName_<对方id>（就是对方在这个会话下的显示名）。
+                squad_name = ""
+                if isinstance(ext_raw, dict):
+                    squad_name = str(ext_raw.get(f"squadName_{peer}") or "")
+                peer_nick = (nick if sender == peer and nick else "") or squad_name
 
                 content = last.get("content") or {}
                 custom = content.get("custom") or {}

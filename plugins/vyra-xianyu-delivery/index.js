@@ -255,6 +255,7 @@ export function apply(ctx, config = {}) {
     await rm(join(cliHome, 'im_token.json'), { force: true })
     authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
     handledMsg.clear()
+    handledOrders.clear()
     stopWatch()
     setTimeout(() => startWatch(), 600)
     return { ok: true, unb }
@@ -506,9 +507,15 @@ export function apply(ctx, config = {}) {
 
   // 拉到的历史统一处理：有订单号就发货，否则回复最新一条买家提问。
   // 轮询和 watch 都走这里，保证两条路径行为一致。
+  // 每个会话最近处理过的订单号：历史里那张下单卡片会一直留在后面，
+  // 只要还是同一单就不再重复发货，把后面的买家消息交给 Agent。
+  const handledOrders = new Map()
+
   async function handleConversation(cid, history, meta = {}) {
     const orderNo = findOrderId(history)
-    if (orderNo) {
+    const lastOrder = handledOrders.get(cid) || ''
+    if (orderNo && orderNo !== lastOrder) {
+      handledOrders.set(cid, orderNo)
       const result = await dispatcher.reconcile(orderNo)
       recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
       if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)

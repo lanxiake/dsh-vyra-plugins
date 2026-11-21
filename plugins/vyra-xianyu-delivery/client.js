@@ -80,7 +80,7 @@ window.__ModuleLoader__.load({
       return json.data
     }
 
-    const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '', mode: 'reuse' }
+    const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '', mode: 'reuse', splitMode: 'sep' }
 
     // 订单失败原因的中文说明（数据库里存的是机器可读的 key）。
     const FAIL_TEXT = {
@@ -233,11 +233,11 @@ window.__ModuleLoader__.load({
       const meta = MODES[mode] || MODES.reuse
       const isEditing = Boolean(editingId)
 
-      // 池型按 --- 分隔计数，给一个「已识别 N 条」的即时反馈。
-      const blocks = String(draft.content || '')
-        .split(/\r?\n\s*---\s*\r?\n/)
-        .map((s) => s.trim())
-        .filter(Boolean)
+      // 池型两种粘贴方式：--- 分隔（一条内容可以多行），或每行一条（卡密列表）。
+      const splitByLine = draft.splitMode === 'line'
+      const blocks = splitByLine
+        ? String(draft.content || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+        : String(draft.content || '').split(/\r?\n\s*---\s*\r?\n/).map((s) => s.trim()).filter(Boolean)
 
       // 买家实际会收到什么：用第一条内容 + 样例变量渲染。
       const previewCard = mode === 'generate'
@@ -311,19 +311,35 @@ window.__ModuleLoader__.load({
 
         meta.needContent
           ? h('div', null,
-            h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' } },
-              h('label', { style: S.label }, mode === 'pool' ? '库存内容（每条之间用单独一行 --- 分隔）' : '发给买家的内容'),
-              h('button', {
-                style: { ...S.btn, padding: '1px 8px', fontSize: '12px', border: 'none', background: 'transparent', color: '#0f9d6e' },
-                title: '把这一种模式的样例填进输入框',
-                onClick: () => setDraft({ ...draft, content: meta.sample }),
-              }, '填入示例')),
+            h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' } },
+              h('label', { style: S.label }, mode === 'pool' ? '库存内容' : '发给买家的内容'),
+              h('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } },
+                mode === 'pool' ? [
+                  ['sep', '--- 分隔'],
+                  ['line', '每行一条'],
+                ].map(([value, label]) => h('button', {
+                  key: value,
+                  onClick: () => setDraft({ ...draft, splitMode: value }),
+                  title: value === 'line' ? '适合直接粘贴一大段卡密，每行是一条' : '一条内容可以有多行（如链接 + 提取码），用单独一行 --- 隔开',
+                  style: {
+                    ...S.btn, padding: '1px 8px', fontSize: '12px',
+                    color: ((draft.splitMode === 'line') ? 'line' : 'sep') === value ? '#0f9d6e' : 'inherit',
+                    border: 'none', background: 'transparent',
+                  },
+                }, label)) : null,
+                h('button', {
+                  style: { ...S.btn, padding: '1px 8px', fontSize: '12px', border: 'none', background: 'transparent', color: '#0f9d6e' },
+                  title: '把这一种模式的样例填进输入框',
+                  onClick: () => setDraft({ ...draft, content: meta.sample }),
+                }, '填入示例'))),
             h('textarea', {
               style: { ...S.area, minHeight: '120px', fontFamily: mode === 'pool' ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit' },
               value: draft.content,
               placeholder: mode === 'reuse'
                 ? '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd\n有效期 7 天，过期联系我补。'
-                : '第一条内容\n---\n第二条内容\n---\n第三条内容',
+                : (splitByLine
+                  ? 'CARD-A1B2-C3D4\nCARD-E5F6-G7H8\n（一行一条，直接粘贴）'
+                  : '链接：https://pan.quark.cn/s/aaaa?pwd=1111\n提取码：1111\n---\n链接：https://pan.quark.cn/s/bbbb?pwd=2222\n提取码：2222'),
               onChange: (e) => setDraft({ ...draft, content: e.target.value }),
             }),
             mode === 'pool'
@@ -373,6 +389,8 @@ window.__ModuleLoader__.load({
               h('span', { style: { ...tiny, flex: 'none' } }, MODES[c.mode] ? MODES[c.mode].name : '池型')),
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
               h('div', { style: { flex: 1, minWidth: 0 } },
+                h('div', { style: { fontSize: '12px', opacity: 0.75, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: c.content || '' },
+                  c.mode === 'generate' ? '每单调用网盘技能生成新链接' : (String(c.content || '').split(/\r?\n/)[0] || '（内容为空）')),
                 h('div', { style: { ...tiny, marginBottom: '4px' } }, c.spec_value ? `规格 ${c.spec_value}` : '通用（不限规格）'),
                 stockCell(c)),
               h('div', { style: { display: 'flex', gap: '4px', flex: 'none' } },
@@ -862,15 +880,33 @@ window.__ModuleLoader__.load({
         background: mine ? '#0f9d6e' : 'rgba(127,127,127,.13)', color: mine ? '#fff' : 'inherit',
       }
       if (c.text && c.text.text) return h('div', { style: bubble }, c.text.text)
-      if (c.tip && c.tip.tip) return h('div', { style: { fontSize: '12px', opacity: 0.6, textAlign: 'center', padding: '4px 0' } }, c.tip.tip)
+      if (c.tip && c.tip.tip) {
+        // 系统提示里带 HTML 片段（<a size=13 data-intent=...>），按纯文本显示。
+        const plain = String(c.tip.tip).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+        return h('div', { style: { fontSize: '12px', opacity: 0.6, textAlign: 'center', padding: '4px 0' } }, plain)
+      }
       if (c.dxCard) {
         const main = (c.dxCard.item && c.dxCard.item.main) || {}
         const ex = main.exContent || {}
         const title = main.title || ex.title || ex.text || '卡片消息'
+        const desc = main.desc || ex.desc || ''
         const pic = main.picUrl || ex.picUrl || ''
-        return h('div', { style: { border: '1px solid rgba(127,127,127,.25)', borderRadius: '10px', overflow: 'hidden', maxWidth: '240px', background: 'rgba(127,127,127,.06)' } },
+        const btn = (ex.button && (ex.button.text || '')) || ''
+        // 订单卡片：标题 + 说明 + 按钮文案，一眼能看出是「已拍下 / 待付款」还是「已付款」。
+        return h('div', {
+          style: { border: '1px solid rgba(127,127,127,.25)', borderRadius: '10px', overflow: 'hidden', maxWidth: '280px', background: 'rgba(127,127,127,.06)' },
+          title: desc || title,
+        },
           pic ? h('img', { src: pic, alt: title, style: { width: '100%', display: 'block' } }) : null,
-          h('div', { style: { padding: '8px 10px', fontSize: '13px' } }, title))
+          h('div', { style: { padding: '9px 11px' } },
+            h('div', { style: { fontSize: '13px', fontWeight: 600 } }, title),
+            desc ? h('div', { style: { fontSize: '12px', opacity: 0.6, marginTop: '3px', lineHeight: 1.5 } }, desc) : null,
+            btn ? h('div', {
+              style: {
+                marginTop: '8px', fontSize: '12px', textAlign: 'center', padding: '5px 0',
+                borderRadius: '6px', background: '#ffe60f', color: '#333', fontWeight: 600,
+              },
+            }, btn) : null))
       }
       const img = (c.image && (c.image.picUrl || c.image.url)) || c.picUrl || c.imageUrl
       if (img) return h('img', { src: img, alt: '图片', style: { maxWidth: '220px', borderRadius: '10px', display: 'block' } })
@@ -1169,6 +1205,7 @@ window.__ModuleLoader__.load({
           specValue: card.spec_value || '',
           content: card.content || '',
           mode: card.mode || 'pool',
+          splitMode: 'sep',
         })
         setTab('cards')
       }
@@ -1180,15 +1217,19 @@ window.__ModuleLoader__.load({
           setNotice('卡券内容必填')
           return
         }
+        // 池型选了「每行一条」时，存库前统一转成 --- 分隔的标准格式。
+        const content = mode === 'pool' && draft.splitMode === 'line'
+          ? String(draft.content || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean).join('\n---\n')
+          : draft.content
         setBusy('add')
         try {
           if (editingCard) {
-            await rpc({ op: 'updateCard', id: editingCard, name: draft.itemId, content: draft.content, specName: draft.specName, specValue: draft.specValue, mode })
+            await rpc({ op: 'updateCard', id: editingCard, name: draft.itemId, content, specName: draft.specName, specValue: draft.specValue, mode })
             setEditingCard(null)
             setDraft(EMPTY_CARD)
             setNotice('卡券已更新')
           } else {
-            await rpc({ op: 'addCard', itemId: draft.itemId, specName: draft.specName, specValue: draft.specValue, name: draft.itemId, type: 'data', content: draft.content, mode })
+            await rpc({ op: 'addCard', itemId: draft.itemId, specName: draft.specName, specValue: draft.specValue, name: draft.itemId, type: 'data', content, mode })
             setDraft(EMPTY_CARD)
             setNotice('卡券已添加')
           }
