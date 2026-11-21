@@ -876,6 +876,8 @@ window.__ModuleLoader__.load({
       const [failures, setFailures] = useState(() => new Map())
       /** The entry whose failure text was just copied, for the tag's own feedback. */
       const [copied, setCopied] = useState(null)
+      // ponytail: 快捷筛选状态（仅已安装/仅可更新）
+      const [quickFilter, setQuickFilter] = useState(null)
 
       // ponytail: 索引缓存，避免切换回已加载的源时重新请求
       const indexCache = useRef(new Map())
@@ -1022,6 +1024,21 @@ window.__ModuleLoader__.load({
       }, [draft, query.text])
 
       const entries = listing === null || listing.value === null ? [] : listing.value.entries
+
+      // ponytail: 快捷筛选 - 根据 quickFilter 过滤条目
+      const filteredEntries = useMemo(() => {
+        if (quickFilter === 'installed') {
+          return entries.filter((entry) => {
+            const state = entryState(entry)
+            return state === 'installed' || state === 'updatable' || state === 'provided'
+          })
+        }
+        if (quickFilter === 'updatable') {
+          return entries.filter((entry) => entryState(entry) === 'updatable')
+        }
+        return entries
+      }, [entries, quickFilter])
+
       const declarations = listing === null || listing.value === null ? undefined : listing.value.metadata
       const categories = useMemo(() => {
         if (declarations === undefined) return []
@@ -1031,10 +1048,17 @@ window.__ModuleLoader__.load({
           .sort((left, right) => collator.compare(left.title, right.title))
       }, [declarations, lang, text])
 
-      const selected = useMemo(() => entries
+      const selected = useMemo(() => filteredEntries
         .filter((entry) => picked.has(entry.name))
-        .map((entry) => ({ entry, bundle: bundles.get(entry.name) })), [entries, picked, bundles])
+        .map((entry) => ({ entry, bundle: bundles.get(entry.name) })), [filteredEntries, picked, bundles])
       const plan = useMemo(() => planBulk(selected), [selected])
+
+      // ponytail: 收集所有可更新的插件（用于"全部更新"按钮）
+      const allUpdatable = useMemo(() => {
+        return filteredEntries
+          .filter((entry) => entryState(entry) === 'updatable')
+          .map((entry) => ({ entry, bundle: bundles.get(entry.name) }))
+      }, [filteredEntries, bundles])
 
       /** Apply a query everywhere at once: field, state, and loaded results. */
       const search = useCallback((next) => {
@@ -1234,7 +1258,7 @@ window.__ModuleLoader__.load({
       const market = active === undefined
         ? (activeUrl ?? t('noSources'))
         : (active.title === undefined ? activeUrl : text(active.title))
-      const pagePicked = entries.length > 0 && entries.every((entry) => picked.has(entry.name))
+      const pagePicked = filteredEntries.length > 0 && filteredEntries.every((entry) => picked.has(entry.name))
       const directed = query.sort.kind === 'published' || query.sort.kind === 'key'
       const buildable = plan.install.length + plan.update.length
 
@@ -1339,6 +1363,15 @@ window.__ModuleLoader__.load({
             style: S.btn(false, busy), disabled: busy,
             onClick: () => { search({ ...query, sort: { ...query.sort, direction: query.sort.direction === 'asc' ? 'desc' : 'asc' } }) },
           }, t('switchDirection', { dir: t(query.sort.direction === 'asc' ? 'ascending' : 'descending') })) : null,
+          // ponytail: "全部更新"按钮 - 一键更新所有可更新插件
+          allUpdatable.length > 0 && quickFilter !== 'updatable' ? h('button', {
+            style: S.btn(true, busy), disabled: busy,
+            onClick: () => {
+              const updatePlan = planBulk(allUpdatable)
+              const updateOrders = orders(updatePlan, 'update')
+              if (updateOrders.length > 0) setConfirm({ action: 'update', orders: updateOrders })
+            },
+          }, t('updateAll', { n: allUpdatable.length })) : null,
           h('button', {
             style: { ...S.squareBtn, opacity: loadingPage ? 0.45 : 1 },
             title: t('refresh'), 'aria-label': t('refresh'),
@@ -1356,6 +1389,20 @@ window.__ModuleLoader__.load({
             },
           }, h(RefreshIcon, {})),
           refreshed ? h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, lang === 'zh' ? '已刷新' : 'Refreshed') : null),
+        // ponytail: 快捷筛选行 - 仅已安装、仅可更新
+        h('div', { style: S.pills, role: 'group', 'aria-label': t('all') },
+          h('button', {
+            style: S.pill(quickFilter === null), 'aria-pressed': quickFilter === null,
+            onClick: () => { setQuickFilter(null); setPicked(new Set()) },
+          }, t('all')),
+          h('button', {
+            style: S.pill(quickFilter === 'installed'), 'aria-pressed': quickFilter === 'installed',
+            onClick: () => { setQuickFilter('installed'); setPicked(new Set()) },
+          }, t('onlyInstalled')),
+          h('button', {
+            style: S.pill(quickFilter === 'updatable'), 'aria-pressed': quickFilter === 'updatable',
+            onClick: () => { setQuickFilter('updatable'); setPicked(new Set()) },
+          }, t('onlyUpdatable'))),
         categories.length === 0 ? null : h('div', { style: S.pills, role: 'group', 'aria-label': t('all') },
           h('button', {
             style: S.pill(query.category === null), 'aria-pressed': query.category === null,
@@ -1372,19 +1419,19 @@ window.__ModuleLoader__.load({
               h('p', { style: S.error, role: 'alert' }, t('loadFailed')),
               h('p', { style: S.meta }, listing.failure),
               h('button', { style: S.btn(false, false), onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined, 0, true) } }, t('retry')))
-              : entries.length === 0 ? h('div', { style: S.state },
-                t(listing.status === 'loading' ? 'loading' : listing.query.text.trim() === '' && listing.query.category === null ? 'empty' : 'noMatch'))
+              : filteredEntries.length === 0 ? h('div', { style: S.state },
+                t(listing.status === 'loading' ? 'loading' : listing.query.text.trim() === '' && listing.query.category === null && quickFilter === null ? 'empty' : 'noMatch'))
                 : h('div', null,
                   h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px' } },
                     h('label', { style: { ...S.meta, display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' } },
                       h('input', {
                         type: 'checkbox', style: S.check, checked: pagePicked, disabled: busy,
-                        onChange: () => { setPicked(pagePicked ? new Set() : new Set(entries.map((entry) => entry.name))) },
+                        onChange: () => { setPicked(pagePicked ? new Set() : new Set(filteredEntries.map((entry) => entry.name))) },
                       }),
                       t('selectPage')),
-                    h('span', { style: S.meta }, t('total', { n: listing.value.total }))),
+                    h('span', { style: S.meta }, t('total', { n: filteredEntries.length }))),
                   h('ul', { style: S.grid },
-                    entries.map((entry) => h(Card, {
+                    filteredEntries.map((entry) => h(Card, {
                       key: entry.name, entry, bundle: bundles.get(entry.name), lang, t, text, busy,
                       picked: picked.has(entry.name),
                       failure: failures.get(entry.name),
