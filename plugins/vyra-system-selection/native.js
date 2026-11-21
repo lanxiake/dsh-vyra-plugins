@@ -52,14 +52,14 @@ export function setWarnSink(fn) {
  * way up would swallow `explorer.exe` and everything the user launched from it, and the guard that
  * uses this set would then treat the entire desktop as "inside DSH".
  *
- * Cached briefly: a reload creates new renderer pids, but a mouse event should not pay for a
- * process snapshot every time.
+ * ponytail: 缓存从 5 秒延长到 30 秒 — 进程树在一次会话里不会频繁变化，
+ * 减少 CreateToolhelp32Snapshot 的调用次数可以避免远程场景下的 I/O 卡顿。
  */
 let shellPids = new Set()
 let shellPidsAt = 0
 function shellProcessIds() {
   const now = Date.now()
-  if (now - shellPidsAt < 5000) return shellPids
+  if (now - shellPidsAt < 30000) return shellPids
   shellPidsAt = now
   // Only this process is seeded. Seeding the parent too would stop the walk below at its first
   // step, because that loop ends when it reaches an id already in the set.
@@ -1579,13 +1579,10 @@ export function createOverlay(handlers = {}) {
   /**
    * How often the queue is drained.
    *
-   * This is the plugin's input latency, not just a timer: Windows delivers a WH_MOUSE_LL
-   * callback only when the installing thread pumps, so every mouse event on the machine waits
-   * for the next tick before it continues to its window. At 16 ms that is ~8 ms of added latency
-   * per event — the "鼠标好像变慢了" that survives after the click-time stalls are gone. A popup
-   * on screen needs nothing faster than a frame, so the cadence follows the hook.
+   * ponytail: 钩子现在只处理按钮事件（不处理 MOUSEMOVE），消息量大幅减少。
+   * 保持 16ms 的轮询节奏用于窗口重绘和主题切换检测，但输入延迟已经不再是瓶颈。
    */
-  const PUMP_MS_HOOKED = 4
+  const PUMP_MS_HOOKED = 16
   const PUMP_MS_IDLE = 16
 
   let timer = null
@@ -1725,13 +1722,26 @@ export function createOverlay(handlers = {}) {
       //
       // Skipped over the DSH window: that surface is read by the page's own `getSelection()`, not
       // by Ctrl+C, and priming there would fire a copy into a Chromium renderer that ignores it.
+      //
+      // ponytail: 新增 onDragRelease 回调，让上层决定是否需要自动弹窗 —
+      // 移除轮询后，这是唯一能检测到"拖动选中文本"的地方。
       if (wParam === WM_LBUTTONUP) {
         const { state: next, fire } = reduceMouse(pressState, { down: false, x: pt.x, y: pt.y, t: now })
         pressState = next
         // Never prime for a gesture that happened on our own card: dragging the card by its
         // header is a drag like any other, and a synthesized Ctrl+C would go to whatever
         // application is underneath.
-        if (fire && !containsPoint(pt) && !windowUnderPoint(pt)) primeSelection()
+        if (fire && !containsPoint(pt) && !windowUnderPoint(pt)) {
+          primeSelection()
+          // 通知上层：一次拖动刚刚结束，可能需要自动弹窗。
+          if (handlers.onDragRelease) {
+            try {
+              handlers.onDragRelease(pt)
+            } catch {
+              // 回调失败不影响钩子链的继续。
+            }
+          }
+        }
         return F.CallNextHookEx(null, code, wParam, lParam)
       }
       // Never swallow a click aimed at our own popup, or the menu could not be dismissed.

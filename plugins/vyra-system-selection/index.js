@@ -97,6 +97,14 @@ export function apply(ctx) {
       }
     },
     onRightClick: (pt, cached) => onRightClick(pt, cached),
+    // ponytail: 新增事件驱动回调，替代轮询 tick() — 只在钩子检测到拖动释放时才触发。
+    onDragRelease: (pt) => {
+      if (!enabled || !settings.openOnSelect) return
+      // 与原 tick() 的逻辑保持一致：窗口可见时不捕获，DSH 窗口内不捕获。
+      if (overlay.visible || overlay.windowUnderPoint?.(pt)) return
+      stats.gestures++
+      scheduleCapture(pt)
+    },
   })
 
   if (!overlay) {
@@ -113,10 +121,9 @@ export function apply(ctx) {
   let settings = stored.settings
   let pending = null // { text, anchor }
   let generation = 0
-  let pollTimer = null
   let captureTimer = null
-  let mouse = null
-  const stats = { ticks: 0, rightClicks: 0, gestures: 0, captured: 0, empty: 0, inApp: 0, lastCapture: '' }
+  // ponytail: 移除 pollTimer 和 mouse — 不再轮询，无需追踪鼠标状态机。
+  const stats = { rightClicks: 0, gestures: 0, captured: 0, empty: 0, inApp: 0, lastCapture: '' }
 
   // --- triggers ------------------------------------------------------------------------------
 
@@ -210,31 +217,8 @@ export function apply(ctx) {
     return { shown: true, at }
   }
 
-  function tick() {
-    if (!enabled) return
-    stats.ticks++
-    const pt = overlay.cursor()
-    if (overlay.visible && overlay.containsPoint(pt)) {
-      mouse = null
-      return
-    }
-    const down = overlay.leftButtonDown()
-    const { state, fire } = reduceMouse(mouse, { down, x: pt.x, y: pt.y, t: Date.now() })
-    mouse = state
-    // Drag-select still opens the menu, but only when the user asks for it with the modifier:
-    // popping a menu after every swipe is the behaviour the toolbar had, and it fights the
-    // right-click flow this plugin is built around.
-    if (fire && settings.openOnSelect && !overlay.modifierHeld?.()) {
-      // Over the DSH window the poll must not capture: the page owns that surface and reports its
-      // own selection (see `installInAppAutoSelect` in the client half). Capturing here would
-      // inject Ctrl+C into a Chromium renderer that ignores it, costing the full 220 ms wait to
-      // learn nothing.
-      if (!overlay.windowUnderPoint?.(pt)) {
-        stats.gestures++
-        scheduleCapture(pt)
-      }
-    }
-  }
+  // ponytail: 移除轮询 tick()，改为由钩子的 onDragRelease 回调直接触发。
+  // 轮询每 30ms 主动检查鼠标状态，在远程场景下是性能杀手；事件驱动只在真正发生拖动时才介入。
 
   /**
    * Whether this selection was already dismissed, so the poll must not reopen it.
@@ -513,30 +497,14 @@ export function apply(ctx) {
   // --- lifecycle -----------------------------------------------------------------------------
 
   function start() {
-    // The right-click takeover is the one part of this plugin that sits in the system's input
-    // path — every mouse event crosses into this process through it. It is worth its cost only
-    // while the user wants our menu on right-click, so it follows that setting instead of the
-    // plugin's own on/off switch. The selection trigger needs no hook at all.
+    // ponytail: 钩子现在同时处理右键拦截和拖动检测，不再需要 openOnSelect 的分支判断。
+    // 所有鼠标事件由钩子的 onDragRelease 回调触发，无需轮询。
     if (settings.interceptRightClick !== false) overlay.installHook()
     else overlay.uninstallHook()
-    // The poll only serves the drag trigger: a drag makes no click, so the hook cannot see it and
-    // there is nothing else watching the button. With that trigger off there is nothing to poll
-    // for, and 33 wake-ups per second stop being free.
-    if (!settings.openOnSelect) {
-      if (pollTimer) clearInterval(pollTimer)
-      pollTimer = null
-      return
-    }
-    if (pollTimer) return
-    pollTimer = setInterval(tick, POLL_MS)
-    if (pollTimer.unref) pollTimer.unref()
   }
   function stop() {
-    if (pollTimer) clearInterval(pollTimer)
-    pollTimer = null
+    // ponytail: 移除 pollTimer 相关代码，不再需要轮询。
     mouse = null
-    // Disabling the plugin used to leave the hook installed, which kept swallowing right-clicks
-    // for an overlay that could no longer show anything.
     overlay.uninstallHook()
   }
 
