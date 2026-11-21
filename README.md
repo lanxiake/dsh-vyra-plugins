@@ -6,27 +6,26 @@ DeepSeek Harness 的插件与技能市场，随 [dsh-Veyra](../dsh-Veyra) fork �
 
 ## 安装
 
-在 DSH 客户端里打开 **设置 → 插件 → 索引源**，按网络情况选一个：
+在 DSH 客户端里打开 **设置 → 插件 → 索引源**，按网络情况选一个。索引分两份，内容相同、**安装源不同**：
 
-国内推荐（ghproxy 代理 GitHub raw，实时更新）：
+| 用途 | 索引内容里的 git 源 | URL |
+|---|---|---|
+| 国内 | GitCode | `https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json` |
+| 海外 | GitHub | `https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json` |
 
-```
-https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json
-```
-
-备用（jsDelivr CDN，可能有几小时缓存）：
+国内备用源（jsDelivr CDN，可能有几小时缓存）：
 
 ```
 https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json
 ```
 
-海外或能直连 GitHub 时用 GitHub Pages：
+海外也可以用 GitHub Pages：
 
 ```
-https://lanxiake.github.io/dsh-vyra-plugins/index.json
+https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 ```
 
-最新版本的插件安装源指向 AtomGit（`git clone` 国内可达），安装时不经过 GitHub。仓库本身同时镜像在 GitHub、GitCode、AtomGit。
+两份索引由同一个 manifest 生成：`docs/index.json` 把所有版本安装源重写成 GitCode，`docs/index-github.json` 重写成 GitHub。同一批 commit 已推送到 GitHub、GitCode、AtomGit，按 SHA 从任一远端都能装。
 
 然后在插件市场里搜索下面的中文名或包名安装。索引是实时拉取的，**这个仓库更新后客户端重新打开插件页就能看到**，不需要改上面的 URL。
 
@@ -66,7 +65,7 @@ DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：
 
 | 通道 | 内容 | 用户怎么用 |
 |---|---|---|
-| **插件市场索引** | `docs/index.json`（format 1） | 客户端「设置 → 插件 → 索引源」加入上面的 URL |
+| **插件市场索引** | `docs/index.json`（GitCode 源）、`docs/index-github.json`（GitHub 源），format 1 | 客户端「设置 → 插件 → 索引源」加入上面的 URL |
 | **技能目录** | `skills/<name>/SKILL.md` | profile 的 `skill-filesystem` 行加 `customSkillDirs` 指向本目录 |
 
 技能不需要打包成插件——DSH 的 `dsh-skill-filesystem` 在任意本地目录扫描 `SKILL.md` 并**监听变更**，改技能无需重启。
@@ -75,7 +74,8 @@ DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：
 
 ```
 dsh-vyra-plugins/
-├── docs/index.json         # 生成物，勿手改（build-index 产出）；GitHub Pages 从 docs/ 根发布
+├── docs/index.json         # 生成物，勿手改（build-index 产出，GitCode 源）；GitHub Pages 从 docs/ 根发布
+├── docs/index-github.json  # 同上，安装源重写成 GitHub
 ├── plugins/                # 每个插件一个 npm 包（独立可发布）
 ├── skills/                 # SKILL.md 目录，直接给 customSkillDirs 用
 ├── scripts/

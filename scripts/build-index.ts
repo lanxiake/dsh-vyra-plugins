@@ -86,5 +86,36 @@ const document = {
   plugins: manifest.plugins.map(plugin),
 }
 
-writeFileSync(resolve(root, 'docs/index.json'), `${JSON.stringify(document, undefined, 2)}\n`)
-console.log(`build-index: wrote ${document.plugins.length} plugin(s) to docs/index.json`)
+const GITHUB_REMOTE = 'https://github.com/lanxiake/dsh-vyra-plugins.git'
+const GITCODE_REMOTE = 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git'
+const ATOM_GIT_REMOTE = 'https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git'
+/** 同一批 commit 推到了三个远端，任何一个都能按 SHA 安装。 */
+const OUR_REMOTES = [GITHUB_REMOTE, GITCODE_REMOTE, ATOM_GIT_REMOTE]
+
+/**
+ * Rewrite every git install source to one remote.
+ *
+ * The same commits are pushed to GitHub and GitCode, so a commit SHA installs
+ * from either. Domestic users read `docs/index.json` (GitCode, fast inside
+ * China); users outside China read `docs/index-github.json` (GitHub).
+ */
+function retarget(input: Record<string, unknown>, to: string) {
+  const copy = structuredClone(input) as {
+    plugins: Array<{ versions: Array<{ source: { type?: string; url?: string } }> }>
+  }
+  for (const entry of copy.plugins) {
+    for (const version of entry.versions) {
+      if (version.source?.type === 'git' && OUR_REMOTES.includes(version.source.url ?? '')) {
+        version.source.url = to
+      }
+    }
+  }
+  return copy
+}
+
+const domestic = retarget(document, GITCODE_REMOTE)
+const overseas = retarget(document, GITHUB_REMOTE)
+
+writeFileSync(resolve(root, 'docs/index.json'), `${JSON.stringify(domestic, undefined, 2)}\n`)
+writeFileSync(resolve(root, 'docs/index-github.json'), `${JSON.stringify(overseas, undefined, 2)}\n`)
+console.log(`build-index: wrote ${document.plugins.length} plugin(s) to docs/index.json (gitcode) and docs/index-github.json (github)`)

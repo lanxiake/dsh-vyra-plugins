@@ -74,7 +74,7 @@
           "publishTimestamp": 1795080600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "92dc3e408b046e087608dd22491a19b2b2915c7d",
             "path": "plugins/tool-usage-stats"
           }
@@ -84,7 +84,7 @@
           "publishTimestamp": 1795065600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "3d318c9dc1f0e4e81463c38f96b209189a01f06c",
             "path": "plugins/tool-usage-stats"
           }
@@ -94,7 +94,7 @@
           "publishTimestamp": 1795062600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ab5079897989fa2a0a1178fd825112ac88b2ec41",
             "path": "plugins/tool-usage-stats"
           }
@@ -104,7 +104,7 @@
           "publishTimestamp": 1795060200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "9ea34cf6d81662e126a62e4720c26f5daca4696b",
             "path": "plugins/tool-usage-stats"
           }
@@ -114,7 +114,7 @@
           "publishTimestamp": 1795392000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "f9dd87937729ba1ec3898f0de845483f141f2295",
             "path": "plugins/tool-usage-stats"
           }
@@ -124,7 +124,7 @@
           "publishTimestamp": 1794551488,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/tool-usage-stats"
           }
@@ -162,7 +162,7 @@
           "publishTimestamp": 1794551488,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-agent-manager"
           }
@@ -200,7 +200,7 @@
           "publishTimestamp": 1794551488,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-smart-compaction"
           }
@@ -238,7 +238,7 @@
           "publishTimestamp": 1795067593,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "7f72ea171649065cef2c4efaae71b2d658e97834",
             "path": "plugins/vyra-skill-mcp-manager"
           }
@@ -248,7 +248,7 @@
           "publishTimestamp": 1795066681,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "a20c4bdea5b9e60677d392a621545d16ae8bbe8d",
             "path": "plugins/vyra-skill-mcp-manager"
           }
@@ -258,7 +258,7 @@
           "publishTimestamp": 1795050000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-skill-mcp-manager"
           }
@@ -268,7 +268,7 @@
           "publishTimestamp": 1794900000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "3a370b1ffcdca5d832672d029ac3014c9dee17c7",
             "path": "plugins/vyra-skill-mcp-manager"
           }
@@ -278,7 +278,7 @@
           "publishTimestamp": 1794551488,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "54bd6c6be93723ddeda71f5802eb23fdd9fb3204",
             "path": "plugins/vyra-skill-mcp-manager"
           }
@@ -316,7 +316,7 @@
           "publishTimestamp": 1795074609,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "3e35a33964fc538665b2c480debd9787b8744a42",
             "path": "plugins/vyra-ssh-terminal"
           }
@@ -326,7 +326,7 @@
           "publishTimestamp": 1795074249,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "c55e166864ba3d279b71eaeea4b2a75c9f756338",
             "path": "plugins/vyra-ssh-terminal"
           }
@@ -336,7 +336,7 @@
           "publishTimestamp": 1794551488,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-ssh-terminal"
           }
@@ -375,7 +375,7 @@
           "publishTimestamp": 1795336200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "6a33ae79dfd652e1b1e10fea9c4f96a4720b9497",
             "path": "plugins/vyra-system-selection"
           }
@@ -385,7 +385,7 @@
           "publishTimestamp": 1795335000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "8b9ccc889745eddeacb8b5131a2573be61636494",
             "path": "plugins/vyra-system-selection"
           }
@@ -395,7 +395,7 @@
           "publishTimestamp": 1795334400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "d28c24a3eb91f353a73ddd975f7a3513629e2cde",
             "path": "plugins/vyra-system-selection"
           }
@@ -405,7 +405,7 @@
           "publishTimestamp": 1795089000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "b60d6bd3f62f9e5ce7b40be3fddb7ab94cc99ea8",
             "path": "plugins/vyra-system-selection"
           }
@@ -415,7 +415,7 @@
           "publishTimestamp": 1795088400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "99a1d5e1d779d3f708c8e79270878287107014cc",
             "path": "plugins/vyra-system-selection"
           }
@@ -425,7 +425,7 @@
           "publishTimestamp": 1795087800,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "b31aa60894c63f4fa870a968368574e43b374d2d",
             "path": "plugins/vyra-system-selection"
           }
@@ -435,7 +435,7 @@
           "publishTimestamp": 1795143607,
           "source": {
             "type": "git",
-            "url": "https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ad533f50952ac4249c652d249c4946aa95925499",
             "path": "plugins/vyra-system-selection"
           }
@@ -445,7 +445,7 @@
           "publishTimestamp": 1795086000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "0ac2ff80f0873c2e7586587edde7b2d25934f009",
             "path": "plugins/vyra-system-selection"
           }
@@ -455,7 +455,7 @@
           "publishTimestamp": 1795081200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "3f17c72599689e0fa593ef583b9c8dd2f7b2ccd0",
             "path": "plugins/vyra-system-selection"
           }
@@ -465,7 +465,7 @@
           "publishTimestamp": 1795077600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "c00a826eb5354dfd02149b38f47ee7922f3c1b5f",
             "path": "plugins/vyra-system-selection"
           }
@@ -475,7 +475,7 @@
           "publishTimestamp": 1795076400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "9958b681e82db647d3f2755a4468645b9f531f74",
             "path": "plugins/vyra-system-selection"
           }
@@ -485,7 +485,7 @@
           "publishTimestamp": 1795075200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "8f19338d97a945bc10d8c7307c06cc301041e5ae",
             "path": "plugins/vyra-system-selection"
           }
@@ -495,7 +495,7 @@
           "publishTimestamp": 1795074360,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "f5267ac1c0373031d13db1b1f06d556e8246aed5",
             "path": "plugins/vyra-system-selection"
           }
@@ -505,7 +505,7 @@
           "publishTimestamp": 1795069344,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "287a29b406e136eeff4f5e3441cbacc5a9986c1d",
             "path": "plugins/vyra-system-selection"
           }
@@ -515,7 +515,7 @@
           "publishTimestamp": 1795062317,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "274cc8b3c066d78c8fee290960c985feb9305322",
             "path": "plugins/vyra-system-selection"
           }
@@ -525,7 +525,7 @@
           "publishTimestamp": 1795392000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "8d971ed6b15feeb3181e3f6e17b67c6622461701",
             "path": "plugins/vyra-system-selection"
           }
@@ -535,7 +535,7 @@
           "publishTimestamp": 1795392000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "aba67108d2145583884ccd3fd77cbf0e0ffeecb0",
             "path": "plugins/vyra-system-selection"
           }
@@ -545,7 +545,7 @@
           "publishTimestamp": 1795305600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-system-selection"
           }
@@ -555,7 +555,7 @@
           "publishTimestamp": 1795219200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "6b7b215d39a1ae8ad0ec7ef4efc3602b2b3cefff",
             "path": "plugins/vyra-system-selection"
           }
@@ -565,7 +565,7 @@
           "publishTimestamp": 1795132800,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "fa2db0587b5bd1f668234a89ce2b44be329babeb",
             "path": "plugins/vyra-system-selection"
           }
@@ -575,7 +575,7 @@
           "publishTimestamp": 1795046400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "28f63b7243a7e07555312c509f7fade6828d25dc",
             "path": "plugins/vyra-system-selection"
           }
@@ -585,7 +585,7 @@
           "publishTimestamp": 1794960000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "a9bfa549aae379aab9649ffe886a2239e71898d6",
             "path": "plugins/vyra-system-selection"
           }
@@ -624,7 +624,7 @@
           "publishTimestamp": 1794963600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-theme-styles"
           }
@@ -662,7 +662,7 @@
           "publishTimestamp": 1795165435,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "1c91d81cf89558dba2d7983d89128e15c1928b01",
             "path": "plugins/vyra-wechat-local"
           },
@@ -675,7 +675,7 @@
           "publishTimestamp": 1795164339,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "09ad8de91d9014cfc673eab16992ef6f5551f884",
             "path": "plugins/vyra-wechat-local"
           },
@@ -688,7 +688,7 @@
           "publishTimestamp": 1795160992,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "79a3e313eee9f0902d6b2ec3634154b644161288",
             "path": "plugins/vyra-wechat-local"
           },
@@ -701,7 +701,7 @@
           "publishTimestamp": 1795160538,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "4188a58abe94b473007f325630214a43ae0a1314",
             "path": "plugins/vyra-wechat-local"
           },
@@ -714,7 +714,7 @@
           "publishTimestamp": 1795160433,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "113b35d8032830b313acdd1f22d18ae0537e9c03",
             "path": "plugins/vyra-wechat-local"
           },
@@ -727,7 +727,7 @@
           "publishTimestamp": 1795144208,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "4469d19ef6c3ea9ff0478923b61e03871f4f2cae",
             "path": "plugins/vyra-wechat-local"
           },
@@ -740,7 +740,7 @@
           "publishTimestamp": 1795143741,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "a2a5e0129e8a9a401f6cfd282fce084af8e52769",
             "path": "plugins/vyra-wechat-local"
           },
@@ -753,7 +753,7 @@
           "publishTimestamp": 1795140376,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "cfe7a621914dd105b61a6f5fdf94b5ede2d74423",
             "path": "plugins/vyra-wechat-local"
           },
@@ -766,7 +766,7 @@
           "publishTimestamp": 1795078687,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "04932926568e618e663a00df694570dead8f7d8a",
             "path": "plugins/vyra-wechat-local"
           },
@@ -779,7 +779,7 @@
           "publishTimestamp": 1795076698,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "7f634d515de374a3b67dafe5617943cb0d09d218",
             "path": "plugins/vyra-wechat-local"
           },
@@ -792,7 +792,7 @@
           "publishTimestamp": 1795070486,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "a1214b80d06663b22d5c99c5521a675c6c00f231",
             "path": "plugins/vyra-wechat-local"
           },
@@ -805,7 +805,7 @@
           "publishTimestamp": 1795068488,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "4159ff0ee420143515b12970e357e26bdd721d23",
             "path": "plugins/vyra-wechat-local"
           },
@@ -818,7 +818,7 @@
           "publishTimestamp": 1795068385,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "cd84a027452f5d5bbf77a289090723a193b1622f",
             "path": "plugins/vyra-wechat-local"
           },
@@ -831,7 +831,7 @@
           "publishTimestamp": 1795068286,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "781e4f143ecf2224862dac0952af99e9e8d4423f",
             "path": "plugins/vyra-wechat-local"
           },
@@ -844,7 +844,7 @@
           "publishTimestamp": 1795066581,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "5c057fecb8e853791c07cde4378cdf65675fc7ad",
             "path": "plugins/vyra-wechat-local"
           },
@@ -857,7 +857,7 @@
           "publishTimestamp": 1795065751,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "f7ce15abf8288948d1de89b457199f4b2b981207",
             "path": "plugins/vyra-wechat-local"
           },
@@ -870,7 +870,7 @@
           "publishTimestamp": 1795062317,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "274cc8b3c066d78c8fee290960c985feb9305322",
             "path": "plugins/vyra-wechat-local"
           },
@@ -883,7 +883,7 @@
           "publishTimestamp": 1795046400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "b5345a639f6f26b8d1235546318b7af1b1f6041b",
             "path": "plugins/vyra-wechat-local"
           },
@@ -1176,7 +1176,7 @@
           "publishTimestamp": 1795149649,
           "source": {
             "type": "git",
-            "url": "https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "5f0b7366586609f23a674f50b15f6e9a6c39c886",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1186,7 +1186,7 @@
           "publishTimestamp": 1795149354,
           "source": {
             "type": "git",
-            "url": "https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "c306a285f9c423a24ac50d5bfcc2f5dba0cf0584",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1196,7 +1196,7 @@
           "publishTimestamp": 1795143511,
           "source": {
             "type": "git",
-            "url": "https://atomgit.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "dbcfdda4c6cdbea19d30c65582ec9afd30b4d771",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1206,7 +1206,7 @@
           "publishTimestamp": 1795141417,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "6597e84e7e9cbca7efcc41aff5b59bbc1a29c981",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1216,7 +1216,7 @@
           "publishTimestamp": 1795138821,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "e894a78059214292aff0caced2ec5eeafa6698af",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1226,7 +1226,7 @@
           "publishTimestamp": 1795137523,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "8be61de4c7ec9cd8b1024945610a5e1f770647fb",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1236,7 +1236,7 @@
           "publishTimestamp": 1795078899,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "1290d8473290843477da63a241c5440460f8621e",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1246,7 +1246,7 @@
           "publishTimestamp": 1795078661,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "fa32e8ef6b6b5eb7de718e5018f4fe92130d7d5f",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1256,7 +1256,7 @@
           "publishTimestamp": 1795078362,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "9ca4d192ac2fb8c045ff0d5674e206056088a871",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1266,7 +1266,7 @@
           "publishTimestamp": 1795077859,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "e03fe1b02d58345477b4cf2418e28f2b06429b71",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1276,7 +1276,7 @@
           "publishTimestamp": 1795075917,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "b6c3d14e224b2d041f3affc9a0b16313f3cfaeaf",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1286,7 +1286,7 @@
           "publishTimestamp": 1795074092,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "6cf26ca9a09f5b40a48ce7d4795f7d437e481f6f",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1296,7 +1296,7 @@
           "publishTimestamp": 1795066500,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "86656eab0bc7c9af403f1d00c46512e135d2c1a6",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1306,7 +1306,7 @@
           "publishTimestamp": 1795066164,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "4d3e6e727ed0b0c2fe9dc849c58abf7642bf16f8",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1316,7 +1316,7 @@
           "publishTimestamp": 1795065592,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "af6111f2e50be335ff13c69e57240f2a8d88309c",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1326,7 +1326,7 @@
           "publishTimestamp": 1795061218,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ed18b769b1791668d706423e713460040f455b5e",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1336,7 +1336,7 @@
           "publishTimestamp": 1795059215,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "7defa10ea77d7bb17385772242210643821805d2",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1346,7 +1346,7 @@
           "publishTimestamp": 1795058652,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "129421592badb4bf8a07ecfe9fbd3036f28b93ec",
             "path": "plugins/vyra-xianyu-delivery"
           }
@@ -1385,7 +1385,7 @@
           "publishTimestamp": 1795080000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "92dc3e408b046e087608dd22491a19b2b2915c7d",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1398,7 +1398,7 @@
           "publishTimestamp": 1795392000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "2eef8b722e0cabc1e5d790a8a78c08772fab50ff",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1411,7 +1411,7 @@
           "publishTimestamp": 1795266000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "482cf2b1769710f8d669b6d8b9eb9cdc7aaf26fc",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1424,7 +1424,7 @@
           "publishTimestamp": 1795230000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1437,7 +1437,7 @@
           "publishTimestamp": 1795226400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "f7ae30421c544f62d3ed6c39aaf42e6c79be5f56",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1450,7 +1450,7 @@
           "publishTimestamp": 1795222800,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "d94ed5e632ad80ea42e5a731d57f351b75f2fb60",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1463,7 +1463,7 @@
           "publishTimestamp": 1794900000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "9c77cc23b9c296c36d57edce8955c06565d30ca2",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1476,7 +1476,7 @@
           "publishTimestamp": 1794963600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "c0a2f398ded5e79da81334b2b0d18b5e81520ba1",
             "path": "plugins/vyra-agent-cli-manager"
           },
@@ -1519,7 +1519,7 @@
           "publishTimestamp": 1795335600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "f2d15632b7a6baedf82f6938bceac655fd4deb82",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1529,7 +1529,7 @@
           "publishTimestamp": 1795335000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "afa6f449498ce8404c9bda25f932f556ee1c4c03",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1539,7 +1539,7 @@
           "publishTimestamp": 1795334400,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "0318a89ada224c3f99042bc6e0c82dbe2c8127c0",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1549,7 +1549,7 @@
           "publishTimestamp": 1795068052,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "bfda1b975d8d19eabbb1eec6d28483db6a10f22a",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1559,7 +1559,7 @@
           "publishTimestamp": 1795067593,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "7f72ea171649065cef2c4efaae71b2d658e97834",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1569,7 +1569,7 @@
           "publishTimestamp": 1795066951,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "575d1f707c56ae444e0b23fa32afe233a55724a8",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1579,7 +1579,7 @@
           "publishTimestamp": 1795059216,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "fcb4faab935dd14cfd94d476fe2514d0bed2db8c",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1589,7 +1589,7 @@
           "publishTimestamp": 1795057200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "86c76d84343b4124d7b677e0d027d67c32fd80f5",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1599,7 +1599,7 @@
           "publishTimestamp": 1795056212,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "8f63f5583d5c20fd54764be31dd656aae29a86b2",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1609,7 +1609,7 @@
           "publishTimestamp": 1795392000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1619,7 +1619,7 @@
           "publishTimestamp": 1795305600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "7420a72571be09aad7bee2e132fdbd335a5c4409",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1629,7 +1629,7 @@
           "publishTimestamp": 1794960000,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "3d7d778e623384e45df66dd225ae4b3ce5091216",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1639,7 +1639,7 @@
           "publishTimestamp": 1794873600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "4bc08a2465719a0f08221a274988daf52d533584",
             "path": "plugins/vyra-plugin-market"
           }
@@ -1676,7 +1676,7 @@
           "publishTimestamp": 1794967200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/dsh-im"
           }
@@ -1715,7 +1715,7 @@
           "publishTimestamp": 1795053600,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/dsh-tool-ocr"
           },
@@ -1728,7 +1728,7 @@
           "publishTimestamp": 1794967200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "bfcecfa25ca5cc0781580a12a267b7f277abe7d3",
             "path": "plugins/dsh-tool-ocr"
           },
@@ -1768,7 +1768,7 @@
           "publishTimestamp": 1794967200,
           "source": {
             "type": "git",
-            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
             "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
             "path": "plugins/dsh-superpowers"
           }
