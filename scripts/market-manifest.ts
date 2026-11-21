@@ -1593,6 +1593,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.8.0: one persistent IM process for chats/history/send and pushes;
+        // sessions register a 闲鱼客服 workspace; prompts and tools are scoped
+        // on the agent; conversation parsing and the RPC probe are testable.
+        '0.8.0': {
+          publishTimestamp: 1795267200,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'c5f656096c83d293eb4a53dfe05011cd14145831',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
