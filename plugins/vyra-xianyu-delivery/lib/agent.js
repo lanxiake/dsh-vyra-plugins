@@ -67,11 +67,17 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
               text: { type: 'string', description: '发给买家的完整回复，不要带引号或解释' },
             },
             required: ['text'],
+            additionalProperties: false,
           },
           output: {
-            schema: { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] },
+            schema: {
+              type: 'object',
+              properties: { ok: { type: 'boolean' } },
+              required: ['ok'],
+              additionalProperties: false,
+            },
             render: () => [{ type: 'text', text: 'ok' }],
-            presentationMeta: () => ({}),
+            presentationMeta: () => ({ expandable: false }),
           },
           execute: async (args) => {
             reply = String(args?.text || '').trim()
