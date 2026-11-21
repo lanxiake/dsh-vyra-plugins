@@ -1514,6 +1514,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.1: orders that never sent anything (old card_exhausted rows)
+        // retry once cards are replenished.
+        '0.7.1': {
+          publishTimestamp: 1795247400,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'daf5a8f3b8dc5079840f51e48434db453bff4c63',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
