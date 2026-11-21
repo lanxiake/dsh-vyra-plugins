@@ -19,9 +19,14 @@ export function stripFrontmatter(md) {
   return end === -1 ? text.trim() : text.slice(end + 4).trim()
 }
 
-export function createAi({ config = {}, store, agent, logger = () => {}, toolNames = [] }) {
+export function createAi({ config = {}, store, agent, logger = () => {}, toolNames = [], skillRoots = null }) {
   const ai = config.ai || {}
   const skillsDir = String(ai.skillsDir || join(homedir(), '.dsh', 'skills'))
+  // 技能可能在多个目录里（默认目录、市场、agents、claude、插件内置），
+  // 只看一个目录会出现「配置了技能但 Agent 说没有」。
+  const roots = Array.isArray(skillRoots) && skillRoots.length
+    ? skillRoots
+    : [skillsDir, join(homedir(), '.dsh', 'market', 'skills'), join(homedir(), '.agents', 'skills'), join(homedir(), '.claude', 'skills')]
   const cooldownSeconds = Number(ai.cooldownSeconds) || 8
   const maxRepliesPerChat = Number(ai.maxRepliesPerChat) || 8
   // 空 = auto：DSH agent 可用就用它，否则退回直连接口。
@@ -42,16 +47,16 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
   async function loadSkill(name) {
     if (skillCache.has(name)) return skillCache.get(name)
     let body = ''
-    for (const candidate of [
-      join(skillsDir, name, 'SKILL.md'),
-      join(skillsDir, `${name}.md`),
-    ]) {
-      try {
-        body = stripFrontmatter(await readFile(candidate, 'utf8'))
-        break
-      } catch {
-        // 试下一个位置
+    for (const root of roots) {
+      for (const candidate of [join(root, name, 'SKILL.md'), join(root, `${name}.md`)]) {
+        try {
+          body = stripFrontmatter(await readFile(candidate, 'utf8'))
+          break
+        } catch {
+          // 试下一个位置
+        }
       }
+      if (body) break
     }
     skillCache.set(name, body)
     return body

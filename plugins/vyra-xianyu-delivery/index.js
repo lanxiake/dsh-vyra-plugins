@@ -185,6 +185,14 @@ export function apply(ctx, config = {}) {
     agent: dshAgent,
     logger: log,
     toolNames: xianyuTools.map((tool) => tool.name),
+    // 和技能列表用同一组目录，避免「面板里能选、Agent 读不到」。
+    skillRoots: [
+      String(cfg.ai?.skillsDir || join(homedir(), '.dsh', 'skills')),
+      join(homedir(), '.dsh', 'market', 'skills'),
+      join(homedir(), '.agents', 'skills'),
+      join(homedir(), '.claude', 'skills'),
+      fileURLToPath(new URL('./builtin-skills', import.meta.url)),
+    ],
   })
   let selfUserId = ''
   let authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
@@ -329,6 +337,7 @@ export function apply(ctx, config = {}) {
     authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
     handledMsg.clear()
     handledOrders.clear()
+    await dshAgent.disposeAll()
     void restartIm()
     return { ok: true, unb }
   }
@@ -338,6 +347,7 @@ export function apply(ctx, config = {}) {
     await rm(join(cliHome, 'im_token.json'), { force: true })
     authCache = { loading: false, unb: '', tracknick: '', valid: false, checkedAt: 0, error: '已退出登录' }
     selfUserId = ''
+    await dshAgent.disposeAll()
     void restartIm()
     return { ok: true }
   }
@@ -655,6 +665,7 @@ export function apply(ctx, config = {}) {
     return () => {
       offEvent()
       offDown()
+      void dshAgent.disposeAll()
       im.dispose()
     }
   }, 'xianyu-delivery.im')

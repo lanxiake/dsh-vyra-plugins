@@ -23,6 +23,12 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
   // Cordis 的服务在插件 apply 时可能还没注册（注入顺序），必须每次现取；
   // 在 apply 时取一次会永久拿到 undefined，AI 客服就一直是关的。
   const liveAgents = () => (typeof getAgents === 'function' ? getAgents() : agents)
+  // 活着的会话句柄：同一买家后续的消息续到同一个会话里，不重建。
+  const liveHandles = new Map()
+  // 已经装过 scoped 贡献的 agentCtx，避免重复注册同名工具/提示段。
+  const preparedScopes = new WeakMap()
+  // 每个会话一个回复槽，句柄复用后工具闭包仍写进同一个对象。
+  const replySlots = new Map()
   const ai = config.ai || {}
   const provider = String(ai.provider || '').trim()
   const model = String(ai.model || '').trim()
@@ -61,11 +67,23 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
         // 默认模型读不到就交给 create 报错
       }
     }
-    let reply = ''
+    let systemDelivered = false
     // 一个买家一个会话：sessionId 固定为 xianyu-<cid>，第一次创建、之后 resume，
     // 这样 DSH 会话列表里是「一段连续对话」而不是每次一条。
     const sessionId = `xianyu-${String(sessionKey || 'chat').replace(/[^0-9a-zA-Z_-]/g, '') || 'chat'}`
+    // 回复槽跟着会话走：handle 复用后，工具闭包必须写进同一个槽，
+    // 而不是各自捕获一个只会用一次的局部变量。
+    const slot = replySlots.get(sessionId) ?? { text: '' }
+    slot.text = ''
+    replySlots.set(sessionId, slot)
     const setup = (agentCtx) => {
+      const state = preparedScopes.get(agentCtx)
+      if (state) {
+        systemDelivered = state.system
+        return
+      }
+      const next = { system: false }
+      preparedScopes.set(agentCtx, next)
       // 客服人设与技能放进系统提示段：续写时还在，也不会挤占用户消息。
       if (systemPrompt) {
         try {
@@ -74,8 +92,11 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
             order: 10150,
             text: () => systemPrompt,
           })
+          next.system = true
+          systemDelivered = true
         } catch (err) {
-          logger(`system prompt section failed: ${err?.message || err}`)
+          // 拿不到 systemPrompt 服务就退回把提示塞进用户消息，别让技能凭空消失。
+          logger(`system prompt section failed, falling back to user message: ${err?.message || err}`)
         }
       }
       agentCtx.tools.register({
@@ -100,7 +121,7 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
           presentationMeta: () => ({ expandable: false }),
         },
         execute: async (args) => {
-          reply = String(args?.text || '').trim()
+          slot.text = String(args?.text || '').trim()
           return { ok: true }
         },
       })
@@ -130,21 +151,37 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     }
 
     const agentsNow = liveAgents()
-    let handle
-    try {
-      // 已有该买家的会话就续写，保持一段连续对话。
-      handle = await agentsNow.resume({ resumeSessionId: sessionId, ...createOptions })
-    } catch {
-      try {
-        handle = await agentsNow.create({ sessionId, ...createOptions })
-      } catch (err) {
-        // 上个实例留下的会话可能正被占用：退回到一次性会话，别让买家等着。
-        logger(`create ${sessionId} failed, falling back to a fresh id: ${err?.message || err}`)
-        handle = await agentsNow.create({
-          ...createOptions,
-          sessionId: `${sessionId}-${Date.now()}`,
-        })
+    // 同一会话复用同一个 handle：每轮结束不 dispose，否则下一轮只能重建，
+    // 一旦 resume 失败就会掉进带时间戳的「临时会话」。
+    let handle = liveHandles.get(sessionId)
+    if (!handle) {
+      const live = agentsNow.get?.(sessionId)
+      if (live) {
+        // DSH 自己已经在跑这个会话：补上本轮需要的 scoped 贡献即可。
+        try {
+          setup(live.ctx)
+        } catch (err) {
+          logger(`re-install setup on live agent failed: ${err?.message || err}`)
+        }
+        handle = { agent: live, dispose: async () => {} }
+      } else {
+        try {
+          // 已有该买家的会话就续写，保持一段连续对话。
+          handle = await agentsNow.resume({ resumeSessionId: sessionId, ...createOptions })
+        } catch (resumeErr) {
+          try {
+            handle = await agentsNow.create({ sessionId, ...createOptions })
+          } catch (err) {
+            // 会话可能正被占用：退回到一次性会话，别让买家等着。
+            logger(`create ${sessionId} failed, falling back to a fresh id: ${err?.message || err} (resume: ${resumeErr?.message || resumeErr})`)
+            handle = await agentsNow.create({
+              ...createOptions,
+              sessionId: `${sessionId}-${Date.now()}`,
+            })
+          }
+        }
       }
+      liveHandles.set(sessionId, handle)
     }
 
     // 挂到「闲鱼客服」工作区：不 attach 的话会话不会出现在侧栏分组里。
@@ -176,7 +213,9 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     }
 
     try {
-      handle.agent.followup(userMessage(prompt))
+      // 系统段没装进去时把同样的内容补在用户消息前面，技能不会丢。
+      const userText = systemDelivered || !systemPrompt ? prompt : `${systemPrompt}\n\n${prompt}`
+      handle.agent.followup(userMessage(userText))
       await Promise.race([
         handle.agent.whenIdle(),
         new Promise((_, reject) => {
@@ -185,12 +224,14 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
       ])
     } catch (err) {
       logger(`agent ask failed: ${err?.message || err}`)
+      // handle 可能已经被 DSH 卸载：丢掉缓存，下一轮重新 resume/create。
+      if (/(disposed|inactive|not live|inactive context)/i.test(String(err?.message || err))) {
+        liveHandles.delete(sessionId)
+      }
       return { text: null, error: String(err?.message || err) }
-    } finally {
-      await handle.dispose().catch(() => {})
     }
 
-    return { text: reply || null, error: reply ? '' : 'empty-reply' }
+    return { text: slot.text || null, error: slot.text ? '' : 'empty-reply' }
   }
 
   return {
@@ -206,5 +247,13 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     provider,
     model,
     ask,
+    // 插件卸载 / 切账号时把还活着的会话关掉。
+    async disposeAll() {
+      const handles = [...liveHandles.values()]
+      liveHandles.clear()
+      for (const handle of handles) {
+        await Promise.resolve(handle.dispose?.()).catch(() => {})
+      }
+    },
   }
 }
