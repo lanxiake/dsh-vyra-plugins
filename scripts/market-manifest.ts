@@ -744,6 +744,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 3.1.0 optimizes performance for remote desktop scenarios: removes polling mechanism,
+        // reduces hook pump frequency from 4ms to 16ms (-75% wakeups), extends process tree
+        // cache from 5s to 30s, and switches to event-driven drag detection. CPU wakeup
+        // frequency drops from 283Hz to 62.5Hz (-78%), mouse movement latency reduced by 90%.
+        '3.1.0': {
+          publishTimestamp: 1732158000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'd2339af2b3d8eb3d8f3c310e72d297044af1f641',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
         // timer and took the whole host process down on the first selection capture.
         '2.0.1': {
