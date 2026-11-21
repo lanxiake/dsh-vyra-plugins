@@ -28,7 +28,7 @@ const agents = {
     const scoped = {
       section: null,
       restricted: null,
-      systemPrompt: { section: (s) => { scoped.section = s } },
+      systemPrompt: { section: (s) => { (scoped.sections ||= []).push(s) } },
       tools: {
         register: (def) => { tools.set(def.name, def) },
         schemas: () => [...tools.values()].map((t) => ({ name: t.name })).concat([{ name: 'xianyu_get_item' }]),
@@ -63,7 +63,7 @@ const agent = createDshAgent({
 
 const first = await agent.ask({
   prompt: '买家：你好',
-  systemPrompt: '技能：夸克网盘 …',
+  sections: [{ name: 'vyra-xianyu-role', text: '角色：闲鱼客服' }, { name: 'vyra-xianyu-skills', text: '技能：夸克网盘 …' }],
   allowedTools: ['xianyu_get_item'],
   sessionKey: '69360436252',
   title: '[客服] 商品-买家',
@@ -71,7 +71,7 @@ const first = await agent.ask({
 const resumedAfterFirst = resumed.length
 const second = await agent.ask({
   prompt: '买家：怎么安装',
-  systemPrompt: '技能：夸克网盘 …',
+  sections: [{ name: 'vyra-xianyu-role', text: '角色：闲鱼客服' }, { name: 'vyra-xianyu-skills', text: '技能：夸克网盘 …' }],
   allowedTools: ['xianyu_get_item'],
   sessionKey: '69360436252',
   title: '[客服] 商品-买家',
@@ -83,8 +83,9 @@ if (created.length !== 1) throw new Error(`应当只创建 1 个会话，实际 
 if (resumed.length !== resumedAfterFirst) throw new Error('第二轮不应重新 resume')
 if (created[0] !== 'xianyu-69360436252') throw new Error(`会话 id 不稳定：${created[0]}`)
 
-if (!lastScope?.section) throw new Error('系统提示段没有注册')
-if (lastScope.section.text() !== '技能：夸克网盘 …') throw new Error('系统提示段内容不对')
+const sections = lastScope?.sections || []
+if (sections.length !== 2) throw new Error('系统提示段数量不对：' + sections.length)
+if (!sections.some((x) => x.text() === '技能：夸克网盘 …')) throw new Error('技能段内容不对')
 const allow = lastScope.restricted?.allow
 if (!allow || !allow.includes('send_buyer_reply')) throw new Error('没有限制工具（缺少回复工具）')
 if (!allow.includes('xianyu_get_item')) throw new Error('允许的客服工具没有生效')

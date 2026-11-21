@@ -40,17 +40,17 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     return raw === BUILTIN_AGENT ? '' : raw
   }
 
-  async function ask({ prompt, systemPrompt = '', allowedTools = null, sessionKey, title = '', model = null }) {
+  async function ask({ prompt, sections = null, systemPrompt = '', allowedTools = null, sessionKey, title = '', model = null }) {
     if (!liveAgents()?.create) return { text: null, error: 'agents-unavailable' }
     try {
-      return await askOnce({ prompt, systemPrompt, allowedTools, sessionKey, title, model })
+      return await askOnce({ prompt, sections, systemPrompt, allowedTools, sessionKey, title, model })
     } catch (err) {
       logger(`agent ask failed: ${err?.message || err}`)
       return { text: null, error: String(err?.message || err) }
     }
   }
 
-  async function askOnce({ prompt, systemPrompt, allowedTools, sessionKey, title, model }) {
+  async function askOnce({ prompt, sections, systemPrompt, allowedTools, sessionKey, title, model }) {
     const preset = currentPreset()
     const route = model && model.provider && model.model
       ? { provider: model.provider, model: model.model }
@@ -67,6 +67,11 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
         // 默认模型读不到就交给 create 报错
       }
     }
+    // 分层系统提示：每段单独注册，便于定位到底哪段没生效。
+    const blocks = Array.isArray(sections) && sections.length
+      ? sections.map((section) => ({ ...section, text: String(section?.text || "") })).filter((section) => section.text.trim())
+      : (systemPrompt ? [{ name: "vyra-xianyu-cs", text: systemPrompt }] : [])
+    const systemText = blocks.map((section) => section.text).join(String.fromCharCode(10,10))
     let systemDelivered = false
     // 一个买家一个会话：sessionId 固定为 xianyu-<cid>，第一次创建、之后 resume，
     // 这样 DSH 会话列表里是「一段连续对话」而不是每次一条。
@@ -84,13 +89,15 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
       }
       const next = { system: false }
       preparedScopes.set(agentCtx, next)
-      // 客服人设与技能放进系统提示段：续写时还在，也不会挤占用户消息。
-      if (systemPrompt) {
+      // 每段单独注册成 section，顺序稳定、互不覆盖。
+      if (blocks.length) {
         try {
-          agentCtx.systemPrompt?.section({
-            name: 'vyra-xianyu-cs',
-            order: 10150,
-            text: () => systemPrompt,
+          blocks.forEach((block, index) => {
+            agentCtx.systemPrompt.section({
+              name: String(block.name || `vyra-xianyu-${index}`),
+              order: 10150 + index,
+              text: () => block.text,
+            })
           })
           next.system = true
           systemDelivered = true
@@ -214,7 +221,7 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
 
     try {
       // 系统段没装进去时把同样的内容补在用户消息前面，技能不会丢。
-      const userText = systemDelivered || !systemPrompt ? prompt : `${systemPrompt}\n\n${prompt}`
+      const userText = systemDelivered || !systemText ? prompt : `${systemText}\n\n${prompt}`
       handle.agent.followup(userMessage(userText))
       await Promise.race([
         handle.agent.whenIdle(),

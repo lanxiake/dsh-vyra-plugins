@@ -830,10 +830,16 @@ async def _serve() -> None:
         return ordered[-limit:]
 
     async def _send(ws: Any, args: dict[str, Any]) -> dict[str, Any]:
+        from goofish_cli.core.ws import send_image
+
         cid = str(args.get("cid") or "")
         toid = str(args.get("toid") or "")
         item_id = str(args.get("itemId") or "")
         text = str(args.get("text") or "")
+        kind = str(args.get("kind") or "text")
+        url = str(args.get("url") or "")
+        width = int(args.get("width") or 0)
+        height = int(args.get("height") or 0)
         if not toid:
             raise GoofishError("缺少 toid")
         if item_id:
@@ -850,7 +856,15 @@ async def _serve() -> None:
             cid = created
         elif cid in ("", "0"):
             raise GoofishError("未知会话 cid；新会话请传 itemId 先创建单聊")
-        mid = await send_text(ws, myid=session.unb, cid=cid, toid=toid, text=text)
+        if kind == "image":
+            if not url:
+                raise GoofishError("发送图片需要 url")
+            mid = await send_image(
+                ws, myid=session.unb, cid=cid, toid=toid, url=url,
+                width=width or 600, height=height or 600,
+            )
+        else:
+            mid = await send_text(ws, myid=session.unb, cid=cid, toid=toid, text=text)
         fut = loop.create_future()
         pending[mid] = fut
         try:

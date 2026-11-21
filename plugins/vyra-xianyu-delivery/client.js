@@ -1056,8 +1056,129 @@ window.__ModuleLoader__.load({
             h('button', { style: S.btn, onClick: onClose }, '关闭'))))
     }
 
+    // 开始使用：把「能不能用」拆成几件能点的事，不懂技术也能照着做。
+    function StartTab(props) {
+      const { steps, shopItems = [], onLogin, onGo, onQuickSetup, busy, notice } = props
+      const [itemId, setItemId] = useState('')
+      const [content, setContent] = useState('')
+      const [mode, setMode] = useState('reuse')
+      const [local, setLocal] = useState('')
+
+      const s = steps || {}
+      const rows = [
+        {
+          key: 'login', done: Boolean(s.loggedIn),
+          title: '登录闲鱼账号',
+          hint: s.loggedIn ? `已登录 ${s.account || ''}` : '用小号扫码，插件要靠它收发消息',
+          action: s.loggedIn ? null : { label: '扫码登录', onClick: onLogin },
+        },
+        {
+          key: 'service', done: Number(s.serviceCount) > 0,
+          title: '有一个客服配置',
+          hint: '决定 Agent 用什么提示词、哪些技能和工具',
+          action: { label: '去客服页', onClick: () => onGo('services') },
+        },
+        {
+          key: 'bind', done: Number(s.boundCount) > 0,
+          title: '商品绑定到客服',
+          hint: '买家问这个商品时走对应客服',
+          action: { label: '去商品页', onClick: () => onGo('items') },
+        },
+        {
+          key: 'card', done: Number(s.cardCount) > 0,
+          title: '配置发货内容',
+          hint: '网盘链接或卡密，拍下自动发',
+          action: { label: '去卡券页', onClick: () => onGo('cards') },
+        },
+        {
+          key: 'im', done: Boolean(s.imReady),
+          title: '消息通道已连接',
+          hint: Boolean(s.imReady) ? `自动回复${s.watchOn ? '已开启' : '只在轮询'} · AI 客服${s.aiOn ? '可用' : '不可用'}` : '正在连接，稍等几秒',
+          action: null,
+        },
+      ]
+      const doneCount = rows.filter((r) => r.done).length
+      const panel = { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', padding: '16px', background: 'rgba(127,127,127,.03)' }
+
+      const submit = async () => {
+        if (!itemId) { setLocal('先选一个商品'); return }
+        if (mode !== 'generate' && !content.trim()) { setLocal('把网盘链接粘进来'); return }
+        setLocal('')
+        await onQuickSetup({ itemId, content: content.trim(), mode })
+      }
+
+      return h('div', { style: { display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' } },
+        h('div', { style: { flex: '1 1 360px', minWidth: '320px' } },
+          h('div', { style: { ...panel, marginBottom: '12px' } },
+            h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' } },
+              h('div', { style: { fontWeight: 600 } }, '准备情况'),
+              h('div', { style: { ...S.muted } }, `${doneCount} / ${rows.length}`)),
+            rows.map((r) => h('div', {
+              key: r.key,
+              style: { display: 'flex', gap: '10px', alignItems: 'center', padding: '8px 0', borderTop: '1px solid rgba(127,127,127,.1)' },
+            },
+              h('span', {
+                style: {
+                  width: '18px', height: '18px', borderRadius: '50%', flex: 'none', fontSize: '11px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: r.done ? '#0f9d6e' : 'rgba(127,127,127,.18)',
+                  color: r.done ? '#fff' : 'inherit',
+                },
+              }, r.done ? '✓' : ''),
+              h('div', { style: { flex: 1, minWidth: 0 } },
+                h('div', { style: { fontSize: '13px', fontWeight: r.done ? 400 : 600 } }, r.title),
+                h('div', { style: { fontSize: '12px', opacity: 0.6 } }, r.hint)),
+              r.action ? h('button', { style: { ...S.btn, padding: '3px 10px', fontSize: '12px', flex: 'none' }, onClick: r.action.onClick }, r.action.label) : null))),
+
+          notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null),
+
+        h('div', { style: { flex: '1 1 380px', minWidth: '320px' } },
+          h('div', { style: panel },
+            h('div', { style: { fontWeight: 600, marginBottom: '4px' } }, '一键配置一个商品'),
+            h('div', { style: { fontSize: '12px', opacity: 0.6, marginBottom: '12px' } },
+              '选商品、粘链接，剩下的（客服、绑定、卡券）自动完成。'),
+            h('label', { style: S.label }, '商品'),
+            h('select', {
+              style: { ...S.input, marginBottom: '10px' },
+              value: itemId,
+              onChange: (e) => setItemId(e.target.value),
+            },
+              h('option', { value: '' }, shopItems.length ? '选择商品…' : '暂无在售商品'),
+              shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`))),
+            h('label', { style: S.label }, '发货方式'),
+            h('div', { style: { display: 'flex', gap: '6px', marginBottom: '10px' } },
+              [['reuse', '复用链接'], ['pool', '多条库存'], ['generate', '每单生成']].map(([value, label]) => h('button', {
+                key: value,
+                onClick: () => setMode(value),
+                style: {
+                  ...S.btn, padding: '3px 10px', fontSize: '12px',
+                  color: mode === value ? '#0f9d6e' : undefined,
+                  borderColor: mode === value ? '#0f9d6e' : undefined,
+                },
+              }, label))),
+            mode === 'generate'
+              ? h('div', { style: { fontSize: '12px', opacity: 0.6, marginBottom: '10px' } }, '每单调用夸克网盘技能生成新链接，不用填内容。')
+              : h('div', null,
+                h('label', { style: S.label }, mode === 'pool' ? '库存内容（每条之间用 --- 分隔）' : '网盘链接'),
+                h('textarea', {
+                  style: { ...S.area, minHeight: '90px' },
+                  value: content,
+                  placeholder: '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd',
+                  onChange: (e) => setContent(e.target.value),
+                })),
+            local ? h('div', { style: { color: '#dc2626', fontSize: '12px', margin: '8px 0' } }, local) : null,
+            h('button', {
+              style: { ...S.btn, marginTop: '12px', background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600, width: '100%', padding: '8px' },
+              onClick: submit,
+              disabled: !!busy,
+            }, busy === 'quick' ? '配置中…' : '一键配置')),
+          h('div', { style: { fontSize: '12px', opacity: 0.55, marginTop: '10px', lineHeight: 1.7 } },
+            '配置完成后，买家拍下会自动发货，咨询由客服 Agent 回复。卡券和客服都可以在各自页面继续微调。')))
+    }
+
     function XianyuDelivery() {
-      const [tab, setTab] = useState('orders')
+      const [tab, setTab] = useState('start')
+      const autoJumped = useRef(false)
       const [status, setStatus] = useState(null)
       const [orders, setOrders] = useState([])
       const [deliveries, setDeliveries] = useState([])
@@ -1093,12 +1214,13 @@ window.__ModuleLoader__.load({
       const [draft, setDraft] = useState(EMPTY_CARD)
       const [loginOpen, setLoginOpen] = useState(false)
       const [login, setLogin] = useState({ state: 'idle' })
+      const [steps, setSteps] = useState(null)
 
       const refresh = useCallback(async () => {
         try {
           // 每项单独容错：auth 拉起 worker 慢或失败时，不能把订单和发货记录一起清空。
           const safe = (p) => p.catch((err) => ({ __error: String(err.message || err) }))
-          const [st, od, dl, cd, il, au, se, ac, sv, ev] = await Promise.all([
+          const [st, od, dl, cd, il, au, se, ac, sv, ev, ck] = await Promise.all([
             safe(rpc({ op: 'status' })),
             safe(rpc({ op: 'orders', limit: 50 })),
             safe(rpc({ op: 'deliveries', limit: 100 })),
@@ -1109,6 +1231,7 @@ window.__ModuleLoader__.load({
             safe(rpc({ op: 'accounts' })),
             safe(rpc({ op: 'services' })),
             safe(rpc({ op: 'events' })),
+            safe(rpc({ op: 'checklist' })),
           ])
           if (st && !st.__error) setStatus(st)
           if (od && !od.__error) setOrders(od)
@@ -1120,6 +1243,14 @@ window.__ModuleLoader__.load({
           if (ac && !ac.__error && Array.isArray(ac)) setAccounts(ac)
           if (sv && !sv.__error && Array.isArray(sv)) setServices(sv)
           if (ev && !ev.__error && Array.isArray(ev)) setEvents(ev)
+          if (ck && !ck.__error) {
+            setSteps(ck)
+            // 配置齐全的人自动进聊天页，不用每次落在引导页。
+            if (!autoJumped.current && ck.loggedIn && ck.serviceCount > 0 && ck.cardCount > 0) {
+              autoJumped.current = true
+              setTab('chat')
+            }
+          }
           setError('')
         } catch (err) {
           setError(String(err.message || err))
@@ -1131,6 +1262,20 @@ window.__ModuleLoader__.load({
         const timer = setInterval(refresh, 5000)
         return () => clearInterval(timer)
       }, [refresh])
+
+      async function quickSetup({ itemId, content, mode }) {
+        setBusy('quick')
+        setNotice('')
+        try {
+          const result = await rpc({ op: 'quickSetup', itemId, content, mode }, 120000)
+          setNotice(`已配置：客服 #${result.serviceId} · 卡券 #${result.cardId}`)
+          await refresh()
+        } catch (err) {
+          setError(String(err.message || err))
+        } finally {
+          setBusy('')
+        }
+      }
 
       async function runTick() {
         setBusy('tick')
@@ -1631,9 +1776,15 @@ window.__ModuleLoader__.load({
         error ? h('div', { style: S.err }, error) : null,
         notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null,
         h('div', { style: S.tabs },
-          ['chat', 'orders', 'cards', 'items', 'services', 'deliveries'].map((k) =>
+          ['start', 'chat', 'orders', 'cards', 'items', 'services', 'deliveries'].map((k) =>
             h('div', { key: k, style: S.tab(tab === k), onClick: () => setTab(k) },
-              { chat: '聊天', orders: '订单', cards: '卡券', items: '商品', services: '客服', deliveries: '发货记录' }[k]))),
+              { start: '开始使用', chat: '聊天', orders: '订单', cards: '卡券', items: '商品', services: '客服', deliveries: '发货记录' }[k]))),
+        tab === 'start' ? h(StartTab, {
+          steps, shopItems, busy, notice,
+          onLogin: openLogin,
+          onGo: setTab,
+          onQuickSetup: quickSetup,
+        }) : null,
         tab === 'chat' ? h(ChatTab, {
           chats, activeChat, messages: chatMessages, replyText, setReplyText,
           onPick: loadChat, onSend: sendReply, onRefresh: loadChats, busy,

@@ -145,6 +145,38 @@ export function createIm({
     chats: (limit = 60) => request('chats', { limit }, 30000),
     history: (cid, limit = 30) => request('history', { cid, limit }, 30000),
     send: ({ cid = '', toid, itemId = '', text }) => request('send', { cid, toid, itemId, text }, 30000),
+    sendImage: ({ cid = '', toid, itemId = '', url, width = 600, height = 600 }) =>
+      request('send', { cid, toid, itemId, kind: 'image', url, width, height }, 30000),
+    /**
+     * 发一条「富文本」消息：正文里 `![alt](url)` 会被拆成图片消息发送。
+     * 买家侧看到的是多条：文本 → 图片 → 文本。
+     */
+    async sendRich(message) {
+      const { text = '', ...rest } = message
+      const pattern = /!\[[^\]]*\]\(\s*(https?:\/\/[^)\s]+)\s*\)/g
+      const parts = []
+      let cursor = 0
+      let match
+      while ((match = pattern.exec(text)) !== null) {
+        const before = text.slice(cursor, match.index).trim()
+        if (before) parts.push({ kind: 'text', text: before })
+        parts.push({ kind: 'image', url: match[1] })
+        cursor = match.index + match[0].length
+      }
+      const tail = text.slice(cursor).trim()
+      if (tail) parts.push({ kind: 'text', text: tail })
+      if (parts.length === 0) parts.push({ kind: 'text', text: String(text) })
+
+      const sent = []
+      for (const part of parts) {
+        if (part.kind === 'image') {
+          sent.push(await this.sendImage({ ...rest, url: part.url }))
+        } else {
+          sent.push(await this.send({ ...rest, text: part.text }))
+        }
+      }
+      return { parts: parts.length, results: sent }
+    },
     // 切账号等场景：关掉当前进程再重新拉起（dispose 之后不能直接 ensure）。
     async restart() {
       this.dispose()

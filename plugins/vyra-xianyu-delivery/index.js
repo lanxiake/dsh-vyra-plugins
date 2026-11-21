@@ -476,7 +476,7 @@ export function apply(ctx, config = {}) {
     }
 
     try {
-      await im.send({ toid: String(meta.send_user_id), itemId, text: answer })
+      await im.sendRich({ toid: String(meta.send_user_id), itemId, text: answer })
       guard.recordSuccess?.()
       log(`ai replied to ${meta.send_user_name || meta.send_user_id}`)
       recordEvent({
@@ -945,6 +945,64 @@ export function apply(ctx, config = {}) {
       }
       case 'events':
         return eventLog
+      case 'checklist': {
+        const services = store.listServices().filter((s) => s.enabled === 1)
+        const items = store.listItems(account())
+        const bound = items.filter((it) => Number(it.service_id) > 0)
+        const cards = store.listCards(account()).filter((c) => c.enabled === 1)
+        return {
+          loggedIn: Boolean(authCache.valid),
+          account: String(authCache.tracknick || authCache.unb || ''),
+          serviceCount: services.length,
+          boundCount: bound.length,
+          cardCount: cards.length,
+          imReady: Boolean(im.ready),
+          watchOn: Boolean(watchEnabled),
+          aiOn: ai.enabled,
+        }
+      }
+      case 'quickSetup': {
+        // 一键配置：建客服（没有就建）→ 绑定商品 → 建/更新卡券。
+        const itemId = String(body.itemId || '').trim()
+        if (!itemId) throw new Error('请先选择商品')
+        const shop = await cli.items(100).catch(() => null)
+        const title = String(
+          body.title || (shop?.items || []).find((it) => String(it.item_id) === itemId)?.title || '',
+        )
+
+        let service = store.listServices().find((s) => s.enabled === 1)
+        let serviceId = service?.id
+        if (!serviceId) {
+          serviceId = store.saveService({
+            name: String(body.serviceName || '闲鱼客服'),
+            systemPrompt: String(body.systemPrompt || ''),
+            skills: String(body.skills || 'xianyu-customer-service'),
+            model: '',
+            autoDeliver: 1,
+            deliverTemplate: '',
+            tools: '',
+            enabled: 1,
+          })
+        }
+        store.setItemService(itemId, serviceId, account(), title)
+
+        const mode = ['pool', 'reuse', 'generate'].includes(String(body.mode)) ? String(body.mode) : 'reuse'
+        const content = String(body.content || '').trim()
+        if (mode !== 'generate' && !content) throw new Error('请粘贴网盘链接或卡券内容')
+
+        const existing = store.listCards(account()).find((c) => String(c.item_id) === itemId && c.enabled === 1)
+        let cardId
+        if (existing) {
+          store.updateCard(existing.id, { content, mode })
+          cardId = existing.id
+        } else {
+          cardId = store.addCard({
+            accountId: account(), itemId, specName: '', specValue: '',
+            name: title || itemId, type: 'data', content, template: '', mode,
+          })
+        }
+        return { serviceId, cardId, itemId, title, mode }
+      }
       case 'settings':
         return {
           agentPreset: store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || '') || 'builtin',
