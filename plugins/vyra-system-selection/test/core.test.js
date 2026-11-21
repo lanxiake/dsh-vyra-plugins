@@ -132,7 +132,13 @@ test('reduceMouse fires on a drag and on a multi-click, but not on a plain click
   // A second quick release at the same spot is a double-click selection.
   const first = reduceMouse(down.state, { down: false, x: 100, y: 100, t: 10 })
   const again = reduceMouse(first.state, { down: true, x: 101, y: 100, t: 100 })
-  assert.equal(reduceMouse(again.state, { down: false, x: 101, y: 100, t: 150 }).fire, true)
+  const double = reduceMouse(again.state, { down: false, x: 101, y: 100, t: 150 })
+  assert.equal(double.fire, true, 'a multi-click still counts for right-click priming')
+  assert.equal(double.dragged, false, 'a multi-click must not auto-open: double-clicking a word is not a request')
+
+  // Only an actual drag carries `dragged`, which is what the auto-open path listens for.
+  assert.equal(reduceMouse(down.state, { down: false, x: 130, y: 100, t: 10 }).dragged, true, 'a drag is a drag')
+  assert.equal(reduceMouse(down.state, { down: false, x: 100, y: 100, t: 10 }).dragged, false, 'a plain click is not')
 })
 
 test('wrapLines breaks at the width and keeps character offsets', () => {

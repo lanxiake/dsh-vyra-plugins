@@ -323,6 +323,7 @@ const VK_RWIN = 0x5C
 const VK_C = 0x43
 const VK_INSERT = 0x2D
 const VK_LBUTTON = 0x01
+const VK_RBUTTON = 0x02
 const INPUT_KEYBOARD = 1
 const KEYEVENTF_KEYUP = 0x0002
 
@@ -1726,15 +1727,16 @@ export function createOverlay(handlers = {}) {
       // ponytail: 新增 onDragRelease 回调，让上层决定是否需要自动弹窗 —
       // 移除轮询后，这是唯一能检测到"拖动选中文本"的地方。
       if (wParam === WM_LBUTTONUP) {
-        const { state: next, fire } = reduceMouse(pressState, { down: false, x: pt.x, y: pt.y, t: now })
+        const { state: next, fire, dragged } = reduceMouse(pressState, { down: false, x: pt.x, y: pt.y, t: now })
         pressState = next
         // Never prime for a gesture that happened on our own card: dragging the card by its
         // header is a drag like any other, and a synthesized Ctrl+C would go to whatever
         // application is underneath.
         if (fire && !containsPoint(pt) && !windowUnderPoint(pt)) {
           primeSelection()
-          // 通知上层：一次拖动刚刚结束，可能需要自动弹窗。
-          if (handlers.onDragRelease) {
+          // 通知上层：一次拖动刚刚结束，可能需要自动弹窗。只有真正的拖动才自动弹窗——
+          // 双击已经选中一个词，若也触发，几乎每次误双击都会弹面板。
+          if (dragged && handlers.onDragRelease) {
             try {
               handlers.onDragRelease(pt)
             } catch {
@@ -2008,6 +2010,13 @@ export function createOverlay(handlers = {}) {
     },
     leftButtonDown() {
       return (F.GetAsyncKeyState(VK_LBUTTON) & 0x8000) !== 0
+    },
+    /**
+     * True while the right button is down. The popup needs this for the same outside-click
+     * dismissal as the left button — the window itself never sees that click.
+     */
+    rightButtonDown() {
+      return (F.GetAsyncKeyState(VK_RBUTTON) & 0x8000) !== 0
     },
     /** True while Ctrl or Alt is held, so the drag trigger can require an explicit modifier. */
     modifierHeld() {

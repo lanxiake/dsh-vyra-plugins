@@ -129,6 +129,8 @@ export function apply(ctx) {
   // carries its own state machine. With the hook installed this stays null and unused.
   let pollTimer = null
   let mouse = null
+  /** Shortest auto-open selection. A stray drag over one character is a slip, not a question. */
+  const MIN_SELECTION_CHARS = 2
   const stats = { rightClicks: 0, gestures: 0, captured: 0, empty: 0, inApp: 0, lastCapture: '' }
 
   // --- triggers ------------------------------------------------------------------------------
@@ -224,25 +226,35 @@ export function apply(ctx) {
   }
 
   /**
-   * Poll fallback for the drag trigger, used only when the right-click hook is not installed.
+   * Poll fallback used only when the right-click hook is not installed.
    *
-   * The hook sees every button release already, so running both would duplicate the detection.
-   * Without a hook nothing else watches the left button, and polling two FFI calls at 30 ms does
-   * not sit in the system's input path — unlike the hook, it cannot make the desktop feel slow.
+   * Two jobs: close the popup when the user clicks anywhere else (the window never takes focus,
+   * so it cannot see that click itself), and remember a drag so auto-open can fire on release.
+   * The hook sees both already, which is why this never runs beside it. Polling is not in the
+   * system's input path — unlike the hook, it cannot make the desktop feel slow.
    */
   function tick() {
-    if (!enabled || !settings.openOnSelect) return
+    if (!enabled) return
     const pt = overlay.cursor()
-    if (overlay.visible && overlay.containsPoint(pt)) {
-      mouse = null
-      return
+    // A click outside a visible popup closes it: the user clicked it open by accident far more
+    // often than not, and a menu that cannot be dismissed is worse than one that never opened.
+    if (overlay.visible) {
+      const pressed = overlay.leftButtonDown() || overlay.rightButtonDown?.() === true
+      if (pressed && !overlay.containsPoint(pt)) {
+        dismiss()
+        mouse = null
+        return
+      }
+      if (overlay.containsPoint(pt)) { mouse = null; return }
     }
+    if (!settings.openOnSelect) return
     const down = overlay.leftButtonDown()
-    const { state, fire } = reduceMouse(mouse, { down, x: pt.x, y: pt.y, t: Date.now() })
+    const { state, dragged } = reduceMouse(mouse, { down, x: pt.x, y: pt.y, t: Date.now() })
     mouse = state
-    // The unmodified drag is the auto-open gesture; the modifier check keeps a scroll-like swipe
-    // from opening the menu. Over the DSH window the page reports its own selection.
-    if (fire && !overlay.modifierHeld?.() && !overlay.windowUnderPoint?.(pt)) {
+    // Only a real drag opens the menu. A double-click already selects a word, and firing on it
+    // made every accidental double-click pop the panel. The modifier check keeps a scroll-like
+    // swipe out, and over the DSH window the page reports its own selection.
+    if (dragged && !overlay.modifierHeld?.() && !overlay.windowUnderPoint?.(pt)) {
       stats.gestures++
       scheduleCapture(pt)
     }
@@ -274,7 +286,9 @@ export function apply(ctx) {
       // menu on text the user has since replaced would be worse than a second capture.
       const primed = overlay.freshSelection?.() || ''
       const text = primed || captureSelection()
-      if (!text || selectionProblem(text) || alreadyDismissed(text)) { hideAll(); return }
+      // A one-character selection is what a slip of the hand produces; opening a panel on it is
+      // exactly the misfire users report. Right-click still opens the menu for anything.
+      if (!text || text.trim().length < MIN_SELECTION_CHARS || selectionProblem(text) || alreadyDismissed(text)) { hideAll(); return }
       stats.captured++
       stats.lastCapture = text.slice(0, 120)
       generation++
@@ -532,9 +546,10 @@ export function apply(ctx) {
     const hooked = settings.interceptRightClick === true
     if (hooked) overlay.installHook()
     else overlay.uninstallHook()
-    // Auto-open needs one of the two watchers: the hook when it is installed, a light poll when
-    // it is not. The poll is not in the input path, so it costs no input latency.
-    if (!hooked && settings.openOnSelect) {
+    // Without the hook, the poll is the only watcher: it closes the popup on an outside click
+    // and, when enabled, opens it on a drag. It is not in the input path, so it costs no input
+    // latency. With the hook installed the hook does both, and this stays off.
+    if (!hooked) {
       if (!pollTimer) {
         pollTimer = setInterval(tick, POLL_MS)
         if (pollTimer.unref) pollTimer.unref()

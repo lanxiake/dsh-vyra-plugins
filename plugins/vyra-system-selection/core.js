@@ -153,7 +153,7 @@ export function distance(ax, ay, bx, by) {
 export function reduceMouse(state, sample) {
   const prev = state ?? { down: false, x0: 0, y0: 0, t0: 0, clicks: 0, lastUpT: -Infinity, lastUpX: 0, lastUpY: 0 }
   if (sample.down && !prev.down) {
-    return { state: { ...prev, down: true, x0: sample.x, y0: sample.y, t0: sample.t }, fire: false }
+    return { state: { ...prev, down: true, x0: sample.x, y0: sample.y, t0: sample.t }, fire: false, dragged: false }
   }
   if (!sample.down && prev.down) {
     const moved = distance(sample.x, sample.y, prev.x0, prev.y0) > DRAG_PX
@@ -172,9 +172,13 @@ export function reduceMouse(state, sample) {
       // A press that neither travelled nor repeated is a plain click: the user was placing a
       // caret, so there is nothing to act on.
       fire: moved || multi,
+      // `dragged` is the strict subset: only an actual drag. Auto-open uses this one, because a
+      // double-click already selects a word — firing the menu on it made every accidental
+      // double-click pop the panel. `fire` still covers multi-click for right-click priming.
+      dragged: moved,
     }
   }
-  return { state: prev, fire: false }
+  return { state: prev, fire: false, dragged: false }
 }
 
 /**
