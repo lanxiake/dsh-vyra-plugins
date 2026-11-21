@@ -1548,6 +1548,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.3: trade cards render, handled orders stop swallowing later
+        // messages, session nicknames fall back to squadName_<peer>.
+        '0.7.3': {
+          publishTimestamp: 1795252200,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '31dcdd5b5bfa4f6d0558e973ae91f576b33adae1',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
