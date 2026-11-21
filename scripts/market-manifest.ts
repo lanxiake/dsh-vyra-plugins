@@ -1525,6 +1525,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.2: redesigned cards panel (list + editor, per-mode fields and
+        // samples, live preview); shipped orders no longer show stale errors.
+        '0.7.2': {
+          publishTimestamp: 1795249800,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '33b9cb3a3c90f96068ea2f097644fc2e7d178811',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
