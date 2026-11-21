@@ -216,6 +216,7 @@ ai:
 | `no-reply:agents-unavailable` | 创建 Agent 会话失败 |
 | `no-reply:empty-reply` | Agent 没调用回复工具 |
 | `no-reply:<其它错误>` | 具体的接口/模型错误 |
+| `send-failed:<错误>` | Agent 生成成功但发送失败（闲鱼接口报错/限流） |
 | `hint:new_msg` | 收到「有新消息」通知，但历史里最新一条不是买家文本 |
 | `hint:card` | 收到卡片/系统提示，历史里既没有订单号也没有买家提问 |
 

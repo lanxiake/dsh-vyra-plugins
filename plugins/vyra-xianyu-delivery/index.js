@@ -371,22 +371,36 @@ export function apply(ctx, config = {}) {
       accountId: account(), buyerNick: String(meta.send_user_name || ''),
     })
     const answer = result?.text || ''
-    recordEvent({
-      cid, kind: 'text', itemId,
-      from: String(meta.send_user_name || meta.send_user_id || ''),
-      text: question.slice(0, 40),
-      action: answer ? 'replied' : `no-reply:${result?.reason || 'unknown'}`,
-    })
-    if (!answer) return false
+    if (!answer) {
+      recordEvent({
+        cid, kind: 'text', itemId,
+        from: String(meta.send_user_name || meta.send_user_id || ''),
+        text: question.slice(0, 40),
+        action: `no-reply:${result?.reason || 'unknown'}`,
+      })
+      return false
+    }
 
     try {
       await cli.send({ toid: String(meta.send_user_id), itemId, text: answer })
       guard.recordSuccess?.()
       log(`ai replied to ${meta.send_user_name || meta.send_user_id}`)
+      recordEvent({
+        cid, kind: 'text', itemId,
+        from: String(meta.send_user_name || meta.send_user_id || ''),
+        text: question.slice(0, 40),
+        action: 'replied',
+      })
       return true
     } catch (err) {
       guard.recordFailure?.()
       log(`ai reply send failed: ${err?.message || err}`)
+      recordEvent({
+        cid, kind: 'text', itemId,
+        from: String(meta.send_user_name || meta.send_user_id || ''),
+        text: question.slice(0, 40),
+        action: `send-failed:${err?.message || err}`,
+      })
       return false
     }
   }
