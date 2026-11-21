@@ -229,8 +229,11 @@ export function createStore(file) {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ),
     recentDeliveries: db.prepare(
-      `SELECT * FROM deliveries WHERE (account_id = ? OR account_id = '')
-       ORDER BY id DESC LIMIT ?`,
+      `SELECT d.*, o.buyer_id, o.item_id as delivery_item_id, o.quantity, o.amount, o.created_at as order_time
+       FROM deliveries d
+       LEFT JOIN orders o ON d.order_no = o.order_no AND (o.account_id = d.account_id OR o.account_id = '')
+       WHERE (d.account_id = ? OR d.account_id = '')
+       ORDER BY d.id DESC LIMIT ?`,
     ),
     matchCard: db.prepare(
       `SELECT * FROM cards WHERE enabled = 1 AND item_id = ?

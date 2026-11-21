@@ -366,6 +366,18 @@ export function apply(ctx, config = {}) {
     }
     if (!itemId) itemId = findItemId(history)
 
+    // 闲鱼 IM 要求首次发消息必须带 itemId，否则拒绝建立会话。
+    // 没商品上下文的会话（买家从聊天列表而不是商品页发起）无法回复。
+    if (!itemId) {
+      recordEvent({
+        cid, kind: 'text', itemId: '',
+        from: String(meta.send_user_name || meta.send_user_id || ''),
+        text: question.slice(0, 40),
+        action: 'no-reply:no-item-context',
+      })
+      return false
+    }
+
     const result = await ai.reply({
       cid, itemId, text: question, history, selfUserId,
       accountId: account(), buyerNick: String(meta.send_user_name || ''),

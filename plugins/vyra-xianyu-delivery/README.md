@@ -212,6 +212,7 @@ ai:
 | `replied` | 已生成并发送 |
 | `no-reply:agent-unavailable` | DSH agents 服务不可用 |
 | `no-reply:no-service` | 没有启用的客服 |
+| `no-reply:no-item-context` | 会话没有商品上下文（买家需从商品页发起聊天） |
 | `no-reply:cooldown` / `max-replies` | 触发冷却或条数上限 |
 | `no-reply:agents-unavailable` | 创建 Agent 会话失败 |
 | `no-reply:empty-reply` | Agent 没调用回复工具 |
@@ -221,6 +222,8 @@ ai:
 | `hint:card` | 收到卡片/系统提示，历史里既没有订单号也没有买家提问 |
 
 闲鱼的推送经常只给一条「有新消息」通知（`new_msg`，不带正文）。插件收到这种通知会拉一次会话历史：历史里有新订单号就发货，最新一条是买家文本就交给客服，所以不依赖推送正文。
+
+**自动回复仅支持从商品页发起的会话**：买家需点商品页的「联系卖家」才能触发自动回复。从聊天列表直接点进来的会话没有商品上下文，闲鱼 IM 协议限制无法建立新会话（诊断表会显示 `no-reply:no-item-context`）。虚拟商品场景下买家咨询都是从商品页发起的，这个限制不影响正常使用。
 
 ## Agent 工具
 
