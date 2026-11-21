@@ -80,7 +80,27 @@ window.__ModuleLoader__.load({
       return json.data
     }
 
-    const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '' }
+    const EMPTY_CARD = { itemId: '', specName: '', specValue: '', content: '', mode: 'reuse' }
+
+    // 订单失败原因的中文说明（数据库里存的是机器可读的 key）。
+    const FAIL_TEXT = {
+      no_card: '没有可用卡券',
+      card_exhausted: '卡密已用完',
+      ambiguous_card: '匹配到多张卡券',
+      service_auto_deliver_off: '客服配置里关闭了自动发货',
+      zero_amount: '0 元订单',
+      refund: '买家退款中',
+      generate_unavailable: '未启用生成型卡券',
+      generate_empty: '网盘技能没有返回链接',
+    }
+    function failText(reason) {
+      const key = String(reason || '')
+      if (FAIL_TEXT[key]) return FAIL_TEXT[key]
+      if (key.startsWith('sensitive:')) return `含敏感词：${key.slice(10)}`
+      if (key.startsWith('generate_failed:')) return `生成失败：${key.slice(16)}`
+      if (key.startsWith('send:')) return `发送失败：${key.slice(5)}`
+      return key
+    }
 
     const DEFAULT_SERVICE_PROMPT = [
       '你是闲鱼店铺「weflow 聊天记录导出」的客服。语气自然、简短，像真人卖家。',
@@ -152,7 +172,9 @@ window.__ModuleLoader__.load({
                 h('span', { title: o.buyer_nick || o.buyer_id || '' }, o.buyer_nick || o.buyer_id || '-'),
                 h('span', null, o.amount ? `¥${o.amount}` : '-'),
                 h('span', null, String(o.quantity || 1)),
-                h('span', null, renderState(o)),
+                h('span', { title: o.fail_reason || '' },
+                  renderState(o),
+                  o.fail_reason ? h('div', { style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } }, failText(o.fail_reason)) : null),
                 h('span', { style: { fontSize: '12px', opacity: 0.7 } }, when(o))
               )
             )
@@ -191,13 +213,34 @@ window.__ModuleLoader__.load({
               h('label', { style: S.label }, '规格值（可选）'),
               h('input', { style: S.input, value: draft.specValue, onChange: (e) => setDraft({ ...draft, specValue: e.target.value }) }))
           ),
-          h('label', { style: S.label }, '卡券内容（发买家的话；多条用单独一行 --- 分隔）'),
-          h('textarea', {
-            style: S.area,
-            value: draft.content,
-            placeholder: '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd\n有效期 7 天，过期联系我补。',
-            onChange: (e) => setDraft({ ...draft, content: e.target.value }),
-          }),
+          h('label', { style: S.label }, '卡券模式'),
+          h('div', { style: { display: 'flex', gap: '8px', marginBottom: '10px' } },
+            [
+              ['pool', '池型：多条库存，每条用一次'],
+              ['reuse', '复用：一条链接反复发'],
+              ['generate', '每单生成：调用网盘技能现做'],
+            ].map(([value, label]) => h('button', {
+              key: value,
+              style: {
+                ...S.btn,
+                padding: '5px 10px',
+                fontSize: '12px',
+                borderColor: draft.mode === value ? '#0f9d6e' : undefined,
+                color: draft.mode === value ? '#0f9d6e' : undefined,
+                fontWeight: draft.mode === value ? 600 : 400,
+              },
+              onClick: () => setDraft({ ...draft, mode: value }),
+            }, label))),
+          draft.mode === 'generate'
+            ? h('div', { style: { ...S.muted, marginBottom: '8px' } }, '每单会调用夸克网盘技能生成一条新链接（7 天 / 单次），内容不用填。')
+            : h('div', null,
+              h('label', { style: S.label }, draft.mode === 'reuse' ? '卡券内容（一条分享链接，反复使用）' : '卡券内容（发买家的话；多条用单独一行 --- 分隔）'),
+              h('textarea', {
+                style: S.area,
+                value: draft.content,
+                placeholder: '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd\n有效期 7 天，过期联系我补。',
+                onChange: (e) => setDraft({ ...draft, content: e.target.value }),
+              })),
           h('div', { style: { ...S.muted, marginTop: '6px' } }, '一个商品只绑一张启用的卡券；不配卡券，自动发货会跳过。'),
           h('div', { style: { marginTop: '10px', display: 'flex', gap: '8px' } },
             h('button', { style: S.btn, onClick: saveCard, disabled: !!busy }, busy === 'add' ? '保存中…' : (editingId ? '保存修改' : '添加')),
@@ -207,13 +250,18 @@ window.__ModuleLoader__.load({
           ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有卡券')
           : h('div', null,
             h('div', { style: { ...rowStyle, ...S.th } },
-              h('span', null, '商品'), h('span', null, '规格'), h('span', null, '名称'), h('span', null, '类型'), h('span', null, '状态 / 操作')),
+              h('span', null, '商品'), h('span', null, '规格'), h('span', null, '模式'), h('span', null, '库存'), h('span', null, '状态 / 操作')),
             cards.map((c) =>
               h('div', { key: c.id, style: rowStyle },
                 h('span', { title: c.item_id, style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, titleOf(c.item_id)),
                 h('span', null, c.spec_value || '通用'),
-                h('span', null, c.name),
-                h('span', null, c.type),
+                h('span', { title: c.name }, c.mode === 'reuse' ? '复用' : c.mode === 'generate' ? '每单生成' : '池型'),
+                h('span', { title: `总量 ${c.total ?? 0} / 已用 ${c.used ?? 0}` },
+                  c.mode === 'generate'
+                    ? '按需'
+                    : c.mode === 'reuse'
+                      ? (c.remaining ? '可用' : '内容为空')
+                      : `${c.remaining ?? 0} / ${c.total ?? 0} 剩`),
                 h('span', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
                   h('button', { style: small, onClick: () => onEdit(c) }, '编辑'),
                   h('button', {
@@ -251,7 +299,9 @@ window.__ModuleLoader__.load({
               h('span', { title: d.buyer_id || '' }, d.buyer_id || '-'),
               h('span', { title: d.item_title || d.delivery_item_id || '' }, d.item_title || d.delivery_item_id || '-'),
               h('span', null, d.amount ? `¥${d.amount}` : '-'),
-              h('span', null, h('span', { style: S.tag(d.send_state) }, d.send_state)),
+              h('span', { title: d.error || '' },
+                h('span', { style: S.tag(d.send_state) }, d.send_state),
+                d.error ? h('div', { style: { fontSize: '11px', color: '#dc2626', marginTop: '2px', whiteSpace: 'normal' } }, failText(d.error)) : null),
               h('span', { style: { ...S.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, d.content),
               h('span', { style: { fontSize: '12px', opacity: 0.8 } }, d.created_at)
             )
@@ -1004,24 +1054,27 @@ window.__ModuleLoader__.load({
           specName: card.spec_name || '',
           specValue: card.spec_value || '',
           content: card.content || '',
+          mode: card.mode || 'pool',
         })
         setTab('cards')
       }
 
       async function saveCard() {
-        if (!draft.itemId || !draft.content.trim()) {
-          setNotice('商品和卡券内容必填')
+        const mode = draft.mode || 'reuse'
+        if (!draft.itemId) { setNotice('商品必填'); return }
+        if (mode !== 'generate' && !String(draft.content || '').trim()) {
+          setNotice('卡券内容必填')
           return
         }
         setBusy('add')
         try {
           if (editingCard) {
-            await rpc({ op: 'updateCard', id: editingCard, name: draft.itemId, content: draft.content, specName: draft.specName, specValue: draft.specValue })
+            await rpc({ op: 'updateCard', id: editingCard, name: draft.itemId, content: draft.content, specName: draft.specName, specValue: draft.specValue, mode })
             setEditingCard(null)
             setDraft(EMPTY_CARD)
             setNotice('卡券已更新')
           } else {
-            await rpc({ op: 'addCard', itemId: draft.itemId, specName: draft.specName, specValue: draft.specValue, name: draft.itemId, type: 'data', content: draft.content })
+            await rpc({ op: 'addCard', itemId: draft.itemId, specName: draft.specName, specValue: draft.specValue, name: draft.itemId, type: 'data', content: draft.content, mode })
             setDraft(EMPTY_CARD)
             setNotice('卡券已添加')
           }

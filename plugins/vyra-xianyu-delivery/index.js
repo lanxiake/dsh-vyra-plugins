@@ -8,7 +8,7 @@ import { createStore } from './lib/db.js'
 import { createCli, defaultPrefix } from './lib/cli.js'
 import { createGuard } from './lib/guard.js'
 import { createDispatcher } from './lib/dispatch.js'
-import { createAi } from './lib/ai.js'
+import { createAi, stripFrontmatter } from './lib/ai.js'
 import { createDshAgent } from './lib/agent.js'
 import { createXianyuTools } from './lib/tools.js'
 
@@ -49,9 +49,12 @@ export function apply(ctx, config = {}) {
   const cli = createCli({ command: cfg.cliCommand, prefix: cfg.cliPrefix })
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
   const account = () => String(authCache.unb || selfUserId || '')
+  // 生成型卡券的实现在 dshAgent 之后才能确定，这里先留一个间接调用。
+  let generateLinkImpl = null
   const dispatcher = createDispatcher({
     store, cli, guard, config: cfg, logger: log,
     getAccount: account,
+    generateLink: (args) => generateLinkImpl(args),
   })
   // 把闲鱼能力注册成主 Agent 可调用的工具。
   const xianyuTools = createXianyuTools({ cli, store, dispatcher, getAccount: account })
@@ -62,13 +65,44 @@ export function apply(ctx, config = {}) {
 
   // 服务按需现取：apply 时 agents 可能还没注册。
   const getService = (name) => (typeof ctx.get === 'function' ? ctx.get(name) : undefined)
+  // 闲鱼客服会话统一落在这个目录：DSH 侧栏按工作区分组，于是有了独立分组。
+  const csWorkspace = join(homedir(), '.dsh', '闲鱼客服')
+  mkdir(csWorkspace, { recursive: true }).catch(() => {})
   const dshAgent = createDshAgent({
     getAgents: () => getService('agents'),
     sessionTitle: getService('sessionTitle'),
     config: cfg,
     logger: log,
     getPreset: () => store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
+    workspaceCwd: csWorkspace,
   })
+
+  // 生成型卡券：让 Agent 按网盘技能当场做一条新分享链接。
+  const QUARK_SKILL = join(fileURLToPath(new URL('.', import.meta.url)), 'builtin-skills', 'quarkclouddrive', 'SKILL.md')
+  generateLinkImpl = async ({ orderNo, buyerNick, card }) => {
+    let skill = ''
+    try {
+      skill = stripFrontmatter(await readFile(QUARK_SKILL, 'utf8'))
+    } catch {
+      skill = ''
+    }
+    const prompt = [
+      skill,
+      `买家下单了（订单 ${orderNo}${buyerNick ? `，买家 ${buyerNick}` : ''}）。`,
+      '请按上面的网盘技能生成一条新的分享链接：有效期 7 天、仅一次有效。',
+      '把最终结果整理成两行：链接：<url> 和 提取码：<code>（没有提取码就只输出链接）。',
+      '调用 send_buyer_reply 交出来，不要解释过程。',
+    ].filter(Boolean).join('\n\n')
+    const result = await dshAgent.ask({
+      prompt,
+      sessionKey: 'gen',
+      title: `[网盘] ${orderNo}`,
+      model: null,
+    })
+    const text = String(result?.text || '')
+    if (!text) throw new Error(result?.error || 'generate empty')
+    return text.trim()
+  }
   const ai = createAi({
     config: cfg,
     store,
@@ -733,6 +767,7 @@ export function apply(ctx, config = {}) {
           specName: body.specName,
           specValue: body.specValue,
           enabled: body.enabled,
+          mode: body.mode,
         })
         return { ok: true }
       case 'deleteCard':
@@ -750,6 +785,7 @@ export function apply(ctx, config = {}) {
             content: String(body.content || ''),
             template: String(body.template || ''),
             delaySeconds: Number(body.delaySeconds) || 0,
+            mode: ['pool', 'reuse', 'generate'].includes(String(body.mode)) ? String(body.mode) : 'pool',
           }),
         }
       case 'tick':

@@ -19,7 +19,7 @@ function userMessage(text) {
   }
 }
 
-export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset }) {
+export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset, workspaceCwd }) {
   // Cordis 的服务在插件 apply 时可能还没注册（注入顺序），必须每次现取；
   // 在 apply 时取一次会永久拿到 undefined，AI 客服就一直是关的。
   const liveAgents = () => (typeof getAgents === 'function' ? getAgents() : agents)
@@ -50,44 +50,68 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
       ? { provider: model.provider, model: model.model }
       : null
     let reply = ''
-    const handle = await liveAgents().create({
-      sessionId: `xianyu-${sessionKey || 'chat'}-${randomUUID()}`,
+    // 一个买家一个会话：sessionId 固定为 xianyu-<cid>，第一次创建、之后 resume，
+    // 这样 DSH 会话列表里是「一段连续对话」而不是每次一条。
+    const sessionId = `xianyu-${String(sessionKey || 'chat').replace(/[^0-9a-zA-Z_-]/g, '') || 'chat'}`
+    const setup = (agentCtx) => {
+      agentCtx.tools.register({
+        name: REPLY_TOOL,
+        description: '把最终要发给买家的回复原样交出来。必须调用且只调用一次。',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: '发给买家的完整回复，不要带引号或解释' },
+          },
+          required: ['text'],
+          additionalProperties: false,
+        },
+        output: {
+          schema: {
+            type: 'object',
+            properties: { ok: { type: 'boolean' } },
+            required: ['ok'],
+            additionalProperties: false,
+          },
+          render: () => [{ type: 'text', text: 'ok' }],
+          presentationMeta: () => ({ expandable: false }),
+        },
+        execute: async (args) => {
+          reply = String(args?.text || '').trim()
+          return { ok: true }
+        },
+      })
+    }
+
+    // 会话落在专用工作区，DSH 侧栏会把它归到「闲鱼客服」分组下。
+    const createOptions = {
       meta: {
+        ...(workspaceCwd ? { cwd: workspaceCwd } : {}),
         delegationDepth: 0,
         ...(preset ? { agentPreset: preset } : {}),
       },
       agentOptions: route ?? (provider ? { provider, model } : undefined),
-      setup: (agentCtx) => {
-        agentCtx.tools.register({
-          name: REPLY_TOOL,
-          description: '把最终要发给买家的回复原样交出来。必须调用且只调用一次。',
-          parameters: {
-            type: 'object',
-            properties: {
-              text: { type: 'string', description: '发给买家的完整回复，不要带引号或解释' },
-            },
-            required: ['text'],
-            additionalProperties: false,
-          },
-          output: {
-            schema: {
-              type: 'object',
-              properties: { ok: { type: 'boolean' } },
-              required: ['ok'],
-              additionalProperties: false,
-            },
-            render: () => [{ type: 'text', text: 'ok' }],
-            presentationMeta: () => ({ expandable: false }),
-          },
-          execute: async (args) => {
-            reply = String(args?.text || '').trim()
-            return { ok: true }
-          },
-        })
-      },
-    })
+      setup,
+    }
 
-    // DSH 会话列表没有分组，用标题前缀当分组：[客服名] 商品简称-客户名
+    const agentsNow = liveAgents()
+    let handle
+    try {
+      // 已有该买家的会话就续写，保持一段连续对话。
+      handle = await agentsNow.resume({ resumeSessionId: sessionId, ...createOptions })
+    } catch {
+      try {
+        handle = await agentsNow.create({ sessionId, ...createOptions })
+      } catch (err) {
+        // 上个实例留下的会话可能正被占用：退回到一次性会话，别让买家等着。
+        logger(`create ${sessionId} failed, falling back to a fresh id: ${err?.message || err}`)
+        handle = await agentsNow.create({
+          ...createOptions,
+          sessionId: `${sessionId}-${Date.now()}`,
+        })
+      }
+    }
+
+    // DSH 会话列表没有原生分组，标题前缀标出客服名。
     if (title && sessionTitle?.rename) {
       try {
         sessionTitle.rename(handle.agent.session, title)

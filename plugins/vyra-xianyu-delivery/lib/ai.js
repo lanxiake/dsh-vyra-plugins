@@ -12,7 +12,7 @@ import { homedir } from 'node:os'
 
 const REPLY_TOOL = 'send_buyer_reply'
 
-function stripFrontmatter(md) {
+export function stripFrontmatter(md) {
   const text = String(md || '')
   if (!text.startsWith('---')) return text.trim()
   const end = text.indexOf('\n---', 3)

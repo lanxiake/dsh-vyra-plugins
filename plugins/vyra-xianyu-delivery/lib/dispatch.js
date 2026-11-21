@@ -27,7 +27,9 @@ function splitMessages(text) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export function createDispatcher({ store, cli, guard, config = {}, logger = () => {}, getAccount = () => '' }) {
+export function createDispatcher({
+  store, cli, guard, config = {}, logger = () => {}, getAccount = () => '', generateLink,
+}) {
   const account = () => String(getAccount() || '')
   const blockRefund = config.blockRefund !== false
   const blockZeroAmount = config.blockZeroAmount !== false
@@ -119,10 +121,34 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
     let delivered = 0
     let lastError = null
     for (let seq = 1; seq <= qty; seq += 1) {
-      const content = store.consumeCard(card.id)
-      if (content == null) {
-        lastError = 'card_exhausted'
-        break
+      // 生成型卡券：每单调用网盘技能现做一条新链接。
+      let content
+      if (card.mode === 'generate') {
+        if (typeof generateLink !== 'function') {
+          lastError = 'generate_unavailable'
+          break
+        }
+        try {
+          content = await generateLink({
+            itemId: order.item_id, orderNo: order.order_no,
+            buyerNick: order.buyer_nick || '', spec: order.spec_value || '',
+            card,
+          })
+        } catch (err) {
+          lastError = `generate_failed:${err?.message || err}`
+          break
+        }
+        if (!content || !String(content).trim()) {
+          lastError = 'generate_empty'
+          break
+        }
+        content = String(content).trim()
+      } else {
+        content = store.consumeCard(card.id)
+        if (content == null) {
+          lastError = 'card_exhausted'
+          break
+        }
       }
 
       const text = renderText(card.template || service?.deliver_template || '', content, order)
@@ -157,6 +183,13 @@ export function createDispatcher({ store, cli, guard, config = {}, logger = () =
     }
 
     if (!delivered) {
+      // 什么都没发出去（没有卡券 / 卡券耗尽 / 生成失败）不是「发出去但失败」，
+      // 标成 blocked，避免和真实的发送失败混在一起。
+      const blocked = /^(no_card|card_exhausted|ambiguous_card|generate_|sensitive)/.test(lastError || '')
+      if (blocked) {
+        store.finishOrder(order.order_no, 'blocked', { failReason: lastError, delivered })
+        return { order: order.order_no, state: 'blocked', reason: lastError }
+      }
       store.finishOrder(order.order_no, 'send_failed', { failReason: lastError || 'no_card', delivered })
       return { order: order.order_no, state: 'send_failed', reason: lastError }
     }

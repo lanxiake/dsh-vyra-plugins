@@ -171,6 +171,9 @@ export function createStore(file) {
   ensureColumn(db, 'orders', 'spec_name', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'orders', 'spec_value', "TEXT NOT NULL DEFAULT ''")
   ensureColumn(db, 'deliveries', 'account_id', "TEXT NOT NULL DEFAULT ''")
+  // 卡券模式：pool = 每条用一次；reuse = 一条链接反复发（网盘分享）；
+  // generate = 每单调用网盘技能生成新链接。
+  ensureColumn(db, 'cards', 'mode', "TEXT NOT NULL DEFAULT 'pool'")
   // 必须放在 SCHEMA 之后、prepare 之前：旧表主键不对会让 upsertItem 的
   // ON CONFLICT 在 prepare 时抛错，整个插件加载失败。
   migrateItems(db)
@@ -244,23 +247,26 @@ export function createStore(file) {
        ORDER BY CASE WHEN spec_name = '' THEN 1 ELSE 0 END, account_id DESC, id`,
     ),
     cardById: db.prepare('SELECT * FROM cards WHERE id = ?'),
+    usedForCard: db.prepare(
+      "SELECT COUNT(*) AS n FROM deliveries WHERE card_id = ? AND send_state = 'success'",
+    ),
     allEnabledCards: db.prepare(
       `SELECT * FROM cards WHERE enabled = 1 AND item_id = ?
        AND (account_id = ? OR account_id = '') ORDER BY id`,
     ),
     updateCard: db.prepare(
-      `UPDATE cards SET name = ?, type = ?, content = ?, template = ?, spec_name = ?, spec_value = ?, enabled = ? WHERE id = ?`,
+      `UPDATE cards SET name = ?, type = ?, content = ?, template = ?, spec_name = ?, spec_value = ?, enabled = ?, mode = ? WHERE id = ?`,
     ),
     deleteCard: db.prepare('DELETE FROM cards WHERE id = ?'),
     updateCardContent: db.prepare(
       'UPDATE cards SET content = ? WHERE id = ? AND content = ?',
     ),
     insertCard: db.prepare(
-      `INSERT INTO cards (account_id, item_id, spec_name, spec_value, name, type, content, template, delay_seconds)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO cards (account_id, item_id, spec_name, spec_value, name, type, content, template, delay_seconds, mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     listCards: db.prepare(
-      `SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds, content, template
+      `SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds, content, template, mode
        FROM cards WHERE (account_id = ? OR account_id = '') ORDER BY id`,
     ),
     getItem: db.prepare(
@@ -299,6 +305,9 @@ export function createStore(file) {
     itemsOfService: db.prepare('SELECT item_id, account_id, title, service_id FROM items WHERE service_id = ?'),
     setItemService: db.prepare(
       `UPDATE items SET service_id = ? WHERE item_id = ? AND (account_id = ? OR account_id = '')`,
+    ),
+    ensureItem: db.prepare(
+      `INSERT OR IGNORE INTO items (item_id, account_id, title) VALUES (?, ?, ?)`,
     ),
     getSetting: db.prepare('SELECT value FROM settings WHERE key = ?'),
     setSetting: db.prepare(
@@ -379,6 +388,7 @@ export function createStore(file) {
         data.specName ?? current.spec_name,
         data.specValue ?? current.spec_value,
         data.enabled === undefined ? current.enabled : (data.enabled ? 1 : 0),
+        data.mode ?? current.mode ?? 'pool',
         Number(id),
       )
     },
@@ -392,6 +402,8 @@ export function createStore(file) {
         if (!row) return null
         const blocks = splitBlocks(row.content)
         if (!blocks.length) return null
+        // 复用型卡券（网盘分享链接）不消耗，每次发同一条。
+        if (row.mode === 'reuse') return blocks[0]
         const [first, ...rest] = blocks
         const info = q.updateCardContent.run(rest.length ? rest.join('\n---\n') : '', cardId, row.content)
         return info.changes === 1 ? first : null
@@ -404,14 +416,25 @@ export function createStore(file) {
 
     addCard({
       accountId = '', itemId = '', specName = '', specValue = '',
-      name, type = 'data', content, template = '', delaySeconds = 0,
+      name, type = 'data', content, template = '', delaySeconds = 0, mode = 'pool',
     }) {
       return q.insertCard.run(
-        accountId, itemId, specName, specValue, name, type, content, template, delaySeconds,
+        accountId, itemId, specName, specValue, name, type, content, template, delaySeconds, mode,
       ).lastInsertRowid
     },
 
-    listCards: (accountId = '') => q.listCards.all(String(accountId)),
+    listCards: (accountId = '') => q.listCards.all(String(accountId)).map((card) => {
+      const remaining = splitBlocks(card.content).length
+      const used = q.usedForCard.get(card.id).n
+      // 复用型没有「消耗」概念：库存按 1 条算，剩余也按 1 条展示。
+      const reusable = card.mode === 'reuse'
+      return {
+        ...card,
+        total: reusable ? 1 : remaining + used,
+        used,
+        remaining: reusable ? (remaining ? 1 : 0) : remaining,
+      }
+    }),
     availableCards: (accountId = '') => q.countCards.get(String(accountId)).n,
 
     getItem: (itemId, accountId = '') => q.getItem.get(String(itemId), String(accountId)) ?? null,
@@ -452,8 +475,12 @@ export function createStore(file) {
     itemsOfService(id) {
       return q.itemsOfService.all(Number(id))
     },
-    setItemService(itemId, serviceId, accountId = '') {
-      q.setItemService.run(Number(serviceId) || 0, String(itemId), String(accountId))
+    setItemService(itemId, serviceId, accountId = '', title = '') {
+      const id = String(itemId)
+      const acc = String(accountId)
+      // 商品还没登记过（没被扫描绑定过）时先建一行，否则 UPDATE 无处可改。
+      q.ensureItem.run(id, acc, String(title || ''))
+      q.setItemService.run(Number(serviceId) || 0, id, acc)
     },
 
     getSetting(key) {
