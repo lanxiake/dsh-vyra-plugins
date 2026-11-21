@@ -349,10 +349,60 @@ async def _refresh_session_once(headless: bool) -> dict[str, Any]:
                 pass
 
 
-async def _refresh_session() -> dict[str, Any]:
-    """先无头刷新，失败再回退有头（headless 指纹被拒时才会弹窗）。"""
+REFRESH_STATE = Path.home() / ".goofish-cli" / "refresh-state.json"
+REFRESH_COOLDOWN_SECS = 900  # 15 分钟：失败后别再反复弹浏览器
+
+
+def _mark_refresh_failure(error: str) -> None:
+    try:
+        REFRESH_STATE.parent.mkdir(parents=True, exist_ok=True)
+        REFRESH_STATE.write_text(
+            json.dumps({"failedAt": int(time.time()), "error": str(error)[:300]}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _refresh_cooldown_left() -> int:
+    try:
+        state = json.loads(REFRESH_STATE.read_text(encoding="utf-8"))
+        failed_at = int(state.get("failedAt") or 0)
+    except Exception:  # noqa: BLE001
+        return 0
+    left = failed_at + REFRESH_COOLDOWN_SECS - int(time.time())
+    return max(0, left)
+
+
+def _clear_refresh_failure() -> None:
+    try:
+        REFRESH_STATE.unlink()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _has_cookies() -> bool:
+    """没登录（没有 cookie）时不要尝试刷新：刷新只会打开浏览器要扫码。"""
+    try:
+        from goofish_cli.core.session import resolve_cookie_path
+
+        path = Path(resolve_cookie_path())
+    except Exception:  # noqa: BLE001
+        path = Path.home() / ".goofish-cli" / "cookies.json"
+    try:
+        return path.exists() and path.stat().st_size > 2
+    except Exception:  # noqa: BLE001
+        return False
+
+
+async def _refresh_session(headful: bool = False) -> dict[str, Any]:
+    """默认只跑无头刷新；headful 只有用户明确要求时才回退。
+
+    无头失败说明 cookie 已经救不回来，再弹一个浏览器窗口要求扫码只会打扰人。
+    """
     errors: list[str] = []
-    for headless in (True, False):
+    modes = (True, False) if headful else (True,)
+    for headless in modes:
         try:
             return await _refresh_session_once(headless)
         except Exception as e:  # noqa: BLE001
@@ -360,8 +410,19 @@ async def _refresh_session() -> dict[str, Any]:
     raise RuntimeError("；".join(errors))
 
 
-def refresh_session() -> dict[str, Any]:
-    return asyncio.run(_refresh_session())
+def refresh_session(headful: bool = False) -> dict[str, Any]:
+    if not _has_cookies():
+        raise RuntimeError("未登录：没有 cookie，不做自动刷新")
+    left = _refresh_cooldown_left()
+    if left:
+        raise RuntimeError(f"自动刷新冷却中（还剩 {left // 60} 分钟），需要重新扫码请点面板的扫码登录")
+    try:
+        result = asyncio.run(_refresh_session(headful))
+    except Exception as e:
+        _mark_refresh_failure(str(e))
+        raise
+    _clear_refresh_failure()
+    return result
 
 
 def user_info(cid: str, owner: bool = False) -> dict[str, Any]:
@@ -642,7 +703,7 @@ COMMANDS = {
     "user-info": lambda a: user_info(a["cid"], bool(a.get("owner"))),
     "item-detail": lambda a: item_detail(a["itemId"]),
     "order-detail": lambda a: order_detail(a["orderId"]),
-    "refresh": lambda a: refresh_session(),
+    "refresh": lambda a: refresh_session(bool(a.get("headful"))),
 }
 
 

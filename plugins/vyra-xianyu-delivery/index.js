@@ -540,6 +540,8 @@ export function apply(ctx, config = {}) {
   let chatPollBaseline = false
 
   async function pollChats() {
+    // 未登录时不轮询：没有 cookie 时任何 IM 调用都只会报错。
+    if (authCache.loading === false && authCache.valid === false) return
     let data
     try {
       data = await cli.chats(60)
@@ -718,6 +720,10 @@ export function apply(ctx, config = {}) {
     const arm = () => {
       timer = setTimeout(async () => {
         try {
+          if (authCache.loading === false && authCache.valid === false) {
+            arm()
+            return
+          }
           await dispatcher.tick()
         } catch (err) {
           log(`xianyu-delivery tick failed: ${err?.message || err}`)

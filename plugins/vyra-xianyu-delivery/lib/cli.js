@@ -6,12 +6,26 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
+import { statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 const execFileP = promisify(execFile)
 export const WORKER_PATH = fileURLToPath(new URL('../vendor/worker.py', import.meta.url))
 export const defaultPrefix = () => ['run', '--with', 'goofish-cli', 'python', WORKER_PATH]
 
 const DEFAULT_WORKER = WORKER_PATH
+const COOKIE_PATH = join(homedir(), '.goofish-cli', 'cookies.json')
+const REFRESH_COOLDOWN_MS = 10 * 60 * 1000
+
+/** 没登录时没有任何可刷新的东西：此时尝试刷新只会弹出浏览器要扫码。 */
+function hasCookies() {
+  try {
+    return statSync(COOKIE_PATH).size > 2
+  } catch {
+    return false
+  }
+}
 
 export function createCli({
   command = 'uv',
@@ -19,6 +33,9 @@ export function createCli({
   cwd,
   timeout = 120000,
 } = {}) {
+  // 自动刷新失败后进入冷却，避免每轮轮询都重新拉起浏览器。
+  let refreshBlockedUntil = 0
+
   async function run(op, args, retried = false) {
     const argv = [...prefix, op, JSON.stringify(args ?? {})]
     try {
@@ -39,8 +56,19 @@ export function createCli({
     } catch (err) {
       const msg = String(err?.message || err)
       // _m_h5_tk 只有约十分钟有效期；过期时先免密刷新一次再重试原命令。
+      // 但没登录 / 刚刷新失败过就不再尝试：否则每次轮询都会弹一个扫码浏览器。
       if (!retried && /FAIL_SYS_TOKEN_EXOIRED|FAIL_SYS_TOKEN_EMPTY|FAIL_SYS_SESSION_EXPIRED|令牌过期/i.test(msg)) {
-        try { await run('refresh', {}, true) } catch { /* 刷新失败就抛原错误 */ }
+        if (!hasCookies()) throw err
+        if (Date.now() < refreshBlockedUntil) throw err
+        let refreshed = false
+        try {
+          await run('refresh', { headful: false }, true)
+          refreshed = true
+        } catch {
+          // 刷新失败：冷却十分钟，期间直接用原始错误返回。
+          refreshBlockedUntil = Date.now() + REFRESH_COOLDOWN_MS
+        }
+        if (!refreshed) throw err
         return run(op, args, true)
       }
       // uv 在 Windows 上偶发 "Failed to update Windows PE resources"（杀毒/权限），
