@@ -202,4 +202,34 @@ assert.deepEqual(withText({ text: '', sort: { kind: 'index' } }, 'foo').sort, { 
 assert.deepEqual(withText({ text: 'foo', sort: { kind: 'relevance' } }, '').sort, { kind: 'index' }, 'clearing returns to index order')
 assert.deepEqual(withText({ text: 'foo', sort: { kind: 'published', direction: 'desc' } }, '').sort, { kind: 'published', direction: 'desc' }, 'a chosen order is kept')
 
+// --- runBatch: a cancel stops the rest, the order already on the Host lands --
+{
+  const performed = []
+  const { runBatch, runner } = __internal
+  const applied = { ok: true, value: { application: 'applied' } }
+  const remote = {
+    pluginManager: {
+      installBundle: async (spec) => {
+        performed.push(spec)
+        // Cancel while the first install is under way, as a person would.
+        if (performed.length === 1) runner.update({ cancel: true })
+        return applied
+      },
+      listBundles: async () => ({ ok: true, value: [] }),
+      setBundleEnabled: async () => applied,
+      removeBundle: async () => applied,
+    },
+  }
+  const list = ['a', 'b', 'c'].map((name) => ({
+    action: 'install', entry: { name }, version: { install: { spec: name } },
+  }))
+  await runBatch(list, remote, (key) => key)
+  assert.deepEqual(performed, ['a'], 'the order already on the Host finished; the rest never start')
+  const state = runner.get()
+  assert.equal(state.running, null, 'the batch does not hang after a cancel')
+  assert.equal(state.outcome.ok, 1)
+  assert.equal(state.outcome.canceled, true)
+  assert.equal(state.outcome.skipped, 2, 'the unrun tail is reported, not hidden')
+}
+
 console.log('vyra-plugin-market: all checks passed')

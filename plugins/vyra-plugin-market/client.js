@@ -221,6 +221,188 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------------------------------------------------------------------
+    // The batch runner
+    // ---------------------------------------------------------------------------
+
+    /**
+     * A batch's state, module-scoped on purpose: leaving the Plugins page unmounts the tab
+     * component, and a run owned by that component would die with the unmount. The runner below
+     * owns the batch; the tab only subscribes and draws whatever state it finds on return.
+     */
+    const runner = (() => {
+      let state = { running: null, outcome: null, failures: new Map(), cancel: false }
+      const listeners = new Set()
+      return {
+        get: () => state,
+        subscribe(listener) {
+          listeners.add(listener)
+          return () => { listeners.delete(listener) }
+        },
+        update(patch) {
+          state = { ...state, ...patch }
+          for (const listener of listeners) listener(state)
+        },
+      }
+    })()
+
+    /** The running batch, kept across tab unmounts. */
+    function useRunner() {
+      const [state, setState] = useState(runner.get)
+      useEffect(() => runner.subscribe(setState), [])
+      return state
+    }
+
+    /** The running bar's verb for one order action. */
+    function actionLabel(t, action) {
+      return t(`act${action[0].toUpperCase()}${action.slice(1)}`)
+    }
+
+    /**
+     * Issue one order and read the Host's answer without judging it.
+     * @param {object} order - one order from {@link orders}.
+     * @param {object} remote - the injected Host namespaces.
+     * @returns {Promise<{pass: boolean, reason?: string, result?: object}>} the outcome.
+     */
+    async function perform(order, remote) {
+      let answer
+      try {
+        if (order.action === 'install') {
+          answer = await remote.pluginManager.installBundle(order.version.install.spec, {
+            enabled: true, saveExact: true,
+            ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
+          })
+        } else if (order.action === 'update') {
+          answer = await remote.pluginManager.updateBundle(order.entry.name, order.version.version, {
+            spec: order.version.install.spec,
+          })
+        } else if (order.action === 'uninstall') {
+          answer = await remote.pluginManager.removeBundle(order.entry.name)
+        } else {
+          answer = await remote.pluginManager.setBundleEnabled(order.entry.name, order.action === 'enable')
+        }
+      } catch (error) {
+        return { pass: false, reason: String(error?.message ?? error) }
+      }
+      if (!answer.ok) return { pass: false, reason: answer.error.message }
+      // An update answers with its own step result and restores the removed
+      // version when the replacement fails; both wrap one change result.
+      const result = order.action === 'update' ? answer.value.result : answer.value
+      if (result === undefined || result.application === 'failed') {
+        // The run's own output says more than the code does — a failed
+        // import, a refused build script — so it is part of the reason.
+        return {
+          pass: false,
+          reason: [result?.error?.diagnostic, result?.packageResult?.output].filter(Boolean).join('\n'),
+          result,
+        }
+      }
+      return { pass: true, result }
+    }
+
+    /**
+     * Run a batch: every order is attempted in turn, so one failure never hides the entries that
+     * follow it. A cancel does not reach into an order already on the Host — a git/pnpm run
+     * cannot be aborted from here — but it stops the batch issuing anything further and skips
+     * the repair pass, which is what pressing cancel should mean.
+     * @param {ReadonlyArray<object>} list - orders from {@link orders}.
+     * @param {object} remote - the injected Host namespaces.
+     * @param {Function} t - the active dictionary, for the few strings that are not ids.
+     */
+    async function runBatch(list, remote, t) {
+      if (list.length === 0 || runner.get().running !== null) return
+      runner.update({
+        running: { action: list[0].action, done: 0, total: list.length, name: list[0].entry.name },
+        outcome: null, failures: new Map(), cancel: false,
+      })
+      let ok = 0
+      let restart = 0
+      let builds = 0
+      let attempted = 0
+      let canceled = false
+      // Keyed by entry, so the card that failed keeps its reason after the
+      // summary bar is gone — which is where the person looks for it.
+      const failed = new Map()
+      for (let index = 0; index < list.length; index += 1) {
+        if (runner.get().cancel) { canceled = true; break }
+        const order = list[index]
+        runner.update({ running: { action: order.action, done: index, total: list.length, name: order.entry.name } })
+        let outcome = null
+        for (let attempt = 0; attempt <= RETRY_DELAY_MS.length; attempt += 1) {
+          outcome = await perform(order, remote)
+          if (outcome.pass) break
+          // A permanent answer is the run's verdict, not the road's: retrying
+          // "not a bundle" or a refused version only wastes the person's time.
+          if (attempt === RETRY_DELAY_MS.length || !TRANSIENT_FAILURE.test(outcome.reason ?? '')) break
+          if (runner.get().cancel) break
+          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS[attempt]))
+          if (runner.get().cancel) break
+        }
+        attempted = index + 1
+        if (!outcome.pass) {
+          failed.set(order.entry.name, outcome.reason === '' ? t('loadFailed') : outcome.reason)
+        } else {
+          ok += 1
+          if (outcome.result.application === 'restart-required') restart += 1
+          if ((outcome.result.pendingBuilds?.length ?? 0) > 0) builds += 1
+        }
+        if (runner.get().cancel) { canceled = true; break }
+      }
+      const skipped = canceled ? list.length - attempted : 0
+      // A writer outside this batch — another tab, the Host's own plugin
+      // page, the third-party console's maintenance run — can rewrite
+      // `package.json` between two orders. The next pnpm run then prunes the
+      // package it no longer finds declared, so a batch silently loses a
+      // plugin it had just installed. Assert the state the batch meant to
+      // leave and put each lost entry back once; a second failure is
+      // reported like any other instead of retried forever. A cancelled
+      // batch skips this: putting back what the person just stopped would be
+      // the opposite of what they asked for.
+      if (skipped === 0) {
+        const kept = list.filter((order) => !failed.has(order.entry.name)
+          && order.action !== 'uninstall' && order.action !== 'disable')
+        if (kept.length > 0) {
+          const answer = await remote.pluginManager.listBundles()
+          if (answer.ok) {
+            const present = new Map(answer.value.map((bundle) => [bundle.name, bundle]))
+            let repaired = false
+            for (const order of kept) {
+              if (present.get(order.entry.name)?.enabled === true) continue
+              repaired = true
+              try {
+                if (order.action === 'install' || order.action === 'update') {
+                  await remote.pluginManager.installBundle(order.version.install.spec, { enabled: true, saveExact: true })
+                } else {
+                  await remote.pluginManager.setBundleEnabled(order.entry.name, true)
+                }
+              } catch (error) {
+                // Installed but switched off: re-enabling is all it needs.
+                try { await remote.pluginManager.setBundleEnabled(order.entry.name, true) }
+                catch (again) { failed.set(order.entry.name, String(again?.message ?? again)) }
+              }
+            }
+            // Only a second read tells whether the repair landed. A package
+            // that is back is not a failure, whatever the attempt said —
+            // `listBundles` omits plain dependencies, so an absence there is
+            // reported only when the re-enable that follows also failed.
+            if (repaired) {
+              const settled = await remote.pluginManager.listBundles()
+              if (settled.ok) {
+                const now = new Map(settled.value.map((bundle) => [bundle.name, bundle]))
+                for (const order of kept) {
+                  if (now.get(order.entry.name)?.enabled === true) failed.delete(order.entry.name)
+                }
+              }
+            }
+          }
+        }
+      }
+      runner.update({
+        running: null, cancel: false, failures: failed,
+        outcome: { ok, failed: [...failed.keys()].length, restart, builds, canceled: skipped > 0, skipped },
+      })
+    }
+
+    // ---------------------------------------------------------------------------
     // Dictionaries
     // ---------------------------------------------------------------------------
 
@@ -270,6 +452,9 @@ window.__ModuleLoader__.load({
       confirmUninstall: '卸载 {n} 个插件',
       confirmUninstallBody: '它们提供的功能会随之消失，已装的文件会被移除。',
       cancel: '取消',
+      cancelRun: '取消',
+      canceling: '正在取消…',
+      canceled: '已取消，剩余 {n} 项未执行',
       ok: '确定',
       actInstall: '安装',
       actUpdate: '更新',
@@ -346,6 +531,9 @@ window.__ModuleLoader__.load({
       confirmUninstall: 'Uninstall {n} plugins',
       confirmUninstallBody: 'What they provide goes away and their installed files are removed.',
       cancel: 'Cancel',
+      cancelRun: 'Cancel',
+      canceling: 'Cancelling…',
+      canceled: 'Cancelled — {n} not run',
       ok: 'Confirm',
       actInstall: 'Installing',
       actUpdate: 'Updating',
@@ -1064,10 +1252,9 @@ window.__ModuleLoader__.load({
       const [confirm, setConfirm] = useState(null)
       const [detailEntry, setDetailEntry] = useState(null)
       const [refreshed, setRefreshed] = useState(false)
-      const [running, setRunning] = useState(null)
-      const [outcome, setOutcome] = useState(null)
-      /** Per-entry failure text, kept on the card after the summary bar is gone. */
-      const [failures, setFailures] = useState(() => new Map())
+      /** The batch, owned outside this component so leaving the page does not stop it. */
+      const job = useRunner()
+      const { running, outcome } = job
       /** The entry whose failure text was just copied, for the tag's own feedback. */
       const [copied, setCopied] = useState(null)
       // ponytail: 快捷筛选状态（仅已安装/仅可更新）
@@ -1094,11 +1281,8 @@ window.__ModuleLoader__.load({
       const alive = useRef(true)
       useEffect(() => () => { alive.current = false }, [])
 
-      // One batch at a time. `running` below is state, so two presses landing
-      // before React re-renders would both pass its check and interleave two
-      // batches; a ref cannot be raced that way. It is released at the end of
-      // the run, and never on unmount because nothing is left to press.
-      const batch = useRef(false)
+      // A batch belongs to the plugin, not to this tab, so `running` is the runner's. Nothing to
+      // release on unmount — the run keeps going and the next mount subscribes to its state.
 
       /** Read the configured sources; an empty list adopts our own market. */
       const loadSources = useCallback(async (adopt) => {
@@ -1292,155 +1476,32 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
-      /** Drop one entry's failure tag once it has been read. */
+      /** Clear one entry's failure tag once it has been read. */
       const clearFailure = useCallback((name) => {
-        setFailures((current) => {
-          if (!current.has(name)) return current
-          const next = new Map(current)
-          next.delete(name)
-          return next
-        })
+        const current = runner.get().failures
+        if (!current.has(name)) return
+        const next = new Map(current)
+        next.delete(name)
+        runner.update({ failures: next })
       }, [])
 
       /**
-       * Issue one order and read the Host's answer without judging it.
-       * @param {object} order - one order from {@link orders}.
-       * @param {object} remote - the injected Host namespaces.
-       * @returns {Promise<{pass: boolean, reason?: string, result?: object}>} the outcome.
-       */
-      async function perform(order, remote) {
-        let answer
-        try {
-          if (order.action === 'install') {
-            answer = await remote.pluginManager.installBundle(order.version.install.spec, {
-              enabled: true, saveExact: true,
-              ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
-            })
-          } else if (order.action === 'update') {
-            answer = await remote.pluginManager.updateBundle(order.entry.name, order.version.version, {
-              spec: order.version.install.spec,
-            })
-          } else if (order.action === 'uninstall') {
-            answer = await remote.pluginManager.removeBundle(order.entry.name)
-          } else {
-            answer = await remote.pluginManager.setBundleEnabled(order.entry.name, order.action === 'enable')
-          }
-        } catch (error) {
-          return { pass: false, reason: String(error?.message ?? error) }
-        }
-        if (!answer.ok) return { pass: false, reason: answer.error.message }
-        // An update answers with its own step result and restores the removed
-        // version when the replacement fails; both wrap one change result.
-        const result = order.action === 'update' ? answer.value.result : answer.value
-        if (result === undefined || result.application === 'failed') {
-          // The run's own output says more than the code does — a failed
-          // import, a refused build script — so it is part of the reason.
-          return {
-            pass: false,
-            reason: [result?.error?.diagnostic, result?.packageResult?.output].filter(Boolean).join('\n'),
-            result,
-          }
-        }
-        return { pass: true, result }
-      }
-
-      /**
-       * Run a batch: every order is attempted in turn, so one failure never
-       * hides the entries that follow it.
+       * Start a batch. The runner outlives this tab, so the run continues if the page is
+       * switched; the confirm dialog is settled here because its work is now under way.
        * @param {ReadonlyArray<object>} list - orders from {@link orders}.
        */
-      const run = useCallback(async (list) => {
-        if (list.length === 0 || batch.current) return
-        batch.current = true
-        setOutcome(null)
+      const start = useCallback((list) => {
         setConfirm(null)
-        setFailures(new Map())
-        let ok = 0
-        let restart = 0
-        let builds = 0
-        // Keyed by entry, so the card that failed keeps its reason after the
-        // summary bar is gone — which is where the person looks for it.
-        const failed = new Map()
-        for (let index = 0; index < list.length; index += 1) {
-          const order = list[index]
-          if (!alive.current) return
-          setRunning({
-            action: t(`act${order.action[0].toUpperCase()}${order.action.slice(1)}`),
-            done: index, total: list.length, name: order.entry.name,
-          })
-          let outcome = null
-          for (let attempt = 0; attempt <= RETRY_DELAY_MS.length; attempt += 1) {
-            outcome = await perform(order, remote)
-            if (outcome.pass) break
-            // A permanent answer is the run's verdict, not the road's: retrying
-            // "not a bundle" or a refused version only wastes the person's time.
-            if (attempt === RETRY_DELAY_MS.length || !TRANSIENT_FAILURE.test(outcome.reason ?? '')) break
-            if (!alive.current) return
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS[attempt]))
-          }
-          if (!alive.current) return
-          if (!outcome.pass) {
-            failed.set(order.entry.name, outcome.reason === '' ? t('loadFailed') : outcome.reason)
-            continue
-          }
-          ok += 1
-          if (outcome.result.application === 'restart-required') restart += 1
-          if ((outcome.result.pendingBuilds?.length ?? 0) > 0) builds += 1
-        }
-        // A writer outside this batch — another tab, the Host's own plugin
-        // page, the third-party console's maintenance run — can rewrite
-        // `package.json` between two orders. The next pnpm run then prunes the
-        // package it no longer finds declared, so a batch silently loses a
-        // plugin it had just installed. Assert the state the batch meant to
-        // leave and put each lost entry back once; a second failure is
-        // reported like any other instead of retried forever.
-        if (alive.current) {
-          const kept = list.filter((order) => !failed.has(order.entry.name)
-            && order.action !== 'uninstall' && order.action !== 'disable')
-          if (kept.length > 0) {
-            const answer = await remote.pluginManager.listBundles()
-            if (answer.ok) {
-              const present = new Map(answer.value.map((bundle) => [bundle.name, bundle]))
-              let repaired = false
-              for (const order of kept) {
-                if (present.get(order.entry.name)?.enabled === true) continue
-                repaired = true
-                try {
-                  if (order.action === 'install' || order.action === 'update') {
-                    await remote.pluginManager.installBundle(order.version.install.spec, { enabled: true, saveExact: true })
-                  } else {
-                    await remote.pluginManager.setBundleEnabled(order.entry.name, true)
-                  }
-                } catch (error) {
-                  // Installed but switched off: re-enabling is all it needs.
-                  try { await remote.pluginManager.setBundleEnabled(order.entry.name, true) }
-                  catch (again) { failed.set(order.entry.name, String(again?.message ?? again)) }
-                }
-              }
-              // Only a second read tells whether the repair landed. A package
-              // that is back is not a failure, whatever the attempt said —
-              // `listBundles` omits plain dependencies, so an absence there is
-              // reported only when the re-enable that follows also failed.
-              if (repaired) {
-                const settled = await remote.pluginManager.listBundles()
-                if (settled.ok) {
-                  const now = new Map(settled.value.map((bundle) => [bundle.name, bundle]))
-                  for (const order of kept) {
-                    if (now.get(order.entry.name)?.enabled === true) failed.delete(order.entry.name)
-                  }
-                }
-              }
-            }
-          }
-        }
-        batch.current = false
-        if (!alive.current) return
-        setRunning(null)
-        setPicked(new Set())
-        setFailures(failed)
-        setOutcome({ ok, failed: [...failed.keys()].length, restart, builds })
-        await loadBundles()
-      }, [remote, running, t, loadBundles])
+        void runBatch(list, remote, t)
+      }, [remote, t])
+
+      // The selection exists to describe what the one batch would touch, so it clears
+      // when the batch ends — whichever page is on screen at the time.
+      const wasRunning = useRef(false)
+      useEffect(() => {
+        if (wasRunning.current && running === null) setPicked(new Set())
+        wasRunning.current = running !== null
+      }, [running])
 
       // Every hook runs before any early return, so the count never changes
       // between the first render and the loaded one (React error #310).
@@ -1484,6 +1545,7 @@ window.__ModuleLoader__.load({
           key: 'outcome', role: 'status',
           style: { ...S.bar, ...outcome.failed > 0 ? S.error : {} },
         }, [
+          outcome.canceled ? t('canceled', { n: outcome.skipped }) : null,
           t('done', { ok: outcome.ok }),
           outcome.failed === 0 ? null : t('failed', { n: outcome.failed }),
           outcome.restart === 0 ? null : t('needRestart', { n: outcome.restart }),
@@ -1499,8 +1561,16 @@ window.__ModuleLoader__.load({
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
             h('span', { style: S.spinner }),
             h('span', { style: { flex: 1, minWidth: 0, ...S.ellipsis } },
-              `${t('progress', { action: running.action, done: running.done, total: running.total })} — ${running.name}`),
-            h('span', { style: { ...S.meta, flex: 'none' } }, `${pct}%`)),
+              `${t('progress', { action: actionLabel(t, running.action), done: running.done, total: running.total })} — ${running.name}`),
+            h('span', { style: { ...S.meta, flex: 'none' } }, `${pct}%`),
+            // Cancel stops the batch after the order already on the Host returns — a
+            // pnpm/git run cannot be aborted from here — so the control says so while
+            // it waits, instead of looking like it did nothing.
+            h('button', {
+              style: { ...S.btn(false, job.cancel), padding: '2px 9px', fontSize: '11.5px', flex: 'none' },
+              disabled: job.cancel,
+              onClick: () => { runner.update({ cancel: true }) },
+            }, t(job.cancel ? 'canceling' : 'cancelRun'))),
           h('div', { style: S.progressTrack },
             h('div', { style: { ...S.progressFill, width: `${pct}%` } }))))
       }
@@ -1518,11 +1588,11 @@ window.__ModuleLoader__.load({
         }, t('bulkUninstall', { n: plan.uninstall.length })))
         if (plan.enable.length > 0) bulk.push(h('button', {
           key: 'enable', style: S.btn(false, busy), disabled: busy,
-          onClick: () => { void run(orders(plan, 'enable')) },
+          onClick: () => { start(orders(plan, 'enable')) },
         }, t('bulkEnable', { n: plan.enable.length })))
         if (plan.disable.length > 0) bulk.push(h('button', {
           key: 'disable', style: S.btn(false, busy), disabled: busy,
-          onClick: () => { void run(orders(plan, 'disable')) },
+          onClick: () => { start(orders(plan, 'disable')) },
         }, t('bulkDisable', { n: plan.disable.length })))
         bulk.push(h('button', {
           key: 'clear', style: S.btn(false, busy), disabled: busy,
@@ -1665,7 +1735,7 @@ window.__ModuleLoader__.load({
                     filteredEntries.map((entry) => h(Card, {
                       key: entry.name, entry, bundle: bundles.get(entry.name), lang, t, text, busy,
                       picked: picked.has(entry.name),
-                      failure: failures.get(entry.name),
+                      failure: job.failures.get(entry.name),
                       copied,
                       onCopyFailure: copyFailure,
                       onClearFailure: clearFailure,
@@ -1677,7 +1747,7 @@ window.__ModuleLoader__.load({
                           return next
                         })
                       },
-                      onRun: (list) => { void run(list) },
+                      onRun: start,
                       onConfirm: setConfirm,
                       onDetails: setDetailEntry,
                     }))),
@@ -1691,11 +1761,11 @@ window.__ModuleLoader__.load({
         confirm === null ? null : h(ConfirmDialog, {
           action: confirm.action, orders: confirm.orders, lang, t, text,
           onCancel: () => { setConfirm(null) },
-          onRun: () => { void run(confirm.orders) },
+          onRun: () => { start(confirm.orders) },
         }),
         detailEntry === null ? null : h(DetailDialog, {
           entry: detailEntry, bundle: bundles.get(detailEntry.name), lang, t, text, busy,
-          onRun: (list) => { void run(list) },
+          onRun: start,
           onConfirm: setConfirm,
           onClose: () => { setDetailEntry(null) },
         }),
@@ -1724,7 +1794,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText, TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset },
+      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText, TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset, runBatch, runner },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), `${NS}: dictionaries`)
