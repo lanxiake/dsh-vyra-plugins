@@ -1581,6 +1581,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.6: model fallback via agentDefaultModel, cookie write-back after
+        // every mtop call (token no longer looks expired every 10 minutes),
+        // and actionable error messages.
+        '0.7.6': {
+          publishTimestamp: 1795259400,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '2931275650eae95a816a5d560ead1e0fdb910ac0',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
