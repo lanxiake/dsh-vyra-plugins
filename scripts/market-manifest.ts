@@ -1416,6 +1416,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.11: add file lock to watch singleton; hot reload no longer spawns
+        // duplicate watchers that kick each other off the IM socket.
+        '0.6.11': {
+          publishTimestamp: 1795233600,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '7ab94aa007b55f380a58da3f343f845598e4e85f',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
