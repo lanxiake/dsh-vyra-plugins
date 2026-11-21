@@ -15,7 +15,7 @@ const DEFAULT_WORKER = WORKER_PATH
 
 export function createCli({
   command = 'uv',
-  prefix = ['run', '--with', 'goofish-cli', 'python', DEFAULT_WORKER],
+  prefix = ['run', '--with', 'goofish-cli', '--with', 'portalocker', 'python', DEFAULT_WORKER],
   cwd,
   timeout = 120000,
 } = {}) {

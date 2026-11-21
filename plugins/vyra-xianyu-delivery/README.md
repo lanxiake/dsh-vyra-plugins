@@ -4,7 +4,7 @@
 
 ## 依赖
 
-- **uv** — 插件通过 `uv run --with goofish-cli` 拉起自带的 worker
+- **uv** — 插件通过 `uv run --with goofish-cli --with portalocker` 拉起自带的 worker
 - **浏览器** — 扫码登录优先用系统 Edge；没有就退回 Playwright 自带的 Chromium
 
 ## 登录

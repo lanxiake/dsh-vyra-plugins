@@ -403,6 +403,7 @@ def history(cid: str, limit: int = 10) -> list[dict[str, Any]]:
 
 
 WATCH_PID = Path.home() / ".goofish-cli" / "watch.pid"
+WATCH_LOCK = Path.home() / ".goofish-cli" / "watch.lock"
 
 
 def _pid_alive(pid: int) -> bool:
@@ -431,23 +432,62 @@ def _claim_watch_slot(token: int) -> bool:
     插件热重载/多开会留下没人管的旧 watch；多个实例同时连 IM 会互相把连接
     踢掉，表现就是"买家发了消息但插件收不到事件"。token 是插件实例的启动
     时间戳：更新的实例杀旧的；旧实例的重试则让位并退出，不会来回互杀。
+
+    用文件锁保证原子性：即使多个进程同时启动，也只有一个能拿到锁并写 pid。
     """
+    try:
+        from portalocker import Lock, LockException
+    except ImportError:
+        # 没装 portalocker 就退回无锁版（向后兼容），多实例风险仍在。
+        return _claim_watch_slot_nolock(token)
+
+    WATCH_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with Lock(WATCH_LOCK, "a+", timeout=0.1) as _:
+            # 拿到锁后再读 pid 文件，判断是否需要杀旧进程。
+            cur_token, cur_pid = 0, 0
+            try:
+                parts = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
+                cur_token, cur_pid = int(parts[0]), int(parts[1])
+            except Exception:  # noqa: BLE001
+                pass
+
+            if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
+                if cur_token < token:
+                    try:
+                        os.kill(cur_pid, signal.SIGTERM)
+                    except Exception:  # noqa: BLE001
+                        pass
+                    time.sleep(0.6)
+                elif cur_token >= token:
+                    return False
+
+            WATCH_PID.write_text(f"{token}|{os.getpid()}", encoding="utf-8")
+            return True
+
+    except (LockException, TimeoutError):
+        # 加锁超时 = 另一个进程正在操作，让位退出。
+        return False
+
+
+def _claim_watch_slot_nolock(token: int) -> bool:
+    """无文件锁的回退版本（多实例仍可能冲突）。"""
     cur_token, cur_pid = 0, 0
     try:
         parts = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
         cur_token, cur_pid = int(parts[0]), int(parts[1])
-    except Exception:  # noqa: BLE001 — 没有文件/格式坏了都当没有
+    except Exception:  # noqa: BLE001
         pass
 
     if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
         if cur_token < token:
             try:
                 os.kill(cur_pid, signal.SIGTERM)
-            except Exception:  # noqa: BLE001 — 旧进程刚好退出
+            except Exception:  # noqa: BLE001
                 pass
-            time.sleep(0.6)  # 等旧连接释放
+            time.sleep(0.6)
         elif cur_token >= token:
-            return False  # 已有更新（或同代）的 watch 在跑
+            return False
 
     WATCH_PID.parent.mkdir(parents=True, exist_ok=True)
     WATCH_PID.write_text(f"{token}|{os.getpid()}", encoding="utf-8")
