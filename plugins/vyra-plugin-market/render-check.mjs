@@ -276,7 +276,8 @@ await (async () => {
   const { remote } = await mount({ sources: [], entries: [] })
   const set = remote.calls.find(([name]) => name === 'setIndexes')
   assert.ok(set !== undefined, 'an unconfigured profile gets a source added')
-  assert.deepEqual(set[1], ['https://lanxiake.github.io/dsh-vyra-plugins/index.json'])
+  // The default source is the ghproxy mirror: reachable in CN without a GitHub detour.
+  assert.deepEqual(set[1], ['https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json'])
 }
 
 // --- this plugin's own market leads, whatever the configured order ----------

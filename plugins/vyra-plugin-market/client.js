@@ -51,11 +51,13 @@ window.__ModuleLoader__.load({
     /** Typing pause before a query is sent. */
     const TEXT_DELAY_MS = 250
 
-    /** 市场索引缓存时间（5 分钟） */
-    const INDEX_CACHE_TTL = 5 * 60 * 1000
-
-    /** 请求超时时间（10 秒） */
-    const FETCH_TIMEOUT = 10000
+    /** localStorage in a browser, nothing in a headless check or a sandboxed renderer. */
+    function storeGet(key) {
+      try { return typeof localStorage === 'undefined' ? null : localStorage.getItem(key) } catch { return null }
+    }
+    function storeSet(key, value) {
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem(key, value) } catch { /* storage full or denied */ }
+    }
 
     // ---------------------------------------------------------------------------
     // Pure logic over market records (`__internal` exposes it to the test).
@@ -310,6 +312,9 @@ window.__ModuleLoader__.load({
       loadFailed: 'Could not read the market.',
       sourceFailed: 'Could not read the market sources.',
       all: 'All',
+      updateAll: 'Update all ({n})',
+      onlyInstalled: 'Installed only',
+      onlyUpdatable: 'Updatable only',
       sortBy: 'Sort',
       sortIndex: 'Default',
       sortPublished: 'Publish date',
@@ -474,19 +479,27 @@ window.__ModuleLoader__.load({
         margin: 0, padding: 0, listStyle: 'none',
       },
       card: (picked) => ({
-        display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', borderRadius: '12px', minWidth: 0,
+        display: 'flex', flexDirection: 'column', gap: '6px', padding: '11px 12px', borderRadius: '10px', minWidth: 0,
         border: `1px solid ${picked ? 'var(--dsw-alias-border-selected)' : 'var(--dsw-alias-border-l2)'}`,
         background: picked ? 'var(--dsw-alias-bg-multi-select)' : 'var(--dsw-alias-card-fill)',
+        transition: 'box-shadow .15s, border-color .15s',
       }),
-      cardTop: { display: 'flex', alignItems: 'flex-start', gap: '9px', minWidth: 0 },
+      cardHover: {
+        boxShadow: '0 3px 12px rgba(0,0,0,.10)',
+        borderColor: 'var(--dsw-alias-border-selected)',
+      },
+      cardTop: { display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 },
       artwork: {
-        width: '38px', height: '38px', borderRadius: '9px', flex: 'none', overflow: 'hidden', display: 'flex',
+        width: '34px', height: '34px', borderRadius: '8px', flex: 'none', overflow: 'hidden', display: 'flex',
         alignItems: 'center', justifyContent: 'center', background: 'var(--dsw-alias-bg-layer-2)',
         color: 'var(--dsw-alias-label-tertiary)',
       },
       img: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
       head: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' },
-      name: { fontSize: '13.5px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      titleRow: { display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 },
+      titleTags: { display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 'none', marginLeft: 'auto' },
+      date: { fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', flex: 'none' },
+      name: { fontSize: '13.5px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
       mono: { fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
       desc: {
         fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-secondary)', margin: 0,
@@ -501,6 +514,8 @@ window.__ModuleLoader__.load({
       }),
       meta: { fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', margin: 0 },
       actions: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginTop: 'auto' },
+      // Resting cards stay flat; the actions grow in on hover so the card is not a wall of buttons.
+      actionsHidden: { display: 'none' },
       check: { width: '15px', height: '15px', flex: 'none', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--dsw-alias-brand-primary)' },
       state: { padding: '28px 8px', textAlign: 'center', color: 'var(--dsw-alias-label-secondary)', fontSize: '13px' },
       error: { color: 'var(--dsw-alias-state-error-primary)' },
@@ -515,6 +530,8 @@ window.__ModuleLoader__.load({
         width: '13px', height: '13px', flex: 'none', borderRadius: '50%', border: '2px solid var(--dsw-alias-border-l2)',
         borderTopColor: 'var(--dsw-alias-brand-primary)', animation: 'vpm-spin .9s linear infinite',
       },
+      progressTrack: { height: '4px', borderRadius: '999px', background: 'var(--dsw-alias-bg-layer-1)', overflow: 'hidden' },
+      progressFill: { height: '100%', borderRadius: '999px', background: 'var(--dsw-alias-brand-primary)', transition: 'width .3s ease' },
       backdrop: {
         position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(0,0,0,.45)',
@@ -533,6 +550,12 @@ window.__ModuleLoader__.load({
         border: BORDER, background: 'var(--dsw-alias-bg-layer-2)', minWidth: 0,
       },
       rowMain: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' },
+      versionRow: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '8px', border: BORDER, background: 'var(--dsw-alias-bg-layer-2)', fontSize: '12.5px' },
+      mdPara: { margin: '0 0 10px', fontSize: '12.5px', lineHeight: '1.7', color: 'var(--dsw-alias-label-primary)' },
+      mdHead: { margin: '14px 0 8px', fontSize: '13.5px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)' },
+      mdLi: { marginLeft: '18px', marginBottom: '4px', fontSize: '12.5px', lineHeight: '1.7', color: 'var(--dsw-alias-label-primary)' },
+      mdPre: { margin: '0 0 10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '12px', lineHeight: 1.6, color: 'var(--dsw-alias-label-primary)' },
+      mdHr: { border: 0, borderTop: '1px solid var(--dsw-alias-border-l1)', margin: '14px 0' },
     }
 
     const KEYFRAMES = 'vpm-keyframes'
@@ -662,8 +685,9 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One entry: artwork, title, state, description, and its actions. A failure
-     * this session left on the entry stays here as a tag whose tooltip holds the
+     * One entry, flattened: the title row carries artwork, name and state tags; the whole card
+     * is the entry point to details; actions appear on hover so the resting card is just title,
+     * description and facts. A failure this session left stays as a tag whose tooltip holds the
      * whole reason and whose press copies it.
      */
     function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, onPick, onRun, onConfirm, onOpen, onDetails, onCopyFailure, onClearFailure }) {
@@ -674,19 +698,16 @@ window.__ModuleLoader__.load({
       const date = shown === undefined ? '' : formatDate(shown.publishTimestamp, lang)
       const incompatible = state === 'available' && version === undefined
       const installed = state === 'installed' || state === 'updatable'
+      const [hover, setHover] = useState(false)
+      const currentVersion = bundle?.version
+      const nextVersion = state === 'updatable' ? updateTarget(entry)?.version : undefined
+
       const actions = []
-      // 详情对未安装的条目也开放：卡片本身的数据 + GitHub 上的 README。
-      if (onDetails !== undefined) {
-        actions.push(h('button', {
-          key: 'detail', style: S.btn(false, false), disabled: busy,
-          onClick: () => { onDetails(entry) },
-        }, lang === 'zh' ? '详情' : 'Details'))
-      }
       if (version !== undefined) {
         const update = state === 'updatable'
         actions.push(h('button', {
           key: 'act', style: S.btn(true, busy), disabled: busy,
-          onClick: () => { onRun([{ action: update ? 'update' : 'install', entry, version }]) },
+          onClick: (event) => { event?.stopPropagation(); onRun([{ action: update ? 'update' : 'install', entry, version }]) },
         }, t(update ? 'update' : 'install')))
       }
       if (installed) {
@@ -697,20 +718,20 @@ window.__ModuleLoader__.load({
         if (removable) {
           actions.push(h('button', {
             key: 'remove', style: S.btn(false, busy), disabled: busy,
-            onClick: () => { onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
+            onClick: (event) => { event?.stopPropagation(); onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
           }, t('uninstall')))
         }
         if (bundle !== undefined && bundle.readOnlyReason === undefined) {
           const disable = bundle.enabled
           actions.push(h('button', {
             key: 'toggle', style: S.btn(false, busy), disabled: busy,
-            onClick: () => { onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
+            onClick: (event) => { event?.stopPropagation(); onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
           }, t(disable ? 'disable' : 'enable')))
         }
         if (onOpen !== undefined) {
           actions.push(h('button', {
             key: 'open', style: S.btn(false, busy), disabled: busy,
-            onClick: () => { onOpen(entry.name) },
+            onClick: (event) => { event?.stopPropagation(); onOpen(entry.name) },
           }, t('open')))
         }
       }
@@ -721,12 +742,12 @@ window.__ModuleLoader__.load({
         tags.push(h('button', {
           key: 'f', type: 'button', title: failure, 'aria-label': `${t('failedTag')}: ${failure}`,
           style: { ...S.tag('error'), cursor: 'pointer', font: 'inherit', margin: 0 },
-          onClick: () => { void onCopyFailure(entry.name, failure) },
+          onClick: (event) => { event?.stopPropagation(); void onCopyFailure(entry.name, failure) },
         }, copied === entry.name ? t('copied') : t('failedTag')))
         tags.push(h('button', {
           key: 'fc', type: 'button', title: t('clearError'), 'aria-label': t('clearError'),
           style: { ...S.tag('error'), cursor: 'pointer', font: 'inherit', margin: 0, padding: '1px 6px' },
-          onClick: () => { onClearFailure(entry.name) },
+          onClick: (event) => { event?.stopPropagation(); onClearFailure(entry.name) },
         }, '×'))
       }
       if (state === 'provided') tags.push(h('span', { key: 'p', style: S.tag('neutral') }, t('tagProvided')))
@@ -734,24 +755,37 @@ window.__ModuleLoader__.load({
       if (state === 'installed') tags.push(h('span', { key: 'i', style: S.tag('ok') }, t(bundle !== undefined && bundle.enabled === false ? 'tagDisabled' : 'tagInstalled')))
       if (incompatible) tags.push(h('span', { key: 'x', style: S.tag('warn') }, t('tagIncompatible')))
       if (shown !== undefined && prerelease(shown.version)) tags.push(h('span', { key: 'r', style: S.tag('neutral') }, t('tagPrerelease')))
-      return h('li', { style: S.card(picked) },
+
+      // A click anywhere on the card opens details; the actions and the checkbox stop
+      // propagation, so picking several or pressing Update never navigates away.
+      const open = onDetails === undefined ? undefined : () => { onDetails(entry) }
+      return h('li', {
+        style: { ...S.card(picked), cursor: open === undefined ? 'default' : 'pointer', ...(hover ? S.cardHover : null) },
+        onClick: open, onMouseEnter: () => { setHover(true) }, onMouseLeave: () => { setHover(false) },
+      },
         h('div', { style: S.cardTop },
           h('input', {
             type: 'checkbox', style: S.check, checked: picked, disabled: busy,
             'aria-label': title, onChange: onPick,
+            onClick: (event) => { event?.stopPropagation() },
           }),
           h('span', { style: S.artwork }, h(Artwork, { src: entry.icon })),
           h('div', { style: S.head },
-            h('span', { style: S.name, title }, title),
-            h('span', { style: S.mono }, entry.name))),
-        tags.length === 0 ? null : h('div', { style: S.tags }, tags),
+            h('div', { style: S.titleRow },
+              h('span', { style: S.name, title }, title),
+              tags.length === 0 ? null : h('div', { style: S.titleTags }, tags))),
+          date === '' ? null : h('span', { style: S.date }, date)),
         entry.description === undefined ? null : h('p', { style: S.desc }, text(entry.description)),
         h('p', { style: S.meta }, [
-          shown === undefined ? null : `${t('version')} ${shown.version}`,
-          entry.author === undefined ? null : `${t('author')} ${entry.author}`,
-          date === '' ? null : `${t('published')} ${date}`,
+          currentVersion !== undefined && nextVersion !== undefined && currentVersion !== nextVersion
+            ? `${currentVersion} → ${nextVersion}`
+            : shown === undefined ? null : `${t('version')} ${shown.version}`,
+          entry.author === undefined ? null : entry.author,
         ].filter(Boolean).join(' · ')),
-        h('div', { style: S.actions }, actions))
+        actions.length === 0 ? null : h('div', {
+          style: { ...S.actions, ...(hover ? null : S.actionsHidden) },
+          onClick: (event) => { event?.stopPropagation() },
+        }, actions))
     }
 
     /** Resolve `owner/repo` from the entry's repository or homepage, for fetching its README. */
@@ -783,7 +817,58 @@ window.__ModuleLoader__.load({
      * author and repository, and the plugin's own README (repository.directory/README.md)
      * is fetched from GitHub — jsDelivr first (reachable in CN), then raw.githubusercontent.com.
      */
-    function DetailDialog({ entry, lang, text, onClose }) {
+    /**
+     * Render README Markdown as real blocks — headings, bullets, fenced code, paragraphs — so
+     * the detail view reads like the client's own plugin pages rather than a pasted blob.
+     * Inline markers the panel cannot draw are stripped; structure that matters is kept.
+     */
+    function renderMarkdown(md, key) {
+      const blocks = []
+      let code = null
+      let para = null
+      const flush = () => {
+        if (para !== null) { blocks.push(...para.map((line, i) => h('p', { key: `${key}p${blocks.length}${i}`, style: S.mdPara }, line))); para = null }
+      }
+      for (const raw of String(md ?? '').replace(/\r\n/g, '\n').split('\n')) {
+        const line = raw.trimEnd()
+        if (/^\s*```/.test(line)) {
+          flush()
+          if (code === null) code = []
+          else { blocks.push(h('pre', { key: `${key}c${blocks.length}`, style: S.mdPre }, code.join('\n'))); code = null }
+          continue
+        }
+        if (code !== null) { code.push(raw); continue }
+        if (line.trim() === '') { flush(); continue }
+        const heading = /^\s{0,3}(#{1,6})\s+(.*)$/.exec(line)
+        if (heading) {
+          flush()
+          blocks.push(h('h4', { key: `${key}h${blocks.length}`, style: { ...S.mdHead, fontSize: heading[1].length <= 2 ? '14px' : '13px' } }, inline(heading[2])))
+          continue
+        }
+        const bullet = /^\s*[-*+]\s+(.*)$/.exec(line)
+        if (bullet) { flush(); blocks.push(h('li', { key: `${key}l${blocks.length}`, style: S.mdLi }, inline(bullet[1]))); continue }
+        const numbered = /^\s*(\d+)[.)]\s+(.*)$/.exec(line)
+        if (numbered) { flush(); blocks.push(h('li', { key: `${key}l${blocks.length}`, style: S.mdLi }, `${numbered[1]}. ${inline(numbered[2])}`)); continue }
+        if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { flush(); blocks.push(h('hr', { key: `${key}r${blocks.length}`, style: S.mdHr })); continue }
+        para = para === null ? [inline(line)] : [...para, inline(line)]
+      }
+      flush()
+      if (code !== null) blocks.push(h('pre', { key: `${key}c${blocks.length}`, style: S.mdPre }, code.join('\n')))
+      return blocks
+    }
+
+    /** Strip inline markers the detail view cannot draw, keeping the words. */
+    function inline(text) {
+      return text
+        .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/(^|[\s(])[*_]([^*_]+)[*_]([\s).,，。])/g, '$1$2$3')
+        .trim()
+    }
+
+    function DetailDialog({ entry, bundle, lang, t, text, busy, onRun, onConfirm, onOpen, onClose }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
       const urls = readmeUrls(entry)
       const [view, setView] = useState({ loading: true, md: '', error: '' })
@@ -814,36 +899,124 @@ window.__ModuleLoader__.load({
         return () => { alive = false }
       }, [entry.name, lang])
 
+      const state = entryState(entry)
       const shown = presentedVersion(entry)
+      const version = actionVersion(entry)
+      const installed = state === 'installed' || state === 'updatable'
+      const removable = bundle !== undefined && bundle.removable !== false
+      const nextVersion = state === 'updatable' ? updateTarget(entry)?.version : undefined
       const facts = [
         shown === undefined ? null : `${lang === 'zh' ? '版本' : 'version'} ${shown.version}`,
         entry.author === undefined ? null : `${lang === 'zh' ? '作者' : 'author'} ${entry.author}`,
         entry.metadata && entry.metadata.category ? entry.metadata.category : null,
       ].filter(Boolean)
 
+      const actions = []
+      if (version !== undefined) {
+        const update = state === 'updatable'
+        actions.push(h('button', {
+          key: 'act', style: S.btn(true, busy), disabled: busy,
+          onClick: () => { onRun([{ action: update ? 'update' : 'install', entry, version }]) },
+        }, t(update ? 'update' : 'install')))
+      }
+      if (installed && removable && onConfirm !== undefined) {
+        actions.push(h('button', {
+          key: 'remove', style: S.btn(false, busy), disabled: busy,
+          onClick: () => { onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
+        }, t('uninstall')))
+      }
+      if (installed && bundle !== undefined && bundle.readOnlyReason === undefined) {
+        const disable = bundle.enabled
+        actions.push(h('button', {
+          key: 'toggle', style: S.btn(false, busy), disabled: busy,
+          onClick: () => { onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
+        }, t(disable ? 'disable' : 'enable')))
+      }
+      if (installed && onOpen !== undefined) {
+        actions.push(h('button', {
+          key: 'open', style: S.btn(false, busy), disabled: busy,
+          onClick: () => { onOpen(entry.name) },
+        }, t('open')))
+      }
+
+      // The version list the index carries, newest first, with the running one marked.
+      const history = entry.versions.slice(0, 8)
+      const current = bundle?.version
+
       return h('div', { style: S.backdrop, onClick: onClose },
         h('div', {
-          style: { ...S.modal, width: 'min(760px, 92vw)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', margin: 0 },
+          style: { ...S.modal, width: 'min(760px, 92vw)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', margin: 0, padding: 0 },
           onClick: (e) => e.stopPropagation(),
         },
-          h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 'none' } },
-            h('span', { style: S.artwork }, h(Artwork, { src: entry.icon })),
+          // --- header ---
+          h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 'none', padding: '16px 18px 12px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
+            h('span', { style: { ...S.artwork, width: '44px', height: '44px' } }, h(Artwork, { src: entry.icon })),
             h('div', { style: { flex: 1, minWidth: 0 } },
-              h('h3', { style: S.modalTitle }, title),
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
+                h('h3', { style: { ...S.modalTitle, margin: 0 } }, title),
+                nextVersion !== undefined && current !== undefined && current !== nextVersion
+                  ? h('span', { style: S.tag('warn') }, `${current} → ${nextVersion}`)
+                  : null),
               h('span', { style: S.mono }, entry.name)),
             h('button', { style: S.btn(false, false), 'aria-label': 'close', onClick: onClose }, '×')),
-          entry.description === undefined ? null : h('p', { style: { ...S.modalBody, marginTop: '10px', flex: 'none' } }, text(entry.description)),
-          facts.length === 0 ? null : h('p', { style: { ...S.meta, marginTop: '6px', flex: 'none' } }, facts.join(' · ')),
-          h('div', { style: { flex: 1, overflow: 'auto', marginTop: '12px', borderRadius: '10px', background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l1)', padding: '12px 14px', minHeight: '180px' } },
+          // --- actions + facts ---
+          h('div', { style: { flex: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '10px 18px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
+            actions,
+            facts.length === 0 ? null : h('span', { style: { ...S.meta, marginLeft: 'auto' } }, facts.join(' · '))),
+          // --- README ---
+          h('div', { style: { flex: 1, overflow: 'auto', padding: '14px 18px', minHeight: '180px' } },
+            entry.description === undefined ? null : h('p', { style: { ...S.modalBody, marginTop: 0 } }, text(entry.description)),
             view.loading
-              ? h('div', { style: { fontSize: '12.5px', color: 'var(--dsw-alias-label-secondary)' } }, lang === 'zh' ? '正在读取 README…' : 'Loading README…')
+              ? h('div', { style: { fontSize: '12.5px', color: 'var(--dsw-alias-label-secondary)', marginTop: '12px' } }, lang === 'zh' ? '正在读取 README…' : 'Loading README…')
               : view.error
-                ? h('div', { style: { fontSize: '12.5px', color: 'var(--dsw-alias-label-secondary)' } }, view.error)
-                : h('pre', { style: { margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '12px', lineHeight: 1.6, color: 'var(--dsw-alias-label-primary)' } }, view.md)),
-          h('div', { style: { flex: 'none', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--dsw-alias-border-l1)', fontSize: '12.5px', lineHeight: 1.7, color: 'var(--dsw-alias-label-secondary)' } },
-            '有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。')
+                ? h('div', { style: { fontSize: '12.5px', color: 'var(--dsw-alias-label-secondary)', marginTop: '12px' } }, view.error)
+                : h('div', { style: { marginTop: '12px' } }, renderMarkdown(view.md, `${entry.name}-md`)),
+            // --- version history ---
+            entry.versions.length === 0 ? null : h('div', { style: { marginTop: '18px', paddingTop: '12px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
+              h('h4', { style: { ...S.mdHead, marginBottom: '8px' } }, lang === 'zh' ? '版本历史' : 'Version history'),
+              h('ul', { style: { ...S.list, marginTop: '6px' } },
+                history.map((v) => h('li', { key: v.version, style: S.versionRow },
+                  h('span', { style: { fontWeight: current === v.version ? 600 : 400 } }, v.version),
+                  v.version === shown?.version ? h('span', { style: S.tag('ok') }, lang === 'zh' ? '最新' : 'Latest') : null,
+                  h('span', { style: { ...S.meta, marginLeft: 'auto' } }, formatDate(v.publishTimestamp, lang))))),
+              entry.versions.length > history.length
+                ? h('p', { style: S.meta }, lang === 'zh' ? `还有 ${entry.versions.length - history.length} 个更早版本未显示` : `${entry.versions.length - history.length} older versions not shown`)
+                : null),
+            h('div', { style: { flex: 'none', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--dsw-alias-border-l1)', fontSize: '12.5px', lineHeight: 1.7, color: 'var(--dsw-alias-label-secondary)' } },
+              '有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。'))
         )
       )
+    }
+
+    /**
+     * Check for updates once, in the background, and tell the user if any exist.
+     *
+     * This runs when the client UI loads rather than when the market tab is opened — the point of
+     * an automatic check is to tell someone who was not going to look. It stays silent on every
+     * failure: a market that is unreachable at startup is not worth interrupting anyone over.
+     * The toggle lives in this plugin's own localStorage key, so no host storage is needed.
+     */
+    async function autoCheck(remote) {
+      try {
+        if (storeGet('vyra-market.autoCheck') === 'off') return
+        const indexes = await remote.pluginMarket.listIndexes()
+        if (!indexes.ok || indexes.value.length === 0) return
+        const url = indexes.value.find((source) => VEYRA_SOURCES.includes(source.url))?.url ?? indexes.value[0].url
+        const [page, bundles] = await Promise.all([
+          remote.pluginMarket.search(url, { sort: { kind: 'index' }, offset: 0, limit: 500 }),
+          remote.pluginManager.listBundles(),
+        ])
+        if (!page.ok || !bundles.ok) return
+        const installed = new Set(bundles.value.map((bundle) => bundle.name))
+        const updatable = page.value.entries
+          .filter((entry) => installed.has(entry.name) && updateTarget(entry) !== undefined).length
+        if (updatable === 0) return
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('插件市场 · Plugin market', { body: `发现 ${updatable} 个插件可更新 / ${updatable} update(s) available` })
+        }
+      } catch {
+        /* Startup is not the place to report a market error. */
+      }
     }
 
     // ---------------------------------------------------------------------------
@@ -878,9 +1051,22 @@ window.__ModuleLoader__.load({
       const [copied, setCopied] = useState(null)
       // ponytail: 快捷筛选状态（仅已安装/仅可更新）
       const [quickFilter, setQuickFilter] = useState(null)
+      // Startup update check toggle, persisted locally (no host storage needed).
+      const [autoCheckOn, setAutoCheckOn] = useState(() => storeGet('vyra-market.autoCheck') !== 'off')
+      // Recent search terms, offered through a native <datalist> rather than a custom dropdown.
+      const [recent, setRecent] = useState(() => {
+        try { return JSON.parse(storeGet('vyra-market.recent') ?? '[]') } catch { return [] }
+      })
+      const rememberQuery = useCallback((term) => {
+        const value = String(term).trim()
+        if (value === '') return
+        setRecent((current) => {
+          const next = [value, ...current.filter((item) => item !== value)].slice(0, 5)
+          storeSet('vyra-market.recent', JSON.stringify(next))
+          return next
+        })
+      }, [])
 
-      // ponytail: 索引缓存，避免切换回已加载的源时重新请求
-      const indexCache = useRef(new Map())
       // ponytail: AbortController 用于取消未完成的请求
       const loadAbortController = useRef(null)
 
@@ -1018,10 +1204,11 @@ window.__ModuleLoader__.load({
           const live = liveRef.current
           const next = withText(live.query, draft)
           setQuery(next)
+          rememberQuery(next.text)
           if (live.listing !== null) void live.load(live.listing.url, next, 0, PAGE, undefined)
         }, TEXT_DELAY_MS)
         return () => { clearTimeout(timer) }
-      }, [draft, query.text])
+      }, [draft, query.text, rememberQuery])
 
       const entries = listing === null || listing.value === null ? [] : listing.value.entries
 
@@ -1284,9 +1471,17 @@ window.__ModuleLoader__.load({
         ].filter(Boolean)))
       }
       if (running !== null) {
-        rows.push(h('div', { key: 'running', style: S.bar, role: 'status' },
-          h('span', { style: S.spinner }),
-          `${t('progress', { action: running.action, done: running.done, total: running.total })} — ${running.name}`))
+        // A visible progress bar, not just a counter: a batch of ten installs can take a
+        // minute, and the person needs to see it moving rather than wonder if it hung.
+        const pct = running.total === 0 ? 0 : Math.round((running.done / running.total) * 100)
+        rows.push(h('div', { key: 'running', style: { ...S.bar, flexDirection: 'column', alignItems: 'stretch', gap: '6px' }, role: 'status' },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+            h('span', { style: S.spinner }),
+            h('span', { style: { flex: 1, minWidth: 0, ...S.ellipsis } },
+              `${t('progress', { action: running.action, done: running.done, total: running.total })} — ${running.name}`),
+            h('span', { style: { ...S.meta, flex: 'none' } }, `${pct}%`)),
+          h('div', { style: S.progressTrack },
+            h('div', { style: { ...S.progressFill, width: `${pct}%` } }))))
       }
       if (picked.size > 0) {
         const bulk = []
@@ -1333,14 +1528,29 @@ window.__ModuleLoader__.load({
               h('button', {
                 role: 'menuitem', style: S.menuItem(false),
                 onClick: () => { setMenu(null); setSourcesOpen(true) },
-              }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, h(SlidersIcon, {}), t('manageSources'))))),
+              }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, h(SlidersIcon, {}), t('manageSources'))),
+              h('div', { style: S.menuSep }),
+              // A toggle, not a checkbox input: one row in a menu, no extra layout.
+              h('button', {
+                role: 'menuitemcheckbox', 'aria-checked': autoCheckOn, style: S.menuItem(false),
+                onClick: () => {
+                  const next = !autoCheckOn
+                  setAutoCheckOn(next)
+                  storeSet('vyra-market.autoCheck', next ? 'on' : 'off')
+                  setMenu(null)
+                },
+              }, `${autoCheckOn ? '✓ ' : ''}${lang === 'zh' ? '启动时检查更新' : 'Check updates at startup'}`))),
           h('div', { style: S.searchWrap },
             h('span', { style: S.searchIcon }, h(SearchIcon, {})),
             h('input', {
               style: S.input, type: 'search', value: draft, spellCheck: false,
-              placeholder: t('search'), 'aria-label': t('search'),
+              placeholder: t('search'), 'aria-label': t('search'), list: 'vpm-recent-searches',
               onChange: (event) => { setDraft(event.target.value) },
-            })),
+            }),
+            // A native suggestion list: the browser/Electron draws and filters it, so no custom
+            // dropdown state, no positioning code, and it still works on a fresh profile.
+            recent.length === 0 ? null : h('datalist', { id: 'vpm-recent-searches' },
+              recent.map((term) => h('option', { key: term, value: term })))),
           h('div', { style: S.host, ref: sortMenu },
             h('button', {
               style: S.btn(false, false), 'aria-haspopup': 'menu', 'aria-expanded': menu === 'sort',
@@ -1464,7 +1674,10 @@ window.__ModuleLoader__.load({
           onRun: () => { void run(confirm.orders) },
         }),
         detailEntry === null ? null : h(DetailDialog, {
-          entry: detailEntry, lang, text,
+          entry: detailEntry, bundle: bundles.get(detailEntry.name), lang, t, text, busy,
+          onRun: (list) => { void run(list) },
+          onConfirm: setConfirm,
+          onOpen: props.openPackage,
           onClose: () => { setDetailEntry(null) },
         }),
         sourcesOpen ? h(SourcesDialog, {
@@ -1496,6 +1709,8 @@ window.__ModuleLoader__.load({
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), `${NS}: dictionaries`)
+        // A background update check at client startup; silent on any failure and behind a toggle.
+        void autoCheck(ctx.remote)
         const t = ctx.locale.bind(NS)
         ctx.slots.inject('plugins.tab', () => ctx.slots.register({
           name: 'plugins.tab',
