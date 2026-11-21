@@ -1731,6 +1731,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.2.0 makes the market usable: switching sources cancels the in-flight read and clears
+        // stale results instead of leaving the previous market on screen; the default source is
+        // the ghproxy mirror (reachable in CN); cards are flattened (name + state on one line,
+        // click opens details, actions on hover); the detail view renders the README as blocks
+        // with actions and version history; bulk runs show a progress bar; quick filters,
+        // update-all, startup update check and recent searches are added.
+        '0.2.0': {
+          publishTimestamp: 1795334400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0318a89ada224c3f99042bc6e0c82dbe2c8127c0',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
