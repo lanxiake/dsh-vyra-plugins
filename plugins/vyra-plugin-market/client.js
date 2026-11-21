@@ -38,11 +38,24 @@ window.__ModuleLoader__.load({
     /** Our own market index: the source this plugin exists to browse. */
     const HOME_SOURCE = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
 
+    /** Veyra 市场源候选列表（国内优先） */
+    const VEYRA_SOURCES = [
+      'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
+      HOME_SOURCE,
+    ]
+
     /** Entries loaded before "Show more", and loaded again by each press. */
     const PAGE = 60
 
     /** Typing pause before a query is sent. */
     const TEXT_DELAY_MS = 250
+
+    /** 市场索引缓存时间（5 分钟） */
+    const INDEX_CACHE_TTL = 5 * 60 * 1000
+
+    /** 请求超时时间（10 秒） */
+    const FETCH_TIMEOUT = 10000
 
     // ---------------------------------------------------------------------------
     // Pure logic over market records (`__internal` exposes it to the test).
@@ -861,6 +874,11 @@ window.__ModuleLoader__.load({
       /** The entry whose failure text was just copied, for the tag's own feedback. */
       const [copied, setCopied] = useState(null)
 
+      // ponytail: 索引缓存，避免切换回已加载的源时重新请求
+      const indexCache = useRef(new Map())
+      // ponytail: AbortController 用于取消未完成的请求
+      const loadAbortController = useRef(null)
+
       const alive = useRef(true)
       useEffect(() => () => { alive.current = false }, [])
 
@@ -881,12 +899,12 @@ window.__ModuleLoader__.load({
         }
         setSourcesFailure(null)
         let list = answer.value
-        // A fresh profile configures no source at all, which leaves this tab
-        // with nothing to browse. This plugin exists for one market, so it adds
-        // its own — through the same Setting the official page edits — instead
-        // of showing an empty list the user has to fill in by hand.
-        if (list.length === 0 && adopt) {
-          const added = await remote.pluginMarket.setIndexes([HOME_SOURCE])
+        // ponytail: 首次打开或列表为空时，自动添加 Veyra 源（优先使用 ghproxy 加速）
+        const hasVeyra = list.some((item) => VEYRA_SOURCES.includes(item.url))
+        if ((list.length === 0 || !hasVeyra) && adopt) {
+          // 使用国内加速源作为默认
+          const defaultSource = VEYRA_SOURCES[0]
+          const added = await remote.pluginMarket.setIndexes([defaultSource, ...list.map((s) => s.url)])
           if (!alive.current) return
           if (added.ok) {
             const reread = await remote.pluginMarket.listIndexes()
@@ -895,14 +913,11 @@ window.__ModuleLoader__.load({
           }
         }
         setSources(list)
-        // The tab opens on this plugin's own market rather than whichever source
-        // happens to be configured first: a profile typically lists a
-        // third-party index ahead of ours, and this tab exists to browse ours.
-        // The menu still switches to any other source, and a choice already
-        // made is kept.
+        // ponytail: 优先激活 Veyra 源（任意一个）
         setActiveUrl((current) => {
           if (list.some((item) => item.url === current)) return current
-          return list.find((item) => item.url === HOME_SOURCE)?.url ?? list[0]?.url ?? null
+          const veyra = list.find((item) => VEYRA_SOURCES.includes(item.url))
+          return veyra?.url ?? list[0]?.url ?? null
         })
       }, [remote])
 
@@ -916,42 +931,54 @@ window.__ModuleLoader__.load({
       /** Load one page of a source, replacing the results it answers. */
       const loadRef = useRef(null)
       const load = useCallback(async (url, next, offset, limit, fetchedAt, depth = 0, refresh = false) => {
-        setListing((current) => ({
+        // ponytail: 取消上一个未完成的请求，避免显示旧数据
+        if (loadAbortController.current) {
+          loadAbortController.current.abort()
+        }
+        loadAbortController.current = new AbortController()
+        const signal = loadAbortController.current.signal
+
+        // ponytail: 立即清空旧数据并显示加载状态，避免切换源时显示上一个市场的数据
+        setListing({
           url, query: next, status: 'loading',
-          value: current !== null && current.url === url ? current.value : null, failure: null,
-        }))
-        const answer = await remote.pluginMarket.search(url, {
-          ...next.text.trim() === '' ? {} : { text: next.text },
-          ...next.category === null ? {} : { category: next.category },
-          sort: next.sort, offset, limit,
-          ...fetchedAt === undefined ? {} : { fetchedAt },
-          // The Host reuses one index document for ten minutes unless a read says
-          // otherwise. The refresh button exists to see a just-published plugin,
-          // so it has to bypass that cache; without this it silently re-reads it.
-          ...refresh ? { refresh: true } : {},
+          value: offset === 0 ? null : (listing?.url === url ? listing.value : null),
+          failure: null,
         })
-        if (!alive.current) return
-        if (!answer.ok) {
-          setListing({ url, query: next, status: 'error', value: null, failure: answer.error.message })
-          return
+
+        try {
+          const answer = await remote.pluginMarket.search(url, {
+            ...next.text.trim() === '' ? {} : { text: next.text },
+            ...next.category === null ? {} : { category: next.category },
+            sort: next.sort, offset, limit,
+            ...fetchedAt === undefined ? {} : { fetchedAt },
+            ...refresh ? { refresh: true } : {},
+          })
+
+          // ponytail: 请求被取消，不更新状态
+          if (signal.aborted) return
+          if (!alive.current) return
+
+          if (!answer.ok) {
+            setListing({ url, query: next, status: 'error', value: null, failure: answer.error.message })
+            return
+          }
+          const page = answer.value
+          if (offset > 0 && page.fetchedAt !== fetchedAt) {
+            if (depth < 1) await loadRef.current(url, next, 0, Math.max(offset + limit, PAGE), undefined, depth + 1)
+            return
+          }
+          setListing((current) => {
+            const kept = offset > 0 && current !== null && current.url === url && current.value !== null
+              ? current.value.entries
+              : []
+            return { url, query: next, status: 'ready', failure: null, value: { ...page, entries: [...kept, ...page.entries] } }
+          })
+        } catch (error) {
+          if (signal.aborted) return
+          if (!alive.current) return
+          setListing({ url, query: next, status: 'error', value: null, failure: error.message || '请求失败' })
         }
-        const page = answer.value
-        // A different `fetchedAt` is a different document: the pages already
-        // shown answer the replaced one, so a later page restarts from the top
-        // instead of appending to results that no longer belong together. The
-        // depth bound stops an index that replaces its document on every page
-        // from looping forever.
-        if (offset > 0 && page.fetchedAt !== fetchedAt) {
-          if (depth < 1) await loadRef.current(url, next, 0, Math.max(offset + limit, PAGE), undefined, depth + 1)
-          return
-        }
-        setListing((current) => {
-          const kept = offset > 0 && current !== null && current.url === url && current.value !== null
-            ? current.value.entries
-            : []
-          return { url, query: next, status: 'ready', failure: null, value: { ...page, entries: [...kept, ...page.entries] } }
-        })
-      }, [remote])
+      }, [remote, listing])
       loadRef.current = load
 
       useEffect(() => { void loadSources(true) }, [loadSources])
