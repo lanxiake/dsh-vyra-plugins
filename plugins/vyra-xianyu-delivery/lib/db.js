@@ -229,9 +229,11 @@ export function createStore(file) {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ),
     recentDeliveries: db.prepare(
-      `SELECT d.*, o.buyer_id, o.item_id as delivery_item_id, o.quantity, o.amount, o.created_at as order_time
+      `SELECT d.*, o.buyer_id, o.item_id AS delivery_item_id, o.quantity, o.amount,
+              o.created_at AS order_time, i.title AS item_title
        FROM deliveries d
        LEFT JOIN orders o ON d.order_no = o.order_no AND (o.account_id = d.account_id OR o.account_id = '')
+       LEFT JOIN items i ON o.item_id = i.item_id AND (i.account_id = o.account_id OR i.account_id = '')
        WHERE (d.account_id = ? OR d.account_id = '')
        ORDER BY d.id DESC LIMIT ?`,
     ),

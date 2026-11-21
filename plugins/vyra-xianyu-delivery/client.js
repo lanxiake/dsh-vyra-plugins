@@ -25,7 +25,9 @@ window.__ModuleLoader__.load({
       card: { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', padding: '16px 18px', marginBottom: '14px' },
       row: (n = 5) => ({
         display: 'grid',
-        gridTemplateColumns: n === 6 ? '1.8fr 1fr .7fr .5fr 1.3fr 1.2fr' : '2fr 1.4fr 1fr 1fr 2fr',
+        gridTemplateColumns: n === 7
+          ? '1.5fr 1fr 1.5fr .7fr .8fr 1.4fr 1.1fr'
+          : n === 6 ? '1.8fr 1fr .7fr .5fr 1.3fr 1.2fr' : '2fr 1.4fr 1fr 1fr 2fr',
         gap: '10px', padding: '9px 12px', borderBottom: '1px solid rgba(127,127,127,.12)', fontSize: '13px', alignItems: 'center',
       }),
       th: { fontWeight: 600, opacity: 0.65 },
@@ -229,20 +231,30 @@ window.__ModuleLoader__.load({
     }
 
     function DeliveriesTab(props) {
-      const { deliveries } = props
+      const { deliveries, onDetail } = props
       const note = h('div', { style: { ...S.muted, marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(127,127,127,.06)' } },
-        '这里只显示插件自动发货发出的消息；你在闲鱼 App 里手动发出的消息不在其中。')
+        '这里只显示插件自动发货发出的消息；你在闲鱼 App 里手动发出的消息不在其中。点任意一行看订单详情。')
       if (!deliveries.length) return h('div', null, note, h('div', { style: S.empty }, '暂无发货记录'))
       return h('div', null, note,
-        h('div', { style: { ...S.row(), ...S.th } },
-          h('span', null, '订单'), h('span', null, '序号'), h('span', null, '结果'), h('span', null, '内容'), h('span', null, '时间')),
-        deliveries.map((d) =>
-          h('div', { key: d.id, style: S.row() },
-            h('span', { style: S.mono }, d.order_no),
-            h('span', null, String(d.seq)),
-            h('span', null, h('span', { style: S.tag(d.send_state) }, d.send_state)),
-            h('span', { style: { ...S.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, d.content),
-            h('span', { style: { fontSize: '12px', opacity: 0.8 } }, d.created_at)
+        h('div', { style: S.tableWrap },
+          h('div', { style: { ...S.row(7), ...S.th } },
+            h('span', null, '订单号'), h('span', null, '买家'), h('span', null, '商品'),
+            h('span', null, '金额'), h('span', null, '结果'), h('span', null, '内容'), h('span', null, '时间')),
+          deliveries.map((d) =>
+            h('div', {
+              key: d.id,
+              style: { ...S.row(7), cursor: d.order_no ? 'pointer' : 'default' },
+              title: d.content ? `发货内容：${d.content}` : '',
+              onClick: () => d.order_no && onDetail && onDetail({ order_no: d.order_no }),
+            },
+              h('span', { style: S.mono, title: d.order_no }, d.order_no),
+              h('span', { title: d.buyer_id || '' }, d.buyer_id || '-'),
+              h('span', { title: d.item_title || d.delivery_item_id || '' }, d.item_title || d.delivery_item_id || '-'),
+              h('span', null, d.amount ? `¥${d.amount}` : '-'),
+              h('span', null, h('span', { style: S.tag(d.send_state) }, d.send_state)),
+              h('span', { style: { ...S.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, d.content),
+              h('span', { style: { fontSize: '12px', opacity: 0.8 } }, d.created_at)
+            )
           )
         )
       )
@@ -1431,7 +1443,7 @@ window.__ModuleLoader__.load({
           onEdit: (s) => setServiceDialog({ service: s }),
           onDelete: removeService,
         }) : null,
-        tab === 'deliveries' ? h(DeliveriesTab, { deliveries }) : null,
+        tab === 'deliveries' ? h(DeliveriesTab, { deliveries, onDetail: (o) => setOrderDetailId(o.order_no) }) : null,
         loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null,
         orderDetailId ? h(OrderDetailDialog, { orderId: orderDetailId, onClose: () => setOrderDetailId(null) }) : null,
         itemDetailItem ? h(ItemDetailDialog, { item: itemDetailItem, onClose: () => setItemDetailItem(null) }) : null,

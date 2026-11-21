@@ -29,6 +29,7 @@ export function apply(ctx, config = {}) {
     blockRefund: true,
     blockZeroAmount: true,
     sendIntervalMs: 60000,
+    chatPollSeconds: 15,
     dataFile: join(homedir(), '.dsh', 'xianyu-delivery', 'data.sqlite'),
     cliCommand: 'uv',
     cliPrefix: undefined, // 默认用 lib/cli.js 里的 worker 路径
@@ -357,12 +358,14 @@ export function apply(ctx, config = {}) {
   }
 
   async function replyToBuyer(cid, question, history, meta = {}) {
-    // 会话对应的商品：优先买家最近的订单，其次会话消息里的商品卡片。
-    let itemId = ''
-    try {
-      itemId = store.lastItemForBuyer(String(meta.send_user_id || ''), account()) || ''
-    } catch {
-      itemId = ''
+    // 会话对应的商品：会话自带的 itemId 最准，其次买家最近的订单，最后看历史卡片。
+    let itemId = String(meta.itemId || '').trim()
+    if (!itemId) {
+      try {
+        itemId = store.lastItemForBuyer(String(meta.send_user_id || ''), account()) || ''
+      } catch {
+        itemId = ''
+      }
     }
     if (!itemId) itemId = findItemId(history)
 
@@ -454,7 +457,6 @@ export function apply(ctx, config = {}) {
     }
 
     // 无正文事件：new_msg 轻量通知（只有 msg_id）、卡片、系统提示。
-    // 统一拉历史：先找订单号立刻发货；没有订单就看最新一条是不是买家提问。
     if ((eventCooldown.get(cid) || 0) > now - 3000) return
     eventCooldown.set(cid, now)
 
@@ -465,7 +467,12 @@ export function apply(ctx, config = {}) {
       log(`history failed: ${err?.message || err}`)
       return
     }
+    await handleConversation(cid, history, evt)
+  }
 
+  // 拉到的历史统一处理：有订单号就发货，否则回复最新一条买家提问。
+  // 轮询和 watch 都走这里，保证两条路径行为一致。
+  async function handleConversation(cid, history, meta = {}) {
     const orderNo = findOrderId(history)
     if (orderNo) {
       const result = await dispatcher.reconcile(orderNo)
@@ -475,19 +482,56 @@ export function apply(ctx, config = {}) {
     }
 
     const latest = latestBuyerText(history, selfUserId)
-    if (latest && latest.text && latest.id !== handledMsg.get(cid)) {
-      if (!ai.enabled) {
-        recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: latest.text.slice(0, 40) })
-        return
-      }
-      handledMsg.set(cid, latest.id)
-      await replyToBuyer(cid, latest.text, history, {
-        ...evt, send_user_id: latest.userId, send_user_name: latest.nick,
-      })
+    if (!latest || !latest.text || latest.id === handledMsg.get(cid)) return
+    if (!ai.enabled) {
+      recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: latest.text.slice(0, 40) })
       return
     }
+    handledMsg.set(cid, latest.id)
+    await replyToBuyer(cid, latest.text, history, {
+      ...meta, send_user_id: latest.userId, send_user_name: latest.nick,
+    })
+  }
 
-    recordEvent({ cid, kind: `hint:${evt.event || 'card'}`, orderNo: '', action: 'no-order' })
+  // 轮询会话列表：每个 CLI 调用都会新开一条 IM 连接，常驻 watch 会被踢下线，
+  // 所以主路径靠轮询（watch 只是低延迟补充）。
+  const lastChatTs = new Map()
+  let chatPollBaseline = false
+
+  async function pollChats() {
+    let data
+    try {
+      data = await cli.chats(60)
+    } catch (err) {
+      log(`chat poll failed: ${err?.message || err}`)
+      return
+    }
+    const sessions = (data && data.sessions) || []
+    const first = !chatPollBaseline
+    chatPollBaseline = true
+
+    for (const s of sessions) {
+      const cid = String(s.session_id || '')
+      if (!cid) continue
+      const ts = Number(s.ts) || 0
+      const seen = lastChatTs.get(cid) || 0
+      if (ts && ts <= seen) continue
+      lastChatTs.set(cid, ts || Date.now())
+      // 启动时只记基线，避免把历史里的旧消息全部回一遍。
+      if (first) continue
+      let history = []
+      try {
+        history = await cli.history(cid, 6)
+      } catch (err) {
+        log(`chat poll history failed: ${err?.message || err}`)
+        continue
+      }
+      await handleConversation(cid, history, {
+        itemId: String(s.item_id || ''),
+        send_user_id: String(s.peer_user_id || ''),
+        send_user_name: String(s.peer_nick || ''),
+      })
+    }
   }
 
   // Windows: uv 启动的 python 是子进程，只 kill 父 PID 会留下孤儿继续占着
@@ -510,7 +554,9 @@ export function apply(ctx, config = {}) {
   // 启动时间戳，新实例杀旧的；旧实例的重试拿到 superseded 后不再重启。
   let watchToken = Date.now()
   let watchSuperseded = false
-  let watchEnabled = (store.getSetting('watch.enabled') ?? (cfg.watchEnabled === false ? '0' : '1')) !== '0'
+  // watch 默认关：它和每次 CLI 调用（history/send 都会新开 IM 连接）抢同一条
+  // 连接，互相踢下线。轮询是主路径，watch 只作为可选的低延迟补充。
+  let watchEnabled = (store.getSetting('watch.enabled') ?? (cfg.watchEnabled === true ? '1' : '0')) !== '0'
 
   // 升级前的 watch 没有 pid 文件，单例管不到，只有首次启动时按命令行清一遍。
   // 同步执行：清扫必须在 spawn 之前完成，否则会连自己刚拉起的进程一起杀掉。
@@ -587,6 +633,28 @@ export function apply(ctx, config = {}) {
     startWatch()
     return () => stopWatch()
   }, 'xianyu-delivery.watch')
+
+  // 会话轮询：不依赖长连接，watch 被踢也能在一轮内补上。
+  ctx.effect(() => {
+    let timer = null
+    let stopped = false
+    const arm = () => {
+      timer = setTimeout(async () => {
+        if (stopped) return
+        try {
+          await pollChats()
+        } catch (err) {
+          log(`chat poll failed: ${err?.message || err}`)
+        }
+        arm()
+      }, cfg.chatPollSeconds * 1000)
+    }
+    arm()
+    return () => {
+      stopped = true
+      if (timer) clearTimeout(timer)
+    }
+  }, 'xianyu-delivery.chat-poll')
 
   const status = () => ({
     config: {

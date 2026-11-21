@@ -18,6 +18,7 @@ import base64
 import json
 import os
 import signal
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -206,6 +207,8 @@ async def _list_conversations(limit: int = 200) -> list[dict[str, Any]]:
                     except (ValueError, TypeError):
                         ext_raw = {}
                 item_title = str((ext_raw or {}).get("itemTitle") or "") if isinstance(ext_raw, dict) else ""
+                # 会话本身就绑着商品：买家从聊天列表进来也能定位商品。
+                item_id = str((ext_raw or {}).get("itemId") or "") if isinstance(ext_raw, dict) else ""
 
                 last = (conv.get("lastMessage") or {}).get("message") or {}
                 last_ext = last.get("extension") or {}
@@ -238,7 +241,7 @@ async def _list_conversations(limit: int = 200) -> list[dict[str, Any]]:
                         "last_msg": text[:60],
                         "ts": int(conv.get("modifyTime") or 0) or None,
                         "unread": int(conv.get("redPoint") or 0),
-                        "item_id": "",
+                        "item_id": item_id,
                         "item_title": item_title,
                         "source": "im",
                     }
@@ -426,68 +429,91 @@ def _pid_alive(pid: int) -> bool:
         return True
 
 
+def _read_watch_pid() -> tuple[int, int]:
+    try:
+        parts = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
+        return int(parts[0]), int(parts[1])
+    except Exception:  # noqa: BLE001 — 没有文件 / 格式坏了都当没有
+        return 0, 0
+
+
+def _kill_watch(pid: int) -> None:
+    """强杀遗留的 watch。Windows 上 SIGTERM 不一定生效，直接 taskkill /F。"""
+    if not pid or pid == os.getpid():
+        return
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/PID", str(pid), "/T", "/F"],
+                capture_output=True, timeout=10,
+            )
+        else:
+            os.kill(pid, signal.SIGKILL)
+    except Exception:  # noqa: BLE001 — 已经退出 / 没有权限
+        pass
+
+
 def _claim_watch_slot(token: int) -> bool:
     """同一时间只留一个 watch，返回 False 表示自己该退出。
 
     插件热重载/多开会留下没人管的旧 watch；多个实例同时连 IM 会互相把连接
-    踢掉，表现就是"买家发了消息但插件收不到事件"。token 是插件实例的启动
-    时间戳：更新的实例杀旧的；旧实例的重试则让位并退出，不会来回互杀。
+    踢掉，表现就是"买家发了消息但插件收不到事件"。
 
-    用文件锁保证原子性：即使多个进程同时启动，也只有一个能拿到锁并写 pid。
+    单例分两层：
+    1. 文件锁（portalocker）保证"读 pid → 判活 → 写 pid"是原子的。
+       必须用 r+ 从偏移 0 加锁：Windows 上 msvcrt 锁的是当前偏移处的字节，
+       a+ 会随写长度变化锁到不同位置，等于没锁。
+    2. 拿不到锁说明别人在操作，或它已经跑起来了：杀掉 pid 文件里的进程再重试。
+    无论插件实例先后，最后只有最后一个启动的 watch 存活。
     """
     try:
         from portalocker import Lock, LockException
     except ImportError:
-        # 没装 portalocker 就退回无锁版（向后兼容），多实例风险仍在。
         return _claim_watch_slot_nolock(token)
 
     WATCH_LOCK.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with Lock(WATCH_LOCK, "a+", timeout=0.1) as _:
-            # 拿到锁后再读 pid 文件，判断是否需要杀旧进程。
-            cur_token, cur_pid = 0, 0
+    if not WATCH_LOCK.exists() or WATCH_LOCK.stat().st_size == 0:
+        WATCH_LOCK.write_text("0", encoding="utf-8")
+
+    for _ in range(3):
+        lock = Lock(str(WATCH_LOCK), mode="r+", timeout=0)
+        try:
+            lock.acquire()
+        except (LockException, TimeoutError, OSError):
+            # 锁被占着：对方要么正在写，要么已经跑起来了。
+            # 更新（或同代）的实例拥有它，让位；更旧的才杀。
+            cur_token, cur_pid = _read_watch_pid()
+            if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
+                if cur_token >= token:
+                    return False
+                _kill_watch(cur_pid)
+            time.sleep(1.0)
+            continue
+
+        try:
+            cur_token, cur_pid = _read_watch_pid()
+            if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
+                if cur_token >= token:
+                    return False  # 本代或更新的一直在跑，别再杀来杀去
+                _kill_watch(cur_pid)
+                time.sleep(0.5)
+            WATCH_PID.write_text(f"{token}|{os.getpid()}", encoding="utf-8")
+            return True
+        finally:
             try:
-                parts = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
-                cur_token, cur_pid = int(parts[0]), int(parts[1])
+                lock.release()
             except Exception:  # noqa: BLE001
                 pass
 
-            if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
-                if cur_token < token:
-                    try:
-                        os.kill(cur_pid, signal.SIGTERM)
-                    except Exception:  # noqa: BLE001
-                        pass
-                    time.sleep(0.6)
-                elif cur_token >= token:
-                    return False
-
-            WATCH_PID.write_text(f"{token}|{os.getpid()}", encoding="utf-8")
-            return True
-
-    except (LockException, TimeoutError):
-        # 加锁超时 = 另一个进程正在操作，让位退出。
-        return False
+    return False
 
 
 def _claim_watch_slot_nolock(token: int) -> bool:
-    """无文件锁的回退版本（多实例仍可能冲突）。"""
-    cur_token, cur_pid = 0, 0
-    try:
-        parts = WATCH_PID.read_text(encoding="utf-8").strip().split("|")
-        cur_token, cur_pid = int(parts[0]), int(parts[1])
-    except Exception:  # noqa: BLE001
-        pass
-
+    """无 portalocker 时的回退版本（有窗口期，尽量不走这里）。"""
+    _, cur_pid = _read_watch_pid()
     if cur_pid and cur_pid != os.getpid() and _pid_alive(cur_pid):
-        if cur_token < token:
-            try:
-                os.kill(cur_pid, signal.SIGTERM)
-            except Exception:  # noqa: BLE001
-                pass
-            time.sleep(0.6)
-        elif cur_token >= token:
-            return False
+        _kill_watch(cur_pid)
+        time.sleep(0.6)
 
     WATCH_PID.parent.mkdir(parents=True, exist_ok=True)
     WATCH_PID.write_text(f"{token}|{os.getpid()}", encoding="utf-8")

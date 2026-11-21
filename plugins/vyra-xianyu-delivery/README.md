@@ -54,11 +54,13 @@ uvx goofish-cli auth status --format json
     - id: xianyu-delivery
       name: 'vyra-xianyu-delivery'
       config:
-        pollSeconds: 60
+        pollSeconds: 60           # 订单轮询（发货）
+        chatPollSeconds: 15       # 会话轮询（自动回复）
         mode: send_then_confirm   # 或 confirm_then_send
         blockRefund: true
         blockZeroAmount: true
         sendIntervalMs: 60000
+        watchEnabled: false       # 常驻 IM 监听，会和 CLI 调用抢连接
 ```
 
 ## 卡券（自动发货的卡密池）
@@ -134,19 +136,18 @@ curl -X POST http://127.0.0.1:<port>/api/xianyu-delivery/rpc \
 | `partial` | 多数量订单只发出了一部分（卡密不够或中途失败），需人工补发剩余 |
 | `blocked` | 未发货：无卡券 / 卡密耗尽 / 敏感词 / 退款 / 0 元 |
 
-## 实时监听
+## 收消息与自动回复
 
-插件启动时会常驻 `message watch`。买家拍下的系统提示里带订单号，命中就直接发货，不用等下一轮轮询：
+**主路径是轮询**：每 `chatPollSeconds`（默认 15 秒）拉一次会话列表，有新消息的会话再拉历史，然后
 
-```
-WS 事件（卡片/提示） → message history → 找 orderId → 立即发货
-```
+1. 历史里有新订单号 → 立即发货
+2. 最新一条是买家文本 → 交给客服 Agent 生成回复并发送
 
-轮询仍然保留：WS 断线、事件漏掉时由 60 秒轮询兜底。幂等表保证同一订单只发一次。
+为什么不是长连接：闲鱼的 IM 是单连接，`send` / `history` 这类命令每次都会新开一条 IM 连接，会把正在收消息的常驻监听踢下线。轮询每次都是短连接，不存在互踢。
 
-**默认开启**。面板状态栏的「实时 开/关」就是开关，点一下即可切换，选择会记住。
+可选的 `watch` 仍保留（设置 `watchEnabled: true` 或点面板上的「实时」开关），延迟更低，但会和 CLI 调用抢连接，不建议同时高频开面板。
 
-同一时间只会有一个 watch：插件重载或开多个 DSH 会留下旧的监听，多个进程同时连 IM 会互相把连接踢掉（表现为"买家发消息但插件收不到"）。worker 用 `~/.goofish-cli/watch.pid` 维护单例，新实例杀掉旧的，旧实例的重试会自动让位退出。
+**会话商品**：会话本身带 `itemId`（从会话扩展里取），所以买家从聊天列表点进来也能定位商品；订单和商品卡片是兜底。
 
 ## 客服配置
 

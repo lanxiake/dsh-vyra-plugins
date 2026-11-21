@@ -7,7 +7,8 @@
         blockRefund: true
         blockZeroAmount: true
         sendIntervalMs: 60000
-        watchEnabled: true
+        chatPollSeconds: 15
+        watchEnabled: false   # 常驻监听会和 CLI 调用抢 IM 连接，默认靠轮询
         ai:
           enabled: false
           mode: dsh            # dsh = 用 DSH 的 agent；api = 直连 OpenAI 兼容接口
