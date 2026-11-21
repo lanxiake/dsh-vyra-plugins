@@ -1570,6 +1570,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.5: find the newest *text* message so an order card no longer
+        // hides the buyer's question.
+        '0.7.5': {
+          publishTimestamp: 1795257000,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'b6efcd4f7f3d96d6b16c4cc5af3587cb06a79d10',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
