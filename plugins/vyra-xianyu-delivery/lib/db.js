@@ -329,8 +329,12 @@ export function createStore(file) {
     beginOrder(meta) {
       const existing = q.order.get(meta.order_no)
       if (existing) {
-        // 没卡券/卡密耗尽导致的 blocked，补齐卡券后允许重试；其它 blocked 不重试。
-        if (existing.state === 'blocked' && /^(no_card|card_exhausted)$/.test(existing.fail_reason || '')) {
+        // 什么都没发出去（无卡券/卡密耗尽/生成失败）的订单，补好卡券后允许重试。
+        // 旧版本把卡密耗尽记成了 send_failed，这里一并兼容：只要 delivered = 0 就安全。
+        const retryable = /^(no_card|card_exhausted|generate_)/.test(existing.fail_reason || '')
+        const nothingSent = existing.state === 'blocked'
+          || (existing.state === 'send_failed' && !existing.delivered)
+        if (retryable && nothingSent) {
           q.resetOrder.run(meta.order_no)
           return { created: true, order: q.order.get(meta.order_no) }
         }
