@@ -1605,6 +1605,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.8.1: one live agent per buyer (no throwaway sessions on the second
+        // message), skills read from every skill root, prompt preserved when
+        // the system section is unavailable.
+        '0.8.1': {
+          publishTimestamp: 1795270800,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '898cadd700cb8d8af350ef9422f87eed693a4ed6',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
