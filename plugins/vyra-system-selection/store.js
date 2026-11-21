@@ -18,21 +18,36 @@ export const DEFAULTS = {
     // using the plugin.
     openOnSelect: true,
     // Taking over the right button is what puts this plugin in the system's input path: every
-    // mouse event crosses into the Host through the low-level hook. On by default because that is
-    // the menu people expect; the switch exists for machines where the crossing is felt.
-    interceptRightClick: true,
+    // mouse event machine-wide crosses into the Host through the low-level hook, and the pointer
+    // waits for the Host's pump. On a remote-desktop session that reads as lag; so it is off
+    // unless someone opts in. Auto-open still works without it, through a poll that costs no
+    // input latency.
+    interceptRightClick: false,
   },
 }
 
 export function loadSettings() {
   try {
     const raw = JSON.parse(readFileSync(FILE, 'utf8'))
+    const settings = {
+      ...DEFAULTS.settings,
+      ...(raw.settings && typeof raw.settings === 'object' ? raw.settings : {}),
+    }
+    // Versions up to 3.1.0 shipped the hook on by default. Anyone who never touched the switch
+    // still carries `true` in the file, and that value is exactly what makes remote sessions
+    // sticky — turn it off once. A deliberate choice is recorded in `rightClickExplicit`.
+    let migrated = false
+    if (settings.interceptRightClick === true && settings.rightClickExplicit !== true) {
+      settings.interceptRightClick = false
+      migrated = true
+    }
     return {
       enabled: typeof raw.enabled === 'boolean' ? raw.enabled : DEFAULTS.enabled,
-      settings: { ...DEFAULTS.settings, ...(raw.settings && typeof raw.settings === 'object' ? raw.settings : {}) },
+      settings,
+      migrated,
     }
   } catch {
-    return { enabled: DEFAULTS.enabled, settings: { ...DEFAULTS.settings } }
+    return { enabled: DEFAULTS.enabled, settings: { ...DEFAULTS.settings }, migrated: false }
   }
 }
 

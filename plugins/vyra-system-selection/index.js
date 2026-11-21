@@ -119,10 +119,16 @@ export function apply(ctx) {
   const stored = loadSettings()
   let enabled = stored.enabled
   let settings = stored.settings
+  // A migrated profile must not keep the old file: without writing it back, the next start
+  // reads `true` again and reinstalls the hook that made remote sessions sticky.
+  if (stored.migrated) saveSettings({ enabled, settings })
   let pending = null // { text, anchor }
   let generation = 0
   let captureTimer = null
-  // ponytail: 移除 pollTimer 和 mouse — 不再轮询，无需追踪鼠标状态机。
+  // Drag detection when no hook is installed: the poll watches left-button transitions and
+  // carries its own state machine. With the hook installed this stays null and unused.
+  let pollTimer = null
+  let mouse = null
   const stats = { rightClicks: 0, gestures: 0, captured: 0, empty: 0, inApp: 0, lastCapture: '' }
 
   // --- triggers ------------------------------------------------------------------------------
@@ -217,8 +223,30 @@ export function apply(ctx) {
     return { shown: true, at }
   }
 
-  // ponytail: 移除轮询 tick()，改为由钩子的 onDragRelease 回调直接触发。
-  // 轮询每 30ms 主动检查鼠标状态，在远程场景下是性能杀手；事件驱动只在真正发生拖动时才介入。
+  /**
+   * Poll fallback for the drag trigger, used only when the right-click hook is not installed.
+   *
+   * The hook sees every button release already, so running both would duplicate the detection.
+   * Without a hook nothing else watches the left button, and polling two FFI calls at 30 ms does
+   * not sit in the system's input path — unlike the hook, it cannot make the desktop feel slow.
+   */
+  function tick() {
+    if (!enabled || !settings.openOnSelect) return
+    const pt = overlay.cursor()
+    if (overlay.visible && overlay.containsPoint(pt)) {
+      mouse = null
+      return
+    }
+    const down = overlay.leftButtonDown()
+    const { state, fire } = reduceMouse(mouse, { down, x: pt.x, y: pt.y, t: Date.now() })
+    mouse = state
+    // The unmodified drag is the auto-open gesture; the modifier check keeps a scroll-like swipe
+    // from opening the menu. Over the DSH window the page reports its own selection.
+    if (fire && !overlay.modifierHeld?.() && !overlay.windowUnderPoint?.(pt)) {
+      stats.gestures++
+      scheduleCapture(pt)
+    }
+  }
 
   /**
    * Whether this selection was already dismissed, so the poll must not reopen it.
@@ -497,13 +525,28 @@ export function apply(ctx) {
   // --- lifecycle -----------------------------------------------------------------------------
 
   function start() {
-    // ponytail: 钩子现在同时处理右键拦截和拖动检测，不再需要 openOnSelect 的分支判断。
-    // 所有鼠标事件由钩子的 onDragRelease 回调触发，无需轮询。
-    if (settings.interceptRightClick !== false) overlay.installHook()
+    // The right-click takeover is opt-in. A WH_MOUSE_LL hook puts this process in the system's
+    // input path: every mouse event machine-wide waits for the Host's message pump, which on a
+    // remote-desktop session reads as a sticky pointer. It is worth that cost only when someone
+    // explicitly asked for our right-click menu.
+    const hooked = settings.interceptRightClick === true
+    if (hooked) overlay.installHook()
     else overlay.uninstallHook()
+    // Auto-open needs one of the two watchers: the hook when it is installed, a light poll when
+    // it is not. The poll is not in the input path, so it costs no input latency.
+    if (!hooked && settings.openOnSelect) {
+      if (!pollTimer) {
+        pollTimer = setInterval(tick, POLL_MS)
+        if (pollTimer.unref) pollTimer.unref()
+      }
+    } else if (pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
   }
   function stop() {
-    // ponytail: 移除 pollTimer 相关代码，不再需要轮询。
+    if (pollTimer) clearInterval(pollTimer)
+    pollTimer = null
     mouse = null
     overlay.uninstallHook()
   }
@@ -548,7 +591,11 @@ export function apply(ctx) {
           if (typeof patch[key] === 'string') settings[key] = patch[key]
         }
         if (typeof patch.openOnSelect === 'boolean') settings.openOnSelect = patch.openOnSelect
-        if (typeof patch.interceptRightClick === 'boolean') settings.interceptRightClick = patch.interceptRightClick
+        if (typeof patch.interceptRightClick === 'boolean') {
+          settings.interceptRightClick = patch.interceptRightClick
+          // A deliberate choice survives the one-time migration in `loadSettings`.
+          settings.rightClickExplicit = true
+        }
       }
       persist()
       // Apply the takeover change now rather than at the next start.

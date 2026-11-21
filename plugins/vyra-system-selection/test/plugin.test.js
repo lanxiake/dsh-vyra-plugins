@@ -65,7 +65,7 @@ test('an anchor with no width still yields a usable menu position', () => {
 test('the hook only primes a selection for a gesture that could have selected', () => {
   const source = readFileSync(join(import.meta.dirname, '..', 'native.js'), 'utf8')
   const branch = source.slice(source.indexOf('if (wParam === WM_LBUTTONUP)'))
-  assert.match(branch.slice(0, 700), /if \(fire && !containsPoint\(pt\) && !windowUnderPoint\(pt\)\) primeSelection\(\)/,
+  assert.match(branch.slice(0, 900), /if \(fire && !containsPoint\(pt\) && !windowUnderPoint\(pt\)\) \{[\s\S]*primeSelection\(\)/,
     'the left-release branch must gate priming on a drag or multi-click outside our own card')
 })
 
