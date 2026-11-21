@@ -59,6 +59,19 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 
 `dsh-h3-video`（[kingcharleslzy-ai](https://github.com/kingcharleslzy-ai/dsh-h3-video)）**没有收录**：它未声明任何许可证，既没有 `license` 字段也没有 LICENSE 文件，默认保留全部权利。要收录得先取得作者授权，或等它补上许可证。
 
+### 开发用快照（未上架市场）
+
+下面六个取自当前客户端已安装并启用的插件，按安装版本原样放入 `plugins/`，供二次开发。它们**没有**写进 `docs/index.json`——市场里装的仍是上游发行版，这里只是一份开发副本。同样保留原包名与各自 MIT LICENSE。
+
+| 包 | 版本 | 介绍 | 上游 |
+|---|---|---|---|
+| `@noob-stupid/dsh-plugin-console` | 0.5.110 | 框架升级安全与插件升级门控：一键升级、失败自动回滚、旧插件不适配自动禁用；自带多源插件市场，可指向内网私有源 | [Noob-stupid/dsh-plugin-gating-hub](https://github.com/Noob-stupid/dsh-plugin-gating-hub) |
+| `dsh-plugin` | 2.3.9 | 社区插件市场，收录 23000+ 社区插件、6000+ 可一键安装的 npm 包 | [dshplugin/dsh-plugin-hub](https://github.com/dshplugin/dsh-plugin-hub) |
+| `@xiaoso/dsh-workflow-lite` | 0.10.0 | 轻量工作流：一个工作流就是一份 JSON（React Flow 原生），内联提示词，编译成模型自己执行的分派计划 | [xiaoso456/dsh-workflow-lite](https://github.com/xiaoso456/dsh-workflow-lite) |
+| `@yunmiao/studymate` | 2.0.4 | StudyMate 学习技能与课程引擎 | [Miaotofu01/Study-Mate](https://github.com/Miaotofu01/Study-Mate) |
+| `dsh-expert-orchestrator` | 2.14.2 | 专家编排模式：分诊、PM 规划、专家委派、依赖 DAG 任务板、消息总线与经验池 | [mario841859784/dsh-expert-orchestrator](https://github.com/mario841859784/dsh-expert-orchestrator) |
+| `@nanmicoder/dsh-agent-teams` | 0.1.30 | 多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板 | [NanmiCoder/dsh-agent-teams](https://github.com/NanmiCoder/dsh-agent-teams) |
+
 ## 两个入口
 
 DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：

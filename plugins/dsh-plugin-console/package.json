@@ -1,0 +1,58 @@
+{
+  "name": "@noob-stupid/dsh-plugin-console",
+  "version": "0.5.110",
+  "description": "DSH 框架升级安全与插件升级门控：一键升级、失败自动回滚、升级后回滚上版、旧插件不适配自动禁用；内置多源插件市场为发现层，插件源全部可自定义，可指向公司内网私有源 / 私有索引 / 本地 Git 仓库，纯内网离线可用 | Framework upgrade safety & plugin version gating for DSH, with a customizable multi-source plugin market: point every source at internal mirrors or a local file:// repo for intranet-only, offline installs.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Noob-stupid/dsh-plugin-gating-hub"
+  },
+  "type": "module",
+  "main": "./lib/index.js",
+  "icon": "icon.svg",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "plugin-manager",
+    "dsh",
+    "dsh-plugins",
+    "plugin-market",
+    "plugin-console",
+    "marketplace",
+    "framework-upgrade",
+    "rollback",
+    "auto-rollback",
+    "upgrade-safety",
+    "gating",
+    "插件市场",
+    "框架升级",
+    "自动回滚",
+    "插件升级门控"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "SECURITY.md",
+    "icon.svg",
+    "scripts",
+    "assets/qq-group.png"
+  ],
+  "license": "MIT"
+}

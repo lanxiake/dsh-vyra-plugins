@@ -1,0 +1,35 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   StudyMate · 问答域 —— 共享记忆（`.learning/MEMORY.yaml`）的读法
+
+   为什么单独一个文件：这份「共享记忆在哪、读得到什么、读不到算什么」的判据与建会话那条路由
+   分开放——路由只管「会话怎么建、标题怎么写」，记忆的落点与缺省值单独一件事，套件也各自钉
+   各自的那一半。#107 之后它只有一个消费方（`lib/ask/session.ts`：开张时注入一条），但仍然
+   不并回去：记忆的读法掺进建会话的流程里，读不到与建不成就会被写成同一类失败。
+
+   为什么在这里就把整份文件收窄成**画像三节**（#190）：这个函数交出去的东西会**原样**变成
+   会话里的一条消息，所以「哪些内容能进学生的上下文」必须在这一处定死——路由那边只管
+   `if (memory !== '') inject(memory)`，没法也**不该**再判一次。边界本体在纯函数域
+   （`lib/core/memory.ts`）：`积累` 是角色攒下的干活笔记，与整份科目记忆一样永不进注入。
+
+   读不到**不是错误**：没有共享记忆的新工作区照样能问、能答。
+   ───────────────────────────────────────────────────────────────────────── */
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { MEMORY_FILE, readMemory } from '../core/memory.ts';
+
+/**
+ * 真宿主里的共享记忆：`.learning/MEMORY.yaml`；读不到就是空串（不是错误）。
+ *
+ * 返回的是**可注入的画像三节投影**——`积累`、规范之外的节、以及空骨架都不带（画像三节一条
+ * 内容都没有时就是空串，调用方照「空记忆不注入」处理）。
+ */
+export function readMemoryFromWorkspace(workspace: string): string {
+  try {
+    const text = fs.readFileSync(path.resolve(workspace, '.learning', MEMORY_FILE), 'utf8');
+    return readMemory({ shared: text }).injectable;
+  } catch {
+    return '';
+  }
+}

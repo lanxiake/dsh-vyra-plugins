@@ -1,0 +1,46 @@
+/**
+ * dsh-workflow-lite — 一小段字、一枚图标、一小块内容换了的时候，新旧两份滚动交接（{@link SwapText} / {@link SwapIcon} / {@link SwapNode}）。
+ * {@link useLast} 记着上一次的值，{@link useTrend} 判断数字是涨是跌。只动 `transform` / `opacity`。
+ *
+ * @module @xiaoso/dsh-workflow-lite/client/ui/motion/swapText
+ */
+import { type IconName } from '../kit/Icon.tsx';
+/** 记住上一个值：变了的那次渲染里把旧值、换了几次一起记下，过一会儿把旧值清掉。 */
+export declare function useLast<V>(value: V, ms: number): {
+    was: V | null;
+    n: number;
+};
+/** 数字这一次是变大还是变小（`SwapText` 的 `dir` 要用）。变了的那次渲染里就定下来，之后保持到下一次变化。 */
+export declare function useTrend(value: number): 'up' | 'down';
+/**
+ * 原地换一段字（「保存中… → 已保存」「没有问题 → 3 个问题」、数字）：旧字往上让开淡掉，新字从下面浮上来。
+ * 旧字画在 `::after` 里（`content: attr(data-was)`），不进 DOM 文本——读 `innerText` 的地方只看到新字。
+ * 换字时元素不重挂，只改文字和几个属性（`data-fresh` 在 a / b 之间切，两段 CSS 动画换个名字从头放）：
+ * 宿主页面的 `:has` 样式让视图里任何插拔都整页重算样式，状态字在打字、拖动时一直在换，重挂一次就卡一下；
+ * 也不用 `animate()`——它当场要样式，会把同一次提交里别处的改动一起逼着算一遍。
+ * `pop`：数字用，新数字带一点回弹。
+ * `dir`：`down` = 反方向——新字从上面落下来、旧字往下沉（数字减小时用，配 {@link useTrend}）；缺省 = 往上走。
+ * `reserve`：会换到的所有字。给了就按最长的那段占宽，换字时外面的按钮不变宽变窄（点一下就换字的按钮要给）。
+ */
+export declare function SwapText(props: {
+    text: string;
+    pop?: boolean;
+    dir?: 'up' | 'down';
+    reserve?: readonly string[];
+}): React.JSX.Element;
+/**
+ * 原地换图标（复制 → ✓、对 ↔ 警告、太阳 ↔ 月亮）：两枚叠在同一格，新的从小放大淡入，旧的缩小淡出。
+ * ✓ 一律用「成功」的绿色（复制路径、从磁盘重新加载等「已完成」的反馈都走这里），退场的那枚也一样。
+ */
+export declare function SwapIcon(props: {
+    name: IconName;
+    size?: number;
+}): React.JSX.Element;
+/**
+ * 原地换一小块东西（文件的类型签这种有底色、有字的小件）：两份叠在同一格，新的从略小淡入，旧的略缩淡出。
+ * `id` 变了才换（同一个 `id` 不动），`render` 按 `id` 画出那一块。
+ */
+export declare function SwapNode(props: {
+    id: string;
+    render(id: string): React.ReactNode;
+}): React.JSX.Element;

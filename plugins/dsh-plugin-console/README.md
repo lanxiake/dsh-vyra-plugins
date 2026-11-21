@@ -1,0 +1,616 @@
+<sub><b>Web</b> &amp; <b>Desktop</b> — both supported.</sub>
+
+> **English**: [README.md](README.md) | **中文**: [README.zh.md](README.zh.md)
+
+---
+
+# DSH Plugin Gating Hub (dsh-plugin-gating-hub)
+
+*Renamed from `dsh-plugin-hub` — old URLs redirect.*
+
+**Framework-upgrade safety and plugin-version gating for DSH.** A failed upgrade rolls back.
+A framework changed by **any** update channel is still guarded. A version the host cannot
+take is refused, not installed.
+
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
+[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+[![GitHub stars](https://img.shields.io/github/stars/Noob-stupid/dsh-plugin-gating-hub?style=flat-square&logo=github)](https://github.com/Noob-stupid/dsh-plugin-gating-hub/stargazers)
+[![License](https://img.shields.io/github/license/Noob-stupid/dsh-plugin-gating-hub?style=flat-square)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/Noob-stupid/dsh-plugin-gating-hub?style=flat-square)](https://github.com/Noob-stupid/dsh-plugin-gating-hub/commits/main)
+[![Registry CI](https://img.shields.io/github/actions/workflow/status/Noob-stupid/dsh-plugin-gating-hub/registry.yml?label=registry%20CI&style=flat-square)](https://github.com/Noob-stupid/dsh-plugin-gating-hub/actions/workflows/registry.yml)
+[![topic: dsh-plugin](https://img.shields.io/badge/topic-dsh_plugin-4D6BFE?style=flat-square)](https://github.com/topics/dsh-plugin)
+[![npm version](https://img.shields.io/npm/v/@noob-stupid/dsh-plugin-console?style=flat-square)](https://www.npmjs.com/package/@noob-stupid/dsh-plugin-console)
+[![npm downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2FNoob-stupid%2Fdsh-plugin-gating-hub%40main%2Fbadges%2Fdownloads.json&v=1&style=flat-square)](https://www.npmjs.com/package/@noob-stupid/dsh-plugin-console) [![npm downloads total](https://img.shields.io/endpoint?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2FNoob-stupid%2Fdsh-plugin-gating-hub%40main%2Fbadges%2Fdownloads-total.json&v=1&style=flat-square)](https://www.npmjs.com/package/@noob-stupid/dsh-plugin-console)
+[![GitHub Release](https://img.shields.io/github/v/release/Noob-stupid/dsh-plugin-gating-hub?style=flat-square)](https://github.com/Noob-stupid/dsh-plugin-gating-hub/releases)[![dsh.so security](https://www.dsh.so/badge/dsh-plugin-hub.svg)](https://www.dsh.so/artifact/dsh-plugin-hub)
+[![dsh.so install · dsh 0.2.0-rc.1](https://www.dsh.so/badge/install/dsh-plugin-hub@0.2.0-rc.1.svg)](https://www.dsh.so/artifact/dsh-plugin-hub/)
+
+**Install (npm, one line)**
+
+```sh
+dsh plugin --profile web add @noob-stupid/dsh-plugin-console
+```
+
+Then restart the dsh service → refresh the page → **Settings → Plugins → Plugin Console**.
+
+![Upgrade safety panel, expanded in place](docs/images/upgrade-safety-panel.png)
+
+**Three hard guarantees**
+
+- 🛡️ **Contract pre-check → rollback point → auto-rollback.** A data-driven **contract pre-check**
+  runs first (message contract / dependency API / config schema / removed API / loader contract);
+  then config backup + a full-tree **rollback point**. A failed install or relaunch **auto-rolls
+  the tree back**, a 「roll back to previous」 button restores the last version, and plugins the
+  new framework cannot load are **auto-disabled** — version check catches fake success, 15-min
+  timeout + stall detection.
+- 👁️ **Even when another update channel changes the framework.** An **environment fingerprint**
+  catches changes made by the official desktop updater or a manual `pnpm`: it auto-runs a
+  **read-only pre-flight**, and disables a row **only with hard evidence** (package unresolvable /
+  `file://` target gone / named in a boot-failure log). `@deepseek-ai/*` and **protected / core
+  rows are never auto-disabled**; each auto-disable writes a one-command recovery record.
+- 🔒 **Plugin install & upgrade gating.** Version/declaration gate (`dsh.engines.framework` /
+  `engines.dsh` / `@deepseek-ai/*` ranges, built-in zero-dependency semver), a **repo-size gate**
+  on source channels, and explicit handling of **non-registry sources** — a bare version is
+  written back only once the registry really resolves it, otherwise the package is materialized
+  as `link:`. Install scripts are never auto-authorized, and pnpm's supply-chain gate is never
+  bypassed.
+
+<img width="1170" height="609" alt="DSH Plugin Gating Hub" src="https://github.com/user-attachments/assets/b802d606-14ba-4151-9956-ff642ed12b0a" />
+
+> **Discovery layer on top**: a **built-in multi-source plugin market & index** (500+ plugins /
+> 300+ skills, zero GitHub API calls) — and **every source is swappable**: install source
+> (incl. a private intranet registry), search source (URL template + headers), index source
+> (self-hosted intranet index), Git source (incl. a local `file://` bare repo), so plugins can be
+> installed on an **intranet-only or fully offline** machine.
+
+## Why DSH Plugin Gating Hub
+
+- 🛡️ **Framework upgrade safety, end-to-end** — one-click upgrade: config backup + full-tree
+  checkpoint (rollback point) → online install (service stays up, page never disconnects) →
+  version verification → auto-restart. A failed install **auto-rolls the whole tree back**,
+  version check catches fake success, 15-min hard timeout + stall detection — the framework is
+  never left broken. → [details](docs/upgrade-safety-adapt-gate.md)
+- ↩️ **One-click rollback to the previous version** — after an upgrade the framework card keeps
+  a 「roll back to previous」 button: stop service → restore full tree → relaunch → health check,
+  state visible throughout.
+- 🚫 **Incompatible plugins auto-disabled** — the **adapt gate** force-disables plugins the new
+  framework cannot load (enable locked; the server rejects `/toggle` with 409 — unbypassable);
+  「Check update → Update & adapt」auto-verifies and unlocks them.
+- 🔒 **Plugin upgrade gating** — a version/declaration gate (`dsh.engines.framework` /
+  `engines.dsh` + `@deepseek-ai/*` ranges, built-in zero-dependency semver engine) decides
+  whether a plugin version may run on this host, so an upgrade can't silently take plugins out.
+- 🧩 **Built-in discovery layer** — multi-source plugin market (GitHub / Gitee / custom sources)
+  plus the static index of `dsh-plugin` repos (500+ by stars) and a Skills tab (up to 300);
+  browse, search, one-click install, **zero GitHub API calls** (served via CDN).
+  **Every source is swappable** — private intranet npm registry, custom search source (URL template +
+  headers), self-hosted index source, Git source (incl. local `file://` bare repo) — so an
+  **intranet-only / offline** machine can still browse and install.
+- 🤖 **AI Empower** — give the console a package name or GitHub repo, the local AI
+  reads its docs and drafts a safe, confirmable deployment plan (install / config /
+  start / health-check); server components get an automatic control card.
+  → [details](docs/ai-empower.md)
+
+## Install
+
+```sh
+# npm release (recommended: prebuilt, no git / build authorization needed)
+dsh plugin --profile web add @noob-stupid/dsh-plugin-console
+
+# or install from GitHub source (needs git; allowBuilds authorization on first add)
+dsh plugin --profile web add github:Noob-stupid/dsh-plugin-gating-hub
+```
+
+Then restart the dsh service → refresh the page → **Settings → Plugins → Plugin Console**.
+
+<details><summary><b>More install options</b> (deploy script / hand it to an AI)</summary>
+
+### Option 2: deploy script (fallback when network is restricted)
+
+Windows (PowerShell):
+
+```powershell
+git clone https://github.com/Noob-stupid/dsh-plugin-gating-hub "$env:TEMP\dsh-plugin-console" 2>$null; & "$env:TEMP\dsh-plugin-console\deploy.ps1"
+```
+
+Linux / macOS:
+
+```bash
+git clone https://github.com/Noob-stupid/dsh-plugin-gating-hub /tmp/dsh-plugin-console 2>/dev/null; bash /tmp/dsh-plugin-console/deploy.sh
+```
+
+The script copies the plugin into `$DSH_HOME/profiles/<profile>/node_modules/` and
+idempotently appends an enable entry to `cordis.patch.yml`. Afterwards:
+
+1. Restart the dsh service (host code changes need a process restart; CLI restarts the
+   process, the desktop client exits and reopens);
+2. Refresh the page → Settings → Plugins → **Plugin Console**.
+
+### Option 3: hand it to an AI in one sentence
+
+> Install the DSH plugin hub (dsh-plugin-hub): run `dsh plugin --profile web add @noob-stupid/dsh-plugin-console` (npm release); if there is no dsh CLI, clone https://github.com/Noob-stupid/dsh-plugin-gating-hub to `~/.dsh/profiles/web/node_modules/` and register it in `cordis.patch.yml` (id: plugin-console, name: @noob-stupid/dsh-plugin-console). Restart dsh web afterwards.
+
+Requires: DSH ≥ 0.1.0-rc.6 (web profile, with `dsh-client-modules` / `dsh-host-plugin-inventory`).
+
+</details>
+
+---
+
+## Highlights
+
+| | Benefit | Detail |
+|---|---|---|
+| 🤖 | **AI Empower ** | Give the console a package name or GitHub repo — the local AI reads docs, drafts a **deployment plan** (install / write config / start service / health check) and executes it safely after your confirmation; server-type components get an automatic control card |
+| 🛡️ | **Framework upgrade safety & adapt gate ** | Force-disables plugins incompatible with the new framework (enable locked; 「Check update → Update & adapt」auto-verifies and unlocks); full-tree checkpoint before upgrade, automatic rollback on relaunch failure, one-click rollback to the previous version |
+| 🏠 | **Family-bundle cards & safety ** | Same-root subpath exports group into one family card (collapse/expand, batch check-update, one-click unlock-adapted, known-check preview); never-crash safety (pre-enable import probe + patch auto-heal + exports fallback); adapt-gate source-scan hard criterion & migrate detection; deleting a bundle sub-row disables only that row |
+| 🚀 | **Server component cards** | Left-side floating card auto-aligned to the main panel: start / stop / status / **open Web UI** buttons, multi-server dropdown, collapsible |
+| 🧩 | **Plugin & skill hub** | Auto-collected index of `dsh-plugin` topic repos (**500+** by stars) plus a **Skills tab** (`agent-skills` ∪ `claude-skills` ∪ `dsh-skill`, up to 300) — browse, search, one-click install, no GitHub API calls |
+| 🤖 | **Auto-collection CI** | GitHub Actions reruns `build-index` every 6 hours (manual trigger available); authors just add the `dsh-plugin` / `agent-skills` / `claude-skills` / `dsh-skill` topic — no application needed |
+| ⚡ | **Instant, rate-limit-free** | The index is served as a static `marketplace/index.json` via jsDelivr CDN (10-min host cache); terminal users make **zero GitHub API calls** |
+| 🔄 | **Version detection & one-click update** | Semver-based; installed entries match npm `dist-tags.latest` / `beta`; subpackage mismatch warnings prevent mixed-version breakage |
+| 🔀 | **Multi-source** | GitHub / Gitee (direct-repo mode) / custom search sources (URL template + header auth + private http); `⊞` merges GitHub + all custom sources in parallel |
+| 🔒 | **Safe by default** | Loopback-only routes; AI fallback behind an explicit cost-consent modal; infrastructure rows are toggle-protected |
+
+<details>
+<summary><b>📑 目录 / Table of Contents</b></summary>
+
+- [Highlights](#highlights)
+- [AI 赋能与服务器组件控制](#ai-赋能与服务器组件控制)
+- [One-click install](#one-click-install)
+- [Usage](#usage)
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Compatibility](#compatibility)
+- [Project layout](#project-layout)
+- [HTTP endpoints](#http-endpoints)
+- [安全](#security)
+- [Known limitations](#known-limitations)
+- [Help & Ecosystem](#help--ecosystem)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
+- [License](#license)
+</details>
+
+---
+
+## Usage
+
+1. Restart DSH → open the Web GUI → **Settings → Plugins → Plugin Console**.
+2. **Installed list**: toggle plugins on/off (HMR applies within ~1s), search by name/id,
+   expand details (version, repository, README summary).
+3. **市场**: empty query on the GitHub source opens the static index (instant);
+   type a query to search live. Switch sources via the login pill (GitHub / Gitee / custom);
+   `⊞` merges all sources; `★` filters to `dsh plugin add`-installable packages.
+4. **Skills tab**: switch 插件/技能 next to the search box to browse and install skills
+   (cloned into `~/.dsh/skills/<name>/`).
+5. **Install**: click 添加到本地 → the chain runs in the background (safe to leave the page);
+   「检测更新」/「更新 → vX」 appear automatically for installed entries.
+
+---
+
+## Screenshots · 界面一览
+
+> 入口挂在**官方插件管理页自己的插槽**（`plugins.bundle.config`，key = 包名）：装完之后它出现在
+> 「设置 → 插件 → 已安装」里我们这一条下面，用的是官方容器与官方风格 —— 不是 DOM 注入，官方更新也不怕。
+
+**1 · 已安装列表里的入口**（官方页，点开我们这条即见）
+
+![Entry inside the official plugins page](docs/images/official-plugins-page.png)
+
+**2 · 「升级安全」面板**（就地展开：运行模式 / 框架版本 / 回滚点 / 环境指纹 / 补声明 / 契约预检 / 各功能入口）
+
+![Upgrade safety panel expanded in place](docs/images/upgrade-safety-panel.png)
+
+**3 · 框架升级 / 回滚**（可选目标版本、常驻的升级进度、一键回滚上一版）
+
+![Framework upgrade and rollback panel](docs/images/framework-upgrade-rollback.png)
+
+**4 · 门控明细**（谁被隔离、为什么：升级预扫 or 启动失败隔离，附来源与时间）
+
+![Compatibility gate detail list](docs/images/compat-gate-detail.png)
+
+---
+
+## Features
+
+### Installed plugins (one-click toggle + details)
+
+- **Shows only third-party plugins by default** (extra/non-bundled), tagged
+  "Third-party" with a delete entry; click "All" to see the full list (1.5s flash feedback);
+- Lists every plugin entry (name, load state, enabled state); search by name/id;
+- Disable = append `- id: X` + `disabled: true` to the user patch layer, effective via HMR;
+- Enable = remove that entry; bundle-layer rows disabled by default are overridden with
+  `disabled: false`;
+- Tags "Patch-disabled / Patch-forced" distinguish user patch state;
+- **Infrastructure protection**: host transport/hmr/storage/settings chain plugins
+  (70+ rows) are marked "Protected" and cannot be toggled — disabling them would break HMR;
+- **Details panel**: version, repository/homepage links and a README summary for each plugin;
+- **Version check**: 检测更新 reads npm `dist-tags.latest` (curl channel, works even when
+  node networking is blocked) and warns about subpackages that need syncing (depsOutdated).
+
+### Framework one-click upgrade (deepseek-harness card)
+
+- The **deepseek-harness** card shows **「框架升级 → vX」** when a newer framework version is
+  available (stable `latest` preferred; `next` channel when `latest` equals the installed
+  version); clicking runs the full flow: backup config + framework snapshot (rollback point)
+  → **online install** (service stays up, page never disconnects) → version verification →
+  **auto-restart to apply**;
+- **Real-time progress**: a `DSH-Upgrade` console window pops up showing live pnpm download
+  progress; the in-panel progress card shows the waiting time;
+- **Upgrade protection**: failed installs **auto-rollback** (robocopy, backup verified before
+  upgrade), version check catches fake success, 15-min hard timeout, stall detection
+  (no debug-log updates → auto switch registry), global trap fallback, and 15-min stale-state
+  cleanup — the framework is never left broken;
+- **pnpm channel**: npm-cli.js freezes at startup in the schtasks task environment (0-byte
+  debug log, no network requests ever sent); upgrades use `corepack pnpm` (starts in ~0.4s,
+  installed rc.8 in 11.5s) against the **npmmirror (China) registry**, with
+  `dangerouslyAllowAllBuilds` so native modules (node-pty/koffi) compile;
+- **Runtime bin resolution**: under the pnpm layout `@deepseek-ai/dsh` is a Junction — the
+  relaunch step resolves `bin.js` at runtime (follows the Junction to the current version)
+  instead of using a path baked in at script-generation time;
+- **Card dismiss semantics**: terminal states (done/failed) are permanently dismissed on ✕
+  (persisted); in-progress dismissal is session-only and the card returns after a refresh.
+
+### Marketplace (multi-source)
+
+- **Source switcher**: click the login pill to switch between **GitHub / Gitee / custom
+  sources** (persisted); title, loading text, placeholder and note all follow the source;
+- **GitHub**: default query `dsh-plugin`, browser-direct with server fallback;
+- **Gitee**: official search API is retired, so it uses **direct-repo mode** — enter
+  `owner/repo` (Chinese paths and full URLs supported) to find and install a repository;
+- **Custom sources**: add in Source Manager (URL template with `{q}`/`{page}` placeholders),
+  optional **header auth** (e.g. `Authorization: Bearer ...`), and **local/private http URLs**;
+- **Multi-source summary**: the `⊞` toggle searches GitHub + all custom sources in parallel,
+  merging results with source labels;
+- **★ official filter**: shows only packages installable via `dsh plugin add` — root packages
+  with a `dsh.bundle` manifest (official) or aggregate repos whose **subpackage carries
+  `dsh.bundle`** (subpackage-installable); markers are enriched by the server (curl dual-channel)
+  with a client-side fallback;
+- **Type badges**: 官方 / 聚合 / 技能 (repo contains SKILL.md) recognized automatically.
+
+> **Network environment notes (why a multi-source setup can look "all dead")**
+> - **Accelerators/proxies that rewrite hosts kill the direct sources**: tools like Steam++ often point
+>   `github.com` at `127.0.0.1`, so the GitHub direct source, `raw.githubusercontent.com` and
+>   `api.github.com` all become unreachable — the plugin is not broken. The console now reports this
+>   honestly as "local proxy / certificate interception (…) — an accelerator or proxy was detected,
+>   turn it off and retry" instead of a vague "network unreachable".
+> - **Free mirrors are unreliable for the git protocol on large packs, while archive/raw are usually
+>   fast**: measured on the same ghproxy.net host, archive (plain HTTP) ran at **4 MB/s** while the git
+>   protocol moved **0 B/s**. Since this version the git channel has a stall criterion (switch source
+>   after 20 s below 1 B/s) plus its own budget, and falls back to the **archive channel** (download the
+>   tarball, extract, create the repo — equivalent to a clone) when all git sources fail. No manual
+>   source switching needed.
+> - To reorder transports, use **Source Manager**: **git sources**, **archive sources** and **index
+>   sources** all support primary→backup plus self-hosted mirrors (internal Gitea/GitLab, local
+>   `file://` bare repos).
+
+#### Download-install channels and dependency forms
+
+Which channel gets used depends on **what the package actually is** — not on a setting:
+
+| Channel | Target | When it is used | Written in the manifest as | Needs plugin-src |
+|---|---|---|---|---|
+| ① pnpm (registry) | npm registry | **if the package is on the registry, this is the main channel** | `<name>: <version>` | no |
+| ② curl tarball (registry) | npm registry tarball | **races in parallel** with ① (takes over when pnpm is blocked/stuck) | same as above | no |
+| ③ GitHub Release asset | prebuilt tgz of an upstream release | when **both registry sources 404** | `link:<absolute path>` | yes |
+| ④ git clone | repository source | no npm package / no release asset | `link:…` | yes |
+| ⑤ archive (tar.gz) | codeload / mirrors | when the git protocol cannot move any bytes | `link:…` | yes |
+
+In one sentence: **has an npm package → ①/②, write a version, keep the lock clean; no npm package →
+fall back to ③/④/⑤, materialize into `~/.dsh/plugin-src/<pkg>` and write `link:`.**
+
+Environment reminder: an accelerator/proxy that rewrites hosts makes the direct sources unreachable
+(see above), and free mirrors are unreliable for the **git protocol** on large packs while
+**archive/raw are usually much faster** — the console already switches by itself.
+
+#### Development installs (`link:`)
+
+Ordinary installs go through the package manager (`pnpm add`); that is the baseline, not a feature here.
+
+`link:` is the separate, **explicit** route: mount a **local directory / plugin you are developing**
+directly into the profile.
+
+- **Source edits take effect immediately**: `node_modules/<name>` in the profile is a **link** to your
+  local directory, not a copy — edit the source, refresh the page. No reinstall, no repackaging.
+- **Who it is for**: plugin authors, or anyone who wants to edit a plugin's source. If you just want
+  to *use* a plugin, an ordinary install is simpler.
+- **What it pins**: the local artifact is written into the profile manifest `dependencies`
+  (`link:<absolute path>`) and gets a matching entry in `pnpm-lock.yaml` — so lockfile health checks
+  and rebuilds never treat it as an orphan, and it **survives restarts and instance updates**.
+- **What the console completes for it** (otherwise the usual outcome is "installed, but it will not load"):
+  - **the target directory's own `dependencies`**: one install run inside that directory, filling in
+    what the local directory is missing;
+  - **the framework peer shim root**: when the local directory lives **outside** the profile tree,
+    Node's resolution chain never reaches the profile's `node_modules`. The console links the framework
+    peers it **declares and currently cannot resolve** (`@deepseek-ai/*`) at the **plugin root**,
+    pointing at `~/.dsh/profiles/node_modules/@deepseek-ai/<pkg>`. It is a **link**, not a copy —
+    both sides share the same realpath, so Cordis service classes and LLM error classes keep their
+    **module identity shared with the host**.
+- **Boundaries** (always reported honestly, never faked):
+  - moving or deleting the local directory **breaks** the link (the manifest `link:` then points at a
+    path that no longer exists);
+  - shims only fill peers it **declares** and that are genuinely missing; a package the framework side
+    does not have is never invented;
+  - anything **already present** at the target path (including a dangling link) is **never overwritten**
+    — it is skipped and reported;
+  - **uninstall removes the shims the console created** (only its own; links you placed by hand are
+    never touched);
+  - if completion fails (target directory not writable, dependency install failed, …) the **install
+    still completes**, and the result honestly says "not ready + what is missing" together with an
+    action you can run.
+
+### Static index market (plugin & skill tabs)
+
+> **Hybrid architecture**: browsing uses the static index (instant, zero GitHub API calls),
+> searching uses live channels (GitHub search API / multi-source parallel) — they complement
+> each other: a brand-new repo can be found by live search even before it enters the index.
+
+- Empty query on the GitHub source shows the **static index** (`marketplace/index.json`,
+  jsDelivr CDN + 10-min host cache): 500+ plugins by stars, instant, **zero GitHub API calls**;
+- **插件 / 技能 tabs** next to the search box: the skills tab lists auto-collected
+  `agent-skills` ∪ `claude-skills` ∪ `dsh-skill` repos (up to 300);
+- **Auto version check**: installed entries in the market are checked against npm
+  `dist-tags.latest` in the background — cards turn into **「更新 → vX」** buttons;
+- **Skill install**: skill entries install by git-clone into `~/.dsh/skills/<name>/`
+  (frontmatter `name` wins over repo name; SKILL.md found at repo root or first-level
+  subdirectory). Installed skills show a grey 「已装」 badge.
+
+### Source Manager
+
+The floating "Sources" button (right of the title row, semi-transparent) opens the manager:
+
+![Source Manager](https://github.com/user-attachments/assets/ef712900-65ae-4f6f-9584-bacdd8d34ea1)
+
+- **Install sources (registry)**: add / inline edit / set primary / restore defaults;
+  private and intranet addresses supported; **deletion is protected** (install-critical);
+- **Search sources**: built-in GitHub, Gitee + custom search sources (add/remove, `🔒` shows
+  header count);
+- **Gitee login (optional)**: direct mode needs no login; login only raises rate limits —
+  create a third-party app (gitee.com → Data management → Third-party apps, scopes
+  user_info, projects), fill client_id / client_secret, save, then authorize.
+
+---
+
+<img width="393" height="525" alt="56ccd0b3-f174-4365-848b-64013b27d604" src="https://github.com/user-attachments/assets/5a2816ce-12d9-4001-b895-1e422c11d423" />
+
+### Run mode (managed / observer)
+
+The mode decides **who leads framework upgrades** — nothing else:
+
+- **Observer (default)**: the console only preflights, gates, and guards the rollback point. It does not take over upgrades.
+- **Managed**: framework upgrade and rollback are owned by this console. It switches to managed automatically when you upgrade through this console, and records the reason.
+- **Switches back to Observer automatically (0.5.32)**: when the **desktop-host shape** is detected (the existing `detectHostShape()` criteria), a mode that was **not set by hand** (`compat-mode.json` `source` is `auto:*`; a missing field counts as `manual`) is switched back to Observer on startup / first status query, with a one-line notice. **Once you switch it by hand it is never changed automatically again**; when it is already Observer nothing is written.
+
+**Boot-failure quarantine is not affected by the mode.** When the service cannot start, the console locates the culprit from the boot log and disables it (broken presets are renamed to `.broken-*`; with no clear culprit it falls back to safe mode so the service can start). A console that cannot boot cannot gate anything — so this rescue path always runs.
+
+**Auto-disable on confirmed evidence (0.5.32)**: when the fingerprint-triggered auto-preflight, or a
+boot-failure record, provides **confirmed evidence** (the row's package resolves on **none** of the
+resolution bases, a `file://` target truly does not exist, or the boot log names the row), the console
+writes `disabled: true` for those rows **itself** (no click needed). Safety rails: **only rows with
+evidence**; `@deepseek-ai/*` (framework-owned) and protected/core rows are **never** auto-disabled;
+a **safe-boot snapshot is written first**, so any auto-disable is one command away from a rollback;
+when there is nothing to write, **not a single byte is written**; every auto-disable leaves a record in
+`dshHome()/plugin-console/auto-disable.log` (time / row id / evidence / restore command).
+
+Prefer "report only, let me click" (enabled by default) — replace `<host:port>` with your instance
+(the default `dsh web` profile listens on `127.0.0.1:3080`):
+
+```bash
+curl -X POST http://<host:port>/plugin-console/compat-ack \
+  -H 'Content-Type: application/json' -d '{"autoDisableOnEvidence":false}'
+```
+
+**How to roll an auto-disable back**: the route `POST /plugin-console/safe-boot` with
+`{"action":"restore-last-good"}` (the current state is backed up first), or — when the service will not
+start — from the plugin directory:
+
+```bash
+node scripts/safe-boot.mjs --list                 # see which snapshots exist
+node scripts/safe-boot.mjs --restore-last-good    # restore the newest good snapshot byte-for-byte
+node scripts/safe-boot.mjs --disable-suspects     # or: append disabled: true to named rows only (nothing deleted)
+node scripts/safe-boot.mjs --mark-good            # mark a snapshot as good (never removed by retention)
+```
+
+Safe-boot snapshots live under `dshHome()/plugin-console/safe-boot/` (**not** in the profile directory),
+keeping the newest 3 plus the one you marked as good.
+
+### When the service won't start because **framework packages were wiped**
+
+The rollback above restores the **config layer** (`cordis.patch.yml`). There is a second failure
+class where the **package payloads** are gone — framework packages emptied or deleted. Then the
+patch is perfectly fine, restoring it changes nothing, and **the console itself runs inside dsh**:
+if dsh cannot boot, the console was never loaded (real outage, 2026-10-14: `cordis`'s store entity
+emptied plus `dsh-llm`/`dsh-tools`/`dsh-web` turned into empty directories ⇒
+`54 plugins failed to import` ⇒ `exit code=1`).
+
+That class needs the **out-of-process** closure preflight (also needs no running service):
+
+```bash
+node scripts/fw-preflight.mjs --check     # diagnose only: list unresolvable packages, write nothing
+node scripts/fw-preflight.mjs --repair    # restore from the **local npm cache** by lock integrity, then re-verify
+```
+
+The criterion is "**can the dependency closure be resolved**", not "is the directory empty" —
+the latter is completely blind to "the shell is still there, the inside was emptied"
+(measured: a naive empty-dir scan reported 237 false positives; the closure criterion passed all
+287 packages and named exactly the one that broke). `--repair` is **offline and never guesses a
+version** (a package missing from the lock is reported as `no-lock-entry`), and it **never kills or
+spawns a process and never grabs a port** (that is exactly what produces
+"The application failed to start or stopped unexpectedly") — restart the service yourself afterwards.
+## Framework compatibility
+
+Measured on isolated instances (fresh `DSH_HOME`, real HTTP probes) — **supported: framework ≥ `0.1.5-rc.2`**, no workarounds needed.
+
+| | 0.1.7-rc.2 (current) | 0.1.5-rc.2 / 0.1.2-rc.1 |
+|---|---|---|
+| Official plugins page (`@deepseek-ai/dsh-client-ui-plugin-manager`) | present | **not shipped by the framework at all** |
+| The official-style **Upgrade safety** entry | shown (hosted in that page's own `plugins.bundle.config` slot) | not shown — there is no page to host it |
+| Classic **Plugins** tab (`settings.plugins.tab`) | shown | **shown** |
+| Server-side features (upgrade / rollback / gating / marketplace) | all available | **all available** (every route answered 200 in the matrix) |
+| Errors | none | **none** (the slot registration degrades silently) |
+
+So on an older framework the plugin is **the old UI with the full feature set** — the new entry simply has nowhere to live. It never white-screens and never throws.
+
+Verification matrix, raw logs and the one framework-side caveat (`0.1.2-rc.1` ships `patchReload: "live"` for a web tree without the HMR service → boot exits 1 after ~10s; unrelated to this plugin) are recorded in `.testdir/fw-old-matrix/report.md`.
+## Documentation
+
+- [AI Empower 与服务器组件控制](docs/ai-empower.md)
+- [Framework upgrade safety & plugin adapt gate](docs/upgrade-safety-adapt-gate.md)
+- [**契约规则库 Upgrade contract rules**](docs/contracts/README.md) — 框架每次变更会打断什么、怎么发现、怎么修（数据在 `lib/contracts/rules.json`，**欢迎 PR 补充**：每个事故都应该变成一条规则）
+- [How it works](docs/how-it-works.md) · [Compatibility](docs/compatibility.md) · [Project layout](docs/project-layout.md)
+- [HTTP endpoints](docs/http-endpoints.md) · [Local AI fallback & consent](docs/ai-fallback.md)
+- [Framework patch (cordis.patch.yml)](docs/framework-patch.md) · [Security & disclaimer](docs/security-disclaimer.md)
+
+---
+
+### Update integrity
+
+An update can be requested for a specific version. That version is carried into every download channel; if
+a channel ends up with a different version, the job reports a failure with both versions named, and the
+existing copy on disk is kept rather than replaced. The manifest and lock record a **version number** for
+such packages — a normal install does not produce a `link:`.
+
+Installs and updates are tracked per target: two different plugins can update at the same time, while the
+same plugin cannot be started twice.
+
+A finished install leaves two small records under `<DSH_HOME>/plugin-console/`:
+
+- `pending-restart.json` — plugins that are installed but not yet loaded, so the panel can keep showing
+  "installed · takes effect after restart" across a host restart. Entries are dropped once the plugin is
+  actually loaded.
+- `install-jobs.json` — the last fifty settled jobs, with the requested version, the version that landed,
+  and the error if any. A failure can therefore still be explained after the process that produced it is gone.
+
+Drift between the manifest and the lock is reconciled in the background with a cooldown, without blocking
+`/state`. Source-type dependencies (`link:`, `file:`, git) are excluded from that automation. A mismatch is
+reported as a failure only when it would actually lose the plugin; a lock or version drift is shown as a
+collapsible note instead.
+
+### Dev links (`link`)
+
+`link:` is a **development** mechanism — ordinary download installs and updates do not produce it. The
+`link` entry in the feature-pack toolbar is the working surface for it:
+
+- pick a registered dev root from the dropdown, or type an absolute path;
+- **Pin** is a two-step action: it first returns a read-only plan, and executes only after you confirm. No
+  code path skips that confirmation;
+- each row shows the target directory and its last-modified time, which is how you tell whether it is the
+  directory you are editing right now;
+- per-row actions appear only when they apply — **fill dependencies**, **build shims** (no pnpm run), and
+  **unpin**;
+- **Browse…** is rendered only when the desktop preload bridge is present. On a web instance it is not
+  rendered, rather than shown as a button that cannot work.
+
+### Disable provenance
+
+A row can be off for different reasons, and the panel distinguishes them:
+
+- **disabled by this console's patch** — removing the patch block enables it normally;
+- **disabled by the plugin or the framework default** — the console can only write an explicit
+  `disabled: false` override, which is what the **forced on by patch** badge refers to;
+- **force-enable had no effect** — the override exists but the row still is not running, and no peer veto
+  explains it. That override can be revoked from the row.
+
+### Operational details
+
+- Market enrichment runs behind a single limiter: four concurrent requests, one in flight per URL, a
+  ten-minute memory for failures and a five-minute success cache. A batch of unreachable mirrors therefore
+  cannot saturate the connection or delay installs.
+- `Disk audit` lists what occupies `<DSH_HOME>/plugin-console` and deletes only after an explicit
+  confirmation. The framework rollback point counts as protected.
+- The gate panel shows the current pending adaptations up front and keeps its history collapsed.
+
+## Known limitations
+
+- Host code changes require a **service restart**; client changes only need a page refresh.
+  - On a **desktop-hosted** instance the console **refuses** to restart and says so: the official path is to
+    fully quit and reopen the client. It never kills or spawns a process there — a manual relaunch would
+    fight the host for the port and produce "The application could not start or stopped unexpectedly".
+  - On a **standalone (web) instance** the restart button is available: it relaunches detached, waits for
+    the port to free, and lets the old process exit gracefully. The toolbar entry is rendered only where it
+    can work — a desktop-hosted instance does not show it.
+- Live GitHub search depends on GitHub reachability (browser-direct + server fallback;
+  during network-blackout windows retry later);
+- Version detection works for npm-published packages; skill-type repos have no version concept;
+- The static index is capped (500 plugins / 300 skills per build); authors bump their star
+  count or wait for the 6h CI cycle to enter the index;
+- Skills are discovered by `dsh-skill-filesystem` — if the current profile does not enable
+  that plugin, installed skills stay dormant until it is enabled and DSH restarted.
+
+---
+
+## Help & Ecosystem
+
+- **Panel missing**: restart dsh → refresh → Settings → Plugins → Plugin Console.
+- **Toggle does nothing**: infrastructure rows are "Protected" (by design); normal toggles
+  take effect via HMR within 1-3s.
+- **Compatibility warning**: a breaking upstream release arrived; see Compatibility.
+- **Search empty/fails**: GitHub uses browser-direct (falls back to the server channel);
+  Gitee is direct-repo mode (enter `owner/repo`); check custom-source URL/headers; retry
+  during network blackout windows.
+- **★ filter empty**: ★ shows only `dsh plugin add`-installable packages (official +
+  subpackage-bundle aggregates); markers are backfilled in 1-3s — no false "none" report.
+- **Install fails**: confirm the repo has package.json and the package is published; npm
+  failures fall back to git install; switch the primary source if npmmirror is unstable.
+- **Skill not found by DSH**: enable `@deepseek-ai/dsh-skill-filesystem` in the profile
+  (`cordis.yml`) and restart; skills live in `~/.dsh/skills/<name>/`.
+
+---
+
+## Ecosystem & discoverability
+
+- Listed on [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) (the community main list) and [DSH Directory](https://dsh.directory);
+- This hub's own auto-collection index (500+ plugins / 300 skills, refreshed by CI every 6h) includes **any** repo tagged `dsh-plugin` / `agent-skills` / `claude-skills` / `dsh-skill` — tag your repo and it appears in the market automatically, no application needed;
+- If you build DSH plugins, this panel is your distribution channel: one-click install for every user of the hub.
+
+## Support
+
+If this panel saves you time or makes DSH more fun to use:
+
+- ⭐ **Star this repo** — it directly helps more DSH users find it;
+- Share it with DSH users or in DSH communities;
+- Submit your own plugin (tag it `dsh-plugin`) to grow the ecosystem;
+- Found a bug or want a feature? [Open an issue](https://github.com/Noob-stupid/dsh-plugin-gating-hub/issues).
+
+---
+
+## Contributing
+
+Contributions of all kinds are welcome — issues, PRs, docs, translations.
+
+- **Guidelines**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Security policy**: [SECURITY.md](SECURITY.md) (report vulnerabilities privately)
+- **Issue templates**: bug reports & feature requests via the [new issue](https://github.com/Noob-stupid/dsh-plugin-gating-hub/issues/new/choose) page
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## License
+
+MIT
+
+---
+
+---
+
+## Preview (experimental · not for production)
+
+The layered-refactor preview lives in its **own repository**: [**`Noob-stupid/dsh-plugin-hub-refactor`**](https://github.com/Noob-stupid/dsh-plugin-hub-refactor)
+
+- **What it is**: the monolithic `lib/index.js` (8547 lines) split into layers — `lib/index.js` **141 lines** + `lib/server/**` **38 modules**; **feature-equivalent to `0.3.57`**, maintainability only;
+- **Verified**: 19 test suites green · 8 architecture-guard assertions · **route inventory identical** (`status` + response fields) against the stable build;
+- **Not yet exercised**: real framework upgrade / rollback, restart guardian, component start/stop, real AI run, Gitee OAuth (~10–25% long-tail risk, subjective);
+- **For everyday use** stick to the **latest npm release** of `@noob-stupid/dsh-plugin-console` (`npm view @noob-stupid/dsh-plugin-console version`), or `main` of this repo.
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>

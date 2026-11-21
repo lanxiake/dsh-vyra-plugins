@@ -1,0 +1,54 @@
+/**
+ * dsh-workflow-lite — 工作流中心：放所有**跨工作流、跨会话**的东西。
+ *
+ * 标题栏和「工作流设置」同一种样子，几页的切换放在标题栏里：
+ * - **运行实例**（`HubRuns.tsx`）：所有会话的实例，左边工作区（能搜）、右边它的实例；
+ *   查看、改整体状态、移到本会话、删除记录（状态文件另外问要不要一起删）；
+ * - **工作流**（`HubWorkflows.tsx`）：全部工作流，每一行能就地改名、删除；选一张看它的版本——存、切换、改说明、删除，不用先打开它；
+ *   导入、导出工作流包也在这一页；
+ * - **记忆**（`HubMemories.tsx`）：记忆库里的每一条——名称、描述、在用的工作流、文件和版本，删掉不用的；
+ * - **存储**（`HubStorage.tsx`）：数据目录、各样东西的占用，清理已结束的实例与旧版本遗留文件；
+ * - **设置**（`HubSettings.tsx`）：插件自己的几项设置（数据目录、步骤上限、自动保存等待……）。
+ *
+ * 换页时新的一页从点的那一侧滑进来（动效都只动 transform / opacity，见 `motion/` 里的各文件与 hubDialog.module.css）。
+ *
+ * @module @xiaoso/dsh-workflow-lite/client/ui/hub/HubDialog
+ */
+import type { HostAccess } from '../../app/host.ts';
+import type { SessionRow } from '../../app/sessions.ts';
+import type { Runs } from '../../app/useRuns.ts';
+import type { T } from '../../i18n.ts';
+import type { WorkflowLiteRpc } from '../../rpc.ts';
+export declare function HubDialog(props: {
+    t: T;
+    rpc: WorkflowLiteRpc;
+    /** 记忆库、桌面能力（「记忆」页看文件用）。 */
+    host: HostAccess;
+    session: string | undefined;
+    /** 宿主的会话列表（拿会话标题、本会话的工作区）；会话服务没接上时是空的。 */
+    sessionRows: readonly SessionRow[];
+    /** 会话服务接上了没有（没接上就不说"会话已不在"，只说"其他会话"）。 */
+    sessionsReady: boolean;
+    runs: Runs;
+    onOpenRun(id: string): void;
+    /** 一句结果提示（改完实例状态之后）。 */
+    onNotice(text: string, tone?: 'info' | 'error'): void;
+    /** 「工作流」页要的：编辑页正开着哪张、怎么把它的改动写下去 / 重新加载、怎么打开别的一张。 */
+    workflows: {
+        current: string | null;
+        /** 导入导出盘点 skill 时站在哪个会话、哪个工作区。 */
+        scope: {
+            cwd?: string;
+            session?: string;
+        };
+        flush(): Promise<boolean>;
+        onReload(): void;
+        onOpen(name: string): void;
+        rename(from: string, to: string): Promise<boolean>;
+        remove(name: string): Promise<boolean>;
+        onChanged(): void;
+    };
+    /** 从画布顶栏的「导出」打开：停在「工作流」页，右栏直接是正在编辑那张的导出。 */
+    exportCurrent?: boolean;
+    onClose(): void;
+}): React.JSX.Element;

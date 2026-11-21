@@ -1,0 +1,15 @@
+/**
+ * dsh-workflow-lite — 主机路径拆成面包屑（选择文件 / 文件夹时的路径栏）。
+ *
+ * 只认分隔符已统一成 `/` 的绝对路径（`host/list` 回的就是这种）：
+ * `C:/Users/me` → `C:`、`Users`、`me`；`/home/me` → `/`、`home`、`me`；`//server/share/x` → `//server/share`、`x`。
+ *
+ * @module @xiaoso/dsh-workflow-lite/client/model/hostPath
+ */
+export interface Crumb {
+    /** 显示的名字。 */
+    label: string;
+    /** 点它跳去的绝对路径。 */
+    path: string;
+}
+export declare function crumbs(path: string): Crumb[];

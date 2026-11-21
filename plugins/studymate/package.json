@@ -1,0 +1,86 @@
+{
+  "name": "@yunmiao/studymate",
+  "version": "2.0.4",
+  "description": "StudyMate learning skills and lesson engine for DeepSeek Harness, Google Antigravity, Codex and ChatGPT Work.",
+  "type": "module",
+  "bin": {
+    "studymate": "bin/studymate.mjs"
+  },
+  "exports": {
+    ".": "./bin/dsh-plugin.mjs",
+    "./learning-preset": "./bin/learning-preset.mjs",
+    "./qa-preset": "./bin/qa-preset.mjs",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-ui-session"
+      ]
+    }
+  },
+  "files": [
+    "cordis.patch.yml",
+    "lib/**",
+    "bin/*.mjs",
+    "bin/*.ts",
+    "openai/studymate/.codex-plugin/plugin.json",
+    "openai/studymate/scripts/*.mjs",
+    "openai/studymate/skills/learning-system/references/*.md",
+    "antigravity/studymate/**",
+    "preset/skills/**",
+    "preset/learning/**",
+    "preset/qa/**",
+    "schemas/*.json",
+    "templates/**",
+    "docs/**/*.md",
+    "docs/images/**",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "assets/qq-group.png"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "license": "MIT",
+  "author": "Cattofu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miaotofu01/Study-Mate.git"
+  },
+  "homepage": "https://github.com/Miaotofu01/Study-Mate#readme",
+  "bugs": {
+    "url": "https://github.com/Miaotofu01/Study-Mate/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "studymate",
+    "learning",
+    "education",
+    "antigravity",
+    "codex",
+    "chatgpt"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "^7.0.2"
+  }
+}

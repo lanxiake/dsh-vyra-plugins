@@ -1,0 +1,30 @@
+/**
+ * dsh-workflow-lite — 右侧面板：步骤库里点中一项时看它的详情，画布上选中东西时看它的属性。
+ *
+ * @module @xiaoso/dsh-workflow-lite/client/ui/shell/workflowView/InspectorPanes
+ */
+import type { NodeData } from '../../../../shared/types.ts';
+import type { HostAccess } from '../../../app/host.ts';
+import type { Workflow } from '../../../app/useWorkflow.ts';
+import type { T } from '../../../i18n.ts';
+import type { Selection } from '../../../model/editor.ts';
+import type { LibraryFocus, StepSource } from '../../../model/library.ts';
+import { Inspector } from '../../editor/Inspector.tsx';
+export declare function InspectorPanes({ t, wf, live, focus, focusPrompt, focusLibrary, addToCanvas, freshTemplateLook, freeStepName, select, duplicate, removeNode, focusCanvas, onFocusFile, host, openMemoryPick, }: {
+    t: T;
+    wf: Workflow;
+    live: boolean;
+    focus: LibraryFocus | null;
+    focusPrompt: boolean;
+    focusLibrary(next: LibraryFocus | null): void;
+    addToCanvas(source: StepSource): void;
+    freshTemplateLook(): Pick<NodeData, 'icon' | 'color'>;
+    freeStepName(base: string): string;
+    select(selection: Selection): void;
+    duplicate(id: string): void;
+    removeNode(id: string): void;
+    focusCanvas(): void;
+    onFocusFile(id: string | null): void;
+    host: HostAccess;
+    openMemoryPick: React.ComponentProps<typeof Inspector>['onPickMemory'];
+}): React.JSX.Element;

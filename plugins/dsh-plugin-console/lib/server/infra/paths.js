@@ -1,0 +1,314 @@
+// L0 · infra（paths.js）—— 分层 Step 从 lib/index.js 搬出，只搬移未改逻辑
+// 分层分组：L0 · infra（边界由 tests/test-architecture-guard.mjs 断言）
+
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
+
+/** DSH 数据根目录（与 dsh-github-login 工具共享令牌文件位置）。 */
+function dshHome() {
+  return process.env.DSH_HOME?.trim() || join(homedir(), '.dsh')
+}
+
+/**
+ * 默认 profile 用户补丁层路径（无 include 条目可推导时的兜底）。
+ *
+ * 硬编码 `profiles/web` 是真实事故（issue #27）：桌面端机器上 `cordis.yml` 里没有
+ * `cordis:include` 条目时兜底必然生效，于是所有补丁写入都落到早已废弃的 `web` profile，
+ * 正在用的 `desktop` 静默收不到——开关插件、改禁用都没反应，而且不报错。
+ *
+ * 现在按可信度排候选，绝不写死 profile 名：
+ *   ① DSH_PROFILE_DIR（桌面端/CLI 会显式设置，最可信）
+ *   ② DSH_PROFILE（只给名字时拼路径）
+ *   ③ `profiles/` 下真实存在补丁文件的目录（desktop 优先，其余按名字排序保证确定性）
+ */
+function defaultPatchPath() {
+  const home = dshHome()
+  const explicitDir = process.env.DSH_PROFILE_DIR?.trim()
+  if (explicitDir !== undefined && explicitDir !== '') return join(explicitDir, 'cordis.patch.yml')
+  const candidates = []
+  const profileName = process.env.DSH_PROFILE?.trim()
+  if (profileName !== undefined && profileName !== '') candidates.push(join(home, 'profiles', profileName, 'cordis.patch.yml'))
+  candidates.push(join(home, 'profiles', 'desktop', 'cordis.patch.yml'))
+  try {
+    const base = join(home, 'profiles')
+    for (const name of readdirSync(base).sort()) {
+      if (name === 'node_modules' || name === 'desktop') continue
+      candidates.push(join(base, name, 'cordis.patch.yml'))
+    }
+  } catch {
+    // profiles 读不到就只用已知候选
+  }
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate
+  }
+  return candidates[0]
+}
+
+/** 从 loader 树推导 profile 的 cordis.patch.yml 绝对路径。 */
+function findPatchPath(ctx) {
+  for (const entry of ctx.loader.entries()) {
+    const cfg = entry.options?.config
+    if (entry.options?.name !== 'cordis:include' || cfg == null || typeof cfg.path !== 'string') continue
+    if (!cfg.path.includes('cordis.yml')) continue
+    const configPath = fileURLToPath(new URL(cfg.path))
+    return configPath.replace(/cordis\.yml$/u, 'cordis.patch.yml')
+  }
+  return defaultPatchPath()
+}
+
+/** profile 根目录（resolvePackageJson 的 fallbackBase 用；失败返回 null）。 */
+function profileDirOf(ctx) {
+  try {
+    return dirname(findPatchPath(ctx))
+  } catch {
+    return null
+  }
+}
+
+/** 把 file:// URL（如 ctx.baseUrl）转成目录路径（resolve 用）。 */
+function baseDirOf(baseUrl) {
+  try {
+    if (typeof baseUrl === 'string' && baseUrl.startsWith('file:')) return dirname(fileURLToPath(baseUrl))
+  } catch {}
+  return typeof baseUrl === 'string' && baseUrl !== '' ? baseUrl : '.'
+}
+
+/**
+ * 解析包 package.json 的绝对路径（exports 限制包 fallback）：
+ * require.resolve('pkg/package.json') 对声明了 exports 且不含 './package.json' 的包会抛错
+ * （2026-09-04 教训：@openviking/dsh-memory-plugin 因此被 heal 误判模块缺失并自动禁用）——
+ * fallback 直接查 node_modules 物理路径。
+ *
+ * ★ 2026-10-13（0.5.48）改错：**对 exports 子路径的假阳性**。
+ *   现场：装 ds-bot 时 `verifyInstalledEntry` 拿 `ds-bot/web-search` 来核实，旧代码把引用名拼成
+ *   `ds-bot/web-search/package.json` ⇒ ds-bot 的 exports 里没有这个子路径 ⇒
+ *   `ERR_PACKAGE_PATH_NOT_EXPORTED` ⇒ 退物理路径 `node_modules/ds-bot/web-search/package.json`
+ *   ⇒ **也不存在**（包的清单在 `node_modules/ds-bot/package.json`，不在子目录里）⇒ 返回 null
+ *   ⇒ 误报"缺模块会崩/会被自动禁用"。
+ *   但按**真实解析语义**这个引用是好的：本机实测 `require.resolve('ds-bot/web-search')` **成功**
+ *   （`包/子路径` 是生态既有约定，官方 patch 里也有这种 entry），`import.meta.resolve` 同理，
+ *   模块也能真 `import()`。
+ *   ⇒ 现在先用**真实解析语义**解析「引用名本身」（不再拿字符串拼 `/package.json`），
+ *     成功后从解析结果**向上找最近的 package.json** 作为该包的清单。
+ *   ⇒ 负控不变：真不存在的子路径，三条路都失败 ⇒ 仍然返回 null（**绝不放松成"一律放行"**）。
+ */
+/** 从解析结果向上找清单。**优先认包名匹配的那份**（★ 0.5.49 改错，见下）。
+ *
+ * ★ 2026-10-14（0.5.49）改错：不能只取"最近的 package.json"。
+ *   真机现场：`@linxin666/dsh-web-all/plugin-manager` 的 exports 目标是 `./lib/shells/shell.js`，
+ *   而 `lib/shells/` 下还有一个**构建产物用的私有子清单**
+ *   （`{"name":"@linxin666/dsh-web-all-shells","private":true}` —— **没有 version 字段**）。
+ *   只认"最近" ⇒ 拿到那份子清单 ⇒ 版本/仓库全空（和"解不出来"一样是坏结果，只是换了个坏法）。
+ *   所以向上找时：命中"name 与引用包名相同"的清单立即返回；一路都没匹配才退回最近的那份
+ *   （不返回 null —— 包确实存在，只是清单不规范，此时宁可给出最近的那份也不谎报"没有这个包"）。
+ */
+function nearestPackageJson(fromPath, expectedName = null) {
+  try {
+    let dir = dirname(fromPath)
+    let fallback = null
+    for (let depth = 0; depth < 40; depth += 1) {
+      const candidate = join(dir, 'package.json')
+      if (existsSync(candidate)) {
+        if (fallback === null) fallback = candidate
+        if (typeof expectedName === 'string' && expectedName !== '' && manifestNameOf(candidate) === expectedName) return candidate
+      }
+      const parent = dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+    return fallback
+  } catch {}
+  return null
+}
+
+/** 读一份清单的 `name`（读不到/不是 JSON 就返回 null）。 */
+function manifestNameOf(file) {
+  try {
+    const parsed = JSON.parse(readFileSync(file, 'utf8'))
+    return typeof parsed?.name === 'string' ? parsed.name : null
+  } catch {
+    return null
+  }
+}
+
+/** 该引用是不是"包 + 子路径"形态（`pkg/sub`、`@scope/pkg/sub`）。
+ * 判据与 packageNameOf 同源：剥掉包名后还剩东西 ⇒ 是子路径引用。 */
+function isSubpathRef(refName) {
+  if (typeof refName !== 'string' || refName === '') return false
+  return refName !== packageNameOf(refName)
+}
+
+/** 用真实解析语义解析「包/子路径」引用的清单路径：先解析引用本身，再向上找**该包**的清单。
+ *  向上找时把包名传下去（`nearestPackageJson(refName, expectedName)`）—— 真机上就有子目录里放
+ *  私有子清单的包（`@linxin666/dsh-web-all/lib/shells/package.json`，name 是 `…-shells` 且无 version），
+ *  只取"最近"会拿到那份、版本照样是空的。详见 nearestPackageJson 的注释。 */
+function resolveViaRealSemantics(refName, base) {
+  if (typeof base !== 'string' || base === '') return null
+  try {
+    const entry = createRequire(join(base, 'package.json')).resolve(refName)
+    return nearestPackageJson(entry, packageNameOf(refName))
+  } catch {
+    return null
+  }
+}
+
+function resolvePackageJson(pkgName, baseDir, fallbackBase) {
+  const name = packageNameOf(pkgName)
+  // ① 真实解析语义（认 exports 子路径）—— 优先，且**不**拼 `/package.json`
+  const real = resolveViaRealSemantics(pkgName, baseDir)
+  if (real !== null) return real
+  // ★ 子路径引用（`包/子路径`）单独一条路：只认「真实解析语义」，但**两个基准都认**。
+  //
+  // 为什么要挡住后两条：那两条是按**包名**（packageNameOf 剥掉子路径后的 name）找
+  //   `node_modules/<包名>/package.json`，对不存在的子路径也会命中**包根**那份清单
+  //   ⇒ 把一个坏引用判成好的 —— 正是"校验被放松成一律放行"，任务红线明令不许。
+  //   （本机实测：`@scope/tool/nope` 在 @scope/tool 存在时会从 fallback 拿到包根清单。）
+  //
+  // ★ 2026-10-14（0.5.49）改错：这道闸原先写成**在 fallbackBase 那次真实解析之前**就 `return null`，
+  //   于是把 profile 回退这条**合法**路径也一起掐了 —— 0.5.48 上 `@linxin666/dsh-web-all/plugin-manager`
+  //   （框架树里没有、只在 profile 里）从"解得出"退回 null，面板里那批第三方子路径行的
+  //   版本/安装日期/仓库全变空（实测 /plugin-console/state 确认），而官方子路径行走的是框架基准、
+  //   不受影响 ⇒ 现场不显眼。判据本身没错，错在**位置**：要挡的是"按包名找清单"那两条兜底，
+  //   不是"解析这个引用本身"。所以现在：baseDir 真实解析 → fallbackBase 真实解析 → 再 return null。
+  //   ⇒ 负控不变（`@scope/tool/nope` 两条真实解析都失败 ⇒ 仍是 null，绝不放松成一律放行）。
+  if (isSubpathRef(pkgName)) {
+    if (typeof fallbackBase === 'string' && fallbackBase !== '' && fallbackBase !== baseDir) {
+      const realFallback = resolveViaRealSemantics(pkgName, fallbackBase)
+      if (realFallback !== null) return realFallback
+    }
+    return null
+  }
+  // ② 既有两条（顺序与行为不变）：`<name>/package.json` 解析 → node_modules 物理路径
+  try {
+    return createRequire(join(baseDir, 'package.json')).resolve(`${name}/package.json`)
+  } catch {}
+  const parts = String(name).split('/')
+  const candidate = join(baseDir, 'node_modules', ...parts, 'package.json')
+  if (existsSync(candidate)) return candidate
+  // issue #15：npm 全局安装 dsh 时 ctx.baseUrl 落在框架安装树（而非 profile node_modules），
+  // 官方 @deepseek-ai/* 恰好可见、第三方插件全部解析失败 → 详情/版本/仓库全空。
+  // 回退到 profile 目录（fallbackBase）再试一次。
+  if (typeof fallbackBase === 'string' && fallbackBase !== '' && fallbackBase !== baseDir) {
+    const realFallback = resolveViaRealSemantics(pkgName, fallbackBase)
+    if (realFallback !== null) return realFallback
+    try {
+      return createRequire(join(fallbackBase, 'package.json')).resolve(`${name}/package.json`)
+    } catch {}
+    const candidate2 = join(fallbackBase, 'node_modules', ...parts, 'package.json')
+    if (existsSync(candidate2)) return candidate2
+  }
+  return null
+}
+
+function entryPkgMeta(moduleName, baseUrl, profileDir) {
+  if (typeof moduleName !== 'string' || moduleName.startsWith('cordis:')) return null
+  const hit = pkgMetaCache.get(moduleName)
+  if (hit !== undefined && Date.now() - hit.at < PKG_META_TTL) return hit
+  const meta = { at: Date.now(), installDate: null, version: null, repository: null }
+  try {
+    // ★ 0.5.60（真机 2026-10-18）：**profile 优先、安装锚点兜底**。
+  //   过去是反的（asar 优先），导致"徽标显示 0.2.1-rc.2（最新）→ 检测更新无更新可点 →
+  //   但实际加载的是 profile 里 0.2.0-rc.2 → peer 永远不匹配"的死局。
+  //   loader 是从 profile 上下文解析模块名的，所以要显示/要比对的必须是 profile 那份；
+  //   只有 profile 里没有该包时（纯内置插件）才回落到安装锚点。
+  const hasProfile = typeof profileDir === 'string' && profileDir !== ''
+  const pkgPath = hasProfile
+    ? resolvePackageJson(moduleName, profileDir, baseDirOf(baseUrl))
+    : resolvePackageJson(moduleName, baseDirOf(baseUrl), null)
+    if (pkgPath === null) throw new Error('not found')
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
+    // 安装日期：优先 curl 通道写入的 .dsh-installed-at 标记（真实安装时刻）；
+    // 否则用 package.json 的 mtime，但 npm tarball 会把文件时间固定为 1985-10-26
+    // （可复现构建），此时回退到目录创建时间（birthtime，解压时刻，Windows 上可靠）。
+    try {
+      const marker = join(dirname(pkgPath), '.dsh-installed-at')
+      if (existsSync(marker)) {
+        const ts = Number(readFileSync(marker, 'utf8').trim())
+        if (Number.isFinite(ts) && ts > 0) {
+          const d = new Date(ts)
+          meta.installDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        }
+      }
+      if (meta.installDate === null) {
+        const st = statSync(pkgPath)
+        const yearOk = (t) => t >= 946684800000 // 2000-01-01：早于它都是打包器固定时间戳等伪日期
+        const candidates = [st.mtimeMs, st.birthtimeMs ?? NaN].filter((t) => Number.isFinite(t) && yearOk(t))
+        if (candidates.length > 0) {
+          const d = new Date(Math.min(...candidates))
+          meta.installDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        }
+      }
+    } catch {}
+    meta.version = typeof pkg.version === 'string' ? pkg.version : null
+    const rawRepo = typeof pkg.repository === 'string' ? pkg.repository : (pkg.repository?.url ?? null)
+    if (typeof rawRepo === 'string') meta.repository = rawRepo.replace(/^git\+/u, '').replace(/\.git$/u, '').toLowerCase()
+  } catch {}
+  pkgMetaCache.set(moduleName, meta)
+  return meta
+}
+
+/** 包名归一：支持子路径导出形式（@linxin666/dsh-web-all/settings → @linxin666/dsh-web-all）。 */
+function packageNameOf(moduleName) {
+  if (typeof moduleName !== 'string') return moduleName
+  const m = moduleName.match(/^(@[^/]+\/[^/]+)(?:\/.*)?$/u)
+  return m ? m[1] : moduleName
+}
+
+/** include 前缀（加载器条目 id 形如 include:schedule，补丁行 id 为 schedule）。 */
+function includePrefix(ctx) {
+  for (const entry of ctx.loader.entries()) {
+    if (entry.options?.name === 'cordis:include') return `${entry.id}:`
+  }
+  return ''
+}
+
+/** 接受加载器条目 id 或行 id，返回补丁行 id。 */
+function rowIdOf(ctx, entryId) {
+  const prefix = includePrefix(ctx)
+  if (prefix.length > 0 && entryId.startsWith(prefix)) return entryId.slice(prefix.length)
+  return entryId
+}
+
+/** 已加载插件的包元信息缓存（安装日期/版本/仓库），60 秒 TTL。 */
+const pkgMetaCache = new Map()
+
+const PKG_META_TTL = 60000
+
+/**
+ * 本插件包根目录（含 package.json 与 lib/）。
+ * ★ 为什么必须有它：函数搬进 lib/server/** 之后，`dirname(import.meta.url)` 指的是
+ * `lib/server/infra` 而不是包根 —— 直接拿它拼 '..' 会得到错误路径。
+ * 升级/回滚/重启脚本生成器里的 pluginDir 也走这里，错了会让生成的脚本找不到插件目录。
+ * **全仓库只有这一处允许用 import.meta.url 计算包根。**
+ */
+export function pluginRoot() {
+  return resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+}
+
+/** 软件源配置文件（registry 列表，安装链按主→备依次尝试）。 */
+const sourcesFile = () => join(dshHome(), 'plugin-console-sources.json')
+
+/** 敏感凭据单独落盘（避免与可分享配置混存）：自定义搜索源 headers + Gitee secret/token。 */
+const sourcesSecretsFile = () => join(dshHome(), 'plugin-console-sources.secrets.json')
+
+/** 市场索引落盘缓存（网络不可达时降级展示上次成功结果，避免内网/断网下市场空白）。 */
+const marketIndexCacheFile = () => join(dshHome(), 'plugin-console-market-index-cache.json')
+
+/** 组件注册表（服务型组件：启动/停止/状态控制按钮的数据源）。 */
+const componentsFile = () => join(dshHome(), 'plugin-console', 'components.json')
+
+/** AI 赋能任务持久化文件（DSH 重启不丢计划/结果；running 任务重启后标记中断）。 */
+const aiJobsFile = () => join(dshHome(), 'plugin-console', 'ai-jobs.json')
+
+const repoLandConfFile = () => join(dshHome(), 'plugin-console', 'repo-land.json')
+
+/** 批量识别搜索结果类型（官方 bundle / 聚合仓库 / 普通项目 / 技能仓库）。
+ * 全部条目并发 + raw 主站与镜像双通道竞速，单条 4 秒封顶。
+ * 聚合仓库（根包 private+workspaces）额外检查子包是否有 dsh.bundle 清单：
+ * 任一子包可 `dsh plugin add` 直装 → aggregateInstallable = true（★ 筛选会包含它）。 */
+const ENRICH_CACHE_FILE = () => join(dshHome(), 'plugin-console', 'enrich-cache.json')
+
+export { dshHome, defaultPatchPath, findPatchPath, profileDirOf, baseDirOf, resolvePackageJson, entryPkgMeta, packageNameOf, includePrefix, rowIdOf, pkgMetaCache, PKG_META_TTL, sourcesFile, sourcesSecretsFile, marketIndexCacheFile, componentsFile, aiJobsFile, repoLandConfFile, ENRICH_CACHE_FILE }

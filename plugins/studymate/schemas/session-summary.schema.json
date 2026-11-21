@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SessionSummary",
+  "description": "【已退役 · #71】sessions/ 不再产生新文件，开场也不再读会话记录（目标态规格 §5.1／§5.5）。这份 schema 保留是为了让盘上已有的旧会话摘要仍读得进、仍能被校验器解释（旧技能正文还引它，技能清洗归 #80/#81）；不要照它写新文件。",
+  "type": "object",
+  "required": ["date", "subject", "session_goal", "learned", "next_step", "weaknesses"],
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "subject": { "type": "string" },
+    "session_goal": { "type": "string" },
+    "learned": { "type": "array", "items": { "type": "string" } },
+    "next_step": { "type": "string" },
+    "weaknesses": { "type": "array", "items": { "type": "string" } },
+    "memory_updates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "【遗留 · #192】记忆更新的确认门已退役：技能里不再产生这个字段，也没有任何消费者（全角色收尾时直接把结论追加进「积累」，写法见 `record-keeping` 的「共享记忆」）。**留着不删**，只为让盘上已有的旧会话摘要仍能被这份 schema 解释——与整份 schema 的退役口径一致；不要照它写新文件。"
+    }
+  }
+}

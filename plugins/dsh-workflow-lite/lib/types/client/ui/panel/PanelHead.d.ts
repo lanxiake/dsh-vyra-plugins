@@ -1,0 +1,21 @@
+/**
+ * dsh-workflow-lite — 右栏的标题栏：模板的属性面板与实例的右栏共用，两边长得一样。
+ *
+ * 左边一个图标块（步骤的外观、资源 / 输入 / 连线的图标；实例里是「在看什么」的切换），中间是名字，
+ * 名字下面一行小字是 ID（点一下复制，复制图标悬停才露），右边是关闭。
+ *
+ * @module @xiaoso/dsh-workflow-lite/client/ui/panel/PanelHead
+ */
+import type { T } from '../../i18n.ts';
+export declare function PanelHead(props: {
+    t: T;
+    lead: React.ReactNode;
+    /** 名字：能改的是输入框，只看的是一段字。 */
+    title: React.ReactNode;
+    /** 节点 id（连线、概览没有）。 */
+    id?: string | undefined;
+    /** 名字右边的小标（输入的题型）。 */
+    extra?: React.ReactNode;
+    onClose(): void;
+    closeTestId?: string;
+}): React.JSX.Element;

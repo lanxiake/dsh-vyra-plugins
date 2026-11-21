@@ -1,0 +1,483 @@
+// L1 · domain —— profile 清单（<profile>/package.json）的写入层：bundles 层 + dependencies 声明
+//
+// 为什么单独成模块（2026-09-24）：安装落点原本散在 install.js 里，而 install.js 已经贴着
+// 架构守卫的 600 行上限；更重要的是，「装了但没声明」这一类问题反复出现（官方面板看不见 /
+// pnpm 按清单还原 / 我们的清理判据误当孤儿），把「怎么写清单」收口到一处才好统一保证。
+//
+// 规矩：
+//   · 所有写操作走 fsx 的写队列（queuedWrite），避免并发读改写互相覆盖；
+//   · **安装即声明**：装到哪版就把 dependencies 写成哪版（读磁盘真实版本，不猜）；
+//   · **卸载即撤销**：否则清单留幽灵依赖，下次 pnpm 操作把它装回来；
+//   · 来源型 spec（link:/file:/git:/URL）绝不改写成版本号 —— 改写等于丢来源。
+
+import { readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { canonicalSourceSpec, linkSpecFor, materializePackageForLink, probeFailureKind, probeRegistryPackage, sameSourceSpec, suggestedPinAction } from './dep-source.js'
+import { ensureLinkSelfSufficiency, removeLinkSelfSufficiency } from './link-self-sufficiency.js'
+import { composeSourceInstallNote, forgetSourceSpec, isLinkSourceSpec, isRealInstallSpec, recordSourceSpec, suggestedRealInstallAction } from './source-spec.js'
+import { queuedWrite } from '../infra/fsx.js'
+import { runPnpmAdd } from '../infra/exec.js'
+import { resolvePackageJson } from '../infra/paths.js'
+import { reconcileLockfile } from './selfupdate.js'
+
+/** 官方 profile 模板自带的 bundle（其余 bundle 视为用户额外添加）。 */
+const DEFAULT_BUNDLES = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app']
+
+/** 读磁盘上真实安装的版本（读不到返回 null，绝不猜）。 */
+async function installedVersionOf(profileDir, packageName) {
+  try {
+    const pkgPath = resolvePackageJson(packageName, profileDir)
+    if (pkgPath === null) return null
+    const version = JSON.parse(await readFile(pkgPath, 'utf8')).version
+    return typeof version === 'string' && version !== '' ? version : null
+  } catch {
+    return null
+  }
+}
+
+async function readManifest(profileDir) {
+  return JSON.parse(await readFile(join(profileDir, 'package.json'), 'utf8'))
+}
+
+async function writeManifest(profileDir, manifest) {
+  await writeFile(join(profileDir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+}
+
+/**
+ * 把包追加进 profile 的 `dsh.profile.bundles` 层（与官方 `dsh plugin add` 的 reconcile 一致），
+ * 同一把写锁内**顺手声明 dependencies**（安装即声明）。
+ * @returns {{ version: string|null }}
+ */
+async function addBundleToManifest(profileDir, packageName) {
+  return queuedWrite(async () => {
+    const manifest = await readManifest(profileDir)
+    const bundles = manifest.dsh?.profile?.bundles ?? []
+    let touched = false
+    if (!bundles.includes(packageName)) {
+      bundles.push(packageName)
+      manifest.dsh = { ...(manifest.dsh ?? {}), profile: { ...(manifest.dsh?.profile ?? {}), bundles } }
+      touched = true
+    }
+    const version = await installedVersionOf(profileDir, packageName)
+    if (version !== null) {
+      const deps = { ...(manifest.dependencies ?? {}) }
+      if (deps[packageName] !== version) { deps[packageName] = version; manifest.dependencies = deps; touched = true }
+    }
+    if (touched) await writeManifest(profileDir, manifest)
+    return { version }
+  })
+}
+
+/** 从 profile manifest 移除一个 bundle（同时撤销 dependencies 声明，避免留下幽灵依赖）。 */
+async function removeBundleFromManifest(profileDir, bundlePkg) {
+  return queuedWrite(async () => {
+    const manifest = await readManifest(profileDir)
+    const bundles = manifest.dsh?.profile?.bundles ?? []
+    const next = bundles.filter((name) => name !== bundlePkg)
+    let touched = false
+    if (next.length !== bundles.length) {
+      manifest.dsh = { ...(manifest.dsh ?? {}), profile: { ...(manifest.dsh?.profile ?? {}), bundles: next } }
+      touched = true
+    }
+    const deps = { ...(manifest.dependencies ?? {}) }
+    if (bundlePkg in deps) { delete deps[bundlePkg]; manifest.dependencies = deps; touched = true }
+    if (touched) await writeManifest(profileDir, manifest)
+    return { changed: touched }
+  })
+}
+
+/** 读 profile 清单里某包的 spec（读不到返回 null）。 */
+async function specOf(profileDir, packageName) {
+  try {
+    const manifest = await readManifest(profileDir)
+    const spec = manifest?.dependencies?.[packageName]
+    return typeof spec === 'string' && spec !== '' ? spec : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * **写回形态判定**（2026-09-27 改错，这是"清单里留下裸版本号 → 下次 pnpm 操作 404"的根修）。
+ *
+ * 修的是什么：`declareProfileDependency` 过去无条件把**磁盘上的版本号**写进 `dependencies`
+ * （注释写着"装到哪版就写哪版"）——对 release 通道 / curl 手铺 / git 装配来的包，npm registry 上
+ * **根本没有这个包**。面板当时显示安装成功，直到任何一次 pnpm 操作按清单解析才炸 `ERR_PNPM_FETCH_404`；
+ * 真机证据：desktop profile 里 `@dsh-external/dsh-graded-mode: 0.0.1-rc1`（npmmirror 与 npmjs 双双 404）。
+ *
+ * 判据（与 lockfile 对账的 planWriteback 同一套语义，绝不两处各判一套）：
+ *   · registry 上**查得到这个包的这个版本** → 写版本号（原行为，回归不变）；
+ *   · 查无此包 / 查无此版本（404）      → 物化到 `<DSH_HOME>/plugin-src/<包名>` 并写 `link:<绝对路径>`；
+ *   · 本次没探到（网络/镜像不可达）      → 不敢替用户猜：仍按旧行为写版本号，但**如实记 note**
+ *     并给出结构化「钉住」建议动作（面板可一键执行），绝不写成"已钉住"。
+ * 返回 { form, spec, note, suggestion }；`spec` 为 null 表示"不要改清单"。
+ *
+ * 2026-10-06 加法 —— **来源型默认【真装】**（用户点名：「默认真装 + link 自足」）：
+ *   调用方**知道这个包的真实来源规格**时（tarball URL / `github:owner/repo` / 本地目录），
+ *   传 `sourceSpec` 进来，写回的就是**那个规格本身** —— 于是 `pnpm add <spec>` 由包管理器
+ *   保证依赖与 peer，与官方 `dsh plugin add` 同一条通道（`form: 'source'`）。
+ *   `link:` 退居**显式开发式安装**：仅在"拿不到真实来源规格"（或用户明确选择开发式）时使用，
+ *   由 `link-self-sufficiency.js` 补齐依赖与框架 peer 垫片根。
+ *   优先级刻意保持"registry 可解析 → 版本号"在最前：既有 registry 流程一字不改（不倒退）。
+ */
+async function planDependencySpec({ profileDir, packageName, version, registries = [], probe = null, home = undefined, profile = null, sourceSpec = null, registryProven = false }) {
+  const doProbe = typeof probe === 'function' ? probe : probeRegistryPackage
+  const realSpec = typeof sourceSpec === 'string' && sourceSpec.trim() !== '' ? sourceSpec.trim() : null
+  const linkable = () => materializePackageForLink(profileDir, packageName, home === undefined ? {} : { home })
+  const asSource = () => ({
+    form: 'source',
+    spec: realSpec,
+    note: `${packageName}：按**真实来源规格**记录依赖（${realSpec}）—— 走 pnpm add <spec> 真装，依赖与 peer 由包管理器保证（与官方 dsh plugin add 同一通道）`,
+    suggestion: null,
+  })
+  const asLink = (why) => {
+    const dir = linkable()
+    if (dir === null) {
+      return {
+        form: 'unknown',
+        spec: null,
+        note: `${packageName}：${why}，但 node_modules 里找不到可物化的已装副本 —— 已跳过写回（未改动清单，避免留下指向不存在 npm 版本的裸版本号）`,
+        suggestion: null,
+      }
+    }
+    const link = linkSpecFor(dir)
+    return {
+      form: 'link',
+      spec: link,
+      note: `${packageName}：${why}；已按**源码安装（本地物化）**记录（${link}）—— 不经 npm registry 解析、不经 tarball 完整性校验，pnpm 重建 lock 也能装上`,
+      suggestion: null,
+    }
+  }
+  let result = null
+  try {
+    result = await doProbe(packageName, registries, { version })
+  } catch (error) {
+    result = { resolvable: false, hasVersion: false, tried: [error instanceof Error ? error.message : String(error)] }
+  }
+  if (result?.resolvable === true && result.hasVersion !== false) return { form: 'version', spec: version, note: null, suggestion: null }
+  // ★ 0.5.87 加法（用户红线：「正常下载安装/更新绝不能走 link:」）：这份物是**我们自己从 registry
+  //   下载成功**的（curl 通道拿到的 dist.tarball，摘要已校验）⇒ "registry 查无此包/此版本"的探测结论
+  //   只能是**探测这次没探成**（镜像元数据滞后/CDN 边缘不一致），不是事实。此时按版本号写回，
+  //   绝不物化成 link:（那会把一个正常下载安装的包变成"开发式安装"，下次 pnpm 操作还会被改形态）。
+  //   没传 registryProven 时（默认 false）行为与改动前**逐字相同**。
+  if (registryProven === true) {
+    return {
+      form: 'version',
+      spec: version,
+      note: `${packageName}：本次是**从 registry 实际下载成功**的（tarball 已校验摘要），故按版本号 ${version} 记录；`
+        + 'registry 元数据探测这次没能确认它（多为镜像/元数据滞后）——下载成功即证明该版本在，**不**据此写成 link:/本地副本',
+      suggestion: null,
+    }
+  }
+  // 来源型：调用方给了真实来源规格 ⇒ 默认真装（不写 link:）。拿不到真实规格才退回 link:。
+  if (probeFailureKind(result) === 'fetch-404' && realSpec !== null) return asSource()
+  if (probeFailureKind(result) === 'fetch-404') {
+    return asLink(result?.resolvable === true
+      ? `registry 上没有 ${version} 这个版本（该包只在 GitHub release / 本地有）`
+      : 'npm registry 查无此包（该包只存在于 GitHub release 或本地）')
+  }
+  return {
+    form: 'unknown',
+    spec: version,
+    note: `${packageName}：本次没能确认 registry 可解析性（网络/镜像不可达），先按版本号 ${version} 写入；若该包确实不在 npm 上，请执行下面的「钉住」动作改成 link:（否则下次 pnpm 操作会 404）`,
+    suggestion: suggestedPinAction({ packageName, version, profileDir, profile }),
+  }
+}
+
+/**
+ * 安装即声明：把包写进 profile 清单的 `dependencies`。
+ *
+ * 三个现象同一个根因（2026-09-24 复盘）：
+ *   · 官方「设置 → 插件」的**已安装**分区只显示清单里声明过的包 —— 我们手铺的包在那里看不见；
+ *   · 任何一次 pnpm 操作都会按清单 + lock 重装，未声明的包会被**还原/清掉**；
+ *   · 连我们自己的「清理残余」也按「有没有被声明」判孤儿 —— 判据病根也在这里。
+ *
+ * 2026-09-27 改错（见 planDependencySpec 注释）：写进去的形态**按 registry 可解析性决定**，
+ * 并且写完**总是**做一次 lock 对账（对齐时零成本：reconcileLockfile 只在漂移时才跑 pnpm）。
+ * @returns {{ changed: boolean, version: string|null, spec: string|null, form: string|null, reason: string|null,
+ *             lockSynced: boolean, lockNote: string|null, depNote: string|null, suggested: object|null }}
+ */
+async function declareProfileDependency(profileDir, packageName, version = null, options = {}) {
+  const { syncLock = true, registries = [], probe = null, home = undefined, profile = null, sourceSpec = null, installSource = null, sourceOrigin = null, sourceKind = null, registryProven = false } = options
+  const empty = { changed: false, version: null, spec: null, form: null, reason: null, lockSynced: false, lockNote: null, depNote: null, suggested: null, sourceInstall: null, selfSufficiency: null }
+  const realSpec = typeof sourceSpec === 'string' && sourceSpec.trim() !== '' ? sourceSpec.trim() : null
+  const homeOpt = home === undefined ? {} : { home }
+  // `link:` 规格 = **显式开发式安装**（本地目录的正常路径）：**不**交给 pnpm 真装，
+  // 直接走既有 link: 路径 + 自足补齐（判据 C：本地目录不涉及下载，link: 就是它的正常形态）。
+  const linkSource = realSpec !== null && isLinkSourceSpec(realSpec)
+  const installSpec = realSpec !== null && linkSource !== true && isRealInstallSpec(realSpec) ? realSpec : null
+  // ★ 来源型默认【真装】（2026-10-06 加法）：给了真实来源规格、而磁盘上还没有这个包时，
+  // **先真装**（pnpm add <spec>，依赖/peer 交给包管理器）；装失败也**不拒绝** ——
+  // 如实记 sourceInstall 后继续走既有判定（退回 link: 并由自足性补齐）。
+  let sourceInstall = null
+  if (installSpec !== null && await installedVersionOf(profileDir, packageName) === null) {
+    sourceInstall = await installSourceDependency({ profileDir, spec: installSpec, registries, install: installSource })
+    recordSourceSpec({ packageName, spec: installSpec, kind: sourceKind, install: sourceInstall, ...homeOpt })
+  }
+  const resolved = typeof version === 'string' && version !== '' ? version : await installedVersionOf(profileDir, packageName)
+  if (resolved === null) {
+    // ★ 失败路径 B（取样/下载本身失败 ⇒ 物不在盘上）：只有如实失败 + 原因，**绝不**出现
+    // "已装上 / 回落成功 / 已安装"之类说法（判据：回落只对"物已在盘上"成立）。
+    const reason = sourceInstall !== null && sourceInstall.ok !== true
+      ? `真装失败：${sourceInstall.error}；磁盘上没有任何副本 —— 无可挂载（清单未改动）`
+      : '读不到已安装版本'
+    return { ...empty, sourceInstall, reason, depNote: composeSourceInstallNote({ packageName, install: sourceInstall }) ?? reason }
+  }
+  // 探测/物化放在写锁**之外**（网络探测最长 8 秒，占着清单写锁会堵住其它写）
+  let plan = linkSource
+    ? {
+        form: 'link',
+        spec: canonicalSourceSpec(realSpec),
+        note: `${packageName}：**源码安装（本地物化）** —— 该包在 npm registry 上找不到，只能拿到源码；已按路径型来源记录（${realSpec}）。不经 registry 解析、不经 tarball 完整性校验，缺失依赖与框架 peer 由 link 自足性补齐`,
+        suggestion: null,
+      }
+    : await planDependencySpec({ profileDir, packageName, version: resolved, registries, probe, home, profile, sourceSpec: installSpec, registryProven })
+  // ★ 本轮接线（2026-10-06）：盘上那份是**取样通道**铺的（curl / GitHub release 资产 / 源码装配），
+  // 而不是包管理器装的 —— 而 registry 又查无此包（plan 判成来源型）⇒ **补一次真装**，
+  // 把依赖交给 pnpm（与官方 dsh plugin add 同一条通道）。
+  // 真装失败 ⇒ 回落既有 `link:` 路径：**回落只对"物已在盘上"成立**，这里正是（resolved 非空）。
+  if (installSpec !== null && sourceInstall === null && sourceOrigin === 'sampled' && plan.form === 'source') {
+    sourceInstall = await installSourceDependency({ profileDir, spec: installSpec, registries, install: installSource })
+    recordSourceSpec({ packageName, spec: installSpec, kind: sourceKind, install: sourceInstall, ...homeOpt })
+    if (sourceInstall.ok !== true) {
+      // ★ 0.5.72（用户 2026-10-18 批准）：**不再回落成 link:**。
+      //   有真实来源规格却装不上 ⇒ 如实报错、**不写清单、不建 link**；
+      //   偷偷挂一份本地副本会让人以为"装上了"，而依赖与 peer 其实没有被包管理器保证过。
+      //   仍保留「一键真装」动作：给的是"重试真实通道"的出路，不是假装成功。
+      const why = typeof sourceInstall.error === 'string' && sourceInstall.error !== '' ? sourceInstall.error : '（原因未记录）'
+      return {
+        ...empty,
+        version: resolved,
+        form: plan.form,
+        reason: `真装失败：${why}`,
+        sourceInstall,
+        depNote: `${packageName}：已获取源码但**真装失败**（${why}）—— 未改动清单，也未按 link: 记录。` +
+          `可点「一键真装」重试；或改用「从本地目录安装」显式走开发式链接。`,
+        suggested: suggestedRealInstallAction({ packageName, spec: installSpec, profile, profileDir }),
+      }
+    }
+  }
+  const installNote = composeSourceInstallNote({ packageName, install: sourceInstall, plan })
+  if (plan.spec === null) {
+    return {
+      ...empty, version: resolved, form: plan.form, reason: plan.note, sourceInstall,
+      depNote: joinNotes(installNote, plan.note), suggested: plan.suggestion,
+    }
+  }
+  const result = await queuedWrite(async () => {
+    const manifest = await readManifest(profileDir)
+    const deps = { ...(manifest.dependencies ?? {}) }
+    // 0.5.39 改错（Fix 2）：逐字比较会把「同一目标的另一种写法」当成漂移 —— 真机 desktop profile 的
+    // `link:D:\dsh-link\…`（反斜杠）会被这条路径无谓改写成正斜杠（用户没要求的漂移）。等价 ⇒ 零写盘。
+    if (sameSourceSpec(profileDir, deps[packageName], plan.spec)) return { changed: false }
+    deps[packageName] = plan.spec
+    manifest.dependencies = deps
+    await writeManifest(profileDir, manifest)
+    return { changed: true }
+  })
+  // ★ link: 自足性（2026-10-06 加法）：写成 link: 之后立刻补齐 —— 目标目录内装它的 dependencies
+  // + 建框架 peer 垫片根。幂等（自足 ⇒ 零写盘）、绝不覆盖它自带的 node_modules、
+  // 失败只如实报未就绪 + 给动作 —— 安装主路径**不新增拒绝分支**。
+  const selfSufficiency = plan.form === 'link'
+    ? await ensureLinkSelfSufficiency({ profileDir, packageName, spec: plan.spec, home })
+    : null
+  // 真装失败 ⇒ 结构化「一键真装」动作优先（此时"钉住/自足"类动作都不是用户想要的那一步）；
+  // 它的 payload 里**没有** spec —— 规格由服务端从记录里读（见 domain/source-spec.js）。
+  const installAction = sourceInstall !== null && sourceInstall.ok !== true
+    ? suggestedRealInstallAction({ packageName, spec: sourceInstall.spec, profile, profileDir, reason: sourceInstall.error })
+    : null
+  const out = {
+    ...empty, changed: result.changed, version: resolved, spec: plan.spec, form: plan.form,
+    depNote: joinNotes(installNote, plan.note),
+    // 优先级：真装失败的「一键真装」> 自足性动作 > 计划里的建议（与 syncLock:false 的旧行为逐字一致）
+    suggested: installAction ?? (selfSufficiency === null ? null : selfSufficiency.action) ?? plan.suggestion,
+    sourceInstall, selfSufficiency,
+  }
+  if (syncLock !== true) return out
+  // **写完清单必须把 lock 拉齐**（2026-09-24 CI 实测）：只写清单不写 lock → 清单/lock 不一致 →
+  // 之后任何 pnpm 操作都会硬失败（ERR_PNPM_CANNOT_REMOVE_MISSING_DEPS）。
+  // 放在写队列**之外**执行（对账本身会跑 pnpm，不该占着清单写锁）；失败只记 note，不让安装失败。
+  const synced = await syncLockFor(profileDir, [packageName], {
+    registries, home, profile,
+    // 0.5.41：刚真装出来的 **tarball URL** 是来源事实 ⇒ 告诉对账"别把它规整回 link:"
+    // （否则收口最后一步会把自己刚写下的真实来源规格改掉，用户看到的是"真装了但清单里是 link:"）。
+    keepUrlSpecs: plan.form === 'source' && /^https?:/u.test(String(plan.spec ?? '')) ? [packageName] : [],
+  })
+  return {
+    ...out,
+    ...synced,
+    depNote: joinNotes(installNote, plan.note, selfSufficiency === null ? null : selfSufficiency.note, synced.depNote),
+    suggested: installAction ?? synced.suggested ?? (selfSufficiency === null ? null : selfSufficiency.action) ?? plan.suggestion,
+  }
+}
+
+/**
+ * 来源型**真装**（2026-10-06 加法）：把真实来源规格交给包管理器 —— `pnpm add <spec>` 进 profile，
+ * 与官方 `dsh plugin add` 同一条通道（依赖与 peer 由 pnpm 保证，我们不手铺）。
+ * 返回 `{ ok, spec, error }`，**绝不抛**：安装主路径不得新增拒绝分支。
+ */
+async function installSourceDependency({ profileDir, spec, registries = [], install = null, timeout = 180000 } = {}) {
+  const runner = typeof install === 'function' ? install : runPnpmAdd
+  const registry = (Array.isArray(registries) ? registries : []).find((r) => typeof r === 'string' && r.trim() !== '') ?? 'https://registry.npmmirror.com'
+  try {
+    await runner({ profileDir, spec, registry, timeout })
+    return { ok: true, spec, error: null }
+  } catch (error) {
+    return { ok: false, spec, error: String(error instanceof Error ? error.message : error).slice(0, 600) }
+  }
+}
+
+/** 多段说明拼接（空段自动跳过）：文案只做拼接，不覆盖 —— 覆盖就是"谎报"的来源。 */
+function joinNotes(...notes) {
+  const list = notes.filter((note) => typeof note === 'string' && note.trim() !== '')
+  return list.length === 0 ? null : list.join('；')
+}
+
+/** 声明之后同步 lock：用仓库既有的对账通道；失败如实回报，不假装成功。 */
+async function syncLockFor(profileDir, names, options = {}) {
+  try {
+    const lock = await reconcileLockfile({
+      profileDir,
+      packages: names.map((name) => ({ name })),
+      registries: Array.isArray(options.registries) ? options.registries : [],
+      ...(Array.isArray(options.keepUrlSpecs) && options.keepUrlSpecs.length > 0 ? { keepUrlSpecs: options.keepUrlSpecs } : {}),
+      ...(options.home === undefined ? {} : { home: options.home }),
+    })
+    return {
+      lockSynced: lock.lockUpdated === true,
+      lockNote: lock.lockNote,
+      depNote: lock.depNote,
+      suggested: Array.isArray(lock.suggestedActions) && lock.suggestedActions.length > 0 ? lock.suggestedActions[0] : null,
+    }
+  } catch (error) {
+    return { lockSynced: false, lockNote: `lock 对账失败：${error instanceof Error ? error.message : String(error)}`, depNote: null, suggested: null }
+  }
+}
+
+/**
+ * 「钉住」动作的核心（POST /plugin-console/run-suggested 的 pin-dependency 分支）：
+ * 把这个包在清单里钉成 `link:<DSH_HOME>/plugin-src/<包名>`（需要时先把已装副本物化过去）。
+ * 只碰清单，不跑 pnpm（lock/node_modules 的对齐由动作执行器随后显式跑一次 pnpm add 完成）。
+ * 返回 { ok, spec, before, after, changed, dir }；物化不出来时**抛错**（绝不写指向不存在目录的 link:）。
+ */
+async function pinProfileDependency(profileDir, packageName, options = {}) {
+  const { home = undefined } = options
+  const dir = materializePackageForLink(profileDir, packageName, home === undefined ? {} : { home })
+  if (dir === null) throw new Error(`${packageName}：node_modules 里没有可物化的已装副本，无法钉住（已中止，未改动清单）`)
+  const spec = linkSpecFor(dir)
+  const before = await specOf(profileDir, packageName)
+  const changed = await queuedWrite(async () => {
+    const manifest = await readManifest(profileDir)
+    const deps = { ...(manifest.dependencies ?? {}) }
+    // 0.5.39 改错（Fix 2）：等价写法（正/反斜杠、相对↔绝对指向同一目录）**不再改写清单** ——
+    // 幂等零写盘；只有真漂移（目标不同/确实缺失）才写，且写的是 linkSpecFor 的**规范形**。
+    if (sameSourceSpec(profileDir, deps[packageName], spec)) return false
+    deps[packageName] = spec
+    manifest.dependencies = deps
+    await writeManifest(profileDir, manifest)
+    return true
+  })
+  const after = await specOf(profileDir, packageName)
+  // ★ link: 自足性（2026-10-06 加法）：钉住是"显式开发式安装"的入口，钉完立刻补齐
+  // （目标目录内装 dependencies + 框架 peer 垫片根）。幂等、绝不覆盖、失败只如实报。
+  const selfSufficiency = await ensureLinkSelfSufficiency({ profileDir, packageName, spec, home })
+  return { ok: sameSourceSpec(profileDir, after, spec), spec, before, after, changed, dir, selfSufficiency }
+}
+
+/**
+ * 把清单里的该包 spec **原样写成给定值**（0.5.38 加法，供 domain/persist.js 的持久化收口用）。
+ * 场景：`node_modules/<包名>` 是指向**用户自己位置**的链接（开发目录 / 别的盘），而清单里没有条目。
+ * 此时"按磁盘真实值写 spec"就是写这条链接本身 —— 走 `pinProfileDependency` 会把它**物化复制**到
+ * plugin-src 并把 spec 换成一个新拷贝，等于悄悄改掉用户的来源（那是另一件事，不该由收口代做）。
+ * 只碰 `dependencies[packageName]` 这一个键，走同一把写队列；返回 `{ before, after, changed }`。
+ */
+async function setProfileDependency(profileDir, packageName, spec) {
+  const before = await specOf(profileDir, packageName)
+  const changed = await queuedWrite(async () => {
+    const manifest = await readManifest(profileDir)
+    const deps = { ...(manifest.dependencies ?? {}) }
+    // 0.5.39 改错（Fix 2）：判等用同一把尺子（canonicalSourceSpec + realpath）—— 等价即零写盘
+    if (sameSourceSpec(profileDir, deps[packageName], spec)) return false
+    deps[packageName] = spec
+    manifest.dependencies = deps
+    await writeManifest(profileDir, manifest)
+    return true
+  })
+  return { before, after: await specOf(profileDir, packageName), changed }
+}
+
+/** 卸载即撤销声明（并清掉**我们造的** link 垫片 —— 卸载即净）。
+ *  `options.home` 必须与当初 `declareProfileDependency` 用的 home 一致（生产两边都不传 = `dshHome()`）；
+ *  只有隔离测试才会传私有 home —— 传错不会误删（记录读不到 ⇒ 无事发生），但也清不掉。 */
+async function undeclareProfileDependency(profileDir, packageName, options = {}) {
+  const result = await queuedWrite(async () => {
+    const manifest = await readManifest(profileDir)
+    const deps = { ...(manifest.dependencies ?? {}) }
+    if (!(packageName in deps)) return { changed: false }
+    delete deps[packageName]
+    manifest.dependencies = deps
+    await writeManifest(profileDir, manifest)
+    return { changed: true }
+  })
+  // 2026-10-06 加法：link 自足性造的垫片是我们加的，卸载时只清**我们造的**那些
+  // （记录里逐个核对"现在仍是指向当初目标的链接"，被人改过的一律不碰）。清不掉只如实报。
+  const shims = removeLinkSelfSufficiency({ packageName, home: options.home ?? null })
+  // 2026-10-06 接线：来源规格记录同样"卸载即撤销" —— 否则下一次安装会拿旧规格去真装（来源早已变了）。
+  const sourceRecord = forgetSourceSpec({ packageName, home: options.home ?? null })
+  return { ...result, shimsRemoved: shims.removed, shimsKept: shims.kept, selfSufficiencyNote: shims.note, sourceSpecForgotten: sourceRecord.removed || sourceRecord.emptied }
+}
+
+/**
+ * 扫描「已装但未声明」的插件（补声明用）。
+ *
+ * 判据刻意保守：只看 profile 的 `dsh.profile.bundles` 里**非默认**且**真装在磁盘上**的包。
+ * 为什么不扫整个 node_modules：那会把框架自带包、传递依赖一并卷进来（它们本来就不该出现在
+ * 用户清单里）。bundles 是「用户显式加进组合树的东西」—— 正是该被声明的那一批。
+ *
+ * 为什么值得做（2026-09-24 用户实测）：第三方插件管理器（如 @linxin666 的插件页）与 pnpm
+ * 都只认清单里的依赖 —— 手铺安装的包在它们眼里不存在：看不见，还会被 pnpm 还原。
+ * @returns {{ candidates: {name: string, version: string}[], skipped: {name: string, reason: string}[] }}
+ */
+async function planDependencyBackfill(profileDir) {
+  const manifest = await readManifest(profileDir)
+  const bundles = Array.isArray(manifest.dsh?.profile?.bundles) ? manifest.dsh.profile.bundles : []
+  const deps = manifest.dependencies ?? {}
+  const candidates = []
+  const skipped = []
+  for (const name of bundles) {
+    if (typeof name !== 'string' || name === '') continue
+    if (DEFAULT_BUNDLES.includes(name)) continue
+    if (typeof deps[name] === 'string' && deps[name] !== '') continue
+    const version = await installedVersionOf(profileDir, name)
+    if (version === null) {
+      skipped.push({ name, reason: '磁盘上读不到已安装版本（可能已卸载）' })
+      continue
+    }
+    candidates.push({ name, version })
+  }
+  return { candidates, skipped }
+}
+
+/** 执行补声明：逐条写入清单（每条独立走写队列，一条失败不影响其它）。
+ * 2026-09-27：补声明同样按 registry 可解析性决定形态（补声明也曾把 release 专属包写成裸版本号 →
+ * 下次 pnpm 操作 404）。`options` 直接透传给 declareProfileDependency（registries/probe 注入）。 */
+async function applyDependencyBackfill(profileDir, options = {}) {
+  const { candidates, skipped } = await planDependencyBackfill(profileDir)
+  const declared = []
+  const notes = []
+  const suggested = []
+  for (const item of candidates) {
+    const result = await declareProfileDependency(profileDir, item.name, item.version, options)
+    if (result.changed) declared.push({ name: item.name, version: result.version, spec: result.spec, form: result.form })
+    else skipped.push({ name: item.name, reason: result.reason ?? '无需改动' })
+    if (result.depNote !== null) notes.push(result.depNote)
+    if (result.suggested !== null) suggested.push(result.suggested)
+  }
+  return { declared, skipped, depNote: notes.length === 0 ? null : notes.join('；'), suggestedActions: suggested }
+}
+
+export {
+  DEFAULT_BUNDLES, addBundleToManifest, applyDependencyBackfill, declareProfileDependency,
+  installedVersionOf, installSourceDependency, planDependencyBackfill, planDependencySpec, pinProfileDependency, removeBundleFromManifest,
+  setProfileDependency, specOf, syncLockFor, undeclareProfileDependency,
+}

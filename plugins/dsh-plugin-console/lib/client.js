@@ -1,0 +1,9019 @@
+window.__ModuleLoader__.load({
+	id: "@noob-stupid/dsh-plugin-console",
+	factory: (require) => {
+		var module = { exports: {} };
+		var exports = module.exports;
+		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+		let react = require("react");
+		//#region styles
+		const css = ".pc_section{width:100%;max-width:760px;color:var(--dsw-alias-label-primary);flex-direction:column;gap:14px;display:flex}.pc_section h3{margin:0;font-size:13px;font-weight:600;line-height:20px}.pc_message{color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:20px;margin:0}.pc_messageRow{display:flex;align-items:center;gap:10px}.pc_spinner{width:14px;height:14px;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-state-business-primary);border-radius:50%;animation:pcspin 1s linear infinite;flex:none}@keyframes pcspin{to{transform:rotate(360deg)}}.pc_message[data-error=true]{color:var(--dsw-alias-state-error-primary)}.pc_message[data-warn=true]{color:var(--dsw-alias-state-warning-primary)}.pc_list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none;display:grid}.pc_row{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:10px;min-width:0;padding:10px 12px;flex-direction:column;gap:6px;display:flex}.pc_rowTop{align-items:center;gap:8px;display:flex}.pc_name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.pc_tag{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);border-radius:999px;padding:1px 8px;font-size:11px;line-height:16px;flex:none}.pc_tag[data-enabled=true]{border-color:var(--dsw-alias-state-success-primary);color:var(--dsw-alias-state-success-primary)}.pc_tag[data-user=true]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_tag[data-pending=true]{border-color:var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary)}.pc_status[data-pending=true]{color:var(--dsw-alias-state-warning-primary)}.pc_toggle[data-pending=true]{border-color:var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary)}.pc_tag[data-skill=true]{border-color:var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary)}.pc_tag[data-system=true]{border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2)}.pc_tag[data-disabled=true]{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}.pc_tag[data-suite=true]{border-color:var(--dsw-alias-state-success-primary);color:var(--dsw-alias-state-success-primary)}.pc_tag[data-error=true]{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}.pc_tabGroup{display:inline-flex;gap:4px;align-items:center}.pc_meta{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;gap:6px;display:flex;align-items:center}.pc_phase[data-phase=failed]{color:var(--dsw-alias-state-error-primary)}.pc_phase[data-phase=active]{color:var(--dsw-alias-state-success-primary)}.pc_toggle{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:0 0;font:inherit;cursor:pointer;border-radius:6px;padding:4px 12px;align-self:flex-start}.pc_toggle:hover:not(:disabled){border-color:var(--dsw-alias-state-business-primary)}.pc_toggle:disabled{opacity:.5;cursor:default}.pc_search{gap:8px;display:flex}.pc_search input{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);height:34px;flex:1;color:var(--dsw-alias-label-primary);font:inherit;border-radius:8px;outline:none;padding:0 12px;font-size:13px}.pc_search input:focus-visible{border-color:var(--dsw-alias-state-business-primary)}.pc_search button{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);font:inherit;cursor:pointer;border-radius:8px;padding:0 14px;font-size:13px}.pc_search button:hover{border-color:var(--dsw-alias-state-business-primary)}.pc_market{flex-direction:column;gap:10px;margin:0;padding:0;list-style:none;display:flex}.pc_item{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:10px;min-width:0;padding:10px 12px;flex-direction:column;gap:6px;display:flex}.pc_itemTop{align-items:center;gap:8px;display:flex}.pc_itemTop a{color:var(--dsw-alias-state-business-primary);font-size:13px;font-weight:600;text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pc_stars{color:var(--dsw-alias-label-tertiary);font-size:11px;flex:none}.pc_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px;margin:0}.pc_item button{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:0 0;font:inherit;cursor:pointer;border-radius:6px;padding:3px 10px;align-self:flex-start;font-size:12px}.pc_item button:hover:not(:disabled){border-color:var(--dsw-alias-state-business-primary)}.pc_item button:disabled{opacity:.5;cursor:default}.pc_detail{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:10px;padding:10px 12px;flex-direction:column;gap:6px;display:flex}.pc_status{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px;margin:0}.pc_note{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;margin:0}.pc_note[data-truncated=true]{color:var(--dsw-alias-state-warning-primary)}.pc_marketHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.pc_descWrap{flex-direction:column;display:flex}.pc_installedHead{display:flex;align-items:center;gap:10px}.pc_iconBtn{width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--dsw-alias-border-l2);border-radius:999px;background:0 0;color:var(--dsw-alias-label-primary);cursor:pointer;flex:none}.pc_iconBtn:hover:not(:disabled){border-color:var(--dsw-alias-state-business-primary)}.pc_iconBtn:disabled{opacity:.5;cursor:default}.pc_iconBtn[data-state=done]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_iconBtn[data-state=active]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-2)}.pc_badgeRow{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;flex-wrap:nowrap;flex:0 1 auto;max-width:60%;height:20px;white-space:nowrap}.pc_badgeAll{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}.pc_tag[data-user-badge=true]{border-style:dashed;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-2)}.pc_tag[data-more=true]{border-style:dotted;cursor:pointer;font:inherit;background:0 0}.pc_userNote{border-left:2px solid var(--dsw-alias-state-business-primary);padding-left:8px;display:flex;flex-direction:column;gap:4px;margin-top:2px}.pc_noteInput{width:100%;font:inherit;padding:4px 6px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;background:var(--dsw-alias-bg-layer-3);color:var(--dsw-alias-label-primary);resize:vertical}.pc_annotRow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pc_backTopWrap{position:fixed;top:56px;right:20px;z-index:100;display:flex;flex-direction:column;gap:8px}.pc_backTop{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(22,27,34,.72);border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);cursor:pointer;backdrop-filter:blur(4px);opacity:.7}.pc_backTop:hover{opacity:1;border-color:var(--dsw-alias-state-business-primary)}.pc_descTopbar{display:flex;justify-content:flex-end;margin:2px 0}.pc_ghpill{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);border-radius:999px;padding:1px 10px;font-size:11px;line-height:18px}.pc_ghpill[data-on=true]{border-color:var(--dsw-alias-state-success-primary);color:var(--dsw-alias-state-success-primary)}.pc_extraBtn{opacity:.75;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:0 0;font:inherit;cursor:pointer;border-radius:6px;padding:4px 10px;font-size:12px;line-height:16px;flex:none;transition:opacity .15s ease,border-color 1.5s ease,color 1.5s ease}.pc_extraBtn:hover{opacity:1}.pc_extraBtn[data-active=true]{opacity:1;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_extraBtn[data-flash=true]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_view{border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:0 0;font:inherit;cursor:pointer;border-radius:6px;padding:2px 10px;font-size:12px;line-height:18px;flex:none}.pc_floatPanel{position:fixed;left:20px;top:50%;transform:translateY(-50%);width:340px;max-height:75vh;overflow-y:auto;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:50;flex-direction:column;gap:8px;display:flex}.pc_refresh{position:sticky;bottom:14px;align-self:flex-end;margin-top:8px;z-index:60;opacity:1;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:transparent;font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_refresh:hover{opacity:.9}.pc_date{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;flex:none}.pc_searchInner{position:relative;flex:1;display:flex;align-items:center;min-width:0}.pc_searchInner input{padding-right:32px;width:100%}.pc_starBtn{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);cursor:pointer;font-size:13px;line-height:1;padding:4px 8px;border-radius:6px;opacity:.75;transition:opacity .15s ease;flex:none}.pc_starBtn:hover{opacity:1}.pc_starBtn[data-active=true]{opacity:1;color:var(--dsw-alias-state-business-primary)}.pc_restartBtn{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:60;opacity:1;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:transparent;font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_restartBtn:hover{opacity:.9}.pc_relaunchFloat{position:fixed;left:20px;top:50%;transform:translateY(-50%);z-index:70;opacity:.85;border:1px solid var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-3);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_relaunchFloat:hover{opacity:1}.pc_aiToggle{position:fixed;right:20px;top:20px;z-index:70;opacity:1;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_aiToggle:hover{opacity:1}.pc_aiToggle[data-active=true]{opacity:1;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_sourcesFloat{position:fixed;right:20px;top:104px;z-index:70;opacity:1;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-3);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_sourcesFloat:hover{opacity:1;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_modeFloat{position:fixed;right:20px;top:204px;z-index:70;opacity:1;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-3);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_modeFloat:hover{opacity:1;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_modeFloat[data-mode=true]{opacity:1;border-color:var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary)}.pc_trashBtn{border:0;background:0 0;color:var(--dsw-alias-label-tertiary);cursor:pointer;font-size:12px;line-height:16px;padding:2px 6px;flex:none;display:flex;align-items:center;border-radius:6px;transition:color .15s ease}.pc_trashBtn:hover{color:var(--dsw-alias-state-error-primary)}.pc_consentRemember{display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);cursor:pointer}.pc_modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center}.pc_modalCard{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:12px;padding:16px 18px;width:min(760px,calc(100vw - 64px));max-height:calc(100vh - 96px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:10px;display:flex;box-shadow:0 12px 32px rgba(0,0,0,.25)}.pc_modalCard::-webkit-scrollbar{width:8px}.pc_modalCard::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:4px}.pc_srcUrl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--dsw-alias-label-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%}.pc_accWrap{display:flex;flex-direction:column;gap:8px}.pc_acc{border:1px solid var(--dsw-alias-border-l2);border-radius:10px;overflow:hidden;background:var(--dsw-alias-bg-layer-2)}.pc_accHead{width:100%;text-align:left;background:transparent;border:0;color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;font-weight:600;line-height:20px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:6px}.pc_accHead:hover{background:var(--dsw-alias-bg-layer-3)}.pc_accHead[data-open=true]{border-bottom:1px solid var(--dsw-alias-border-l2)}.pc_accBody{padding:10px 12px;display:flex;flex-direction:column;gap:8px}.pc_ghpill{background:0 0;cursor:pointer}.pc_ghwrap{position:relative;display:inline-flex}.pc_sourceMenu{position:absolute;right:0;top:calc(100% + 6px);z-index:90;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:8px;padding:4px;flex-direction:column;display:flex;min-width:120px;box-shadow:0 8px 24px rgba(0,0,0,.18)}.pc_sourceOpt{border:0;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:6px;padding:6px 10px;text-align:left;font-size:12px;line-height:16px}.pc_sourceOpt[data-active=true]{color:var(--dsw-alias-state-business-primary);font-weight:600}.pc_sourceOpt:hover{background:var(--dsw-alias-bg-layer-3)}.pc_aiEmpower{position:fixed;right:20px;top:48px;z-index:70;opacity:1;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_aiEmpower:hover{opacity:.9}.pc_aiEmpower[data-busy=true]{opacity:1;border-color:var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary)}.pc_aiEmpower[data-active=true]{opacity:1;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_compCard{position:fixed;left:8px;top:20px;width:320px;max-height:70vh;overflow-y:auto;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:45;flex-direction:column;gap:8px;display:flex}.pc_compCard .pc_rowTop{flex-wrap:wrap}.pc_compCard .pc_toggle{padding:3px 8px;font-size:11px}.pc_compCard[data-hidden=true]{display:none}.pc_compDrop{background:rgba(24,28,34,.92);backdrop-filter:blur(6px);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.35);flex-direction:column;display:flex;gap:2px}.pc_compDropRow{border:0;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer;border-radius:6px;padding:6px 8px;text-align:left;font-size:12px;line-height:16px;flex-direction:column;display:flex;gap:2px}.pc_compDropRow:hover{background:var(--dsw-alias-bg-layer-2)}.pc_compDropUrl{color:var(--dsw-alias-label-tertiary);font-size:11px;word-break:break-all}.pc_compToggle{position:fixed;left:336px;top:20px;z-index:46;opacity:.55;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:rgba(22,27,34,.72);font:inherit;cursor:pointer;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;backdrop-filter:blur(4px);transition:opacity .15s ease}.pc_compToggle:hover{opacity:1;border-color:var(--dsw-alias-state-business-primary)}.pc_toolbarMain{position:fixed;right:70px;top:max(88px,21vh);z-index:71;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:border-color .15s ease}.pc_toolbarMain:hover{border-color:var(--dsw-alias-state-business-primary)}.pc_toolbarMain[data-active=true]{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_toolbarGroup{position:fixed;right:70px;top:calc(max(88px,21vh) + 36px);z-index:70;flex-direction:column;gap:8px;display:flex;transform-origin:top right;animation:pcDrawerIn .3s cubic-bezier(.34,1.56,.64,1)}@media (max-width:1160px){.pc_toolbarMain{top:max(150px,30vh)}.pc_toolbarGroup{top:calc(max(150px,30vh) + 36px)}.pc_aiToggle{top:104px}.pc_aiEmpower{top:132px}.pc_sourcesFloat{top:188px}.pc_modeFloat{top:288px}}@keyframes pcDrawerIn{from{opacity:0;transform:translateX(28px) scale(.94)}to{opacity:1;transform:translateX(0) scale(1)}}.pc_toolItem{opacity:.85;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-3);font:inherit;cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;transition:opacity .15s ease}.pc_toolItem:hover{opacity:1;border-color:var(--dsw-alias-state-business-primary)}.pc_toolItem[data-active=true]{opacity:1;border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_toolItem[data-mode=true]{opacity:1;border-color:var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary)}.pc_switch{width:34px;height:18px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);position:relative;cursor:pointer;flex:none;transition:background .15s ease,border-color .15s ease}.pc_switch:hover{border-color:var(--dsw-alias-state-business-primary)}.pc_switch[data-on=true]{background:var(--dsw-alias-state-success-primary);border-color:var(--dsw-alias-state-success-primary)}.pc_switchKnob{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .15s ease}.pc_switch[data-on=true] .pc_switchKnob{left:18px}.pc_aiSpinner{width:12px;height:12px;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-state-business-primary);border-radius:50%;animation:pcspin 1s linear infinite;flex:none}.pc_aiSpinBtn{position:fixed;right:152px;top:20px;z-index:71;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);cursor:pointer;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px}.pc_aiSpinBtn:hover{border-color:var(--dsw-alias-state-business-primary)}.pc_tag[data-bad=true]{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}.pc_progress{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;margin:0;font-variant-numeric:tabular-nums}.pc_consentCard{border:2px solid var(--dsw-alias-state-warning-primary);background:var(--dsw-alias-bg-layer-2);border-radius:10px;padding:12px 14px;flex-direction:column;gap:8px;display:flex;box-shadow:0 0 0 3px rgba(255,176,32,.10)}.pc_consentCountdown{margin-left:auto;flex:none;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--dsw-alias-state-warning-primary)}.pc_consentApprove{border:1px solid var(--dsw-alias-state-warning-primary);color:var(--dsw-alias-state-warning-primary);background:0 0;font:inherit;font-weight:600;cursor:pointer;border-radius:6px;padding:4px 12px;align-self:flex-start}.pc_consentApprove:hover{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-state-business-primary)}.pc_starFoot{margin-top:auto;position:sticky;bottom:0;justify-content:flex-end;display:flex;padding:6px 0 2px;background:var(--dsw-alias-bg-layer-1);box-shadow:0 16px 0 var(--dsw-alias-bg-layer-1)}.pc_starLink{color:var(--dsw-alias-label-secondary);align-items:center;gap:6px;font-size:12px;line-height:16px;text-decoration:none;display:inline-flex;flex:none;border-radius:4px}.pc_starLink svg{flex:none;display:block}.pc_starLink:hover{color:var(--dsw-alias-state-business-primary);text-decoration:underline;text-underline-offset:3px}.pc_starLink:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.pc_groupNew{animation:pcGroupIn 260ms cubic-bezier(.2,.9,.3,1.25) both}@keyframes pcGroupIn{0%{opacity:0;transform:translateY(-10px) scale(.94)}55%{opacity:1;transform:translateY(4px) scale(1.03)}76%{transform:translateY(-2px) scale(.995)}100%{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){.pc_groupNew{animation:none}}";
+		const tagId = "@noob-stupid/dsh-plugin-console/PluginConsoleTab.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@noob-stupid/dsh-plugin-console";
+			tag.dataset.pluginCss = tagId;
+			tag.textContent = css;
+			document.head.appendChild(tag);
+		}
+		const styles = {
+			section: "pc_section",
+			marketHead: "pc_marketHead",
+			installedHead: "pc_installedHead",
+			backTop: "pc_backTop",
+			backTopWrap: "pc_backTopWrap",
+			spinner: "pc_spinner",
+			ghpill: "pc_ghpill",
+			descWrap: "pc_descWrap",
+			descTopbar: "pc_descTopbar",
+			message: "pc_message",
+			list: "pc_list",
+			row: "pc_row",
+			rowTop: "pc_rowTop",
+			name: "pc_name",
+			tag: "pc_tag",
+			meta: "pc_meta",
+			phase: "pc_phase",
+			toggle: "pc_toggle",
+			search: "pc_search",
+			extraBtn: "pc_extraBtn",
+			view: "pc_view",
+			floatPanel: "pc_floatPanel",
+			refresh: "pc_refresh",
+			restartBtn: "pc_restartBtn",
+			relaunchFloat: "pc_relaunchFloat",
+			aiToggle: "pc_aiToggle",
+			aiEmpower: "pc_aiEmpower",
+			compCard: "pc_compCard",
+			compDrop: "pc_compDrop",
+			compDropRow: "pc_compDropRow",
+			compDropUrl: "pc_compDropUrl",
+			compToggle: "pc_compToggle",
+			toolbarMain: "pc_toolbarMain",
+			toolbarGroup: "pc_toolbarGroup",
+			toolItem: "pc_toolItem",
+			aiSpinner: "pc_aiSpinner",
+			aiSpinBtn: "pc_aiSpinBtn",
+			pcSwitch: "pc_switch",
+			pcSwitchKnob: "pc_switchKnob",
+			sourcesFloat: "pc_sourcesFloat",
+			srcUrl: "pc_srcUrl",
+			accWrap: "pc_accWrap",
+			acc: "pc_acc",
+			accHead: "pc_accHead",
+			accBody: "pc_accBody",
+			modeFloat: "pc_modeFloat",
+			trashBtn: "pc_trashBtn",
+			consentRemember: "pc_consentRemember",
+			consentCard: "pc_consentCard",
+			consentCountdown: "pc_consentCountdown",
+			consentApprove: "pc_consentApprove",
+			progress: "pc_progress",
+			modalBackdrop: "pc_modalBackdrop",
+			modalCard: "pc_modalCard",
+			starFoot: "pc_starFoot",
+			starLink: "pc_starLink",
+			ghwrap: "pc_ghwrap",
+			sourceMenu: "pc_sourceMenu",
+			sourceOpt: "pc_sourceOpt",
+			date: "pc_date",
+			searchInner: "pc_searchInner",
+			starBtn: "pc_starBtn",
+			tabGroup: "pc_tabGroup",
+			market: "pc_market",
+			item: "pc_item",
+			itemTop: "pc_itemTop",
+			stars: "pc_stars",
+			desc: "pc_desc",
+			detail: "pc_detail",
+			status: "pc_status",
+			note: "pc_note",
+			iconBtn: "pc_iconBtn",
+			badgeRow: "pc_badgeRow",
+			badgeAll: "pc_badgeAll",
+			userNote: "pc_userNote",
+			noteInput: "pc_noteInput",
+			annotRow: "pc_annotRow",
+			groupNew: "pc_groupNew",
+		};
+		//#endregion
+		//#region locales
+		const zh = {
+			tab: "插件管理",
+			safetyTab: "升级安全",
+			safetyModeManagedShort: "托管",
+			safetyModeObserverShort: "观察者",
+			safetyBackfillTitle: "补声明（已装未声明）",
+			safetyBackfillShort: "{n} 项待补声明",
+			safetyBackfillDesc: "有 {n} 个已装插件没写进 profile 清单 —— 官方/第三方插件页看不见它们，pnpm 操作还可能把它们还原。补声明会把磁盘上的真实版本写进清单（不改包、不重装）。",
+			safetyBackfillNone: "已装插件都在清单里声明过了（官方面板的「已安装」与 pnpm 都能看见）",
+			safetyBackfillBtn: "补声明（{n} 项）",
+			safetyBackfillDone: "补声明完成",
+			// 2026-09-27 加法：依赖锁体检 / 重建（只读体检 + 用户显式触发；中英各一份）
+			safetyLockTitle: "依赖锁体检",
+			safetyLockDesc: "只读体检：声明依赖能否在 registry 解析 + pnpm-lock.yaml 是否与清单一致（不会自动改你的 profile）",
+			safetyLockOk: "依赖锁与清单一致，无需处理",
+			safetyLockBad: "发现 {n} 类问题",
+			safetyLockBlocked: "有依赖在 registry 上解析不到：{pkgs}（重建会停下，不会静默丢弃依赖）",
+			safetyLockRepaired: "lock 已重建并与清单对齐",
+			safetyLockRepairPartial: "重建后仍有差距，见下方问题",
+			safetyLockNoRebuild: "当前不需要重建",
+			safetyLockCheckBtn: "体检",
+			// 0.5.84 加法（用户第 7 项）：磁盘体检 / 两步清理
+			diskTitle: "磁盘占用（plugin-console）",
+			diskDesc: "只读体检：这个目录谁占了多少、哪些能安全清理、哪些绝不能动（当前回滚点指向的备份一律不许删）",
+			diskCheckBtn: "磁盘体检",
+			diskSummary: "共 {mb} MB（{n} 项）· 可直接清理约 {safe} MB · 可清理（含取舍）约 {reclaim} MB",
+			diskSafeHint: "只清理「安全」级（日志 / 旧残留 / 状态 .bak）：不影响任何功能",
+			diskConfirmHint: "确认清理：这一步才会真的删（服务端只删体检白名单里的条目）",
+			diskCleanupBtn: "清理安全项",
+			diskConfirmBtn: "确认清理（约 {mb} MB）",
+			diskPlanReady: "将清理 {n} 项、释放约 {mb} MB —— 确认后才会真的删",
+			diskConfirmBtn2: "确认清理",
+			diskDone: "已清理",
+			diskFailed: "磁盘体检失败",
+			diskNoCandidate: "没有可安全清理的条目（大头通常是当前回滚点指向的框架备份，不能删）",
+			safetyLockRepairBtn: "重建 lock（显式）",
+			// 2026-09-27 加法：安装结果旁的「建议动作」执行框（短句进面板，长解释进悬浮 title）
+			actionBoxTitle: "建议动作",
+			actionPinLabel: "钉住该依赖（按 link: 记录）",
+			actionPersistLabel: "一键钉住（清单 + lock + 挂载行）",
+			vetoJudgedCopy: "面板显示 {shown}，但这条否决判定用的是 profile 里那份 {judged} —— 鼠标悬停可看路径（说明这是两份副本，见 CHANGELOG v0.5.52）",
+			skippedBundlesTitle: "被框架跳过的 bundle（{n} 个）—— 它们装了但整层没被装载，所以插件列表里看不到；鼠标悬停看每一项的出路",
+			hostedNoChannel: "本实例由桌面端外壳托管：框架升级与回滚请走桌面端（此处不可用）",
+			linksTitle: "开发式链接（link）：共 {n} 个，自足 {ready} 个 —— ✓ 自足 · · 缺东西（悬停看原因）",
+			healthSummary: "需要处理 {n} 类问题",
+			exemptGrantBtn: "授精确版本豁免",
+			healthDismissBtn: "知道了",
+			healthDismissTitle: "关掉这条提示。问题发生变化（类别或条数改变）时会重新出现，不会让你错过新问题",
+			linksToggleBtn: "开发式链接（link）明细",
+			linksToggleSummary: "开发式链接（link）：共 {n} 个，自足 {ready} 个",
+			linksToggleTitle: "展开/收起 link 明细（默认收起）",
+			// 0.5.84 加法（用户第 6 项）：功能包工具栏里的 link 入口 + 它打开的那块面板
+			linksBtn: "link",
+			linksPanelTitle: "开发式链接（link:）—— 直接展示 /plugin-console/links 的只读清单：指向哪、目标还在不在、依赖/peer 齐不齐、垫片在不在",
+			linksPanelLoading: "正在读取…",
+			linksPanelReload: "重新读取",
+			linksPanelEmpty: "没有 link: 钉住的插件（这份清单只列开发式链接）",
+			// 0.5.87 加法（用户 2026-10-18）：link 面板从「只读清单」升级为「可操作」——
+			//   顶部选开发区 + 两段式钉住；每行按服务端结论给动作（缺依赖 / 缺 peer / 取消钉住）。
+			linksDevRootLabel: "开发区：",
+			linksDevRootPick: "选择已登记的开发区…",
+			linksDirPlaceholder: "要钉住的目录（绝对路径，必须在某个已登记开发区里）",
+			linksBrowse: "浏览…",
+			linksPinPlanBtn: "钉住",
+			linksPinPlanTitle: "{p} 将被钉成 link: 依赖，操作如下（还没动任何东西）",
+			linksPinConfirmBtn: "确认钉住",
+			linksCancel: "取消",
+			linksPinnedDone: "已钉住 {p}",
+			linksMtime: "改动于",
+			linksMtimeHint: "「改动于」= 目标目录本身或它直接下一层（不含 node_modules / .git）里最近的修改时间；更深的文件改动不会体现在这里",
+			linksRepairDeps: "补齐依赖",
+			linksRepairShims: "造垫片",
+			linksRepairDone: "已补齐",
+			linksUnpinBtn: "取消钉住",
+			linksUnpinConfirmBtn: "确认取消钉住",
+			linksUnpinDone: "已取消钉住",
+			linksBusyWorking: "处理中…",
+			devRootsTitle: "开发区根（只有这些根里的目录能钉住）",
+			devRootsNone: "（未登记）",
+			devRootAddPlaceholder: "注册新的开发区根（绝对路径，例如 D:\\my-plugins）",
+			devRootAddBtn: "注册根",
+			devRootAdded: "已注册（列表已刷新）",
+			pinDirPlaceholder: "要钉住的目录（必须在上面某个根里）",
+			pinPlanBtn: "先看会发生什么",
+			pinApplyBtn: "确认钉住",
+			pinAllowAgent: "允许 agent 自动钉住",
+			pinAllowAgentTitle: "默认关闭：勾选后，agent 发起的钉住才会被服务端接受",
+			pinPlanReady: "将把 {name} v{v} 钉成 link 依赖",
+			pinDone: "已钉住 {name}（清单已备份；若 pnpm 或验证失败已自动回滚）",
+			exemptGrantTitle: "把「这个精确版本」在「当前框架版本」上授权给框架（写入 profile 的 compatibility.json，先备份、写完读回验证）",
+			linksFailed: "开发式链接清单读取失败",
+			actionReconcileLabel: "重建 pnpm-lock.yaml",
+			actionRun: "执行",
+			actionCopy: "复制",
+			actionCopied: "已复制命令",
+			actionRunning: "执行中…",
+			actionOk: "执行成功",
+			actionPartial: "部分成功（清单已改，lock 未对齐）",
+			actionFailed: "执行失败",
+			actionLongTitle: "控制台按白名单动作在自己的进程里执行（只认 pin-dependency / reconcile-lock / allow-builds 这类内置动作，绝不接受自定义命令字符串）；命令仅供展示与复制。",
+			// 2026-09-27 加法（选项 2）：pnpm 因**构建脚本未获批准**报错时，动作框多出这一个按钮。
+			// 短句进面板，长解释（含"它不执行任何脚本/放行后第一次安装会很慢"）一律进悬浮 title。
+			actionAllowLabel: "允许这些构建脚本",
+			actionAllowLong: "只有你点它才会写盘：在 profile 的 pnpm-workspace.yaml 里把**具体包名**补进 allowBuilds（改前先备份 .bak-<时间戳>、写完读回核实、其它字段一字不动）。它本身不下载、不执行任何脚本；放行后**下一次** pnpm 安装才会真正跑这些脚本（二进制要下载、原生模块要编译，本机实测首次约 19 分钟）。",
+			actionAllowOk: "已写入放行项",
+			actionAllowFailed: "放行失败（文件未改动）",
+			actionAllowBackup: "备份",
+			// 2026-09-27 加法（0.5.26 修 F2）：预设装配**默认只补不覆盖**；出现同名冲突时多出这一个按钮。
+			// 短句进面板，长解释（含"会先整目录备份"）一律进悬浮 title。
+			actionOverwritePresetLabel: "覆盖该预设",
+			actionOverwritePresetLong: "只有你点它才会覆盖：先按记录的源码出处重新取一次仓库里的预设，把原目录**整份备份**成 <预设名>.bak-<时间戳>，再逐文件覆盖，写完读回核实（字节不一致会如实报告）。默认装配只补缺失文件、绝不覆盖你在用的同名预设。",
+			actionOverwritePresetOk: "已覆盖（原目录已备份）",
+			actionOverwritePresetFailed: "覆盖失败（文件未改动）",
+			safetyMode: "运行模式",
+			safetyModeManaged: "托管：框架升级与回滚由本控制台负责（默认，行为与之前一致）",
+			safetyModeManagedOn: "已切到托管模式：框架升级与回滚仍由本控制台负责",
+			safetyModeObserver: "观察者：只做预检、门控与回滚点守护，不接管框架升级",
+			safetyModeObserverOn: "已切到观察者模式：不再接管框架升级，只守门",
+			safetyModeSwitch: "切换托管 / 观察者",
+			safetySwitchFailed: "操作失败",
+			safetyFrameworkTitle: "框架版本",
+			safetyFrameworkDesc: "当前 {v} —— 换版本、换安装根（npx 缓存 / 桌面端自带运行时）、框架树包数变化，都会记为一次环境变更",
+			safetyRollbackTitle: "回滚点",
+			safetyRollbackOk: "可用：{from} → {to}",
+			safetyRollbackNone: "不可用：{reason}",
+			safetyFpTitle: "环境指纹",
+			safetyFpStable: "环境未变化（与上次基线一致）",
+			safetyFpChanged: "检测到环境变更（谁改的都算）：{reasons}",
+			safetyFpAck: "知道了，记为基线",
+			safetyFpAcked: "已记为基线",
+			safetyAdaptTitle: "会话格式契约预检",
+			safetyAdaptDesc: "升级前后都能跑：扫本地生产方（agent 预设 + 已装插件）里的旧形状，能改的先备份再改",
+			safetyPreflightFound: "预检发现 {n} 处必须适配（点右侧按钮可自动适配并逐个备份）",
+			safetyPreflightPatched: "已适配 {n} 处（每个文件都留了 .bak-preflight-*）",
+			safetyJumpHint: "打开控制台功能（就地展开，不跳走、不换页）",
+			safetyJumpMarket: "插件市场",
+			safetyJumpSkills: "技能市场",
+			safetyJumpFramework: "框架升级 / 回滚",
+			safetyJumpGate: "门控明细",
+			safetyJumpSources: "软件源",
+			safetyJumpAi: "AI 部署",
+			safetyEmbedded: "控制台（就地展开，原有功能一个不少）",
+			safetyUnknown: "未知",
+			loading: "正在读取插件…",
+			error: "暂时无法读取插件。",
+			retry: "重试",
+			installedTitle: "已安装插件",
+			marketTitle: "插件市场（GitHub）",
+			marketTitleOther: "插件市场（{source}）",
+			search: "搜索",
+			searchPlaceholder: "搜索 GitHub 上的 dsh-plugin 插件（留空使用默认关键词）",
+			searchPlaceholderOther: "搜索 {source} 上的插件（留空使用默认关键词）",
+			multiSourceTitle: "多源汇总：GitHub + 全部自定义源并行搜索（Gitee 直装模式不参与）",
+			multiSourceToggle: "多源搜索开关",
+			multiEmpty: "所有搜索源都没有找到匹配的插件。",
+			giteeRepoPlaceholder: "输入 Gitee 仓库名（owner/repo，如 oschina/git-osc）",
+			giteeEmpty: "Gitee 官方搜索接口已废弃：请在搜索框直接输入仓库名（owner/repo，如 oschina/git-osc）后回车",
+			empty: "暂无插件。",
+			on: "启用",
+			off: "停用",
+			enabledTag: "已启用",
+			disabledTag: "已停用",
+			userDisabledTag: "补丁停用",
+			pendingCompatTag: "待适配",
+			pendingCompatHint: "框架升级后被强制禁用：先点「检测更新」，如有新版按钮会变为「更新并适配」，点击后更新完成自动校验通过即解锁启用",
+			updateAndAdapt: "更新并适配",
+			familyTag: "全家桶",
+			familySubs: "子包",
+			familyUnlockAll: "一键启用已适配",
+			familyUnlockAllTip: "对全家桶内尚未通过扫描的子包重跑源码扫描：通过即解锁启用；未通过保持禁用并给出原因",
+			familyUnlockAllConfirm: "将对全家桶内尚未通过扫描的子包重跑源码扫描，通过的一键解锁启用？未通过的保持禁用。",
+			familyUnlockAllDone: "已批量适配解锁",
+			familyExpand: "展开",
+			familyCollapse: "收起",
+			familyUpdate: "全家桶版本检测",
+			familyCheckUpdate: "批量检测更新",
+			familyUpdateBtn: "更新",
+			familyCheckUpdateTip: "检测到新版本后此处出现「更新」按钮，点击开始整包更新（含子包版本对齐与适配校验）",
+			// issue #22 ①：已安装列表的「一键检测全部更新」（只有图标 ↑↑↑ 的圆按钮 + 结果/筛选态）
+			checkAllUpdates: "检测全部更新",
+			checkAllUpdatesHint: "一键检测全部已装插件是否有新版（本次要查 {n} 个）",
+			checkingAllUpdates: "正在检测全部更新（{n} 个，并发受限，可能要几秒）",
+			checkAllUpdatesDone: "{n} 个可更新",
+			checkAllUpdateNone: "没有可更新的插件",
+			checkAllUpdateUnknownNote: "其中 {n} 个未检测到（网络或 registry 没答上来，可单独点卡片上的「检测更新」重试）",
+			checkAllUpdateFailed: "批量检测失败",
+			checkAllUpdateEmptyList: "已安装列表里没有可检测的插件",
+			batchUpdateOnly: "仅看可更新",
+			batchUpdateOnlyTip: "只显示本次检测到有更新的插件（再点一次取消）",
+			batchUpdateFilterEmpty: "本次检测没有可更新的插件（取消「仅看可更新」可看全部）",
+			batchUpdateAvailable: "可更新 → v{v}",
+			batchUpdateAvailableTip: "本次批量检测到新版本；点「更新」按这个版本更新（与单卡「检测更新」同一判据）",
+			batchUpToDate: "已最新",
+			batchUpdateUnknown: "未检测到",
+			batchUpdateUnknownTip: "registry 与 GitHub 都没答上来 ⇒ 不知道有没有新版（不是\"已是最新\"）；可单独点「检测更新」重试",
+			batchUpdateResultTip: "本次检测的结论：{n} 个可更新、{m} 个已最新、{k} 个未检测到（{at}）",
+			adaptUnlockBtn: "已适配，立即解锁",
+			// issue #22 ②③：用户注解（备注 / 用户徽章 / 用户自建分组）—— 都是**用户自己的数据**
+			annotationsBtn: "备注插件",
+			annotationsPanelTitle: "备注 / 用户徽章 / 用户分组：这些都是你自己的数据，存在 <DSH_HOME>/plugin-console/plugin-annotations.json，不写进插件、不改 profile；文件坏了也不影响上面的插件列表",
+			annotationsFailed: "注解操作失败",
+			annotationsCorrupt: "注解文件读不出来（{err}）—— 插件列表不受影响；修好或删掉该文件后再试写",
+			annotationsRepaired: "注解文件被手工改过，已按规则忽略 {n} 处不合规内容",
+			annotationsEmpty: "还没有任何备注 / 徽章 / 分组：在下面任一插件行里写第一条",
+			annotationsStats: "{p} 个插件有注解 · {b} 个用户徽章 · {g} 个分组",
+			annotationsListShow: "插件列表（{n}）· 点此展开",
+			annotationsListHide: "插件列表（{n}）· 点此收起",
+			annotationsSearchPlaceholder: "搜索：包名 / rowId / 备注内容（边打边筛）",
+			annotationsNoMatch: "没有匹配的插件",
+			noteLabel: "备注",
+			noteEdit: "改备注",
+			noteEmpty: "＋ 加备注",
+			notePlaceholder: "这是干什么的、为什么装它",
+			noteSaveHint: "回车保存 · Shift+回车换行 · Esc 取消（存空 = 清空备注）",
+			noteSaved: "备注已保存",
+			noteCleared: "备注已清空",
+			badgeLabel: "用户徽章",
+			badgeAddPlaceholder: "徽章文字（回车添加）",
+			badgeAdded: "已加徽章「{b}」",
+			badgeRemove: "移除这个徽章",
+			badgeRemoved: "已移除徽章「{b}」",
+			badgeUndo: "撤销",
+			badgeUndoDone: "已恢复徽章",
+			badgeMax: "用户徽章最多 {n} 个",
+			badgesAll: "全部徽章（{n}）：系统徽章 + 用户徽章都在这",
+			groupLabel: "分组",
+			groupNone: "（不分组）",
+			groupCreate: "新建分组",
+			groupCreatePlaceholder: "分组名，如：记忆类（回车创建）",
+			groupCreated: "已创建分组「{name}」",
+			groupNewInlineHint: "在详情页直接建一个分组，并把当前插件放进去",
+			groupNewInlinePlaceholder: "分组名（回车创建并拉入）",
+			groupNewInline: "新建分组",
+			groupRename: "重命名",
+			groupRenamed: "分组已重命名",
+			groupRemove: "删除这个分组（只解除归属，不删插件）",
+			groupDeleteConfirm: "确认删除分组「{name}」？只解除归属，插件本身不会删",
+			groupDeleted: "已删除分组「{name}」（解除 {n} 个归属，插件本身没删）",
+			groupRestore: "撤销删除",
+			groupRestored: "分组「{name}」已恢复",
+			groupAssigned: "已加入分组「{name}」",
+			groupUnassigned: "已从分组移除",
+			groupMembers: "{n} 个插件",
+			groupNoMembers: "这个分组里还没有插件：从右边下拉里选一个加进来",
+			groupMemberPick: "＋ 选一个插件加进这个分组",
+			groupUpdateAll: "一键更新本组",
+			groupUpdateAllTip: "按组内每个成员各自的目标版本逐个更新（串行，不并发；不适配的仍会被门控挡住）",
+			groupUpdateAllProgress: "正在更新第 {i}/{n} 个：",
+			groupUpdateAllDone: "本组更新完成：{n} 个成员，{hit} 个有新版并已发起更新",
+			groupLoadMore: "加载更多（还有 {n} 个）",
+			groupOpenHint: "点分组名可以在这里展开，搜索并添加插件",
+			groupAddSearchPlaceholder: "搜索插件名，点「加入」放进这个分组",
+			groupAddOne: "加入",
+			groupAddNoMatch: "没有匹配的插件（或都已在分组里）",
+			groupInFamilyNote: "成员都在官方全家桶区块里（同一插件不会重复显示）",
+			groupMemberNone: "插件都已经在这个分组里了",
+			groupMemberRemove: "从这个分组移出（只解除归属，不删插件）",
+			groupEmptyHint: "还没有分组：先在上面建一个（如「记忆类」），再到插件行里选它",
+			userGroupTag: "我的分组",
+			adaptUnlockHint: "已安装版本经源码扫描确认适配当前框架：立即移除禁用块并解锁启用",
+			adaptUnlockDone: "已适配解锁：刷新后该行可正常启用",
+			riskyEnableTitle: "强行启用不适配插件？",
+			riskyEnableBody: "该插件在当前框架下被判为不适配（框架升级时已被自动禁用）。强行启用后，DSH 下次启动可能失败、需要手动处理。确认强行启用？",
+			riskyEnableConfirm: "确认强行启用",
+			riskyEnableCancel: "取消",
+			adoptableDetected: "检测到已适配：当前版本 {version} 已通过源码扫描，点「已适配，立即解锁」即可启用（不会自动开启）",
+			adoptableRescinded: "判据已更新：旧版扫描给出的「不兼容」结论已撤回（当前判据下源码扫描干净，版本不变也算）。点「已适配，立即解锁」即可启用（不会自动开启）",
+			compatRescindedTag: "判据已撤回·可解锁",
+			compatRescindedHint: "这条禁用是旧判据的误报：当前判据重算后不再判「不兼容」。点上方「已适配，立即解锁」即可启用；补丁由你确认后才改。",
+			compatGateLabel: "兼容门",
+			compatGateAutoDisable: "升级时自动禁用不适配插件",
+			compatGateAutoDetect: "打开时自动检测已适配（仅提示）",
+			compatGateHint: "关掉即回到纯手动：升级只提示、不动你的开关；检测也不提示，由你自己判断",
+			compatGateSaved: "兼容门设置已保存",
+			gateBtn: "门控",
+			gateTitle: "门控：升级时自动禁用不适配插件、打开时自动检测已适配",
+			gateModalTitle: "门控（兼容门总开关）",
+			gatePendingInfo: "当前待适配：{n} 行（升级预扫或启动失败隔离记下的，更新插件后可一键解锁）",
+			gatePendingNone: "当前没有待适配的行",
+			gateListPending: "待适配明细（{n} 行）",
+			gateListAdopted: "已适配解锁（{n} 行，历史上被拦过、现已放行）",
+			gateHistoryShow: "展开查看 {n} 条历史",
+			gateHistoryHide: "收起历史",
+			gateListMore: "展开全部 {n} 行",
+			gateListFold: "收起列表",
+			gateRowReason: "原因：{reason}",
+			gateRowFromBoot: "来源：启动失败隔离",
+			gateRowFromUpgrade: "来源：框架升级预扫",
+			gateRowAt: " · {t}",
+			gateRowAdoptable: " · 已通过源码扫描，可解锁",
+			// ★ 0.5.98 加法（用户 2026-10-28）：适配门**记录**的如实标注 + 删除入口（两段式）。
+			//   现场：3 条 pending 记录的补丁行早已不存在、moduleName 也是 null —— 面板必须如实说出来。
+			gateRowModule: "模块：",
+			gateRowMissing: "该行已不存在",
+			gateStaleLine: "另有 {n} 条记录的补丁行已不存在（永远等不到适配，可以清掉）",
+			gateForgetRow: "删除记录",
+			gateForgetRowTitle: "只删这条记录：不动插件、不动补丁文件（点一下先确认）",
+			gateForgetStale: "清理无效记录",
+			gateForgetStaleTitle: "只清掉补丁行已不存在的记录：不动插件、不动补丁文件（点一下先确认）",
+			gateForgetArmRow: "将删除记录 {id}（模块：{name}）。",
+			gateForgetArmStale: "将清理 {n} 条失效记录（补丁行已不存在的那几条）。真实待适配与历史记录都不会被删。",
+			gateForgetSafety: "只删 compat-pending.json 里的记录：不动插件、不动补丁文件，写盘前先备份。",
+			gateForgetConfirm: "确认删除",
+			gateForgetCancel: "取消",
+			gateForgetDoneRow: "已删除记录 {id}（插件与补丁一个字都没动）",
+			gateForgetDoneStale: "已清理 {n} 条失效记录（插件与补丁一个字都没动）",
+			gateForgetNone: "没有可删除的记录（文件未改动）",
+			gateForgetFailed: "删除失败：",
+			// ★ 0.5.100 加法（用户 2026-11-02）：「按需检查」—— 预检只在升级前跑，平时门控是空的，
+			//   0 条会被误读成"全部兼容"。这里给一个"现在查一次"的入口 + 空态说明 + 上次检查摘要。
+			gateScanBtn: "检查当前是否适配",
+			gateScanBusy: "正在检查…",
+			gateScanTitle: "对当前补丁里的行跑一次适配判定：只记录结论，不禁用任何行",
+			gateScanNoTargets: "当前没有可检查的行（补丁里没有可判定的插件行），所以不显示检查按钮",
+			gateScanDone: "检查 {n} 行：通过 {p} / 不适配 {f} / 无法判定 {u}",
+			gateScanFailed: "检查失败：",
+			gateNoRecordsHint: "本次没有裁决记录（预检只在升级前运行，可点上面按钮检查）",
+			gateLastScan: "上次检查（{at}）：{n} 行 · 通过 {p} / 不适配 {f} / 无法判定 {u}",
+			// ★ 0.5.101 加法（用户 2026-11-02）：**加载失败的行**（运行期挂载失败）分区 + 两段式停用。
+			//   与"适配裁决"分开：这类失败不经过预扫/隔离链，**不写 compat-pending.json**。
+			gateLoadFailedTitle: "加载失败的行（{n} 行 · 运行期挂载失败）",
+			gateLoadFailedHint: "这些行是**运行期加载失败**（例：某个依赖包解析不到），不是适配裁决，也不会写进适配记录；可在此停用它们。",
+			gateLoadDisable: "停用",
+			gateLoadDisableTitle: "停用这一行（会往补丁里写一条 disabled 块；点一下先确认）",
+			gateLoadArmRow: "将停用 {id}（{name}）。",
+			gateLoadSafety: "这会往 profile 补丁里写一条 disabled 块（可随时在列表里重新启用）；不会卸载包、不会动其它行。",
+			gateLoadConfirm: "确认停用",
+			gateLoadCancel: "取消",
+			gateLoadFailedDone: "已请求停用 {id}（补丁已更新，HMR 应用后列表会随之变化）",
+			gateLoadFailedGone: "该行已不在运行时列表里（可能已被删除），本动作没有发请求",
+			gateLoadFailedFailed: "停用失败：",
+			// ★ 0.5.x 加法（用户 2026-10-18）：「安全启动」在界面上的入口 —— 门控面板里的一个分区。
+			//   用户原话「现在这能力藏得太深，只有命令行能用」；这里只做展示 + 两段式上膛，
+			//   判据与动作白名单全在服务端 POST /plugin-console/safe-boot。
+			safeBootSectionTitle: "安全启动",
+			safeBootToggleTitle: "展开/收起安全启动面板（只有展开那一下才读一次快照列表，收起时零请求）",
+			safeBootSectionHint: "服务还能应答时的出路：回到上次好的补丁状态、或只禁可疑行。服务起不来时用下面的命令行兜底。",
+			safeBootLoading: "正在读取快照列表…",
+			safeBootReload: "重新读取",
+			safeBootListFailed: "读取快照失败：",
+			safeBootEmpty: "还没有快照：",
+			safeBootNotWritten: "本次没有写新快照：",
+			safeBootReasonPatchInvalid: "补丁结构校验没过，快照闸门没放行",
+			safeBootReasonNoPatch: "没有补丁文件，没有可写的材料",
+			safeBootReasonEnvChanged: "环境指纹刚变过，还没确认服务正常",
+			safeBootReasonUnchanged: "内容与最新快照逐字节相同，无需再写一份",
+			safeBootReasonNotYet: "还没到该写的时机（快照只在服务确认正常、且环境指纹未变时才写）",
+			safeBootCount: "快照 {n} 份",
+			safeBootLastGoodId: "最后标记为良好：",
+			safeBootLastGood: "良好（last-good）",
+			safeBootRowAt: "时间",
+			safeBootRowSha: "sha256",
+			safeBootRestore: "恢复上次好的状态",
+			safeBootRestoreTitle: "两段式：第一下只是上膛并写明要恢复到哪份快照，确认后才真发请求",
+			safeBootDisable: "只禁用可疑行",
+			safeBootDisableTitle: "两段式：只给自动预检点名的行追加 disabled: true，不做整树回滚",
+			safeBootMarkGood: "标记当前为好的状态",
+			safeBootMarkGoodTitle: "把最新这份快照标记为良好（永不随保留策略删除）；成功后自动刷新列表",
+			safeBootArmRestore: "要恢复到的快照：",
+			safeBootArmRestoreOverwrite: "会把这个补丁文件整份覆盖成快照内容（不做合并），改前先另存备份：",
+			safeBootArmDisable: "只给这些行追加 disabled: true：",
+			safeBootArmDisableNote: "不删任何行、不做整树回滚，改前先另存备份。",
+			safeBootConfirm: "确认执行",
+			safeBootCancel: "取消（不发任何请求）",
+			safeBootDoneRestore: "已按快照逐字节恢复（改前状态已备份）",
+			safeBootDoneDisable: "已只给点名行追加 disabled: true（其余逐字节未动）：",
+			safeBootDoneMarkGood: "已标记为良好：这份快照不再随保留策略删除：",
+			safeBootDisabledSkipped: "跳过",
+			safeBootNoopRestore: "当前补丁与快照逐字节一致，无需恢复（已备份当前状态）",
+			safeBootNoSuspects: "服务端没点名任何可疑行，一个字节都没改",
+			safeBootSuspectsTitle: "自动预检点名的可疑行：",
+			safeBootSuspectsNone: "自动预检还没点名任何可疑行 —— 所以这里不显示「只禁用可疑行」按钮（点了也没东西可禁）",
+			safeBootNoSnapshotActions: "没有快照可操作：「恢复」与「标记为良好」都要先有快照，所以这两个按钮不显示",
+			safeBootFailed: "操作失败：",
+			safeBootCmdHint: "服务起不来时（命令行兜底，无需服务在跑）：",
+			safeBootBusy: "进行中…",
+			starHint: "喜欢这个插件？去 GitHub 点个 Star",
+			starHintTitle: "在新标签页打开 GitHub 项目",
+			fwFailedButUpgraded: "框架本体其实已经升到 {v} 并已生效——失败的只是脚本最后「重启服务」那一步。可点「重启服务」确认，或必要时回滚。",
+			fwPanelBtn: "框架",
+			fwPanelTitle: "框架升级 / 回滚",
+			fwPanelCurrent: "当前版本",
+			fwPanelAvailable: "可升级到 {v}",
+			fwPanelUpToDate: "已是最新（latest {latest} · next {next}）",
+			fwPanelCheckFailed: "版本检查失败：{err}",
+			fwPanelChecking: "检查中…",
+			fwPanelRecheck: "重新检查版本",
+			fwPanelRefreshStatus: "刷新进度",
+			fwRecordClear: "关闭这条记录",
+			fwRecordClearTitle: "关掉后这里会显示「还没有升级记录」；日志仍保留在 ~/.dsh/plugin-console（fw-upgrade.log / fw-relaunch.log）",
+			fwRecordCleared: "已关闭这条升级记录",
+			fwPanelNoRecord: "还没有升级记录（这里会常驻显示最近一次升级/回滚的每一步）",
+			fwPanelConfirmBody: "确认升级到 {v}？脚本会自动：备份配置 → 预扫禁用不适配行 → 停服 → 装新版 → 拉起服务；起不来会先隔离重试，最后才整包回滚。",
+			fwRollbackDone: "已回滚到 {v}（当前就是快照版本，没有更早的可回）",
+			migrateTip: "项目已迁移（适配当前框架）",
+			migrateBtn: "迁移并适配",
+			aiEmpowerFrameworkCheck: "框架适配检测",
+			userForcedTag: "补丁强制启用",
+			// ★ 0.5.76（用户 2026-10-18）：禁用**出处**要写明，别只给一句"已停用"
+			disabledByBundleTag: "插件默认禁用",
+			forcedNotLoadedTag: "强制启用未生效",
+			revokeForceLabel: "撤销该强制启用",
+			revokeForceHint: "这条 disabled: false 覆盖没有让插件加载起来 —— 撤掉它，界面不再显示「强制启用」的假象（不会改动清单）",
+			protectedTag: "受保护",
+			unobserved: "未挂载",
+			pending: "等待依赖",
+			loadingPhase: "加载中",
+			active: "已挂载",
+			failed: "挂载失败",
+			unloading: "卸载中",
+			toggledOn: "已请求启用",
+			toggledOff: "已请求停用",
+			view: "查看",
+			install: "添加并启用",
+			installing: "正在安装…",
+			marketLoading: "正在搜索 GitHub…",
+			marketLoadingOther: "正在搜索 {source}…",
+			directOther: "通过服务端通道检索 {source} 平台（自定义源不走浏览器直连）",
+			marketError: "搜索失败",
+			marketEmpty: "没有找到相关项目。",
+			repoLoading: "正在读取仓库信息…",
+			repoError: "读取仓库信息失败",
+			packageName: "npm 包名",
+			dshHint: "疑似 DSH 插件",
+			noPackage: "该仓库没有 package.json，无法安装",
+			privateRootHint: "该仓库根包未发布到 npm（private），无法直接安装",
+			subpackagesTitle: "仓库子包（可单独安装）",
+			subpackagesLoading: "正在读取子包列表…",
+			subpackagesError: "读取子包列表失败（网络波动时可稍后重试）",
+			subpackagesEmpty: "未发现可安装的子包。",
+			recentFailures: "最近安装失败",
+			installed: "已安装并启用",
+			// 0.5.38 加法：三处没齐备（清单 / lock / 挂载行）时**绝不**说"已安装并启用"——
+			// 那种状态下任何一次 pnpm 操作或重启都会把它清掉（真机 dshmarket 现场）。
+			installedNotPersisted: "⚠ 已装上但未持久化（重启/重装会消失）",
+			// 0.5.84 判据降噪：只是「口径不一致」时换这句 —— 不再拿"会消失"吓人
+			installedNotPersistedWarn: "已装上；清单 / lock 口径还没对齐（不影响重启后加载，可顺手钉一下）",
+			installNote: "HMR 正在生效；若插件带界面，请刷新页面",
+			bundleNote: "该包是 bundle 层插件（如皮肤合集），重启 DSH 服务后生效",
+			// ── 安装诊断短句（2026-09-26 加法）：面板只放短句；解释性长文留在服务端字段里，
+			// 前端只把它挂到 title 悬浮提示上，不铺进面板（用户明确要求）──
+			diagCardTitle: "安装诊断",
+			// 0.5.38 加法：持久化判据（服务端 domain/persist.js）——三处任一没就位就出这张卡
+			diagNotPersisted: "未持久化：清单 / lock / 挂载行有缺口",
+			// 0.5.84 判据降噪：降级后的短句（可折叠提示，不再报红）
+			diagPersistDowngraded: "口径不一致（不影响重启后加载）",
+			// 分隔符也进字典：英文界面用半角标点，避免中文全角标点混进英文句子
+			diagColon: "：",
+			diagSemi: "；",
+			diagDot: "。",
+			diagKindNetworkTimeout: "网络超时：可用更长超时重试",
+			diagKindAllowBuilds: "构建脚本未放行：需你手动确认，我们不会自动改白名单",
+			diagKindMinimumReleaseAge: "版本太新被安全间隔拦下：稍后再试",
+			diagKindMissingTool: "本机缺少命令（corepack/pnpm/git）：装好再重试",
+			diagKindNotFound: "registry 上没有这个包或版本：核对包名或换源",
+			// 2026-09-27 加法：三个新分类（fetch-404 / lockfile-outdated / supply-chain-age）的短句
+			diagKindFetch404: "依赖在 registry 上 404：核对包名/版本或换源（不会丢弃依赖）",
+			diagKindLockfileOutdated: "lock 与清单对不上：可在「升级安全」里显式体检并重建",
+			diagKindSupplyChainAge: "版本太新被供应链闸拦下：稍后再试（不自动绕过）",
+			diagKindLocked: "文件被占用或无权限：关掉占用进程后重试",
+			diagKindOther: "未归类的安装失败：先原样重试，仍失败看原始输出",
+			diagRetried: "网络超时：已自动重试一次（更长超时）",
+			diagRetriedMark: "已重试一次",
+			diagEntryFail: "装后校验未通过",
+			diagEntryReasonEntry: "入口文件缺失（可能镜像未同步完整）",
+			diagEntryReasonPatch: "补丁行指向别的包",
+			diagEntryReasonBundle: "bundle 文件或引用缺失",
+			diagEntryAdviceMirror: "建议重装；仍失败请换源",
+			diagEntryAdvice: "建议重装一次",
+			diagIntegrityOk: "已校验 {algo} 摘要",
+			diagIntegrityNone: "来源无摘要，未校验",
+			diagIntegrityMismatch: "摘要不匹配（已安装，未拦截）",
+			diagIntegritySkip: "摘要未校验（读取失败，不影响安装）",
+			// 0.5.28 改错：框架 0.1.7-rc.x 起预设改为**声明行**（不再扫 .agent-presets 目录），
+			// "新建会话时选择"对没写成声明行的预设是错的。可见性由服务端下发的 presetNote 说清
+			// （「已声明为预设行 … 重启实例后在新会话可选」／「文件已就位，但…需要声明行」），
+			// 这里只留一句中性提示，不再替服务端断言"选了就能用"。
+			presetDot: "。预设：见上方说明（需要声明行才会出现在选择器里）",
+			presetInstalledMsg: "预设已装配",
+			diagChannelNotes: "通道说明",
+			direct: "（浏览器直连 GitHub；若你的浏览器打不开 GitHub，将自动回退到服务端通道）",
+			details: "详情",
+					expandDesc: "展开",
+			collapseDesc: "收起",
+			addLocal: "添加到本地",
+			installingLocal: "安装中…",
+			needPackage: "该仓库没有 package.json，无法直接添加",
+			noDetail: "该插件没有提供说明信息。",
+			versionLabel: "版本",
+			repoLabel: "仓库",
+			homepageLabel: "主页",
+			readmeLabel: "说明摘要",
+			loadingDetails: "正在读取详情…",
+			githubLoggedIn: "已登录 GitHub：",
+			githubCornerOut: "未登录 GitHub",
+			githubLoginViaApp: "GitHub 登录",
+			githubLoginOpened: "已打开 GitHub 授权窗口，请在页面上输入验证码完成授权…",
+			githubLoginUnavailable: "无法使用窗口登录",
+			githubLoginOrToken: "或用 Token 登录",
+			githubLoginTip: "粘贴 GitHub Token 登录（fine-grained，需 read:user 权限）。登录后可用代码搜索（按子包名搜索）并提高 API 限额；也可用 dsh-github-login 插件登录。",
+			githubTokenPlaceholder: "粘贴 token（ghp_… 或 github_pat_…）",
+			githubLoginBtn: "登录",
+			githubLoginOk: "已登录 GitHub：{login}",
+			githubLoginFail: "登录失败",
+			hubUpdateAvailable: "下载更新",
+			cleanResiduals: "清理残余备份",
+			cleanFrameworkResiduals: "清理框架残留",
+			cfStale: "旧目录 {n} 个",
+			cfBackups: "可清备份 {n} 条（约 {mb} MB）",
+			cfEntities: "旧 store 实体 {n} 个（只报告）",
+			cfConfirm: "确认执行？旧目录会改名备份并重建链接；超出保留数量的框架备份会被删除。",
+			cfNothing: "没有需要清理的项",
+			cfCancelled: "已取消（未改动任何文件）",
+			cfRunning: "正在执行清理…",
+			cfDone: "已改名 {renamed} / 重建链接 {linked} / 删备份 {removed} 条（释放约 {mb} MB）",
+			cfFailed: "{n} 项失败（详见 fw/console 日志）",
+			compatNoticeDismiss: "我知道了（此版本不再提示）",
+					searchInstalledPlaceholder: "搜索已安装插件（名称 / id / 备注）",
+			extraFilter: "已装",
+			extraFilterAll: "全部",
+			extraTag: "第三方",
+			extraFilterTitle: "切换：已装（后装/第三方插件）/ 全部",
+			extraEmpty: "没有已装的插件（非 dsh 自带）。",
+			noMatch: "没有匹配的插件。",
+			loadMore: "加载更多",
+			loadingMore: "加载中…",
+			marketCount: "共 {total} 条 / 已显示 {shown} 条",
+			marketCountKnown: "已显示 {shown} 条",
+			marketTruncated: "结果已截断，可继续加载",
+			marketTruncatedEnd: "结果已截断，没有更多了",
+			backToSearch: "回到搜索",
+			collapseResults: "收起搜索结果",
+			expandResults: "展开搜索结果",
+			reloadPage: "刷新页面",
+			refreshList: "刷新插件列表",
+			stageLabel: "阶段",
+			stagePreparing: "准备中",
+			stageInstalling: "下载安装中（可离开本页，后台继续）",
+			stageConfiguring: "写入启用配置",
+			stageRepairing: "本地 AI 接管安装中…",
+			restartService: "重启服务",
+			restartHostedNotice: "本实例由桌面端外壳托管 —— 请在桌面端内重启：完全退出 DeepSeek Harness 再打开（控制台不自行 kill / spawn，以免与宿主争端口）。",
+			restarting: "正在处理重启请求…",
+			autoReload: "页面即将自动刷新…",
+			aiRepaired: "本地 AI 已接管并完成修复，请刷新页面查看",
+			deletePlugin: "删除插件（移除配置并卸载包）",
+			confirmDelete: "确认删除？",
+			deleting: "删除中…",
+			deleteNote: "已删除插件并卸载包，正在刷新",
+			deleteBundleNote: "已移除插件所属 bundle，重启服务后生效",
+			pendingRestartTag: "已安装·重启后生效",
+			pendingRestartHint: "包已装好，重启服务后才会出现在上面的插件列表里；现在删除可直接撤回这次安装",
+			pendingRestartDelete: "撤销这次安装（删补丁行 / bundles 清单 / 包目录）",
+			pendingRestartNote: "已撤销这次安装（补丁行、bundles 清单、包目录均已清理）",
+			pendingRestartPartial: "撤销未完全生效，请按提示手动处理",
+			aiConsentText: "常规安装通道均已尝试失败。下一步将让本地 AI 接管安装——这会调用 DeepSeek API 模型，可能产生 API 费用。是否继续？",
+			aiConsentNotifyTitle: "插件安装需要授权",
+			aiConsentApprove: "同意，继续（可能产生费用）",
+			aiConsentDecline: "取消",
+			aiConsentCardTitle: "⚠ 需要你的授权：本地 AI 兜底",
+			aiConsentCountdown: "剩余",
+			aiConsentTimeoutNote: "超过 {min} 分钟不做选择将自动取消（不会产生任何费用）",
+			aiConsentLastError: "确定性通道最后一个错误",
+			aiConsentTopHint: "⚠ 有安装任务在等你授权：确定性安装通道都失败了，可使用本地 AI 兜底（会调用模型 API 产生费用）——请在安装进度处选择「同意 / 取消」",
+			progressSubpackage: "正在装第 {index}/{total} 个子包：{name}",
+			progressSuiteClone: "正在拉取第 {index}/{total} 个子模块：{name}",
+			progressSuiteAssemble: "正在装配第 {index}/{total} 个子模块：{name}",
+			progressDone: "已完成（共 {total} 个）",
+			aiFallbackLabel: "AI 兜底",
+			aiEmpowerLabel: "AI 赋能",
+			aiEmpowerTitle: "AI 赋能：读文档自动规划并部署组件；识别到服务器类组件后自动加启动/停止按钮",
+			aiEmpowerSrcTitle: "输入要部署的组件（npm 包名或 GitHub 仓库，如 Noob-stupid/dsh-plugin-gating-hub 或 @noob-stupid/dsh-plugin-console）",
+			aiEmpowerPlanTitle: "AI 赋能部署计划",
+			aiEmpowerType: "类型",
+			aiEmpowerTypeMapping: { "pure-plugin": "纯插件", "service": "服务器组件", "config-only": "仅配置" },
+			aiEmpowerSteps: "执行步骤（可勾选）",
+			aiEmpowerRun: "同意并部署",
+			aiEmpowerNeedSteps: "请至少勾选一个步骤；勾选后点击「同意并部署」才会执行",
+			aiConfirmDeploy: "即将执行 {name} 的 {n} 个部署步骤（可能安装软件/写入配置/启动服务）。确认同意并部署？",
+			aiPlanHint: "⚠️ AI 只负责规划建议——部署前需要你明确同意：勾选步骤 → 同意并部署 →（二次确认）",
+			aiWorkspaceInfo: "调研工作区",
+			aiEmpowerCancel: "取消",
+			aiEmpowerWaiting: "等待 AI 分析文档并生成计划（约 1-5 分钟，会调用 DeepSeek API，可能产生费用）…",
+			aiEmpowerExecuting: "AI 赋能执行中…",
+			aiEmpowerDone: "AI 赋能部署完成",
+			aiEmpowerFail: "AI 赋能失败",
+			aiEmpowerLogs: "执行日志",
+			aiEmpowerComponents: "已识别的服务器组件",
+			compStart: "启动",
+			compStop: "停止",
+			compStatus: "状态",
+			compOpen: "打开",
+			compRunning: "运行中",
+			compStopped: "未运行",
+			compHealthy: "健康",
+			compUnhealthy: "不健康",
+			compRefresh: "刷新组件状态",
+			compDropTitle: "展开所有服务器，点击打开网址",
+			compNoUrl: "暂无网址",
+			compCollapseTitle: "收缩组件卡片",
+			compExpandTitle: "展开组件卡片",
+			toolbarLabel: "功能包",
+			toolbarOpenTitle: "展开功能包",
+			toolbarCloseTitle: "收起功能包",
+			repoLandLabel: "仓库落地",
+			repoLandTitle: "仓库落地：用 Git 源「{source}」克隆任意项目到本地（~/.dsh/repos/，不限于 DSH 插件）",
+			repoLandSourceUnknown: "已配置的 Git 源",
+			repoLandPlaceholder: "输入 owner/repo 或仓库链接，如 deepseek-ai/deepseek-harness",
+			repoLandBusy: "克隆中…（大仓库可能较慢）",
+			repoLandDone: "已落地到：",
+			repoLandOpenFolder: "打开文件夹",
+			repoOpenDone: "已请求打开：",
+			repoOpenFailed: "打开文件夹失败：",
+			subpluginFound: "该仓库根目录没有清单，但插件在子目录 {dir}/ 下（{pkg}，标记：{markers}）—— 它不是「不是插件」，只是清单不在仓库根",
+			subpluginCopyDir: "复制子目录路径",
+			subpluginCopyName: "复制包名",
+			// 子目录插件的一键安装（0.5.47 加法）：识别出来之后**必须能装**，不能只给一段文字。
+			subpluginInstall: "从这个子目录安装",
+			subpluginInstallHint: "先按稀疏取源码把该子目录取到本地，再按既有本地目录来源（link:）装进 profile；清单校验与来源校验与其它安装路径同一套，装完照样收口（清单 + lock + 挂载行）",
+			// 「报失败前先核实已装」（0.5.47 改错）：已装 ⇒ 这句话是主行，历史失败折叠成次要信息。
+			alreadyInstalled: "已安装 v{version}（无需重装）",
+			alreadyInstalledNoVersion: "已安装（无需重装；版本号读不到）",
+			installedBadge: "已安装",
+			alreadyInstalledWhere: "命中：{where}",
+			whereDependencies: "依赖清单 dependencies",
+			whereBundles: "dsh.profile.bundles",
+			whereNodeModules: "node_modules",
+			failureSecondary: "历史失败（次要信息，仅供排查；已装上的插件无需重装）",
+			failureSecondaryShow: "显示历史失败",
+			failureSecondaryHide: "收起历史失败",
+			repoLandExists: "该仓库已存在，无需重复落地",
+			repoLandDirLabel: "保存路径",
+			repoLandSaveDir: "保存路径",
+			repoLandList: "已落地仓库",
+			repoLandRemoveConfirm: "确认删除已落地仓库 {repo}（本地目录将被删除）？",
+			repoLandEntry: "仓库落地",
+			repoLandLanded: "已落地",
+			aiProgressTitle: "AI 赋能进行中，点击查看进度",
+			compAutoTitle: "自启动：开启后随 DSH 启动自动拉起该服务器（关闭则需手动启动）",
+			compActionDone: "{action}：{name}",
+			noComponents: "暂无已识别的服务器组件（用 AI 赋能部署后自动出现）",
+			aiFallbackTitle: "关闭后：常规通道失败将直接取消安装，不再调用模型 API（零费用）",
+			// ★ 加法（用户 2026-11-04 第 2 项）：功能包里的 [自更新] 开关 —— **只更新控制台自己**。
+			selfUpdateLabel: "自更新",
+			selfUpdateAria: "自更新：只自动更新控制台自己（不碰任何别的插件）；点一下切换开关",
+			selfUpdateCheckLabel: "立即检查",
+			selfUpdateCheckHint: "立刻查一次有没有新版本（只更新控制台自己；装完要重启服务才生效）",
+			selfUpdateLastCheck: "上次检查",
+			selfUpdateLastResult: "上次结果",
+			selfUpdateNever: "从未检查",
+			selfUpdateResultNever: "还没有跑过检查",
+			selfUpdateUpToDate: "已是最新",
+			selfUpdateUpdated: "已更新到 {version}（重启服务后生效）",
+			selfUpdateSkipped: "本轮跳过：{reason}",
+			selfUpdateFailed: "失败：{reason}",
+			selfUpdateChecking: "正在检查控制台的新版本…",
+			selfUpdateSaving: "正在写入开关…",
+			selfUpdateOn: "自更新已开启（只自动更新控制台自己）",
+			selfUpdateOff: "自更新已关闭（不会再自动更新任何东西）",
+			aiFallbackOff: "已按设置关闭 AI 兜底，本次安装已取消（零费用）",
+			aiConsentRemember: "以后不再提醒（自动同意 AI 兜底，可能产生费用；可随时在插件市场页面最底部恢复提醒）",
+			aiRememberNote: "已按设置自动同意本地 AI 兜底（如需恢复弹窗提醒，请到市场底部修改）",
+			aiRememberReset: "已关闭 AI 兜底弹窗提醒（点击恢复提醒）",
+			consentWaiting: "等待授权确认…",
+			dismissFailure: "关闭此条提示",
+			sourcesBtn: "软件源",
+			sourcesTimeout: "读取软件源超时（DSH 可能正在重启或繁忙）——点重试即可",
+			sourcesTitle: "软件源管理",
+			sourcesDesc: "分工：① 软件源 = 下载 npm 包（安装用）；② 索引源 = 市场首页清单 JSON；③ Git 源 = 克隆仓库代码（无 npm 包时）；④ 搜索源 = 搜索时查哪个平台——搜到之后仍按 ①/③ 下载",
+			sourcePrimary: "主源",
+			setPrimary: "设为主源",
+			registryScan: "扫描软件源",
+			registryScanHint: "逐个探测每个软件源：是否可达、响应延迟、以及该源上 dsh-plugin-console 的最新版本（用于判断主源是否最优）",
+			registryScanning: "正在扫描…",
+			registryScanSummary: "扫描完成：{ok}/{total} 个可达",
+			registryScanBest: "最新版本 {version} 来自：{name}",
+			registryScanNoVersion: "该源上没有这个包",
+			registryScanFail: "不可达",
+			setPrimaryHint: "设为主源：优先使用它，失败时自动回退到其他源",
+			editSourceHint: "编辑：修改这个源的名称与地址",
+			removeSourceHint: "删除：从列表中移除这个源（不影响已安装的插件）",
+			removeSource: "删除",
+			sourceName: "名称",
+			sourceUrl: "地址（https://…）",
+			addSource: "添加",
+			resetSources: "恢复默认",
+			closeModal: "关闭",
+			invalidSourceUrl: "软件源地址必须是 https:// 开头（或本机/私网 http://）的合法 URL",
+			editSource: "编辑",
+			saveSource: "保存",
+			cancelEdit: "取消",
+			searchSourcesTitle: "搜索源",
+			searchSourcesDesc: "搜索平台（点击登录标切换）。自定义源用 URL 模板：{q}=关键词、{page}=页码",
+			addSearchSource: "添加搜索源",
+			indexSourcesTitle: "索引源",
+			indexSourcesDesc: "市场静态索引的下载地址（主源优先，其余依次重试）。可换成公司内网自建服务——注意：索引「内容」由那份 JSON 决定，把公共索引与内网私有插件索引一并托管即可在内网浏览；想同时看到两边条目，请打开下面的「合并所有索引源」",
+			indexMergeLabel: "合并所有索引源",
+			indexMergeDesc: "开启后：所有索引源的结果合并去重展示（公共索引 + 公司内网私有索引同时可见）；关闭时按主→备只用一个源（内网优先，更快）",
+			addIndexSource: "添加索引源",
+			indexUrlPlaceholder: "索引 JSON 地址（https:// 或本机/私网 http://）",
+			gitSourcesTitle: "Git 源",
+			archiveSourcesTitle: "archive 源（HTTP 压缩包）",
+			archiveSourcesDesc: "git 协议拉不动时的替代通道：直接用 HTTP 下载仓库压缩包再解压建仓（真机实测同一镜像下 archive 4 MB/s、git 协议 0 B/s）。模板用 {owner}/{repo} 占位符，可选 {branch}；主源优先，失败自动回退下一个。示例：https://ghproxy.net/https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.tar.gz",
+			archiveUrlPlaceholder: "https://ghproxy.net/https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.tar.gz",
+			addArchiveSource: "添加 archive 源",
+			gitSourcesDesc: "克隆仓库时用的地址模板（{owner}/{repo} 占位符）。下面这个列表就是「自定义 Git 源」——内置两条是默认值，点「添加 Git 源」即可换成你自己的：Gitee = https://gitee.com/{owner}/{repo}.git；GitLab = https://gitlab.com/{owner}/{repo}.git；自建 Gitea = https://你的域名/{owner}/{repo}.git；镜像代理 = https://镜像站/https://github.com/{owner}/{repo}.git；本地裸仓库 = file:///C:/repos/{owner}/{repo}.git。主源优先，失败自动回退下一个",
+			addGitSource: "添加 Git 源",
+			gitUrlPlaceholder: "如 https://gitee.com/{owner}/{repo}.git",
+			gitSourceBtn: "Git 源",
+			marketIndexOffline: "离线数据 · 缓存于 {time}（索引源不可达，已回退上次成功结果）",
+			marketIndexStale: "市场索引未加载：搜索只覆盖 GitHub 实时结果（仓库名/描述/topics），收录条目与本地索引模糊匹配都用不上",
+			marketIndexRetry: "重试加载索引",
+			searchLoginHint: "未登录 GitHub：代码搜索不可用（按子包名搜索需要登录）；仓库搜索仍可用",
+			marketIndexFrom: "索引来源：{source}",
+			marketIndexFailed: "市场索引加载失败",
+			unknown: "未知",
+			searchUrlPlaceholder: "URL 模板（必须含 {q}）",
+			invalidSearchUrl: "搜索 URL 模板必须包含 {q} 占位符",
+			headersPlaceholder: "请求头（可选）：每行一个，格式 名称: 值，如 Authorization: Bearer 令牌",
+			giteeTitle: "Gitee 登录（可选）",
+			giteeDesc: "Gitee 直装模式无需登录；登录仅用于提高接口限额（可选）：① 打开 gitee.com → 设置 → 数据管理 → 第三方应用（或直接访问 https://gitee.com/oauth/applications/new）；② 新建应用：应用名称随意，应用主页填 http://127.0.0.1:{port}（任意有效网址即可），应用回调地址填 http://127.0.0.1:{port}/plugin-console/gitee-oauth-callback，权限勾选 user_info、projects；③ 创建成功后把 Client ID / Client Secret 填到下面并点「保存配置」，再点「授权登录 Gitee」",
+			giteeClientId: "Client ID",
+			giteeClientSecret: "Client Secret",
+			giteeSave: "保存配置",
+			giteeLoginBtn: "授权登录 Gitee",
+			giteeLoggedIn: "已登录 Gitee：",
+			giteeClear: "清除登录",
+			giteeSetupHint: "未登录（可选）——直装模式无需登录，登录仅提高接口限额",
+			giteeLoginPrompt: "Gitee 源不需要登录：直接输入仓库名 owner/repo 搜索安装即可",
+			sourcesUpdated: "软件源已更新",
+			sourceOf: "源：",
+			searchSourceTitle: "点击切换搜索源（GitHub / Gitee / 自定义）",
+			installedAt: "已安装",
+			checkUpdate: "检测更新",
+			checkingUpdate: "检测中…",
+			updateCheckFailed: "检测失败",
+			updateAvailable: "发现新版本",
+			upToDate: "已是最新版本",
+			updateNow: "更新",
+			depsOutdatedHint: "本包更新后还需同步以下子包版本（避免版本混搭导致启动冲突）",
+			update: "更新版本",
+			officialBadge: "官方",
+			aggregateBadge: "聚合",
+			officialTitle: "官方 dsh plugin add 通道可安装（dsh.bundle 清单）",
+			aggregateTitle: "聚合仓库：根包未发布，子包才是插件（查看详情可逐个安装）",
+			officialOnlyToggle: "只看官方",
+			officialChecking: "正在识别插件类型…",
+			elapsed: "已用时",
+			skillBadge: "技能",
+			skillTitle: "仓库含 SKILL.md，可按技能安装到 ~/.dsh/skills（由 dsh-skill-filesystem 扫描发现）",
+			skillTab: "技能",
+			pluginsTab: "插件",
+			skillMarketEmpty: "技能库为空（自动收录 agent-skills / claude-skills / dsh-skill topic 仓库）",
+			installSkill: "装技能",
+			skillInstalledTag: "已装",
+			skillInstalledMsg: "技能安装完成",
+			skillInstallNote: "技能已复制到 ~/.dsh/skills；当前 profile 若未启用 dsh-skill-filesystem 插件，技能不会被发现（启用后重启即可）",
+			skillUninstallHint: "删除技能：直接删除 ~/.dsh/skills/<名称> 目录",
+			modeBtn: "切换市场模式：插件市场 / 技能市场（技能从 SKILL.md 仓库一键安装到 ~/.dsh/skills）",
+			skillsMode: "技能",
+			pluginsMode: "插件",
+			skillsMarketTitle: "技能市场（GitHub）",
+			skillsMarketTitleOther: "技能市场（{source}）",
+			skillsSearchPlaceholder: "搜索技能仓库（agent-skills / claude-skills / dsh-skill topic；留空浏览全部）",
+			skillsNote: "技能模式仅支持 GitHub 源；技能安装 = 克隆 SKILL.md 仓库到 ~/.dsh/skills/<名称>/，不写补丁、无需重启",
+			skillsGithubOnly: "技能搜索仅支持 GitHub 源（其他源请在插件模式使用）",
+			installedSkillsTitle: "已安装技能",
+			skillDelete: "删除技能",
+			skillDeleteConfirm: "确认删除技能「{name}」？",
+			skillDeletedMsg: "技能已删除",
+			skillsEmpty: "技能库为空（自动收录 agent-skills / claude-skills / dsh-skill topic 仓库）",
+			skillsEmptyHint: "这里的「已安装技能」只统计用户技能目录（~/.dsh/skills）；插件自带的技能（如 openviking-memory）随插件在技能中心提供，不在本列表",
+			pluginSkillsTitle: "插件自带技能",
+			pluginSkillTag: "插件自带",
+			pluginSkillsHint: "由已安装插件提供、只读展示；如需在会话中调用，直接使用技能名即可（如 openviking-memory）",
+			skillSystemTag: "系统",
+			skillSystemTitle: "系统自带技能（~/.dsh/skills/.system 等保留目录），禁止删除",
+			skillDisable: "停用",
+			skillEnable: "启用",
+			skillDisabledTag: "已停用",
+			skillDisabledTitle: "已停用：模型与用户命令均不可调用（disable-model-invocation: true，可随时启用）",
+			skillToggledMsg: "技能已停用",
+			skillEnabledMsg: "技能已启用",
+			skillMetaLabel: "技能摘要",
+			skillNameLabel: "技能名",
+			skillWhenToUseLabel: "适用场景",
+			skillRepoNote: "技能仓库（SKILL.md），非 npm 包",
+			skillTopicsLabel: "来源",
+			skillDetailInstalled: "已装",
+			skillDetailDisabled: "已停用",
+			skillDetailPath: "安装位置",
+			suiteBadge: "套装",
+			suiteTitle: "submodule 聚合套装：自动装配子模块组件（bundle 插件 / 普通插件 / 技能 / agent 预设），照仓库 install.ps1 语义执行、不运行第三方脚本",
+			suiteInstall: "安装套装",
+			suiteInstalledMsg: "套装安装完成",
+			suiteComponentType: "组件",
+			suiteComponentOk: "成功",
+			suiteComponentFail: "失败",
+			suiteRepoNote: "套装仓库（submodule 聚合），非 npm 包——安装方式见下方官方命令",
+			officialInstallLabel: "官方安装方式",
+			copyInstallCmd: "复制",
+			copiedInstallCmd: "安装命令已复制，可粘贴到终端手动执行",
+			frameworkUpgradeNotice: "检测到 DSH 框架升级：{from} → {to}。已自动备份升级前配置到 {dir}，框架补丁：{patch}；第三方插件请留意兼容性。",
+			frameworkPatchApplied: "已重新应用",
+			frameworkPatchSkipped: "无需应用",
+			frameworkUpgradeBtn: "框架升级",
+			frameworkUpgradeTitle: "框架升级：自动打包备份现有配置 → 停止并重启 DSH 服务 → npm 升级框架与配套包（失败自动回滚）→ 拉起服务并适配",
+			frameworkUpgradeTarget: "升级目标",
+			frameworkUpgradePick: "选择要升级到的版本（列出所有比当前新的版本，含预发布；latest 为稳定版）",
+			frameworkUpgradeMore: "展开全部可选版本（{n}）",
+			// 升级前契约预检（2026-09-24 事故：v4 消息格式变更让运行期生产方全部失效）
+			fwPreflightBtn: "升级预检",
+			fwPreflightTitle: "升级前契约预检：抓目标版本的会话格式契约（迁移边），扫描 .agent-presets 与已装插件里的旧形状消息来源；可一键适配并自动备份（.bak-preflight-*）",
+			fwPreflightRunning: "预检中…",
+			fwPreflightClean: "预检通过：本地生产方没有会触发格式校验的旧写法",
+			fwPreflightFound: "预检发现 {n} 处必须适配（另有 {m} 处提示）",
+			fwPreflightContract: "会话格式契约：{summary}",
+			fwPreflightNoContract: "契约未知：{err}（已降级为内置规则扫描）",
+			fwPreflightPatch: "一键适配（自动备份）",
+			fwPreflightApplyConfirm: "将修改本地文件（每个文件自动备份为 .bak-preflight-*），继续？",
+			fwPreflightPatched: "已适配 {n} 处，备份 {b} 个文件",
+			fwPreflightRemaining: "适配后仍有 {n} 处需人工处理（预检不会自动改）",
+			fwPreflightNeedManual: "需人工处理：{why}",
+			fwPreflightScanned: "已扫描 {n} 个生产方文件（预设 + 插件）",
+			frameworkUpgradeFold: "收起版本列表",
+			frameworkUpgradeChannelStable: "稳定版",
+			frameworkUpgradeChannelPre: "预发布",
+			frameworkUpgradeConfirm: "确认升级？（服务将自动重启）",
+			frameworkUpgradeDone: "框架升级流程已执行",
+			frameworkRollbackBtn: "回滚到上一版",
+			frameworkRollbackTitle: "一键回滚到升级前版本：全树恢复（含依赖世界），脚本自动拉起服务",
+			frameworkRollbackDone: "已发起回滚：{from} → 恢复中，服务将短暂断开，请勿手动操作",
+			frameworkUpgradeUpToDate: "（已是最新版本）",
+			frameworkUpgradeCheckFailed: "（版本检测失败，无法确认是否有更新——请检查网络后重试）",
+			frameworkUpToDate: "已是最新框架",
+			frameworkUpToDateTitle: "当前 DSH 框架已是最新版本（升级请走官方流程或等新版本发布）",
+			frameworkUseUpgrade: "deepseek-harness 是 DSH 框架本体，无需安装；升级请使用卡片上的「框架升级」流程（有新版本时出现）",
+			relaunchBtn: "重启指引",
+			relaunchTitle: "服务断开时点此看官方重启方式（控制台不会自行 kill / 拉起进程）",
+			relaunchDone: "已按官方路径处理（控制台不会自行拉起进程）",
+			fwStepBackup: "备份现有配置",
+			fwStepStop: "停止服务（页面将断开）",
+			fwStepInstall: "升级框架本体",
+			fwStepRollback: "升级失败回滚",
+			fwStepPkg: "更新官方配套包",
+			fwStepRelaunch: "拉起 DSH 服务",
+			fwStepDone: "升级完成",
+			installBusy: "已有安装/更新任务进行中，请等待完成后再试",
+		};
+		const en = {
+			tab: "Plugin console",
+			safetyTab: "Upgrade safety",
+			safetyModeManagedShort: "managed",
+			safetyModeObserverShort: "observer",
+			safetyBackfillTitle: "Missing dependency declarations",
+			safetyBackfillShort: "{n} to declare",
+			safetyBackfillDesc: "{n} installed plugins are not declared in the profile manifest — third-party plugin pages cannot see them and a pnpm operation may restore them. Declaring writes the on-disk version into the manifest (no repack, no reinstall).",
+			safetyBackfillNone: "Every installed plugin is declared in the manifest (visible to plugin pages and pnpm)",
+			safetyBackfillBtn: "Declare {n}",
+			safetyBackfillDone: "Declarations written",
+			// 2026-09-27 additive: dependency lock health / rebuild (read-only check + explicit user trigger)
+			safetyLockTitle: "Dependency lock health",
+			safetyLockDesc: "Read-only check: whether declared deps resolve on the registry and whether pnpm-lock.yaml matches the manifest (your profile is never auto-edited)",
+			safetyLockOk: "Lock file matches the manifest — nothing to do",
+			safetyLockBad: "{n} kind(s) of problem found",
+			safetyLockBlocked: "Deps not resolvable on the registry: {pkgs} (the rebuild stops; your deps are never silently dropped)",
+			safetyLockRepaired: "Lock rebuilt and aligned with the manifest",
+			safetyLockRepairPartial: "Still out of sync after the rebuild — see the problems below",
+			safetyLockNoRebuild: "No rebuild needed right now",
+			safetyLockCheckBtn: "Check",
+			diskTitle: "Disk usage (plugin-console)",
+			diskDesc: "Read-only audit: what fills this directory, what can be cleaned safely, and what must never be touched (the backup the current rollback point refers to is off limits)",
+			diskCheckBtn: "Audit disk",
+			diskSummary: "{mb} MB total ({n} entries) - about {safe} MB safely cleanable, about {reclaim} MB cleanable with a tradeoff",
+			diskSafeHint: "Clean only the safe tier (logs / old residue / state .bak files): no functionality is affected",
+			diskConfirmHint: "Confirm cleanup: this is the step that actually deletes (the server only deletes entries from the audit whitelist)",
+			diskCleanupBtn: "Clean safe items",
+			diskConfirmBtn: "Confirm cleanup (~{mb} MB)",
+			diskPlanReady: "Will remove {n} items, about {mb} MB freed - nothing is deleted until you confirm",
+			diskConfirmBtn2: "Confirm cleanup",
+			diskDone: "Cleaned",
+			diskFailed: "Disk audit failed",
+			diskNoCandidate: "Nothing is safely cleanable (the largest item is usually the framework backup the current rollback point refers to, which must not be deleted)",
+			safetyLockRepairBtn: "Rebuild lock (explicit)",
+			actionBoxTitle: "Suggested action",
+			actionPinLabel: "Pin this dependency (record as link:)",
+			actionPersistLabel: "Pin it in one click (manifest + lock + mount row)",
+			vetoJudgedCopy: "Panel shows {shown}, but this veto was computed against the profile copy {judged} - hover for the path (two copies exist; see CHANGELOG v0.5.52)",
+			skippedBundlesTitle: "{n} bundle(s) skipped by the framework - installed but never loaded, which is why they are absent from the plugin list; hover an item for the way out",
+			hostedNoChannel: "Hosted by the desktop shell: use the desktop app for framework upgrade and rollback (unavailable here)",
+			linksTitle: "Dev links (link:): {n} total, {ready} self-sufficient - checkmark = ready, dot = something missing (hover for why)",
+			healthSummary: "{n} issue type(s) need attention",
+			exemptGrantBtn: "Grant exact-version exemption",
+			healthDismissBtn: "Got it",
+			healthDismissTitle: "Dismiss this notice. It reappears when the problems change (kind or count), so you will not miss anything new",
+			linksToggleBtn: "Dev link (link:) details",
+			linksToggleSummary: "Dev links (link:): {n} total, {ready} self-sufficient",
+			linksToggleTitle: "Expand/collapse link details (collapsed by default)",
+			linksBtn: "link",
+			linksPanelTitle: "Dev links (link:) - the read-only list from /plugin-console/links: where it points, whether the target still exists, whether deps/peers are complete, and whether shims are in place",
+			linksPanelLoading: "Reading...",
+			linksPanelReload: "Reload",
+			linksPanelEmpty: "No plugin is pinned with link: (this list only covers dev links)",
+			linksDevRootLabel: "Dev root:",
+			linksDevRootPick: "Pick a registered dev root...",
+			linksDirPlaceholder: "Directory to pin (absolute path, must be inside a registered dev root)",
+			linksBrowse: "Browse...",
+			linksPinPlanBtn: "Pin",
+			linksPinPlanTitle: "{p} will be pinned as a link: dependency - steps below (nothing has changed yet)",
+			linksPinConfirmBtn: "Confirm pin",
+			linksCancel: "Cancel",
+			linksPinnedDone: "Pinned {p}",
+			linksMtime: "changed",
+			linksMtimeHint: "'changed' = the newest mtime of the target directory itself or its direct children (node_modules / .git excluded); deeper file edits do not show up here",
+			linksRepairDeps: "Install deps",
+			linksRepairShims: "Create shims",
+			linksRepairDone: "Repaired",
+			linksUnpinBtn: "Unpin",
+			linksUnpinConfirmBtn: "Confirm unpin",
+			linksUnpinDone: "Unpinned",
+			linksBusyWorking: "Working...",
+			devRootsTitle: "Dev roots (only directories inside these can be pinned)",
+			devRootsNone: "(none registered)",
+			devRootAddPlaceholder: "Register a dev root (absolute path, e.g. D:\\my-plugins)",
+			devRootAddBtn: "Add root",
+			devRootAdded: "Registered (list refreshed)",
+			pinDirPlaceholder: "Directory to pin (must be inside one of the roots above)",
+			pinPlanBtn: "Preview",
+			pinApplyBtn: "Pin it",
+			pinAllowAgent: "Allow agent-initiated pins",
+			pinAllowAgentTitle: "Off by default: once ticked, pins initiated by the agent are accepted",
+			pinPlanReady: "Will pin {name} v{v} as a link dependency",
+			pinDone: "Pinned {name} (manifest backed up; rolled back automatically if pnpm or verification failed)",
+			exemptGrantTitle: "Authorize this exact version on the current framework version (writes via compatibility.json in the profile, with backup and read-back verification)",
+			linksFailed: "Failed to read the dev-link inventory",
+			actionReconcileLabel: "Rebuild pnpm-lock.yaml",
+			actionRun: "Run",
+			actionCopy: "Copy",
+			actionCopied: "Command copied",
+			actionRunning: "Running…",
+			actionOk: "Done",
+			actionPartial: "Partly done (manifest updated, lock not aligned)",
+			actionFailed: "Failed",
+			actionLongTitle: "The console runs a whitelisted action inside its own process (only built-in kinds such as pin-dependency / reconcile-lock / allow-builds; a custom command string is never accepted). The command itself is display/copy only.",
+			// 2026-09-27 additive (option 2): shown when pnpm fails because build scripts are not approved.
+			actionAllowLabel: "Allow these build scripts",
+			actionAllowLong: "Nothing is written until you click this: it adds the exact package names to allowBuilds in the profile's pnpm-workspace.yaml (backup .bak-<timestamp> first, read back and verify, other fields untouched). It downloads and runs nothing itself; only the *next* pnpm install actually runs those scripts (a binary download plus native builds — measured ≈19 minutes the first time on this machine).",
+			actionAllowOk: "Approval written",
+			actionAllowFailed: "Approval failed (file untouched)",
+			actionAllowBackup: "Backup",
+			// 2026-09-27 additive (0.5.26 F2): preset assembly is add-only by default; a same-name conflict shows this button.
+			actionOverwritePresetLabel: "Overwrite this preset",
+			actionOverwritePresetLong: "Nothing is overwritten until you click this: it re-fetches the preset from its recorded source repo, copies your whole current directory to <preset>.bak-<timestamp> first, then overwrites file by file and reads every file back to verify (a byte mismatch is reported, never hidden). By default assembly only adds missing files and never touches your same-name presets.",
+			actionOverwritePresetOk: "Overwritten (original backed up)",
+			actionOverwritePresetFailed: "Overwrite failed (files untouched)",
+			safetyMode: "Operating mode",
+			safetyModeManaged: "Managed: this console owns framework upgrade and rollback (default, unchanged behaviour)",
+			safetyModeManagedOn: "Switched to managed: framework upgrade and rollback stay with this console",
+			safetyModeObserver: "Observer: preflight, gating and rollback-point guard only — does not take over upgrades",
+			safetyModeObserverOn: "Switched to observer: no longer takes over framework upgrades, only gates",
+			safetyModeSwitch: "Switch managed / observer",
+			safetySwitchFailed: "Action failed",
+			safetyFrameworkTitle: "Framework version",
+			safetyFrameworkDesc: "Currently {v} — a version change, a different install root (npx cache / bundled desktop runtime), or a tree size change all count as an environment change",
+			safetyRollbackTitle: "Rollback point",
+			safetyRollbackOk: "Available: {from} → {to}",
+			safetyRollbackNone: "Unavailable: {reason}",
+			safetyFpTitle: "Environment fingerprint",
+			safetyFpStable: "Unchanged since the last baseline",
+			safetyFpChanged: "Environment changed (whoever did it): {reasons}",
+			safetyFpAck: "Got it — set as baseline",
+			safetyFpAcked: "Baseline updated",
+			safetyAdaptTitle: "Session-format contract preflight",
+			safetyAdaptDesc: "Runs before or after an upgrade: scans local producers (agent presets + installed plugins) for legacy shapes; fixes are backed up first",
+			safetyPreflightFound: "{n} place(s) must be adapted (use the button to adapt with per-file backups)",
+			safetyPreflightPatched: "Adapted {n} place(s); every file kept a .bak-preflight-* backup",
+			safetyJumpHint: "Open console features (expanded in place — no navigation away)",
+			safetyJumpMarket: "Plugin market",
+			safetyJumpSkills: "Skill market",
+			safetyJumpFramework: "Framework upgrade / rollback",
+			safetyJumpGate: "Gating detail",
+			safetyJumpSources: "Registries",
+			safetyJumpAi: "AI deploy",
+			safetyEmbedded: "Console (expanded in place, nothing removed)",
+			safetyUnknown: "unknown",
+			loading: "Reading plugins…",
+			error: "Plugins are temporarily unavailable.",
+			retry: "Retry",
+			installedTitle: "Installed plugins",
+			marketTitle: "Plugin market (GitHub)",
+			marketTitleOther: "Plugin market ({source})",
+			search: "Search",
+			searchPlaceholder: "Search dsh-plugin projects on GitHub (empty = default query)",
+			searchPlaceholderOther: "Search {source} for plugins (empty = default query)",
+			multiSourceTitle: "Multi-source: GitHub + all custom sources in parallel (Gitee direct mode excluded)",
+			multiSourceToggle: "Multi-source search toggle",
+			multiEmpty: "No matching plugins found in any search source.",
+			giteeRepoPlaceholder: "Enter a Gitee repo (owner/repo, e.g. oschina/git-osc)",
+			giteeEmpty: "Gitee's official search API is deprecated: type a repo name (owner/repo, e.g. oschina/git-osc) in the search box and press Enter",
+			empty: "No plugins are available.",
+			on: "Enable",
+			off: "Disable",
+			enabledTag: "Enabled",
+			disabledTag: "Disabled",
+			userDisabledTag: "Disabled by patch",
+			pendingCompatTag: "Pending adapt",
+			pendingCompatHint: "Force-disabled after framework upgrade: click Check update first; if a newer version exists the button becomes Update & adapt - click it and it unlocks automatically after the compat check",
+			updateAndAdapt: "Update & adapt",
+			familyTag: "Family bundle",
+			familySubs: "sub packages",
+			familyUnlockAll: "Unlock all adapted",
+			familyUnlockAllTip: "Re-run the source scan for sub packages not yet verified: passing ones get unlocked; failing ones stay disabled with a reason",
+			familyUnlockAllConfirm: "Re-run the source scan for every not-yet-verified sub package in this family and unlock the ones that pass? Failing ones stay disabled.",
+			familyUnlockAllDone: "Family batch unlock done",
+			familyExpand: "Expand",
+			familyCollapse: "Collapse",
+			familyUpdate: "Family version check",
+			familyCheckUpdate: "Check all",
+			familyUpdateBtn: "Update",
+			familyCheckUpdateTip: "When a newer version is detected this Update button appears; click to start the full-family update (subpackage alignment + adapt check)",
+			// issue #22 ①: bulk update check for the installed list (icon-only ↑↑↑ button + result/filter states)
+			checkAllUpdates: "Check all updates",
+			checkAllUpdatesHint: "Check every installed plugin for a newer version ({n} to check)",
+			checkingAllUpdates: "Checking all updates ({n} plugins, concurrency capped - may take a few seconds)",
+			checkAllUpdatesDone: "{n} updatable",
+			checkAllUpdateNone: "No updatable plugin",
+			checkAllUpdateUnknownNote: "{n} could not be checked (network or registry did not answer; use the per-card \"Check update\" to retry)",
+			checkAllUpdateFailed: "Bulk update check failed",
+			checkAllUpdateEmptyList: "No checkable plugin in the installed list",
+			batchUpdateOnly: "Updatable only",
+			batchUpdateOnlyTip: "Show only plugins with an update detected in this check (click again to clear)",
+			batchUpdateFilterEmpty: "No updatable plugin in this check (clear \"Updatable only\" to see all)",
+			batchUpdateAvailable: "Update → v{v}",
+			batchUpdateAvailableTip: "A newer version was detected by the bulk check; Update installs exactly this version (same criterion as the per-card Check update)",
+			batchUpToDate: "Up to date",
+			batchUpdateUnknown: "Not detected",
+			batchUpdateUnknownTip: "Neither the registry nor GitHub answered, so \"no update\" is unknown - not \"up to date\". Retry per card with Check update",
+			batchUpdateResultTip: "This check: {n} updatable, {m} up to date, {k} not detected ({at})",
+			adaptUnlockBtn: "Adapted - unlock now",
+			// issue #22 ②③: user annotations (notes / user badges / user groups) - the user's own data
+			annotationsBtn: "Annotate",
+			annotationsPanelTitle: "Notes / user badges / user groups: your own data, stored in <DSH_HOME>/plugin-console/plugin-annotations.json. Nothing is written into plugins or the profile, and a broken file never affects the plugin list above.",
+			annotationsFailed: "Annotation action failed",
+			annotationsCorrupt: "The annotation file cannot be read ({err}) - the plugin list is unaffected; fix or delete that file, then retry",
+			annotationsRepaired: "The annotation file was edited by hand; {n} invalid entries were ignored",
+			annotationsEmpty: "No notes / badges / groups yet: write the first one in any plugin row below",
+			annotationsStats: "{p} annotated plugins · {b} user badges · {g} groups",
+			annotationsListShow: "Plugin list ({n}) · click to expand",
+			annotationsListHide: "Plugin list ({n}) · click to collapse",
+			annotationsSearchPlaceholder: "Search: package name / rowId / note text (filters as you type)",
+			annotationsNoMatch: "No matching plugins",
+			noteLabel: "Note",
+			noteEdit: "Edit note",
+			noteEmpty: "+ Add note",
+			notePlaceholder: "What is this plugin, and why did you install it",
+			noteSaveHint: "Enter saves · Shift+Enter newline · Esc cancels (empty = clear the note)",
+			noteSaved: "Note saved",
+			noteCleared: "Note cleared",
+			badgeLabel: "User badge",
+			badgeAddPlaceholder: "Badge text (Enter to add)",
+			badgeAdded: "Badge \"{b}\" added",
+			badgeRemove: "Remove this badge",
+			badgeRemoved: "Badge \"{b}\" removed",
+			badgeUndo: "Undo",
+			badgeUndoDone: "Badges restored",
+			badgeMax: "At most {n} user badges",
+			badgesAll: "All badges ({n}): system badges and user badges",
+			groupLabel: "Group",
+			groupNone: "(no group)",
+			groupCreate: "New group",
+			groupCreatePlaceholder: "Group name, e.g. Memory (Enter to create)",
+			groupCreated: "Group \"{name}\" created",
+			groupNewInlineHint: "Create a group here and put this plugin in it",
+			groupNewInlinePlaceholder: "Group name (Enter creates and adds)",
+			groupNewInline: "New group",
+			groupRename: "Rename",
+			groupRenamed: "Group renamed",
+			groupRemove: "Delete this group (membership only, plugins are kept)",
+			groupDeleteConfirm: "Delete group \"{name}\"? Only the membership is removed - plugins stay",
+			groupDeleted: "Group \"{name}\" deleted ({n} memberships removed, plugins kept)",
+			groupRestore: "Undo delete",
+			groupRestored: "Group \"{name}\" restored",
+			groupAssigned: "Added to group \"{name}\"",
+			groupUnassigned: "Removed from the group",
+			groupMembers: "{n} plugins",
+			groupNoMembers: "No plugins in this group yet: pick one from the dropdown on the right",
+			groupMemberPick: "+ Pick a plugin to add to this group",
+			groupUpdateAll: "Update this group",
+			groupUpdateAllTip: "Updates each member sequentially, one at a time, at its own target version; the compatibility gate still applies",
+			groupUpdateAllProgress: "Updating {i}/{n}:",
+			groupUpdateAllDone: "Group update finished: {n} members, {hit} had a newer version and were started",
+			groupLoadMore: "Load more ({n} left)",
+			groupInFamilyNote: "Members live inside the official family block, not duplicated here",
+			groupMemberNone: "Every plugin is already in this group",
+			groupMemberRemove: "Remove from this group (membership only, the plugin is kept)",
+			groupEmptyHint: "No groups yet: create one above (e.g. Memory), then pick it in a plugin row",
+			userGroupTag: "My group",
+			adaptUnlockHint: "Installed version passed the source scan for the current framework: unlock immediately",
+			adaptUnlockDone: "Unlocked: refresh and the row is enabled",
+			riskyEnableTitle: "Force-enable an incompatible plugin?",
+			riskyEnableBody: "This plugin is judged incompatible with the current framework (auto-disabled during the upgrade). Force-enabling it may make the next DSH start fail and require manual recovery. Force-enable?",
+			riskyEnableConfirm: "Force enable",
+			riskyEnableCancel: "Cancel",
+			adoptableDetected: "Now compatible: version {version} passed the source scan — click \"Adapted - unlock now\" to enable it (never auto-enabled)",
+			adoptableRescinded: "Criteria updated: the older scan's \"incompatible\" verdict has been withdrawn (the current criteria find the source clean even without a version change). Click \"Adapted - unlock now\" to enable it (never auto-enabled)",
+			compatRescindedTag: "Verdict withdrawn - unlockable",
+			compatRescindedHint: "This disable came from a false positive of the older criteria: recomputing with the current criteria no longer says \"incompatible\". Click \"Adapted - unlock now\" above; your patch is only changed after you confirm.",
+			compatGateLabel: "Compat gate",
+			compatGateAutoDisable: "Auto-disable incompatible plugins on upgrade",
+			compatGateAutoDetect: "Detect adapted plugins on open (hint only)",
+			compatGateHint: "Turn off to go fully manual: the upgrade only warns and never touches your switches, and no detection hints are shown",
+			compatGateSaved: "Compat gate settings saved",
+			gateBtn: "Gating",
+			gateTitle: "Gating: auto-disable incompatible plugins on upgrade, detect adapted ones on open",
+			gateModalTitle: "Gating (compat gate master switches)",
+			gatePendingInfo: "Pending adaptation: {n} row(s) — recorded by the upgrade pre-scan or boot quarantine; unlock them after updating the plugin",
+			gatePendingNone: "No rows pending adaptation",
+			gateListPending: "Pending rows ({n})",
+			gateListAdopted: "Adapted & unlocked ({n} — blocked at some point, now allowed)",
+			gateListMore: "Show all {n} rows",
+			gateListFold: "Collapse list",
+			gateRowReason: "Reason: {reason}",
+			gateRowFromBoot: "Source: boot-failure quarantine",
+			gateRowFromUpgrade: "Source: framework upgrade pre-scan",
+			// ★ 0.5.98 additive: honest labelling of adaptation-gate **records** + a delete entry (two-step).
+			gateRowModule: "Module: ",
+			gateRowMissing: "this row no longer exists",
+			gateStaleLine: "{n} more record(s) point to rows that no longer exist (they can never be adapted — safe to clean up)",
+			gateForgetRow: "Delete record",
+			gateForgetRowTitle: "Deletes this record only: no plugin and no patch file is touched (click once to confirm)",
+			gateForgetStale: "Clean up invalid records",
+			gateForgetStaleTitle: "Only removes records whose patch row no longer exists: no plugin and no patch file is touched (click once to confirm)",
+			gateForgetArmRow: "Record {id} (module: {name}) will be deleted.",
+			gateForgetArmStale: "{n} invalid record(s) (their patch rows no longer exist) will be removed. Real pending rows and history stay untouched.",
+			gateForgetSafety: "Records in compat-pending.json only: no plugin and no patch file is touched, and a backup is written first.",
+			gateForgetConfirm: "Confirm delete",
+			gateForgetCancel: "Cancel",
+			gateForgetDoneRow: "Deleted record {id} (plugins and patch file untouched)",
+			gateForgetDoneStale: "Removed {n} invalid record(s) (plugins and patch file untouched)",
+			gateForgetNone: "Nothing to delete (file unchanged)",
+			gateForgetFailed: "Delete failed: ",
+			// ★ 0.5.100 additive (user 2026-11-02): on-demand adaptation check in the gating panel.
+			gateScanBtn: "Check current compatibility",
+			gateScanBusy: "Checking…",
+			gateScanTitle: "Runs the adaptation verdict over the rows in the current patch: records conclusions only, disables nothing",
+			gateScanNoTargets: "No rows to check (the patch has no judgeable plugin rows), so the check button is not shown",
+			gateScanDone: "Checked {n} row(s): pass {p} / incompatible {f} / undecidable {u}",
+			gateScanFailed: "Check failed: ",
+			gateNoRecordsHint: "No verdict records yet (the pre-scan only runs before an upgrade — use the button above to check now)",
+			gateLastScan: "Last check ({at}): {n} row(s) · pass {p} / incompatible {f} / undecidable {u}",
+			// ★ 0.5.101 additive (user 2026-11-02): rows that FAILED TO LOAD at runtime.
+			gateLoadFailedTitle: "Rows that failed to load ({n} · runtime mount failure)",
+			gateLoadFailedHint: "These rows failed to load at runtime (e.g. a dependency cannot be resolved). This is not an adaptation verdict and is never written to the adaptation records; you can disable them here.",
+			gateLoadDisable: "Disable",
+			gateLoadDisableTitle: "Disable this row (writes a disabled block into the patch; click once to confirm)",
+			gateLoadArmRow: "Row {id} ({name}) will be disabled.",
+			gateLoadSafety: "This writes one disabled block into the profile patch (you can re-enable it from the list at any time); it does not uninstall the package and does not touch other rows.",
+			gateLoadConfirm: "Confirm disable",
+			gateLoadCancel: "Cancel",
+			gateLoadFailedDone: "Disable requested for {id} (the patch is updated; the list follows once HMR applies)",
+			gateLoadFailedGone: "This row is no longer in the runtime list (it may have been removed), so no request was sent",
+			gateLoadFailedFailed: "Disable failed: ",
+			gateRowAt: " · {t}",
+			gateRowAdoptable: " · passed the source scan, can be unlocked",
+			safeBootSectionTitle: "Safe boot",
+			safeBootToggleTitle: "Expand/collapse the safe-boot panel (the snapshot list is read once per expand — zero requests while collapsed)",
+			safeBootSectionHint: "Ways out while the service still answers: return to the last good patch state, or disable suspect rows only. When the service cannot start, use the command below.",
+			safeBootLoading: "Reading the snapshot list…",
+			safeBootReload: "Reload",
+			safeBootListFailed: "Could not read snapshots: ",
+			safeBootEmpty: "No snapshot yet: ",
+			safeBootNotWritten: "No new snapshot was written this time: ",
+			safeBootReasonPatchInvalid: "the patch failed the structural check, so the snapshot gate refused to write",
+			safeBootReasonNoPatch: "there is no patch file, so there is nothing to snapshot",
+			safeBootReasonEnvChanged: "the environment fingerprint just changed, the service is not confirmed healthy yet",
+			safeBootReasonUnchanged: "byte-identical to the newest snapshot, no need to write another one",
+			safeBootReasonNotYet: "the moment has not arrived yet (snapshots are written only once the service is confirmed healthy and the environment fingerprint has not changed)",
+			safeBootCount: "Snapshots: {n}",
+			safeBootLastGoodId: "Last marked good: ",
+			safeBootLastGood: "good (last-good)",
+			safeBootRowAt: "at",
+			safeBootRowSha: "sha256",
+			safeBootRestore: "Restore last-good state",
+			safeBootRestoreTitle: "Two steps: the first click only arms it and names the snapshot, the request goes out after you confirm",
+			safeBootDisable: "Disable suspect rows only",
+			safeBootDisableTitle: "Two steps: append disabled: true to the rows named by auto-preflight only, never a whole-tree rollback",
+			safeBootMarkGood: "Mark the current state as good",
+			safeBootMarkGoodTitle: "Mark the newest snapshot as good (never removed by retention); the list refreshes afterwards",
+			safeBootArmRestore: "Snapshot to restore:",
+			safeBootArmRestoreOverwrite: "It overwrites this whole patch file with the snapshot content (no merge); the current state is backed up first:",
+			safeBootArmDisable: "Append disabled: true to these rows only:",
+			safeBootArmDisableNote: "No row is deleted and there is no whole-tree rollback; the current state is backed up first.",
+			safeBootConfirm: "Confirm",
+			safeBootCancel: "Cancel (sends nothing)",
+			safeBootDoneRestore: "Restored byte-for-byte from the snapshot (previous state backed up)",
+			safeBootDoneDisable: "Appended disabled: true to the named rows only (everything else untouched):",
+			safeBootDoneMarkGood: "Marked as good: this snapshot is never removed by retention:",
+			safeBootDisabledSkipped: "skipped",
+			safeBootNoopRestore: "The patch is already byte-identical to the snapshot — nothing to restore (current state was backed up)",
+			safeBootNoSuspects: "The server named no suspect rows, so not a single byte changed",
+			safeBootSuspectsTitle: "Rows named by auto-preflight:",
+			safeBootSuspectsNone: "Auto-preflight has not named any suspect row yet — so the \"disable suspect rows only\" button is not shown (there would be nothing to disable)",
+			safeBootNoSnapshotActions: "Nothing to act on: restore and mark-as-good both need an existing snapshot, so those two buttons are not shown",
+			safeBootFailed: "Action failed: ",
+			safeBootCmdHint: "When the service cannot start (offline fallback, no running server needed):",
+			safeBootBusy: "working…",
+			starHint: "Enjoying this plugin? Star it on GitHub",
+			starHintTitle: "Open the GitHub project in a new tab",
+			fwFailedButUpgraded: "The framework itself is already on {v} and active — only the final \"restart service\" step failed. Use Restart service to confirm, or roll back if needed.",
+			fwPanelBtn: "Framework",
+			fwPanelTitle: "Framework upgrade / rollback",
+			fwPanelCurrent: "Installed",
+			fwPanelAvailable: "Upgrade available: {v}",
+			fwPanelUpToDate: "Up to date (latest {latest} · next {next})",
+			fwPanelCheckFailed: "Version check failed: {err}",
+			fwPanelChecking: "checking…",
+			fwPanelRecheck: "Re-check version",
+			fwPanelRefreshStatus: "Refresh progress",
+			fwRecordClear: "Dismiss this record",
+			fwRecordClearTitle: "Hides the record here; logs stay in ~/.dsh/plugin-console (fw-upgrade.log / fw-relaunch.log)",
+			fwRecordCleared: "Upgrade record dismissed",
+			fwPanelNoRecord: "No upgrade record yet (the last upgrade/rollback steps will always be shown here)",
+			fwPanelConfirmBody: "Upgrade to {v}? The script will back up config, pre-disable incompatible rows, stop the service, install the new version and relaunch it; if it fails to start it quarantines and retries first, and only then rolls back the whole tree.",
+			fwRollbackDone: "Already rolled back to {v} (this is the snapshot version; nothing earlier to restore)",
+			migrateTip: "Project migrated (adapted to the current framework)",
+			migrateBtn: "Migrate & adapt",
+			aiEmpowerFrameworkCheck: "Framework compat check",
+			userForcedTag: "Forced on by patch",
+			disabledByBundleTag: "Disabled by plugin default",
+			forcedNotLoadedTag: "Force-enable had no effect",
+			revokeForceLabel: "Revoke this force-enable",
+			revokeForceHint: "This disabled: false override did not make the plugin load; revoking it stops the false forced-on badge (the manifest is untouched)",
+			protectedTag: "Protected",
+			unobserved: "Not mounted",
+			pending: "Waiting for dependencies",
+			loadingPhase: "Loading",
+			active: "Mounted",
+			failed: "Mount failed",
+			unloading: "Unloading",
+			toggledOn: "Enable requested",
+			toggledOff: "Disable requested",
+			view: "Inspect",
+			install: "Add & enable",
+			installing: "Installing…",
+			marketLoading: "Searching GitHub…",
+			marketLoadingOther: "Searching {source}…",
+			directOther: "Searching {source} through the server channel (custom sources do not use browser-direct)",
+			marketError: "Search failed",
+			marketEmpty: "No matching projects.",
+			repoLoading: "Reading repository…",
+			repoError: "Failed to read repository",
+			packageName: "npm package",
+			dshHint: "Looks like a DSH plugin",
+			noPackage: "This repository has no package.json, cannot install",
+			privateRootHint: "Root package is not published to npm (private); cannot install directly",
+			subpackagesTitle: "Repository subpackages (installable individually)",
+			subpackagesLoading: "Reading subpackage list…",
+			subpackagesError: "Failed to read subpackages (retry later if the network is flaky)",
+			subpackagesEmpty: "No installable subpackages found.",
+			recentFailures: "Recent install failures",
+			installed: "Installed and enabled",
+			installedNotPersisted: "⚠ Installed but NOT persisted (it disappears on restart/reinstall)",
+			installedNotPersistedWarn: "Installed; manifest / lock are not fully aligned (this does NOT affect loading after a restart - pin it whenever convenient)",
+			installNote: "HMR is applying; refresh the page if the plugin ships UI",
+			bundleNote: "This package is a bundle-layer plugin (e.g. skin packs); restart the DSH service to activate it",
+			// ── install-diagnosis one-liners (2026-09-26, additive): the panel shows short sentences only;
+			// the long server-side explanations go to the title tooltip, never into the panel body ──
+			diagCardTitle: "Install diagnosis",
+			diagNotPersisted: "Not persisted: a gap remains in manifest / lock / mount row",
+			diagPersistDowngraded: "Not aligned (this does not affect loading after a restart)",
+			// separators live in the dictionary too: English uses half-width punctuation
+			diagColon: ": ",
+			diagSemi: "; ",
+			diagDot: ". ",
+			diagKindNetworkTimeout: "Network timeout: retry with a longer timeout",
+			diagKindAllowBuilds: "Build scripts not approved: your explicit approval is required, we never auto-edit the allowlist",
+			diagKindMinimumReleaseAge: "Version too new for the release-age gate: retry later",
+			diagKindMissingTool: "Missing local command (corepack/pnpm/git): install it, then retry",
+			diagKindNotFound: "Package or version not on the registry: check the name or switch source",
+			// 2026-09-27 additive: short lines for the three new kinds (fetch-404 / lockfile-outdated / supply-chain-age)
+			diagKindFetch404: "Dependency 404 on the registry: check name/version or switch source (your deps are never dropped)",
+			diagKindLockfileOutdated: "Lock file disagrees with the manifest: run the explicit check/rebuild in Upgrade safety",
+			diagKindSupplyChainAge: "Too new for the release-age gate: retry later (never auto-bypassed)",
+			diagKindLocked: "File in use or no permission: close the holder, then retry",
+			diagKindOther: "Unclassified failure: retry as-is; if it fails again read the raw output",
+			diagRetried: "Network timeout: auto-retried once (longer timeout)",
+			diagRetriedMark: "already retried once",
+			diagEntryFail: "Post-install check failed",
+			diagEntryReasonEntry: "entry file missing (the mirror may be incomplete)",
+			diagEntryReasonPatch: "a patch row points to another package",
+			diagEntryReasonBundle: "bundle file or a referenced package is missing",
+			diagEntryAdviceMirror: "Reinstall; if it fails again, switch source",
+			diagEntryAdvice: "Reinstall once",
+			diagIntegrityOk: "Verified {algo} digest",
+			diagIntegrityNone: "No digest from source; not verified",
+			diagIntegrityMismatch: "Digest mismatch (installed, not blocked)",
+			diagIntegritySkip: "Digest not verified (read failed; install unaffected)",
+			presetDot: ". Preset: see the note above (a declaration row is required for it to appear)",
+			presetInstalledMsg: "Presets installed",
+			diagChannelNotes: "Channel notes",
+			direct: "(The browser calls GitHub directly; the server channel is used as fallback.)",
+			details: "Details",
+					expandDesc: "Expand",
+			collapseDesc: "Collapse",
+			addLocal: "Add locally",
+			installingLocal: "Installing…",
+			needPackage: "This repository has no package.json, cannot add directly",
+			noDetail: "No description provided for this plugin.",
+			versionLabel: "Version",
+			repoLabel: "Repository",
+			homepageLabel: "Homepage",
+			readmeLabel: "Readme summary",
+			loadingDetails: "Reading details…",
+			githubLoggedIn: "GitHub signed in: ",
+                    hubUpdateAvailable: "Download update",
+                    cleanResiduals: "Clean residual backups",
+                    cleanFrameworkResiduals: "Clean framework residuals",
+                    cfStale: "{n} stale dirs",
+                    cfBackups: "{n} backups removable (~{mb} MB)",
+                    cfEntities: "{n} old store entities (report only)",
+                    cfConfirm: "Proceed? Stale dirs get renamed+relinked; framework backups beyond the keep count are deleted.",
+                    cfNothing: "nothing to clean",
+                    cfCancelled: "cancelled (nothing changed)",
+                    cfRunning: "cleaning…",
+                    cfDone: "renamed {renamed} / relinked {linked} / backups removed {removed} (~{mb} MB freed)",
+                    cfFailed: "{n} failed (see fw/console logs)",
+     compatNoticeDismiss: "Got it (hide for this version)",
+			githubCornerOut: "Not signed in to GitHub",
+			githubLoginViaApp: "GitHub login",
+			githubLoginOpened: "Authorization window opened — enter the code on the GitHub page to finish",
+			githubLoginUnavailable: "Window login unavailable",
+			githubLoginOrToken: "Or sign in with a token",
+			githubLoginTip: "Paste a GitHub token to sign in (fine-grained, needs the read:user scope). Signing in enables code search (search by subpackage name) and raises API rate limits; you can also sign in with the dsh-github-login plugin.",
+			githubTokenPlaceholder: "Paste token (ghp_… or github_pat_…)",
+			githubLoginBtn: "Sign in",
+			githubLoginOk: "Signed in to GitHub: {login}",
+			githubLoginFail: "Sign-in failed",
+					searchInstalledPlaceholder: "Search installed plugins (name / id / note)",
+			extraFilter: "Installed",
+			extraFilterAll: "All",
+			extraTag: "Third-party",
+			extraFilterTitle: "Toggle: installed (extra/third-party) / all",
+			extraEmpty: "No installed extra (non-bundled) plugins.",
+			noMatch: "No matching plugins.",
+			loadMore: "Load more",
+			loadingMore: "Loading…",
+			marketCount: "{total} found / {shown} shown",
+			marketCountKnown: "{shown} shown",
+			marketTruncated: "Results truncated — you can keep loading",
+			marketTruncatedEnd: "Results truncated — no more available",
+			backToSearch: "Back to search",
+			collapseResults: "Collapse results",
+			expandResults: "Expand results",
+			reloadPage: "Reload page",
+			refreshList: "Refresh plugin list",
+			stageLabel: "Stage",
+			stagePreparing: "Preparing",
+			stageInstalling: "Downloading & installing (safe to leave this page)",
+			stageConfiguring: "Writing enable config",
+			stageRepairing: "Local AI is taking over the install…",
+			restartService: "Restart service",
+			restartHostedNotice: "This instance is hosted by the desktop shell - restart it there by fully quitting and reopening DeepSeek Harness.",
+			restarting: "Handling the restart request…",
+			autoReload: "Page will auto-reload…",
+			aiRepaired: "Local AI took over and finished the repair; refresh the page",
+			deletePlugin: "Delete plugin (remove config and uninstall package)",
+			confirmDelete: "Confirm delete?",
+			deleting: "Deleting…",
+			deleteNote: "Plugin deleted and package uninstalled; refreshing",
+			deleteBundleNote: "Owning bundle removed; takes effect after service restart",
+			pendingRestartTag: "Installed · after restart",
+			pendingRestartHint: "The package is installed and will show up in the list above after a restart; deleting now revokes this install",
+			pendingRestartDelete: "Revoke this install (drop patch row, bundles entry and package dir)",
+			pendingRestartNote: "Install revoked (patch row, bundles entry and package dir cleaned)",
+			pendingRestartPartial: "Revoke incomplete — handle the leftovers manually as reported",
+			aiConsentText: "All regular install channels failed. Next, the local AI takes over the install, which calls a DeepSeek API model and may incur API costs. Continue?",
+			aiConsentNotifyTitle: "Plugin install needs approval",
+			aiConsentApprove: "Agree, continue (may incur costs)",
+			aiConsentDecline: "Cancel",
+			aiConsentCardTitle: "⚠ Approval needed: local AI fallback",
+			aiConsentCountdown: "Time left",
+			aiConsentTimeoutNote: "No choice within {min} minutes cancels it automatically (no cost at all)",
+			aiConsentLastError: "Last error from the deterministic channels",
+			aiConsentTopHint: "⚠ An install is waiting for your approval: every deterministic channel failed, and the local AI fallback (which calls the model API and may incur costs) needs your consent — choose Agree / Cancel in the install progress area",
+			progressSubpackage: "Installing subpackage {index}/{total}: {name}",
+			progressSuiteClone: "Cloning submodule {index}/{total}: {name}",
+			progressSuiteAssemble: "Assembling submodule {index}/{total}: {name}",
+			progressDone: "Completed ({total} total)",
+			aiFallbackLabel: "AI fallback",
+			aiEmpowerLabel: "AI Empower",
+			aiEmpowerTitle: "AI Empower: read docs, plan and deploy a component automatically; server-type components get start/stop buttons",
+			aiEmpowerSrcTitle: "Component to deploy (npm package or GitHub repo)",
+			aiEmpowerPlanTitle: "AI Empower deployment plan",
+			aiEmpowerType: "Type",
+			aiEmpowerTypeMapping: { "pure-plugin": "Pure plugin", "service": "Server component", "config-only": "Config only" },
+			aiEmpowerSteps: "Steps to execute (selectable)",
+			aiEmpowerRun: "Approve & deploy",
+			aiEmpowerNeedSteps: "Select at least one step; then click Approve & deploy to execute",
+			aiConfirmDeploy: "About to run {n} deployment step(s) for {name} (may install software / write config / start services). Approve and deploy?",
+			aiPlanHint: "⚠️ AI only drafts the plan — deployment needs your explicit consent: select steps → Approve & deploy → (second confirmation)",
+			aiWorkspaceInfo: "Research workspace",
+			aiEmpowerCancel: "Cancel",
+			aiEmpowerWaiting: "AI is analyzing the docs and drafting the plan (1-5 min, calls DeepSeek API, may incur costs)…",
+			aiEmpowerExecuting: "AI Empower executing…",
+			aiEmpowerDone: "AI Empower deployment finished",
+			aiEmpowerFail: "AI Empower failed",
+			aiEmpowerLogs: "Execution log",
+			aiEmpowerComponents: "Detected server components",
+			compStart: "Start",
+			compStop: "Stop",
+			compStatus: "Status",
+			compOpen: "Open",
+			compRunning: "Running",
+			compStopped: "Stopped",
+			compHealthy: "Healthy",
+			compUnhealthy: "Unhealthy",
+			compRefresh: "Refresh component status",
+			compDropTitle: "Expand to open all server URLs",
+			compNoUrl: "No URL yet",
+			compCollapseTitle: "Collapse server card",
+			compExpandTitle: "Expand server card",
+			toolbarLabel: "Feature pack",
+			toolbarOpenTitle: "Expand feature pack",
+			toolbarCloseTitle: "Collapse feature pack",
+			repoLandLabel: "Repo land",
+			repoLandTitle: "Repo land: clone any project to ~/.dsh/repos/ via git source \"{source}\" (not limited to DSH plugins)",
+			repoLandSourceUnknown: "the configured git source",
+			repoLandPlaceholder: "owner/repo or repo URL, e.g. deepseek-ai/deepseek-harness",
+			repoLandBusy: "Cloning… (large repos may take a while)",
+			repoLandDone: "Landed at: ",
+			repoLandOpenFolder: "Open folder",
+			repoOpenDone: "Requested to open: ",
+			repoOpenFailed: "Failed to open folder: ",
+			subpluginFound: "This repository has no manifest at its root, but the plugin lives in the subdirectory {dir}/ ({pkg}, markers: {markers}) — it is not \"not a plugin\", the manifest is just not at the repository root",
+			subpluginCopyDir: "Copy subdirectory path",
+			subpluginCopyName: "Copy package name",
+			// One-click install from a subdirectory (0.5.47): recognition must come with a way to install.
+			subpluginInstall: "Install from this subdirectory",
+			subpluginInstallHint: "Fetches the subdirectory source (sparse) into a local folder, then installs it through the existing local-directory source (link:). Manifest and source validation are the same as for any other install path, and finalization (manifest + lock + mount row) still applies",
+			// "Verify it is actually installed before reporting failure" (0.5.47): this line is primary when it is.
+			alreadyInstalled: "Already installed v{version} (no reinstall needed)",
+			alreadyInstalledNoVersion: "Already installed (no reinstall needed; version unreadable)",
+			installedBadge: "Installed",
+			alreadyInstalledWhere: "Found in: {where}",
+			whereDependencies: "manifest dependencies",
+			whereBundles: "dsh.profile.bundles",
+			whereNodeModules: "node_modules",
+			failureSecondary: "Earlier failure (secondary, for diagnosis only; an installed plugin needs no reinstall)",
+			failureSecondaryShow: "Show earlier failure",
+			failureSecondaryHide: "Hide earlier failure",
+			repoLandExists: "Already exists — nothing to clone",
+			repoLandDirLabel: "Save path",
+			repoLandSaveDir: "Save path",
+			repoLandList: "Landed repos",
+			repoLandRemoveConfirm: "Delete landed repo {repo} (local folder will be removed)?",
+			repoLandEntry: "Repo land",
+			repoLandLanded: "Landed",
+			aiProgressTitle: "AI Empower in progress — click to view",
+			compAutoTitle: "Autostart: launch this server automatically when DSH starts (off = manual)",
+			compActionDone: "{action}: {name}",
+			noComponents: "No server components yet (they appear after an AI Empower deployment)",
+			aiFallbackTitle: "When off: if regular channels fail, the install is cancelled directly without calling the model API (zero cost)",
+			// ★ additive: the [Self-update] switch in the feature-pack toolbar — updates the console itself only.
+			selfUpdateLabel: "Self-update",
+			selfUpdateAria: "Self-update: auto-update the console itself only (never other plugins); click to toggle",
+			selfUpdateCheckLabel: "Check now",
+			selfUpdateCheckHint: "Check for a new console version right now (self only; restart the service to apply)",
+			selfUpdateLastCheck: "Last checked",
+			selfUpdateLastResult: "Last result",
+			selfUpdateNever: "Never checked",
+			selfUpdateResultNever: "No check has run yet",
+			selfUpdateUpToDate: "Up to date",
+			selfUpdateUpdated: "Updated to {version} (takes effect after restarting the service)",
+			selfUpdateSkipped: "Skipped this round: {reason}",
+			selfUpdateFailed: "Failed: {reason}",
+			selfUpdateChecking: "Checking for a new console version…",
+			selfUpdateSaving: "Saving the switch…",
+			selfUpdateOn: "Self-update is on (updates the console itself only)",
+			selfUpdateOff: "Self-update is off (nothing is auto-updated anymore)",
+			aiFallbackOff: "AI fallback is disabled by your setting; this install was cancelled (zero cost)",
+			aiConsentRemember: "Don't ask again (auto-approve the AI fallback, may incur costs; restore reminders anytime at the very bottom of the market)",
+			aiRememberNote: "AI fallback auto-approved per your setting (restore reminders at the market bottom)",
+			aiRememberReset: "AI fallback reminders disabled (click to restore)",
+			consentWaiting: "Awaiting approval…",
+			dismissFailure: "Dismiss this notice",
+			sourcesBtn: "Sources",
+			sourcesTitle: "Software sources",
+			sourcesTimeout: "Timed out reading sources (the DSH service may be restarting or busy) — hit retry",
+			sourcesDesc: "Roles: ① registry = download npm packages (install); ② index sources = market list JSON; ③ git sources = clone repo code (when no npm package); ④ search sources = where to search — results are still downloaded via ①/③",
+			sourcePrimary: "Primary",
+			setPrimary: "Set primary",
+			registryScan: "Scan sources",
+			registryScanHint: "Probe each npm registry: reachability, latency, and the latest dsh-plugin-console version it serves (to pick the best primary)",
+			registryScanning: "Scanning…",
+			registryScanSummary: "Scan complete: {ok}/{total} reachable",
+			registryScanBest: "Newest {version} comes from: {name}",
+			registryScanNoVersion: "Package not on this registry",
+			registryScanFail: "unreachable",
+			setPrimaryHint: "Set primary: tried first, falls back to the others on failure",
+			editSourceHint: "Edit: change this source's name and URL",
+			removeSourceHint: "Remove: delete this source from the list (installed plugins unaffected)",
+			removeSource: "Remove",
+			sourceName: "Name",
+			sourceUrl: "URL (https://…)",
+			addSource: "Add",
+			resetSources: "Reset defaults",
+			closeModal: "Close",
+			invalidSourceUrl: "Source URL must start with https:// (or a private http:// address)",
+			editSource: "Edit",
+			saveSource: "Save",
+			cancelEdit: "Cancel",
+			searchSourcesTitle: "Search sources",
+			searchSourcesDesc: "Search platforms (switch via the pill). Custom sources use a URL template: {q}=keyword, {page}=page number",
+			addSearchSource: "Add search source",
+			indexSourcesTitle: "Index sources",
+			indexSourcesDesc: "Download URLs for the static market index (primary first, others retried in order). Point this at an intranet service — note the index CONTENT comes from that JSON, so host a merged public+private index there. To see both sides at once, turn on \"Merge all index sources\" below",
+			indexMergeLabel: "Merge all index sources",
+			indexMergeDesc: "On: results from all index sources are merged and de-duplicated (public index + company intranet private index visible together). Off: only one source is used, primary first (intranet-friendly, faster)",
+			addIndexSource: "Add index source",
+			indexUrlPlaceholder: "Index JSON URL (https:// or local/intranet http://)",
+			gitSourcesTitle: "Git sources",
+			archiveSourcesTitle: "Archive sources (HTTP tarball)",
+			archiveSourcesDesc: "Fallback transport when the git protocol cannot move data: download the repo tarball over plain HTTP, extract, and create a repo from it (measured: on the same mirror archive ran at 4 MB/s while git moved 0 B/s). Templates use {owner}/{repo}, optionally {branch}; primary first, falls back on failure.",
+			archiveUrlPlaceholder: "https://ghproxy.net/https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.tar.gz",
+			addArchiveSource: "Add archive source",
+			gitSourcesDesc: "URL template for cloning ({owner}/{repo} placeholders). This list IS the custom git-source list — the two built-ins are just defaults; click Add git source to swap in your own: Gitee = https://gitee.com/{owner}/{repo}.git; GitLab = https://gitlab.com/{owner}/{repo}.git; self-hosted Gitea = https://your-domain/{owner}/{repo}.git; mirror proxy = https://mirror/https://github.com/{owner}/{repo}.git; local bare repo = file:///C:/repos/{owner}/{repo}.git. Primary first, falls back on failure",
+			addGitSource: "Add Git source",
+			gitUrlPlaceholder: "e.g. https://gitee.com/{owner}/{repo}.git",
+			gitSourceBtn: "Git sources",
+			marketIndexOffline: "Offline data · cached {time} (index sources unreachable, showing last successful result)",
+			marketIndexStale: "Market index not loaded: search only covers live GitHub results (name/description/topics); curated entries and local fuzzy matching are unavailable",
+			marketIndexRetry: "Retry loading index",
+			searchLoginHint: "GitHub not signed in: code search is unavailable (searching by subpackage name needs sign-in); repository search still works",
+			marketIndexFrom: "Index source: {source}",
+			marketIndexFailed: "Failed to load market index",
+			unknown: "unknown",
+			searchUrlPlaceholder: "URL template (must contain {q})",
+			invalidSearchUrl: "Search URL template must contain the {q} placeholder",
+			headersPlaceholder: "Headers (optional): one per line, format Name: Value, e.g. Authorization: Bearer token",
+			giteeTitle: "Gitee login (optional)",
+			giteeDesc: "Gitee direct-repo mode needs no login; login only raises API rate limits (optional): ① Open gitee.com → Settings → Data management → Third-party apps (or go directly to https://gitee.com/oauth/applications/new); ② Create an app: any app name, homepage URL = http://127.0.0.1:{port} (any valid URL works), redirect/callback URL = http://127.0.0.1:{port}/plugin-console/gitee-oauth-callback, grant scope user_info, projects; ③ Fill Client ID / Client Secret below, click Save, then click Authorize Gitee",
+			giteeClientId: "Client ID",
+			giteeClientSecret: "Client Secret",
+			giteeSave: "Save",
+			giteeLoginBtn: "Authorize Gitee",
+			giteeLoggedIn: "Signed in to Gitee: ",
+			giteeClear: "Clear login",
+			giteeSetupHint: "Not signed in (optional) — direct mode needs no login; login raises rate limits",
+			giteeLoginPrompt: "Gitee login is optional: type a repo name owner/repo to search and install",
+			sourcesUpdated: "Sources updated",
+			sourceOf: "Source: ",
+			searchSourceTitle: "Click to switch search source (GitHub / Gitee / custom)",
+			installedAt: "Installed",
+			checkUpdate: "Check update",
+			checkingUpdate: "Checking…",
+			updateCheckFailed: "Check failed",
+			updateAvailable: "New version available",
+			upToDate: "Up to date",
+			updateNow: "Update",
+			depsOutdatedHint: "Updating this package also needs these subpackage versions (avoid mixed-version startup conflicts)",
+			update: "Update",
+			officialBadge: "Official",
+			aggregateBadge: "Aggregate",
+			officialTitle: "Installable via official dsh plugin add (dsh.bundle manifest)",
+			aggregateTitle: "Aggregate repo: root unpublished; subpackages are the plugins (view to install)",
+			officialOnlyToggle: "Official only",
+			officialChecking: "Identifying plugin types…",
+			elapsed: "Elapsed",
+			skillBadge: "Skill",
+			skillTitle: "Repo contains SKILL.md — installable as a skill into ~/.dsh/skills (scanned by dsh-skill-filesystem)",
+			skillTab: "Skills",
+			pluginsTab: "Plugins",
+			skillMarketEmpty: "Skill library is empty (auto-collected from agent-skills / claude-skills / dsh-skill topic repos)",
+			installSkill: "Install skill",
+			skillInstalledTag: "Installed",
+			skillInstalledMsg: "Skill installed",
+			skillInstallNote: "Skill copied to ~/.dsh/skills; if the current profile does not enable the dsh-skill-filesystem plugin the skill won't be discovered (enable it and restart)",
+			skillUninstallHint: "To remove a skill: delete the ~/.dsh/skills/<name> directory",
+			modeBtn: "Switch market mode: plugin market / skill market (skills install from SKILL.md repos into ~/.dsh/skills)",
+			skillsMode: "Skills",
+			pluginsMode: "Plugins",
+			skillsMarketTitle: "Skill market (GitHub)",
+			skillsMarketTitleOther: "Skill market ({source})",
+			skillsSearchPlaceholder: "Search skill repos (agent-skills / claude-skills / dsh-skill topics; empty = browse all)",
+			skillsNote: "Skill mode supports the GitHub source only; installing a skill = clone the SKILL.md repo into ~/.dsh/skills/<name>/, no patch, no restart",
+			skillsGithubOnly: "Skill search supports the GitHub source only (use plugin mode for other sources)",
+			installedSkillsTitle: "Installed skills",
+			skillDelete: "Remove skill",
+			skillDeleteConfirm: "Remove skill「{name}」?",
+			skillDeletedMsg: "Skill removed",
+			skillsEmpty: "Skill library is empty (auto-collected from agent-skills / claude-skills / dsh-skill topic repos)",
+			skillsEmptyHint: "This list only counts user skills (~/.dsh/skills); plugin-provided skills (e.g. openviking-memory) appear in the Skill Center, not here",
+			pluginSkillsTitle: "Plugin-provided skills",
+			pluginSkillTag: "Plugin",
+			pluginSkillsHint: "Provided by installed plugins, read-only; invoke by skill name (e.g. openviking-memory)",
+			skillSystemTag: "System",
+			skillSystemTitle: "System-owned skill (~/.dsh/skills/.system etc.), cannot be removed",
+			skillDisable: "Disable",
+			skillEnable: "Enable",
+			skillDisabledTag: "Disabled",
+			skillDisabledTitle: "Disabled: neither model nor user commands can invoke it (disable-model-invocation: true, re-enable anytime)",
+			skillToggledMsg: "Skill disabled",
+			skillEnabledMsg: "Skill enabled",
+			skillMetaLabel: "Skill summary",
+			skillNameLabel: "Skill name",
+			skillWhenToUseLabel: "When to use",
+			skillRepoNote: "Skill repo (SKILL.md), not an npm package",
+			skillTopicsLabel: "Source",
+			skillDetailInstalled: "Installed",
+			skillDetailDisabled: "Disabled",
+			skillDetailPath: "Location",
+			suiteBadge: "Suite",
+			suiteTitle: "Submodule aggregate suite: auto-assembles components (bundle plugins / plugins / skills / agent presets) following the repo's install.ps1 semantics without executing third-party scripts",
+			suiteInstall: "Install suite",
+			suiteInstalledMsg: "Suite installed",
+			suiteComponentType: "Component",
+			suiteComponentOk: "OK",
+			suiteComponentFail: "Failed",
+			suiteRepoNote: "Suite repo (submodule aggregate), not an npm package — see the official install command below",
+			officialInstallLabel: "Official install",
+			copyInstallCmd: "Copy",
+			copiedInstallCmd: "Install command copied — paste into your terminal to run it manually",
+			frameworkUpgradeNotice: "DSH framework upgrade detected: {from} → {to}. Pre-upgrade config backed up to {dir}; framework patch: {patch}. Check third-party plugin compatibility.",
+			frameworkPatchApplied: "reapplied",
+			frameworkPatchSkipped: "not needed",
+			frameworkUpgradeBtn: "Framework upgrade",
+			frameworkUpgradeTitle: "Framework upgrade: backup config → stop & restart DSH service → npm upgrade framework + official packages (auto rollback on failure) → relaunch and adapt",
+			frameworkUpgradeTarget: "Upgrade target",
+			frameworkUpgradePick: "Pick a version to upgrade to (every version newer than the current one, pre-releases included; latest = stable channel)",
+			frameworkUpgradeMore: "Show all available versions ({n})",
+			// Pre-upgrade contract preflight (2026-09-24 incident: v4 message-format change broke every runtime producer)
+			fwPreflightBtn: "Pre-upgrade preflight",
+			fwPreflightTitle: "Pre-upgrade contract preflight: fetch the target session-format contract (migration edges) and scan .agent-presets + installed plugins for legacy message sources; one click adapts with .bak-preflight-* backups",
+			fwPreflightRunning: "Preflighting…",
+			fwPreflightClean: "Preflight passed: no legacy producer shape that would fail format validation",
+			fwPreflightFound: "Preflight found {n} blockers to adapt ({m} advisories)",
+			fwPreflightContract: "Session-format contract: {summary}",
+			fwPreflightNoContract: "Contract unknown: {err} (degraded to built-in rules)",
+			fwPreflightPatch: "Adapt now (auto backup)",
+			fwPreflightApplyConfirm: "This will modify local files (each backed up as .bak-preflight-*). Continue?",
+			fwPreflightPatched: "Adapted {n} spot(s), backed up {b} file(s)",
+			fwPreflightRemaining: "{n} spot(s) still need manual work (preflight never auto-fixes those)",
+			fwPreflightNeedManual: "Needs manual work: {why}",
+			fwPreflightScanned: "Scanned {n} producer file(s) (presets + plugins)",
+			frameworkUpgradeFold: "Collapse version list",
+			frameworkUpgradeChannelStable: "stable",
+			frameworkUpgradeChannelPre: "pre-release",
+			frameworkUpgradeConfirm: "Confirm upgrade? (service will restart)",
+			frameworkUpgradeDone: "Framework upgrade flow executed",
+			frameworkUpgradeUpToDate: " (already latest)",
+			frameworkUpgradeCheckFailed: " (version check failed - cannot confirm update, check network and retry)",
+			frameworkUpToDate: "Framework up to date",
+			frameworkUpToDateTitle: "Current DSH framework is already the latest (upgrade via the official flow or wait for a new release)",
+			frameworkUseUpgrade: "deepseek-harness is the DSH framework itself, not a plugin; upgrade via the card's Framework Upgrade flow (shown when a new version exists)",
+			relaunchBtn: "Restart guidance",
+			frameworkRollbackBtn: "Rollback to previous",
+			frameworkRollbackTitle: "One-click rollback to the previous framework version (full tree), service relaunches automatically",
+			frameworkRollbackDone: "Rollback started: {from} -> restoring, service will briefly disconnect",
+			relaunchTitle: "Service may be down — click for the official restart path (the console never kills or spawns processes)",
+			relaunchDone: "Handled via the official path (the console never spawns a process)",
+			fwStepBackup: "Backup current config",
+			fwStepStop: "Stop service (page will disconnect)",
+			fwStepInstall: "Upgrade framework",
+			fwStepRollback: "Rollback on failure",
+			fwStepPkg: "Update official packages",
+			fwStepRelaunch: "Relaunch DSH service",
+			fwStepDone: "Upgrade complete",
+		};
+		//#endregion
+		const NS = "settings.pluginConsole";
+		const inject = ["slots", "locale"];
+		const PHASE_KEYS = { pending: "pending", loading: "loadingPhase", active: "active", failed: "failed", unloading: "unloading" };
+		const GITHUB_API = "https://api.github.com";
+		const GITHUB_RAW = "https://raw.githubusercontent.com";
+
+		// ★★ 市场搜索的**唯一**排序区（0.5.35）★★
+		// 用户定案：「所有的搜索链，都应该以名字相似为主排序，然后才往下按 star 走」。
+		// 这里是服务端 lib/server/domain/market-search.js 里同一标记块（// <<<market-rank:begin/end>>>）的
+		// **逐字移植**：本文件是单文件打包产物（window.__ModuleLoader__.load），不能 import，
+		// 所以两端共用一份**文本**，由 tests/test-market-rank-canonical.mjs 断言"去缩进后逐字相等"
+		// （改一边不改另一边 = 直接红灯）。排序语义只有这一份判据，任何搜索链都只许调它。
+		// <<<market-rank:begin>>>
+		/** 排序层级（越小越靠前）。Tier 0-6 与用户定案逐条对应；NOT_MATCHED 只是"没有名字/描述命中"。 */
+		const RANK_TIER = Object.freeze({
+		FULL_NAME_EXACT: 0,
+		NAME_EXACT: 1,
+		NAME_PREFIX: 2,
+		NAME_SUBSTRING: 3,
+		NAME_TOKENS: 4,
+		DESCRIPTION_OR_TOPICS: 5,
+		README: 6,
+		NOT_MATCHED: 7,
+		})
+
+		/** 归一化：小写 + 去掉尾部 `.git` / 首尾空白。所有判据都用它，避免大小写与 `.git` 差异漏判。 */
+		function normalizeSearchName(value) {
+		return String(value ?? '').trim().replace(/\.git$/iu, '').toLowerCase()
+		}
+
+		/** 查询词按分隔符切出的 token（≥2 字符，去重保序）——用于 Tier 4「token 全命中」判据。 */
+		function queryTokens(query) {
+		const q = normalizeSearchName(query)
+		if (q === '') return []
+		const out = []
+		for (const tk of q.split(/[\s\-_/.]+/u)) {
+		  if (tk.length >= 2 && !out.includes(tk)) out.push(tk)
+		}
+		return out
+		}
+
+		/** 条目的两个名字形态（都归一化）：`full` = owner/repo，`short` = 裸名（缺 name 时从 full 取尾段）。 */
+		function itemNameForms(item) {
+		const full = normalizeSearchName(item?.fullName ?? item?.full_name)
+		const short = normalizeSearchName(item?.name) || (full === '' ? '' : (full.split('/').pop() ?? ''))
+		return { full, short }
+		}
+
+		/** 名字里按分隔符切出的 token（小写）。`dsh-connection-card-host` → [dsh, connection, card, host]。 */
+		function nameTokens(name) {
+		return String(name ?? '').toLowerCase().split(/[\s\-_/.]+/u).filter(Boolean)
+		}
+
+		/** description / topics 是不是命中查询词（整词子串，大小写不敏感）。 */
+		function textHitsQuery(query, item) {
+		const q = normalizeSearchName(query)
+		if (q === '') return false
+		const desc = normalizeSearchName(item?.description)
+		if (desc !== '' && desc.includes(q)) return true
+		const topics = Array.isArray(item?.topics) ? item.topics : []
+		return topics.some((topic) => normalizeSearchName(topic).includes(q))
+		}
+
+		/** README 命中：优先看条目**自带**的 readme 文本；没有就认标记位（服务端 in:readme 重查补进来的条目）。
+		 *  标记位是"这条是从 README 检索面捞到的"的既成事实，不编造内容。 */
+		function readmeHitsQuery(query, item) {
+		const q = normalizeSearchName(query)
+		if (q === '') return false
+		const readme = normalizeSearchName(item?.readme)
+		if (readme !== '' && readme.includes(q)) return true
+		return item?.viaReadme === true
+		}
+
+		/** 名字相似度分层（唯一判据；越小越靠前）。owner/repo 查询只按 full_name 判 Tier 0，
+		 *  避免"同名不同 owner"被当成逐字命中（与用户"输入确切名字要排第一"的预期一致）。 */
+		function rankTier(query, item) {
+		const q = normalizeSearchName(query)
+		if (q === '') return RANK_TIER.NOT_MATCHED
+		const { full, short } = itemNameForms(item)
+		const tokens = queryTokens(query)
+		const hasOwner = q.includes('/')
+		const target = short !== '' ? short : full
+		if (full !== '' && full === q) return RANK_TIER.FULL_NAME_EXACT
+		if (!hasOwner && short !== '' && short === q) return RANK_TIER.NAME_EXACT
+		if (target !== '' && target.startsWith(q)) return RANK_TIER.NAME_PREFIX
+		if (target !== '' && target.includes(q)) return RANK_TIER.NAME_SUBSTRING
+		if (tokens.length > 0) {
+		  const owned = nameTokens(full !== '' ? full : short)
+		  if (tokens.every((tk) => owned.includes(tk))) return RANK_TIER.NAME_TOKENS
+		}
+		if (textHitsQuery(query, item)) return RANK_TIER.DESCRIPTION_OR_TOPICS
+		if (readmeHitsQuery(query, item)) return RANK_TIER.README
+		return RANK_TIER.NOT_MATCHED
+		}
+
+		/** 星数（缺省 0；非数字按 0 处理——索引/GitHub 都是外部数据，不能拿它当数字用）。 */
+		function starsOf(item) {
+		const n = item?.stars ?? item?.stargazers_count
+		return typeof n === 'number' && Number.isFinite(n) ? n : 0
+		}
+
+		/** 更新时间戳（毫秒）。缺省/非法一律 0（"没给时间"排最后；绝不编造"刚更新"）。 */
+		function updatedAtOf(item) {
+		const raw = item?.updatedAt ?? item?.updated_at
+		if (typeof raw === 'number' && Number.isFinite(raw)) return raw
+		if (typeof raw === 'string' && raw !== '') {
+		  const parsed = Date.parse(raw)
+		  if (Number.isFinite(parsed)) return parsed
+		}
+		return 0
+		}
+
+		/** 确定性兜底 tiebreaker：同层同星同时间时按 full_name 字典序（分页不抖动）。 */
+		function nameOf(item) {
+		return normalizeSearchName(item?.fullName ?? item?.full_name ?? item?.name)
+		}
+
+		/** 统一比较器：Tier 0-6 升序 → stars 降序 → updatedAt 降序 → full_name 升序。
+		 *  「名字相似为主、同层才比 star」的全部语义都在这一个函数里；所有搜索链只许调它。 */
+		function compareByRank(query) {
+		return (a, b) => {
+		  const ta = rankTier(query, a)
+		  const tb = rankTier(query, b)
+		  if (ta !== tb) return ta - tb
+		  const sa = starsOf(a)
+		  const sb = starsOf(b)
+		  if (sa !== sb) return sb - sa
+		  const ua = updatedAtOf(a)
+		  const ub = updatedAtOf(b)
+		  if (ua !== ub) return ub - ua
+		  const na = nameOf(a)
+		  const nb = nameOf(b)
+		  return na < nb ? -1 : (na > nb ? 1 : 0)
+		}
+		}
+
+		/** **唯一入口**：按用户定案排序（返回**新数组**；条目对象一个字段都不动 —— 只改顺序不改内容）。
+		 *  分页幂等的根本保证：同一数组同一 query 的排序结果逐位相同（比较器无随机、无时间依赖）。 */
+		function rankSearchResults(items, query) {
+		const list = Array.isArray(items) ? items.slice() : []
+		if (list.length < 2) return list
+		return list.sort(compareByRank(query))
+		}
+
+		/** 分层结果（UI 角标/说明与测试用）：[{ tier, items }] 只含**真的命中**（Tier 0-6）的层，层序固定。 */
+		function rankTiers(items, query) {
+		const buckets = new Map()
+		for (const item of Array.isArray(items) ? items : []) {
+		  const tier = rankTier(query, item)
+		  if (tier > RANK_TIER.README) continue
+		  if (!buckets.has(tier)) buckets.set(tier, [])
+		  buckets.get(tier).push(item)
+		}
+		return [...buckets.keys()].sort((a, b) => a - b).map((tier) => ({ tier, items: buckets.get(tier) }))
+		}
+
+		/**
+		 * 分页 + 截断口径（纯函数；GitHub search 的 `total_count` 与 `per_page` 都进这里）：
+		 *   · shown   本次实际显示的条目数
+		 *   · total   数据源报的**总命中数**（未知传 null → UI 只说"已显示 M 条"，绝不编造总数）
+		 *   · hasMore 还能不能往下翻（`page*perPage < total` **且没有翻过数据源硬上限**；总数为 null 时退化为"本页满页"）
+		 *   · truncated 结果被截断了（总数 > 本次已取到的范围）——UI 必须**明说**，不许让用户以为"就是没有"
+		 *   · reason  截断的**可读原因**（GitHub API 最多 1000 条 / 索引封顶 / 无 total 但满页）
+		 * 幂等：同一 (page, perPage, total) 永远同一结论。
+		 *
+		 * ★ 0.5.35 实测（真机 GitHub，2026-10-03）：`per_page=20&page=51`（第 1001 条起）不是"返回空"而是
+		 *   **HTTP 422 `Only the first 1000 search results are available`** —— 也就是说越过上限再翻页必然报错。
+		 *   所以 hasMore 在 `page*perPage >= min(total, cap)` 时必须为 false：按钮不给，用户就不会点出一个错误。
+		 *   它也在标记块**之内**：浏览器那一半用同一份口径算「加载更多」与「共 N 条」。
+		 */
+		function buildPageEnvelope({ shown = 0, total = null, page = 1, perPage = 20, cap = 1000, capReason = null } = {}) {
+		const n = Number.isFinite(shown) && shown > 0 ? shown : 0
+		const p = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1
+		const size = Number.isFinite(perPage) && perPage > 0 ? Math.floor(perPage) : 20
+		const known = typeof total === 'number' && Number.isFinite(total) && total >= 0 ? Math.floor(total) : null
+		const capValue = Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : Infinity
+		const fetched = p * size
+		// 数据源硬上限之内还能取到条数（GitHub search 只有前 1000 条；越过就是 422，不是空页）
+		const reachable = known === null ? Infinity : Math.min(known, capValue)
+		// hasMore 只由**总数与上限**决定（`shown > 0`）：本页返回 0 条就是到底了，不许再让用户点空按钮，
+		// 也不许让用户点到必然 422 的那一页。
+		const hasMore = known === null ? n >= size : (n > 0 && fetched < reachable)
+		// 截断分两种，都必须让用户看见（而不是以为"就是没有"）：
+		//   ① 数据源硬上限（GitHub search 只给前 1000 条）→ 这是**始终**成立的事实，与翻到第几页无关；
+		//   ② 本次只取到前 fetched 条（还有更多没取）→ 翻页可解。
+		const overCap = known !== null && known > cap
+		const truncated = overCap || (known === null ? n >= size : known > fetched)
+		let reason = null
+		if (overCap) reason = capReason !== null ? capReason : `数据源最多只返回前 ${cap} 条（命中 ${known} 条）`
+		else if (known === null && n >= size) reason = '数据源未返回总数（只能按每页满页判断还有更多）'
+		else if (known !== null && known > fetched) reason = `共 ${known} 条，本次只取到前 ${Math.min(fetched, known)} 条`
+		// 已经翻到/翻过硬上限：再说"可继续加载"就是骗人（GitHub 第 1001 条起是 422）
+		if (overCap && fetched >= cap) {
+		  reason = capReason !== null ? capReason : `数据源最多只返回前 ${cap} 条（命中 ${known} 条）：已翻到第 ${fetched} 条，无法再往下`
+		}
+		return { shown: n, total: known, page: p, perPage: size, hasMore, truncated, reason }
+		}
+		// <<<market-rank:end>>>
+
+		// ★★ 「更新候选」的**唯一**判据区（0.5.37）★★
+		// 真机缺陷（2026-10-03 用户实测）：卡片上已装 `@deepseek-ai/dsh-time-context` **0.2.0-rc.2**，
+		// 却提示「发现新版本 0.2.0-rc.2 → **0.1.1-rc.1**」并给出「更新」按钮 —— 按下去是**降级**。
+		// 根因就在本文件：普通插件行只判 `data.latest` 与 `entry.version` **字符串不相等**，没有大小比较；
+		// 镜像源 `registry.npmmirror.com` 的 `latest` 陈旧到低于已装版本时，"不相等"被当成"有新版"。
+		// 这里是服务端 lib/server/infra/semver.js 里同一标记块（// <<<update-pick:begin/end>>>）的
+		// **逐字移植**（本文件不能 import），两端共用一份**文本**，由 tests/test-update-version-pick.mjs
+		// 与 tests/test-architecture-guard.mjs ⑪ 断言"去缩进后逐字相等"（改一边不改另一边 = 直接红灯）。
+		// 语义只有这一份判据，任何"要不要提示更新"的地方都只许调它。
+		// <<<update-pick:begin>>>
+		/** 宽松解析（容忍 `v` 前缀与首尾空白）；不是三段数字的版本（''、'latest'、'1.2'）一律 null。 */
+		function updateParseVersion(value) {
+		  const text = String(value ?? '').trim().replace(/^v/u, '')
+		  const m = text.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u)
+		  if (!m) return null
+		  return { major: Number(m[1]), minor: Number(m[2]), patch: Number(m[3]), pre: m[4] ?? null }
+		}
+
+		/** 语义版本比较（含 prerelease 段；无 prerelease 段视为更高）。只在两份解析都成功时调用。 */
+		function updateCompareVersion(a, b) {
+		  if (a.major !== b.major) return a.major - b.major
+		  if (a.minor !== b.minor) return a.minor - b.minor
+		  if (a.patch !== b.patch) return a.patch - b.patch
+		  if (a.pre === null && b.pre === null) return 0
+		  if (a.pre === null) return 1
+		  if (b.pre === null) return -1
+		  const pa = a.pre.split('.')
+		  const pb = b.pre.split('.')
+		  const len = Math.max(pa.length, pb.length)
+		  for (let i = 0; i < len; i += 1) {
+		    const xa = pa[i]
+		    const xb = pb[i]
+		    if (xa === undefined) return -1
+		    if (xb === undefined) return 1
+		    const na = /^\d+$/u.test(xa)
+		    const nb = /^\d+$/u.test(xb)
+		    if (na && nb) { const d = Number(xa) - Number(xb); if (d !== 0) return d; continue }
+		    if (na) return -1
+		    if (nb) return 1
+		    const d = xa < xb ? -1 : xa > xb ? 1 : 0
+		    if (d !== 0) return d
+		  }
+		  return 0
+		}
+
+		/**
+		 * 「更新候选」的唯一判据：从 candidates 里挑出**严格高于 current** 的最高者，没有则 null。
+		 * 边界（全部钉死在 tests/test-update-version-pick.mjs）：相同版本 / 更低版本 / 任一无法解析 ⇒ null。
+		 * @param {string} current 已装版本
+		 * @param {Array<string|null|undefined>} candidates 候选（registry 的 latest / next / beta 等）
+		 * @returns {string|null}
+		 */
+		function pickNewerSemver(current, candidates) {
+		  const cur = updateParseVersion(current)
+		  if (cur === null) return null
+		  const list = Array.isArray(candidates) ? candidates : []
+		  let best = null
+		  let bestParsed = null
+		  for (const candidate of list) {
+		    const parsed = updateParseVersion(candidate)
+		    if (parsed === null) continue
+		    if (updateCompareVersion(parsed, cur) <= 0) continue
+		    if (bestParsed === null || updateCompareVersion(parsed, bestParsed) > 0) {
+		      best = String(candidate).trim().replace(/^v/u, '')
+		      bestParsed = parsed
+		    }
+		  }
+		  return best
+		}
+		// <<<update-pick:end>>>
+		const el = react.createElement;
+// ★ 0.5.93（issue #22 ② 收口）：徽章"放得下几个"的估算函数（BADGE_AREA_FALLBACK_PX / badgeChipWidthOf /
+//   fitBadgeChunks / fitBadgeList）**整段删除**。它们配合 ResizeObserver 撑起了"卡片上收成 +N"那套机制，
+//   而用户定稿的行为是：卡片上放不下就**不显示**（纯 CSS 截断、无任何提示），全部徽章去详情页看。
+//   留着这套估算只会有人再把它接回去（抖动正是这么来的）。
+// ★ 0.5.60：被跳过 bundle 的签名（包名+版本）。关掉提示时记下它；清单变了就重新出现。
+//   模块级 —— 上一版把辅助函数放子组件里、主面板误用，导致整块面板空白。
+function skippedSignature(skipped) {
+	try {
+		if (skipped === null || skipped === undefined || !Array.isArray(skipped.items)) return "0";
+		return skipped.items.map((x) => String(x.packageName) + "@" + String(x.version ?? "?")).join("|");
+	} catch { return "0"; }
+}
+// ★ 0.5.59：健康问题的**签名**（类别+条数）。关掉提示时记下它；签名一变说明问题变了，提示重新出现。
+//   刻意放在模块级（不放组件内）—— 上一版就是因为把辅助函数放在子组件里、主面板误用而整块空白。
+function healthSignature(health) {
+	try {
+		if (health === null || health === undefined || !Array.isArray(health.items)) return "0";
+		return health.items.map((x) => String(x.kind) + ":" + String(x.count)).join("|");
+	} catch { return "0"; }
+}
+		function moduleShortName(moduleName) {
+			return (moduleName.startsWith("@") ? moduleName.slice(moduleName.indexOf("/") + 1) : moduleName)
+				.replace(/^cordis:/, "").replace(/^cordis-plugin-/, "").replace(/^dsh-(?:host-|client-)?/, "");
+		}
+		/** 提取 README 标题与开篇摘要（与宿主端 summarizeReadme 同规则）。 */
+		function summarizeReadmeText(text) {
+			const lines = text.split(/\r?\n/u);
+			let title = "";
+			const intro = [];
+			for (const line of lines) {
+				const heading = line.match(/^(#{1,3})\s+(.+)$/u);
+				if (heading) {
+					if (title === "") { title = heading[2].trim(); continue; }
+					break;
+				}
+				if (title === "") continue;
+				const cleaned = line.replace(/!\[[^\]]*\]\([^)]*\)/gu, "")
+					.replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+					.replace(/[`*_~]/gu, "")
+					.trim();
+				if (cleaned) intro.push(cleaned);
+				if (intro.join(" ").length > 700) break;
+			}
+			return { title, summary: intro.join(" ").trim().slice(0, 900) };
+		}
+		function phaseLabel(phase, t) {
+			return phase === null ? t("unobserved") : t(PHASE_KEYS[phase]);
+		}
+		// 0.5.33 改错 ①-2：「已适配，立即解锁」按钮的门控判据 —— 必须与同一卡片正文用的是**同一个**判据。
+		// 现症：按钮只判 pendingCompat === true，不判 entry.adoptable → 正文按 adoptable 说"不适配"，
+		// 按钮按 pendingCompat 说"已适配"，自相矛盾；点下去 POST /adapt-unlock 必得 409（适配校验 fail），
+		// 补丁与行状态零变化 ⇒ 用户观感"点了没反应"。
+		// 现在只有**真的检测到已适配**（adoptable 是服务端 detectAdoptablePending 给出的对象）才出按钮；
+		// 其余情况不给这个承诺，原因照旧由正文那行（pendingCompatHint + checkNote）如实展示。
+		// 0.5.34 加法：`compatRescinded`（记录里的 fail 是旧判据的误报、已被当前判据撤回）同样给一键解锁入口 ——
+		// 这类行**没有版本变化**，旧判据要求"版本变化"会让用户被永久钉在「待适配」（真机 dshmarket 就是这样）。
+		// 判据本身没放宽：adoptable 仍是服务端算出来的对象（真 fail 的行根本拿不到它）。
+		function canAdaptUnlock(entry) {
+			return entry !== null && entry !== undefined
+				&& (entry.pendingCompat === true || entry.compatRescinded === true)
+				&& entry.adoptable !== null && entry.adoptable !== undefined
+				&& typeof entry.adoptable === "object";
+		}
+		async function call(path, body) {
+			const response = await fetch(path, body === undefined
+				? {}
+				: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+			let data = null;
+			try {
+				data = await response.json();
+			} catch {}
+			if (!response.ok || (data !== null && data.ok === false)) {
+				const error = new Error(data !== null && typeof data.error === "string" ? data.error : "HTTP " + response.status);
+				// 结构化错误码随错误对象带回（如适配门软禁的 compat-confirm → 前端要弹风险确认）
+				if (data !== null && data.details !== undefined) error.details = data.details;
+				throw error;
+			}
+			return data;
+		}
+		/** 执行「建议动作」：与 call() 的关键差别 ——**服务端把"动作失败"也当结果返回**
+		*  （`{ ok:false, partial:true, exitCode, reason, stderr }`），而 call() 的统一约定会把
+		*  `data.ok === false` 抛成一句没信息量的 "HTTP 200"（真机体验：失败原因看不见）。
+		*  所以这里直接读响应体，只把"协议级失败（HTTP != 2xx / 网络异常）"当错误抛。 */
+		async function callAction(payload) {
+			const response = await fetch("/plugin-console/run-suggested", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+			let data = null;
+			try { data = await response.json(); } catch {}
+			if (!response.ok) {
+				throw new Error(data !== null && typeof data.error === "string" && data.error !== "" ? data.error : "HTTP " + response.status);
+			}
+			return data ?? {};
+		}
+		/** 复制到剪贴板：抽成函数便于离线渲染测试断言；失败**绝不抛**（无权限/老浏览器时只是没复制上）。 */
+		function copyToClipboard(text) {
+			try { void navigator.clipboard.writeText(String(text)); return true } catch { return false }
+		}
+		/** 重启服务（按钮 / 工具项 / 自更新后共用）：服务端在「本实例由桌面端外壳托管」等场景会**拒绝**
+		*  并回结构化短句 —— 必须把它显示出来，否则按钮看起来是「点了没反应」（旧实现把错误吞掉了）。 */
+// ★ 0.5.92：本函数是模块级的，**不能用组件的 t()** —— 用了就抛 ReferenceError，
+//   点击直接异常、请求都发不出去（这正是"点了没反应"的真因）。文案用常量，永不抛。
+const RESTART_IN_PROGRESS_NOTE = "正在处理重启请求…";
+const RESTART_FAILED_NOTE = "重启请求失败";
+		function restartServiceViaServer(setMessage, options) {
+			const reload = (options ?? {}).reload !== false;
+			if (reload) setMessage(RESTART_IN_PROGRESS_NOTE);
+			call("/plugin-console/restart", {}).then(
+				(data) => {
+					// ★ 0.5.89：显示服务端那段说明（发生了什么、要不要等、等多久）
+					const note = data !== null && typeof data === "object" && typeof data.message === "string" && data.message !== ""
+						? data.message
+						: RESTART_IN_PROGRESS_NOTE;
+					setMessage(note);
+					if (reload) window.setTimeout(() => window.location.reload(), 12000);
+					else if (typeof options?.onDone === "function") options.onDone(data);
+				},
+				(error) => { setMessage(error !== null && typeof error.message === "string" && error.message !== "" ? error.message : RESTART_FAILED_NOTE); },
+			);
+		}
+		/** 超时类错误附上可操作提示（网络黑洞期的最常见表现）。 */
+		function friendlyGithubError(error) {
+			const msg = error !== null && typeof error.message === "string" ? error.message : String(error);
+			if (/超时|timeout|aborted|网络/iu.test(msg)) {
+				return new Error(msg + "（当前网络可能处于波动期：稍等一两分钟再试；或刷新页面，让浏览器直连通道重新工作）");
+			}
+			return error;
+		}
+		async function githubFetch(url) {
+			const response = await fetch(url, {
+				headers: { accept: "application/vnd.github+json" },
+				signal: AbortSignal.timeout(15000),
+			});
+			if (response.status === 403) throw new Error("GitHub 匿名接口限流已用尽，请稍后再试");
+			if (!response.ok) throw new Error("GitHub 请求失败 (HTTP " + response.status + ")");
+			return response.json();
+		}
+		/** 对路径中的每一段做百分号编码，保留 "/" 作为分隔符，防止特殊字符篡改目标 URL。 */
+		const encodePathSegments = (value) => String(value).split("/").map(encodeURIComponent).join("/");
+		/** raw 文件多通道竞速：官方直连 + 常见 gh 镜像，谁先成功用谁；非 GitHub 平台走对应 raw 地址。 */
+		const RAW_CANDIDATES = [
+			(repo, branch, file) => `${GITHUB_RAW}/${repo}/${branch}/${file}`,
+			(repo, branch, file) => `https://ghproxy.net/https://raw.githubusercontent.com/${repo}/${branch}/${file}`,
+			(repo, branch, file) => `https://ghfast.top/https://raw.githubusercontent.com/${repo}/${branch}/${file}`,
+			(repo, branch, file) => `https://mirror.ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/${file}`,
+		];
+		async function fetchRawText(repo, branch, file, source = "github") {
+			repo = encodePathSegments(repo);
+			branch = encodePathSegments(branch);
+			file = encodePathSegments(file);
+			if (source === "gitee") {
+				try {
+					const res = await fetch(`https://gitee.com/${repo}/raw/${branch}/${file}`, { signal: AbortSignal.timeout(15000) });
+					if (!res.ok) return null;
+					return await res.text();
+				} catch { return null; }
+			}
+			const attempts = RAW_CANDIDATES.map((build) => fetch(build(repo, branch, file), {
+				signal: AbortSignal.timeout(15000),
+			}).then((res) => {
+				if (!res.ok) throw new Error("HTTP " + res.status);
+				return res.text();
+			}));
+			try {
+				return await Promise.any(attempts);
+			} catch {
+				return null;
+			}
+		}
+		/** 浏览器直连 GitHub 搜索；失败抛错由调用方回退到服务端通道。
+		 *  ★ 0.5.35：结果顺序不再照 GitHub 的 `sort=stars` 直接用 —— 回到调用点过**唯一**排序函数
+		 *  （名字相似分层，同层才比 star）。`total` 一起带回来，供"共 N 条 / 还有更多"的口径。 */
+		async function searchFromGithub(q, page, all) {
+			const base = (q ?? "").trim() || "dsh-plugin";
+			const query = all ? base : (base + " topic:dsh-plugin");
+			const data = await githubFetch(`${GITHUB_API}/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=20&page=${Math.max(page || 1, 1)}`);
+			const items = (data.items ?? []).map((item) => ({
+				fullName: item.full_name,
+				description: item.description ?? "",
+				htmlUrl: item.html_url,
+				stars: item.stargazers_count ?? 0,
+				updatedAt: item.updated_at ?? "",
+				defaultBranch: item.default_branch ?? "main",
+				topics: item.topics ?? [],
+			}));
+			const total = typeof data.total_count === "number" ? data.total_count : null;
+			return { items, total };
+		}
+		/** 提取 SKILL.md frontmatter 摘要（name / description / whenToUse，与宿主端同规则）。 */
+		function summarizeSkillFrontmatter(text) {
+			const fm = text.startsWith("---") ? text.slice(3, text.indexOf("\n---", 3)) : "";
+			if (fm === "") return null;
+			const KEY_PATTERNS = {
+				name: /^name:\s*(.*)$/mu,
+				description: /^description:\s*(.*)$/mu,
+				whenToUse: /^whenToUse:\s*(.*)$/mu,
+			};
+			const pick = (key) => {
+				const m = fm.match(KEY_PATTERNS[key]);
+				if (!m) return "";
+				const first = m[1].trim();
+				if (first.startsWith("|")) {
+					// 多行块：取后续行直到下一个键或结束
+					const rest = fm.slice(m.index + m[0].length);
+					const lines = [];
+					for (const line of rest.split("\n")) {
+						if (/^[a-zA-Z][\w-]*\s*:/u.test(line)) break;
+						const v = line.trim();
+						if (v) lines.push(v);
+						if (lines.join(" ").length > 240) break;
+					}
+					return lines.join(" ").slice(0, 500);
+				}
+				return first.slice(0, 200);
+			};
+			const name = pick("name");
+			const description = pick("description");
+			const whenToUse = pick("whenToUse");
+			if (!name && !description && !whenToUse) return null;
+			return { name, description, whenToUse };
+		}
+		/** 浏览器直连读取仓库元数据 + package.json + README 摘要。
+		* 搜索结果自带描述/star/分支信息，seed 存在时跳过 api.github.com 请求
+		* （该接口在黑洞期会挂起很久，是"查看没反应"的根因）。 */
+		async function repoInfoFromGithub(repo, seed) {
+			let branch = "main";
+			let metaDescription = "";
+			let metaStars = 0;
+			if (seed && typeof seed.defaultBranch === "string" && seed.defaultBranch) {
+				branch = seed.defaultBranch;
+				metaDescription = seed.description ?? "";
+				metaStars = seed.stars ?? 0;
+			} else {
+				const meta = await githubFetch(`${GITHUB_API}/repos/${encodeURIComponent(repo)}`);
+				branch = meta.default_branch ?? "main";
+				metaDescription = meta.description ?? "";
+				metaStars = meta.stargazers_count ?? 0;
+			}
+			let pkg = null;
+			let readme = null;
+			let skill = null;
+			const pkgText = await fetchRawText(repo, branch, "package.json");
+			if (pkgText !== null) {
+				try { pkg = JSON.parse(pkgText); } catch {}
+			}
+			const readmeText = await fetchRawText(repo, branch, "README.md");
+			if (readmeText !== null) readme = summarizeReadmeText(readmeText);
+			const skillText = await fetchRawText(repo, branch, "SKILL.md");
+			if (skillText !== null) skill = summarizeSkillFrontmatter(skillText);
+			return {
+				repo,
+				defaultBranch: branch,
+				description: metaDescription,
+				stars: metaStars,
+				packageName: pkg !== null && typeof pkg.name === "string" ? pkg.name : null,
+				packageDescription: pkg !== null && typeof pkg.description === "string" ? pkg.description : null,
+				hasPackageJson: pkg !== null,
+				privateRoot: pkg !== null && pkg.private === true,
+				readme,
+				skill,
+				dshHint: pkg !== null && (
+					typeof pkg.name === "string" && /(^|-)dsh[-/]/u.test(pkg.name)
+					|| pkg.peerDependencies !== undefined && pkg.peerDependencies["@deepseek-ai/cordis"] !== undefined
+					|| Array.isArray(pkg.keywords) && pkg.keywords.includes("dsh-plugin")
+				),
+			};
+		}
+		/** 只取仓库的 npm 包名与 private 标记（跳过 README 与 api.github.com，供"添加到本地"快捷路径使用）。 */
+		async function fetchPackageName(repo, seedBranch, source = "github") {
+			const branch = typeof seedBranch === "string" && seedBranch ? seedBranch : "main";
+			const pkgText = await fetchRawText(repo, branch, "package.json", source);
+			if (pkgText !== null) {
+				try {
+					const pkg = JSON.parse(pkgText);
+					if (pkg && typeof pkg.name === "string") return { name: pkg.name, private: pkg.private === true };
+				} catch {}
+			}
+			return null;
+		}
+		/** 非 GitHub 平台仓库详情：seed 自带元数据，直接用平台 raw 读 package.json 与 README。 */
+		async function repoInfoFromPlatform(item) {
+			const source = item.source ?? "github";
+			const branch = item.defaultBranch ?? (source === "gitee" ? "master" : "main");
+			let pkg = null;
+			let readme = null;
+			let skill = null;
+			const pkgText = await fetchRawText(item.fullName, branch, "package.json", source);
+			if (pkgText !== null) {
+				try { pkg = JSON.parse(pkgText); } catch {}
+			}
+			const readmeText = await fetchRawText(item.fullName, branch, "README.md", source);
+			if (readmeText !== null) readme = summarizeReadmeText(readmeText);
+			const skillText = await fetchRawText(item.fullName, branch, "SKILL.md", source);
+			if (skillText !== null) skill = summarizeSkillFrontmatter(skillText);
+			return {
+				repo: item.fullName,
+				defaultBranch: branch,
+				description: item.description ?? "",
+				stars: item.stars ?? 0,
+				packageName: pkg !== null && typeof pkg.name === "string" ? pkg.name : null,
+				packageDescription: pkg !== null && typeof pkg.description === "string" ? pkg.description : null,
+				hasPackageJson: pkg !== null,
+				privateRoot: pkg !== null && pkg.private === true,
+				readme,
+				skill,
+				dshHint: pkg !== null && (
+					typeof pkg.name === "string" && /(^|-)dsh[-/]/u.test(pkg.name)
+					|| pkg.peerDependencies !== undefined && pkg.peerDependencies["@deepseek-ai/cordis"] !== undefined
+					|| Array.isArray(pkg.keywords) && pkg.keywords.includes("dsh-plugin")
+				),
+			};
+		}
+		/** monorepo 子包列表：git trees 递归列出 packages 目录下的 package.json，逐个取 npm 包名（上限 24 个）。 */
+		async function fetchSubpackages(repo, branch) {
+			const data = await githubFetch(`https://api.github.com/repos/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+			const paths = (data.tree ?? []).filter((node) => node.type === "blob" && /^(?:packages|examples|plugins|skills|apps|extensions|src|lib)\/[^/]+\/package\.json$/u.test(node.path)).map((node) => node.path);
+			if (paths.length === 0) return [];
+			const out = [];
+			for (const path of paths.slice(0, 24)) {
+				const text = await fetchRawText(repo, branch, path);
+				if (text === null) continue;
+				try {
+					const pkg = JSON.parse(text);
+					if (pkg && typeof pkg.name === "string") out.push({ dir: path.split("/")[1], path: path.split("/").slice(0, -1).join("/"), name: pkg.name });
+				} catch {}
+			}
+			return out;
+		}
+		/** 批量识别搜索结果：官方通道（根包 dsh.bundle）/ 聚合仓库（private+workspaces，子包才是插件）/ 普通项目。 */
+		/** 补标「官方 / 聚合」标记。每条要发网络请求（raw 多通道竞速），
+		* 因此限制并发（默认 6 条一批），避免打满浏览器连接数拖慢整页。 */
+		async function enrichOfficialBundle(items, concurrency = 6) {
+			const out = [];
+			for (let i = 0; i < items.length; i += concurrency) {
+				const batch = items.slice(i, i + concurrency);
+				const done = await Promise.all(batch.map(async (item) => {
+					let official = null;
+					let aggregate = false;
+					const pkgText = await fetchRawText(item.fullName, item.defaultBranch, "package.json", item.source ?? "github");
+					if (pkgText !== null) {
+						try {
+							const pkg = JSON.parse(pkgText);
+							if (typeof pkg.dsh?.bundle?.patch === "string") {
+								official = true;
+							} else if (pkg.private === true && (Array.isArray(pkg.workspaces) || /(^|-)dsh[-/]/u.test(String(pkg.name ?? "")))) {
+								aggregate = true;
+							}
+						} catch {}
+					}
+					return { ...item, official, aggregate };
+				}));
+				out.push(...done);
+			}
+			return out;
+		}
+		/** 源地址校验（与宿主端一致）：https 任意；http 仅限本机/私网（内网源常用 http）。 */
+		function isAllowedSourceUrl(url) {
+			if (/^https:\/\/\S+$/u.test(url)) return true;
+			if (!/^http:\/\/\S+$/u.test(url)) return false;
+			try {
+				const host = new URL(url).hostname.toLowerCase();
+				if (host === "localhost" || host === "::1" || host === "[::1]") return true;
+				if (/^127\.\d+\.\d+\.\d+$/u.test(host)) return true;
+				if (/^10\.\d+\.\d+\.\d+$/u.test(host)) return true;
+				if (/^192\.168\.\d+\.\d+$/u.test(host)) return true;
+				if (/^169\.254\.\d+\.\d+$/u.test(host)) return true;
+				const m = host.match(/^172\.(\d+)\.\d+\.\d+$/u);
+				if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+				if (/^[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){2,7}$/iu.test(host)) return true;
+				return false;
+			} catch {
+				return false;
+			}
+		}
+		// ★★ 0.5.87 加法：宿主**真的**有没有系统目录对话框？★★
+		// 判据只有一条、且必须是**正面证据**：桌面端外壳通过 contextBridge 注入的
+		//   `window.__DSH_DIRECTORY_PICKER__.pick()`（Electron 主进程 dialog.showOpenDialog）。
+		// 为什么不能"先摆一个按钮、点了再说"：用户 2026-10-18 的话是「点了没反应」算缺陷 ——
+		//   web 端（浏览器直接打开控制台）没有这个桥，那种按钮点下去只会抛个没意义的错。
+		// 所以：有桥才渲染「浏览…」，没有就**不渲染**（不是灰掉，是根本不出现）。
+		// 放在模块级（不放组件里）：与 skippedSignature / healthSignature 同一条纪律 ——
+		//   主面板不许依赖"只属于某个子组件"的局部东西。
+		let directoryPicker = null;
+		function detectDirectoryPicker() {
+			try {
+				const bridge = typeof globalThis === "undefined" ? null : globalThis.__DSH_DIRECTORY_PICKER__;
+				if (bridge !== null && typeof bridge === "object" && typeof bridge.pick === "function") return () => bridge.pick();
+			} catch {}
+			return null;
+		}
+		/** 目标目录的修改时间：ISO → 本地可读。解析不了就原样回显 —— 绝不编造一个时间。 */
+		function formatMtimeText(iso) {
+			try {
+				const when = new Date(String(iso));
+				if (Number.isNaN(when.getTime())) return String(iso);
+				return when.toLocaleString();
+			} catch { return String(iso); }
+		}
+		/** 从下拉里选了一个开发区 → 补成"待续写"的草稿路径。
+		 *  为什么：**根本身不能当钉住目标**（服务端刻意不允许，领域判据没放宽），
+		 *  所以直接塞根本身会让人点了必被拒。补上分隔符，接着写根里的那个插件目录即可。
+		 *  分隔符按路径自身风格推断（Windows 的 `\` / 其它 `/`）—— 不猜平台，只看字符串。 */
+		function devRootDraft(root) {
+			const text = String(root ?? "");
+			if (text === "") return "";
+			if (/[\\/]$/u.test(text)) return text;
+			return text + (text.includes("\\") ? "\\" : "/");
+		}
+		// ── [自更新] 开关的四个**纯函数**（用户 2026-11-04 第 2 项，加法）──────────────────────
+		//  为什么拆成纯函数：面板里那段渲染一旦写错，只有开浏览器才看得见（本仓为此吃过"整块空白"的亏）。
+		//  这四件都只吃 `/state` 下发的 `selfAutoUpdate`（+ 字典），**不写盘、不发请求、不编造**：
+		//    · 字段缺失（老服务端 / 还没刷新）⇒ 按**默认开启**显示，但**绝不**因此写回服务端；
+		//    · 上次检查 / 上次结果拿不到 ⇒ 一律显示「—」，有结果才照服务端原话念。
+		function selfAutoUpdateEnabledOf(info) {
+			if (info === null || info === undefined) return true; // 默认开启；**不**写回
+			return info.enabled !== false;
+		}
+		function selfAutoUpdateLastCheckOf(info, neverText) {
+			if (info === null || info === undefined) return "—"; // 拿不到就是「—」，不编造一个时间
+			const at = Number(info.lastCheckAt);
+			if (!Number.isFinite(at) || at <= 0) return neverText;
+			try { return new Date(at).toLocaleString(); } catch { return "—"; }
+		}
+		function selfAutoUpdateLastResultOf(info, t) {
+			if (info === null || info === undefined) return "—";
+			return selfUpdateOutcomeText(info.lastResult, t);
+		}
+		/** 「一次检查的结果」→ 一句话（`checkAndUpdate` 的结构与 `lastResult` 同形，两处共用这一份）。 */
+		function selfUpdateOutcomeText(outcome, t) {
+			if (outcome === null || outcome === undefined || typeof outcome !== "object") return t("selfUpdateResultNever");
+			if (outcome.updated === true) return t("selfUpdateUpdated").replace("{version}", String(outcome.to ?? outcome.version ?? "?"));
+			if (outcome.skipped === "up-to-date") return t("selfUpdateUpToDate");
+			if (outcome.ok === false) return t("selfUpdateFailed").replace("{reason}", String(outcome.reason ?? ""));
+			if (typeof outcome.skipped === "string" && outcome.skipped !== "") return t("selfUpdateSkipped").replace("{reason}", String(outcome.reason ?? outcome.skipped));
+			return t("selfUpdateUpToDate");
+		}
+		function PluginConsoleTab({ t, section = null }) {
+			const [state, setState] = react.useState({ status: "loading" });
+			// ★ 0.5.59：健康摘要**可关掉**（用户 2026-10-17「这个提示可以关掉」）。
+			//   关掉后不再打扰，但记的是**问题签名**（类别+条数）：问题一变就重新出现 ——
+			//   不能因为"关过一次"就让人永久错过新出现的问题。
+			const [healthClosed, setHealthClosed] = react.useState(() => {
+				try { return localStorage.getItem("pc-health-closed") ?? ""; } catch { return ""; }
+			});
+			// ★ 0.5.60：被跳过 bundle 的提示也可以关掉（用户 2026-10-18「不是说这个可以关闭吗」）。
+			//   同样记"签名"（包名+版本），清单变了会重新出现 —— 关掉不等于永远看不见。
+			const [skippedClosed, setSkippedClosed] = react.useState(() => {
+				try { return localStorage.getItem("pc-skipped-closed") ?? ""; } catch { return ""; }
+			});
+			const [busy, setBusy] = react.useState(null);
+			const [adaptUnlocking, setAdaptUnlocking] = react.useState(null);
+			// 待适配行「强行启用」的风险确认态：{ entryId, moduleName, frameworkVersion, checkNote } | null
+			const [riskyConfirm, setRiskyConfirm] = react.useState(null);
+			const [message, setMessage] = react.useState(null);
+			const [reloadHint, setReloadHint] = react.useState(false);
+			const [restartHint, setRestartHint] = react.useState(false);
+			const [jobs, setJobs] = react.useState({});
+			const [familyCollapsed, setFamilyCollapsed] = react.useState({});
+			const [familyCheck, setFamilyCheck] = react.useState({});
+			const [query, setQuery] = react.useState(() => {
+				try { return localStorage.getItem("pc-market-query") ?? ""; } catch { return ""; }
+			});
+			const [market, setMarket] = react.useState(null);
+			const [marketPage, setMarketPage] = react.useState(1);
+			const [loadingMore, setLoadingMore] = react.useState(false);
+			const [repoInfo, setRepoInfo] = react.useState(null);
+			const [subpackages, setSubpackages] = react.useState(null);
+			const [installing, setInstalling] = react.useState(null);
+			// ★ 0.5.70（用户 2026-10-18）：**按目标并行**的在飞集合。installing 只留作展示，
+			//   真正的并发闸门是 inFlight —— 同一目标才拦，不同插件可同时更新。
+			const [inFlight, setInFlight] = react.useState(() => new Set());
+			const markInFlight = (key) => { if (typeof key === "string" && key !== "") setInFlight((prev) => { const n = new Set(prev); n.add(key); return n; }); };
+			const clearInFlight = (key) => { if (typeof key === "string" && key !== "") setInFlight((prev) => { const n = new Set(prev); n.delete(key); return n; }); };
+			const [details, setDetails] = react.useState(null);
+			// 已安装插件"检测更新"：null=未检测 / {status:'checking'} / {status:'ready', latest, error}
+			const [updateCheck, setUpdateCheck] = react.useState(null);
+			// 静态插件索引（dsh-plugin topic 全量浏览）：null=未加载 / {items, skills, loaded}
+			const [indexData, setIndexData] = react.useState(null);
+			// 索引加载失败原因：null = 还没失败过（用于市场页顶部"索引未加载 + 重试"提示）
+			const [indexError, setIndexError] = react.useState(null);
+			// 索引浏览当前展示条数（分页展示，避免一次渲染 500 条）
+			const [indexShown, setIndexShown] = react.useState(50);
+			// 已补标（官方/聚合标记）到的索引位置：随「加载更多」增量推进，避免一次性发上千请求
+			const [enrichedUpTo, setEnrichedUpTo] = react.useState(0);
+			/** 合并一条补标结果（不动已有标记，避免 null 覆盖）。 */
+			function mergeEnrichMark(e, b) {
+				return {
+					...e,
+					official: e.official !== null ? e.official : (b?.official ?? null),
+					aggregate: e.aggregate === true || b?.aggregate === true,
+					aggregateInstallable: b?.aggregateInstallable === true,
+					hasSkill: e.hasSkill === true || b?.hasSkill === true,
+					hasSuite: e.hasSuite === true || b?.hasSuite === true,
+				};
+			}
+			/** 服务端 /enrich 兜底：并发限流 12 + 24h 缓存，补齐客户端直连失败/遗漏的标记
+			*  （每次最多 30 条，按需分批；结果按位置合并回索引与当前展示切片）。 */
+			function enrichRangeServer(from, slice) {
+				const BATCH = 30;
+				for (let i = 0; i < slice.length; i += BATCH) {
+					const batch = slice.slice(i, i + BATCH);
+					const start = from + i;
+					call("/plugin-console/enrich", { items: batch }).then(
+						(r) => {
+							if (r === null || !Array.isArray(r.items)) return;
+							const got = r.items;
+							setIndexData((prev) => {
+								if (prev === null || prev.loaded !== true) return prev;
+								const items = [...prev.items];
+								got.forEach((e, k) => {
+									const idx = start + k;
+									if (idx < items.length) items[idx] = mergeEnrichMark(e, items[idx]);
+								});
+								return { ...prev, items };
+							});
+							setMarket((prev) => {
+								if (prev === null || prev.status !== "ready" || prev.fromIndex !== true) return prev;
+								return {
+									...prev,
+									data: prev.data.map((it) => {
+										const hit = got.find((e) => e.fullName === it.fullName);
+										return hit ? mergeEnrichMark(hit, it) : it;
+									}),
+								};
+							});
+						},
+						() => {},
+					);
+				}
+			}
+			/** 增量补标索引区间 [from, to)：首屏先补前 50 条，之后随「加载更多」继续往下补。 */
+			function enrichRange(from, to, list) {
+				const slice = (list ?? []).slice(from, to);
+				if (slice.length === 0) return;
+				enrichOfficialBundle(slice).then((enriched) => {
+					if (!Array.isArray(enriched)) return;
+					setIndexData((prev) => {
+						if (prev === null || prev.loaded !== true) return prev;
+						const items = [...prev.items];
+						enriched.forEach((e, i) => {
+							const idx = from + i;
+							if (idx < items.length) items[idx] = mergeEnrichMark(e, items[idx]);
+						});
+						return { ...prev, items };
+					});
+					// 同步刷新当前展示的切片（引用变化才会重渲染）
+					setMarket((prev) => {
+						if (prev === null || prev.status !== "ready" || prev.fromIndex !== true) return prev;
+						return {
+							...prev,
+							data: prev.data.map((it) => {
+								const hit = enriched.find((e) => e.fullName === it.fullName);
+								return hit ? mergeEnrichMark(hit, it) : it;
+							}),
+						};
+					});
+					setEnrichedUpTo((prev) => Math.max(prev, to));
+				});
+				// ② 服务端 /enrich 兜底：延后 1.5 秒执行（不抢首屏带宽），走 24h 缓存 + 并发限流通道
+				if (typeof window.setTimeout === "function") {
+					window.setTimeout(() => enrichRangeServer(from, slice), 1500);
+				}
+			}
+			// 市场总模式：'plugins' = 插件市场 / 'skills' = 技能市场（localStorage 持久化）
+			const [mode, setMode] = react.useState(() => {
+				try { return localStorage.getItem("pc-market-mode") === "skills" ? "skills" : "plugins"; } catch { return "plugins"; }
+			});
+			// 已安装技能清单（~/.dsh/skills），[{name, dir|file}]，用于技能条目「已装」标记与已安装区展示
+			const [installedSkills, setInstalledSkills] = react.useState([]);
+			const [pluginSkills, setPluginSkills] = react.useState([]);
+			// 原始页面标题（AI 授权标题闪烁后恢复用）
+			const originalTitleRef = react.useRef("");
+			// 技能删除两步确认：存待确认技能名
+			const [confirmSkillDelete, setConfirmSkillDelete] = react.useState(null);
+			// 技能停用/启用进行中
+			const [togglingSkill, setTogglingSkill] = react.useState(null);
+			// 套装安装报告：{ jobId: [{component, type, ok, note}] }
+			const [suiteReports, setSuiteReports] = react.useState({});
+			// 框架升级提示已关闭（本次会话内）
+			const [frameworkNoticeDismissed, setFrameworkNoticeDismissed] = react.useState(false);
+			// 进度条已关闭
+			const [fwStatusDismissed, setFwStatusDismissed] = react.useState(false);
+			// 框架升级：两步确认 + 执行中
+			const [confirmFrameworkUpgrade, setConfirmFrameworkUpgrade] = react.useState(false);
+			const [frameworkUpgrading, setFrameworkUpgrading] = react.useState(false);
+			// 框架升级进度（重连后恢复显示）：{status, message}
+			const [frameworkStatus, setFrameworkStatus] = react.useState(null);
+			// Hub 自身更新：仅在检测到远程新版时显示下载/更新按钮
+			const [selfUpdate, setSelfUpdate] = react.useState(null);
+			// 进度条步骤（与 host 脚本 SetState 的阶段对应）
+			const FW_STEPS = [
+				{ key: "starting", label: t("fwStepBackup") },
+				{ key: "stopped", label: t("fwStepStop") },
+				{ key: "installing", label: t("fwStepInstall") },
+				{ key: "rollback", label: t("fwStepRollback") },
+				{ key: "pkg", label: t("fwStepPkg") },
+				{ key: "relaunching", label: t("fwStepRelaunch") },
+				{ key: "done", label: t("fwStepDone") },
+			];
+			// 升级进度轮询：页面断开后请求失败自动停止；重连后由挂载恢复逻辑继续
+			const fwStatusTimerRef = react.useRef(null);
+			const pollFrameworkStatus = () => {
+				if (fwStatusTimerRef.current) return;
+				fwStatusTimerRef.current = window.setInterval(() => {
+					call("/plugin-console/framework-upgrade-status").then(
+						(data) => {
+							if (data && typeof data.status === "string") {
+								setFrameworkStatus(data);
+								if (data.status === "done" || data.status === "failed") {
+									window.clearInterval(fwStatusTimerRef.current);
+									fwStatusTimerRef.current = null;
+								}
+							}
+						},
+						() => {}, // 服务断开：轮询失败静默（重连后由挂载逻辑恢复）
+					);
+				}, 3000);
+			};
+			// 功能包 → [框架] 常驻面板（用户要求：卡片被关掉后就找不回来了，框架升级/回滚要常驻可入口）
+			const [fwPanelOpen, setFwPanelOpen] = react.useState(false);
+			const [fwCheck, setFwCheck] = react.useState(null);
+			const [fwCheckBusy, setFwCheckBusy] = react.useState(false);
+			const [fwConfirmPanel, setFwConfirmPanel] = react.useState(false);
+			// 可选升级版本列表（用户 2026-09-23 要求）：默认收起；选中项优先用户选择 → latest → 原 target
+			const [fwPicking, setFwPicking] = react.useState(false);
+			const [fwPickAll, setFwPickAll] = react.useState(false);
+			const [fwSelectedVersion, setFwSelectedVersion] = react.useState(null);
+			const fwVersions = Array.isArray(fwCheck && fwCheck.versions) ? fwCheck.versions : [];
+			const fwSelected = fwSelectedVersion !== null && fwVersions.some((v) => v.version === fwSelectedVersion)
+				? fwSelectedVersion
+				: (fwCheck && fwCheck.tagDefault) || (fwCheck && fwCheck.target) || (fwVersions[0] ? fwVersions[0].version : null);
+			const fwChannelLabel = (v) => (v && v.isLatest === true ? t("frameworkUpgradeChannelStable") + " · latest" : (v && typeof v.channel === "string" && v.channel !== "" ? t("frameworkUpgradeChannelPre") + " · " + v.channel : t("frameworkUpgradeChannelPre")));
+			// 升级前契约预检（Step 1+2）：report=只读预检结论，patch=一键适配结果；两者分开放，
+			// 免得把「扫描结论」和「已经改过什么」混成一团（用户要能分辨「该不该升级」与「改了什么」）
+			const [fwPreflightBusy, setFwPreflightBusy] = react.useState(false);
+			const [fwPreflight, setFwPreflight] = react.useState(null);
+			// 面板里的状态刷新：**无视**「终态已关闭」标记——卡片可以被永久关掉，面板必须永远能查到真相
+			// 2026-09-25 用户要求：升级记录常驻是设计，但必须能一键关掉（否则每次打开都看到上次那条吓人的失败）
+			const [fwClearing, setFwClearing] = react.useState(false);
+			const clearFrameworkRecord = () => {
+				if (fwClearing) return;
+				setFwClearing(true);
+				call("/plugin-console/framework-status-clear", {}).then(
+					() => { setFrameworkStatus({ status: "idle", message: null }); setFwStatusDismissed(true); setMessage(t("fwRecordCleared")); },
+					(error) => { setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message); },
+				).finally(() => setFwClearing(false));
+			};
+			const fwStatusRefresh = () => {
+				call("/plugin-console/framework-upgrade-status").then(
+					(data) => {
+						if (data && typeof data.status === "string") {
+							setFrameworkStatus(data);
+							if (data.status !== "done" && data.status !== "failed") pollFrameworkStatus();
+						}
+					},
+					() => {},
+				);
+			};
+			const fwCheckRefresh = (refresh) => {
+				setFwCheckBusy(true);
+				call("/plugin-console/framework-check", refresh === true ? { refresh: true } : {}).then(
+					(data) => { setFwCheckBusy(false); if (data && data.ok === true) setFwCheck(data); },
+					(error) => { setFwCheckBusy(false); setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message); },
+				);
+			};
+			// 升级前契约预检：先只读预检（抓目标版本会话格式契约 + 扫本地生产方），
+			// 再按需一键适配（服务端逐文件备份 .bak-preflight-*，名单外文件一律拒绝写入）。
+			// 为什么必须独立于「框架升级」按钮：包级适配门看不到运行期契约破坏（2026-09-24 事故）。
+			const fwPreflightRun = (apply) => {
+				const targetVersion = fwSelected ?? fwCheck?.target ?? null;
+				if (apply === true && !window.confirm(t("fwPreflightApplyConfirm"))) return;
+				setFwPreflightBusy(true);
+				const path = apply === true ? "/plugin-console/framework-preflight-patch" : "/plugin-console/framework-preflight";
+				const payload = apply === true ? { targetVersion, mode: "apply" } : { targetVersion };
+				call(path, payload).then(
+					(data) => {
+						setFwPreflightBusy(false);
+						setFwPreflight((prev) => (apply === true ? { report: (prev && prev.report) ?? null, patch: data } : { report: data, patch: null }));
+					},
+					(error) => { setFwPreflightBusy(false); setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message); },
+				);
+			};
+			const fwShortPath = (p) => String(p ?? "").replace(/\\/gu, "/").split("/").slice(-3).join("/");
+			const doFrameworkRollback = () => {
+				setFrameworkUpgrading(true);
+				call("/plugin-console/framework-rollback", {}).then(
+					(data) => {
+						setFrameworkUpgrading(false);
+						setMessage(t("frameworkRollbackDone").replace("{from}", String(data?.from ?? "?")));
+						setFrameworkStatus({ status: "rollback", message: t("frameworkRollbackDone").replace("{from}", String(data?.from ?? "?")) });
+						pollFrameworkStatus();
+					},
+					(error) => { setFrameworkUpgrading(false); setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message); },
+				);
+			};
+			// 回滚按钮可用性：已经处在「回滚目标版本」时不再提供回滚（点了等于恢复现状）。
+			// v0.3.41：客户端**自己算**一遍，不只信服务端的 applicable ——
+			// 服务端 0.3.38 还没这个字段时（用户实测「明明版本对了回滚还亮着」），
+			// 只要 /state 里已有 framework.version 与 rollback.from 就能判定，刷新页面即生效。
+			const rollbackInfo = state.status === "ready" ? state.data.rollback : null;
+			const curFwVersion = state.status === "ready" && typeof state.data.framework?.version === "string" ? state.data.framework.version : null;
+			// ★ 0.5.53 加法（真机 2026-10-15）：本实例是否由**桌面端外壳托管**。
+			//   升级/回滚两条通道在外壳托管时会被服务端**拒绝**（409 + 那句"请在桌面端内重启/更新"），
+			//   而面板过去照旧显示可点的「回滚到上一版」⇒ 点下去必然失败。
+			//   现在按同一份事实（/state 的 host 字段）禁用并说明原因，而不是让人撞墙。
+			const hostedByShell = state.status === "ready" && state.data.host?.hosted === true;
+			const hostedNotice = hostedByShell ? (state.data.host?.notice ?? null) : null;
+			const rollbackUsable = rollbackInfo !== null && rollbackInfo !== undefined
+				&& rollbackInfo.applicable !== false
+				&& hostedByShell !== true
+				&& !(curFwVersion !== null && rollbackInfo.from !== null && rollbackInfo.from !== undefined && curFwVersion === rollbackInfo.from);
+			// 升级步骤视图（卡片与常驻面板共用；失败时按 stage 标已完成步骤，不整列红叉）
+			const fwStepsView = (st) => {
+				const cur = FW_STEPS.findIndex((s) => s.key === st.status);
+				const failedStage = st.status === "failed"
+					? (st.stage ?? (st.frameworkAtTarget ? "relaunching" : null))
+					: null;
+				const stageIdx = failedStage ? FW_STEPS.findIndex((s) => s.key === failedStage) : -1;
+				return el("ul", { className: styles.market }, FW_STEPS.map((step, idx) => {
+					const state2 = st.status === "done"
+						? "ok"
+						: st.status === "failed"
+							? (stageIdx >= 0 ? (idx < stageIdx ? "ok" : (idx === stageIdx ? "fail" : "wait")) : "fail")
+							: (idx < cur ? "ok" : (idx === cur ? "cur" : "wait"));
+					return el("li", { key: step.key, className: styles.item },
+						el("div", { className: styles.itemTop },
+							el("code", { className: styles.name }, (state2 === "ok" ? "✓ " : state2 === "cur" ? "⟳ " : state2 === "fail" ? "✕ " : "· ") + step.label),
+							state2 === "cur" ? el("span", { className: styles.spinner }) : null));
+				}));
+			};
+			// 挂载/重连后恢复升级进度（若上次升级仍在进行/刚完成）
+			react.useEffect(() => {
+				call("/plugin-console/framework-upgrade-status").then(
+					(data) => {
+						// 状态照收（[框架] 按钮角标与常驻面板都要用）；**卡片是否显示**由 fwShowCard 统一决定，
+						// 不再在这里用 localStorage 标记把状态整个吞掉（那会让角标也瞎掉）。
+						if (data && typeof data.status === "string" && data.status !== "idle") {
+							setFrameworkStatus(data);
+							if (data.status !== "done" && data.status !== "failed") pollFrameworkStatus();
+						}
+					},
+					() => {},
+				);
+				return () => { if (fwStatusTimerRef.current) { window.clearInterval(fwStatusTimerRef.current); fwStatusTimerRef.current = null; } };
+			}, []);
+			// 自动版本比对结果：{ fullName: latest }（已安装且有新版）
+			const [updateMap, setUpdateMap] = react.useState({});
+			// ★ issue #22 ①：已安装列表的「一键检测全部更新」（批量）。
+			//   状态机：null（还没查过）→ checking（查中，带本次要查的包数）→ ready（有结论）/ error。
+			//   界面只**展示**结论，不当判据：哪个版本更高由服务端唯一判据（`<<<update-pick>>>` 那块）给出，
+			//   这里把 target 原样交给 startJob —— 与单卡「检测更新」同一个参数形状。
+			const [batchCheck, setBatchCheck] = react.useState(null);
+			// 「仅看可更新」筛选：只在 ready 且真的有可更新项时才渲染成按钮（没有可点的空状态）
+			const [onlyUpdatable, setOnlyUpdatable] = react.useState(false);
+			// ★ issue #22 ②③：用户注解（备注 / 用户徽章 / 用户自建分组）—— 独立文件、独立通道；
+			//   读不到或写失败只影响这块，插件列表照常（服务端边界见 domain/plugin-annotations.js 顶部）。
+			const [annotations, setAnnotations] = react.useState(null);
+			const [annotationsNote, setAnnotationsNote] = react.useState(null);
+			const [annotationBusy, setAnnotationBusy] = react.useState(null);
+			const [annotationsPanelOpen, setAnnotationsPanelOpen] = react.useState(false);
+			// ② 收口（0.5.93，用户定稿）：面板一打开列表**收起**（只留一行摘要「插件列表（N）· 点此展开」）；
+			//   展开后可按 包名 / rowId / 已有备注内容 **边打边筛**（不需要点按钮）。
+			//   查询词是受控 state —— 过滤过程绝不回写、更不清空用户正在输入的内容。
+			const [annotationsListOpen, setAnnotationsListOpen] = react.useState(false);
+			const [annotationsQuery, setAnnotationsQuery] = react.useState("");
+			const [noteEdit, setNoteEdit] = react.useState(null);
+			const [badgeDraft, setBadgeDraft] = react.useState({});
+			const [badgeUndo, setBadgeUndo] = react.useState({});
+			const [groupDraftName, setGroupDraftName] = react.useState("");
+			// ③ 收口（0.5.93）：**只**记住"刚刚建出来的那个分组 id"用来播一次入场动画；
+			//   分组本身的真相永远来自服务端返回的全量 groups（annotationWrite 直接覆盖），
+			//   这里不维护第二份客户端状态。
+			const [groupJustCreated, setGroupJustCreated] = react.useState(null);
+			// #5：详情页里就地新建分组 —— **按卡片 key 区分**（{ key, draft } | null）。
+			//   用一个全局值会让所有卡片同时展开输入框（用户实测到的问题）。
+			const [detailGroupDraft, setDetailGroupDraft] = react.useState(null);
+			// 面板里"点开某个分组"（只允许一个展开）+ 该分组内的搜索词
+			const [panelGroupOpen, setPanelGroupOpen] = react.useState(null);
+			const [panelGroupQuery, setPanelGroupQuery] = react.useState("");
+			const [panelGroupShow, setPanelGroupShow] = react.useState(8); // 候选默认 8 个，可加载更多
+			const [groupRenameEdit, setGroupRenameEdit] = react.useState(null);
+			const [groupDeleteArm, setGroupDeleteArm] = react.useState(null);
+			const [groupUndo, setGroupUndo] = react.useState(null);
+			const [expandedDescs, setExpandedDescs] = react.useState({});
+			const [installedQuery, setInstalledQuery] = react.useState(() => {
+				try { return localStorage.getItem("pc-market-installed-q") ?? ""; } catch { return ""; }
+			});
+			const [installedSearchOpen, setInstalledSearchOpen] = react.useState(false);
+			const [extraOnly, setExtraOnly] = react.useState(true);
+			// 点击切换时的高亮闪烁（1.5 秒后渐变回落）
+			const [extraFlash, setExtraFlash] = react.useState(false);
+			const [officialOnly, setOfficialOnly] = react.useState(() => {
+				try { return localStorage.getItem("pc-market-official") === "1"; } catch { return false; }
+			});
+			// 多源汇总搜索（GitHub + 全部自定义源并行），localStorage 持久化
+			const [multiSource, setMultiSource] = react.useState(() => {
+				try { return localStorage.getItem("pc-multi-source") === "1"; } catch { return false; }
+			});
+			const [confirmDeleteRowId, setConfirmDeleteRowId] = react.useState(null);
+			const [deleteBusy, setDeleteBusy] = react.useState(null);
+			// AI 兜底开关（默认开启，零费用保障）：关掉后常规通道失败即取消，不调用模型 API
+			const [aiFallback, setAiFallback] = react.useState(() => {
+				try { return localStorage.getItem("pc-ai-fallback-v2") !== "off"; } catch { return true; }
+			});
+			// AI 赋能：来源输入 / 计划确认 / 执行进度
+			const [aiOpen, setAiOpen] = react.useState(false);
+			const [aiSource, setAiSource] = react.useState("");
+			const [aiJob, setAiJob] = react.useState(null);
+			const [aiSelected, setAiSelected] = react.useState({});
+			const [aiRunning, setAiRunning] = react.useState(false);
+			const [aiJobsList, setAiJobsList] = react.useState([]);
+			// 并发任务列表：轻量视图轮询（服务端支持并行多个 AI 赋能）
+			async function refreshAiList() {
+				try {
+					const data = await call("/plugin-console/ai-empower/list", {});
+					if (data && data.ok === true) setAiJobsList(data.tasks ?? []);
+				} catch {}
+			}
+			function aiSelect(jobId) {
+				if (aiJob !== null && aiJob.jobId === jobId) return;
+				setAiJob(null);
+				setAiRunning(true);
+				aiPoll(jobId);
+			}
+			// 服务器组件清单（AI 赋能注册的服务型组件）
+			const [comps, setComps] = react.useState([]);
+			const [compBusy, setCompBusy] = react.useState(null);
+			const [compDropOpen, setCompDropOpen] = react.useState(false);
+			const [compCollapsed, setCompCollapsed] = react.useState(() => {
+				try { return localStorage.getItem("pc-comp-collapsed") === "1"; } catch { return false; }
+			});
+			const [toolbarOpen, setToolbarOpen] = react.useState(() => {
+				try { return localStorage.getItem("pc-toolbar-open") === "1"; } catch { return false; }
+			});
+			// 门控面板（用户要求：总开关收进「功能包」里的 [门控] 按钮，不再占已安装列表的表头）
+			const [gateOpen, setGateOpen] = react.useState(false);
+			// ★ 0.5.84 加法（用户第 6 项）：功能包工具栏里的 **link 入口**。
+			//   过去开发式链接（link:）清单只长在「升级安全」面板**内部**的折叠块里 —— 得先找到那个入口、
+			//   再展开才看得到；用户要的是从工具栏直接跳到那份数据。数据源与判据与安全面板**完全同一份**
+			//   （`GET /plugin-console/links`，纯只读，判据全在 domain/link-inventory.js）；
+			//   这里只负责如实展示，不推断、不美化，也不自己算"自足/缺什么"。
+			//   安全面板里那块折叠展示**保留不动**（老入口照旧），这是加法。
+			const [linksPanelOpen, setLinksPanelOpen] = react.useState(false);
+			const [linksPanelData, setLinksPanelData] = react.useState(null);
+			const [linksPanelBusy, setLinksPanelBusy] = react.useState(false);
+			const linksPanelLoad = async () => {
+				if (linksPanelBusy) return;
+				setLinksPanelBusy(true);
+				try {
+					const data = await call("/plugin-console/links");
+					if (data !== null) setLinksPanelData(data);
+				} catch (error) {
+					// 拿不到就如实说（不静默成"没有 link 依赖"）
+					setLinksPanelData({ ok: false, items: [], count: 0, readyCount: 0, error: (error && error.message) || t("safetySwitchFailed") });
+				} finally { setLinksPanelBusy(false); }
+			};
+			// ★★ 0.5.87 加法：把 link 面板从「只读清单」升级为「可操作」★★
+			// 边界（写死）：**判据全部在服务端**（/links 给 ready / 缺什么 / 目标 / 改动时间），
+			//   这里只做三件事：选开发区 → 两段式钉住（先只读计划、确认后才 apply）、
+			//   行内动作 → 调对应写接口 → 重新读取。客户端不重算任何"缺什么 / 能不能补"。
+			const [linksDevRoots, setLinksDevRoots] = react.useState([]);
+			const [linksDevRootsNote, setLinksDevRootsNote] = react.useState(null);
+			const [linksDir, setLinksDir] = react.useState("");
+			const [linksPinPlan, setLinksPinPlan] = react.useState(null);
+			const [linksPinBusy, setLinksPinBusy] = react.useState(false);
+			const [linksRowBusy, setLinksRowBusy] = react.useState(null);
+			const [linksRowNote, setLinksRowNote] = react.useState({});
+			const [linksUnpinPlan, setLinksUnpinPlan] = react.useState(null);
+			// 「浏览…」只在宿主**确实**提供系统目录对话框时才存在（见模块级 detectDirectoryPicker）
+			const linksCanBrowse = typeof directoryPicker === "function";
+			/** 已登记开发区（来自 /dev-roots 的只读 list 分支；登记表坏了要如实说，不静默成空）。 */
+			const linksDevRootsLoad = async () => {
+				try {
+					const data = await call("/plugin-console/dev-roots", { action: "list" });
+					setLinksDevRoots(Array.isArray(data && data.roots) ? data.roots : []);
+					setLinksDevRootsNote(data && Array.isArray(data.warnings) && data.warnings.length > 0 ? data.warnings.join("；") : null);
+				} catch (error) {
+					setLinksDevRoots([]);
+					setLinksDevRootsNote((error && error.message) || t("safetySwitchFailed"));
+				}
+			};
+			const linksBrowse = async () => {
+				if (!linksCanBrowse) return;
+				try {
+					const picked = await directoryPicker();
+					if (typeof picked === "string" && picked !== "") setLinksDir(picked);
+				} catch (error) {
+					setLinksPinPlan({ ok: false, applied: false, error: (error && error.message) || t("safetySwitchFailed") });
+				}
+			};
+			/** 第一段：**只读计划**（服务端 plan 段，一个字节都不写）——先让人看清会发生什么。 */
+			const linksPinPlanLoad = async () => {
+				const dir = linksDir.trim();
+				if (dir === "" || linksPinBusy) return;
+				setLinksPinBusy(true);
+				setLinksPinPlan(null);
+				try {
+					const data = await call("/plugin-console/pin-dev-dir", { dir });
+					setLinksPinPlan({ ok: true, applied: false, plan: data });
+				} catch (error) {
+					setLinksPinPlan({ ok: false, applied: false, error: (error && error.message) || t("safetySwitchFailed") });
+				} finally { setLinksPinBusy(false); }
+			};
+			/** 第二段：用户点了「确认钉住」才真写（前端绝不跳过确认去调 apply）。 */
+			const linksPinConfirm = async () => {
+				const dir = linksDir.trim();
+				if (dir === "" || linksPinBusy) return;
+				setLinksPinBusy(true);
+				try {
+					const data = await call("/plugin-console/pin-dev-dir", { dir, confirm: true });
+					setLinksPinPlan({ ok: true, applied: true, plan: data });
+					await linksPanelLoad();
+				} catch (error) {
+					setLinksPinPlan({ ok: false, applied: false, error: (error && error.message) || t("safetySwitchFailed") });
+				} finally { setLinksPinBusy(false); }
+			};
+			/** 行内动作：deps=补齐依赖 / shims=造垫片。成败都按服务端 note 原话展示。 */
+			const linksRowRun = async (item, kind) => {
+				if (linksRowBusy !== null) return;
+				const name = String(item.packageName);
+				setLinksRowBusy(name + "|" + kind);
+				setLinksRowNote((prev) => ({ ...prev, [name]: t("linksBusyWorking") }));
+				try {
+					const data = await call("/plugin-console/link-repair", { packageName: name, kind });
+					setLinksRowNote((prev) => ({ ...prev, [name]: (data && data.note) || t("linksRepairDone") }));
+					await linksPanelLoad();
+				} catch (error) {
+					setLinksRowNote((prev) => ({ ...prev, [name]: t("safetySwitchFailed") + "：" + ((error && error.message) || "") }));
+				} finally { setLinksRowBusy(null); }
+			};
+			/** 取消钉住的第一段：只读计划（会明说"它还在 bundles 里"这类后果）。 */
+			const linksUnpinPlanLoad = async (item) => {
+				if (linksRowBusy !== null) return;
+				const name = String(item.packageName);
+				setLinksRowBusy(name + "|unpin-plan");
+				setLinksUnpinPlan(null);
+				try {
+					const data = await call("/plugin-console/unpin-dev-dir", { packageName: name });
+					setLinksUnpinPlan({ ok: true, packageName: name, plan: data });
+				} catch (error) {
+					setLinksUnpinPlan({ ok: false, packageName: name, error: (error && error.message) || t("safetySwitchFailed") });
+				} finally { setLinksRowBusy(null); }
+			};
+			const linksUnpinConfirm = async (item) => {
+				if (linksRowBusy !== null) return;
+				const name = String(item.packageName);
+				setLinksRowBusy(name + "|unpin");
+				try {
+					const data = await call("/plugin-console/unpin-dev-dir", { packageName: name, confirm: true });
+					setLinksUnpinPlan(null);
+					setLinksRowNote((prev) => ({ ...prev, [name]: (data && data.note) || t("linksUnpinDone") }));
+					await linksPanelLoad();
+				} catch (error) {
+					setLinksUnpinPlan({ ok: false, packageName: name, error: (error && error.message) || t("safetySwitchFailed") });
+				} finally { setLinksRowBusy(null); }
+			};
+			// ★ 0.5.80：历史解锁记录默认折叠（用户：新的应覆盖旧的，别一直铺满）
+			const [gateHistoryOpen, setGateHistoryOpen] = react.useState(false);
+			// 功能包位置:长按拖动,持久化 localStorage(每次打开沿用上次位置)
+			const [toolbarPos, setToolbarPos] = react.useState(() => {
+				try {
+					const v = JSON.parse(localStorage.getItem("pc-toolbar-pos") || "null");
+					if (v && Number.isFinite(v.left) && Number.isFinite(v.top)) {
+						// ★ 用户 2026-10-18：存下来的位置**必须钳进可视区**，否则拖到标题栏/屏幕外就再也拿不回来。
+						//   上边界 64px 是标题栏与窗口按钮的安全区（原来只钳到 8px，正好落在标题栏里）。
+						const SAFE_TOP = 64;
+						const maxLeft = Math.max(8, (window.innerWidth || 1280) - 120);
+						const maxTop = Math.max(SAFE_TOP, (window.innerHeight || 800) - 80);
+						return { left: Math.min(Math.max(8, v.left), maxLeft), top: Math.min(Math.max(SAFE_TOP, v.top), maxTop) };
+					}
+				} catch {}
+				return null;
+			});
+			const [dragPos, setDragPos] = react.useState(null);
+			const dragRef = react.useRef({ long: null, active: false, justDragged: false, grabX: 0, grabY: 0, base: null });
+			const [repoLandOn, setRepoLandOn] = react.useState(() => {
+				try { return localStorage.getItem("pc-repo-land") === "1"; } catch { return false; }
+			});
+			const [repoLandOpen, setRepoLandOpen] = react.useState(false);
+			const [repoLandInput, setRepoLandInput] = react.useState("");
+			const [repoLandBusy, setRepoLandBusy] = react.useState(false);
+			const [repoLandResult, setRepoLandResult] = react.useState(null);
+			const [repoLanded, setRepoLanded] = react.useState([]);
+			const [repoLandDir, setRepoLandDir] = react.useState("");
+			const [repoLandDirInput, setRepoLandDirInput] = react.useState("");
+			async function repoLandRefresh() {
+				try {
+					const data = await call("/plugin-console/repo-list", {});
+					if (data && data.ok === true) {
+						setRepoLanded(data.repos ?? []);
+						setRepoLandDir(data.dir ?? "");
+						setRepoLandDirInput(data.dir ?? "");
+					}
+				} catch {}
+			}
+			async function repoLandEntry(repo) {
+				setRepoLandResult(null);
+				try {
+					const data = await call("/plugin-console/repo-clone", { repo });
+					if (data && data.ok === true) setRepoLandResult({ ok: true, path: data.path });
+				} catch (error) {
+					setRepoLandResult({ ok: false, error: error.message });
+				}
+				repoLandRefresh();
+			}
+			async function repoLandSaveDir() {
+				const dir = repoLandDirInput.trim();
+				if (dir === "") return;
+				try {
+					const data = await call("/plugin-console/repo-land-config", { dir });
+					if (data && data.ok === true) { setRepoLandDir(data.dir); repoLandRefresh(); }
+				} catch (error) {
+					setRepoLandResult({ ok: false, error: error.message });
+				}
+			}
+			async function repoLandRemove(item) {
+				if (!window.confirm(t("repoLandRemoveConfirm").replace("{repo}", item.repo))) return;
+				try {
+					await call("/plugin-console/repo-remove", { path: item.path });
+				} catch (error) {
+					// 2026-10-13 改错：删不掉时旧代码 `catch {}` 静默吞掉，用户看到的是"点了没反应、仓库还在"。
+					setMessage(t("safetySwitchFailed") + "：" + (error && typeof error.message === "string" && error.message !== "" ? error.message : t("safetySwitchFailed")));
+				}
+				repoLandRefresh();
+			}
+			async function repoLandStart() {
+				const repo = repoLandInput.trim();
+				if (repo === "" || repoLandBusy) return;
+				setRepoLandBusy(true);
+				setRepoLandResult(null);
+				try {
+					const data = await call("/plugin-console/repo-clone", { repo });
+					if (data && data.ok === true) setRepoLandResult({ ok: true, path: data.path });
+				} catch (error) {
+					setRepoLandResult({ ok: false, error: error.message });
+				}
+				setRepoLandBusy(false);
+			}
+			/** 打开仓库落地目录（2026-10-13 改错：**成功与失败都必须有结果**）。
+			* 旧实现 `try { await call(...) } catch {}` —— 非 2xx（路径被守卫拒绝 / 目录不存在 /
+			* 文件管理器起不来）全被吞掉，用户只看到"点了没反应"（真机实测报告）。
+			* 现在：服务端回结构化状态 → 成功显示"已在文件管理器中打开：<path>"（服务端的 note 也带上），
+			* 失败把**原因原样**显示（守卫拒绝的原因、目录不存在、spawn 失败的系统原话）。
+			* 供「刚落地」按钮与「已落地列表」每行的按钮共用（两处行为必须一致，别再各写一遍）。 */
+			async function repoLandOpenFolder(target) {
+				const path = typeof target === "string" && target !== "" ? target : (repoLandResult && repoLandResult.path);
+				if (!path) return;
+				try {
+					const data = await call("/plugin-console/repo-open", { path });
+					const note = data && typeof data.note === "string" && data.note !== "" ? "（" + data.note + "）" : "";
+					setMessage(t("repoOpenDone") + (data && data.path ? data.path : path) + note);
+				} catch (error) {
+					setMessage(t("repoOpenFailed") + (error && typeof error.message === "string" && error.message !== "" ? error.message : t("safetySwitchFailed")));
+				}
+			}
+			const sectionRef = react.useRef(null);
+			const [compCardTop, setCompCardTop] = react.useState(null);
+			function measureCompCardTop() {
+				const host = sectionRef.current;
+				if (!host) return;
+				const secTop = host.getBoundingClientRect().top;
+				let top = secTop;
+				let node = host.parentElement;
+				while (node) {
+					const r = node.getBoundingClientRect();
+					if (r.height > 10 && r.height <= 1600) {
+						if (r.top < top - 28) { top = r.top; break; }
+						if (r.top > top + 2) break;
+					}
+					node = node.parentElement;
+				}
+				setCompCardTop(`${Math.max(8, Math.round(top))}px`);
+			}
+			async function refreshComps() {
+				try {
+					const data = await call("/plugin-console/components", {});
+					if (data && data.ok === true) setComps(data.components ?? []);
+					else setComps([]);
+				} catch { setComps([]); }
+				window.setTimeout(measureCompCardTop, 50);
+			}
+			async function aiPoll(jobId) {
+				try {
+					const data = await call("/plugin-console/ai-empower/status", { jobId });
+					refreshAiList();
+					if (data && data.ok === true) {
+						setAiJob(data);
+						if (data.status === "running") {
+							window.setTimeout(() => aiPoll(jobId), 2500);
+							return;
+						}
+						if (data.status === "plan-ready") {
+							const sel = {};
+							for (const s of data.steps ?? []) sel[s.index] = true;
+							setAiSelected(sel);
+						}
+						setAiRunning(false);
+						refreshComps();
+					}
+				} catch (error) {
+					// 任务已失效（如 DSH 重启导致内存任务丢失）：清理本地记忆，下次挂载不再恢复
+					if (/没有这个 AI 赋能任务/.test(error.message)) {
+						try { localStorage.removeItem("pc-ai-job"); } catch {}
+						setAiJob({ jobId: null, source: "", status: "failed", stage: "gone", error: "上次 AI 赋能任务已失效（DSH 重启中断），请重新发起" });
+					} else {
+						setAiJob((prev) => ({ ...(prev ?? {}), status: "failed", error: error.message }));
+					}
+					setAiRunning(false);
+				}
+			}
+			function openAiFor(source) {
+				setAiSource(String(source ?? ""));
+				setAiJob(null);
+				setAiRunning(false);
+				setAiOpen(true);
+			}
+			async function aiStartPlan() {
+				const source = aiSource.trim();
+				if (source === "") return;
+				setAiJob(null);
+				setAiRunning(true);				try {
+					const data = await call("/plugin-console/ai-empower/plan", { source });
+					if (data && data.ok === true) {
+						try { localStorage.setItem("pc-ai-job", data.jobId); } catch {}
+						setAiJob({ jobId: data.jobId, source, status: "running", stage: "planning" });
+						aiPoll(data.jobId);
+					}
+					else { setAiRunning(false); setMessage(t("safetySwitchFailed") + "：" + (data?.error ?? "未知")); }
+				} catch (error) {
+					setAiRunning(false);
+					setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+				}
+			}
+			async function aiRun() {
+				if (aiJob === null || aiJob.status !== "plan-ready") return;
+				const steps = (aiJob.steps ?? []).map((s) => s.index).filter((i) => aiSelected[i]);
+				if (steps.length === 0) {
+					setMessage(t("aiEmpowerNeedSteps"));
+					return;
+				}
+				if (!window.confirm(t("aiConfirmDeploy").replace("{n}", String(steps.length)).replace("{name}", aiJob.displayName ?? aiJob.source))) {
+					return;
+				}
+				setAiRunning(true);
+				try {
+					await call("/plugin-console/ai-empower/run", { jobId: aiJob.jobId, steps, confirmed: true });
+					aiPoll(aiJob.jobId);
+				} catch (error) {
+					setAiRunning(false);
+					setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+				}
+			}
+			async function aiCancel() {
+				if (aiJob === null) return;
+				try { await call("/plugin-console/ai-empower/cancel", { jobId: aiJob.jobId }); } catch {}
+				setAiRunning(false);
+				await aiPoll(aiJob.jobId).catch(() => {});
+			}
+			// 「取消」= 彻底终止并回到普通面板：清空任务状态 + 本地任务记忆（重开不再恢复旧任务）
+			function aiResetLocal() {
+				try { localStorage.removeItem("pc-ai-job"); } catch {}
+				setAiJob(null);
+				setAiRunning(false);
+			}
+			async function compAction(id, action) {
+				setCompBusy(id);
+				try {
+					const data = await call("/plugin-console/component/" + action, { id });
+					setMessage(t("compActionDone").replace("{action}", t(action === "start" ? "compStart" : "compStop")).replace("{name}", data?.name ?? id));
+				} catch (error) {
+					setMessage(t("safetySwitchFailed") + "：" + error.message);
+				}
+				setCompBusy(null);
+				refreshComps();
+			}
+			async function compStatusOne(id) {
+				setCompBusy(id);
+				try {
+					const data = await call("/plugin-console/component/status", { id });
+					if (data && data.ok === true) {
+						setMessage(data.running ? (data.healthy ? t("compHealthy") : t("compUnhealthy")) + "：" + (data.name ?? id) : t("compStopped") + "：" + (data.name ?? id));
+					}
+				} catch (error) {
+					setMessage(t("safetySwitchFailed") + "：" + error.message);
+				}
+				setCompBusy(null);
+				refreshComps();
+			}
+			// 面板重开时恢复 AI 赋能任务（服务端任务常驻内存+持久化，前端只需恢复轮询——关闭面板不会中断赋能）
+			react.useEffect(() => {
+				refreshAiList();
+				repoLandRefresh();
+				try {
+					const jid = localStorage.getItem("pc-ai-job");
+					if (jid) { setAiRunning(true); aiPoll(jid); }
+				} catch {}
+			}, []);
+			async function compAuto(id, on) {				setCompBusy(id);
+				try {
+					await call("/plugin-console/component/autostart", { id, enabled: on });
+					setMessage((on ? "✔ 已开启自启动：" : "已关闭自启动：") + id);
+				} catch (error) {
+					setMessage(t("safetySwitchFailed") + "：" + error.message);
+				}
+				setCompBusy(null);
+				refreshComps();
+			}
+			const aiAutoDeclinedRef = react.useRef({});
+			react.useEffect(() => {
+				if (state.status === "ready") { refreshComps(); window.setTimeout(measureCompCardTop, 120); }
+			}, [state.status]);
+			// 已关闭的失败提示（用户点 × 后不再显示，服务重启后重置）
+			const [dismissedFailures, setDismissedFailures] = react.useState({});
+			// 「已装上的那次失败」里，历史失败正文是否展开（0.5.47 加法：默认收起 —— 次要信息不许喧宾夺主）
+			const [failureDetailOpen, setFailureDetailOpen] = react.useState({});
+			// 软件源管理
+			const [sourcesOpen, setSourcesOpen] = react.useState(false);
+			const [sourcesData, setSourcesData] = react.useState(null);
+			const [sourceName, setSourceName] = react.useState("");
+			const [sourceUrl, setSourceUrl] = react.useState("");
+			const [sourcesBusy, setSourcesBusy] = react.useState(false);
+			// 软件源扫描结果：null=未扫描 / {status:'scanning'} / {status:'ready', results, scannedAt}
+			const [regScan, setRegScan] = react.useState(null);
+			// registry 行内编辑
+			const [editReg, setEditReg] = react.useState(null);
+			const [indexSourceName, setIndexSourceName] = react.useState("");
+			const [indexSourceUrl, setIndexSourceUrl] = react.useState("");
+			const [editIndex, setEditIndex] = react.useState(null);
+			const [gitSourceName, setGitSourceName] = react.useState("");
+			const [gitSourceUrl, setGitSourceUrl] = react.useState("");
+			const [editGit, setEditGit] = react.useState(null);
+			// archive 源（批次 C-⑨）：git 协议拉不动时改走普通 HTTP 下载压缩包；模板与 git 源同形
+			const [archiveSourceName, setArchiveSourceName] = react.useState("");
+			const [archiveSourceUrl, setArchiveSourceUrl] = react.useState("");
+			const [editArchive, setEditArchive] = react.useState(null);
+			// 软件源弹窗折叠分区：软件源默认展开，其余收起（避免弹窗过长）
+			const [openSections, setOpenSections] = react.useState({ registries: true, index: false, git: false, archive: false, search: false, gitee: false });
+			// 官方风格入口（新 tab）传入 section 时就地展开对应功能。
+			// 不传 section 时（= 原有 tab 的调用方式）行为与改动前**完全一致** —— 纯加法。
+			react.useEffect(() => {
+				if (section === null) return;
+				if (section === "framework") setFwPanelOpen(true);
+				else if (section === "gate") setGateOpen(true);
+				else if (section === "sources") setSourcesOpen(true);
+				else if (section === "ai") setAiOpen(true);
+				else if (section === "market") setMode("plugins");
+				else if (section === "skills") setMode("skills");
+			}, [section]);
+			// 搜索源列表（内置 + 自定义，来自配置）
+			const [searchSourcesList, setSearchSourcesList] = react.useState(null);
+			// Git 源列表（「仓库落地」提示动态显示当前主源，避免写死 GitHub）
+			const [gitSourcesList, setGitSourcesList] = react.useState(null);
+			// archive 源列表（「软件源 → archive 源」）
+			const [archiveSourcesList, setArchiveSourcesList] = react.useState(null);
+			// 自定义搜索源添加表单
+			const [searchSourceName, setSearchSourceName] = react.useState("");
+			const [searchSourceUrl, setSearchSourceUrl] = react.useState("");
+			// 自定义源请求头（每行 "名称: 值"，保存时解析）
+			const [searchSourceHeaders, setSearchSourceHeaders] = react.useState("");
+			// Gitee OAuth
+			const [giteeClientId, setGiteeClientId] = react.useState("");
+			const [giteeClientSecret, setGiteeClientSecret] = react.useState("");
+			// 派生：Gitee 登录状态
+			const giteeStatus = sourcesData !== null
+				? { clientConfigured: !!sourcesData.gitee?.clientConfigured, hasToken: !!sourcesData.gitee?.hasToken, login: sourcesData.gitee?.login ?? "" }
+				: null;
+			// 搜索源（默认 GitHub；点击登录标切换），localStorage 持久化
+			const [searchSource, setSearchSource] = react.useState(() => {
+				try { const s = localStorage.getItem("pc-search-source"); return s === "gitee" ? s : "github"; } catch { return "github"; }
+			});
+			const [sourceMenuOpen, setSourceMenuOpen] = react.useState(false);
+			// GitHub 登录：徽章点开内联面板，token 只在「浏览器 → 本机服务端」之间走，服务端不回显
+			const [ghLoginOpen, setGhLoginOpen] = react.useState(false);
+			const [ghToken, setGhToken] = react.useState("");
+			const [ghLoginBusy, setGhLoginBusy] = react.useState(false);
+			// "不再提醒"：勾选后 AI 兜底自动同意，不再弹窗（可在市场底部恢复提醒）
+			const [aiRemember, setAiRemember] = react.useState(() => {
+				try { return localStorage.getItem("pc-ai-remember") === "1"; } catch { return false; }
+			});
+			const [showBackTop, setShowBackTop] = react.useState(false);
+			const [marketCollapsed, setMarketCollapsed] = react.useState(false);
+			// 下滑超过搜索框顶部时浮现"回到搜索"↑按钮
+			react.useEffect(() => {
+				const onScroll = () => {
+					const node = document.getElementById("pc-market-search");
+					setShowBackTop(node ? node.getBoundingClientRect().top < -24 : false);
+				};
+				window.addEventListener("scroll", onScroll, true);
+				window.addEventListener("resize", onScroll);
+				onScroll();
+				return () => {
+					window.removeEventListener("scroll", onScroll, true);
+					window.removeEventListener("resize", onScroll);
+				};
+			}, []);
+			// 挂载时拉取软件源配置（搜索源菜单用，含自定义源）
+			react.useEffect(() => {
+				call("/plugin-console/sources").then(
+					(data) => {
+						// 2026-09-24 用户实测：软件源弹窗每次打开都重新请求 → 展开要等（右侧「功能包」里的软件源因为是复用已取到的数据，所以很快）。
+						// 这里把挂载时取到的整份配置缓存下来，弹窗直接渲染缓存；保存/恢复默认后再刷新缓存。
+						setSourcesData((prev) => (prev === null ? data.sources : prev));
+						setSearchSourcesList(data.sources.searchSources ?? []);
+						setGitSourcesList(data.sources.gitSources ?? []);
+						setArchiveSourcesList(data.sources.archiveSources ?? []);
+					},
+					() => {},
+				);
+			}, []);
+			// 加载静态插件索引（GitHub 源空查询时秒开浏览，零 API 调用）。
+			// 失败时记下原因：市场页顶部给出"索引未加载 → 只能搜 GitHub 实时结果"的提示 + 重试按钮
+			//（2026-09-20 事故：另一位用户索引源全挂 + 未登录，三条检索路全断，搜 web-all 搜不到 dsh-web，
+			//  而界面上只有一句"市场索引加载失败"，看不出后果也没有重试入口）
+			const loadMarketIndex = () => {
+				call("/plugin-console/market-index", {}).then(
+					(data) => {
+						if (data && Array.isArray(data.items)) {
+							setIndexError(null);
+							setIndexData({
+								items: data.items,
+								skills: Array.isArray(data.skills) ? data.skills : [],
+								loaded: true,
+								offline: data.offline === true,
+								cachedAt: typeof data.cachedAt === "number" ? data.cachedAt : null,
+								sourceName: typeof data.sourceName === "string" ? data.sourceName : null,
+							});
+							// ★「只看官方」需要官方标记：先补首屏 50 条，其余随「加载更多」增量补
+							//（每条要发网络请求，全量 500 条会打满浏览器连接数，导致打开插件页明显变慢）
+							const runEnrich = () => enrichRange(0, 50, data.items);
+							if (typeof window.requestIdleCallback === "function") {
+								window.requestIdleCallback(() => runEnrich(), { timeout: 2000 });
+							} else {
+								window.setTimeout(runEnrich, 400);
+							}
+						}
+					},
+					(error) => {
+						const text = error?.message ?? t("unknown");
+						setIndexError(text);
+						setMessage(t("marketIndexFailed") + "：" + text);
+					},
+				);
+			};
+			react.useEffect(() => {
+				loadMarketIndex();
+				// 市场状态记忆：关闭前搜索过 → 重开时自动恢复该搜索（query 已从 localStorage 初始化）
+				if (query !== "") {
+					search();
+				}
+			}, []);
+			// 挂载时记录原始标题（AI 授权标题闪烁后恢复用）
+			react.useEffect(() => {
+				try { originalTitleRef.current = document.title; } catch {}
+			}, []);
+			// 挂载时拉取已安装技能清单（技能条目「已装」标记用）
+			react.useEffect(() => {
+				call("/plugin-console/skills-installed").then(
+					(data) => {
+						if (data && Array.isArray(data.skills)) setInstalledSkills(data.skills);
+						if (data && Array.isArray(data.pluginSkills)) setPluginSkills(data.pluginSkills);
+					},
+					() => {},
+				);
+			}, []);
+			// 自动版本比对：市场数据中已安装的条目，后台查 registry 最新版，有新版则卡片显示「更新」。
+			// 官方框架组件（@deepseek-ai/* 且 repository 指向 deepseek-harness）随框架版本配套发布，
+			// 单独更新会版本混搭——排除；且必须 latest !== 已装版本才显示（避免恒显示「更新」）。
+			react.useEffect(() => {
+				if (market === null || market.status !== "ready" || state.status !== "ready") return;
+				const matched = market.data
+					.map((item) => ({
+						item,
+						entry: state.data.entries.find((candidate) =>
+							(candidate.repository && candidate.repository.includes(item.fullName.toLowerCase()))
+							|| moduleShortName(candidate.moduleName) === item.fullName.toLowerCase().split("/")[1]),
+					}))
+					.filter(({ entry }) => entry !== undefined && entry.moduleName !== undefined)
+					// 排除官方框架组件：@deepseek-ai/* 且仓库指向 deepseek-harness（框架本体及其配套子包）
+					.filter(({ entry }) => !(entry.repository && entry.repository.includes("deepseek-ai/deepseek-harness")
+						&& String(entry.moduleName).startsWith("@deepseek-ai/")))
+					.slice(0, 6);
+				// 框架本体特判：deepseek-harness 仓库 → 查 @deepseek-ai/dsh（框架包）版本，
+				// 有新版则卡片显示「框架升级 → vX」（点击走 /framework-upgrade：备份配置 + 升级指引 + 适配）
+				const fwItem = market.data.find((item) => item.fullName === "deepseek-ai/deepseek-harness");
+				if (fwItem) {
+					call("/plugin-console/check-update", { packageName: "@deepseek-ai/dsh" }).then(
+						(data) => {
+							if (data && data.error === null) {
+								const current = state.data.compat?.dshVersion ?? "";
+								// 判据只有一份（本文件上方 <<<update-pick>>> 区，与服务端 lib/server/infra/semver.js 逐字同一份文本）：
+								// 支持 0.1.0-rc.8 → 0.1.1-rc.2 跨 minor 升级，正式版高于同号预发布（0.1.1 > 0.1.1-rc.2）。
+								// 稳定版 latest 优先；latest 不高于当前而 next（预发布渠道）更高时，目标取 next。
+								const target = pickNewerSemver(current, [data.latest, data.next]);
+								if (target !== null) {
+									setUpdateMap((prev) => {
+										// 两条路径写同一个 map：已有目标更高时保持不动（绝不许把结论换低）
+										const existing = prev[fwItem.fullName];
+										if (typeof existing === "string" && pickNewerSemver(target, [existing]) !== null) return prev;
+										return { ...prev, [fwItem.fullName]: target };
+									});
+								}
+							}
+						},
+						() => {},
+					);
+				}
+				if (matched.length === 0) return;
+				let done = 0;
+				const run = () => {
+					if (done >= matched.length) return;
+					const { item, entry } = matched[done];
+					done += 1;
+					call("/plugin-console/check-update", { packageName: entry.moduleName }).then(
+						(data) => {
+							// ★ 只在**严格更高**时才提示更新（唯一判据 = 本文件上方 <<<update-pick>>> 区）。
+							// 0.5.37 改错：这里原本只判 `data.latest` 与 `entry.version` **字符串不相等**，
+							// 没有大小比较 ⇒ 镜像源陈旧的 latest 低于已装版本时也提示「更新」= 引导降级。
+							const better = data && data.error === null ? pickNewerSemver(entry.version, [data.latest]) : null;
+							if (better !== null) {
+								setUpdateMap((prev) => {
+									// 两条路径写同一个 map（框架特判可能已算出正确目标）：已有目标更高时保持不动
+									const existing = prev[item.fullName];
+									if (typeof existing === "string" && pickNewerSemver(better, [existing]) !== null) return prev;
+									return { ...prev, [item.fullName]: better };
+								});
+							}
+						},
+						() => {},
+					).then(run, run);
+				};
+				run();
+			}, [market, state]);
+			// Hub 自身更新检测：semver 比较，且识别 beta/next 测试版（本地已是测试版最新则不提示）
+			react.useEffect(() => {
+				if (state.status !== "ready") return;
+				const current = state.data.selfVersion ?? null;
+				if (!current) return;
+				const ver = (v) => {
+					try {
+						const m = String(v).match(/^(\d+)\.(\d+)\.(\d+)/);
+						return m ? Number(m[1]) * 1000000 + Number(m[2]) * 1000 + Number(m[3]) : 0;
+					} catch { return 0; }
+				};
+				call("/plugin-console/check-update", { packageName: "@noob-stupid/dsh-plugin-console" }).then(
+					(data) => {
+						if (data && data.error === null) {
+							const candidates = [data.latest, data.next, data.beta].filter((v) => typeof v === "string" && v !== "");
+							let better = null;
+							for (const v of candidates) {
+								if (ver(v) > ver(current) && (better === null || ver(v) > ver(better))) better = v;
+							}
+							setSelfUpdate(better === null ? null : { latest: better });
+						} else {
+							setSelfUpdate(null);
+						}
+					},
+					() => setSelfUpdate(null),
+				);
+			}, [state]);
+			// 搜索源菜单：点击外部收起
+			react.useEffect(() => {
+				if (!sourceMenuOpen) return;
+				const onDown = (event) => {
+					const area = document.getElementById("pc-ghwrap");
+					if (area && !area.contains(event.target)) setSourceMenuOpen(false);
+				};
+				document.addEventListener("mousedown", onDown);
+				return () => document.removeEventListener("mousedown", onDown);
+			}, [sourceMenuOpen]);
+			// 已安装搜索：点击搜索区以外且无内容时立即收起（无延迟）
+			react.useEffect(() => {
+				if (!installedSearchOpen) return;
+				const onDown = (event) => {
+					const area = document.getElementById("pc-installed-search-area");
+					if (area && !area.contains(event.target) && installedQuery.trim() === "") {
+						setInstalledSearchOpen(false);
+					}
+				};
+				document.addEventListener("mousedown", onDown);
+				return () => document.removeEventListener("mousedown", onDown);
+			}, [installedSearchOpen, installedQuery]);
+			const refresh = react.useCallback(() => {
+				setState((prev) => ({ ...prev, status: "loading" }));
+				call("/plugin-console/state").then(
+					(data) => {
+						setState({ status: "ready", data });
+						// 恢复进行中的安装任务轮询（离开面板再回来也能看到进度）
+						for (const job of data.installJobs ?? []) {
+							setJobs((prev) => ({ ...prev, [job.jobId]: job }));
+							pollJob(job.jobId);
+						}
+					},
+					() => setState({ status: "error" }),
+				);
+			}, []);
+			react.useEffect(() => { refresh(); }, [refresh]);
+			// ── GitHub 登录态的两个读数：面板里多处要用（徽章文案、菜单项、内联子面板）──
+			const ghAuthed = state.status === "ready" && state.data.github !== undefined && state.data.github.loggedIn === true;
+			const ghLoginName = state.status === "ready" && state.data.github !== undefined && state.data.github.login !== null && state.data.github.login !== undefined
+				? state.data.github.login
+				: "unknown";
+			// 设备码登录的轮询句柄：拿到登录态就停，用户手动收起菜单也停（不留后台空转的定时器）
+			const ghPollRef = react.useRef(null);
+			const stopGhPoll = react.useCallback(() => {
+				if (ghPollRef.current !== null) { window.clearInterval(ghPollRef.current); ghPollRef.current = null; }
+			}, []);
+			// 组件卸载时收尾（本面板是长驻 UI，正常不卸载，但热重载/关闭面板会）
+			react.useEffect(() => () => stopGhPoll(), [stopGhPoll]);
+			// 菜单收起 = 用户手动关掉了这次登录尝试 → 立刻停止轮询（对应"最多 60s 或用户手动关闭"）
+			react.useEffect(() => { if (!sourceMenuOpen) stopGhPoll(); }, [sourceMenuOpen, stopGhPoll]);
+			// 窗口登录开始后等登录态：每 2s 问一次 /state，最多 60s。
+			// 为什么只能轮询：设备码流程在**另一个进程**里完成（用户在 GitHub 页面上输验证码授权），
+			// 本插件收不到任何回调，只能盯 <DSH_HOME>/github-auth.json（/state 的 github 字段）有没有变。
+			const startGhPoll = () => {
+				stopGhPoll();
+				const deadline = Date.now() + 60000;
+				ghPollRef.current = window.setInterval(() => {
+					call("/plugin-console/state").then(
+						(snap) => {
+							const github = snap !== null && snap !== undefined ? snap.github : null;
+							if (github !== null && github !== undefined && github.loggedIn === true) {
+								stopGhPoll();
+								setMessage(t("githubLoginOk").replace("{login}", github.login ?? ""));
+								refresh();
+								return;
+							}
+							if (Date.now() >= deadline) stopGhPoll();
+						},
+						// 单次失败不中断：授权期间用户可能正在重启服务，下一拍再问
+						() => { if (Date.now() >= deadline) stopGhPoll(); },
+					);
+				}, 2000);
+			};
+			// 菜单里的主入口「GitHub 登录」：首选设备码窗口流程（在 GitHub 页面上输验证码），
+			// 通道不可用才降级到 token 粘贴子面板（token 是兜底，不是正路）。
+			const githubOpenLogin = () => {
+				if (ghLoginBusy) return;
+				setGhLoginBusy(true);
+				// 先给一句反馈：环回调用最长要等 8s，中间没有提示会让人以为点了没反应
+				setMessage(t("githubLoginOpened"));
+				call("/plugin-console/github-open-login", {}).then(
+					(r) => {
+						setGhLoginBusy(false);
+						if (r !== null && r !== undefined && r.started === true) {
+							setMessage(t("githubLoginOpened"));
+							startGhPoll();
+							return;
+						}
+						// 服务端回 started:false 时一定带 reason（插件没装/没有 exe/平台不支持），照念给用户
+						setMessage(t("githubLoginUnavailable") + "：" + (r !== null && r !== undefined && typeof r.reason === "string" ? r.reason : ""));
+						setGhLoginOpen(true);
+					},
+					(error) => {
+						setGhLoginBusy(false);
+						setMessage(t("githubLoginFail") + "：" + (error?.message ?? ""));
+						setGhLoginOpen(true);
+					},
+				);
+			};
+			// 粘贴 token 登录：成功后清空输入 + 收起面板 + 刷新登录态（让徽章/代码搜索立刻用上新身份）；
+			// 失败**不清空输入**——用户多半是复制时多带了空格/少了一段，保留原文才好改。
+			const githubLogin = () => {
+				const token = ghToken.trim();
+				if (token === "" || ghLoginBusy) return;
+				setGhLoginBusy(true);
+				call("/plugin-console/github-login", { token }).then(
+					(r) => {
+						setGhLoginBusy(false);
+						setMessage(t("githubLoginOk").replace("{login}", r?.login ?? ""));
+						setGhToken("");
+						setGhLoginOpen(false);
+						refresh();
+					},
+					(error) => {
+						setGhLoginBusy(false);
+						setMessage(t("githubLoginFail") + "：" + (error?.message ?? ""));
+					},
+				);
+			};
+			const loadDetails = (entry) => {
+				if (details !== null && details.entryId === entry.entryId) {
+					setDetails(null);
+					setUpdateCheck(null);
+					return;
+				}
+				setDetails({ entryId: entry.entryId, status: "loading" });
+				setUpdateCheck(null);
+				call("/plugin-console/details", { entryId: entry.entryId }).then(
+					(data) => setDetails({ entryId: entry.entryId, status: "ready", data }),
+					(error) => setDetails({ entryId: entry.entryId, status: "error", error }),
+				);
+			};
+			// ★ 0.5.76：撤销"强制启用"覆盖（补丁里的 disabled: false）。只对确实 forced 的行生效，服务端会校验。
+			const revokeForce = (entry) => {
+				if (busy !== null) return;
+				setBusy(entry.entryId);
+				call("/plugin-console/revoke-force", { entryId: entry.entryId }).then(
+					(data) => { setMessage(data?.note ?? t("revokeForceLabel")); refresh(); },
+					(error) => { setMessage(friendlyGithubError(error).message); },
+				).finally(() => setBusy(null));
+			};
+			const checkUpdate = (entry) => {
+				const pkgName = entry.moduleName;
+				setUpdateCheck({ status: "checking" });
+				call("/plugin-console/check-update", { packageName: pkgName }).then(
+					(data) => setUpdateCheck({ status: "ready", latest: data.latest ?? null, next: data.next ?? null, beta: data.beta ?? null, target: data.target ?? null, source: data.source ?? "npm", error: data.error ?? null }),
+					(error) => setUpdateCheck({ status: "ready", latest: null, source: "npm", error: friendlyGithubError(error).message }),
+				);
+			};
+			// ★ issue #22 ①：一键检测全部更新 —— **一次**请求查完已装列表（服务端并发上限 4，见 domain/update-batch.js）。
+			//   为什么不是逐个包各发一个请求：那样并发由客户端决定，几十个包同时出去就是 0.5.84
+			//   市场富化把网络打满、安装作业被拖死那次的形状（教训写在 domain/enrich-throttle.js 顶部）。
+			//   为什么没有 x/y 进度：单个请求拿不到逐包进度；编一个假百分比比转圈更糟。要真进度只能分批请求
+			//   （每批一次请求、累加 x/y）——已写进 UI 方案等用户定，本版先给转圈 + 待查包数。
+			const checkAllUpdates = () => {
+				if (batchCheck !== null && batchCheck.status === "checking") return;
+				const names = [];
+				const seen = new Set();
+				for (const entry of (state.status === "ready" ? state.data.entries : [])) {
+					const mn = String(entry.moduleName ?? "");
+					if (mn === "" || mn.startsWith("cordis:") || seen.has(mn)) continue;
+					seen.add(mn);
+					names.push(mn);
+				}
+				if (names.length === 0) {
+					// 没有可查的东西也必须**有反馈**（空列表不是"点了没反应"）
+					setMessage(t("checkAllUpdateEmptyList"));
+					return;
+				}
+				setBatchCheck({ status: "checking", total: names.length });
+				setMessage(t("checkingAllUpdates").replace("{n}", String(names.length)));
+				// ★ 2026-10-27：**分批**跑（每批 40，逐批回报进度）。整批一次性丢给服务端时，
+				//   界面在几分钟里只有一个转圈，用户以为"卡在限制上"。分批后可看到"已查 40/238"逐步推进。
+				const CHUNK = 40;
+				const merged = { items: [], checked: 0, updatable: 0, unknown: 0 };
+				const runChunk = (offset) => {
+					const slice = names.slice(offset, offset + CHUNK);
+					if (slice.length === 0) return Promise.resolve(merged);
+					setMessage(t("checkingAllUpdates").replace("{n}", String(names.length)) + "（" + offset + "/" + names.length + "）");
+					return call("/plugin-console/check-updates", { packageNames: slice }).then((data) => {
+						if (data !== null && Array.isArray(data.items)) merged.items.push(...data.items);
+						merged.checked += typeof data?.checked === "number" ? data.checked : slice.length;
+						merged.updatable += typeof data?.updatable === "number" ? data.updatable : 0;
+						merged.unknown += typeof data?.unknown === "number" ? data.unknown : 0;
+						setBatchCheck({ status: "checking", total: names.length, done: merged.checked });
+						return runChunk(offset + CHUNK);
+					}, () => runChunk(offset + CHUNK));
+				};
+				runChunk(0).then(
+					(data) => {
+						const items = {};
+						for (const item of (data !== null && Array.isArray(data.items) ? data.items : [])) {
+							if (item !== null && typeof item === "object" && typeof item.packageName === "string") items[item.packageName] = item;
+						}
+						const updatable = typeof data?.updatable === "number" ? data.updatable : 0;
+						const unknown = typeof data?.unknown === "number" ? data.unknown : 0;
+						const checked = typeof data?.checked === "number" ? data.checked : names.length;
+						setBatchCheck({ status: "ready", at: Date.now(), checked, updatable, unknown, items });
+						// 结论必须看得见：没有可更新项时**不动**"仅看可更新"筛选（否则列表突然变空）
+						if (updatable === 0) setOnlyUpdatable(false);
+						setMessage(
+							(updatable > 0 ? t("checkAllUpdatesDone").replace("{n}", String(updatable)) : t("checkAllUpdateNone"))
+							+ (unknown > 0 ? "；" + t("checkAllUpdateUnknownNote").replace("{n}", String(unknown)) : ""),
+						);
+					},
+					(error) => {
+						setBatchCheck({ status: "error", error: friendlyGithubError(error).message });
+						setMessage(t("checkAllUpdateFailed") + "：" + friendlyGithubError(error).message);
+					},
+				);
+			};
+			const toggle = (entry, enabled, confirmRisky = false) => {
+				setBusy(entry.entryId);
+				setMessage(null);
+				call("/plugin-console/toggle", { entryId: entry.entryId, enabled, confirmRisky }).then(
+					() => {
+						setRiskyConfirm(null);
+						setMessage(t(enabled ? "toggledOn" : "toggledOff") + "：" + entry.entryId + "。" + t("autoReload"));
+						// HMR 应用补丁后自动强刷页面，让客户端插件的挂载/卸载即时可见
+						window.setTimeout(() => window.location.reload(), 1500);
+					},
+					(error) => {
+						// 适配门软禁（用户定案）：服务端不直接拒绝，而是要求确认 → 弹风险提示，由你决定开不开
+						const details = error !== null && typeof error === "object" ? error.details : null;
+						if (details !== null && details !== undefined && details.code === "compat-confirm") {
+							setRiskyConfirm({ entryId: entry.entryId, moduleName: details.moduleName ?? entry.moduleName ?? null, frameworkVersion: details.frameworkVersion ?? null, checkNote: details.checkNote ?? null });
+							return;
+						}
+						setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+					},
+				).finally(() => setBusy(null));
+			};
+			/** 兼容门总开关：autoDisable（升级时自动禁用不适配）/ autoDetect（打开时自动检测已适配）。 */
+			const setCompatGate = (patch) => {
+				call("/plugin-console/compat-gate", patch).then(
+					(data) => {
+						setState((prev) => (prev !== null && prev.status === "ready"
+							? { ...prev, data: { ...prev.data, compatGate: data.compatGate } }
+							: prev));
+						setMessage(t("compatGateSaved"));
+					},
+					(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+				);
+			};
+			// 0.5.35 改错（**用户"第二次搜索变成一大堆高星无关仓库"的元凶**）：这里原来有一套
+			// 「本地索引模糊匹配 + 编辑距离 ≤2」，命中就直接 return —— 它把 12 条**按星数排**的无关条目
+			// 当最终结果（用户搜 dsh-connection-card-host，索引里根本没有这个新仓库，靠 token 相似
+			// 捞出 dsh-desktop ★29812 这类），既埋没了逐字同名，也把「加载更多」变成了死路
+			// （只有 12 条，按钮的 length>=20 条件不成立）。
+			// 判据统一到唯一的名字分层排序（本文件上方 <<<market-rank>>> 区 + 服务端同一份），
+			// 非空查询一律走真实搜索链（浏览器直连 → 失败回落服务端），不再有"索引抢先 return"。
+			/** 服务端/直连结果里的分页口径（纯函数移植：与服务端 buildPageEnvelope 同一份）。
+			* 返回 null 表示"这个数据源没给口径"（不是"没有更多"）——调用方保留既有提示，不谎报。 */
+			const envelopeOf = (data, page, perPage = 20) => {
+				if (data === null || typeof data !== "object" || typeof data.hasMore !== "boolean") return null;
+				return {
+					shown: typeof data.shown === "number" ? data.shown : 0,
+					total: typeof data.total === "number" ? data.total : null,
+					hasMore: data.hasMore,
+					truncated: data.truncated === true,
+					reason: typeof data.reason === "string" && data.reason !== "" ? data.reason : null,
+					page,
+					perPage,
+				};
+			};
+			/** 浏览器直连 GitHub 只有 total_count/per_page 可依据：用**同一个** buildPageEnvelope 算口径。 */
+			const envelopeFromGithub = (total, shownCount, page, perPage = 20) => {
+				const env = buildPageEnvelope({
+					shown: typeof shownCount === "number" ? shownCount : 0,
+					total: typeof total === "number" ? total : null, page, perPage,
+				});
+				return { shown: env.shown, total: env.total, hasMore: env.hasMore, truncated: env.truncated, reason: env.reason, page: env.page, perPage: env.perPage };
+			};
+			/** 本地索引浏览切片的口径（索引是本地的，总数就取索引自身长度，绝不编造）。 */
+			const envelopeFromIndex = (list, shownNow, page, perPage = 50) => {
+				const env = buildPageEnvelope({ shown: shownNow, total: Array.isArray(list) ? list.length : null, page, perPage });
+				return { shown: env.shown, total: env.total, hasMore: env.hasMore, truncated: env.truncated, reason: env.reason, page: env.page, perPage: env.perPage };
+			};
+			/** 合并/补标之后重算"已显示 M 条"（total/hasMore/truncated 是数据源的事实，不因合并而改）。 */
+			const repaginate = (hints, list) => {
+				if (hints === null || hints === undefined) return hints;
+				const shown = Array.isArray(list) ? list.length : 0;
+				return { ...hints, shown };
+			};
+			/** 合并服务端"增量检索"结果（npm 包名映射 / in:readme 重查 / 代码搜索子包）：
+			* npm 命中置顶，其余按增量顺序追加，最后接原有直连结果，全部按 fullName 去重。
+			* 背景（2026-09-20）：浏览器直连 GitHub 搜索成功时不会走服务端路由，而未登录用户恰恰只能走直连
+			* →「只存在于 npm 包名 / README / 仓库文件里」的名字（如 web-all）永远补不上。
+			* 0.5.35：合并后的**最终顺序**由唯一排序函数（rankSearchResults）决定 —— 这里的 npm 前置
+			* 只是"合并时别把 npm 命中丢掉"，不再冒充排序判据。 */
+			function mergeSearchExtras(base, extras) {
+				const seen = new Set();
+				const npm = [];
+				const rest = [];
+				for (const it of extras) {
+					const key = it.fullName ?? JSON.stringify(it);
+					if (seen.has(key)) continue;
+					seen.add(key);
+					if (it.npmPackage === true) npm.push(it); else rest.push(it);
+				}
+				const out = [...npm, ...rest];
+				for (const it of base) {
+					const key = it.fullName ?? JSON.stringify(it);
+					if (seen.has(key)) continue;
+					seen.add(key);
+					out.push(it);
+				}
+				return out;
+			}
+			/** 用 enrich 结果**就地更新**市场列表（按 fullName 打补丁），而不是整表替换——
+			* 否则并行补进来的「增量检索」条目（npm 包名/子包）会被 enrich 回调冲掉。 */
+			const applyEnriched = (enriched) => setMarket((m) => {
+				if (m === null || m.status !== "ready" || !Array.isArray(enriched)) return m;
+				const byName = new Map(enriched.map((x) => [x.fullName, x]));
+				return { ...m, data: m.data.map((x) => byName.get(x.fullName) ?? x) };
+			});
+			/** 搜索批次序号：每次 search() 递增。**晚到的旧响应一律丢弃** —— 上一版两条链（浏览器直连
+			* 与"增量检索"）+ enrich 回调各自 setMarket，点的时机不同就出现"点两次结果不同"的竞态。 */
+			const searchSeqRef = react.useRef(0);
+			const search = () => {
+				const seq = searchSeqRef.current + 1;
+				searchSeqRef.current = seq;
+				const current = () => searchSeqRef.current === seq;
+				setMarket({ status: "loading" });
+				setRepoInfo(null);
+				setMarketPage(1);
+				// 技能模式：仅 GitHub 源；空查询 → 技能静态索引（秒开），非空 → 服务端三 topic 合并检索
+				if (mode === "skills") {
+					if (searchSource !== "github" || multiSource) {
+						setMarket({ status: "error", error: new Error(t("skillsGithubOnly")) });
+						return;
+					}
+					if (query.trim() === "" && indexData !== null && indexData.loaded) {
+						const shown = indexData.skills.slice(0, indexShown);
+						setMarket({ status: "ready", data: shown, hints: envelopeFromIndex(indexData.skills, shown.length, 1, 50), direct: false, source: "github", fromIndex: true });
+						return;
+					}
+					call("/plugin-console/search", { q: query, page: 1, skills: true }).then(
+						(data) => {
+							if (!current()) return;
+							const items = rankSearchResults(data.items ?? [], query);
+							const hints = envelopeOf(data, 1) ?? envelopeFromIndex(items, items.length, 1);
+							setMarket({ status: "ready", data: items, hints, direct: false, source: "github", skills: true });
+						},
+						(error) => { if (current()) setMarket({ status: "error", error: friendlyGithubError(error) }); },
+					);
+					return;
+				}
+				// 静态索引浏览：GitHub 源 + 空查询时展示 dsh-plugin topic 全量索引（秒开、零 API 调用）
+				if (searchSource === "github" && !multiSource && query.trim() === "" && indexData !== null && indexData.loaded) {
+					const shown = indexData.items.slice(0, indexShown);
+					setMarket({ status: "ready", data: shown, hints: envelopeFromIndex(indexData.items, shown.length, 1, 50), direct: false, source: "github", fromIndex: true });
+					return;
+				}
+				// 0.5.35 改错：这里原来还有一条「非空查询先做本地索引模糊匹配，命中即 return」的链 ——
+				// 它就是"第二次搜索变成一大堆高星无关仓库 / 没有加载更多"的元凶（见上方说明），已删除。
+				// 非空查询现在只有一条链：真实搜索（直连 GitHub → 失败回落服务端），结果统一走名字分层排序。
+				if (multiSource) {
+					// 多源汇总：GitHub + 全部自定义源并行（服务端合并，自带标记）
+					call("/plugin-console/search", { q: query, page: 1, multi: true }).then(
+						(data) => {
+							if (!current()) return;
+							const items = rankSearchResults(data.items ?? [], query);
+							setMarket({ status: "ready", data: items, hints: envelopeOf(data, 1), direct: false, source: "all", multi: true });
+						},
+						(error) => { if (current()) setMarket({ status: "error", error: friendlyGithubError(error) }); },
+					);
+					return;
+				}
+				if (searchSource !== "github") {
+					// Gitee / 自定义源：走服务端平台检索（浏览器直连通道对这些平台不可靠）
+					call("/plugin-console/search", { q: query, page: 1, source: searchSource }).then(
+						(data) => {
+							if (!current()) return;
+							const items = rankSearchResults(data.items ?? [], query);
+							setMarket({ status: "ready", data: items, hints: envelopeOf(data, 1), direct: false, source: searchSource });
+							enrichOfficialBundle(items).then((enriched) => {
+								if (!current()) return;
+								applyEnriched(enriched);
+							});
+						},
+						(error) => { if (current()) setMarket({ status: "error", error: friendlyGithubError(error) }); },
+					);
+					return;
+				}
+				searchFromGithub(query, 1, repoLandOn).then(
+					({ items: rawItems, total: rawTotal }) => {
+						if (!current()) return;
+						// 秒出直连数据（**同样过唯一排序函数**：直连链与服务端链的结果顺序必须一致，
+						// 否则"点两次结果不同"的观感还在）
+						const items = rankSearchResults(rawItems, query);
+						setMarket({ status: "ready", data: items, hints: envelopeFromGithub(rawTotal, items.length, 1), direct: true });
+						// 并行补标记：
+						// ① 客户端浏览器直连读根包 package.json（快，官方/聚合标记立即可筛）
+						enrichOfficialBundle(items).then((enriched) => {
+							if (!current()) return;
+							applyEnriched(enriched);
+						});
+						// ② 服务端 curl 双通道 enrich（聚合子包 dsh.bundle 检查 → aggregateInstallable），后台补更精确标记
+						call("/plugin-console/enrich", { items }).then(
+							(r) => { if (current() && r && Array.isArray(r.items)) applyEnriched(r.items); },
+							() => {},
+						);
+						// ③ 服务端"增量检索"（并行、不阻塞首屏）：npm 包名映射 + in:readme 重查 + 代码搜索子包。
+						// 直连搜索只覆盖 仓库名/描述/topics，包名与 README/文件里的名字补不上（2026-09-20 事故）
+						if (query.trim() !== "") {
+							call("/plugin-console/search", { q: query, page: 1, extras: true, all: repoLandOn === true }).then(
+								(r) => {
+									if (!current()) return;
+									if (r !== null && r.codeSearchSkipped === true) setMessage(t("searchLoginHint"));
+									if (r === null || !Array.isArray(r.items) || r.items.length === 0) return;
+									// 合并后**再排一次**（唯一排序函数）：npm/README 命中该进哪一层由分层判据决定，
+									// 不由"谁是后到的"决定。
+									setMarket((m) => {
+										if (m === null || m.status !== "ready") return m;
+										const merged = rankSearchResults(mergeSearchExtras(m.data, r.items), query);
+										return { ...m, data: merged, hints: repaginate(m.hints, merged) };
+									});
+								},
+								() => {},
+							);
+						}
+					},
+					() => call("/plugin-console/search", { q: query, page: 1 }).then(
+						(data) => {
+							if (!current()) return;
+							const items = rankSearchResults(data.items ?? [], query);
+							setMarket({ status: "ready", data: items, hints: envelopeOf(data, 1), direct: false });
+							enrichOfficialBundle(items).then((enriched) => {
+								if (!current()) return;
+								applyEnriched(enriched);
+							});
+						},
+						(error) => { if (current()) setMarket({ status: "error", error: friendlyGithubError(error) }); },
+					),
+				);
+			};
+			/** 翻页合并：按 fullName 去重（"+N 条"的新条目才追加）→ 全表**再排一次**（唯一排序函数，
+			*  所以跨页顺序与数据源给的单页顺序一致）→ 重算口径（total/hasMore/truncated 是数据源事实）。 */
+			const appendPage = (prevList, pageItems, baseHints, mergeHints, page, perPage = 20) => {
+				const seen = new Set();
+				const merged = [];
+				for (const item of [...(Array.isArray(prevList) ? prevList : []), ...(Array.isArray(pageItems) ? pageItems : [])]) {
+					const key = item?.fullName ?? JSON.stringify(item);
+					if (seen.has(key)) continue;
+					seen.add(key);
+					merged.push(item);
+				}
+				const ranked = rankSearchResults(merged, query);
+				const src = mergeHints ?? baseHints;
+				const hints = src === null || src === undefined
+					? null
+					: { ...src, shown: ranked.length, page, perPage };
+				return { data: ranked, hints };
+			};
+			const loadMore = () => {
+				if (loadingMore || market === null || market.status !== "ready") return;
+				const next = marketPage + 1;
+				const seq = searchSeqRef.current;
+				const current = () => searchSeqRef.current === seq;
+				setLoadingMore(true);
+				setMarketPage(next);
+				const baseHints = market.hints ?? null;
+				if (mode === "skills" && !market.fromIndex) {
+					// 技能搜索分页：服务端三 topic 并集池切片（skills: true）
+					call("/plugin-console/search", { q: query, page: next, skills: true }).then(
+						(data) => {
+							if (!current()) { setLoadingMore(false); return; }
+							const hints = envelopeOf(data, next) ?? envelopeFromIndex(market.data, market.data.length, next);
+							const page_ = appendPage(market.data, data.items, baseHints, hints, next);
+							setMarket({ status: "ready", data: page_.data, hints: page_.hints, direct: false, source: "github", skills: true });
+							setLoadingMore(false);
+						},
+						(error) => {
+							setLoadingMore(false);
+							setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+						},
+					);
+					return;
+				}
+				if (market.fromIndex === true && indexData !== null) {
+					// 索引浏览：本地继续展示更多（技能模式浏览技能索引段）
+					const sourceData = mode === "skills" ? indexData.skills : indexData.items;
+					const more = sourceData.slice(0, indexShown + next * 50);
+					setMarket({
+						status: "ready", data: more, direct: false, source: "github", fromIndex: true,
+						hints: envelopeFromIndex(sourceData, more.length, next, 50),
+					});
+					setIndexShown(indexShown + next * 50);
+					// 新增的这段继续补「官方/聚合」标记（与首屏同样的增量策略）
+					if (mode !== "skills") enrichRange(enrichedUpTo, indexShown + next * 50, indexData.items);
+					setLoadingMore(false);
+					return;
+				}
+				if (multiSource) {
+					call("/plugin-console/search", { q: query, page: next, multi: true }).then(
+						(data) => {
+							if (!current()) { setLoadingMore(false); return; }
+							const hints = envelopeOf(data, next) ?? envelopeFromIndex(market.data, market.data.length, next);
+							const page_ = appendPage(market.data, data.items, baseHints, hints, next);
+							setMarket({ status: "ready", data: page_.data, hints: page_.hints, direct: false, source: "all", multi: true });
+							setLoadingMore(false);
+						},
+						(error) => {
+							setLoadingMore(false);
+							setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+						},
+					);
+					return;
+				}
+				if (searchSource !== "github") {
+					call("/plugin-console/search", { q: query, page: next, source: searchSource }).then(
+						(data) => {
+							if (!current()) { setLoadingMore(false); return; }
+							const hints = envelopeOf(data, next) ?? envelopeFromIndex(market.data, market.data.length, next);
+							const page_ = appendPage(market.data, data.items, baseHints, hints, next);
+							setMarket({ status: "ready", data: page_.data, hints: page_.hints, direct: false, source: searchSource });
+							setLoadingMore(false);
+							enrichOfficialBundle(data.items).then((enriched) => {
+								if (!current()) return;
+								const byName = new Map(enriched.map((x) => [x.fullName, x]));
+								setMarket((m) => (m !== null && m.status === "ready"
+									? { ...m, data: m.data.map((x) => byName.get(x.fullName) ?? x) }
+									: m));
+							});
+						},
+						(error) => {
+							setLoadingMore(false);
+							setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+						},
+					);
+					return;
+				}
+				searchFromGithub(query, next).then(
+					({ items: rawItems, total: rawTotal }) => {
+						if (!current()) { setLoadingMore(false); return; }
+						const hints = envelopeFromGithub(rawTotal, rawItems.length, next);
+						const page_ = appendPage(market.data, rawItems, baseHints, hints, next);
+						setMarket({ status: "ready", data: page_.data, hints: page_.hints, direct: true });
+						setLoadingMore(false);
+						// 并行补标记：客户端快速（根包）+ 服务端完整（子包检查）。
+						// 按 fullName **就地更新**（不再靠"取末尾 N 条"的假设——排序变了，末尾不一定是新页）。
+						const patchByName = (list) => {
+							const byName = new Map(list.map((x) => [x.fullName, x]));
+							setMarket((m) => (m !== null && m.status === "ready"
+								? { ...m, data: m.data.map((x) => byName.get(x.fullName) ?? x) }
+								: m));
+						};
+						enrichOfficialBundle(rawItems).then((enriched) => { if (current()) patchByName(enriched); });
+						call("/plugin-console/enrich", { items: rawItems }).then(
+							(r) => { if (current() && r && Array.isArray(r.items)) patchByName(r.items); },
+							() => {},
+						);
+					},
+					() => call("/plugin-console/search", { q: query, page: next }).then(
+						(data) => {
+							if (!current()) { setLoadingMore(false); return; }
+							const hints = envelopeOf(data, next) ?? envelopeFromIndex(market.data, market.data.length, next);
+							const page_ = appendPage(market.data, data.items, baseHints, hints, next);
+							setMarket({ status: "ready", data: page_.data, hints: page_.hints, direct: false });
+							setLoadingMore(false);
+							enrichOfficialBundle(data.items).then((enriched) => {
+								if (!current()) return;
+								const byName = new Map(enriched.map((x) => [x.fullName, x]));
+								setMarket((m) => (m !== null && m.status === "ready"
+									? { ...m, data: m.data.map((x) => byName.get(x.fullName) ?? x) }
+									: m));
+							});
+						},
+						(error) => {
+							setLoadingMore(false);
+							setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+						},
+					),
+				);
+			};
+			const loadSubpackages = (repo, branch) => {
+				setSubpackages({ status: "loading" });
+				fetchSubpackages(repo, branch).then(
+					(list) => setSubpackages({ status: "ready", list }),
+					() => call("/plugin-console/subpackages", { repo, branch }).then(
+						(data) => setSubpackages({ status: "ready", list: data.subpackages ?? [] }),
+						() => setSubpackages({ status: "error" }),
+					),
+				);
+			};
+			const inspect = (item) => {
+				const repo = item.fullName;
+				setRepoInfo({ status: "loading", repo });
+				setSubpackages(null);
+				if (item.source !== undefined && item.source !== "github") {
+					// 非 GitHub 平台：用平台 raw 直接读详情（无 trees/子包能力）
+					repoInfoFromPlatform(item).then(
+						(data) => setRepoInfo({ status: "ready", repo, data, direct: true, source: item.source }),
+						() => setRepoInfo({ status: "error", repo, error: new Error(t("repoError")) }),
+					);
+					return;
+				}
+				repoInfoFromGithub(repo, item).then(
+					(data) => {
+						if (item.hasSkill === true) data.hasSkill = true;
+						if (Array.isArray(item.skillTopics)) data.skillTopics = item.skillTopics;
+						if (item.hasSuite === true) {
+							data.hasSuite = true;
+							// 立即本地拼官方安装命令（不等服务端后台补拉），手动安装引导即时可见
+							if (!data.installCommand) {
+								const short = repo.split("/")[1] ?? repo;
+								data.installCommand = "git clone --recurse-submodules https://github.com/" + repo + ".git\ncd " + short + "\npowershell -ExecutionPolicy Bypass -File install.ps1";
+							}
+						}
+						setRepoInfo({ status: "ready", repo, data, direct: true });
+						if (data.privateRoot || !data.hasPackageJson) loadSubpackages(repo, data.defaultBranch);
+						// 浏览器直连只读 package.json/README/SKILL.md：后台补拉服务端增强字段
+						// （hasSuite / installCommand 官方安装方式），不阻塞详情显示
+						call("/plugin-console/repo", { repo }).then(
+							(d) => {
+								if (d && d.ok === true) {
+									setRepoInfo((prev) => (prev !== null && prev.repo === repo && prev.status === "ready"
+										? { ...prev, data: {
+											...prev.data,
+											hasSuite: d.hasSuite === true,
+											installCommand: d.installCommand ?? null,
+										} }
+										: prev));
+								}
+							},
+							() => {},
+						);
+					},
+					() => call("/plugin-console/repo", { repo }).then(
+						(data) => {
+							if (item.hasSkill === true) data.hasSkill = true;
+							if (Array.isArray(item.skillTopics)) data.skillTopics = item.skillTopics;
+							if (item.hasSuite === true) data.hasSuite = true;
+							setRepoInfo({ status: "ready", repo, data, direct: false });
+							if (data.privateRoot || !data.hasPackageJson) loadSubpackages(repo, data.defaultBranch);
+						},
+						(error) => setRepoInfo({ status: "error", repo, error: friendlyGithubError(error) }),
+					),
+				);
+			};
+			/** 后台安装任务：/install 立即返回 jobId，轮询 /install-status 更新进度。 */
+			const jobTimersRef = react.useRef({});
+			const stopJobPolling = (jobId) => {
+				if (jobTimersRef.current[jobId]) {
+					window.clearInterval(jobTimersRef.current[jobId]);
+					delete jobTimersRef.current[jobId];
+				}
+			};
+			const pollJob = (jobId) => {
+				if (jobTimersRef.current[jobId]) return;
+				jobTimersRef.current[jobId] = window.setInterval(() => {
+					call("/plugin-console/install-status", { jobId }).then(
+						(data) => {
+							setJobs((prev) => ({ ...prev, [jobId]: data }));
+							// 授权请求必须"看得见"（2026-09-20 真装实测事故：面板只把 stage 变成
+							// ai-consent，用户不知道要做什么 → 干等 10 分钟被超时取消）。顶部消息先说一句，
+							// 详情卡在下面的安装进度区（同一位置的醒目卡片 + 倒计时 + 同意/取消）。
+							if (data.status === "installing" && data.stage === "ai-consent" && data.aiConsent?.pending === true && !aiAutoDeclinedRef.current[jobId]) {
+								setMessage(t("aiConsentTopHint"));
+							}
+							// 需要用户授权时（面板页后台/失焦也能看到）：系统通知 + 标题闪烁提示
+							if (data.status === "installing" && data.stage === "ai-consent" && aiFallback && !aiRemember && !aiAutoDeclinedRef.current[jobId]) {
+								aiAutoDeclinedRef.current[jobId] = true;
+								const who = data.packageName ?? data.repo ?? "";
+								try {
+									const title = t("aiConsentNotifyTitle");
+									if ("Notification" in window && Notification.permission === "granted") {
+										new Notification(title, { body: who + "：" + t("aiConsentText").slice(0, 80) + "…", tag: "dsh-ai-consent" });
+									} else if ("Notification" in window && Notification.permission === "default") {
+										Notification.requestPermission().then((p) => {
+											if (p === "granted") new Notification(title, { body: who + "：" + t("aiConsentText").slice(0, 80) + "…", tag: "dsh-ai-consent" });
+										});
+									}
+								} catch {}
+								try {
+									document.title = "⚠ " + t("aiConsentNotifyTitle") + " - " + who;
+								} catch {}
+							}
+							// AI 兜底已关闭：遇到授权等待态自动取消（零费用，不弹窗）
+							if (data.status === "installing" && data.stage === "ai-consent" && !aiFallback && !aiAutoDeclinedRef.current[jobId]) {
+								aiAutoDeclinedRef.current[jobId] = true;
+								aiConsent(jobId, false);
+							}
+							// 用户勾选"不再提醒"：自动同意 AI 兜底（已预先授权，可能产生费用）
+							if (data.status === "installing" && data.stage === "ai-consent" && aiFallback && aiRemember && !aiAutoDeclinedRef.current[jobId]) {
+								aiAutoDeclinedRef.current[jobId] = true;
+								aiConsent(jobId, true);
+							}
+							if (data.status !== "installing") {
+								// ★ 0.5.70：任务结束 ⇒ 释放该目标的并发锁（其它插件的更新不受影响）
+								clearInFlight(data.packageName);
+								stopJobPolling(jobId);
+								if (data.status === "done") {
+									if (data.kind === "skill") {
+										// 技能安装：不写补丁、无需重启/刷新页面；提示 + 刷新已装技能清单
+										setMessage(t("skillInstalledMsg") + "：" + (data.skillName ?? "") + "。" + (data.skillNote ?? t("skillInstallNote")));
+										call("/plugin-console/skills-installed").then(
+											(d) => { if (d && Array.isArray(d.skills)) setInstalledSkills(d.skills); },
+											() => {},
+										);
+									} else if (data.kind === "suite") {
+										// 套装安装：保存组件报告；有 bundle 组件需重启，否则刷新页面
+										if (Array.isArray(data.suiteReport)) setSuiteReports((prev) => ({ ...prev, [jobId]: data.suiteReport }));
+										setMessage(t("suiteInstalledMsg") + "：" + (data.suiteNote ?? "") + diagMessage(data));
+										if ((data.suiteReport ?? []).some((r) => r.type === "bundle" && r.ok)) {
+											setRestartHint(true);
+										} else {
+											setReloadHint(true);
+											window.setTimeout(() => window.location.reload(), 2500);
+										}
+									} else if (data.ai === true) {
+										setMessage(t("installed") + "：" + data.packageName + "。" + (data.aiNote ?? t("aiRepaired")) + diagMessage(data));
+									} else if (typeof data.presetNote === "string" && data.presetNote !== "") {
+										// 预设装配成功（2026-09-27 批次 D-③）：落盘路径由服务端如实下发，这里补一句
+										// 「预设：新建会话时选择」（点击安装的当下没有新会话，必须先说清楚下一步）。
+										setMessage(t("presetInstalledMsg") + "：" + data.presetNote + t("presetDot") + diagMessage(data));
+										setReloadHint(true);
+									} else if (data.persisted === false) {
+										// 0.5.38 加法（用户诉求「下载下来就不用 lock、重启也不会消失」）：
+										// 三处没齐备时**绝不报"已安装并启用"** —— 说清它还缺什么、后果是什么，
+										// 并把服务端下发的「一键钉住」执行框带出来（下面的 suggestedAction 分支）。
+										// 0.5.84 降噪：只有「会丢插件」那一档才用"重启/重装会消失"这句；只是口径
+										// 不一致（lock 形态、清单与磁盘版本）时用软一点的措辞，原因照样在诊断行里。
+										const sev = data.persist !== null && data.persist !== undefined && typeof data.persist.severity === "object" && data.persist.severity !== null ? data.persist.severity : null;
+										const criticalGap = sev === null ? true : sev.level === "critical";
+										const head = criticalGap ? t("installedNotPersisted") : t("installedNotPersistedWarn");
+										const detail = typeof data.persistNote === "string" && data.persistNote !== "" ? data.persistNote : (typeof sev?.note === "string" ? sev.note : "");
+										setMessage(head + "：" + data.packageName + (detail !== "" ? "。" + detail : "") + diagMessage(data));
+										setReloadHint(true);
+									} else {
+										setMessage(t("installed") + "：" + data.packageName + "（" + (data.entryId ?? "") + "）。" + (data.curlNote ?? (data.bundle ? t("bundleNote") : t("installNote"))) + (data.bundleNote ? "。" + data.bundleNote : "") + (data.lockNote ? "。⚠️ " + data.lockNote : "") + (data.depNote ? "。" + data.depNote : "") + diagMessage(data));
+									}
+									if (data.kind === "skill") {
+										// 技能无需页面刷新
+										setInstalling(null);
+										setTimeout(refresh, 500);
+										return;
+									}
+									if (data.bundle) {
+										setRestartHint(true);
+									} else if (data.persisted === false) {
+										// 未持久化：不自动刷新（卡片上的「一键钉住」还没点，刷新会把结果冲掉）
+										setReloadHint(true);
+									} else if ((data.suggestedAction !== null && data.suggestedAction !== undefined)
+										|| (typeof data.presetNote === "string" && data.presetNote !== "")) {
+										// 有建议动作时不自动刷新页面（2026-09-27 加法）：旧行为 2.5 秒后 reload，
+										// 用户根本来不及点「执行」；这里改成给一个"请刷新"的可见提示。
+										// 预设装配同理：只是往 ~/.dsh/.agent-presets 落盘，刷新页面没有意义，
+										// 还会把「落盘路径 + 新建会话时选择」这句提示冲掉。
+										setReloadHint(true);
+									} else {
+										// 安装成功：自动刷新页面，让插件立即出现在列表里（可见的成功反馈）
+										setReloadHint(true);
+										window.setTimeout(() => window.location.reload(), 2500);
+									}
+								} else {
+									setMessage(t("safetySwitchFailed") + "：" + (data.error ?? "未知错误") + diagMessage(data));
+								}
+								setInstalling(null);
+								setTimeout(refresh, 1500);
+							}
+						},
+						() => {},
+					);
+				}, 2000);
+			};
+			/** 本地 AI 兜底授权：调用模型 API 产生费用，必须用户明确同意。 */
+			const aiConsent = (jobId, approved) => {
+				call("/plugin-console/ai-consent", { jobId, approved }).then(
+					() => { if (!approved) setMessage(t("safetySwitchFailed") + "：已取消本地 AI 兜底（不会调用模型 API）"); },
+					(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+				);
+			};
+			/** 安装进度文案：服务端 progress{channel,phase,index,total,name,done} → 一行人话。
+			* 2026-09-20 真装实测：11 个子包的聚合仓库跑 19 分钟，面板只有"安装中"——用户不知道
+			* 在第几个、还剩几个、当前装的是谁。这里把服务端下发的进度翻成"第 i/n 个：<名字>"。 */
+			const progressText = (progress) => {
+				if (progress === null || progress === undefined) return "";
+				if (progress.done === true) return t("progressDone").replace("{total}", String(progress.total ?? 0));
+				const key = progress.channel === "suite"
+					? (progress.phase === "clone" ? "progressSuiteClone" : "progressSuiteAssemble")
+					: "progressSubpackage";
+				return t(key)
+					.replace("{index}", String(progress.index ?? 0))
+					.replace("{total}", String(progress.total ?? 0))
+					.replace("{name}", progress.name ?? "");
+			};
+			/** 授权倒计时（剩余 mm:ss）：服务端只给请求时间 + 超时上限，剩余量在前端算。
+			* 轮询每 2s 触发一次重渲染，倒计时随之刷新，不需要额外的定时器。 */
+			const consentRemaining = (job) => {
+				const consent = job?.aiConsent ?? null;
+				if (consent === null || consent.pending !== true || typeof consent.since !== "number") return null;
+				const timeoutMs = typeof consent.timeoutMs === "number" && consent.timeoutMs > 0 ? consent.timeoutMs : 600000;
+				const left = Math.max(0, Math.round((consent.since + timeoutMs - Date.now()) / 1000));
+				return Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+			};
+			const consentTimeoutMinutes = (job) => {
+				const timeoutMs = job?.aiConsent?.timeoutMs;
+				return String(Math.max(1, Math.round((typeof timeoutMs === "number" && timeoutMs > 0 ? timeoutMs : 600000) / 60000)));
+			};
+			//#region install-diagnosis-lines
+			/** 安装诊断短句（2026-09-26 加法）：把服务端下发的 diagnosis / entryCheck / integrity 折成
+			* **一两行短句**（解释性长文一律不进面板 —— 用户明确要求；长文案只挂 title 悬浮提示）。
+			* 返回 [{ key, text, level, title }]：level 为 null（中性）| "warn" | "error"，
+			* 直接映射既有 styles.message + data-warn / data-error 约定，不新增徽章 / 按钮 / class。
+			* 无问题时不产出任何行（不占版面）；摘要「已校验 …」按需求作为极短一行保留。 */
+			const diagLines = (job) => {
+				const view = job === null || job === undefined ? {} : job;
+				const lines = [];
+				// ① 装后校验（install-verify.js: { ok, problems[], mirrorHint, suggestions[], entry, patch, bundle, version }）
+				//    只有 ok !== true 才算问题；面板只放一句短原因，完整长句挂 title
+				const check = view.entryCheck ?? null;
+				if (check !== null && check.ok !== true) {
+					const problem = Array.isArray(check.problems) && typeof check.problems[0] === "string" ? check.problems[0] : "";
+					const reason = /入口文件缺失/u.test(problem) ? t("diagEntryReasonEntry")
+						: /补丁行/u.test(problem) ? t("diagEntryReasonPatch")
+							: /bundle/u.test(problem) ? t("diagEntryReasonBundle")
+								: "";
+					const problems = Array.isArray(check.problems) ? check.problems.filter((p) => typeof p === "string") : [];
+					lines.push({
+						key: "entry",
+						text: t("diagEntryFail") + (reason === "" ? "" : t("diagColon") + reason),
+						level: "error",
+						title: problems.length === 0 ? null : problems.join("\n"),
+					});
+					const suggestions = Array.isArray(check.suggestions) ? check.suggestions.filter((s) => typeof s === "string") : [];
+					lines.push({
+						key: "entryAdvice",
+						text: check.mirrorHint !== null && check.mirrorHint !== undefined ? t("diagEntryAdviceMirror") : t("diagEntryAdvice"),
+						level: "warn",
+						title: suggestions.length === 0 ? null : suggestions.join("\n"),
+					});
+				}
+				// ② 下载物摘要（verifyTarballDigest: { checked, ok, algorithm, expected, actual, sha256, note }）：
+				//    三种短句 + 读取失败一种；不匹配只提示「未拦截」（服务端语义就是不拒装，这里不改）
+				const integrity = view.integrity ?? null;
+				if (integrity !== null) {
+					const text = integrity.checked !== true ? t("diagIntegritySkip")
+						: integrity.ok === true ? t("diagIntegrityOk").replace("{algo}", String(integrity.algorithm ?? "sha256"))
+							: integrity.ok === false ? t("diagIntegrityMismatch")
+								: t("diagIntegrityNone");
+					lines.push({ key: "integrity", text: text, level: integrity.ok === false ? "warn" : null, title: typeof integrity.note === "string" ? integrity.note : null });
+				}
+				// ③ 失败分类（install-diagnose.js: { kind, hint, retry }，定向重试后带 retried/retryTimeoutMs）：
+				//    失败给「短分类句」；网络类定向重试后**成功**的作业只留一句「已自动重试一次」
+				const diagnosis = view.diagnosis ?? null;
+				if (diagnosis !== null && (view.status === "failed" || diagnosis.retried === true)) {
+					const kindText = diagnosis.kind === "network-timeout" ? t("diagKindNetworkTimeout")
+						: diagnosis.kind === "allowBuilds" ? t("diagKindAllowBuilds")
+							: diagnosis.kind === "minimumReleaseAge" ? t("diagKindMinimumReleaseAge")
+								: diagnosis.kind === "missing-tool" ? t("diagKindMissingTool")
+									: diagnosis.kind === "not-found" ? t("diagKindNotFound")
+										: diagnosis.kind === "fetch-404" ? t("diagKindFetch404")
+											: diagnosis.kind === "lockfile-outdated" ? t("diagKindLockfileOutdated")
+												: diagnosis.kind === "supply-chain-age" ? t("diagKindSupplyChainAge")
+													: diagnosis.kind === "locked" ? t("diagKindLocked")
+														: t("diagKindOther");
+					lines.push({
+						key: "diagnosis",
+						text: view.status === "failed"
+							? kindText + (diagnosis.retried === true ? t("diagSemi") + t("diagRetriedMark") : "")
+							: t("diagRetried"),
+						level: "warn",
+						title: typeof diagnosis.hint === "string" ? diagnosis.hint : null,
+					});
+				}
+				// ④ 通道备注（2026-09-27 批次 D-④）：服务端一直在下发"为什么没试某个通道"（体积门禁、
+				//    稀疏降级、release/git 预算…），但面板从未展示 → 用户只看到笼统的"失败"。
+				//    失败时逐条显示（最多 6 条），成功时不显示（成功路径已有 presetNote/curlNote 等具体文案）。
+				const channelNotes = Array.isArray(view.channelNotes) ? view.channelNotes.filter((n) => typeof n === "string" && n !== "") : [];
+				if (view.status === "failed" && channelNotes.length > 0) {
+					lines.push({
+						key: "channelNotes",
+						text: t("diagChannelNotes") + t("diagColon") + channelNotes.slice(0, 6).join(t("diagSemi")),
+						level: "warn",
+						title: channelNotes.join("\n"),
+					});
+				}
+				// ⑤ 持久化判据（0.5.38 加法，服务端 domain/persist.js：{ missing, actual, note, severity }）：
+				//    三处（清单 spec / pnpm-lock.yaml 条目 / 挂载行）任一没就位 → 诊断行，
+				//    完整缺口清单挂 title。**装成功但没钉住**的作业从此不会只显示"已安装并启用"。
+				// ★ 0.5.84 判据降噪（用户 2026-10 反馈：红字太多，真要紧的那条被淹了）：
+				//   服务端 persistSeverity() 已把每个缺口分成「会丢插件 / 只是口径不一致」两档，
+				//   这里**只认那一份结论**，不自己重判：
+				//     · critical（清单里没有它 / 重启后挂不上）→ error 级（红），并给完整缺口清单；
+				//     · warn（lock 形态/目标、清单形态与磁盘版本不一致）→ warn 级（可折叠提示）+
+				//       明说"不影响重启后加载"，不再拿红字吓人。
+				//   老服务端没有 severity 字段 → 按 critical 处理（保持 0.5.38 以来的既有行为，不静默降级）。
+				if (view.status === "done" && view.persisted === false) {
+					const severity = view.persist !== null && view.persist !== undefined && typeof view.persist.severity === "object" && view.persist.severity !== null ? view.persist.severity : null;
+					const critical = severity === null ? true : severity.level === "critical";
+					const missingText = Array.isArray(view.persist?.missing) && view.persist.missing.length > 0 ? t("diagColon") + view.persist.missing.join(" / ") : "";
+					const longText = typeof view.persistNote === "string" && view.persistNote !== "" ? view.persistNote
+						: (typeof view.persist?.note === "string" ? view.persist.note : null);
+					lines.push({
+						key: "persist",
+						text: critical ? t("diagNotPersisted") + missingText : t("diagPersistDowngraded") + missingText,
+						level: critical ? "error" : "warn",
+						title: !critical && typeof severity?.note === "string" && severity.note !== "" ? severity.note : longText,
+					});
+				}
+				return lines;
+			};
+			/** 诊断短句 → 消息栏后缀（空串 = 没问题）：只在既有文案**末尾追加**，一个字都不替换。 */
+			const diagMessage = (job) => {
+				const lines = diagLines(job);
+				return lines.length === 0 ? "" : t("diagDot") + lines.map((line) => line.text).join(t("diagSemi"));
+			};
+			/** 单条诊断行 → <p className={styles.message} data-error|data-warn>（沿用既有约定，不加新 class）。 */
+			const diagLineEl = (line) => el("p", {
+				key: "diag-" + line.key,
+				className: styles.message,
+				"data-error": line.level === "error" ? "true" : undefined,
+				"data-warn": line.level === "warn" ? "true" : undefined,
+				title: line.title === null || line.title === undefined ? undefined : line.title,
+			}, line.text);
+			/** 安装诊断卡（加法）：**装成功但装后校验 / 摘要校验有问题**的作业 → 一张卡片；
+			* 无问题（或只有「已校验 …」这类中性行）返回 null，不占版面、不加按钮/徽章。 */
+			const diagCardEl = (job) => {
+				const lines = diagLines(job).filter((line) => line.level !== null);
+				if (lines.length === 0) return null;
+				return el("div", { key: "check-" + job.jobId, className: styles.detail },
+					el("div", { className: styles.rowTop },
+						el("span", { className: styles.phase, "data-phase": lines.some((line) => line.level === "error") ? "failed" : undefined }, t("diagCardTitle")),
+						el("strong", { className: styles.name }, job.packageName ?? job.repo)),
+					...lines.map(diagLineEl));
+			};
+			//#endregion
+			/** 软件源管理：打开时拉取当前配置。 */
+			const openSources = () => {
+				setSourcesOpen(true);
+				// 已有缓存（挂载时取过 / 上次打开取过）→ 立即渲染，不再白等一次往返
+				if (sourcesData !== null && sourcesData.error === undefined) return;
+				// 2026-09-24（图1 复现）：请求若一直不落地，弹窗体只看 sourcesData === null 就会永远显示
+				// 「正在读取插件…」——界面把失败吞掉，用户只能干等。这里给 15s 上限，超时/失败都落到可重试错误态。
+				const timeout = new Promise((resolve) => setTimeout(() => resolve({ __timeout: true }), 15000));
+				Promise.race([call("/plugin-console/sources"), timeout]).then(
+					(data) => {
+						if (data !== null && data.__timeout === true) { setSourcesData({ error: t("sourcesTimeout") }); return }
+						setSourcesData(data.sources);
+						setSearchSourcesList(data.sources.searchSources ?? []);
+						setGiteeClientId(data.sources.gitee?.clientId ?? "");
+						// 安全：secret 永不回传（服务端已脱敏）；已配置时留空、保存需重新输入，
+						// 未配置时为空表单引导首次填写
+						setGiteeClientSecret("");
+					},
+					(error) => { setSourcesData({ error: friendlyGithubError(error).message }); },
+				);
+			};
+			const saveGiteeSetup = () => {
+				// clientId 打码回显（如 abc12345…）：用户未修改时原样传回服务端，服务端识别打码标记保留原配置
+				const idValue = giteeClientId.trim();
+				if (!idValue || !giteeClientSecret.trim()) {
+					setMessage(t("safetySwitchFailed") + "：client_id / client_secret 不能为空");
+					return;
+				}
+				if (idValue.endsWith("…")) {
+					sourcesAction({ action: "gitee-setup", clientId: "", clientSecret: giteeClientSecret.trim(), keepClientId: true });
+				} else {
+					sourcesAction({ action: "gitee-setup", clientId: idValue, clientSecret: giteeClientSecret.trim() });
+				}
+			};
+			const startGiteeOauth = () => {
+				call("/plugin-console/gitee-oauth-url").then(
+					(data) => { if (data && data.url) window.open(data.url, "_blank", "noopener"); },
+					(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+				);
+			};
+			const sourcesAction = (payload, done) => {
+				setSourcesBusy(true);
+				call("/plugin-console/sources", payload).then(
+					(data) => {
+						setSourcesData(data.sources);
+						setSearchSourcesList(data.sources.searchSources ?? []);
+						setMessage(t("sourcesUpdated"));
+						if (done) done();
+					},
+					(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+				).finally(() => setSourcesBusy(false));
+			};
+			const addSource = () => {
+				if (!isAllowedSourceUrl(sourceUrl.trim())) {
+					setMessage(t("safetySwitchFailed") + "：" + t("invalidSourceUrl"));
+					return;
+				}
+				sourcesAction({ action: "add", name: sourceName.trim(), url: sourceUrl.trim() }, () => { setSourceName(""); setSourceUrl(""); });
+			};
+			/** 软件源扫描：服务端并发探测每个源（可达性/延迟/最新版本），结果显示在源列表行内。 */
+			const scanRegistries = () => {
+				setRegScan({ status: "scanning" });
+				call("/plugin-console/registry-scan", {}).then(
+					(data) => setRegScan({ status: "ready", results: Array.isArray(data.results) ? data.results : [], scannedAt: typeof data.scannedAt === "number" ? data.scannedAt : null }),
+					(error) => { setRegScan(null); setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message); },
+				);
+			};
+			// 扫描结果派生视图：每条源的命中结果 + 可达计数 + 最新版本来自哪个源
+			const scanRows = regScan !== null && regScan.status === "ready" ? regScan.results : [];
+			const scanOf = (id) => scanRows.find((row) => row.id === id) ?? null;
+			const scanOkCount = scanRows.filter((row) => row.ok === true).length;
+			const scanBest = (() => {
+				const withVersion = scanRows.filter((row) => row.ok === true && typeof row.latest === "string");
+				if (withVersion.length === 0) return null;
+				const parse = (v) => String(v).split(".").map((n) => Number.parseInt(n, 10) || 0);
+				const newer = (a, b) => {
+					const [pa, pb] = [parse(a), parse(b)];
+					for (let i = 0; i < 3; i += 1) if (pa[i] !== pb[i]) return pa[i] > pb[i];
+					return false;
+				};
+				return withVersion.reduce((best, row) => (best === null || newer(row.latest, best.latest) ? row : best), null);
+			})();
+			const saveEditReg = () => {
+				if (editReg === null) return;
+				sourcesAction({ action: "edit", id: editReg.id, name: editReg.name, url: editReg.url }, () => setEditReg(null));
+			};
+			const addIndexSource = () => {
+				if (!isAllowedSourceUrl(indexSourceUrl.trim())) {
+					setMessage(t("safetySwitchFailed") + "：" + t("invalidSourceUrl"));
+					return;
+				}
+				sourcesAction({ action: "add-index", name: indexSourceName.trim(), url: indexSourceUrl.trim() }, () => { setIndexSourceName(""); setIndexSourceUrl(""); });
+			};
+			const saveEditIndex = () => {
+				if (editIndex === null) return;
+				sourcesAction({ action: "edit-index", id: editIndex.id, name: editIndex.name, url: editIndex.url }, () => setEditIndex(null));
+			};
+			/** archive 源（批次 C-⑨）：与 git 源同一套操作语义（添加 / 编辑 / 设主源 / 删除）。 */
+			const addArchiveSource = () => {
+				const tpl2 = archiveSourceUrl.trim();
+				if (!tpl2.includes("{owner}") || !tpl2.includes("{repo}")) { setMessage(t("archiveUrlPlaceholder")); return; }
+				sourcesAction({ action: "add-archive", name: archiveSourceName.trim(), urlTemplate: tpl2 }, () => { setArchiveSourceName(""); setArchiveSourceUrl(""); });
+			};
+			const saveEditArchive = () => {
+				if (editArchive === null) return;
+				sourcesAction({ action: "edit-archive", id: editArchive.id, name: editArchive.name, urlTemplate: editArchive.urlTemplate }, () => setEditArchive(null));
+			};
+
+			const addGitSource = () => {
+				const tpl = gitSourceUrl.trim();
+				if (!tpl.includes("{owner}") || !tpl.includes("{repo}")) {
+					setMessage(t("safetySwitchFailed") + "：" + t("gitUrlPlaceholder"));
+					return;
+				}
+				if (!isAllowedSourceUrl(tpl)) {
+					setMessage(t("safetySwitchFailed") + "：" + t("invalidSourceUrl"));
+					return;
+				}
+				sourcesAction({ action: "add-git", name: gitSourceName.trim(), urlTemplate: tpl }, () => { setGitSourceName(""); setGitSourceUrl(""); });
+			};
+			const saveEditGit = () => {
+				if (editGit === null) return;
+				sourcesAction({ action: "edit-git", id: editGit.id, name: editGit.name, urlTemplate: editGit.urlTemplate }, () => setEditGit(null));
+			};
+			/** 折叠分区（软件源弹窗）：标题可点，展开/收起各自独立；软件源默认展开。 */
+			const accSection = (key, title, children) => {
+				const open = openSections[key] === true;
+				return el("div", { key, className: styles.acc },
+					el("button", {
+						type: "button",
+						className: styles.accHead,
+						"data-open": open ? "true" : "false",
+						"aria-expanded": open ? "true" : "false",
+						onClick: () => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] })),
+					}, (open ? "▾ " : "▸ ") + title),
+					open ? el("div", { className: styles.accBody }, ...children) : null);
+			};
+			const addSearchSource = () => {
+				if (!isAllowedSourceUrl(searchSourceUrl.trim()) || !searchSourceUrl.includes("{q}")) {
+					setMessage(t("safetySwitchFailed") + "：" + t("invalidSearchUrl"));
+					return;
+				}
+				// 解析请求头：每行 "名称: 值"
+				const headers = searchSourceHeaders.split("\n")
+					.map((line) => line.trim())
+					.filter((line) => line !== "")
+					.map((line) => {
+						const idx = line.indexOf(":");
+						if (idx <= 0) return null;
+						return { name: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() };
+					})
+					.filter((h) => h !== null);
+				sourcesAction(
+					{ action: "add-search", name: searchSourceName.trim(), url: searchSourceUrl.trim(), headers },
+					() => { setSearchSourceName(""); setSearchSourceUrl(""); setSearchSourceHeaders(""); },
+				);
+			};
+			// subdir 用于「从这个子目录安装」（0.5.47 加法）：服务端按它去读 <subdir>/package.json、
+			// 稀疏取该子目录源码、再按既有本地目录来源（link:）装。为空时请求体形状与改动前逐字相同。
+			const startJob = (repo, packageName, source = "github", kind = "plugin", update = false, subdir = null, version = null) => {
+				// 防并发（与 addLocal 一致）：已有安装/更新进行中时忽略新点击（更新按钮此前可绕过，
+				// 反复点击会产生几十个并发任务装同一插件）
+				// 只拦**同一个目标**：不同插件可以并行更新（服务端是作业模型，天然支持）
+				const jobKey = repo || packageName;
+				if (inFlight.has(jobKey)) {
+					setMessage(t("installBusy"));
+					return;
+				}
+				markInFlight(jobKey);
+				setInstalling(jobKey);
+				setReloadHint(false);
+				setRestartHint(false);
+				setMessage(null);
+				const body = { repo: repo ?? "", packageName, source, kind, update };
+			// ★ 0.5.81（用户 2026-10-18）：目标版本必须传下去 —— 不带版本时 pnpm 按 latest 把旧版本原地重装，
+		//   表现就是"更新了、刷新后还是老版本"。null/空串一律不带（行为与改动前逐字相同）。
+		if (typeof version === "string" && version !== "") body.version = version;
+				if (subdir !== null && subdir !== undefined && String(subdir) !== "") body.subdir = String(subdir);
+				call("/plugin-console/install", body).then(
+					(data) => {
+						if (data && data.jobId) {
+							setJobs((prev) => ({
+								...prev,
+								[data.jobId]: { jobId: data.jobId, repo, source, packageName, kind, status: "installing", stage: "preparing", startedAt: Date.now() },
+							}));
+							pollJob(data.jobId);
+						}
+					},
+					(error) => {
+						setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+						clearInFlight(jobKey);
+						setInstalling(null);
+					},
+				);
+			};
+			/** 技能安装：git clone 仓库 → 复制 SKILL.md 到 ~/.dsh/skills/<name>/（不写 cordis 补丁、无需重启）。 */
+			const startSkillJob = (item) => {
+				if (installing !== null) return;
+				startJob(item.fullName, null, item.source ?? "github", "skill");
+			};
+			/** 套装安装：submodule 聚合仓库（照 install.ps1 语义装配子模块组件）。 */
+			const startSuiteJob = (item) => {
+				if (installing !== null) return;
+				startJob(item.fullName, null, item.source ?? "github", "suite");
+			};
+			// 卸载时清理轮询定时器；页面回到前台时恢复标题（AI 授权提示后）
+			react.useEffect(() => {
+				const onVisible = () => {
+					if (document.visibilityState === "visible") {
+						try { document.title = originalTitleRef.current; } catch {}
+					}
+				};
+				document.addEventListener("visibilitychange", onVisible);
+				return () => {
+					document.removeEventListener("visibilitychange", onVisible);
+					for (const timer of Object.values(jobTimersRef.current)) window.clearInterval(timer);
+				};
+			}, []);
+			/** 搜索结果卡片上的"添加到本地"：直接启动安装任务（服务端解析包名与类型），
+			* 点击立即出现进度卡片——不再先浏览器取包名（黑洞期直连失败会拖到 40s 无反馈）。
+			* 技能条目走技能通道，套装条目走套装通道。 */
+			const addLocal = (item) => {
+				if (installing !== null) return;
+				setInstalling(item.fullName);
+				setMessage(null);
+				if (item.fullName === "deepseek-ai/deepseek-harness") {
+					// 框架本体：不提供安装（服务端也会拦截）；升级请用卡片「框架升级」流程
+					setMessage(t("frameworkUseUpgrade"));
+					setInstalling(null);
+					return;
+				}
+				if (item.hasSkill === true || item.skillTopics !== undefined) {
+					// 没有 npm 包但有 SKILL.md：按技能安装（clone → ~/.dsh/skills）
+					startSkillJob(item);
+					return;
+				}
+				if (item.hasSuite === true) {
+					// submodule 聚合套装：走套装安装通道（clone → 子模块按类型装配）
+					startSuiteJob(item);
+					return;
+				}
+				if ((item.subpackagePath || item.npmPackage === true) && typeof item.packageName === "string" && item.packageName !== "") {
+					// monorepo 子包 / npm 包名命中：搜索结果带 packageName，按 npm 包名安装
+					//（npm 包名反查命中的条目没有 subpackagePath，只有 packageName + npmPackage，
+					//  不改这一行就会退化成"按仓库装"，装到的不是用户输入的那个包 —— 2026-09-20）
+					startJob(item.fullName, item.packageName, item.source ?? "github");
+					return;
+				}
+				startJob(item.fullName, null, item.source ?? "github");
+			};
+			/** 停用/启用已安装技能（写入官方调用策略 frontmatter，可逆）。 */
+			const doToggleSkill = (name, enabled) => {
+				setTogglingSkill(name);
+				call("/plugin-console/skill-toggle", { name, enabled }).then(
+					() => {
+						setMessage((enabled ? t("skillEnabledMsg") : t("skillToggledMsg")) + "：" + name);
+						setConfirmSkillDelete(null);
+						setTogglingSkill(null);
+						setInstalledSkills((prev) => prev.map((s) => (s.name === name ? { ...s, disabled: !enabled } : s)));
+					},
+					(error) => {
+						setTogglingSkill(null);
+						setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+					},
+				);
+			};
+			/** 复制安装命令到剪贴板（navigator.clipboard + 兼容兜底）。 */
+			const copyInstallCommand = (cmd) => {
+				const done = () => setMessage(t("copiedInstallCmd"));
+				const fallback = () => {
+					try {
+						const ta = document.createElement("textarea");
+						ta.value = cmd;
+						ta.style.position = "fixed";
+						ta.style.opacity = "0";
+						document.body.appendChild(ta);
+						ta.select();
+						const ok = document.execCommand("copy");
+						document.body.removeChild(ta);
+						if (ok) done();
+					} catch {}
+				};
+				try {
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						navigator.clipboard.writeText(cmd).then(done, fallback);
+					} else fallback();
+				} catch { fallback(); }
+			};
+			/** 框架升级：Hub 打包备份现有配置 + 版本检测 + 升级脚本（脚本会自行停止/拉起服务，无需手动重启）。 */
+			const doFrameworkUpgrade = () => {
+				setFrameworkUpgrading(true);
+				// 用户选了版本就带上（宿主端按候选列表校验：只接受比当前新的真实版本）
+				call("/plugin-console/framework-upgrade", fwSelected ? { version: fwSelected } : {}).then(
+					(data) => {
+						setFrameworkUpgrading(false);
+						setConfirmFrameworkUpgrade(false);
+						if (data && data.ok === true) {
+							// 新一轮升级开始：让卡片恢复显示（清掉"本次会话隐藏"，运行身份由时间戳自然区分）
+							setFwStatusDismissed(false);
+							setMessage(t("frameworkUpgradeDone")
+								+ (data.hasUpdate === true ? "：" + (data.current ?? "?") + " → " + (data.target ?? data.latest ?? "?") : (data.registryError ? t("frameworkUpgradeCheckFailed") : t("frameworkUpgradeUpToDate")))
+								+ "。备份：" + (data.backupDir ?? "") + "。" + (Array.isArray(data.hints) ? data.hints.join(" ") : ""));
+							// 升级脚本会自行停止→升级→拉起服务：不显示手动重启按钮（避免升级中途被干扰）
+							setRestartHint(false);
+							setReloadHint(false);
+							// 启动进度条轮询（服务断开前能看到前几步；重连后自动恢复）
+							setFrameworkStatus({ status: "starting", message: t("fwStepBackup") });
+							pollFrameworkStatus();
+						}
+					},
+					(error) => {
+						setFrameworkUpgrading(false);
+						setConfirmFrameworkUpgrade(false);
+						setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message);
+					},
+				);
+			};
+			/** 删除已安装技能（~/.dsh/skills/<name> 目录），两步确认防误删。 */
+			const doRemoveSkill = (name) => {
+				call("/plugin-console/skill-remove", { name }).then(
+					() => {
+						setMessage(t("skillDeletedMsg") + "：" + name);
+						setConfirmSkillDelete(null);
+						setInstalledSkills((prev) => prev.filter((s) => s.name !== name));
+					},
+					(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+				);
+			};
+			const installedQueryNorm = installedQuery.trim().toLowerCase();
+			// 当前搜索源的展示名（内置 + 自定义）
+			const sourceDisplayName = (source) => source === "github"
+				? "GitHub"
+				: source === "gitee"
+					? "Gitee"
+					: ((searchSourcesList !== null ? searchSourcesList.find((s) => s.id === source)?.name : undefined) ?? source);
+			// 仓库落地提示：动态带上当前主 Git 源名称（Git 源可自定义，不能写死 GitHub）
+			const repoLandTitleText = () => {
+				const primary = (gitSourcesList ?? []).find((s) => s.primary === true);
+				const label = primary?.name ?? t("repoLandSourceUnknown");
+				return t("repoLandTitle").replace("{source}", label);
+			};
+			// issue #22 ①：批量检测结论查询（entry → 该项结论）。没查过 / 查中 / 出错一律 null =「这次没有结论」，
+			// 于是卡片既不显示"可更新"也不显示"已最新"——不拿"没查过"冒充"已是最新"。
+			const batchItemOf = (entry) => (batchCheck !== null && batchCheck.status === "ready"
+				? batchCheck.items[String(entry.moduleName ?? "")] ?? null
+				: null);
+
+			// ★ 0.5.93 改错（issue #22 ② 收口）：徽章区**不再做任何宽度测量**。
+			//   上一版用 ResizeObserver 读第一张卡片的徽章行宽度、再按估算宽度决定"显示几个 / 收成 +N"——
+			//   测量值随卡片宽度抖动 ⇒ 徽章时不时多一个少一个（用户原话「徽章有挤压变化」）。
+			//   现在：卡片上把徽章**全渲染**，靠 `.pc_badgeRow` 的 overflow:hidden + white-space:nowrap
+			//   在纯 CSS 层截断（单行、固定高度、放不下的直接看不见，不给"还有 N 个"的提示）；
+			//   全部徽章在**详情页**一次看全。于是没有任何"测量 → 重算 → 重渲染"的反馈环。
+			// ── issue #22 ②③：用户注解的读写与编辑块（备注 / 用户徽章 / 用户自建分组）───────────
+			// 数据在**独立文件**里、走独立接口；这块出问题绝不影响插件列表（那是另一条通道）。
+			const annotationKeyOf = (entry) => {
+				const name = String(entry?.moduleName ?? "");
+				return name !== "" ? name : String(entry?.rowId ?? "");
+			};
+			const annotationOf = (entry) => {
+				const key = annotationKeyOf(entry);
+				const record = key === "" ? null : annotations?.plugins?.[key];
+				return record !== null && typeof record === "object" ? record : null;
+			};
+			const annotationsLoad = () => {
+				call("/plugin-console/annotations").then(
+					(data) => {
+						setAnnotations(data !== null && typeof data === "object" ? data : null);
+						// 手工改过文件 → 服务端规范化时丢弃了不合规内容，如实说（不静默）
+						if (data !== null && Array.isArray(data.repaired) && data.repaired.length > 0) {
+							setAnnotationsNote(t("annotationsRepaired").replace("{n}", String(data.repaired.length)));
+						}
+					},
+					(error) => {
+						setAnnotations(null);
+						setAnnotationsNote(t("annotationsCorrupt").replace("{err}", friendlyGithubError(error).message));
+					},
+				);
+			};
+			/** 一次写动作：成功就用响应里的**整份最新状态**刷新（服务端保证回了全量），失败如实提示。 */
+			const annotationWrite = (body, okText) => {
+				const busyKey = String(body?.packageName ?? body?.id ?? body?.action ?? "");
+				setAnnotationBusy(busyKey);
+				return call("/plugin-console/annotations", body).then(
+					(data) => {
+						if (data !== null && data.plugins !== null && typeof data.plugins === "object") {
+							setAnnotations({
+								ok: true, file: data.file ?? null, exists: true, emptyFile: false, version: 1, updatedAt: 0,
+								plugins: data.plugins, groups: Array.isArray(data.groups) ? data.groups : [],
+								stats: data.stats ?? null, repaired: [], error: null,
+							});
+						}
+						setAnnotationsNote(okText === undefined || okText === null ? null : okText);
+						return data;
+					},
+					(error) => { setAnnotationsNote(t("annotationsFailed") + "：" + friendlyGithubError(error).message); return null; },
+				).finally(() => setAnnotationBusy(null));
+			};
+			const userGroups = Array.isArray(annotations?.groups) ? annotations.groups : [];
+			/** 某个包属于哪个用户分组（单值：取第一个命中的）。渲染请用 groupsOfPackage —— 分组允许重叠。 */
+			const groupOfPackage = (moduleName) => {
+				const name = String(moduleName ?? "");
+				if (name === "") return null;
+				for (const group of userGroups) {
+					if (Array.isArray(group.packages) && group.packages.includes(name)) return group;
+				}
+				return null;
+			};
+			/**
+			 * 某个包属于**哪些**用户分组（分组允许重叠 ⇒ 可能多个）。
+			 * 与 groupOfPackage 的区别：那个用于"当前选中哪个组"（单值），这个用于渲染（多值）。
+			 */
+			const groupsOfPackage = (moduleName) => {
+				const name = String(moduleName ?? "");
+				if (name === "") return [];
+				return userGroups.filter((group) => Array.isArray(group.packages) && group.packages.includes(name));
+			};
+			const createUserGroup = () => {
+				const name = groupDraftName.trim();
+				if (name === "") return;
+				// ③：新建只走**回车/点按钮**这一条明确动作（绝不边打边建）；成功后用服务端返回的
+				//   group.id 标一下"刚建好"（只为了在主列表的横框上播一次入场动画，数据仍是服务端那份）。
+				setGroupDraftName("");
+				annotationWrite({ action: "group-create", name }, t("groupCreated").replace("{name}", name)).then((data) => {
+					const id = data !== null && data !== undefined && data.group !== null && data.group !== undefined
+						? String(data.group.id ?? "")
+						: "";
+					if (id === "") return;
+					setGroupJustCreated(id);
+					try {
+						// 动画只有 220ms；1.2s 后把这个标记撤掉，避免以后重渲染时又播一次
+						window.setTimeout(() => setGroupJustCreated((prev) => (prev === id ? null : prev)), 1200);
+					} catch {}
+				});
+			};
+			/**
+			 * 打开「备注插件」面板（用户定稿：面板打开时插件列表**收起**，只留一行摘要）。
+			 * 每次打开都回到收起 + 空查询 —— 不给"上次展开到一半"的残留状态。
+			 */
+			const openAnnotationsPanel = () => {
+				setAnnotationsListOpen(false);
+				setAnnotationsQuery("");
+				setAnnotationsPanelOpen(true);
+				annotationsLoad();
+			};
+			/** 工具栏那个按钮是**开关**：开着再点就关掉（"点了没反应"算缺陷）。 */
+			const toggleAnnotationsPanel = () => {
+				if (annotationsPanelOpen) { setAnnotationsPanelOpen(false); return; }
+				openAnnotationsPanel();
+			};
+			// issue #22 ②：注解面板里的插件行 —— 默认收起；展开后按 包名 / rowId / 已有备注内容 即时过滤。
+			//   查询词只读不写 ⇒ 边打边筛的过程中用户正在输入的内容**不会被清掉**。
+			const annotationListEntries = state.status === "ready" ? state.data.entries : [];
+			const annotationsQueryNorm = annotationsQuery.trim().toLowerCase();
+			const annotationListFiltered = annotationsQueryNorm === ""
+				? annotationListEntries
+				: annotationListEntries.filter((entry) => [entry.moduleName, entry.rowId, annotationOf(entry)?.note]
+					.some((value) => String(value ?? "").toLowerCase().includes(annotationsQueryNorm)));
+			/**
+			 * 用户注解编辑块 —— 详情页与「备注插件」面板**共用同一份**（两处交互必须一模一样）。
+			 * · 备注：点一下就地编辑，回车保存、Esc 取消；存空 = 清空（清空后**不占位**）。
+			 * · 徽章：∪ 追加（系统徽章在卡片上是另一组，**绝不替换、绝不合并**）；× 删除后可撤销一次。
+			 * · 没有备注也没有徽章时：只显示一个「＋ 加备注」入口（用户定稿的那一种，不显示空壳）。
+			 */
+			const annotationBlock = (entry) => {
+				const key = annotationKeyOf(entry);
+				const packageName = String(entry?.moduleName ?? key);
+				const record = annotationOf(entry);
+				const note = typeof record?.note === "string" ? record.note : "";
+				const badges = Array.isArray(record?.badges) ? record.badges : [];
+				const group = groupOfPackage(packageName);
+				const editing = noteEdit !== null && noteEdit.key === key;
+				const busy = annotationBusy === key || annotationBusy === packageName;
+				const draft = badgeDraft[key] ?? "";
+				const undo = badgeUndo[key];
+				const writeNote = (text) => annotationWrite({ action: "note", packageName, rowId: entry?.rowId ?? null, note: text }, text.trim() === "" ? t("noteCleared") : t("noteSaved"));
+				const writeBadges = (list, okText) => annotationWrite({ action: "badges", packageName, rowId: entry?.rowId ?? null, badges: list }, okText);
+				const addBadge = () => {
+					const text = draft.trim();
+					if (text === "") return;
+					setBadgeDraft((prev) => ({ ...prev, [key]: "" }));
+					if (badges.includes(text)) return;
+					if (badges.length >= 12) { setAnnotationsNote(t("badgeMax").replace("{n}", "12")); return; }
+					writeBadges([...badges, text], t("badgeAdded").replace("{b}", text));
+				};
+				return el("div", { className: styles.userNote, "data-annot": "true" },
+					editing
+						? el("div", null,
+							el("textarea", {
+								className: styles.noteInput,
+								rows: 2,
+								value: noteEdit.draft,
+								placeholder: t("notePlaceholder"),
+								"aria-label": t("noteLabel"),
+								onChange: (event) => setNoteEdit({ key, draft: String(event.target.value ?? "") }),
+								onKeyDown: (event) => {
+									if (event.key === "Escape") { event.preventDefault(); setNoteEdit(null); return; }
+									if (event.key === "Enter" && event.shiftKey !== true) {
+										event.preventDefault();
+										const text = noteEdit.draft;
+										setNoteEdit(null);
+										writeNote(text);
+									}
+								},
+							}),
+							el("p", { className: styles.note, style: { margin: 0 } }, t("noteSaveHint")))
+						: el("div", { className: styles.annotRow },
+							note !== "" ? el("p", { className: styles.desc, style: { margin: 0, whiteSpace: "pre-wrap", flex: "1 1 200px" } }, note) : null,
+							el("button", {
+								type: "button",
+								className: styles.toggle,
+								disabled: busy,
+								title: t("notePlaceholder"),
+								onClick: () => setNoteEdit({ key, draft: note }),
+							}, note !== "" ? t("noteEdit") : t("noteEmpty"))),
+					el("div", { className: styles.annotRow },
+						el("span", { className: styles.status }, t("badgeLabel") + "："),
+						badges.map((badge) => el("span", { key: "ub-" + badge, className: styles.tag, "data-user-badge": "true" },
+							badge,
+							el("button", {
+								type: "button",
+								className: styles.tag,
+								"data-more": "true",
+								title: t("badgeRemove"),
+								"aria-label": t("badgeRemove"),
+								disabled: busy,
+								onClick: () => {
+									setBadgeUndo((prev) => ({ ...prev, [key]: badges }));
+									writeBadges(badges.filter((item) => item !== badge), t("badgeRemoved").replace("{b}", badge));
+								},
+							}, "×"))),
+						el("input", {
+							type: "text",
+							value: draft,
+							placeholder: t("badgeAddPlaceholder"),
+							"aria-label": t("badgeAddPlaceholder"),
+							disabled: busy,
+							style: { width: 130, font: "inherit", padding: "2px 6px" },
+							onChange: (event) => setBadgeDraft((prev) => ({ ...prev, [key]: String(event.target.value ?? "") })),
+							onKeyDown: (event) => { if (event.key === "Enter") { event.preventDefault(); addBadge(); } },
+						}),
+						undo !== undefined
+							? el("button", {
+								type: "button",
+								className: styles.toggle,
+								disabled: busy,
+								onClick: () => {
+									writeBadges(undo, t("badgeUndoDone"));
+									setBadgeUndo((prev) => { const next = { ...prev }; delete next[key]; return next; });
+								},
+							}, t("badgeUndo"))
+							: null),
+					el("div", { className: styles.annotRow },
+						el("span", { className: styles.status }, t("groupLabel") + "："),
+						// #5：就在这里新建分组，并把当前插件直接拉进去（回车创建）
+						detailGroupDraft === null || detailGroupDraft.key !== key
+							? el("button", {
+								type: "button",
+								className: styles.toggle,
+								"data-newgroup": "true",
+								title: t("groupNewInlineHint"),
+								disabled: busy,
+								onClick: () => setDetailGroupDraft({ key, draft: "" }),
+							}, "＋ " + t("groupNewInline"))
+							: el("input", {
+								type: "text",
+								autoFocus: true,
+								value: detailGroupDraft.draft,
+								placeholder: t("groupNewInlinePlaceholder"),
+								"aria-label": t("groupNewInline"),
+								style: { font: "inherit", padding: "2px 6px", width: 160 },
+								onChange: (event) => setDetailGroupDraft({ key, draft: String(event.target.value ?? "") }),
+								onKeyDown: (event) => {
+									if (event.key === "Escape") { event.preventDefault(); setDetailGroupDraft(null); return; }
+									if (event.key !== "Enter") return;
+									event.preventDefault();
+									const name = String(detailGroupDraft.draft ?? "").trim();
+									if (name === "") { setDetailGroupDraft(null); return; }
+									setDetailGroupDraft(null);
+									// 建组 → 用返回的全量 groups 找到它 → 把当前插件拉进去
+									annotationWrite({ action: "group-create", name }, t("groupCreated").replace("{name}", name))
+										.then((data) => {
+											if (data === null) return;
+											const created = (Array.isArray(data.groups) ? data.groups : [])
+												.find((item) => String(item.name) === name);
+											if (created !== undefined && created !== null) {
+												annotationWrite({ action: "group-assign", id: created.id, packageName }, t("groupAssigned").replace("{name}", name));
+											}
+										});
+								},
+							}),
+						el("select", {
+							value: group?.id ?? "",
+							"aria-label": t("groupLabel"),
+							disabled: busy,
+							style: { font: "inherit", padding: "2px 6px" },
+							onChange: (event) => {
+								const picked = String(event.target.value ?? "");
+								if (picked === "") {
+									if (group === null) return;
+									annotationWrite({ action: "group-assign", id: group.id, packageName, member: false }, t("groupUnassigned"));
+									return;
+								}
+								const pickedName = String(userGroups.find((item) => item.id === picked)?.name ?? "");
+								annotationWrite({ action: "group-assign", id: picked, packageName }, t("groupAssigned").replace("{name}", pickedName));
+							},
+						},
+							el("option", { value: "" }, t("groupNone")),
+							userGroups.map((item) => el("option", { key: "gs-" + item.id, value: item.id }, String(item.name))))));
+			};
+			const extraIds = new Set((state.status === "ready" ? state.data.patch?.inserts ?? [] : []));
+			const extraCount = state.status === "ready" ? state.data.entries.filter((entry) => entry.extra === true || extraIds.has(entry.rowId)).length : 0;
+			// issue #22 ②③：打开面板即读一次注解（读失败只提示，插件列表照常）
+			react.useEffect(() => { annotationsLoad(); }, []);
+			const pkgRootOf = (m) => { const mm = String(m ?? ""); const x = mm.match(/^(@[^/]+\/[^/]+)(?:\/.*)?$/u); return x ? x[1] : mm; };
+			const filteredEntries = state.status === "ready"
+				? state.data.entries.filter((entry) => {
+					if (extraOnly && !(entry.extra === true || extraIds.has(entry.rowId))) return false;
+					// issue #22 ①：「仅看可更新」只筛**本次批量检测确实查到新版**的行。
+					// 没查到结论的行（未检测到 / 没查过）**不算**可更新 —— 与"没查到 ≠ 已最新"同一条纪律。
+					if (onlyUpdatable && batchItemOf(entry)?.status !== "update") return false;
+					if (installedQueryNorm === "") return true;
+					// ★ 用户 2026-10-27：搜索也要命中**备注**（备注是可用来命名的，只按包名搜会漏）
+					const noteText = (() => {
+						const key = annotationKeyOf(entry);
+						if (key === "") return "";
+						const rec = annotations !== null && annotations.plugins !== null && annotations.plugins !== undefined
+							? annotations.plugins[key] ?? null
+							: null;
+						return typeof rec?.note === "string" ? rec.note : "";
+					})();
+					return [entry.moduleName, entry.entryId, entry.rowId, noteText]
+						.some((value) => String(value ?? "").toLowerCase().includes(installedQueryNorm));
+				})
+				: [];
+			// 聚合包分组：仅「同根包 + 子路径导出」（web-all 0.3.14 式，moduleName=pkg/sub）→ 全家桶组；
+			// 经典多子包聚合（每子包独立名）不归组。组头与子包卡片一律置于列表【最底部】。
+			const famRootOf = (entry) => {
+				const m = String(entry.moduleName ?? "");
+				if (m.startsWith("@deepseek-ai/")) return null;
+				return pkgRootOf(m);
+			};
+			const familyCounts = new Map(); // root → Set(moduleName)：仅按不同子包名聚合；同一包的重复行不算全家桶（2026-09-06 i18n 重复行事故）
+			for (const entry of (state.status === "ready" ? state.data.entries : [])) {
+				const root = famRootOf(entry);
+				if (root === null) continue;
+				const set = familyCounts.get(root) ?? new Set();
+				set.add(String(entry.moduleName ?? ""));
+				familyCounts.set(root, set);
+			}
+			const familySize = (root) => (familyCounts.get(root)?.size ?? 0);
+			const familyCards = filteredEntries.map((entry, cardIndex) => {
+					const familyRoot = String(entry.moduleName ?? "").startsWith("@deepseek-ai/") ? null : pkgRootOf(entry.moduleName);
+					void familyRoot;
+					const open = details !== null && details.entryId === entry.entryId;
+					// issue #22 ①：这张卡本次的批量检测结论（null = 没查过/查中/查失败 ⇒ 不加任何"已最新"标签）
+					const batchItem = batchItemOf(entry);
+					// issue #22 ②：卡片徽章 = **系统徽章（现有顺序，一条不少）** + 用户徽章（追加在最后）。
+					//   系统徽章用现有实心/描边样式（props 原样搬过来），用户徽章带 data-user-badge（虚线+浅底）。
+					const systemBadges = [
+						{ key: "enabled", label: t(entry.enabled ? "enabledTag" : "disabledTag"), props: { "data-enabled": entry.enabled ? "true" : "false" } },
+						entry.extra === true ? { key: "extra", label: t("extraTag"), props: { "data-user": "true" } } : null,
+						entry.protected ? { key: "protected", label: t("protectedTag"), props: { "data-user": "true" } } : null,
+						entry.userDisabled ? { key: "userDisabled", label: t("userDisabledTag"), props: { "data-user": "true" } } : null,
+						entry.userForced ? { key: "userForced", label: t("userForcedTag"), props: { "data-user": "true" } } : null,
+						batchItem?.status === "update"
+							? { key: "batch-update", label: t("batchUpdateAvailable").replace("{v}", String(batchItem.target ?? "?")), props: { "data-pending": "true", title: t("batchUpdateAvailableTip") } }
+							: batchItem?.status === "current"
+								? { key: "batch-current", label: t("batchUpToDate"), props: { "data-enabled": "true" } }
+								: batchItem?.status === "unknown"
+									? { key: "batch-unknown", label: t("batchUpdateUnknown"), props: { title: t("batchUpdateUnknownTip") + (batchItem.error ? "（" + String(batchItem.error) + "）" : "") } }
+									: null,
+						entry.disableSource === "bundle" ? { key: "bundle", label: t("disabledByBundleTag"), props: { "data-user": "true", "data-source": "bundle" } } : null,
+						entry.forcedNotLoaded === true ? { key: "ineffective", label: t("forcedNotLoadedTag"), props: { "data-user": "true", "data-source": "ineffective" } } : null,
+					].filter((badge) => badge !== null);
+					const userBadges = (Array.isArray(annotationOf(entry)?.badges) ? annotationOf(entry).badges : [])
+						.map((label) => ({ key: "user-" + label, label: String(label), props: { "data-user-badge": "true", title: t("badgeLabel") } }));
+					const allBadges = [...systemBadges, ...userBadges];
+					let detailPanel = null;
+					if (open) {
+						if (details.status === "loading") {
+							detailPanel = el("div", { className: styles.detail },
+								el("p", { className: styles.status }, t("loadingDetails")));
+						} else if (details.status === "error") {
+							detailPanel = el("div", { className: styles.detail },
+								el("p", { className: styles.status, "data-error": "true" }, t("safetySwitchFailed") + "：" + details.error.message));
+						} else {
+							const meta = details.data.meta;
+							const readme = details.data.readme;
+							const compatInfo = state.status === "ready" && state.data.compatPending
+								? (state.data.compatPending.pending ?? []).find((p) => p.rowId === entry.rowId) ?? null
+								: null;
+							// ★ issue #22 ②（用户定稿）：动作按钮排在详情页**最后**（原来挂在"版本"那一行，夹在中间）。
+							//   判据/禁用条件/文案逐字搬过来，一个字都没改，只换了位置。
+							const detailActionRow = meta !== null && meta.version
+								? el("div", { className: styles.rowTop },
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										disabled: (updateCheck !== null && updateCheck.status === "checking") || inFlight.has(entry.moduleName),
+										onClick: () => checkUpdate(entry),
+									}, updateCheck !== null && updateCheck.status === "checking" ? t("checkingUpdate") : t("checkUpdate")),
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										title: t("aiEmpowerTitle"),
+										onClick: () => openAiFor(String(entry.moduleName ?? entry.repo ?? "")),
+									}, t("aiEmpowerLabel")),
+									canAdaptUnlock(entry)
+										? el("button", {
+											type: "button",
+											className: styles.toggle,
+											"data-pending": "true",
+											title: t("adaptUnlockHint"),
+											disabled: installing === entry.moduleName || adaptUnlocking === entry.entryId,
+											onClick: () => {
+												setAdaptUnlocking(entry.entryId);
+												call("/plugin-console/adapt-unlock", { rowId: entry.rowId }).then(
+													() => {
+														setAdaptUnlocking(null);
+														setMessage(t("adaptUnlockDone"));
+														window.setTimeout(() => window.location.reload(), 1200);
+													},
+													(error) => { setAdaptUnlocking(null); setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message); },
+												);
+											},
+										}, adaptUnlocking === entry.entryId ? t("loadingPhase") : t("adaptUnlockBtn"))
+										: null)
+								: null;
+							detailPanel = el("div", { className: styles.detail },
+								// ★ 0.5.93（issue #22 ② 收口）：卡片上放不下的徽章**不提示、不展开**，
+								//   全部徽章（系统徽章 + 用户徽章，顺序与卡片一致）在详情页里一次看全 ——
+								//   这也是"卡片不再出现 +N"之后"看不到的徽章去哪了"的唯一答案。
+								el("div", { className: styles.badgeAll, "data-allbadges": "true", title: t("badgesAll").replace("{n}", String(allBadges.length)) },
+									allBadges.map((badge) => el("span", { key: "detail-" + badge.key, className: styles.tag, ...badge.props }, badge.label))),
+								// ★ issue #22 ②（用户定稿的详情页顺序）：用户备注/用户徽章放**最前面**，
+								//   系统诊断 → 版本/仓库/说明摘要 → 动作按钮依次在其后。
+								annotationBlock(entry),
+								meta !== null ? el("p", { className: styles.desc }, meta.description ?? t("noDetail")) : null,
+								entry.pendingCompat === true
+									? el("p", { className: styles.status, "data-pending": entry.adoptable ? "false" : "true" },
+										entry.adoptable
+											? (entry.adoptable.basis === "verdict-rescinded"
+												// 0.5.34：旧判据的误报已被当前判据撤回（真机 dshmarket 现场）——如实说是"判据更新"，
+												// 不能说成"插件已适配"（那会让人以为作者发过新版）
+												? t("adoptableRescinded").replace("{version}", String(entry.adoptable.version ?? "?"))
+												: t("adoptableDetected").replace("{version}", String(entry.adoptable.version ?? "?")).replace("{prev}", String(compatInfo?.version ?? "?")))
+											: t("pendingCompatHint") + (compatInfo && compatInfo.checkNote ? "；已知校验：" + compatInfo.checkNote : ""))
+									: null,
+								meta !== null && meta.version ? el("p", { className: styles.status }, t("versionLabel") + "：" + meta.version) : null,
+								updateCheck !== null && updateCheck.status === "ready" && updateCheck.migrate && updateCheck.migrate.compatible
+									? el("div", null,
+										el("div", { className: styles.rowTop },
+											el("p", { className: styles.status }, t("migrateTip") + "：" + String(updateCheck.migrate.to ?? "") + (updateCheck.migrate.latest ? " v" + updateCheck.migrate.latest : "")),
+											el("button", {
+												type: "button",
+												className: styles.toggle,
+												disabled: installing === entry.moduleName,
+												onClick: () => startJob("", updateCheck.migrate.to, "github", "plugin", false),
+											}, installing === entry.moduleName ? t("installing") : t("migrateBtn"))))
+									: null,
+								updateCheck !== null && updateCheck.status === "ready"
+									? (updateCheck.error
+										? el("p", { className: styles.status, "data-error": "true" }, t("updateCheckFailed") + "：" + updateCheck.error)
+										// 0.5.52 改错（真机 2026-10-15）：这里原先只认 `latest`。
+										// 而 npm 上 `@deepseek-ai/*` 的 `dist-tags.latest` 是**远古版本**，
+										// 被服务端按"低于已装"净化成 null ⇒ 面板永远说「已是最新版本」，
+										// 「不适配 → 禁用 → 更新 → 启用」这条流程**走不完**（用户原话：
+										// "我们原本意思就是如果不适配先禁用，然后再更新适配启用吧"）。
+										// 服务端现在同时下发 `target`（latest 优先，其次 next/beta，
+										// 与框架卡片 pickFrameworkTarget 同口径），这里改用它、并回落 latest
+										// 以兼容老服务端（字段缺失时行为与旧版一字不差）。
+										: ((updateCheck.target ?? updateCheck.latest) && meta !== null && meta.version && (updateCheck.target ?? updateCheck.latest) !== meta.version
+											? el("div", null,
+												el("div", { className: styles.rowTop },
+													el("p", { className: styles.status }, t("updateAvailable") + "：" + meta.version + " → " + (updateCheck.target ?? updateCheck.latest) + (updateCheck.source === "github" ? "（GitHub release）" : "")),
+													el("button", {
+														type: "button",
+														className: styles.toggle,
+														disabled: installing === entry.moduleName,
+														// ★ 0.5.81：把服务端算出的目标版本一起传下去（传 null 时行为与改动前逐字相同）
+												onClick: () => startJob("", entry.moduleName, "github", "plugin", true, null, updateCheck.target ?? updateCheck.latest ?? null),
+													}, installing === entry.moduleName ? t("installing") : (entry.pendingCompat === true ? t("updateAndAdapt") : t("updateNow")))),
+												Array.isArray(updateCheck.depsOutdated) && updateCheck.depsOutdated.length > 0
+													? el("p", { className: styles.status, "data-error": "true" },
+														t("depsOutdatedHint") + "：" + updateCheck.depsOutdated.map((d) => `${d.name} ${d.current}→${d.required}`).join("、"))
+													: null)
+											: el("p", { className: styles.status }, t("upToDate") + (updateCheck.source === "github" ? "（GitHub release 检测）" : ""))))
+									: null,
+								meta !== null && meta.repository
+									? el("p", { className: styles.status }, t("repoLabel") + "：" + String(meta.repository).replace(/^git\+/u, ""))
+									: null,
+								meta !== null && meta.homepage
+									? el("p", { className: styles.status }, t("homepageLabel") + "：" + meta.homepage)
+									: null,
+								readme !== null && (readme.title || readme.summary)
+									? el("div", null,
+										el("p", { className: styles.status }, t("readmeLabel") + "："),
+										readme.title ? el("strong", null, readme.title + "。") : null,
+										readme.summary ? el("p", { className: styles.desc }, readme.summary) : null,
+									)
+									: meta === null ? el("p", { className: styles.status }, t("noDetail")) : null,
+								detailActionRow,
+							);
+						}
+					}
+					return el("li", { key: entry.entryId, className: styles.row },
+						el("div", { className: styles.rowTop, style: { minWidth: 0 } },
+							el("strong", { className: styles.name, title: entry.moduleName, style: { minWidth: 0 } }, (() => {
+								const famRoot = famRootOf(entry);
+								const mn = String(entry.moduleName ?? "");
+								const shortName = famRoot !== null && familySize(famRoot) > 1 && mn.startsWith(famRoot + "/")
+									? mn.slice(famRoot.length + 1)
+									: moduleShortName(entry.moduleName);
+								// ★ 用户 2026-10-26：备注可以**覆盖显示名**。有备注时标题用备注（强调色 + ✎ 标记），
+								//   原短名降到旁边的小字 —— 一眼能看出"这个插件被我备注过"，与没备注的区分开。
+								const rec = annotationOf(entry);
+								const custom = typeof rec?.note === "string" ? rec.note.trim() : "";
+								if (custom === "") return shortName;
+								return el("span", { "data-note-name": "true", style: { display: "inline-flex", alignItems: "baseline", gap: 6, minWidth: 0 } },
+									el("span", { className: styles.noteName ?? undefined, style: { color: "var(--dsw-alias-state-business-primary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, custom),
+									el("span", { style: { opacity: 0.55, fontWeight: 400, fontSize: ".85em", whiteSpace: "nowrap" } }, shortName));
+							})()),
+							// ★ 0.5.93（issue #22 ② 收口）：徽章区**单行不换行**，放不下的直接看不见
+							//   （纯 CSS：`.pc_badgeRow` 固定高度 + overflow:hidden + white-space:nowrap），
+							//   卡片上**不给** "+N"、不给"还有几个"的任何提示，也不做宽度测量 ——
+							//   行为与这个功能上线前一致；全部徽章去详情页看。
+							//   顺序（用户定稿）：**先系统徽章（现有顺序一个字没改）→ 再用户徽章（描边样式）**。
+							el("div", { className: styles.badgeRow },
+								allBadges.map((badge) => el("span", { key: badge.key, className: styles.tag, ...badge.props }, badge.label))),
+						),
+						el("div", { className: styles.meta },
+							el("span", { className: styles.phase, "data-phase": entry.fiberPhase ?? "unobserved" },
+								phaseLabel(entry.fiberPhase, t)),
+							el("code", null, entry.entryId),
+						),
+						// 0.5.33 加法 ①-4：框架 peer 预检**否决**的本地复算结果（服务端 entries[].veto）。
+						// 框架只在内存里禁用、原因只打 stderr —— 这里把它补出来。复用**既有行**内的
+						// status 短句位（不新增常驻面板行），出路放悬浮提示（复用既有 title 位置）。
+						entry.veto && entry.veto.reason
+							? el("p", { className: styles.status, "data-pending": "true", title: entry.veto.hint ?? undefined },
+								entry.veto.reason)
+							: null,
+						// 0.5.52 加法（真机现场）：否决判据用的那份副本，与面板显示的版本**可能不是同一个**。
+						// 桌面端有 asar（框架自带）与 profile 两份同名包：显示版本走框架 base 优先，
+						// 判据只按 profile ⇒ 卡片会自相矛盾（「版本 0.2.1-rc.2」+「peer 不满足」）。
+						// 只在两者确实不一致时才多写一行，且如实给出判据那份的路径 —— 不猜、不掩盖。
+						entry.veto && entry.veto.judged && entry.veto.judged.version
+							&& entry.version && entry.veto.judged.version !== entry.version
+							? el("p", { className: styles.status, title: entry.veto.judged.path ?? undefined },
+								t("vetoJudgedCopy")
+									.replace("{shown}", String(entry.version))
+									.replace("{judged}", String(entry.veto.judged.version)))
+							: null,
+						el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+							el("div", { className: styles.rowTop },
+								el("button", {
+									type: "button",
+									className: styles.toggle,
+									// ★ 强制启用且未运行 ⇒ 这个开关本身是空操作（patch.js#enableEntry 直接 changed:false），藏起来
+									disabled: !entry.toggleable || busy === entry.entryId, // ★ 待适配不再禁用启用（用户 2026-10-18）：启用=确认启用，服务端会把它标为已采纳
+									// 0.5.34：结论已被当前判据撤回的行不再显示「待适配」（旧判据的误报不许当事实展示）
+									title: entry.pendingCompat === true ? (entry.compatRescinded === true ? t("compatRescindedHint") : t("pendingCompatHint")) : undefined,
+									onClick: () => toggle(entry, !entry.enabled),
+								}, busy === entry.entryId ? t("loadingPhase") : (entry.pendingCompat === true ? (entry.compatRescinded === true ? t("compatRescindedTag") : t("pendingCompatTag")) : t(entry.enabled ? "off" : "on"))),
+								// ★ issue #22 ①：批量检测到新版的卡片直接给「更新」按钮 —— 与详情卡片里那个按钮
+								//   **完全同一条路**（startJob(-, moduleName, github, plugin, update=true, -, target)），
+								//   目标是服务端唯一判据算出的 target；点下去走的是既有安装/更新作业，不新增任何写盘路径。
+								batchItem !== null && batchItem.status === "update"
+									? el("button", {
+										type: "button",
+										className: styles.toggle,
+										title: t("batchUpdateAvailableTip"),
+										disabled: installing === entry.moduleName || inFlight.has(entry.moduleName),
+										onClick: () => startJob("", entry.moduleName, "github", "plugin", true, null, batchItem.target ?? null),
+									}, installing === entry.moduleName
+										? t("installing")
+										: (entry.pendingCompat === true ? t("updateAndAdapt") : t("update") + " → v" + String(batchItem.target ?? "?")))
+									: null,
+								// ★ 0.5.76：补丁写了强制开启但运行时没起来 ⇒ 给一个撤销覆盖的入口
+								entry.userForced === true ? el("button", {
+									type: "button",
+									className: styles.toggle,
+									title: t("revokeForceHint"),
+									onClick: () => revokeForce(entry),
+								}, t("revokeForceLabel")) : null,
+								el("button", {
+									type: "button",
+									className: styles.toggle,
+									onClick: () => loadDetails(entry),
+								}, t("details")),
+							),
+							el("div", { className: styles.rowTop },
+								entry.extra === true && entry.rowId !== "plugin-console"
+									? el("button", {
+										type: "button",
+										className: styles.trashBtn,
+										title: t("deletePlugin"),
+										"aria-label": t("deletePlugin"),
+										disabled: deleteBusy === entry.entryId,
+										onClick: () => {
+											if (confirmDeleteRowId === entry.entryId) {
+												setDeleteBusy(entry.entryId);
+												call("/plugin-console/uninstall", { entryId: entry.entryId }).then(
+													(data) => {
+														setConfirmDeleteRowId(null);
+														if (data && data.restart === true) {
+															setMessage(t("deleteBundleNote") + "：" + (data.packageName ?? "") + (data.uninstallError ? "（包卸载警告：" + data.uninstallError + "）" : ""));
+															setRestartHint(true);
+														} else {
+															setMessage(t("deleteNote") + "：" + (data.packageName ?? "") + (data.note ? "；" + data.note : "") + (data.uninstallError ? "（包卸载警告：" + data.uninstallError + "）" : ""));
+															setTimeout(refresh, 1500);
+														}
+													},
+													(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+												).finally(() => setDeleteBusy(null));
+											} else {
+												setConfirmDeleteRowId(entry.entryId);
+												window.setTimeout(() => setConfirmDeleteRowId((v) => (v === entry.entryId ? null : v)), 3000);
+											}
+										},
+									}, deleteBusy === entry.entryId
+										? t("deleting")
+										: confirmDeleteRowId === entry.entryId
+											? t("confirmDelete")
+											: el("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+												el("polyline", { points: "3 6 5 6 21 6" }),
+												el("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }),
+												el("line", { x1: "10", y1: "11", x2: "10", y2: "17" }),
+												el("line", { x1: "14", y1: "11", x2: "14", y2: "17" })))
+									: null,
+								entry.extra === true && entry.installDate
+									? el("span", { className: styles.date }, entry.installDate)
+									: null,
+							),
+						),
+						detailPanel,
+					);
+				});
+			// 全家桶组头：聚合包（同根包 ≥2 行）合并展示为一个「web 包」卡片
+			const familyHeaders = [];
+			const familySeen = new Set();
+			for (const entry of filteredEntries) {
+				const root = famRootOf(entry);
+				if (root === null || familySize(root) <= 1 || familySeen.has(root)) continue;
+				familySeen.add(root);
+				familyHeaders.push(el("div", { key: "family-" + root, className: styles.detail, style: { border: "1px solid var(--dsw-alias-state-business-primary)", borderRadius: 10, padding: "8px 12px", gridColumn: "1 / -1" } },
+					el("div", { className: styles.rowTop, style: { alignItems: "center" } },
+						el("strong", { className: styles.name, style: { flex: "0 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, title: root }, root.replace(/^@[^/]+\//u, "").replace(/^dsh-/u, "")),
+						el("span", { className: styles.tag, "data-user": "true" }, t("familyTag") + " · " + familySize(root) + " " + t("familySubs")),
+						el("button", {
+							type: "button",
+							className: styles.toggle,
+							style: { whiteSpace: "nowrap", flexShrink: 0 },
+							onClick: () => setFamilyCollapsed((prev) => ({ ...prev, [root]: prev[root] !== true })),
+						}, familyCollapsed[root] === true ? "▸ " + t("familyExpand") : "▾ " + t("familyCollapse")),
+						el("button", {
+							type: "button",
+							className: styles.toggle,
+							style: { whiteSpace: "nowrap", flexShrink: 0 },
+							onClick: () => {
+								setMessage(t("checkingUpdate"));
+								call("/plugin-console/check-update", { packageName: root }).then(
+									(d) => {
+										const installed = state.status === "ready"
+											? (state.data.entries.find((e) => e.moduleName === root) ?? {}).version ?? null
+											: null;
+										setFamilyCheck((prev) => ({ ...prev, [root]: { latest: d?.latest ?? null, installed } }));
+										setMessage(t("familyUpdate") + "：" + root + " " + (d?.latest ?? "?") + (d?.migrate && d.migrate.compatible ? " → " + d.migrate.to + " v" + d.migrate.latest : "") + (d?.error ? "（" + d.error + "）" : ""));
+									},
+									(e) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(e).message),
+								);
+							},
+						}, t("familyCheckUpdate")),
+						familyCheck[root] && familyCheck[root].latest !== null && familyCheck[root].latest !== familyCheck[root].installed
+							? el("button", {
+								type: "button",
+								className: styles.toggle,
+								style: { whiteSpace: "nowrap", flexShrink: 0 },
+								title: t("familyCheckUpdateTip"),
+								onClick: () => startJob("", root, "github", "plugin", true),
+							}, t("familyUpdateBtn") + " " + familyCheck[root].latest)
+							: null,
+						el("button", {
+							type: "button",
+							className: styles.toggle,
+							style: { whiteSpace: "nowrap", flexShrink: 0 },
+							title: t("familyUnlockAllTip"),
+							onClick: () => {
+								if (!window.confirm(t("familyUnlockAllConfirm"))) return;
+								call("/plugin-console/adapt-unlock-all", { root }).then(
+									(d) => {
+										const unlockedCount = (d?.unlocked ?? []).length;
+										if (unlockedCount === 0 && typeof d?.note === "string") { setMessage(d.note); return; }
+										setMessage(t("familyUnlockAllDone") + "：" + unlockedCount + " 行" + (Array.isArray(d?.kept) && d.kept.length > 0 ? "；保留 " + d.kept.length + " 行（未通过校验）" : ""));
+										window.setTimeout(() => window.location.reload(), 1500);
+									},
+									(e) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(e).message),
+								);
+							},
+						}, t("familyUnlockAll")))
+				));
+			}
+			// 组头放到最底部：普通条目在前，全家桶（组头+子包卡片）整体在后
+			const nonFamilyCards = [];
+			const familySections = new Map();
+			// issue #22 ③：用户自建分组 → 折叠区块。**官方 family 优先**（用户拍定的规则）：
+			//   属于官方 family 的插件即使被归进用户分组，也**留在官方 family 区块里**，不进用户分组区块 ——
+			//   官方 family 的渲染因此一个字都没变，两者共存且不会出现同一插件两处重复。
+			const userGroupBuckets = new Map();
+			familyCards.forEach((card, i) => {
+				const e = filteredEntries[i];
+				if (e === undefined) { nonFamilyCards.push(card); return; }
+				const root = famRootOf(e);
+				// ★ 用户 2026-10-26：**用户分组优先** —— 被归进自己分组的插件，卡片直接住进那个分组区块
+				//   （像全家桶一样能展开看到卡片），官方 family 区块里不再重复渲染它。
+				// ★ 分组允许重叠：一个插件可以同时出现在多个分组区块里（用户 2026-10-27 定稿的规则）
+				const userGroupsOf = groupsOfPackage(e.moduleName);
+				if (userGroupsOf.length > 0) {
+					for (const g of userGroupsOf) {
+						if (!userGroupBuckets.has(g.id)) userGroupBuckets.set(g.id, []);
+						userGroupBuckets.get(g.id).push(card);
+					}
+					return;
+				}
+				if (root === null || familySize(root) <= 1) {
+					nonFamilyCards.push(card);
+					return;
+				}
+				if (!familySections.has(root)) familySections.set(root, { head: familyHeaders.find((h) => h && h.key === "family-" + root) ?? null, cards: [] });
+				familySections.get(root).cards.push(card);
+			});
+			const familySectionEls = [];
+			for (const [, section] of familySections) {
+				if (section.head !== null) familySectionEls.push(section.head);
+				const root = section.head !== null ? section.head.key.slice("family-".length) : null;
+				if (root === null || familyCollapsed[root] !== true) familySectionEls.push(...section.cards);
+			}
+			// 已安装但尚未生效（bundle 型要重启才被加载；对应服务端 /state 的 pendingRestart）：
+			// 演练实测（2026-09-20）装完这类插件时 entryId 为 null、loader 里也没有新条目 ——
+			// 用户以为没装上，删除按钮也无处可点。这里渲染成同样的行 + 「已安装·重启后生效」徽标，
+			// 行上的删除按钮按 jobId 撤销这次安装（服务端删补丁行 / bundles 清单 / 包目录）。
+			const pendingCards = (state.status === "ready" ? state.data.pendingRestart ?? [] : [])
+				.filter((job) => installedQueryNorm === "" || [job.packageName, job.repo, job.jobId]
+					.some((value) => String(value ?? "").toLowerCase().includes(installedQueryNorm)))
+				.map((job) => el("li", { key: "pending-" + job.jobId, className: styles.row },
+					el("div", { className: styles.rowTop },
+						el("strong", { className: styles.name, title: job.packageName }, job.packageName),
+						el("span", { className: styles.tag, "data-pending": "true", title: t("pendingRestartHint") }, t("pendingRestartTag")),
+					),
+					el("div", { className: styles.meta },
+						el("code", null, job.jobId),
+						job.repo ? el("code", null, job.repo) : null,
+					),
+					el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+						el("p", { className: styles.desc }, t("pendingRestartHint")),
+						el("div", { className: styles.rowTop },
+							el("button", {
+								type: "button",
+								className: styles.trashBtn,
+								title: t("pendingRestartDelete"),
+								"aria-label": t("pendingRestartDelete"),
+								disabled: deleteBusy === job.jobId,
+								onClick: () => {
+									if (confirmDeleteRowId === job.jobId) {
+										setDeleteBusy(job.jobId);
+										call("/plugin-console/uninstall", { jobId: job.jobId }).then(
+											(data) => {
+												setConfirmDeleteRowId(null);
+												setMessage(data && data.warn
+													? t("pendingRestartPartial") + "：" + data.warn
+													: t("pendingRestartNote") + "：" + (data?.packageName ?? "") + (data?.uninstallError ? "（包卸载警告：" + data.uninstallError + "）" : ""));
+												refresh();
+											},
+											(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+										).finally(() => setDeleteBusy(null));
+									} else {
+										setConfirmDeleteRowId(job.jobId);
+										window.setTimeout(() => setConfirmDeleteRowId((v) => (v === job.jobId ? null : v)), 3000);
+									}
+								},
+							}, deleteBusy === job.jobId
+								? t("deleting")
+								: confirmDeleteRowId === job.jobId
+									? t("confirmDelete")
+									: el("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+										el("polyline", { points: "3 6 5 6 21 6" }),
+										el("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }),
+										el("line", { x1: "10", y1: "11", x2: "10", y2: "17" }),
+										el("line", { x1: "14", y1: "11", x2: "14", y2: "17" }))),
+						),
+					),
+				));
+			// issue #22 ③（0.5.93 收口，用户定稿）：用户自建分组在主列表里是**横框**，外观与官方 family
+			//   区块**同一套视觉语言**（标题行 + 折叠箭头 + 容器 + 成员数徽章）。三条行为：
+			//   · 空分组（刚建出来、还没放插件）**也渲染** —— 否则"新建分组"在列表里根本看不到，
+			//     等于点了没反应；
+			//   · 框里可以直接**加入 / 移出**插件（走 group-assign；服务端保证一个包只属于一个分组，
+			//     移出只解除归属，不删插件、不动备注与徽章）；
+			//   · **只含官方 family 成员**的分组仍不画（官方 family 优先：那些成员留在 family 区块里，
+			//     绝不出现同一插件两处重复）；
+			//   · 刚建出来的那个横框多挂一个 pc_groupNew（220ms 入场动画；prefers-reduced-motion 下不播）。
+			//   数据来源只有服务端那一份 groups（annotationWrite 用响应里的全量状态覆盖 annotations），
+			//   客户端额外只记一个"刚建好的 id"用于播动画，不维护第二份状态。
+			const userGroupFrame = (group, bucket) => {
+				const members = (Array.isArray(group.packages) ? group.packages : []).map((item) => String(item));
+				const inGroup = new Set(members);
+				const candidates = [];
+				for (const entry of (state.status === "ready" ? state.data.entries : [])) {
+					const name = String(entry.moduleName ?? "");
+					if (name === "" || inGroup.has(name) || candidates.includes(name)) continue;
+					candidates.push(name);
+				}
+				const fresh = groupJustCreated !== null && String(group.id) === String(groupJustCreated);
+				const header = el("div", { className: styles.rowTop, style: { alignItems: "center" } },
+					el("strong", { className: styles.name, style: { flex: "0 0 auto", whiteSpace: "nowrap" }, title: String(group.name) }, String(group.name)),
+					el("span", { className: styles.tag, "data-user-badge": "true" }, t("userGroupTag") + " · " + members.length + " " + t("familySubs")),
+					el("button", {
+						type: "button",
+						className: styles.toggle,
+						style: { whiteSpace: "nowrap", flexShrink: 0 },
+						disabled: annotationBusy === group.id,
+						onClick: () => annotationWrite({ action: "group-collapse", id: group.id, collapsed: group.collapsed !== true }, null),
+					}, group.collapsed === true ? "▸ " + t("familyExpand") : "▾ " + t("familyCollapse")),
+				// ★ 用户 2026-10-27：分组框也要有「批量检测更新 / 一键启用已适配 / 删除分组」
+				el("button", {
+					type: "button",
+					className: styles.toggle,
+					style: { whiteSpace: "nowrap", flexShrink: 0 },
+					disabled: annotationBusy === group.id,
+					onClick: () => {
+						// 批检：组内每个成员各查一次（单包接口复用，判据不分叉）
+						setMessage(t("checkingUpdate"));
+						const names = members.slice();
+						Promise.all(names.map((nm) => call("/plugin-console/check-update", { packageName: nm }).catch(() => null)))
+							.then((list) => {
+								const hits = list.filter((d) => d !== null && typeof d?.target === "string" && d.target !== "")
+								setMessage(hits.length > 0 ? t("familyUpdate") + "：" + hits.length + " / " + names.length : t("upToDate"));
+							});
+					},
+				}, t("familyCheckUpdate")),
+				el("button", {
+					type: "button",
+					className: styles.toggle,
+					style: { whiteSpace: "nowrap", flexShrink: 0 },
+					disabled: annotationBusy === group.id,
+					onClick: () => {
+						// 一键启用已适配：只对组内有 adoptable 的成员解锁
+						const ready = bucket
+							.map((card) => card?.key ?? null)
+							.filter((x) => x !== null);
+						const targets = (state.status === "ready" ? state.data.entries : [])
+							.filter((e) => members.includes(String(e.moduleName ?? "")) && e.adoptable !== null && e.adoptable !== undefined);
+						if (targets.length === 0) { setMessage(t("gateNoAdoptable")); return; }
+						Promise.all(targets.map((e) => call("/plugin-console/adapt-unlock", { entryId: e.entryId }).catch(() => null)))
+							.then(() => { setMessage(t("familyUnlockAll") + "：" + targets.length); refresh(); });
+					},
+				}, t("familyUnlockAll")),
+					el("button", {
+						type: "button",
+						className: styles.toggle,
+						style: { display: "none" },
+						title: t("annotationsPanelTitle"),
+						onClick: () => { openAnnotationsPanel(); },
+					}, t("annotationsBtn")));
+				const memberChips = members.length === 0
+					? el("span", { className: styles.status }, t("groupNoMembers"))
+					: members.map((name) => el("span", { key: "ugm-" + name, className: styles.tag, "data-usergroup-member": "true", title: name }, name,
+						el("button", {
+							type: "button",
+							className: styles.tag,
+							"data-more": "true",
+							title: t("groupMemberRemove"),
+							"aria-label": t("groupMemberRemove"),
+							disabled: annotationBusy === group.id,
+							onClick: () => annotationWrite({ action: "group-assign", id: group.id, packageName: name, member: false }, t("groupUnassigned")),
+						}, "×")));
+				const addSelect = el("select", {
+					value: "",
+					"aria-label": "groupMemberAdd",
+					disabled: annotationBusy === group.id || candidates.length === 0,
+					style: { font: "inherit", padding: "2px 6px", maxWidth: 320 },
+					onChange: (event) => {
+						const picked = String(event.target.value ?? "");
+						if (picked === "") return;
+						annotationWrite({ action: "group-assign", id: group.id, packageName: picked }, t("groupAssigned").replace("{name}", String(group.name)));
+					},
+				},
+					el("option", { value: "" }, candidates.length === 0 ? t("groupMemberNone") : t("groupMemberPick")),
+					candidates.map((name) => el("option", { key: "ugc-" + name, value: name }, name)));
+				const body = el("div", { style: { flexDirection: "column", gap: 6, display: "flex", marginTop: 2 } },
+					el("div", { className: styles.annotRow }, memberChips, addSelect),
+					bucket.length > 0
+						? el("ul", { className: styles.list }, bucket)
+						: members.length > 0
+							? el("p", { className: styles.status, "data-in-family": "true" }, t("groupInFamilyNote"))
+							: null);
+				return el("div", {
+					key: "usergroup-" + group.id,
+					className: styles.detail + (fresh ? " " + styles.groupNew : ""),
+					"data-usergroup": "true",
+					"data-group-id": String(group.id),
+					"data-new-group": fresh ? "true" : undefined,
+					style: { border: "1px solid var(--dsw-alias-state-business-primary)", borderRadius: 10, padding: "8px 12px", gridColumn: "1 / -1" },
+				},
+					header,
+					group.collapsed === true ? null : body);
+			};
+			const userGroupSectionEls = [];
+			for (const group of userGroups) {
+				const bucket = userGroupBuckets.get(group.id) ?? [];
+				const members = Array.isArray(group.packages) ? group.packages : [];
+				// ★ 用户 2026-10-26：分组框**永远画出来**。此前"成员全在官方 family 里就跳过"会让用户
+				//   建完分组后在主列表什么都看不到（既没框也没入场动画），观感等于"点了没反应"。
+				//   同一插件仍不重复渲染：那些成员留在官方 family 区块里，这里只给一句如实说明。
+				userGroupSectionEls.push(userGroupFrame(group, bucket));
+			}
+			const rows = state.status === "ready" ? [...nonFamilyCards, ...familySectionEls, ...userGroupSectionEls, ...pendingCards] : [];
+			const marketShown = market === null || market.status !== "ready"
+				? []
+				: officialOnly
+					? market.data.filter((item) => item.official === true || item.aggregateInstallable === true)
+					: market.data;
+			const marketRows = market === null ? [] : market.status === "loading"
+				? [el("p", { key: "m", className: styles.status }, searchSource === "github" ? t("marketLoading") : t("marketLoadingOther").replace("{source}", sourceDisplayName(searchSource)))]
+				: market.status === "error"
+					? [el("div", { key: "m", className: styles.detail },
+						el("p", { className: styles.status, "data-error": "true" }, t("marketError") + "：" + market.error.message),
+						el("button", { type: "button", className: styles.toggle, onClick: search }, t("retry")))]
+					: market.data.length === 0
+						? [el("p", { key: "m", className: styles.status }, searchSource === "gitee" ? t("giteeEmpty") : (mode === "skills" ? t("skillsEmpty") : t("marketEmpty")))]
+						: marketShown.length === 0
+							? [el("p", { key: "m", className: styles.status },
+								officialOnly && market.data.some((item) => item.official === undefined || item.official === null)
+									? t("officialChecking")
+									: t("marketEmpty"))]
+							: marketShown.map((item) => {
+							const desc = item.description ?? "";
+							const long = desc.length > 90;
+							const open = expandedDescs[item.fullName] === true;
+							const shown = long && !open ? desc.slice(0, 90) + "…" : desc;
+							const installedMatch = state.status === "ready"
+								? state.data.entries.find((entry) =>
+									(entry.repository && entry.repository.includes(item.fullName.toLowerCase()))
+									|| moduleShortName(entry.moduleName) === item.fullName.toLowerCase().split("/")[1])
+								: null;
+							return el("li", { key: item.fullName, className: styles.item },
+								el("div", { className: styles.itemTop },
+									el("a", { href: item.htmlUrl, target: "_blank", rel: "noreferrer" }, item.fullName),
+									el("span", { className: styles.stars }, "★ " + item.stars),
+									item.official === true
+										? el("span", { className: styles.tag, "data-user": "true", title: t("officialTitle") }, t("officialBadge"))
+										: item.aggregate === true
+											? el("span", { className: styles.tag, title: t("aggregateTitle") }, t("aggregateBadge"))
+											: null,
+									item.hasSkill === true || item.skillTopics !== undefined
+										? el("span", { className: styles.tag, "data-skill": "true", title: t("skillTitle") + (Array.isArray(item.skillTopics) && item.skillTopics.length > 0 ? "（" + item.skillTopics.join(" / ") + "）" : "") }, t("skillBadge"))
+										: null,
+									item.hasSuite === true
+										? el("span", { className: styles.tag, "data-suite": "true", title: t("suiteTitle") }, t("suiteBadge"))
+										: null,
+								),
+								desc ? (long
+									? (open
+										? el("div", { className: styles.descWrap },
+											el("div", { className: styles.descTopbar },
+												el("button", {
+													type: "button",
+													onClick: () => setExpandedDescs((prev) => ({ ...prev, [item.fullName]: false })),
+												}, t("collapseDesc"))),
+											el("p", { className: styles.desc }, desc),
+											el("div", { className: styles.descTopbar },
+												el("button", {
+													type: "button",
+													onClick: () => setExpandedDescs((prev) => ({ ...prev, [item.fullName]: false })),
+												}, t("collapseDesc"))))
+										: el("div", null,
+											el("p", { className: styles.desc }, shown),
+											el("button", {
+												type: "button",
+												onClick: () => setExpandedDescs((prev) => ({ ...prev, [item.fullName]: true })),
+											}, t("expandDesc"))))
+									: el("p", { className: styles.desc }, desc))
+								: null,
+								el("div", { className: styles.rowTop },
+									el("button", {
+										type: "button",
+										disabled: repoInfo !== null && repoInfo.status === "loading" && repoInfo.repo === item.fullName,
+										onClick: () => inspect(item),
+									}, t("view")),
+									repoLandOn && mode !== "skills"
+										? el("button", {
+											type: "button",
+											className: styles.toggle,
+											title: repoLandTitleText(),
+											onClick: () => repoLandEntry(item.fullName),
+										}, repoLanded.some((r) => r.repo === item.fullName) ? t("repoLandLanded") + " ✓" : t("repoLandEntry"))
+										: null,
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										title: t("aiEmpowerTitle"),
+										onClick: () => openAiFor(item.fullName),
+									}, t("aiEmpowerLabel")),
+									// 技能条目（技能市场模式 / 技能索引数据）：走技能安装通道（clone → ~/.dsh/skills）
+									item.skillTopics !== undefined
+										? (() => {
+											const skillName = item.fullName.split("/")[1];
+											const already = installedSkills.some((s) => s.name === skillName);
+											return el("button", {
+												type: "button",
+												className: styles.toggle,
+												disabled: installing === item.fullName || already,
+												title: already ? t("skillUninstallHint") : undefined,
+												onClick: () => startSkillJob(item),
+											}, installing === item.fullName ? t("installingLocal") : (already ? t("skillInstalledTag") : t("installSkill")));
+										})()
+										: item.fullName === "deepseek-ai/deepseek-harness"
+											? (updateMap[item.fullName] !== undefined
+												? (confirmFrameworkUpgrade
+													? el("button", {
+														type: "button",
+														className: styles.toggle,
+														disabled: frameworkUpgrading,
+														onClick: doFrameworkUpgrade,
+													}, frameworkUpgrading ? t("installingLocal") : t("frameworkUpgradeConfirm"))
+													: el("button", {
+														type: "button",
+														className: styles.toggle,
+														disabled: frameworkUpgrading,
+														title: t("frameworkUpgradeTitle"),
+														onClick: () => setConfirmFrameworkUpgrade(true),
+													}, t("frameworkUpgradeBtn") + " → v" + updateMap[item.fullName]))
+												: el("button", {
+													type: "button",
+													className: styles.toggle,
+													disabled: true,
+													title: t("frameworkUpToDateTitle"),
+												}, t("frameworkUpToDate")))
+											: updateMap[item.fullName] !== undefined
+												? el("button", {
+													type: "button",
+													className: styles.toggle,
+													disabled: installing === item.fullName,
+													onClick: () => startJob("", installedMatch.moduleName, "github", "plugin", true),
+												}, installing === item.fullName ? t("installingLocal") : t("update") + " → v" + updateMap[item.fullName])
+												: el("button", {
+													type: "button",
+													className: styles.toggle,
+													disabled: installing === item.fullName,
+													onClick: () => addLocal(item),
+												}, installing === item.fullName ? t("installingLocal") : (installedMatch !== null && installedMatch !== undefined ? t("update") : t("addLocal"))),
+								),
+							);
+						});
+			let detail = null;
+			if (repoInfo !== null) {
+				if (repoInfo.status === "loading") {
+					detail = el("div", { className: styles.detail }, el("p", { className: styles.status }, t("repoLoading")));
+				} else if (repoInfo.status === "error") {
+					detail = el("div", { className: styles.detail },
+						el("p", { className: styles.status, "data-error": "true" }, t("repoError") + "：" + repoInfo.error.message));
+				} else {
+					const info = repoInfo.data;
+					const detailSkillName = info.skill?.name ?? info.skillName ?? repoInfo.repo.split("/")[1];
+					const detailSkill = installedSkills.find((s) => s.name === detailSkillName) ?? null;
+					const detailSkillInstalled = detailSkill !== null;
+					const detailSkillDisabled = detailSkill?.disabled === true;
+					detail = el("div", { className: styles.detail },
+						el("div", { className: styles.rowTop },
+							el("strong", { className: styles.name }, repoInfo.repo),
+							info.dshHint ? el("span", { className: styles.tag, "data-user": "true" }, t("dshHint")) : null,
+							info.hasSkill === true ? el("span", { className: styles.tag, "data-skill": "true", title: t("skillTitle") }, t("skillBadge")) : null,
+							info.hasSuite === true ? el("span", { className: styles.tag, "data-suite": "true", title: t("suiteTitle") }, t("suiteBadge")) : null,
+						),
+						info.description ? el("p", { className: styles.desc }, info.description) : null,
+						info.hasSkill === true && info.skill !== null && (info.skill.name || info.skill.description || info.skill.whenToUse)
+							? el("div", null,
+								el("p", { className: styles.status }, t("skillMetaLabel") + "："),
+								info.skill.name ? el("p", { className: styles.status }, t("skillNameLabel") + "：" + info.skill.name) : null,
+								info.skill.description ? el("p", { className: styles.desc }, info.skill.description) : null,
+								info.skill.whenToUse ? el("p", { className: styles.status }, t("skillWhenToUseLabel") + "：" + info.skill.whenToUse) : null,
+								Array.isArray(info.skillTopics) && info.skillTopics.length > 0
+									? el("p", { className: styles.status }, t("skillTopicsLabel") + "：" + info.skillTopics.join(" / "))
+									: null,
+							)
+							: null,
+						info.readme !== null && (info.readme.title || info.readme.summary)
+							? el("div", null,
+								el("p", { className: styles.status }, t("readmeLabel") + "："),
+								info.readme.title ? el("strong", null, info.readme.title + "。") : null,
+								info.readme.summary ? el("p", { className: styles.desc }, info.readme.summary) : null,
+							)
+							: null,
+						el("p", { className: styles.status },
+							info.hasSuite === true && info.hasPackageJson === false
+								? t("suiteRepoNote")
+								: (info.hasSkill === true && info.hasPackageJson === false
+									? t("skillRepoNote")
+									: (t("packageName") + "：" + (info.packageName ?? t("noPackage"))))),
+						info.installCommand
+							? el("div", null,
+								el("p", { className: styles.status }, t("officialInstallLabel") + "："),
+								el("pre", { className: styles.cmdBlock, style: { margin: "4px 0", padding: "8px 10px", background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: "8px", overflowX: "auto", fontSize: "12px", lineHeight: "18px", whiteSpace: "pre-wrap", wordBreak: "break-all" } }, info.installCommand),
+								el("button", { type: "button", className: styles.toggle, onClick: () => copyInstallCommand(info.installCommand) }, t("copyInstallCmd")))
+							: null,
+						info.packageName !== null && info.packageName !== undefined && state.status === "ready"
+							? (() => {
+								const entry = state.data.entries.find((candidate) => candidate.moduleName === info.packageName);
+								return entry ? el("p", { className: styles.status },
+									t("installedAt") + "：" + (entry.installDate ?? "?") + (entry.version ? " · v" + entry.version : "")) : null;
+							})()
+							: null,
+						info.hasSkill === true && detailSkillInstalled
+							? el("p", { className: styles.status },
+								t("skillDetailInstalled") + "：" + detailSkillName
+									+ (detailSkillDisabled ? " · " + t("skillDetailDisabled") : "")
+									+ (detailSkill.path ? " · " + t("skillDetailPath") + " " + detailSkill.path : ""))
+							: null,
+						info.packageName ? el("button", {
+							type: "button",
+							className: styles.toggle,
+							disabled: installing === repoInfo.repo,
+							onClick: () => startJob(repoInfo.repo, info.packageName),
+						}, installing === repoInfo.repo ? t("installing") : (state.status === "ready" && state.data.entries.some((candidate) => candidate.moduleName === info.packageName) ? t("update") : t("install"))) : null,
+						info.hasSkill === true ? el("button", {
+							type: "button",
+							className: styles.toggle,
+							disabled: installing === repoInfo.repo || detailSkillInstalled,
+							title: detailSkillInstalled ? t("skillUninstallHint") : undefined,
+							onClick: () => startSkillJob({ fullName: repoInfo.repo, source: repoInfo.source ?? "github" }),
+						}, installing === repoInfo.repo ? t("installing") : (detailSkillInstalled ? t("skillInstalledTag") : t("installSkill"))) : null,
+						info.hasSuite === true && info.hasPackageJson === false ? el("button", {
+							type: "button",
+							className: styles.toggle,
+							disabled: installing === repoInfo.repo,
+							title: t("suiteTitle"),
+							onClick: () => startSuiteJob({ fullName: repoInfo.repo, source: repoInfo.source ?? "github" }),
+						}, installing === repoInfo.repo ? t("installing") : t("suiteInstall")) : null,
+						info.hasSkill === true && detailSkillInstalled && !detailSkill.system
+							? el("button", {
+								type: "button",
+								className: styles.toggle,
+								disabled: togglingSkill === detailSkillName,
+								onClick: () => doToggleSkill(detailSkillName, detailSkillDisabled),
+							}, togglingSkill === detailSkillName ? t("installingLocal") : (detailSkillDisabled ? t("skillEnable") : t("skillDisable")))
+							: null,
+						(info.privateRoot || !info.hasPackageJson) ? el("div", null,
+							info.privateRoot ? el("p", { className: styles.status, "data-error": "true" }, t("privateRootHint")) : null,
+							el("p", { className: styles.status }, t("subpackagesTitle") + "："),
+							subpackages === null ? null
+								: subpackages.status === "loading"
+									? el("p", { className: styles.status }, t("subpackagesLoading"))
+									: subpackages.status === "error"
+										? el("p", { className: styles.status, "data-error": "true" }, t("subpackagesError"))
+										: subpackages.list.length === 0
+											? el("p", { className: styles.status }, t("subpackagesEmpty"))
+											: el("ul", { className: styles.market }, subpackages.list.map((sub) =>
+												el("li", { key: sub.name, className: styles.item },
+													el("div", { className: styles.itemTop },
+														el("code", { className: styles.name }, sub.name)),
+													el("div", { className: styles.rowTop },
+														el("button", {
+															type: "button",
+															className: styles.toggle,
+															disabled: installing === sub.name,
+															onClick: () => startJob(repoInfo.repo, sub.name),
+														}, installing === sub.name ? t("installing") : t("install")))))))
+						: null,
+					);
+				}
+			}
+			// 升级卡片显示条件（v0.3.40 明确化，2026-09-11 用户连问两次「卡片为什么还在」）：
+			//  - 升级/回滚**进行中** → 显示（实时进度）；
+			//  - 结果**是自愈出来的**（脚本被强杀后按现实判定，用户根本没看着它跑）→ 不弹卡片，
+			//    结果常驻在「功能包 → 框架」里，不打扰人；
+			//  - 结束的卡片点过叉号 → 只关闭**那一次**（按状态文件时间戳认身份），
+			//    下次升级时间戳变了才会再弹；旧实现按 status 字符串记，导致"关了 failed 又冒出 done"。
+			const fwRunKey = frameworkStatus !== null ? String(frameworkStatus.at ?? "") : "";
+			const fwDismissedRun = (() => {
+				try { return frameworkStatus !== null && localStorage.getItem("pc-fw-dismiss-at") === fwRunKey; } catch { return false; }
+			})();
+			const fwTerminal = frameworkStatus !== null && (frameworkStatus.status === "done" || frameworkStatus.status === "failed");
+			const fwShowCard = frameworkStatus !== null && frameworkStatus.status !== "idle" && !fwStatusDismissed
+				&& !fwDismissedRun
+				&& !(fwTerminal && frameworkStatus.reconciled !== undefined);
+			// 门控（兼容门总开关）取值：state 未就绪时按默认「都开」，与服务端默认一致
+			const gateReady = state !== null && state.status === "ready";
+			const gateAutoDisable = !gateReady || (state.data.compatGate ?? {}).autoDisable !== false;
+			const gateAutoDetect = !gateReady || (state.data.compatGate ?? {}).autoDetect !== false;
+			// ★ 0.5.98 改错（用户 2026-10-28 实测）：计数只数**真待适配**的 —— `status=pending`
+			//   **且**该行此刻仍在补丁里。旧口径取 `compatPending.pending.length`，把两种"不是待办"的
+			//   记录算了进去：① 已经 adopted 的历史（服务端本来就滤掉了，但语义上也不该数）；
+			//   ② **行早已不存在的 pending**（真机现场 3 条，moduleName 也是 null）——
+			//   于是面板一直挂着"有 N 行待适配"，而实际一行都没有。
+			//   判据的唯一真源在服务端（domain/compat-pending-records.js#isActionablePending，
+			//   /state 下发 actionableCount / staleCount）；拿不到这两个字段时（老服务端），
+			//   这里按**同一个判据**用 state.data.patch 的既有行清单（disables/forced/inserts，
+			//   就是补丁解析的产物）回退算，**绝不退回数组长度**。
+			const gatePatchRowIds = new Set([
+				...((state !== null && state.data && state.data.patch && Array.isArray(state.data.patch.disables)) ? state.data.patch.disables : []),
+				...((state !== null && state.data && state.data.patch && Array.isArray(state.data.patch.forced)) ? state.data.patch.forced : []),
+				...((state !== null && state.data && state.data.patch && Array.isArray(state.data.patch.inserts)) ? state.data.patch.inserts : []),
+			]);
+			const gatePendingRaw = gateReady ? (state.data.compatPending?.pending ?? []) : [];
+			/** 一条记录"行还在不在"（服务端 rowMissing 优先；老服务端按本地行清单算 —— 同一判据）。 */
+			const gateRowMissing = (r) => (r !== null && r !== undefined && typeof r.rowMissing === "boolean"
+				? r.rowMissing
+				: !(r !== null && r !== undefined && typeof r.rowId === "string" && gatePatchRowIds.has(r.rowId)));
+			/** 一条记录"是不是真待适配"（服务端 actionable 优先；老服务端按同一判据回退）。 */
+			const gateRowActionable = (r) => (r !== null && r !== undefined && typeof r.actionable === "boolean"
+				? r.actionable
+				: ((r?.status ?? "pending") === "pending" && !gateRowMissing(r)));
+			const gateActionableRows = gatePendingRaw.filter((p) => (p?.status ?? "pending") === "pending" && !gateRowMissing(p));
+			const gateStaleRows = gatePendingRaw.filter((p) => (p?.status ?? "pending") === "pending" && gateRowMissing(p));
+			const gatePendingCount = gateReady
+				? (Number.isFinite(state.data.compatPending?.actionableCount) ? state.data.compatPending.actionableCount : gateActionableRows.length)
+				: 0;
+			const gateStaleCount = gateReady
+				? (Number.isFinite(state.data.compatPending?.staleCount) ? state.data.compatPending.staleCount : gateStaleRows.length)
+				: 0;
+			// 门控明细清单（用户 2026-09-24 要求：面板要显示"是哪些插件"，不只是数量）
+			const [gateShowAll, setGateShowAll] = react.useState(false);
+			const [compatNoticeClosed, setCompatNoticeClosed] = react.useState(false);
+			const gateRows = gateReady ? (state.data.gating ?? null) : null;
+			const gateTime = (ms) => (typeof ms === "number" && ms > 0 ? new Date(ms).toLocaleString() : "—");
+			// ★ 0.5.98 加法（用户 2026-10-28 明确要求）：**删记录**的两个入口（单条 / 批量清理失效）。
+			//   三条硬约束：① 只删记录 —— 不动插件、不动补丁文件（服务端只改 compat-pending.json）；
+			//   ② **两段式** —— 第一下只上膛（零请求，并把"要删什么、不影响什么"写清楚），确认后才真发；
+			//   ③ 失败一律把服务端原文摆出来（不静默、不谎报成功）。
+			const [gateForgetArmed, setGateForgetArmed] = react.useState(null); // { kind: "row", rowId, moduleName } | { kind: "stale" }
+			const [gateForgetBusy, setGateForgetBusy] = react.useState(false);
+			const [gateForgetNote, setGateForgetNote] = react.useState(null); // { text, level }
+			// ★ 0.5.100 加法：「按需检查」的按钮状态与结果反馈（用户 2026-11-02「平时不预检」）。
+			//   `gateScanTargets` = 当前**可检查**的行数（有 rowId 且不是控制台自己）：为 0 时不摆按钮。
+			const gateScanTargets = gateReady && Array.isArray(state.data.entries)
+				? state.data.entries.filter((e) => typeof e?.rowId === "string" && e.rowId !== "" && e.rowId !== "plugin-console").length
+				: 0;
+			const gateLastScan = gateReady && state.data.compatPending !== null && state.data.compatPending !== undefined
+				? (state.data.compatPending.lastScan ?? null)
+				: null;
+			const [gateScanBusy, setGateScanBusy] = react.useState(false);
+			const [gateScanNote, setGateScanNote] = react.useState(null); // { text, level }
+			/** 一键「检查当前是否适配」：服务端只记录结论、绝不禁用任何行；成功/失败都要有明确反馈。 */
+			const gateScanSend = () => {
+				if (gateScanBusy) return;
+				setGateScanBusy(true);
+				setGateScanNote(null);
+				call("/plugin-console/compat-gate", { action: "scan-current" }).then(
+					(data) => {
+						const n = Number(data?.checked ?? 0);
+						const p = Number(data?.pass ?? 0);
+						const f = Number(data?.fail ?? 0);
+						const u = Number(data?.unknown ?? 0);
+						setGateScanNote({ text: t("gateScanDone").replace("{n}", String(n)).replace("{p}", String(p)).replace("{f}", String(f)).replace("{u}", String(u)), level: null });
+						refresh(); // 结论落盘了 ⇒ 重拉 /state（列表、计数、"上次检查"一起变）
+					},
+					(error) => setGateScanNote({ text: t("gateScanFailed") + friendlyGithubError(error).message, level: "error" }),
+				).finally(() => setGateScanBusy(false));
+			};
+			// ★ 0.5.101 加法（用户 2026-11-02）：**运行期加载失败**的行（`fiberPhase === 'failed'`）。
+			//   真机：`experimental-inspector` 因 `@deepseek-ai/cordis` 解析失败挂载失败，门控完全看不到
+			//   —— 那条失败不经过预扫/隔离链。这里只做**视图**（服务端 gating.loadFailed；**从不**写
+			//   compat-pending.json，那是适配裁决记录）；停用仍是用户的动作（两段式，落到既有 /toggle）。
+			const gateLoadFailed = gateReady && gateRows !== null && Array.isArray(gateRows.loadFailed) ? gateRows.loadFailed : [];
+			const [gateLoadArmed, setGateLoadArmed] = react.useState(null); // { rowId, name }
+			const [gateLoadNote, setGateLoadNote] = react.useState(null); // { text, level }
+			const gateLoadEntry = (rowId) => (gateReady && Array.isArray(state.data.entries)
+				? (state.data.entries.find((e) => e.rowId === rowId) ?? null)
+				: null);
+			/** 两段式第一段：只上膛（零请求）。 */
+			const gateLoadArm = (next) => { setGateLoadNote(null); setGateLoadArmed(next); };
+			/** 确认后才真发：走**既有** /toggle（enabled:false），成功后刷新。 */
+			const gateLoadDisable = (armed) => {
+				const entry = armed === null ? null : gateLoadEntry(armed.rowId);
+				setGateLoadArmed(null);
+				setGateLoadNote(null);
+				if (entry === null) { setGateLoadNote({ text: t("gateLoadFailedFailed") + t("gateLoadFailedGone"), level: "error" }); return; }
+				call("/plugin-console/toggle", { entryId: entry.entryId, enabled: false }).then(
+					() => { setGateLoadNote({ text: t("gateLoadFailedDone").replace("{id}", String(armed.rowId)), level: null }); refresh(); },
+					(error) => setGateLoadNote({ text: t("gateLoadFailedFailed") + friendlyGithubError(error).message, level: "error" }),
+				);
+			};
+			/** 两段式的第一段：只上膛，一个请求都不发（换目标 = 换载荷，旧载荷不会跟着发出去）。 */
+			const gateForgetArm = (next) => { setGateForgetNote(null); setGateForgetArmed(next); };
+			/** 唯一出口：真发删除请求（成功后刷新 /state，列表与计数一起变）。 */
+			const gateForgetSend = (armed) => {
+				if (armed === null || gateForgetBusy) return;
+				setGateForgetArmed(null); // 一旦真发请求，上膛状态作废（绝不留"看着像待确认"的残影）
+				setGateForgetBusy(true);
+				setGateForgetNote(null);
+				const body = armed.kind === "stale" ? { action: "forget-stale" } : { action: "forget", rowId: String(armed.rowId) };
+				call("/plugin-console/compat-gate", body).then(
+					(data) => {
+						const removed = Array.isArray(data?.removed) ? data.removed : [];
+						const text = data !== null && data !== undefined && data.changed === false
+							? t("gateForgetNone")
+							: (armed.kind === "stale"
+								? t("gateForgetDoneStale").replace("{n}", String(removed.length))
+								: t("gateForgetDoneRow").replace("{id}", String(armed.rowId)));
+						setGateForgetNote({ text, level: null });
+						refresh(); // 删完必须重拉 /state（计数与列表都跟着变，不留旧数字）
+					},
+					(error) => setGateForgetNote({ text: t("gateForgetFailed") + friendlyGithubError(error).message, level: "error" }),
+				).finally(() => setGateForgetBusy(false));
+			};
+			// ══ 安全启动（门控面板里的一个分区）══════════════════════════════════════════════
+			// 用户 2026-10-18 原话：「现在这能力藏得太深，只有命令行能用」。后端 POST /safe-boot 早就有了
+			// （lib/server/routes/safe-boot.js；动作白名单 list / restore-last-good / disable-suspects /
+			// mark-good），界面上却一个入口都没有 —— 这里补的就是这四个动作的手套。
+			//
+			// 为什么放**门控面板**里（不是 fwPanel、更不是新工具栏按钮）：
+			//   safe-boot 救的正是「门控/兼容判断没拦住、框架被别的通道换坏之后打不开」那种局面 ——
+			//   它和门控是**同一条链**（先拦、拦不住再回退），放在一起，用户出事时只有一个地方要想起。
+			//   用户也明确不许再加工具栏按钮（已经挤），所以它挂在已有门控面板里，排在门控正文之后。
+			//
+			// 三条硬约束（用户定）：① 不许"点了没反应" —— 每个动作要么有成功/失败/进行中反馈，要么这个
+			//   按钮根本不显示；② 危险写动作**两段式** —— 第一下只上膛并写明影响面（改哪份文件、会覆盖什么），
+			//   确认后才真发请求；③ 拿不到的数据如实显示「—」，不编造。
+			// 判据一条都不搬过来：动作白名单、快照挑选、写盘闸门全在服务端 —— 客户端不重算、不预测结果。
+			const [safeBootOpen, setSafeBootOpen] = react.useState(false);
+			const [safeBootData, setSafeBootData] = react.useState(null); // list 的响应（null = 还没读过 / 读取失败）
+			const [safeBootError, setSafeBootError] = react.useState(null); // 读取失败原文（不静默、不留空白）
+			const [safeBootBusy, setSafeBootBusy] = react.useState(null); // 'list' | 动作名 | null（进行中反馈）
+			const [safeBootArmed, setSafeBootArmed] = react.useState(null); // 两段式的"上膛"：{ action, id?, rowIds? }
+			const [safeBootNote, setSafeBootNote] = react.useState(null); // 写动作的结果/失败原文：{ text, level }
+			const safeBootErrText = (error) => {
+				const msg = error !== null && error !== undefined && typeof error.message === "string" ? error.message : String(error ?? "");
+				return msg === "" ? t("safetySwitchFailed") : msg;
+			};
+			const safeBootTime = (ms) => (typeof ms === "number" && ms > 0 ? new Date(ms).toLocaleString() : "—");
+			/** 快照 sha256 只显示前几位（列表里够辨认；完整值在快照文件里）。拿不到就是「—」。 */
+			const safeBootSha = (sha) => (typeof sha === "string" && sha !== "" ? sha.slice(0, 10) : "—");
+			/** 「为什么没写快照」的原因词表 —— 与 lib/server/routes/compat.js#maybeWriteSnapshot 是**同一套字符串**。
+			 *  不认识的 reason 原样显示（不翻译成瞎话，也不吞掉）。 */
+			const SAFE_BOOT_REASON_KEYS = {
+				"patch-not-yaml-valid": "safeBootReasonPatchInvalid", // 结构校验没过（有东西可写，但闸门不放行）
+				"no-patch-file": "safeBootReasonNoPatch",
+				"environment-changed": "safeBootReasonEnvChanged", // 时机未到
+				"unchanged": "safeBootReasonUnchanged", // 时机未到（已有一份一样的）
+				"not-yet": "safeBootReasonNotYet", // 时机未到（这个字符串由本面板推导出来，见下）
+			};
+			const safeBootReasonText = (reason) => {
+				const key = typeof reason === "string" ? SAFE_BOOT_REASON_KEYS[reason] : undefined;
+				if (key !== undefined) return t(key);
+				return typeof reason === "string" && reason !== "" ? reason : "—";
+			};
+			/**
+			 * 「这一次该写快照却没写，是因为什么」——**只在能说出原因时**返回 `{ written: false, reason, problems }`，
+			 * 说不出来就返回 null（面板就不显示这一行，不编一句话凑数）。
+			 *
+			 * 数据来源两条，都不猜：
+			 *   ① 响应里真带 `snapshot.written`（与 compat-status 的 safeBoot.snapshot 同形）→ 原样用它的
+			 *      written/reason；written === true 时返回 null（没东西可抱怨）。
+			 *   ② 没带时，只用 list **确实下发**的事实推导：patch.exists / patch.check（服务端当场跑
+			 *      validatePatchYaml 的结论）/ snapshots。于是两类原因分得清清楚楚：
+			 *        · 结构校验没过  → `patch-not-yaml-valid`（有补丁、但校验结论 ok:false）
+			 *        · 还没到该写的时机 → `not-yet`（补丁没问题，只是根本还没有一份快照；
+			 *          服务端只在「服务确认正常 + 环境指纹未变」时才写 —— 见 compat.js 的那段判据）
+			 *      两个文案完全不同，绝不糊成一句"没有快照"。
+			 */
+			const safeBootGateOf = (data) => {
+				if (data === null || typeof data !== "object") return null;
+				if (data.snapshot !== null && typeof data.snapshot === "object" && typeof data.snapshot.written === "boolean") {
+					if (data.snapshot.written === true) return null;
+					return { written: false, reason: data.snapshot.reason ?? null, problems: Array.isArray(data.snapshot.problems) ? data.snapshot.problems : [] };
+				}
+				const snaps = Array.isArray(data.snapshots) ? data.snapshots : [];
+				const patch = data.patch !== null && typeof data.patch === "object" ? data.patch : null;
+				if (patch === null || patch.exists !== true) return { written: false, reason: "no-patch-file", problems: [] };
+				const check = patch.check !== null && typeof patch.check === "object" ? patch.check : null;
+				if (check !== null && check.ok !== true) return { written: false, reason: "patch-not-yaml-valid", problems: Array.isArray(check.problems) ? check.problems : [] };
+				if (snaps.length === 0) return { written: false, reason: "not-yet", problems: [] };
+				return null;
+			};
+			/** 快照清单（新→旧；只认形状对的条目，坏数据不会把整块渲染拖崩）。 */
+			const safeBootSnapsOf = (data) => (data !== null && typeof data === "object" && Array.isArray(data.snapshots) ? data.snapshots : [])
+				.filter((s) => s !== null && typeof s === "object" && typeof s.id === "string")
+				.sort((a, b) => Number(b.at ?? 0) - Number(a.at ?? 0));
+			/** 自动预检点名的可疑行（服务端 lastPlan.suspects）；没有就是空数组 —— 那就**不显示**这个按钮。 */
+			const safeBootSuspectsOf = (data) => (data !== null && typeof data === "object" && data.lastPlan !== null && typeof data.lastPlan === "object" && Array.isArray(data.lastPlan.suspects)
+				? data.lastPlan.suspects.filter((x) => typeof x === "string" && x !== "")
+				: []);
+			/** 读一次快照列表（**只**在"展开那一下"和写动作之后调用；收起状态零请求）。
+			 *  失败时保留上一次的数据但把错误原文摆出来 —— 一次读取失手不该把已有信息抹掉。 */
+			const safeBootRead = async () => {
+				try {
+					const data = await call("/plugin-console/safe-boot", { action: "list" });
+					if (data === null || typeof data !== "object") { setSafeBootError(t("safeBootListFailed") + "—"); return; }
+					setSafeBootData(data);
+					setSafeBootError(null);
+				} catch (error) {
+					setSafeBootError(t("safeBootListFailed") + safeBootErrText(error));
+				}
+			};
+			/** 写动作结束后的一句结果（服务端说什么就说什么：changed:false / no-suspects / 具体行）。 */
+			const safeBootDoneText = (action, data) => {
+				if (data === null || typeof data !== "object") return t("safeBootFailed") + "—";
+				if (action === "restore-last-good") return data.changed === false ? t("safeBootNoopRestore") : t("safeBootDoneRestore");
+				if (action === "disable-suspects") {
+					if (data.reason === "no-suspects") return t("safeBootNoSuspects");
+					const added = Array.isArray(data.added) ? data.added.filter((x) => typeof x === "string") : [];
+					const skipped = Array.isArray(data.skipped) ? data.skipped : [];
+					if (added.length === 0) return t("safeBootNoSuspects");
+					return t("safeBootDoneDisable") + " " + added.join("、") + (skipped.length === 0 ? "" : " · " + t("safeBootDisabledSkipped") + " " + String(skipped.length));
+				}
+				if (action === "mark-good") {
+					const id = data.snapshot !== null && typeof data.snapshot === "object" && typeof data.snapshot.id === "string" ? data.snapshot.id : null;
+					return t("safeBootDoneMarkGood") + " " + (id ?? "—");
+				}
+				return "—";
+			};
+			/** 真发请求（唯一出口）：list / restore-last-good / disable-suspects / mark-good */
+			const safeBootSend = async (action, extra) => {
+				if (safeBootBusy !== null) return; // 进行中不叠加请求（按钮此刻也是 disabled）
+				setSafeBootBusy(action);
+				setSafeBootNote(null);
+				setSafeBootArmed(null); // 一旦真发请求，上膛状态作废（绝不留一个"看着像待确认"的残影）
+				if (action === "list") setSafeBootError(null);
+				try {
+					const body = { action };
+					// 只放服务端白名单认得的两个载荷字段（id / rowIds）；其余一概不传。
+					if (extra !== null && extra !== undefined) {
+						if (typeof extra.id === "string" && extra.id !== "") body.id = extra.id;
+						if (Array.isArray(extra.rowIds) && extra.rowIds.length > 0) body.rowIds = extra.rowIds.slice();
+					}
+					const data = await call("/plugin-console/safe-boot", body);
+					if (action === "list") {
+						if (data === null || typeof data !== "object") setSafeBootError(t("safeBootListFailed") + "—");
+						else { setSafeBootData(data); setSafeBootError(null); }
+					} else {
+						setSafeBootNote({ text: safeBootDoneText(action, data), level: null });
+						// 写动作之后**重新读一次列表**（mark-good 尤其必须：last-good 标记要随之变化）
+						await safeBootRead();
+					}
+				} catch (error) {
+					// 失败一律把服务端给的原文摆出来（call() 已经把 {ok:false,error} 抛成 Error.message）
+					if (action === "list") setSafeBootError(t("safeBootListFailed") + safeBootErrText(error));
+					else setSafeBootNote({ text: t("safeBootFailed") + safeBootErrText(error), level: "error" });
+				} finally { setSafeBootBusy(null); }
+			};
+			/** 展开/收起：**展开那一下**才读一次 list（收起状态零请求）；收起时把上膛清掉。 */
+			const safeBootToggle = () => {
+				const next = !safeBootOpen;
+				setSafeBootOpen(next);
+				setSafeBootArmed(null);
+				setSafeBootNote(null);
+				if (next) void safeBootSend("list");
+			};
+			/** 两段式的第一段：只上膛，一个请求都不发（换动作 = 换载荷，上一个动作的载荷不会跟着发出去）。 */
+			const safeBootArm = (next) => {
+				setSafeBootNote(null);
+				setSafeBootArmed(next);
+			};
+			const safeBootPanel = () => {
+				const data = safeBootData;
+				const gate = safeBootGateOf(data);
+				const snaps = safeBootSnapsOf(data);
+				const suspects = safeBootSuspectsOf(data);
+				// 恢复目标的选择口径与服务端 domain/safe-boot.js#pickSnapshot 一致（kind=good 优先，其次最新）；
+				// 选好后把 id **显式传下去** —— 面板上写的是哪份，恢复的就是哪份，不可能"说 A 做 B"。
+				const goodOne = snaps.filter((s) => s.kind === "good")[0] ?? null;
+				const restoreTarget = goodOne ?? snaps[0] ?? null;
+				const newest = snaps[0] ?? null;
+				const lastGoodId = data !== null && typeof data === "object" && typeof data.lastGoodId === "string" && data.lastGoodId !== "" ? data.lastGoodId : null;
+				const patchPath = data !== null && typeof data === "object" && typeof data.patchPath === "string" && data.patchPath !== "" ? data.patchPath : null;
+				const commands = data !== null && typeof data === "object" && data.commands !== null && typeof data.commands === "object" ? data.commands : null;
+				// 上膛的那份快照对象（按 id 回查 —— 显示的时间/sha256 与"会恢复的那一份"必然是同一份）
+				const armedSnap = safeBootArmed === null || typeof safeBootArmed.id !== "string" ? null : (snaps.find((s) => s.id === safeBootArmed.id) ?? null);
+				const busy = safeBootBusy !== null;
+				const reasonOf = (x) => (x === null || typeof x !== "object" ? null : x.reason ?? null);
+				return el("div", {
+					"data-safeboot": "true",
+					style: { flexDirection: "column", gap: 6, display: "flex", marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2)" },
+				},
+					el("button", {
+						type: "button",
+						className: styles.toggle,
+						"data-safeboot-toggle": "true",
+						"data-open": safeBootOpen ? "true" : "false",
+						"aria-label": "safeBootToggle",
+						"aria-expanded": safeBootOpen ? "true" : "false",
+						title: t("safeBootToggleTitle"),
+						onClick: safeBootToggle,
+					}, (safeBootOpen ? "▾ " : "▸ ") + t("safeBootSectionTitle") + (busy ? " · " + t("safeBootBusy") : "")),
+					safeBootOpen ? el("div", { style: { flexDirection: "column", gap: 6, display: "flex" } },
+						el("p", { className: styles.status }, t("safeBootSectionHint")),
+						// 进行中：明确说在做什么（"点了没反应"就是这个面板最不能犯的错）
+						busy ? el("p", { className: styles.status, "data-safeboot-busy": "true" }, t("safeBootLoading")) : null,
+						// 读取失败：错误原文 + 一个「重新读取」（有反馈的出口，不是一个哑按钮）
+						safeBootError !== null
+							? el("div", { style: { flexDirection: "column", gap: 6, display: "flex" } },
+								el("p", { className: styles.message, "data-error": "true", "data-safeboot-error": "true" }, safeBootError),
+								el("button", {
+									type: "button",
+									className: styles.toggle,
+									"aria-label": "safeBootReload",
+									disabled: busy,
+									onClick: () => { void safeBootSend("list"); },
+								}, t("safeBootReload")))
+							: null,
+						data === null ? null : el("div", { style: { flexDirection: "column", gap: 6, display: "flex" } },
+							// ① 「这次没写快照」+ 原因：结构校验没过 / 时机未到 —— 两句话不一样，原因原文也照抄
+							gate === null
+								? null
+								: el("p", { className: styles.status, "data-safeboot-reason": "true", "data-reason": gate.reason ?? "—" },
+									t("safeBootNotWritten") + " " + safeBootReasonText(reasonOf(gate)) + "（" + (reasonOf(gate) ?? "—") + "）"
+									+ (gate.problems.length === 0 ? "" : " · " + gate.problems.slice(0, 3).join("；"))),
+							// ② 计数 + last-good（拿不到就「—」）；data-count 是这份份数本身（界面上不以它为唯一来源）
+							el("p", { className: styles.status, "data-safeboot-count": "true", "data-count": String(snaps.length) },
+								t("safeBootCount").replace("{n}", String(snaps.length)) + " · " + t("safeBootLastGoodId") + " " + (lastGoodId ?? "—")),
+							// ③ 清单 / 空态（空态必须说原因，不能只说"没有快照"就完了）
+							snaps.length === 0
+								? el("p", { className: styles.status, "data-safeboot-empty": "true" },
+									t("safeBootEmpty") + " " + safeBootReasonText(reasonOf(gate)) + "（" + (reasonOf(gate) ?? "—") + "）")
+								: el("div", { style: { flexDirection: "column", gap: 4, display: "flex" }, "data-safeboot-list": "true" },
+									snaps.map((s) => el("div", {
+										key: "sb-" + String(s.id),
+										className: styles.row,
+										"data-safeboot-row": "true",
+										"data-snapshot-id": String(s.id),
+									},
+										el("div", { className: styles.rowTop },
+											el("code", { className: styles.name, style: { fontSize: 11, whiteSpace: "normal", overflow: "visible", textOverflow: "clip", wordBreak: "break-all" }, title: String(s.id) }, String(s.id)),
+											s.kind === "good" || s.id === lastGoodId
+												? el("span", { className: styles.tag, "data-lastgood": "true" }, t("safeBootLastGood"))
+												: null),
+										el("div", { className: styles.rowTop, style: { gap: 6 } },
+											el("span", { className: styles.status }, t("safeBootRowAt") + " " + safeBootTime(s.at)),
+											" · ",
+											el("span", { className: styles.status, "data-snapshot-sha": "true" }, t("safeBootRowSha") + " " + safeBootSha(s.patchSha256)))))),
+							// ④ 动作：没有可操作对象时**一个按钮都不显示**，并说明为什么（不许出现点了必失败的按钮）
+							snaps.length === 0
+								? el("p", { className: styles.status, "data-safeboot-noaction": "true" }, t("safeBootNoSnapshotActions"))
+								: el("div", { style: { flexDirection: "row", gap: 8, display: "flex", flexWrap: "wrap" } },
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										"aria-label": "safeBootRestore",
+										"data-armed": safeBootArmed !== null && safeBootArmed.action === "restore-last-good" ? "true" : undefined,
+										disabled: busy || restoreTarget === null,
+										title: t("safeBootRestoreTitle"),
+										onClick: () => safeBootArm({ action: "restore-last-good", id: restoreTarget === null ? null : String(restoreTarget.id) }),
+									}, t("safeBootRestore")),
+									suspects.length === 0
+										? null // 没有点名的行 ⇒ 不显示这个按钮（点了只会得到 no-suspects，属于"点了没反应"）
+										: el("button", {
+											type: "button",
+											className: styles.toggle,
+											"aria-label": "safeBootDisable",
+											"data-armed": safeBootArmed !== null && safeBootArmed.action === "disable-suspects" ? "true" : undefined,
+											disabled: busy,
+											title: t("safeBootDisableTitle"),
+											onClick: () => safeBootArm({ action: "disable-suspects", rowIds: suspects.slice() }),
+										}, t("safeBootDisable")),
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										"aria-label": "safeBootMarkGood",
+										disabled: busy,
+										title: t("safeBootMarkGoodTitle"),
+										onClick: () => { void safeBootSend("mark-good", { id: newest === null ? null : String(newest.id) }); },
+									}, t("safeBootMarkGood"))),
+							snaps.length === 0
+								? null
+								: (suspects.length === 0
+									? el("p", { className: styles.status, "data-safeboot-suspects": "none" }, t("safeBootSuspectsNone"))
+									: el("p", { className: styles.status, "data-safeboot-suspects": "true" }, t("safeBootSuspectsTitle") + " " + suspects.join("、"))),
+							// ⑤ 两段式：上膛后把"要改什么、改哪份文件"写清楚，取消 = 零请求
+							safeBootArmed === null
+								? null
+								: el("div", { "data-safeboot-armed": "true", style: { flexDirection: "column", gap: 6, display: "flex", borderLeft: "2px solid var(--dsw-alias-state-warning-primary)", paddingLeft: 8 } },
+									el("p", { className: styles.message, "data-warn": "true", "data-safeboot-armedtext": "true" },
+										safeBootArmed.action === "restore-last-good"
+											? t("safeBootArmRestore") + " " + String(safeBootArmed.id ?? "—") + " · " + t("safeBootRowAt") + " "
+												+ safeBootTime(armedSnap === null ? null : armedSnap.at) + " · sha256 "
+												+ safeBootSha(armedSnap === null ? null : armedSnap.patchSha256)
+											: t("safeBootArmDisable") + " " + (Array.isArray(safeBootArmed.rowIds) ? safeBootArmed.rowIds.join("、") : "—")),
+									safeBootArmed.action === "restore-last-good"
+										? el("p", { className: styles.status }, t("safeBootArmRestoreOverwrite") + " " + (patchPath ?? "—"))
+										: el("p", { className: styles.status }, t("safeBootArmDisableNote")),
+									el("div", { style: { flexDirection: "row", gap: 8, display: "flex" } },
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											"aria-label": "safeBootConfirm",
+											disabled: busy,
+											onClick: () => { void safeBootSend(safeBootArmed.action, safeBootArmed); },
+										}, t("safeBootConfirm")),
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											"aria-label": "safeBootCancel",
+											onClick: () => { setSafeBootArmed(null); setSafeBootNote(null); },
+										}, t("safeBootCancel")))),
+							// ⑥ 结果反馈（成功/无操作/失败原文，都留在面板上）——
+							//    失败走既有 error 样式；成功用既有 success 色（没有新的 CSS 类，只借颜色令牌）。
+							safeBootNote === null
+								? null
+								: el("p", {
+									className: styles.message,
+									"data-safeboot-note": "true",
+									"data-error": safeBootNote.level === "error" ? "true" : undefined,
+									style: safeBootNote.level === "error" ? undefined : { color: "var(--dsw-alias-state-success-primary)" },
+								}, String(safeBootNote.text ?? "—")),
+							// ⑦ 服务起不来时的命令行兜底（服务端下发的原始命令，不自己拼）
+							commands !== null && typeof commands.list === "string"
+								? el("p", { className: styles.status, "data-safeboot-cmd": "true" }, t("safeBootCmdHint") + " " + commands.list)
+								: null))
+						: null,
+				);
+			};
+			// 「功能包 → 框架」按钮角标：升级进行中 ⟳ / 上次失败 ✕ / 有可用更新 ↑（优先级从高到低）
+			const fwRunning = frameworkStatus !== null
+				&& frameworkStatus.status !== "idle" && frameworkStatus.status !== "done" && frameworkStatus.status !== "failed";
+			const fwBadge = fwRunning ? " ⟳" : (frameworkStatus?.status === "failed" ? " ✕" : (fwCheck?.target ? " ↑" : ""));
+			return el("section", { ref: sectionRef, className: styles.section, "aria-busy": state.status === "loading" },
+				// 兼容提示（2026-09-28 加法）：以前是纯 <p>，关不掉。现在按服务端的 noticeVisible 显示
+				// （老服务端没有该字段时回落 !supported），并给一个手动关闭入口 —— 关闭只影响展示：
+				// 服务端记的是「这个框架版本我看过了」，版本一变会重新提示；supported 与门控语义一个字都不变。
+				state.status === "ready" && state.data.compat
+					&& (state.data.compat.noticeVisible === undefined
+						? !state.data.compat.supported
+						: state.data.compat.noticeVisible === true)
+					&& !compatNoticeClosed
+					? el("p", { className: styles.message, "data-error": "true" },
+							state.data.compat.notice,
+							" ",
+							el("button", {
+								type: "button",
+								style: { marginLeft: "8px", cursor: "pointer" },
+								title: t("compatNoticeDismiss"),
+								onClick: () => {
+									// 失败不收起（关了却还在服务端显示会造成「点了没反应」的错觉）
+									call("/plugin-console/compat-ack", { webAppVersion: state.data.compat?.webAppVersion })
+										.then(() => setCompatNoticeClosed(true), () => {});
+								},
+							}, t("compatNoticeDismiss")),
+						)
+					: null,
+				// ★ 0.5.55 加法：**一行健康摘要** —— 面板有 176 个按钮、信息散在六处，
+				// 过去没有任何地方能回答"整体健康吗、该先处理哪件"。这里把服务端已折好的
+				// 分项计数摆在最上面（不新增判据、不新增 IO：全部来自 /state 已有的块）。
+				state.status === "ready" && state.data.health && state.data.health.issues > 0
+					&& Array.isArray(state.data.health.items)
+					&& healthSignature(state.data.health) !== healthClosed
+					? el("p", { className: styles.message, "data-error": "true", style: { marginTop: "8px", marginBottom: "0" } },
+							t("healthSummary").replace("{n}", String(state.data.health.issues)) + "："
+							+ state.data.health.items.map((x) => x.label + " " + String(x.count)).join(" · "),
+							" ",
+							el("button", {
+								type: "button",
+								style: { marginLeft: "8px", cursor: "pointer" },
+								title: t("healthDismissTitle"),
+								onClick: () => {
+									const sig = healthSignature(state.data.health);
+									try { localStorage.setItem("pc-health-closed", sig); } catch {}
+									setHealthClosed(sig);
+								},
+							}, t("healthDismissBtn")))
+					: null,
+				// ★ 0.5.53 加法（真机 2026-10-15）：**被框架整层跳过的 bundle**。
+				//   为什么必须放在这里（不是列表里）：被跳过的 bundle **不产生任何 loader 行**，
+				//   所以在插件列表里根本没有位置可挂 —— 用户看到的是"我明明有，却不显示"。
+				//   服务端 skippedBundles.reliable === true 才渲染（判据不可靠时宁可不报，见 domain/bundle-veto.js）。
+				state.status === "ready" && state.data.skippedBundles
+					&& state.data.skippedBundles.reliable === true
+					&& Array.isArray(state.data.skippedBundles.items)
+					&& state.data.skippedBundles.items.length > 0
+					&& skippedSignature(state.data.skippedBundles) !== skippedClosed
+					? el("div", { className: styles.message, "data-error": "true", style: { marginTop: "8px" } },
+							el("p", null,
+								t("skippedBundlesTitle").replace("{n}", String(state.data.skippedBundles.items.length)),
+								" ",
+								el("button", {
+									type: "button",
+									style: { marginLeft: "8px", cursor: "pointer" },
+									title: t("healthDismissTitle"),
+									onClick: () => {
+										const sig = skippedSignature(state.data.skippedBundles);
+										try { localStorage.setItem("pc-skipped-closed", sig); } catch {}
+										setSkippedClosed(sig);
+									},
+								}, t("healthDismissBtn"))),
+							...state.data.skippedBundles.items.map((b) => el("p", { key: b.packageName, title: b.hint ?? undefined, style: { margin: "4px 0 0 12px" } },
+								"• " + b.packageName + (b.version ? " v" + b.version : "") + " — " + b.reason,
+								// ★ 0.5.56：把提示里的"三条出路"之一真正做成可点的动作。
+								//   过去控制台**只读** compatibility.json、从不写 ⇒ 那句提示等于把活推回用户。
+								//   只在能确定精确版本时才给按钮（写豁免必须按精确版本，否则框架会忽略）。
+								b.version
+									? el("button", {
+										type: "button",
+										style: { marginLeft: "8px", cursor: "pointer" },
+										title: t("exemptGrantTitle"),
+										onClick: () => {
+											call("/plugin-console/compat-exempt", { packageName: b.packageName, version: b.version })
+												.then(() => refresh(), () => {});
+										},
+									}, t("exemptGrantBtn"))
+									: null)),
+						)
+					: null,
+
+				state.status === "ready" && comps.length > 0 && details === null && repoInfo === null
+					? el("button", {
+						type: "button",
+						className: styles.compToggle,
+						style: compCardTop !== null ? { top: compCardTop, left: compCollapsed ? "8px" : "336px" } : { left: compCollapsed ? "8px" : "336px" },
+						title: t(compCollapsed ? "compExpandTitle" : "compCollapseTitle"),
+						"aria-label": t(compCollapsed ? "compExpandTitle" : "compCollapseTitle"),
+						onClick: () => setCompCollapsed((v) => {
+							const next = !v;
+							try { localStorage.setItem("pc-comp-collapsed", next ? "1" : "0"); } catch {}
+							return next;
+						}),
+					}, compCollapsed ? "▶" : "◀")
+					: null,
+				state.status === "ready" && comps.length > 0 && !compCollapsed && details === null && repoInfo === null
+					? el("div", { className: styles.compCard, style: compCardTop !== null ? { top: compCardTop } : undefined },
+						el("div", { className: styles.rowTop },
+							el("strong", { className: styles.name }, t("aiEmpowerComponents") + "（" + comps.length + "）"),
+							el("button", { type: "button", className: styles.toggle, onClick: refreshComps }, t("compRefresh")),
+							comps.length > 1
+								? el("button", { type: "button", className: styles.toggle, "data-active": compDropOpen ? "true" : "false", title: t("compDropTitle"), onClick: () => setCompDropOpen((v) => !v) }, compDropOpen ? "▴" : "▾")
+								: null),
+						compDropOpen && comps.length > 1
+							? el("div", { className: styles.compDrop },
+								comps.map((c) =>
+									el("button", { key: c.id, type: "button", className: styles.compDropRow, onClick: () => { if (c.uiUrl) window.open(c.uiUrl, "_blank", "noopener"); } },
+										el("span", null, c.name + "（" + t(c.running ? "compRunning" : "compStopped") + "）"),
+										el("span", { className: styles.compDropUrl }, c.uiUrl ?? t("compNoUrl")))))
+							: null,
+						comps.map((c) =>
+							el("div", { key: c.id, className: styles.rowTop, style: { flexWrap: "wrap" } },
+								el("strong", { className: styles.name, style: { flex: "1 1 auto" } }, c.name),
+								el("span", { className: styles.tag, "data-enabled": c.running ? "true" : "false" }, c.running ? t("compRunning") : t("compStopped")),
+								(c.running && c.healthy !== null) ? el("span", { className: styles.tag, "data-enabled": c.healthy ? "true" : "false" }, c.healthy ? t("compHealthy") : t("compUnhealthy")) : null,
+								el("div", { className: styles.rowTop },
+									el("div", {
+										className: styles.pcSwitch,
+										"data-on": c.autoStart === true ? "true" : "false",
+										role: "switch",
+										"aria-checked": c.autoStart === true ? "true" : "false",
+										title: t("compAutoTitle"),
+										onClick: () => compAuto(c.id, c.autoStart !== true),
+									}, el("div", { className: styles.pcSwitchKnob })),
+									el("button", { type: "button", className: styles.toggle, disabled: c.running || compBusy === c.id, onClick: () => compAction(c.id, "start") }, t("compStart")),
+									el("button", { type: "button", className: styles.toggle, disabled: !c.running || compBusy === c.id, onClick: () => compAction(c.id, "stop") }, t("compStop")),
+									el("button", { type: "button", className: styles.toggle, disabled: compBusy === c.id, onClick: () => compStatusOne(c.id) }, t("compStatus")),
+									el("button", { type: "button", className: styles.toggle, disabled: !c.uiUrl, title: c.uiUrl ?? "", onClick: () => { if (c.uiUrl) window.open(c.uiUrl, "_blank", "noopener"); } }, t("compOpen"))))))
+					: null,
+				fwPanelOpen
+					? el("div", { className: styles.modalBackdrop, onClick: (event) => { if (event.target === event.currentTarget) { setFwPanelOpen(false); setFwConfirmPanel(false); } } },
+						el("div", { className: styles.modalCard, style: { maxWidth: 560 } },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("fwPanelTitle")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => { setFwPanelOpen(false); setFwConfirmPanel(false); } }, "✕")),
+							// ① 版本信息：当前 / 可用更新
+							el("p", { className: styles.status },
+								t("fwPanelCurrent") + "：" + (fwCheck?.current ?? (state.status === "ready" ? state.data.framework?.version : null) ?? "?")
+								+ (fwCheckBusy ? "（" + t("fwPanelChecking") + "）" : "")),
+							fwCheck === null
+								? null
+								: fwCheck.target
+									? el("p", { className: styles.status, "data-pending": "true" }, t("fwPanelAvailable").replace("{v}", fwSelected ?? fwCheck.target) + "（latest " + (fwCheck.latest ?? "—") + " · next " + (fwCheck.next ?? "—") + (fwCheck.alpha ? " · alpha " + fwCheck.alpha : "") + "）")
+									: fwCheck.registryError
+										? el("p", { className: styles.message, "data-error": "true" }, t("fwPanelCheckFailed").replace("{err}", fwCheck.registryError))
+										: el("p", { className: styles.status }, t("fwPanelUpToDate").replace("{latest}", fwCheck.latest ?? "—").replace("{next}", fwCheck.next ?? "—")),
+							el("p", { className: styles.status }, t("frameworkUpgradePick")),
+							fwPicking
+								? el("div", { style: { flexDirection: "column", gap: 6, display: "flex", flexBasis: "100%" } },
+									(fwPickAll ? fwVersions : fwVersions.slice(0, 6)).map((v) => el("button", {
+										key: v.version, type: "button", className: styles.toggle, disabled: frameworkUpgrading,
+										title: v.version + "（" + fwChannelLabel(v) + "）",
+										style: { justifyContent: "space-between", display: "flex", width: "100%" },
+										"data-active": v.version === fwSelected ? "true" : undefined,
+										onClick: () => { setFwSelectedVersion(v.version); setFwPicking(false); },
+									}, el("span", null, (v.version === fwSelected ? "● " : "○ ") + v.version), el("span", { className: styles.status }, fwChannelLabel(v)))),
+									fwVersions.length > 6
+										? el("button", { type: "button", className: styles.toggle, onClick: () => setFwPickAll((x) => !x) }, fwPickAll ? t("frameworkUpgradeFold") : t("frameworkUpgradeMore").replace("{n}", String(fwVersions.length)))
+										: null)
+								: null,
+							el("button", { type: "button", className: styles.toggle, disabled: frameworkUpgrading || fwVersions.length === 0, title: t("frameworkUpgradePick"), "data-active": fwPicking ? "true" : undefined, onClick: () => setFwPicking((x) => !x) }, t("frameworkUpgradeTarget") + "：" + (fwSelected ?? "—") + (fwPicking ? " ▴" : " ▾")),
+							// ② 上次/当前升级记录（卡片可被永久关闭，这里是常驻的真相入口）
+							frameworkStatus !== null && frameworkStatus.status !== "idle"
+								? el("div", { style: { flexDirection: "column", gap: 8, display: "flex" } },
+									el("strong", { className: styles.name }, t("frameworkUpgradeBtn") + " " + (frameworkStatus.status === "done" ? "✓" : (frameworkStatus.status === "failed" ? "✕" : "⟳"))),
+									fwStepsView(frameworkStatus),
+									frameworkStatus.status === "failed" && frameworkStatus.frameworkAtTarget
+										? el("p", { className: styles.status }, t("fwFailedButUpgraded").replace("{v}", frameworkStatus.frameworkAtTarget))
+										: null,
+									frameworkStatus.reconciled
+										? el("p", { className: styles.status, "data-pending": "true" }, "⚠ " + frameworkStatus.reconciled.note)
+										: null,
+									frameworkStatus.stalled && frameworkStatus.note
+										? el("p", { className: styles.message, "data-warn": "true" }, "⚠ " + frameworkStatus.note)
+										: null,
+									frameworkStatus.message ? el("p", { className: styles.status, "data-error": frameworkStatus.status === "failed" ? "true" : undefined }, frameworkStatus.message) : null,
+									// 2026-09-25 用户要求：记录常驻是设计，但得能一键关掉（否则每次打开都看到上次那条吓人的失败）
+									el("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+										el("button", { type: "button", className: styles.toggle, disabled: fwClearing, title: t("fwRecordClearTitle"), onClick: clearFrameworkRecord }, t("fwRecordClear"))))
+								: el("p", { className: styles.status }, t("fwPanelNoRecord")),
+							// ③.0 升级预检报告（只读结论 + 一键适配结果）——放在升级按钮之前，
+							// 让「先预检、再升级」成为默认路径
+							fwPreflight !== null
+								? el("div", { style: { flexDirection: "column", gap: 6, display: "flex", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: 8, padding: 8 } },
+									el("strong", { className: styles.name },
+										t("fwPreflightBtn")
+										+ (fwPreflight.report?.scan ? "（" + t("fwPreflightScanned").replace("{n}", String(fwPreflight.report.scan.filesScanned)) + "）" : "")),
+									fwPreflight.report === null || fwPreflight.report === undefined
+										? null
+										: (fwPreflight.report.contract !== null && fwPreflight.report.contract !== undefined
+											? el("p", { className: styles.status }, t("fwPreflightContract").replace("{summary}", String(fwPreflight.report.contractSummary ?? "")))
+											: el("p", { className: styles.message, "data-warn": "true" }, t("fwPreflightNoContract").replace("{err}", String(fwPreflight.report.contractError ?? "?")))),
+									fwPreflight.report === null || fwPreflight.report === undefined
+										? null
+										: (fwPreflight.report.scan.ok === true
+											? el("p", { className: styles.status }, "✓ " + t("fwPreflightClean"))
+											: el("p", { className: styles.message, "data-error": "true" }, t("fwPreflightFound").replace("{n}", String(fwPreflight.report.scan.blockers)).replace("{m}", String(fwPreflight.report.scan.warnings)))),
+									fwPreflight.report === null || fwPreflight.report === undefined
+										? null
+										: el("div", { style: { flexDirection: "column", gap: 2, display: "flex", maxHeight: 160, overflowY: "auto" } },
+											(fwPreflight.report.scan.findings ?? []).slice(0, 10).map((f, idx) => el("p", { key: idx, className: styles.status },
+												"• " + fwShortPath(f.file) + ":" + f.line + " — " + f.rule
+												+ (f.fixable === true ? "" : "（" + t("fwPreflightNeedManual").replace("{why}", String(f.reason ?? f.note ?? "?")) + "）")
+												+ (f.after ? "  →  " + f.after : "")))),
+									fwPreflight.patch !== null && fwPreflight.patch !== undefined
+										? el("p", { className: styles.status, "data-pending": "true" },
+											t("fwPreflightPatched").replace("{n}", String((fwPreflight.patch.changes ?? []).length)).replace("{b}", String((fwPreflight.patch.backups ?? []).length)))
+										: null,
+									fwPreflight.patch !== null && fwPreflight.patch !== undefined && (fwPreflight.patch.remaining?.blockers ?? 0) > 0
+										? el("p", { className: styles.message, "data-warn": "true" }, t("fwPreflightRemaining").replace("{n}", String(fwPreflight.patch.remaining.blockers)))
+										: null,
+									el("div", { className: styles.rowTop },
+										fwPreflight.report !== null && fwPreflight.report !== undefined && fwPreflight.report.scan.blockers > 0
+											? el("button", { type: "button", className: styles.toggle, disabled: fwPreflightBusy, onClick: () => fwPreflightRun(true) }, t("fwPreflightPatch"))
+											: null,
+										el("button", { type: "button", className: styles.toggle, disabled: fwPreflightBusy, onClick: () => fwPreflightRun(false) }, fwPreflightBusy ? t("fwPreflightRunning") : t("fwPreflightBtn")),
+										el("button", { type: "button", className: styles.toggle, onClick: () => setFwPreflight(null) }, t("closeModal"))))
+								: null,
+							// ③ 操作：升级（两步确认）/ 回滚 / 重启 / 重新检查
+							el("div", { className: styles.rowTop, style: { flexWrap: "wrap" } },
+								el("button", { type: "button", className: styles.toggle, disabled: fwPreflightBusy, title: t("fwPreflightTitle"), onClick: () => fwPreflightRun(false) }, fwPreflightBusy ? t("fwPreflightRunning") : t("fwPreflightBtn")),
+								fwCheck?.target
+									? (fwConfirmPanel
+										? el("div", { style: { flexDirection: "column", gap: 8, display: "flex", flexBasis: "100%" } },
+											el("p", { className: styles.message, "data-warn": "true" }, t("fwPanelConfirmBody").replace("{v}", fwCheck.target)),
+											el("div", { className: styles.rowTop },
+												el("button", { type: "button", className: styles.toggle, disabled: frameworkUpgrading, onClick: () => { setFwConfirmPanel(false); doFrameworkUpgrade(); } }, frameworkUpgrading ? t("installingLocal") : t("frameworkUpgradeConfirm")),
+												el("button", { type: "button", className: styles.toggle, onClick: () => setFwConfirmPanel(false) }, t("closeModal"))))
+										: el("button", { type: "button", className: styles.toggle, disabled: frameworkUpgrading || hostedByShell, title: hostedByShell ? (hostedNotice ?? t("frameworkUpgradeTitle")) : t("frameworkUpgradeTitle"), onClick: () => setFwConfirmPanel(true) }, t("frameworkUpgradeBtn") + " → v" + (fwSelected ?? fwCheck.target)))
+									: null,
+								hostedByShell
+									? el("span", { className: styles.status }, hostedNotice ?? t("hostedNoChannel"))
+									: null,
+								rollbackUsable
+									? el("button", { type: "button", className: styles.toggle, title: t("frameworkRollbackTitle"), disabled: frameworkUpgrading, onClick: doFrameworkRollback }, t("frameworkRollbackBtn") + " → " + (rollbackInfo.from ?? "?"))
+									: (rollbackInfo !== null && rollbackInfo !== undefined
+										? el("span", { className: styles.status }, t("fwRollbackDone").replace("{v}", String(rollbackInfo.from ?? "?")))
+										: null),
+								el("button", { type: "button", className: styles.toggle, onClick: fwStatusRefresh }, t("fwPanelRefreshStatus")),
+								el("button", { type: "button", className: styles.toggle, disabled: fwCheckBusy, onClick: () => fwCheckRefresh(true) }, fwCheckBusy ? t("fwPanelChecking") : t("fwPanelRecheck"))),
+							el("div", { className: styles.rowTop },
+								hostedByShell
+									? el("p", { className: styles.status, "data-hosted": "true" }, t("restartHostedNotice"))
+									: el("button", { type: "button", className: styles.toggle, onClick: () => { restartServiceViaServer(setMessage); } }, t("restartService")))))
+					: null,
+				// ★ 0.5.84（用户第 6 项）：功能包 → [开发式链接] 的面板：直接展示 /plugin-console/links
+				//   的同一份数据（与「升级安全」里那块折叠展示同源）。判据来自服务端，这里只如实展示：
+				//   每行 = ✓/• + 包名 + 版本 + 指向 + 缺什么（悬停看完整原因）。
+				// ★ 0.5.87 把这份只读清单升级为**可操作**（用户 2026-10-18）：顶部选开发区 → 两段式钉住；
+				//   每行按**服务端说的缺什么**给按钮（有哪个显示哪个，没有就不显示），底部照旧「重新读取」。
+				linksPanelOpen
+					? el("div", { className: styles.modalBackdrop, onClick: (event) => { if (event.target === event.currentTarget) setLinksPanelOpen(false); } },
+						el("div", { className: styles.modalCard, style: { maxWidth: 720 } },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("linksBtn")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => setLinksPanelOpen(false) }, "✕")),
+							el("p", { className: styles.message }, t("linksPanelTitle")),
+							// ── 顶部：选开发区 → [钉住]（先只读计划，用户确认后才真写）────────────────
+							el("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingTop: 8, borderTop: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))" } },
+								el("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } },
+									el("span", { className: styles.status }, t("linksDevRootLabel")),
+									el("select", {
+										"aria-label": t("linksDevRootLabel"),
+										value: "",
+										disabled: linksPinBusy,
+										onChange: (event) => { const picked = String(event.target.value ?? ""); if (picked !== "") setLinksDir(devRootDraft(picked)); },
+										style: { flex: "0 1 300px", minWidth: 180, font: "inherit", padding: "4px 6px" },
+									},
+										el("option", { value: "" }, t("linksDevRootPick")),
+										linksDevRoots.map((root) => el("option", { key: "dr-" + String(root), value: String(root) }, String(root))))),
+								el("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } },
+									el("input", {
+										type: "text",
+										placeholder: t("linksDirPlaceholder"),
+										value: linksDir,
+										disabled: linksPinBusy,
+										"aria-label": t("linksDirPlaceholder"),
+										onChange: (event) => setLinksDir(String(event.target.value ?? "")),
+										style: { flex: 1, minWidth: 220, font: "inherit", padding: "4px 8px" },
+									}),
+									// ★ 只在宿主**确实**有系统目录对话框时才渲染（web 端没有 ⇒ 不显示，不是灰掉）
+									linksCanBrowse
+										? el("button", { type: "button", className: styles.toggle, disabled: linksPinBusy, onClick: linksBrowse }, t("linksBrowse"))
+										: null,
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										disabled: linksPinBusy || linksDir.trim() === "",
+										onClick: linksPinPlanLoad,
+									}, linksPinBusy ? t("linksPanelLoading") : t("linksPinPlanBtn"))),
+								linksDevRootsNote === null ? null : el("p", { className: styles.status, "data-warn": "true" }, linksDevRootsNote),
+								// 计划 / 结果卡片（两段式的第一段就在这里给人看）
+								linksPinPlan === null
+									? null
+									: el("div", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, padding: "6px 8px", border: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", borderRadius: 6 } },
+										linksPinPlan.ok !== true
+											? el("div", { "data-warn": "true" }, t("safetySwitchFailed") + "：" + String(linksPinPlan.error ?? "-"))
+											: (linksPinPlan.applied === true
+												? el("div", null,
+													t("linksPinnedDone").replace("{p}", String(linksPinPlan.plan.packageName ?? linksDir.trim()))
+													+ (linksPinPlan.plan.after ? " → " + String(linksPinPlan.plan.after) : "")
+													+ (linksPinPlan.plan.sufficiency && linksPinPlan.plan.sufficiency.note ? "；" + String(linksPinPlan.plan.sufficiency.note) : ""))
+												: el("div", { style: { display: "flex", flexDirection: "column", gap: 4 } },
+													el("div", { style: { fontWeight: 500 } }, t("linksPinPlanTitle").replace("{p}", String(linksPinPlan.plan.packageName ?? "?"))),
+													(Array.isArray(linksPinPlan.plan.steps) ? linksPinPlan.plan.steps : []).map((step, stepIndex) => el("div", { key: "pin-step-" + stepIndex, style: { opacity: .85 } }, "· " + String(step))),
+													el("div", { style: { display: "flex", gap: 8, marginTop: 4 } },
+														el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 10px" }, disabled: linksPinBusy, onClick: linksPinConfirm }, t("linksPinConfirmBtn")),
+														el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 10px" }, disabled: linksPinBusy, onClick: () => setLinksPinPlan(null) }, t("linksCancel"))))))),
+							// ── 清单（每行按服务端结论给动作）──────────────────────────────────────
+							linksPanelData === null
+								? el("p", { className: styles.status }, t("linksPanelLoading"))
+								: (linksPanelData.ok === false
+									? el("p", { className: styles.message, "data-warn": "true" }, t("linksFailed") + "：" + String(linksPanelData.error ?? "-"))
+									: el("div", { style: { flexDirection: "column", gap: 4, display: "flex", maxHeight: "52vh", overflow: "auto" } },
+										// ⚠️ 这里**不能**用 fill()：它是 PluginSafetyTab 内部的局部助手，
+										// 主面板里出现 fill( 就是 0.5.59 那次「整块空白」事故的根因
+										// （tests/test-ui-contract.mjs ⑨ 与 test-client-scope.mjs ★★ 都把这条钉死了）。
+										// 这里用最朴素的字符串替换，语义与 fill 的两个占位符一致。
+										el("div", { style: { fontSize: 12, fontWeight: 500 } },
+											t("linksTitle").replace("{n}", String(linksPanelData.count ?? 0)).replace("{ready}", String(linksPanelData.readyCount ?? 0))),
+										(Array.isArray(linksPanelData.items) ? linksPanelData.items : []).length === 0
+											? el("p", { className: styles.status }, t("linksPanelEmpty"))
+											: null,
+										(Array.isArray(linksPanelData.items) ? linksPanelData.items : []).map((x) => el("div", { key: "lp-" + x.packageName, title: [x.note ?? null, t("linksMtimeHint")].filter((v) => typeof v === "string" && v !== "").join("\n") || undefined, style: { fontSize: 12, opacity: .9, wordBreak: "break-all", display: "flex", flexDirection: "column", gap: 3, paddingBottom: 5 } },
+											el("div", null,
+												(x.ready === true ? "✓ " : "• ") + x.packageName + (x.version ? " v" + x.version : "")
+													+ (x.target ? "  → " + x.target : "")
+													+ "  · " + t("linksMtime") + " " + (typeof x.targetMtime === "string" && x.targetMtime !== "" ? formatMtimeText(x.targetMtime) : "—")
+													+ (Array.isArray(x.missingDeps) && x.missingDeps.length > 0 ? "  · 缺依赖 " + x.missingDeps.length : "")
+													+ (Array.isArray(x.missingPeers) && x.missingPeers.length > 0 ? "  · 缺 peer " + x.missingPeers.length : "")
+													+ (x.foreignPeers !== null && x.foreignPeers !== undefined && Array.isArray(x.foreignPeers) && x.foreignPeers.length > 0 ? "  · 异副本 " + x.foreignPeers.length : "")
+													+ (x.shims !== null && x.shims !== undefined ? "  · 垫片 " + String(x.shims.count ?? 0) : "")
+													+ (x.persisted !== null && x.persisted !== undefined && x.persisted.ok === false ? "  · 未持久化" : "")),
+											// 行内动作：**有哪个显示哪个**（没有就不显示，绝不摆灰按钮）
+											el("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } },
+												Array.isArray(x.missingDeps) && x.missingDeps.length > 0
+													? el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 8px" }, disabled: linksRowBusy !== null, onClick: () => linksRowRun(x, "deps") }, t("linksRepairDeps"))
+													: null,
+												Array.isArray(x.shimmablePeers) && x.shimmablePeers.length > 0
+													? el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 8px" }, disabled: linksRowBusy !== null, onClick: () => linksRowRun(x, "shims") }, t("linksRepairShims"))
+													: null,
+												el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 8px" }, disabled: linksRowBusy !== null, onClick: () => linksUnpinPlanLoad(x) }, t("linksUnpinBtn")),
+												linksRowNote[x.packageName] ? el("span", { className: styles.status }, String(linksRowNote[x.packageName])) : null),
+											// 取消钉住的第一段：把"将会发生什么 + 后果"先摆出来（两段式，确认才动手）
+											linksUnpinPlan !== null && linksUnpinPlan.packageName === x.packageName
+												? el("div", { style: { display: "flex", flexDirection: "column", gap: 3, padding: "4px 6px", border: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", borderRadius: 6 } },
+													linksUnpinPlan.ok !== true
+														? el("div", { "data-warn": "true" }, t("safetySwitchFailed") + "：" + String(linksUnpinPlan.error ?? "-"))
+														: el("div", { style: { display: "flex", flexDirection: "column", gap: 3 } },
+															(Array.isArray(linksUnpinPlan.plan.steps) ? linksUnpinPlan.plan.steps : []).map((step, unpinStepIndex) => el("div", { key: "unpin-step-" + unpinStepIndex, style: { opacity: .85 } }, "· " + String(step))),
+															(Array.isArray(linksUnpinPlan.plan.warnings) ? linksUnpinPlan.plan.warnings : []).map((warning, warnIndex) => el("div", { key: "unpin-warn-" + warnIndex, "data-warn": "true" }, "! " + String(warning))),
+															el("div", { style: { display: "flex", gap: 8, marginTop: 2 } },
+																el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 8px" }, disabled: linksRowBusy !== null, onClick: () => linksUnpinConfirm(x) }, t("linksUnpinConfirmBtn")),
+																el("button", { type: "button", className: styles.toggle, style: { fontSize: 11, padding: "2px 8px" }, disabled: linksRowBusy !== null, onClick: () => setLinksUnpinPlan(null) }, t("linksCancel")))))
+												: null)))),
+							el("div", { className: styles.rowTop, style: { justifyContent: "flex-end", gap: 8, marginTop: 10 } },
+								el("button", { type: "button", className: styles.toolItem, "data-busy": linksPanelBusy ? "true" : "false", onClick: () => { linksPanelLoad(); linksDevRootsLoad(); } }, linksPanelBusy ? t("linksPanelLoading") : t("linksPanelReload")))))
+					: null,
+				annotationsPanelOpen
+					? el("div", { className: styles.modalBackdrop, onClick: (event) => { if (event.target === event.currentTarget) setAnnotationsPanelOpen(false); } },
+						el("div", { className: styles.modalCard, style: { maxWidth: 760, maxHeight: "82vh", overflow: "auto" } },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("annotationsBtn")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => setAnnotationsPanelOpen(false) }, "✕")),
+							el("p", { className: styles.message }, t("annotationsPanelTitle")),
+							annotations !== null && annotations.file !== null && annotations.file !== undefined
+								? el("p", { className: styles.status }, String(annotations.file))
+								: null,
+							// 失败/降级一律有文字（绝不"点了一下没反应"）
+							annotationsNote !== null
+								? el("p", { className: styles.message, "data-error": "true" }, annotationsNote)
+								: null,
+							// ── 分组管理：新建 / 重命名 / 删除（两段式）/ 撤销删除 ─────────────────
+							el("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 6, paddingTop: 8, borderTop: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))" } },
+								el("div", { className: styles.annotRow },
+									el("input", {
+										type: "text",
+										value: groupDraftName,
+										placeholder: t("groupCreatePlaceholder"),
+										"aria-label": t("groupCreatePlaceholder"),
+										disabled: annotationBusy !== null,
+										style: { flex: 1, minWidth: 200, font: "inherit", padding: "4px 8px" },
+										onChange: (event) => setGroupDraftName(String(event.target.value ?? "")),
+										onKeyDown: (event) => { if (event.key === "Enter") { event.preventDefault(); createUserGroup(); } },
+									}),
+									el("button", { type: "button", className: styles.toggle, disabled: groupDraftName.trim() === "" || annotationBusy !== null, onClick: createUserGroup }, t("groupCreate"))),
+								groupUndo !== null
+									? el("div", { className: styles.annotRow },
+										el("span", { className: styles.status, "data-pending": "true" }, t("groupDeleted").replace("{name}", String(groupUndo.group?.name ?? "")).replace("{n}", String(Array.isArray(groupUndo.group?.packages) ? groupUndo.group.packages.length : 0))),
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											disabled: annotationBusy !== null,
+											onClick: () => {
+												const record = groupUndo;
+												setGroupUndo(null);
+												annotationWrite({ action: "group-restore", group: record.group, index: record.index }, t("groupRestored").replace("{name}", String(record.group?.name ?? "")));
+											},
+										}, t("groupRestore")))
+									: null,
+								userGroups.length === 0
+									? el("p", { className: styles.status }, t("groupEmptyHint"))
+									: el("ul", { className: styles.list }, userGroups.map((group) => el("li", { key: "ug-" + group.id, className: styles.row },
+										el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+											el("strong", { className: styles.name, "data-group-name": String(group.id), style: { cursor: "pointer", borderBottom: "1px dotted currentColor" }, title: t("groupOpenHint"), onClick: () => { setPanelGroupOpen((prev) => (prev === group.id ? null : group.id)); setPanelGroupQuery(""); } }, String(group.name)),
+											el("span", { className: styles.tag, "data-user-badge": "true" }, t("groupMembers").replace("{n}", String(Array.isArray(group.packages) ? group.packages.length : 0)))),
+										el("div", { className: styles.annotRow },
+											groupRenameEdit !== null && groupRenameEdit.id === group.id
+												? el("div", { className: styles.annotRow },
+													el("input", {
+														type: "text",
+														value: groupRenameEdit.draft,
+														"aria-label": t("groupRename"),
+														style: { font: "inherit", padding: "2px 6px" },
+														onChange: (event) => setGroupRenameEdit({ id: group.id, draft: String(event.target.value ?? "") }),
+														onKeyDown: (event) => {
+															if (event.key === "Escape") { event.preventDefault(); setGroupRenameEdit(null); return; }
+															if (event.key === "Enter") {
+																event.preventDefault();
+																const draft = groupRenameEdit.draft;
+																setGroupRenameEdit(null);
+																annotationWrite({ action: "group-rename", id: group.id, name: draft }, t("groupRenamed"));
+															}
+														},
+													}),
+													el("button", { type: "button", className: styles.toggle, onClick: () => setGroupRenameEdit(null) }, t("linksCancel")))
+												: el("button", { type: "button", className: styles.toggle, disabled: annotationBusy === group.id, onClick: () => setGroupRenameEdit({ id: group.id, draft: String(group.name) }) }, t("groupRename")),
+											groupDeleteArm === group.id
+												? el("div", { className: styles.annotRow },
+													el("span", { className: styles.status, "data-pending": "true" }, t("groupDeleteConfirm").replace("{name}", String(group.name))),
+													el("button", { type: "button", className: styles.toggle, onClick: () => setGroupDeleteArm(null) }, t("linksCancel")),
+													el("button", {
+														type: "button",
+														className: styles.toggle,
+														disabled: annotationBusy === group.id,
+														onClick: () => {
+															setGroupDeleteArm(null);
+															const memberCount = Array.isArray(group.packages) ? group.packages.length : 0;
+															// 两段式：第一次点只是"上膛"，这里才是真删（且**只解除归属**）
+															annotationWrite({ action: "group-delete", id: group.id }, t("groupDeleted").replace("{name}", String(group.name)).replace("{n}", String(memberCount))).then((data) => {
+																const removed = data?.deleted;
+																if (removed !== null && removed !== undefined && removed.group !== null && removed.group !== undefined) setGroupUndo({ group: removed.group, index: Number.isFinite(removed.index) ? removed.index : null });
+															});
+														},
+													}, t("confirmDelete")))
+												: el("button", { type: "button", className: styles.trashBtn, title: t("groupRemove"), "aria-label": t("groupRemove"), disabled: annotationBusy === group.id, onClick: () => setGroupDeleteArm(group.id) }, "✕")))))),
+							// ★ 2026-10-27：点分组名 → 展开「成员 + 一键更新 + 搜索添加（含备注）」
+							(() => {
+								const open = userGroups.find((g) => g.id === panelGroupOpen) ?? null;
+								if (open === null) {
+									return el("p", { className: styles.status, "data-panel-groupadd-hint": "true" }, t("groupOpenHint"));
+								}
+								const inGroup = new Set((Array.isArray(open.packages) ? open.packages : []).map((x) => String(x)));
+								const noteOf = (nm) => {
+									const rec = annotations !== null && annotations.plugins !== null && annotations.plugins !== undefined
+										? annotations.plugins[nm] ?? null
+										: null;
+									return typeof rec?.note === "string" ? rec.note : "";
+								};
+								const q = panelGroupQuery.trim().toLowerCase();
+								const pool = (state.status === "ready" ? state.data.entries : [])
+									.map((e) => String(e.moduleName ?? ""))
+									.filter((nm) => nm !== "" && !nm.startsWith("cordis:") && !inGroup.has(nm))
+									// ★ 用户 2026-10-27：搜索要能命中**备注**（不只是包名）
+									.filter((nm) => q === "" || nm.toLowerCase().includes(q) || noteOf(nm).toLowerCase().includes(q));
+								const shown = pool.slice(0, panelGroupShow);
+								const hidden = Math.max(0, pool.length - shown.length);
+								const chips = [...inGroup].map((nm) => el("span", { key: "pgm-" + nm, className: styles.tag, "data-usergroup-member": "true" },
+									nm,
+									el("button", {
+										type: "button",
+										className: styles.tag,
+										"data-more": "true",
+										title: t("groupMemberRemove"),
+										onClick: () => annotationWrite({ action: "group-assign", id: open.id, packageName: nm, member: false }, t("groupUnassigned")),
+									}, "×")))
+								const headerRow = el("div", { className: styles.annotRow },
+									el("strong", { className: styles.name }, String(open.name)),
+									el("span", { className: styles.status }, t("groupMembers").replace("{n}", String(inGroup.size))),
+									el("button", {
+										type: "button",
+										className: styles.toggle,
+										"data-group-update-all": String(open.id),
+										title: t("groupUpdateAllTip"),
+										onClick: () => {
+											const members2 = [...inGroup];
+											if (members2.length === 0) { setMessage(t("groupNoMembers")); return; }
+											// 逐个串行：先查目标版本，再按那个版本更新（与单卡同一判据），门控照旧生效
+											const step = (i, hit) => {
+												if (i >= members2.length) {
+													setMessage(t("groupUpdateAllDone").replace("{hit}", String(hit)).replace("{n}", String(members2.length)));
+													return;
+												}
+												const nm = members2[i];
+												setMessage(t("groupUpdateAllProgress").replace("{i}", String(i + 1)).replace("{n}", String(members2.length)) + " — " + nm);
+												call("/plugin-console/check-update", { packageName: nm }).then((d) => {
+													const target = typeof d?.target === "string" && d.target !== "" ? d.target : (typeof d?.latest === "string" ? d.latest : null);
+													if (target !== null) startJob("", nm, "github", "plugin", true, null, target);
+													step(i + 1, target !== null ? hit + 1 : hit);
+												}, () => step(i + 1, hit));
+											};
+											step(0, 0);
+										},
+									}, t("groupUpdateAll")))
+								const searchInput = el("input", {
+									type: "search",
+									value: panelGroupQuery,
+									placeholder: t("groupAddSearchPlaceholder"),
+									"aria-label": t("groupAddSearchPlaceholder"),
+									style: { font: "inherit", padding: "4px 8px", width: "100%" },
+									onChange: (event) => setPanelGroupQuery(String(event.target.value ?? "")),
+								})
+								const candRows = shown.map((nm) => {
+									const note = noteOf(nm);
+									return el("li", { key: "pgc-" + nm, className: styles.row },
+										el("div", { className: styles.rowTop },
+											el("strong", { className: styles.name, title: nm, style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, nm),
+											note !== ""
+												? el("span", { style: { color: "var(--dsw-alias-state-business-primary)", fontWeight: 500, fontSize: ".9em", whiteSpace: "nowrap", maxWidth: "45%", overflow: "hidden", textOverflow: "ellipsis" } }, note)
+												: null,
+											el("button", {
+												type: "button",
+												className: styles.toggle,
+												"data-group-add": nm,
+												disabled: annotationBusy !== null,
+												onClick: () => annotationWrite({ action: "group-assign", id: open.id, packageName: nm }, t("groupAssigned").replace("{name}", String(open.name))),
+											}, "＋ " + t("groupAddOne"))));
+								})
+								const candList = el("ul", { className: styles.list, "data-group-candidates": "true" },
+									pool.length === 0
+										? el("li", { className: styles.row }, el("span", { className: styles.status }, t("groupAddNoMatch")))
+										: candRows)
+								const moreBtn = hidden > 0
+									? el("button", { type: "button", className: styles.toggle, "data-group-loadmore": "true", onClick: () => setPanelGroupShow((prev) => prev + 20) }, t("groupLoadMore").replace("{n}", String(hidden)))
+									: null
+								return el("div", { "data-panel-groupadd": String(open.id), style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 6 } },
+									headerRow,
+									el("div", { className: styles.annotRow }, chips.length > 0 ? chips : el("span", { className: styles.status }, t("groupNoMembers"))),
+									searchInput,
+									candList,
+									moreBtn)
+							})(),
+							// ── 插件行：备注 / 徽章 / 分组（每行一套，与详情页同一个编辑块）───────────
+							el("p", { className: styles.message, style: { marginTop: 8 } },
+								annotations === null
+									? t("annotationsEmpty")
+									: t("annotationsStats")
+										.replace("{p}", String(annotations.stats?.packages ?? 0))
+										.replace("{b}", String(annotations.stats?.badges ?? 0))
+										.replace("{g}", String(annotations.stats?.groups ?? 0))),
+							// ★ 0.5.93（issue #22 ②，用户定稿）：列表**默认收起**，只留一行摘要「插件列表（N）· 点此展开」；
+							//   点开才渲染搜索框与插件行。查询词是受控 state ⇒ 边打边筛，且过滤不会清掉输入框里的字。
+							el("button", {
+								type: "button",
+								className: styles.toggle,
+								"aria-label": "annotationsListToggle",
+								"aria-expanded": annotationsListOpen ? "true" : "false",
+								"data-open": annotationsListOpen ? "true" : "false",
+								onClick: () => setAnnotationsListOpen((prev) => !prev),
+							}, (annotationsListOpen ? t("annotationsListHide") : t("annotationsListShow"))
+								.replace("{n}", String(annotationListEntries.length))),
+							annotationsListOpen === false
+								? null
+								: el("div", { style: { flexDirection: "column", gap: 8, display: "flex", marginTop: 6 } },
+									el("input", {
+										type: "text",
+										value: annotationsQuery,
+										placeholder: t("annotationsSearchPlaceholder"),
+										"aria-label": "annotationsSearch",
+										style: { font: "inherit", padding: "4px 8px", borderRadius: 6 },
+										onChange: (event) => setAnnotationsQuery(String(event.target.value ?? "")),
+									}),
+									annotationListEntries.length === 0
+										? el("p", { className: styles.status }, t("empty"))
+										: annotationListFiltered.length === 0
+											? el("p", { className: styles.status, "data-nomatch": "true" }, t("annotationsNoMatch"))
+											: el("ul", { className: styles.list, "data-annotlist": "true" }, annotationListFiltered.map((entry) => el("li", { key: "an-" + entry.entryId, className: styles.row },
+												el("div", { className: styles.rowTop },
+													el("strong", { className: styles.name, title: entry.moduleName }, moduleShortName(entry.moduleName)),
+													entry.extra === true ? el("span", { className: styles.tag, "data-user": "true" }, t("extraTag")) : null),
+												el("div", { className: styles.meta }, el("code", null, String(entry.moduleName ?? ""))),
+												annotationBlock(entry)))))))
+					: null,
+				gateOpen
+					? el("div", { className: styles.modalBackdrop, onClick: (event) => { if (event.target === event.currentTarget) setGateOpen(false); } },
+						el("div", { className: styles.modalCard, style: { maxWidth: 520 } },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("gateModalTitle")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => setGateOpen(false) }, "✕")),
+							el("div", { style: { flexDirection: "column", gap: 12, display: "flex" } },
+								el("div", { className: styles.rowTop, style: { justifyContent: "space-between", gap: 12 } },
+									el("span", { className: styles.status, style: { flex: 1 } }, t("compatGateAutoDisable")),
+									el("div", {
+										className: styles.pcSwitch,
+										"data-on": gateAutoDisable ? "true" : "false",
+										role: "switch",
+										"aria-checked": gateAutoDisable ? "true" : "false",
+										"aria-label": t("compatGateAutoDisable"),
+										title: t("compatGateHint"),
+										onClick: () => setCompatGate({ autoDisable: !gateAutoDisable }),
+									}, el("div", { className: styles.pcSwitchKnob }))),
+								el("div", { className: styles.rowTop, style: { justifyContent: "space-between", gap: 12 } },
+									el("span", { className: styles.status, style: { flex: 1 } }, t("compatGateAutoDetect")),
+									el("div", {
+										className: styles.pcSwitch,
+										"data-on": gateAutoDetect ? "true" : "false",
+										role: "switch",
+										"aria-checked": gateAutoDetect ? "true" : "false",
+										"aria-label": t("compatGateAutoDetect"),
+										title: t("compatGateHint"),
+										onClick: () => setCompatGate({ autoDetect: !gateAutoDetect }),
+									}, el("div", { className: styles.pcSwitchKnob }))),
+								el("p", { className: styles.message }, t("compatGateHint")),
+								el("p", { className: styles.status, "data-pending": gatePendingCount > 0 ? "true" : undefined, "data-gate-pending": String(gatePendingCount), "data-gate-stale": String(gateStaleCount) },
+									gatePendingCount > 0 ? t("gatePendingInfo").replace("{n}", String(gatePendingCount)) : t("gatePendingNone")),
+								// ★ 0.5.100 加法（用户 2026-11-02「我们一般情况下都不预检吧」）：
+								//   预检只在**升级前**跑，所以平时门控是空的 —— 而 0 条会被误读成"全部兼容"。
+								//   这里给两件事：① 一个「现在查一次」的按钮（判据复用服务端框架升级预扫那条链，
+								//   **只记录结论、不禁用任何行**）；② 没有裁决记录时的说明 + 上次检查的摘要。
+								//   零行可查时**不摆按钮**，并说明为什么（不许出现点了必然没反应的按钮）。
+								gateScanTargets === 0
+									? el("p", { className: styles.status, "data-gate-scan-none": "true" }, t("gateScanNoTargets"))
+									: el("div", { style: { flexDirection: "row", gap: 8, display: "flex", alignItems: "center" } },
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											"aria-label": "gateScanCurrent",
+											disabled: gateScanBusy,
+											title: t("gateScanTitle"),
+											onClick: () => { gateScanSend(); },
+										}, gateScanBusy ? t("gateScanBusy") : t("gateScanBtn"))),
+								gateScanNote === null
+									? null
+									: el("p", {
+										className: styles.message,
+										"data-gate-scan-note": "true",
+										"data-error": gateScanNote.level === "error" ? "true" : undefined,
+										style: gateScanNote.level === "error" ? undefined : { color: "var(--dsw-alias-state-success-primary)" },
+									}, String(gateScanNote.text ?? "—")),
+								gateLastScan === null
+									? null
+									: el("p", { className: styles.status, "data-gate-lastscan": "true" },
+										t("gateLastScan")
+											.replace("{at}", gateTime(gateLastScan.at))
+											.replace("{n}", String(gateLastScan.checked ?? 0))
+											.replace("{p}", String(gateLastScan.pass ?? 0))
+											.replace("{f}", String(gateLastScan.fail ?? 0))
+											.replace("{u}", String(gateLastScan.unknown ?? 0))),
+								// 门控为空时的明确文案：不让 0 条看起来像"全绿"（用户 2026-11-02 点名）
+								gateRows === null || gateRows.pendingCount + gateRows.adoptedCount === 0
+									? el("p", { className: styles.status, "data-gate-empty-hint": "true" }, t("gateNoRecordsHint"))
+									: null,
+																			// 明细清单（2026-09-24 用户要求：面板要能看到是哪些插件，有列表数据）
+							gateRows !== null && gateRows.pendingCount + gateRows.adoptedCount > 0
+								? el("div", { style: { flexDirection: "column", gap: 6, display: "flex" } },
+									// ★ 0.5.98 改错：这里的数字改成"真待适配"的条数（与服务端 actionableCount 同一判据）。
+									//   下面仍列出**全部** pending 记录（含失效的），失效的逐条标注「该行已不存在」——
+									//   藏着不显示才是骗人，标出来才是如实。
+									el("strong", { className: styles.name }, t("gateListPending").replace("{n}", String(gateRows.pending.filter(gateRowActionable).length))),
+									gateRows.pending.length === 0
+										? el("p", { className: styles.status }, t("gatePendingNone"))
+										: null,
+									(gateShowAll ? gateRows.pending : gateRows.pending.slice(0, 8)).map((r) => el("div", {
+										key: "p-" + String(r.rowId),
+										style: { flexDirection: "column", gap: 2, display: "flex", padding: "4px 0" },
+										"data-gate-row": String(r.rowId),
+										"data-row-missing": gateRowMissing(r) ? "true" : "false",
+									},
+										el("span", { className: styles.name }, (r.enabled === false ? "⛔ " : "• ") + String(r.name) + (r.version ? "  v" + r.version : "")),
+										// ★ 0.5.98 加法：模块名单独一行 —— 记录里没有 moduleName 就如实显示「—」，**绝不编造**。
+										//   行已不在补丁里的，紧跟一个标记；删除入口就在这一行（两段式）。
+										el("span", { className: styles.status, "data-gate-module": "true" },
+											t("gateRowModule") + " " + (typeof r.moduleName === "string" && r.moduleName !== "" ? r.moduleName : "—"),
+											gateRowMissing(r) ? " · " + t("gateRowMissing") : "",
+											el("button", {
+												type: "button",
+												className: styles.toggle,
+												style: { marginLeft: 8, fontSize: 11, padding: "1px 6px" },
+												"aria-label": "gateRowForget",
+												"data-gate-forget-row": String(r.rowId),
+												disabled: gateForgetBusy,
+												title: t("gateForgetRowTitle"),
+												onClick: () => gateForgetArm({ kind: "row", rowId: String(r.rowId), moduleName: typeof r.moduleName === "string" ? r.moduleName : null }),
+											}, t("gateForgetRow"))),
+										el("span", { className: styles.status }, t("gateRowReason").replace("{reason}", String(r.note ?? "—"))),
+										el("span", { className: styles.status },
+											(r.source === "boot-quarantine" ? t("gateRowFromBoot") : t("gateRowFromUpgrade"))
+											+ (r.forcedAt ? t("gateRowAt").replace("{t}", gateTime(r.forcedAt)) : "")
+											+ (r.adoptable ? t("gateRowAdoptable") : "")))),
+									gateRows.pendingCount > 8
+										? el("button", { type: "button", className: styles.toggle, onClick: () => setGateShowAll((v) => !v) },
+											gateShowAll ? t("gateListFold") : t("gateListMore").replace("{n}", String(gateRows.pendingCount)))
+										: null,
+									// ★ 0.5.98 加法：失效记录摘要 + 「清理无效记录」（**只在真有可清理的**时才摆按钮 ——
+									//   零失效时连按钮都不出现，绝不摆一个点了必然没反应的按钮）。
+									gateStaleCount > 0
+										? el("div", { "data-gate-stale-block": "true", style: { flexDirection: "column", gap: 4, display: "flex", paddingTop: 4 } },
+											el("p", { className: styles.status, "data-gate-stale-line": "true" },
+												t("gateStaleLine").replace("{n}", String(gateStaleCount))),
+											el("button", {
+												type: "button",
+												className: styles.toggle,
+												"aria-label": "gateForgetStale",
+												disabled: gateForgetBusy,
+												title: t("gateForgetStaleTitle"),
+												onClick: () => gateForgetArm({ kind: "stale" }),
+											}, t("gateForgetStale")))
+										: null,
+									gateRows.adoptedCount > 0
+										? el("div", { style: { flexDirection: "column", gap: 2, display: "flex" } },
+											// ★ 0.5.80：默认折叠，只留一行摘要（点开才列明细）—— 历史不该把当前态挤下去
+											el("button", {
+												type: "button",
+												className: styles.toggle,
+												onClick: () => setGateHistoryOpen((v) => !v),
+											}, (gateHistoryOpen ? t("gateHistoryHide") : t("gateHistoryShow").replace("{n}", String(gateRows.adoptedCount)))
+												+ "  ·  " + t("gateListAdopted").replace("{n}", String(gateRows.adoptedCount))),
+											gateHistoryOpen
+												? gateRows.adopted.map((r) => el("span", { key: "a-" + String(r.rowId), className: styles.status },
+													"✓ " + String(r.name) + (r.version ? "  v" + r.version : "") + (r.adoptedAt ? "  · " + gateTime(r.adoptedAt) : ""),
+													// ★ 0.5.98：历史记录也能逐条删（同样是两段式）—— 每条记录都有删除入口
+													el("button", {
+														type: "button",
+														className: styles.toggle,
+														style: { marginLeft: 6, fontSize: 11, padding: "1px 6px" },
+														"aria-label": "gateRowForget",
+														"data-gate-forget-row": String(r.rowId),
+														disabled: gateForgetBusy,
+														title: t("gateForgetRowTitle"),
+														onClick: () => gateForgetArm({ kind: "row", rowId: String(r.rowId), moduleName: typeof r.moduleName === "string" ? r.moduleName : null }),
+													}, t("gateForgetRow"))))
+												: null)
+										: null)
+								: null,
+							// ★ 0.5.101 加法（用户 2026-11-02）：**加载失败的行**分区。
+							//   与"适配裁决"是两件事：这些行是**运行期挂载失败**（例：某个依赖包解析不到），
+							//   不经过预扫/隔离链，所以也**不会写进 compat-pending.json**；这里给的是视图 +
+							//   「停用」（两段式，落到既有 /toggle，真的写补丁 disabled 块）。
+							//   零失败行时整个分区不出现（不摆空壳）。
+							gateLoadFailed.length === 0
+								? null
+								: el("div", {
+									"data-gate-loadfailed": "true",
+									style: { flexDirection: "column", gap: 6, display: "flex", marginTop: 4, paddingTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2)" },
+								},
+									el("strong", { className: styles.name }, t("gateLoadFailedTitle").replace("{n}", String(gateLoadFailed.length))),
+									el("p", { className: styles.status }, t("gateLoadFailedHint")),
+									gateLoadFailed.map((r) => el("div", {
+										key: "lf-" + String(r.rowId),
+										"data-gate-loadfailed-row": String(r.rowId),
+										style: { flexDirection: "column", gap: 2, display: "flex", padding: "4px 0" },
+									},
+										el("span", { className: styles.name }, "⛔ " + String(r.moduleName ?? r.rowId) + (r.version ? "  v" + r.version : "")),
+										el("span", { className: styles.status, "data-gate-loadfailed-module": "true" },
+											t("gateRowModule") + " " + (typeof r.moduleName === "string" && r.moduleName !== "" ? r.moduleName : "—")
+											+ " · " + String(r.fiberPhase ?? "failed"),
+											el("button", {
+												type: "button",
+												className: styles.toggle,
+												style: { marginLeft: 8, fontSize: 11, padding: "1px 6px" },
+												"aria-label": "gateLoadDisable",
+												"data-gate-load-disable": String(r.rowId),
+												title: t("gateLoadDisableTitle"),
+												onClick: () => gateLoadArm({ rowId: String(r.rowId), name: typeof r.moduleName === "string" ? r.moduleName : null }),
+											}, t("gateLoadDisable"))))),
+									gateLoadArmed === null
+										? null
+										: el("div", { "data-gate-load-armed": "true", style: { flexDirection: "column", gap: 6, display: "flex", borderLeft: "2px solid var(--dsw-alias-state-warning-primary)", paddingLeft: 8 } },
+											el("p", { className: styles.message, "data-warn": "true", "data-gate-load-text": "true" },
+												t("gateLoadArmRow").replace("{id}", String(gateLoadArmed.rowId)).replace("{name}", String(gateLoadArmed.name ?? "—"))),
+											el("p", { className: styles.status }, t("gateLoadSafety")),
+											el("div", { style: { flexDirection: "row", gap: 8, display: "flex" } },
+												el("button", {
+													type: "button",
+													className: styles.toggle,
+													"aria-label": "gateLoadConfirm",
+													onClick: () => { gateLoadDisable(gateLoadArmed); },
+												}, t("gateLoadConfirm")),
+												el("button", {
+													type: "button",
+													className: styles.toggle,
+													"aria-label": "gateLoadCancel",
+													onClick: () => { setGateLoadArmed(null); setGateLoadNote(null); },
+												}, t("gateLoadCancel")))),
+									gateLoadNote === null
+										? null
+										: el("p", {
+											className: styles.message,
+											"data-gate-load-note": "true",
+											"data-error": gateLoadNote.level === "error" ? "true" : undefined,
+											style: gateLoadNote.level === "error" ? undefined : { color: "var(--dsw-alias-state-success-primary)" },
+										}, String(gateLoadNote.text ?? "—"))),
+							// ★ 0.5.98 加法：删除的**两段式**确认区 + 结果反馈（都留在面板上，不弹系统对话框）。
+							//   上膛时把"要删什么、不会动什么"写清楚：只删记录，不动插件、不动补丁文件。
+							gateForgetArmed === null
+								? null
+								: el("div", { "data-gate-forget-armed": "true", style: { flexDirection: "column", gap: 6, display: "flex", borderLeft: "2px solid var(--dsw-alias-state-warning-primary)", paddingLeft: 8 } },
+									el("p", { className: styles.message, "data-warn": "true", "data-gate-forget-text": "true" },
+										gateForgetArmed.kind === "stale"
+											? t("gateForgetArmStale").replace("{n}", String(gateStaleCount))
+											: t("gateForgetArmRow").replace("{id}", String(gateForgetArmed.rowId)).replace("{name}", String(gateForgetArmed.moduleName ?? "—"))),
+									el("p", { className: styles.status }, t("gateForgetSafety")),
+									el("div", { style: { flexDirection: "row", gap: 8, display: "flex" } },
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											"aria-label": "gateForgetConfirm",
+											disabled: gateForgetBusy,
+											onClick: () => { gateForgetSend(gateForgetArmed); },
+										}, t("gateForgetConfirm")),
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											"aria-label": "gateForgetCancel",
+											onClick: () => { setGateForgetArmed(null); setGateForgetNote(null); },
+										}, t("gateForgetCancel")))),
+							gateForgetNote === null
+								? null
+								: el("p", {
+									className: styles.message,
+									"data-gate-forget-note": "true",
+									"data-error": gateForgetNote.level === "error" ? "true" : undefined,
+									style: gateForgetNote.level === "error" ? undefined : { color: "var(--dsw-alias-state-success-primary)" },
+								}, String(gateForgetNote.text ?? "—"))),
+							// ★ 0.5.x 加法（用户 2026-10-18）：「安全启动」分区 —— 挂在门控面板里（不新增工具栏按钮）。
+							//   默认收起，展开那一下才读一次快照列表；四个动作见 safeBootPanel（list / restore-last-good /
+							//   disable-suspects / mark-good）。它排在门控正文**之后**，Star 行仍在最后（贴底那条不变）。
+							safeBootPanel(),
+							// 0.5.42 加法（用户点名）：右侧贴底的 Star 提示 —— 只加这一行 UI，
+							// 不动任何开关逻辑/路由/门控语义。它是卡片的最后一个子项（整行，不占左侧内容宽度），
+							// margin-top:auto 让它在卡片有富余高度时贴底；position:sticky;bottom:0 让正文
+							// 超长滚动时它仍钉在卡片下沿（.pc_starFoot 见 #region styles）。
+							el("div", { className: styles.starFoot },
+								el("a", {
+									className: styles.starLink,
+									href: "https://github.com/Noob-stupid/dsh-plugin-gating-hub",
+									target: "_blank",
+									rel: "noreferrer",
+									title: t("starHintTitle"),
+								},
+									// 标准 GitHub 标记（GitHub Octicons 的正统几何，16×16 视图、内联、currentColor 随文字着色；
+									// 尺寸 15px、次级灰、flex 居中对齐文字）
+									el("svg", { width: 15, height: 15, viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true", focusable: "false" },
+										el("path", { d: "M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656" })),
+									el("span", null, t("starHint"))))))
+					: null,
+				aiOpen
+					? el("div", { className: styles.modalBackdrop },
+						el("div", { className: styles.modalCard, style: { maxWidth: 560 } },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("aiEmpowerLabel")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => setAiOpen(false) }, "✕")),
+							aiJobsList.length > 1
+								? el("div", { style: { flexDirection: "column", gap: 6, display: "flex", maxHeight: 120, overflowY: "auto" } },
+									aiJobsList.map((task) =>
+										el("button", {
+											key: task.jobId,
+											type: "button",
+											className: styles.toggle,
+											style: aiJob !== null && aiJob.jobId === task.jobId ? { borderColor: "var(--dsw-alias-state-business-primary)", color: "var(--dsw-alias-state-business-primary)" } : undefined,
+											onClick: () => aiSelect(task.jobId),
+										}, (task.displayName ?? task.source) + "：" + (task.status === "running" ? (t("aiEmpowerExecuting") + (task.progress && task.progress.done ? "（" + task.progress.done + "/" + task.progress.total + "）" : "")) : task.status === "plan-ready" ? t("aiEmpowerPlanTitle") : task.status === "done" ? t("aiEmpowerDone") : task.status === "failed" ? t("aiEmpowerFail") : task.status ?? "?"))))
+								: null,
+							aiJob === null || (aiJob.status === "running" && aiJob.stage === "planning")
+								? el("div", { style: { flexDirection: "column", gap: "10px", display: "flex" } },
+									el("section", null,
+										el("input", { type: "text", placeholder: t("aiEmpowerSrcTitle"), value: aiSource, disabled: aiRunning, onChange: (event) => setAiSource(event.target.value), onKeyDown: (event) => { if (event.key === "Enter" && !aiRunning) aiStartPlan(); }, style: { width: "100%", boxSizing: "border-box", font: "inherit", padding: "6px 10px", borderRadius: 8, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)" } }),
+									el("div", { className: styles.rowTop },
+										el("button", { type: "button", className: styles.toggle, disabled: aiRunning || aiSource.trim() === "", onClick: aiStartPlan }, t("aiEmpowerLabel")),
+										aiRunning ? el("span", { className: styles.message }, t("aiEmpowerWaiting") + (aiJob?.source ? "（" + aiJob.source + "）" : "")) : null,
+										aiRunning ? el("button", { type: "button", className: styles.toggle, onClick: () => { call("/plugin-console/ai-empower/cancel", { jobId: aiJob ? aiJob.jobId : "" }).catch(() => {}); aiResetLocal(); } }, t("aiEmpowerCancel")) : null)))
+								: aiJob.status === "plan-ready"
+									? el("div", { style: { flexDirection: "column", gap: "10px", display: "flex" } },
+										el("div", { className: styles.rowTop },
+											el("strong", { className: styles.name }, (aiJob.displayName ?? aiJob.source) + "："),
+											el("span", { className: styles.tag }, t("aiEmpowerType") + "：" + (t("aiEmpowerTypeMapping")[aiJob.type] ?? aiJob.type ?? "?"))),
+									aiJob.frameworkCheck
+										? el("p", { className: styles.status, "data-error": aiJob.frameworkCheck.check?.decision === "fail" ? "true" : undefined, title: aiJob.frameworkCheck.check?.reason ?? undefined }, t("aiEmpowerFrameworkCheck") + "：" + (aiJob.frameworkCheck.summary ?? "") + (aiJob.frameworkCheck.frameworkVersion ? "（框架 " + aiJob.frameworkCheck.frameworkVersion + "）" : ""))
+										: null,
+							aiJob?.workspace ? el("p", { className: styles.status }, t("aiWorkspaceInfo") + "：" + aiJob.workspace) : null,
+							aiJob.summary ? el("p", { className: styles.message }, aiJob.summary) : null,
+										el("p", { className: styles.message, "data-error": "true" }, t("aiPlanHint")),
+										(aiJob.servers ?? []).length > 0
+											? el("p", { className: styles.message }, (aiJob.servers ?? []).map((s) => (s.name ?? "?") + (s.port ? "（端口 " + s.port + "）" : "")).join("、"))
+											: null,
+										el("strong", { className: styles.name }, t("aiEmpowerSteps")),
+										el("div", { style: { flexDirection: "column", gap: "6px", display: "flex", maxHeight: 220, overflowY: "auto" } },
+											(aiJob.steps ?? []).map((s) =>
+												el("label", { key: s.index, className: styles.consentRemember, style: { alignItems: "flex-start" } },
+													el("input", { type: "checkbox", checked: aiSelected[s.index] === true, onChange: (event) => setAiSelected((prev) => ({ ...prev, [s.index]: event.target.checked })) }),
+													el("span", null, (s.index + 1) + ". [" + s.action + "] " + (s.description ?? "") + (s.path ? " → " + s.path : "")))),
+										el("div", { className: styles.rowTop },
+											el("button", { type: "button", className: styles.toggle, onClick: aiRun }, t("aiEmpowerRun")),
+											el("button", { type: "button", className: styles.toggle, onClick: aiResetLocal }, t("aiEmpowerCancel")))))
+									: el("div", { style: { flexDirection: "column", gap: "10px", display: "flex" } },
+										el("p", { className: styles.message, "data-error": aiJob.status === "failed" ? "true" : undefined }, (aiJob.status === "done" ? t("aiEmpowerDone") : aiJob.status === "failed" ? t("aiEmpowerFail") + "：" + (aiJob.error ?? "?") : t("aiEmpowerExecuting")) + (aiJob.source ? "（" + aiJob.source + "）" : "") + (aiJob.status === "running" ? " " + (aiJob.progress?.done ?? 0) + "/" + (aiJob.progress?.total ?? "?") : "")),
+										el("pre", { style: { maxHeight: 200, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all", background: "var(--dsw-alias-bg-layer-2)", border: "1px solid var(--dsw-alias-border-l2)", borderRadius: 8, padding: 8, fontSize: 11, margin: 0, fontFamily: "inherit" } }, aiJob.logText ?? ""),
+										el("div", { className: styles.rowTop },
+											(aiJob.status === "running") ? el("button", { type: "button", className: styles.toggle, onClick: async () => { await aiCancel(); aiResetLocal(); } }, t("aiEmpowerCancel")) : null,
+											el("button", { type: "button", className: styles.toggle, onClick: aiResetLocal }, t("closeModal"))))))
+					: null,
+				repoLandOpen
+					? el("div", { className: styles.modalBackdrop },
+						el("div", { className: styles.modalCard, style: { maxWidth: 560 } },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("repoLandLabel")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => { setRepoLandOpen(false); setRepoLandResult(null); } }, "✕")),
+							el("p", { className: styles.message }, repoLandTitleText()),
+							el("div", { className: styles.rowTop, style: { flexWrap: "wrap" } },
+								el("span", { className: styles.message }, t("repoLandDirLabel") + "：" + (repoLandDir || "—")),
+								el("input", { type: "text", value: repoLandDirInput, onChange: (event) => setRepoLandDirInput(event.target.value), style: { flex: 1, minWidth: 120, font: "inherit", padding: "4px 8px", borderRadius: 6, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)" } }),
+								el("button", { type: "button", className: styles.toggle, onClick: repoLandSaveDir }, t("repoLandSaveDir"))),
+							el("section", null,
+								el("input", { type: "text", placeholder: t("repoLandPlaceholder"), value: repoLandInput, disabled: repoLandBusy, onChange: (event) => setRepoLandInput(event.target.value), onKeyDown: (event) => { if (event.key === "Enter" && !repoLandBusy) repoLandStart(); }, style: { width: "100%", boxSizing: "border-box", font: "inherit", padding: "6px 10px", borderRadius: 8, border: "1px solid var(--dsw-alias-border-l2)", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)" } }),
+							el("div", { className: styles.rowTop },
+								el("button", { type: "button", className: styles.toggle, disabled: repoLandBusy || repoLandInput.trim() === "", onClick: repoLandStart }, repoLandBusy ? t("repoLandBusy") : t("repoLandLabel"))),
+							repoLandResult !== null
+								? (repoLandResult.ok === true
+									? el("div", { className: styles.rowTop },
+										el("p", { className: styles.message, style: { flex: 1, minWidth: 0, wordBreak: "break-all" } }, t("repoLandDone") + repoLandResult.path),
+										el("button", { type: "button", className: styles.toggle, onClick: () => repoLandOpenFolder(repoLandResult.path) }, t("repoLandOpenFolder")))
+									: el("p", { className: styles.message, "data-error": "true" }, t("safetySwitchFailed") + "：" + (repoLandResult.error ?? "?")))
+								: null,
+							el("strong", { className: styles.name }, t("repoLandList") + "（" + repoLanded.length + "）"),
+							repoLanded.length === 0
+								? el("p", { className: styles.status }, "—")
+								: el("div", { style: { flexDirection: "column", gap: 6, display: "flex", maxHeight: 180, overflowY: "auto" } },
+									repoLanded.map((item) =>
+										el("div", { key: item.repo, className: styles.rowTop },
+											el("strong", { className: styles.name, style: { flex: "1 1 auto" } }, item.repo),
+											el("button", { type: "button", className: styles.toggle, onClick: () => repoLandOpenFolder(item.path) }, t("repoLandOpenFolder")),
+											el("button", { type: "button", className: styles.trashBtn, title: t("repoLandRemoveConfirm"), "aria-label": t("repoLandRemoveConfirm"), onClick: () => repoLandRemove(item) }, "✕"))))
+							)))
+					: null,
+				state.status === "ready" && state.data.framework && state.data.framework.upgraded === true && !frameworkNoticeDismissed
+					? el("div", { className: styles.messageRow },
+						el("p", { className: styles.message }, t("frameworkUpgradeNotice").replace("{from}", state.data.framework.from ?? "?").replace("{to}", state.data.framework.version ?? "?").replace("{dir}", state.data.framework.backupDir ?? "").replace("{patch}", state.data.framework.patchApplied === true ? t("frameworkPatchApplied") : t("frameworkPatchSkipped") + (state.data.framework.patchNote ? "：" + state.data.framework.patchNote : ""))),
+						el("button", { type: "button", className: styles.toggle, onClick: () => setFrameworkNoticeDismissed(true) }, t("closeModal")))
+					: null,
+				fwShowCard && frameworkStatus.status !== "done"
+					? el("button", {
+						type: "button",
+						className: styles.relaunchFloat,
+						title: t("relaunchTitle"),
+						"aria-label": t("relaunchBtn"),
+						onClick: () => {
+							// 2026-10-10：服务端这条路由已改为**官方路径 / 如实告知**（零 spawn / 零 kill），
+							// 永远回 409 + 面向用户的短句 ⇒ 原样显示那句话（不再套"安全开关失败："前缀，
+							// 否则用户看到的是"失败"而不是"该怎么做"）。
+							call("/plugin-console/framework-relaunch", {}).then(
+								(data) => { if (data && data.ok === true) setMessage(t("relaunchDone")); },
+								(error) => { setMessage(error !== null && typeof error.message === "string" && error.message !== "" ? error.message : t("safetySwitchFailed")); },
+							);
+						},
+					}, t("relaunchBtn"))
+					: null,
+					el("button", {
+						type: "button",
+						style: { position: "fixed", left: 12, bottom: 12, zIndex: 1000, opacity: 0.75 },
+						title: t("cleanResiduals"),
+						onClick: () => {
+							setMessage(t("cleanResiduals") + "…");
+							call("/plugin-console/clean-residuals", {}).then(
+								(data) => {
+									const keptCount = Array.isArray(data && data.kept) ? data.kept.length : 0;
+									const keptNote = keptCount > 0 ? "；保留在用插件 " + keptCount + " 个" : "";
+									if (data && data.ok === true) setMessage(t("cleanResiduals") + "：" + (data.count === 0 ? "无残余" : "已清理 " + data.count + " 项") + keptNote);
+								},
+								(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+							);
+						},
+					}, "🧹 " + t("cleanResiduals")),
+				el("button", {
+					type: "button",
+					style: { position: "fixed", left: 12, bottom: 44, zIndex: 1000, opacity: 0.75 },
+					title: t("cleanFrameworkResiduals"),
+					onClick: () => {
+						// 2026-09-28 加法：框架残留清理（顶层旧版本目录 / framework-backups）。两步走：
+						// 先 dryRun 出报告 → window.confirm 让用户看清要动什么 → 才带 confirm:true 真执行。
+						// 服务端默认 dryRun，所以「误点一下」不会动任何文件。
+						const SCOPES = ["framework", "frameworkBackups", "pnpmEntities"];
+						setMessage(t("cleanFrameworkResiduals") + "…");
+						call("/plugin-console/clean-residuals", { scope: SCOPES }).then(
+							(report) => {
+								const fw = report && report.framework ? report.framework : null;
+								const bk = report && report.frameworkBackups ? report.frameworkBackups : null;
+								const pe = report && report.pnpmEntities ? report.pnpmEntities : null;
+								const stale = fw && Array.isArray(fw.planned) ? fw.planned.length : 0;
+								const pend = bk && Array.isArray(bk.plannedRemove) ? bk.plannedRemove : [];
+								const mb = Math.round(pend.reduce((s, it) => s + (it && Number.isFinite(it.sizeBytes) ? it.sizeBytes : 0), 0) / 1048576);
+								const entities = pe && Number.isFinite(pe.entityCount) ? pe.entityCount : 0;
+								const head = t("cleanFrameworkResiduals") + "：" + t("cfStale").replace("{n}", String(stale))
+									+ "、" + t("cfBackups").replace("{n}", String(pend.length)).replace("{mb}", String(mb))
+									+ (entities > 0 ? "；" + t("cfEntities").replace("{n}", String(entities)) : "");
+								if (stale === 0 && pend.length === 0) { setMessage(head + "；" + t("cfNothing")); return; }
+								if (!window.confirm(head + "\n" + t("cfConfirm"))) { setMessage(head + "；" + t("cfCancelled")); return; }
+								setMessage(t("cfRunning"));
+								call("/plugin-console/clean-residuals", { scope: SCOPES, confirm: true, keep: 1 }).then(
+									(done) => {
+										const renamed = done && done.framework && Array.isArray(done.framework.renamed) ? done.framework.renamed.length : 0;
+										const relinked = done && done.framework && Array.isArray(done.framework.relinked) ? done.framework.relinked.length : 0;
+										const removed = done && done.frameworkBackups && Array.isArray(done.frameworkBackups.removed) ? done.frameworkBackups.removed.length : 0;
+										const freed = done && done.frameworkBackups && Number.isFinite(done.frameworkBackups.freedBytes) ? Math.round(done.frameworkBackups.freedBytes / 1048576) : 0;
+										const failed = (done && done.framework && Array.isArray(done.framework.failed) ? done.framework.failed.length : 0)
+											+ (done && done.frameworkBackups && Array.isArray(done.frameworkBackups.failed) ? done.frameworkBackups.failed.length : 0);
+										setMessage(t("cfDone").replace("{renamed}", String(renamed)).replace("{linked}", String(relinked)).replace("{removed}", String(removed)).replace("{mb}", String(freed))
+											+ (failed > 0 ? "；" + t("cfFailed").replace("{n}", String(failed)) : ""));
+									},
+									(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+								);
+							},
+							(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+						);
+					},
+				}, "🧰 " + t("cleanFrameworkResiduals")),
+				fwShowCard
+					? el("div", { className: styles.detail },
+						el("div", { className: styles.rowTop },
+							el("strong", { className: styles.name }, t("frameworkUpgradeBtn") + " " + (frameworkStatus.status === "done" ? "✓" : (frameworkStatus.status === "failed" ? "✕" : t("installingLocal")))),
+							el("button", { type: "button", className: styles.trashBtn, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => {
+								// 结束的卡片关闭 = 只关这一次（按运行时间戳认身份）；进行中的关闭 = 仅本会话隐藏
+								if (fwTerminal) {
+									try { localStorage.setItem("pc-fw-dismiss-at", fwRunKey); } catch {}
+								}
+								setFwStatusDismissed(true);
+							} }, "✕")),
+						fwStepsView(frameworkStatus),
+						frameworkStatus.status === "failed" && frameworkStatus.frameworkAtTarget
+							? el("p", { className: styles.status }, t("fwFailedButUpgraded").replace("{v}", frameworkStatus.frameworkAtTarget))
+							: null,
+						frameworkStatus.reconciled
+							? el("p", { className: styles.status, "data-pending": "true" }, "⚠ " + frameworkStatus.reconciled.note)
+							: null,
+						frameworkStatus.stalled && frameworkStatus.note
+							? el("p", { className: styles.message, "data-warn": "true" }, "⚠ " + frameworkStatus.note)
+							: null,
+						frameworkStatus.message ? el("p", { className: styles.status, "data-error": frameworkStatus.status === "failed" ? "true" : undefined }, frameworkStatus.message) : null,
+						rollbackUsable
+							? el("div", { className: styles.rowTop },
+								el("button", {
+									type: "button",
+									className: styles.toggle,
+									title: t("frameworkRollbackTitle"),
+									disabled: frameworkUpgrading,
+									onClick: doFrameworkRollback,
+								}, t("frameworkRollbackBtn") + " → " + (rollbackInfo.from ?? "?")))
+							: null)
+					: null,
+				message !== null ? el("div", { className: styles.messageRow }, el("p", { className: styles.message }, message), reloadHint ? el("button", { type: "button", className: styles.toggle, onClick: () => window.location.reload() }, t("reloadPage")) : null, restartHint ? el("button", { type: "button", className: styles.toggle, onClick: () => { restartServiceViaServer(setMessage); } }, t("restartService")) : null) : null,
+				// 适配门「软禁」的风险确认（用户定案：自动禁用，但允许手动强行启用）
+				riskyConfirm !== null
+					? el("div", { className: styles.detail, "data-risky": "true" },
+						el("strong", { className: styles.name, "data-pending": "true" }, t("riskyEnableTitle") + "（" + riskyConfirm.entryId + "）"),
+						el("p", { className: styles.status, "data-pending": "true" }, t("riskyEnableBody")
+							+ (riskyConfirm.frameworkVersion ? "（框架 " + riskyConfirm.frameworkVersion + "）" : "")
+							+ (riskyConfirm.checkNote ? "；判定依据：" + riskyConfirm.checkNote : "")),
+						el("div", { className: styles.rowTop },
+							el("button", {
+								type: "button",
+								className: styles.toggle,
+								disabled: busy === riskyConfirm.entryId,
+								onClick: () => {
+									const target = (state.status === "ready" ? state.data.entries : []).find((e) => e.entryId === riskyConfirm.entryId) ?? null;
+									if (target === null) { setRiskyConfirm(null); return; }
+									toggle(target, true, true);
+								},
+							}, t("riskyEnableConfirm")),
+							el("button", { type: "button", className: styles.toggle, onClick: () => setRiskyConfirm(null) }, t("riskyEnableCancel"))))
+					: null,
+				el("div", { className: styles.marketHead },
+					el("h3", null, mode === "skills"
+						? (searchSource === "github"
+							? t("skillsMarketTitle")
+							: t("skillsMarketTitleOther").replace("{source}", sourceDisplayName(searchSource)))
+						: (searchSource === "github"
+							? t("marketTitle")
+							: t("marketTitleOther").replace("{source}", sourceDisplayName(searchSource)))),
+					el("div", { id: "pc-ghwrap", className: styles.ghwrap },
+	selfUpdate !== null ? el("button", {
+	type: "button",
+	className: styles.ghpill,
+	title: t("hubUpdateAvailable") + " v" + selfUpdate.latest,
+	onClick: () => {
+	setMessage(t("installing"));
+	call("/plugin-console/self-update", {}).then(
+	(data) => {
+	if (data && data.ok === true) {
+	// 未写进 lockfile 时必须**显眼**说清（用户实测报告：只铺文件不写 lock → 之后任何 pnpm 操作
+	// 都会把版本还原，而用户以为升级成功了）
+	const lockWarn = data.lockUpdated === false && typeof data.lockNote === "string" && data.lockNote !== ""
+	? "⚠️ " + data.lockNote
+	: "";
+	setMessage((data.note ?? "已更新") + (lockWarn === "" ? "" : "。" + lockWarn) + "，正在重启生效…");
+	restartServiceViaServer(setMessage, { reload: false });
+	} else {
+	setMessage(t("safetySwitchFailed") + "：" + (data?.reason ?? "未知"));
+	}
+	},
+	(error) => setMessage(t("safetySwitchFailed") + "：" + friendlyGithubError(error).message),
+	);
+	}
+	}, "⬇ " + t("hubUpdateAvailable") + " v" + selfUpdate.latest) : null,
+						el("button", {
+							type: "button",
+							className: styles.ghpill,
+							// 外观回退：市场页只有**这一颗** pill，登录态体现在它的绿色描边上（data-on），
+							// 不再单独占一颗登录徽章
+							"data-on": ghAuthed ? "true" : "false",
+							title: t("searchSourceTitle"),
+							"aria-label": t("searchSourceTitle"),
+							onClick: () => setSourceMenuOpen((v) => !v),
+						},
+							// 源选在 GitHub 时这颗 pill 顺手报登录态（回到上一批之前的形态）；
+							// 选别的源时只报源名 —— 否则"未登录 GitHub"看着像徽章却点开的是源菜单
+							searchSource === "github"
+								? (ghAuthed ? t("githubLoggedIn") + ghLoginName : t("githubCornerOut"))
+								: t("sourceOf") + ((searchSourcesList !== null ? searchSourcesList.find((s) => s.id === searchSource)?.name : undefined)
+									?? (searchSource === "gitee" ? "Gitee" : searchSource)),
+							" ▾"),
+						sourceMenuOpen
+							? el("div", { className: styles.sourceMenu },
+								(searchSourcesList !== null && searchSourcesList.length > 0
+									? searchSourcesList
+									: [{ id: "github", name: "GitHub" }, { id: "gitee", name: "Gitee" }]
+								).map((s) =>
+									el("button", {
+										type: "button",
+										key: s.id,
+										className: styles.sourceOpt,
+										"data-active": searchSource === s.id ? "true" : "false",
+										onClick: () => {
+											setSearchSource(s.id);
+											try { localStorage.setItem("pc-search-source", s.id); } catch {}
+											setSourceMenuOpen(false);
+										},
+									}, s.name)),
+								// ── 登录区（登录入口收进这颗 pill 的菜单里，不再单独一颗徽章）──
+								el("div", { style: { height: 1, margin: "4px 2px", background: "var(--dsw-alias-border-l2)" } }),
+								ghAuthed
+									// 已登录：这行只报状态（点了把状态念到消息栏，不做别的）
+									? el("button", {
+										type: "button",
+										className: styles.sourceOpt,
+										"data-active": "true",
+										title: t("githubLoginTip"),
+										onClick: () => setMessage(t("githubLoggedIn") + ghLoginName),
+									}, t("githubLoggedIn") + ghLoginName)
+									// 未登录：主入口走设备码窗口登录；窗口不可用时它自己会展开下面的 token 子面板
+									: el("button", {
+										type: "button",
+										className: styles.sourceOpt,
+										disabled: ghLoginBusy,
+										title: t("githubLoginTip"),
+										onClick: githubOpenLogin,
+									}, t("githubLoginViaApp")),
+								// 次要入口：token 兜底（已登录时也留着 —— 换账号/换 token 就靠它）
+								el("button", {
+									type: "button",
+									className: styles.sourceOpt,
+									onClick: () => setGhLoginOpen((v) => !v),
+								}, t("githubLoginOrToken")),
+								// token 兜底子面板：窗口登录不可用（插件没装/非 Windows/没有 exe）时自动展开；
+								// 也可以从上面「或用 Token 登录」主动开合。样式内联，不为它改 CSS 表。
+								ghLoginOpen
+									? el("div", { style: { display: "flex", flexDirection: "column", gap: 6, width: 280, boxSizing: "border-box", padding: "2px 2px 4px" } },
+										el("p", { className: styles.message, style: { margin: 0 } }, t("githubLoginTip")),
+										el("input", {
+											type: "password",
+											placeholder: t("githubTokenPlaceholder"),
+											value: ghToken,
+											onChange: (event) => setGhToken(event.target.value),
+											style: { width: "100%", boxSizing: "border-box" },
+										}),
+										el("button", { type: "button", className: styles.toggle, disabled: ghLoginBusy || ghToken.trim() === "", onClick: githubLogin }, t("githubLoginBtn")))
+									: null)
+							: null,
+					)),
+				(aiRunning || aiJobsList.some((x) => x.status === "running"))
+					? el("button", {
+						type: "button",
+						className: styles.aiSpinBtn,
+						title: t("aiProgressTitle"),
+						"aria-label": t("aiProgressTitle"),
+						onClick: () => setAiOpen(true),
+					}, el("div", { className: styles.aiSpinner }))
+					: null,
+				el("button", {
+					type: "button",
+					className: styles.toolbarMain,
+					"data-active": toolbarOpen ? "true" : "false",
+					title: t(toolbarOpen ? "toolbarCloseTitle" : "toolbarOpenTitle"),
+					"aria-label": t("toolbarLabel"),
+					style: (dragPos ?? toolbarPos) !== null
+						? { left: (dragPos ?? toolbarPos).left, top: (dragPos ?? toolbarPos).top, right: "auto", touchAction: "none", userSelect: "none" }
+						: { touchAction: "none", userSelect: "none" },
+					onPointerDown: (e) => {
+						const cur = dragPos ?? toolbarPos ?? { left: Math.max(8, window.innerWidth - 70 - 110), top: Math.max(88, Math.round(window.innerHeight * 0.21)) };
+						dragRef.current.grabX = e.clientX - cur.left;
+						dragRef.current.grabY = e.clientY - cur.top;
+						dragRef.current.base = cur;
+						dragRef.current.active = false;
+						dragRef.current.justDragged = false;
+						// ★ 0.5.91：不要在这里捕获指针（会把内部按钮的 click 吞到容器上）。先记下，长按确认拖动后再捕获。
+						dragRef.current.captureEl = e.currentTarget;
+						dragRef.current.captureId = e.pointerId;
+						dragRef.current.long = window.setTimeout(() => {
+							dragRef.current.active = true;
+							try { dragRef.current.captureEl?.setPointerCapture?.(dragRef.current.captureId); } catch {}
+							setDragPos(cur);
+						}, 450);
+					},
+					onPointerMove: (e) => {
+						if (!dragRef.current.active) return;
+						const w = window.innerWidth;
+						const h = window.innerHeight;
+						const bw = e.currentTarget.offsetWidth || 96;
+						const bh = e.currentTarget.offsetHeight || 30;
+						const left = Math.max(8, Math.min(w - bw - 8, e.clientX - dragRef.current.grabX));
+						const top = Math.max(64, Math.min(h - bh - 8, e.clientY - dragRef.current.grabY)); // ★ 64 = 标题栏安全区
+						setDragPos({ left, top });
+					},
+					onPointerUp: () => {
+						if (dragRef.current.long !== null) { window.clearTimeout(dragRef.current.long); dragRef.current.long = null; }
+						try { dragRef.current.captureEl?.releasePointerCapture?.(dragRef.current.captureId); } catch {}
+						if (dragRef.current.active) {
+							const p = dragPos;
+							if (p !== null) {
+								try { localStorage.setItem("pc-toolbar-pos", JSON.stringify(p)); } catch {}
+								setToolbarPos(p);
+							}
+							dragRef.current.active = false;
+							dragRef.current.justDragged = true;
+							window.setTimeout(() => { dragRef.current.justDragged = false; }, 300);
+							setDragPos(null);
+						}
+					},
+					onPointerCancel: () => {
+						if (dragRef.current.long !== null) { window.clearTimeout(dragRef.current.long); dragRef.current.long = null; }
+						dragRef.current.active = false;
+						setDragPos(null);
+					},
+					onClick: (e) => {
+						if (dragRef.current.justDragged) { e.preventDefault(); dragRef.current.justDragged = false; return; }
+						setToolbarOpen((v) => {
+							const next = !v;
+							try { localStorage.setItem("pc-toolbar-open", next ? "1" : "0"); } catch {}
+							return next;
+						});
+					},
+				}, t("toolbarLabel") + (toolbarOpen ? " ▾" : " ▸")),
+				toolbarOpen
+					? el("div", { className: styles.toolbarGroup, style: (dragPos ?? toolbarPos) !== null ? { left: (dragPos ?? toolbarPos).left, top: (dragPos ?? toolbarPos).top + 36, right: "auto" } : undefined },
+						
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-active": annotationsPanelOpen ? "true" : "false",
+							title: t("annotationsPanelTitle"),
+							"aria-label": t("annotationsBtn"),
+							// issue #22 ②③：打开即读一次（注解是独立文件，别处改了也能看到最新的）；
+							// ★ 0.5.93：打开时列表回到**收起**状态（见 openAnnotationsPanel）
+							onClick: () => toggleAnnotationsPanel(),
+						}, t("annotationsBtn") + (annotations !== null && annotations.stats !== null && annotations.stats !== undefined && annotations.stats.packages > 0 ? " " + annotations.stats.packages : "")),
+						hostedByShell ? null : el("button", { // ★ 0.5.84：桌面端（shell 托管）不显示；web 端保留且可用
+								type: "button",
+								className: styles.toolItem,
+								title: t("restartService"),
+								onClick: () => { restartServiceViaServer(setMessage); },
+							}, t("restartService")),
+							el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-active": repoLandOn ? "true" : "false",
+							title: repoLandTitleText(),
+							"aria-label": t("repoLandLabel"),
+							onClick: () => { setRepoLandOn((v) => { const n = !v; try { localStorage.setItem("pc-repo-land", n ? "1" : "0"); } catch {} return n; }); setRepoLandOpen(true); repoLandRefresh(); },
+						}, t("repoLandLabel")),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-active": aiFallback ? "true" : "false",
+							title: t("aiFallbackTitle"),
+							"aria-label": t("aiFallbackLabel"),
+							onClick: () => setAiFallback((v) => {
+								const next = !v;
+								try { localStorage.setItem("pc-ai-fallback-v2", next ? "on" : "off"); } catch {}
+								return next;
+							}),
+						}, t("aiFallbackLabel")),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-busy": aiRunning ? "true" : "false",
+							"data-active": aiOpen ? "true" : "false",
+							title: t("aiEmpowerTitle"),
+							"aria-label": t("aiEmpowerLabel"),
+							onClick: () => setAiOpen((v) => !v),
+						}, t("aiEmpowerLabel")),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							title: t("sourcesTitle"),
+							"aria-label": t("sourcesBtn"),
+							onClick: openSources,
+						}, t("sourcesBtn")),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-active": linksPanelOpen ? "true" : "false",
+							"data-busy": linksPanelBusy ? "true" : "false",
+							title: t("linksPanelTitle"),
+							"aria-label": t("linksBtn"),
+							// ★ 0.5.84（用户第 6 项）：打开时拉一次真实清单（与安全面板同一个只读接口）
+							// ★ 0.5.87：同时拉一次「已登记开发区」（钉住要用；没有它下拉就是空的）
+							onClick: () => setLinksPanelOpen((v) => { const next = !v; if (next) { linksPanelLoad(); linksDevRootsLoad(); } return next; }),
+						}, t("linksBtn") + (linksPanelData !== null && Array.isArray(linksPanelData.items) ? " " + linksPanelData.items.length : "")),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-active": gateOpen ? "true" : "false",
+							title: t("gateTitle"),
+							"aria-label": t("gateBtn"),
+							onClick: () => setGateOpen((v) => !v),
+						}, t("gateBtn") + (gatePendingCount > 0 ? " " + gatePendingCount : "")),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-active": fwPanelOpen ? "true" : "false",
+							"data-mode": fwRunning ? "true" : "false",
+							title: t("fwPanelTitle"),
+							"aria-label": t("fwPanelBtn"),
+							onClick: () => {
+								setFwPanelOpen((v) => {
+									const next = !v;
+									// 打开时拉一次真实状态（无视卡片的「已关闭」标记）+ 版本检查
+									if (next) { fwStatusRefresh(); if (fwCheck === null) fwCheckRefresh(false); }
+									return next;
+								});
+							},
+						}, t("fwPanelBtn") + fwBadge),
+						el("button", {
+							type: "button",
+							className: styles.toolItem,
+							"data-mode": mode === "skills" ? "true" : "false",
+							title: t("modeBtn"),
+							"aria-label": t("modeBtn"),
+							onClick: () => {
+								const next = mode === "plugins" ? "skills" : "plugins";
+								setMode(next);
+								try { localStorage.setItem("pc-market-mode", next); } catch {}
+								setMarket(null);
+							},
+						}, (mode === "skills" ? t("pluginsMode") : t("skillsMode"))))
+					: null,
+				market !== null && market.status === "ready" && market.data.length > 0
+					? el("div", { className: styles.backTopWrap },
+						showBackTop
+							? el("button", {
+								type: "button",
+								className: styles.backTop,
+								title: t("backToSearch"),
+								"aria-label": t("backToSearch"),
+								onClick: () => {
+									const node = document.getElementById("pc-market-search");
+									if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+								},
+							}, el("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+								el("polyline", { points: "18 15 12 9 6 15" })))
+							: null,
+						el("button", {
+							type: "button",
+							className: styles.backTop,
+							title: marketCollapsed ? t("expandResults") : t("collapseResults"),
+							"aria-label": marketCollapsed ? t("expandResults") : t("collapseResults"),
+							onClick: () => setMarketCollapsed((v) => !v),
+						}, el("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+							marketCollapsed
+								? [el("polyline", { key: "a", points: "6 9 12 15 18 9" }), el("polyline", { key: "b", points: "6 16 12 22 18 16" })]
+								: [el("polyline", { key: "a", points: "18 15 12 9 6 15" }), el("polyline", { key: "b", points: "18 8 12 2 6 8" })])))
+					: null,
+				el("p", { className: styles.note }, mode === "skills"
+					? (searchSource === "github"
+						? t("skillsNote")
+						: t("skillsGithubOnly"))
+					: (searchSource === "github" ? t("direct") : t("directOther").replace("{source}", sourceDisplayName(searchSource)))),
+				indexData !== null && indexData.offline === true
+					? el("p", { className: styles.message, "data-warn": "true" },
+						t("marketIndexOffline").replace("{time}", indexData.cachedAt !== null ? new Date(indexData.cachedAt).toLocaleString() : "—")
+						+ (indexData.sourceName !== null ? " · " + t("marketIndexFrom").replace("{source}", indexData.sourceName) : ""))
+					: null,
+				// 索引彻底没加载成功：说清后果（只剩 GitHub 实时结果）+ 给重试入口。
+				// 2026-09-20 事故：这种状态下"包名/README/子包里的名字"搜不到，而界面上只有一句加载失败
+				indexData === null && indexError !== null
+					? el("p", { className: styles.message, "data-warn": "true" },
+						t("marketIndexStale") + " ",
+						el("button", {
+							type: "button",
+							className: styles.toggle,
+							onClick: () => loadMarketIndex(),
+						}, t("marketIndexRetry")))
+					: null,
+				el("div", { className: styles.search, id: "pc-market-search" },
+					el("div", { className: styles.searchInner },
+						el("input", {
+							type: "search",
+							value: query,
+							placeholder: mode === "skills"
+								? (searchSource === "github"
+									? t("skillsSearchPlaceholder")
+									: t("skillsGithubOnly"))
+								: (searchSource === "github"
+									? t("searchPlaceholder")
+									: searchSource === "gitee"
+										? t("giteeRepoPlaceholder")
+										: t("searchPlaceholderOther").replace("{source}", sourceDisplayName(searchSource))),
+							"aria-label": t("search"),
+							onChange: (event) => {
+								const v = event.target.value;
+								setQuery(v);
+								try { localStorage.setItem("pc-market-query", v); } catch {}
+							},
+							onKeyDown: (event) => { if (event.key === "Enter") search(); },
+						}),
+					),
+					mode === "plugins"
+						? el("button", {
+							type: "button",
+							className: styles.starBtn,
+							"data-active": officialOnly ? "true" : "false",
+							title: t("officialTitle"),
+							"aria-label": t("officialOnlyToggle"),
+							onClick: () => setOfficialOnly((v) => {
+								const next = !v;
+								try { localStorage.setItem("pc-market-official", next ? "1" : "0"); } catch {}
+								return next;
+							}),
+						}, officialOnly ? "★" : "☆")
+						: null,
+					mode === "plugins"
+						? el("button", {
+							type: "button",
+							className: styles.starBtn,
+							"data-active": multiSource ? "true" : "false",
+							title: t("multiSourceTitle"),
+							"aria-label": t("multiSourceToggle"),
+							onClick: () => setMultiSource((v) => {
+								const next = !v;
+								try { localStorage.setItem("pc-multi-source", next ? "1" : "0"); } catch {}
+								return next;
+							}),
+						}, multiSource ? "⊞" : "⊟")
+						: null,
+					el("button", { type: "button", onClick: search }, t("search")),
+				),
+				!marketCollapsed && marketRows.length > 0 ? el("ul", { className: styles.market }, marketRows) : null,
+				// 0.5.35：结果状态行 —— "共 N 条 / 已显示 M 条"（数据源没给总数时只报"已显示 M 条"，
+				// 绝不编造总数）；**被截断**时明说"可继续加载"（而不是让用户以为"就是没有"）。
+				!marketCollapsed && market !== null && market.status === "ready" && market.data.length > 0
+					? el("p", { className: styles.note, "data-truncated": market.hints !== null && market.hints !== undefined && market.hints.truncated === true ? "true" : "false" },
+						(market.hints !== null && market.hints !== undefined && typeof market.hints.total === "number"
+							? t("marketCount").replace("{total}", String(market.hints.total)).replace("{shown}", String(market.data.length))
+							: t("marketCountKnown").replace("{shown}", String(market.data.length)))
+						+ (market.hints !== null && market.hints !== undefined && market.hints.truncated === true
+							? " · " + (market.hints.hasMore === true ? t("marketTruncated") : t("marketTruncatedEnd"))
+								+ (typeof market.hints.reason === "string" && market.hints.reason !== "" ? "：" + market.hints.reason : "")
+							: ""))
+					: null,
+				// 「加载更多」的判据从"长度 ≥ 20"改成**数据源给的口径**（hints.hasMore）：
+				// 旧判据下 3 条命中就不渲染按钮（用户"无从往下看"），而满 20 条又会在到底之后继续给空按钮。
+				// hints 缺失（老响应/本地索引以外的场景）时退回旧判据，不假装知道。
+				!marketCollapsed && market !== null && market.status === "ready"
+					&& (market.hints !== null && market.hints !== undefined
+						? market.hints.hasMore === true
+						: market.data.length >= 20)
+					? el("div", { className: styles.descTopbar },
+						el("button", {
+							type: "button",
+							className: styles.toggle,
+							disabled: loadingMore,
+							onClick: loadMore,
+						}, loadingMore ? t("loadingMore") : t("loadMore")))
+					: null,
+				Object.values(jobs).filter((job) => job.status === "installing").map((job) => {
+					if (job.stage === "ai-consent") {
+						// 授权请求就摆在**安装进度所在位置**（用户盯着进度看，授权提示不能只在模态框里）。
+						// 这块卡片是要显眼的：警告色描边 + 倒计时 + 同意/取消，而不是一行小字。
+						// 关掉兜底或勾了"不再提醒"时给出对应说明（这两种情况前端会自动同意/取消）。
+						const autoNote = !aiFallback ? t("aiFallbackOff") : (aiRemember ? t("aiRememberNote") : null);
+						const remain = consentRemaining(job);
+						const lastError = job.aiConsent?.lastError ?? null;
+						const progressLine = progressText(job.progress);
+						return el("div", { key: job.jobId, className: styles.consentCard },
+							el("div", { className: styles.rowTop },
+								el("span", { className: styles.spinner }),
+								el("strong", { className: styles.name }, t("aiConsentCardTitle")),
+								remain !== null ? el("span", { className: styles.consentCountdown }, t("aiConsentCountdown") + " " + remain) : null),
+							el("p", { className: styles.message }, t("installingLocal") + "：" + (job.packageName ?? job.repo)),
+							progressLine !== "" ? el("p", { className: styles.progress }, progressLine) : null,
+							el("p", { className: styles.message }, t("aiConsentText")),
+							lastError !== null ? el("p", { className: styles.note }, t("aiConsentLastError") + "：" + lastError) : null,
+							remain !== null ? el("p", { className: styles.note }, t("aiConsentTimeoutNote").replace("{min}", consentTimeoutMinutes(job))) : null,
+							autoNote !== null ? el("p", { className: styles.note }, autoNote) : null,
+							el("div", { className: styles.rowTop },
+								el("button", { type: "button", className: styles.consentApprove, onClick: () => aiConsent(job.jobId, true) }, t("aiConsentApprove")),
+								el("button", { type: "button", className: styles.toggle, onClick: () => aiConsent(job.jobId, false) }, t("aiConsentDecline"))));
+					}
+					const stageKey = job.stage === "preparing" ? "stagePreparing" : job.stage === "configuring" ? "stageConfiguring" : job.stage === "repairing" ? "stageRepairing" : "stageInstalling";
+					const elapsed = Math.max(0, Math.round((Date.now() - (job.startedAt ?? Date.now())) / 1000));
+					const progressLine = progressText(job.progress);
+					return el("div", { key: job.jobId, className: styles.detail },
+						el("div", { className: styles.rowTop },
+							el("span", { className: styles.spinner }),
+							el("strong", { className: styles.name }, t("installingLocal") + "：" + (job.packageName ?? job.repo))),
+						progressLine !== "" ? el("p", { className: styles.progress }, progressLine) : null,
+						el("p", { className: styles.status },
+							t("stageLabel") + "：" + t(stageKey) + " · " + t("elapsed") + " " + elapsed + "s"));
+				}),
+				// 安装诊断卡（2026-09-26 加法）：只有**装成功但装后校验 / 摘要校验有问题**的作业才出现
+				// （无问题时 diagCardEl 返回 null，不占版面）。数据只用本地 jobs 状态，不新增任何接口字段。
+				Object.values(jobs).filter((job) => job.status === "done").map((job) => diagCardEl(job)),
+				// 建议动作执行框（2026-09-27 加法）：只在安装结果里带了 suggestedAction 时出现（否则返回 null，不占版面）
+				Object.values(jobs).filter((job) => job.status === "done" && job.suggestedAction !== null && job.suggestedAction !== undefined)
+					.map((job) => el(SuggestedActionBox, { key: "act-" + job.jobId, job: job, t: t })),
+				Object.entries(suiteReports).map(([jobId, report]) =>
+					el("div", { key: "suite-" + jobId, className: styles.detail },
+						el("p", { className: styles.status }, t("suiteComponentType") + "："),
+						el("ul", { className: styles.market }, report.map((r) =>
+							el("li", { key: r.component, className: styles.item },
+								el("div", { className: styles.itemTop },
+									el("code", { className: styles.name }, r.component),
+									r.ok
+										? el("span", { className: styles.tag, "data-user": "true" }, t("suiteComponentOk"))
+										: el("span", { className: styles.tag, "data-error": "true" }, t("suiteComponentFail"))),
+								r.note ? el("p", { className: styles.desc }, r.note) : null))))),
+				(state.status === "ready" ? state.data.recentFailures ?? [] : []).filter((job) => !dismissedFailures[job.jobId]).map((job) => {
+					// ★ 0.5.47 改错（用户被误导过）：服务端在下发**之前**已经查过三处（依赖清单 /
+					// dsh.profile.bundles / node_modules）。已经装上时，「已安装 vX（无需重装）」是**主行**，
+					// 历史失败降级成次要信息（默认收起）—— 绝不让用户以为没装上、再点一次重试。
+					const evidence = job.installedEvidence !== null && job.installedEvidence !== undefined && job.installedEvidence.installed === true
+						? job.installedEvidence
+						: null;
+					const whereText = evidence === null
+						? ""
+						: (Array.isArray(evidence.where) ? evidence.where : []).map((w) => w === "dependencies" ? t("whereDependencies") : w === "bundles" ? t("whereBundles") : w === "node_modules" ? t("whereNodeModules") : String(w)).join(" / ");
+					const installedLine = evidence === null
+						? null
+						: (evidence.version === null || evidence.version === undefined
+							? t("alreadyInstalledNoVersion")
+							: t("alreadyInstalled").replace("{version}", String(evidence.version)))
+							+ (whereText === "" ? "" : " · " + t("alreadyInstalledWhere").replace("{where}", whereText));
+					const failureOpen = failureDetailOpen[job.jobId] === true;
+					// 子目录插件的一键安装（0.5.47 加法）：服务端给了结构化的可执行计划才渲染按钮
+					// （`install.action === "install-subdir"`）—— 只在文案里写"可以装"不算数。
+					const subInstall = job.subplugin !== null && job.subplugin !== undefined
+						&& job.subplugin.install !== null && job.subplugin.install !== undefined
+						&& job.subplugin.install.action === "install-subdir"
+						? job.subplugin.install
+						: null;
+					return el("div", { key: "fail-" + job.jobId, className: styles.detail },
+						el("div", { className: styles.rowTop },
+							el("span", { className: styles.phase, "data-phase": evidence === null ? "failed" : "active" }, evidence === null ? t("recentFailures") : t("installedBadge")),
+							el("strong", { className: styles.name }, job.packageName ?? job.repo),
+							el("button", {
+								type: "button",
+								className: styles.trashBtn,
+								title: t("dismissFailure"),
+								"aria-label": t("dismissFailure"),
+								onClick: () => setDismissedFailures((prev) => ({ ...prev, [job.jobId]: true })),
+							}, "✕")),
+						installedLine === null
+							? el("p", { className: styles.message, "data-error": "true" }, job.error ?? "")
+							: el("p", { className: styles.message, "data-warn": "true" }, installedLine),
+						// 子目录插件（2026-10-13 加法，真机 Fei2411/DeepSeek-Bot）：服务端已判定"插件在
+						// <子目录>/ 下"，这里把结论**单独显示**（不用用户从一整段报错里找路径），
+						// 0.5.47 起再给**可点的一步**（不只是可复制的路径）。用 styles.message、不加新 class。
+						job.subplugin !== null && job.subplugin !== undefined
+							? el("p", { className: styles.message, "data-warn": "true" },
+								t("subpluginFound")
+									.replace("{dir}", String(job.subplugin.dir ?? "?"))
+									.replace("{pkg}", String(job.subplugin.packageName ?? "?"))
+									.replace("{markers}", Array.isArray(job.subplugin.markers) ? job.subplugin.markers.join(" / ") : "?"))
+							: null,
+						subInstall !== null
+							? el("div", { className: styles.rowTop },
+								el("button", {
+									type: "button",
+									className: styles.toggle,
+									title: t("subpluginInstallHint"),
+									onClick: () => startJob(job.repo, subInstall.packageName ?? job.packageName ?? null, job.source ?? "github", "plugin", false, subInstall.dir),
+								}, t("subpluginInstall") + " · " + String(subInstall.dir ?? "") + "/"))
+							: null,
+						job.subplugin !== null && job.subplugin !== undefined && typeof job.subplugin.dir === "string" && job.subplugin.dir !== ""
+							? el("div", { className: styles.rowTop },
+								el("button", { type: "button", className: styles.toggle, onClick: () => copyInstallCommand(String(job.subplugin.dir)) }, t("subpluginCopyDir")),
+								typeof job.subplugin.packageName === "string" && job.subplugin.packageName !== ""
+									? el("button", { type: "button", className: styles.toggle, onClick: () => copyInstallCommand(String(job.subplugin.packageName)) }, t("subpluginCopyName"))
+									: null)
+							: null,
+						...diagLines(job).map(diagLineEl),
+						el("div", { className: styles.rowTop },
+							el("button", { type: "button", className: styles.toggle, onClick: () => startJob(job.repo, job.packageName, job.source ?? "github") }, t("retry")),
+							// 历史失败（0.5.47）：已装上的插件这张卡里，失败正文与"重试"降级进可折叠的次要区
+							// —— 默认收起，用户不会被一句红色失败误导成"没装上"。
+							evidence !== null
+								? el("button", {
+									type: "button",
+									className: styles.toggle,
+									onClick: () => setFailureDetailOpen((prev) => ({ ...prev, [job.jobId]: failureOpen !== true })),
+								}, failureOpen ? t("failureSecondaryHide") : t("failureSecondaryShow"))
+								: null,
+							// 「仓库落地」一键克隆：hint=repo-land（旧结论）与 hint=subdir-plugin（插件在子目录里）
+							// 都要给 —— 后者的文案本身就写着"先按「仓库落地」克隆到本地查看该子目录"，
+							// 按钮若只在 repo-land 时渲染，那句话就指向一个不存在的入口。
+							job.hint === "repo-land" || job.hint === "subdir-plugin"
+								? el("button", { type: "button", className: styles.toggle, title: repoLandTitleText(), onClick: () => { setRepoLandOpen(true); repoLandEntry(job.repo); } }, t("repoLandEntry"))
+								: null),
+						// 次要信息区（默认收起）：历史失败正文 + 服务端那句核实note + 诊断行，只在用户展开时显示
+						evidence !== null && failureOpen
+							? el("div", { className: styles.detail },
+								el("p", { className: styles.note }, t("failureSecondary")),
+								el("p", { className: styles.message, "data-error": "true" }, job.error ?? ""),
+								typeof evidence.note === "string" && evidence.note !== "" ? el("p", { className: styles.note }, evidence.note) : null)
+							: null)
+				}),
+				repoInfo !== null
+					? el("aside", { className: styles.floatPanel },
+						el("div", { className: styles.descTopbar },
+							el("button", { type: "button", className: styles.toggle, onClick: () => setRepoInfo(null) }, "✕")),
+						detail)
+					: null,
+				el("div", { id: "pc-installed-search-area" },
+					el("div", { className: styles.installedHead },
+						el("h3", null, mode === "skills" ? t("installedSkillsTitle") : t("installedTitle")),
+						mode === "plugins"
+							? el("button", { type: "button", className: styles.toggle, onClick: () => setInstalledSearchOpen((v) => !v) }, t("search"))
+							: null,
+						// ★ issue #22 ①：一键检测全部更新（**只有图标**的圆按钮 ↑↑↑，与「搜索」同高）。
+						//   三态都在按钮上：idle（可点）/ checking（转圈 + 禁用）/ done（描边高亮，再点是重查）。
+						//   判据全在服务端（唯一判据 + 并发上限），这里只负责"问一句、如实显示"。
+						mode === "plugins"
+							? el("button", {
+								type: "button",
+								className: styles.iconBtn,
+								title: batchCheck !== null && batchCheck.status === "checking"
+									? t("checkingAllUpdates").replace("{n}", String(batchCheck.total ?? 0))
+									: t("checkAllUpdates") + "：" + t("checkAllUpdatesHint").replace("{n}", String(state.status === "ready" ? state.data.entries.length : 0)),
+								"aria-label": t("checkAllUpdates"),
+								"data-state": batchCheck !== null && batchCheck.status === "checking" ? "checking" : (batchCheck !== null && batchCheck.status === "ready" ? "done" : "idle"),
+								disabled: (batchCheck !== null && batchCheck.status === "checking") || state.status !== "ready",
+								onClick: checkAllUpdates,
+							}, batchCheck !== null && batchCheck.status === "checking"
+								? el("span", { className: styles.spinner })
+								: el("svg", { width: 13, height: 13, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.2, strokeLinecap: "round", strokeLinejoin: "round" },
+									el("path", { d: "M5 20V7" }), el("polyline", { points: "3 9 5 7 7 9" }),
+									el("path", { d: "M12 20V7" }), el("polyline", { points: "10 9 12 7 14 9" }),
+									el("path", { d: "M19 20V7" }), el("polyline", { points: "17 9 19 7 21 9" })))
+							: null,
+						// 结果态：可更新 > 0 ⇒ 可点的筛选按钮（同一个筛选的开关）；可更新 = 0 ⇒ **只读**小结，
+						// 不做成按钮（否则就是"点了一下列表变空"的死按钮）。
+						mode === "plugins" && batchCheck !== null && batchCheck.status === "ready" && batchCheck.updatable > 0
+							? el("button", {
+								type: "button",
+								className: styles.extraBtn,
+								title: t("batchUpdateResultTip")
+									.replace("{n}", String(batchCheck.updatable))
+									.replace("{m}", String(Math.max(0, batchCheck.checked - batchCheck.updatable - batchCheck.unknown)))
+									.replace("{k}", String(batchCheck.unknown))
+									.replace("{at}", new Date(batchCheck.at).toLocaleTimeString()),
+								"aria-pressed": onlyUpdatable ? "true" : "false",
+								onClick: () => setOnlyUpdatable((v) => !v),
+							}, t("batchUpdateOnly") + " · " + batchCheck.updatable + (onlyUpdatable ? " ✓" : ""))
+							: null,
+						mode === "plugins" && batchCheck !== null && batchCheck.status === "ready" && batchCheck.updatable === 0
+							? el("span", { className: styles.tag, "data-enabled": "true", title: t("batchUpdateResultTip").replace("{n}", "0").replace("{m}", String(Math.max(0, batchCheck.checked - batchCheck.unknown))).replace("{k}", String(batchCheck.unknown)).replace("{at}", new Date(batchCheck.at).toLocaleTimeString()) },
+								t("checkAllUpdateNone") + (batchCheck.unknown > 0 ? "（" + t("batchUpdateUnknown") + " " + batchCheck.unknown + "）" : ""))
+							: null,
+						mode === "plugins" && batchCheck !== null && batchCheck.status === "error"
+							? el("span", { className: styles.tag, "data-pending": "true", title: String(batchCheck.error ?? "") }, t("checkAllUpdateFailed"))
+							: null),
+					mode === "plugins" && installedSearchOpen
+						? el("div", { className: styles.search },
+							el("input", {
+								type: "search",
+								id: "pc-installed-search-input",
+								value: installedQuery,
+								placeholder: t("searchInstalledPlaceholder"),
+								"aria-label": t("searchInstalledPlaceholder"),
+								onChange: (event) => {
+									const v = event.target.value;
+									setInstalledQuery(v);
+									try { localStorage.setItem("pc-market-installed-q", v); } catch {}
+								},
+							}),
+							el("button", {
+								type: "button",
+								className: styles.extraBtn,
+								"data-flash": extraFlash ? "true" : "false",
+								title: t("extraFilterTitle"),
+								"aria-label": t("extraFilterTitle"),
+								onClick: () => {
+									setExtraOnly((v) => !v);
+									setExtraFlash(true);
+									window.setTimeout(() => setExtraFlash(false), 1500);
+								},
+							}, extraOnly ? t("extraFilterAll") : t("extraFilter") + " · " + extraCount),
+							)
+						: null),
+				mode === "skills"
+					? (installedSkills.length === 0 && pluginSkills.length === 0
+						? el("p", { className: styles.status, "data-error": "false" }, t("skillsEmpty") + "。" + t("skillsEmptyHint"))
+						: el("div", { style: { flexDirection: "column", gap: 8, display: "flex" } },
+							pluginSkills.length > 0
+								? el("div", { className: styles.detail },
+									el("strong", { className: styles.name }, t("pluginSkillsTitle") + "（" + pluginSkills.length + "）"),
+									el("p", { className: styles.status }, t("pluginSkillsHint")),
+									el("ul", { className: styles.list }, pluginSkills.map((sk) =>
+										el("li", { key: sk.name, className: styles.row },
+											el("div", { className: styles.rowTop },
+												el("code", { className: styles.name }, sk.name),
+												el("span", { className: styles.tag, "data-system": "true" }, t("pluginSkillTag") + (sk.provider ? " · " + sk.provider : ""))),
+											sk.description ? el("p", { className: styles.desc }, sk.description) : null))))
+								: null,
+							installedSkills.length > 0
+								? el("ul", { className: styles.list }, installedSkills.map((sk) =>
+							el("li", { key: sk.name, className: styles.row },
+								el("div", { className: styles.rowTop },
+									el("code", { className: styles.name }, sk.name),
+									sk.system === true
+										? el("span", { className: styles.tag, "data-system": "true", title: t("skillSystemTitle") }, t("skillSystemTag"))
+										: sk.disabled === true
+											? el("span", { className: styles.tag, "data-disabled": "true", title: t("skillDisabledTitle") }, t("skillDisabledTag"))
+											: el("span", { className: styles.tag, "data-skill": "true", title: t("skillTitle") }, t("skillBadge"))),
+								el("div", { className: styles.meta }, sk.path ?? ""),
+								el("div", { className: styles.rowTop },
+									sk.system === true
+										? null
+										: el("button", {
+											type: "button",
+											className: styles.toggle,
+											disabled: togglingSkill === sk.name,
+											onClick: () => doToggleSkill(sk.name, sk.disabled === true),
+										}, togglingSkill === sk.name ? t("installingLocal") : (sk.disabled === true ? t("skillEnable") : t("skillDisable"))),
+									sk.system === true
+										? null
+										: confirmSkillDelete === sk.name
+											? el("button", {
+												type: "button",
+												className: styles.toggle,
+												onClick: () => doRemoveSkill(sk.name),
+											}, t("skillDeleteConfirm").replace("{name}", sk.name))
+											: el("button", {
+												type: "button",
+												className: styles.trashBtn,
+												title: t("skillDelete"),
+												"aria-label": t("skillDelete"),
+												onClick: () => setConfirmSkillDelete(sk.name),
+											}, "✕")))))
+								: null))
+					: (state.status === "loading"
+						? el("p", { className: styles.status }, t("loading"))
+						: state.status === "error"
+							? el("div", { className: styles.detail },
+								el("p", { className: styles.status, "data-error": "true" }, t("error")),
+								el("button", { type: "button", className: styles.toggle, onClick: refresh }, t("retry")))
+							: state.data.entries.length === 0 && pendingCards.length === 0
+								? el("p", { className: styles.status }, t("empty"))
+								: installedQueryNorm !== "" && rows.length === 0
+									? el("p", { className: styles.status }, t("noMatch"))
+									// issue #22 ①：把「仅看可更新」筛空的话必须说清楚**是筛空的**，
+									// 否则用户看到空列表会以为插件没了（并给出取消筛选的办法）。
+									: onlyUpdatable && rows.length === 0
+										? el("p", { className: styles.status }, t("batchUpdateFilterEmpty"))
+										: extraOnly && rows.length === 0
+											? el("p", { className: styles.status }, t("extraEmpty"))
+											: el("ul", { className: styles.list }, rows)),
+				showBackTop
+					? el("button", {
+						type: "button",
+						className: styles.refresh,
+						title: t("refreshList"),
+						"aria-label": t("refreshList"),
+						onClick: refresh,
+					}, el("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.5, strokeLinecap: "round", strokeLinejoin: "round" },
+						el("path", { d: "M21 12a9 9 0 1 1-2.64-6.36" }),
+						el("polyline", { points: "21 3 21 9 15 9" })))
+					: null,
+				aiRemember
+					? el("div", { className: styles.descTopbar },
+						el("button", {
+							type: "button",
+							className: styles.toggle,
+							onClick: () => {
+								setAiRemember(false);
+								try { localStorage.setItem("pc-ai-remember", "0"); } catch {}
+								setMessage(t("aiRememberReset"));
+							},
+						}, t("aiRememberReset")))
+					: null,
+				(() => {
+					// 最上层模态框：需要 AI 兜底授权时无论如何都让用户看到
+					const consentJob = Object.values(jobs).find((job) => job.status === "installing" && job.stage === "ai-consent" && aiFallback && !aiRemember);
+					if (consentJob === undefined) return null;
+					// 倒计时与进度也放进模态框：用户在模态框上做决定，不用回去翻进度区
+					const remain = consentRemaining(consentJob);
+					const lastError = consentJob.aiConsent?.lastError ?? null;
+					const progressLine = progressText(consentJob.progress);
+					return el("div", { className: styles.modalBackdrop },
+						el("div", { className: styles.modalCard },
+							el("strong", { className: styles.name }, t("aiConsentCardTitle")),
+							el("p", { className: styles.message }, t("installingLocal") + "：" + (consentJob.packageName ?? consentJob.repo)),
+							progressLine !== "" ? el("p", { className: styles.progress }, progressLine) : null,
+							remain !== null
+								? el("p", { className: styles.message, "data-warn": "true" },
+									t("aiConsentCountdown") + " " + remain + " · " + t("aiConsentTimeoutNote").replace("{min}", consentTimeoutMinutes(consentJob)))
+								: null,
+							el("p", { className: styles.message }, t("aiConsentText")),
+							lastError !== null ? el("p", { className: styles.note }, t("aiConsentLastError") + "：" + lastError) : null,
+							el("label", { className: styles.consentRemember },
+								el("input", {
+									type: "checkbox",
+									checked: aiRemember,
+									onChange: (event) => {
+										const checked = event.target.checked;
+										setAiRemember(checked);
+										try { localStorage.setItem("pc-ai-remember", checked ? "1" : "0"); } catch {}
+									},
+								}),
+								t("aiConsentRemember")),
+							el("div", { className: styles.rowTop },
+								el("button", { type: "button", className: styles.consentApprove, onClick: () => { try { localStorage.setItem("pc-ai-remember", aiRemember ? "1" : "0"); } catch {} aiConsent(consentJob.jobId, true); } }, t("aiConsentApprove")),
+								el("button", { type: "button", className: styles.toggle, onClick: () => aiConsent(consentJob.jobId, false) }, t("aiConsentDecline")))));
+				})(),
+				sourcesOpen
+					? el("div", { className: styles.modalBackdrop },
+						el("div", { className: styles.modalCard },
+							el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+								el("strong", { className: styles.name }, t("sourcesTitle")),
+								el("button", { type: "button", className: styles.trashBtn, style: { fontSize: 14, padding: "4px 8px" }, title: t("closeModal"), "aria-label": t("closeModal"), onClick: () => setSourcesOpen(false) }, "✕")),
+							el("p", { className: styles.message }, t("sourcesDesc")),
+							sourcesData === null
+								? el("p", { className: styles.status }, t("loading"))
+								: sourcesData.error !== undefined
+									? el("div", null,
+										el("p", { className: styles.status }, t("safetySwitchFailed") + "：" + sourcesData.error),
+										el("button", { type: "button", className: styles.toggle, onClick: () => { setSourcesData(null); openSources(); } }, t("retry")))
+									: el("div", { className: styles.accWrap },
+									accSection("registries", t("sourcesBtn"), [
+									...sourcesData.registries.map((src) =>
+										editReg !== null && editReg.id === src.id
+											? el("div", { key: src.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("input", { type: "text", value: editReg.name, onChange: (event) => setEditReg({ ...editReg, name: event.target.value }), style: { flex: 1, minWidth: 80 } }),
+												el("input", { type: "text", value: editReg.url, onChange: (event) => setEditReg({ ...editReg, url: event.target.value }), style: { flex: 2, minWidth: 120 } }),
+												el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: saveEditReg }, t("saveSource")),
+												el("button", { type: "button", className: styles.toggle, onClick: () => setEditReg(null) }, t("cancelEdit")))
+											: el("div", { key: src.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("div", { className: styles.rowTop, style: { flex: 1, minWidth: 0 } },
+													el("strong", { className: styles.name, style: { flex: "none", maxWidth: "35%" } }, src.name + (src.primary ? "（" + t("sourcePrimary") + "）" : "")),
+													el("code", { className: styles.srcUrl }, src.url),
+													(() => {
+														const hit = scanOf(src.id);
+														if (hit === null) return null;
+														const title = hit.ok === true
+															? hit.url + " · " + hit.ms + "ms" + (hit.versions !== null ? " · " + hit.versions + " 个版本" : "") + (hit.latest === null ? " · " + t("registryScanNoVersion") : "")
+															: hit.url + " · " + (hit.error ?? t("registryScanFail")) + " · " + hit.ms + "ms";
+														return el("span", {
+															className: styles.tag,
+															"data-enabled": hit.ok === true ? "true" : undefined,
+															"data-bad": hit.ok === true ? undefined : "true",
+															title,
+														}, hit.ok === true
+															? "✓ " + hit.ms + "ms" + (hit.latest !== null ? " · v" + hit.latest : " · " + t("registryScanNoVersion"))
+															: "✗ " + (hit.error ?? t("registryScanFail")));
+													})()),
+												el("div", { className: styles.rowTop },
+													src.primary ? null : el("button", { type: "button", className: styles.toggle, title: t("setPrimaryHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "set-primary", id: src.id }) }, t("setPrimary")),
+													el("button", { type: "button", className: styles.toggle, title: t("editSourceHint"), disabled: sourcesBusy, onClick: () => setEditReg({ id: src.id, name: src.name, url: src.url }) }, t("editSource"))))),
+									el("div", { className: styles.rowTop },
+										el("input", { type: "text", placeholder: t("sourceName"), value: sourceName, onChange: (event) => setSourceName(event.target.value), style: { flex: 1, minWidth: 0 } }),
+										el("input", { type: "text", placeholder: t("sourceUrl"), value: sourceUrl, onChange: (event) => setSourceUrl(event.target.value), style: { flex: 2, minWidth: 0 } }),
+										el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: addSource }, t("addSource"))),
+									el("div", { className: styles.rowTop },
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											title: t("registryScanHint"),
+											disabled: regScan !== null && regScan.status === "scanning",
+											onClick: scanRegistries,
+										}, regScan !== null && regScan.status === "scanning" ? t("registryScanning") : t("registryScan")),
+										regScan !== null && regScan.status === "scanning" ? el("span", { className: styles.spinner }) : null,
+										regScan !== null && regScan.status === "ready"
+											? el("span", { className: styles.message },
+												t("registryScanSummary").replace("{ok}", String(scanOkCount)).replace("{total}", String(scanRows.length))
+												+ (scanBest !== null ? " · " + t("registryScanBest").replace("{version}", scanBest.latest).replace("{name}", scanBest.name) : ""))
+											: null),
+									]),
+									accSection("index", t("indexSourcesTitle"), [
+									el("p", { className: styles.message }, t("indexSourcesDesc")),
+									(sourcesData.indexSources ?? []).map((s) =>
+										editIndex !== null && editIndex.id === s.id
+											? el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("input", { type: "text", value: editIndex.name, onChange: (event) => setEditIndex({ ...editIndex, name: event.target.value }), style: { flex: 1, minWidth: 80 } }),
+												el("input", { type: "text", value: editIndex.url, onChange: (event) => setEditIndex({ ...editIndex, url: event.target.value }), style: { flex: 2, minWidth: 120 } }),
+												el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: saveEditIndex }, t("saveSource")),
+												el("button", { type: "button", className: styles.toggle, onClick: () => setEditIndex(null) }, t("cancelEdit")))
+											: el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("div", { className: styles.rowTop, style: { flex: 1, minWidth: 0 } },
+													el("strong", { className: styles.name, style: { flex: "none", maxWidth: "35%" } }, s.name + (s.primary ? "（" + t("sourcePrimary") + "）" : "")),
+													el("code", { className: styles.srcUrl }, s.url)),
+												el("div", { className: styles.rowTop },
+													s.primary ? null : el("button", { type: "button", className: styles.toggle, title: t("setPrimaryHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "set-index-primary", id: s.id }) }, t("setPrimary")),
+													el("button", { type: "button", className: styles.toggle, title: t("editSourceHint"), disabled: sourcesBusy, onClick: () => setEditIndex({ id: s.id, name: s.name, url: s.url }) }, t("editSource")),
+													el("button", { type: "button", className: styles.toggle, title: t("removeSourceHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "remove-index", id: s.id }) }, t("removeSource"))))),
+									el("div", { className: styles.rowTop },
+										el("input", { type: "text", placeholder: t("sourceName"), value: indexSourceName, onChange: (event) => setIndexSourceName(event.target.value), style: { flex: 1, minWidth: 0 } }),
+										el("input", { type: "text", placeholder: t("indexUrlPlaceholder"), value: indexSourceUrl, onChange: (event) => setIndexSourceUrl(event.target.value), style: { flex: 2, minWidth: 0 } }),
+										el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: addIndexSource }, t("addIndexSource"))),
+									el("div", { className: styles.rowTop },
+										el("button", {
+											type: "button",
+											className: styles.toggle,
+											"data-active": sourcesData.indexMerge === true ? "true" : "false",
+											title: t("indexMergeDesc"),
+											disabled: sourcesBusy,
+											onClick: () => sourcesAction({ action: "set-index-merge", merge: sourcesData.indexMerge !== true }),
+										}, t("indexMergeLabel") + "：" + (sourcesData.indexMerge === true ? t("on") : t("off")))),
+									el("p", { className: styles.message }, t("indexMergeDesc")),
+									]),
+									accSection("git", t("gitSourcesTitle"), [
+									el("p", { className: styles.message }, t("gitSourcesDesc")),
+									(sourcesData.gitSources ?? []).map((s) =>
+										editGit !== null && editGit.id === s.id
+											? el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("input", { type: "text", value: editGit.name, onChange: (event) => setEditGit({ ...editGit, name: event.target.value }), style: { flex: 1, minWidth: 80 } }),
+												el("input", { type: "text", value: editGit.urlTemplate, onChange: (event) => setEditGit({ ...editGit, urlTemplate: event.target.value }), style: { flex: 2, minWidth: 120 } }),
+												el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: saveEditGit }, t("saveSource")),
+												el("button", { type: "button", className: styles.toggle, onClick: () => setEditGit(null) }, t("cancelEdit")))
+											: el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("div", { className: styles.rowTop, style: { flex: 1, minWidth: 0 } },
+													el("strong", { className: styles.name, style: { flex: "none", maxWidth: "35%" } }, s.name + (s.primary ? "（" + t("sourcePrimary") + "）" : "")),
+													el("code", { className: styles.srcUrl }, s.urlTemplate)),
+												el("div", { className: styles.rowTop },
+													s.primary ? null : el("button", { type: "button", className: styles.toggle, title: t("setPrimaryHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "set-git-primary", id: s.id }) }, t("setPrimary")),
+													el("button", { type: "button", className: styles.toggle, title: t("editSourceHint"), disabled: sourcesBusy, onClick: () => setEditGit({ id: s.id, name: s.name, urlTemplate: s.urlTemplate }) }, t("editSource")),
+													el("button", { type: "button", className: styles.toggle, title: t("removeSourceHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "remove-git", id: s.id }) }, t("removeSource"))))),
+									el("div", { className: styles.rowTop },
+										el("input", { type: "text", placeholder: t("sourceName"), value: gitSourceName, onChange: (event) => setGitSourceName(event.target.value), style: { flex: 1, minWidth: 0 } }),
+										el("input", { type: "text", placeholder: t("gitUrlPlaceholder"), value: gitSourceUrl, onChange: (event) => setGitSourceUrl(event.target.value), style: { flex: 2, minWidth: 0 } }),
+										el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: addGitSource }, t("addGitSource"))),
+									]),
+									accSection("archive", t("archiveSourcesTitle"), [
+									el("p", { className: styles.message }, t("archiveSourcesDesc")),
+									(sourcesData.archiveSources ?? []).map((s) =>
+										editArchive !== null && editArchive.id === s.id
+											? el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("input", { type: "text", value: editArchive.name, onChange: (event) => setEditArchive({ ...editArchive, name: event.target.value }), style: { flex: 1, minWidth: 80 } }),
+												el("input", { type: "text", value: editArchive.urlTemplate, onChange: (event) => setEditArchive({ ...editArchive, urlTemplate: event.target.value }), style: { flex: 2, minWidth: 120 } }),
+												el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: saveEditArchive }, t("saveSource")),
+												el("button", { type: "button", className: styles.toggle, onClick: () => setEditArchive(null) }, t("cancelEdit")))
+											: el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+												el("div", { className: styles.rowTop, style: { flex: 1, minWidth: 0 } },
+													el("strong", { className: styles.name, style: { flex: "none", maxWidth: "35%" } }, s.name + (s.primary ? "（" + t("sourcePrimary") + "）" : "")),
+													el("code", { className: styles.srcUrl }, s.urlTemplate)),
+												el("div", { className: styles.rowTop },
+													s.primary ? null : el("button", { type: "button", className: styles.toggle, title: t("setPrimaryHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "set-archive-primary", id: s.id }) }, t("setPrimary")),
+													el("button", { type: "button", className: styles.toggle, title: t("editSourceHint"), disabled: sourcesBusy, onClick: () => setEditArchive({ id: s.id, name: s.name, urlTemplate: s.urlTemplate }) }, t("editSource")),
+													el("button", { type: "button", className: styles.toggle, title: t("removeSourceHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "remove-archive", id: s.id }) }, t("removeSource"))))),
+									el("div", { className: styles.rowTop },
+										el("input", { type: "text", placeholder: t("sourceName"), value: archiveSourceName, onChange: (event) => setArchiveSourceName(event.target.value), style: { flex: 1, minWidth: 0 } }),
+										el("input", { type: "text", placeholder: t("archiveUrlPlaceholder"), value: archiveSourceUrl, onChange: (event) => setArchiveSourceUrl(event.target.value), style: { flex: 2, minWidth: 0 } }),
+										el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: addArchiveSource }, t("addArchiveSource"))),
+									]),
+									accSection("search", t("searchSourcesTitle"), [
+									el("p", { className: styles.message }, t("searchSourcesDesc")),
+									(sourcesData.searchSources ?? []).map((s) =>
+										el("div", { key: s.id, className: styles.rowTop, style: { justifyContent: "space-between" } },
+											el("div", { className: styles.rowTop, style: { flex: 1, minWidth: 0 } },
+												el("strong", { className: styles.name, style: { flex: "none", maxWidth: "35%" } }, s.name),
+												s.type === "custom" ? el("code", { className: styles.srcUrl }, s.url) : el("span", { className: styles.tag }, "内置"),
+												s.type === "custom" && s.headers !== undefined && Object.keys(s.headers).length > 0
+													? el("span", { className: styles.tag, title: t("headersPlaceholder") }, "🔒 " + Object.keys(s.headers).length)
+													: null),
+											s.type === "custom"
+												? el("button", { type: "button", className: styles.toggle, title: t("removeSourceHint"), disabled: sourcesBusy, onClick: () => sourcesAction({ action: "remove-search", id: s.id }) }, t("removeSource"))
+												: null)),
+									el("div", { className: styles.rowTop },
+										el("input", { type: "text", placeholder: t("sourceName"), value: searchSourceName, onChange: (event) => setSearchSourceName(event.target.value), style: { flex: 1, minWidth: 0 } }),
+										el("input", { type: "text", placeholder: t("searchUrlPlaceholder"), value: searchSourceUrl, onChange: (event) => setSearchSourceUrl(event.target.value), style: { flex: 2, minWidth: 0 } }),
+										el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: addSearchSource }, t("addSearchSource"))),
+									el("textarea", {
+										rows: 2,
+										placeholder: t("headersPlaceholder"),
+										value: searchSourceHeaders,
+										onChange: (event) => setSearchSourceHeaders(event.target.value),
+										style: { width: "100%", boxSizing: "border-box", font: "inherit", resize: "vertical" },
+									}),
+									]),
+									accSection("gitee", t("giteeTitle"), [
+									el("p", { className: styles.message }, t("giteeDesc").replace("{port}", String(window.location.port || "3080"))),
+									el("div", { className: styles.rowTop, style: { justifyContent: "space-between" } },
+										el("span", { className: styles.tag },
+											giteeStatus !== null && giteeStatus.hasToken
+												? t("giteeLoggedIn") + (giteeStatus.login || "—")
+												: (giteeStatus !== null && giteeStatus.clientConfigured ? t("giteeSetupHint") : t("giteeLoginPrompt")))),
+									el("div", { className: styles.rowTop },
+										el("input", { type: "text", placeholder: t("giteeClientId"), value: giteeClientId, onChange: (event) => setGiteeClientId(event.target.value), style: { flex: 1, minWidth: 0 } }),
+										el("input", { type: "password", placeholder: t("giteeClientSecret"), value: giteeClientSecret, onChange: (event) => setGiteeClientSecret(event.target.value), style: { flex: 2, minWidth: 0 } }),
+										el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy || !giteeClientId.trim() || !giteeClientSecret.trim(), onClick: saveGiteeSetup }, t("giteeSave"))),
+									el("div", { className: styles.rowTop },
+										el("button", { type: "button", className: styles.toggle, disabled: giteeStatus !== null && !giteeStatus.clientConfigured, onClick: startGiteeOauth }, t("giteeLoginBtn")),
+										giteeStatus !== null && giteeStatus.hasToken
+											? el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: () => sourcesAction({ action: "gitee-clear" }) }, t("giteeClear"))
+											: null),
+									]),
+								),
+							el("div", { className: styles.rowTop },
+								el("button", { type: "button", className: styles.toggle, disabled: sourcesBusy, onClick: () => sourcesAction({ action: "reset" }) }, t("resetSources")),
+								el("button", { type: "button", className: styles.toggle, onClick: () => setSourcesOpen(false) }, t("closeModal")))))
+					: null,
+			);
+		}
+		// 「升级安全」入口（2026-09-24 按用户要求改造为**长按钮 + 抽屉**）：纯加法。
+		//   默认只渲染一个长按钮，点开右侧抽屉 —— 里面才是模式开关、状态、一键适配、补声明与各功能入口。
+		//   为什么不直接塞进「图2」那一页：那一页是第三方插件的 tab（@linxin666 的 family-plugins），
+		//   它没有开放任何子插槽；官方 settings.plugins.tab 的 owner props 也是空的（没有切兄弟 tab 的 API）。
+		//   所以做法是「就地抽屉」，而不是往别人的 DOM 里注入（注入会在对方更新时碎掉）。
+		//   原 tab（id=console）与悬浮面板一行未动。
+		/** 「建议动作」执行框（2026-09-27 加法，用户明确要求）：安装结果旁的一个**小**框 ——
+		* 一句短说明 + 等宽只读命令 + 「执行」「复制」+ 执行中状态 + 结果/错误回显 + 可关闭。
+		* 边界（与服务端同一条）：面板只发**结构化动作**（`suggestedAction.payload`），
+		* 命令字符串仅用于展示/复制；服务端只认白名单动作类型（见 domain/plugin-actions.js）。
+		* 只用既有 styles.*（detail / rowTop / phase / name / message / note / toggle / trashBtn），
+		* 不新增徽章、不新增独立面板 —— 长解释一律进悬浮 title。 */
+		function SuggestedActionBox({ job, t }) {
+			const [state, setState] = react.useState({ phase: "idle", text: null, level: null, title: null, closed: false });
+			// 2026-09-27 加法（选项 2）：第二个显式动作的状态（「允许这些构建脚本」）。
+			// 只在**执行结果**说明"pnpm 因构建脚本未获批准而报错"时才出现（服务端下发 state.nextAction）；
+			// 平时一个像素都不多占。
+			const [allow, setAllow] = react.useState({ phase: "idle", text: null, level: null, title: null });
+			// 2026-09-27 加法（0.5.26 修 F2）：第三个显式动作的状态（「覆盖该预设」）。
+			// 只在服务端下发的 suggestedAction.kind === "overwrite-preset" 时出现（默认装配只补不覆盖）。
+			const [overwrite, setOverwrite] = react.useState({ phase: "idle", text: null, level: null, title: null });
+			const action = job === null || job === undefined ? null : (job.suggestedAction ?? null);
+			if (action === null || typeof action.command !== "string" || state.closed === true) return null;
+			const running = state.phase === "running";
+			const label = action.kind === "pin-dependency" ? t("actionPinLabel")
+				: action.kind === "persist-plugin" ? t("actionPersistLabel")
+				: action.kind === "reconcile-lock" ? t("actionReconcileLabel")
+					: action.kind === "allow-builds" ? t("actionAllowLabel")
+						: action.kind === "overwrite-preset" ? t("actionOverwritePresetLabel")
+							: (typeof action.label === "string" && action.label !== "" ? action.label : String(action.kind ?? ""));
+			const allowAction = state.nextAction !== null && state.nextAction !== undefined && typeof state.nextAction === "object"
+				? state.nextAction
+				: (action.kind === "allow-builds" ? action : null);
+			const allowRunning = allow.phase === "running";
+			const overwriteRunning = overwrite.phase === "running";
+			const showAllow = allowAction !== null && typeof allowAction.command === "string" && allow.phase !== "done";
+			const run = () => {
+				if (running || action.payload === null || typeof action.payload !== "object") return;
+				setState({ phase: "running", text: t("actionRunning"), level: null, title: null, closed: false, nextAction: state.nextAction ?? null });
+				callAction(action.payload).then(
+					(done) => {
+						const verdict = done?.ok === true ? t("actionOk") : done?.partial === true ? t("actionPartial") : t("actionFailed");
+						const parts = [verdict];
+						if (typeof done?.reason === "string" && done.reason !== "") parts.push(done.reason);
+						// 服务端下发的 note（例如"已钉住，但 pnpm 因构建脚本未获批准而报错"）优先展示
+						if (Array.isArray(done?.notes) && done.notes.length > 0 && typeof done.notes[0] === "string") parts.push(done.notes[0]);
+						const raw = typeof done?.stderr === "string" && done.stderr.trim() !== "" ? done.stderr.trim() : "";
+						if (raw !== "") parts.push(raw.split("\n").slice(-1)[0]);
+						setState({
+							phase: done?.ok === true ? "done" : "error",
+							text: parts.join(" · "),
+							level: done?.ok === true ? null : "warn",
+							title: [done?.command, typeof done?.exitCode === "number" ? "exitCode=" + done.exitCode : null, done?.stdout, raw].filter((s) => typeof s === "string" && s !== "").join("\n") || null,
+							closed: false,
+							// 只有真的到了"构建脚本未获批准"这一步才把它带出来（老服务端没有这个字段 → null）
+							nextAction: done?.nextAction ?? null,
+						});
+					},
+					(error) => setState({ phase: "error", text: (error !== null && typeof error.message === "string" && error.message !== "" ? error.message : t("actionFailed")), level: "error", title: null, closed: false, nextAction: state.nextAction ?? null }),
+				);
+			};
+			const copy = () => {
+				if (copyToClipboard(action.command)) setState({ ...state, text: t("actionCopied"), level: null, title: null });
+			};
+			// 「允许这些构建脚本」：同样是**结构化动作**（只发 nextAction.payload），服务端自己改文件；
+			// 面板绝不拼命令、也不碰 profile。
+			const runAllow = () => {
+				if (allowRunning || allowAction === null || typeof allowAction.payload !== "object" || allowAction.payload === null) return;
+				setAllow({ phase: "running", text: t("actionRunning"), level: null, title: null });
+				callAction(allowAction.payload).then(
+					(done) => {
+						const verdict = done?.ok === true ? t("actionAllowOk") : t("actionAllowFailed");
+						const parts = [verdict, typeof done?.reason === "string" ? done.reason : null, Array.isArray(done?.notes) ? done.notes[0] : null].filter((s) => typeof s === "string" && s !== "");
+						setAllow({
+							phase: done?.ok === true ? "done" : "error",
+							text: parts.join(" · "),
+							level: done?.ok === true ? null : "warn",
+							title: [done?.file, Array.isArray(done?.added) && done.added.length > 0 ? t("actionAllowLabel") + "：" + done.added.join("、") : null,
+								typeof done?.sha256Before === "string" ? "sha256 " + String(done.sha256Before).slice(0, 12) + " → " + String(done.sha256After ?? "").slice(0, 12) : null,
+								typeof done?.backup === "string" ? t("actionAllowBackup") + "：" + done.backup : null].filter((s) => typeof s === "string" && s !== "").join("\n") || null,
+						});
+					},
+					(error) => setAllow({ phase: "error", text: (error !== null && typeof error.message === "string" && error.message !== "" ? error.message : t("actionAllowFailed")), level: "error", title: null }),
+				);
+			};
+			// 「覆盖该预设」：同样是**结构化动作**（只发 action.payload），服务端自己重新取源码 + 备份 + 覆盖 + 读回核实；
+			// 面板绝不拼命令、也绝不碰 .agent-presets。
+			const runOverwrite = () => {
+				if (overwriteRunning || action.payload === null || typeof action.payload !== "object") return;
+				setOverwrite({ phase: "running", text: t("actionRunning"), level: null, title: null });
+				callAction(action.payload).then(
+					(done) => {
+						const verdict = done?.ok === true ? t("actionOverwritePresetOk") : t("actionOverwritePresetFailed");
+						const parts = [verdict, typeof done?.reason === "string" ? done.reason : null, Array.isArray(done?.notes) && done.notes.length > 0 ? done.notes[0] : null].filter((s) => typeof s === "string" && s !== "");
+						setOverwrite({
+							phase: done?.ok === true ? "done" : "error",
+							text: parts.join(" · "),
+							level: done?.ok === true ? null : "warn",
+							title: [done?.file,
+								Array.isArray(done?.overwritten) && done.overwritten.length > 0 ? t("actionOverwritePresetLabel") + "：" + done.overwritten.join("、") : null,
+								typeof done?.backup === "string" ? t("actionAllowBackup") + "：" + done.backup : null].filter((s) => typeof s === "string" && s !== "").join("\n") || null,
+						});
+					},
+					(error) => setOverwrite({ phase: "error", text: (error !== null && typeof error.message === "string" && error.message !== "" ? error.message : t("actionOverwritePresetFailed")), level: "error", title: null }),
+				);
+			};
+			return el("div", { className: styles.detail, "data-suggested-action": String(action.kind ?? "") },
+				el("div", { className: styles.rowTop },
+					el("span", { className: styles.phase }, t("actionBoxTitle")),
+					el("strong", { className: styles.name, title: t("actionLongTitle") }, label),
+					el("button", {
+						type: "button", className: styles.trashBtn, title: t("closeModal"), "aria-label": t("closeModal"),
+						onClick: () => setState({ phase: "idle", text: null, level: null, title: null, closed: true, nextAction: null }),
+					}, "✕")),
+				el("code", {
+					className: styles.note,
+					title: t("actionLongTitle"),
+					style: { fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace", fontSize: "12px", wordBreak: "break-all", userSelect: "text" },
+				}, action.command),
+				el("div", { className: styles.rowTop },
+					el("button", { type: "button", className: styles.toggle, disabled: running, onClick: run }, running ? t("actionRunning") : t("actionRun")),
+					el("button", { type: "button", className: styles.toggle, onClick: copy }, t("actionCopy")),
+					// ★ 选项 2 的第二个动作：只在这个场景出现，文案短句 + 悬浮长解释（中英各一份）
+					showAllow
+						? el("button", { type: "button", className: styles.toggle, "data-allow-builds": "true", title: t("actionAllowLong"), disabled: allowRunning, onClick: runAllow }, allowRunning ? t("actionRunning") : t("actionAllowLabel"))
+						: null,
+					// ★ 0.5.26 加法（修 F2）：预设装配**默认只补不覆盖**，出现同名冲突时多出这一个按钮。
+					// 与上面同一个模式：只发结构化 payload（服务端自己重新取源码 + 备份 + 覆盖 + 读回核实），
+					// 面板绝不拼命令、也绝不写 .agent-presets。
+					action.kind === "overwrite-preset" && overwrite.phase !== "done"
+						? el("button", { type: "button", className: styles.toggle, "data-overwrite-preset": String(action.payload?.presetName ?? ""), title: t("actionOverwritePresetLong"), disabled: overwriteRunning, onClick: runOverwrite }, overwriteRunning ? t("actionRunning") : t("actionOverwritePresetLabel"))
+						: null,
+					el("span", {
+						className: styles.message,
+						"data-warn": state.level === "warn" ? "true" : undefined,
+						"data-error": state.level === "error" ? "true" : undefined,
+						title: state.title === null ? undefined : state.title,
+					}, state.text ?? "")),
+				allow.text === null ? null : el("div", { className: styles.rowTop },
+					el("span", {
+						className: styles.message,
+						"data-warn": allow.level === "warn" ? "true" : undefined,
+						"data-error": allow.level === "error" ? "true" : undefined,
+						title: allow.title === null ? undefined : allow.title,
+					}, allow.text)),
+				overwrite.text === null ? null : el("div", { className: styles.rowTop },
+					el("span", {
+						className: styles.message,
+						"data-warn": overwrite.level === "warn" ? "true" : undefined,
+						"data-error": overwrite.level === "error" ? "true" : undefined,
+						title: overwrite.title === null ? undefined : overwrite.title,
+					}, overwrite.text)));
+		}
+
+		function PluginSafetyTab({ t }) {
+			const [open, setOpen] = react.useState(false);
+			const [status, setStatus] = react.useState(null);
+			const [busy, setBusy] = react.useState(false);
+			const [note, setNote] = react.useState(null);
+			const [section, setSection] = react.useState(null);
+			const [backfill, setBackfill] = react.useState(null);
+			// 2026-09-27 加法：依赖锁体检结果（null = 还没体检过；不自动跑，用户点「体检」才打接口）
+			const [lockFix, setLockFix] = react.useState(null);
+			// ★ 0.5.54 加法：link 开发式安装清单（/links，纯只读）。
+			//   过去 link 钉住的插件与普通插件长得一模一样 —— 看不出指向哪、目标还在不在、
+			//   依赖/peer 齐不齐、垫片还在不在。这份清单让"看见"先成立。
+			const [links, setLinks] = react.useState(null);
+			// ★ 0.5.58：link 可视化默认**收起**（用户 2026-10-17 要求）——
+			//   这块信息量大但不常用，展开着会把「升级安全」面板顶长，反而让人找不到东西。
+			const [linksOpen, setLinksOpen] = react.useState(false);
+			// ★ 0.5.57：开发区根 + 钉住输入（用户决定：允许注册自己的根；不允许任意目录；agent 钉住需勾选、默认关）
+			const [devRoots, setDevRoots] = react.useState([]);
+			const [rootInput, setRootInput] = react.useState("");
+			const [pinInput, setPinInput] = react.useState("");
+			const [pinNote, setPinNote] = react.useState(null);
+			const [allowAgent, setAllowAgent] = react.useState(false);
+			// ★ 0.5.84 加法（用户第 7 项）：磁盘体检 / 清理的状态与两个动作。
+			//   判据全在服务端（domain/disk-audit.js）：面板只展示服务端给的 level 与体积，
+			//   并且**必须**经过「先要计划（不带 confirm）→ 再确认（confirm:true）」两步。
+			const [diskAudit, setDiskAudit] = react.useState(null);
+			const [diskPlan, setDiskPlan] = react.useState(null);
+			const [diskBusy, setDiskBusy] = react.useState(false);
+			const [diskNote, setDiskNote] = react.useState(null);
+			// ★ 加法（用户 2026-11-04 第 2 项；2026-11-05 位置调整）：**「自更新」/「立即检查」两颗按钮
+			//   从「功能包」工具栏搬到这一排跳转按钮的末尾**（用户原话：可移除功能包，位置放在「AI 部署」之后；
+			//   全仓只有这一份，不许再回工具栏）。业务判据**一行都没有重写**：
+			//     · 状态只读 `/plugin-console/state` 的 `selfAutoUpdate` 那一段（字段缺失 ⇒ 按开启**显示**，
+			//       但绝不因为"没读到"就写回一个值）；
+			//     · 写只走既有路由 `POST /plugin-console/self-auto-update`（`toggle` / `check`）；
+			//     · 纯函数沿用模块级的 selfAutoUpdateEnabledOf / …LastCheckOf / …LastResultOf / selfUpdateOutcomeText。
+			const [selfUpdateInfo, setSelfUpdateInfo] = react.useState(null);
+			const [selfUpdateBusy, setSelfUpdateBusy] = react.useState(false);
+			const selfUpdateEnabled = selfAutoUpdateEnabledOf(selfUpdateInfo);
+			/** 「上次检查时间 / 上次结果」两行 —— 拿不到就是「—」，不编造（两个 title 共用这一份）。 */
+			const selfUpdateLastText = () => t("selfUpdateLastCheck") + "：" + selfAutoUpdateLastCheckOf(selfUpdateInfo, t("selfUpdateNever"))
+				+ "\n" + t("selfUpdateLastResult") + "：" + selfAutoUpdateLastResultOf(selfUpdateInfo, t);
+			const selfUpdateTitleText = () => t("selfUpdateAria") + "\n" + selfUpdateLastText();
+			const selfUpdateCheckTitleText = () => t("selfUpdateCheckHint") + "\n" + selfUpdateLastText();
+			/** 只取需要的那一段（`/state` 很大，本组件不关心别的）；读不到 ⇒ 保持 null（= 默认开启 +「—」），不编造。 */
+			const selfUpdateViewOf = (data) => (data !== null && data !== undefined && data.selfAutoUpdate !== null && data.selfAutoUpdate !== undefined ? data.selfAutoUpdate : null);
+			const loadSelfUpdate = async () => {
+				try {
+					setSelfUpdateInfo(selfUpdateViewOf(await call("/plugin-console/state")));
+				} catch { /* 只读没拿到 ⇒ 继续显示「—」；写请求照样能点（服务端才是判据），失败会把原文念出来 */ }
+			};
+			/** 失败一律念服务端原文（`call()` 抛的 message 就是 `data.error`），拿不到原文才退回一句短语。 */
+			const selfUpdateFailText = (error, fallbackKey) => t("safetySwitchFailed") + "："
+				+ ((error !== null && error !== undefined && typeof error.message === "string" && error.message !== "") ? error.message : t(fallbackKey));
+			const selfUpdateToggle = async () => {
+				if (selfUpdateBusy) return;
+				const next = !selfUpdateEnabled;
+				setSelfUpdateBusy(true);
+				setNote({ text: t("selfUpdateSaving") }); // 点了先有反应（随后由结果替换）
+				try {
+					const data = await call("/plugin-console/self-auto-update", { action: "toggle", enabled: next });
+					const view = selfUpdateViewOf(data);
+					if (view !== null) setSelfUpdateInfo(view); // 以服务端回读为准（不拿自己的 next 冒充结果）
+					const nowOn = view !== null ? view.enabled === true : next;
+					setNote({ text: (nowOn ? t("selfUpdateOn") : t("selfUpdateOff")) + (data !== null && data !== undefined && typeof data.note === "string" && data.note !== "" ? "（" + data.note + "）" : "") });
+				} catch (error) { setNote({ text: selfUpdateFailText(error, "selfUpdateLabel") }); }
+				finally { setSelfUpdateBusy(false); }
+			};
+			// 「立即检查」：与定时器同一条路（服务端单飞，正在跑时直接回 skipped:'busy'）
+			const selfUpdateCheckNow = async () => {
+				if (selfUpdateBusy) return;
+				setSelfUpdateBusy(true);
+				setNote({ text: t("selfUpdateChecking") });
+				try {
+					const data = await call("/plugin-console/self-auto-update", { action: "check" });
+					const view = selfUpdateViewOf(data);
+					if (view !== null) setSelfUpdateInfo(view);
+					setNote({ text: selfUpdateOutcomeText(data !== null && data !== undefined ? (data.check === undefined ? null : data.check) : null, t) });
+				} catch (error) { setNote({ text: selfUpdateFailText(error, "selfUpdateCheckLabel") }); }
+				finally { setSelfUpdateBusy(false); }
+			};
+			const diskCheck = async () => {
+				if (diskBusy) return;
+				setDiskBusy(true); setDiskNote(null); setDiskPlan(null);
+				try {
+					const data = await call("/plugin-console/disk-audit"); // 只读：无 body ⇒ GET
+					setDiskAudit(data ?? null);
+					if (data !== null && data.ok === true) setDiskNote({ text: fill(t("diskSummary"), [["mb", String(data.totalMb ?? 0)], ["n", String((data.entries ?? []).length)], ["safe", String(data.safeMb ?? 0)], ["reclaim", String(data.reclaimableMb ?? 0)]]) + (data.truncated === true ? "（统计已截断）" : ""), level: null });
+				} catch (error) { setDiskNote({ text: String((error && error.message) || error), level: "error" }); }
+				finally { setDiskBusy(false); }
+			};
+			// confirm=false ⇒ 服务端**只回计划**（一个文件都不动）；confirm=true 才会真删。
+			const diskCleanup = async (confirm) => {
+				if (diskBusy) return;
+				setDiskBusy(true); setDiskNote(null);
+				try {
+					const ids = confirm && diskPlan !== null && Array.isArray(diskPlan.ids) && diskPlan.ids.length > 0
+						? diskPlan.ids
+						: (diskAudit !== null && Array.isArray(diskAudit.entries) ? diskAudit.entries.filter((x) => x.level === "safe").map((x) => x.id) : []);
+					const data = await call("/plugin-console/disk-cleanup", { ids: ids, confirm: confirm === true });
+					if (data !== null && data.needsConfirm === true) {
+						// 第一步的回报：把计划（哪些项 / 能省多少）留下，等用户点「确认清理」
+						const plan = data.plan ?? {};
+						setDiskPlan({ ids: (plan.plan ?? []).map((p) => p.id), freedMb: plan.freedMb ?? 0 });
+						setDiskNote({ text: fill(t("diskPlanReady"), [["n", String((plan.plan ?? []).length)], ["mb", String(plan.freedMb ?? 0)]]) + ((plan.refused ?? []).length === 0 ? "" : " · 已拒绝 " + plan.refused.length + " 项"), level: null });
+					} else if (data !== null) {
+						setDiskPlan(null);
+						setDiskNote({ text: String(data.note ?? t("diskDone")), level: data.ok === true ? null : "error" });
+						await diskCheck(); // 删完重新体检，让面板显示真实的新体积
+					}
+				} catch (error) { setDiskNote({ text: String((error && error.message) || error), level: "error" }); }
+				finally { setDiskBusy(false); }
+			};
+			const load = async () => {
+				try {
+					// link 清单：独立 try（拿不到时这块显示"读取失败"，绝不静默）
+				try { const lk = await call("/plugin-console/links"); if (lk !== null) setLinks(lk); } catch {}
+				try { const dr = await call("/plugin-console/dev-roots", { action: "list" }); if (dr !== null && Array.isArray(dr.roots)) setDevRoots(dr.roots); } catch {}
+				const data = await call("/plugin-console/compat-status");
+					if (data !== null) {
+						setStatus(data);
+						// 0.5.32 加法（D1/D4/D5）：**瞬时提示**，沿用既有 note 通道（自动消失、无新组件、无按钮）。
+						// 文案由服务端下发（中英双语短句）：「已自动切观察者」/「框架变化，已自动预检」/「已自动禁用 N 行」。
+						// 语言选择复用既有 i18n：t() 在中文下取键名本身（sentinel），在英文下取字典值。
+						const isEn = t("safetyUnknown") !== "safetyUnknown";
+						const pick = (pair) => (pair === null || pair === undefined ? null : (isEn ? (pair.en || pair.zh) : (pair.zh || pair.en)));
+						const auto = data.autoDisable && data.autoDisable.notice ? pick(data.autoDisable.notice) : null;
+						if (typeof auto === "string" && auto !== "") setNote({ text: auto });
+						else if (typeof data.autoPreflight?.note?.zh === "string" && data.autoPreflight.changed === true && data.autoPreflight.scheduled !== true) setNote({ text: pick(data.autoPreflight.note) });
+						else if (data.modeAuto) setNote({ text: pick(data.modeAuto.note) });
+					}
+				} catch {}
+			};
+			// 依赖锁体检：**只读**接口，不打任何写操作
+			const lockCheck = async () => {
+				if (busy) return;
+				setBusy(true);
+				try {
+					const data = await call("/plugin-console/lockfile-check", {});
+					setLockFix(data ?? null);
+					setNote({ text: data?.hint ?? t("safetySwitchFailed") });
+				} catch (error) { setNote({ text: (error && error.message) || t("safetySwitchFailed") }); }
+				finally { setBusy(false); }
+			};
+			// 重建 lock：**必须由用户点**（服务端也只认显式 POST）；失败如实说，不假装成功
+			const lockRepair = async () => {
+				if (busy) return;
+				setBusy(true);
+				try {
+					const done = await call("/plugin-console/lockfile-repair", {});
+					const text = done?.action === "repaired" ? t("safetyLockRepaired")
+						: done?.action === "blocked" ? fill(t("safetyLockBlocked"), [["pkgs", (done.packages ?? []).join("、") || "—"]])
+							: done?.action === "noop" ? t("safetyLockNoRebuild")
+								: t("safetyLockRepairPartial");
+					setNote({ text: text + (typeof done?.hint === "string" ? t("diagColon") + done.hint : "") });
+					const again = await call("/plugin-console/lockfile-check", {}).catch(() => null);
+					if (again !== null && again !== undefined) setLockFix(again);
+				} catch (error) { setNote({ text: (error && error.message) || t("safetySwitchFailed") }); }
+				finally { setBusy(false); }
+			};
+			const loadBackfill = async () => {
+				try { const data = await call("/plugin-console/declare-installed", { mode: "plan" }); if (data !== null) setBackfill(data); } catch {}
+			};
+			// loadSelfUpdate 只是**只读**取数（`/state.selfAutoUpdate`），挂载时读一次；不在这里发任何写请求。
+			react.useEffect(() => { ensureSafetyStyle(); load(); loadSelfUpdate(); loadBackfill(); }, []);
+			const switchMode = async (mode) => {
+				if (busy) return;
+				setBusy(true);
+				try {
+					await call("/plugin-console/compat-mode", { mode: mode });
+					setNote({ text: mode === "observer" ? t("safetyModeObserverOn") : t("safetyModeManagedOn") });
+					await load();
+				} catch (error) { setNote({ text: (error && error.message) || t("safetySwitchFailed") }); }
+				finally { setBusy(false); }
+			};
+			const ack = async () => {
+				try { await call("/plugin-console/compat-stamp", {}); await load(); setNote({ text: t("safetyFpAcked") }); } catch {}
+			};
+			const preflight = async (apply) => {
+				if (busy) return;
+				setBusy(true);
+				setNote({ text: t("fwPreflightRunning") });
+				try {
+					const pre = await call("/plugin-console/framework-preflight", {});
+					const blockers = (pre && pre.scan && pre.scan.blockers) || 0;
+					if (!apply || blockers === 0) {
+						const planned = await call("/plugin-console/framework-preflight-patch", { mode: "plan" });
+						const n = (planned && planned.changes && planned.changes.length) || 0;
+						setNote({ text: blockers === 0 ? t("fwPreflightClean") : fill(t("safetyPreflightFound"), [["n", n || blockers]]) });
+					} else {
+						const done = await call("/plugin-console/framework-preflight-patch", { mode: "apply" });
+						const n = (done && done.changes && done.changes.length) || 0;
+						setNote({ text: fill(t("safetyPreflightPatched"), [["n", n]]) });
+					}
+				} catch (error) { setNote({ text: (error && error.message) || t("safetySwitchFailed") }); }
+				finally { setBusy(false); }
+			};
+			const applyBackfill = async () => {
+				if (busy) return;
+				setBusy(true);
+				try {
+					const done = await call("/plugin-console/declare-installed", { mode: "apply" });
+					setNote({ text: (done && done.note) || t("safetyBackfillDone") });
+					await loadBackfill();
+				} catch (error) { setNote({ text: (error && error.message) || t("safetySwitchFailed") }); }
+				finally { setBusy(false); }
+			};
+			const fill = (text, pairs) => {
+				let out = String(text);
+				for (const pair of pairs) out = out.split("{" + pair[0] + "}").join(String(pair[1]));
+				return out;
+			};
+			// 图标：16px 线条 SVG（用户反馈：emoji 当 logo 太差）
+			const stroke = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round", style: { flex: "0 0 auto", opacity: .8, marginTop: "2px" } };
+			const ICONS = {
+				shield: "M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z",
+				pin: "M12 17v4M7 4h10l-1 6 3 3H5l3-3z",
+				back: "M11 19l-7-7 7-7M4 12h11a5 5 0 015 5v1",
+				scan: "M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2M9 12h6",
+				list: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+				pulse: "M3 12h4l2-5 4 10 2-5h6"
+			};
+			const icon = (key) => el("svg", stroke, el("path", { d: ICONS[key] || ICONS.shield }));
+			const row = (key, title, desc, control, descTitle) => el("div", { style: { display: "flex", alignItems: "flex-start", gap: "10px", padding: "10px 12px" } },
+				icon(key),
+				el("div", { style: { flex: "1 1 auto", minWidth: "0" } },
+					el("div", { style: { fontSize: "13px", fontWeight: 500 } }, title),
+					el("div", { style: { fontSize: "12px", opacity: .7, marginTop: "2px", wordBreak: "break-word" }, title: descTitle === undefined ? undefined : descTitle }, desc)),
+				control === undefined || control === null ? null : control);
+			const sw = (on, onClick, title) => el("button", { type: "button", title: title, onClick: onClick, disabled: busy, style: { width: "40px", height: "22px", borderRadius: "999px", border: "none", padding: 0, cursor: busy ? "default" : "pointer", background: on ? "var(--dsw-alias-bg-accent, #4d6bfe)" : "var(--dsw-alias-bg-secondary, rgba(127,127,127,.35))", position: "relative", flex: "0 0 auto", marginTop: "2px" } },
+				el("span", { style: { position: "absolute", top: "3px", left: on ? "21px" : "3px", width: "16px", height: "16px", borderRadius: "50%", background: "#fff", transition: "left .18s cubic-bezier(.34,1.56,.64,1)" } }));
+			const jump = (id, label) => el("button", { key: id, type: "button", className: styles.toggle, style: { marginRight: "8px", marginBottom: "8px" }, onClick: () => setSection((prev) => (prev === id ? null : id)) }, label);
+			const mode = status !== null && status.mode === "observer" ? "observer" : status !== null && status.mode === "managed" ? "managed" : "observer";
+			const fp = status !== null && status.fingerprint !== null && status.fingerprint !== undefined ? status.fingerprint : {};
+			const rb = status !== null && status.rollback !== null && status.rollback !== undefined ? status.rollback : {};
+			const fw = status !== null && typeof status.frameworkVersion === "string" && status.frameworkVersion !== "" ? status.frameworkVersion : t("safetyUnknown");
+			const pending = backfill !== null && typeof backfill.count === "number" ? backfill.count : 0;
+			// 触发条：默认只看到这一行（点开在**原地**展开，功能包那种下拉，不走右侧固定抽屉）
+			// 收起/展开：收起时**清掉就地分区**，否则再展开时内嵌控制台会重新挂载并把上次那个面板自动打开一遍
+			// （用户实测：点过「框架升级/回滚」→ 关掉弹窗 → 收起 → 再展开，弹窗又自己弹出来了）
+			const toggleOpen = () => {
+				if (open) { setOpen(false); setSection(null); } else { setOpen(true); }
+			};
+			const trigger = el("button", { type: "button", "aria-expanded": open ? "true" : "false", onClick: toggleOpen, style: { width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "12px", border: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", background: "var(--dsw-alias-bg-layer-4, rgba(127,127,127,.10))", cursor: "pointer", textAlign: "left", color: "inherit" } },
+				icon("shield"),
+				el("div", { style: { flex: "1 1 auto", minWidth: "0" } },
+					el("div", { style: { fontSize: "13px", fontWeight: 500 } }, t("safetyTab")),
+					el("div", { style: { fontSize: "12px", opacity: .7, marginTop: "2px" } }, (mode === "observer" ? t("safetyModeObserverShort") : t("safetyModeManagedShort")) + " · " + fw + (pending > 0 ? " · " + fill(t("safetyBackfillShort"), [["n", pending]]) : ""))),
+				el("span", { style: { opacity: .5, flex: "0 0 auto", transform: open ? "rotate(90deg)" : "none", transition: "transform .2s cubic-bezier(.34,1.56,.64,1)" } }, el("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" }, el("path", { d: "M9 6l6 6-6 6" }))));
+			const panel = el("div", { className: "pc-safety-panel", style: { marginTop: "8px", padding: "8px", borderRadius: "12px", border: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", background: "var(--dsw-alias-bg-layer-4, rgba(127,127,127,.10))", display: "flex", flexDirection: "column", gap: "4px" } },
+				row("shield", t("safetyMode"), mode === "observer" ? t("safetyModeObserver") : t("safetyModeManaged") + (status !== null && typeof status.modeReason === "string" && status.modeReason !== "" ? "（" + status.modeReason + "）" : ""), sw(mode === "observer", () => switchMode(mode === "observer" ? "managed" : "observer"), t("safetyModeSwitch"))),
+				row("pin", t("safetyFrameworkTitle"), fill(t("safetyFrameworkDesc"), [["v", fw]])),
+				// ★ 0.5.53：外壳托管时回滚点是**点了会被拒**的（409），这里按同一份事实标成"不可用"
+				// 并把原因说出来，而不是显示"可用"让人撞墙。
+				row("back", t("safetyRollbackTitle"), status !== null && status?.host?.hosted === true
+					? fill(t("safetyRollbackNone"), [["reason", status?.host?.notice ?? t("hostedNoChannel")]])
+					: (rb.applicable === true ? fill(t("safetyRollbackOk"), [["from", rb.from], ["to", rb.to]]) : fill(t("safetyRollbackNone"), [["reason", rb.reason === null || rb.reason === undefined ? "-" : rb.reason]]))),
+				// ★ 0.5.58：折叠头（默认收起）。摘要行始终可见，点开才展开两块明细。
+				el("button", {
+					type: "button",
+					style: { display: "flex", alignItems: "center", gap: "6px", width: "100%", marginTop: "6px", paddingTop: "6px", borderTop: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", background: "none", border: "none", borderTopWidth: "1px", borderTopStyle: "solid", borderTopColor: "var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", color: "inherit", cursor: "pointer", fontSize: "12px", fontWeight: 500, textAlign: "left" },
+					"aria-expanded": linksOpen ? "true" : "false",
+					title: t("linksToggleTitle"),
+					onClick: () => setLinksOpen((v) => !v),
+				},
+					el("span", { style: { transform: linksOpen ? "rotate(90deg)" : "none", transition: "transform .2s", display: "inline-block" } }, "▸"),
+					el("span", null, links === null
+						? t("linksToggleBtn")
+						: fill(t("linksToggleSummary"), [["n", String(links.count ?? 0)], ["ready", String(links.readyCount ?? 0)]]))),
+				// ★ 0.5.54 加法：开发式链接（link）清单 —— 每行给出目标、版本、自足性与垫片。
+				//   判据全部来自服务端 /links（纯只读）；这里只负责如实展示，不推断、不美化。
+				links !== null && Array.isArray(links.items) && links.items.length > 0
+					? el("div", { style: { display: linksOpen ? "flex" : "none", flexDirection: "column", gap: "2px", marginTop: "4px", paddingTop: "4px", borderTop: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))" } },
+							el("div", { style: { fontSize: "12px", fontWeight: 500 } }, fill(t("linksTitle"), [["n", String(links.count ?? links.items.length)], ["ready", String(links.readyCount ?? 0)]])),
+							...links.items.map((x) => el("div", { key: x.packageName, title: x.note ?? undefined, style: { fontSize: "12px", marginLeft: "10px", opacity: .85, wordBreak: "break-all" } },
+								(x.ready === true ? "✓ " : "• ") + x.packageName + (x.version ? " v" + x.version : "")
+									+ (x.target ? "  → " + x.target : "")
+									+ (Array.isArray(x.missingDeps) && x.missingDeps.length > 0 ? "  · 缺依赖 " + x.missingDeps.length : "")
+									+ (Array.isArray(x.missingPeers) && x.missingPeers.length > 0 ? "  · 缺 peer " + x.missingPeers.length : "")
+									+ (Array.isArray(x.foreignPeers) && x.foreignPeers.length > 0 ? "  · 异副本 " + x.foreignPeers.length : "")
+									+ (x.shims !== null && x.shims !== undefined ? "  · 垫片 " + String(x.shims.count ?? 0) : "")
+									+ (x.persisted !== null && x.persisted !== undefined && x.persisted.ok === false ? "  · 未持久化" : ""))))
+
+					: (links !== null && links.ok === false
+						? el("div", { style: { fontSize: "12px", marginTop: "4px", opacity: .8 } }, t("linksFailed") + "：" + String(links.error ?? "-"))
+						: null),
+				// ★ 0.5.57：开发区根与"按路径钉住" —— 把协作开发流真正接通。
+				//   规矩全部由服务端执行（domain/dev-roots.js 是"不许任意目录"的唯一执行点），
+				//   这里只负责：先规划给人看 → 再让人确认 → 才真写。
+				el("div", { style: { display: linksOpen ? "flex" : "none", flexDirection: "column", gap: "4px", marginTop: "6px", paddingTop: "6px", borderTop: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))" } },
+					el("div", { style: { fontSize: "12px", fontWeight: 500 } }, t("devRootsTitle")),
+					el("div", { style: { fontSize: "12px", opacity: .8, marginLeft: "10px", wordBreak: "break-all" } }, devRoots.length === 0 ? t("devRootsNone") : devRoots.join("  ·  ")),
+					el("div", { style: { display: "flex", gap: "6px", marginLeft: "10px", flexWrap: "wrap" } },
+						el("input", {
+							type: "text", value: rootInput, placeholder: t("devRootAddPlaceholder"),
+							style: { flex: "1 1 240px", minWidth: "180px", fontSize: "12px", padding: "3px 6px" },
+							onChange: (e) => setRootInput(e.target.value),
+						}),
+						el("button", {
+							type: "button", className: styles.toggle, disabled: busy || rootInput.trim() === "",
+							onClick: async () => {
+								setBusy(true); setPinNote(null);
+								try {
+									const r = await call("/plugin-console/dev-roots", { action: "add", dir: rootInput.trim() });
+									if (r !== null) { setRootInput(""); setPinNote({ text: t("devRootAdded"), level: null }); await load(); }
+								} catch (error) { setPinNote({ text: String(error && error.message || error), level: "error" }); }
+								setBusy(false);
+							},
+						}, t("devRootAddBtn"))),
+					el("div", { style: { display: "flex", gap: "6px", marginLeft: "10px", flexWrap: "wrap" } },
+						el("input", {
+							type: "text", value: pinInput, placeholder: t("pinDirPlaceholder"),
+							style: { flex: "1 1 280px", minWidth: "200px", fontSize: "12px", padding: "3px 6px" },
+							onChange: (e) => setPinInput(e.target.value),
+						}),
+						// ③ 用户决定：agent 自动钉住要勾选、**默认关闭**
+						el("label", { style: { fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }, title: t("pinAllowAgentTitle") },
+							el("input", { type: "checkbox", checked: allowAgent, onChange: (e) => setAllowAgent(e.target.checked) }),
+							t("pinAllowAgent")),
+						el("button", {
+							type: "button", className: styles.toggle, disabled: busy || pinInput.trim() === "",
+							onClick: async () => {
+								setBusy(true); setPinNote(null);
+								try {
+									// 第一段：只规划，把"将要发生什么"给人看（人性化：不让人闭眼点）
+									const plan = await call("/plugin-console/pin-dev-dir", { dir: pinInput.trim(), confirm: false, allowAgent });
+									if (plan !== null && plan.ok === true) {
+										setPinNote({ text: fill(t("pinPlanReady"), [["name", String(plan.packageName)], ["v", String(plan.version ?? "?")]]) + " → " + (plan.steps || []).join("；"), level: null });
+									}
+								} catch (error) { setPinNote({ text: String(error && error.message || error), level: "error" }); }
+								setBusy(false);
+							},
+						}, t("pinPlanBtn")),
+						el("button", {
+							type: "button", className: styles.toggle, disabled: busy || pinInput.trim() === "",
+							onClick: async () => {
+								setBusy(true); setPinNote(null);
+								try {
+									// 第二段：真写（备份清单 → link: → pnpm 对齐 → 自足性 → 读回验证）
+									const r = await call("/plugin-console/pin-dev-dir", { dir: pinInput.trim(), confirm: true, allowAgent });
+									if (r !== null) { setPinNote({ text: fill(t("pinDone"), [["name", String(r.packageName ?? pinInput.trim())]]), level: null }); setPinInput(""); await load(); }
+								} catch (error) { setPinNote({ text: String(error && error.message || error), level: "error" }); }
+								setBusy(false);
+							},
+						}, t("pinApplyBtn"))),
+					pinNote === null ? null : el("div", { style: { fontSize: "12px", marginLeft: "10px", color: pinNote.level === "error" ? "#d33" : "inherit", wordBreak: "break-word" } }, pinNote.text)),
+				row("scan", t("safetyFpTitle"), fp.changed === true ? fill(t("safetyFpChanged"), [["reasons", (fp.reasons || []).join("；")]]) : t("safetyFpStable"), fp.changed === true ? el("button", { type: "button", className: styles.toggle, onClick: ack, disabled: busy }, t("safetyFpAck")) : null),
+				row("list", t("safetyBackfillTitle"), pending > 0 ? fill(t("safetyBackfillDesc"), [["n", pending]]) : t("safetyBackfillNone"), pending > 0 ? el("button", { type: "button", className: styles.toggle, disabled: busy, onClick: applyBackfill }, fill(t("safetyBackfillBtn"), [["n", pending]])) : null),
+				// 依赖锁体检 / 重建（2026-09-27 加法）：体检只读；重建必须用户点（服务端也只认显式 POST）。
+				// 面板只放短句，服务端的长 hint 挂 title 悬浮提示（与安装诊断同一约定）。
+				row("scan", t("safetyLockTitle"),
+					lockFix === null ? t("safetyLockDesc")
+						: lockFix.ok === true ? t("safetyLockOk")
+							: fill(t("safetyLockBad"), [["n", (lockFix.problems ?? []).length]])
+								+ ((lockFix.packages404 ?? []).length === 0 ? "" : " · " + lockFix.packages404.join("、")),
+					el("div", { style: { display: "flex", gap: "8px", flex: "0 0 auto" } },
+						el("button", { type: "button", className: styles.toggle, disabled: busy, title: t("safetyLockDesc"), onClick: lockCheck }, t("safetyLockCheckBtn")),
+						lockFix !== null && lockFix.repair?.applicable === true
+							? el("button", { type: "button", className: styles.toggle, disabled: busy, title: lockFix.repair?.command ?? "", onClick: lockRepair }, t("safetyLockRepairBtn"))
+							: null),
+					lockFix !== null && lockFix.ok !== true && Array.isArray(lockFix.problems) && lockFix.problems.length > 0
+						? lockFix.problems.map((p) => p.hint).join("\n")
+						: undefined),
+				// ★ 0.5.84 加法（用户第 7 项）：`<DSH_HOME>/plugin-console` 的**磁盘体检 + 显式确认后清理**。
+				//   两段式（不让人闭眼点）：先「磁盘体检」（GET /disk-audit，纯只读）→ 再「清理安全项」
+				//   （POST /disk-cleanup，**不带 confirm** ⇒ 服务端只回计划）→ 最后「确认清理」（confirm:true）。
+				//   哪些能删、哪些绝不能删**全由服务端判**（domain/disk-audit.js）：真机实测最大的 2.1 GB
+				//   恰恰是当前回滚点指向的备份，面板不自己按体积猜。
+				row("trash", t("diskTitle"),
+					diskAudit === null ? t("diskDesc")
+						: diskAudit.ok !== true ? t("diskFailed") + "：" + String(diskAudit.error ?? "-")
+							: fill(t("diskSummary"), [["mb", String(diskAudit.totalMb ?? 0)], ["n", String((diskAudit.entries ?? []).length)], ["safe", String(diskAudit.safeMb ?? 0)], ["reclaim", String(diskAudit.reclaimableMb ?? 0)]]),
+					el("div", { style: { display: "flex", gap: "8px", flex: "0 0 auto" } },
+						el("button", { type: "button", className: styles.toggle, disabled: busy || diskBusy, title: t("diskDesc"), onClick: diskCheck }, t("diskCheckBtn")),
+						diskAudit !== null && diskAudit.ok === true && (diskAudit.safeBytes ?? 0) > 0
+							? el("button", { type: "button", className: styles.toggle, disabled: busy || diskBusy, title: t("diskSafeHint"), onClick: () => diskCleanup(false) }, t("diskCleanupBtn"))
+							: null,
+						diskPlan !== null
+							? el("button", { type: "button", className: styles.toggle, disabled: busy || diskBusy, title: t("diskConfirmHint"), onClick: () => diskCleanup(true) }, fill(t("diskConfirmBtn"), [["mb", String(diskPlan.freedMb ?? 0)]]))
+							: null),
+					diskAudit !== null && diskAudit.ok === true && Array.isArray(diskAudit.entries)
+						? diskAudit.entries.filter((x) => x.level !== "protected").slice(0, 6)
+							.map((x) => (x.level === "safe" ? "✓ " : "! ") + x.name + "  " + x.mb + " MB").join("\n") || t("diskNoCandidate")
+						: undefined),
+				diskNote === null ? null : el("div", { style: { fontSize: "12px", padding: "0 12px 6px", color: diskNote.level === "error" ? "#d33" : "inherit", wordBreak: "break-word" } }, diskNote.text),
+				row("pulse", t("safetyAdaptTitle"), t("safetyAdaptDesc"), el("div", { style: { display: "flex", gap: "8px", flex: "0 0 auto" } },
+					el("button", { type: "button", className: styles.toggle, disabled: busy, onClick: () => preflight(false) }, t("fwPreflightBtn")),
+					el("button", { type: "button", className: styles.toggle, disabled: busy, onClick: () => preflight(true) }, t("fwPreflightPatch")))),
+				note === null ? null : el("div", { style: { fontSize: "12px", opacity: .8, padding: "0 12px 6px" } }, note.text),
+				el("div", { style: { padding: "4px 12px 2px" } },
+					jump("market", t("safetyJumpMarket")),
+					jump("skills", t("safetyJumpSkills")),
+					jump("framework", t("safetyJumpFramework")),
+					jump("gate", t("safetyJumpGate")),
+					jump("sources", t("safetyJumpSources")),
+					jump("ai", t("safetyJumpAi")),
+					// ★ 加法（位置调整）：这两颗**就在「AI 部署」之后**（用户红笔位置），与上面那排跳转按钮
+					//   同一个 className + 同一套内边距（不引入新样式体系）；「功能包」工具栏里已经没有了。
+					//   点一下就有反应：写请求期间 disabled + 省略号 + note 里一句「进行中」；失败念服务端原文。
+					el("button", {
+						type: "button",
+						className: styles.toggle,
+						style: { marginRight: "8px", marginBottom: "8px" },
+						"data-active": selfUpdateEnabled ? "true" : "false",
+						"data-busy": selfUpdateBusy ? "true" : "false",
+						disabled: selfUpdateBusy,
+						title: selfUpdateTitleText(),
+						"aria-label": t("selfUpdateAria"),
+						onClick: () => selfUpdateToggle(),
+					}, t("selfUpdateLabel") + (selfUpdateEnabled ? " ✓" : "") + (selfUpdateBusy ? " …" : "")),
+					el("button", {
+						type: "button",
+						className: styles.toggle,
+						style: { marginRight: "8px", marginBottom: "8px" },
+						"data-busy": selfUpdateBusy ? "true" : "false",
+						disabled: selfUpdateBusy,
+						title: selfUpdateCheckTitleText(),
+						"aria-label": t("selfUpdateCheckHint"),
+						onClick: () => selfUpdateCheckNow(),
+					}, t("selfUpdateCheckLabel") + (selfUpdateBusy ? " …" : ""))),
+				section === null ? null : el("div", { style: { margin: "4px 12px 8px", borderTop: "1px solid var(--dsw-alias-border-secondary, rgba(127,127,127,.18))", paddingTop: "10px" } },
+					el(PluginConsoleTab, { t: t, section: section, key: section })));
+			return el("div", null, trigger, open ? panel : null);
+		}
+		// 「功能包」那种就地展开的 Q 弹动画（一次性注入，不依赖外部 CSS）
+		function ensureSafetyStyle() {
+			try {
+				if (typeof document === "undefined" || document.querySelector("style[data-pc-safety]") !== null) return;
+				const tag = document.createElement("style");
+				tag.dataset.pcSafety = "1";
+				tag.textContent = "@keyframes pcSafetyPop{0%{opacity:0;transform:translateY(-6px) scaleY(.96)}60%{opacity:1;transform:translateY(0) scaleY(1.02)}100%{transform:translateY(0) scaleY(1)}}.pc-safety-panel{animation:pcSafetyPop .28s cubic-bezier(.34,1.56,.64,1);transform-origin:top center}";
+				document.head.appendChild(tag);
+			} catch {}
+		}
+		function apply(ctx) {
+			// ★ 0.5.87：探测宿主有没有系统目录对话框（桌面端外壳有、web 端没有）。
+			//   主面板据此决定**是否渲染**「浏览…」—— 没有就根本不存在这个按钮，
+			//   而不是摆一个点了没反应的（用户 2026-10-18 明确要求）。
+			directoryPicker = detectDirectoryPicker();
+			ctx.effect(() => ctx.locale.register(NS, { zh, en }), "plugin-console: dictionaries");
+			const t = ctx.locale.bind(NS);
+			ctx.slots.inject("settings.plugins.tab", () => ctx.slots.register({
+				name: "settings.plugins.tab",
+				id: "console",
+				order: 20,
+				label: () => t("tab"),
+				locale: NS,
+				inject: () => ({}),
+			}, PluginConsoleTab));
+			// 「升级安全」入口：注册进**官方插件管理页自己的子插槽**（2026-09-24 落点更正）。
+			// 官方页 @deepseek-ai/dsh-client-ui-plugin-manager 占 main + sidebar.panellist，
+			// 并声明了 children 子插槽；其中 `plugins.bundle.config` 按**包名**挂该 bundle 的配置卡片：
+			//   渲染点 = renderSlot("plugins.bundle.config", { view: "page" }, { entryKey: pkg.name })
+			//   且仅当 configured = ledger.bundles.has(pkg.name) 为真 —— 我们是 profile bundle，天然满足。
+			// 所以入口长在那一页「已安装 → 我们的 bundle」详情里，用的是官方容器与官方风格，不是 DOM 注入。
+			// 之前那个独立的「升级安全」tab 已按用户要求关闭（错误落点不占位）；原 tab(id=console) 一行未动。
+			//
+			// 老框架兼容（2026-09-25 用户提问后加固）：`plugins.bundle.config` 是**官方插件管理页声明的子插槽**，
+			// 老版本框架里可能根本不存在这个插槽。此时绝不能让它把一个异常抛到 apply() 外面 —— 那样会连带
+			// 把上面那个「插件」tab 一起拖没（前端半边整个 pending/异常）。这里包一层 try/catch：
+			// 插槽不存在 → 只是这个新入口不显示，其余功能（含原 tab）照常。
+			try {
+				ctx.slots.inject("plugins.bundle.config", () => ctx.slots.register({
+					name: "plugins.bundle.config",
+					key: "@noob-stupid/dsh-plugin-console",
+					locale: NS,
+					inject: () => ({}),
+				}, PluginSafetyTab));
+			} catch (error) {
+				// 静默降级：老框架没有该子插槽属预期情况，不该在用户控制台里刷错误
+				ctx.logger?.debug?.("plugin-console: plugins.bundle.config 插槽不可用，已跳过「升级安全」入口", error)
+			}
+		}
+		exports.NS = NS;
+		exports.apply = apply;
+		exports.inject = inject;
+		// 仅测试用导出（tests/test-plugin-actions.mjs 的离线渲染断言：用假 React 真渲染这个组件，
+		// 断言"有/无 suggestedAction、执行中、成功、失败、中英切换"五种情形的 DOM 结构）。
+		exports.SuggestedActionBox = SuggestedActionBox;
+		// 仅测试用导出（tests/test-adapt-unlock-gate.mjs ①-2：断言「已适配，立即解锁」按钮的门控判据，
+		// 以及它必须与卡片正文用同一个判据）。
+		exports.canAdaptUnlock = canAdaptUnlock;
+		// 仅测试用导出（tests/test-links-actions-ui.mjs：假 React **真渲染**主面板，断言 link 面板
+		// 的按钮按服务端结论出现/不出现、「浏览…」只在宿主提供目录对话框时存在、钉住是两段式）。
+		exports.PluginConsoleTab = PluginConsoleTab;
+		// 仅测试用导出（tests/test-safety-self-update-ui.mjs：假 React **真渲染**「升级安全」面板，
+		// 断言「自更新／立即检查」两颗按钮在跳转行末尾、功能包工具栏里已经没有、点一下真的发 POST、
+		// 进行中禁用、失败念原文、字段缺失不写回）。
+		exports.PluginSafetyTab = PluginSafetyTab;
+		// 仅测试用导出（同上：断言「宿主有没有系统目录对话框」这条探测本身）。
+		exports.detectDirectoryPicker = detectDirectoryPicker;
+		return module.exports;
+	}
+	});

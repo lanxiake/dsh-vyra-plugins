@@ -1,0 +1,58 @@
+/* DSH Plugin Hub — the community plugin marketplace for DeepSeek Harness.
+ * Website: https://dsh-plugin.org
+ * GitHub: https://github.com/dshplugin/dsh-plugin-hub
+ *
+ * 设置行用的开关：小号 34×18 轨道 + 滑动圆钮。关 = 中性细线轨道；开 = 品牌填充。
+ * 尺寸贴合紧凑的设置行高（18px，输入行是 28px），让标签垂直居中且无多余留白。 */
+
+.toggle,
+.toggleOn {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: 34px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.toggle {
+  background: var(--hub-bg-3);
+  box-shadow: inset 0 0 0 1px var(--hub-border-2);
+}
+
+.toggle:hover {
+  background: var(--hub-bg-hover);
+}
+
+.toggleOn {
+  background: var(--hub-brand);
+}
+
+.toggleOn:hover {
+  background: var(--hub-brand-hover);
+}
+
+.toggle:disabled,
+.toggleOn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.knob {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+  transform: translateX(2px);
+}
+
+.toggleOn .knob {
+  transform: translateX(18px);
+}

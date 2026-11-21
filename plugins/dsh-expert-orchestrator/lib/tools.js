@@ -1,0 +1,2286 @@
+// 自有召唤工具（v2.3）：list_experts / summon_expert / summon_experts
+//
+// 参考实现：MichengAI/dsh-agency-agents src/index.ts（精读结论见
+// docs/expert-tools-design.md）。与 Agency 的差异：
+// - 数据源 = 合并花名册（merged/roster.json）+ roster-aliases.json 惯用名映射
+//   + custom 伪来源（v2.2）；无 division 概念，分组维度为来源 ID；
+// - toolFilter 递归防护（dsh-expert-293 系列回炉后的现行语义）：deny 只传宿主
+//   全局层确证名（子代理 spawn 侧 restrict 校验集的可靠子集）；宿主提供 schemas()
+//   枚举面时叠加 allow=全局层−递归防护清单，把 subagent/subagent_fork/workflow/
+//   ralph 等派生面做成对被召唤专家全通道不可见（枚举面缺失时退回 deny-only，
+//   派生面执法由宿主 maxDepth=1 深度熔断兜底）；
+// - 注册失败降级为 console.error：本插件还承担 preset 部署职责，不因工具
+//   注册失败而崩溃循环（Agency 是 fail-fast，此处刻意偏离）。
+import { basename, join } from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { execFile } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { getExpertContent } from './index.js'
+import { FILE_LAYER_SOURCE_ID, globalExpertsDir, projectExpertsDir, loadFileExperts, readFileLayerPersona, resolveFileExpert } from './expert-files.js'
+import { globalProfilesPath, loadExpertProfiles, profileForExpert, projectProfilesPath, resolveExpertModel, resolveRoutePref } from './expert-profiles.js'
+import { checkOriginChain, originChainEnabled, renderOriginChainMarker } from './origin-chain.js'
+import { acquireCwdWriteLock } from './cwd-lock.js'
+import { createOscillationDetector, oscillationEnabled, oscillationThreshold } from './oscillation.js'
+import { createSummonFailLoopDetector, summonFailLoopEnabled, summonFailLoopThreshold } from './fail-loop.js'
+import { preflightEffort } from './effort-preflight.js'
+import { budgetMaybeEnabled, budgetNoticeFromEnvelope } from './budget.js'
+import { createCostLedger, tokenBudgetTokens, costBudgetHint, formatTokenScale, estimateTokens } from './cost.js'
+import { makeRecorder as makeRouteTelemetry } from './route-telemetry.js'
+import { msg } from './messages.js'
+import { idleReclaimEnabled, selectIdleReclaimTasks, IDLE_RECLAIM_MAX_TASKS, IDLE_RECLAIM_OWNER } from './idle-reclaim.js'
+// T3 ③（dsh-expert-alpha4）：agentPreset（preset 组合）通道——per-summon Agent
+// Preset 挂载/选择（persona + 工具组合副本 + 全局层收窄经 preset 交付）。
+import {
+  buildPresetChannelToolFilter,
+  createSummonPresetCache,
+  createSummonPresetRefs,
+  ensureSummonPreset,
+  releaseSummonPreset,
+} from './summon-preset.js'
+
+// defineTool 来自 @deepseek-ai/dsh-tools（peerDependencies 声明，宿主环境经
+// pnpm auto-install-peers 可解析）。开发/沙箱环境解析失败时降级为恒等包装
+// ——descriptor 原样交给 ctx.tools.register（真实宿主用真实 defineTool）。
+let defineTool = (d) => d
+try {
+  ({ defineTool } = await import('@deepseek-ai/dsh-tools'))
+} catch {
+  console.warn('[dsh-expert-orchestrator] @deepseek-ai/dsh-tools not resolvable — using identity defineTool fallback')
+}
+
+const SUMMON_CONCURRENCY = 4
+/** 单条任务的 Unicode 码点上限（与 Agency 一致）。 */
+const SUMMON_TASK_MAX_CHARS = 8000
+const MAX_PERSONA_CHARS = 100000
+/** 每专家经验池注入预算上限（P1）。 */
+const EXPERT_LESSON_MAX_CHARS = 2000
+const EXPERT_LESSONS_DIRNAME = 'expert-lessons'
+const EXPERT_METHODS_DIRNAME = 'expert-methods'
+/** persona 深读区分隔标记（P2）：标记之前 = 注入子代理的瘦 persona。 */
+const METHODS_CUT_MARKER = '<!-- methods-cut -->'
+const CUSTOM_SOURCE_ID = 'custom'
+const CORE_SOURCE_ID = 'bundled-core'
+
+/** 递归防护 deny 清单：召唤工具 + 通用派生工具。
+ *  维护约定：新增任何可派生子代理的工具时必须同步本表，否则开出递归侧门。
+ *  dsh-expert-293 T2 回炉新增 ralph（源码实证 dsh-tool-ralph 0.2.1-alpha.2：
+ *  lib/index.js:301 工具名 "ralph"；:331 ctx.workflowEngine.start 每轮 spawn
+ *  全新子代理，且 dsh-workflow-ptc startChild 不传 maxDepth——与 workflow 同为
+ *  绕过 tool-subagent maxDepth 熔断的派生面，必须一并收走可见性）。
+ *  执法语义（dsh-expert-296 T1 回退终版）：本清单是「意图名单」，不是直接下发名单
+ *  ——deny 只下发自全局层确证的子集（filterRestrictableTools，2.9.5 真机恒 3 名
+ *  召唤工具）。2.9.5 曾在 schemas() 枚举面可用时把清单整体转入 allow 白名单
+ *  （buildRecursionAllowList），实机即炸：插件 ctx 全局 schemas() 视域看不到
+ *  preset 组合层核心工具（read/write/edit/bash/glob/grep/web/todo/skill 全部
+ *  缺失），allow 白名单把被召唤专家的核心工作工具全通道遮蔽，主委派通道实质
+ *  不可用——2.9.6 起回退为 deny-only（2.9.3 稳定语义），派生名的执法退回宿主
+ *  maxDepth=1 深度熔断（2.9.3/2.9.5 两轮真机实证有效）。 */
+export const EXPERT_TOOLS_DENY_LIST = Object.freeze([
+  'list_experts',
+  'summon_expert',
+  'summon_experts',
+  'subagent',
+  'subagent_fork',
+  'workflow',
+  'ralph',
+])
+
+/** 宿主 restrictableNames 动态求交（T26 #21，WP-7 ③）：deny 列表与宿主 restrictableNames
+ *  动态求交）：宿主 ToolRuntime 对 restrict() 只收「已注册的全局工具名」，本函数按可用
+ *  seam 求出该名字集合——① tools.schemas() 枚举面（一次性批量，最权威；返回空数组视为
+ *  不可用——空枚举若照信会把 deny 清成空集，fail-safe 保守回退）；② 逐名 get() 探测
+ *  （T9 缺陷 A 既有机制，seam 缺 schemas 时仍可用）；③ 两者皆缺 → names: null（调用方
+ *  原样传递，退回宿主报错，不静默）。导出供自测。
+ *  dsh-expert-294 回炉终版：只读**全局视域**——schemas()/get(name) 无参调用在
+ *  dsh-tools 里就是全局视域（dsh-tools 0.2.1-alpha.2 lib/index.js:3021/:2994
+ *  「omitted = the global view」）。2.9.4 曾对召唤者 agent scope（exec.agent）开
+ *  scope=显式参数的视域面，真机即炸：召唤者视域（view(exec.agent).visible）包含
+ *  召唤者 own 层与其更高祖先层（GUI 会话 preset generation 等）的工具——如
+ *  subagent——而子代理 spawn 侧 restrict 的校验集是 view(child).restrictableNames
+ *  （lib/index.js:2904），只含全局层 ∪ preset generation 层（view() 只把
+ *  inherited 计入 restrictableNames，own 层豁免；子代理经 composeFrom→bind
+ *  （dsh-agent-preset-registry lib/index.js:701/:654-680）把 scope 父重绑到
+ *  preset generation key，召唤者链上更高层与其 own 层都不在子代理链上）。
+ *  「召唤者可见」与「子代理可 restrict」是两个集合，而 schemas/get 这条 seam 读的
+ *  visible 无法区分 own 层与 generation 层归属——所以唯一可靠的执法规则是：
+ *  只有全局层确证的名字才允许进入 toolFilter。 */
+export function hostRestrictableNames(ctx) {
+  if (typeof ctx?.tools?.schemas === 'function') {
+    try {
+      const names = (ctx.tools.schemas() ?? [])
+        .map((s) => s?.name)
+        .filter((n) => typeof n === 'string' && n)
+      if (names.length > 0) return { mode: 'schemas', names }
+    } catch { /* 枚举面异常 → 逐名探测兜底 */ }
+  }
+  if (typeof ctx?.tools?.get === 'function') return { mode: 'probe', names: null }
+  return { mode: 'none', names: null }
+}
+
+/** 收集 summon 发射时可用的「已注册名」探测面（dsh-expert-293 T1 起；T2 的 scope
+ *  面被 dsh-expert-294 回炉剔除，见 hostRestrictableNames 注）。
+ *  返回 [{ kind:'schemas', names:Set } | { kind:'get', get:fn }, ...]；全部不可用 → []。
+ *  面 = 插件 ctx 的全局视域（hostRestrictableNames）：全局层确证 ⊆ 任何子代理
+ *  scope 的 restrictableNames（dsh-tools view() 从 global 层起算 inherited，
+ *  lib/index.js:2960-2970），这是「restrict 不炸」的充分条件。
+ *  导出供自测。 */
+export function restrictProbeFaces(ctx) {
+  const faces = []
+  const host = hostRestrictableNames(ctx)
+  if (host.mode === 'schemas') faces.push({ kind: 'schemas', names: new Set(host.names) })
+  else if (host.mode === 'probe') faces.push({ kind: 'get', get: (name) => ctx.tools.get(name) })
+  return faces
+}
+
+/** 递归防护 deny 名单按宿主实际注册过滤（T9 缺陷 A）：宿主 tools.restrict()
+ *  对未知名直接抛错（dsh-tools lib/index.js:2904-2906 校验
+ *  view(scope).restrictableNames），而部署差异可能使名单含宿主未注册的工具名。
+ *
+ *  dsh-expert-294 回炉终版（真机回归修复）：2.9.4 的召唤者 scope 视域面把
+ *  「召唤者可见但子代理不可 restrict」的名字（实机现场：subagent）放进了 deny，
+ *  宿主 restrict() 校验即抛 `names unknown global tool "subagent"`，summon 全体
+ *  派发被拒。本版只保留全局视域面——单面判定语义：
+ *  - 全局面确证已注册 → 保留（全局层 ⊆ 子代理 restrictableNames，不炸）；
+ *  - 全局面确证未注册 → 剔除 + console.warn（边界②：宿主真不认识的名字必须
+ *    收窄，否则 spawn 时 restrict() names unknown 直接炸）；
+ *  - 探测异常 → 保守保留（探测失败≠未注册，退回宿主裁决，不静默放宽）；
+ *  - 完全没有探测缝（schemas/get 双缺）→ 原样传递（退回宿主报错，不静默）。
+ *  代价（如实声明，2.9.3/2.9.5 两轮已实证的已知限制）：只存在于召唤者更高祖先层/
+ *  own 层或 preset generation 层的名字（真机现场：subagent 与 workflow/ralph/
+ *  subagent_fork）不进 deny——派生面执法由宿主 maxDepth=1 深度熔断承担。曾以
+ *  allow 白名单补全执法（2.9.5 P1），因插件 ctx 全局 schemas() 视域看不到 preset
+ *  组合层核心工具、白名单一发即遮蔽被召唤专家全部核心工作工具，已于
+ *  dsh-expert-296 T1 回退为 deny-only（残余管控与复用条件见
+ *  buildRecursionAllowList 停用注）。
+ *  run_code 防护：宿主 restrict() 对保留 PTC 传输名直接抛错（dsh-tools
+ *  lib/index.js:2903），且该名在 PTC 非原生模式下就在 visible 里
+ *  （lib/index.js:2977）——探测面会确证它「已注册」，必须在此显式剔除。
+ *  label 仅影响告警文案（deny/allow 共用同一探测纪律；#19 档案 tools.allow 白名单
+ *  同样经本函数过滤）。导出供自测。 */
+export function filterRestrictableTools(ctx, names, label = 'deny') {
+  const faces = restrictProbeFaces(ctx)
+  if (faces.length === 0) return [...names]
+  return names.filter((name) => {
+    if (name === 'run_code') {
+      console.warn(`[dsh-expert-orchestrator] toolFilter ${label} 跳过保留 PTC 传输名 run_code（宿主 restrict 拒收）`)
+      return false
+    }
+    let definitive = false
+    for (const face of faces) {
+      try {
+        if (face.kind === 'schemas') {
+          if (face.names.has(name)) return true
+        } else if (face.get(name) !== undefined) {
+          return true
+        }
+        definitive = true // 该面给出确定性「未注册」结论（异常面不计）
+      } catch { /* 单面异常 → 本轮该面不可信，由其他面兜底 */ }
+    }
+    if (!definitive) return true // 所有面均异常 → 保守保留（防护优先）
+    console.warn(`[dsh-expert-orchestrator] toolFilter ${label} 跳过宿主未注册的工具：${name}`)
+    return false
+  })
+}
+
+/** dsh-expert-294 回炉 P1：递归防护 allow 名单（workflow/ralph 旁路的不可见执法）。
+ *  【停用（dsh-expert-296 T1，保留本体不删）】本函数已退出全部调用路径。停用原因
+ *  （2.9.5 真机实证）：allow 视域出自插件 ctx 的无参 schemas() 全局枚举，该视域
+ *  看不到 preset 组合层的核心工具（read/write/edit/bash/glob/grep/web/todo/skill
+ *  全部缺失，实测 allow 仅 34 名 = MCP 连接器类 + working_directory）——allow 白
+ *  名单一发即把被召唤专家的核心工作工具全通道遮蔽，主委派通道实质不可用。
+ *  可复用条件（届时在 resolveProfileEffect 与 summon 派发两处恢复调用并复跑用例）：
+ *  宿主提供「子代理工具级遮蔽缝」——枚举/探测视域完整覆盖将被 allow 遮蔽的全部
+ *  inherited 层（全局层 ∪ preset generation 层 ∪ 调用方 own 层的可见性剪除），
+ *  即视域 ⊇ 核心工具全集时，方可重新接入，否则回退 deny-only。
+ *
+ *  宿主 schemas() 全局枚举面可用 → 返回「全局层注册名 − 递归防护清单 − run_code」；
+ *  否则返回 null（调用方退回 deny-only，不做假修复）。
+ *  源码级依据（dsh-tools 0.2.1-alpha.2 lib/index.js）：
+ *  - allow 对全部 inherited 工具生效：view() 只把「每个链上层都 admits」的
+ *    inherited 名放进 visible（:2968-2971），inherited = 全局层 ∪ preset
+ *    generation 层——preset 作用域派生工具（subagent/subagent_fork/workflow/ralph）
+ *    不在 allow 即不可见；子代理 own 层豁免（:2973-2976），结构化输出等子代理
+ *    自有机制不受 allow 遮蔽（dsh-subagent attachStructuredRuntime 装在 child own 层）。
+ *  - 校验集 ⊇ 全局层：restrict() 校验 view(scope).restrictableNames（:2904）=
+ *    全局层 ∪ generation 层（:2967-2970 只计 inherited），allow ⊆ 全局层必过。
+ *  - 空 allow 语义坑：admits() 对空 allow 集把全部 inherited 判为不可见
+ *    （:2642-2645），且 restrict({}) 双缺会抛错（:2898）——求交后为空必须返回
+ *    null 退回 deny-only，绝不发空 allow。
+ *  - run_code 是保留 PTC 传输名，restrict 拒收（:2903），且 PTC 非原生模式下就在
+ *    全局 visible 里（:2977）——必须从枚举结果显式剔除。
+ *  行为代价（如实声明）：allow 是白名单语义，generation 层上不属于全局层的
+ *    全部工具（含将来新增的 preset 级工具）对被召唤专家一并不可见。
+ *  导出供自测。 */
+export function buildRecursionAllowList(ctx) {
+  const host = hostRestrictableNames(ctx)
+  if (host.mode !== 'schemas') return null
+  const hidden = new Set([...EXPERT_TOOLS_DENY_LIST, 'run_code'])
+  const allow = host.names.filter((n) => !hidden.has(n))
+  return allow.length > 0 ? allow : null
+}
+
+const norm = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '')
+
+function readJsonFile(path) {
+  if (!existsSync(path)) return null
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
+/** 导出供自测（test/tools.selftest.mjs）：正常 / 文件缺失 / 损坏 JSON 语义。 */
+export function loadRoster(dst) {
+  return readJsonFile(join(dst, 'expert-sources', 'merged', 'roster.json'))
+}
+
+/** 导出供自测（test/tools.selftest.mjs）：正常 / 文件缺失 / 损坏 JSON 语义。 */
+export function loadAliases(dst) {
+  return readJsonFile(join(dst, 'skills', 'expert-orchestration', 'roster-aliases.json'))
+}
+
+function loadCustomExperts(dst) {
+  return readJsonFile(join(dst, 'expert-sources', 'custom-experts.json'))
+}
+
+/** roster.json → 可召唤候选（core + 各来源 files；剔除 shadowed——同名非代表
+ *  副本不可召唤，代表才是该专家）。custom 伪来源条目同样进入候选。 */
+export function rosterCandidates(roster) {
+  const out = []
+  for (const e of roster?.core ?? []) {
+    if (!e || typeof e.file !== 'string') continue
+    out.push({
+      source: e.source ?? CORE_SOURCE_ID,
+      file: e.file,
+      name: e.name ?? null,
+      title: e.title ?? null,
+      shadowed: false,
+      disabled: !!e.disabled,
+    })
+  }
+  for (const s of roster?.sources ?? []) {
+    for (const e of s.files ?? []) {
+      if (!e || typeof e.file !== 'string') continue
+      out.push({
+        source: e.source ?? s.id,
+        file: e.file,
+        name: e.name ?? null,
+        title: e.title ?? null,
+        shadowed: !!e.shadowed,
+        disabled: !!e.disabled,
+      })
+    }
+  }
+  return out
+}
+
+/** 『来源名/原名』形态解析（审计 2026-11-10：报错承诺的消歧语法此前无解析通道，
+ *  死语法重试 14 天 10 次浪费）。query 含 '/' 时按**首个** '/' 拆分：两侧 trim、
+ *  name 侧去尾部 `.md`（大小写不敏感）。真实失败样本三形态全兼容——
+ *  `bundled-core/code-reviewer`、`bundled-core/code-reviewer.md`、
+ *  `bundled-core / devops-engineer.md`（斜杠两侧带空格）。无 '/' 或拆后
+ *  source/name 出现空串 → null（非本形态，交回既有通道）。导出供自测。 */
+export function parseSourceName(query) {
+  if (typeof query !== 'string' || !query.includes('/')) return null
+  const i = query.indexOf('/')
+  const source = query.slice(0, i).trim()
+  let name = query.slice(i + 1).trim()
+  if (!source || !name) return null
+  name = name.replace(/\.md$/i, '')
+  return name ? { source, name } : null
+}
+
+/** roster-aliases 空格不敏感回退匹配（审计 2026-11-10：别名键逐字匹配，键含
+ *  空格「DevOps 自动化工程师」而模型自然书写「DevOps自动化工程师」14 天 3 次
+ *  失败）。键与 query 各自 norm 后压掉全部空白再比对；唯一命中才返回——
+ *  多键压空后同形 → null（宁拒勿猜）。逐字命中优先由调用方保证（字节兼容）。
+ *  导出供自测。 */
+export function aliasLoose(aliases, query) {
+  if (!aliases?.aliases || typeof query !== 'string') return null
+  const squash = (s) => norm(s).replace(/\s+/g, '')
+  const target = squash(query)
+  if (!target) return null
+  const keys = Object.keys(aliases.aliases).filter((k) => squash(k) === target)
+  return keys.length === 1 ? aliases.aliases[keys[0]] : null
+}
+
+/** 委派名解析：① 花名册 name 精确命中（含 zh 包中文名）②『来源名/原名』显式
+ *  消歧（仅 ① 未中且 query 含 '/' 时；name 按原生 name 或来源内相对 file 路径
+ *  归一匹配，后者兼容旧报错清单的 source/file 形态整串回填）③ roster-aliases
+ *  惯用名命中（逐字优先，空格不敏感回退唯一命中）④ 无歧义 title 归一命中；
+ *  多候选 → ambiguous（附清单）；shadowed / disabled → 对应拒绝原因。 */
+export function resolveExpert(candidates, aliases, query) {
+  const q = norm(query)
+  if (!q) return { ok: false, reason: 'missing' }
+  let hits = candidates.filter((e) => norm(e.name) === q)
+  // ② source/name：不含 '/' 或 ① 命中时本段零执行（既有行为逐字节一致；含 '/'
+  // 的合法自定义名由 ① 先手接住，不被误拆）。
+  if (hits.length === 0) {
+    const sn = parseSourceName(query)
+    if (sn) {
+      hits = candidates.filter((e) => norm(e.source) === norm(sn.source)
+        && (norm(e.name) === norm(sn.name) || norm(e.file).replace(/\.md$/, '') === norm(sn.name)))
+    }
+  }
+  if (hits.length === 0) {
+    const alias = aliases?.aliases?.[query] ?? aliasLoose(aliases, query)
+    if (alias?.source && alias?.path) {
+      hits = candidates.filter((e) => e.source === alias.source && e.file === alias.path)
+    }
+  }
+  if (hits.length === 0) {
+    const titled = candidates.filter((e) => norm(e.title) === q)
+    if (titled.length === 1) hits = titled
+    else if (titled.length > 1) return { ok: false, reason: 'ambiguous', candidates: titled }
+  }
+  if (hits.length === 0) return { ok: false, reason: 'missing' }
+  if (hits.length > 1) {
+    return {
+      ok: false,
+      reason: 'ambiguous',
+      candidates: hits,
+    }
+  }
+  const expert = hits[0]
+  if (expert.disabled) return { ok: false, reason: 'expertDisabled', expert }
+  if (expert.shadowed) return { ok: false, reason: 'expertShadowed', expert }
+  return { ok: true, expert }
+}
+
+/** T2（gh-issues-1-2 追问）：档案键/groups members 别名反查器（纯函数工厂，导出
+ *  供自测）。档案键与组 members 常以惯用名（roster-aliases 键）或花名册 title
+ *  （bundled-core 中文显示名）书写，而档案消费面（profileForExpert /
+ *  resolveExpertModel）用 summon 已解析的原生名查询——本工厂产出
+ *  (key) => 原生名 | null 反查函数，作可选 aliasResolver 参数透传（未传 = 行为
+ *  零变化）。反查顺序与 resolveExpert 解析链一致（宁拒勿猜，绝不猜名）：
+ *  ① roster-aliases 惯用名 → nativeName（nativeName 非空字符串才采信）；
+ *  ② 花名册 title 唯一命中 → name（多命中 → null，不反查；仅采信非空 name）。
+ *  无别名表（loadAliases 缺失由 loadState 归一为 {}）/查不到/非法键 → null
+ *  （调用方零变化）。 */
+export function profileKeyAliasResolver(aliases, candidates) {
+  const aliasMap = aliases?.aliases ?? {}
+  const roster = Array.isArray(candidates) ? candidates : []
+  return (key) => {
+    if (typeof key !== 'string') return null
+    const q = key.trim()
+    if (!q) return null
+    const alias = aliasMap[key] ?? aliasMap[q]
+    if (alias && typeof alias.nativeName === 'string' && alias.nativeName.trim()) {
+      return alias.nativeName.trim()
+    }
+    const titled = roster.filter((e) => norm(e.title) === norm(q) && typeof e.name === 'string' && e.name)
+    return titled.length === 1 ? titled[0].name : null
+  }
+}
+
+/** 模板括号中和（P3）：persona 含 `{{ github.sha }}` 等 CI 模板片段时，宿主
+ *  dsh-system-prompt 的 interpolate() 会把 `{{name}}` 当变量引用解析——名字含
+ *  点或未注册一律 throw（且无任何转义机制）。注入前把所有 `{{`/`}}` 替换为
+ *  `«`/`»`，保证输出零双花括号、解析器永不命中；单花括号 `{a}` 不受影响。
+ *  纯函数、确定性，导出供自测。 */
+export function neutralizePromptTemplates(text) {
+  if (typeof text !== 'string') return text
+  return text.replaceAll('{{', '«').replaceAll('}}', '»')
+}
+
+/** persona 注入前净化：剥离 frontmatter（防 frontmatter 注入面）→ 清理控制
+ *  字符（保留 \n \t）→ 模板括号中和（防宿主 interpolate 解析 persona 内
+ *  `{{name}}` 片段）→ 长度上限截断。 */
+export function sanitizePersona(text) {
+  if (typeof text !== 'string') return ''
+  let out = text
+  const fm = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.exec(out)
+  if (fm) out = out.slice(fm[0].length)
+  out = out.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+  out = neutralizePromptTemplates(out)
+  if (out.length > MAX_PERSONA_CHARS) out = out.slice(0, MAX_PERSONA_CHARS)
+  return out.trim()
+}
+
+/** 每专家经验池 slug（P1）：由花名册候选的 source/file 派生稳定文件名——
+ *  source 作前缀使跨源重名天然消歧；非 [A-Za-z0-9._-] 字符（含路径分隔符）
+ *  归一为 '-'。纯函数、确定性，导出供 T7 文档与自测引用。 */
+export function expertLessonSlug(source, file) {
+  const raw = `${source ?? 'unknown'}--${String(file ?? '').replace(/\.md$/, '')}`
+  return raw.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+/** 每专家经验池（P1）：只读 <dst>/expert-lessons/<slug>.md——existsSync 静默
+ *  缺失返 null；净化复用 sanitizePersona（剥 frontmatter/控制字符）；2K 截断
+ *  控注入预算。绝不自动写入：教训入库由编排者收尾裁剪。 */
+export function loadExpertLessons(dst, slug) {
+  if (!slug) return null
+  const p = join(dst, EXPERT_LESSONS_DIRNAME, `${slug}.md`)
+  if (!existsSync(p)) return null
+  let out = sanitizePersona(readFileSync(p, 'utf-8'))
+  if (out.length > EXPERT_LESSON_MAX_CHARS) out = out.slice(0, EXPERT_LESSON_MAX_CHARS)
+  return out
+}
+
+/** 任务文本尾部追加经验提示（P1）：无命中 = 原样返回（行为零变化，向后兼
+ *  容）。放尾部与协议 §5 缓存组版（变量段后置）一致，不破坏固定前缀。
+ *  T9：头行文案收口进 lib/messages 字典（【经验提示】tag 保持中文原字面，
+ *  tag 后描述语切语言）；lang 可选、缺省 'zh'（zh 逐字节一致，向后兼容）。
+ *  导出供自测。 */
+export function withLessonHint(taskText, expertName, lesson, lang = 'zh') {
+  if (!lesson) return taskText
+  return `${taskText}\n\n${msg('lesson.header', lang, { name: expertName })}\n${lesson}`
+}
+
+/** persona frontmatter 的 method 键提取（P2）：必须在 sanitizePersona 之前对
+ *  原文调用（sanitize 会剥掉 frontmatter）。无 frontmatter 或无该键 → null
+ *  （来源包专家无此键 = 行为零变化）。导出供自测。 */
+export function extractPersonaMethod(raw) {
+  if (typeof raw !== 'string') return null
+  const fm = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.exec(raw)
+  if (!fm) return null
+  const m = /^method:[ \t]*(\S[^\r\n]*)$/m.exec(fm[0])
+  return m ? m[1].trim() : null
+}
+
+/** persona 方法论分层（P2）：frontmatter 带 method 键且净化后 body 含
+ *  <!-- methods-cut --> 标记时，子代理 persona = 标记之前部分 + 尾加 method
+ *  指针行；method 值 = 相对 dst 的路径且必须落在 expert-methods/ 下（防上游
+ *  persona 把 dst 内任意文件路径指给子代理）。
+ *  fail-safe：无标记 / 无 method / 非 expert-methods/ 前缀 / method 文件缺失 /
+ *  路径可疑（绝对路径或越过 dst）一律回退全文注入（向后兼容，来源包专家不受
+ *  影响）。导出供自测。
+ */
+export function splitPersona(dst, persona, method) {
+  if (!method || typeof persona !== 'string' || typeof dst !== 'string') return persona
+  const cut = persona.indexOf(METHODS_CUT_MARKER)
+  if (cut === -1) return persona
+  if (!method.startsWith(`${EXPERT_METHODS_DIRNAME}/`)) return persona
+  if (/^(?:[a-z]+:)?[/\\]/i.test(method) || method.split(/[/\\]/).includes('..')) return persona
+  const methodAbs = join(dst, method)
+  if (!existsSync(methodAbs)) return persona
+  return `${persona.slice(0, cut).trimEnd()}\n\n领域方法论全文在 ${methodAbs}，任务复杂或触及清单场景时先 read 再动手`
+}
+
+// ── WP-6 余项 #17 prompt 瘦身 + #19 per-expert 档案生效面（T15）──────────────
+// #17（学 dsh-plugin-subagent-roles trim.js，调研 D-subagent-ecosystem §5）：
+// persona 收窄了工具的专家，其 system prompt 里对应工具的 guidance 段落是死重，
+// 应在 persona 组装处一并剪掉。剪除的判定依据=专家档案（#19）的收窄清单——无档
+// 案=全量（persona 逐字节零变化，向后兼容硬要求）；剪除只在本组装函数一处实现
+// （不散落运行时字符串过滤）。
+//
+// persona 段标记约定（沿 v2.4.0 `<!-- methods-cut -->` 的 HTML 注释先例）：
+//   <!-- tools: NAME[, NAME]... -->   段首：本段 guidance 依赖的工具名清单
+//   ...guidance...
+//   <!-- /tools -->                   段尾
+// 剪除规则（trim.js ②组段语义）：段内点名的工具**全部**不可见才剪整段（含标
+// 记）；任一可见即保留（保留段的原标记原样留在 persona——源文本最小变换）。
+// fail-safe（对齐 methods-cut 回退全文）：无收尾标记的开段、空名单标记、标记
+// 语法残缺一律不剪（宁留勿删；不支持嵌套段——开段之后首个收尾标记闭段）。
+const TOOLS_SECTION_OPEN_RE = /<!--\s*tools:([^>]*?)-->/g
+const TOOLS_SECTION_CLOSE_RE = /<!--\s*\/tools\s*-->/
+
+/** 解析 persona 中的工具段标记：返回配对段清单 [{start, end, tools}]（start/end
+ *  覆盖**含两端标记本体**的完整区间，剪除即整段移除）。顺序扫描、不支持嵌套：
+ *  开段与其后首个收尾标记配对，已被前一配对段吞掉的嵌套开段不再参与配对。
+ *  导出供自测。 */
+export function parseToolGuidanceSections(persona) {
+  const sections = []
+  if (typeof persona !== 'string') return sections
+  let cursor = 0
+  for (const open of persona.matchAll(TOOLS_SECTION_OPEN_RE)) {
+    if (open.index < cursor) continue // 已被前一配对段吞掉（不支持嵌套）
+    const contentStart = open.index + open[0].length
+    const rest = persona.slice(contentStart)
+    const close = TOOLS_SECTION_CLOSE_RE.exec(rest)
+    if (!close) break // 开段无收尾：fail-safe 不剪，其后不再配对
+    const end = contentStart + close.index + close[0].length
+    const tools = open[1].split(/[\s,，、]+/).map((s) => s.trim()).filter(Boolean)
+    sections.push({ start: open.index, end, tools })
+    cursor = end
+  }
+  return sections
+}
+
+/** #17 persona 组装处剪除（唯一实现点，纯函数）：isAvailable(toolName) → 该工具
+ *  对本专家是否可见；点名的工具全部不可见的配对段整段剪除（含两端标记）。无剪
+ *  除发生时逐字节原样返回（零变化保证）；发生剪除时仅折叠多余空行。导出供自测。 */
+export function pruneUnavailableToolSections(persona, isAvailable) {
+  if (typeof persona !== 'string' || typeof isAvailable !== 'function') return persona
+  const sections = parseToolGuidanceSections(persona)
+  const pruned = sections.filter((s) => s.tools.length > 0 && s.tools.every((t) => !isAvailable(t)))
+  if (pruned.length === 0) return persona
+  let out = ''
+  let cursor = 0
+  for (const s of pruned) {
+    out += persona.slice(cursor, s.start)
+    cursor = s.end
+  }
+  out += persona.slice(cursor)
+  return out.replace(/\n{3,}/g, '\n\n').trim()
+}
+
+/** #19 档案 → MCP 白名单展开为 deny 名单：宿主提供 tools.schemas() 枚举面时，
+ *  把所有 mcp__* 工具中不属于白名单 server（mcp__<server>__ 前缀）的具名工具
+ *  收进 deny（它们本就注册在案，探测过滤必然保留）；宿主无枚举面（旧代宿主）
+ *  → 返回 null（调用方降级可见，不猜名字——restrict 对未知名会 fail-fast）。
+ *  导出供自测。 */
+export function expandMcpWhitelistDeny(ctx, servers) {
+  if (!Array.isArray(servers) || servers.length === 0) return []
+  if (typeof ctx?.tools?.schemas !== 'function') return null
+  const prefixes = servers.map((s) => `mcp__${s}__`)
+  const deny = []
+  try {
+    for (const schema of ctx.tools.schemas()) {
+      const name = schema?.name
+      if (typeof name !== 'string' || !name.startsWith('mcp__')) continue
+      if (!prefixes.some((p) => name.startsWith(p))) deny.push(name)
+    }
+  } catch (err) {
+    console.warn(`[dsh-expert-orchestrator] MCP 白名单展开失败（该字段本次召唤未生效）：${err?.message ?? err}`)
+    return null
+  }
+  return deny
+}
+
+/** #19 档案 → summon 生效面（T15）：profile=null → null（调用方走既有无档案
+ *  路径，逐字节零变化）。有档案 → { toolFilter, isToolAvailable }：
+ *  - toolFilter：allow 白名单（探测过滤；**空 allow 原样传空——fail closed 绝
+ *    不静默放宽**，roles 先例）+ deny 黑名单（递归防护清单 ∪ 档案 deny ∪ MCP
+ *    白名单展开，求并后探测过滤——递归防护永不放宽）；
+ *    递归防护 allow 已停用（dsh-expert-296 T1 回退：2.9.5 的 allow 白名单遮蔽
+ *    preset 组合层核心工具，主委派通道不可用）——档案未配置 tools.allow 时一律
+ *    deny-only，派生面执法由宿主 maxDepth=1 深度熔断兜底（2.9.3/2.9.5 两轮真机
+ *    实证有效）。
+ *  - isToolAvailable：#17 剪除判定的可见性谓词（deny 命中→不可见；allow 存在
+ *    且不含→不可见；探测 API 缺失/异常→按可见处理，fail-safe 宁留勿删）。
+ *  导出供自测。 */
+export function resolveProfileEffect(ctx, profile) {
+  if (!profile) return null
+  const denyNames = [...EXPERT_TOOLS_DENY_LIST, ...(profile.tools?.deny ?? [])]
+  const mcpDeny = expandMcpWhitelistDeny(ctx, profile.mcp)
+  if (mcpDeny === null) {
+    console.warn('[dsh-expert-orchestrator] 宿主未提供工具枚举面（tools.schemas），专家档案 mcp 白名单本次召唤未生效（降级可见）')
+  } else {
+    denyNames.push(...mcpDeny)
+  }
+  const allowNames = Array.isArray(profile.tools?.allow) ? profile.tools.allow : null
+  // dsh-expert-296 T1 回退：递归防护 allow（P1）已停用——档案未自带白名单时一律
+  // deny-only（详见 buildRecursionAllowList 停用注），不做 allow 遮蔽。
+  const dedup = (list) => [...new Set(list)]
+  const deny = dedup(filterRestrictableTools(ctx, denyNames, 'deny'))
+  const toolFilter = allowNames
+    ? { allow: dedup(filterRestrictableTools(ctx, allowNames, 'allow')), deny }
+    : { deny }
+  const denySet = new Set(denyNames)
+  const allowSet = allowNames ? new Set(allowNames) : null
+  const probe = (name) => {
+    try {
+      if (typeof ctx?.tools?.get !== 'function') return true
+      return ctx.tools.get(name) !== undefined
+    } catch {
+      return true
+    }
+  }
+  const isToolAvailable = (name) => {
+    if (denySet.has(name)) return false
+    if (allowSet && !allowSet.has(name)) return false
+    return probe(name)
+  }
+  return { toolFilter, isToolAvailable }
+}
+
+/** #19 档案 skills 白名单的提示级约束注入（T15）：宿主 start request 无 per-child
+ *  技能缝（两代一致可用的只有提示级），白名单以固定格式约束行注入 persona 尾部
+ *  ——确定性可断言、如实声明为提示级。无 skills 字段 → 原样返回（零变化）。导出
+ *  供自测。 */
+export function withProfileConstraints(persona, profile) {
+  const skills = profile?.skills
+  if (!Array.isArray(skills) || skills.length === 0) return persona
+  return `${persona}\n\n【专家档案约束】可用技能白名单：${skills.join('、')}；白名单之外的技能一律不要调用。`
+}
+
+// ── WP-4a 派工即回写（auto-claim）：派发入口先 claim、后跑专家 ────────────
+// 设计（v2.6-plan WP-4 ①，回炉第 1 轮改时序）：summon 类工具在派发入口——
+// 专家 run 开始**之前**——从任务文本解析显式 T<数字> token，在唯一任务板上自
+// 动 claim（ready→running + owner=被召唤专家名），保证专家拿到任务书时条目
+// 已 running。专家执行失败/召唤失败时条目保持 running，不回滚（fail-open），
+// 由编排者按板处置（reassign/fail）。复用 taskboard.py 子进程（不回刻板文件
+// 格式）；板定位只认 <cwd>/.expert-taskboards/ 顶层 *.json 且恰好一个；任何
+// 失败 fail-open——只产出可见提示行，绝不阻塞 summon 主流程。taskboard.py
+// 按模块相对解析（生产=部署副本 <dst>/lib/../skills/...，自测=仓库同构布局），
+// 两端同构。
+const TASKBOARD_PY = fileURLToPath(new URL('../skills/expert-orchestration/tools/taskboard.py', import.meta.url))
+const BUS_PY = fileURLToPath(new URL('../skills/expert-orchestration/tools/bus.py', import.meta.url))
+const AUTOCLAIM_TIMEOUT_MS = 15000
+const AUTOCLAIM_MAX_IDS = 8
+
+/** 解析任务文本中显式引用的任务 id（T<数字> token）：前后不得紧邻 ASCII 字
+ *  母/数字/下划线（宁漏勿错——排除 T7x/AT7/T7_ 之类非显式片段），中文紧邻
+ *  允许（「任务T7」是显式引用）。另排除两类回炉第 1 轮明确的误伤源：
+ *  ① 命令引述形态——T<数字> 前邻 `claim/done/progress/show/deps` + 空白
+ *  （引述 taskboard 命令，非本次派工目标）；
+ *  ② 路径形态——T<数字> 前邻 `/`、`.`、`-`（如 build/T3-report.md）。
+ *  去重保序；完整列表（不截断）由内部 parseTaskIdList 返回，导出的
+ *  parseTaskIds 截到 AUTOCLAIM_MAX_IDS 个（超出部分宁漏勿错）。残余误伤类
+ *  （同句提及的其他任务 id）在 SKILL.md §3 写明，缓解条件=仅 ready+无 owner
+ *  才 claim。导出供自测。 */
+const TASK_ID_RE = /(?<![A-Za-z0-9_/.-])T\d+(?![0-9A-Za-z_])/g
+// 前缀以「命令动词 + 可选空白」结尾即视为命令引述（大小写不敏感，宁漏勿错）
+const TASK_CMD_PREFIX_RE = /(?:^|[^\p{L}\p{N}])(?:claim|done|progress|show|deps)[ \t]*$/iu
+
+function parseTaskIdList(text) {
+  if (typeof text !== 'string') return []
+  const out = []
+  for (const m of text.matchAll(TASK_ID_RE)) {
+    if (TASK_CMD_PREFIX_RE.test(text.slice(0, m.index))) continue
+    if (!out.includes(m[0])) out.push(m[0])
+  }
+  return out
+}
+
+export function parseTaskIds(text) {
+  return parseTaskIdList(text).slice(0, AUTOCLAIM_MAX_IDS)
+}
+
+/** 板定位（宁漏勿错）：仅认 <cwd>/.expert-taskboards/ 顶层 *.json 且恰好一
+ *  个才动作；0 个或多个 → 不动作并给出可读原因。导出供自测。 */
+export function locateAutoClaimBoard(cwd) {
+  try {
+    const dir = join(cwd, '.expert-taskboards')
+    const names = existsSync(dir)
+      ? readdirSync(dir, { withFileTypes: true }).filter((e) => e.isFile() && e.name.endsWith('.json')).map((e) => e.name).sort()
+      : []
+    if (names.length === 1) return { ok: true, board: join(dir, names[0]), name: names[0] }
+    if (names.length === 0) return { ok: false, reason: 'cwd 下没有 .expert-taskboards/*.json 任务板' }
+    return { ok: false, reason: `cwd 下有多个任务板（${names.join('、')}），无法唯一定位` }
+  } catch (error) {
+    return { ok: false, reason: `任务板目录不可读：${error?.message ?? error}` }
+  }
+}
+
+/** taskboard.py 子进程封装：超时/退出码/非 JSON 输出都归一为结果对象，不抛出。
+ *  timedOut 与普通非零退出分开标记——超时提示语必须与「板不可读/任务不存在」
+ *  可区分（回炉第 1 轮 💭3）。env 可注入（T27 预算盘点自测用；缺省 process.env
+ *  与 execFile 既有行为逐字节一致）。 */
+function runTaskboard(cwd, args, timeoutMs = AUTOCLAIM_TIMEOUT_MS, env = process.env) {
+  return new Promise((resolve) => {
+    execFile('python3', [TASKBOARD_PY, ...args], { cwd, encoding: 'utf-8', timeout: timeoutMs, env }, (error, stdout, stderr) => {
+      let json = null
+      try { json = JSON.parse(String(stdout ?? '').trim()) } catch { /* 人类可读多行输出，不解析 */ }
+      resolve({
+        code: error ? (typeof error.code === 'number' ? error.code : 1) : 0,
+        stdout: String(stdout ?? ''),
+        stderr: String(stderr ?? ''),
+        json,
+        timedOut: error?.killed === true || error?.signal === 'SIGTERM',
+      })
+    })
+  })
+}
+
+/** taskboard.py --json 结构化信封解析（v2.8 S1 机器契约，T17）：--json 模式下 stdout 恰一行
+ *  JSON——成功 {ok:true,cmd,data,revision}（任务中心命令 data.task=完整任务对象，含全部簿记
+ *  字段），失败 {ok:false,error,...}。auto-claim 只消费结构化信封，不再断言 show 首行/尾行
+ *  文本（人类可读展示层的格式演进不再影响机器消费方；旧 parseShowTask/lastRevision 文本
+ *  解析器已随本改造移除）。解析不出信封（旧版 taskboard.py/输出被污染）返回 null——调用方
+ *  fail-open 跳过，与旧文本解析失败同语义。 */
+function parseTaskboardEnvelope(stdout) {
+  try {
+    const env = JSON.parse(String(stdout ?? '').trim())
+    if (env && typeof env === 'object' && !Array.isArray(env) && typeof env.ok === 'boolean') return env
+  } catch { /* 非信封输出（多行人类可读或空） */ }
+  return null
+}
+
+/** 机器回执契约校验（v2.13 T2 回执契约严格化，消费端同规）：对已解析为对象的信封按**精确键名**
+ *  校验必备字段——键大小写敏感、无别名（'OK'/'Error'/'CMD' 等错大小写键一律视为缺失，不抵充）。
+ *  必备字段：ok（boolean，parseTaskboardEnvelope 已门）；成功面（ok===true）还须 cmd（非空字符串）
+ *  与 data（普通对象）；失败面（ok===false）还须 error（非空字符串）。revision 非必备
+ *  （archive/_hook-check 信封无，与 taskboard.py _emit 的 required 集一致）。额外字段对未来
+ *  演进透明（不拒绝）。返回 null=契约满足；否则具名结构化错误对象 {error:'receipt_invalid',
+ *  missing:[...]}（与生产端 receipt_invalid 回执同形态，机器可解析）。导出供自测。 */
+export function receiptContractError(env) {
+  if (!env || typeof env !== 'object' || Array.isArray(env) || typeof env.ok !== 'boolean') {
+    return { error: 'receipt_invalid', missing: ['ok'] }
+  }
+  const missing = []
+  if (env.ok === true) {
+    if (typeof env.cmd !== 'string' || env.cmd === '') missing.push('cmd')
+    if (!env.data || typeof env.data !== 'object' || Array.isArray(env.data)) missing.push('data')
+  } else if (typeof env.error !== 'string' || env.error === '') {
+    missing.push('error')
+  }
+  return missing.length ? { error: 'receipt_invalid', missing } : null
+}
+
+/** 回执契约违规的人类可读提示片段——回执契约违规提示的**单一文案源**（v2.13.1 T3：
+ *  三个消费点 :709/:793/:826 与 claimFailureReason 窄分支全部经此函数出文案，禁止
+ *  各处手写第二套括号措辞）：'receipt_invalid（缺 cmd/data）'。导出供自测（T2-C4 同源锚定）。 */
+function receiptContractHint(contract) {
+  return `${contract.error}（缺 ${contract.missing.join('/')}）`
+}
+export { receiptContractHint }
+
+/** --json 失败信封的人类可读原因优选（T32 评审备忘1，一行三档）：人读 sys.exit
+ *  类拒绝（draft/非 ready 竞态等）在 stdout 信封的 **message** 字段——--json 下
+ *  stderr 为空（实测），原因只在信封里，故 message 置于最高优先；BoardError 具
+ *  名错误（stale_revision/stale_attempt…）无 message，落在 error 具名码；两者都
+ *  取不到再以 stderr/stdout 首行兜底（非 json 面/输出被污染）。旧实现
+ *  `error ?? stderr` 把 command_failed 类失败降级成常量码，且旧注释声称「人读拒
+ *  绝在 stderr 首行」与 --json 行为不符——本函数一并修正。纯函数、导出供自测。 */
+export function claimFailureReason(json, stderr, stdout) {
+  // 回执契约违规窄分支（v2.13 T2）：信封明确 ok:false 却缺非空 error 具名码 → 具名
+  // receipt_invalid。文案统一走 receiptContractHint 单一文案源（v2.13.1 T3 收敛，
+  // 消除与 :709/:793/:826 消费点的两套括号措辞：'（缺:error）'→'（缺 error）'）。
+  // 只认 ok===false 的失败信封（非回执 JSON 不误判，仍走旧兜底）。
+  if (json && typeof json === 'object' && !Array.isArray(json) && json.ok === false
+      && (typeof json.error !== 'string' || json.error === '')) {
+    return receiptContractHint({ error: 'receipt_invalid', missing: ['error'] })
+  }
+  return json?.message ?? json?.error ?? ((stderr || stdout).trim().split('\n')[0] || '未知错误')
+}
+
+/** bus.py 子进程封装：与 runTaskboard 同语义（超时/退出码归一为结果对象，不抛出）。 */
+function runBus(cwd, args, timeoutMs = AUTOCLAIM_TIMEOUT_MS) {
+  return new Promise((resolve) => {
+    execFile('python3', [BUS_PY, ...args], { cwd, encoding: 'utf-8', timeout: timeoutMs }, (error, stdout, stderr) => {
+      resolve({
+        code: error ? (typeof error.code === 'number' ? error.code : 1) : 0,
+        stdout: String(stdout ?? ''),
+        stderr: String(stderr ?? ''),
+        timedOut: error?.killed === true || error?.signal === 'SIGTERM',
+      })
+    })
+  })
+}
+
+/** WP-8 ①：宿主设置页 autoClaim 旋钮的读取。宿主 volatile 生效路径传入的是
+ *  Volatile 引用（get() 返回不可变快照），普通路径是布尔或 undefined——鸭子
+ *  判型两者都接受（帮手在 lib/host-settings.js，此处内联等价实现避免把该
+ *  模块拉进工具面依赖）。 */
+function resolveAutoClaimEnabled(value) {
+  if (value !== null && typeof value === 'object' && typeof value.get === 'function') {
+    try {
+      return value.get()
+    } catch {
+      return undefined
+    }
+  }
+  return value
+}
+
+/** T3v2（gh-issues T7）：宿主设置页 replyLanguage 的读取。宿主 volatile 生效路径
+ *  传入 Volatile 引用（get() 返回不可变快照），普通路径是字符串或 undefined——
+ *  鸭子判型两者都接受（与 resolveAutoClaimEnabled 同款先例；帮手在
+ *  lib/host-settings.js readSetting，此处内联等价实现避免把该模块拉进工具面依赖）。
+ *  优先级：env DSH_EXPERT_REPLY_LANG 精确 'en'/'zh' 覆盖优先于 Config（其他 env 值
+ *  不识别、不覆盖，照常走 Config）；Config 值仅 === 'en' 生效为英文，其余（'zh'、
+ *  缺失、Volatile get() 抛错、非法值）一律按中文——Config 缺失/降级不炸且行为零
+ *  变化（=zh）。每次 summon 现场调用：volatile 编辑对下一次 summon 即时生效。
+ *  返回 'zh' | 'en'，绝不 throw。T9（lib/messages 字典）在本模块 summon 流程内
+ *  消费本函数返回值；本期不改任何提示行文案。 */
+export function resolveReplyLanguage(value) {
+  const flag = process.env.DSH_EXPERT_REPLY_LANG
+  if (flag === 'en') return 'en'
+  if (flag === 'zh') return 'zh'
+  if (value !== null && typeof value === 'object' && typeof value.get === 'function') {
+    try {
+      value = value.get()
+    } catch {
+      value = undefined
+    }
+  }
+  return value === 'en' ? 'en' : 'zh'
+}
+
+/** 对单个任务 id 执行 show→判定→claim；任何失败都归一为提示行，绝不 throw。
+ *  超时与板不可读/认领失败分别给出可区分的提示语（回炉第 1 轮 💭3）。
+ *  v2.8 S1（T17）：show/claim 均走 --json 结构化信封——任务状态/owner/revision 从
+ *  data.task 与信封顶层 revision 读取，不再解析人类可读首行与 revision 尾行文本。
+ *  tag（T28 #20）：提示行标签，缺省 'auto-claim'（WP-4a 派工即回写既有文案逐字节
+ *  不变）；idle-edge 自动续领复用本函数时传 '自动续领'——同一 claim 执行面、两种
+ *  触发来源在提示行可区分。lang（T9）：提示行语言，缺省 'zh'（zh 逐字节一致）；
+ *  【tag】保持原字面不译，tag 后正文经 lib/messages 字典切语言。 */
+async function autoClaimOne(board, id, owner, cwd, timeoutMs, tag = 'auto-claim', lang = 'zh') {
+  const show = await runTaskboard(cwd, ['--board', board, '--json', 'show', id], timeoutMs)
+  if (show.code !== 0) {
+    if (show.timedOut) {
+      return msg('claim.preflightTimeout', lang, { tag, id, timeoutMs })
+    }
+    return msg('claim.notOnBoard', lang, { tag, id })
+  }
+  const env = parseTaskboardEnvelope(show.stdout)
+  // T2 回执契约（v2.13）：信封键集不满足（缺字段/错大小写别名）→ 具名提示，不按旧文案误报
+  const contract = env ? receiptContractError(env) : null
+  if (contract) return msg('claim.contractViolation', lang, { tag, id, hint: receiptContractHint(contract) })
+  const task = env?.ok === true ? env.data?.task : null
+  if (!task) return msg('claim.unparseable', lang, { tag, id })
+  if (task.status !== 'ready') {
+    return msg('claim.wrongStatus', lang, { tag, id, status: task.status, owner: task.owner })
+  }
+  if (task.owner) return msg('claim.taken', lang, { tag, id, owner: task.owner })
+  const rev = Number(env.revision)
+  const claim = await runTaskboard(cwd, [
+    '--board', board, '--json', 'claim', id, owner,
+    ...(Number.isFinite(rev) ? ['--expected-revision', String(rev)] : []),
+  ], timeoutMs)
+  if (claim.code !== 0) {
+    if (claim.timedOut) {
+      return msg('claim.writeTimeout', lang, { tag, id, timeoutMs })
+    }
+    // --json 信封错误面（T32 备忘1 修正）：人读 sys.exit 类拒绝的原因在 stdout 信封的
+    // message 字段（--json 下 stderr 为空），BoardError 具名错误（stale_revision/stale_attempt…）
+    // 落在 error 具名码——message ?? error 优选，stderr/stdout 首行仅作非 json 面兜底。
+    const why = claimFailureReason(claim.json, claim.stderr, claim.stdout)
+    return msg('claim.failed', lang, { tag, id, why })
+  }
+  return msg('claim.ok', lang, { tag, id, owner, board: basename(board) })
+}
+
+/** WP-4a 入口：summon 派发入口（专家 run 开始之前）调用。任务文本无显式任务
+ *  id / 开关关闭时返回 ''（零副作用，板都不查）；有 id 时定位板并逐个
+ *  auto-claim，产出单行提示（多 id 用「；」连接）。调用方把提示行附在 summon
+ *  结果尾部（成功）或错误信息尾部（专家执行失败），降级可见；条目一旦
+ *  claimed 即保持 running，不随专家失败回滚（编排者按板处置）。claimedIds
+ *  为批量召唤内去重集合：同一任务 id 只回写一次（无论成败）。id 数量上限
+ *  AUTOCLAIM_MAX_IDS（8），超出取前 8 并在提示中说明截断。开关语义（回炉第
+ *  1 轮 💭3；WP-8 ① 增补 enabled 参数）：DSH_EXPERT_AUTOCLAIM 为 '0' 或 '' 时
+ *  整体关闭（既有环境开关，优先级不变）；enabled === false 时同样关闭（宿主
+ *  设置页旋钮，见 lib/host-settings.js）——两个开关任一关闭即关，均未设置/
+ *  为 true 时开启。lang（T9）：提示行语言，缺省 'zh'，经 autoClaimOne 透传。
+ *  导出供自测。 */
+export async function autoClaimSummonedTasks({ taskText, owner, cwd = process.cwd(), claimedIds, timeoutMs = AUTOCLAIM_TIMEOUT_MS, enabled, lang = 'zh' } = {}) {
+  const flag = process.env.DSH_EXPERT_AUTOCLAIM
+  if (flag === '0' || flag === '') return ''
+  if (resolveAutoClaimEnabled(enabled) === false) return ''
+  const all = parseTaskIdList(taskText)
+  if (all.length === 0 || !owner) return ''
+  const ids = all.slice(0, AUTOCLAIM_MAX_IDS)
+  const truncated = all.length > AUTOCLAIM_MAX_IDS
+  const located = locateAutoClaimBoard(cwd)
+  if (!located.ok) {
+    return msg('autoclaim.skipLocate', lang, { reason: located.reason, ids: ids.join('、') })
+  }
+  const lines = []
+  for (const id of ids) {
+    if (claimedIds?.has(id)) continue
+    claimedIds?.add(id) // 批量内同一 id 只回写一次（同步去重，先于任何 await）
+    try {
+      lines.push(await autoClaimOne(located.board, id, owner, cwd, timeoutMs, 'auto-claim', lang))
+    } catch (error) {
+      lines.push(msg('autoclaim.exception', lang, { id, message: error?.message ?? error }))
+    }
+  }
+  const joined = lines.filter(Boolean).join('；')
+  return truncated
+    ? msg('autoclaim.truncated', lang, { total: all.length, max: AUTOCLAIM_MAX_IDS, ids: ids.join('、'), joined })
+    : joined
+}
+
+/** #16 预算 summon 盘点（T27）：预算开关开启且任务书显式引用任务 id 时，逐个读
+ *  taskboard.py --json budget 结构化信封，经 budgetNoticeFromEnvelope 翻成达档提示行
+ *  （执法面在 taskboard.py，JS 只消费信封、不复制任何计数/阈值语义——这也是 #20 自动
+ *  续领判预算的复用面）。预算关闭/无任务 id/板不可唯一定位/任何单板查询失败 → ''，
+ *  fail-open 绝不阻塞派工（与 auto-claim 同哲学）。env 可注入（自测；缺省 process.env）。
+ *  lang（T9）：提示行语言，缺省 'zh'，透传 budgetNoticeFromEnvelope。导出供自测。 */
+export async function summonBudgetHint(taskText, owner, cwd = process.cwd(), timeoutMs = AUTOCLAIM_TIMEOUT_MS, env = process.env, lang = 'zh') {
+  if (!budgetMaybeEnabled(env)) return ''
+  const ids = parseTaskIds(taskText)
+  if (ids.length === 0 || !owner) return ''
+  const located = locateAutoClaimBoard(cwd)
+  if (!located.ok) return ''
+  const lines = []
+  for (const id of ids) {
+    const r = await runTaskboard(cwd, ['--board', located.board, '--json', 'budget', id], timeoutMs, env)
+    if (r.code !== 0) continue
+    const envelope = parseTaskboardEnvelope(r.stdout)
+    // T2 回执契约（v2.13）：违规给具名提示行（不静默吞——契约违规与「无达档」必须可区分）
+    const contract = envelope ? receiptContractError(envelope) : null
+    if (contract) {
+      lines.push(msg('budget.contractViolation', lang, { id, hint: receiptContractHint(contract) }))
+      continue
+    }
+    const line = budgetNoticeFromEnvelope(envelope, owner, lang)
+    if (line) lines.push(line)
+  }
+  return lines.join('\n')
+}
+
+// ── #20 idle-edge 自动续领（T28，v2.8 M8-2 / WP-7 ②）────────────────────────
+// 设计与边界见 lib/idle-reclaim.js 文件头。执行落点：runExpert 受保护段入口对在途
+// 专家执行计数，成功收尾且归 0（空闲边沿）时调用本扫描——板面条件不满足/板不可定位/
+// 任何失败一律 fail-open 空串（summon 行为零变化）。认领走 taskboard.py 原子 claim_idle
+// 单锁命令（v2.9 T3/T39-① 收窄，事件 type 仍为 claim；autoClaimOne 仅供 WP-4a 派工即
+// 回写使用，不再被续领复用）；owner=IDLE_RECLAIM_OWNER（编排者）——领取是板面动作，
+// 绝不自动召唤专家（失控面红线，SKILL.md §3 成文）。
+/** 空闲边沿续领扫描：定位唯一板 → list --json 全量任务 → selectIdleReclaimTasks 判定
+ *  （有 running 整轮不动；仅 ready+无 owner 入选，上限 IDLE_RECLAIM_MAX_TASKS）→ 一次
+ *  taskboard.py 原子 claim_idle 认领（v2.9 T3/T39-① 收窄：单锁内「无 running 判定+认领」，
+ *  关闭旧「逐任务 show 复判 → claim」两步与并发 sweep/人工 claim 之间的窄窗——并发 sweep
+ *  竞争下恰好一个成功；list 快照降级为 fail-open 预筛，判定权威在锁内，锁内复判覆盖旧
+ *  show 的实时性：非 ready/已有 owner/不存在一律跳过）。返回提示行（拼接单行，'；' 分隔，
+ *  与 autoClaimSummonedTasks 同通道同形态）；无可续领/条件不满足/失败 → ''（零变化）。
+ *  开关判定在调用方（settleIdle：关闭时不发生任何板读取）。lang（T9）：提示行语言，
+ *  缺省 'zh'；【自动续领】tag 保持中文原字面，tag 后正文经 lib/messages 字典切语言。
+ *  导出供自测。 */
+export async function idleReclaimSweep({ cwd = process.cwd(), timeoutMs = AUTOCLAIM_TIMEOUT_MS, owner = IDLE_RECLAIM_OWNER, max = IDLE_RECLAIM_MAX_TASKS, lang = 'zh' } = {}) {
+  const located = locateAutoClaimBoard(cwd)
+  if (!located.ok) return '' // 板不可唯一定位：静默跳过（与 summonBudgetHint 同语义，不制造噪音）
+  const lst = await runTaskboard(cwd, ['--board', located.board, '--json', 'list'], timeoutMs)
+  if (lst.code !== 0) return '' // 板损坏/不可读：fail-open 空串
+  const env = parseTaskboardEnvelope(lst.stdout)
+  // T2 回执契约（v2.13）：信封键集不满足（缺字段/错大小写别名）→ 具名提示，不与「信封解析失败
+  // fail-open」混同（契约违规是板侧程序缺陷，须可见；解析不出才静默跳过）
+  const contract = env ? receiptContractError(env) : null
+  if (contract) return msg('reclaim.contractViolation', lang, { hint: receiptContractHint(contract) })
+  const tasks = env?.ok === true ? env.data?.tasks : null
+  if (!Array.isArray(tasks)) return '' // 信封解析失败：fail-open 空串
+  const sel = selectIdleReclaimTasks(tasks, { max })
+  if (!sel.ok) return '' // 板上有开放执行（running）：整轮不动（负向条件①）
+  if (sel.ids.length === 0) return '' // 无可续领条目：零提示零副作用
+  // 原子认领（T39-①）：单次 claim_idle 持锁完成空闲判定+认领；任何失败归一为提示行，绝不 throw
+  const cl = await runTaskboard(cwd, ['--board', located.board, '--json', 'claim_idle', owner, ...sel.ids], timeoutMs)
+  if (cl.code !== 0) {
+    if (cl.timedOut) {
+      return msg('reclaim.writeTimeout', lang, { timeoutMs })
+    }
+    // 具名失败面（--json 信封 error 码，T32 备忘1 同解析次序）：
+    if (cl.json?.error === 'board_not_idle') {
+      // 并发 sweep/人工认领先行（锁内空闲闸拒绝，本轮零认领）——恰一个成功语义的另一半
+      return msg('reclaim.boardNotIdle', lang)
+    }
+    if (cl.json?.error === 'budget_interrupted' && cl.json?.task) {
+      // #16 预算联动（T28 (d) 同形提示行）：被拒任务点名，本轮零认领
+      return msg('reclaim.budgetInterrupted', lang, { task: cl.json.task })
+    }
+    if (cl.json?.error === 'claim_idle_noop' && Array.isArray(cl.json.skipped)) {
+      // 候选快照滞后（锁内复判全跳过）：逐条跳过提示，板零变化
+      return cl.json.skipped
+        .filter((s) => s && typeof s.id === 'string')
+        .map((s) => msg('reclaim.noopSkip', lang, { id: s.id, reason: s.reason ?? msg('reclaim.stateChanged', lang) }))
+        .join('；')
+    }
+    const why = claimFailureReason(cl.json, cl.stderr, cl.stdout)
+    return msg('reclaim.failed', lang, { why })
+  }
+  const data = cl.json?.ok === true ? cl.json.data : null
+  // 信封解析失败 fail-open 按全量候选提示（与旧实现 claim 成功面不解析响应同语义）
+  const claimedIds = Array.isArray(data?.claimed) ? data.claimed.filter((x) => typeof x === 'string') : sel.ids
+  const skipped = Array.isArray(data?.skipped) ? data.skipped : []
+  const lines = claimedIds.map((id) => msg('reclaim.claimed', lang, { id, owner, board: basename(located.board) }))
+  for (const s of skipped) {
+    if (s && typeof s.id === 'string') lines.push(msg('reclaim.noopSkip', lang, { id: s.id, reason: s.reason ?? msg('reclaim.stateChanged', lang) }))
+  }
+  const joined = lines.filter(Boolean).join('；')
+  return sel.truncated
+    ? msg('reclaim.truncated', lang, { total: sel.total, max, ids: sel.ids.join('、'), joined })
+    : joined
+}
+
+// ── WP-4b ④ summon 专家断点续跑（T12，用户裁决 2026-10-07 Q2=2A）─────────────
+// 设计（对齐宿主 dsh-subagent 0.2.x 实测语义）：
+//   新一代宿主的冷恢复硬性要求子代理 descriptor.mode === 'continuable'（one-shot
+//   子会话一律 NOT_RESUMABLE）——因此 seam 可用时 summon 把专家 run 建为
+//   continuable 子代理：startContinuable 建持久会话（childId 即断点锚点），turn
+//   结束且信箱空时宿主自动释放 Activation 并发 subagent/end（含 stopReason 与
+//   lastAssistantMessage，与 one-shot run 同词表）；中断后经 sendMessage 投递恰好
+//   一个续跑 turn（缺失直接子代理按持久 descriptor 冷恢复）。旧宿主
+//   0.1.7-alpha.2 的 SubagentRuntime 仅 start/getProvider（无 continuation
+//   生命周期）——探测返回 null，维持现状（检查点+全新代理重跑）。
+const RESUME_BUS_BOX = 'coordinator'
+/** bus.py 信箱根默认 <cwd>/.expert-bus（读取命令未传 --root）：幻影闭合的交叉
+ *  校验目录必须与读取命令的路径解析同源（T12 二轮回炉 major-3）。 */
+const BUS_ROOT_DIRNAME = '.expert-bus'
+/** 续跑判定（turn 级）：error=模型/传输故障、max-tokens=额度截断——同一持久会话
+ *  续跑一 turn 有实际意义。completed=成功；aborted=取消通道（exec.signal，续跑
+ *  会对抗调用方的取消）；refusal=专家明确拒绝（续跑会重复拒绝）——三者一律不
+ *  续跑，按现状抛错由编排者处置。宿主进程死亡则 turn 无结算事件，本函数不感知
+ *  （summon 随调用一起死，恢复交给编排者重派/adopt）。导出供自测。 */
+export const RESUMABLE_STOP_REASONS = Object.freeze(['error', 'max-tokens'])
+/** 断点折叠预算（导出供自测锁定不变量）：RESUME_PROGRESS_MAX_ITEMS=检查点+bus
+ *  汇报共享的条目总额；RESUME_PROMPT_MAX_CHARS=清单部分的总码点预算（含截断
+ *  标记行本身——T12 回炉建议1，不含 prompt 头尾固定行）。 */
+export const RESUME_PROGRESS_MAX_ITEMS = 8
+const RESUME_ITEM_MAX_CHARS = 400
+const RESUME_PARTIAL_MAX_CHARS = 800
+export const RESUME_PROMPT_MAX_CHARS = 4000
+
+/** 疑问3 落实（T12 回炉）：宿主 dsh-subagent 0.2.1-alpha.1 对 signal 是裸调用——
+ *  startContinuable 内 spec.signal.throwIfAborted()（lib/index.js:1702 等）、
+ *  sendMessage 路径 options.signal.throwIfAborted()（lib/index.js:1767/:1843），
+ *  均非可选链，且 d.ts 把 ContinuableStartSpec.signal 与
+ *  SubagentSendMessageOptions.signal 声明为非可选 AbortSignal——exec.signal 缺省
+ *  （undefined）直接透传会在宿主内 TypeError。宿主自有工具恒传 exec.signal
+ *  （dsh-tool-subagent-control/lib/index.js:58），但无 signal 的工具执行面真实
+ *  存在（自测 mock、宿主差异）——缺省补一张永不中止的 signal，语义=「无外部取
+ *  消通道」，与 undefined 在本插件观察面（signal?.aborted 恒 false）下等价。 */
+const NEVER_ABORT_SIGNAL = new AbortController().signal
+
+/** 断点续跑 seam 探测（探测式双轨，dsh-expert-291 T1）：seam = continuation 生
+ *  命周期 + provider 的 continuable 创建能力（prepareContinuable 方法存在即能
+ *  力，dsh-subagent types 原文「Method presence IS the capability」）+ 结算观
+ *  察面（ctx.on 订阅 subagent/end）。
+ *  旧轨（0.2.1-alpha.1 及之前）：startContinuable + sendMessage；
+ *  新轨（0.2.1-alpha.2 起，宿主源码 lib/index.js:3032/:3068 实证）：SubagentRuntime
+ *  无 startContinuable，startActivation(spec)（spec.provider 指定 provider，
+ *  provider.prepareContinuable !== undefined 时内部走 manager.startLocal）+
+ *  sendMessage(sender, targetId, content, options) 承担续跑 turn。
+ *  任一缺失返回 null → summon 维持 one-shot 现状。宿主具备 continuation 面但
+ *  provider 缺 prepareContinuable / ctx.on 缺失时，经 onDegrade（缺省静默，供
+ *  调用点注入 console.warn）显式上报降级——不得静默丢功能。DSH_EXPERT_RESUME=
+ *  '0'/'' 为显式关闭，维持静默 null。导出供自测。 */
+export function detectResumeSeam(ctx, provider, { onDegrade } = {}) {
+  const flag = process.env.DSH_EXPERT_RESUME
+  if (flag === '0' || flag === '') return null
+  const s = ctx?.subagents
+  const legacyContinuation = !!s && typeof s.startContinuable === 'function' && typeof s.sendMessage === 'function'
+  const activationContinuation = !!s && typeof s.startActivation === 'function' && typeof s.sendMessage === 'function'
+  if (!legacyContinuation && !activationContinuation) return null
+  if (typeof provider?.prepareContinuable !== 'function' || typeof ctx?.on !== 'function') {
+    try {
+      onDegrade?.(typeof provider?.prepareContinuable !== 'function'
+        ? `provider "${provider?.name ?? '?'}" 未声明 prepareContinuable（无 continuable 创建能力）`
+        : '宿主结算观察面 ctx.on 不可用（续跑无法结算）')
+    } catch { /* 降级上报失败不阻断降级本身 */ }
+    return null
+  }
+  if (legacyContinuation) {
+    return {
+      track: 'legacy',
+      // 调用方构造平铺 spec（rc.2 契约为准）——legacy alpha.x startContinuable 契约=
+      // 嵌套 request（transcript 实证成功形）：此处包回嵌套，rest 展开与旧嵌套构造
+      // 逐字节等价（request 键集=prompt/parent/persona?/toolFilter?/agentPreset?/
+      // agentOptions?），alpha 行为零变化。
+      startContinuable: (spec) => {
+        const { provider, label, signal, ...rest } = spec
+        return s.startContinuable({ provider, label, request: rest, signal })
+      },
+      sendMessage: (sender, childId, content, options) => s.sendMessage(sender, childId, content, options),
+      // 辅助面（0.2.0-rc 早期可能缺）：缺省为 null，调用点跳过（取消中断/主动释放降级）
+      interrupt: typeof s.interrupt === 'function'
+        ? (childId, authority) => { try { s.interrupt(childId, authority) } catch { /* fire-and-forget，取消路径不因中断失败而阻断 */ } }
+        : null,
+      // 辅助面（0.2.1-alpha.1 起有，minor-3 回收面）：释放指定驻留 continuable 子
+      // 代理的 Activation（缺失目标/无 manager 为 no-op；持久 descriptor 保留在盘
+      // ——冷恢复锚点，非删除会话）。缺省 null 时终态失败路径跳过回收。
+      drainChildren: typeof s.drainContinuableChildren === 'function'
+        ? (parent, childIds) => s.drainContinuableChildren(parent, childIds)
+        : null,
+      onSettlement: (listener) => ctx.on('subagent/end', listener),
+    }
+  }
+  // 新轨（alpha.2 面）：startActivation spec 顶层带 provider/label/signal；
+  // **rc.2 契约=顶层平铺**（SUMMON-FAIL-0.2.2-rc.2.md 实证：宿主 :3018-3022 直读
+  // spec.parent.id、:1478 startLocal 全部 spec 顶层、:2207 receipt {childId, name,
+  // result, dispose}；alpha 升级指南示例的嵌套 request 与 rc.2 运行时矛盾——插件
+  // 曾按指南嵌套发射致 summon 全炸，已留痕待上游反馈）。interrupt(targetSessionId,
+  // authority) 与回收面 drainChildren(parent, childIds) 同名直传；辅助面缺失降级
+  // 语义与旧轨一致。
+  return {
+    track: 'activation',
+    // 调用方（runExpertContinuable）构造平铺 spec { provider, label, prompt, parent,
+    // persona?, toolFilter? / agentPreset?, agentOptions?, signal }——rc.2 顶层契约
+    // 原样透传；alpha.2 时代 startActivation 从未真正执行过（旧宿主 hasLegacyStart
+    // 恒走 legacy 轨），平铺是首个真适配（报告口径）。
+    startContinuable: (spec) => s.startActivation(spec),
+    sendMessage: (sender, childId, content, options) => s.sendMessage(sender, childId, content, options),
+    interrupt: typeof s.interrupt === 'function'
+      ? (childId, authority) => { try { s.interrupt(childId, authority) } catch { /* fire-and-forget，取消路径不因中断失败而阻断 */ } }
+      : null,
+    drainChildren: typeof s.drainChildren === 'function'
+      ? (parent, childIds) => s.drainChildren(parent, childIds)
+      : null,
+    onSettlement: (listener) => ctx.on('subagent/end', listener),
+  }
+}
+
+/** 结算观察器：订阅 subagent/end（一次 summon 一次订阅，按 childId 过滤并缓冲
+ *  ——订阅先于 startContinuable，杜绝「结算先到、订阅后到」丢事件；串行等待，
+ *  单 wake 槽位足够）。signal 中止时立即拒绝（不空等已死的工具调用）：泊位等待
+ *  与 abort 监听竞速，堵「检查后才中止、泊位中无唤醒」的丢失唤醒窗口；拒绝前
+ *  best-effort interrupt 子代理 turn（continuable 不随 signal 自灭）。导出供自测。 */
+export function createSettlementWatcher(seam) {
+  const events = []
+  let wake = null
+  let disposed = false
+  const off = seam.onSettlement((info) => {
+    if (!info || typeof info.id !== 'string' || typeof info.stopReason !== 'string') return
+    events.push(info)
+    if (wake) { const w = wake; wake = null; w() }
+  })
+  const abortError = () => new Error('summon 已被取消（exec.signal 中止）')
+  return {
+    async next(childId, signal, onAbort) {
+      for (;;) {
+        const idx = events.findIndex((e) => e.id === childId)
+        if (idx !== -1) return events.splice(idx, 1)[0]
+        if (signal?.aborted) {
+          try { onAbort?.() } catch { /* 已尽力 */ }
+          throw abortError()
+        }
+        await new Promise((resolve, reject) => {
+          let offAbort = null
+          const fireAbort = () => {
+            wake = null
+            if (offAbort) offAbort()
+            try { onAbort?.() } catch { /* 已尽力 */ }
+            reject(abortError())
+          }
+          wake = () => {
+            wake = null
+            if (offAbort) offAbort()
+            resolve()
+          }
+          if (typeof signal?.addEventListener === 'function') {
+            signal.addEventListener('abort', fireAbort, { once: true })
+            offAbort = () => signal.removeEventListener('abort', fireAbort)
+          }
+        })
+      }
+    },
+    dispose() {
+      if (disposed) return
+      disposed = true
+      try { off?.() } catch { /* 订阅清理失败不影响结果 */ }
+    },
+  }
+}
+
+/** bus read 输出解析（续跑折叠来源②）：消息头 `--- <id> [未读] from=… subject=…
+ *  ts=…[ seq=…][ task=… attempt=…]`，正文为后续行。解析不出的消息跳过（宁漏勿
+ *  错）。task 字段保留（T12 回炉 major-1：断点折叠按任务书引用的任务 id 优选
+ *  bus 汇报，需知道消息携带的任务归属；与 attempt 一样只会成对出现）。id 保留
+ *  供 major-3 幻影闭合的收件箱文件名交叉校验（trustedBusMessages）。导出供自测。 */
+export function parseBusMessages(stdout) {
+  const out = []
+  const blocks = String(stdout ?? '').split(/^--- /m).slice(1)
+  for (const block of blocks) {
+    const nl = block.indexOf('\n')
+    const header = nl === -1 ? block : block.slice(0, nl)
+    const body = nl === -1 ? '' : block.slice(nl + 1)
+    const m = /^(\S+) \[[^\]]*\] from=(.*?) subject=(.*) ts=(\d+)/.exec(header)
+    if (!m) continue
+    // subject 贪婪到 ts= 之前的整段（subject 自身可含空格）；尾部 ts/seq/task/attempt 字段剥离
+    const subject = m[3].replace(/ ts=\d+(?: seq=\d+)?(?: task=\S* attempt=\S*)?$/, '').trim()
+    const task = / ts=\d+(?: seq=\d+)? task=(\S*) attempt=\S*$/.exec(header)?.[1]
+    const msg = { id: m[1], from: m[2], subject, body: body.trim() }
+    if (task) msg.task = task
+    out.push(msg)
+  }
+  return out
+}
+// 留档（T12 残余 minor，T17 收口）：from=(.*?) 非贪婪到首个「 subject=」——from 落款名自身含
+// 「 subject=」分隔串时会被截断（如 from=甲 subject=x → from='甲'），署名过滤 from===owner 随即
+// 失配、该消息不折入续跑 prompt——fail-closed（宁漏勿错）方向，无注入增益（伪造 from 需先过
+// trustedBusMessages 交叉校验）。bus send --from 是自由文本，协议未禁止该形态；结构化修复落地前
+// 以本注释留档边界，消费方（署名过滤）行为保持现状。
+
+/** 幻影消息闭合（T12 二轮回炉 major-3，纯只读、不动 bus.py）：bus read 正文原样
+ *  输出无转义，正文内嵌/逐字转述的「--- <id> …」行会被 parseBusMessages 裂解为
+ *  幻影消息，伪造或改写落款的头可绕过 from===owner 署名过滤折入续跑 prompt。两
+ *  步只读闭合：
+ *  ① id↔收件箱文件名交叉校验——bus.py 条目文件名 = {ts:013d}-{id}.json，取首个
+ *     「-」之后即消息 id；幻影 id 在信箱目录无真实文件对应即弃（评审方案①）。
+ *  ② 同 id 去重保首——逐字转述真实头的幻影 id 真实在场，①挡不住（评审采纳的方
+ *     案①在转述形态下不闭合的补口）；但转述者必先读到被引消息才可能引用其 id，
+ *     被引消息 ts 必更小、文件名序在前——真实消息恒先于转述幻影出现，保留首次
+ *     出现即真实消息，其后同 id 皆为正文内嵌复制品。去重必须先于署名过滤：真实
+ *     消息（from≠owner）需在场遮蔽改写落款的转述幻影。
+ *  信箱目录与读取命令同源解析（read --box 无 --root/--since-seq/--board，
+ *  --no-attempt-filter 只影响过滤不改路径）＝<cwd>/.expert-bus/<box>；目录不可
+ *  读（无法核实）返回空——宁漏勿错，未核实内容一律不折入。残余边界（T12 三轮
+ *  建议A 修正表述，T17 落档）：同毫秒双发或预测 id 属「可直改收件箱文件」同信任
+ *  级（协议 §9 非目标）；随机段(100-999)可在单条消息正文内喷洒多候选 id，实际硬
+ *  约束是「精确毫秒+pid 预测」而非猜中单个随机段；且保首时序不变量以单机单时钟
+ *  为前提——跨机共享文件系统部署需重估本残余（多机时钟偏差可破「真实恒先于转述」
+ *  的文件名序前提，见 T12 三轮疑问1）。导出供自测。 */
+export function trustedBusMessages(messages, inboxDir) {
+  let inboxIds
+  try {
+    inboxIds = new Set()
+    for (const name of readdirSync(inboxDir)) {
+      if (!name.endsWith('.json')) continue
+      const dash = name.indexOf('-')
+      if (dash > 0) inboxIds.add(name.slice(dash + 1, -5))
+    }
+  } catch {
+    return [] // 信箱目录不可读（无法核实）——全部按幻影处置
+  }
+  const seen = new Set()
+  return messages.filter((msg) => inboxIds.has(msg.id) && !seen.has(msg.id) && (seen.add(msg.id), true))
+}
+
+/** 断点数据净化截断（T12 回炉 major-2）：续跑 prompt 以 bullet 清单折入断点数据，
+ *  检查点/汇报正文内嵌换行会打破清单框架、伪造后续行「指令」——先把 [\r\n]+ 扁
+ *  平化为可见「 ⏎ 」标记（保留换行痕迹、消灭真实行边界），扁平前剥除每个原始行
+ *  行首的 -、#、*、• 与编号标记（防伪造清单项/标题/有序列表；已知误伤：行首「3.14」
+ *  类小数会被剥成「14…」，属摘要级可接受损耗）。最后统一码点截断。导出供自测
+ *  间接覆盖（clamp 本身不导出）。 */
+const clamp = (text, max) => {
+  const t = String(text ?? '')
+    .split(/[\r\n]+/)
+    .map((line) => line.replace(/^\s*(?:[-#*•]+|\d{1,4}[.)、．])\s*/, '').trim())
+    .filter(Boolean)
+    .join(' ⏎ ')
+  return [...t].length > max ? [...t].slice(0, max).join('') + '…' : t
+}
+
+/** 断点数据收集（续跑 prompt 的「已完成进度清单」来源，全部 fail-open、全程
+ *  只读）：① 任务板最新检查点——show 输出的「最新检查点(N)」行（show 只输出最
+ *  新一条而非全轨迹；T10 事件溯源化后检查点随事件流持久，崩溃/中断不丢；此处读
+ *  人类可读面，v2.8 taskboard.py --json 结构化通道已备，迁移属后续任务不在 S1 面）；
+ *  ② bus 汇报——coordinator 收件箱中落款为该专家的消息（--no-attempt-filter 纯
+ *  读零副作用：不归档、不 skip-round；署名纪律保证 from=专家名）。任何失败静默
+ *  跳过该项。导出供自测。 */
+export async function collectResumeProgress({ taskText, owner, cwd = process.cwd(), timeoutMs = AUTOCLAIM_TIMEOUT_MS } = {}) {
+  const items = []
+  const ids = parseTaskIdList(taskText)
+  if (ids.length) {
+    const located = locateAutoClaimBoard(cwd)
+    if (located.ok) {
+      for (const id of ids.slice(0, AUTOCLAIM_MAX_IDS)) {
+        try {
+          const r = await runTaskboard(cwd, ['--board', located.board, 'show', id], timeoutMs)
+          if (r.code !== 0) continue
+          const line = (r.stdout ?? '').split('\n').map((l) => l.trim()).find((l) => l.startsWith('最新检查点('))
+          if (line) items.push({ source: '任务板最新检查点', text: `${id} ${clamp(line, RESUME_ITEM_MAX_CHARS)}` })
+        } catch { /* 单任务检查点读取失败不阻断折叠 */ }
+      }
+    }
+  }
+  if (owner) {
+    try {
+      const bus = await runBus(cwd, ['read', '--box', RESUME_BUS_BOX, '--no-attempt-filter'], timeoutMs)
+      if (bus.code === 0) {
+        // T12 回炉 major-1（取旧弃新修复）：bus read 输出按收件箱 ts 升序（最旧在
+        // 前），按序填充会让同名专家跨任务的历史汇报占满名额、把最新最相关的汇报
+        // 挤出清单，旧消息还可能混入其他任务的误导性「已完成X」——先全量署名过
+        // 滤，再按相关性取尾（尾部=最新）：① task= 字段命中任务书引用任务 id 的
+        // 消息优先入选（组内取尾）；② 剩余名额从其余消息尾部补齐。检查点已占名
+        // 额先行扣减，两来源共享 RESUME_PROGRESS_MAX_ITEMS 总预算。
+        // T12 二轮回炉 major-3：先经收件箱文件名交叉校验 + 同 id 去重保首剔除正文
+        // 伪造/转述分块头裂解出的幻影消息（trustedBusMessages），再做署名过滤。
+        const mine = trustedBusMessages(parseBusMessages(bus.stdout), join(cwd, BUS_ROOT_DIRNAME, RESUME_BUS_BOX)).filter((msg) => msg.from === owner)
+        const slots = RESUME_PROGRESS_MAX_ITEMS - items.length
+        if (slots > 0 && mine.length) {
+          const idSet = new Set(ids)
+          const onTask = mine.filter((msg) => idSet.has(msg.task))
+          const rest = mine.filter((msg) => !idSet.has(msg.task))
+          const onTaskPicked = onTask.slice(-slots)
+          const restSlots = slots - onTaskPicked.length
+          const picked = restSlots > 0 ? [...onTaskPicked, ...rest.slice(-restSlots)] : onTaskPicked
+          for (const msg of picked) {
+            items.push({ source: 'bus 汇报', text: clamp(`[${msg.subject}] ${msg.body}`, RESUME_ITEM_MAX_CHARS) })
+          }
+        }
+      }
+    } catch { /* bus 读取失败不阻断折叠 */ }
+  }
+  return items.slice(0, RESUME_PROGRESS_MAX_ITEMS)
+}
+
+/** 续跑 prompt 组装（恰好一个续跑 turn 的全部指令）：持久会话冷恢复会重放全部
+ *  历史，原任务书无需重复；折入的是断点数据——任务板最新检查点 + bus 汇报 +
+ *  中断前部分产出。无任何断点数据时显式写「无清单」并要求先落检查点（协议 §3
+ *  禁止无检查点盲续）。lang（T9）：文案语言，缺省 'zh'（zh 逐字节一致）；【】tag
+ *  保持中文原字面，正文经 lib/messages 字典切语言。导出供自测。 */
+export function buildResumePrompt({ progress = [], partialOutput = '', expertName, lang = 'zh' } = {}) {
+  const lines = [
+    msg('resume.header', lang),
+  ]
+  const TRUNCATION_LINE = msg('resume.truncated', lang)
+  const list = []
+  const partial = clamp(partialOutput, RESUME_PARTIAL_MAX_CHARS)
+  if (partial) list.push({ source: '中断前部分产出', text: partial })
+  // 注入护栏在组装帧收口（T12 回炉 major-2）：progress 各条目虽已在收集侧经
+  // clamp 净化，此处再过一遍 clamp——bullet 清单框架在本函数拼装，条目文本不得
+  // 携带真实换行或行首清单标记进入框架（幂等：已净化文本二次 clamp 零变化）。
+  list.push(...progress.map((item) => ({ ...item, text: clamp(item?.text, RESUME_ITEM_MAX_CHARS) })))
+  if (list.length) {
+    lines.push(msg('resume.progressHeader', lang))
+    let budget = RESUME_PROMPT_MAX_CHARS
+    // 预算口径留档（T12 残余 minor「截断标记预算边角」书面裁定，T17）：预算=断点数据清单段
+    // （清单行+截断标记，与 FINDINGS_MAX_CHARS 断点数据口径对齐），帧头两行与 expertName 尾行
+    // 为固定常量不计入——残余超幅是常量级（数十码点），预算是 prompt 尺寸软约束而非安全边界；
+    // 改口径将推翻已锁定的清单段不变量用例，无实害不实施。
+    for (const item of list) {
+      const line = `- [${item.source}] ${item.text}`
+      const cost = [...line].length + 1
+      if (budget < cost) {
+        // T12 回炉建议1：放不下即以截断标记收尾，标记行自身开销同样计入预算
+        // （放不下标记就静默收尾）——清单总开销（含标记）不越过总预算。
+        const markCost = [...TRUNCATION_LINE].length + 1
+        if (budget >= markCost) lines.push(TRUNCATION_LINE)
+        break
+      }
+      budget -= cost
+      lines.push(line)
+    }
+  } else {
+    lines.push(msg('resume.progressEmpty', lang))
+  }
+  if (expertName) lines.push(msg('resume.expertTail', lang, { name: expertName }))
+  return lines.join('\n')
+}
+
+function textBlocks(blocks) {
+  return (blocks ?? [])
+    .filter((b) => b?.type === 'text')
+    .map((b) => b.text)
+    .join('')
+}
+
+async function mapPool(items, concurrency, mapper) {
+  if (items.length === 0) return []
+  const limit = Math.max(1, Math.min(concurrency, items.length))
+  const results = new Array(items.length)
+  let next = 0
+  const workers = Array.from({ length: limit }, async () => {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await mapper(items[index], index)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
+
+function renderExpertList(value) {
+  const lines = [`共 ${value.total} 位有效专家（${value.sources.length} 个来源）：`]
+  for (const g of value.sources) {
+    lines.push(`- ${g.source}：${g.count} 位`)
+    for (const e of g.experts ?? []) {
+      const label = e.name ?? e.title ?? e.file
+      const marks = `${e.disabled ? '（已停用）' : ''}${e.conflict ? '（跨源重名，用『来源名/原名』召唤指定来源）' : ''}`
+      lines.push(`    · ${label}${marks}`)
+    }
+    for (const e of g.shadowed ?? []) {
+      const rep = e.rep ? `；代表：${e.rep}` : ''
+      lines.push(`    · ${e.name ?? e.title ?? e.file}（shadowed：去重组非代表副本，不可召唤${rep}）`)
+    }
+  }
+  return lines.join('\n')
+}
+
+/** 注册入口：apply 内调用。任何失败降级为 console.error 并跳过（不抛出——
+ *  本插件承担 preset 部署职责，注册失败不得引发崩溃循环）。
+ *  autoClaimCwd：WP-4a auto-claim 的板定位目录（默认宿主进程 cwd，即会话工
+ *  作区），同时是 #19 项目层档案（.dsh/expert-profiles.json）与文件层项目层
+ *  专家的统一 cwd 锚点；autoClaimTimeoutMs：auto-claim 的 taskboard.py 子进程超
+ *  时（仅供自测注入，宿主无需传）；autoClaim：WP-8 ① 宿主设置页旋钮原样透传
+ *  （可能是 Volatile 引用/布尔/undefined，autoClaimSummonedTasks 内经
+ *  resolveAutoClaimEnabled 读取，volatile 编辑即时生效——见 lib/host-settings.js）；
+ *  replyLanguage：T3v2（gh-issues T7）宿主设置页回复语言原样透传（可能是 Volatile
+ *  引用/字符串/undefined，T9 在 summon 流程内经 resolveReplyLanguage 读取——env
+ *  DSH_EXPERT_REPLY_LANG 覆盖优先于 Config，缺省=zh 行为零变化；见
+ *  lib/host-settings.js）；
+ *  profilesPaths：#19 档案路径覆盖 {homePath, projectPath}（仅供自测注入，缺省
+ *  全局层随 DSH_HOME 现场解析、项目层锚解析缝结果）；
+ *  cwd：T1 会话 cwd 解析缝（方案 a′）的 config.expertTools?.cwd 配置覆盖（可能
+ *  是 undefined；优先级 = summon 显式 cwd 参数 > 宿主 exec.agent 会话 cwd >
+ *  本配置 > process.cwd() 注册期兜底，见下方 resolveSessionCwd）。 */
+export function registerExpertTools(ctx, { dst, providerName = 'spawn', getExpertContentImpl, autoClaimCwd = process.cwd(), cwd: configCwd, autoClaimTimeoutMs = AUTOCLAIM_TIMEOUT_MS, autoClaim, replyLanguage, profilesPaths } = {}) {
+  // 注册守卫探测式双轨（dsh-expert-291 T1）：alpha.2 起 SubagentRuntime 无 start，
+  // 新 API = startActivation + getProvider（宿主源码 lib/index.js:3032/:3268 实证）
+  // 走新轨；旧宿主（start 为函数）保留回退轨（两代兼容不得回退——旧面行为逐字节
+  // 保持）。两轨皆缺才 console.error 既有文案并跳过注册（注册失败不崩溃语义不变）。
+  const subagents = ctx?.subagents
+  const hasLegacyStart = typeof subagents?.start === 'function'
+  // 发射面二选一：两代面并存时保守走旧轨（已验证行为优先）；仅 alpha.2 新面才切新轨。
+  const activationDispatch = !hasLegacyStart && typeof subagents?.startActivation === 'function'
+  if (typeof ctx?.tools?.register !== 'function' || typeof subagents?.getProvider !== 'function' || (!hasLegacyStart && !activationDispatch)) {
+    console.error('[dsh-expert-orchestrator] expert tools unavailable: ctx.tools/ctx.subagents missing — skipping tool registration')
+    return false
+  }
+  // ── T1 会话 cwd 解析缝（方案 a′，用户裁决）────────────────────────────────
+  // 缺陷（编排者实测）：autoClaimCwd 注册期固定 = 宿主 server 进程 cwd（实机 =
+  // node_modules/.bin），项目层档案 .dsh/expert-profiles.json 与项目任务板
+  // .expert-taskboards/ 在真实部署永不命中，只有全局层（DSH_HOME）可用。
+  // 解析链（优先级降序）：summon 显式 cwd 参数 > 宿主 exec.agent 会话 cwd
+  // （可行性门已核实：dsh-tools pipeline.js:471 tool.execute(exec.arguments, exec)
+  // 透传 exec.agent=运行中 agent；dsh-working-directory 服务 get(session) 返回
+  // 有效目录（投影 init=header.cwd、折叠 working-directory/change 事件，含会话
+  // 内 cd 变更），服务不可达降级 session.header.cwd 原初目录）>
+  // config.expertTools?.cwd 配置覆盖 > process.cwd()（注册期 autoClaimCwd，
+  // ≤2.13.5 现状兜底，行为逐字节一致）。每次 summon 现算，绝不缓存。
+  const sessionCwdFromExec = (exec) => {
+    const session = exec?.agent?.session
+    if (!session) return undefined
+    try {
+      // reflect.get(name,false)：服务未挂载返回 undefined 不抛（cordis 契约，
+      // strict=false 跳过 fiber 活跃检查）；投影读失败/服务异常 → 降级
+      // header.cwd，绝不阻塞 summon（fail-open 同 auto-claim 哲学）。
+      const wd = typeof ctx?.get === 'function' ? ctx.get('workingDirectory', false) : undefined
+      if (wd && typeof wd.get === 'function') {
+        const dir = wd.get(session)
+        if (typeof dir === 'string' && dir) return dir
+      }
+    } catch { /* 下一级 */ }
+    const headerCwd = session.header?.cwd
+    return typeof headerCwd === 'string' && headerCwd ? headerCwd : undefined
+  }
+  const resolveSessionCwd = ({ cwd, exec } = {}) => {
+    if (typeof cwd === 'string' && cwd.trim()) return cwd.trim()
+    const fromSession = sessionCwdFromExec(exec)
+    if (fromSession) return fromSession
+    if (typeof configCwd === 'string' && configCwd.trim()) return configCwd.trim()
+    return autoClaimCwd
+  }
+
+  // T3 ③：per-summon preset 注册缓存（{persona,toolFilter} 内容键 → preset id）
+  // 与引用计数面（T12 用完即注：preset id → {refs, unregister}，run 收尾边沿
+  // 归还、归零注销——冷恢复在途保护语义见 lib/summon-preset.js 文件头）。
+  // 两者 registerExpertTools 每实例一份、同生命周期。
+  const summonPresetCache = createSummonPresetCache()
+  const summonPresetRefs = createSummonPresetRefs()
+  const readPersona = (expert) => {
+    if (expert.source === CUSTOM_SOURCE_ID) {
+      // 自定义专家的 prompt 存于 custom-experts.json（getExpertContent 拒绝 custom）
+      const db = loadCustomExperts(dst) ?? {}
+      const slug = String(expert.file ?? '').replace(/\.md$/, '')
+      const rec = (db.customExperts ?? []).find((c) => !c.deleted && (c.slug === slug || `${c.slug}.md` === expert.file))
+      if (!rec) throw new Error(`自定义专家不存在或已删除：${slug}`)
+      return { content: rec.prompt }
+    }
+    if (expert.source === FILE_LAYER_SOURCE_ID) {
+      // WP-6a 文件层专家（T13）：执行期重读（S3）——每次召唤现场读 .md 全文
+      //（剥 frontmatter/净化由 runExpert 的 sanitizePersona 链统一负责），改文
+      // 件立即生效、无需重启宿主。文件被删/不可读 → 显式失败：专家定义已消失，
+      // 静默回退花名册会造成「同名换人」，拒绝比换人安全；读取侧 lstat 守卫
+      // （回炉 M1）确保扫描→读取间隙被换成符号链接的内容同样不进信任面。
+      return { content: readFileLayerPersona(expert.path) }
+    }
+    return (getExpertContentImpl ?? ((ref) => getExpertContent(dst, ref)))({ sourceId: expert.source, file: expert.file })
+  }
+
+  // ── WP-6a 专家定义文件层（T13）：目录定位 ──────────────────────────────
+  // 全局层 = <DSH_HOME|~/.dsh>/experts/*.md（与 lib/index.js resolvePresetTargetDir
+  // 同一 .dsh 定位约定；DSH_HOME 每次现场读取——测试与宿主均可注入）；项目层 =
+  // <sessionCwd>/.dsh/experts/*.md（T1 解析缝：cwd 锚点每次 summon 现算，缺省
+  // 参数=autoClaimCwd 兜底=现状行为；与 WP-4a 板定位同锚点，既有测试注入通道
+  // 复用）。两目录均在 preset 部署树之外，PROTOCOL/USER_DATA 刷新机制永不触碰
+  // （用户数据语义，已核实）。
+  const fileLayerDirs = (sessionCwd = autoClaimCwd) => ({
+    homeDir: globalExpertsDir(),
+    projectDir: projectExpertsDir(sessionCwd),
+  })
+
+  // ── #19 per-expert 档案（T15）：路径定位 ────────────────────────────────
+  // 全局层 = <DSH_HOME|~/.dsh>/expert-profiles.json（与文件层全局层同一 home 定
+  // 位约定）；项目层 = <sessionCwd>/.dsh/expert-profiles.json（T1 解析缝：cwd
+  // 锚点每次 summon 现算，缺省参数=autoClaimCwd 兜底；与文件层项目层同源）。
+  // 每次 summon 现场读（执行期重读=热调锚点）；profilesPaths 仅
+  // 供自测注入双路径，宿主无需传。
+  const profilePaths = (sessionCwd = autoClaimCwd) => profilesPaths ?? {
+    homePath: globalProfilesPath(),
+    projectPath: projectProfilesPath(sessionCwd),
+  }
+
+  const loadState = () => {
+    const roster = loadRoster(dst)
+    if (!roster) throw new Error('合并花名册不可用（expert-sources/merged/roster.json 缺失）——请先在设置页完成来源下载并重启')
+    const aliases = loadAliases(dst) ?? {}
+    // all 保留 shadowed 条目（P7 冲突显式化：list_experts 标注用）；candidates
+    // 仍剔除 shadowed——解析与召唤语义不变。
+    const all = rosterCandidates(roster)
+    const candidates = all.filter((e) => !e.shadowed)
+    return { roster, aliases, candidates, all }
+  }
+
+  // ── #22 振荡检测（T26）：派发序记录器，registerExpertTools 每会话一份，summon
+  // 与批量召唤共用同一序列（跨工具口可见完整的 A↔B 交替面）；开关关闭 → null。
+  const oscillation = oscillationEnabled()
+    ? createOscillationDetector({ threshold: oscillationThreshold() })
+    : null
+
+  // ── 编排经济学 · 方向 2 成本记账（docs/internal/direction2-orchestration-economics.md）：
+  // 会话级召唤记账一份（summon_expert/summon_experts 全量条目，纯内存封顶 500）；
+  // 记账恒开（零 I/O），但【成本】提示行/批量成本行只在 DSH_EXPERT_TOKEN_BUDGET
+  // 显式开启后出现（熔断=提示级，沿振荡告警先例；未开启时 summon 输出逐字节不变）。
+  const costLedger = createCostLedger()
+
+  // ── ⑤小切口 路由实测数据回填（lib/route-telemetry.js）：summon 边界只读埋点——
+  // 实测面（专家/模型/stopReason/字符规模/时长）逐样本落会话 cwd 的
+  // .expert-routing/samples.jsonl（任务板/事件流零写入、summon 输出零变化）；
+  // DSH_EXPERT_ROUTE_TELEMETRY='0' 关闭；落盘异常 fail-open 本会话禁用。
+  // 用途=后续校准估算系数与模型路由（usage 接入点见 lib/cost.js 头注）。
+  const routeTelemetry = makeRouteTelemetry({ env: process.env })
+
+  // ── 方向 3 召唤失败循环告警（lib/fail-loop.js，默认开启非阻断）：同一专家连续
+  // 召唤失败达阈值后，错误尾部附【升级｜连续失败｜告警】信封提示行（现状/建议格式，
+  // 换专家/换通道/上报用户）；
+  // 成功即清零。DSH_EXPERT_SUMMON_FAILLOOP='0'/'' 整体关闭（行为零变化）。
+  const summonFailLoop = summonFailLoopEnabled()
+    ? createSummonFailLoopDetector({ threshold: summonFailLoopThreshold() })
+    : null
+  // 召唤结果记账：成功清 streak（query 与解析后花名册名都清——惯用名/别名召唤不残留）；
+  // 失败按 query 名累计并返回告警行（解析前失败也只有 query 名可键）。
+  const summonLoopHint = (names, ok, lang = 'zh') => {
+    if (!summonFailLoop) return ''
+    const list = Array.isArray(names) ? names : [names]
+    if (ok) {
+      for (const n of list) summonFailLoop.recordSuccess(n)
+      return ''
+    }
+    return summonFailLoop.recordFailure(list[0], lang)
+  }
+
+  // ── #20 idle-edge 自动续领（T28）：在途专家执行计数（registerExpertTools 每会话
+  // 一份，summon_expert 与 summon_experts 并发项共用——最后一位收尾即空闲边沿）。
+  // 计数点=runExpert 受保护段入口（锁获准之后）；settle 恰好一次（成功边沿扫描、
+  // 失败边沿只递减、兜底幂等），开关关闭时 settle 直接空串返回（零板读取零开销）。
+  let idleFlight = 0
+
+  // T1 解析缝：sessionCwd 每次解析现算（调用方传入，缺省=autoClaimCwd 兜底）。
+  const resolveOrThrow = (state, query, sessionCwd = autoClaimCwd) => {
+    // WP-6a 文件层解析前置（S2 三层覆盖：项目层>全局层>内置/来源包，用户裁决
+    // 2026-10-07 Q4=4A）：每次解析现场 loadFileExperts（S3 执行期重读，无任何
+    // 缓存）。回炉裁决（编排者 q1：宁严勿宽，对齐 Q4=4A「同名」字面范围）：
+    // ① 文件层参与解析链的优先级只有一条通道——花名册 name 精确命中与文件层
+    //    name 精确命中同点裁决，同名 → 文件层覆盖（dedup 代表规则不再参与）；
+    // ② 文件层专家的 title 仅在花名册 name/惯用名/title 全部未命中后做文件层
+    //    内部兜底解析（title→唯一），绝不劫持花名册（内置/来源包）的精确名或
+    //    title 解析（含文件层 name 撞花名册 title 的情形，花名册 title 胜）；
+    // ③ 未使用文件层（空文件层）→ 全部按既有解析链逐字走，用户行为零变化。
+    const fileLayer = loadFileExperts(fileLayerDirs(sessionCwd))
+    const fileByName = resolveFileExpert(fileLayer.all, query, { mode: 'name' })
+    const q = norm(query)
+    const rosterNameHit = !!q && state.candidates.some((e) => norm(e.name) === q)
+    // ① 同名覆盖（唯一优先通道）：花名册与文件层 name 同时精确命中。
+    if (rosterNameHit && fileByName.ok) return fileByName.expert
+    // ② 花名册解析链完整保留（name 命中且无同名覆盖 → 花名册专家；name 未命
+    //    中 → 惯用名 > title；禁用/shadowed/歧义语义逐字不变）——文件层在
+    //    此阶段一律不参与。
+    const r = resolveExpert(state.candidates, state.aliases, query)
+    if (r.ok) return r.expert
+    if (r.reason === 'expertDisabled') {
+      throw new Error(`专家 ${r.expert?.name ?? query} 已被停用——请在设置页重新启用后再召唤`)
+    }
+    if (r.reason === 'expertShadowed') {
+      throw new Error(`${query} 是去重组的非代表副本——请召唤该组的代表专家`)
+    }
+    if (r.reason === 'ambiguous') {
+      // 清单给出可召唤形式 source/name（+ title 括注）——旧清单的 source/file
+      // 形态不可召唤（审计 2026-11-10：模型照抄必败，死语法 10 次浪费根源）。
+      const list = (r.candidates ?? [])
+        .map((c) => `${c.source}/${c.name ?? c.title ?? '?'}${c.name && c.title ? `（${c.title}）` : ''}`)
+        .join('\n')
+      throw new Error(`委派名存在多个候选，请用『来源名/原名』精确指定（以下任一整串可直接作为 expert 参数召唤）：\n${list}`)
+    }
+    // ③ 花名册整体未命中 → 文件层内部兜底解析：name（①②已排他未命中）→
+    //    title 唯一命中；title 多命中 → ambiguous（宁拒勿猜）。
+    if (fileByName.ok) return fileByName.expert
+    const ft = resolveFileExpert(fileLayer.all, query, { mode: 'title' })
+    if (ft.ok) return ft.expert
+    if (ft.reason === 'ambiguous') {
+      // 文件层无 source 语法，可召唤形式是 name；layer/file 仅定位不改写。
+      const list = (ft.candidates ?? []).map((c) => `${c.name ?? c.title ?? '?'}（${c.layer} 层：${c.file}）`).join('\n')
+      throw new Error(`委派名存在多个候选，请用完整专家名精确指定（以下 name 可直接作为 expert 参数召唤）：\n${list}`)
+    }
+    // 『来源名/原名』形态的失败如实归因（审计 2026-11-10：此前统一落「专家不存在」，
+    // 模型无从判断是来源写错、名写错还是指向了不可召唤的遮蔽副本）。三类区分：
+    const sn = parseSourceName(query)
+    if (sn) {
+      // 指向被去重遮蔽的非代表副本 → 指路该名全部可召唤代表（source/name 形式）。
+      const shadowedHit = state.all.some((e) => e.shadowed && norm(e.source) === norm(sn.source)
+        && (norm(e.name) === norm(sn.name) || norm(e.file).replace(/\.md$/, '') === norm(sn.name)))
+      if (shadowedHit) {
+        const reps = [...new Map(state.all
+          .filter((e) => !e.shadowed && norm(e.name) === norm(sn.name))
+          .map((e) => [`${e.source}/${e.name}`, 1]))
+          .keys()].join('、')
+        throw new Error(`${query} 指向去重组的非代表副本（shadowed），不可直接召唤——该名的可召唤代表：${reps || '（无，用 list_experts 浏览花名册）'}`)
+      }
+      throw new Error(`专家不存在：${query}——『来源名/原名』解析未命中（来源「${sn.source}」不存在或未启用，或其中没有名为「${sn.name}」的可召唤专家）；可先调用 list_experts 浏览花名册（惯用名见 roster-aliases.json）`)
+    }
+    throw new Error(`专家不存在：${query}；可先调用 list_experts 浏览花名册（惯用名见 roster-aliases.json）`)
+  }
+
+  // one-shot 现状路径（旧宿主 / seam 不可用 / 显式关闭）：无档案时与 T15 之前的
+  // 行为逐字节一致（toolFilter/agentOptions 由 runExpert 统一组装后传入）。
+  // taskText→promptText（T26 #21）：经验提示与 origin chain 标记行统一在 runExpert
+  // 组装，两条派发路径只消费最终 promptText（提示在前、链标记行恒收尾）。
+  // T3 ③：agentPreset 非空=preset 通道——request 只带 agentPreset（宿主 manager
+  // 新建路径 composition 只读 request.agentPreset，persona/toolFilter 直传键被
+  // 静默丢弃，绝不发送）；null=既有直传通道（persona/toolFilter 原样，≤alpha.2
+  // 逐字节不变）。
+  const runExpertOneShot = async ({ query, expert, promptText, persona, exec, toolFilter, agentOptions, agentPreset }) => {
+    const personaKeys = agentPreset ? { agentPreset } : { persona, toolFilter }
+    // 发射双轨（T1）：alpha.2 无 start——新轨 startActivation(spec)。**rc.2 契约=spec
+    // 顶层平铺**（SUMMON-FAIL-0.2.2-rc.2.md 实证：宿主 lib/index.js:3018-3022 直读
+    // spec.parent.id、:1478 startLocal 读 spec.prompt/agentPreset/agentOptions 顶层，
+    // types.d.ts:23 SubagentActivationSpec extends Omit<SubagentStartRequest,...>——
+    // 此前按 alpha 升级指南写的嵌套 request 形状在 rc.2 上 spec.parent===undefined
+    // → TypeError，summon 全炸；指南与运行时矛盾已留痕待上游反馈）。delivery:'caller'
+    // =one-shot 语义（宿主 :1560 prompt 不包结果投递指导、:2216 notifySettlement 不向
+    // parent 投递结算消息——结果经 receipt.result 由本插件取，不注入 parent inbox）；
+    // receipt 形状不变 { childId, result, dispose }（:2207，result 结算 { output,
+    // stopReason }）。宿主对 spec.signal 为裸 throwIfAborted，缺省补永不中止 signal
+    // （语义同 NEVER_ABORT_SIGNAL 注记）；取消语义判定（exec.signal?.aborted）仍读
+    // 原始 signal。旧轨 start(providerName, request) 现状逐字节保留。
+    const run = activationDispatch
+      ? await ctx.subagents.startActivation({
+          provider: providerName,
+          label: `expert:${expert.name ?? query}`,
+          prompt: [{ type: 'text', text: promptText }],
+          parent: exec.agent,
+          ...personaKeys,
+          // #19 model 热调（T15）：仅档案配置了 model 且 provider 声明 agentOptions
+          // 能力时才带该键（无档案/未配置 → 键不存在，payload 与既有行为一致）。
+          ...(agentOptions ? { agentOptions } : {}),
+          delivery: 'caller',
+          signal: exec.signal ?? NEVER_ABORT_SIGNAL,
+        })
+    // 键集边界（如实声明）：rc.2 SubagentStartRequest 顶层键集=cwd/agentPreset/label/
+    // prompt/parent/agentOptions/outputSchema/signal——无 preset 能力 provider 下
+    // persona/toolFilter 两键在 activation 轨无宿主载体（local 轨忽略、external 轨
+    // 透传 provider），persona 面经 agentPreset 交付（provider capabilities 全 true
+    // 的 spawn 面恒走 preset 通道）；无 preset 能力面的 persona 载体边界留后续实测。
+      : await ctx.subagents.start(providerName, {
+          label: `expert:${expert.name ?? query}`,
+          prompt: [{ type: 'text', text: promptText }],
+          parent: exec.agent,
+          ...personaKeys,
+          // #19 model 热调（T15）：仅档案配置了 model 且 provider 声明 agentOptions
+          // 能力时才带该键（无档案/未配置 → 键不存在，payload 与既有行为一致）。
+          ...(agentOptions ? { agentOptions } : {}),
+          signal: exec.signal,
+        })
+    try {
+      const result = await run.result
+      const text = textBlocks(result?.output)
+      if (result?.stopReason !== 'completed') {
+        throw new Error(`专家执行未正常完成（stopReason=${result?.stopReason ?? 'unknown'}）${text ? '：' + text.slice(0, 500) : ''}`)
+      }
+      // ⑤埋点：stopReason 随结果回传（宿主结算观察面的真实离散面；additive 键，
+      // 既有消费方按 answer/expert 解构不受影响）。
+      return { expert: expert.name ?? query, answer: text, stopReason: result?.stopReason ?? null }
+    } finally {
+      if (run?.dispose) await run.dispose()
+    }
+  }
+
+  // continuable 断点续跑路径（新一代宿主，用户裁决 Q2=2A）：专家 run 建为持久
+  // continuable 子代理；中断（error/max-tokens）后经 sendMessage 恢复恰好一个续
+  // 跑 turn（宿主对缺失直接子代理按持久 descriptor 冷恢复），续跑 prompt 折入断
+  // 点数据（任务板最新检查点 + bus 汇报 + 中断前部分产出）。取消（aborted）与
+  // 拒绝（refusal）不续跑；续跑后再中断按一次性纪律抛错交编排者处置。
+  // T3 ③：agentPreset 语义与 one-shot 相同；agentPreset id 随持久 descriptor 落盘，
+  // 冷恢复经 presets.mount(childCtx, id) 重挂——T12 用完即注下 run 在途（含本轮
+  // 中断自动续跑窗口）计数 >0 定义必存活；run 收尾后注销为方案 A 裁决语义（同进程
+  // 重物化窗口不再保障，lib/summon-preset.js 文件头与设计文档 §用完即注）。
+  // lang（T9）：续跑相关文案语言（buildResumePrompt + answer 尾行），由 runExpert
+  // 以 resolveReplyLanguage(replyLanguage) 计算后透传；缺省 'zh'（zh 逐字节一致）。
+  const runExpertContinuable = async (seam, { query, expert, promptText, resumeTaskText, persona, exec, toolFilter, agentOptions, agentPreset, sessionCwd = autoClaimCwd, lang = 'zh' }) => {
+    const personaKeys = agentPreset ? { agentPreset } : { persona, toolFilter }
+    const watcher = createSettlementWatcher(seam)
+    try {
+      // 疑问3（T12 回炉）：exec.signal 缺省时两处宿主调用面补永不中止 signal（宿主
+      // d.ts 非可选 + 裸 throwIfAborted，见 NEVER_ABORT_SIGNAL 注记）；取消语义判
+      // 定（exec.signal?.aborted）仍读原始 signal。
+      const signal = exec.signal ?? NEVER_ABORT_SIGNAL
+      // 平铺 spec（rc.2 契约为准，SUMMON-FAIL-0.2.2-rc.2.md 实证）；legacy 轨由
+      // detectResumeSeam 适配层包回嵌套 request（与旧嵌套构造逐字节等价，alpha 行为不变）。
+      // 有意不带 delivery 键：rc.2 缺省（parent 交付）= 持久 descriptor + 结果投递指导
+      // + 结算消息投 parent——恰是 continuable 持久会话/冷恢复/结算观察（ctx.on
+      // subagent/end）所需；'caller' 专属 one-shot（sessionPersistence 面）。
+      const started = await seam.startContinuable({
+        provider: providerName,
+        label: `expert:${expert.name ?? query}`,
+        prompt: [{ type: 'text', text: promptText }],
+        parent: exec.agent,
+        ...personaKeys,
+        // #19 model 热调（T15）：spec 顶层携带 agentOptions，宿主据此解析子代理模型
+        //（写入持久 descriptor）。
+        ...(agentOptions ? { agentOptions } : {}),
+        signal,
+      })
+      const childId = started?.childId
+      if (typeof childId !== 'string' || !childId) {
+        throw new Error('宿主未返回持久子代理 id（startContinuable 契约不符）——按检查点+全新代理重跑处置')
+      }
+      const interruptTurn = () => seam.interrupt?.(childId, { kind: 'ancestor', agent: exec.agent })
+      // minor-3（T12 回炉）：终态失败路径 best-effort 回收——宿主
+      // drainContinuableChildren 只释放驻留 Activation（缺失目标/无 manager 为
+      // no-op），持久 descriptor 保留在盘（冷恢复锚点，刻意不删）。回收失败静默，
+      // 绝不掩盖原错误；契约不符路径无 childId、取消路径维持 interrupt 现状，均
+      // 不回收。宿主辅助面缺失（seam.drainChildren=null）时跳过。
+      const reclaimChild = () => {
+        try {
+          const drained = seam.drainChildren?.(exec.agent, [childId])
+          if (drained && typeof drained.catch === 'function') drained.catch(() => { /* best-effort */ })
+        } catch { /* 已尽力 */ }
+      }
+      const answerText = (info) => textBlocks(info?.lastAssistantMessage ?? info?.output)
+      let settle = await watcher.next(childId, signal, interruptTurn)
+      if (settle.stopReason === 'completed') {
+        return { expert: expert.name ?? query, answer: answerText(settle), stopReason: settle.stopReason }
+      }
+      const firstReason = settle.stopReason
+      if (!RESUMABLE_STOP_REASONS.includes(firstReason) || exec.signal?.aborted) {
+        reclaimChild()
+        throw new Error(`专家执行未正常完成（stopReason=${firstReason ?? 'unknown'}）${answerText(settle) ? '：' + answerText(settle).slice(0, 500) : ''}`)
+      }
+      const progress = await collectResumeProgress({ taskText: resumeTaskText, owner: expert.name ?? query, cwd: sessionCwd, timeoutMs: autoClaimTimeoutMs })
+      const resumePrompt = buildResumePrompt({ progress, partialOutput: answerText(settle), expertName: expert.name ?? query, lang })
+      try {
+        await seam.sendMessage(exec.agent, childId, [{ type: 'text', text: resumePrompt }], { signal })
+      } catch (error) {
+        // minor-4（T12 回炉）：宿主契约为「inbox 受理才 resolve」，抛错理论=未受
+        // 理且无第二次投递；若宿主在受理后抛错则存在孤儿 turn——错误信息附
+        // childId 供编排者人工核查（错误信息不含 childId 无法定位）。
+        throw new Error(`续跑消息投递失败（childId=${childId}）：${error?.message ?? error}`)
+      }
+      settle = await watcher.next(childId, signal, interruptTurn)
+      if (settle.stopReason === 'completed') {
+        return {
+          expert: expert.name ?? query,
+          answer: `${answerText(settle)}\n${msg('resume.answerSuffix', lang, { reason: firstReason })}`,
+          stopReason: settle.stopReason,
+        }
+      }
+      reclaimChild()
+      throw new Error(`专家执行未正常完成（stopReason=${firstReason}），已自动续跑恰好 1 个 turn 后仍中断（stopReason=${settle.stopReason ?? 'unknown'}）——按一次性纪律以检查点+全新代理重跑`)
+    } finally {
+      watcher.dispose()
+    }
+  }
+
+  const runExpert = async (query, task, exec, { claimedIds, readOnly = false, cwd, model: summonModel } = {}) => {
+    const taskText = typeof task === 'string' ? task.trim() : ''
+    if (!taskText) throw new Error('task 必填：给专家的自包含任务说明（含全部必要上下文）')
+    if ([...taskText].length > SUMMON_TASK_MAX_CHARS) {
+      throw new Error(`task 超长（${[...taskText].length} > ${SUMMON_TASK_MAX_CHARS} 码点）——请精简任务书或拆分`)
+    }
+    // 调用态 model 覆盖（2.13.8，issue#1 追问）：空串/非串=未传（零变化）；
+    // 覆盖注入点在档案快照之后（resolvedModel 赋值，见 modelProfile 合成段前）。
+    if (typeof summonModel === 'string') summonModel = summonModel.trim() || undefined
+    if (exec?.agent === undefined) throw new Error('summon_expert 必须在有 agent 的会话中调用')
+    // T1 解析缝：每次 summon 现算会话 cwd（显式 cwd 参数 > 宿主 exec.agent 会话
+    // cwd > config.expertTools?.cwd > autoClaimCwd 兜底），全部 8 处消费锚点
+    // （文件层/档案/origin-chain/写锁/idle 扫/auto-claim/预算提示/续领）统一走
+    // sessionCwd，注册期 autoClaimCwd 只作兜底默认值。
+    const sessionCwd = resolveSessionCwd({ cwd, exec })
+    // T9（gh-issues-1-2 ②）：回复语言生效面裁决——lib 注入的全部协议行 + 人读提示行
+    //（含【】tag 后正文，tag 字面不译）。语言源=构造参数 replyLanguage（lib/index.js
+    // 已从 Config 透传），经 resolveReplyLanguage 判读（env DSH_EXPERT_REPLY_LANG >
+    // Config > 'zh'；非法/缺失一律 zh，绝不 throw）。zh 模式下所有收口文案逐字节
+    // 等于原实现（硬契约，test/tools.selftest.mjs 与 effort-preflight 契约测试守门）。
+    const lang = resolveReplyLanguage(replyLanguage)
+    // 编排经济学 · 方向 2：成本熔断阈值（DSH_EXPERT_TOKEN_BUDGET，千 token）——
+    // null=禁用（提示行零变化）；记账（costLedger.record）恒开，提示仅阈值激活时附。
+    const costBudget = tokenBudgetTokens()
+    const provider = ctx.subagents.getProvider(providerName)
+    if (!provider) throw new Error(`subagent provider "${providerName}" 不可用`)
+    const caps = provider.capabilities ?? {}
+    // ── T3 ②（dsh-expert-alpha4）：caps 门禁能力分支（运行时能力探测，不按版本号
+    // 硬编码）——provider 声明 agentPreset 能力（alpha.3/4 spawn 实证
+    // dsh-subagent-spawn-in-process/lib/index.js:21-26
+    // {agentOptions,agentPreset,outputSchema,depthLimit}，已无 persona/toolFilter）
+    // 走 preset 通道：persona/toolFilter 经 per-summon Agent Preset 交付（T3 ③），
+    // 硬门禁对这两个已不存在的旧能力不再检查；否则维持既有直传通道，硬门禁
+    // 原样保留（≤alpha.2 行为逐字节不变）。host assertCapabilities 对 agentPreset
+    // 请求要求 !inheritsParentContext（fork 一律拒收独立选择，dsh-subagent/lib/
+    // types/index.js:439-441）——fork 等继承型 provider 不声明该能力，自然落回
+    // 直传分支，其旧门禁语义不变。 ──
+    const presetChannel = caps.agentPreset === true
+    if (!presetChannel) {
+      if (!caps.persona) throw new Error(`provider "${providerName}" 不支持 persona 注入`)
+      if (!caps.toolFilter) throw new Error(`provider "${providerName}" 不支持 toolFilter`)
+    }
+    // T2 解析缝：summon 解析与档案查询共用同一 loadState 快照——反查器从
+    // aliases/candidates 纯内存构建，查询语义零变化（此前 state 为即弃临时量）。
+    const summonState = loadState()
+    const expert = resolveOrThrow(summonState, query, sessionCwd)
+    // ── #21 origin chain 递归防护（WP-7 ③，T26）：链上重复对拒绝，报错含链路本身 ──
+    // 检查在 persona 组装与任何写面（auto-claim/写锁）之前 fail-fast；入站任务书解析
+    // 出链后延伸当前跳 (专家名, cwd)；出站任务书 = 剥旧标记净文本 + 经验提示 + 新标记行
+    // 收尾（协议侧复制约定见 SKILL.md §5 env 传递段）。开关关闭 → 全段跳过（零变化）。
+    let chain = null
+    let baseTask = taskText
+    if (originChainEnabled()) {
+      const chainCheck = checkOriginChain({ taskText, expertName: expert.name ?? query, cwd: sessionCwd })
+      if (!chainCheck.ok) throw new Error(chainCheck.message)
+      baseTask = chainCheck.taskText
+      chain = chainCheck.chain
+    }
+    const lesson = loadExpertLessons(dst, expertLessonSlug(expert.source, expert.file))
+    const rawPersona = readPersona(expert).content
+    const method = extractPersonaMethod(rawPersona)
+    // ── #19 per-expert 档案 + #17 prompt 瘦身（T15，persona 组装处唯一实现点）──
+    // 档案执行期重读：summon 入口现场读 expert-profiles.json（项目层 > 全局层，
+    // profilesPaths 仅供自测注入）——热改文件后新 summon 即生效、恢复文件即回滚
+    // （验收 (d)）；档案在此一次性快照，在途 summon/run 不被任何机制触碰（热改只
+    // 影响新 summon，构造性边界）。读取失败/无档案/该专家未配置 → profile=null，
+    // persona 与 start spec 走既有路径逐字节一致（向后兼容硬要求）。
+    // T8（gh-issues-1-2）：model 优先级链接线——档案快照同时解析组/兜底 model
+    // （resolveExpertModel 纯函数，链=逐专家 > 领域组 > defaults > null）。profile
+    // 本体（tools/skills/mcp/effort 消费面）语义不变：组/兜底层永不承载这些字段；
+    // 无 groups/defaults 时 resolvedModel 与 profile.model 逐字节一致（回归硬门）。
+    let profile = null
+    let resolvedModel = null
+    try {
+      const profiles = loadExpertProfiles(profilePaths(sessionCwd))
+      // T2 档案键别名反查：档案键/members 以惯用名或花名册 title 书写时归一为
+      // 原生名再命中（同一 resolver 透传 per-expert 与组层 members 两面）；查
+      // 不到 = resolver 返 null，消费面行为与现状逐字节一致。
+      const aliasResolver = profileKeyAliasResolver(summonState.aliases, summonState.candidates)
+      profile = profileForExpert(profiles, expert.name ?? query, aliasResolver)
+      // 方向 2 三档偏好（DSH_EXPERT_ROUTE_PREF）：pref 只在 defaults 层生效
+      // （逐专家/组层显式配置不覆盖），env 未设置/非法时 resolveRoutePref 返 null
+      // ——resolveExpertModel 行为与既有逐字节一致。
+      resolvedModel = resolveExpertModel(profiles, expert.name ?? query, undefined, aliasResolver, { pref: resolveRoutePref() })
+    } catch (error) {
+      console.warn(`[dsh-expert-orchestrator] 专家档案读取失败（该专家按无档案行为）：${error?.message ?? error}`)
+    }
+    // 调用态 model 覆盖（2.13.8，issue#1 追问）：summon 显式参数最具体，压过整条
+    // 档案链（逐专家 > 组 > defaults）。未传时 resolvedModel 保持档案链结果，行为
+    // 逐字节一致；传入即以 profile.model 形态走既有 modelProfile 合成缝（下方），
+    // preflightEffort 能力预检/降级告警/agentOptions 消费三处零改动。失败重试语义：
+    // 模型不可用时 summon 报错原样可见（板条目保持 running），编排者换 model 重新
+    // summon 即切换重试——插件内不做自动 fallback（用户裁决：归 retry/continue 类插件）。
+    if (summonModel) resolvedModel = summonModel
+    const profileEffect = resolveProfileEffect(ctx, profile)
+    let persona = sanitizePersona(rawPersona)
+    if (profile) {
+      // #17（验收 (c)）：档案存在即按有效工具面（档案收窄 ∪ 递归防护 deny ∪ 注册
+      // 探测）剪除「点名工具全部不可见」的 guidance 段；无档案=全量（零变化）。
+      persona = pruneUnavailableToolSections(persona, profileEffect.isToolAvailable)
+    }
+    persona = splitPersona(dst, persona, method)
+    if (profile) {
+      // #19 skills 白名单：提示级约束（宿主无 per-child 技能缝，如实声明）。
+      // T34 修复（评审回炉）：注入点必须在 splitPersona **之后**——persona 方法
+      // 论分层在 <!-- methods-cut --> 标记处截断 persona（Top-5 内置专家均带标记
+      // 且 expert-methods/ 随包部署），先注入的约束行会随标记之后内容被静默丢弃；
+      // 后注入保证约束行落在最终 persona 尾部（method 指针行之后），有/无分层
+      // 专家均生效。消费方视角回归：真实分层 persona + skills 档案全链用例。
+      persona = withProfileConstraints(persona, profile)
+    }
+    // #19 model 热调 + #22 effort 预检（T26）：provider 声明 agentOptions 能力才传
+    // ——宿主 assertCapabilities 对缺能力的请求 fail-fast 拒收（0.2.x 实测），先门禁
+    // 避免整次 summon 被拒；旧代宿主未声明该能力 → 降级可见，summon 照常。model 降
+    // 级告警文本与 T15 既有实现逐字一致；effort 为 #22 新增（一行告警，不阻断）。
+    // T8：组/兜底解析出的 model 与 per-expert model 同经此预检缝消费——组模型来源
+    // 以 profile.model 形态进入 preflightEffort，effort-preflight.js 的 model 降级
+    // 告警文案原样覆盖（零改动确认）。per-expert 命中（或链上无组/兜底值）时
+    // resolvedModel 与 profile.model 相同或缺省，profile 对象原样传递，行为逐字节
+    // 一致；仅当链解析出组/兜底 model 且 per-expert 未声明时合成 model-only 覆盖面。
+    let modelProfile = profile
+    if (resolvedModel && profile?.model !== resolvedModel) {
+      modelProfile = { ...(profile ?? {}), model: resolvedModel }
+    }
+    const effortPreflight = preflightEffort({ profile: modelProfile, caps, providerName, lang })
+    const agentOptions = effortPreflight.agentOptions
+    for (const w of effortPreflight.warnings) console.warn(`[dsh-expert-orchestrator] ${w}`)
+    // dsh-expert-296 T1 回退：派发 toolFilter 一律 deny-only（deny 只下发全局层
+    // 确证子集，2.9.3 语义：真机=3 名召唤工具）。2.9.5 曾在 schemas() 枚举面可用
+    // 时叠加递归防护 allow（P1，buildRecursionAllowList），实机即炸：插件 ctx 全局
+    // schemas() 视域看不到 preset 组合层核心工具（read/write/edit/bash/glob/grep/
+    // web/todo/skill 全部缺失，allow 仅 34 名），白名单把被召唤专家的核心工作工具
+    // 全通道遮蔽，主委派通道实质不可用。
+    // 已知残余（如实声明）：workflow/ralph/subagent_fork 等派生旁路面不再被
+    // allow 不可见执法覆盖——管控手段 = 协议任务书纪律（红线禁止专家再派生）+
+    // origin-chain 链路溯源 + 宿主 maxDepth=1 深度熔断（subagent/subagent_fork
+    // 实证有效）+ 上游特性请求（宿主侧提供子代理工具级遮蔽缝，缝出现前不再启用
+    // allow 白名单，复用条件见 buildRecursionAllowList 停用注）。
+    const toolFilter = profileEffect?.toolFilter
+      ?? { deny: filterRestrictableTools(ctx, EXPERT_TOOLS_DENY_LIST, 'deny') }
+    // ── T3 ③：agentPreset（preset 组合）通道的 per-summon 挂载/选择——persona
+    // 与全局层收窄经动态注册的 per-summon Agent Preset 交付（lib/summon-preset.js；
+    // 设计文档 dsh-expert-alpha4-t3-design.md）。注册/激活失败 fail-fast（此点在
+    // cwd 写锁与在途计数之前：被拒派工不在板上/锁面/计数面留任何痕迹）。通道
+    // 判定与门禁同源（presetChannel），≤alpha.2 直传通道此段整体跳过。──
+    let agentPreset = null
+    if (presetChannel) {
+      agentPreset = await ensureSummonPreset(ctx, summonPresetCache, {
+        persona,
+        toolFilter: buildPresetChannelToolFilter(profileEffect, toolFilter),
+        expertName: expert.name ?? query,
+      }, summonPresetRefs)
+    }
+    // ── T12 用完即注：run 收尾边沿归还本 run 的 preset 引用（成功 answer / 失败
+    // throw / 锁拒与兜底 finally 三路，presetSettled 幂等——每路恰好一次生效，
+    // 与 #20 settleIdle 同一边沿模式）。归零即注销定义并清缓存项；run 在途（含
+    // 中断自动续跑窗口）计数 >0 定义必存活（冷恢复在途保护），收尾后注销为方案 A
+    // 裁决的预期语义（同进程重物化窗口不再保障，见 lib/summon-preset.js 文件头
+    // 与设计文档 §用完即注）。直传通道（agentPreset=null）三路调用皆 no-op，
+    // ≤alpha.2 零变化。──
+    let presetSettled = false
+    const settlePreset = async () => {
+      if (agentPreset == null || presetSettled) return
+      presetSettled = true
+      try {
+        await releaseSummonPreset(summonPresetRefs, summonPresetCache, agentPreset, expert.name ?? query)
+      } catch (error) {
+        console.warn(`[dsh-expert-orchestrator] per-summon preset 释放异常（fail-open，定义保留）：${error?.message ?? error}`)
+      }
+    }
+    // ── #22 per-cwd 写锁（验收 (d)：同 cwd 双专家并发写被拒而非排队）──
+    // 派发边界执法（拉起专家之前拒绝），持有期=本次专家 run 全程；只读扇出经
+    // readOnly 逃生口跳过；同 pid 同名专家计为重入（单专家多阶段正常写不误伤）。
+    // 拒绝发生在 auto-claim 之前：被拒派工不在板上留任何写痕迹。
+    const lock = acquireCwdWriteLock({ cwd: sessionCwd, expert: expert.name ?? query, readOnly })
+    if (!lock.ok) {
+      await settlePreset() // T12：锁拒边沿归还（ensure 已成功计数，不归还即泄漏）
+      throw new Error(lock.message)
+    }
+    // ── #20 idle-edge 在途计数（T28）：计数点与受保护段入口之间零间隙（此间任何
+    // 同步 throw 都不会发生）；settleIdle 幂等，成功/失败/兜底三路恰好一次生效。
+    idleFlight += 1
+    let idleSettled = false
+    const settleIdle = async (succeeded) => {
+      if (idleSettled) return ''
+      idleSettled = true
+      idleFlight = Math.max(0, idleFlight - 1)
+      // 空闲边沿=本会话最后一位在途专家执行成功收尾；失败边沿只递减不扫描
+      // （宁漏勿错——失败路径的板面常残留 running 条目，扫描也会被开放执行条件挡下）。
+      if (!succeeded || idleFlight !== 0 || !idleReclaimEnabled()) return ''
+      try {
+        return await idleReclaimSweep({ cwd: sessionCwd, timeoutMs: autoClaimTimeoutMs, lang })
+      } catch (error) {
+        console.warn(`[dsh-expert-orchestrator] 自动续领异常（已忽略，不阻塞派工）：${error?.message ?? error}`)
+        return ''
+      }
+    }
+    // T37 随行④：acquire 成功后**立即**进入受保护段——原实现 acquire 与 try/finally 之间
+    // 隔着振荡记录/任务书组装/auto-claim/提示行拼装/seam 探测等多个同步面，任一同步异常
+    // 都会带锁泄漏到进程退出（活持有者挡住异名专家直至 ESRCH 自愈）。
+    try {
+      // ── #22 振荡检测（验收 (e)：振荡 N 次来回后告警）──派发序记录，非阻断告警。
+      const oscWarn = oscillation ? oscillation.record(expert.name ?? query, lang) : null
+      // 出站任务书组装：净文本（剥旧链标记）→ 经验提示 → origin chain 标记行收尾
+      //（「任务书最后一行恒为链标记」是 §5 复制约定与到达探针的锚点）。
+      let promptText = withLessonHint(baseTask, expert.name, lesson, lang)
+      if (chain) promptText = `${promptText}\n${renderOriginChainMarker(chain)}`
+      // WP-4a 派工即回写（回炉第 1 轮改时序）：派发入口先 claim、后跑专家——
+      // 专家拿到任务书时条目已 running。fail-open：claim 任何失败只产出提示行，
+      // 绝不阻塞派工；专家执行失败/召唤失败时条目保持 running 不回滚，提示行
+      // 附到错误信息尾部供编排者按板处置（reassign/fail）。
+      let claimHint = ''
+      try {
+        claimHint = await autoClaimSummonedTasks({ taskText: baseTask, owner: expert.name ?? query, cwd: sessionCwd, claimedIds, timeoutMs: autoClaimTimeoutMs, enabled: autoClaim, lang })
+      } catch (error) {
+        console.warn(`[dsh-expert-orchestrator] auto-claim 异常（已忽略，不阻塞派工）：${error?.message ?? error}`)
+      }
+      // ── #16 工具调用硬预算（T27）：summon 消费面——预算开启且任务书显式引用任务时盘点
+      // budget --json 信封，已达档位的附【预算】提示行（wrap-up/interrupt 档语义的编排侧
+      // 落点：续派任务书自动附收敛指令；fail-open 与 auto-claim 同哲学，绝不阻塞派工）。
+      let budgetHint = ''
+      try {
+        budgetHint = await summonBudgetHint(baseTask, expert.name ?? query, sessionCwd, autoClaimTimeoutMs, process.env, lang)
+      } catch (error) {
+        console.warn(`[dsh-expert-orchestrator] 预算盘点异常（已忽略，不阻塞派工）：${error?.message ?? error}`)
+      }
+      // 降级/告警提示行（与 claimHint 同通道：成功附 answer 尾、失败附 error 尾）。
+      // model 降级告警仅 console（T15 既有语义）；effort 预检告警双通道（#22 新增可见面）。
+      const hints = [claimHint, lock.degraded ? msg('lock.degraded', lang) : '', oscWarn, budgetHint, ...effortPreflight.answerHints].filter(Boolean)
+      const hint = hints.length ? hints.join('\n') : ''
+      // WP-4b ④ 断点续跑：seam 可用（宿主 continuation 面 + provider continuable
+      // 能力 + 结算观察面）走 continuable 路径；否则维持 one-shot 现状。宿主具备
+      // continuation 面但能力/观察面缺失时经 onDegrade 显式 console.warn（降级可见，
+      // 不得静默丢功能）；两条路径的成功/失败语义一致（成功 answer 附提示行；失败
+      // message 附提示行）。
+      const seam = detectResumeSeam(ctx, provider, {
+        onDegrade: (reason) => console.warn(`[dsh-expert-orchestrator] 断点续跑降级为 one-shot：${reason}`),
+      })
+      const summonT0 = Date.now() // ⑤埋点：实测耗时锚点（成功/失败两路共用；声明在 try 外——catch 路径引用）
+      try {
+        const r = seam
+          ? await runExpertContinuable(seam, { query, expert, promptText, resumeTaskText: baseTask, persona, exec, toolFilter, agentOptions, agentPreset, sessionCwd, lang })
+          : await runExpertOneShot({ query, expert, promptText, persona, exec, toolFilter, agentOptions, agentPreset })
+        // ── 编排经济学 · 方向 2：召唤记账（恒开，纯内存）——任务书+回包当场估算；
+        // 真实 usage 接入点留痕见 lib/cost.js 头注（宿主结算面出现 usage 字段时替换）。
+        costLedger.record({ expert: expert.name ?? query, model: resolvedModel ?? '', ok: true, taskText: promptText, answerText: r.answer })
+        // ── ⑤小切口：路由实测样本落盘（只读埋点——板面/事件流零写入，输出零变化；
+        // 估算值沿 cost.js 字符启发式当场重算，与记账条目同口径）。
+        routeTelemetry.record({
+          expert: expert.name ?? query, model: resolvedModel ?? '',
+          pref: (process.env.DSH_EXPERT_ROUTE_PREF ?? '').trim(),
+          ok: true, stopReason: r.stopReason ?? null,
+          taskText: promptText, answerText: r.answer,
+          estTokens: estimateTokens(promptText) + estimateTokens(r.answer),
+          durationMs: Date.now() - summonT0,
+        }, sessionCwd)
+        // ── #20 idle-edge 自动续领（T28）：成功收尾=空闲边沿（开关开启且无其他在途
+        // 执行时做一次续领扫描）；续领提示行与既有提示行同通道附 answer 尾（在既有
+        // hint 之后，reclaimHint 为空串时输出与既有行为逐字节一致）。
+        const reclaimHint = await settleIdle(true)
+        await settlePreset() // T12：成功边沿归还（run 已收尾，在途保护结束）
+        // 成本熔断提示（opt-in）：累计估算达阈值才出现（提示级，不阻断）。
+        const costHint = costBudgetHint(costLedger.totals(), costBudget, lang)
+        const allHints = [hint, reclaimHint, costHint].filter(Boolean).join('\n')
+        return allHints ? { ...r, answer: `${r.answer}\n${allHints}` } : r
+      } catch (error) {
+        // 派工失败路径：已 claim 条目保持 running（fail-open 不回滚），
+        // auto-claim 结果随错误附出，编排者按板处置。
+        costLedger.record({ expert: expert.name ?? query, model: resolvedModel ?? '', ok: false, taskText: promptText, answerText: '' })
+        // ⑤埋点：失败样本（回包不可得 → answerChars=0、stopReason 不猜=null）
+        routeTelemetry.record({
+          expert: expert.name ?? query, model: resolvedModel ?? '',
+          pref: (process.env.DSH_EXPERT_ROUTE_PREF ?? '').trim(),
+          ok: false, stopReason: null,
+          taskText: promptText, answerText: '',
+          estTokens: estimateTokens(promptText),
+          durationMs: Date.now() - summonT0,
+        }, sessionCwd)
+        await settleIdle(false) // 失败边沿：只递减不扫描（#20）
+        await settlePreset() // T12：失败边沿同样归还（成功与失败皆算收尾）
+        if (hint) error.message = `${error.message}\n${hint}`
+        throw error
+      }
+    } finally {
+      try { lock.release?.() } catch { /* 释放面自愈，绝不掩盖主流程结果 */ }
+      await settleIdle(false) // #20 兜底：受保护段内任何未路过 settle 的异常在此幂等递减
+      await settlePreset() // T12 兜底：同上边沿模式的 preset 引用归还（幂等）
+    }
+  }
+
+  ctx.tools.register(
+    defineTool({
+      name: 'list_experts',
+      description:
+        'List the available experts from the merged expert roster (bundled core + enabled source packs + user-defined custom experts), grouped by source. Without a filter it returns source ids and counts (compact); pass a source id to expand its expert names. Call this before summon_expert when you do not know the expert name.',
+      parameters: {
+        bySource: { type: 'string', description: 'Optional source id to expand (e.g. agency-agents-zh, awesome-claude-code-subagents, bundled-core, custom).' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            sources: { type: 'array', required: true, items: { type: 'json' } },
+            total: { type: 'number', required: true },
+          },
+        },
+        render: (_args, value) => [{ type: 'text', text: renderExpertList(value) }],
+      },
+      async execute(args, exec) {
+        const state = loadState()
+        const bySource = typeof args?.bySource === 'string' ? args.bySource.trim() : ''
+        // P7 冲突显式化：跨源重名（同名可召唤候选分布在 ≥2 个来源）打 conflict
+        // 标注——用户看得见歧义而非靠召唤报错才发现；仅标注不拒绝，消歧经
+        // resolveExpert 的『来源名/原名』通道（source/name 显式点名，2.13.7 起为
+        // 真实现；此前提示语法无解析通道，属死语法）。
+        const byNormName = new Map()
+        for (const e of state.candidates) {
+          if (typeof e.name !== 'string' || !e.name) continue
+          const key = norm(e.name)
+          const srcs = byNormName.get(key) ?? new Set()
+          srcs.add(e.source)
+          byNormName.set(key, srcs)
+        }
+        const crossSourceNames = new Set([...byNormName.entries()].filter(([, srcs]) => srcs.size > 1).map(([key]) => key))
+        // WP-6a 文件层（T13）：文件层专家并入可召唤候选视图（执行期重读）。
+        // 未使用文件层（两目录缺失/为空）→ all=[]，输出与既有行为逐字节一致
+        // （零变化）；使用后 file 组与既有来源并列，bySource='file' 可展开。
+        // crossSourceNames 保持只算花名册候选：文件层是覆盖方而非冲突方，同名
+        // roster 条目已被文件层覆盖，再标 conflict 反而误导。
+        // T1 解析缝：list_experts 同锚会话 cwd（项目层文件层视图随会话工作区）。
+        const fileLayer = loadFileExperts(fileLayerDirs(resolveSessionCwd({ exec })))
+        const experts = bySource
+          ? (bySource === FILE_LAYER_SOURCE_ID ? fileLayer.all : state.candidates.filter((e) => e.source === bySource))
+          : [...state.candidates, ...fileLayer.all]
+        const groups = new Map()
+        for (const e of experts) {
+          const g = groups.get(e.source) ?? { source: e.source, count: 0 }
+          g.count += 1
+          if (bySource) {
+            (g.experts ??= []).push(e.source === FILE_LAYER_SOURCE_ID
+              ? {
+                  name: e.name,
+                  title: e.title,
+                  file: e.file,
+                  layer: e.layer,
+                  ...(crossSourceNames.has(norm(e.name)) ? { conflict: true } : {}),
+                }
+              : {
+                  name: e.name,
+                  title: e.title,
+                  file: e.file,
+                  disabled: e.disabled,
+                  ...(crossSourceNames.has(norm(e.name)) ? { conflict: true } : {}),
+                })
+          }
+          groups.set(e.source, g)
+        }
+        // P7 shadowed 显式化：去重组非代表副本不可召唤但对用户可见（对齐 merged
+        // roster 的 dedupGroups 标注）。仅 bySource 展开时输出；count/total 语义
+        // 不变（只计可召唤候选，向后兼容）。
+        if (bySource) {
+          for (const e of state.all) {
+            if (!e.shadowed || e.source !== bySource) continue
+            const g = groups.get(e.source) ?? { source: e.source, count: 0 }
+            ;(g.shadowed ??= []).push({ name: e.name, title: e.title, file: e.file, rep: state.all.find((x) => !x.shadowed && norm(x.name) === norm(e.name))?.name ?? null })
+            groups.set(e.source, g)
+          }
+        }
+        const sources = [...groups.values()].sort((a, b) => b.count - a.count)
+        if (bySource && !sources.some((g) => g.source === bySource)) {
+          throw new Error(`来源不存在或未启用：${bySource}；可用来源见不带参数的 list_experts`)
+        }
+        return { sources, total: experts.length }
+      },
+    }),
+  )
+
+  ctx.tools.register(
+    defineTool({
+      name: 'summon_expert',
+      description:
+        "Summon a domain expert from the merged expert roster to complete a task: a specialist subagent runs with that expert's full persona and returns its result. Use for tasks that clearly belong to a specialist domain. This call waits for the expert's result. Call list_experts first if you do not know the expert name.",
+      parameters: {
+        expert: { type: 'string', required: true, description: 'Expert name to summon (roster native name, a legacy alias listed in roster-aliases.json, or "source/name" — e.g. bundled-core/code-reviewer — to disambiguate cross-source duplicates).' },
+        task: { type: 'string', required: true, description: 'The complete, self-contained task for the expert (max 8000 chars).' },
+        readOnly: { type: 'boolean', description: 'Declare this delegation read-only: it will not contend for the per-cwd write lock. Omit (default) for write-capable delegations.' },
+        model: { type: 'string', description: 'Optional model override for THIS summon (provider model id). Takes precedence over the expert-profiles model chain (per-expert > group > defaults); omit to use the profile/main-session model. If the model is unavailable the call fails with the provider error — re-summon with a different model to retry.' },
+        cwd: { type: 'string', description: 'Optional workspace directory anchoring project-layer resolution (.dsh/expert-profiles.json, .dsh/experts, taskboard). Omit to use the current session working directory.' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: { expert: { type: 'string', required: true }, answer: { type: 'string', required: true } },
+        },
+        render: (_args, value) => [{ type: 'text', text: value.answer }],
+      },
+      async execute(args, exec) {
+        const queryName = typeof args?.expert === 'string' ? args.expert.trim() : ''
+        const lang = resolveReplyLanguage(replyLanguage)
+        try {
+          const r = await runExpert(args?.expert, args?.task, exec, { readOnly: args?.readOnly === true, cwd: typeof args?.cwd === 'string' ? args.cwd.trim() : undefined, model: typeof args?.model === 'string' ? args.model : undefined })
+          summonLoopHint([queryName, r.expert], true, lang)
+          return r
+        } catch (error) {
+          // 方向 3：召唤失败循环告警（默认开启非阻断）——连续失败达阈值时错误尾部
+          // 附【升级｜连续失败｜告警】信封行；开关关闭/未达阈值时错误信息逐字节不变。
+          const loopHint = summonLoopHint(queryName, false, lang)
+          if (loopHint) error.message = `${error.message}\n${loopHint}`
+          throw error
+        }
+      },
+    }),
+  )
+
+  ctx.tools.register(
+    defineTool({
+      name: 'summon_experts',
+      description:
+        'Summon multiple experts in parallel, each with its own task, running as specialist subagents with their own personas. At most 8 experts run with concurrency 4; if some fail, successful answers are still returned. Use this to assemble a specialist team.',
+      parameters: {
+        experts: {
+          type: 'array',
+          required: true,
+          description: 'The experts to summon, each with an expert name and its own task.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+                expert: { type: 'string', required: true, description: 'Expert name to summon; use "source/name" (e.g. bundled-core/code-reviewer) to disambiguate cross-source duplicates.' },
+                task: { type: 'string', required: true, description: 'The complete, self-contained task for this expert.' },
+                readOnly: { type: 'boolean', description: 'Declare this item read-only: it will not contend for the per-cwd write lock.' },
+                model: { type: 'string', description: 'Optional model override for this item (provider model id); takes precedence over the expert-profiles model chain. Re-summon with a different model to retry an unavailable one.' },
+            },
+          },
+        },
+        stagger: { type: 'boolean', description: 'Opt-in cache warm-up stagger: the FIRST item runs alone to completion (one prefix cache write), then the remaining items run in parallel (cache reads). Worthwhile when the batch shares a long prefix (same-expert items, shared host prefix); marginal for heterogeneous expert batches.' },
+        cwd: { type: 'string', description: 'Optional workspace directory anchoring project-layer resolution (.dsh/expert-profiles.json, .dsh/experts, taskboard). Omit to use the current session working directory.' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: { results: { type: 'array', required: true, items: { type: 'json' } } },
+        },
+        render: (args, value) => {
+          const lines = (value.results ?? []).map((r) => `- ${r.expert}: ${r.ok ? '完成' : `失败（${r.error ?? '未知错误'}）`}`)
+          const text = ['召唤结果：', ...lines]
+          // 编排经济学 · 方向 2（03-启示 1 读型/写型分流）：同一批含 ≥2 个写型条目时
+          // 附【分流建议】——写型任务需共享决策上下文，按协议应串行单代理；只有读型
+          // 才扇出并行。非阻断建议行（沿振荡告警先例），仅 render 文本，返回值结构不变。
+          const writeItems = Array.isArray(args?.experts) ? args.experts.filter((it) => it?.readOnly !== true).length : 0
+          if (writeItems >= 2) text.push(msg('econ.writeFanoutAdvisory', resolveReplyLanguage(replyLanguage), { count: writeItems }))
+          // 编排经济学 · 方向 2（02-D5 可观测面）：成本累计行 opt-in——DSH_EXPERT_TOKEN_
+          // BUDGET 未设置时零变化（render 文本与既有逐字节一致）。
+          const budgetThreshold = tokenBudgetTokens()
+          if (budgetThreshold) {
+            const t = costLedger.totals()
+            text.push(msg('cost.batchSummary', resolveReplyLanguage(replyLanguage), { summons: t.summons, ok: t.okCount, fail: t.failCount, sum: formatTokenScale(t.estTokens), budget: formatTokenScale(budgetThreshold) }))
+          }
+          return [{ type: 'text', text: text.join('\n') }]
+        },
+      },
+      async execute(args, exec) {
+        if (exec?.agent === undefined) throw new Error('summon_experts 必须在有 agent 的会话中调用')
+        const raw = Array.isArray(args?.experts) ? args.experts : []
+        if (raw.length === 0) throw new Error('experts 不能为空')
+        if (raw.length > 8) throw new Error('一次最多召唤 8 位专家')
+        // T1 解析缝：批量召唤共享一个顶层 cwd 参数（每项 summon 现算同一锚点）。
+        const batchCwd = typeof args?.cwd === 'string' ? args.cwd.trim() : undefined
+        const specs = raw.map((item, index) => {
+          const expert = typeof item?.expert === 'string' ? item.expert.trim() : ''
+          const task = typeof item?.task === 'string' ? item.task.trim() : ''
+          if (!expert) throw new Error(`experts[${index}].expert 必填`)
+          if (!task) throw new Error(`experts[${index}].task 必填`)
+          if ([...task].length > SUMMON_TASK_MAX_CHARS) throw new Error(`experts[${index}].task 超长（> ${SUMMON_TASK_MAX_CHARS} 码点）`)
+          return { expert, task, readOnly: item?.readOnly === true, model: typeof item?.model === 'string' && item.model.trim() ? item.model.trim() : undefined }
+        })
+        // WP-4a：批量召唤共享一个去重集合——同一任务 id 只回写一次
+        const claimedIds = new Set()
+        const batchLang = resolveReplyLanguage(replyLanguage)
+        const runOne = async (spec) => {
+          try {
+            const r = await runExpert(spec.expert, spec.task, exec, { claimedIds, readOnly: spec.readOnly, cwd: batchCwd, model: spec.model })
+            summonLoopHint([spec.expert, r.expert], true, batchLang)
+            return { expert: r.expert, ok: true, answer: r.answer }
+          } catch (error) {
+            // 方向 3：批量项召唤失败同样计入连续失败循环（同一检测器实例），达阈值
+            // 时该条目 error 尾部附【升级｜连续失败｜告警】信封行。
+            const loopHint = summonLoopHint(spec.expert, false, batchLang)
+            if (loopHint) error.message = `${error.message}\n${loopHint}`
+            return { expert: spec.expert, ok: false, error: String(error?.message ?? error) }
+          }
+        }
+        // 编排经济学 · 方向 2（02-D4 1 write + N read 预热派工，opt-in `stagger: true`）：
+        // 首项串行完成缓存写入后再并行其余——整批从「N 次并发 write」压成「1 次 write
+        // + N-1 次 read」。共享前缀主要来自同专家重复条目与宿主基础设施前缀（异质
+        // 专家 persona 各异收益有限，如实声明）；不改变并发上限与部分成功语义。
+        const results = args?.stagger === true && specs.length > 1
+          ? [await runOne(specs[0]), ...(await mapPool(specs.slice(1), SUMMON_CONCURRENCY, runOne))]
+          : await mapPool(specs, SUMMON_CONCURRENCY, runOne)
+        return {
+          results: results.map((item) => ({
+            expert: item.expert,
+            ok: item.ok,
+            // T9 缺陷 B：失败条目无 answer——不得写显式 undefined 属性，否则
+            // 宿主对成功返回值的 lossless JSON 快照直接拒绝（ToolOutputError
+            // "value is not lossless JSON"，整次召唤报错）。
+            ...(item.answer === undefined ? {} : { answer: item.answer }),
+            ...(item.error === undefined ? {} : { error: item.error }),
+          })),
+        }
+      },
+    }),
+  )
+
+  // 父会话系统提示注入：花名册引导（被召唤的子代理不注入——parentSession 守卫）。
+  if (typeof ctx?.systemPrompt?.section === 'function') {
+    ctx.systemPrompt.section({
+      name: 'expert-orchestrator:roster',
+      order: 117,
+      text: (context) => {
+        const agent = context?.agent
+        if (agent?.session?.header?.parentSession !== undefined) return ''
+        return [
+          '## 专家召唤模式（expert-orchestrator）',
+          '父会话拥有合并花名册（bundled core + 已启用来源包 + 自定义专家）。',
+          '需要领域专家时：先调用 `list_experts()` 看来源与数量，必要时 `list_experts(bySource)` 展开名单，',
+          '再用 `summon_expert(expert, task)` 召唤（同步等结果）或 `summon_experts` 组建小队（≤8，并发 4）。',
+          'summon 是默认委派通道；`subagent`/`subagent_fork` 仅限：召唤通道异常回退、联调/续作/长任务后台、自带库短 persona 的轻量委派——其余场景一律 summon。',
+          '长任务一律后台委派并依赖完成通知回交，回合自然结束等待；编排场景不使用 goal 工具（create_goal/get_goal/update_goal），也不做定时轮询等待。',
+          '子代理一次性使用：一份任务书一次委派，完成后不 send_message 续派；下一任务=全新子代理。',
+          '断点续跑（新一代宿主）：summon 通道的专家 run 中断后由工具自动按持久会话恢复恰好一个续跑 turn（折入任务板检查点与 bus 汇报进度）；旧宿主或续跑再失败按检查点+全新代理重跑。',
+          '被停用（disabled）或去重 shadowed 的专家不可召唤。被召唤的专家无法再派生子代理。',
+        ].join('\n')
+      },
+    })
+  }
+  return true
+}
