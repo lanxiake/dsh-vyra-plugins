@@ -1451,6 +1451,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.13: tighten send_buyer_reply tool schema with additionalProperties
+        // and explicit presentationMeta to match DSH registration requirements.
+        '0.6.13': {
+          publishTimestamp: 1795237800,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '3f8291144084afa7e8628d5fa840d6b31d34d006',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
