@@ -1810,6 +1810,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.2.2 renders README images: <picture>/<img> HTML is unwrapped into Markdown images,
+        // a standalone image is drawn, and a relative source resolves against the README URL —
+        // the QQ-group QR code in every plugin README was missing without this.
+        '0.2.2': {
+          publishTimestamp: 1795335600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f2d15632b7a6baedf82f6938bceac655fd4deb82',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
