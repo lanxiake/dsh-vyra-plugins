@@ -583,12 +583,30 @@ export function apply(ctx, config = {}) {
   const lastChatTs = new Map()
   let chatPollBaseline = false
 
+  // 会话列表缓存：面板每 10 秒、轮询每 15 秒都会要一次，
+  // 密集请求会被闲鱼流控（400 flow controled），5 秒内直接复用上一次结果。
+  let chatsCache = { at: 0, limit: 0, data: null }
+  async function listChats(limit) {
+    const now = Date.now()
+    if (chatsCache.data && now - chatsCache.at < 5000 && chatsCache.limit >= limit) return chatsCache.data
+    let data
+    try {
+      data = await im.chats(limit)
+    } catch (err) {
+      // 常驻通道没连上（握手被流控）时退回短命令，它自带 HTTP 兜底。
+      log(`IM 会话列表失败，改用短命令：${err?.message || err}`)
+      data = await cli.chats(limit)
+    }
+    chatsCache = { at: now, limit, data }
+    return data
+  }
+
   async function pollChats() {
     // 未登录时不轮询：没有 cookie 时任何 IM 调用都只会报错。
     if (authCache.loading === false && authCache.valid === false) return
     let data
     try {
-      data = await im.chats(60)
+      data = await listChats(60)
     } catch (err) {
       log(`chat poll failed: ${err?.message || err}`)
       return
@@ -868,7 +886,7 @@ export function apply(ctx, config = {}) {
         }
       }
       case 'chats':
-        return im.chats(Number(body.fetchNum) || 200)
+        return listChats(Number(body.fetchNum) || 200)
       case 'userInfo':
         return cli.userInfo(String(body.cid || ''), Boolean(body.owner))
       case 'itemDetail':
