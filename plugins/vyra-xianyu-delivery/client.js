@@ -97,7 +97,12 @@ window.__ModuleLoader__.load({
       const key = String(reason || '')
       if (FAIL_TEXT[key]) return FAIL_TEXT[key]
       if (key.startsWith('sensitive:')) return `含敏感词：${key.slice(10)}`
-      if (key.startsWith('generate_failed:')) return `生成失败：${key.slice(16)}`
+      if (key.startsWith('generate_failed:')) {
+        const detail = key.slice(16)
+        if (detail === 'empty-reply') return '生成失败：网盘技能没有返回链接'
+        if (/agent-unavailable|agents-unavailable/.test(detail)) return '生成失败：DSH Agent 不可用'
+        return `生成失败：${detail}`
+      }
       if (key.startsWith('send:')) return `发送失败：${key.slice(5)}`
       return key
     }
@@ -135,6 +140,16 @@ window.__ModuleLoader__.load({
       const { orders, localOrders, onRefresh, loading, onDetail } = props
       const list = orders.length ? orders : localOrders
       const when = (o) => o.updated_at || o.created_at || ''
+
+      // 平台已发货 / 交易成功，或插件已完成的订单，不再显示历史失败原因。
+      const showFail = (o) => {
+        if (!o.fail_reason) return false
+        const platform = String(o.status || '')
+        const local = String(o.local_state || o.state || '')
+        if (/已发货|交易成功|已完成/.test(platform)) return false
+        if (/^(completed|sent)$/.test(local)) return false
+        return true
+      }
 
       // 平台状态优先：用户手动在闲鱼发货后，本地 blocked 不应盖过「已发货」。
       const renderState = (o) => {
@@ -174,7 +189,9 @@ window.__ModuleLoader__.load({
                 h('span', null, String(o.quantity || 1)),
                 h('span', { title: o.fail_reason || '' },
                   renderState(o),
-                  o.fail_reason ? h('div', { style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } }, failText(o.fail_reason)) : null),
+                  showFail(o)
+                    ? h('div', { style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } }, failText(o.fail_reason))
+                    : null),
                 h('span', { style: { fontSize: '12px', opacity: 0.7 } }, when(o))
               )
             )
@@ -182,100 +199,197 @@ window.__ModuleLoader__.load({
       )
     }
 
+    // 卡券页：左边是已配置的卡券，右边是编辑器。模式决定字段和示例，
+    // 所以每种模式给的是它自己的输入方式和真实样例，而不是同一个空文本框。
     function CardsTab(props) {
       const { cards, shopItems = [], draft, setDraft, saveCard, editingId, onEdit, onToggle, onRemove, onCancelEdit, busy } = props
+
       const titleOf = (itemId) => {
         const hit = shopItems.find((it) => it.item_id === itemId)
         return hit ? (hit.title || hit.item_id) : itemId
       }
-      const rowStyle = {
-        display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr .7fr 2.2fr', gap: '10px',
-        padding: '9px 12px', borderBottom: '1px solid rgba(127,127,127,.12)', fontSize: '13px', alignItems: 'center',
+
+      const MODES = {
+        reuse: {
+          name: '复用链接',
+          hint: '一条网盘分享链接，所有订单发同一份，不消耗',
+          sample: '链接：https://pan.quark.cn/s/1cc79adb8f0e?pwd=xfrJ\n提取码：xfrJ\n有效期 7 天，过期联系我补。',
+          needContent: true,
+        },
+        pool: {
+          name: '多条库存',
+          hint: '多条内容排成池子，每发一单消耗一条',
+          sample: '链接：https://pan.quark.cn/s/aaaa?pwd=1111\n提取码：1111\n---\n链接：https://pan.quark.cn/s/bbbb?pwd=2222\n提取码：2222',
+          needContent: true,
+        },
+        generate: {
+          name: '每单生成',
+          hint: '每笔订单调用夸克网盘技能，现做一条新链接',
+          sample: '',
+          needContent: false,
+        },
       }
-      const small = { ...S.btn, padding: '3px 8px', fontSize: '12px', flex: 'none' }
-      return h('div', null,
-        h('div', { style: S.card },
-          h('div', { style: { fontWeight: 600, marginBottom: '10px' } }, editingId ? '编辑卡券' : '添加卡券'),
-          h('div', { style: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px', marginBottom: '10px' } },
-            h('div', null,
-              h('label', { style: S.label }, '商品'),
-              h('select', {
-                style: S.input,
-                value: draft.itemId,
-                onChange: (e) => setDraft({ ...draft, itemId: e.target.value }),
-              },
-                h('option', { value: '' }, shopItems.length ? '请选择商品…' : '暂无在售商品'),
-                shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`)))),
-            h('div', null,
-              h('label', { style: S.label }, '规格名（可选）'),
-              h('input', { style: S.input, value: draft.specName, onChange: (e) => setDraft({ ...draft, specName: e.target.value }) })),
-            h('div', null,
-              h('label', { style: S.label }, '规格值（可选）'),
-              h('input', { style: S.input, value: draft.specValue, onChange: (e) => setDraft({ ...draft, specValue: e.target.value }) }))
-          ),
-          h('label', { style: S.label }, '卡券模式'),
-          h('div', { style: { display: 'flex', gap: '8px', marginBottom: '10px' } },
-            [
-              ['pool', '池型：多条库存，每条用一次'],
-              ['reuse', '复用：一条链接反复发'],
-              ['generate', '每单生成：调用网盘技能现做'],
-            ].map(([value, label]) => h('button', {
-              key: value,
-              style: {
-                ...S.btn,
-                padding: '5px 10px',
-                fontSize: '12px',
-                borderColor: draft.mode === value ? '#0f9d6e' : undefined,
-                color: draft.mode === value ? '#0f9d6e' : undefined,
-                fontWeight: draft.mode === value ? 600 : 400,
-              },
-              onClick: () => setDraft({ ...draft, mode: value }),
-            }, label))),
-          draft.mode === 'generate'
-            ? h('div', { style: { ...S.muted, marginBottom: '8px' } }, '每单会调用夸克网盘技能生成一条新链接（7 天 / 单次），内容不用填。')
-            : h('div', null,
-              h('label', { style: S.label }, draft.mode === 'reuse' ? '卡券内容（一条分享链接，反复使用）' : '卡券内容（发买家的话；多条用单独一行 --- 分隔）'),
-              h('textarea', {
-                style: S.area,
-                value: draft.content,
-                placeholder: '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd\n有效期 7 天，过期联系我补。',
-                onChange: (e) => setDraft({ ...draft, content: e.target.value }),
-              })),
-          h('div', { style: { ...S.muted, marginTop: '6px' } }, '一个商品只绑一张启用的卡券；不配卡券，自动发货会跳过。'),
-          h('div', { style: { marginTop: '10px', display: 'flex', gap: '8px' } },
-            h('button', { style: S.btn, onClick: saveCard, disabled: !!busy }, busy === 'add' ? '保存中…' : (editingId ? '保存修改' : '添加')),
-            editingId ? h('button', { style: S.btn, onClick: onCancelEdit }, '取消编辑') : null)
-        ),
+      const mode = draft.mode || 'reuse'
+      const meta = MODES[mode] || MODES.reuse
+      const isEditing = Boolean(editingId)
+
+      // 池型按 --- 分隔计数，给一个「已识别 N 条」的即时反馈。
+      const blocks = String(draft.content || '')
+        .split(/\r?\n\s*---\s*\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      // 买家实际会收到什么：用第一条内容 + 样例变量渲染。
+      const previewCard = mode === 'generate'
+        ? '链接：https://pan.quark.cn/s/新生成?pwd=xxxx\n提取码：xxxx\n有效期 7 天'
+        : (blocks[0] || meta.sample.split('\n---\n')[0] || '（还没有内容）')
+      const previewText = previewCard.replace(/\{card\}/g, previewCard)
+
+      const panel = { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', padding: '16px', background: 'rgba(127,127,127,.03)' }
+      const tiny = { fontSize: '12px', opacity: 0.62, lineHeight: 1.6 }
+
+      const stockCell = (c) => {
+        if (c.mode === 'generate') return h('span', { style: { ...S.muted } }, '按需生成')
+        if (c.mode === 'reuse') {
+          return h('span', { style: { ...S.muted, color: c.remaining ? '#0f9d6e' : '#dc2626' } },
+            c.remaining ? '可用，不消耗' : '内容为空')
+        }
+        const total = Number(c.total) || 0
+        const left = Number(c.remaining) || 0
+        const pct = total ? Math.max(0, Math.min(100, (left / total) * 100)) : 0
+        return h('div', { style: { minWidth: '96px' } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' } },
+            h('span', { style: { color: left ? 'inherit' : '#dc2626' } }, `剩 ${left}`),
+            h('span', { style: { opacity: 0.55 } }, `共 ${total}`)),
+          h('div', { style: { height: '4px', borderRadius: '2px', background: 'rgba(127,127,127,.18)', overflow: 'hidden' } },
+            h('div', { style: { width: `${pct}%`, height: '100%', background: '#0f9d6e' } })))
+      }
+
+      const modeCard = (value) => {
+        const m = MODES[value]
+        const active = mode === value
+        return h('button', {
+          key: value,
+          onClick: () => setDraft({ ...draft, mode: value }),
+          'aria-pressed': active,
+          style: {
+            flex: '1 1 0', minWidth: '150px', textAlign: 'left', cursor: 'pointer',
+            padding: '10px 12px', borderRadius: '10px', font: 'inherit', color: 'inherit',
+            border: `1px solid ${active ? '#0f9d6e' : 'rgba(127,127,127,.28)'}`,
+            background: active ? 'rgba(15,157,110,.08)' : 'transparent',
+          },
+        },
+          h('div', { style: { fontWeight: 600, fontSize: '13px', color: active ? '#0f9d6e' : 'inherit' } }, m.name),
+          h('div', { style: { ...tiny, marginTop: '3px' } }, m.hint))
+      }
+
+      const editor = h('div', { style: panel },
+        h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '12px' } },
+          h('div', { style: { fontWeight: 600, fontSize: '14px' } }, isEditing ? '编辑卡券' : '新建卡券'),
+          isEditing ? h('button', { style: { ...S.btn, padding: '3px 8px', fontSize: '12px' }, onClick: onCancelEdit }, '取消') : null),
+
+        h('label', { style: S.label }, '商品'),
+        h('select', {
+          style: { ...S.input, marginBottom: '10px' },
+          value: draft.itemId,
+          onChange: (e) => setDraft({ ...draft, itemId: e.target.value }),
+        },
+          h('option', { value: '' }, shopItems.length ? '选择商品…' : '暂无在售商品'),
+          shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`))),
+
+        h('div', { style: { display: 'flex', gap: '8px', marginBottom: '10px' } },
+          h('div', { style: { flex: 1 } },
+            h('label', { style: S.label }, '规格名'),
+            h('input', { style: S.input, value: draft.specName, placeholder: '不填 = 通用', onChange: (e) => setDraft({ ...draft, specName: e.target.value }) })),
+          h('div', { style: { flex: 1 } },
+            h('label', { style: S.label }, '规格值'),
+            h('input', { style: S.input, value: draft.specValue, placeholder: '不填 = 通用', onChange: (e) => setDraft({ ...draft, specValue: e.target.value }) }))),
+
+        h('label', { style: S.label }, '发货方式'),
+        h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' } },
+          ['reuse', 'pool', 'generate'].map(modeCard)),
+
+        meta.needContent
+          ? h('div', null,
+            h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' } },
+              h('label', { style: S.label }, mode === 'pool' ? '库存内容（每条之间用单独一行 --- 分隔）' : '发给买家的内容'),
+              h('button', {
+                style: { ...S.btn, padding: '1px 8px', fontSize: '12px', border: 'none', background: 'transparent', color: '#0f9d6e' },
+                title: '把这一种模式的样例填进输入框',
+                onClick: () => setDraft({ ...draft, content: meta.sample }),
+              }, '填入示例')),
+            h('textarea', {
+              style: { ...S.area, minHeight: '120px', fontFamily: mode === 'pool' ? 'ui-monospace, SFMono-Regular, Menlo, monospace' : 'inherit' },
+              value: draft.content,
+              placeholder: mode === 'reuse'
+                ? '链接：https://pan.quark.cn/s/xxxx?pwd=abcd\n提取码：abcd\n有效期 7 天，过期联系我补。'
+                : '第一条内容\n---\n第二条内容\n---\n第三条内容',
+              onChange: (e) => setDraft({ ...draft, content: e.target.value }),
+            }),
+            mode === 'pool'
+              ? h('div', { style: { ...tiny, marginTop: '6px', color: blocks.length ? '#0f9d6e' : undefined } },
+                blocks.length ? `已识别 ${blocks.length} 条库存，每单消耗 1 条` : '还没有识别到库存：用单独一行 --- 分隔每一条')
+              : h('div', { style: { ...tiny, marginTop: '6px' } }, '所有订单都发这一段，内容不会被消耗。'))
+          : h('div', { style: { border: '1px dashed rgba(127,127,127,.35)', borderRadius: '10px', padding: '12px', marginBottom: '4px' } },
+            h('div', { style: { fontSize: '13px', fontWeight: 600, marginBottom: '6px' } }, '夸克网盘 · 自动生成'),
+            h('div', { style: tiny }, '每笔订单调用内置的 quarkclouddrive 技能：新建分享链接，有效期 7 天、单次访问，然后把链接和提取码发给买家。'),
+            h('div', { style: { ...tiny, marginTop: '6px' } }, '需要本机已配置夸克网盘 CLI 的登录态；生成失败时订单会标记为「生成失败」并保留原因，不会当作已发货。')),
+
+        h('div', { style: { marginTop: '14px' } },
+          h('div', { style: { ...S.label, marginBottom: '6px' } }, '买家会收到'),
+          h('div', {
+            style: {
+              border: '1px solid rgba(127,127,127,.2)', borderRadius: '12px', borderTopLeftRadius: '4px',
+              padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, whiteSpace: 'pre-wrap',
+              background: 'rgba(127,127,127,.08)', maxWidth: '92%', wordBreak: 'break-word',
+            },
+          }, previewText)),
+
+        h('div', { style: { marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'center' } },
+          h('button', {
+            style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', padding: '7px 18px', fontWeight: 600 },
+            onClick: saveCard,
+            disabled: !!busy,
+          }, busy === 'add' ? '保存中…' : (isEditing ? '保存修改' : '添加卡券')),
+          h('span', { style: tiny }, '一个商品只绑一张启用的卡券')))
+
+      const list = h('div', { style: { flex: '1 1 340px', minWidth: '300px' } },
+        h('div', { style: { ...S.muted, marginBottom: '8px' } }, cards.length ? `${cards.length} 张卡券` : '还没有卡券'),
         cards.length === 0
-          ? h('div', { style: { ...S.muted, padding: '16px 0' } }, '还没有卡券')
-          : h('div', null,
-            h('div', { style: { ...rowStyle, ...S.th } },
-              h('span', null, '商品'), h('span', null, '规格'), h('span', null, '模式'), h('span', null, '库存'), h('span', null, '状态 / 操作')),
-            cards.map((c) =>
-              h('div', { key: c.id, style: rowStyle },
-                h('span', { title: c.item_id, style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, titleOf(c.item_id)),
-                h('span', null, c.spec_value || '通用'),
-                h('span', { title: c.name }, c.mode === 'reuse' ? '复用' : c.mode === 'generate' ? '每单生成' : '池型'),
-                h('span', { title: `总量 ${c.total ?? 0} / 已用 ${c.used ?? 0}` },
-                  c.mode === 'generate'
-                    ? '按需'
-                    : c.mode === 'reuse'
-                      ? (c.remaining ? '可用' : '内容为空')
-                      : `${c.remaining ?? 0} / ${c.total ?? 0} 剩`),
-                h('span', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
-                  h('button', { style: small, onClick: () => onEdit(c) }, '编辑'),
-                  h('button', {
-                    style: c.enabled
-                      ? { ...small, color: '#d97706', borderColor: 'rgba(217,119,6,.35)' }
-                      : { ...small, color: '#16a34a', borderColor: 'rgba(22,163,74,.35)' },
-                    title: c.enabled ? '停用后该商品不再自动发货' : '启用后该商品恢复自动发货',
-                    onClick: () => onToggle(c),
-                  }, c.enabled ? '停用' : '启用'),
-                  h('button', { style: { ...small, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }, onClick: () => onRemove(c) }, '删除'))
-              )
-            )
-          )
-      )
+          ? h('div', { style: { ...panel, textAlign: 'center', padding: '28px 16px' } },
+            h('div', { style: { fontSize: '13px', marginBottom: '6px' } }, '还没有配置发货内容'),
+            h('div', { style: tiny }, '先选一个商品，再把网盘链接粘到右边。一条链接就能开始自动发货。'))
+          : cards.map((c) => h('div', {
+            key: c.id,
+            style: {
+              ...panel, padding: '12px 14px', marginBottom: '8px',
+              borderLeft: `3px solid ${c.enabled ? '#0f9d6e' : 'rgba(127,127,127,.35)'}`,
+              opacity: c.enabled ? 1 : 0.7,
+            },
+          },
+            h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '6px' } },
+              h('div', { style: { flex: 1, fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: c.item_id },
+                titleOf(c.item_id)),
+              h('span', { style: { ...tiny, flex: 'none' } }, MODES[c.mode] ? MODES[c.mode].name : '池型')),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+              h('div', { style: { flex: 1, minWidth: 0 } },
+                h('div', { style: { ...tiny, marginBottom: '4px' } }, c.spec_value ? `规格 ${c.spec_value}` : '通用（不限规格）'),
+                stockCell(c)),
+              h('div', { style: { display: 'flex', gap: '4px', flex: 'none' } },
+                h('button', { style: { ...S.btn, padding: '3px 8px', fontSize: '12px' }, onClick: () => onEdit(c) }, '编辑'),
+                h('button', {
+                  style: {
+                    ...S.btn, padding: '3px 8px', fontSize: '12px',
+                    color: c.enabled ? '#d97706' : '#16a34a',
+                    borderColor: c.enabled ? 'rgba(217,119,6,.35)' : 'rgba(22,163,74,.35)',
+                  },
+                  onClick: () => onToggle(c),
+                }, c.enabled ? '停用' : '启用'),
+                h('button', { style: { ...S.btn, padding: '3px 8px', fontSize: '12px', color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }, onClick: () => onRemove(c) }, '删除'))))))
+
+      return h('div', { style: { display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' } },
+        list,
+        h('div', { style: { flex: '1 1 380px', minWidth: '320px' } }, editor))
     }
 
     function DeliveriesTab(props) {
