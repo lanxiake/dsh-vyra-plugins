@@ -28,7 +28,7 @@ function splitMessages(text) {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function createDispatcher({
-  store, cli, guard, config = {}, logger = () => {}, getAccount = () => '', generateLink,
+  store, cli, im, guard, config = {}, logger = () => {}, getAccount = () => '', generateLink,
 }) {
   const account = () => String(getAccount() || '')
   const blockRefund = config.blockRefund !== false
@@ -46,7 +46,7 @@ export function createDispatcher({
     const parts = splitMessages(text)
     for (let i = 0; i < parts.length; i += 1) {
       await guard.wait()
-      await cli.send({ toid, itemId, text: parts[i] })
+      await (im ? im.send({ toid, itemId, text: parts[i] }) : cli.send({ toid, itemId, text: parts[i] }))
       if (i < parts.length - 1) await sleep(multiMessageDelayMs)
     }
     return parts

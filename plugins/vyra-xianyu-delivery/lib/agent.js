@@ -19,7 +19,7 @@ function userMessage(text) {
   }
 }
 
-export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset, workspaceCwd, getDefaultModel }) {
+export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset, workspaceCwd, getDefaultModel, attachSession, renameSession }) {
   // Cordis 的服务在插件 apply 时可能还没注册（注入顺序），必须每次现取；
   // 在 apply 时取一次会永久拿到 undefined，AI 客服就一直是关的。
   const liveAgents = () => (typeof getAgents === 'function' ? getAgents() : agents)
@@ -34,17 +34,17 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     return raw === BUILTIN_AGENT ? '' : raw
   }
 
-  async function ask({ prompt, sessionKey, title = '', model = null }) {
+  async function ask({ prompt, systemPrompt = '', allowedTools = null, sessionKey, title = '', model = null }) {
     if (!liveAgents()?.create) return { text: null, error: 'agents-unavailable' }
     try {
-      return await askOnce({ prompt, sessionKey, title, model })
+      return await askOnce({ prompt, systemPrompt, allowedTools, sessionKey, title, model })
     } catch (err) {
       logger(`agent ask failed: ${err?.message || err}`)
       return { text: null, error: String(err?.message || err) }
     }
   }
 
-  async function askOnce({ prompt, sessionKey, title, model }) {
+  async function askOnce({ prompt, systemPrompt, allowedTools, sessionKey, title, model }) {
     const preset = currentPreset()
     const route = model && model.provider && model.model
       ? { provider: model.provider, model: model.model }
@@ -66,6 +66,18 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     // 这样 DSH 会话列表里是「一段连续对话」而不是每次一条。
     const sessionId = `xianyu-${String(sessionKey || 'chat').replace(/[^0-9a-zA-Z_-]/g, '') || 'chat'}`
     const setup = (agentCtx) => {
+      // 客服人设与技能放进系统提示段：续写时还在，也不会挤占用户消息。
+      if (systemPrompt) {
+        try {
+          agentCtx.systemPrompt?.section({
+            name: 'vyra-xianyu-cs',
+            order: 10150,
+            text: () => systemPrompt,
+          })
+        } catch (err) {
+          logger(`system prompt section failed: ${err?.message || err}`)
+        }
+      }
       agentCtx.tools.register({
         name: REPLY_TOOL,
         description: '把最终要发给买家的回复原样交出来。必须调用且只调用一次。',
@@ -92,6 +104,18 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
           return { ok: true }
         },
       })
+
+      // 真正限制可用工具，而不是只在 prompt 里列名字。
+      if (Array.isArray(allowedTools) && allowedTools.length > 0) {
+        try {
+          const schemas = agentCtx.tools.schemas?.() || []
+          const present = new Set(schemas.map((tool) => tool?.name).filter(Boolean))
+          const allow = [...new Set([...allowedTools, REPLY_TOOL])].filter((name) => present.has(name))
+          if (allow.length > 0) agentCtx.tools.restrict({ allow })
+        } catch (err) {
+          logger(`tools restrict failed: ${err?.message || err}`)
+        }
+      }
     }
 
     // 会话落在专用工作区，DSH 侧栏会把它归到「闲鱼客服」分组下。
@@ -123,12 +147,31 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
       }
     }
 
-    // DSH 会话列表没有原生分组，标题前缀标出客服名。
-    if (title && sessionTitle?.rename) {
+    // 挂到「闲鱼客服」工作区：不 attach 的话会话不会出现在侧栏分组里。
+    if (typeof attachSession === 'function') {
       try {
-        sessionTitle.rename(handle.agent.session, title)
+        await attachSession(sessionId)
       } catch (err) {
-        logger(`rename session failed: ${err?.message || err}`)
+        logger(`attach session failed: ${err?.message || err}`)
+      }
+    }
+
+    // 标题：优先用官方 sessionController，退回 sessionTitle。
+    if (title) {
+      let renamed = false
+      if (typeof renameSession === 'function') {
+        try {
+          renamed = await renameSession(sessionId, title) !== false
+        } catch (err) {
+          logger(`rename via controller failed: ${err?.message || err}`)
+        }
+      }
+      if (!renamed && sessionTitle?.rename) {
+        try {
+          sessionTitle.rename(handle.agent.session, title)
+        } catch (err) {
+          logger(`rename session failed: ${err?.message || err}`)
+        }
       }
     }
 

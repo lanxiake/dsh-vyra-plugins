@@ -670,6 +670,243 @@ def _emit(obj: dict[str, Any]) -> None:
     print(json.dumps(obj, ensure_ascii=False), flush=True)
 
 
+# ---------------------------------------------------------------------------
+# serve：常驻 IM 进程。
+#
+# 每条短命令都要重新 `uv run` 起一个 Python（1~2 秒），而 chats/history/send
+# 每次还新开一条 IM 连接、把常驻监听踢下线。serve 只建一条连接，stdin 读命令、
+# stdout 写结果，收发的推送也走同一条连接。
+#
+# 协议（每行一个 JSON）：
+#   请求  {"id":1,"op":"chats"|"history"|"send","args":{...}}
+#   结果  {"id":1,"ok":true,"data":...} / {"id":1,"ok":false,"error":"..."}
+#   事件  {"event":"message",...} / {"event":"read",...}  （服务端推送）
+# ---------------------------------------------------------------------------
+async def _serve() -> None:
+    from goofish_cli.core import Session
+    from goofish_cli.core.errors import GoofishError
+    from goofish_cli.core.message_history import parse_message
+    from goofish_cli.core.sign import generate_mid
+    from goofish_cli.core.token import get_access_token
+    from goofish_cli.core.ws import (
+        build_ack, cid_from_create_ack, connect, create_chat,
+        extract_incoming_text, extract_meta_event, extract_push_messages,
+        heartbeat_loop, register, send_text, wait_ready,
+    )
+
+    session = Session.load()
+    token = get_access_token(session)
+    loop = asyncio.get_running_loop()
+    pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
+
+    def _emit_event(obj: dict[str, Any]) -> None:
+        _emit(obj)
+
+    async def _reader(ws: Any) -> None:
+        async for raw in ws:
+            try:
+                frame = json.loads(raw)
+            except (ValueError, TypeError):
+                continue
+            mid = (frame.get("headers") or {}).get("mid")
+            waiter = pending.pop(mid, None) if mid else None
+            if waiter is not None:
+                if not waiter.done():
+                    waiter.set_result(frame)
+                continue
+            # 没有等待者的帧都是服务端推送：回 ack，再把消息抛给宿主。
+            try:
+                await ws.send(json.dumps(build_ack(frame)))
+            except Exception:  # noqa: BLE001
+                pass
+            if frame.get("lwp") != "/s/vulcan":
+                continue
+            for decoded in extract_push_messages(frame):
+                meta = extract_meta_event(decoded)
+                if meta is not None:
+                    _emit_event(meta)
+                    continue
+                item = extract_incoming_text(decoded)
+                if item is not None and (item.get("send_message") or item.get("content_type") == 1):
+                    _emit_event(item)
+
+    async def _call(ws: Any, lwp: str, body: Any, timeout: float = 20.0) -> dict[str, Any]:
+        mid = generate_mid()
+        fut: asyncio.Future[dict[str, Any]] = loop.create_future()
+        pending[mid] = fut
+        await ws.send(json.dumps({"lwp": lwp, "headers": {"mid": mid}, "body": body}, ensure_ascii=False))
+        try:
+            return await asyncio.wait_for(fut, timeout)
+        finally:
+            pending.pop(mid, None)
+
+    async def _chats(ws: Any, limit: int) -> dict[str, Any]:
+        out: list[dict[str, Any]] = []
+        cursor: Any = 9007199254740991
+        while len(out) < limit:
+            ack = await _call(
+                ws, "/r/Conversation/listNewestPagination",
+                [cursor, min(50, limit - len(out))],
+            )
+            body = (ack or {}).get("body") or {}
+            items = body.get("userConvs") or []
+            for raw in items:
+                conv = raw.get("singleChatUserConversation") or raw
+                single = conv.get("singleChatConversation") or {}
+                cid = str(single.get("cid") or "").split("@")[0]
+                if not cid:
+                    continue
+                first = str(single.get("pairFirst") or "").split("@")[0]
+                second = str(single.get("pairSecond") or "").split("@")[0]
+                peer = second if first == session.unb else first
+                if not peer or peer == "0":
+                    continue
+                ext = single.get("extension") or {}
+                if isinstance(ext, str):
+                    try:
+                        ext = json.loads(ext)
+                    except (ValueError, TypeError):
+                        ext = {}
+                last = (conv.get("lastMessage") or {}).get("message") or {}
+                last_ext = last.get("extension") or {}
+                if isinstance(last_ext, str):
+                    try:
+                        last_ext = json.loads(last_ext)
+                    except (ValueError, TypeError):
+                        last_ext = {}
+                sender = str((last_ext or {}).get("senderUserId") or "").split("@")[0]
+                nick = str((last_ext or {}).get("reminderTitle") or "")
+                squad = str((ext or {}).get(f"squadName_{peer}") or "") if isinstance(ext, dict) else ""
+                peer_nick = (nick if sender == peer and nick else "") or squad
+                content = last.get("content") or {}
+                custom = content.get("custom") or {}
+                text = str(custom.get("summary") or "")
+                if not text and custom.get("data"):
+                    try:
+                        payload = json.loads(base64.b64decode(custom["data"]))
+                        text_obj = payload.get("text") or {}
+                        text = text_obj.get("text", "") if isinstance(text_obj, dict) else str(text_obj)
+                    except (ValueError, TypeError, UnicodeDecodeError):
+                        text = ""
+                out.append({
+                    "session_id": cid,
+                    "peer_user_id": peer,
+                    "peer_nick": peer_nick,
+                    "last_msg": text[:60],
+                    "ts": int(conv.get("modifyTime") or 0) or None,
+                    "unread": int(conv.get("redPoint") or 0),
+                    "item_id": str((ext or {}).get("itemId") or "") if isinstance(ext, dict) else "",
+                    "item_title": str((ext or {}).get("itemTitle") or "") if isinstance(ext, dict) else "",
+                    "source": "im",
+                })
+            if body.get("hasMore") not in (1, "1", True) or not items:
+                break
+            nxt = body.get("nextCursor")
+            if nxt is None:
+                break
+            cursor = nxt
+        return {"sessions": out, "total": len(out)}
+
+    async def _history(ws: Any, cid: str, limit: int) -> list[dict[str, Any]]:
+        messages: dict[Any, dict[str, Any]] = {}
+        cursor: Any = 9007199254740991
+        page = 50
+        while len(messages) < limit:
+            ack = await _call(
+                ws, "/r/MessageManager/listUserMessages",
+                [f"{cid}@goofish", False, cursor, min(page, limit - len(messages)), False],
+            )
+            body = (ack or {}).get("body") or {}
+            models = body.get("userMessageModels") or []
+            for model in models:
+                item = parse_message(model, cid)
+                messages[item["message_id"] or len(messages)] = item
+            if len(messages) >= limit or body.get("hasMore") not in (1, "1", True):
+                break
+            cursor = body.get("nextCursor")
+            if cursor is None or not models:
+                break
+        ordered = sorted(messages.values(), key=lambda m: m.get("created_at") or 0)
+        return ordered[-limit:]
+
+    async def _send(ws: Any, args: dict[str, Any]) -> dict[str, Any]:
+        cid = str(args.get("cid") or "")
+        toid = str(args.get("toid") or "")
+        item_id = str(args.get("itemId") or "")
+        text = str(args.get("text") or "")
+        if not toid:
+            raise GoofishError("缺少 toid")
+        if item_id:
+            create_mid = await create_chat(ws, myid=session.unb, toid=toid, item_id=item_id)
+            fut: asyncio.Future[dict[str, Any]] = loop.create_future()
+            pending[create_mid] = fut
+            try:
+                create_ack = await asyncio.wait_for(fut, 15)
+            finally:
+                pending.pop(create_mid, None)
+            created = cid_from_create_ack(create_ack)
+            if not created:
+                raise GoofishError("创建会话失败：回包里没有 cid，未发送")
+            cid = created
+        elif cid in ("", "0"):
+            raise GoofishError("未知会话 cid；新会话请传 itemId 先创建单聊")
+        mid = await send_text(ws, myid=session.unb, cid=cid, toid=toid, text=text)
+        fut = loop.create_future()
+        pending[mid] = fut
+        try:
+            ack = await asyncio.wait_for(fut, 15)
+        finally:
+            pending.pop(mid, None)
+        if (ack or {}).get("code") != 200:
+            raise GoofishError(f"发送未被服务端接受：code={(ack or {}).get('code')}")
+        body = (ack or {}).get("body") or {}
+        return {
+            "cid": cid, "toid": toid, "kind": "text", "ok": True,
+            "mid": mid, "message_id": str(body.get("messageId", "")),
+        }
+
+    async with connect(session) as ws:
+        mids = await register(ws, session, token)
+        # 握手要先独占连接：wait_ready 自己读帧，和 reader 并发读会冲突。
+        if not await wait_ready(ws, mids=mids):
+            raise GoofishError("IM 连接未就绪")
+        heartbeat = asyncio.create_task(heartbeat_loop(ws))
+        reader = asyncio.create_task(_reader(ws))
+        try:
+            _emit({"event": "ready", "unb": session.unb, "tracknick": session.tracknick})
+            while True:
+                line = await asyncio.to_thread(sys.stdin.readline)
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    cmd = json.loads(line)
+                except ValueError:
+                    continue
+                req_id = cmd.get("id")
+                op = str(cmd.get("op") or "")
+                args = cmd.get("args") or {}
+                try:
+                    if op == "chats":
+                        data = await _chats(ws, int(args.get("limit") or 60))
+                    elif op == "history":
+                        data = await _history(ws, str(args.get("cid") or ""), int(args.get("limit") or 30))
+                    elif op == "send":
+                        data = await _send(ws, args)
+                    elif op == "ping":
+                        data = {"ok": True}
+                    else:
+                        raise GoofishError(f"unknown op: {op}")
+                    _emit({"id": req_id, "ok": True, "data": data})
+                except Exception as exc:  # noqa: BLE001
+                    _emit({"id": req_id, "ok": False, "error": str(exc)})
+        finally:
+            reader.cancel()
+            heartbeat.cancel()
+
+
 async def _launch_browser(pw: Any, headless: bool = False) -> Any:
     """优先系统 Edge，其次 bundled Chromium，最后系统 Chrome。
 
@@ -793,6 +1030,15 @@ def main() -> None:
         # 流式事件，自己负责输出；不要外层再包一层 JSON。
         try:
             asyncio.run(_login_qr(int(args.get("timeout", 180))))
+        except Exception as e:  # noqa: BLE001
+            _emit({"event": "error", "message": str(e)})
+        return
+
+    if command == "serve":
+        try:
+            asyncio.run(_serve())
+        except KeyboardInterrupt:
+            pass
         except Exception as e:  # noqa: BLE001
             _emit({"event": "error", "message": str(e)})
         return

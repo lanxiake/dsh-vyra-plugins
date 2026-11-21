@@ -150,14 +150,23 @@ curl -X POST http://127.0.0.1:<port>/api/xianyu-delivery/rpc \
 
 ## 收消息与自动回复
 
-**主路径是轮询**：每 `chatPollSeconds`（默认 15 秒）拉一次会话列表，有新消息的会话再拉历史，然后
+插件常驻一个 `worker.py serve` 进程：**一条 IM 连接**同时负责收推送、拉历史、发消息。
 
-1. 历史里有新订单号 → 立即发货
-2. 最新一条是买家文本 → 交给客服 Agent 生成回复并发送
+```
+serve 进程 ── 收推送 ──▶ handleImEvent ──▶ 发货 / 交给 Agent
+          ── chats / history / send（同一条连接，不再起新进程）
+```
 
-为什么不是长连接：闲鱼的 IM 是单连接，`send` / `history` 这类命令每次都会新开一条 IM 连接，会把正在收消息的常驻监听踢下线。轮询每次都是短连接，不存在互踢。
+这么做解决了两件事：
 
-可选的 `watch` 仍保留（设置 `watchEnabled: true` 或点面板上的「实时」开关），延迟更低，但会和 CLI 调用抢连接，不建议同时高频开面板。
+- **不再互踢**：以前每条 `send`/`history` 都会新开连接，把常驻监听踢下线；现在全走同一条
+- **快**：以前每条命令要 `uv run` 起一个 Python（1~2 秒），现在同一进程内往返约 100~600ms
+
+收到的每条消息：历史里有新订单号 → 发货；最近一条**带文本**的买家消息 → 交给客服 Agent 回复（下单卡片没有文本，会往前找到真正的提问）。
+
+兜底轮询仍在（默认 15 秒）：进程重启、事件漏掉时补一轮。
+
+面板「实时」开关只控制要不要处理推送事件，通道本身始终保留。
 
 **会话商品**：会话本身带 `itemId`（从会话扩展里取），所以买家从聊天列表点进来也能定位商品；订单和商品卡片是兜底。
 
@@ -180,7 +189,11 @@ curl -X POST http://127.0.0.1:<port>/api/xianyu-delivery/rpc \
 2. 「商品」页给商品「绑定客服」
 3. 买家发文本消息 → 找商品绑定的客服 → 技能 + 最近对话 → Agent 生成 → 发送
 
-**DSH 会话列表里的「闲鱼客服」分组**：自动回复创建的会话落在专用工作区 `~/.dsh/闲鱼客服`，DSH 侧栏按工作区分组，于是出现独立分组。**一个买家一个会话**（sessionId 固定为 `xianyu-<cid>`，第一次创建、之后续写），标题是 `[客服名] 商品简称-客户名`，点进去能看到完整的提问和 Agent 回复过程。
+**DSH 会话列表里的「闲鱼客服」分组**：插件启动时用 DSH 的 `workspaceRegistry.create(目录, '闲鱼客服')` 注册一个工作区，每个会话创建后再 `attachSession` 挂进去——只设 `meta.cwd` 不注册工作区的话，会话会先出现在「未分组」再消失。
+
+**一个买家一个会话**（sessionId 固定为 `xianyu-<cid>`，第一次创建、之后续写），标题通过 `sessionController.rename({ sessionId, title })` 设为 `[客服名] 商品简称-客户名`。
+
+**技能与工具**：客服提示词和技能正文写进 Agent 的**系统提示段**（`systemPrompt.section`），续写时依然存在；允许的工具用 `tools.restrict({ allow })` 真正限制，而不只是写在 prompt 里。
 
 配置项（`cordis.patch.yml`）：
 
@@ -269,11 +282,26 @@ ai:
 
 顶部「立即处理一轮」手动触发轮询，面板每 5 秒自动刷新一次。
 
-## 自检
+## 调试与自检
+
+**不打开面板也能看插件状态**（自动探测 DSH 的本地端口）：
 
 ```bash
-node plugins/vyra-xianyu-delivery/test/self-check.mjs
-node plugins/vyra-xianyu-delivery/test/client-check.mjs
+node plugins/vyra-xianyu-delivery/scripts/dev-probe.mjs status
+node plugins/vyra-xianyu-delivery/scripts/dev-probe.mjs events
+node plugins/vyra-xianyu-delivery/scripts/dev-probe.mjs chats
+node plugins/vyra-xianyu-delivery/scripts/dev-probe.mjs tick
+```
+
+**离线自检**（不需要 DSH）：
+
+```bash
+node test/self-check.mjs         # 发货状态机：幂等、卡密消耗、熔断、多规格、模板
+node test/conversation-check.mjs # 历史解析：下单卡片、自己发言、启动前消息
+node test/client-check.mjs       # 客户端组件
+node test/render-smoke.mjs       # 11 个界面场景渲染
+node test/boot-check.mjs         # 用假 ctx 真正 apply 插件并走一遍 RPC
+node test/im-check.mjs           # 常驻 IM 通道：复用连接、往返耗时
 ```
 
 覆盖：重复触发只发一次、卡密不重复消费、卡密耗尽、敏感词拦截、退款跳过、多数量、多规格、模板渲染、`######` 多条消息、连续失败熔断。

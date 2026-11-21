@@ -86,7 +86,9 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
       ? `你可以调用这些工具完成查询和操作：${allowed.join(', ')}`
       : ''
 
-    return [
+    // system 段：客服人设 + 规则 + 技能正文。放进系统提示后，
+    // 后续每次续写都还在，不会随对话轮次丢失。
+    const system = [
       service?.system_prompt || '你是闲鱼店铺的客服，负责回答买家关于商品的问题。语气自然、简短，像真人卖家，不要长篇大论。',
       [
         '规则：',
@@ -99,11 +101,17 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
       ].join('\n'),
       toolsLine,
       itemId ? `当前商品 ID：${itemId}` : '',
-      skills.length ? `商品技能资料：\n\n${skills.join('\n\n')}` : '商品技能资料：（未配置）',
+      skills.length ? `商品技能资料：\n\n${skills.join('\n\n')}` : '',
+    ].filter(Boolean).join('\n\n')
+
+    // user 段：只有这一轮的对话上下文和问题。
+    const user = [
       lines.length ? `最近对话：\n${lines.join('\n')}` : '',
       `买家最新消息：${text}`,
       `请生成回复，然后调用 ${REPLY_TOOL} 工具把回复原样交出来。`,
     ].filter(Boolean).join('\n\n')
+
+    return { system, user, allowedTools: allowed }
   }
 
   async function apiReply(prompt) {
@@ -154,7 +162,7 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
     if (coolingDown(cid)) return { reason: 'cooldown' }
     if ((counts.get(cid) || 0) >= maxRepliesPerChat) return { reason: 'max-replies' }
 
-    const prompt = await buildPrompt({ text, itemId, history, selfUserId, accountId, item, service })
+    const built = await buildPrompt({ text, itemId, history, selfUserId, accountId, item, service })
     const short = (value) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 10)
     const title = `[${service.name}] ${short(item?.title || itemId)}-${short(buyerNick || '买家')}`
     // 客服可以单独指定模型，格式 provider:model。
@@ -164,11 +172,18 @@ export function createAi({ config = {}, store, agent, logger = () => {}, toolNam
       : null
     let out = null
     if (mode !== 'api' && agent?.available) {
-      const result = await agent.ask({ prompt, sessionKey: cid, title, model: modelChoice })
+      const result = await agent.ask({
+        prompt: built.user,
+        systemPrompt: built.system,
+        allowedTools: built.allowedTools,
+        sessionKey: cid,
+        title,
+        model: modelChoice,
+      })
       if (!result.text) return { reason: result.error || 'agent-empty' }
       out = result.text
     } else {
-      out = await apiReply(prompt)
+      out = await apiReply(`${built.system}\n\n${built.user}`)
       if (!out) return { reason: 'api-empty' }
     }
 

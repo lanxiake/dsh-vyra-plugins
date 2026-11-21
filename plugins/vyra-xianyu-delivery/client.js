@@ -1375,7 +1375,17 @@ window.__ModuleLoader__.load({
         setBusy('chats')
         try {
           const data = await rpc({ op: 'chats', fetchNum: 100 }, 60000)
-          setChats((data && data.sessions) || [])
+          const next = (data && data.sessions) || []
+          // 增量合并：没变化的会话复用原对象，避免整表重渲染和闪烁。
+          setChats((prev) => {
+            const old = new Map(prev.map((c) => [c.session_id, c]))
+            return next.map((s) => {
+              const before = old.get(s.session_id)
+              return before && before.ts === s.ts && before.unread === s.unread && before.peer_nick === s.peer_nick
+                ? before
+                : s
+            })
+          })
         } catch (err) {
           setError(String(err.message || err))
         } finally {

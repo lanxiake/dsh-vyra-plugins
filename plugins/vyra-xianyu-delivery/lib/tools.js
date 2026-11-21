@@ -29,7 +29,7 @@ function definition({ name, description, parameters, run }) {
   }
 }
 
-export function createXianyuTools({ cli, store, dispatcher, getAccount = () => '' }) {
+export function createXianyuTools({ cli, im, store, dispatcher, getAccount = () => '' }) {
   const account = () => String(getAccount() || '')
 
   return [
@@ -43,7 +43,7 @@ export function createXianyuTools({ cli, store, dispatcher, getAccount = () => '
         },
       },
       async run(args) {
-        const page = await cli.chats(Math.min(Number(args.limit) || 50, 200))
+        const page = await im.chats(Math.min(Number(args.limit) || 50, 200))
         return { sessions: page.sessions || [], total: page.total || 0 }
       },
     }),
@@ -61,7 +61,7 @@ export function createXianyuTools({ cli, store, dispatcher, getAccount = () => '
       },
       async run(args) {
         if (!args.cid) throw new Error('缺少 cid')
-        return cli.history(String(args.cid), Math.min(Number(args.limit) || 50, 200))
+        return im.history(String(args.cid), Math.min(Number(args.limit) || 50, 200))
       },
     }),
 
@@ -80,7 +80,7 @@ export function createXianyuTools({ cli, store, dispatcher, getAccount = () => '
       },
       async run(args) {
         if (!args.toid || !args.text) throw new Error('缺少 toid 或 text')
-        return cli.send({
+        return im.send({
           cid: String(args.cid || '0'),
           toid: String(args.toid),
           itemId: String(args.itemId || ''),

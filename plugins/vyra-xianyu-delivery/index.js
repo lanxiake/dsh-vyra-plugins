@@ -6,6 +6,8 @@ import { readdir, readFile, copyFile, writeFile, mkdir, rm } from 'node:fs/promi
 import { createInterface } from 'node:readline'
 import { createStore } from './lib/db.js'
 import { createCli, defaultPrefix } from './lib/cli.js'
+ import { createIm } from './lib/im.js'
+import { findItemId, findOrderId, latestBuyerText } from './lib/conversation.js'
 import { createGuard } from './lib/guard.js'
 import { createDispatcher } from './lib/dispatch.js'
 import { createAi, stripFrontmatter } from './lib/ai.js'
@@ -47,17 +49,28 @@ export function apply(ctx, config = {}) {
 
   const store = createStore(cfg.dataFile)
   const cli = createCli({ command: cfg.cliCommand, prefix: cfg.cliPrefix })
+  // 常驻 IM 通道：chats/history/send 复用一条连接，不再每条命令起一个新进程。
+  const im = createIm({ command: cfg.cliCommand || 'uv', prefix: cfg.cliPrefix ?? defaultPrefix(), logger: log })
+
+  // 切账号后 cookie 变了，必须重建 IM 连接。
+  async function restartIm() {
+    try {
+      await im.restart()
+    } catch (err) {
+      log(`IM 重启失败：${err?.message || err}`)
+    }
+  }
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
   const account = () => String(authCache.unb || selfUserId || '')
   // 生成型卡券的实现在 dshAgent 之后才能确定，这里先留一个间接调用。
   let generateLinkImpl = null
   const dispatcher = createDispatcher({
-    store, cli, guard, config: cfg, logger: log,
+    store, cli, im, guard, config: cfg, logger: log,
     getAccount: account,
     generateLink: (args) => generateLinkImpl(args),
   })
   // 把闲鱼能力注册成主 Agent 可调用的工具。
-  const xianyuTools = createXianyuTools({ cli, store, dispatcher, getAccount: account })
+  const xianyuTools = createXianyuTools({ cli, im, store, dispatcher, getAccount: account })
   ctx.effect(() => {
     const disposers = xianyuTools.map((def) => ctx.tools.register(def))
     return () => { for (const dispose of disposers) dispose() }
@@ -68,6 +81,50 @@ export function apply(ctx, config = {}) {
   // 闲鱼客服会话统一落在这个目录：DSH 侧栏按工作区分组，于是有了独立分组。
   const csWorkspace = join(homedir(), '.dsh', '闲鱼客服')
   mkdir(csWorkspace, { recursive: true }).catch(() => {})
+
+  // DSH 侧栏的分组来自 workspaceRegistry：只放 meta.cwd 不注册工作区，
+  // 会话会先出现在「未分组」再消失。这里注册一个「闲鱼客服」工作区并挂会话。
+  let csWorkspaceHandle = null
+  let csWorkspacePromise = null
+  function ensureCsWorkspace() {
+    if (csWorkspaceHandle) return Promise.resolve(csWorkspaceHandle)
+    if (!csWorkspacePromise) {
+      csWorkspacePromise = (async () => {
+        const registry = getService('workspaceRegistry')
+        if (!registry?.create) throw new Error('workspaceRegistry 不可用')
+        const handle = await registry.create(csWorkspace, '闲鱼客服')
+        csWorkspaceHandle = handle
+        log('闲鱼客服工作区已注册')
+        return handle
+      })().catch((err) => {
+        csWorkspacePromise = null
+        throw err
+      })
+    }
+    return csWorkspacePromise
+  }
+
+  // 工作区随服务就绪再注册，失败就等下一轮。
+  ctx.effect(() => {
+    let stopped = false
+    let timer = null
+    const tryCreate = async () => {
+      if (stopped) return
+      try {
+        await ensureCsWorkspace()
+        if (timer) clearInterval(timer)
+        timer = null
+      } catch {
+        // 服务还没注册好，继续等
+      }
+    }
+    timer = setInterval(() => { void tryCreate() }, 1000)
+    void tryCreate()
+    return () => {
+      stopped = true
+      if (timer) clearInterval(timer)
+    }
+  }, 'xianyu-delivery.workspace')
   const dshAgent = createDshAgent({
     getAgents: () => getService('agents'),
     sessionTitle: getService('sessionTitle'),
@@ -82,6 +139,17 @@ export function apply(ctx, config = {}) {
       } catch {
         return null
       }
+    },
+    // 建完/续写完把会话挂到「闲鱼客服」工作区，侧栏才会分组显示。
+    attachSession: async (sessionId) => {
+      const ws = await ensureCsWorkspace().catch(() => null)
+      if (ws?.attachSession) await ws.attachSession(sessionId)
+    },
+    // 官方改名接口：sessionController.rename({ sessionId, title })。
+    renameSession: async (sessionId, title) => {
+      const controller = getService('sessionController')
+      if (!controller?.rename) return false
+      return await controller.rename({ sessionId, title })
     },
   })
 
@@ -120,9 +188,6 @@ export function apply(ctx, config = {}) {
   })
   let selfUserId = ''
   let authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
-  let watchProc = null
-  let watchRetry = null
-  let watchBackoff = 1000
   const eventCooldown = new Map()
   // 最近的消息处理记录，面板用它诊断「发了消息为什么没回」。
   const eventLog = []
@@ -264,8 +329,7 @@ export function apply(ctx, config = {}) {
     authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
     handledMsg.clear()
     handledOrders.clear()
-    stopWatch()
-    setTimeout(() => startWatch(), 600)
+    void restartIm()
     return { ok: true, unb }
   }
 
@@ -274,7 +338,7 @@ export function apply(ctx, config = {}) {
     await rm(join(cliHome, 'im_token.json'), { force: true })
     authCache = { loading: false, unb: '', tracknick: '', valid: false, checkedAt: 0, error: '已退出登录' }
     selfUserId = ''
-    stopWatch()
+    void restartIm()
     return { ok: true }
   }
 
@@ -356,56 +420,11 @@ export function apply(ctx, config = {}) {
 
   ctx.effect(() => () => cancelLogin(), 'xianyu-delivery.login')
 
-  // ---- ImWatch：实时监听。轮询保留为兜底。 ----
-  function findOrderId(messages) {
-    for (const m of messages || []) {
-      const tip = m?.message?.tip?.argInfo?.args
-      if (tip && tip.orderId) return String(tip.orderId)
-      const card = m?.message?.dxCard?.item?.main?.clickParam?.args
-      if (card && card.orderId) return String(card.orderId)
-    }
-    return ''
-  }
-
-  // 会话里的商品卡片会带 itemId（字段或 targetUrl 两种形态），没下单也能定位商品。
-  function findItemId(messages) {
-    for (const m of messages || []) {
-      const raw = JSON.stringify(m?.message || {})
-      const direct = raw.match(/"itemId"\s*:\s*"?(\d{6,})"?/)
-      if (direct) return direct[1]
-      const fromUrl = raw.match(/itemId=(\d{6,})/)
-      if (fromUrl) return fromUrl[1]
-    }
-    return ''
-  }
-
+  // 历史解析用纯函数，见 lib/conversation.js（可脱离 DSH 单测）。
   // 已经处理过的最新买家消息 id（每个会话），避免 new_msg 通知反复触发同一条。
   const handledMsg = new Map()
   // 插件启动时刻：比它早的消息只当作上下文，不触发自动回复。
   const pluginStartedAt = Date.now()
-
-  // 最新一条「带文本」的消息是不是买家发的提问。
-  // 下单后历史里最后一条常是订单卡片（没有文本），不能因此判定"没人说话"：
-  // 要往前找最近一条真正有文字的消息，那条才是买家的问题。
-  function latestBuyerText(history, self = '') {
-    const digits = (v) => String(v || '').replace(/\D/g, '')
-    for (let i = history.length - 1; i >= 0; i -= 1) {
-      const m = history[i]
-      const text = String(m?.message?.text?.text || '').trim()
-      if (!text) continue // 卡片 / 提示 / 图片：跳过，继续往前
-      // 最近一条文本是自己说的话，说明已经回过了。
-      if (digits(self) && digits(self) === digits(m.send_user_id)) return null
-      // 插件启动前的老消息不自动回复，避免重启后把历史问题全回答一遍。
-      if (Number(m.created_at) && Number(m.created_at) < pluginStartedAt) return null
-      return {
-        id: String(m.message_id || ''),
-        text,
-        userId: String(m.send_user_id || ''),
-        nick: String(m.send_user_name || ''),
-      }
-    }
-    return null
-  }
 
   async function replyToBuyer(cid, question, history, meta = {}) {
     // 会话对应的商品：会话自带的 itemId 最准，其次买家最近的订单，最后看历史卡片。
@@ -447,7 +466,7 @@ export function apply(ctx, config = {}) {
     }
 
     try {
-      await cli.send({ toid: String(meta.send_user_id), itemId, text: answer })
+      await im.send({ toid: String(meta.send_user_id), itemId, text: answer })
       guard.recordSuccess?.()
       log(`ai replied to ${meta.send_user_name || meta.send_user_id}`)
       recordEvent({
@@ -498,7 +517,7 @@ export function apply(ctx, config = {}) {
 
       let history = []
       try {
-        history = await cli.history(cid, 10)
+        history = await im.history(cid, 10)
       } catch {
         // 历史拿不到也能回，只是少了上下文
       }
@@ -512,7 +531,7 @@ export function apply(ctx, config = {}) {
 
     let history = []
     try {
-      history = await cli.history(cid, 6)
+      history = await im.history(cid, 6)
     } catch (err) {
       log(`history failed: ${err?.message || err}`)
       return
@@ -537,7 +556,7 @@ export function apply(ctx, config = {}) {
       // 不 return：同一轮里买家可能还问了话，下面继续走回复。
     }
 
-    const latest = latestBuyerText(history, selfUserId)
+    const latest = latestBuyerText(history, { self: selfUserId, notBefore: pluginStartedAt })
     if (!latest || !latest.text || latest.id === handledMsg.get(cid)) return
     if (!ai.enabled) {
       recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: latest.text.slice(0, 40) })
@@ -559,7 +578,7 @@ export function apply(ctx, config = {}) {
     if (authCache.loading === false && authCache.valid === false) return
     let data
     try {
-      data = await cli.chats(60)
+      data = await im.chats(60)
     } catch (err) {
       log(`chat poll failed: ${err?.message || err}`)
       return
@@ -579,7 +598,7 @@ export function apply(ctx, config = {}) {
       if (first) continue
       let history = []
       try {
-        history = await cli.history(cid, 6)
+        history = await im.history(cid, 6)
       } catch (err) {
         log(`chat poll history failed: ${err?.message || err}`)
         continue
@@ -607,90 +626,38 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  // 多个 watch 同时连 IM 会互相把连接踢掉（买家发消息但收不到事件）。
-  // 单例由 worker 端维护（~/.goofish-cli/watch.pid）：token 是插件实例的
-  // 启动时间戳，新实例杀旧的；旧实例的重试拿到 superseded 后不再重启。
-  let watchToken = Date.now()
-  let watchSuperseded = false
-  // watch 默认关：它和每次 CLI 调用（history/send 都会新开 IM 连接）抢同一条
-  // 连接，互相踢下线。轮询是主路径，watch 只作为可选的低延迟补充。
-  let watchEnabled = (store.getSetting('watch.enabled') ?? (cfg.watchEnabled === true ? '1' : '0')) !== '0'
+// 常驻 IM 通道负责收消息：serve 进程本身就是监听，推送事件直接进 handleImEvent。
+  // 「实时」开关只决定要不要处理这些事件，通道本身始终保留（列表和发送都要用）。
+  let watchEnabled = (store.getSetting('watch.enabled') ?? '1') !== '0'
 
-  // 升级前的 watch 没有 pid 文件，单例管不到，只有首次启动时按命令行清一遍。
-  // 同步执行：清扫必须在 spawn 之前完成，否则会连自己刚拉起的进程一起杀掉。
+  // 旧版本会另外起 worker.py watch 进程；升级后统一清扫一次，避免两条连接互踢。
   let legacySwept = false
   function sweepLegacyWatchers() {
     if (legacySwept || process.platform !== 'win32') return
     legacySwept = true
-    const script = "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*worker.py watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+    const script = "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*worker.py watch*' -or $_.CommandLine -like '*worker.py serve*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
     try {
       execFileSync('powershell', ['-NoProfile', '-Command', script], { timeout: 8000, windowsHide: true })
     } catch {
-      // 清扫失败就让单例兜底，不阻塞启动
-    }
-  }
-
-  function startWatch() {
-    if (watchProc || watchRetry || !watchEnabled) return
-    watchSuperseded = false
-    sweepLegacyWatchers()
-    const prefix = cfg.cliPrefix ?? defaultPrefix()
-    let child
-    try {
-      child = spawn(cfg.cliCommand, [...prefix, 'watch', JSON.stringify({ token: watchToken })], {
-        windowsHide: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: { ...process.env, NO_COLOR: '1', PYTHONIOENCODING: 'utf-8' },
-      })
-    } catch (err) {
-      log(`watch spawn failed: ${err?.message || err}`)
-      return
-    }
-    watchProc = child
-    watchBackoff = 1000
-    createInterface({ input: child.stdout }).on('line', (line) => {
-      let evt
-      try {
-        evt = JSON.parse(line)
-      } catch {
-        return
-      }
-      if (evt.event === 'superseded') {
-        watchSuperseded = true
-        log('watch superseded by a newer plugin instance')
-        return
-      }
-      handleImEvent(evt).catch((err) => log(`watch handler: ${err?.message || err}`))
-    })
-    child.on('exit', () => {
-      watchProc = null
-      if (watchSuperseded || !watchEnabled) return
-      watchRetry = setTimeout(() => {
-        watchRetry = null
-        startWatch()
-      }, watchBackoff)
-      watchBackoff = Math.min(watchBackoff * 2, 60000)
-    })
-  }
-
-  function stopWatch() {
-    // 主动停止（切账号/关开关）后重启要用更大的 token，
-    // 否则还是同一个 token，会误判为"同代实例在跑"而让位退出。
-    watchToken = Math.max(watchToken + 1, Date.now())
-    if (watchRetry) {
-      clearTimeout(watchRetry)
-      watchRetry = null
-    }
-    if (watchProc) {
-      killTree(watchProc)
-      watchProc = null
+      // 清扫失败不影响使用
     }
   }
 
   ctx.effect(() => {
-    startWatch()
-    return () => stopWatch()
-  }, 'xianyu-delivery.watch')
+    sweepLegacyWatchers()
+    const offEvent = im.onEvent((evt) => {
+      if (!watchEnabled) return
+      if (evt.event === 'read' || evt.event === 'ready') return
+      handleImEvent(evt).catch((err) => log(`im event: ${err?.message || err}`))
+    })
+    const offDown = im.onDown(() => log('IM 通道断开，等待自动重连'))
+    void im.ensure().catch((err) => log(`IM 启动失败：${err?.message || err}`))
+    return () => {
+      offEvent()
+      offDown()
+      im.dispose()
+    }
+  }, 'xianyu-delivery.im')
 
   // 会话轮询：不依赖长连接，watch 被踢也能在一轮内补上。
   ctx.effect(() => {
@@ -724,7 +691,7 @@ export function apply(ctx, config = {}) {
     },
     cards: store.availableCards(),
     ai: ai.enabled,
-    watch: Boolean(watchProc),
+    watch: Boolean(im.ready) && watchEnabled,
     watchEnabled,
     recentOrders: store.recentOrders(20),
   })
@@ -839,9 +806,8 @@ export function apply(ctx, config = {}) {
       case 'setWatch': {
         watchEnabled = Boolean(body.enabled)
         store.setSetting('watch.enabled', watchEnabled ? '1' : '0')
-        if (watchEnabled) startWatch()
-        else stopWatch()
-        return { watch: Boolean(watchProc), watchEnabled }
+        if (watchEnabled) void im.ensure().catch((err) => log(`IM 启动失败：${err?.message || err}`))
+        return { watch: Boolean(im.ready) && watchEnabled, watchEnabled }
       }
       case 'login-start':
         return startLogin(Number(body.timeout) || 180)
@@ -862,7 +828,7 @@ export function apply(ctx, config = {}) {
         })
         return { ok: true }
       case 'ai-status':
-        return { enabled: ai.enabled, model: cfg.ai?.model || '', watch: Boolean(watchProc) }
+        return { enabled: ai.enabled, model: cfg.ai?.model || '', watch: Boolean(im.ready) && watchEnabled }
       case 'auth':
         return authSnapshot()
       case 'accounts':
@@ -891,7 +857,7 @@ export function apply(ctx, config = {}) {
         }
       }
       case 'chats':
-        return cli.chats(Number(body.fetchNum) || 200)
+        return im.chats(Number(body.fetchNum) || 200)
       case 'userInfo':
         return cli.userInfo(String(body.cid || ''), Boolean(body.owner))
       case 'itemDetail':
@@ -899,7 +865,7 @@ export function apply(ctx, config = {}) {
       case 'orderDetail':
         return cli.orderDetail(String(body.orderId || ''))
       case 'history':
-        return cli.history(String(body.cid || ''), Number(body.limit) || 20)
+        return im.history(String(body.cid || ''), Number(body.limit) || 20)
       case 'sendMessage':
         await cli.send({
           cid: String(body.cid || '0'),
