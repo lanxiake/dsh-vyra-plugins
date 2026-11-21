@@ -1427,6 +1427,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.12: recordEvent('replied') now happens after send succeeds; send
+        // failures are diagnosed as send-failed:<error> instead of replied.
+        '0.6.12': {
+          publishTimestamp: 1795236000,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '4209f0634d6263ed31f988b2d6f267c03e82694e',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
