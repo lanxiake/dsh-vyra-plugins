@@ -774,6 +774,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 3.1.2 cuts the accidental popups and makes an accidental one dismissible: auto-open
+        // fires only on a real drag (a double-click no longer counts) and never on a
+        // one-character slip, and with the hook off a click anywhere outside closes the popup.
+        '3.1.2': {
+          publishTimestamp: 1795336200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6a33ae79dfd652e1b1e10fea9c4f96a4720b9497',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
         // timer and took the whole host process down on the first selection capture.
         '2.0.1': {
