@@ -761,6 +761,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
+        // 3.1.1 takes the global mouse hook out of the default path: it made every mouse event
+        // machine-wide wait on the Host's pump, which remote sessions felt as lag. The hook is
+        // opt-in now, old profiles carrying the previous default are migrated off once, and the
+        // drag trigger falls back to a poll that is not in the input path.
+        '3.1.1': {
+          publishTimestamp: 1795335000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '8b9ccc889745eddeacb8b5131a2573be61636494',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         // 2.0.1 removes an undeclared `lastSources` assignment that threw inside a
         // timer and took the whole host process down on the first selection capture.
         '2.0.1': {
@@ -1759,6 +1772,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '0318a89ada224c3f99042bc6e0c82dbe2c8127c0',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.2.1 makes the cards static: install/update/uninstall/enable sit beside the state tags
+        // and never appear on hover, and the per-card "details" button that opened the client's
+        // native plugin page is gone — clicking a card opens this market's own detail view.
+        '0.2.1': {
+          publishTimestamp: 1795335000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'afa6f449498ce8404c9bda25f932f556ee1c4c03',
             path: 'plugins/vyra-plugin-market',
           },
         },
