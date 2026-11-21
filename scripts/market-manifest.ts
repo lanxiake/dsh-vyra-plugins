@@ -1502,6 +1502,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.0: sessions grouped under the 闲鱼客服 workspace (one per buyer),
+        // card modes pool/reuse/generate with stock counts, visible failure
+        // reasons, and setup tools the main agent can call.
+        '0.7.0': {
+          publishTimestamp: 1795245000,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '156cc65449b3f89ee995049643cf39e0bb34abaa',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
