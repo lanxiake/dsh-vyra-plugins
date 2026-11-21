@@ -1833,6 +1833,238 @@
           "debugging"
         ]
       }
+    },
+    {
+      "name": "@noob-stupid/dsh-plugin-console",
+      "title": {
+        "en": "Plugin Console",
+        "zh": "插件控制台"
+      },
+      "description": {
+        "en": "Framework upgrade safety and plugin version gating for DSH: one-click upgrade with automatic rollback on failure, rollback to the previous release, automatic disabling of plugins that no longer fit, plus a multi-source plugin market whose sources can point at internal mirrors, private indexes or a local Git repository for intranet-only offline installs.",
+        "zh": "框架升级安全与插件升级门控：一键升级、失败自动回滚、升级后回滚上版、旧插件不适配自动禁用；内置多源插件市场为发现层，插件源全部可自定义，可指向公司内网私有源、私有索引、本地 Git 仓库，纯内网离线可用。"
+      },
+      "author": "Noob-stupid",
+      "homepage": "https://github.com/Noob-stupid/dsh-plugin-gating-hub#readme",
+      "repository": {
+        "url": "https://github.com/Noob-stupid/dsh-plugin-gating-hub"
+      },
+      "versions": [
+        {
+          "version": "0.5.110",
+          "publishTimestamp": 1795336800,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
+            "path": "plugins/dsh-plugin-console"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "integration",
+        "keywords": [
+          "plugin-manager",
+          "market",
+          "upgrade",
+          "rollback",
+          "gating"
+        ]
+      }
+    },
+    {
+      "name": "dsh-plugin",
+      "title": {
+        "en": "Community Plugin Market",
+        "zh": "社区插件市场"
+      },
+      "description": {
+        "en": "A community plugin marketplace for DeepSeek Harness, built to the official plugin spec: browse, search and install 6000+ hand-verified npm plugins out of 23000+ indexed, without leaving the app.",
+        "zh": "遵循官方规范的社区插件市场：收录 23000+ 社区插件、其中 6000+ 已发布 npm 包可一键安装，每日更新。"
+      },
+      "author": "DSH Plugin Hub contributors",
+      "homepage": "https://dsh-plugin.org",
+      "repository": {
+        "url": "https://github.com/dshplugin/dsh-plugin-hub"
+      },
+      "versions": [
+        {
+          "version": "2.3.9",
+          "publishTimestamp": 1795337000,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
+            "path": "plugins/dsh-plugin"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "integration",
+        "keywords": [
+          "marketplace",
+          "market",
+          "plugins",
+          "npm"
+        ]
+      }
+    },
+    {
+      "name": "@xiaoso/dsh-workflow-lite",
+      "title": {
+        "en": "Workflow Lite",
+        "zh": "轻量工作流"
+      },
+      "description": {
+        "en": "Lightweight agent workflow for DeepSeek Harness: one workflow = one JSON (React Flow native) with prompts inline, compiled into a dispatch plan the model executes itself. No execution engine; optional per-workflow run state kept by the model in a YAML file.",
+        "zh": "轻量智能体工作流：一个工作流就是一份 JSON（React Flow 原生），提示词内联，编译成模型自己执行的分派计划；没有执行引擎，可选的运行状态由模型写在 YAML 里。"
+      },
+      "author": "xiaoso",
+      "homepage": "https://xiaoso456.github.io/dsh-workflow-lite/",
+      "repository": {
+        "url": "https://github.com/xiaoso456/dsh-workflow-lite"
+      },
+      "versions": [
+        {
+          "version": "0.10.0",
+          "publishTimestamp": 1795337200,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
+            "path": "plugins/dsh-workflow-lite"
+          },
+          "engines": {
+            "dsh": ">=0.2.0-0 <0.2.1-0 || >=0.2.1-0 <0.3.0-0"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "agent-runtime",
+        "keywords": [
+          "workflow",
+          "agents",
+          "json",
+          "dispatch"
+        ]
+      }
+    },
+    {
+      "name": "@yunmiao/studymate",
+      "title": {
+        "en": "StudyMate",
+        "zh": "StudyMate 学习"
+      },
+      "description": {
+        "en": "StudyMate learning skills and lesson engine for DeepSeek Harness, Google Antigravity, Codex and ChatGPT Work.",
+        "zh": "StudyMate 学习技能与课程引擎，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。"
+      },
+      "author": "Cattofu",
+      "homepage": "https://github.com/Miaotofu01/Study-Mate#readme",
+      "repository": {
+        "url": "https://github.com/Miaotofu01/Study-Mate"
+      },
+      "versions": [
+        {
+          "version": "2.0.4",
+          "publishTimestamp": 1795337400,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
+            "path": "plugins/studymate"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "agent-runtime",
+        "keywords": [
+          "study",
+          "learning",
+          "skills",
+          "lessons"
+        ]
+      }
+    },
+    {
+      "name": "dsh-expert-orchestrator",
+      "title": {
+        "en": "Expert Orchestrator",
+        "zh": "专家编排"
+      },
+      "description": {
+        "en": "Expert Orchestrator: a multi-agent orchestration agent preset for DSH — triage, PM planning, delegation to domain experts through a merged roster (summon_expert), a dependency-DAG taskboard, a file message bus, tiered delivery gates and experience pooling.",
+        "zh": "专家编排模式：多智能体任务编排，分诊、PM 先行规划、专家委派、依赖 DAG 任务板、消息总线并行落盘、分级交付门禁、经验池沉淀。"
+      },
+      "author": "mario841859784",
+      "homepage": "https://github.com/mario841859784/dsh-expert-orchestrator#readme",
+      "repository": {
+        "url": "https://github.com/mario841859784/dsh-expert-orchestrator"
+      },
+      "versions": [
+        {
+          "version": "2.14.2",
+          "publishTimestamp": 1795337600,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
+            "path": "plugins/dsh-expert-orchestrator"
+          },
+          "engines": {
+            "dsh": ">=0.1.7-alpha.2 <0.2.0-0 || >=0.2.0-rc.1 <0.3.0-0 || >=0.2.1-0 <0.3.0-0"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "agent-runtime",
+        "keywords": [
+          "orchestration",
+          "multi-agent",
+          "preset",
+          "dag"
+        ]
+      }
+    },
+    {
+      "name": "@nanmicoder/dsh-agent-teams",
+      "title": {
+        "en": "Agent Teams",
+        "zh": "智能体团队"
+      },
+      "description": {
+        "en": "Multi-agent team collaboration for DSH: captain, members, tasks with dependencies and messaging, driven by natural language, with a tree monitor in the web GUI.",
+        "zh": "多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板。"
+      },
+      "author": "NanmiCoder",
+      "homepage": "https://github.com/NanmiCoder/dsh-agent-teams#readme",
+      "repository": {
+        "url": "https://github.com/NanmiCoder/dsh-agent-teams"
+      },
+      "versions": [
+        {
+          "version": "0.1.30",
+          "publishTimestamp": 1795337800,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
+            "path": "plugins/dsh-agent-teams"
+          },
+          "engines": {
+            "dsh": ">=0.1.2-alpha.2"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "agent-runtime",
+        "keywords": [
+          "multi-agent",
+          "teams",
+          "collaboration",
+          "tasks"
+        ]
+      }
     }
   ]
 }
