@@ -42,8 +42,19 @@ function loadBundle() {
 const { __internal } = loadBundle()
 const {
   marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
-  TRANSIENT_FAILURE, RETRY_DELAY_MS,
+  TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset,
 } = __internal
+
+// --- README images: a <picture> block must become the Markdown image it wraps --
+{
+  const readme = '<picture>\n<source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />\n<img alt="QQ 群" src="./assets/qq-group.png" width="220" />\n</picture>'
+  const md = htmlImages(readme)
+  assert.ok(!/<picture|<source|<img/i.test(md), `HTML image tags are gone, got: ${md}`)
+  assert.match(md, /!\[QQ 群\]\(\.\/assets\/qq-group\.png\)/, 'the <img> became a Markdown image')
+  const base = 'https://cdn.jsdelivr.net/gh/o/r@HEAD/plugins/p/'
+  assert.equal(resolveAsset('./assets/qq-group.png', base), 'https://cdn.jsdelivr.net/gh/o/r@HEAD/plugins/p/assets/qq-group.png', 'a relative asset resolves against the README directory')
+  assert.equal(resolveAsset('https://x.invalid/a.png', base), 'https://x.invalid/a.png', 'an absolute asset is left alone')
+}
 
 // A transport hiccup earns another run; a verdict about the package does not.
 // Getting this backwards would either give up on a flaky line or hammer the

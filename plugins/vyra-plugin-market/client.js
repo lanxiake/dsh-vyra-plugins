@@ -550,6 +550,7 @@ window.__ModuleLoader__.load({
       mdLi: { marginLeft: '18px', marginBottom: '4px', fontSize: '12.5px', lineHeight: '1.7', color: 'var(--dsw-alias-label-primary)' },
       mdPre: { margin: '0 0 10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--dsw-alias-bg-layer-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '12px', lineHeight: 1.6, color: 'var(--dsw-alias-label-primary)' },
       mdHr: { border: 0, borderTop: '1px solid var(--dsw-alias-border-l1)', margin: '14px 0' },
+      mdImg: { display: 'block', maxWidth: 'min(260px, 100%)', height: 'auto', margin: '10px 0', borderRadius: '8px', border: '1px solid var(--dsw-alias-border-l1)' },
     }
 
     const KEYFRAMES = 'vpm-keyframes'
@@ -807,18 +808,41 @@ window.__ModuleLoader__.load({
      * is fetched from GitHub — jsDelivr first (reachable in CN), then raw.githubusercontent.com.
      */
     /**
-     * Render README Markdown as real blocks — headings, bullets, fenced code, paragraphs — so
-     * the detail view reads like the client's own plugin pages rather than a pasted blob.
-     * Inline markers the panel cannot draw are stripped; structure that matters is kept.
+     * Turn the HTML image forms a README actually uses into Markdown, so the block renderer sees
+     * them. `<picture>`/`<source>` carry the same image twice (dark and light variants); the
+     * `<img>` inside is the one to draw. Raw HTML is otherwise not rendered.
      */
-    function renderMarkdown(md, key) {
+    function htmlImages(md) {
+      return String(md ?? '')
+        .replace(/<picture\b[^>]*>/gi, '')
+        .replace(/<\/picture\s*>/gi, '')
+        .replace(/<source\b[^>]*\/?>/gi, '')
+        .replace(/<img\b([^>]*)>/gi, (_all, attrs) => {
+          const src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(attrs)?.[1] ?? ''
+          const alt = /\balt\s*=\s*["']([^"']*)["']/i.exec(attrs)?.[1] ?? ''
+          return src === '' ? '' : `\n![${alt}](${src})\n`
+        })
+    }
+
+    /** Absolute URL for a README-relative asset; absolute and data: sources are left alone. */
+    function resolveAsset(src, base) {
+      if (/^(?:https?:|data:)/i.test(src)) return src
+      try { return new URL(src, base).href } catch { return src }
+    }
+
+    /**
+     * Render README Markdown as real blocks — headings, bullets, fenced code, images,
+     * paragraphs — so the detail view reads like the client's own plugin pages rather than a
+     * pasted blob. Inline markers the renderer cannot draw are stripped; images are drawn.
+     */
+    function renderMarkdown(md, key, resolve = (src) => src) {
       const blocks = []
       let code = null
       let para = null
       const flush = () => {
         if (para !== null) { blocks.push(...para.map((line, i) => h('p', { key: `${key}p${blocks.length}${i}`, style: S.mdPara }, line))); para = null }
       }
-      for (const raw of String(md ?? '').replace(/\r\n/g, '\n').split('\n')) {
+      for (const raw of htmlImages(md).replace(/\r\n/g, '\n').split('\n')) {
         const line = raw.trimEnd()
         if (/^\s*```/.test(line)) {
           flush()
@@ -828,6 +852,17 @@ window.__ModuleLoader__.load({
         }
         if (code !== null) { code.push(raw); continue }
         if (line.trim() === '') { flush(); continue }
+        // A line that is nothing but an image is drawn as one; an image mixed into prose is
+        // still flattened to its alt text by `inline`.
+        const image = /^\s*!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)\s*$/.exec(line)
+        if (image) {
+          flush()
+          blocks.push(h('img', {
+            key: `${key}i${blocks.length}`, src: resolve(image[2]), alt: image[1],
+            style: S.mdImg, loading: 'lazy', referrerPolicy: 'no-referrer',
+          }))
+          continue
+        }
         const heading = /^\s{0,3}(#{1,6})\s+(.*)$/.exec(line)
         if (heading) {
           flush()
@@ -874,7 +909,10 @@ window.__ModuleLoader__.load({
               const res = await fetch(url, { signal: AbortSignal.timeout(15000) })
               if (res.ok) {
                 const md = await res.text()
-                if (alive) setView({ loading: false, md, error: '' })
+                // The README's own directory is the base every relative asset resolves
+                // against — a QR image is `./assets/qq-group.png`, not a repository URL.
+                const base = url.slice(0, url.lastIndexOf('/') + 1)
+                if (alive) setView({ loading: false, md, error: '', base })
                 return
               }
             } catch {
@@ -953,7 +991,7 @@ window.__ModuleLoader__.load({
               ? h('div', { style: { fontSize: '12.5px', color: 'var(--dsw-alias-label-secondary)', marginTop: '12px' } }, lang === 'zh' ? '正在读取 README…' : 'Loading README…')
               : view.error
                 ? h('div', { style: { fontSize: '12.5px', color: 'var(--dsw-alias-label-secondary)', marginTop: '12px' } }, view.error)
-                : h('div', { style: { marginTop: '12px' } }, renderMarkdown(view.md, `${entry.name}-md`)),
+                : h('div', { style: { marginTop: '12px' } }, renderMarkdown(view.md, `${entry.name}-md`, (src) => resolveAsset(src, view.base))),
             // --- version history ---
             entry.versions.length === 0 ? null : h('div', { style: { marginTop: '18px', paddingTop: '12px', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
               h('h4', { style: { ...S.mdHead, marginBottom: '8px' } }, lang === 'zh' ? '版本历史' : 'Version history'),
@@ -1686,7 +1724,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText, TRANSIENT_FAILURE, RETRY_DELAY_MS },
+      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText, TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), `${NS}: dictionaries`)
