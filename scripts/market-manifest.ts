@@ -1462,6 +1462,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.14: skip replies when no itemId (buyer from chat list, not product
+        // page); show buyer/item/amount in delivery records.
+        '0.6.14': {
+          publishTimestamp: 1795240200,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: 'f6a6e6b979cb085f0fe7aa259ba2e773323aff57',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
