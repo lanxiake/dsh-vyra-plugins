@@ -373,23 +373,30 @@ export function apply(ctx, config = {}) {
 
   // 已经处理过的最新买家消息 id（每个会话），避免 new_msg 通知反复触发同一条。
   const handledMsg = new Map()
+  // 插件启动时刻：比它早的消息只当作上下文，不触发自动回复。
+  const pluginStartedAt = Date.now()
 
-  // 最新一条消息是不是买家发的文本。new_msg 通知没有正文，只能从历史里取；
-  // 最后一条是自己发的，说明已经回过了。
+  // 最新一条「带文本」的消息是不是买家发的提问。
+  // 下单后历史里最后一条常是订单卡片（没有文本），不能因此判定"没人说话"：
+  // 要往前找最近一条真正有文字的消息，那条才是买家的问题。
   function latestBuyerText(history, self = '') {
-    const last = history[history.length - 1]
-    if (!last) return null
-    // unb 有时带后缀，只比数字部分。
     const digits = (v) => String(v || '').replace(/\D/g, '')
-    if (digits(self) && digits(self) === digits(last.send_user_id)) return null
-    const text = String(last?.message?.text?.text || '').trim()
-    if (!text) return null
-    return {
-      id: String(last.message_id || ''),
-      text,
-      userId: String(last.send_user_id || ''),
-      nick: String(last.send_user_name || ''),
+    for (let i = history.length - 1; i >= 0; i -= 1) {
+      const m = history[i]
+      const text = String(m?.message?.text?.text || '').trim()
+      if (!text) continue // 卡片 / 提示 / 图片：跳过，继续往前
+      // 最近一条文本是自己说的话，说明已经回过了。
+      if (digits(self) && digits(self) === digits(m.send_user_id)) return null
+      // 插件启动前的老消息不自动回复，避免重启后把历史问题全回答一遍。
+      if (Number(m.created_at) && Number(m.created_at) < pluginStartedAt) return null
+      return {
+        id: String(m.message_id || ''),
+        text,
+        userId: String(m.send_user_id || ''),
+        nick: String(m.send_user_name || ''),
+      }
     }
+    return null
   }
 
   async function replyToBuyer(cid, question, history, meta = {}) {
@@ -519,7 +526,7 @@ export function apply(ctx, config = {}) {
       const result = await dispatcher.reconcile(orderNo)
       recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
       if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)
-      return
+      // 不 return：同一轮里买家可能还问了话，下面继续走回复。
     }
 
     const latest = latestBuyerText(history, selfUserId)
