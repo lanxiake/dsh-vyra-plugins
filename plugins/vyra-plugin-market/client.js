@@ -484,10 +484,6 @@ window.__ModuleLoader__.load({
         background: picked ? 'var(--dsw-alias-bg-multi-select)' : 'var(--dsw-alias-card-fill)',
         transition: 'box-shadow .15s, border-color .15s',
       }),
-      cardHover: {
-        boxShadow: '0 3px 12px rgba(0,0,0,.10)',
-        borderColor: 'var(--dsw-alias-border-selected)',
-      },
       cardTop: { display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 },
       artwork: {
         width: '34px', height: '34px', borderRadius: '8px', flex: 'none', overflow: 'hidden', display: 'flex',
@@ -496,8 +492,9 @@ window.__ModuleLoader__.load({
       },
       img: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
       head: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' },
-      titleRow: { display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 },
-      titleTags: { display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 'none', marginLeft: 'auto' },
+      titleRow: { display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' },
+      titleTags: { display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center', marginLeft: 'auto' },
+      titleActions: { display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' },
       date: { fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', flex: 'none' },
       name: { fontSize: '13.5px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 },
       mono: { fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
@@ -513,9 +510,6 @@ window.__ModuleLoader__.load({
         background: 'transparent',
       }),
       meta: { fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)', margin: 0 },
-      actions: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginTop: 'auto' },
-      // Resting cards stay flat; the actions grow in on hover so the card is not a wall of buttons.
-      actionsHidden: { display: 'none' },
       check: { width: '15px', height: '15px', flex: 'none', marginTop: '2px', cursor: 'pointer', accentColor: 'var(--dsw-alias-brand-primary)' },
       state: { padding: '28px 8px', textAlign: 'center', color: 'var(--dsw-alias-label-secondary)', fontSize: '13px' },
       error: { color: 'var(--dsw-alias-state-error-primary)' },
@@ -685,12 +679,11 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One entry, flattened: the title row carries artwork, name and state tags; the whole card
-     * is the entry point to details; actions appear on hover so the resting card is just title,
-     * description and facts. A failure this session left stays as a tag whose tooltip holds the
-     * whole reason and whose press copies it.
+     * One entry, flattened: the title row carries artwork, name, state tags and the actions that
+     * apply; the whole card opens this market's detail view. A failure this session left stays as
+     * a tag whose tooltip holds the whole reason and whose press copies it.
      */
-    function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, onPick, onRun, onConfirm, onOpen, onDetails, onCopyFailure, onClearFailure }) {
+    function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, onPick, onRun, onConfirm, onDetails, onCopyFailure, onClearFailure }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
       const state = entryState(entry)
       const shown = presentedVersion(entry)
@@ -698,7 +691,7 @@ window.__ModuleLoader__.load({
       const date = shown === undefined ? '' : formatDate(shown.publishTimestamp, lang)
       const incompatible = state === 'available' && version === undefined
       const installed = state === 'installed' || state === 'updatable'
-      const [hover, setHover] = useState(false)
+      
       const currentVersion = bundle?.version
       const nextVersion = state === 'updatable' ? updateTarget(entry)?.version : undefined
 
@@ -706,7 +699,7 @@ window.__ModuleLoader__.load({
       if (version !== undefined) {
         const update = state === 'updatable'
         actions.push(h('button', {
-          key: 'act', style: S.btn(true, busy), disabled: busy,
+          key: 'act', style: { ...S.btn(true, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
           onClick: (event) => { event?.stopPropagation(); onRun([{ action: update ? 'update' : 'install', entry, version }]) },
         }, t(update ? 'update' : 'install')))
       }
@@ -717,22 +710,16 @@ window.__ModuleLoader__.load({
         const removable = bundle !== undefined && bundle.removable !== false
         if (removable) {
           actions.push(h('button', {
-            key: 'remove', style: S.btn(false, busy), disabled: busy,
+            key: 'remove', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
             onClick: (event) => { event?.stopPropagation(); onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
           }, t('uninstall')))
         }
         if (bundle !== undefined && bundle.readOnlyReason === undefined) {
           const disable = bundle.enabled
           actions.push(h('button', {
-            key: 'toggle', style: S.btn(false, busy), disabled: busy,
+            key: 'toggle', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
             onClick: (event) => { event?.stopPropagation(); onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
           }, t(disable ? 'disable' : 'enable')))
-        }
-        if (onOpen !== undefined) {
-          actions.push(h('button', {
-            key: 'open', style: S.btn(false, busy), disabled: busy,
-            onClick: (event) => { event?.stopPropagation(); onOpen(entry.name) },
-          }, t('open')))
         }
       }
       const tags = []
@@ -756,12 +743,13 @@ window.__ModuleLoader__.load({
       if (incompatible) tags.push(h('span', { key: 'x', style: S.tag('warn') }, t('tagIncompatible')))
       if (shown !== undefined && prerelease(shown.version)) tags.push(h('span', { key: 'r', style: S.tag('neutral') }, t('tagPrerelease')))
 
-      // A click anywhere on the card opens details; the actions and the checkbox stop
-      // propagation, so picking several or pressing Update never navigates away.
+      // Static controls: the actions sit beside the state tags rather than appearing on hover, so
+      // nothing moves under the pointer and an action is never missed. A click elsewhere on the
+      // card opens this market's detail view; the checkbox and buttons stop propagation.
       const open = onDetails === undefined ? undefined : () => { onDetails(entry) }
       return h('li', {
-        style: { ...S.card(picked), cursor: open === undefined ? 'default' : 'pointer', ...(hover ? S.cardHover : null) },
-        onClick: open, onMouseEnter: () => { setHover(true) }, onMouseLeave: () => { setHover(false) },
+        style: { ...S.card(picked), cursor: open === undefined ? 'default' : 'pointer' },
+        onClick: open,
       },
         h('div', { style: S.cardTop },
           h('input', {
@@ -773,7 +761,12 @@ window.__ModuleLoader__.load({
           h('div', { style: S.head },
             h('div', { style: S.titleRow },
               h('span', { style: S.name, title }, title),
-              tags.length === 0 ? null : h('div', { style: S.titleTags }, tags))),
+              h('div', { style: { ...S.titleTags, gap: '6px' } },
+                tags,
+                actions.length === 0 ? null : h('div', {
+                  style: S.titleActions,
+                  onClick: (event) => { event?.stopPropagation() },
+                }, actions)))),
           date === '' ? null : h('span', { style: S.date }, date)),
         entry.description === undefined ? null : h('p', { style: S.desc }, text(entry.description)),
         h('p', { style: S.meta }, [
@@ -781,11 +774,7 @@ window.__ModuleLoader__.load({
             ? `${currentVersion} → ${nextVersion}`
             : shown === undefined ? null : `${t('version')} ${shown.version}`,
           entry.author === undefined ? null : entry.author,
-        ].filter(Boolean).join(' · ')),
-        actions.length === 0 ? null : h('div', {
-          style: { ...S.actions, ...(hover ? null : S.actionsHidden) },
-          onClick: (event) => { event?.stopPropagation() },
-        }, actions))
+        ].filter(Boolean).join(' · ')))
     }
 
     /** Resolve `owner/repo` from the entry's repository or homepage, for fetching its README. */
@@ -868,7 +857,7 @@ window.__ModuleLoader__.load({
         .trim()
     }
 
-    function DetailDialog({ entry, bundle, lang, t, text, busy, onRun, onConfirm, onOpen, onClose }) {
+    function DetailDialog({ entry, bundle, lang, t, text, busy, onRun, onConfirm, onClose }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
       const urls = readmeUrls(entry)
       const [view, setView] = useState({ loading: true, md: '', error: '' })
@@ -915,28 +904,22 @@ window.__ModuleLoader__.load({
       if (version !== undefined) {
         const update = state === 'updatable'
         actions.push(h('button', {
-          key: 'act', style: S.btn(true, busy), disabled: busy,
+          key: 'act', style: { ...S.btn(true, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
           onClick: () => { onRun([{ action: update ? 'update' : 'install', entry, version }]) },
         }, t(update ? 'update' : 'install')))
       }
       if (installed && removable && onConfirm !== undefined) {
         actions.push(h('button', {
-          key: 'remove', style: S.btn(false, busy), disabled: busy,
+          key: 'remove', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
           onClick: () => { onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
         }, t('uninstall')))
       }
       if (installed && bundle !== undefined && bundle.readOnlyReason === undefined) {
         const disable = bundle.enabled
         actions.push(h('button', {
-          key: 'toggle', style: S.btn(false, busy), disabled: busy,
+          key: 'toggle', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
           onClick: () => { onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
         }, t(disable ? 'disable' : 'enable')))
-      }
-      if (installed && onOpen !== undefined) {
-        actions.push(h('button', {
-          key: 'open', style: S.btn(false, busy), disabled: busy,
-          onClick: () => { onOpen(entry.name) },
-        }, t('open')))
       }
 
       // The version list the index carries, newest first, with the running one marked.
@@ -1492,7 +1475,7 @@ window.__ModuleLoader__.load({
           onClick: () => { setConfirm({ action: plan.install.length === 0 ? 'update' : 'install', orders: orders(plan, plan.install.length === 0 ? 'update' : 'install') }) },
         }, t('bulkApply', { n: buildable })))
         if (plan.uninstall.length > 0) bulk.push(h('button', {
-          key: 'remove', style: S.btn(false, busy), disabled: busy,
+          key: 'remove', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
           onClick: () => { setConfirm({ action: 'uninstall', orders: orders(plan, 'uninstall') }) },
         }, t('bulkUninstall', { n: plan.uninstall.length })))
         if (plan.enable.length > 0) bulk.push(h('button', {
@@ -1658,7 +1641,6 @@ window.__ModuleLoader__.load({
                       },
                       onRun: (list) => { void run(list) },
                       onConfirm: setConfirm,
-                      onOpen: props.openPackage,
                       onDetails: setDetailEntry,
                     }))),
                   listing.value.nextOffset === null ? null : h('div', { style: { display: 'flex', justifyContent: 'center', margin: '12px 0' } },
@@ -1677,7 +1659,6 @@ window.__ModuleLoader__.load({
           entry: detailEntry, bundle: bundles.get(detailEntry.name), lang, t, text, busy,
           onRun: (list) => { void run(list) },
           onConfirm: setConfirm,
-          onOpen: props.openPackage,
           onClose: () => { setDetailEntry(null) },
         }),
         sourcesOpen ? h(SourcesDialog, {
