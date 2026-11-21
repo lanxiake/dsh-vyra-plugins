@@ -96,6 +96,9 @@ window.__ModuleLoader__.load({
     function failText(reason) {
       const key = String(reason || '')
       if (FAIL_TEXT[key]) return FAIL_TEXT[key]
+      if (/has no provider\/model/i.test(key)) return '没有可用模型：请设置默认模型'
+      if (/FAIL_SYS_TOKEN_EXOIRED|令牌过期/i.test(key)) return '登录已过期，请重新扫码'
+      if (/未登录|AuthRequired/i.test(key)) return '未登录，请先扫码登录'
       if (key.startsWith('sensitive:')) return `含敏感词：${key.slice(10)}`
       if (key.startsWith('generate_failed:')) {
         const detail = key.slice(16)

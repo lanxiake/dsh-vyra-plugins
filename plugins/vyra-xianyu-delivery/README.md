@@ -27,11 +27,9 @@ uvx goofish-cli auth status --format json
 
 ## 令牌续期
 
-`_m_h5_tk` 只有约十分钟有效期，需要浏览器活跃访问才会续。任何接口返回「令牌过期」时，插件会自动：
+`_m_h5_tk` 只有约十分钟有效期。**每次 mtop 请求结束后，插件会把 cookie jar 写回 `~/.goofish-cli/cookies.json`**——闲鱼在这条响应里轮换的新 token 因此不会丢，下一条命令用的就是最新的。令牌过期时会用刚写回的 token **原地重试一次**，不需要浏览器。
 
-1. 用 Playwright（**无头**）打开闲鱼首页，点「快速进入」走免密记忆登录
-2. 等 cookie 刷新并写回 `~/.goofish-cli/cookies.json`
-3. 重试原请求
+只有连重试都救不回来（session 层失效）才走浏览器：用 Playwright（**无头**）打开闲鱼首页，点「快速进入」走免密记忆登录，再重试原请求。
 
 **不会反复弹浏览器**，有三层限制：
 

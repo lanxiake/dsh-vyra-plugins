@@ -27,6 +27,70 @@ from typing import Any
 SELLER_HEADERS = {"origin": "https://seller.goofish.com", "referer": "https://seller.goofish.com/"}
 
 
+def _persist_cookies(session: Any) -> None:
+    """把 requests 的 cookie jar 写回 cookies.json。
+
+    mtop 每次响应都会轮换 `_m_h5_tk`，但 goofish-cli 只把它留在内存里，
+    下一条命令又从磁盘读旧值——这就是「登录十分钟就过期」的根因。
+    """
+    try:
+        from goofish_cli.core.session import resolve_cookie_path, write_cookies_json
+
+        path = resolve_cookie_path()
+        domains: dict[str, str] = {}
+        for rec in getattr(session, "cookie_records", None) or []:
+            name = rec.get("name") if isinstance(rec, dict) else getattr(rec, "name", "")
+            domain = rec.get("domain") if isinstance(rec, dict) else getattr(rec, "domain", "")
+            if name:
+                domains[str(name)] = str(domain or ".goofish.com")
+        records = [
+            {
+                "name": cookie.name,
+                "value": cookie.value,
+                "domain": cookie.domain or domains.get(cookie.name) or ".goofish.com",
+                "path": cookie.path or "/",
+            }
+            for cookie in session.http.cookies
+        ]
+        if records:
+            write_cookies_json(path, records)
+    except Exception:  # noqa: BLE001 — 写盘失败不能影响命令结果
+        pass
+
+
+def _install_cookie_persist() -> None:
+    """每次 mtop 调用后都写回 cookie，让 token 自己续上，不靠浏览器。"""
+    try:
+        import goofish_cli.core.mtop as mtop
+
+        if getattr(mtop.call, "_persists_cookies", False):
+            return
+        original = mtop.call
+
+        def call_with_persist(session, *args, **kwargs):  # type: ignore[no-untyped-def]
+            retried = bool(kwargs.pop("_retried", False))
+            try:
+                return original(session, *args, **kwargs)
+            except Exception as exc:  # noqa: BLE001
+                # 令牌过期时服务器会在这条失败响应的 Set-Cookie 里发新 _m_h5_tk。
+                # 先写回，再用同一个 session（jar 已更新）重试一次——不需要浏览器。
+                _persist_cookies(session)
+                from goofish_cli.core.errors import AuthRequiredError
+
+                message = str(exc)
+                token_level = isinstance(exc, AuthRequiredError) and any(
+                    key in message for key in ("TOKEN_EXOIRED", "TOKEN_EMPTY", "令牌过期")
+                )
+                if token_level and not retried:
+                    return original(session, *args, _retried=True, **kwargs)
+                raise
+
+        call_with_persist._persists_cookies = True  # type: ignore[attr-defined]
+        mtop.call = call_with_persist
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _spec_of(item: dict[str, Any]) -> tuple[str, str]:
     for line in ((item.get("itemVO") or {}).get("itemInfoLines")) or []:
         k = str((line or {}).get("key") or "").strip()
@@ -708,6 +772,9 @@ COMMANDS = {
 
 
 def main() -> None:
+    # 不让 goofish-cli 自己在失败时拉起浏览器：刷新由插件显式控制（无头 + 冷却）。
+    os.environ.setdefault("GOOFISH_AUTO_REFRESH_TOKEN", "0")
+    _install_cookie_persist()
     # 中文 Windows 默认 stdout 是 GBK，商品标题里的 ¥ 会直接编码失败。
     try:
         sys.stdout.reconfigure(encoding="utf-8")

@@ -19,7 +19,7 @@ function userMessage(text) {
   }
 }
 
-export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset, workspaceCwd }) {
+export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, logger = () => {}, getPreset, workspaceCwd, getDefaultModel }) {
   // Cordis 的服务在插件 apply 时可能还没注册（注入顺序），必须每次现取；
   // 在 apply 时取一次会永久拿到 undefined，AI 客服就一直是关的。
   const liveAgents = () => (typeof getAgents === 'function' ? getAgents() : agents)
@@ -49,6 +49,18 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
     const route = model && model.provider && model.model
       ? { provider: model.provider, model: model.model }
       : null
+    // 插件自建的会话不会自动继承 DSH 默认模型，必须显式给 provider/model，
+    // 否则运行时报 "agent has no provider/model"。优先级：
+    // 客服指定的模型 → 插件配置 → DSH 当前默认模型。
+    let agentOptions = route ?? (provider ? { provider, model } : null)
+    if (!agentOptions) {
+      try {
+        const sel = getDefaultModel?.()
+        if (sel?.provider && sel?.model) agentOptions = { provider: sel.provider, model: sel.model }
+      } catch {
+        // 默认模型读不到就交给 create 报错
+      }
+    }
     let reply = ''
     // 一个买家一个会话：sessionId 固定为 xianyu-<cid>，第一次创建、之后 resume，
     // 这样 DSH 会话列表里是「一段连续对话」而不是每次一条。
@@ -89,7 +101,7 @@ export function createDshAgent({ agents, getAgents, sessionTitle, config = {}, l
         delegationDepth: 0,
         ...(preset ? { agentPreset: preset } : {}),
       },
-      agentOptions: route ?? (provider ? { provider, model } : undefined),
+      ...(agentOptions ? { agentOptions } : {}),
       setup,
     }
 

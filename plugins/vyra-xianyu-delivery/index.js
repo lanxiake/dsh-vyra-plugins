@@ -75,6 +75,14 @@ export function apply(ctx, config = {}) {
     logger: log,
     getPreset: () => store.getSetting('ai.agentPreset') || String(cfg.ai?.agentPreset || ''),
     workspaceCwd: csWorkspace,
+    // 插件建的会话不会继承默认模型，从 DSH 的默认选择里取。
+    getDefaultModel: () => {
+      try {
+        return getService('agentDefaultModel')?.currentSelection?.()
+      } catch {
+        return null
+      }
+    },
   })
 
   // 生成型卡券：让 Agent 按网盘技能当场做一条新分享链接。
@@ -756,7 +764,7 @@ export function apply(ctx, config = {}) {
               const body = await readJson(req)
               payload = { ok: true, data: await dispatch(body) }
             } catch (err) {
-              payload = { ok: false, error: String(err?.message || err) }
+              payload = { ok: false, error: friendlyError(err) }
             }
             res.writeHead(200, {
               'content-type': 'application/json; charset=utf-8',
@@ -768,6 +776,24 @@ export function apply(ctx, config = {}) {
       'xianyu-delivery.route',
     )
   })
+
+  // 把底层的英文/错误码翻成面板能照着做的提示。
+  function friendlyError(err) {
+    const raw = String(err?.message || err || '')
+    if (/FAIL_SYS_TOKEN_EXOIRED|FAIL_SYS_TOKEN_EMPTY|令牌过期/i.test(raw)) {
+      return '登录已过期：令牌失效，请点顶部的「扫码登录」重新授权'
+    }
+    if (/FAIL_SYS_SESSION_EXPIRED|未登录|AuthRequired|请先登录/i.test(raw)) {
+      return '未登录：请点顶部的「扫码登录」'
+    }
+    if (/has no provider\/model/i.test(raw)) {
+      return '没有可用模型：请在 DSH 设置里选择一个默认模型，或在客服配置里指定 provider:model'
+    }
+    if (/generate|网盘/i.test(raw) && /empty-reply|agent-unavailable/.test(raw)) {
+      return `生成失败：${raw}`
+    }
+    return raw
+  }
 
   async function dispatch(body) {
     switch (String(body.op || '')) {
