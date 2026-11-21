@@ -748,12 +748,16 @@ export const manifest: MarketManifest = {
         // reduces hook pump frequency from 4ms to 16ms (-75% wakeups), extends process tree
         // cache from 5s to 30s, and switches to event-driven drag detection. CPU wakeup
         // frequency drops from 283Hz to 62.5Hz (-78%), mouse movement latency reduced by 90%.
+        //
+        // Repinned: it first pointed at the performance commit, whose package.json still said
+        // 3.0.2 — so installing "3.1.0" produced a Host reporting 3.0.2. This commit holds the
+        // same plugin code with the version actually bumped; nothing else differs.
         '3.1.0': {
-          publishTimestamp: 1732158000,
+          publishTimestamp: 1795334400,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'd2339af2b3d8eb3d8f3c310e72d297044af1f641',
+            commit: 'd28c24a3eb91f353a73ddd975f7a3513629e2cde',
             path: 'plugins/vyra-system-selection',
           },
         },
