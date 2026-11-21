@@ -1617,6 +1617,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.9.0: image replies via ![](url), layered system prompt, reply cap,
+        // and the 开始使用 tab with one-click product setup.
+        '0.9.0': {
+          publishTimestamp: 1795274400,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '1f7578363182b41f7cf6ff62e219b4f52e8d2b1a',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
