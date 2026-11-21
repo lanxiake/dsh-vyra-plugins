@@ -1559,6 +1559,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.7.4: no automatic browser pops. Refresh needs a cookie file,
+        // runs headless only, and backs off after a failure.
+        '0.7.4': {
+          publishTimestamp: 1795254600,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '0220dd1c5a3c698f6ae8e5684689592f557392fd',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
