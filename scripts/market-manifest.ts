@@ -1477,6 +1477,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.6.15: conversation polling replaces the persistent watcher as the
+        // main path (CLI calls kicked it off the single-login IM socket);
+        // itemId now comes from the conversation extension.
+        '0.6.15': {
+          publishTimestamp: 1795242600,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '46cb2f29186bca66c936612affd173eb6f8a5d75',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
