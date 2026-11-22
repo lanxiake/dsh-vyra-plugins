@@ -21,6 +21,14 @@ export type LocaleMap = { readonly en: string; readonly zh?: string }
  * document itself; a relative path would not resolve from the client, and
  * published indexes carry the image this way.
  */
+/**
+ * Icon for 免费模型: an infinity mark with a lightning bolt — "unlimited, free",
+ * drawn deliberately unlike Our Free Model's aquarium so the two are never
+ * mistaken for the same plugin in the market list.
+ */
+const VYRA_FREE_MODEL_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNSIgZmlsbD0iIzEyMTYxRiIvPgogIDxyZWN0IHg9IjIuNzUiIHk9IjIuNzUiIHdpZHRoPSI1OC41IiBoZWlnaHQ9IjU4LjUiIHJ4PSIxNC4yNSIgc3Ryb2tlPSIjMkIzMjQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxwYXRoIGQ9Ik0xNS41IDM4LjVjLTIuOSAwLTUuMS0yLjYtNS4xLTYuNXMyLjItNi41IDUuMS02LjVjMy42IDAgNi4xIDMuNCA4LjYgNy42IDIuMSAzLjUgNCA2LjQgNi40IDYuNCAyLjEgMCAzLjQtMS42IDMuNC00cy0xLjMtNC0zLjQtNGMtMi40IDAtNC4zIDIuOS02LjQgNi40LTIuNSA0LjItNSA3LjYtOC42IDcuNiIKICAgICAgICBzdHJva2U9IiM0QzhERkYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTQ4LjUgMjUuNWMyLjkgMCA1LjEgMi42IDUuMSA2LjVzLTIuMiA2LjUtNS4xIDYuNWMtMy42IDAtNi4xLTMuNC04LjYtNy42IgogICAgICAgIHN0cm9rZT0iIzRDOERGRiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiLz4KICA8cGF0aCBkPSJNMzUuNiAyMC41IDI5LjggMzFoNS42bC0yLjIgMTIuNUw0MSAzMS40aC01Ljl6IiBmaWxsPSIjRjVDNTQyIi8+Cjwvc3ZnPg=='
+
 const TOOL_USAGE_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZDRlZDgiLz48ZyBmaWxsPSIjZmZmIj48cmVjdCB4PSIxNiIgeT0iMzYiIHdpZHRoPSI3IiBoZWlnaHQ9IjE0IiByeD0iMiIvPjxyZWN0IHg9IjI4LjUiIHk9IjI2IiB3aWR0aD0iNyIgaGVpZ2h0PSIyNCIgcng9IjIiLz48cmVjdCB4PSI0MSIgeT0iMTYiIHdpZHRoPSI3IiBoZWlnaHQ9IjM0IiByeD0iMiIvPjwvZz48L3N2Zz4='
 
@@ -2204,6 +2212,39 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'model',
         keywords: ['model', 'llm', 'free', 'provider', 'gateway'],
+      },
+    },
+    {
+      name: 'vyra-free-model',
+      title: {
+        en: 'Free Models',
+        zh: '免费模型',
+      },
+      description: {
+        en: 'Free models with no sign-up and no API key: pick one and chat. Signing into one domestic account for extra quota and exposing the models to Cursor or Claude Code are both optional, and the whole plugin is one settings page in three steps.',
+        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。登录一个国内账号换更多额度、让 Cursor 或 Claude Code 共用这批模型，两步都可选——整个插件就一屏设置页，三步配置完。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-free-model',
+      },
+      icon: VYRA_FREE_MODEL_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795416000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'cb4a7d789f2f43bea3a449e494bd750613cac76f',
+            path: 'plugins/vyra-free-model',
+          },
+        },
+      },
+      metadata: {
+        category: 'model',
+        keywords: ['model', 'llm', 'free', 'provider'],
       },
     },
     {
