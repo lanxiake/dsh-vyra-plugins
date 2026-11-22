@@ -1963,10 +1963,23 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.5.0 adds two validated community indexes (DSH Open Market and
+        // DSH Go Market); page-level lazy loading and a five-minute page
+        // cache; a single compact filter row; and a Settings section with
+        // independent switches for the sidebar row and the Plugins tab.
+        '0.5.0': {
+          publishTimestamp: 1795335394,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a11b064118e088bff365a0257d92f54ce4c7dba7',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
-        keywords: ['market', 'marketplace', 'plugin', 'batch', 'queue', 'installed', 'sidebar'],
+        keywords: ['market', 'marketplace', 'plugin', 'batch', 'queue', 'installed', 'sidebar', 'settings', 'lazy'],
       },
     },
     // ── Vendored third-party plugins ──
