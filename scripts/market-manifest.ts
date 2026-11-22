@@ -1995,17 +1995,6 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
-        // 0.5.2 groups DSH-provided bundles under their own heading below the
-        // profile's installed plugins.
-        '0.5.2': {
-          publishTimestamp: 1795341110,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
-            path: 'plugins/vyra-plugin-market',
-          },
-        },
         // 0.5.3 probes the network and swaps the Veyra index edition between
         // GitCode installs (domestic) and GitHub installs (overseas).
         '0.5.3': {
@@ -2014,6 +2003,16 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '65185870099ba0e380397155c9be6d003fbba5dd',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.6.0 adds cross-source search and the Agent CLI/skill.
+        '0.6.0': {
+          publishTimestamp: 1795355020,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '665b7fbfa7f02c98b482579beb4765c505a1f0f5',
             path: 'plugins/vyra-plugin-market',
           },
         },
