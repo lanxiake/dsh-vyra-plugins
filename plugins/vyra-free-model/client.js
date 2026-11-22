@@ -69,6 +69,17 @@ window.__ModuleLoader__.load({
         'accounts.claimFailed': '上次自动领取没成功。',
         'accounts.retry': '重试',
         'accounts.ownedElsewhere': '账号功能已由 Our Free Model 接管。请到那里管理账号，这里继续用免费模型。',
+
+        'forward.title': '让别的工具也用上（可选）',
+        'forward.hint': '打开后，Cursor、Claude Code 这类工具就能用同一批免费模型。只在你这台电脑上有效。',
+        'forward.on': '打开',
+        'forward.off': '关闭',
+        'forward.address': '地址',
+        'forward.key': '密钥',
+        'forward.forCursor': '给 Cursor',
+        'forward.forClaudeCode': '给 Claude Code',
+        'forward.copy': '复制',
+        'forward.copied': '已复制',
       },
       en: {
         nav: 'Free models',
@@ -104,6 +115,17 @@ window.__ModuleLoader__.load({
         'accounts.claimFailed': 'The last automatic claim did not succeed.',
         'accounts.retry': 'Retry',
         'accounts.ownedElsewhere': 'Our Free Model already manages accounts here. Manage them there; the free models keep working.',
+
+        'forward.title': 'Use these models elsewhere (optional)',
+        'forward.hint': 'Once on, tools like Cursor or Claude Code can use the same free models. This machine only.',
+        'forward.on': 'Turn on',
+        'forward.off': 'Turn off',
+        'forward.address': 'Address',
+        'forward.key': 'Key',
+        'forward.forCursor': 'For Cursor',
+        'forward.forClaudeCode': 'For Claude Code',
+        'forward.copy': 'Copy',
+        'forward.copied': 'Copied',
       },
     }
 
@@ -196,6 +218,10 @@ window.__ModuleLoader__.load({
 .vfm_acctmain{display:flex;align-items:center;gap:8px;min-width:0}
 .vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-state-warning-primary);font-size:12px;color:var(--dsw-alias-label-secondary)}
+.vfm_field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--dsw-alias-border-l1)}
+.vfm_field:first-of-type{border-top:none}
+.vfm_label{color:var(--dsw-alias-label-secondary);font-size:12px;flex:none}
+.vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-primary);text-align:right}
 `
 
     // ── the model block ──────────────────────────────────────────────────────
@@ -379,6 +405,100 @@ window.__ModuleLoader__.load({
           : null)
     }
 
+    // ── the forward block ────────────────────────────────────────────────────
+
+    /**
+     * What to paste into Cursor.
+     *
+     * Two lines, in the order that tool asks for them. Plain text rather than
+     * JSON on purpose: a person can read this and see it matches what the form
+     * wants.
+     */
+    function cursorSnippet(port, key) {
+      return [
+        `Base URL: http://127.0.0.1:${port}/v1`,
+        `API Key: ${key}`,
+      ].join('\n')
+    }
+
+    /**
+     * What to paste into a terminal for Claude Code.
+     *
+     * Three exported variables. The model falls back to the automatic one, so a
+     * user who never picked a model still gets a working command.
+     */
+    function claudeCodeSnippet(port, key, model) {
+      const chosen = typeof model === 'string' && model !== '' ? model : 'kilo-auto/free'
+      return [
+        `export ANTHROPIC_BASE_URL=http://127.0.0.1:${port}`,
+        `export ANTHROPIC_AUTH_TOKEN=${key}`,
+        `export ANTHROPIC_MODEL=${chosen}`,
+      ].join('\n')
+    }
+
+    /** What a key looks like when it is present but not being shown. */
+    const MASKED_KEY = 'sk-••••••••••••'
+
+    /**
+     * The forward block: let another tool on this machine use these models.
+     *
+     * Collapsed to a single switch until it is on, because this is the one
+     * feature a beginner should not have to think about. When on, it shows the
+     * two things needed to use it and a button per client.
+     */
+    function ForwardBlock({ enabled, port, hasKey, key, model, onToggle, onCopy }) {
+      const [copied, setCopied] = useState('')
+
+      const copy = async (which, text) => {
+        try {
+          await navigator.clipboard.writeText(text)
+          setCopied(which)
+          onCopy?.(which)
+        } catch {
+          setCopied('')
+        }
+      }
+
+      const base = `http://127.0.0.1:${port}/v1`
+      const realKey = typeof key === 'string' && key !== '' ? key : MASKED_KEY
+
+      return h('section', { className: 'vfm_card' },
+        h('div', { className: 'vfm_cardhead' },
+          h('h3', { className: 'vfm_cardtitle' }, t('forward.title')),
+          h('button', {
+            type: 'button',
+            className: 'vfm_btn',
+            onClick: () => onToggle?.(!(enabled === true)),
+          }, enabled === true ? t('forward.off') : t('forward.on'))),
+
+        h('p', { className: 'vfm_note' }, t('forward.hint')),
+
+        enabled !== true
+          ? null
+          : h(Fragment, {},
+            h('div', { className: 'vfm_field' },
+              h('span', { className: 'vfm_label' }, t('forward.address')),
+              h('code', { className: 'vfm_code' }, base)),
+            h('div', { className: 'vfm_field' },
+              h('span', { className: 'vfm_label' }, t('forward.key')),
+              h('code', { className: 'vfm_code' }, hasKey === true ? MASKED_KEY : '')),
+            h('div', { className: 'vfm_field' },
+              h('span', { className: 'vfm_label' }, t('forward.forCursor')),
+              h('button', {
+                type: 'button',
+                className: 'vfm_btn',
+                onClick: () => void copy('cursor', cursorSnippet(port, realKey)),
+              }, copied === 'cursor' ? t('forward.copied') : t('forward.copy'))),
+            h('div', { className: 'vfm_field' },
+              h('span', { className: 'vfm_label' }, t('forward.forClaudeCode')),
+              h('button', {
+                type: 'button',
+                className: 'vfm_btn',
+                onClick: () => void copy('claude', claudeCodeSnippet(port, realKey, model)),
+              }, copied === 'claude' ? t('forward.copied') : t('forward.copy'))))
+      )
+    }
+
     // ── the page ─────────────────────────────────────────────────────────────
 
     /**
@@ -393,6 +513,7 @@ window.__ModuleLoader__.load({
       const [selected, setSelected] = useState('')
       const [busy, setBusy] = useState(false)
       const [accountStatus, setAccountStatus] = useState({})
+      const [forwardKey, setForwardKey] = useState('')
 
       const load = useCallback(async () => {
         try {
@@ -479,8 +600,7 @@ window.__ModuleLoader__.load({
       }, [pollAccounts])
 
       /** Claim credits, for one provider when named, otherwise for all. */
-      const claim = useCallback(async providerId => {
-        const target = providerId === '' ? undefined : providerId
+      const claim = useCallback(async providerId => {        const target = providerId === '' ? undefined : providerId
         setAccountStatus(current => {
           const next = { ...current }
           for (const key of target === undefined ? Object.keys(next) : [target]) {
@@ -518,6 +638,33 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
+      /**
+       * Turn the local port on or off.
+       *
+       * The key is fetched only after the port is on: before that there is
+       * nothing to paste, and the route answers 409. A failure leaves the switch
+       * off rather than showing a half-enabled block.
+       */
+      const toggleForward = useCallback(async enabled => {
+        try {
+          const payload = await api('/forward', { method: 'POST', body: { enabled } })
+          const next = payload?.forward ?? {}
+          setSummary(current => (current === undefined ? current : { ...current, forward: next }))
+          if (next.enabled === true) {
+            try {
+              const withKey = await api('/forward/key', { method: 'POST' })
+              setForwardKey(typeof withKey?.key === 'string' ? withKey.key : '')
+            } catch {
+              setForwardKey('')
+            }
+          } else {
+            setForwardKey('')
+          }
+        } catch {
+          setForwardKey('')
+        }
+      }, [])
+
       if (error !== '' && summary === undefined) {
         return h('div', { className: 'vfm_page' },
           h('div', { className: 'vfm_center' },
@@ -549,6 +696,14 @@ window.__ModuleLoader__.load({
           claimFailedAt: summary?.accounts?.claimFailedAt,
           onLogin: id => void login(id),
           onClaim: id => void claim(id),
+        }),
+        h(ForwardBlock, {
+          enabled: summary?.forward?.enabled === true,
+          port: summary?.forward?.port ?? 0,
+          hasKey: summary?.forward?.hasKey === true,
+          key: forwardKey,
+          model: selected,
+          onToggle: enabled => void toggleForward(enabled),
         }))
     }
 
@@ -583,7 +738,8 @@ window.__ModuleLoader__.load({
     exports.inject = inject
     exports.name = 'vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
-    exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, PROVIDERS, SettingsPage, DICT, CSS, API }
+    exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
+      cursorSnippet, claudeCodeSnippet, PROVIDERS, SettingsPage, DICT, CSS, API }
     return module.exports
   },
 })

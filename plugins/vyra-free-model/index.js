@@ -557,7 +557,8 @@ export function createApiRoutes(deps) {
         return send(200, assemble(deps))
       }
 
-      if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward' || routePath === '/channel') {
+      if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward'
+        || routePath === '/forward/key' || routePath === '/channel') {
         if (method !== 'POST' && routePath !== '/summary') return send(405, { error: 'method-not-allowed' })
         if (routePath === '/summary') return send(405, { error: 'method-not-allowed' })
       }
@@ -571,6 +572,20 @@ export function createApiRoutes(deps) {
         const body = await readJson(req)
         const forward = await deps.setForward(body?.enabled === true)
         return send(200, { forward: { enabled: forward.enabled === true, port: forward.port ?? 0, hasKey: typeof forward.key === 'string' && forward.key !== '' } })
+      }
+
+      if (routePath === '/forward/key' && method === 'POST') {
+        // The key exists so this machine's tools can authenticate to a loopback
+        // port. Hiding it from the page that has to paste it protects nothing —
+        // anything able to read this response is already running as this user,
+        // and could read the file it lives in. It stays out of /summary because
+        // that document is rendered into the page body; this route is asked for
+        // only when a copy button is pressed.
+        const forward = deps.forward?.() ?? {}
+        if (forward.enabled !== true || typeof forward.key !== 'string' || forward.key === '') {
+          return send(409, { error: 'forward-disabled' })
+        }
+        return send(200, { key: forward.key })
       }
 
       if (routePath === '/channel' && method === 'POST') {
