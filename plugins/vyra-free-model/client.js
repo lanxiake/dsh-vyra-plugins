@@ -233,6 +233,8 @@ window.__ModuleLoader__.load({
     // ── styles ───────────────────────────────────────────────────────────────
 
     const CSS = `
+/* No max-width here: the settings shell already bounds the column, and imposing
+   a second one left the cards 20px off-centre inside their own container. */
 .vfm_page{display:flex;flex-direction:column;gap:20px;padding:2px 0 28px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.55}
 
 /* the page head: title left, master switch right, on one baseline */
@@ -260,7 +262,10 @@ window.__ModuleLoader__.load({
 .vfm_count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
 
 /* ── selectable rows (models and accounts share this) ─────────────────── */
-.vfm_rows{display:flex;flex-direction:column;gap:2px;margin:0 -8px}
+/* One rhythm for every stacked list. Three different gaps (2 / 10 / 21) read as
+   three different pages, and the extra margin on accounts doubled the parent's
+   own gap. */
+.vfm_rows{display:flex;flex-direction:column;gap:4px}
 .vfm_row{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border-radius:10px;
   border:1px solid transparent;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;
   transition:background-color .15s ease,border-color .15s ease}
@@ -286,23 +291,33 @@ window.__ModuleLoader__.load({
 .vfm_btn:active:not(:disabled){transform:translateY(1px)}
 .vfm_btn:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
 .vfm_btn:disabled{opacity:.5;cursor:default}
+/* ghost is Btn's default kind, so it needs a real rule: without one every plain
+   action fell back to the solid base and the page lost its action hierarchy. */
+.vfm_btn[data-kind="ghost"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
+.vfm_btn[data-kind="ghost"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .vfm_btn[data-kind="primary"]{border-color:transparent;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:500}
 .vfm_btn[data-kind="primary"]:hover:not(:disabled){filter:brightness(1.08)}
 .vfm_btn[data-kind="quiet"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
 .vfm_btn[data-kind="quiet"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 
 /* ── account cards ────────────────────────────────────────────────────── */
+/* Inner surfaces must read as raised: at the parent's own tone they measured
+   1.00:1 and the "layered cards" the design calls for simply was not there. */
 .vfm_acct{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:11px;
-  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 88%,transparent);background:var(--dsw-alias-bg-layer-1)}
-.vfm_acct+.vfm_acct{margin-top:7px}
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 62%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 86%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent)}
+.vfm_accts{display:flex;flex-direction:column;gap:6px}
 .vfm_acct[data-state="ready"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 38%,transparent)}
 .vfm_acctmain{display:flex;align-items:center;gap:9px;min-width:0}
 .vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── tool configuration ───────────────────────────────────────────────── */
-.vfm_tools{display:flex;flex-direction:column;gap:10px}
+.vfm_tools{display:flex;flex-direction:column;gap:6px}
 .vfm_tool{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 14px;border-radius:12px;
-  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 90%,transparent);background:var(--dsw-alias-bg-layer-1)}
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 62%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 86%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent)}
 .vfm_tool[data-state="done"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 36%,transparent)}
 .vfm_tool[data-state="failed"]{border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 40%,transparent)}
 .vfm_toolmain{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -325,9 +340,14 @@ window.__ModuleLoader__.load({
 @keyframes vfm_pulse{0%,100%{opacity:.35}50%{opacity:1}}
 
 /* ── forward block fields ─────────────────────────────────────────────── */
-.vfm_field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;
-  border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 80%,transparent)}
-.vfm_field:first-of-type{border-top:none;padding-top:0}
+/* The divider sits inside a card whose first child is the head, so
+   :first-of-type never matched a field and every block opened with a stray
+   rule under its hint. The :not(:first-child) form is the selector that holds. */
+.vfm_field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;
+  border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 76%,transparent)}
+.vfm_field:not(:first-child){margin-top:0}
+.vfm_fields{border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 76%,transparent)}
+.vfm_fields .vfm_field:first-child{border-top:none}
 .vfm_label{color:var(--dsw-alias-label-secondary);font-size:12px;flex:none}
 .vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
@@ -497,7 +517,7 @@ window.__ModuleLoader__.load({
       return h(Card, {
         title: h(BlockTitle, {}, t('models.title')),
         action: [
-          h('span', { className: 'vfm_count' }, t('models.count', { n: others.length })),
+          h('span', { className: 'vfm_count' }, t('models.count', { n: others.length + 1 })),
           h(Btn, { disabled: busy === true, onClick: () => onRecheck?.() },
             busy === true ? t('models.rechecking') : t('models.recheck')),
         ],
@@ -628,13 +648,13 @@ window.__ModuleLoader__.load({
           h(Btn, { onClick: () => onClaim?.('') }, t('accounts.retry')))
         : null,
 
-      ...primary.map(entry => providerRow(entry, entries[entry.id], handlers)),
+      h('div', { className: 'vfm_accts' },
+        ...primary.map(entry => providerRow(entry, entries[entry.id], handlers)),
+        showMore ? extra.map(entry => providerRow(entry, entries[entry.id], handlers)) : []),
 
       extra.length > 0
         ? (showMore
-          ? h(Fragment, {},
-            ...extra.map(entry => providerRow(entry, entries[entry.id], handlers)),
-            h(Btn, { kind: 'quiet', onClick: () => setShowMore(false) }, t('accounts.less')))
+          ? h(Btn, { kind: 'quiet', onClick: () => setShowMore(false) }, t('accounts.less'))
           : h(Btn, { kind: 'quiet', onClick: () => setShowMore(true) }, t('accounts.more')))
         : null)
     }
@@ -705,7 +725,7 @@ window.__ModuleLoader__.load({
 
       enabled !== true
         ? null
-        : h(Fragment, {},
+        : h('div', { className: 'vfm_fields' },
           h('div', { className: 'vfm_field' },
             h('span', { className: 'vfm_label' }, t('forward.address')),
             h('code', { className: 'vfm_code' }, base)),

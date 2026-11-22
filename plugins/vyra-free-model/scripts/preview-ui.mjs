@@ -114,8 +114,10 @@ const html = `<!doctype html>
     --dsw-alias-state-error-primary:#ef5b5b; --dsw-alias-state-idle-primary:#5b6575;
     --dsw-alias-state-success-primary:#3ecfa0; --dsw-alias-state-warn-primary:#f5c542;
   }
-  body{margin:0;padding:28px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);
-    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif;max-width:720px}
+  /* The section fills its container, so the fixture must not impose a width of
+     its own or the measurements describe the fixture instead of the page. */
+  body{margin:0;padding:28px 24px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);
+    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif}
   ${CSS}
 </style></head>
 <body>${body}</body></html>`

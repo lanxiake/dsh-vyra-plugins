@@ -242,14 +242,16 @@ test('the automatic model is offered once even though the catalog lists it', () 
   assert.ok(html.includes('A'))
 })
 
-test('the model count excludes the automatic row it draws itself', () => {
+test('the model count includes the automatic row so it matches what is shown', () => {
   const models = [
     { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false },
     { id: 'a:free', name: 'A', contextWindow: 262144, vision: false },
     { id: 'b:free', name: 'B', contextWindow: 262144, vision: false },
   ]
   const html = renderToString(h(ModelBlock, { models, selected: '', onSelect: () => {} }))
-  assert.ok(html.includes('2 个可用'), 'the automatic entry is not counted twice')
+  // Two catalog models plus the automatic row the block draws itself.
+  assert.ok(html.includes('3 个可用'), 'the count must match the rows on screen')
+  assert.equal((html.match(/className="vfm_row"/g) ?? []).length, 3)
 })
 
 test('a long reason is trimmed with an ellipsis rather than cut mid-word', () => {
