@@ -25,6 +25,32 @@ import { buildCatalog, fetchKiloListing } from './src/kilo.js'
 import { JsonStore } from './src/store.js'
 import { USAGE_INITIAL, recordUsage, pruneDays, todayTotals } from './src/usage.js'
 
+/** The prefix every route this plugin serves lives under. */
+export const API_PATH = '/api/vyra-free-model'
+
+/**
+ * The channel calls the settings page is allowed to make.
+ *
+ * The pack behind them exposes far more — backup import/export, captcha carrier
+ * relay, per-model blacklists — and none of that belongs behind a button on a
+ * page for people who do not want to configure anything. The proxy refuses
+ * everything outside this list, so a mistake in the page cannot reach a
+ * destructive call.
+ */
+export const CHANNEL_METHODS = Object.freeze([
+  'provider.status',
+  'account.create',
+  'account.list',
+  'account.delete',
+  'credits.claimAll',
+  'credits.status',
+])
+
+/** Whether one channel call may pass the proxy. */
+export function isChannelMethodAllowed(method) {
+  return typeof method === 'string' && CHANNEL_METHODS.includes(method)
+}
+
 export const name = 'vyra-free-model'
 
 /**
@@ -80,6 +106,18 @@ export function apply(ctx, _config) {
   /** What the settings page reports when the last refresh failed. */
   let laneOk = true
   let disposed = false
+
+  /**
+   * The channel pack's state: `pending` before its dynamic import settles,
+   * `ready` once mounted, `failed` when it could not load, and
+   * `owned-elsewhere` when another plugin already mounted it (Task 10).
+   */
+  let accountsState = 'pending'
+
+  /** Provider rows the account block renders. Task 10 fills this. */
+  function accountProviders() {
+    return []
+  }
 
   const state = () => ({ catalog, settings })
 
@@ -143,7 +181,48 @@ export function apply(ctx, _config) {
   }, 'vyra-free-model: catalog refresh')
 
   logger.info?.(`vyra-free-model: mounted, route "${ROUTE}" with ${catalog.length} cached models`)
+
+  /** Whatever the forward switch currently holds. Task 8 wires the real server. */
+  const forwardState = { enabled: false, port: 0, key: '' }
+
+  const api = createApiRoutes({
+    version: VERSION,
+    settings,
+    catalog: () => catalog,
+    laneOk: () => laneOk,
+    accounts: () => ({ state: accountsState, providers: accountProviders() }),
+    usage: () => todayTotals(usageStore.get()),
+    forward: () => forwardState,
+    refreshCatalog: () => refreshCatalog({ log: true }),
+    setForward: async enabled => {
+      forwardState.enabled = enabled === true
+      return forwardState
+    },
+    channel: undefined,
+  })
+
+  // The routes are optional: a headless composition has no web server, and that
+  // must cost the settings page, never the models.
+  ctx.inject(['webServer'], scoped => {
+    scoped.effect(() => scoped.webServer.register({
+      kind: 'prefix',
+      path: API_PATH,
+      handler: api,
+    }), 'vyra-free-model: api routes')
+  })
 }
+
+/** The plugin version, read once for the summary document. */
+function readVersion() {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+    return typeof manifest.version === 'string' ? manifest.version : '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
+
+const VERSION = readVersion()
 
 /** Last run's roster, or an empty list when there is none or it is damaged. */
 function readCachedCatalog(file) {
@@ -165,4 +244,149 @@ function writeCachedCatalog(file, models, logger) {
   } catch (error) {
     logger.warn?.(`vyra-free-model: could not cache the model roster (${error?.message ?? error})`)
   }
+}
+
+/**
+ * Everything the settings page needs, in one read.
+ *
+ * One document rather than four endpoints: the page renders three blocks at once,
+ * and four round trips would let the user see a half-loaded page for a moment.
+ *
+ * The forward key never appears here. The page shows a mask and asks the user to
+ * copy from the response of the call that creates it, which is the only moment
+ * the value is legitimately on the wire.
+ */
+export function createSummary({ version, catalog, laneOk, accounts, usage, forward }) {
+  return {
+    version,
+    lane: {
+      ok: laneOk === true,
+      models: (catalog ?? []).map(entry => ({
+        id: entry.id,
+        name: entry.name,
+        contextWindow: entry.contextWindow,
+        maxOutput: entry.maxOutput,
+        vision: entry.vision === true,
+        efforts: entry.efforts ?? null,
+      })),
+    },
+    accounts: {
+      state: accounts?.state ?? 'pending',
+      providers: accounts?.providers ?? [],
+    },
+    usage: {
+      input: usage?.input ?? 0,
+      output: usage?.output ?? 0,
+      total: usage?.total ?? 0,
+    },
+    forward: {
+      enabled: forward?.enabled === true,
+      port: forward?.port ?? 0,
+      hasKey: typeof forward?.key === 'string' && forward.key !== '',
+    },
+  }
+}
+
+/**
+ * The HTTP surface.
+ *
+ * Every route is same-origin only. A request that arrived through a proxy carries
+ * `x-forwarded-for`, which means something outside this machine reached it, and
+ * that is refused: these routes can create accounts and mint a port key.
+ *
+ * @param {object} deps
+ */
+export function createApiRoutes(deps) {
+  return async function handler(req, res) {
+    const url = new URL(req.url ?? '/', 'http://localhost')
+    const routePath = url.pathname.startsWith(API_PATH)
+      ? url.pathname.slice(API_PATH.length).replace(/\/+$/, '') || '/'
+      : url.pathname
+    const method = String(req.method ?? 'GET').toUpperCase()
+
+    const send = (status, payload) => {
+      const body = JSON.stringify(payload)
+      res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+      res.end(body)
+    }
+
+    // A proxied request means something outside this machine reached a route
+    // that can create accounts and mint a port key. Refuse it outright rather
+    // than trying to recover the peer address.
+    if (isProxied(req)) return send(403, { error: 'forbidden' })
+
+    try {
+      if (routePath === '/summary' && method === 'GET') {
+        return send(200, assemble(deps))
+      }
+
+      if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward' || routePath === '/channel') {
+        if (method !== 'POST' && routePath !== '/summary') return send(405, { error: 'method-not-allowed' })
+        if (routePath === '/summary') return send(405, { error: 'method-not-allowed' })
+      }
+
+      if (routePath === '/recheck' && method === 'POST') {
+        const models = await deps.refreshCatalog()
+        return send(200, { count: Array.isArray(models) ? models.length : 0, summary: assemble(deps) })
+      }
+
+      if (routePath === '/forward' && method === 'POST') {
+        const body = await readJson(req)
+        const forward = await deps.setForward(body?.enabled === true)
+        return send(200, { forward: { enabled: forward.enabled === true, port: forward.port ?? 0, hasKey: typeof forward.key === 'string' && forward.key !== '' } })
+      }
+
+      if (routePath === '/channel' && method === 'POST') {
+        const body = await readJson(req)
+        if (!isChannelMethodAllowed(body?.method)) return send(403, { error: 'method-not-allowed' })
+        if (typeof deps.channel !== 'function') return send(503, { error: 'channels-unavailable' })
+        try {
+          const value = await deps.channel(body.method, body?.payload)
+          return send(200, { value })
+        } catch (error) {
+          return send(502, { error: String(error?.message ?? error).slice(0, 300) })
+        }
+      }
+
+      return send(404, { error: 'not-found' })
+    } catch (error) {
+      return send(500, { error: String(error?.message ?? error).slice(0, 300) })
+    }
+  }
+}
+
+/** Read the assembled summary out of the dependency bag. */
+function assemble(deps) {
+  return createSummary({
+    version: deps.version ?? '0.0.0',
+    catalog: deps.catalog?.() ?? [],
+    laneOk: deps.laneOk?.() === true,
+    accounts: deps.accounts?.() ?? { state: 'pending', providers: [] },
+    usage: deps.usage?.() ?? { input: 0, output: 0, total: 0 },
+    forward: deps.forward?.() ?? { enabled: false, port: 0, key: '' },
+  })
+}
+
+/** Did this request arrive through a proxy rather than straight from the shell? */
+function isProxied(req) {
+  const forwarded = req?.headers?.['x-forwarded-for']
+  return typeof forwarded === 'string' && forwarded.trim() !== ''
+}
+
+/** Read a JSON body, tolerating an empty one. */
+function readJson(req) {
+  return new Promise(resolve => {
+    const chunks = []
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      const text = Buffer.concat(chunks).toString('utf8')
+      if (text.trim() === '') return resolve(undefined)
+      try { resolve(JSON.parse(text)) } catch { resolve(undefined) }
+    }
+    req.on('data', chunk => chunks.push(Buffer.from(chunk)))
+    req.on('end', finish)
+    req.on('error', finish)
+  })
 }
