@@ -29,9 +29,11 @@ const ENDPOINTS = {
   geminiGenerate: 'https://cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse',
   geminiToken: 'https://oauth2.googleapis.com/token',
 }
-const GEMINI_CLIENT_ID = '681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com'
-// Installed-app client identifier, published by Gemini CLI, not a user secret.
-const GEMINI_CLIENT_SECRET = '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'
+// Upstream ships Gemini CLI's published installed-app identifier. GitHub's
+// push protection treats it as a secret, so this snapshot reads it from the
+// environment instead; set both variables to use the Gemini channel.
+const GEMINI_CLIENT_ID = typeof process === 'undefined' ? '' : (process.env.GEMINI_CLIENT_ID ?? '')
+const GEMINI_CLIENT_SECRET = typeof process === 'undefined' ? '' : (process.env.GEMINI_CLIENT_SECRET ?? '')
 const MAX_BYTES = 4 * 1024 * 1024
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value)
 const numeric = value => typeof value === 'number' && Number.isFinite(value) ? value : null

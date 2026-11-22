@@ -13,3 +13,12 @@ Vendored from <https://github.com/Ebony-Vinyl/dsh-our-free-model> at commit
 
 Re-importing upstream later replaces the root snapshot; keep local forks in a branch or rename
 the package.
+
+## Gemini OAuth identifiers
+
+Upstream publishes Gemini CLI's installed-app OAuth client ID/secret in
+`src/subscriptions.js` and `vendor/channel-pack/pack.js`. GitHub push
+protection treats those values as secrets, so this snapshot reads them from
+`GEMINI_CLIENT_ID` / `GEMINI_CLIENT_SECRET` instead and defaults to an empty
+string. Set both environment variables before starting DSH to use the Gemini
+channel; other channels are unaffected.
