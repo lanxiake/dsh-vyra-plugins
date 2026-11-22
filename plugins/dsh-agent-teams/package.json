@@ -29,7 +29,6 @@
     "compatibility.json",
     "scripts/doctor.mjs",
     "scripts/compatibility.mjs",
-    "pnpm-workspace.yaml",
     "scripts/legacy-session-source-repair.mjs",
     "assets/qq-group.png"
   ],
