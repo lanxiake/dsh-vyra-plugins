@@ -31,6 +31,10 @@ import { startGateway } from './src/gateway.js'
 /** The prefix every route this plugin serves lives under. */
 export const API_PATH = '/api/vyra-free-model'
 
+/** Where the channel pack publishes its own RPC route, and its endpoint name. */
+const CHANNEL_PACK_PATH = '/api/channel-pack'
+const CHANNEL_ENDPOINT = 'channel-pack'
+
 /**
  * The channel calls the settings page is allowed to make.
  *
@@ -117,9 +121,46 @@ export function apply(ctx, _config) {
    */
   let accountsState = 'pending'
 
-  /** Provider rows the account block renders. Task 10 fills this. */
+  /** The account providers the pack publishes, once it is mounted. */
+  const providers = []
+
+  /** Provider rows the account block renders. Task 11 reads these. */
   function accountProviders() {
-    return []
+    return providers
+  }
+
+  /**
+   * Call one method on the channel pack.
+   *
+   * The pack answers over its own RPC envelope, not a typed service call: it
+   * registers a buffered POST route and expects `{ type, rpcId, method,
+   * payload }` where the outer method is the endpoint name and the inner one is
+   * the call. Talking to it through that same envelope keeps this proxy honest —
+   * it exercises the surface the pack actually publishes rather than a private
+   * one that could drift.
+   */
+  async function callChannel(method, payload) {
+    const connection = ctx.get('connection')
+    if (connection === undefined || typeof connection.fetch !== 'function') {
+      throw new Error('the channel pack is not mounted')
+    }
+    const rpcId = crypto.randomUUID()
+    const response = await connection.fetch(CHANNEL_PACK_PATH, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        type: 'client-request',
+        rpcId,
+        method: CHANNEL_ENDPOINT,
+        payload: { method, payload: payload ?? {} },
+      }),
+    })
+    if (!response.ok) throw new Error(`channel pack answered HTTP ${response.status}`)
+    const message = await response.json()
+    if (message?.result?.ok !== true) {
+      throw new Error(message?.result?.error?.message ?? 'the channel pack refused the call')
+    }
+    return message.result.value
   }
 
   const state = () => ({ catalog, settings })
@@ -277,7 +318,7 @@ export function apply(ctx, _config) {
     forward: () => forwardState,
     refreshCatalog: () => refreshCatalog({ log: true }),
     setForward,
-    channel: undefined,
+    channel: callChannel,
   })
 
   // The routes are optional: a headless composition has no web server, and that
@@ -289,6 +330,57 @@ export function apply(ctx, _config) {
       handler: api,
     }), 'vyra-free-model: api routes')
   })
+
+  /**
+   * Mount the account pack.
+   *
+   * Deferred and guarded on two axes. Deferred, because it is a 2.6 MB module
+   * that this plugin's core does not need — a person who only wants to chat must
+   * never pay for it at boot. Guarded, because the pack claims the `accountPool`
+   * service globally: if another plugin already mounted it, a second mount would
+   * be a duplicate registration, so the existing one is reported instead.
+   */
+  ctx.inject(['credentials', 'commands', 'llm'], scoped => {
+    scoped.effect(() => {
+      let cancelled = false
+      void (async () => {
+        try {
+          const pack = await import('./vendor/channel-pack/pack.js')
+          if (cancelled) return
+          if (ctx.get('accountPool') !== undefined) {
+            accountsState = 'owned-elsewhere'
+            logger.info?.('vyra-free-model: another plugin already owns the account pool; leaving it alone')
+            return
+          }
+          pack.apply(scoped, { disableOpencode: true })
+          accountsState = 'ready'
+          providers.length = 0
+          providers.push(...readProviders())
+          logger.info?.(`vyra-free-model: account pack mounted with ${providers.length} providers`)
+        } catch (error) {
+          accountsState = 'failed'
+          logger.warn?.(`vyra-free-model: could not mount the account pack (${error?.message ?? error})`)
+        }
+      })()
+      return () => { cancelled = true }
+    }, 'vyra-free-model: account pack')
+  })
+
+  /**
+   * The provider rows, read from the pack once it is up.
+   *
+   * A failed read is not a reason to show an error: the account block degrades
+   * to "sign in later", which is still a usable page.
+   */
+  async function readProviders() {
+    try {
+      const status = await callChannel('provider.status', {})
+      const rows = Array.isArray(status?.providers) ? status.providers : []
+      return rows.filter(row => row !== null && typeof row === 'object' && typeof row.id === 'string')
+    } catch {
+      return []
+    }
+  }
 }
 
 /** The plugin version, read once for the summary document. */
