@@ -1998,7 +1998,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/vyra-plugin-market',
           },
         },
@@ -2009,7 +2009,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '95a269fe0c6bcf64c7de9bda93a932daaf9f88b3',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/vyra-plugin-market',
           },
         },
@@ -2049,7 +2049,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/dsh-sync',
           },
         },
@@ -2081,7 +2081,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/dsh-skins',
           },
         },
@@ -2114,7 +2114,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/dsh-ffmpeg',
           },
         },
@@ -2146,7 +2146,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/dsh-music-panel',
           },
         },
@@ -2178,7 +2178,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '65185870099ba0e380397155c9be6d003fbba5dd',
             path: 'plugins/dsh-our-free-model',
           },
         },
