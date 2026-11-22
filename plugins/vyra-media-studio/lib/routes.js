@@ -1,17 +1,18 @@
 /**
  * Host route handlers and registration. Two exact Fetch routes:
- * ` /api/vyra-media/list` and `/api/vyra-media/file`.
+ * `/api/vyra-media/list` and `/api/vyra-media/file`.
  *
  * Every route resolves the Session workspace through `workspaceFiles.scopeOf`
- * and confines the result with `ctx.fs.contains`. The bridge supplies
- * authentication; direct callers must still target a live browser Peer.
+ * and confines the result to that root. The bridge supplies authentication;
+ * direct callers must still target a live browser Peer.
  */
-import { relative } from 'node:path'
 import { SCAN_DEFAULTS, scanMedia } from './scan.js'
+import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
 
 const LIST_PATH = '/api/vyra-media/list'
 const FILE_PATH = '/api/vyra-media/file'
+const DIAGNOSE_PATH = '/api/vyra-media/diagnose'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -43,7 +44,20 @@ function integer(raw, fallback, min, max) {
 }
 
 /**
- * Resolve a Session's workspace root and scan target, enforcing containment.
+ * A request failure the route reports to the client as a code plus message.
+ * @param {number} status - HTTP status.
+ * @param {string} code - stable machine-readable code.
+ * @param {string} message - human-readable reason.
+ * @returns {Error} the tagged error.
+ */
+function requestFailure(status, code, message) {
+  return Object.assign(new Error(message), { status, code })
+}
+
+/**
+ * Resolve a Session's workspace root in this Host process, then the scan root
+ * inside it. Containment is checked on the resolved targets, so `.` and `..`
+ * cannot escape the workspace.
  * @param {object} ctx - Host context.
  * @param {string} sessionId - Session identity.
  * @param {string} path - relative, absolute-inside-workspace, or empty for root.
@@ -51,21 +65,26 @@ function integer(raw, fallback, min, max) {
  * @returns {Promise<{ workspaceRoot: string, scanRoot: string, relativeRoot: string }>} resolved paths.
  */
 async function resolveScanRoot(ctx, sessionId, path, signal) {
-  const scope = await ctx.workspaceFiles.scopeOf(sessionId, signal)
-  if (scope === undefined) throw Object.assign(new Error('unknown session'), { status: 404, code: 'unknown-session' })
+  const workspaceFiles = ctx.workspaceFiles
+  if (workspaceFiles === undefined || typeof workspaceFiles.scopeOf !== 'function') {
+    throw requestFailure(503, 'workspace-service-missing', 'ctx.workspaceFiles.scopeOf is unavailable on this Host')
+  }
+  const scope = await workspaceFiles.scopeOf(sessionId, signal)
+  if (scope === undefined) throw requestFailure(404, 'unknown-session', `no Session "${sessionId}"`)
   const workspaceRoot = scope.workspaceRoot
+  if (typeof workspaceRoot !== 'string' || workspaceRoot === '') {
+    throw requestFailure(409, 'no-workspace-root', 'this Session has no workspace directory')
+  }
+
   const rootTarget = await ctx.fs.resolve(workspaceRoot, { signal })
-  const target = await ctx.fs.resolve(path === '' ? '.' : path, { cwd: workspaceRoot, signal })
-  if (!ctx.fs.contains(rootTarget, target)) {
-    throw Object.assign(new Error('outside workspace'), { status: 403, code: 'outside-workspace' })
+  const candidate = path === '' ? workspaceRoot : joinWorkspacePath(workspaceRoot, path)
+  const target = await ctx.fs.resolve(candidate, { signal })
+  if (!containsTarget(ctx.fs, rootTarget, target)) {
+    throw requestFailure(403, 'outside-workspace', `"${path}" is outside the workspace`)
   }
-  const workspaceDir = ctx.fs.processPath(rootTarget)
-  const scanDir = ctx.fs.processPath(target)
-  return {
-    workspaceRoot: workspaceDir,
-    scanRoot: scanDir,
-    relativeRoot: relative(workspaceDir, scanDir).split('\\').join('/'),
-  }
+  const workspaceDir = targetPathOf(ctx.fs, rootTarget)
+  const scanDir = targetPathOf(ctx.fs, target)
+  return { workspaceRoot: workspaceDir, scanRoot: scanDir, relativeRoot: path }
 }
 
 /**
@@ -77,13 +96,17 @@ async function resolveScanRoot(ctx, sessionId, path, signal) {
 async function handleList(request, ctx) {
   const url = new URL(request.url)
   const sessionId = url.searchParams.get('sessionId')
-  if (sessionId === null || sessionId === '') return json({ ok: false, error: 'missing sessionId' }, 400)
+  if (sessionId === null || sessionId === '') return json({ ok: false, error: 'missing sessionId', code: 'bad-request' }, 400)
 
   let resolved
   try {
     resolved = await resolveScanRoot(ctx, sessionId, url.searchParams.get('root') ?? '', request.signal)
   } catch (error) {
-    return json({ ok: false, error: error.message, code: error.code }, error.status ?? 500)
+    return json({
+      ok: false,
+      code: error.code ?? 'resolve-failed',
+      error: error.message ?? 'cannot resolve workspace',
+    }, error.status ?? 500)
   }
 
   try {
@@ -104,7 +127,11 @@ async function handleList(request, ctx) {
       ...result,
     })
   } catch (error) {
-    return json({ ok: false, error: typeof error?.message === 'string' ? error.message : 'scan failed', code: 'scan-failed' }, 500)
+    return json({
+      ok: false,
+      code: 'scan-failed',
+      error: typeof error?.message === 'string' ? error.message : 'scan failed',
+    }, 500)
   }
 }
 
@@ -121,16 +148,75 @@ async function handleFile(request, ctx) {
     return new Response('missing sessionId', { status: 400, headers: { 'Cache-Control': 'no-store' } })
   }
 
+  const workspaceFiles = ctx.workspaceFiles
+  if (workspaceFiles === undefined || typeof workspaceFiles.scopeOf !== 'function') {
+    return new Response('ctx.workspaceFiles.scopeOf is unavailable on this Host', {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
   let workspaceRoot
   try {
-    const scope = await ctx.workspaceFiles.scopeOf(sessionId, request.signal)
+    const scope = await workspaceFiles.scopeOf(sessionId, request.signal)
     if (scope === undefined) return new Response('unknown session', { status: 404, headers: { 'Cache-Control': 'no-store' } })
     workspaceRoot = scope.workspaceRoot
-  } catch {
-    return new Response('session lookup failed', { status: 500, headers: { 'Cache-Control': 'no-store' } })
+    if (typeof workspaceRoot !== 'string' || workspaceRoot === '') {
+      return new Response('this Session has no workspace directory', { status: 409, headers: { 'Cache-Control': 'no-store' } })
+    }
+  } catch (error) {
+    return new Response(`session lookup failed: ${error?.message ?? error}`, { status: 500, headers: { 'Cache-Control': 'no-store' } })
   }
 
   return serveMediaFile({ request, fs: ctx.fs, workspaceRoot })
+}
+
+/**
+ * GET /api/vyra-media/diagnose
+ *
+ * Reports what the media routes can actually see, so a failed scan or playback
+ * names its cause instead of returning a bare 500. It exposes only paths and
+ * capability facts for the caller's own Session — no file content.
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} capability and resolution facts.
+ */
+async function handleDiagnose(request, ctx) {
+  const url = new URL(request.url)
+  const sessionId = url.searchParams.get('sessionId')
+  const fs = ctx.fs
+  const report = {
+    ok: true,
+    sessionId,
+    fs: fs === undefined ? null : {
+      resolve: typeof fs.resolve === 'function',
+      stat: typeof fs.stat === 'function',
+      processPath: typeof fs.processPath === 'function',
+      contains: typeof fs.contains === 'function',
+      readByteRange: typeof fs.readByteRange === 'function',
+      readBytes: typeof fs.readBytes === 'function',
+    },
+    workspaceFiles: ctx.workspaceFiles === undefined ? null : {
+      scopeOf: typeof ctx.workspaceFiles.scopeOf === 'function',
+    },
+    rangeParser: typeof (await import('./range.js')).parseRange === 'function',
+  }
+  if (sessionId === null || sessionId === '') return json({ ...report, ok: false, error: 'missing sessionId' }, 400)
+  if (fs === undefined) return json({ ...report, ok: false, error: 'ctx.fs is unavailable' }, 503)
+
+  try {
+    const scope = await ctx.workspaceFiles?.scopeOf?.(sessionId, request.signal)
+    report.workspaceRoot = scope?.workspaceRoot ?? null
+    if (scope !== undefined) {
+      const target = await fs.resolve(scope.workspaceRoot, { signal: request.signal })
+      report.workspacePath = targetPathOf(fs, target)
+      report.workspaceStat = await fs.stat(target, request.signal) ?? null
+    }
+  } catch (error) {
+    report.ok = false
+    report.error = `${error?.code ?? 'error'}：${error?.message ?? error}`
+  }
+  return json(report, report.ok ? 200 : 500)
 }
 
 /**
@@ -154,9 +240,15 @@ export function registerMediaRoutes(ctx, connection) {
       requestBody: 'buffered',
       fetch: request => handleFile(request, ctx),
     }),
+    connection.fetch.register({
+      path: DIAGNOSE_PATH,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: request => handleDiagnose(request, ctx),
+    }),
   ]
   ctx.effect(() => () => { for (const dispose of disposers) void dispose() }, 'vyra-media-studio: routes')
   return true
 }
 
-export { LIST_PATH, FILE_PATH, handleFile, handleList }
+export { LIST_PATH, FILE_PATH, DIAGNOSE_PATH, handleDiagnose, handleFile, handleList }

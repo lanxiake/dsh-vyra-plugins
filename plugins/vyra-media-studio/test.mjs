@@ -127,6 +127,13 @@ test('serveMediaFile rejects escapes, missing files and oversized files', async 
 
   const escaped = await serveMediaFile({ request: fileRequest('sessionId=s&path=../secret.mp4'), fs, workspaceRoot: '/ws' })
   assert.equal(escaped.status, 403)
+  assert.equal(escaped.headers.get('x-vyra-media-error'), 'outside-workspace')
+
+  // An absolute path is served outside the workspace, matching the platform's
+  // own file route; only workspace-relative paths are confined to it.
+  const absolute = await serveMediaFile({ request: fileRequest('sessionId=s&path=%2Fsecret.mp4'), fs, workspaceRoot: '/ws' })
+  assert.equal(absolute.status, 200)
+  assert.equal(await absolute.text(), 'nope')
 
   const missing = await serveMediaFile({ request: fileRequest('sessionId=s&path=none.mp4'), fs, workspaceRoot: '/ws' })
   assert.equal(missing.status, 404)
@@ -253,6 +260,7 @@ test('registerMediaRoutes mounts both exact Fetch routes', async () => {
     assert.deepEqual(routes.map(route => [route.path, route.methods]), [
       ['/api/vyra-media/list', ['GET']],
       ['/api/vyra-media/file', ['GET', 'HEAD']],
+      ['/api/vyra-media/diagnose', ['GET']],
     ])
 
     const list = await routes[0].fetch(new Request('http://host/api/vyra-media/list?sessionId=s'))

@@ -38,7 +38,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// plugins/vyra-media-studio/src/client/entry.js
+// src/client/entry.js
 var entry_exports = {};
 __export(entry_exports, {
   default: () => entry_default
@@ -46,10 +46,10 @@ __export(entry_exports, {
 module.exports = __toCommonJS(entry_exports);
 var import_react6 = __toESM(require("react"), 1);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
 var import_react2 = require("react");
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -60,7 +60,7 @@ var mergeClasses = (...classes) => classes.filter((className, index, array) => {
   return Boolean(className) && className.trim() !== "" && array.indexOf(className) === index;
 }).join(" ").trim();
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -69,7 +69,7 @@ var mergeClasses = (...classes) => classes.filter((className, index, array) => {
  */
 var toKebabCase = (string) => string.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -81,7 +81,7 @@ var toCamelCase = (string) => string.replace(
   (match, p1, p2) => p2 ? p2.toUpperCase() : p1.toLowerCase()
 );
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -93,10 +93,10 @@ var toPascalCase = (string) => {
   return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
 };
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/Icon.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/Icon.js
 var import_react = require("react");
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/defaultAttributes.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/defaultAttributes.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -115,7 +115,7 @@ var defaultAttributes = {
   strokeLinejoin: "round"
 };
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -131,7 +131,7 @@ var hasA11yProp = (props) => {
   return false;
 };
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/Icon.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/Icon.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -168,7 +168,7 @@ var Icon = (0, import_react.forwardRef)(
   )
 );
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -192,7 +192,7 @@ var createLucideIcon = (iconName, iconNode) => {
   return Component;
 };
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-left.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-left.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -205,7 +205,7 @@ var __iconNode = [
 ];
 var ArrowLeft = createLucideIcon("arrow-left", __iconNode);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-right.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-right.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -218,7 +218,7 @@ var __iconNode2 = [
 ];
 var ArrowRight = createLucideIcon("arrow-right", __iconNode2);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/check.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/check.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -228,7 +228,7 @@ var ArrowRight = createLucideIcon("arrow-right", __iconNode2);
 var __iconNode3 = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
 var Check = createLucideIcon("check", __iconNode3);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-down.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-down.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -238,7 +238,7 @@ var Check = createLucideIcon("check", __iconNode3);
 var __iconNode4 = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
 var ChevronDown = createLucideIcon("chevron-down", __iconNode4);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/copy.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/copy.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -251,7 +251,7 @@ var __iconNode5 = [
 ];
 var Copy = createLucideIcon("copy", __iconNode5);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/download.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/download.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -265,7 +265,7 @@ var __iconNode6 = [
 ];
 var Download = createLucideIcon("download", __iconNode6);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/ellipsis.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/ellipsis.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -279,7 +279,7 @@ var __iconNode7 = [
 ];
 var Ellipsis = createLucideIcon("ellipsis", __iconNode7);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/external-link.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/external-link.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -293,7 +293,7 @@ var __iconNode8 = [
 ];
 var ExternalLink = createLucideIcon("external-link", __iconNode8);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -311,7 +311,7 @@ var __iconNode9 = [
 ];
 var Folder = createLucideIcon("folder", __iconNode9);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image-off.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image-off.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -334,7 +334,7 @@ var __iconNode10 = [
 ];
 var ImageOff = createLucideIcon("image-off", __iconNode10);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -348,7 +348,7 @@ var __iconNode11 = [
 ];
 var Image = createLucideIcon("image", __iconNode11);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/layout-grid.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/layout-grid.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -363,7 +363,7 @@ var __iconNode12 = [
 ];
 var LayoutGrid = createLucideIcon("layout-grid", __iconNode12);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/link-2.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/link-2.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -377,7 +377,7 @@ var __iconNode13 = [
 ];
 var Link2 = createLucideIcon("link-2", __iconNode13);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/list.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/list.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -394,7 +394,7 @@ var __iconNode14 = [
 ];
 var List = createLucideIcon("list", __iconNode14);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/maximize.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/maximize.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -409,7 +409,7 @@ var __iconNode15 = [
 ];
 var Maximize = createLucideIcon("maximize", __iconNode15);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/monitor-play.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/monitor-play.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -430,7 +430,7 @@ var __iconNode16 = [
 ];
 var MonitorPlay = createLucideIcon("monitor-play", __iconNode16);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/music-2.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/music-2.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -443,7 +443,7 @@ var __iconNode17 = [
 ];
 var Music2 = createLucideIcon("music-2", __iconNode17);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/pause.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/pause.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -456,7 +456,7 @@ var __iconNode18 = [
 ];
 var Pause = createLucideIcon("pause", __iconNode18);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/picture-in-picture-2.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/picture-in-picture-2.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -469,7 +469,7 @@ var __iconNode19 = [
 ];
 var PictureInPicture2 = createLucideIcon("picture-in-picture-2", __iconNode19);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/play.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/play.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -487,7 +487,7 @@ var __iconNode20 = [
 ];
 var Play = createLucideIcon("play", __iconNode20);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/plus.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/plus.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -500,7 +500,7 @@ var __iconNode21 = [
 ];
 var Plus = createLucideIcon("plus", __iconNode21);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/refresh-cw.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/refresh-cw.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -515,7 +515,7 @@ var __iconNode22 = [
 ];
 var RefreshCw = createLucideIcon("refresh-cw", __iconNode22);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/scan.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/scan.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -530,7 +530,7 @@ var __iconNode23 = [
 ];
 var Scan = createLucideIcon("scan", __iconNode23);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/search.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/search.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -543,7 +543,7 @@ var __iconNode24 = [
 ];
 var Search = createLucideIcon("search", __iconNode24);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -563,7 +563,7 @@ var __iconNode25 = [
 ];
 var SlidersHorizontal = createLucideIcon("sliders-horizontal", __iconNode25);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/trash-2.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/trash-2.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -579,7 +579,7 @@ var __iconNode26 = [
 ];
 var Trash2 = createLucideIcon("trash-2", __iconNode26);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/triangle-alert.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/triangle-alert.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -599,7 +599,7 @@ var __iconNode27 = [
 ];
 var TriangleAlert = createLucideIcon("triangle-alert", __iconNode27);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/video.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/video.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -618,7 +618,7 @@ var __iconNode28 = [
 ];
 var Video = createLucideIcon("video", __iconNode28);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/volume-2.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/volume-2.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -638,7 +638,7 @@ var __iconNode29 = [
 ];
 var Volume2 = createLucideIcon("volume-2", __iconNode29);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/volume-x.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/volume-x.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -658,7 +658,7 @@ var __iconNode30 = [
 ];
 var VolumeX = createLucideIcon("volume-x", __iconNode30);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/x.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/x.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -671,7 +671,7 @@ var __iconNode31 = [
 ];
 var X = createLucideIcon("x", __iconNode31);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/zoom-in.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/zoom-in.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -686,7 +686,7 @@ var __iconNode32 = [
 ];
 var ZoomIn = createLucideIcon("zoom-in", __iconNode32);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/zoom-out.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/zoom-out.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -700,7 +700,7 @@ var __iconNode33 = [
 ];
 var ZoomOut = createLucideIcon("zoom-out", __iconNode33);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/lucide-react.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/lucide-react.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -708,28 +708,334 @@ var ZoomOut = createLucideIcon("zoom-out", __iconNode33);
  * See the LICENSE file in the root directory of this source tree.
  */
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/counter/counter.css
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/counter/counter.css
 var counter_default = ".yarl__counter{position:var(--yarl__counter_position,absolute);top:var(--yarl__counter_top,0);left:var(--yarl__counter_left,0);bottom:var(--yarl__counter_bottom,unset);right:var(--yarl__counter_right,unset);color:var(--yarl__counter_color,var(--yarl__color_button,hsla(0,0%,100%,.8)));filter:var(--yarl__counter_filter,drop-shadow(2px 2px 2px rgba(0,0,0,.8)));margin:var(--yarl__counter_margin,var(--yarl__toolbar_padding,8px));padding:var(--yarl__counter_padding,var(--yarl__button_padding,8px));line-height:var(--yarl__counter_line_height,var(--yarl__icon_size,32px));-webkit-user-select:var(--yarl__counter_user_select,none);-moz-user-select:var(--yarl__counter_user_select,none);user-select:var(--yarl__counter_user_select,none)}[dir=rtl] .yarl__counter{left:var(--yarl__counter_rtl_left,unset);right:var(--yarl__counter_rtl_right,0)}";
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/thumbnails/thumbnails.css
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/thumbnails/thumbnails.css
 var thumbnails_default = ".yarl__thumbnails{display:flex;height:100%}.yarl__thumbnails_bottom,.yarl__thumbnails_end .yarl__thumbnails_track,.yarl__thumbnails_start .yarl__thumbnails_track,.yarl__thumbnails_top{flex-direction:column}.yarl__thumbnails_wrapper{flex:1;position:relative}.yarl__thumbnails_container{flex:0 0 auto;background-color:var(--yarl__thumbnails_container_background_color,var(--yarl__color_backdrop,#000));padding:var(--yarl__thumbnails_container_padding,16px);position:relative;overflow:hidden;-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-touch-callout:none}.yarl__thumbnails_vignette{position:absolute;pointer-events:none;--yarl__thumbnails_vignette_size:12%}@media(min-width:1200px){.yarl__thumbnails_vignette{--yarl__thumbnails_vignette_size:8%}}@media(min-width:2000px){.yarl__thumbnails_vignette{--yarl__thumbnails_vignette_size:5%}}.yarl__thumbnails_bottom .yarl__thumbnails_vignette,.yarl__thumbnails_top .yarl__thumbnails_vignette{height:100%;left:0;right:0;background:linear-gradient(to right,var(--yarl__color_backdrop,#000) 0,transparent var(--yarl__thumbnails_vignette_size,12%) calc(100% - var(--yarl__thumbnails_vignette_size,12%)),var(--yarl__color_backdrop,#000) 100%)}.yarl__thumbnails_end .yarl__thumbnails_vignette,.yarl__thumbnails_start .yarl__thumbnails_vignette{width:100%;top:0;bottom:0;background:linear-gradient(to bottom,var(--yarl__color_backdrop,#000) 0,transparent var(--yarl__thumbnails_vignette_size,12%) calc(100% - var(--yarl__thumbnails_vignette_size,12%)),var(--yarl__color_backdrop,#000) 100%)}.yarl__thumbnails_track{outline:none;gap:var(--yarl__thumbnails_thumbnail_gap,16px)}.yarl__thumbnails_thumbnail{flex:0 0 auto;cursor:pointer;-webkit-appearance:none;-moz-appearance:none;appearance:none;background:var(--yarl__thumbnails_thumbnail_background,#000);border-width:var(--yarl__thumbnails_thumbnail_border,1px);border-style:var(--yarl__thumbnails_thumbnail_border_style,solid);border-color:var(--yarl__thumbnails_thumbnail_border_color,var(--yarl__color_button,hsla(0,0%,100%,.8)));border-radius:var(--yarl__thumbnails_thumbnail_border_radius,4px);-webkit-tap-highlight-color:transparent;position:relative;overflow:hidden;padding:var(--yarl__thumbnails_thumbnail_padding,4px);outline:none;width:var(--yarl__thumbnails_thumbnail_width,120px);height:var(--yarl__thumbnails_thumbnail_height,80px);box-sizing:content-box}.yarl__thumbnails_thumbnail_active{border-color:var(--yarl__thumbnails_thumbnail_active_border_color,var(--yarl__color_button_active,#fff))}.yarl__thumbnails_thumbnail_fadein{opacity:0;animation:yarl__thumbnails_thumbnail_fadein var(--yarl__thumbnails_thumbnail_fadein_duration,.5s) ease-in-out var(--yarl__thumbnails_thumbnail_fadein_delay,0s) forwards}.yarl__thumbnails_thumbnail_fadeout{animation:yarl__thumbnails_thumbnail_fadeout var(--yarl__thumbnails_thumbnail_fadeout_duration,.5s) ease-in-out var(--yarl__thumbnails_thumbnail_fadeout_delay,0s) forwards;cursor:unset}.yarl__thumbnails_thumbnail_placeholder{visibility:hidden;cursor:unset}.yarl__thumbnails_thumbnail:focus{box-shadow:var(--yarl__thumbnails_thumbnail_focus_box_shadow,#000 0 0 0 2px,var(--yarl__color_button,hsla(0,0%,100%,.8)) 0 0 0 4px)}.yarl__thumbnails_thumbnail:focus:not(:focus-visible){box-shadow:unset}.yarl__thumbnails_thumbnail:focus-visible{box-shadow:var(--yarl__thumbnails_thumbnail_focus_box_shadow,#000 0 0 0 2px,var(--yarl__color_button,hsla(0,0%,100%,.8)) 0 0 0 4px)}.yarl__thumbnails_thumbnail_icon{color:var(--yarl__thumbnails_thumbnail_icon_color,var(--yarl__color_button,hsla(0,0%,100%,.8)));filter:var(--yarl__thumbnails_thumbnail_icon_filter,drop-shadow(2px 2px 2px rgba(0,0,0,.8)));position:absolute;top:50%;left:50%;transform:translateX(-50%) translateY(-50%);width:var(--yarl__thumbnails_thumbnail_icon_size,32px);height:var(--yarl__thumbnails_thumbnail_icon_size,32px)}@keyframes yarl__thumbnails_thumbnail_fadein{0%{opacity:0}to{opacity:1}}@keyframes yarl__thumbnails_thumbnail_fadeout{0%{opacity:1}to{opacity:0}}";
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/styles.css
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/styles.css
 var styles_default = ".yarl__fullsize{width:100%;height:100%}.yarl__relative{position:relative}.yarl__portal{position:fixed;top:0;right:0;bottom:0;left:0;opacity:0;overflow:hidden;z-index:var(--yarl__portal_zindex,9999);transition:opacity var(--yarl__fade_animation_duration,.25s) var(--yarl__fade_animation_timing_function,ease);pointer-events:auto}.yarl__portal_open{opacity:1}.yarl__container{position:absolute;top:0;right:0;bottom:0;left:0;overflow:hidden;background-color:var(--yarl__container_background_color,var(--yarl__color_backdrop,#000));outline:none;-webkit-user-select:none;-moz-user-select:none;user-select:none;touch-action:var(--yarl__controller_touch_action,none);overscroll-behavior:var(--yarl__controller_overscroll_behavior,contain)}.yarl__carousel{display:flex;flex:0 0 auto;height:100%;align-content:center;justify-content:center;align-items:stretch;width:calc(100% + (-1 + var(--yarl__carousel_slides_count)) * (100% + var(--yarl__carousel_spacing_px,0) * 1px + var(--yarl__carousel_spacing_percent,0) * 1%));transform:translate(var(--yarl__swipe_offset,0),var(--yarl__pull_offset,0));opacity:var(--yarl__pull_opacity,1)}.yarl__carousel_with_slides{-moz-column-gap:calc(var(--yarl__carousel_spacing_px,0) * 1px + 100 / (100 * var(--yarl__carousel_slides_count) + (-1 + var(--yarl__carousel_slides_count)) * var(--yarl__carousel_spacing_percent,0)) * var(--yarl__carousel_spacing_percent,0) * 1%);column-gap:calc(var(--yarl__carousel_spacing_px,0) * 1px + 100 / (100 * var(--yarl__carousel_slides_count) + (-1 + var(--yarl__carousel_slides_count)) * var(--yarl__carousel_spacing_percent,0)) * var(--yarl__carousel_spacing_percent,0) * 1%)}.yarl__flex_center{display:flex;justify-content:center;align-content:center;align-items:center}.yarl__slide{flex:1;position:relative;overflow:hidden;padding:calc(var(--yarl__carousel_padding_px,0) * 1px + 100 / (100 * var(--yarl__carousel_slides_count) + (-1 + var(--yarl__carousel_slides_count)) * var(--yarl__carousel_spacing_percent,0)) * var(--yarl__carousel_padding_percent,0) * 1%)}[dir=rtl] .yarl__slide{--yarl__direction:-1}.yarl__slide_image{max-width:100%;max-height:100%;-o-object-fit:contain;object-fit:contain;touch-action:var(--yarl__controller_touch_action,none);-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-touch-callout:none}.yarl__slide_image_cover{width:100%;height:100%;-o-object-fit:cover;object-fit:cover}.yarl__slide_image_loading{opacity:0}@media screen and (min-width:800px){.yarl__slide_wrapper:not(.yarl__slide_wrapper_interactive) .yarl__slide_image{-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;-webkit-transform-style:preserve-3d}}.yarl__slide_placeholder{position:absolute;top:50%;left:50%;transform:translateX(-50%) translateY(-50%);line-height:0}.yarl__slide_loading{color:var(--yarl__slide_icon_loading_color,var(--yarl__color_button,hsla(0,0%,100%,.8)));animation:yarl__delayed_fadein 1s linear}.yarl__slide_loading line{animation:yarl__stroke_opacity 1s linear infinite}.yarl__slide_loading line:first-of-type{animation-delay:-1.875s}.yarl__slide_loading line:nth-of-type(2){animation-delay:-1.75s}.yarl__slide_loading line:nth-of-type(3){animation-delay:-1.625s}.yarl__slide_loading line:nth-of-type(4){animation-delay:-1.5s}.yarl__slide_loading line:nth-of-type(5){animation-delay:-1.375s}.yarl__slide_loading line:nth-of-type(6){animation-delay:-1.25s}.yarl__slide_loading line:nth-of-type(7){animation-delay:-1.125s}.yarl__slide_loading line:nth-of-type(8){animation-delay:-1s}.yarl__slide_error{width:var(--yarl__slide_icon_error_size,48px);height:var(--yarl__slide_icon_error_size,48px);color:var(--yarl__slide_icon_error_color,red)}@media(prefers-reduced-motion){.yarl__portal,.yarl__slide{transition:unset}.yarl__slide_loading,.yarl__slide_loading line{animation:unset}}.yarl__toolbar{position:absolute;top:0;right:0;bottom:auto;left:auto;display:flex;justify-content:flex-end;padding:var(--yarl__toolbar_padding,8px)}[dir=rtl] .yarl__toolbar{top:0;right:auto;bottom:auto;left:0}.yarl__icon{width:var(--yarl__icon_size,32px);height:var(--yarl__icon_size,32px)}.yarl__button{cursor:pointer;-webkit-appearance:none;-moz-appearance:none;appearance:none;background-color:var(--yarl__button_background_color,transparent);border:var(--yarl__button_border,0);margin:var(--yarl__button_margin,0);outline:none;line-height:0;padding:var(--yarl__button_padding,8px);color:var(--yarl__color_button,hsla(0,0%,100%,.8));filter:var(--yarl__button_filter,drop-shadow(2px 2px 2px rgba(0,0,0,.8)));-webkit-tap-highlight-color:transparent}.yarl__button:focus{color:var(--yarl__color_button_active,#fff)}.yarl__button:focus:not(:focus-visible){color:var(--yarl__color_button,hsla(0,0%,100%,.8))}.yarl__button:focus-visible{color:var(--yarl__color_button_active,#fff)}@media(hover:hover){.yarl__button:focus-visible:hover,.yarl__button:focus:hover,.yarl__button:hover{color:var(--yarl__color_button_active,#fff)}}.yarl__button:disabled{color:var(--yarl__color_button_disabled,hsla(0,0%,100%,.4));cursor:default}.yarl__navigation_next,.yarl__navigation_prev{position:absolute;top:50%;transform:translateY(-50%);padding:var(--yarl__navigation_button_padding,24px 16px)}.yarl__navigation_prev{left:0}[dir=rtl] .yarl__navigation_prev{left:unset;right:0;transform:translateY(-50%) rotate(180deg)}.yarl__navigation_next{right:0}[dir=rtl] .yarl__navigation_next{left:0;right:unset;transform:translateY(-50%) rotate(180deg)}.yarl__no_scroll{height:100%;overflow:hidden;overscroll-behavior:none}@keyframes yarl__delayed_fadein{0%{opacity:0}80%{opacity:0}to{opacity:1}}@keyframes yarl__stroke_opacity{0%{stroke-opacity:1}to{stroke-opacity:.125}}";
 
-// plugins/vyra-media-studio/src/client/extra.css
-var extra_default = '/* Native media, the media tab, and the lightbox host. */\n\n.vms-lightbox-stage {\n  flex: 1;\n  min-height: 0;\n  position: relative;\n  overflow: hidden;\n  background: #08090c;\n}\n\n.vms-lightbox {\n  --yarl__color_backdrop: transparent;\n  --yarl__container_background_color: transparent;\n  --yarl__color_button: rgba(255, 255, 255, 0.82);\n  --yarl__color_button_active: #fff;\n  --yarl__color_button_disabled: rgba(255, 255, 255, 0.36);\n  --yarl__button_filter: none;\n  --yarl__icon_size: 20px;\n  --yarl__toolbar_padding: 6px;\n  --yarl__navigation_button_padding: 12px 8px;\n  --yarl__slide_icon_error_size: 32px;\n  --yarl__counter_color: rgba(255, 255, 255, 0.78);\n  --yarl__counter_filter: none;\n  width: 100%;\n  height: 100%;\n}\n.vms-lightbox .yarl__container { background: transparent; }\n.vms-lightbox .yarl__slide { padding: 0; }\n.vms-lightbox .yarl__slide_image { object-fit: contain; }\n.vms-lightbox .yarl__toolbar { padding: 6px; }\n.vms-lightbox .yarl__button { padding: 6px; border-radius: 8px; }\n.vms-lightbox .yarl__button:hover { background: rgba(255, 255, 255, 0.12); }\n.vms-lightbox .yarl__navigation_prev,\n.vms-lightbox .yarl__navigation_next { padding: 12px 7px; border-radius: 10px; }\n.vms-lightbox .yarl__counter {\n  font-family: var(--dsh-font-family-code, "Cascadia Mono", Consolas, monospace);\n  font-size: 9.5px;\n  line-height: 18px;\n  margin: 6px;\n  padding: 4px 6px;\n  border-radius: 6px;\n  background: rgba(8, 10, 14, 0.55);\n}\n.vms-lightbox .yarl__thumbnails_container {\n  background: rgba(8, 10, 14, 0.78);\n  border-top: 0.5px solid rgba(255, 255, 255, 0.12);\n  padding: 6px 8px;\n}\n.vms-lightbox .yarl__thumbnails_thumbnail { background: #0d1016; }\n.vms-lightbox .yarl__thumbnails_thumbnail_active { border-color: var(--vms-accent); }\n.vms-lightbox-thumb-video { width: 100%; height: 100%; object-fit: cover; }\n.vms-lightbox-thumb-icon {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  height: 100%;\n  color: rgba(255, 255, 255, 0.82);\n  background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));\n}\n.vms-lightbox-thumb-icon.is-link { background: linear-gradient(145deg, #1a1826, #0e0d16); color: #c7b8ff; }\n\n.vms-audio-slide {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 14px;\n  padding: 24px;\n  color: #fff;\n  background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 38%, #08090c), #08090c 72%);\n}\n.vms-audio-slide-art {\n  width: 136px;\n  height: 136px;\n  border-radius: 20px;\n  display: grid;\n  place-items: center;\n  color: rgba(255, 255, 255, 0.86);\n  background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));\n  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.14);\n}\n.vms-audio-slide-wave {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  height: 42px;\n  width: min(82%, 420px);\n}\n.vms-audio-slide-wave i {\n  flex: 1;\n  border-radius: 2px;\n  background: rgba(255, 255, 255, 0.55);\n  animation: vms-wave 1.05s ease-in-out infinite alternate;\n}\n.vms-audio-slide-title { text-align: center; }\n.vms-audio-slide-title b { display: block; font-size: 14px; font-weight: 550; }\n.vms-audio-slide-title span {\n  display: block;\n  margin-top: 3px;\n  font-family: var(--dsh-font-family-code, monospace);\n  font-size: 9.5px;\n  color: rgba(255, 255, 255, 0.52);\n}\n.vms-audio-slide audio { width: min(92%, 520px); margin-top: 4px; }\n\n.vms-link-slide {\n  position: absolute;\n  inset: 0;\n  display: grid;\n  place-content: center;\n  justify-items: center;\n  gap: 12px;\n  padding: 26px;\n  text-align: center;\n  color: #fff;\n  background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%);\n}\n.vms-link-slide-glyph {\n  width: 56px;\n  height: 56px;\n  border-radius: 16px;\n  display: grid;\n  place-items: center;\n  background: rgba(199, 184, 255, 0.12);\n  color: #c7b8ff;\n  border: 0.5px solid rgba(199, 184, 255, 0.28);\n}\n.vms-link-slide b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\n.vms-link-slide code {\n  max-width: min(520px, 90%);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  padding: 6px 9px;\n  border-radius: 8px;\n  background: rgba(255, 255, 255, 0.07);\n  color: rgba(255, 255, 255, 0.62);\n  font-family: var(--dsh-font-family-code, monospace);\n  font-size: 10px;\n}\n.vms-link-slide-actions { display: flex; gap: 7px; margin-top: 3px; }\n.vms-link-slide-actions .vms-primary-btn,\n.vms-link-slide-actions .vms-ghost-btn {\n  height: 31px;\n  padding: 0 11px;\n  border-color: rgba(255, 255, 255, 0.18);\n  background: rgba(255, 255, 255, 0.08);\n  color: #fff;\n}\n.vms-link-slide-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\n\n/* Media tab */\n.vms-media-tab { height: 100%; }\n.vms-media-tab-head {\n  flex: none;\n  height: 48px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 10px;\n  padding: 0 9px 0 13px;\n  border-bottom: 0.5px solid var(--vms-line);\n  background: var(--vms-layer);\n}\n.vms-media-tab-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\n.vms-media-tab-title b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-media-tab-title span:last-child {\n  font-family: var(--dsh-font-family-code, monospace);\n  font-size: 9px;\n  color: var(--vms-ink4);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.vms-media-tab-actions { display: flex; align-items: center; gap: 4px; flex: none; }\n.vms-media-tab-body { flex: 1; min-height: 0; position: relative; background: #08090c; }\n\n.vms-native-video, .vms-native-video video { width: 100%; height: 100%; }\n.vms-native-video { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\n.vms-native-video video { object-fit: contain; background: #08090c; }\n.vms-native-audio {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 15px;\n  padding: 24px;\n  background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 36%, #08090c), #08090c 72%);\n}\n.vms-native-audio-art {\n  width: 138px;\n  height: 138px;\n  border-radius: 20px;\n  display: grid;\n  place-items: center;\n  color: rgba(255, 255, 255, 0.86);\n  background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));\n  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.14);\n}\n.vms-native-audio-title { text-align: center; color: #fff; }\n.vms-native-audio-title b { display: block; font-size: 14px; font-weight: 550; }\n.vms-native-audio-title span {\n  display: block;\n  margin-top: 3px;\n  font-family: var(--dsh-font-family-code, monospace);\n  font-size: 9.5px;\n  color: rgba(255, 255, 255, 0.52);\n}\n.vms-native-audio audio { width: min(92%, 520px); }\n.vms-media-error {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 24px;\n  text-align: center;\n  color: rgba(255, 255, 255, 0.86);\n  background: rgba(8, 10, 14, 0.92);\n  font-size: 11px;\n}\n\n/* Native inline playback inside a card */\n.vms-inline-video, .vms-inline-audio { position: absolute; inset: 0; z-index: 3; }\n.vms-inline-video { background: #05070a; }\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\n.vms-inline-audio {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 9px;\n  padding: 11px;\n  color: #fff;\n  background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));\n}\n.vms-inline-audio-head { display: flex; align-items: center; gap: 7px; min-width: 0; }\n.vms-inline-audio-glyph {\n  width: 26px;\n  height: 26px;\n  border-radius: 7px;\n  display: grid;\n  place-items: center;\n  background: rgba(255, 255, 255, 0.13);\n  flex: none;\n}\n.vms-inline-audio-head b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-inline-audio-native { width: 100%; height: 32px; }\n.vms-inline-expand {\n  position: absolute;\n  top: 6px;\n  right: 6px;\n  z-index: 5;\n  width: 24px;\n  height: 24px;\n  border: 0.5px solid rgba(255, 255, 255, 0.18);\n  border-radius: 7px;\n  display: grid;\n  place-items: center;\n  background: rgba(8, 10, 14, 0.62);\n  color: #fff;\n  backdrop-filter: blur(8px);\n}\n.vms-inline-expand:hover { background: rgba(8, 10, 14, 0.82); }\n.vms-card[data-playing] .vms-card-index,\n.vms-card[data-playing] .vms-kind-badge,\n.vms-card[data-playing] .vms-duration { opacity: 0; pointer-events: none; }\n\n/* The first prototype hid its own <audio>; native inline controls must show. */\n.vms-inline-audio audio.vms-inline-audio-native { display: block; }\n';
+// src/client/extra.css
+var extra_default = `/* Native media, the media tab, and the lightbox host. */
 
-// plugins/vyra-media-studio/src/client/styles.css
+.vms-lightbox-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: #08090c;
+}
+
+.vms-lightbox {
+  --yarl__color_backdrop: transparent;
+  --yarl__container_background_color: transparent;
+  --yarl__color_button: rgba(255, 255, 255, 0.82);
+  --yarl__color_button_active: #fff;
+  --yarl__color_button_disabled: rgba(255, 255, 255, 0.36);
+  --yarl__button_filter: none;
+  --yarl__icon_size: 20px;
+  --yarl__toolbar_padding: 6px;
+  --yarl__navigation_button_padding: 12px 8px;
+  --yarl__slide_icon_error_size: 32px;
+  --yarl__counter_color: rgba(255, 255, 255, 0.78);
+  --yarl__counter_filter: none;
+  width: 100%;
+  height: 100%;
+}
+.vms-lightbox .yarl__container { background: transparent; }
+.vms-lightbox .yarl__slide { padding: 0; }
+.vms-lightbox .yarl__slide_image { object-fit: contain; }
+.vms-lightbox .yarl__toolbar { padding: 6px; }
+.vms-lightbox .yarl__button { padding: 6px; border-radius: 8px; }
+.vms-lightbox .yarl__button:hover { background: rgba(255, 255, 255, 0.12); }
+.vms-lightbox .yarl__navigation_prev,
+.vms-lightbox .yarl__navigation_next { padding: 12px 7px; border-radius: 10px; }
+.vms-lightbox .yarl__counter {
+  font-family: var(--dsh-font-family-code, "Cascadia Mono", Consolas, monospace);
+  font-size: 9.5px;
+  line-height: 18px;
+  margin: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(8, 10, 14, 0.55);
+}
+.vms-lightbox .yarl__thumbnails_container {
+  background: rgba(8, 10, 14, 0.78);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 8px;
+}
+.vms-lightbox .yarl__thumbnails_thumbnail { background: #0d1016; }
+.vms-lightbox .yarl__thumbnails_thumbnail_active { border-color: var(--vms-accent); }
+.vms-lightbox-thumb-video { width: 100%; height: 100%; object-fit: cover; }
+.vms-lightbox-thumb-icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.82);
+  background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));
+}
+.vms-lightbox-thumb-icon.is-link { background: linear-gradient(145deg, #1a1826, #0e0d16); color: #c7b8ff; }
+
+.vms-audio-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  color: #fff;
+  background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 38%, #08090c), #08090c 72%);
+}
+.vms-audio-slide-art {
+  width: 136px;
+  height: 136px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.86);
+  background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.vms-audio-slide-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 42px;
+  width: min(82%, 420px);
+}
+.vms-audio-slide-wave i {
+  flex: 1;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.55);
+  animation: vms-wave 1.05s ease-in-out infinite alternate;
+}
+.vms-audio-slide-title { text-align: center; }
+.vms-audio-slide-title b { display: block; font-size: 14px; font-weight: 550; }
+.vms-audio-slide-title span {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.52);
+}
+.vms-audio-slide audio { width: min(92%, 520px); margin-top: 4px; }
+
+.vms-link-slide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 26px;
+  text-align: center;
+  color: #fff;
+  background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%);
+}
+.vms-link-slide-glyph {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(199, 184, 255, 0.12);
+  color: #c7b8ff;
+  border: 0.5px solid rgba(199, 184, 255, 0.28);
+}
+.vms-link-slide b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }
+.vms-link-slide code {
+  max-width: min(520px, 90%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 10px;
+}
+.vms-link-slide-actions { display: flex; gap: 7px; margin-top: 3px; }
+.vms-link-slide-actions .vms-primary-btn,
+.vms-link-slide-actions .vms-ghost-btn {
+  height: 31px;
+  padding: 0 11px;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.vms-link-slide-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }
+
+/* Media tab */
+.vms-media-tab { height: 100%; }
+.vms-media-tab-head {
+  flex: none;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 9px 0 13px;
+  border-bottom: 0.5px solid var(--vms-line);
+  background: var(--vms-layer);
+}
+.vms-media-tab-title { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.vms-media-tab-title b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vms-media-tab-title span:last-child {
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9px;
+  color: var(--vms-ink4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vms-media-tab-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.vms-media-tab-body { flex: 1; min-height: 0; position: relative; background: #08090c; }
+
+.vms-native-video, .vms-native-video video { width: 100%; height: 100%; }
+.vms-native-video { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.vms-native-video video { object-fit: contain; background: #08090c; }
+.vms-native-audio {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 24px;
+  background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 36%, #08090c), #08090c 72%);
+}
+.vms-native-audio-art {
+  width: 138px;
+  height: 138px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.86);
+  background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.vms-native-audio-title { text-align: center; color: #fff; }
+.vms-native-audio-title b { display: block; font-size: 14px; font-weight: 550; }
+.vms-native-audio-title span {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.52);
+}
+.vms-native-audio audio { width: min(92%, 520px); }
+.vms-media-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(8, 10, 14, 0.92);
+  font-size: 11px;
+}
+
+/* Native inline playback inside a card */
+.vms-inline-video, .vms-inline-audio { position: absolute; inset: 0; z-index: 3; }
+.vms-inline-video { background: #05070a; }
+.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vms-inline-audio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px;
+  color: #fff;
+  background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));
+}
+.vms-inline-audio-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.vms-inline-audio-glyph {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.13);
+  flex: none;
+}
+.vms-inline-audio-head b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vms-inline-audio-native { width: 100%; height: 32px; }
+.vms-inline-expand {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+  width: 24px;
+  height: 24px;
+  border: 0.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 14, 0.62);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+.vms-inline-expand:hover { background: rgba(8, 10, 14, 0.82); }
+.vms-card[data-playing] .vms-card-index,
+.vms-card[data-playing] .vms-kind-badge,
+.vms-card[data-playing] .vms-duration { opacity: 0; pointer-events: none; }
+
+/* The first prototype hid its own <audio>; native inline controls must show. */
+.vms-inline-audio audio.vms-inline-audio-native { display: block; }
+
+/* The route's own reason, shown under a failed media element. */
+.vms-error-detail {
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
+/* Host capability report shown beside a failed scan. */
+.vms-diagnostic {
+  width: min(100%, 520px);
+  max-height: 220px;
+  overflow: auto;
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--vms-layer2);
+  border: 0.5px solid var(--vms-line);
+  color: var(--vms-ink3);
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+`;
+
+// src/client/styles.css
 var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 54px 62px 60px 68px 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-meta, .vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 500px) {\r\n  .vms-row { grid-template-columns: 48px minmax(0, 1fr) 52px 28px; }\r\n  .vms-row-meta, .vms-row-size, .vms-row-time { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n';
 
-// plugins/vyra-media-studio/src/client/library.js
+// src/client/library.js
 var import_react5 = __toESM(require("react"), 1);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
 var React = __toESM(require("react"), 1);
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/types.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/types.js
 var MODULE_CAROUSEL = "carousel";
 var MODULE_CONTROLLER = "controller";
 var MODULE_NAVIGATION = "navigation";
@@ -780,7 +1086,7 @@ var IMAGE_FIT_CONTAIN = "contain";
 var IMAGE_FIT_COVER = "cover";
 var UNKNOWN_ACTION_TYPE = "Unknown action type";
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
 var import_react_dom = require("react-dom");
 var cssPrefix$3 = "yarl__";
 function clsx(...classes) {
@@ -2390,7 +2696,7 @@ function Lightbox({ carousel, animation, render, toolbar, controller, noScroll: 
   );
 }
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/counter/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/counter/index.js
 var React2 = __toESM(require("react"), 1);
 var defaultCounterProps = {
   separator: "/",
@@ -2423,7 +2729,7 @@ function Counter({ augment, addChild }) {
   addChild(MODULE_CONTROLLER, createModule(PLUGIN_COUNTER, CounterComponent));
 }
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/fullscreen/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/fullscreen/index.js
 var React3 = __toESM(require("react"), 1);
 var defaultFullscreenProps = {
   auto: false,
@@ -2549,7 +2855,7 @@ function Fullscreen({ augment, contains, addParent }) {
   addParent(contains(PLUGIN_THUMBNAILS) ? PLUGIN_THUMBNAILS : MODULE_CONTROLLER, createModule(PLUGIN_FULLSCREEN, FullscreenContextProvider));
 }
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/inline/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/inline/index.js
 var React4 = __toESM(require("react"), 1);
 function InlineContainer({ inline: { className, style, ...rest } = {}, styles, children }) {
   return React4.createElement(LightboxRoot, { className: clsx(cssClass("relative"), className), style: { [cssVar("controller_overscroll_behavior")]: "contain auto", ...styles.root, ...style }, ...rest }, children);
@@ -2572,7 +2878,7 @@ function Inline({ augment, replace, remove }) {
   replace(MODULE_PORTAL, createModule(PLUGIN_INLINE, InlineContainer));
 }
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/thumbnails/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/thumbnails/index.js
 var React5 = __toESM(require("react"), 1);
 var defaultThumbnailsProps = {
   ref: null,
@@ -2814,7 +3120,7 @@ function Thumbnails({ augment, contains, append, addParent }) {
   }
 }
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/video/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/video/index.js
 var React6 = __toESM(require("react"), 1);
 var defaultVideoProps = {
   controls: true,
@@ -2999,7 +3305,7 @@ function Video2({ augment }) {
   }));
 }
 
-// plugins/vyra-media-studio/node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/zoom/index.js
+// node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/zoom/index.js
 var React7 = __toESM(require("react"), 1);
 var defaultZoomProps = {
   minZoom: 1,
@@ -3558,10 +3864,10 @@ var Zoom = ({ augment, addModule }) => {
   addModule(createModule(PLUGIN_ZOOM, ZoomContextProvider));
 };
 
-// plugins/vyra-media-studio/src/client/components.js
+// src/client/components.js
 var import_react4 = __toESM(require("react"), 1);
 
-// plugins/vyra-media-studio/src/client/helpers.js
+// src/client/helpers.js
 var LIBRARY_ID = "vyra-media-studio/library";
 var VIDEO_ID = "vyra-media-studio/video";
 var AUDIO_ID = "vyra-media-studio/audio";
@@ -3801,7 +4107,7 @@ function slideFor(item, index, sessionId) {
   return { type: "vms-link", url: item.url, title: item.title, domain: domainOf(item) };
 }
 
-// plugins/vyra-media-studio/src/client/icons.js
+// src/client/icons.js
 var import_react3 = __toESM(require("react"), 1);
 var ICONS = {
   alert: TriangleAlert,
@@ -3858,7 +4164,7 @@ function IconButton3({ name, label, onClick, active, disabled, className = "" })
   }, import_react3.default.createElement(Icon2, { name }));
 }
 
-// plugins/vyra-media-studio/src/client/components.js
+// src/client/components.js
 var h = import_react4.default.createElement;
 function MediaThumb({ item, sessionId, lazy = true }) {
   const boxRef = (0, import_react4.useRef)(null);
@@ -4111,6 +4417,24 @@ function NativeMedia({ item, sessionId, visible = true }) {
   const src = mediaSrc(sessionId, item);
   const videoRef = (0, import_react4.useRef)(null);
   const [failed, setFailed] = (0, import_react4.useState)(false);
+  const [failure, setFailure] = (0, import_react4.useState)(null);
+  (0, import_react4.useEffect)(() => {
+    if (item.source === "url") {
+      setFailure(null);
+      return void 0;
+    }
+    const controller = new AbortController();
+    fetch(src, { method: "HEAD", signal: controller.signal, credentials: "same-origin" }).then((response) => {
+      if (response.ok) {
+        setFailure(null);
+        return;
+      }
+      const code = response.headers.get("x-vyra-media-error") ?? `http-${response.status}`;
+      return response.text().then((text) => setFailure(text ? `${code}\uFF1A${text}` : code));
+    }).catch(() => {
+    });
+    return () => controller.abort();
+  }, [src, item.source]);
   (0, import_react4.useEffect)(() => {
     if (item.kind === "video" && !visible && videoRef.current) videoRef.current.pause();
   }, [item.kind, visible]);
@@ -4120,6 +4444,7 @@ function NativeMedia({ item, sessionId, visible = true }) {
       { className: "vms-media-error" },
       h(Icon2, { name: "alert", size: 18 }),
       h("span", null, item.source === "url" ? "\u5728\u7EBF\u5A92\u4F53\u52A0\u8F7D\u5931\u8D25" : "\u5F53\u524D\u6D4F\u89C8\u5668\u65E0\u6CD5\u64AD\u653E\u6B64\u5A92\u4F53"),
+      failure !== null && h("code", { className: "vms-error-detail" }, failure),
       h(
         "a",
         { href: src, download: item.fileName || void 0, className: "vms-error-download" },
@@ -4255,7 +4580,7 @@ function renderLightboxThumbnail({ slide }) {
   return void 0;
 }
 
-// plugins/vyra-media-studio/src/client/library.js
+// src/client/library.js
 var h2 = import_react5.default.createElement;
 var LIGHTBOX_PLUGINS = [Inline, Video2, Zoom, Thumbnails, Counter, Fullscreen];
 function AddLinkForm({ onSubmit, onClose }) {
@@ -4407,14 +4732,23 @@ function LibraryBody(props) {
   const [addOpen, setAddOpen] = (0, import_react5.useState)(false);
   const [limit, setLimit] = (0, import_react5.useState)(PAGE_SIZE);
   const [notice, setNotice] = (0, import_react5.useState)("");
+  const [diagnostic, setDiagnostic] = (0, import_react5.useState)(null);
   (0, import_react5.useEffect)(() => {
     const controller = new AbortController();
     let alive = true;
     setState((previous) => ({ ...previous, loading: true, error: null }));
     fetch(apiUrl("api/vyra-media/list", { sessionId }), { signal: controller.signal, credentials: "same-origin" }).then(async (response) => {
-      if (!response.ok) throw new Error(`\u626B\u63CF\u5931\u8D25\uFF08HTTP ${response.status}\uFF09`);
-      const body = await response.json();
-      if (body.ok !== true) throw new Error(body.error || "\u626B\u63CF\u5931\u8D25");
+      let body;
+      try {
+        body = await response.json();
+      } catch {
+        body = void 0;
+      }
+      if (!response.ok || body?.ok !== true) {
+        const reason = body?.error ?? await response.text().catch(() => "") ?? "";
+        const code = body?.code ?? `http-${response.status}`;
+        throw new Error(`${code}\uFF1A${reason || `HTTP ${response.status}`}`);
+      }
       return body;
     }).then((body) => {
       if (!alive) return;
@@ -4445,6 +4779,16 @@ function LibraryBody(props) {
   (0, import_react5.useEffect)(() => {
     if (state.root !== "") setLinks(readLinks(state.root));
   }, [state.root]);
+  (0, import_react5.useEffect)(() => {
+    if (!state.error) {
+      setDiagnostic(null);
+      return void 0;
+    }
+    const controller = new AbortController();
+    fetch(apiUrl("api/vyra-media/diagnose", { sessionId }), { signal: controller.signal, credentials: "same-origin" }).then((response) => response.json()).then(setDiagnostic).catch(() => {
+    });
+    return () => controller.abort();
+  }, [state.error, sessionId]);
   (0, import_react5.useEffect)(() => {
     if (notice === "") return void 0;
     const timer = setTimeout(() => setNotice(""), 2e3);
@@ -4702,6 +5046,7 @@ function LibraryBody(props) {
         h2("span", { className: "vms-empty-art" }, h2(Icon2, { name: "alert", size: 20 })),
         h2("b", null, "\u5A92\u4F53\u5E93\u52A0\u8F7D\u5931\u8D25"),
         h2("p", null, state.error),
+        diagnostic !== null && h2("pre", { className: "vms-diagnostic" }, JSON.stringify(diagnostic, null, 2)),
         h2("button", { type: "button", className: "vms-primary-btn", onClick: () => setReloadKey((value) => value + 1) }, "\u91CD\u8BD5")
       ),
       !state.loading && !state.error && filtered.length === 0 && h2(
@@ -4809,7 +5154,7 @@ function MediaTab(props) {
   );
 }
 
-// plugins/vyra-media-studio/src/client/entry.js
+// src/client/entry.js
 function installStyles() {
   const style = document.createElement("style");
   style.dataset.vyraMediaStudio = "";

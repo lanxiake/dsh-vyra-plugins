@@ -273,3 +273,34 @@
 
 /* The first prototype hid its own <audio>; native inline controls must show. */
 .vms-inline-audio audio.vms-inline-audio-native { display: block; }
+
+/* The route's own reason, shown under a failed media element. */
+.vms-error-detail {
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
+/* Host capability report shown beside a failed scan. */
+.vms-diagnostic {
+  width: min(100%, 520px);
+  max-height: 220px;
+  overflow: auto;
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--vms-layer2);
+  border: 0.5px solid var(--vms-line);
+  color: var(--vms-ink3);
+  font-family: var(--dsh-font-family-code, monospace);
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

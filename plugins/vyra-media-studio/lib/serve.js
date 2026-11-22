@@ -1,10 +1,11 @@
 /**
  * Authenticated media file response: workspace containment, ETag, and one
- * bounded Range window streamed in 1 MiB chunks. Pure enough to unit-test with
- * a fake `ctx.fs`.
+ * bounded Range window. The complete file is read through the filesystem seam
+ * in chunks so a large video never lands in memory at once.
  */
 import { extensionOf, mimeOf } from './media-types.js'
 import { entityTagOf, parseRange } from './range.js'
+import { containsTarget, isAbsolutePath, joinWorkspacePath } from './paths.js'
 
 /** Hard cap on one file request; larger files are refused, never truncated. */
 export const MAX_MEDIA_BYTES = 8 * 1024 * 1024 * 1024
@@ -17,13 +18,19 @@ const BASE_HEADERS = {
 
 /**
  * @param {number} status - HTTP status.
- * @param {string} message - plain diagnostic, never file content.
+ * @param {string} code - stable diagnostic code, never file content.
+ * @param {string} [detail] - extra diagnostic text.
  * @returns {Response} a non-cacheable text response.
  */
-function failure(status, message) {
-  return new Response(message, {
+function failure(status, code, detail) {
+  return new Response(detail === undefined ? code : `${code}: ${detail}`, {
     status,
-    headers: { ...BASE_HEADERS, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'private, no-store' },
+    headers: {
+      ...BASE_HEADERS,
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'private, no-store',
+      'X-Vyra-Media-Error': code,
+    },
   })
 }
 
@@ -44,21 +51,36 @@ function fileNameStar(name) {
  */
 function rangeStream(fs, target, offset, length, signal) {
   let sent = 0
+  let finished = false
   return new ReadableStream({
     async pull(controller) {
-      if (signal.aborted) { controller.close(); return }
-      if (sent >= length) { controller.close(); return }
+      if (finished) return
+      if (signal.aborted) { finished = true; controller.close(); return }
+      if (sent >= length) { finished = true; controller.close(); return }
       const window = Math.min(CHUNK_BYTES, length - sent)
-      const bytes = await fs.readByteRange(target, { offset: offset + sent, length: window }, signal)
-      if (bytes.byteLength === 0) { controller.close(); return }
+      let bytes
+      try {
+        bytes = await fs.readByteRange(target, { offset: offset + sent, length: window }, signal)
+      } catch (error) {
+        finished = true
+        controller.error(error)
+        return
+      }
+      if (bytes === undefined || bytes.byteLength === 0) { finished = true; controller.close(); return }
       controller.enqueue(bytes)
       sent += bytes.byteLength
     },
+    cancel() { finished = true },
   })
 }
 
 /**
  * Build the GET/HEAD response for one workspace file.
+ *
+ * A workspace-relative path is resolved against the Session root and must stay
+ * inside it. An absolute path is served wherever the filesystem backend grants
+ * read authority — the same rule the platform's own file route follows, so a
+ * delivered file outside the workspace still plays.
  * @param {object} options - request inputs.
  * @param {Request} options.request - admitted fetch request.
  * @param {object} options.fs - `ctx.fs`.
@@ -70,23 +92,27 @@ export async function serveMediaFile({ request, fs, workspaceRoot, maxBytes = MA
   const url = new URL(request.url)
   const requestedPath = url.searchParams.get('path')
   if (requestedPath === null || requestedPath.length === 0 || requestedPath.includes('\0')) {
-    return failure(400, 'missing path')
+    return failure(400, 'missing-path')
   }
 
-  let rootTarget
+  const absolute = isAbsolutePath(requestedPath)
   let target
   let info
   try {
-    rootTarget = await fs.resolve(workspaceRoot, { signal: request.signal })
-    target = await fs.resolve(requestedPath, { cwd: workspaceRoot, signal: request.signal })
-    if (!fs.contains(rootTarget, target)) return failure(403, 'outside workspace')
+    if (absolute) {
+      if (typeof fs.resolve !== 'function') return failure(503, 'fs-unavailable')
+      target = await fs.resolve(requestedPath, { signal: request.signal })
+    } else {
+      target = await resolveInsideWorkspace(fs, workspaceRoot, requestedPath, request.signal)
+    }
     info = await fs.stat(target, request.signal)
   } catch (error) {
+    if (error?.code === 'outside-workspace') return failure(403, 'outside-workspace', error.message)
     return fileSystemFailure(error)
   }
-  if (info === undefined) return failure(404, 'not found')
-  if (info.type !== 'file') return failure(403, 'not a regular file')
-  if (typeof info.size === 'number' && info.size > maxBytes) return failure(413, 'file exceeds byte limit')
+  if (info === undefined) return failure(404, 'not-found')
+  if (info.type !== 'file') return failure(403, 'not-regular-file')
+  if (typeof info.size === 'number' && info.size > maxBytes) return failure(413, 'too-large')
 
   const knownSize = typeof info.size === 'number' && Number.isFinite(info.size) && info.size >= 0
     ? info.size
@@ -135,6 +161,23 @@ export async function serveMediaFile({ request, fs, workspaceRoot, maxBytes = MA
 }
 
 /**
+ * Resolve a workspace-relative path and prove it stays inside the workspace.
+ * @param {object} fs - `ctx.fs`.
+ * @param {string} workspaceRoot - Session workspace root.
+ * @param {string} relativePath - the relative path from the request.
+ * @param {AbortSignal} signal - request cancellation.
+ * @returns {Promise<object>} the resolved target.
+ */
+async function resolveInsideWorkspace(fs, workspaceRoot, relativePath, signal) {
+  const workspaceTarget = await fs.resolve(workspaceRoot, { signal })
+  const target = await fs.resolve(joinWorkspacePath(workspaceRoot, relativePath), { signal })
+  if (!containsTarget(fs, workspaceTarget, target)) {
+    throw Object.assign(new Error(`"${relativePath}" is outside the workspace`), { code: 'outside-workspace' })
+  }
+  return target
+}
+
+/**
  * @param {unknown} error - thrown filesystem failure.
  * @returns {Response} status mapped from the stable `FsError` code.
  */
@@ -148,5 +191,6 @@ function fileSystemFailure(error) {
     FS_TOO_LARGE: 413,
     FS_ABORTED: 499,
   }
-  return failure(statuses[code] ?? 500, typeof code === 'string' ? code : 'filesystem error')
+  const detail = typeof error?.message === 'string' ? error.message : undefined
+  return failure(statuses[code] ?? 500, typeof code === 'string' ? code : 'filesystem-error', detail)
 }

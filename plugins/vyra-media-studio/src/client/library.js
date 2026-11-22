@@ -123,6 +123,7 @@ export function LibraryBody(props) {
   const [addOpen, setAddOpen] = useState(false)
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [notice, setNotice] = useState('')
+  const [diagnostic, setDiagnostic] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -130,9 +131,15 @@ export function LibraryBody(props) {
     setState(previous => ({ ...previous, loading: true, error: null }))
     fetch(apiUrl('api/vyra-media/list', { sessionId }), { signal: controller.signal, credentials: 'same-origin' })
       .then(async response => {
-        if (!response.ok) throw new Error(`扫描失败（HTTP ${response.status}）`)
-        const body = await response.json()
-        if (body.ok !== true) throw new Error(body.error || '扫描失败')
+        // The route answers JSON for its own failures; keep the code and reason
+        // so the panel can show what actually went wrong.
+        let body
+        try { body = await response.json() } catch { body = undefined }
+        if (!response.ok || body?.ok !== true) {
+          const reason = body?.error ?? (await response.text().catch(() => '')) ?? ''
+          const code = body?.code ?? `http-${response.status}`
+          throw new Error(`${code}：${reason || `HTTP ${response.status}`}`)
+        }
         return body
       })
       .then(body => {
@@ -163,6 +170,18 @@ export function LibraryBody(props) {
   useEffect(() => {
     if (state.root !== '') setLinks(readLinks(state.root))
   }, [state.root])
+
+  // When the scan fails, ask the Host what it can see. The capability report
+  // names a missing service or method instead of leaving a bare HTTP 500.
+  useEffect(() => {
+    if (!state.error) { setDiagnostic(null); return undefined }
+    const controller = new AbortController()
+    fetch(apiUrl('api/vyra-media/diagnose', { sessionId }), { signal: controller.signal, credentials: 'same-origin' })
+      .then(response => response.json())
+      .then(setDiagnostic)
+      .catch(() => { /* the panel already shows the primary failure */ })
+    return () => controller.abort()
+  }, [state.error, sessionId])
 
   useEffect(() => {
     if (notice === '') return undefined
@@ -333,6 +352,7 @@ export function LibraryBody(props) {
         h('span', { className: 'vms-empty-art' }, h(Icon, { name: 'alert', size: 20 })),
         h('b', null, '媒体库加载失败'),
         h('p', null, state.error),
+        diagnostic !== null && h('pre', { className: 'vms-diagnostic' }, JSON.stringify(diagnostic, null, 2)),
         h('button', { type: 'button', className: 'vms-primary-btn', onClick: () => setReloadKey(value => value + 1) }, '重试')),
       !state.loading && !state.error && filtered.length === 0 && h('div', { className: 'vms-empty' },
         h('span', { className: 'vms-empty-art' }, h(Icon, { name: 'search', size: 20 })),

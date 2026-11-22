@@ -172,6 +172,22 @@ export function NativeMedia({ item, sessionId, visible = true }) {
   const src = mediaSrc(sessionId, item)
   const videoRef = useRef(null)
   const [failed, setFailed] = useState(false)
+  const [failure, setFailure] = useState(null)
+
+  // Ask the route directly so a 4xx/5xx body — the actual reason — is shown
+  // instead of the element's generic decode failure.
+  useEffect(() => {
+    if (item.source === 'url') { setFailure(null); return undefined }
+    const controller = new AbortController()
+    fetch(src, { method: 'HEAD', signal: controller.signal, credentials: 'same-origin' })
+      .then(response => {
+        if (response.ok) { setFailure(null); return }
+        const code = response.headers.get('x-vyra-media-error') ?? `http-${response.status}`
+        return response.text().then(text => setFailure(text ? `${code}：${text}` : code))
+      })
+      .catch(() => { /* aborted or offline: the media element reports its own failure */ })
+    return () => controller.abort()
+  }, [src, item.source])
 
   useEffect(() => {
     if (item.kind === 'video' && !visible && videoRef.current) videoRef.current.pause()
@@ -181,6 +197,7 @@ export function NativeMedia({ item, sessionId, visible = true }) {
     return h('div', { className: 'vms-media-error' },
       h(Icon, { name: 'alert', size: 18 }),
       h('span', null, item.source === 'url' ? '在线媒体加载失败' : '当前浏览器无法播放此媒体'),
+      failure !== null && h('code', { className: 'vms-error-detail' }, failure),
       h('a', { href: src, download: item.fileName || undefined, className: 'vms-error-download' },
         h(Icon, { name: 'download', size: 13 }), '下载原文件'))
   }
