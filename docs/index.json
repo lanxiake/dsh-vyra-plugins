@@ -2292,29 +2292,31 @@
       }
     },
     {
-      "name": "@yunmiao/studymate",
+      "name": "vyra-studymate",
       "title": {
-        "en": "StudyMate",
+        "en": "StudyMate Learning",
         "zh": "StudyMate 学习"
       },
       "description": {
-        "en": "StudyMate learning skills and lesson engine for DeepSeek Harness, Google Antigravity, Codex and ChatGPT Work.",
-        "zh": "StudyMate 学习技能与课程引擎，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。"
+        "en": "StudyMate learning skills and lesson engine, maintained here with audio lessons, narrated video and hands-on workshops: turn a subject into lessons, practice and projects inside DSH. Based on StudyMate by Cattofu (MIT).",
+        "zh": "StudyMate 学习技能与课程引擎：把一门科目拆成课程、练习与项目，并可将每一课派生为音频课、旁白视频和动手工作坊。基于 Cattofu 的 StudyMate（MIT）。"
       },
-      "author": "Cattofu",
-      "homepage": "https://github.com/Miaotofu01/Study-Mate#readme",
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiM0ZjQ2ZTUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMzIgMjB2MjYiLz48cGF0aCBkPSJNMzIgMjBjLTQtMy05LTQtMTQtNHYyNmM1IDAgMTAgMSAxNCA0IDQtMyA5LTQgMTQtNFYxNmMtNSAwLTEwIDEtMTQgNHoiLz48L2c+PHBhdGggZD0iTTI2LjUgMjkuNWwxMCA1LTEwIDV6IiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
-        "url": "https://github.com/Miaotofu01/Study-Mate"
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/vyra-studymate"
       },
       "versions": [
         {
-          "version": "2.0.4",
-          "publishTimestamp": 1795337400,
+          "version": "2.1.0",
+          "publishTimestamp": 1795354811,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "677cc3aba9a7f07fcf0b81571be36abe77cbffa1",
-            "path": "plugins/studymate"
+            "commit": "0f02c9852ade1c91681a69d01d41403d38c5c176",
+            "path": "plugins/vyra-studymate"
           }
         }
       ],
@@ -2324,12 +2326,11 @@
           "study",
           "learning",
           "skills",
-          "lessons"
-        ],
-        "sortKeys": {
-          "stars": 1509,
-          "downloads": 8046
-        }
+          "lessons",
+          "audio",
+          "video",
+          "workshop"
+        ]
       }
     },
     {

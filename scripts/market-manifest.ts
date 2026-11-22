@@ -86,6 +86,10 @@ const XIANYU_DELIVERY_ICON =
 const WECHAT_LOCAL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwN2MxNjAiLz48cGF0aCBkPSJNMTggMjBoMjhhNCA0IDAgMCAxIDQgNHYxNGE0IDQgMCAwIDEtNCA0SDMybC05IDd2LTdoLTVhNCA0IDAgMCAxLTQtNFYyNGE0IDQgMCAwIDEgNC00eiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjI1IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjM5IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjwvc3ZnPg=='
 
+/** Inline icon for `vyra-studymate`: a white book with a play mark on indigo. */
+const STUDYMATE_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiM0ZjQ2ZTUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMzIgMjB2MjYiLz48cGF0aCBkPSJNMzIgMjBjLTQtMy05LTQtMTQtNHYyNmM1IDAgMTAgMSAxNCA0IDQtMyA5LTQgMTQtNFYxNmMtNSAwLTEwIDEtMTQgNHoiLz48L2c+PHBhdGggZD0iTTI2LjUgMjkuNWwxMCA1LTEwIDV6IiBmaWxsPSIjZmZmIi8+PC9zdmc+'
+
 /** Inline icon for `vyra-agent-cli-manager`. */
 const AGENT_CLI_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4NCiAgPHRpdGxlPkFnZW50IENMSSBNYW5hZ2VyPC90aXRsZT4NCiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz4NCiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+DQogICAgPHJlY3QgeD0iMTQiIHk9IjE2IiB3aWR0aD0iMzYiIGhlaWdodD0iMzIiIHJ4PSI1IiBvcGFjaXR5PSIwLjg1Ii8+DQogICAgPHBhdGggZD0iTTIyIDI3bDUgNS01IDUiLz4NCiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4NCiAgPC9nPg0KPC9zdmc+DQo='
@@ -2397,34 +2401,36 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: '@yunmiao/studymate',
+      name: 'vyra-studymate',
       title: {
-        en: 'StudyMate',
+        en: 'StudyMate Learning',
         zh: 'StudyMate 学习',
       },
       description: {
-        en: 'StudyMate learning skills and lesson engine for DeepSeek Harness, Google Antigravity, Codex and ChatGPT Work.',
-        zh: 'StudyMate 学习技能与课程引擎，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。',
+        en: 'StudyMate learning skills and lesson engine, maintained here with audio lessons, narrated video and hands-on workshops: turn a subject into lessons, practice and projects inside DSH. Based on StudyMate by Cattofu (MIT).',
+        zh: 'StudyMate 学习技能与课程引擎：把一门科目拆成课程、练习与项目，并可将每一课派生为音频课、旁白视频和动手工作坊。基于 Cattofu 的 StudyMate（MIT）。',
       },
-      author: 'Cattofu',
-      homepage: 'https://github.com/Miaotofu01/Study-Mate#readme',
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
       repository: {
-        url: 'https://github.com/Miaotofu01/Study-Mate',
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-studymate',
       },
+      icon: STUDYMATE_ICON,
       versions: {
-        '2.0.4': {
-          publishTimestamp: 1795337400,
+        '2.1.0': {
+          publishTimestamp: 1795354811,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '677cc3aba9a7f07fcf0b81571be36abe77cbffa1',
-            path: 'plugins/studymate',
+            commit: '0f02c9852ade1c91681a69d01d41403d38c5c176',
+            path: 'plugins/vyra-studymate',
           },
         },
       },
       metadata: {
         category: 'agent-runtime',
-        keywords: ['study', 'learning', 'skills', 'lessons'],
+        keywords: ['study', 'learning', 'skills', 'lessons', 'audio', 'video', 'workshop'],
       },
     },
     {
