@@ -46,6 +46,7 @@ const {
   compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
   localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility,
   pageCacheKey, cachedPage, rememberPage, pageCache,
+  parseRepoRef, specPath, buildBundleIndex,
 } = __internal
 
 // --- README images: a <picture> block must become the Markdown image it wraps --
@@ -407,6 +408,42 @@ assert.equal(visibility.get().sidebar, true)
   assert.equal(cachedPage(key, 40, 8), undefined, 'a page from another index revision is not reused')
   assert.deepEqual(cachedPage(key, 40, 7), { fetchedAt: 7, entries: [{ name: 'alpha' }] }, 'the same revision is reused')
   pageCache.clear()
+}
+
+// --- installed-state matching across source spellings ------------------------
+{
+  assert.deepEqual(parseRepoRef('git+https://github.com/o/r.git#abcdef'), { repo: 'o/r' })
+  assert.equal(specPath('git+https://x/o/r.git#sha&path:/plugins/foo'), 'plugins/foo')
+  const bundle = {
+    name: '@scope/dsh-foo', version: '1.0.0', installed: true,
+    source: 'github:owner/repo#sha&path:/plugins/foo',
+  }
+  const resolve = buildBundleIndex(new Map([[bundle.name, bundle]]))
+  assert.equal(resolve({ name: 'foo', versions: [] }), bundle, 'a short/unscoped entry finds a scoped bundle')
+  assert.equal(resolve({
+    name: 'other', versions: [],
+    repository: { url: 'https://github.com/mirror/repo', directory: 'plugins/foo' },
+  }), bundle, 'the same package directory matches across a repository mirror')
+  assert.equal(resolve({
+    name: 'other',
+    versions: [{ install: { spec: 'github:owner/repo#sha&path:/plugins/foo' } }],
+  }), bundle, 'the same Git spec matches')
+  assert.equal(resolve({
+    name: 'other', versions: [],
+    repository: { url: 'https://github.com/owner/repo' },
+  }), bundle, 'a repository with one installed bundle matches')
+  const npmBundle = { name: '@scope/foo', version: '1.2.3', installed: true, source: '@scope/foo@1.2.3' }
+  const npmResolve = buildBundleIndex(new Map([['npm', npmBundle]]))
+  assert.equal(npmResolve({
+    name: 'other',
+    versions: [{ install: { spec: '@scope/foo@1.0.0' } }],
+  }), npmBundle, 'the npm package name inside an install spec matches the bundle')
+
+  const ambiguous = buildBundleIndex(new Map([
+    ['a', { name: 'dsh-x', installed: true, source: 'github:o/a' }],
+    ['b', { name: '@s/x', installed: true, source: 'github:o/b' }],
+  ]))
+  assert.equal(ambiguous({ name: 'x', versions: [] }), undefined, 'an ambiguous short name is refused instead of guessed')
 }
 
 console.log('vyra-plugin-market: all checks passed')

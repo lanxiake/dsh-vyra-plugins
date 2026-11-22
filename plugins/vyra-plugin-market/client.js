@@ -368,6 +368,94 @@ window.__ModuleLoader__.load({
       return at <= 0 ? text : text.slice(0, at)
     }
 
+    /** The repository identity in a URL or install spec, without `.git`. */
+    function parseRepoRef(value) {
+      const text = String(value ?? '')
+      const match = /(?:github(?:\.com)?|gitcode(?:\.com)?|atomgit(?:\.com)?|gitee(?:\.com)?|gitlab(?:\.com)?)[/:]([^/#?\s]+)\/([^/#?\s]+?)(?:\.git)?(?=$|[#?&\s])/i.exec(text)
+      return match === null ? null : { repo: `${match[1]}/${match[2]}`.toLowerCase() }
+    }
+
+    /** The `path:` segment of a pnpm Git spec, normalized. */
+    function specPath(spec) {
+      const match = /(?:[#&?]|\b)path:\/?([^&?#\s]+)/i.exec(String(spec ?? ''))
+      return match === null ? '' : match[1].replace(/^\/+|\/+$/g, '').toLowerCase()
+    }
+
+    /**
+     * Match a market entry to the profile's installed bundle even when the two
+     * names differ (scoped vs short, GitHub vs a GitCode mirror, a display name
+     * vs the package name). Keys are tried strongest first; a key shared by
+     * more than one bundle is refused rather than guessed.
+     */
+    function buildBundleIndex(bundles) {
+      const index = new Map()
+      const add = (key, bundle) => {
+        if (key === '') return
+        const list = index.get(key)
+        if (list === undefined) index.set(key, [bundle])
+        else if (!list.includes(bundle)) list.push(bundle)
+      }
+      for (const bundle of bundles.values()) {
+        const name = String(bundle.name ?? '').toLowerCase()
+        if (name === '') continue
+        add(`name:${name}`, bundle)
+        const npm = npmSpecName(String(bundle.source ?? ''))
+        if (npm !== '') add(`name:${npm.toLowerCase()}`, bundle)
+        const repo = parseRepoRef(bundle.source)
+        const path = specPath(bundle.source)
+        if (repo !== null) {
+          add(`repo:${repo.repo}`, bundle)
+          if (path !== '') {
+            add(`repopath:${repo.repo}#${path}`, bundle)
+            add(`path:${path}`, bundle)
+          }
+        } else if (path !== '') {
+          add(`path:${path}`, bundle)
+        }
+        add(`short:${shortBundleName(name).toLowerCase()}`, bundle)
+      }
+      return (entry) => {
+        const keys = []
+        const name = String(entry.name ?? '').toLowerCase()
+        if (name !== '') keys.push(`name:${name}`)
+        const directory = String(entry.repository?.directory ?? '').replace(/^\/+|\/+$/g, '').toLowerCase()
+        const entryRepo = parseRepoRef(typeof entry.repository === 'string' ? entry.repository : entry.repository?.url)
+        for (const version of Array.isArray(entry.versions) ? entry.versions : []) {
+          const spec = version?.install?.spec
+          const npm = npmSpecName(spec)
+          if (npm !== '') keys.push(`name:${npm.toLowerCase()}`)
+          const repo = parseRepoRef(spec) ?? (version?.source?.type === 'git' ? parseRepoRef(version.source.url) : null)
+          const path = specPath(spec)
+            || String(version?.source?.path ?? '').replace(/^\/+|\/+$/g, '').toLowerCase()
+          if (repo !== null) {
+            if (path !== '') keys.push(`repopath:${repo.repo}#${path}`)
+            if (path !== '') keys.push(`path:${path}`)
+            keys.push(`repo:${repo.repo}`)
+          } else if (path !== '') {
+            keys.push(`path:${path}`)
+          }
+        }
+        if (entryRepo !== null) {
+          keys.push(`repo:${entryRepo.repo}`)
+          if (directory !== '') {
+            keys.push(`repopath:${entryRepo.repo}#${directory}`)
+            keys.push(`path:${directory}`)
+          }
+        } else if (directory !== '') {
+          keys.push(`path:${directory}`)
+        }
+        if (name !== '') keys.push(`short:${shortBundleName(name).toLowerCase()}`)
+        const seen = new Set()
+        for (const key of keys) {
+          if (seen.has(key)) continue
+          seen.add(key)
+          const list = index.get(key)
+          if (list !== undefined && list.length === 1) return list[0]
+        }
+        return undefined
+      }
+    }
+
     /** The version a spec pins, or '' when it pins none. */
     function specVersion(spec) {
       const text = String(spec ?? '').trim()
@@ -2488,9 +2576,9 @@ window.__ModuleLoader__.load({
           remote.pluginManager.listBundles(),
         ])
         if (!page.ok || !bundles.ok) return
-        const installed = new Set(bundles.value.map((bundle) => bundle.name))
+        const resolveBundle = buildBundleIndex(new Map(bundles.value.map((bundle) => [bundle.name, bundle])))
         const updatable = page.value.entries
-          .filter((entry) => installed.has(entry.name) && updateTarget(entry) !== undefined).length
+          .filter((entry) => resolveBundle(entry) !== undefined && updateTarget(entry) !== undefined).length
         if (updatable === 0) return
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           new Notification('插件市场 · Plugin market', { body: `发现 ${updatable} 个插件可更新 / ${updatable} update(s) available` })
@@ -2814,16 +2902,18 @@ window.__ModuleLoader__.load({
 
       const entries = listing === null || listing.value === null ? [] : listing.value.entries
 
-      // A built-in aggregator has no Host-side installation annotation, so it
-      // is narrowed here against the bundles the profile actually holds. Host
-      // entries already carry the richer `provided` / update states.
+      // Match every market entry to the profile's bundles, not just entries
+      // whose package name happens to equal the bundle name. This is what
+      // stops an entry from another source offering Install for a plugin that
+      // is already on disk under a scoped or mirrored name.
+      const bundleOf = useMemo(() => buildBundleIndex(bundles), [bundles])
       const liveEntries = useMemo(() => entries.map((entry) => {
-        if (entry.external !== true) return entry
-        const bundle = bundles.get(entry.name)
-        return bundle === undefined
-          ? entry
-          : { ...entry, installation: { status: 'installed', installedVersion: bundle.version } }
-      }), [entries, bundles])
+        const bundle = bundleOf(entry)
+        if (bundle === undefined || bundle.installed === false) return entry
+        const status = entry.installation?.status
+        if (status !== undefined && status !== 'not-installed') return entry
+        return { ...entry, installation: { status: 'installed', installedVersion: bundle.version } }
+      }), [entries, bundleOf])
 
       // The installed view is independent of any market source: every bundle
       // the Host reports, including ones installed by hand or by another
@@ -2885,15 +2975,15 @@ window.__ModuleLoader__.load({
 
       const selected = useMemo(() => filteredEntries
         .filter((entry) => picked.has(entry.name))
-        .map((entry) => ({ entry, bundle: bundles.get(entry.name) })), [filteredEntries, picked, bundles])
+        .map((entry) => ({ entry, bundle: bundleOf(entry) })), [filteredEntries, picked, bundleOf])
       const plan = useMemo(() => planBulk(selected), [selected])
 
       // ponytail: 收集所有可更新的插件（用于"全部更新"按钮）
       const allUpdatable = useMemo(() => {
         return filteredEntries
           .filter((entry) => entryState(entry) === 'updatable')
-          .map((entry) => ({ entry, bundle: bundles.get(entry.name) }))
-      }, [filteredEntries, bundles])
+          .map((entry) => ({ entry, bundle: bundleOf(entry) }))
+      }, [filteredEntries, bundleOf])
 
       /** Apply a query everywhere at once: field, state, and loaded results. */
       const search = useCallback((next) => {
@@ -3335,7 +3425,7 @@ window.__ModuleLoader__.load({
                     h('span', { className: 'vpm-meta' }, t('total', { n: filteredEntries.length }))),
                   h('ul', { className: 'vpm-grid' },
                     filteredEntries.map((entry) => h(Card, {
-                      key: entry.name, entry, bundle: bundles.get(entry.name), lang, t, text, busy, stats: statsIndex,
+                      key: entry.name, entry, bundle: bundleOf(entry), lang, t, text, busy, stats: statsIndex,
                       picked: picked.has(entry.name),
                       failure: job.failures.get(entry.name),
                       copied,
@@ -3366,7 +3456,7 @@ window.__ModuleLoader__.load({
           onRun: () => { start(confirm.orders) },
         }),
         detailEntry === null ? null : h(DetailDialog, {
-          entry: detailEntry, bundle: bundles.get(detailEntry.name), lang, t, text, busy, stats: statsIndex,
+          entry: detailEntry, bundle: bundleOf(detailEntry), lang, t, text, busy, stats: statsIndex,
           onRun: start,
           onConfirm: setConfirm,
           onClose: () => { setDetailEntry(null) },
@@ -3445,6 +3535,7 @@ window.__ModuleLoader__.load({
         compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
         localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility,
         pageCacheKey, cachedPage, rememberPage, pageCache,
+        parseRepoRef, specPath, buildBundleIndex,
       },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {

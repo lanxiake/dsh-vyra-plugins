@@ -421,6 +421,21 @@ await (async () => {
   assert.ok(texts(tag).join('').includes('failedTag'), 'the tag renders the Failed label')
 }
 
+// --- a plugin installed from another market is not offered for install again --
+{
+  const installed = entry('@scope/dsh-foo', { installation: { status: 'not-installed' } })
+  const { tree } = await mount({
+    entries: [installed],
+    bundles: [{
+      name: 'foo', version: '1.0.0', installed: true, enabled: true, removable: true,
+      source: 'github:owner/repo#sha&path:/plugins/foo', rows: [], overrides: [],
+    }],
+  })
+  assert.ok(texts(tree).join(' | ').includes('tagInstalled'), 'the card shows Installed despite the different package spelling')
+  assert.equal(buttonByText(tree, 'install'), undefined, 'the card does not offer Install again')
+  assert.ok(buttonByText(tree, 'uninstall') !== undefined, 'the matched bundle is controllable from the card')
+}
+
 // --- the Installed view lists bundles no market index knows about ------------
 {
   const bundle = {
