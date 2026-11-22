@@ -1,0 +1,124 @@
+/**
+ * Render the settings page to a standalone HTML file so it can be looked at.
+ *
+ * The stub React walks the element tree the same way the tests do, so what this
+ * prints is what the component function actually produces — not a mock-up.
+ */
+import { readFileSync, writeFileSync } from 'node:fs'
+import vm from 'node:vm'
+
+const source = readFileSync(new URL('../client.js', import.meta.url), 'utf8')
+
+const flatten = children => {
+  const out = []
+  for (const child of children) {
+    if (Array.isArray(child)) out.push(...flatten(child))
+    else if (child !== null && child !== undefined && child !== false && child !== true) out.push(child)
+  }
+  return out
+}
+
+const makeReact = () => ({
+  createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: flatten(children) }),
+  Fragment: Symbol('Fragment'),
+  useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
+  useEffect: () => {},
+  useMemo: fn => fn(),
+  useRef: value => ({ current: value }),
+  useCallback: fn => fn,
+  useSyncExternalStore: () => undefined,
+})
+
+const escapeHtml = text => String(text)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+function render(node) {
+  if (node === null || node === undefined || node === false || node === true) return ''
+  if (typeof node === 'string' || typeof node === 'number') return escapeHtml(node)
+  if (Array.isArray(node)) return node.map(render).join('')
+  if (typeof node.type === 'function') return render(node.type({ ...node.props, children: node.children }))
+  if (typeof node.type === 'symbol') return node.children.map(render).join('')
+  const attrs = Object.entries(node.props ?? {})
+    .filter(([key, value]) => key !== 'children' && typeof value !== 'function'
+      && value !== undefined && value !== null && value !== false)
+    // React maps className to class; this renderer has to do it explicitly, or
+    // the preview shows attributes no browser applies.
+    .map(([key, value]) => (key === 'className' ? ['class', value] : [key, value]))
+    .map(([key, value]) => (value === true ? ` ${key}` : ` ${key}="${escapeHtml(value)}"`))
+    .join('')
+  return `<${node.type}${attrs}>${node.children.map(render).join('')}</${node.type}>`
+}
+
+let registered
+const window = {
+  __ModuleLoader__: {
+    load(definition) {
+      registered = definition.factory(name => {
+        if (name === 'react') return makeReact()
+        if (name === 'react-dom') return { createPortal: node => node }
+        throw new Error(`unexpected require(${name})`)
+      })
+    },
+  },
+  localStorage: { getItem: () => null, setItem: () => {} },
+  document: {
+    documentElement: { lang: 'zh-CN' }, baseURI: 'http://127.0.0.1/',
+    head: { appendChild() {} },
+    createElement: tag => ({ tagName: tag, setAttribute() {}, remove() {} }),
+  },
+  location: { origin: 'http://127.0.0.1' },
+  setTimeout, clearTimeout,
+  fetch: () => Promise.reject(new Error('offline')),
+}
+const context = { window, document: window.document, localStorage: window.localStorage,
+  location: window.location, setTimeout, clearTimeout, fetch: window.fetch, console, URL, TextDecoder, structuredClone }
+context.globalThis = context
+vm.createContext(context)
+vm.runInContext(source, context, { filename: 'client.js' })
+
+const { h, ModelBlock, AccountsBlock, ForwardBlock, Card, BlockTitle, ToolCard, CSS } = registered.__test
+
+const models = [
+  { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false },
+  { id: 'particle-ai/particle-1:free', name: 'particle-1', contextWindow: 256000, vision: true },
+  { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'nemotron-3.5-super-vl', contextWindow: 131072, vision: true },
+  { id: 'baidu/ernie-5.5-flash-preview:free', name: 'ernie-5.5-flash-preview', contextWindow: 131072, vision: false },
+  { id: 'liquid/lfm-3-1.7b:free', name: 'lfm-3-1.7b', contextWindow: 32768, vision: false },
+]
+
+const body = render(h('div', { className: 'vfm_page' },
+  h('header', { className: 'vfm_head' },
+    h('div', { className: 'vfm_headtext' },
+      h('h2', { className: 'vfm_title' }, '免费模型'),
+      h('p', { className: 'vfm_sub' }, '装上就能用。选个模型，需要更多额度时登录一次国内账号。'))),
+  h(ModelBlock, { models, selected: '', onSelect: () => {}, laneOk: true, onRecheck: () => {}, busy: false }),
+  h(AccountsBlock, {
+    providers: undefined,
+    status: { qodercn: { state: 'ready', nickname: '小明', credits: 120 } },
+    onLogin: () => {}, onClaim: () => {},
+  }),
+  h(ForwardBlock, { enabled: true, port: 8899, hasKey: true, key: 'sk-x', model: '', onToggle: () => {} }),
+  h(Card, { title: h(BlockTitle, {}, '给别的工具用（可选）'), hint: '把本地地址写进下面两个工具的配置。写入前会整份备份，随时可还原；你原来的配置不会被动。' },
+    h('div', { className: 'vfm_tools' },
+      h(ToolCard, { tool: 'codex', name: 'Codex', status: { configured: true, command: 'codex-vyra' }, onWrite: () => {}, onRestore: () => {} }),
+      h(ToolCard, { tool: 'claude', name: 'Claude Code', status: { configured: false }, onWrite: () => {}, onRestore: () => {} })))
+))
+
+const html = `<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>vyra-free-model settings preview</title>
+<style>
+  :root{
+    --dsw-alias-bg-base:#0f1115; --dsw-alias-bg-layer-1:#171a21; --dsw-alias-bg-layer-2:#1e222b;
+    --dsw-alias-bg-overlay:#242934; --dsw-alias-border-l1:#2a2f3a; --dsw-alias-border-l2:#3a4150;
+    --dsw-alias-brand-primary:#4c8dff; --dsw-alias-label-primary:#e8ecf3; --dsw-alias-label-secondary:#9aa4b5;
+    --dsw-alias-state-error-primary:#ef5b5b; --dsw-alias-state-idle-primary:#5b6575;
+    --dsw-alias-state-success-primary:#3ecfa0; --dsw-alias-state-warn-primary:#f5c542;
+  }
+  body{margin:0;padding:28px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);
+    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif;max-width:720px}
+  ${CSS}
+</style></head>
+<body>${body}</body></html>`
+
+writeFileSync(new URL('../.preview.html', import.meta.url), html)
+console.log('wrote .preview.html,', html.length, 'bytes')

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>vyra-free-model settings preview</title>
+<style>
+  :root{
+    --dsw-alias-bg-base:#0f1115; --dsw-alias-bg-layer-1:#171a21; --dsw-alias-bg-layer-2:#1e222b;
+    --dsw-alias-bg-overlay:#242934; --dsw-alias-border-l1:#2a2f3a; --dsw-alias-border-l2:#3a4150;
+    --dsw-alias-brand-primary:#4c8dff; --dsw-alias-label-primary:#e8ecf3; --dsw-alias-label-secondary:#9aa4b5;
+    --dsw-alias-state-error-primary:#ef5b5b; --dsw-alias-state-idle-primary:#5b6575;
+    --dsw-alias-state-success-primary:#3ecfa0; --dsw-alias-state-warn-primary:#f5c542;
+  }
+  body{margin:0;padding:28px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);
+    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif;max-width:720px}
+  
+.vfm_page{display:flex;flex-direction:column;gap:20px;padding:2px 0 28px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.55}
+
+/* the page head: title left, master switch right, on one baseline */
+.vfm_head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.vfm_headtext{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vfm_title{margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em}
+.vfm_sub{margin:0;color:var(--dsw-alias-label-secondary);font-size:12.5px;max-width:56ch}
+
+/* ── cards ────────────────────────────────────────────────────────────── */
+.vfm_card{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px 22px;
+  border-radius:18px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 70%,transparent);
+  background:linear-gradient(168deg,color-mix(in srgb,var(--dsw-alias-bg-layer-2) 92%,transparent),color-mix(in srgb,var(--dsw-alias-bg-layer-1) 86%,transparent));
+  overflow:hidden}
+.vfm_card::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 140% at 10% -30%,color-mix(in srgb,var(--dsw-alias-brand-primary) 9%,transparent),transparent 62%)}
+.vfm_card>*{position:relative}
+
+.vfm_cardhead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vfm_cardtitle{display:flex;align-items:center;gap:9px;margin:0;font-size:13.5px;font-weight:600;letter-spacing:-0.005em}
+.vfm_blocktitle{display:flex;align-items:center;gap:9px;margin:0;font-size:13.5px;font-weight:600}
+.vfm_blocktitle::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--dsw-alias-brand-primary);flex:none}
+
+.vfm_note{margin:0;color:var(--dsw-alias-label-secondary);font-size:12.5px;line-height:1.6}
+.vfm_count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
+
+/* ── selectable rows (models and accounts share this) ─────────────────── */
+.vfm_rows{display:flex;flex-direction:column;gap:2px;margin:0 -8px}
+.vfm_row{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border-radius:10px;
+  border:1px solid transparent;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;
+  transition:background-color .15s ease,border-color .15s ease}
+.vfm_row:hover{background:var(--dsw-alias-bg-layer-2)}
+.vfm_row:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
+.vfm_row[data-on="1"]{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 46%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-brand-primary) 8%,transparent)}
+.vfm_dot{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l2);flex:none;position:relative;transition:border-color .15s ease}
+.vfm_row[data-on="1"] .vfm_dot{border-color:var(--dsw-alias-brand-primary)}
+.vfm_row[data-on="1"] .vfm_dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--dsw-alias-brand-primary)}
+.vfm_name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfm_meta{display:flex;align-items:center;gap:7px;flex:none;color:var(--dsw-alias-label-secondary);font-size:11.5px;font-variant-numeric:tabular-nums}
+.vfm_tag{padding:1.5px 6px;border-radius:5px;border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 60%,transparent);
+  background:var(--dsw-alias-bg-layer-2);font-size:11px;line-height:1.5}
+
+/* ── buttons ──────────────────────────────────────────────────────────── */
+.vfm_btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 72%,transparent);
+  background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);
+  font:inherit;font-size:12.5px;line-height:1.5;white-space:nowrap;
+  transition:background-color .15s ease,border-color .15s ease,transform .1s ease}
+.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1);border-color:var(--dsw-alias-border-l2)}
+.vfm_btn:active:not(:disabled){transform:translateY(1px)}
+.vfm_btn:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
+.vfm_btn:disabled{opacity:.5;cursor:default}
+.vfm_btn[data-kind="primary"]{border-color:transparent;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:500}
+.vfm_btn[data-kind="primary"]:hover:not(:disabled){filter:brightness(1.08)}
+.vfm_btn[data-kind="quiet"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
+.vfm_btn[data-kind="quiet"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+
+/* ── account cards ────────────────────────────────────────────────────── */
+.vfm_acct{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:11px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 88%,transparent);background:var(--dsw-alias-bg-layer-1)}
+.vfm_acct+.vfm_acct{margin-top:7px}
+.vfm_acct[data-state="ready"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 38%,transparent)}
+.vfm_acctmain{display:flex;align-items:center;gap:9px;min-width:0}
+.vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── tool configuration ───────────────────────────────────────────────── */
+.vfm_tools{display:flex;flex-direction:column;gap:10px}
+.vfm_tool{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 14px;border-radius:12px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 90%,transparent);background:var(--dsw-alias-bg-layer-1)}
+.vfm_tool[data-state="done"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 36%,transparent)}
+.vfm_tool[data-state="failed"]{border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 40%,transparent)}
+.vfm_toolmain{display:flex;flex-direction:column;gap:5px;min-width:0}
+.vfm_toolname{display:flex;align-items:center;gap:8px;font-weight:500}
+.vfm_toolhint{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.55}
+.vfm_toolactions{display:flex;align-items:center;gap:8px;flex:none}
+.vfm_cmd{display:inline-flex;align-items:center;gap:6px;margin-top:2px;padding:3px 8px;border-radius:6px;
+  background:var(--dsw-alias-bg-layer-2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  color:var(--dsw-alias-label-primary);align-self:flex-start;max-width:100%;overflow:hidden}
+.vfm_cmd code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── status dot ───────────────────────────────────────────────────────── */
+.vfm_state{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dsw-alias-label-secondary);flex:none}
+.vfm_state .vfm_dot{width:8px;height:8px;border:none;background:var(--dsw-alias-state-idle-primary)}
+.vfm_state .vfm_dot::after{display:none}
+.vfm_state[data-state="done"] .vfm_dot{background:var(--dsw-alias-state-success-primary)}
+.vfm_state[data-state="failed"] .vfm_dot{background:var(--dsw-alias-state-error-primary)}
+.vfm_state[data-state="stale"] .vfm_dot{background:var(--dsw-alias-state-warn-primary)}
+.vfm_state[data-state="busy"] .vfm_dot{background:var(--dsw-alias-brand-primary);animation:vfm_pulse 1.1s ease-in-out infinite}
+@keyframes vfm_pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* ── forward block fields ─────────────────────────────────────────────── */
+.vfm_field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;
+  border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 80%,transparent)}
+.vfm_field:first-of-type{border-top:none;padding-top:0}
+.vfm_label{color:var(--dsw-alias-label-secondary);font-size:12px;flex:none}
+.vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  color:var(--dsw-alias-label-primary);text-align:right}
+
+/* ── banners and states ───────────────────────────────────────────────── */
+.vfm_banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:11px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-state-warn-primary) 46%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 8%,var(--dsw-alias-bg-layer-1));
+  font-size:12.5px;color:var(--dsw-alias-label-primary)}
+.vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:10px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-state-warn-primary) 40%,transparent);font-size:12.5px;
+  color:var(--dsw-alias-label-secondary)}
+.vfm_center{display:flex;align-items:center;justify-content:center;padding:40px 16px;
+  color:var(--dsw-alias-label-secondary);font-size:12.5px}
+.vfm_centerbox{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.vfm_more{align-self:flex-start;margin-top:2px}
+
+</style></head>
+<body><div class="vfm_page"><header class="vfm_head"><div class="vfm_headtext"><h2 class="vfm_title">免费模型</h2><p class="vfm_sub">装上就能用。选个模型，需要更多额度时登录一次国内账号。</p></div></header><section class="vfm_card"><div class="vfm_cardhead"><h3 class="vfm_blocktitle">模型</h3><div class="vfm_meta"><span class="vfm_count">4 个可用</span><button type="button" class="vfm_btn" data-kind="ghost">重新检测</button></div></div><div class="vfm_rows"><button type="button" class="vfm_row" data-on="1"><span class="vfm_dot"></span><span class="vfm_name">自动选择（推荐）</span><span class="vfm_meta"><span>自动挑一个当前能用的</span></span></button><button type="button" class="vfm_row"><span class="vfm_dot"></span><span class="vfm_name">particle-1</span><span class="vfm_meta"><span class="vfm_tag">250K</span><span class="vfm_tag">能看图</span></span></button><button type="button" class="vfm_row"><span class="vfm_dot"></span><span class="vfm_name">nemotron-3.5-super-vl</span><span class="vfm_meta"><span class="vfm_tag">128K</span><span class="vfm_tag">能看图</span></span></button><button type="button" class="vfm_row"><span class="vfm_dot"></span><span class="vfm_name">ernie-5.5-flash-preview</span><span class="vfm_meta"><span class="vfm_tag">128K</span></span></button><button type="button" class="vfm_row"><span class="vfm_dot"></span><span class="vfm_name">lfm-3-1.7b</span><span class="vfm_meta"><span class="vfm_tag">32K</span></span></button></div></section><section class="vfm_card"><div class="vfm_cardhead"><h3 class="vfm_blocktitle">账号（可选）</h3></div><p class="vfm_note">不登录也能用上面的免费模型。登录一个国内账号，就能多一份额度。</p><div class="vfm_acct" data-state="ready"><div class="vfm_acctmain"><span class="vfm_acctname">Qoder 中国版</span><span class="vfm_meta"><span>小明</span><span class="vfm_tag">120 积分</span></span></div><div class="vfm_meta"><button type="button" class="vfm_btn">重新领取</button></div></div><div class="vfm_acct" data-state=""><div class="vfm_acctmain"><span class="vfm_acctname">TRAE</span><span class="vfm_meta"></span></div><div class="vfm_meta"><button type="button" class="vfm_btn">登录</button></div></div><div class="vfm_acct" data-state=""><div class="vfm_acctmain"><span class="vfm_acctname">ZCode</span><span class="vfm_meta"></span></div><div class="vfm_meta"><button type="button" class="vfm_btn">登录</button></div></div><div class="vfm_acct" data-state=""><div class="vfm_acctmain"><span class="vfm_acctname">MiniMax</span><span class="vfm_meta"></span></div><div class="vfm_meta"><button type="button" class="vfm_btn">登录</button></div></div><div class="vfm_acct" data-state=""><div class="vfm_acctmain"><span class="vfm_acctname">有道 LobsterAI</span><span class="vfm_meta"></span></div><div class="vfm_meta"><button type="button" class="vfm_btn">登录</button></div></div><div class="vfm_acct" data-state=""><div class="vfm_acctmain"><span class="vfm_acctname">讯飞 Loomy</span><span class="vfm_meta"></span></div><div class="vfm_meta"><button type="button" class="vfm_btn">登录</button></div></div><button type="button" class="vfm_btn" data-kind="quiet">更多</button></section><section class="vfm_card"><div class="vfm_cardhead"><h3 class="vfm_blocktitle">让别的工具也用上（可选）</h3><div class="vfm_meta"><button type="button" class="vfm_btn" data-kind="ghost">关闭</button></div></div><p class="vfm_note">打开后，Cursor、Claude Code 这类工具就能用同一批免费模型。只在你这台电脑上有效。</p><div class="vfm_field"><span class="vfm_label">地址</span><code class="vfm_code">http://127.0.0.1:8899/v1</code></div><div class="vfm_field"><span class="vfm_label">密钥</span><code class="vfm_code">sk-••••••••••••</code></div><div class="vfm_field"><span class="vfm_label">给 Cursor</span><button type="button" class="vfm_btn" data-kind="ghost">复制</button></div><div class="vfm_field"><span class="vfm_label">给 Claude Code</span><button type="button" class="vfm_btn" data-kind="ghost">复制</button></div></section><section class="vfm_card"><div class="vfm_cardhead"><h3 class="vfm_blocktitle">给别的工具用（可选）</h3></div><p class="vfm_note">把本地地址写进下面两个工具的配置。写入前会整份备份，随时可还原；你原来的配置不会被动。</p><div class="vfm_tools"><div class="vfm_tool" data-state="done" data-tool="codex"><div class="vfm_toolmain"><span class="vfm_toolname">Codex<span class="vfm_state" data-state="done"><span class="vfm_dot"></span><span>已写入</span></span></span><span class="vfm_toolhint">用它启动就能连上这里的免费模型；原有设置仍保持原样。</span><span class="vfm_cmd"><code>codex-vyra</code></span></div><div class="vfm_toolactions"><button type="button" class="vfm_btn" data-kind="quiet">还原</button></div></div><div class="vfm_tool" data-state="idle" data-tool="claude"><div class="vfm_toolmain"><span class="vfm_toolname">Claude Code<span class="vfm_state" data-state="idle"><span class="vfm_dot"></span><span>未配置</span></span></span><span class="vfm_toolhint">会新增一段独立配置，你原有的设置不动。</span></div><div class="vfm_toolactions"><button type="button" class="vfm_btn" data-kind="primary">写入</button></div></div></div></section></div></body></html>

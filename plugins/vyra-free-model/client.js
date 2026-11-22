@@ -88,6 +88,19 @@ window.__ModuleLoader__.load({
         'master.disable': '先关掉',
         'master.enable': '重新打开',
         'master.offHint': '已关闭。模型不会出现在选择器里；随时可以重新打开。',
+
+        'tools.idle': '未配置',
+        'tools.writing': '正在写入…',
+        'tools.written': '已写入',
+        'tools.failed': '写入失败',
+        'tools.hintIdle': '会新增一段独立配置，你原有的设置不动。',
+        'tools.hintWritten': '用它启动就能连上这里的免费模型；原有设置仍保持原样。',
+        'tools.write': '写入',
+        'tools.retry': '重试',
+        'tools.restore': '还原',
+        'tools.title': '给别的工具用（可选）',
+        'tools.hint': '把本地地址写进下面两个工具的配置。写入前会整份备份，随时可还原；你原来的配置不会被动。',
+        'tools.needPort': '请先打开上面的端口，再写入配置。',
       },
       en: {
         nav: 'Free models',
@@ -142,6 +155,19 @@ window.__ModuleLoader__.load({
         'master.disable': 'Turn off',
         'master.enable': 'Turn back on',
         'master.offHint': 'Off. These models stay out of the picker; turn them back on any time.',
+
+        'tools.idle': 'Not configured',
+        'tools.writing': 'Writing…',
+        'tools.written': 'Configured',
+        'tools.failed': 'Write failed',
+        'tools.hintIdle': 'Adds its own section; your existing settings stay untouched.',
+        'tools.hintWritten': 'Launch it with this command to reach the free models here; your own setup is unchanged.',
+        'tools.write': 'Write',
+        'tools.retry': 'Retry',
+        'tools.restore': 'Restore',
+        'tools.title': 'Use from other tools (optional)',
+        'tools.hint': 'Writes the local address into these two tools. Each file is backed up first and can be restored; your current settings are left alone.',
+        'tools.needPort': 'Turn the port on above first, then write the configuration.',
       },
     }
 
@@ -207,40 +233,229 @@ window.__ModuleLoader__.load({
     // ── styles ───────────────────────────────────────────────────────────────
 
     const CSS = `
-.vfm_page{display:flex;flex-direction:column;gap:20px;padding:4px 0 24px;color:var(--dsw-alias-label-primary);font-size:13px}
-.vfm_head{display:flex;flex-direction:column;gap:4px}
-.vfm_headrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.vfm_title{font-size:16px;font-weight:600;margin:0}
-.vfm_sub{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5}
-.vfm_card{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1);padding:14px}
-.vfm_cardhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-.vfm_cardtitle{font-size:13px;font-weight:600;margin:0}
-.vfm_note{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;margin:8px 0 0}
-.vfm_row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:transparent;width:100%;text-align:left;color:inherit;font:inherit}
+.vfm_page{display:flex;flex-direction:column;gap:20px;padding:2px 0 28px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.55}
+
+/* the page head: title left, master switch right, on one baseline */
+.vfm_head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.vfm_headtext{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vfm_title{margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em}
+.vfm_sub{margin:0;color:var(--dsw-alias-label-secondary);font-size:12.5px;max-width:56ch}
+
+/* ── cards ────────────────────────────────────────────────────────────── */
+.vfm_card{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px 22px;
+  border-radius:18px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 70%,transparent);
+  background:linear-gradient(168deg,color-mix(in srgb,var(--dsw-alias-bg-layer-2) 92%,transparent),color-mix(in srgb,var(--dsw-alias-bg-layer-1) 86%,transparent));
+  overflow:hidden}
+.vfm_card::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 140% at 10% -30%,color-mix(in srgb,var(--dsw-alias-brand-primary) 9%,transparent),transparent 62%)}
+.vfm_card>*{position:relative}
+
+.vfm_cardhead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vfm_cardtitle{display:flex;align-items:center;gap:9px;margin:0;font-size:13.5px;font-weight:600;letter-spacing:-0.005em}
+.vfm_blocktitle{display:flex;align-items:center;gap:9px;margin:0;font-size:13.5px;font-weight:600}
+.vfm_blocktitle::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--dsw-alias-brand-primary);flex:none}
+
+.vfm_note{margin:0;color:var(--dsw-alias-label-secondary);font-size:12.5px;line-height:1.6}
+.vfm_count{color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums}
+
+/* ── selectable rows (models and accounts share this) ─────────────────── */
+.vfm_rows{display:flex;flex-direction:column;gap:2px;margin:0 -8px}
+.vfm_row{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border-radius:10px;
+  border:1px solid transparent;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;
+  transition:background-color .15s ease,border-color .15s ease}
 .vfm_row:hover{background:var(--dsw-alias-bg-layer-2)}
-.vfm_row[data-on="1"]{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}
-.vfm_dot{width:14px;height:14px;border-radius:50%;border:1px solid var(--dsw-alias-border-l2);flex:none;position:relative}
+.vfm_row:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
+.vfm_row[data-on="1"]{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 46%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-brand-primary) 8%,transparent)}
+.vfm_dot{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--dsw-alias-border-l2);flex:none;position:relative;transition:border-color .15s ease}
 .vfm_row[data-on="1"] .vfm_dot{border-color:var(--dsw-alias-brand-primary)}
 .vfm_row[data-on="1"] .vfm_dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--dsw-alias-brand-primary)}
 .vfm_name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vfm_meta{display:flex;gap:8px;align-items:center;flex:none;color:var(--dsw-alias-label-secondary);font-size:11px}
-.vfm_tag{border:1px solid var(--dsw-alias-border-l1);border-radius:4px;padding:1px 5px}
-.vfm_btn{border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:inherit;font-size:12px;padding:4px 10px}
-.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2)}
-.vfm_btn:disabled{opacity:.55;cursor:default}
-.vfm_center{display:flex;align-items:center;justify-content:center;padding:28px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
-.vfm_more{align-self:flex-start;margin-top:6px}
-.vfm_acct{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1)}
-.vfm_acct+.vfm_acct{margin-top:6px}
-.vfm_acctmain{display:flex;align-items:center;gap:8px;min-width:0}
+.vfm_meta{display:flex;align-items:center;gap:7px;flex:none;color:var(--dsw-alias-label-secondary);font-size:11.5px;font-variant-numeric:tabular-nums}
+.vfm_tag{padding:1.5px 6px;border-radius:5px;border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 60%,transparent);
+  background:var(--dsw-alias-bg-layer-2);font-size:11px;line-height:1.5}
+
+/* ── buttons ──────────────────────────────────────────────────────────── */
+.vfm_btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 72%,transparent);
+  background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);
+  font:inherit;font-size:12.5px;line-height:1.5;white-space:nowrap;
+  transition:background-color .15s ease,border-color .15s ease,transform .1s ease}
+.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1);border-color:var(--dsw-alias-border-l2)}
+.vfm_btn:active:not(:disabled){transform:translateY(1px)}
+.vfm_btn:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
+.vfm_btn:disabled{opacity:.5;cursor:default}
+.vfm_btn[data-kind="primary"]{border-color:transparent;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:500}
+.vfm_btn[data-kind="primary"]:hover:not(:disabled){filter:brightness(1.08)}
+.vfm_btn[data-kind="quiet"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
+.vfm_btn[data-kind="quiet"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+
+/* ── account cards ────────────────────────────────────────────────────── */
+.vfm_acct{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:11px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 88%,transparent);background:var(--dsw-alias-bg-layer-1)}
+.vfm_acct+.vfm_acct{margin-top:7px}
+.vfm_acct[data-state="ready"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 38%,transparent)}
+.vfm_acctmain{display:flex;align-items:center;gap:9px;min-width:0}
 .vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-state-warn-primary);font-size:12px;color:var(--dsw-alias-label-secondary)}
-.vfm_field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--dsw-alias-border-l1)}
-.vfm_field:first-of-type{border-top:none}
+
+/* ── tool configuration ───────────────────────────────────────────────── */
+.vfm_tools{display:flex;flex-direction:column;gap:10px}
+.vfm_tool{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 14px;border-radius:12px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 90%,transparent);background:var(--dsw-alias-bg-layer-1)}
+.vfm_tool[data-state="done"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 36%,transparent)}
+.vfm_tool[data-state="failed"]{border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 40%,transparent)}
+.vfm_toolmain{display:flex;flex-direction:column;gap:5px;min-width:0}
+.vfm_toolname{display:flex;align-items:center;gap:8px;font-weight:500}
+.vfm_toolhint{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.55}
+.vfm_toolactions{display:flex;align-items:center;gap:8px;flex:none}
+.vfm_cmd{display:inline-flex;align-items:center;gap:6px;margin-top:2px;padding:3px 8px;border-radius:6px;
+  background:var(--dsw-alias-bg-layer-2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  color:var(--dsw-alias-label-primary);align-self:flex-start;max-width:100%;overflow:hidden}
+.vfm_cmd code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── status dot ───────────────────────────────────────────────────────── */
+.vfm_state{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dsw-alias-label-secondary);flex:none}
+.vfm_state .vfm_dot{width:8px;height:8px;border:none;background:var(--dsw-alias-state-idle-primary)}
+.vfm_state .vfm_dot::after{display:none}
+.vfm_state[data-state="done"] .vfm_dot{background:var(--dsw-alias-state-success-primary)}
+.vfm_state[data-state="failed"] .vfm_dot{background:var(--dsw-alias-state-error-primary)}
+.vfm_state[data-state="stale"] .vfm_dot{background:var(--dsw-alias-state-warn-primary)}
+.vfm_state[data-state="busy"] .vfm_dot{background:var(--dsw-alias-brand-primary);animation:vfm_pulse 1.1s ease-in-out infinite}
+@keyframes vfm_pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* ── forward block fields ─────────────────────────────────────────────── */
+.vfm_field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;
+  border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 80%,transparent)}
+.vfm_field:first-of-type{border-top:none;padding-top:0}
 .vfm_label{color:var(--dsw-alias-label-secondary);font-size:12px;flex:none}
-.vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-primary);text-align:right}
-.vfm_banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--dsw-alias-state-warn-primary);background:var(--dsw-alias-bg-layer-2);font-size:12px;color:var(--dsw-alias-label-secondary)}
+.vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  color:var(--dsw-alias-label-primary);text-align:right}
+
+/* ── banners and states ───────────────────────────────────────────────── */
+.vfm_banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:11px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-state-warn-primary) 46%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 8%,var(--dsw-alias-bg-layer-1));
+  font-size:12.5px;color:var(--dsw-alias-label-primary)}
+.vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:10px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-state-warn-primary) 40%,transparent);font-size:12.5px;
+  color:var(--dsw-alias-label-secondary)}
+.vfm_center{display:flex;align-items:center;justify-content:center;padding:40px 16px;
+  color:var(--dsw-alias-label-secondary);font-size:12.5px}
+.vfm_centerbox{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.vfm_more{align-self:flex-start;margin-top:2px}
 `
+
+    // ── primitives ───────────────────────────────────────────────────────────
+
+    /**
+     * The card every block sits in.
+     *
+     * One shell rather than per-block markup: the three blocks must look like
+     * they belong to the same page, and the only way to guarantee that is to
+     * have exactly one place that draws a card.
+     */
+    function Card({ title, hint, action, children }) {
+      // `title` is a node, not a string, so the caller decides its own heading —
+      // wrapping it here nested one <h3> inside another and doubled the markup.
+      return h('section', { className: 'vfm_card' },
+        title === undefined && action === undefined
+          ? null
+          : h('div', { className: 'vfm_cardhead' },
+            title === undefined ? null : (typeof title === 'string' ? h('h3', { className: 'vfm_cardtitle' }, title) : title),
+            action === undefined ? null : h('div', { className: 'vfm_meta' }, action)),
+        hint === undefined ? null : h('p', { className: 'vfm_note' }, hint),
+        children)
+    }
+
+    /** A section heading with the accent marker. */
+    function BlockTitle({ children }) {
+      return h('h3', { className: 'vfm_blocktitle' }, children)
+    }
+
+    /**
+     * A button.
+     *
+     * Three kinds only. `primary` is for the one action a block wants the user
+     * to take; everything else is neutral or quiet, so a page of cards never
+     * competes for attention.
+     */
+    function Btn({ kind = 'ghost', disabled, onClick, children, title }) {
+      return h('button', {
+        type: 'button',
+        className: 'vfm_btn',
+        'data-kind': kind,
+        disabled: disabled === true,
+        title,
+        onClick: event => { if (disabled !== true) onClick?.(event) },
+      }, children)
+    }
+
+    /** A state dot with its label: colour is never the only signal. */
+    function StatusDot({ state = 'idle', label }) {
+      return h('span', { className: 'vfm_state', 'data-state': state },
+        h('span', { className: 'vfm_dot' }),
+        label === undefined ? null : h('span', {}, label))
+    }
+
+    /**
+     * One tool's configuration row.
+     *
+     * Five states, each with one sentence and at most one action: not
+     * configured, writing, written, failed, and stale (written but the port has
+     * moved since). A failure shows a trimmed reason rather than an upstream
+     * stack, and never the port key.
+     */
+    function ToolCard({ tool, name, status, onWrite, onRestore }) {
+      const entry = status !== null && typeof status === 'object' ? status : {}
+      const configured = entry.configured === true
+      const busy = entry.busy === true
+      const failed = typeof entry.error === 'string' && entry.error !== ''
+      const command = typeof entry.command === 'string' ? entry.command : ''
+      const state = busy ? 'busy' : failed ? 'failed' : configured ? 'done' : 'idle'
+
+      const label = busy
+        ? t('tools.writing')
+        : failed
+          ? t('tools.failed')
+          : configured
+            ? t('tools.written')
+            : t('tools.idle')
+
+      return h('div', { className: 'vfm_tool', 'data-state': state, 'data-tool': tool },
+        h('div', { className: 'vfm_toolmain' },
+          h('span', { className: 'vfm_toolname' }, name, h(StatusDot, { state, label })),
+          failed
+            ? h('span', { className: 'vfm_toolhint' }, truncate(entry.error, 120))
+            : h('span', { className: 'vfm_toolhint' }, configured ? t('tools.hintWritten') : t('tools.hintIdle')),
+          configured && command !== ''
+            ? h('span', { className: 'vfm_cmd' }, h('code', {}, command))
+            : null),
+        h('div', { className: 'vfm_toolactions' },
+          failed
+            ? h(Btn, { kind: 'primary', disabled: busy, onClick: () => onWrite?.(tool) }, t('tools.retry'))
+            : configured
+              ? h(Btn, { kind: 'quiet', disabled: busy, onClick: () => onRestore?.(tool) }, t('tools.restore'))
+              : h(Btn, { kind: 'primary', disabled: busy, onClick: () => onWrite?.(tool) }, t('tools.write'))))
+    }
+
+    /** Text trimmed for display, with an ellipsis so it reads as trimmed. */
+    function truncate(text, limit) {
+      const value = String(text ?? '')
+      return value.length <= limit ? value : `${value.slice(0, limit)}…`
+    }
+
+    /**
+     * The tools this plugin can configure.
+     *
+     * Both are named the way their own users name them; the launch command each
+     * one produces is what keeps the user's existing default untouched.
+     */
+    const TOOL_LABELS = Object.freeze([
+      Object.freeze({ id: 'codex', name: 'Codex' }),
+      Object.freeze({ id: 'claude', name: 'Claude Code' }),
+    ])
 
     // ── the model block ──────────────────────────────────────────────────────
 
@@ -261,8 +476,13 @@ window.__ModuleLoader__.load({
     function ModelBlock({ models, selected, onSelect, laneOk, onRecheck, busy }) {
       const [expanded, setExpanded] = useState(false)
       const roster = Array.isArray(models) ? models : []
-      const shown = expanded ? roster : roster.slice(0, COLLAPSED_ROWS)
-      const hidden = roster.length - shown.length
+      // The catalog already promotes the automatic model as its first row. Draw
+      // the row once: two entries named "自动选择" read as a bug, not a choice.
+      const automatic = roster.find(entry => entry.id === '' || entry.name === t('models.auto')
+        || entry.id === 'kilo-auto/free')
+      const others = roster.filter(entry => entry !== automatic)
+      const shown = expanded ? others : others.slice(0, COLLAPSED_ROWS)
+      const hidden = others.length - shown.length
 
       const row = (id, name, meta, isAuto) => h('button', {
         type: 'button',
@@ -274,20 +494,16 @@ window.__ModuleLoader__.load({
       h('span', { className: 'vfm_name' }, name),
       h('span', { className: 'vfm_meta' }, ...meta))
 
-      return h('section', { className: 'vfm_card' },
-        h('div', { className: 'vfm_cardhead' },
-          h('h3', { className: 'vfm_cardtitle' }, t('models.title')),
-          h('div', { className: 'vfm_meta' },
-            h('span', {}, t('models.count', { n: roster.length })),
-            h('button', {
-              type: 'button',
-              className: 'vfm_btn',
-              disabled: busy === true,
-              onClick: () => onRecheck?.(),
-            }, busy === true ? t('models.rechecking') : t('models.recheck')))),
-
+      return h(Card, {
+        title: h(BlockTitle, {}, t('models.title')),
+        action: [
+          h('span', { className: 'vfm_count' }, t('models.count', { n: others.length })),
+          h(Btn, { disabled: busy === true, onClick: () => onRecheck?.() },
+            busy === true ? t('models.rechecking') : t('models.recheck')),
+        ],
+      },
+      h('div', { className: 'vfm_rows' },
         row('', t('models.auto'), [h('span', {}, t('models.autoHint'))], true),
-
         ...shown.map(entry => row(
           entry.id,
           entry.name ?? entry.id,
@@ -296,17 +512,16 @@ window.__ModuleLoader__.load({
             entry.vision === true ? h('span', { className: 'vfm_tag' }, t('models.vision')) : null,
           ].filter(Boolean),
           false,
-        )),
+        ))),
 
-        hidden > 0
-          ? h('button', { type: 'button', className: 'vfm_btn vfm_more', onClick: () => setExpanded(true) },
-            t('models.more', { n: roster.length }))
-          : (expanded && roster.length > COLLAPSED_ROWS
-            ? h('button', { type: 'button', className: 'vfm_btn vfm_more', onClick: () => setExpanded(false) }, t('models.less'))
-            : null),
+      hidden > 0
+        ? h(Btn, { kind: 'quiet', onClick: () => setExpanded(true) }, t('models.more', { n: others.length }))
+        : (expanded && others.length > COLLAPSED_ROWS
+          ? h(Btn, { kind: 'quiet', onClick: () => setExpanded(false) }, t('models.less'))
+          : null),
 
-        roster.length === 0 ? h('p', { className: 'vfm_note' }, t('models.empty')) : null,
-        laneOk === false && roster.length > 0 ? h('p', { className: 'vfm_note' }, t('models.offline')) : null)
+      roster.length === 0 ? h('p', { className: 'vfm_note' }, t('models.empty')) : null,
+      laneOk === false && roster.length > 0 ? h('p', { className: 'vfm_note' }, t('models.offline')) : null)
     }
 
     // ── the account block ────────────────────────────────────────────────────
@@ -397,30 +612,31 @@ window.__ModuleLoader__.load({
       const extra = roster.filter(entry => entry.more === true)
 
       if (ownedElsewhere === true) {
-        return h('section', { className: 'vfm_card' },
-          h('div', { className: 'vfm_cardhead' }, h('h3', { className: 'vfm_cardtitle' }, t('accounts.title'))),
-          h('p', { className: 'vfm_note' }, t('accounts.ownedElsewhere')))
+        return h(Card, {
+          title: h(BlockTitle, {}, t('accounts.title')),
+          hint: t('accounts.ownedElsewhere'),
+        })
       }
 
-      return h('section', { className: 'vfm_card' },
-        h('div', { className: 'vfm_cardhead' }, h('h3', { className: 'vfm_cardtitle' }, t('accounts.title'))),
-        h('p', { className: 'vfm_note' }, t('accounts.hint')),
+      return h(Card, {
+        title: h(BlockTitle, {}, t('accounts.title')),
+        hint: t('accounts.hint'),
+      },
+      claimFailedAt !== undefined && claimFailedAt !== null
+        ? h('div', { className: 'vfm_warn' },
+          h('span', {}, t('accounts.claimFailed')),
+          h(Btn, { onClick: () => onClaim?.('') }, t('accounts.retry')))
+        : null,
 
-        claimFailedAt !== undefined && claimFailedAt !== null
-          ? h('div', { className: 'vfm_warn' },
-            h('span', {}, t('accounts.claimFailed')),
-            h('button', { type: 'button', className: 'vfm_btn', onClick: () => onClaim?.('') }, t('accounts.retry')))
-          : null,
+      ...primary.map(entry => providerRow(entry, entries[entry.id], handlers)),
 
-        ...primary.map(entry => providerRow(entry, entries[entry.id], handlers)),
-
-        extra.length > 0
-          ? (showMore
-            ? h(Fragment, {},
-              ...extra.map(entry => providerRow(entry, entries[entry.id], handlers)),
-              h('button', { type: 'button', className: 'vfm_btn vfm_more', onClick: () => setShowMore(false) }, t('accounts.less')))
-            : h('button', { type: 'button', className: 'vfm_btn vfm_more', onClick: () => setShowMore(true) }, t('accounts.more')))
-          : null)
+      extra.length > 0
+        ? (showMore
+          ? h(Fragment, {},
+            ...extra.map(entry => providerRow(entry, entries[entry.id], handlers)),
+            h(Btn, { kind: 'quiet', onClick: () => setShowMore(false) }, t('accounts.less')))
+          : h(Btn, { kind: 'quiet', onClick: () => setShowMore(true) }, t('accounts.more')))
+        : null)
     }
 
     // ── the forward block ────────────────────────────────────────────────────
@@ -480,41 +696,30 @@ window.__ModuleLoader__.load({
       const base = `http://127.0.0.1:${port}/v1`
       const realKey = typeof key === 'string' && key !== '' ? key : MASKED_KEY
 
-      return h('section', { className: 'vfm_card' },
-        h('div', { className: 'vfm_cardhead' },
-          h('h3', { className: 'vfm_cardtitle' }, t('forward.title')),
-          h('button', {
-            type: 'button',
-            className: 'vfm_btn',
-            onClick: () => onToggle?.(!(enabled === true)),
-          }, enabled === true ? t('forward.off') : t('forward.on'))),
+      return h(Card, {
+        title: h(BlockTitle, {}, t('forward.title')),
+        action: h(Btn, { kind: enabled === true ? 'ghost' : 'primary', onClick: () => onToggle?.(!(enabled === true)) },
+          enabled === true ? t('forward.off') : t('forward.on')),
+      },
+      h('p', { className: 'vfm_note' }, t('forward.hint')),
 
-        h('p', { className: 'vfm_note' }, t('forward.hint')),
-
-        enabled !== true
-          ? null
-          : h(Fragment, {},
-            h('div', { className: 'vfm_field' },
-              h('span', { className: 'vfm_label' }, t('forward.address')),
-              h('code', { className: 'vfm_code' }, base)),
-            h('div', { className: 'vfm_field' },
-              h('span', { className: 'vfm_label' }, t('forward.key')),
-              h('code', { className: 'vfm_code' }, hasKey === true ? MASKED_KEY : '')),
-            h('div', { className: 'vfm_field' },
-              h('span', { className: 'vfm_label' }, t('forward.forCursor')),
-              h('button', {
-                type: 'button',
-                className: 'vfm_btn',
-                onClick: () => void copy('cursor', cursorSnippet(port, realKey)),
-              }, copied === 'cursor' ? t('forward.copied') : t('forward.copy'))),
-            h('div', { className: 'vfm_field' },
-              h('span', { className: 'vfm_label' }, t('forward.forClaudeCode')),
-              h('button', {
-                type: 'button',
-                className: 'vfm_btn',
-                onClick: () => void copy('claude', claudeCodeSnippet(port, realKey, model)),
-              }, copied === 'claude' ? t('forward.copied') : t('forward.copy'))))
-      )
+      enabled !== true
+        ? null
+        : h(Fragment, {},
+          h('div', { className: 'vfm_field' },
+            h('span', { className: 'vfm_label' }, t('forward.address')),
+            h('code', { className: 'vfm_code' }, base)),
+          h('div', { className: 'vfm_field' },
+            h('span', { className: 'vfm_label' }, t('forward.key')),
+            h('code', { className: 'vfm_code' }, hasKey === true ? MASKED_KEY : '')),
+          h('div', { className: 'vfm_field' },
+            h('span', { className: 'vfm_label' }, t('forward.forCursor')),
+            h(Btn, { onClick: () => void copy('cursor', cursorSnippet(port, realKey)) },
+              copied === 'cursor' ? t('forward.copied') : t('forward.copy'))),
+          h('div', { className: 'vfm_field' },
+            h('span', { className: 'vfm_label' }, t('forward.forClaudeCode')),
+            h(Btn, { onClick: () => void copy('claude', claudeCodeSnippet(port, realKey, model)) },
+              copied === 'claude' ? t('forward.copied') : t('forward.copy')))))
     }
 
     // ── degradation ──────────────────────────────────────────────────────────
@@ -543,7 +748,7 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'vfm_banner' },
         h('span', {}, message.text),
         message.canRetry && typeof onRetry === 'function'
-          ? h('button', { type: 'button', className: 'vfm_btn', onClick: () => onRetry() }, t('load.retry'))
+          ? h(Btn, { kind: 'primary', onClick: () => onRetry() }, t('load.retry'))
           : null)
     }
 
@@ -562,6 +767,8 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(false)
       const [accountStatus, setAccountStatus] = useState({})
       const [forwardKey, setForwardKey] = useState('')
+      /** Per-tool configuration status, keyed by tool id. */
+      const [configureStatus, setConfigureStatus] = useState({})
 
       const load = useCallback(async () => {
         try {
@@ -577,6 +784,19 @@ window.__ModuleLoader__.load({
         api('/summary')
           .then(payload => { if (alive) setSummary(payload) })
           .catch(cause => { if (alive) setError(String(cause?.message ?? cause)) })
+        // Read alongside the summary so the tool cards paint configured on the
+        // first frame rather than after a second round trip.
+        api('/configure/status')
+          .then(payload => {
+            if (!alive) return
+            const next = {}
+            for (const row of payload?.tools ?? []) {
+              if (typeof row?.tool !== 'string') continue
+              next[row.tool] = { ...row, command: row.tool === 'claude' ? 'claude-vyra' : 'codex-vyra' }
+            }
+            setConfigureStatus(next)
+          })
+          .catch(() => {})
         return () => { alive = false }
       }, [])
 
@@ -721,6 +941,61 @@ window.__ModuleLoader__.load({
         } catch { /* the page keeps its current reading */ }
       }, [])
 
+      /** Read what each tool's configuration currently says. */
+      const loadConfigureStatus = useCallback(async () => {
+        try {
+          const payload = await api('/configure/status')
+          const next = {}
+          for (const row of payload?.tools ?? []) {
+            if (typeof row?.tool !== 'string') continue
+            next[row.tool] = { ...row, command: row.tool === 'claude' ? 'claude-vyra' : 'codex-vyra' }
+          }
+          setConfigureStatus(next)
+        } catch { /* leaving the cards as they were beats a page of errors */ }
+      }, [])
+
+      /**
+       * Write the port into one tool.
+       *
+       * The card shows "writing" while the request is in flight and keeps the
+       * failure message afterwards, so a refusal is visible rather than a
+       * button that silently does nothing.
+       */
+      const writeTool = useCallback(async tool => {
+        setConfigureStatus(current => ({ ...current, [tool]: { ...(current[tool] ?? {}), busy: true, error: undefined } }))
+        try {
+          const payload = await api('/configure', { method: 'POST', body: { tool }, timeoutMs: 30000 })
+          setConfigureStatus(current => ({
+            ...current,
+            [tool]: {
+              configured: true,
+              busy: false,
+              port: payload?.port,
+              command: payload?.command ?? (tool === 'claude' ? 'claude-vyra' : 'codex-vyra'),
+            },
+          }))
+        } catch (cause) {
+          setConfigureStatus(current => ({
+            ...current,
+            [tool]: { ...(current[tool] ?? {}), configured: false, busy: false, error: String(cause?.message ?? cause) },
+          }))
+        }
+      }, [])
+
+      /** Put one tool's file back the way its backup holds it. */
+      const restoreTool = useCallback(async tool => {
+        setConfigureStatus(current => ({ ...current, [tool]: { ...(current[tool] ?? {}), busy: true, error: undefined } }))
+        try {
+          await api('/configure/restore', { method: 'POST', body: { tool }, timeoutMs: 30000 })
+          setConfigureStatus(current => ({ ...current, [tool]: { configured: false, busy: false } }))
+        } catch (cause) {
+          setConfigureStatus(current => ({
+            ...current,
+            [tool]: { ...(current[tool] ?? {}), busy: false, error: String(cause?.message ?? cause) },
+          }))
+        }
+      }, [])
+
       if (error !== '' && summary === undefined) {
         return h('div', { className: 'vfm_page' },
           h('div', { className: 'vfm_center' },
@@ -735,15 +1010,13 @@ window.__ModuleLoader__.load({
 
       return h('div', { className: 'vfm_page' },
         h('header', { className: 'vfm_head' },
-          h('div', { className: 'vfm_headrow' },
-            h('div', {},
-              h('h2', { className: 'vfm_title' }, t('title')),
-              h('p', { className: 'vfm_sub' }, t('subtitle'))),
-            h('button', {
-              type: 'button',
-              className: 'vfm_btn',
-              onClick: () => void toggleEnabled(summary.enabled !== false),
-            }, summary.enabled === false ? t('master.enable') : t('master.disable')))),
+          h('div', { className: 'vfm_headtext' },
+            h('h2', { className: 'vfm_title' }, t('title')),
+            h('p', { className: 'vfm_sub' }, t('subtitle'))),
+          h(Btn, {
+            kind: 'quiet',
+            onClick: () => void toggleEnabled(summary.enabled !== false),
+          }, summary.enabled === false ? t('master.enable') : t('master.disable'))),
         summary.enabled === false ? h('p', { className: 'vfm_note' }, t('master.offHint')) : null,
         h(DegradedBanner, {
           state: summary?.lane?.ok === false && (summary?.lane?.models ?? []).length === 0
@@ -776,7 +1049,24 @@ window.__ModuleLoader__.load({
           key: forwardKey,
           model: selected,
           onToggle: enabled => void toggleForward(enabled),
-        }))
+        }),
+        h(Card, {
+          title: h(BlockTitle, {}, t('tools.title')),
+          hint: t('tools.hint'),
+        },
+        // Writing needs a live port to point at, so the block says so instead of
+        // offering a button that can only fail.
+        summary?.forward?.enabled !== true
+          ? h('p', { className: 'vfm_note' }, t('tools.needPort'))
+          : h('div', { className: 'vfm_tools' },
+            ...TOOL_LABELS.map(entry => h(ToolCard, {
+              key: entry.id,
+              tool: entry.id,
+              name: entry.name,
+              status: configureStatus[entry.id],
+              onWrite: id => void writeTool(id),
+              onRestore: id => void restoreTool(id),
+            })))))
     }
 
     // ── registration ─────────────────────────────────────────────────────────
@@ -822,7 +1112,8 @@ window.__ModuleLoader__.load({
     exports.name = 'vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
     exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
-      cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API }
+      cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API,
+      Card, BlockTitle, Btn, StatusDot, ToolCard, truncate }
     return module.exports
   },
 })
