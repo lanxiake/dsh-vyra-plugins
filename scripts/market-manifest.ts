@@ -2002,6 +2002,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.5.3 probes the network and swaps the Veyra index edition between
+        // GitCode installs (domestic) and GitHub installs (overseas).
+        '0.5.3': {
+          publishTimestamp: 1795343104,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '95a269fe0c6bcf64c7de9bda93a932daaf9f88b3',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
