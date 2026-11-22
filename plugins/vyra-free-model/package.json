@@ -1,6 +1,6 @@
 {
   "name": "vyra-free-model",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "装上就能用的免费模型：零配置聊天，点一次登录国内账号，一屏设置页。",
