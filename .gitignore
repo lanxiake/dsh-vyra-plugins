@@ -7,3 +7,7 @@ pnpm-workspace.yaml
 # Python bytecode from local worker tests
 __pycache__/
 *.pyc
+
+# vyra-free-model preview artefacts
+plugins/vyra-free-model/.preview.html
+plugins/vyra-free-model/.preview.png
