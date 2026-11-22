@@ -44,7 +44,7 @@ const {
   marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
   TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset,
   compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
-  localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility,
+  localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
   pageCacheKey, cachedPage, rememberPage, pageCache,
   parseRepoRef, specPath, buildBundleIndex,
 } = __internal
@@ -398,6 +398,31 @@ visibility.set('sidebar', false)
 assert.equal(visibility.get().sidebar, false)
 visibility.set('sidebar', true)
 assert.equal(visibility.get().sidebar, true)
+
+// --- region override: manual modes are immediate and probe-free ------------
+region.setMode('overseas')
+assert.equal(region.snapshot().active, 'overseas')
+region.setMode('domestic')
+assert.equal(region.snapshot().active, 'domestic')
+
+// --- region probe: a much faster overseas line wins in auto mode -----------
+{
+  const realFetch = globalThis.fetch
+  globalThis.fetch = async (url) => {
+    const domestic = /npmmirror|gitcode/.test(url)
+    await new Promise((resolve) => setTimeout(resolve, domestic ? 30 : 5))
+    return { ok: true }
+  }
+  try {
+    region.setMode('auto')
+    const snap = await region.detect(true)
+    assert.equal(snap.detected, 'overseas', 'the 6x faster overseas line wins')
+    assert.equal(snap.active, 'overseas', 'auto follows the detected line')
+  } finally {
+    region.setMode('domestic')
+    globalThis.fetch = realFetch
+  }
+}
 
 // --- page cache: first page is instant, later pages must share a revision ---
 {

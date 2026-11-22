@@ -277,6 +277,8 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
   assert.ok(drawn.includes('settingsVisibility'), `the settings surface shows the visibility row, got: ${drawn}`)
   assert.ok(drawn.includes('showSidebar'), 'the sidebar switch is there')
   assert.ok(drawn.includes('showPluginsTab'), 'the Plugins tab switch is there')
+  assert.ok(drawn.includes('networkRegion'), 'the network line control is there')
+  assert.ok(drawn.includes('regionAuto'), 'auto is one of the line choices')
 }
 
 // --- the registration targets: Plugins tab, sidebar row, main panel ----------
