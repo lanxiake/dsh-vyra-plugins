@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Vyra Free Model — browser half.
  *
  * One settings section, three blocks, top to bottom in the order a new user
@@ -791,6 +791,17 @@ window.__ModuleLoader__.load({
     }
 
     function apply(ctx) {
+      // The stylesheet has to be mounted, not merely defined: a page whose CSS
+      // never reaches document.head renders as bare stacked HTML, which is what
+      // shipped once and looked broken rather than plain.
+      ctx.effect(() => {
+        const style = document.createElement('style')
+        style.setAttribute('data-plugin', 'vyra-free-model')
+        style.textContent = CSS
+        document.head.appendChild(style)
+        return () => style.remove()
+      }, 'vyra-free-model: styles')
+
       ctx.slots.inject('settings.section', () => ctx.slots.register({
         name: 'settings.section',
         id: 'vyra-free-model',

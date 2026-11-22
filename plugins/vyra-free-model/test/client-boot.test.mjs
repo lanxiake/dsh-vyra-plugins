@@ -8,6 +8,24 @@ import { dirname, join } from 'node:path'
 const here = dirname(fileURLToPath(import.meta.url))
 const clientPath = join(here, '..', 'client.js')
 
+/** A document stub that can host a stylesheet, which apply() mounts. */
+function makeDocument() {
+  const appended = []
+  return {
+    documentElement: { lang: 'zh-CN' },
+    baseURI: 'http://127.0.0.1/',
+    appended,
+    head: { appendChild(node) { appended.push(node); return node } },
+    createElement(tag) {
+      return {
+        tagName: tag, attributes: {}, textContent: '', removed: false,
+        setAttribute(key, value) { this.attributes[key] = value },
+        remove() { this.removed = true },
+      }
+    },
+  }
+}
+
 /**
  * A React stub just large enough to build elements and evaluate a component
  * tree to a string. It keys on the element's `type`, so a component is simply
@@ -70,7 +88,7 @@ function loadBundle() {
       },
     },
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
-    document: { documentElement: { lang: 'zh-CN' }, baseURI: 'http://127.0.0.1/' },
+    document: makeDocument(),
     location: { origin: 'http://127.0.0.1' },
     setTimeout,
     clearTimeout,
@@ -97,6 +115,8 @@ test('the client bundle registers the settings section and its icon', () => {
       register: decl => { registered.push(decl); return () => {} },
     },
     locale: { getLocale: () => ({ active: 'zh-CN' }) },
+    // The section also mounts its stylesheet, so the stub has to honour effect().
+    effect: fn => { const dispose = fn(); return typeof dispose === 'function' ? dispose : () => {} },
   }
   bundle.apply(ctx)
   assert.ok(injected >= 1)
@@ -149,4 +169,63 @@ test('a short roster shows everything without an expand control', () => {
   const html = renderToString(h(ModelBlock, { models, selected: '', onSelect: () => {} }))
   assert.equal(html.includes('展开全部'), false)
   assert.ok(html.includes('Only'))
+})
+
+test('the bundle mounts its stylesheet into document.head and removes it on dispose', () => {
+  // The page rendered unstyled in a real host because CSS was defined but never
+  // injected. This is the check that keeps that from happening again.
+  const appended = []
+  const head = {
+    appendChild(node) { appended.push(node); return node },
+  }
+  const source = readFileSync(clientPath, 'utf8')
+  let registeredModule
+  const window = {
+    __ModuleLoader__: {
+      load(definition) {
+        registeredModule = definition.factory(name => {
+          if (name === 'react') return makeReact()
+          if (name === 'react-dom') return { createPortal: node => node }
+          throw new Error(`unexpected require(${name})`)
+        })
+      },
+    },
+    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    document: {
+      documentElement: { lang: 'zh-CN' },
+      baseURI: 'http://127.0.0.1/',
+      head,
+      createElement(tag) {
+        return { tagName: tag, attributes: {}, textContent: '',
+          setAttribute(k, v) { this.attributes[k] = v },
+          remove() { this.removed = true } }
+      },
+    },
+    location: { origin: 'http://127.0.0.1' },
+    setTimeout, clearTimeout,
+    fetch: () => Promise.reject(new Error('no network in tests')),
+  }
+  const context = { window, document: window.document, localStorage: window.localStorage,
+    location: window.location, setTimeout, clearTimeout, fetch: window.fetch, console, URL, TextDecoder, structuredClone }
+  context.globalThis = context
+  vm.createContext(context)
+  vm.runInContext(source, context, { filename: 'client.js' })
+
+  const disposers = []
+  const ctx = {
+    slots: { inject: (name, fn) => fn(), register: () => () => {} },
+    locale: { getLocale: () => ({ active: 'zh-CN' }) },
+    effect: (fn) => { const d = fn(); if (typeof d === 'function') disposers.push(d); return d },
+  }
+  registeredModule.apply(ctx)
+
+  const style = appended.find(node => node.tagName === 'style')
+  assert.ok(style !== undefined, 'apply() must append a <style> to document.head')
+  assert.ok(style.textContent.length > 500, 'the stylesheet must carry the real rules')
+  assert.ok(style.textContent.includes('.vfm_'), 'the rules must target this page')
+  assert.equal(style.attributes['data-plugin'], 'vyra-free-model')
+
+  assert.ok(disposers.length > 0, 'the stylesheet must be registered through ctx.effect')
+  for (const dispose of disposers) dispose()
+  assert.equal(style.removed, true, 'disposing must remove the stylesheet')
 })
