@@ -212,7 +212,7 @@ function buttonByText(tree, label) {
  *  made its one-time dshmarket.com catalog choice. */
 function makeStorage(seeded) {
   const values = new Map()
-  if (seeded) values.set('vyra-market.sources-seeded', '1')
+  if (seeded) values.set('vyra-market.sources-seeded', '2')
   return {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => { values.set(key, String(value)) },
@@ -221,7 +221,7 @@ function makeStorage(seeded) {
 }
 
 /** Mount the tab, settle its reads, and return the drawn tree with its Remote. */
-async function mount({ sources = [{ url: 'https://example.invalid/index.json' }], entries = [entry('alpha'), entry('beta')], bundles = [], answers = {}, seeded = true } = {}) {
+async function mount({ sources = [{ url: 'https://example.invalid/index.json' }], entries = [entry('alpha'), entry('beta')], bundles = [], answers = {}, seeded = true, slot = 'plugins.tab', surface } = {}) {
   globalThis.localStorage = makeStorage(seeded)
   const react = makeReact()
   const bundle = loadBundle(react)
@@ -239,9 +239,9 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
       getSnapshot: () => ({ active: 'en' }), subscribe: () => () => {},
     },
     slots: {
-      // Only the Plugins tab is mounted here; the sidebar row and panel are
-      // registered by the same apply call and covered by the registration block.
-      inject: (name, register) => { if (name === 'plugins.tab') register() },
+      // Mount one surface per call; the other registrations are covered by the
+      // registration block below.
+      inject: (name, register) => { if (name === slot) register() },
       register: (_options, component) => { Component = component },
     },
     remote,
@@ -250,6 +250,7 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
     t: (key, params) => (params === undefined ? key : `${key}${JSON.stringify(params)}`),
     remote,
     useLocale: (select) => select({ active: 'en' }),
+    ...(surface === undefined ? {} : { surface }),
   }
   // The stub has no scheduler, so render and settle several turns by hand: a
   // read sets state, which the next render reads, which loads the page, and so
@@ -269,6 +270,15 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
   return { tree, remote, settle: () => render(3) }
 }
 
+// --- the settings surface carries the two visibility switches ----------------
+{
+  const { tree } = await mount({ slot: 'settings.section', surface: 'settings', bundles: [] })
+  const drawn = texts(tree).join(' | ')
+  assert.ok(drawn.includes('settingsVisibility'), `the settings surface shows the visibility row, got: ${drawn}`)
+  assert.ok(drawn.includes('showSidebar'), 'the sidebar switch is there')
+  assert.ok(drawn.includes('showPluginsTab'), 'the Plugins tab switch is there')
+}
+
 // --- the registration targets: Plugins tab, sidebar row, main panel ----------
 await (async () => {
   const react = makeReact()
@@ -286,6 +296,8 @@ await (async () => {
   const tab = options.find((entry) => entry.name === 'plugins.tab')
   const row = options.find((entry) => entry.name === 'sidebar.panellist')
   const panel = options.find((entry) => entry.name === 'main')
+  const settings = options.find((entry) => entry.name === 'settings.section')
+  const overlay = options.find((entry) => entry.name === 'shell.overlay')
   assert.ok(tab !== undefined, 'the Plugins tab is still registered')
   assert.equal(tab.id, 'market')
   assert.equal(tab.locale, 'vyra-plugin-market')
@@ -299,6 +311,11 @@ await (async () => {
   assert.equal(panel.key, 'vyra-market', 'the row opens this panel')
   assert.equal(panel.locale, 'vyra-plugin-market')
   assert.equal(typeof panel.inject, 'function', 'the panel injects its own remote and locale hook')
+  assert.ok(settings !== undefined, 'the settings section is registered')
+  assert.equal(settings.id, 'vyra-market')
+  assert.equal(settings.locale, 'vyra-plugin-market')
+  assert.equal(settings.inject().surface, 'settings', 'the settings surface shows the visibility switches')
+  assert.ok(overlay !== undefined, 'the completion toast is registered in shell.overlay')
 })()
 
 // --- a page draws one card per entry, with the source name in the toolbar -----
@@ -317,10 +334,12 @@ await (async () => {
   const set = remote.calls.find(([name]) => name === 'setIndexes')
   assert.ok(set !== undefined, 'an unconfigured profile gets a source added')
   // Veyra leads with the ghproxy mirror (reachable in CN without a GitHub
-  // detour), and the dshmarket.com catalog is seeded once beside it.
+  // detour), then the three verified format-1 catalogs, seeded once.
   assert.deepEqual(set[1], [
     'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
     'https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json',
+    'https://dshopen.org/index.json',
+    'https://go.dshtui.com/market/index.json',
   ])
 }
 
@@ -417,9 +436,10 @@ await (async () => {
   assert.ok(drawn.includes('manual-plugin'), `the installed list names a bundle outside the market, got: ${drawn}`)
   assert.ok(drawn.includes('Manual plugin'), 'the manifest description is shown')
 
-  const open = buttonByText(installed, 'open')
-  assert.ok(open !== undefined, 'an installed bundle offers Details')
-  open.props.onClick()
+  // There is no Details button any more: the whole card opens the dialog.
+  const card = findAll(installed, (node) => node.type === 'li' && node.props.className === 'vpm-card' && texts(node).join('').includes('manual-plugin'))[0]
+  assert.ok(card !== undefined, 'the installed card is clickable')
+  card.props.onClick()
   const detail = await settle()
   assert.ok(remote.calls.some(([name, bundleName]) => name === 'readBundleDetail' && bundleName === 'manual-plugin'),
     'Details reads the local bundle README through the Host')

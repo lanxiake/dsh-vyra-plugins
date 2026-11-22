@@ -51,6 +51,12 @@ window.__ModuleLoader__.load({
      * one: the Host already knows how to fetch, validate and annotate it.
      */
     const DSHMARKET_CATALOG = 'https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json'
+    /** DSH Open Market — 1,340 community plugins, validated format 1. */
+    const DSHOPEN_CATALOG = 'https://dshopen.org/index.json'
+    /** DSH Go Market — 41 curated plugins, served by its cached worker. */
+    const DSH_GO_CATALOG = 'https://go.dshtui.com/market/index.json'
+    /** The host indexes this plugin seeds once, in display order. */
+    const BUILTIN_CATALOGS = [DSHMARKET_CATALOG, DSHOPEN_CATALOG, DSH_GO_CATALOG]
 
     /**
      * dsh.so exposes a compact index of its own (≈11 MB, immutable, CORS *),
@@ -81,7 +87,43 @@ window.__ModuleLoader__.load({
     const STATS_CACHE_MS = 6 * 60 * 60 * 1000
 
     /** Entries loaded before "Show more", and loaded again by each press. */
-    const PAGE = 60
+    const PAGE = 40
+
+    /**
+     * A small client-side page cache. The Host already caches each index, but
+     * a source or query switch still waits for a round trip; this answers the
+     * exact page it just showed and makes switching back instant. It is
+     * cleared on refresh and whenever the profile's bundles change, because
+     * installation state is part of every page.
+     */
+    const PAGE_CACHE_MS = 5 * 60 * 1000
+    const PAGE_CACHE_MAX = 80
+    const pageCache = new Map()
+
+    function pageCacheKey(url, query, offset, limit) {
+      return JSON.stringify([
+        url, query.text ?? '', query.category ?? null,
+        query.sort?.kind ?? 'index', query.sort?.id ?? null, query.sort?.direction ?? null,
+        offset, limit,
+      ])
+    }
+
+    function cachedPage(key, offset, fetchedAt) {
+      const hit = pageCache.get(key)
+      if (hit === undefined || Date.now() - hit.at >= PAGE_CACHE_MS) return undefined
+      // Page two onwards must belong to the same index revision the first
+      // page came from; the Host reports that identity as `fetchedAt`.
+      if (offset > 0 && hit.page.fetchedAt !== fetchedAt) return undefined
+      return hit.page
+    }
+
+    function rememberPage(key, page) {
+      pageCache.set(key, { at: Date.now(), page })
+      while (pageCache.size > PAGE_CACHE_MAX) {
+        const oldest = pageCache.keys().next().value
+        pageCache.delete(oldest)
+      }
+    }
 
     /** Typing pause before a query is sent. */
     const TEXT_DELAY_MS = 250
@@ -92,6 +134,47 @@ window.__ModuleLoader__.load({
     }
     function storeSet(key, value) {
       try { if (typeof localStorage !== 'undefined') localStorage.setItem(key, value) } catch { /* storage full or denied */ }
+    }
+
+    /**
+     * Where the market appears. Settings is always a door, so turning both
+     * switches off never strands the market; the sidebar and Plugins tab are
+     * opt-out. Stored in the browser, like the startup-check toggle.
+     */
+    const VISIBILITY_KEY = 'vyra-market.visibility'
+    const DEFAULT_VISIBILITY = { sidebar: true, pluginsTab: true }
+    function readVisibility() {
+      try {
+        const raw = storeGet(VISIBILITY_KEY)
+        const value = raw === null ? null : JSON.parse(raw)
+        return {
+          sidebar: value?.sidebar !== false,
+          pluginsTab: value?.pluginsTab !== false,
+        }
+      } catch {
+        return { ...DEFAULT_VISIBILITY }
+      }
+    }
+    const visibility = (() => {
+      let state = readVisibility()
+      const listeners = new Set()
+      return {
+        get: () => state,
+        set(key, value) {
+          state = { ...state, [key]: value !== false }
+          storeSet(VISIBILITY_KEY, JSON.stringify(state))
+          for (const listener of listeners) listener(state)
+        },
+        subscribe(listener) {
+          listeners.add(listener)
+          return () => { listeners.delete(listener) }
+        },
+      }
+    })()
+    function useVisibility() {
+      const [state, setState] = useState(visibility.get)
+      useEffect(() => visibility.subscribe(setState), [])
+      return state
     }
 
     // ---------------------------------------------------------------------------
@@ -400,6 +483,10 @@ window.__ModuleLoader__.load({
           defaultVersion: version === '' ? 'latest' : version,
           installation: { status: 'not-installed' },
           external: true,
+          // 26k entries are searched on every debounced keystroke; lower-case
+          // the haystack once instead of rebuilding it per query.
+          marketSearchText: [display, name, String(raw[4] ?? ''), String(raw[2] ?? ''), repoUrl, catIds.join(' '), labels.join(' ')]
+            .join(' ').toLowerCase(),
           marketStats: {
             ...(stars > 0 ? { stars } : {}),
             ...(downloads === undefined ? {} : { downloads, downloadsWeek, window: 'total' }),
@@ -456,10 +543,10 @@ window.__ModuleLoader__.load({
       if (words.length === 0) return 0
       const name = String(entry.name ?? '').toLowerCase()
       const title = String(entry.title ?? '').toLowerCase()
-      const description = String(entry.description ?? '').toLowerCase()
       const author = String(entry.author ?? '').toLowerCase()
-      const repo = repoOfEntry(entry).toLowerCase()
-      const tags = [...(entry.marketExtra?.categories ?? []), ...(entry.metadata?.keywords ?? [])].join(' ').toLowerCase()
+      const haystack = entry.marketSearchText
+        ?? [name, title, String(entry.description ?? ''), author, repoOfEntry(entry),
+          ...(entry.marketExtra?.categories ?? []), ...(entry.metadata?.keywords ?? [])].join(' ').toLowerCase()
       let score = 0
       for (const word of words) {
         if (name === word) score += 12
@@ -467,9 +554,7 @@ window.__ModuleLoader__.load({
         else if (name.includes(word)) score += 5
         else if (title.includes(word)) score += 4
         else if (author.includes(word)) score += 3
-        else if (tags.includes(word)) score += 2
-        else if (description.includes(word)) score += 1
-        else if (repo.includes(word)) score += 1
+        else if (haystack.includes(word)) score += 2
         else return -1
       }
       return score
@@ -1097,6 +1182,8 @@ window.__ModuleLoader__.load({
       onlyInstalled: '仅已安装',
       onlyUpdatable: '仅可更新',
       sortBy: '排序',
+      category: '分类',
+      allCategories: '全部分类',
       sortIndex: '默认',
       sortPublished: '发布时间',
       sortRelevance: '相关度',
@@ -1156,6 +1243,10 @@ window.__ModuleLoader__.load({
       toastBody: '成功 {ok} 项 · 失败 {failed} 项 · 需重启 {restart} 项',
       toastOpen: '查看',
       toastClose: '关闭',
+      settingsVisibility: '显示位置',
+      showSidebar: '左侧菜单栏',
+      showPluginsTab: '插件页面',
+      settingsNote: '设置菜单中始终保留插件市场入口。',
       viewMarket: '市场',
       viewInstalled: '已安装',
       searchInstalled: '搜索已安装插件',
@@ -1195,6 +1286,8 @@ window.__ModuleLoader__.load({
       builtinTrust: '内置源同样是第三方内容，安装前请确认来源可信。',
       dshSoDesc: '32,000+ 条，带 star、npm 下载量、安全扫描与验证等级。',
       dshmarketDesc: 'dshmarket.com 的精选目录，6,000+ 条可安装插件。',
+      dshOpenDesc: '开放插件市场，1,340 个社区插件，format-1 索引。',
+      dshGoDesc: 'DSH Go 市场，41 个精选插件，带缓存 worker。',
       addRecommended: '添加',
       manageSources: '管理市场源…',
       addSource: '添加',
@@ -1234,6 +1327,8 @@ window.__ModuleLoader__.load({
       onlyInstalled: 'Installed only',
       onlyUpdatable: 'Updatable only',
       sortBy: 'Sort',
+      category: 'Category',
+      allCategories: 'All categories',
       sortIndex: 'Default',
       sortPublished: 'Publish date',
       sortRelevance: 'Relevance',
@@ -1293,6 +1388,10 @@ window.__ModuleLoader__.load({
       toastBody: '{ok} done · {failed} failed · {restart} need a restart',
       toastOpen: 'View',
       toastClose: 'Close',
+      settingsVisibility: 'Show in',
+      showSidebar: 'Sidebar',
+      showPluginsTab: 'Plugins page',
+      settingsNote: 'Settings always keeps a market entry.',
       viewMarket: 'Market',
       viewInstalled: 'Installed',
       searchInstalled: 'Search installed plugins',
@@ -1332,6 +1431,8 @@ window.__ModuleLoader__.load({
       builtinTrust: 'Built-in sources are still third-party content; verify before installing.',
       dshSoDesc: '32,000+ artifacts with stars, npm downloads, security scans and verification levels.',
       dshmarketDesc: 'The curated dshmarket.com directory: 6,000+ installable plugins.',
+      dshOpenDesc: 'DSH Open Market: 1,340 community plugins as a format-1 index.',
+      dshGoDesc: 'DSH Go Market: 41 curated plugins behind a cached worker.',
       addRecommended: 'Add',
       manageSources: 'Manage sources…',
       addSource: 'Add',
@@ -1557,6 +1658,9 @@ window.__ModuleLoader__.load({
       .vpm-segment-item{height:28px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer;transition:background-color .16s,color .16s,box-shadow .16s}
       .vpm-segment-item:hover{color:var(--dsw-alias-label-primary)}
       .vpm-segment-item.on{background:var(--dsw-alias-settings-card-fill,var(--dsw-alias-bg-layer-1));color:var(--dsw-alias-label-primary);font-weight:650;box-shadow:0 1px 3px rgba(15,23,42,.10)}
+      .vpm-segment.sm{padding:2px}
+      .vpm-segment.sm .vpm-segment-item{height:26px;padding:0 10px;font-size:11.5px}
+      .vpm-menu.scroll{max-height:320px;overflow-y:auto}
       .vpm-queue{display:flex;flex-direction:column;gap:5px;margin-top:4px;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l2)}
       .vpm-queue-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);min-width:0}
       .vpm-queue-item .vpm-queue-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
@@ -1569,6 +1673,14 @@ window.__ModuleLoader__.load({
       .vpm-toast-title{font-size:13px;line-height:18px;font-weight:650;color:var(--dsw-alias-label-primary);margin:0}
       .vpm-toast-body{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary);margin:0}
       .vpm-toast-actions{display:flex;align-items:center;gap:6px;flex:none}
+      .vpm-settings{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:8px 14px;border-radius:13px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-bg-layer-1)}
+      .vpm-switch{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none}
+      .vpm-switch input{appearance:none;-webkit-appearance:none;width:38px;height:22px;margin:0;border-radius:999px;background:var(--dsw-alias-border-l3);position:relative;transition:background-color .18s;cursor:pointer;flex:none}
+      .vpm-switch input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.25);transition:transform .18s}
+      .vpm-switch input:checked{background:var(--dsw-alias-brand-primary)}
+      .vpm-switch input:checked::after{transform:translateX(16px)}
+      .vpm-switch input:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,transparent)}
+      @media (prefers-reduced-motion:reduce){.vpm-switch input,.vpm-switch input::after{transition:none}}
       @media (max-width:680px){.vpm-toast{left:14px;right:14px;bottom:14px}.vpm-toast-card{min-width:0;max-width:none}}
       .vpm-page-inner{display:flex;flex-direction:column;height:100%;min-height:0;gap:14px;width:100%;max-width:1160px;margin:0 auto}
       .vpm-hero{position:relative;flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:22px 24px;border-radius:24px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-bg-layer-1);overflow:hidden}
@@ -1721,6 +1833,8 @@ window.__ModuleLoader__.load({
     function marketSourceLabel(source, text, lang) {
       if (VEYRA_SOURCES.includes(source.url)) return lang === 'zh' ? 'Veyra 精选' : 'Veyra picks'
       if (source.url === DSHMARKET_CATALOG) return 'dshmarket.com'
+      if (source.url === DSHOPEN_CATALOG) return lang === 'zh' ? '开放插件市场' : 'DSH Open Market'
+      if (source.url === DSH_GO_CATALOG) return 'DSH Go Market'
       if (source.url === DSH_SO_SOURCE.url) return text(source.title)
       return source.title === undefined ? source.url : text(source.title)
     }
@@ -1792,6 +1906,12 @@ window.__ModuleLoader__.load({
     /** Read and write the configured market sources. */
     function SourcesDialog({ sources, lang, t, text, saving, failure, onAdd, onRemove, onClose }) {
       const [draft, setDraft] = useState('')
+      // Recommended host catalogs that the profile does not carry yet.
+      const recommended = [
+        { url: DSHMARKET_CATALOG, label: 'dshmarket.com', desc: t('dshmarketDesc') },
+        { url: DSHOPEN_CATALOG, label: marketSourceLabel({ url: DSHOPEN_CATALOG }, text, lang), desc: t('dshOpenDesc') },
+        { url: DSH_GO_CATALOG, label: 'DSH Go Market', desc: t('dshGoDesc') },
+      ].filter((item) => !sources.some((source) => source.url === item.url))
       const submit = (event) => {
         event.preventDefault()
         const url = draft.trim()
@@ -1812,14 +1932,14 @@ window.__ModuleLoader__.load({
               h('span', { style: S.name }, text(DSH_SO_SOURCE.title)),
               h('span', { style: S.mono }, t('dshSoDesc'))),
             h('span', { style: S.tag('neutral') }, t('builtinBadge'))),
-          sources.some((source) => source.url === DSHMARKET_CATALOG) ? null : h('li', { key: 'dshmarket', style: S.row },
+          recommended.map((item) => h('li', { key: item.url, style: S.row },
             h('div', { style: S.rowMain },
-              h('span', { style: S.name }, 'dshmarket.com'),
-              h('span', { style: S.mono }, t('dshmarketDesc'))),
+              h('span', { style: S.name }, item.label),
+              h('span', { style: S.mono }, item.desc)),
             h('button', {
               style: S.btn(true, saving), disabled: saving,
-              onClick: () => { onAdd(DSHMARKET_CATALOG) },
-            }, t('addRecommended')))),
+              onClick: () => { onAdd(item.url) },
+            }, t('addRecommended'))))),
         h('p', { style: { ...S.meta, margin: 0 } }, t('builtinTrust'))),
       sources.length === 0 ? null : h('ul', { style: S.list },
         sources.map((source) => h('li', { key: source.url, style: S.row },
@@ -2234,10 +2354,7 @@ window.__ModuleLoader__.load({
         }, t('tagError')),
       ].filter(Boolean)
       const actions = [
-        h('button', {
-          key: 'details', className: 'vpm-btn small',
-          onClick: (event) => { event?.stopPropagation(); onDetails(bundle) },
-        }, t('open')),
+        // No Details button: the whole card opens the detail dialog.
         bundle.readOnlyReason !== undefined || missing ? null : h('button', {
           key: 'toggle', className: 'vpm-btn small', disabled: busy,
           onClick: (event) => { event?.stopPropagation(); onToggle(bundle) },
@@ -2389,8 +2506,11 @@ window.__ModuleLoader__.load({
 
     function MarketTab(props) {
       const { t, remote, useLocale } = props
+      const surface = props.surface ?? 'plugins'
+      const showVisibility = surface === 'settings'
       const lang = useLocale((snapshot) => snapshot.active)
       const text = useCallback((value) => marketText(value, lang), [lang])
+      const visibilityState = useVisibility()
 
       const [sources, setSources] = useState(null)
       const [sourcesFailure, setSourcesFailure] = useState(null)
@@ -2476,21 +2596,28 @@ window.__ModuleLoader__.load({
         // The profile always gets Veyra back. The dshmarket.com catalog is
         // seeded once; removing it later is a choice, not a missing default.
         const hasVeyra = list.some((item) => VEYRA_SOURCES.includes(item.url))
-        const seeded = storeGet('vyra-market.sources-seeded') === '1'
-        const hasCatalog = list.some((item) => item.url === DSHMARKET_CATALOG)
-        // Seeing the catalog is itself the one-time choice: a profile that
-        // already carried it must not get it back after the user removes it.
-        if (!seeded && hasCatalog) storeSet('vyra-market.sources-seeded', '1')
+        // Seeding version 2 adds the newer built-in catalogs beside the
+        // original dshmarket.com one. A profile that already carries them is
+        // itself the choice: removing one later must not bring it back.
+        const seedState = storeGet('vyra-market.sources-seeded')
+        const seeded = seedState === '2'
+        const hasUrl = (url) => list.some((item) => item.url === url)
+        // Version 1 seeded only dshmarket.com. An upgraded profile that
+        // removed it made a choice; add the two new catalogs without undoing
+        // that choice.
+        const missingCatalogs = BUILTIN_CATALOGS.filter((url) => !hasUrl(url)
+          && !(seedState === '1' && url === DSHMARKET_CATALOG))
+        if (!seeded && missingCatalogs.length === 0) storeSet('vyra-market.sources-seeded', '2')
         const wantsVeyra = list.length === 0 || !hasVeyra
-        const wantsCatalog = !seeded && !hasCatalog
-        if (adopt && (wantsVeyra || wantsCatalog)) {
+        const wantsCatalogs = !seeded && missingCatalogs.length > 0
+        if (adopt && (wantsVeyra || wantsCatalogs)) {
           const additions = []
           if (wantsVeyra) additions.push(VEYRA_SOURCES[0])
-          if (wantsCatalog) additions.push(DSHMARKET_CATALOG)
+          if (wantsCatalogs) additions.push(...missingCatalogs)
           const added = await remote.pluginMarket.setIndexes([...additions, ...list.map((s) => s.url)])
           if (!alive.current) return
           if (added.ok) {
-            if (!seeded) storeSet('vyra-market.sources-seeded', '1')
+            storeSet('vyra-market.sources-seeded', '2')
             const reread = await remote.pluginMarket.listIndexes()
             if (!alive.current) return
             list = reread.ok ? reread.value : []
@@ -2573,6 +2700,21 @@ window.__ModuleLoader__.load({
           failure: null,
         })
 
+        if (refresh) pageCache.clear()
+        const cacheKey = pageCacheKey(url, next, offset, limit)
+        const cached = refresh ? undefined : cachedPage(cacheKey, offset, fetchedAt)
+        if (cached !== undefined) {
+          // Answer the page we just showed instead of waiting for the Host to
+          // repeat it. Installation state is refreshed by `changed` events.
+          setListing((current) => {
+            const kept = offset > 0 && current !== null && current.url === url && current.value !== null
+              ? current.value.entries
+              : []
+            return { url, query: next, status: 'ready', failure: null, value: { ...cached, entries: [...kept, ...cached.entries] } }
+          })
+          return
+        }
+
         try {
           let page
           if (url === DSH_SO_SOURCE.url) {
@@ -2604,6 +2746,7 @@ window.__ModuleLoader__.load({
               return
             }
           }
+          rememberPage(cacheKey, page)
           setListing((current) => {
             const kept = offset > 0 && current !== null && current.url === url && current.value !== null
               ? current.value.entries
@@ -2634,6 +2777,9 @@ window.__ModuleLoader__.load({
       // this tab, the Installed tab, or an agent — lands here too.
       useEffect(() => {
         const off = remote.$on('plugin-manager/changed', () => {
+          // Every page carries the profile's install state; do not answer a
+          // change from a page cached before it.
+          pageCache.clear()
           void loadBundles()
           if (view === 'installed') return
           setListing((current) => {
@@ -2756,6 +2902,12 @@ window.__ModuleLoader__.load({
         if (listing !== null) void load(listing.url, next, 0, PAGE, undefined)
       }, [listing, load])
 
+      /** Switch sources: category ids are source-local, so clear that filter. */
+      const switchSource = useCallback((url) => {
+        setQuery((current) => ({ ...current, category: null }))
+        setActiveUrl(url)
+      }, [])
+
       /**
        * Copy a failure's text, so it can be pasted into a report. The clipboard
        * is optional (an insecure origin has none), so a refusal is swallowed
@@ -2811,12 +2963,16 @@ window.__ModuleLoader__.load({
         return () => clearTimeout(timer)
       }, [refreshed])
       const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
+      const categoryMenu = useMenu(menu === 'category', () => { setMenu(null) })
       const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
       // The built-in dsh.so browser is always available; host-configured
       // indexes follow it. Veyra leads, then dsh.so, then dshmarket.com.
       const sourceRank = (source) => VEYRA_SOURCES.includes(source.url)
         ? 0
-        : source.url === DSH_SO_SOURCE.url ? 1 : source.url === DSHMARKET_CATALOG ? 2 : 3
+        : source.url === DSH_SO_SOURCE.url ? 1
+          : source.url === DSHMARKET_CATALOG ? 2
+            : source.url === DSHOPEN_CATALOG ? 3
+              : source.url === DSH_GO_CATALOG ? 4 : 5
       const orderedSources = [...(sources ?? []), DSH_SO_SOURCE].sort((left, right) => sourceRank(left) - sourceRank(right))
       const active = orderedSources.find((source) => source.url === activeUrl)
       const market = active === undefined
@@ -2825,6 +2981,9 @@ window.__ModuleLoader__.load({
       const pagePicked = filteredEntries.length > 0 && filteredEntries.every((entry) => picked.has(entry.name))
       const directed = query.sort.kind === 'published' || query.sort.kind === 'key'
       const buildable = plan.install.length + plan.update.length
+      const currentCategory = query.category === null
+        ? t('allCategories')
+        : (categories.find((category) => category.id === query.category)?.title ?? t('allCategories'))
       const installedCount = liveEntries.filter((entry) => {
         const state = entryState(entry)
         return state === 'installed' || state === 'updatable' || state === 'provided'
@@ -2990,6 +3149,21 @@ window.__ModuleLoader__.load({
                 },
               }, h(RefreshIcon, {})),
               refreshed ? h('span', { className: 'vpm-meta' }, lang === 'zh' ? '已刷新' : 'Refreshed') : null))),
+        showVisibility ? h('div', { className: 'vpm-settings' },
+          h('span', { className: 'vpm-meta' }, t('settingsVisibility')),
+          h('label', { className: 'vpm-switch' },
+            h('input', {
+              type: 'checkbox', checked: visibilityState.sidebar,
+              onChange: (event) => { visibility.set('sidebar', event.target.checked) },
+            }),
+            h('span', null, t('showSidebar'))),
+          h('label', { className: 'vpm-switch' },
+            h('input', {
+              type: 'checkbox', checked: visibilityState.pluginsTab,
+              onChange: (event) => { visibility.set('pluginsTab', event.target.checked) },
+            }),
+            h('span', null, t('showPluginsTab'))),
+          h('span', { className: 'vpm-meta' }, t('settingsNote'))) : null,
         h('div', { className: 'vpm-toolbar' },
           view === 'market' ? h(React.Fragment, null,
           h('div', { style: { position: 'relative', display: 'flex' }, ref: sourceMenu },
@@ -3001,7 +3175,7 @@ window.__ModuleLoader__.load({
               orderedSources.map((source) => h('button', {
                 key: source.url, role: 'menuitem', title: source.builtin === true ? undefined : source.url,
                 className: `vpm-menu-item${source.url === activeUrl ? ' on' : ''}`,
-                onClick: () => { setMenu(null); setActiveUrl(source.url) },
+                onClick: () => { setMenu(null); switchSource(source.url) },
               }, marketSourceLabel(source, text, lang))),
               h('div', { className: 'vpm-menu-sep' }),
               h('button', {
@@ -3019,6 +3193,35 @@ window.__ModuleLoader__.load({
                   setMenu(null)
                 },
               }, `${autoCheckOn ? '✓ ' : ''}${lang === 'zh' ? '启动时检查更新' : 'Check updates at startup'}`))),
+          // Status and category live in the same row as source and sort now;
+          // the old two full-width pill rows pushed the cards down.
+          h('div', { className: 'vpm-segment sm', role: 'group', 'aria-label': t('all') },
+            [
+              { value: null, label: t('all') },
+              { value: 'installed', label: t('onlyInstalled') },
+              { value: 'updatable', label: t('onlyUpdatable') },
+            ].map((option) => h('button', {
+              key: String(option.value),
+              className: `vpm-segment-item${quickFilter === option.value ? ' on' : ''}`,
+              'aria-pressed': quickFilter === option.value,
+              onClick: () => { setQuickFilter(option.value); setPicked(new Set()) },
+            }, option.label))),
+          h('div', { style: { position: 'relative', display: 'flex' }, ref: categoryMenu },
+            h('button', {
+              className: 'vpm-btn', 'aria-haspopup': 'menu', 'aria-expanded': menu === 'category',
+              onClick: () => { setMenu(menu === 'category' ? null : 'category') },
+            }, h('span', { className: 'vpm-ellipsis', style: { maxWidth: '150px' } }, `${t('category')}: ${currentCategory}`), h(ChevronIcon, {})),
+            menu !== 'category' ? null : h('div', { className: 'vpm-menu right scroll', role: 'menu' },
+              h('button', {
+                role: 'menuitemradio', 'aria-checked': query.category === null,
+                className: `vpm-menu-item${query.category === null ? ' on' : ''}`,
+                onClick: () => { setMenu(null); search({ ...query, category: null }) },
+              }, t('allCategories')),
+              categories.map((category) => h('button', {
+                key: category.id, role: 'menuitemradio', 'aria-checked': query.category === category.id,
+                className: `vpm-menu-item${query.category === category.id ? ' on' : ''}`,
+                onClick: () => { setMenu(null); search({ ...query, category: category.id }) },
+              }, category.title)))),
           h('div', { style: { position: 'relative', display: 'flex' }, ref: sortMenu },
             h('button', {
               className: 'vpm-btn', 'aria-haspopup': 'menu', 'aria-expanded': menu === 'sort',
@@ -3070,29 +3273,6 @@ window.__ModuleLoader__.load({
           view === 'market' ? h('button', {
             className: 'vpm-btn', onClick: () => { setSourcesOpen(true) },
           }, h(SlidersIcon, { size: 13 }), t('manageSources')) : null),
-        // ponytail: 快捷筛选行 - 仅已安装、仅可更新
-        view === 'market' ? h('div', { className: 'vpm-pills', role: 'group', 'aria-label': t('all') },
-          h('button', {
-            className: `vpm-pill${quickFilter === null ? ' on' : ''}`, 'aria-pressed': quickFilter === null,
-            onClick: () => { setQuickFilter(null); setPicked(new Set()) },
-          }, t('all')),
-          h('button', {
-            className: `vpm-pill${quickFilter === 'installed' ? ' on' : ''}`, 'aria-pressed': quickFilter === 'installed',
-            onClick: () => { setQuickFilter('installed'); setPicked(new Set()) },
-          }, t('onlyInstalled')),
-          h('button', {
-            className: `vpm-pill${quickFilter === 'updatable' ? ' on' : ''}`, 'aria-pressed': quickFilter === 'updatable',
-            onClick: () => { setQuickFilter('updatable'); setPicked(new Set()) },
-          }, t('onlyUpdatable'))) : null,
-        view === 'market' && categories.length > 0 ? h('div', { className: 'vpm-pills', role: 'group', 'aria-label': t('all') },
-          h('button', {
-            className: `vpm-pill${query.category === null ? ' on' : ''}`, 'aria-pressed': query.category === null,
-            onClick: () => { search({ ...query, category: null }) },
-          }, t('all')),
-          categories.map((category) => h('button', {
-            key: category.id, className: `vpm-pill${query.category === category.id ? ' on' : ''}`, 'aria-pressed': query.category === category.id,
-            onClick: () => { search({ ...query, category: category.id }) },
-          }, category.title))) : null,
         rows,
         h('div', { className: 'vpm-scroll' },
           view === 'installed'
@@ -3263,7 +3443,8 @@ window.__ModuleLoader__.load({
         marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
         TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset, enqueue, pump, newRequestId, runner,
         compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
-        localizedValue, shortBundleName, bundleTitle, bundleDescription,
+        localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility,
+        pageCacheKey, cachedPage, rememberPage, pageCache,
       },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {
@@ -3318,41 +3499,120 @@ window.__ModuleLoader__.load({
         } catch {
           // A Host without an overlay slot keeps the in-page outcome bar.
         }
-        ctx.slots.inject('plugins.tab', () => ctx.slots.register({
-          name: 'plugins.tab',
-          id: 'market',
-          order: 10,
-          locale: NS,
-          label: () => t('title'),
-          inject: () => ({ remote: ctx.remote, hooks: { locale: ctx.locale } }),
-        }, MarketTab))
-        // The sidebar row and the panel it opens share one id: the host selects
-        // the `main` entry whose key matches the row's id, so no layout service
-        // or click handler is needed. Order 2 keeps it below Plugins.
         const useLocale = makeLocaleHook(ctx)
+
+        // The Plugins tab is opt-out. Its registration is kept in a gate so a
+        // settings switch can add or remove it without a reload.
+        let tabSeat = false
+        let offTab = null
+        const syncTab = () => {
+          if (!tabSeat) return
+          const want = visibility.get().pluginsTab
+          if (want && offTab === null) {
+            offTab = ctx.slots.register({
+              name: 'plugins.tab',
+              id: 'market',
+              order: 10,
+              locale: NS,
+              label: () => t('title'),
+              inject: () => ({ remote: ctx.remote, hooks: { locale: ctx.locale }, surface: 'plugins' }),
+            }, MarketTab)
+          } else if (!want && offTab !== null) {
+            if (typeof offTab === 'function') offTab()
+            offTab = null
+          }
+        }
         try {
-          ctx.slots.inject('sidebar.panellist', () => {
-            const offRow = ctx.slots.register({
+          ctx.slots.inject('plugins.tab', () => {
+            tabSeat = true
+            syncTab()
+            return () => {
+              tabSeat = false
+              if (typeof offTab === 'function') offTab()
+              offTab = null
+            }
+          })
+        } catch {
+          // A host without the Plugins tab keeps the other doors.
+        }
+
+        // The sidebar row is opt-out; its `main` panel stays registered even
+        // when the row is off, so the completion toast can still open it.
+        let sidebarSeat = false
+        let offRow = null
+        let offPanel = null
+        const syncSidebar = () => {
+          if (!sidebarSeat) return
+          if (offPanel === null) {
+            offPanel = ctx.slots.register({
+              name: 'main',
+              key: 'vyra-market',
+              locale: NS,
+              inject: () => ({ remote: ctx.remote, t, useLocale, surface: 'sidebar' }),
+            }, MarketPanel)
+          }
+          const want = visibility.get().sidebar
+          if (want && offRow === null) {
+            offRow = ctx.slots.register({
               name: 'sidebar.panellist',
               id: 'vyra-market',
               order: 2,
               locale: NS,
               label: () => t('title'),
             }, MarketIcon)
-            const offPanel = ctx.slots.register({
-              name: 'main',
-              key: 'vyra-market',
-              locale: NS,
-              inject: () => ({ remote: ctx.remote, t, useLocale }),
-            }, MarketPanel)
+          } else if (!want && offRow !== null) {
+            if (typeof offRow === 'function') offRow()
+            offRow = null
+          }
+        }
+        try {
+          ctx.slots.inject('sidebar.panellist', () => {
+            sidebarSeat = true
+            syncSidebar()
             return () => {
+              sidebarSeat = false
               if (typeof offRow === 'function') offRow()
+              offRow = null
               if (typeof offPanel === 'function') offPanel()
+              offPanel = null
             }
           })
         } catch {
-          // A host before the sidebar panel slot keeps the Plugins tab.
+          // A host before the sidebar panel slot keeps the other doors.
         }
+
+        // Settings is the third door and is always available, so both
+        // switches can be off without stranding the market.
+        try {
+          ctx.slots.inject('settings.section', () => ctx.slots.register({
+            name: 'settings.section',
+            id: 'vyra-market',
+            order: 20,
+            locale: NS,
+            label: () => t('title'),
+            inject: () => ({ remote: ctx.remote, t, useLocale, surface: 'settings' }),
+          }, MarketPanel))
+        } catch {
+          // A host without a settings section keeps the other doors.
+        }
+        try {
+          ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
+            name: 'settings.section.icon',
+            id: 'vyra-market',
+          }, MarketIcon))
+        } catch {
+          // Older hosts render the section label without a custom icon.
+        }
+
+        ctx.effect(() => {
+          syncTab()
+          syncSidebar()
+          const off = visibility.subscribe(() => {
+            syncTab()
+            syncSidebar()
+          })
+          return () => off()
+        }, `${NS}: visibility`)
       },
     }
   },

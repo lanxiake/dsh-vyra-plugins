@@ -44,7 +44,8 @@ const {
   marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
   TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset,
   compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
-  localizedValue, shortBundleName, bundleTitle, bundleDescription,
+  localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility,
+  pageCacheKey, cachedPage, rememberPage, pageCache,
 } = __internal
 
 // --- README images: a <picture> block must become the Markdown image it wraps --
@@ -389,5 +390,23 @@ assert.equal(localizedValue({ 'zh-CN': '简中', en: 'English' }, 'zh'), '简中
 assert.equal(bundleTitle({ name: '@scope/dsh-foo', meta: { title: { en: 'Foo', zh: '福' } } }, 'zh'), '福')
 assert.equal(bundleTitle({ name: '@scope/dsh-foo' }, 'en'), 'foo')
 assert.equal(bundleDescription({ name: 'x', description: 'A manual bundle' }, 'en'), 'A manual bundle')
+
+// --- visibility switches are opt-out and immediately observable -------------
+assert.deepEqual(visibility.get(), { sidebar: true, pluginsTab: true }, 'both doors default to on')
+visibility.set('sidebar', false)
+assert.equal(visibility.get().sidebar, false)
+visibility.set('sidebar', true)
+assert.equal(visibility.get().sidebar, true)
+
+// --- page cache: first page is instant, later pages must share a revision ---
+{
+  const query = { text: 'x', category: null, sort: { kind: 'index' } }
+  const key = pageCacheKey('https://example.invalid/index.json', query, 0, 40)
+  rememberPage(key, { fetchedAt: 7, entries: [{ name: 'alpha' }] })
+  assert.deepEqual(cachedPage(key, 0), { fetchedAt: 7, entries: [{ name: 'alpha' }] }, 'the first page is served from cache')
+  assert.equal(cachedPage(key, 40, 8), undefined, 'a page from another index revision is not reused')
+  assert.deepEqual(cachedPage(key, 40, 7), { fetchedAt: 7, entries: [{ name: 'alpha' }] }, 'the same revision is reused')
+  pageCache.clear()
+}
 
 console.log('vyra-plugin-market: all checks passed')
