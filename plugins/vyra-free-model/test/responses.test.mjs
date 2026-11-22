@@ -165,3 +165,38 @@ test('a failure is reported as an error event, not a silent empty answer', () =>
   assert.ok(failed !== undefined, `expected response.failed, got ${list.map(f => f.type).join(',')}`)
   assert.ok(failed.data.response.error.message.includes('upstream down'))
 })
+
+// ── the live emitter, used by the gateway ───────────────────────────────────
+
+test('the emitter cannot close the same turn twice', async () => {
+  const { ResponsesEmitter } = await import('../src/responses.js')
+  const emitter = new ResponsesEmitter({ model: 'm', id: 'resp-x' })
+  emitter.start()
+  emitter.push({ type: 'text-delta', text: 'hi' })
+  const first = emitter.finish()
+  assert.ok(first.includes('response.completed'))
+  assert.equal(emitter.finish(), '', 'a second finish must emit nothing')
+  assert.equal(emitter.fail({ message: 'late' }), '', 'a failure after finishing must emit nothing')
+})
+
+test('the emitter stamps one strictly increasing sequence across every frame', async () => {
+  const { ResponsesEmitter } = await import('../src/responses.js')
+  const emitter = new ResponsesEmitter({ model: 'm', id: 'resp-y' })
+  let wire = emitter.start()
+  wire += emitter.push({ type: 'reasoning-delta', text: 'think' })
+  wire += emitter.push({ type: 'text-delta', text: 'answer' })
+  wire += emitter.push({ type: 'tool-call', id: 'c1', name: 'go', arguments: '{}' })
+  wire += emitter.push({ type: 'usage', usage: { inputTokens: 3, outputTokens: 4 } })
+  wire += emitter.finish()
+  const numbers = [...wire.matchAll(/"sequence_number":(\d+)/g)].map(m => Number(m[1]))
+  assert.ok(numbers.length > 8)
+  assert.deepEqual(numbers, numbers.map((_, index) => index))
+})
+
+test('an unknown chunk type produces no frame rather than an empty one', async () => {
+  const { ResponsesEmitter } = await import('../src/responses.js')
+  const emitter = new ResponsesEmitter({ model: 'm', id: 'resp-z' })
+  assert.equal(emitter.push({ type: 'block-start', index: 0, blockType: 'text' }), '')
+  assert.equal(emitter.push(null), '')
+  assert.equal(emitter.push({ type: 'text-delta', text: '' }), '')
+})
