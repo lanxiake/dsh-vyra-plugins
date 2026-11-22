@@ -32,6 +32,7 @@ const ICONS = {
   'vyra-theme-styles': 'THEME_STYLES_ICON',
   'vyra-agent-cli-manager': 'AGENT_CLI_MANAGER_ICON',
   'vyra-plugin-market': 'PLUGIN_MARKET_ICON',
+  'vyra-media-studio': 'MEDIA_STUDIO_ICON',
 }
 
 const lines = []
