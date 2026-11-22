@@ -1,0 +1,64 @@
+{
+  "name": "vyra-media-studio",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "右侧栏媒体库与音视频预览：Range 流式播放、网格/列表、多条件筛选、图片与在线直链。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib/",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "assets/qq-group.png"
+  ],
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "test": "node --test test.mjs test-client.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "media",
+    "video",
+    "audio",
+    "gallery"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-media-studio"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3",
+    "mime-types": "^3.0.2",
+    "range-parser": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "lucide-react": "^0.577.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "yet-another-react-lightbox": "^3.33.1"
+  }
+}

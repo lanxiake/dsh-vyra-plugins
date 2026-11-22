@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <radialGradient id="glow" cx="72%" cy="28%" r="70%">
+      <stop offset="0" stop-color="#2f7fa8"/>
+      <stop offset=".45" stop-color="#12364f"/>
+      <stop offset="1" stop-color="#071420"/>
+    </radialGradient>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fd4ee" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#7fd4ee" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#7fd4ee" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M80 0H0V80" fill="none" stroke="#9fd8ea" stroke-opacity=".12" stroke-width="1"/>
+    </pattern>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .13"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#glow)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+  <path d="M-200 760C260 560 540 900 930 610s620-80 900-260" fill="none" stroke="url(#sweep)" stroke-width="3"/>
+  <path d="M-120 560C300 700 640 380 1030 560s460 20 700-120" fill="none" stroke="#7fd4ee" stroke-opacity=".28" stroke-width="1.5"/>
+  <circle cx="1180" cy="300" r="210" fill="none" stroke="#9fd8ea" stroke-opacity=".22"/>
+  <circle cx="1180" cy="300" r="150" fill="none" stroke="#9fd8ea" stroke-opacity=".14"/>
+  <g fill="#eaf7fb">
+    <text x="96" y="180" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="34" letter-spacing="10" opacity=".62">NORTH LOOP / 2026</text>
+    <text x="90" y="840" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="248" font-weight="600" letter-spacing="-6">01</text>
+    <text x="520" y="838" font-family="'Segoe UI', sans-serif" font-size="30" opacity=".66">横版封面 · 4K 母版</text>
+  </g>
+  <g fill="none" stroke="#eaf7fb" stroke-opacity=".5">
+    <path d="M1312 96h192M1312 96v56M1504 96v56" stroke-width="2"/>
+    <path d="M1312 804h192M1312 748v56M1504 748v56" stroke-width="2"/>
+  </g>
+  <rect width="1600" height="900" filter="url(#grain)" opacity=".55"/>
+</svg>
