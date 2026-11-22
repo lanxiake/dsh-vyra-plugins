@@ -2548,6 +2548,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.1.2 supports Hosts whose workspace-files service predates
+        // `scopeOf`: the workspace root is resolved from the live Session's
+        // sandbox policy, then its header, then a stored Session header.
+        '0.1.2': {
+          publishTimestamp: 1795347000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '29cafb11566f0a763bda65a51cd354d69cb4206a',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
