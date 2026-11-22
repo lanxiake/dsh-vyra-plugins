@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "vyra-free-model",
   "version": "0.1.0",
   "private": true,
@@ -22,7 +22,8 @@
     "icon.svg",
     "cordis.patch.yml",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "scripts"
   ],
   "dsh": {
     "bundle": {

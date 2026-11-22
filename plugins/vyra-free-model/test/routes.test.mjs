@@ -170,3 +170,57 @@ test('the master switch reports 503 when the composition wires no setter', async
   const res = await call(handler, { method: 'POST', path: '/enabled', body: { enabled: false } })
   assert.equal(res.status, 503)
 })
+
+// ── configure routes ────────────────────────────────────────────────────────
+
+test('the configure status route lists both tools', async () => {
+  const handler = createApiRoutes(deps({
+    configureStatus: () => [{ tool: 'claude', configured: false }, { tool: 'codex', configured: true }],
+  }))
+  const res = await call(handler, { method: 'GET', path: '/configure/status' })
+  assert.equal(res.status, 200)
+  assert.equal(res.body.tools.length, 2)
+  assert.equal(res.body.tools[1].configured, true)
+})
+
+test('a configure write answers 200 on success and 409 on refusal', async () => {
+  const ok = createApiRoutes(deps({ configure: async () => ({ ok: true, tool: 'claude', command: 'claude-vyra' }) }))
+  const good = await call(ok, { method: 'POST', path: '/configure', body: { tool: 'claude' } })
+  assert.equal(good.status, 200)
+  assert.equal(good.body.command, 'claude-vyra')
+
+  const refused = createApiRoutes(deps({ configure: async () => ({ ok: false, reason: '请先打开端口' }) }))
+  const bad = await call(refused, { method: 'POST', path: '/configure', body: { tool: 'claude' } })
+  assert.equal(bad.status, 409)
+  assert.ok(bad.body.reason.includes('端口'))
+})
+
+test('a configure write is 503 when the composition wires no writer', async () => {
+  const handler = createApiRoutes(deps())
+  const res = await call(handler, { method: 'POST', path: '/configure', body: { tool: 'claude' } })
+  assert.equal(res.status, 503)
+})
+
+test('the restore route reports its refusal instead of pretending', async () => {
+  const handler = createApiRoutes(deps({ restoreConfigure: async () => ({ ok: false, reason: '没有可用的备份。' }) }))
+  const res = await call(handler, { method: 'POST', path: '/configure/restore', body: { tool: 'codex' } })
+  assert.equal(res.status, 409)
+  assert.ok(res.body.reason.includes('备份'))
+})
+
+test('the configure status route rejects a POST', async () => {
+  const handler = createApiRoutes(deps({ configureStatus: () => [] }))
+  const res = await call(handler, { method: 'POST', path: '/configure/status', body: {} })
+  assert.equal(res.status, 405)
+})
+
+test('a configure write cannot be reached through a proxy', async () => {
+  const handler = createApiRoutes(deps({ configure: async () => ({ ok: true }) }))
+  const res = await new Promise(resolve => {
+    const req = { method: 'POST', url: '/api/vyra-free-model/configure',
+      headers: { 'x-forwarded-for': '10.0.0.1' }, on() { return req } }
+    const out = { statusCode: 0, writeHead(s) { this.statusCode = s }, end(p) { resolve({ status: this.statusCode, body: JSON.parse(p) }) } }
+    void handler(req, out)
+  })
+  assert.equal(res.status, 403)
+})

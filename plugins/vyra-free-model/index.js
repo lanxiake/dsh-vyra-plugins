@@ -23,10 +23,14 @@ import fs from 'node:fs'
 import net from 'node:net'
 import crypto from 'node:crypto'
 import { KiloAdapter, ROUTE } from './src/adapter.js'
-import { buildCatalog, fetchKiloListing } from './src/kilo.js'
+import { buildCatalog, fetchKiloListing, AUTO_ID } from './src/kilo.js'
 import { JsonStore } from './src/store.js'
 import { USAGE_INITIAL, recordUsage, pruneDays, todayTotals } from './src/usage.js'
 import { startGateway } from './src/gateway.js'
+import {
+  TOOLS, configPathFor, planClaudeWrite, planCodexWrite, applyPlan, restoreFrom,
+  listBackups, readStatus, scriptPathFor, starterScript,
+} from './src/configure.js'
 
 /** The prefix every route this plugin serves lives under. */
 export const API_PATH = '/api/vyra-free-model'
@@ -85,6 +89,8 @@ export function resolveDshHome() {
 
 export function apply(ctx, _config) {
   const logger = ctx.logger ?? console
+  /** The user's home, where the other tools keep their configuration. */
+  const dshHome = os.homedir()
   const dataDir = path.resolve(resolveDshHome(), DATA_DIR_NAME)
   fs.mkdirSync(dataDir, { recursive: true })
   const cacheFile = path.join(dataDir, 'catalog.json')
@@ -329,7 +335,79 @@ export function apply(ctx, _config) {
       settingsStore.update({ enabled: enabled === true })
       return settingsStore.get().enabled === true
     },
+    configureStatus: () => TOOLS.map(tool => readStatus(tool, dshHome)),
+    configure: async (tool, dryRun) => configureTool(tool, dryRun),
+    restoreConfigure: async (tool, stamp) => restoreTool(tool, stamp),
   })
+
+  /** Config status for one tool, or every tool. */
+  function configureStatus() {
+    return TOOLS.map(tool => readStatus(tool, dshHome))
+  }
+
+  /**
+   * Write the local port into one tool's configuration.
+   *
+   * Refuses when the port is off: a config pointing at a closed port is worse
+   * than no config, because the failure shows up in the other tool as an
+   * unexplained connection error.
+   */
+  async function configureTool(tool, dryRun) {
+    if (!TOOLS.includes(tool)) return { ok: false, reason: `不支持的工具：${String(tool)}` }
+    if (forwardState.enabled !== true || forwardState.port === 0) {
+      return { ok: false, reason: '请先打开「让别的工具也用上」的端口，再写入配置。' }
+    }
+    const file = configPathFor(tool, dshHome)
+    let original = ''
+    try {
+      original = fs.readFileSync(file, 'utf8')
+    } catch { /* a first-time write starts from nothing */ }
+
+    // The plugin cannot see which model the user picked in the harness picker, so
+    // the automatic one is baked in: it is always valid and always the safest choice.
+    const selected = AUTO_ID
+    const plan = tool === 'claude'
+      ? planClaudeWrite(original, { port: forwardState.port, key: forwardState.key, model: selected, home: dshHome })
+      : planCodexWrite(original, { port: forwardState.port, home: dshHome })
+
+    if (dryRun === true) return plan
+    const applied = applyPlan(plan)
+    if (applied.ok !== true) return applied
+
+    // The launcher is what makes the config usable without touching defaults.
+    const scriptFile = scriptPathFor(tool, dshHome)
+    try {
+      fs.mkdirSync(path.dirname(scriptFile), { recursive: true })
+      fs.writeFileSync(scriptFile, starterScript(tool, {
+        port: forwardState.port, key: forwardState.key, model: selected,
+      }), { mode: 0o755 })
+    } catch (error) {
+      logger.warn?.(`vyra-free-model: could not write the ${tool} launcher (${error?.message ?? error})`)
+    }
+
+    return {
+      ...applied,
+      tool,
+      script: scriptFile,
+      command: path.basename(scriptFile).replace(/\.cmd$/, ''),
+      port: forwardState.port,
+      model: selected,
+    }
+  }
+
+  /** Put a configuration file back exactly as its backup holds it. */
+  async function restoreTool(tool, stamp) {
+    if (!TOOLS.includes(tool)) return { ok: false, reason: `不支持的工具：${String(tool)}` }
+    const file = configPathFor(tool, dshHome)
+    const backups = listBackups(file)
+    if (backups.length === 0) return { ok: false, reason: '没有可用的备份。' }
+    const chosen = typeof stamp === 'string' && stamp !== ''
+      ? backups.find(entry => entry.stamp === stamp)
+      : backups[0]
+    if (chosen === undefined) return { ok: false, reason: '找不到这个备份。' }
+    const restored = restoreFrom(chosen.path, file)
+    return restored.ok === true ? { ...restored, tool, stamp: chosen.stamp } : { ...restored, tool }
+  }
 
   // The routes are optional: a headless composition has no web server, and that
   // must cost the settings page, never the models.
@@ -566,9 +644,11 @@ export function createApiRoutes(deps) {
       }
 
       if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward'
-        || routePath === '/forward/key' || routePath === '/channel' || routePath === '/enabled') {
-        if (method !== 'POST' && routePath !== '/summary') return send(405, { error: 'method-not-allowed' })
-        if (routePath === '/summary') return send(405, { error: 'method-not-allowed' })
+        || routePath === '/forward/key' || routePath === '/channel' || routePath === '/enabled'
+        || routePath === '/configure' || routePath === '/configure/restore' || routePath === '/configure/status') {
+        const wantsGet = routePath === '/summary' || routePath === '/configure/status'
+        if (method !== 'POST' && !wantsGet) return send(405, { error: 'method-not-allowed' })
+        if (wantsGet && method !== 'GET') return send(405, { error: 'method-not-allowed' })
       }
 
       if (routePath === '/recheck' && method === 'POST') {
@@ -604,6 +684,24 @@ export function createApiRoutes(deps) {
         if (typeof deps.setEnabled !== 'function') return send(503, { error: 'settings-unavailable' })
         const value = await deps.setEnabled(enabled)
         return send(200, { enabled: value === true })
+      }
+
+      if (routePath === '/configure/status' && method === 'GET') {
+        return send(200, { tools: deps.configureStatus?.() ?? [] })
+      }
+
+      if (routePath === '/configure' && method === 'POST') {
+        const body = await readJson(req)
+        if (typeof deps.configure !== 'function') return send(503, { error: 'configure-unavailable' })
+        const result = await deps.configure(body?.tool, body?.dryRun === true)
+        return send(result?.ok === true ? 200 : 409, result ?? { ok: false, reason: 'no result' })
+      }
+
+      if (routePath === '/configure/restore' && method === 'POST') {
+        const body = await readJson(req)
+        if (typeof deps.restoreConfigure !== 'function') return send(503, { error: 'configure-unavailable' })
+        const result = await deps.restoreConfigure(body?.tool, body?.stamp)
+        return send(result?.ok === true ? 200 : 409, result ?? { ok: false, reason: 'no result' })
       }
 
       if (routePath === '/channel' && method === 'POST') {

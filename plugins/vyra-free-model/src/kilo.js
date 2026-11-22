@@ -32,7 +32,7 @@ const LISTING_TIMEOUT_MS = 15000
 const TURN_TIMEOUT_MS = 300000
 
 /** The one id that makes the picker's default item an always-available choice. */
-const AUTO_ID = 'kilo-auto/free'
+export const AUTO_ID = 'kilo-auto/free'
 
 /** How the recommended auto pick reads in the picker. */
 const AUTO_LABEL = '自动选择（推荐）'

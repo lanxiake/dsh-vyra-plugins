@@ -11,7 +11,7 @@
  * @module scripts/check-syntax
  */
 
-import { readdirSync, existsSync } from 'node:fs'
+import { readdirSync, existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -60,4 +60,31 @@ if (failed > 0) {
   console.error(`${failed} file(s) failed`)
   process.exit(1)
 }
+
+// A UTF-8 BOM rides in front of the first token and makes JSON.parse reject a
+// document that looks perfectly fine in an editor. It has cost this plugin a
+// build already, so it is checked here rather than remembered.
+let bommed = 0
+for (const file of targets) {
+  const bytes = readFileSync(file)
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    bommed += 1
+    console.error(`UTF-8 BOM in ${file.replace(root + '/', '').replace(root + '\\', '')}`)
+  }
+}
+for (const extra of ['package.json', join('locale', 'zh.json'), join('locale', 'en.json')]) {
+  const file = join(root, extra)
+  try {
+    const bytes = readFileSync(file)
+    if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+      bommed += 1
+      console.error(`UTF-8 BOM in ${extra}`)
+    }
+  } catch { /* an optional file that is absent has no BOM to report */ }
+}
+if (bommed > 0) {
+  console.error(`${bommed} file(s) start with a BOM`)
+  process.exit(1)
+}
+
 console.log(`syntax ok (${targets.length} files)`)

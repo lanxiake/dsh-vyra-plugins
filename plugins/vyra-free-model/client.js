@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Vyra Free Model — browser half.
  *
  * One settings section, three blocks, top to bottom in the order a new user
