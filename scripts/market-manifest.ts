@@ -193,6 +193,9 @@ export const manifest: MarketManifest = {
       'integration': { title: { en: 'Integrations', zh: '外部集成' } },
       'browser': { title: { en: 'Browser and desktop', zh: '浏览器与桌面' } },
       'content': { title: { en: 'Content creation', zh: '内容创作' } },
+      'appearance': { title: { en: 'Appearance', zh: '界面外观' } },
+      'media': { title: { en: 'Media', zh: '媒体处理' } },
+      'model': { title: { en: 'Model access', zh: '模型接入' } },
     },
   },
   plugins: [

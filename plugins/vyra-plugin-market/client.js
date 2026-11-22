@@ -1341,6 +1341,8 @@ window.__ModuleLoader__.load({
       installedSummary: '{total} 个已安装 · {enabled} 启用 · {disabled} 停用',
       installedEmptyTitle: '没有可显示的插件',
       installedEmptyBody: '手动安装或其他市场安装的插件会出现在这里。',
+      installedProfileTitle: '已安装插件',
+      installedBundledTitle: 'DSH 内置插件',
       tagEnabled: '已启用',
       tagOfficial: '客户端自带',
       tagOptional: '可选',
@@ -1486,6 +1488,8 @@ window.__ModuleLoader__.load({
       installedSummary: '{total} installed · {enabled} enabled · {disabled} disabled',
       installedEmptyTitle: 'Nothing to show',
       installedEmptyBody: 'Plugins installed by hand or from another market appear here.',
+      installedProfileTitle: 'Installed plugins',
+      installedBundledTitle: 'Bundled with DSH',
       tagEnabled: 'Enabled',
       tagOfficial: 'Bundled',
       tagOptional: 'Optional',
@@ -1820,6 +1824,10 @@ window.__ModuleLoader__.load({
       .vpm-bar.error{color:var(--dsw-alias-state-error-primary)}
       .vpm-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 2px 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l3) transparent}
       .vpm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:0;padding:0;list-style:none;align-items:start}
+      .vpm-installed-section{display:flex;flex-direction:column;gap:10px}
+      .vpm-installed-section + .vpm-installed-section{margin-top:24px;padding-top:18px;border-top:1px solid var(--dsw-alias-border-l2)}
+      .vpm-section-title{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;line-height:18px;font-weight:650;letter-spacing:-.01em;color:var(--dsw-alias-label-secondary)}
+      .vpm-section-title .vpm-count{font-size:11px;line-height:16px;font-weight:500;color:var(--dsw-alias-label-tertiary)}
       .vpm-card{position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;min-height:164px;align-self:start;padding:16px;border-radius:18px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-settings-card-fill,var(--dsw-alias-bg-layer-1));cursor:pointer;transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,border-color .18s,background-color .18s}
       .vpm-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(15,23,42,.11);border-color:var(--dsw-alias-border-l3)}
       .vpm-card:active{transform:translateY(0) scale(.996)}
@@ -2949,6 +2957,12 @@ window.__ModuleLoader__.load({
           return terms.every((term) => haystack.includes(term))
         })
       }, [installedBundles, draft, lang])
+      // DSH's own bundles stay at the bottom under their own heading; a
+      // profile dependency is the person's plugin, a shipped one is the client.
+      const installedGroups = useMemo(() => ({
+        profile: installedFiltered.filter((bundle) => bundle.installed === true),
+        bundled: installedFiltered.filter((bundle) => bundle.installed !== true),
+      }), [installedFiltered])
 
       // ponytail: 快捷筛选 - 根据 quickFilter 过滤条目
       const filteredEntries = useMemo(() => {
@@ -3178,6 +3192,14 @@ window.__ModuleLoader__.load({
           h('span', { className: 'vpm-grow', style: { fontWeight: 600 } }, t('selected', { n: picked.size })), bulk))
       }
 
+      const installedCard = (bundle) => h(InstalledCard, {
+        key: bundle.name, bundle, lang, t,
+        busy: installedBusy === bundle.name,
+        onDetails: setInstalledDetail,
+        onToggle: toggleInstalled,
+        onUninstall: (target) => { setInstalledConfirm(target) },
+      })
+
       return h('div', { className: 'vpm-page' },
         h('div', { className: 'vpm-page-inner' },
         h('header', { className: 'vpm-hero' },
@@ -3371,14 +3393,17 @@ window.__ModuleLoader__.load({
                 h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
                 h('p', { className: 'vpm-state-title' }, installedBundles.length === 0 ? t('installedEmptyTitle') : t('noMatchTitle')),
                 h('p', { className: 'vpm-state-body' }, installedBundles.length === 0 ? t('installedEmptyBody') : t('noMatchBody')))
-              : h('ul', { className: 'vpm-grid' },
-                installedFiltered.map((bundle) => h(InstalledCard, {
-                  key: bundle.name, bundle, lang, t,
-                  busy: installedBusy === bundle.name,
-                  onDetails: setInstalledDetail,
-                  onToggle: toggleInstalled,
-                  onUninstall: (target) => { setInstalledConfirm(target) },
-                }))))
+              : h('div', null,
+                installedGroups.profile.length === 0 ? null : h('section', { className: 'vpm-installed-section' },
+                  h('h3', { className: 'vpm-section-title' },
+                    t('installedProfileTitle'),
+                    h('span', { className: 'vpm-count' }, installedGroups.profile.length)),
+                  h('ul', { className: 'vpm-grid' }, installedGroups.profile.map(installedCard))),
+                installedGroups.bundled.length === 0 ? null : h('section', { className: 'vpm-installed-section' },
+                  h('h3', { className: 'vpm-section-title' },
+                    t('installedBundledTitle'),
+                    h('span', { className: 'vpm-count' }, installedGroups.bundled.length)),
+                  h('ul', { className: 'vpm-grid' }, installedGroups.bundled.map(installedCard)))))
             : (listing === null ? h('div', null,
             h('div', { className: 'vpm-state' },
               h('span', { className: 'vpm-spin' }),

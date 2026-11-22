@@ -436,6 +436,25 @@ await (async () => {
   assert.ok(buttonByText(tree, 'uninstall') !== undefined, 'the matched bundle is controllable from the card')
 }
 
+// --- DSH's bundled plugins sit below the profile's own, under a heading ------
+{
+  const { tree, settle } = await mount({
+    entries: [],
+    bundles: [
+      { name: 'profile-plugin', version: '1.0.0', installed: true, enabled: true, removable: true, rows: [], overrides: [] },
+      { name: 'dsh-bundled', version: '2.0.0', installed: false, availability: 'installation', official: true, enabled: true, removable: false, rows: [], overrides: [] },
+    ],
+  })
+  const segment = findAll(tree, (node) => node.type === 'button' && texts(node).join('').includes('viewInstalled'))[0]
+  segment.props.onClick()
+  const installed = await settle()
+  const lines = texts(installed)
+  const profileAt = lines.indexOf('installedProfileTitle')
+  const bundledAt = lines.indexOf('installedBundledTitle')
+  assert.ok(profileAt !== -1 && bundledAt !== -1, 'both installed sections are drawn')
+  assert.ok(profileAt < bundledAt, 'the client-provided section comes after the profile plugins')
+}
+
 // --- the Installed view lists bundles no market index knows about ------------
 {
   const bundle = {

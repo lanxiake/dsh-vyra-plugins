@@ -1,0 +1,61 @@
+{
+  "name": "@weibaohui/dsh-sync",
+  "version": "0.4.12",
+  "description": "dsh 插件 · 多机同步与多协议备份：Git（分支→PR→合并、冲突交 AI）+ WebDAV + 本地文件夹三种协议各一个页签一个开关；技能/会话/设置/插件清单独立开关与策略；纯备份协议与 git backup 布局一致（backup/<实例ID>/）；快照本地优先、多协议通用上云与恢复回退。",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "sync",
+    "backup",
+    "webdav",
+    "git",
+    "gitcode",
+    "dsh-plugin"
+  ],
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./client/bundle.js",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=22.5",
+    "dsh": ">=0.1.7-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "src",
+    "client",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "check": "node --check src/index.js && node --check client/index.js",
+    "test": "node --test --experimental-test-isolation=none --test-timeout=120000 --test-force-exit test/*.test.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "prepublishOnly": "npm run build:client && npm run check && npm test"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weibaohui/dsh-sync.git"
+  },
+  "homepage": "https://github.com/weibaohui/dsh-sync#readme",
+  "bugs": {
+    "url": "https://github.com/weibaohui/dsh-sync/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

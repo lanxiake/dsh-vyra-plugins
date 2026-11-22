@@ -1,0 +1,10 @@
+# dsh-music-panel: local music library + sidebar player.
+# `config.roots` seeds the library before the settings page saves anything;
+# values saved from the settings page take precedence over this seed.
+- insert:
+    - id: music
+      name: dsh-music-panel
+      config:
+        roots: []
+        depth: 4
+        extensions: []

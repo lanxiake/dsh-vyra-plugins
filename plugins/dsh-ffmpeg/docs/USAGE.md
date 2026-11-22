@@ -1,0 +1,105 @@
+# dsh-ffmpeg 使用说明
+
+[返回简介](../README.md) · [更新记录](../CHANGELOG.md) · [验证记录](VALIDATION.md)
+
+## 抽帧与源文件保护
+
+默认帧序列写入 `<输入名>-frames/run-*/`，每次使用新目录。显式指定序列时，已有输出需要 `overwrite=true`；即使允许覆盖，也不能覆盖任何输入或字幕源及其文件别名。
+
+## 本次改进
+
+相对文件路径以当前会话工作区为基准。提供 start / duration 时必须是合法时间，非法输入不会退回默认值或意外处理整段视频。
+
+## 安装
+
+```bash
+dsh plugin --profile web add dsh-ffmpeg
+```
+
+需要本机已安装 ffmpeg（`ffmpeg -version` 能出结果即可）；不在 PATH 上时可用 `ffmpegPath`/`ffprobePath` 显式指定，或设置环境变量 `DSH_FFMPEG_PATH` / `DSH_FFPROBE_PATH`。
+
+## 卸载
+
+```bash
+dsh plugin --profile web remove dsh-ffmpeg
+```
+
+卸载后重启 Web 服务。如需彻底清理，可再手动删除自己 profile `cordis.patch.yml` 中覆盖的插件行。
+
+## 配置
+
+在你自己的 profile 的 `cordis.patch.yml` 里覆盖本插件行（缺省时全部用默认值）：
+
+```yaml
+- id: ffmpeg
+  name: 'dsh-ffmpeg'
+  config:
+    # ffmpegPath: C:\tools\ffmpeg\bin\ffmpeg.exe   # 非 PATH 时显式指定（也可用 DSH_FFMPEG_PATH）
+    # ffprobePath: C:\tools\ffmpeg\bin\ffprobe.exe # 也可用 DSH_FFPROBE_PATH
+    timeoutMs: 300000                                # 单次操作超时（默认 5 分钟，10 秒 - 2 小时）
+    # overwrite: true                                 # 允许覆盖同名输出（默认自动加 _1/_2 序号）
+```
+
+## 工具一览
+
+| 工具 | 作用 | 关键参数 |
+| :-- | :-- | :-- |
+| `ffmpeg_probe` | 探测媒体信息（格式/时长/分辨率/帧率/码率/音轨/字幕轨；多视频流时返回完整 videos 列表） | `input` 必填 |
+| `ffmpeg_cut` | 剪辑片段（默认流拷贝秒级，可精确重编码） | `input` 必填；`start`/`end`/`duration` |
+| `ffmpeg_concat` | 拼接 2-20 个片段；重编码时等比补边到同一画布，混合无声片段会补静音并保留其余原声 | `inputs` 数组必填；`reencode=true` 时可用 `width` + `height`、`fps` 指定输出 |
+| `ffmpeg_encode` | 转码（B 站 1080p/4K、竖屏 1080p、web-720p 预设 + crf/fps/scale 覆盖） | `input` 必填；`preset` 可选 |
+| `ffmpeg_subtitle` | 字幕烧录（SRT/ASS 硬字幕） | `input`+`subtitle` 必填 |
+| `ffmpeg_extract` | 提取音轨（m4a，非 AAC 自动转 AAC）/ 抽帧序列 / 单帧 / 字幕流 | `input`+`what` 必填 |
+| `ffmpeg_gif` | 视频转高质量 GIF（两遍调色板） | `input` 必填；`fps`/`width`/`duration` 可选 |
+| `ffmpeg_frames` | 批量抽帧给视觉模型读图（定间隔或指定时间点，PNG/JPG） | `input` 必填；`every`/`times` 二选一 |
+| `ffmpeg_adjust` | 变速（音视频同步）/ 音量 / 静音 / 旋转（竖横屏互转），可组合 | `input` 必填；`speed`/`volume`/`mute`/`rotate` 至少一个 |
+| `ffmpeg_health` | 自检 ffmpeg / ffprobe 可执行文件 | 无 |
+
+### 示例
+
+```text
+ffmpeg_probe { input: E:\videos\raw.mp4 }
+ffmpeg_cut { input: E:\videos\raw.mp4, start: 10, end: 30 }
+ffmpeg_encode { input: E:\videos\raw.mp4, preset: bilibili-1080p }
+ffmpeg_subtitle { input: E:\videos\raw.mp4, subtitle: E:\videos\subs.srt }
+ffmpeg_extract { input: E:\videos\raw.webm, what: audio }
+ffmpeg_gif { input: E:\videos\raw.mp4, duration: 3, width: 480 }
+ffmpeg_adjust { input: E:\videos\raw.mp4, volume: +2dB }
+```
+
+## 故障排查
+
+遇到问题先运行 `ffmpeg_health`：它会分别探测 ffmpeg 与 ffprobe，输出实际使用的可执行文件路径；失败时附「下一步」修复步骤。
+
+| 现象 | 原因与处理 |
+| :-- | :-- |
+| `spawn ffmpeg ENOENT` / 提示「找不到可执行文件」 | ffmpeg 未安装或不在 PATH。安装 FFmpeg（含 ffprobe），或在 `cordis.patch.yml` 配置 `ffmpegPath` / `ffprobePath`，也可设置 `DSH_FFMPEG_PATH` / `DSH_FFPROBE_PATH`（绝对路径），重启 DSH 后重跑 `ffmpeg_health` |
+| `失败（退出码 N）：…` | 直接来自 ffmpeg 的 stderr 尾部。先看最后一行，常见原因是输入编码、字幕文件路径或滤镜参数不支持 |
+| 操作超时 | 单次操作默认 5 分钟。大文件或多路拼接可调大 `timeoutMs`（上限 2 小时），或用 `start`/`end` 分段处理 |
+| 「输出超过 4MB 已截断」 | 探测输出被宿主截断无法解析。缩小探测范围（先 `ffmpeg_cut` 截出片段再 probe），或改用更小的输入 |
+| 「抽帧输出已存在…已拒绝覆盖」 | 帧序列默认写入新的 `<名称>-frames/run-*` 目录；显式指定 output 时请更换文件名前缀或使用 `overwrite: true` |
+| 「输出路径与输入文件相同」 | 防覆写保护：换输出路径或文件名。同名成品默认自动加 `_1`/`_2` 序号 |
+| 结果里的时间不是精确帧 | `ffmpeg_storyboard` 报告的是采样目标时间，均匀采样不等于镜头检测；需要精确时间码时用 `ffmpeg_probe` + `ffmpeg_extract` |
+
+## 安全设计
+
+- **无 shell**：所有参数以独立 argv 数组传递，用户输入不可能注入命令
+- **进程走 DSH 官方 subprocess 服务**：超时 AbortSignal 会真正触发树级终止（SIGTERM → 强杀，Windows taskkill /T），本插件零运行时依赖
+- **防覆写**：默认不覆盖同名文件（自动加序号），输出与输入相同直接拒绝
+- **超时钳制**：单次操作 10 秒 - 2 小时；探测额外限制 60 秒
+- **参数校验**：时间格式、预设枚举、crf/fps/scale 范围全部前置校验，输入目录、抽帧无扩展名输出等边界也有中文错误/自动修复
+
+## 开发
+
+```bash
+pnpm install
+pnpm test       # 构建 + 124 个测试
+```
+
+## License
+
+MIT
+
+## 视频总览图
+
+调用 `ffmpeg_storyboard({input:"movie.mp4",count:12,columns:4,width:320})` 生成单张 PNG。可用 start/end 指定片段，接受秒数或 HH:MM:SS.mmm；count 为 2–36，columns 为 1–6，每格 width 为 160–640。画面按 16:9 留黑边，不拉伸原比例。工具结果附每格的采样目标时间，不是实际解码帧的精确时间码；均匀采样不等于镜头检测，也不保证覆盖所有短镜头。需要可定位、时长已知的本地视频。默认保留源文件与重名成品；取消或失败会清理临时采样，不发布半成品。
