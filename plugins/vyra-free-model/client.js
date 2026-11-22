@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Vyra Free Model — browser half.
  *
  * One settings section, three blocks, top to bottom in the order a new user
@@ -80,6 +80,14 @@ window.__ModuleLoader__.load({
         'forward.forClaudeCode': '给 Claude Code',
         'forward.copy': '复制',
         'forward.copied': '已复制',
+
+        'degrade.laneDown': '暂时连不上，请检查网络',
+        'degrade.laneThrottled': '免费额度暂时用完，稍后再试或登录一个账号',
+        'degrade.accountsFailed': '账号功能暂时不可用',
+        'degrade.accountsOwned': '账号功能已由 Our Free Model 接管，这里继续用免费模型。',
+        'master.disable': '先关掉',
+        'master.enable': '重新打开',
+        'master.offHint': '已关闭。模型不会出现在选择器里；随时可以重新打开。',
       },
       en: {
         nav: 'Free models',
@@ -126,6 +134,14 @@ window.__ModuleLoader__.load({
         'forward.forClaudeCode': 'For Claude Code',
         'forward.copy': 'Copy',
         'forward.copied': 'Copied',
+
+        'degrade.laneDown': 'Cannot reach it right now; check the network.',
+        'degrade.laneThrottled': 'The free quota is used up for now. Try later, or sign in.',
+        'degrade.accountsFailed': 'Accounts are unavailable right now.',
+        'degrade.accountsOwned': 'Our Free Model already manages accounts; the free models keep working.',
+        'master.disable': 'Turn off',
+        'master.enable': 'Turn back on',
+        'master.offHint': 'Off. These models stay out of the picker; turn them back on any time.',
       },
     }
 
@@ -193,6 +209,7 @@ window.__ModuleLoader__.load({
     const CSS = `
 .vfm_page{display:flex;flex-direction:column;gap:20px;padding:4px 0 24px;color:var(--dsw-alias-label-primary);font-size:13px}
 .vfm_head{display:flex;flex-direction:column;gap:4px}
+.vfm_headrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .vfm_title{font-size:16px;font-weight:600;margin:0}
 .vfm_sub{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5}
 .vfm_card{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1);padding:14px}
@@ -222,6 +239,7 @@ window.__ModuleLoader__.load({
 .vfm_field:first-of-type{border-top:none}
 .vfm_label{color:var(--dsw-alias-label-secondary);font-size:12px;flex:none}
 .vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-primary);text-align:right}
+.vfm_banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--dsw-alias-state-warning-primary);background:var(--dsw-alias-bg-layer-2);font-size:12px;color:var(--dsw-alias-label-secondary)}
 `
 
     // ── the model block ──────────────────────────────────────────────────────
@@ -499,6 +517,36 @@ window.__ModuleLoader__.load({
       )
     }
 
+    // ── degradation ──────────────────────────────────────────────────────────
+
+    /**
+     * What to tell the user when something is not working.
+     *
+     * The rule: one sentence naming what failed, and a retry only when retrying
+     * could actually help. A quota that ran out is not fixed by pressing a
+     * button, so it gets no retry — it points at the one action that does help.
+     * An unknown state returns nothing: inventing a warning for a healthy page
+     * would be worse than saying nothing.
+     */
+    function degradedMessage(state) {
+      if (state === 'lane-down') return { text: t('degrade.laneDown'), canRetry: true }
+      if (state === 'lane-throttled') return { text: t('degrade.laneThrottled'), canRetry: false }
+      if (state === 'accounts-failed') return { text: t('degrade.accountsFailed'), canRetry: false }
+      if (state === 'accounts-owned') return { text: t('degrade.accountsOwned'), canRetry: false }
+      return undefined
+    }
+
+    /** The one line a degraded page shows, above its blocks. */
+    function DegradedBanner({ state, onRetry }) {
+      const message = degradedMessage(state)
+      if (message === undefined) return null
+      return h('div', { className: 'vfm_banner' },
+        h('span', {}, message.text),
+        message.canRetry && typeof onRetry === 'function'
+          ? h('button', { type: 'button', className: 'vfm_btn', onClick: () => onRetry() }, t('load.retry'))
+          : null)
+    }
+
     // ── the page ─────────────────────────────────────────────────────────────
 
     /**
@@ -665,6 +713,14 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
+      /** The master switch: takes the model group out of the picker. */
+      const toggleEnabled = useCallback(async enabled => {
+        try {
+          const payload = await api('/enabled', { method: 'POST', body: { enabled: !enabled } })
+          setSummary(current => (current === undefined ? current : { ...current, enabled: payload?.enabled === true }))
+        } catch { /* the page keeps its current reading */ }
+      }, [])
+
       if (error !== '' && summary === undefined) {
         return h('div', { className: 'vfm_page' },
           h('div', { className: 'vfm_center' },
@@ -679,8 +735,24 @@ window.__ModuleLoader__.load({
 
       return h('div', { className: 'vfm_page' },
         h('header', { className: 'vfm_head' },
-          h('h2', { className: 'vfm_title' }, t('title')),
-          h('p', { className: 'vfm_sub' }, t('subtitle'))),
+          h('div', { className: 'vfm_headrow' },
+            h('div', {},
+              h('h2', { className: 'vfm_title' }, t('title')),
+              h('p', { className: 'vfm_sub' }, t('subtitle'))),
+            h('button', {
+              type: 'button',
+              className: 'vfm_btn',
+              onClick: () => void toggleEnabled(summary.enabled !== false),
+            }, summary.enabled === false ? t('master.enable') : t('master.disable')))),
+        summary.enabled === false ? h('p', { className: 'vfm_note' }, t('master.offHint')) : null,
+        h(DegradedBanner, {
+          state: summary?.lane?.ok === false && (summary?.lane?.models ?? []).length === 0
+            ? 'lane-down'
+            : summary?.accounts?.state === 'failed'
+              ? 'accounts-failed'
+              : 'ok',
+          onRetry: () => void recheck(),
+        }),
         h(ModelBlock, {
           models: summary?.lane?.models ?? [],
           selected,
@@ -739,7 +811,7 @@ window.__ModuleLoader__.load({
     exports.name = 'vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
     exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
-      cursorSnippet, claudeCodeSnippet, PROVIDERS, SettingsPage, DICT, CSS, API }
+      cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API }
     return module.exports
   },
 })

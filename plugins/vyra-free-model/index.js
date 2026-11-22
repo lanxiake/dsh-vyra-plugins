@@ -89,8 +89,10 @@ export function apply(ctx, _config) {
   fs.mkdirSync(dataDir, { recursive: true })
   const cacheFile = path.join(dataDir, 'catalog.json')
 
-  /** Settings the adapter and the routes read. Task 7 owns the durable store. */
-  const settings = { enabled: true }
+  /** Settings the adapter and the routes read. */
+  const settingsFile = path.join(dataDir, 'settings.json')
+  const settingsStore = new JsonStore(settingsFile, { enabled: true }, { log: message => logger.warn?.(message) })
+  const settings = settingsStore.get()
 
   /** Today's token counts, and the durable file behind them. */
   const usageFile = path.join(dataDir, 'usage.json')
@@ -322,6 +324,7 @@ export function apply(ctx, _config) {
     refreshCatalog: () => refreshCatalog({ log: true }),
     setForward,
     channel: callChannel,
+    isEnabled: () => settingsStore.get().enabled !== false,
   })
 
   // The routes are optional: a headless composition has no web server, and that
@@ -492,9 +495,10 @@ function writeCachedCatalog(file, models, logger) {
  * copy from the response of the call that creates it, which is the only moment
  * the value is legitimately on the wire.
  */
-export function createSummary({ version, catalog, laneOk, accounts, usage, forward }) {
+export function createSummary({ version, catalog, laneOk, accounts, usage, forward, enabled }) {
   return {
     version,
+    enabled: enabled !== false,
     lane: {
       ok: laneOk === true,
       models: (catalog ?? []).map(entry => ({
@@ -558,7 +562,7 @@ export function createApiRoutes(deps) {
       }
 
       if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward'
-        || routePath === '/forward/key' || routePath === '/channel') {
+        || routePath === '/forward/key' || routePath === '/channel' || routePath === '/enabled') {
         if (method !== 'POST' && routePath !== '/summary') return send(405, { error: 'method-not-allowed' })
         if (routePath === '/summary') return send(405, { error: 'method-not-allowed' })
       }
@@ -586,6 +590,15 @@ export function createApiRoutes(deps) {
           return send(409, { error: 'forward-disabled' })
         }
         return send(200, { key: forward.key })
+      }
+
+      if (routePath === '/enabled' && method === 'POST') {
+        const body = await readJson(req)
+        const enabled = body?.enabled === true
+        settingsStore.update({ enabled })
+        // The picker reads `listModels` on its own schedule; the page also shows
+        // the switch, so the answer carries the state it should render.
+        return send(200, { enabled: settingsStore.get().enabled === true })
       }
 
       if (routePath === '/channel' && method === 'POST') {
@@ -616,6 +629,7 @@ function assemble(deps) {
     accounts: deps.accounts?.() ?? { state: 'pending', providers: [] },
     usage: deps.usage?.() ?? { input: 0, output: 0, total: 0 },
     forward: deps.forward?.() ?? { enabled: false, port: 0, key: '' },
+    enabled: deps.isEnabled?.() !== false,
   })
 }
 
