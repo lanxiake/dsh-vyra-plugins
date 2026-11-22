@@ -325,6 +325,10 @@ export function apply(ctx, _config) {
     setForward,
     channel: callChannel,
     isEnabled: () => settingsStore.get().enabled !== false,
+    setEnabled: async enabled => {
+      settingsStore.update({ enabled: enabled === true })
+      return settingsStore.get().enabled === true
+    },
   })
 
   // The routes are optional: a headless composition has no web server, and that
@@ -595,10 +599,11 @@ export function createApiRoutes(deps) {
       if (routePath === '/enabled' && method === 'POST') {
         const body = await readJson(req)
         const enabled = body?.enabled === true
-        settingsStore.update({ enabled })
-        // The picker reads `listModels` on its own schedule; the page also shows
-        // the switch, so the answer carries the state it should render.
-        return send(200, { enabled: settingsStore.get().enabled === true })
+        // The store belongs to the caller's composition, so the route reaches it
+        // through the injected setter rather than a captured variable.
+        if (typeof deps.setEnabled !== 'function') return send(503, { error: 'settings-unavailable' })
+        const value = await deps.setEnabled(enabled)
+        return send(200, { enabled: value === true })
       }
 
       if (routePath === '/channel' && method === 'POST') {

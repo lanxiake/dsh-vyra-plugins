@@ -150,3 +150,23 @@ test('POST /forward toggles and never echoes the key back', async () => {
   assert.equal(on.body.forward.port, 8899)
   assert.equal(JSON.stringify(on.body).includes('"k"'), false)
 })
+
+test('the master switch goes through the injected setter, not a captured store', async () => {
+  let enabled = true
+  const handler = createApiRoutes(deps({
+    isEnabled: () => enabled,
+    setEnabled: async value => { enabled = value === true; return enabled },
+  }))
+  const off = await call(handler, { method: 'POST', path: '/enabled', body: { enabled: false } })
+  assert.equal(off.status, 200)
+  assert.equal(off.body.enabled, false)
+  assert.equal(enabled, false)
+  const summary = await call(handler, { path: '/summary' })
+  assert.equal(summary.body.enabled, false)
+})
+
+test('the master switch reports 503 when the composition wires no setter', async () => {
+  const handler = createApiRoutes(deps())
+  const res = await call(handler, { method: 'POST', path: '/enabled', body: { enabled: false } })
+  assert.equal(res.status, 503)
+})
