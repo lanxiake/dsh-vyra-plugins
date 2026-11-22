@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "vyra-free-model",
   "version": "0.1.0",
   "private": true,
@@ -35,7 +35,7 @@
     }
   },
   "scripts": {
-    "check": "node scripts/check-syntax.mjs",
+    "check": "node scripts/check-syntax.mjs && node scripts/check-css.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "peerDependencies": {

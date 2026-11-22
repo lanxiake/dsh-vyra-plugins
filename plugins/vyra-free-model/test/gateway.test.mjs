@@ -145,3 +145,69 @@ test('an error thrown by the completion becomes a 502 with a message', async () 
     assert.equal(res.status, 502)
   }, { complete: async () => { throw new Error('boom') } })
 })
+
+test('/v1/responses streams the typed event sequence Codex reads', async () => {
+  await withGateway(async gw => {
+    const res = await fetch(`http://127.0.0.1:${gw.port}/v1/responses`, {
+      method: 'POST', headers: { authorization: 'Bearer k', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'a:free', input: 'hi', stream: true }),
+    })
+    assert.equal(res.status, 200)
+    const text = await res.text()
+    const types = [...text.matchAll(/^event: (\S+)$/gm)].map(m => m[1])
+    assert.equal(types[0], 'response.created')
+    assert.ok(types.includes('response.output_text.delta'))
+    assert.ok(types.includes('response.completed'))
+    assert.ok(text.includes('"delta":"hi"'))
+
+    // The contract the client checks on every frame.
+    const numbers = [...text.matchAll(/"sequence_number":(\d+)/g)].map(m => Number(m[1]))
+    assert.deepEqual(numbers, numbers.map((_, index) => index))
+  })
+})
+
+test('/v1/responses answers a non-streaming call with one JSON body', async () => {
+  await withGateway(async gw => {
+    const res = await fetch(`http://127.0.0.1:${gw.port}/v1/responses`, {
+      method: 'POST', headers: { authorization: 'Bearer k', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'a:free', input: 'hi' }),
+    })
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.object, 'response')
+    assert.equal(body.status, 'completed')
+    assert.equal(body.output[0].content[0].text, 'hi')
+  })
+})
+
+test('/v1/responses carries instructions as a system turn', async () => {
+  const seen = []
+  await withGateway(async gw => {
+    await fetch(`http://127.0.0.1:${gw.port}/v1/responses`, {
+      method: 'POST', headers: { authorization: 'Bearer k', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'a:free', input: 'hi', instructions: 'be brief' }),
+    })
+  }, { complete: async (request, onChunk) => { seen.push(request.messages); onChunk({ text: 'x' }); return {} } })
+  assert.equal(seen[0][0].role, 'system')
+  assert.equal(seen[0][0].content[0].text, 'be brief')
+})
+
+test('/v1/responses refuses an unknown model like the chat endpoint does', async () => {
+  await withGateway(async gw => {
+    const res = await fetch(`http://127.0.0.1:${gw.port}/v1/responses`, {
+      method: 'POST', headers: { authorization: 'Bearer k', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: '', input: 'hi' }),
+    })
+    assert.equal(res.status, 400)
+  })
+})
+
+test('/v1/responses still requires the bearer key', async () => {
+  await withGateway(async gw => {
+    const res = await fetch(`http://127.0.0.1:${gw.port}/v1/responses`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'a:free', input: 'hi' }),
+    })
+    assert.equal(res.status, 401)
+  })
+})

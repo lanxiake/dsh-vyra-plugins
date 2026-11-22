@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Vyra Free Model — browser half.
  *
  * One settings section, three blocks, top to bottom in the order a new user
@@ -218,15 +218,15 @@ window.__ModuleLoader__.load({
 .vfm_note{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;margin:8px 0 0}
 .vfm_row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:transparent;width:100%;text-align:left;color:inherit;font:inherit}
 .vfm_row:hover{background:var(--dsw-alias-bg-layer-2)}
-.vfm_row[data-on="1"]{border-color:var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-2)}
+.vfm_row[data-on="1"]{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}
 .vfm_dot{width:14px;height:14px;border-radius:50%;border:1px solid var(--dsw-alias-border-l2);flex:none;position:relative}
-.vfm_row[data-on="1"] .vfm_dot{border-color:var(--dsw-alias-state-business-primary)}
-.vfm_row[data-on="1"] .vfm_dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--dsw-alias-state-business-primary)}
+.vfm_row[data-on="1"] .vfm_dot{border-color:var(--dsw-alias-brand-primary)}
+.vfm_row[data-on="1"] .vfm_dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--dsw-alias-brand-primary)}
 .vfm_name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vfm_meta{display:flex;gap:8px;align-items:center;flex:none;color:var(--dsw-alias-label-secondary);font-size:11px}
 .vfm_tag{border:1px solid var(--dsw-alias-border-l1);border-radius:4px;padding:1px 5px}
 .vfm_btn{border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:transparent;color:var(--dsw-alias-label-primary);cursor:pointer;font:inherit;font-size:12px;padding:4px 10px}
-.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-3)}
+.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2)}
 .vfm_btn:disabled{opacity:.55;cursor:default}
 .vfm_center{display:flex;align-items:center;justify-content:center;padding:28px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .vfm_more{align-self:flex-start;margin-top:6px}
@@ -234,12 +234,12 @@ window.__ModuleLoader__.load({
 .vfm_acct+.vfm_acct{margin-top:6px}
 .vfm_acctmain{display:flex;align-items:center;gap:8px;min-width:0}
 .vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-state-warning-primary);font-size:12px;color:var(--dsw-alias-label-secondary)}
+.vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-state-warn-primary);font-size:12px;color:var(--dsw-alias-label-secondary)}
 .vfm_field{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--dsw-alias-border-l1)}
 .vfm_field:first-of-type{border-top:none}
 .vfm_label{color:var(--dsw-alias-label-secondary);font-size:12px;flex:none}
 .vfm_code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-primary);text-align:right}
-.vfm_banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--dsw-alias-state-warning-primary);background:var(--dsw-alias-bg-layer-2);font-size:12px;color:var(--dsw-alias-label-secondary)}
+.vfm_banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--dsw-alias-state-warn-primary);background:var(--dsw-alias-bg-layer-2);font-size:12px;color:var(--dsw-alias-label-secondary)}
 `
 
     // ── the model block ──────────────────────────────────────────────────────

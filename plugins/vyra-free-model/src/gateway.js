@@ -1,4 +1,4 @@
-﻿/**
+/**
  * A local OpenAI-compatible port.
  *
  * Other tools on this machine — an editor, a CLI agent — speak the OpenAI shape
@@ -19,6 +19,7 @@
  */
 
 import http from 'node:http'
+import { toResponsesBody, responsesJson, ResponsesEmitter } from './responses.js'
 
 const HOST = '127.0.0.1'
 const BODY_LIMIT_BYTES = 8 * 1024 * 1024
@@ -95,6 +96,13 @@ async function handle(req, res, { key, models, complete, log }) {
   if (url.pathname === '/v1/chat/completions') {
     if (req.method !== 'POST') return send(405, { error: { message: 'method not allowed' } })
     return chatCompletions(req, res, { complete, log })
+  }
+
+  // Codex speaks this shape rather than the chat one, and it is not optional:
+  // a caller configured with `wire_api = "responses"` gets a 404 without it.
+  if (url.pathname === '/v1/responses' || url.pathname === '/responses') {
+    if (req.method !== 'POST') return send(405, { error: { message: 'method not allowed' } })
+    return responses(req, res, { complete, log })
   }
 
   return send(404, { error: { message: 'not found' } })
@@ -278,5 +286,119 @@ async function chatCompletions(req, res, { complete, log }) {
     log(`vyra-free-model: forward completion failed (${error?.message ?? error})`)
     res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: { message: String(error?.message ?? 'upstream error') } }))
+  }
+}
+
+/**
+ * One Responses turn, streamed or whole.
+ *
+ * Streaming here is genuinely incremental: the emitter writes frames the moment
+ * a chunk arrives, so a client shows progress during a long reasoning turn
+ * instead of staring at nothing until the answer is complete.
+ */
+async function responses(req, res, { complete, log }) {
+  let body
+  try {
+    body = await readBody(req)
+  } catch (error) {
+    const status = Number.isInteger(error?.status) ? error.status : 400
+    res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ error: { message: String(error?.message ?? 'bad request') } }))
+    return
+  }
+
+  const call = toResponsesBody(body)
+  if (call.model === '') {
+    res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ error: { message: 'model is required' } }))
+    return
+  }
+
+  const controller = new AbortController()
+  res.on('close', () => {
+    if (!res.writableEnded) controller.abort()
+  })
+
+  const id = `resp-${Date.now().toString(36)}`
+  const created = Math.floor(Date.now() / 1000)
+  const meta = { model: call.model, id, created }
+  const request = {
+    model: call.model,
+    messages: call.messages,
+    tools: body?.tools,
+    maxTokens: call.maxTokens,
+    temperature: call.temperature,
+    signal: controller.signal,
+  }
+
+  if (body?.stream !== true) {
+    try {
+      const chunks = []
+      const result = await complete(request, chunk => {
+        if (chunk === null || typeof chunk !== 'object') return
+        if (typeof chunk.text === 'string' && chunk.text !== '') chunks.push({ type: 'text-delta', text: chunk.text })
+        if (typeof chunk.reasoning === 'string' && chunk.reasoning !== '') chunks.push({ type: 'reasoning-delta', text: chunk.reasoning })
+        if (Array.isArray(chunk.toolCalls)) {
+          for (const call of chunk.toolCalls) chunks.push({ type: 'tool-call', ...call })
+        }
+      }, controller.signal)
+      if (result?.usage !== undefined) chunks.push({ type: 'usage', usage: result.usage })
+      const failure = result?.finish === 'error'
+        ? (result.failure ?? { message: 'upstream error' })
+        : undefined
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+      res.end(JSON.stringify(responsesJson(chunks, { ...meta, failure })))
+    } catch (error) {
+      if (controller.signal.aborted) return
+      log(`vyra-free-model: responses call failed (${error?.message ?? error})`)
+      res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ error: { message: String(error?.message ?? 'upstream error') } }))
+    }
+    return
+  }
+
+  res.writeHead(200, {
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-store',
+    connection: 'keep-alive',
+  })
+
+  const emitter = new ResponsesEmitter(meta)
+  const write = frames => {
+    if (frames !== '' && !res.writableEnded) res.write(frames)
+  }
+  /**
+   * `complete` reports progress as `{ text }` / `{ reasoning }` / `{ toolCalls }`
+   * — the same contract the chat endpoint consumes. The emitter speaks the
+   * adapter's typed vocabulary, so the translation happens here, at the one
+   * boundary, rather than by widening either side's contract.
+   */
+  const feed = chunk => {
+    if (chunk === null || typeof chunk !== 'object') return
+    if (typeof chunk.text === 'string' && chunk.text !== '') write(emitter.push({ type: 'text-delta', text: chunk.text }))
+    if (typeof chunk.reasoning === 'string' && chunk.reasoning !== '') write(emitter.push({ type: 'reasoning-delta', text: chunk.reasoning }))
+    if (Array.isArray(chunk.toolCalls)) {
+      for (const call of chunk.toolCalls) write(emitter.push({ type: 'tool-call', ...call }))
+    }
+  }
+
+  write(emitter.start())
+  try {
+    const result = await complete(request, feed, controller.signal)
+    if (result?.usage !== undefined) write(emitter.push({ type: 'usage', usage: result.usage }))
+    if (result?.finish === 'error') {
+      write(emitter.fail(result.failure ?? { message: 'upstream error' }))
+    } else {
+      write(emitter.finish())
+    }
+    res.end()
+  } catch (error) {
+    if (controller.signal.aborted) {
+      try { res.end() } catch { /* already closed */ }
+      return
+    }
+    log(`vyra-free-model: responses stream failed (${error?.message ?? error})`)
+    write(emitter.fail({ message: String(error?.message ?? 'upstream error') }))
+    res.end()
   }
 }
