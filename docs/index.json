@@ -2359,6 +2359,16 @@
       },
       "versions": [
         {
+          "version": "2.2.0",
+          "publishTimestamp": 1795360406,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "02f1678b11b20748c7084566370b1dcd1406e558",
+            "path": "plugins/vyra-studymate"
+          }
+        },
+        {
           "version": "2.1.0",
           "publishTimestamp": 1795354811,
           "source": {

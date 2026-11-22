@@ -2469,6 +2469,18 @@ export const manifest: MarketManifest = {
       },
       icon: STUDYMATE_ICON,
       versions: {
+        // 2.2.0 asks for a course format at enrollment (reading, audio,
+        // video, quiz or a mix) and ships the media generators with the
+        // installed package.
+        '2.2.0': {
+          publishTimestamp: 1795360406,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '02f1678b11b20748c7084566370b1dcd1406e558',
+            path: 'plugins/vyra-studymate',
+          },
+        },
         '2.1.0': {
           publishTimestamp: 1795354811,
           source: {
