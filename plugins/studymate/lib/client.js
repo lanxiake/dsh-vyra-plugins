@@ -541,6 +541,8 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
 .smb-chip--kind { border-style: dashed; }
 .smb-chip--warn { color: var(--smb-text-learning); border-color: color-mix(in srgb, var(--smb-learning) 45%, transparent); }
 .smb-chip--info { color: var(--smb-text-info); border-color: color-mix(in srgb, var(--smb-info) 45%, transparent); }
+.smb-chip--link { text-decoration: none; cursor: pointer; }
+.smb-chip--link:hover { border-color: var(--smb-text-2); color: var(--smb-text-2); }
 
 /* ── 右栏检查器 ─────────────────────────────────────────────────────────── */
 .smb-right { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--smb-line); background: var(--smb-panel); }
@@ -633,6 +635,7 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
 .smb-btn:hover { background: var(--smb-hover); }
 .smb-btn[disabled] { opacity: .5; cursor: not-allowed; }
 .smb-btn--primary { background: var(--smb-brand); border-color: transparent; color: var(--dsw-alias-label-primary-inverted, #fff); font-weight: 550; }
+.smb-btn--link { text-decoration: none; }
 .smb-btnrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .smb-ref { margin-top: 8px; padding: 9px 11px; border-radius: 8px; background: var(--smb-fill); font-size: 12px; }
 .smb-ref h4 { margin: 0 0 4px; font-size: 11px; color: var(--smb-text-4); letter-spacing: .04em; }
@@ -2508,6 +2511,11 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
      */
     function SubjectPage({ subject, onLesson, onRefresh }) {
       const done = subject.stats['已学完'] || 0;
+      const offlineExport = typeof window !== 'undefined' && !!window.__STUDYMATE_EXPORT__;
+      const game = subject.media && subject.media.game;
+      const gameHref = !offlineExport && game && game.present
+        ? '/api/studymate/media?subject=' + encodeURIComponent(subject.slug) + '&kind=game&file=index.html'
+        : null;
 
       return h('div.smb-wrap', null,
         h('header.smb-subhead', null,
@@ -2521,6 +2529,12 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
             }, h('i', { style: { width: (subject.nodes.length ? (done / subject.nodes.length) * 100 : 0) + '%' } })),
             h('div.smb-subhead__counts', null, TIERS.map((tier) => h('span.smb-chip.smb-chip--' + tier, { key: tier },
               h('i.smb-dot.smb-dot--' + tier), tier + ' ' + (subject.stats[tier] || 0))))) ),
+
+        gameHref ? h('div.smb-btnrow', null,
+          h('a.smb-btn.smb-btn--primary.smb-btn--link', {
+            href: gameHref, target: '_blank', rel: 'noopener',
+            title: game.stale ? '游戏内容已更新，产物可能过期' : '打开这一科目的互动闯关',
+          }, '开始闯关' + (game.stale ? '（待更新）' : ''))) : null,
 
         subject.project ? h('section.smb-note.smb-note--brand', null,
           h('div', null, h('b', null, '在做的项目'), h('div', null, subject.project))) : null,
@@ -3083,6 +3097,19 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
       const lessonFile = node.lesson || '';
       const liveQuote = quote && quote.anchor && quote.anchor.lesson === lessonFile ? quote : null;
 
+      // 音频产物入口：只连 DSH 的媒体路由；离线导出没有 Host 半，先隐藏，等导出打包再接。
+      const offlineExport = typeof window !== 'undefined' && !!window.__STUDYMATE_EXPORT__;
+      const audioMedia = node.media && node.media.audio;
+      const audioHref = !offlineExport && audioMedia && audioMedia.present
+        ? '/api/studymate/media?subject=' + encodeURIComponent(subject.slug)
+          + '&kind=audio&node=' + encodeURIComponent(node.id) + '&file=player.html'
+        : null;
+      const videoMedia = node.media && node.media.video;
+      const videoHref = !offlineExport && videoMedia && videoMedia.present
+        ? '/api/studymate/media?subject=' + encodeURIComponent(subject.slug)
+          + '&kind=video&node=' + encodeURIComponent(node.id) + '&file=player.html'
+        : null;
+
       // 两条栏的内容先取出来：同一份要挨着两种形态用（并排的一栏 / 盖在正文上的抽屉）
       const nav = h(LessonNav, { subject, node, onLesson });
       const inspector = h(Inspector, {
@@ -3128,6 +3155,14 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
             h('span.smb-chip.smb-chip--' + node.tier, { title: '旧词表：' + node.raw_status },
               h('i.smb-dot.smb-dot--' + node.tier), node.tier),
             node.lab ? h('span.smb-chip', null, 'lab') : null,
+            audioHref ? h('a.smb-chip.smb-chip--info.smb-chip--link', {
+              href: audioHref, target: '_blank', rel: 'noopener',
+              title: audioMedia.stale ? '音频内容已更新，产物可能过期' : '打开这一课的音频播放器',
+            }, '听这一课' + (audioMedia.stale ? '（待更新）' : '')) : null,
+            videoHref ? h('a.smb-chip.smb-chip--info.smb-chip--link', {
+              href: videoHref, target: '_blank', rel: 'noopener',
+              title: videoMedia.stale ? '视频内容已更新，产物可能过期' : '打开这一课的视频播放器',
+            }, '看视频' + (videoMedia.stale ? '（待更新）' : '')) : null,
             // 小节跳转：原来在滚动区里 sticky 着（`.smb-secsbar`），现在挂在顶部这一条上——
             // 这一条不跟正文滚，所以跳转一直在，还不占正文的滚动高度。
             h('nav.smb-secs', { 'aria-label': '本节目录' }, lesson.sections.map((section) => h('button.smb-sec', {

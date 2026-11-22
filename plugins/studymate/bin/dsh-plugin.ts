@@ -260,4 +260,8 @@ export async function apply(ctx: PluginContext): Promise<void> {
   // 数学式时阅读端才来取。清单、MIME 与边界判据在 lib/math.ts，注册在 lib/math-route.ts
   // （一条文件一条精确路由），这个文件同样不认识它们的形状。
   import('../lib/math-route.ts').then((module) => module.registerMathRoute(ctx), (error) => { console.warn(`StudyMate：公式资源路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
+
+  // 媒体产物（音频播放器 / 视频 / 游戏）：GET /api/studymate/media?subject=&kind=&node=&file=
+  // 路径解析与 MIME 在 lib/media/route.ts；这里只挂一行。
+  import('../lib/media/route.ts').then((module) => module.registerMediaRoute(ctx), (error) => { console.warn(`StudyMate：媒体产物路由没挂上。${error instanceof Error ? error.message : String(error)}`); });
 }

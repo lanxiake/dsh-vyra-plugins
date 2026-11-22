@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LessonScript",
+  "description": "课件 → 音频 / 视频 / 游戏共用的讲解脚本。由 lib/media/script.ts 从 lesson.md + quiz.json + 可选 narration.md 生成；不是事实来源，可由源文件重建。",
+  "type": "object",
+  "required": ["version", "kind", "subject", "node", "title", "goal", "language", "source", "scenes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "kind": { "const": "lesson-script" },
+    "subject": { "type": "string", "minLength": 1 },
+    "node": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "goal": { "type": "string" },
+    "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+    "source": {
+      "type": "object",
+      "required": ["lesson", "lessonSha256"],
+      "additionalProperties": false,
+      "properties": {
+        "lesson": { "type": "string", "minLength": 1 },
+        "quiz": { "type": "string" },
+        "narration": { "type": "string" },
+        "lessonSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "quizSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "narrationSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "heading", "narration", "visuals", "quizAnchors", "estimatedSeconds"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^s[0-9]+$" },
+          "heading": { "type": "string", "minLength": 1 },
+          "narration": { "type": "string", "minLength": 1 },
+          "instruction": { "type": "string", "minLength": 1 },
+          "quizAnchors": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "estimatedSeconds": { "type": "integer", "minimum": 1 },
+          "visuals": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": [
+                    "title", "heading", "paragraph", "list", "code", "table",
+                    "figure", "svg", "card", "practice", "links", "quiz"
+                  ]
+                },
+                "level": { "enum": [2, 3] },
+                "text": { "type": "string" },
+                "items": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "ordered": { "type": "boolean" },
+                "lang": { "type": "string" },
+                "header": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                },
+                "src": { "type": "string" },
+                "alt": { "type": "string" },
+                "caption": { "type": "string" },
+                "raw": { "type": "string" },
+                "title": { "type": "string" },
+                "variant": { "enum": ["tip", "warn", "note"] },
+                "body": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

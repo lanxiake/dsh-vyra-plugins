@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSpec",
+  "description": "互动游戏的关卡数据。由 curriculum.yaml + 每课 .quiz.json 生成；题面与答案原样搬运，不改题库。",
+  "type": "object",
+  "required": [
+    "version", "kind", "subject", "title", "generatedAt",
+    "libraryEndpoint", "attemptsEndpoint", "levels", "warnings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "kind": { "const": "game" },
+    "subject": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "libraryEndpoint": { "type": "string", "minLength": 1 },
+    "attemptsEndpoint": { "type": "string", "minLength": 1 },
+    "workshop": {
+      "type": "object",
+      "required": ["title", "file"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "file": { "type": "string", "minLength": 1 }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "number", "kind", "objective", "prerequisites", "attemptsVersion", "questions"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "number": { "type": "string" },
+          "kind": { "type": "string" },
+          "objective": { "type": "string" },
+          "prerequisites": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "attemptsVersion": { "type": "string" },
+          "questions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "anchor", "kind", "q"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "anchor": { "type": "string", "minLength": 1 },
+                "kind": { "enum": ["客观题", "预测验证", "开放题", "交付物"] },
+                "q": { "type": "string", "minLength": 1 },
+                "opts": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": { "type": "string" }
+                },
+                "ans": { "type": "integer", "minimum": 0 },
+                "why": { "type": "string" },
+                "answer": { "type": "string" },
+                "criteria": { "type": "string" },
+                "predicted": { "type": "string" },
+                "compare": { "type": "string" },
+                "deliverable": { "type": "string" },
+                "evidence": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

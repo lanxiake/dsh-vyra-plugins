@@ -48,6 +48,9 @@ import { normalizeMisconceptions, misconceptionIssues as misconceptionIssuesOf }
 import type { Misconception } from './core/misconceptions.ts';
 // 作答数据（attempts/<NNNN>-<节点id>.json）与课件一一对应，绝不写回题库（ADR-0007）
 import { readAttempts, attemptsVersion } from './attempts.ts';
+// 媒体产物摘要：只读 manifest，不把音频/视频塞进 payload（目标态 §12 按需扫描）。
+import { gameMediaSummary, nodeMediaSummary } from './media/summary.ts';
+import type { MediaSummary, NodeMediaSummary } from './media/summary.ts';
 
 /* ── 形状 ──────────────────────────────────────────────────────────────────
    这一份 JSON 是与阅读端（lib/client.js）之间的契约：字段名、层级、空值口径都按它走。
@@ -117,6 +120,8 @@ interface SubjectNode {
   question_kinds: PoolKindIssue[];
   /** 这个节点的作答数据（attempts/<NNNN>-<节点id>.json）；没作答过就是空 */
   attempts: AttemptsView;
+  /** 这一课的音频 / 视频产物摘要；阅读端只读，不加载媒体文件。 */
+  media: NodeMediaSummary;
   lab: Lab | null;
 }
 
@@ -154,6 +159,8 @@ interface SubjectPayload {
   /** 旧写法的迁移提示（可展示，不阻断）：读得进，写回时按新字段收敛 */
   misconception_issues: string[];
   records: LearningRecord[];
+  /** 整门课的游戏产物摘要。 */
+  media: { game: MediaSummary };
   nodes: SubjectNode[];
   levels: number;
   stats: Record<string, number>;
@@ -492,6 +499,12 @@ function buildSubject(subjectDir: string, dirName: string, workspace: string): S
     const lessonMarkdown = lessonFile === null
       ? ''
       : readTextIfPresent(path.join(lessonsDir, lessonFile)) ?? '';
+    const narrationFile = lessonFile === null
+      ? null
+      : lessonFile.replace(/\.md$/, '.narration.md');
+    const narrationText = narrationFile === null
+      ? null
+      : readTextIfPresent(path.join(lessonsDir, narrationFile));
 
     // 题库路径是把课件的 .md 换成 .quiz.json（不是追加），与参考实现的 with_suffix 一致
     const poolFile = lessonFile === null
@@ -528,6 +541,15 @@ function buildSubject(subjectDir: string, dirName: string, workspace: string): S
     // progress 只记有变化的节点，没写的按大纲里的初始快照算
     const rawStatus = run.status || node.status || '未开始';
 
+    const media = nodeMediaSummary({
+      workspace,
+      subject: slug,
+      node: String(nodeId),
+      lesson: lessonMarkdown,
+      ...(poolRaw === '' ? {} : { quiz: poolRaw }),
+      ...(narrationText === null ? {} : { narration: narrationText }),
+    });
+
     nodes.push({
       id: nodeId,
       title: pick(node, 'title', nodeId),
@@ -561,6 +583,7 @@ function buildSubject(subjectDir: string, dirName: string, workspace: string): S
           : attempt.version,
         questions: attempt === null ? {} : attempt.data.题,
       },
+      media,
       lab: readLab(path.join(subjectDir, 'lab'), number),
     });
   }
@@ -590,6 +613,8 @@ function buildSubject(subjectDir: string, dirName: string, workspace: string): S
     misconceptionIssues.push(...misconceptionIssuesOf(item, index));
   });
 
+  const gameMedia = gameMediaSummary({ workspace, subject: slug });
+
   return {
     slug,
     name: pick(subject, 'name', slug),
@@ -608,6 +633,7 @@ function buildSubject(subjectDir: string, dirName: string, workspace: string): S
     misconception_library: misconceptions,
     misconception_issues: misconceptionIssues,
     records: readRecords(path.join(subjectDir, 'learning-records')),
+    media: { game: gameMedia },
     nodes,
     levels: nodes.length === 0 ? 0 : Math.max(...Object.values(levels), 0) + 1,
     stats,
