@@ -1,0 +1,4 @@
+- insert:
+    - id: vyra-free-model
+      name: 'vyra-free-model'
+      config: {}
