@@ -20,10 +20,13 @@
 import path from 'node:path'
 import os from 'node:os'
 import fs from 'node:fs'
+import net from 'node:net'
+import crypto from 'node:crypto'
 import { KiloAdapter, ROUTE } from './src/adapter.js'
 import { buildCatalog, fetchKiloListing } from './src/kilo.js'
 import { JsonStore } from './src/store.js'
 import { USAGE_INITIAL, recordUsage, pruneDays, todayTotals } from './src/usage.js'
+import { startGateway } from './src/gateway.js'
 
 /** The prefix every route this plugin serves lives under. */
 export const API_PATH = '/api/vyra-free-model'
@@ -176,14 +179,93 @@ export function apply(ctx, _config) {
       disposed = true
       clearTimeout(boot)
       if (timer !== undefined) clearTimeout(timer)
+      if (forwardServer !== null) {
+        void forwardServer.close().catch(() => {})
+        forwardServer = null
+      }
       usageStore.dispose()
     }
   }, 'vyra-free-model: catalog refresh')
 
   logger.info?.(`vyra-free-model: mounted, route "${ROUTE}" with ${catalog.length} cached models`)
 
-  /** Whatever the forward switch currently holds. Task 8 wires the real server. */
+  /** Whatever the forward switch currently holds. */
   const forwardState = { enabled: false, port: 0, key: '' }
+  /** The live listener, when the switch is on. */
+  let forwardServer = null
+
+  /** Is a loopback port free to bind? */
+  const canBind = port => new Promise(resolve => {
+    const probe = net.createServer()
+    probe.once('error', () => resolve(false))
+    probe.once('listening', () => probe.close(() => resolve(true)))
+    probe.listen(port, '127.0.0.1')
+  })
+
+  /**
+   * Turn the port on or off.
+   *
+   * A busy port walks forward rather than failing: the user did not choose the
+   * number, so the plugin picks the next one and the page shows what it got.
+   */
+  async function setForward(enabled) {
+    if (enabled !== true) {
+      if (forwardServer !== null) {
+        const closing = forwardServer
+        forwardServer = null
+        await closing.close()
+      }
+      forwardState.enabled = false
+      forwardState.port = 0
+      return forwardState
+    }
+    if (forwardServer !== null) return forwardState
+
+    forwardState.key = forwardState.key === '' ? mintKey() : forwardState.key
+    let port = 8899
+    for (let attempt = 0; attempt < 10; attempt += 1, port += 1) {
+      if (!(await canBind(port))) continue
+      try {
+        forwardServer = await startGateway({
+          port,
+          key: forwardState.key,
+          models: catalog,
+          complete: (request, onChunk, signal) => forwardComplete(request, onChunk, signal),
+          log: message => logger.warn?.(message),
+        })
+        forwardState.enabled = true
+        forwardState.port = forwardServer.port
+        logger.info?.(`vyra-free-model: forward port listening on 127.0.0.1:${forwardState.port}`)
+        return forwardState
+      } catch (error) {
+        if (error?.code !== 'EADDRINUSE') throw error
+      }
+    }
+    throw new Error('no free loopback port was available for the forward listener')
+  }
+
+  /** Run one turn through the adapter for a forwarded request. */
+  async function forwardComplete(request, onChunk, signal) {
+    let usage
+    let finish = 'stop'
+    for await (const chunk of adapter.stream({
+      provider: ROUTE,
+      model: request.model,
+      messages: (request.messages ?? []).map(toHarnessMessage),
+      maxTokens: request.maxTokens,
+      temperature: request.temperature,
+      signal,
+    })) {
+      if (chunk.type === 'text-delta') onChunk({ text: chunk.text })
+      else if (chunk.type === 'reasoning-delta') onChunk({ reasoning: chunk.text })
+      else if (chunk.type === 'usage') usage = chunk.usage
+      else if (chunk.type === 'finish') {
+        if (chunk.reason?.kind === 'max-tokens') finish = 'max-tokens'
+        if (chunk.reason?.kind === 'error') throw new Error(chunk.reason.failure?.message ?? 'upstream error')
+      }
+    }
+    return { usage, finish }
+  }
 
   const api = createApiRoutes({
     version: VERSION,
@@ -194,10 +276,7 @@ export function apply(ctx, _config) {
     usage: () => todayTotals(usageStore.get()),
     forward: () => forwardState,
     refreshCatalog: () => refreshCatalog({ log: true }),
-    setForward: async enabled => {
-      forwardState.enabled = enabled === true
-      return forwardState
-    },
+    setForward,
     channel: undefined,
   })
 
@@ -213,8 +292,7 @@ export function apply(ctx, _config) {
 }
 
 /** The plugin version, read once for the summary document. */
-function readVersion() {
-  try {
+function readVersion() {  try {
     const manifest = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
     return typeof manifest.version === 'string' ? manifest.version : '0.0.0'
   } catch {
@@ -223,6 +301,35 @@ function readVersion() {
 }
 
 const VERSION = readVersion()
+
+/** A fresh bearer token for the forward port. */
+function mintKey() {
+  return `sk-${crypto.randomBytes(24).toString('base64url')}`
+}
+
+/**
+ * One OpenAI chat message as a harness message.
+ *
+ * The forwarded shape is the flat chat shape: role, a string or parts, and
+ * optional `tool_calls`. Anything this plugin does not understand becomes plain
+ * text rather than an error, because a caller's extra field is not a reason to
+ * refuse their turn.
+ */
+function toHarnessMessage(message) {
+  const role = message?.role === 'assistant' || message?.role === 'tool' || message?.role === 'system'
+    ? message.role
+    : 'user'
+  const content = []
+  if (typeof message?.content === 'string' && message.content !== '') {
+    content.push({ type: 'text', text: message.content })
+  } else if (Array.isArray(message?.content)) {
+    for (const part of message.content) {
+      if (part?.type === 'text' && typeof part.text === 'string') content.push({ type: 'text', text: part.text })
+    }
+  }
+  const toolCallId = typeof message?.tool_call_id === 'string' ? message.tool_call_id : undefined
+  return { ...(toolCallId === undefined ? {} : { toolCallId }), role, content }
+}
 
 /** Last run's roster, or an empty list when there is none or it is damaged. */
 function readCachedCatalog(file) {
