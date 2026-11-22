@@ -14,6 +14,7 @@
 import { postKiloStreamed } from './kilo.js'
 import { toChatMessages, toToolDefs } from './messages.js'
 import { readChunks } from './stream.js'
+import { effortsFor, defaultEffortFor } from './effort.js'
 
 /** The one provider route this plugin publishes. */
 export const ROUTE = 'vyra-free'
@@ -258,25 +259,9 @@ export class KiloAdapter {
 /**
  * The declared effort menu, or `undefined` when there is nothing to choose.
  *
- * A single rung is not a menu: showing a one-item control promises a choice the
- * model does not offer.
+ * Kept as a local alias so `resolveModel` reads in the adapter's own vocabulary;
+ * the rule itself lives in `effort.js`.
  */
 function menuFor(entry) {
-  const values = entry?.efforts
-  if (!Array.isArray(values) || values.length < 2) return undefined
-  return values.map(id => ({ id, name: labelFor(id) }))
-}
-
-/** `xhigh` -> `XHigh`, `none` -> `None`. */
-function labelFor(id) {
-  const text = String(id)
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
-
-/** The rung a fresh turn starts on. */
-function defaultEffortFor(entry) {
-  const values = entry?.efforts
-  if (!Array.isArray(values) || values.length < 2) return undefined
-  if (typeof entry.defaultEffort === 'string' && values.includes(entry.defaultEffort)) return entry.defaultEffort
-  return values[Math.floor(values.length / 2)]
+  return effortsFor(entry)
 }
