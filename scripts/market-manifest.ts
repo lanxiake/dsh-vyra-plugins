@@ -2518,6 +2518,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.1.1 fixes the two failures found on a real Host: a missing
+        // `fs.contains`/`processPath` capability produced an opaque 500, and
+        // workspace-relative paths could not reach delivered files outside the
+        // workspace. It also reports the route's own reason instead of a bare
+        // HTTP status.
+        '0.1.1': {
+          publishTimestamp: 1795345200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a6050a2cbad210c252bd745a2983413e3eade0ef',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
