@@ -1938,10 +1938,24 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.4.0 adds the sidebar entry and the Apple-style surface; built-in
+        // dsh.so and dshmarket.com aggregation with star/npm-download stats; a
+        // session-wide install queue with host-side cancellation, live phases,
+        // pnpm logs and a completion toast; and an Installed tab that lists
+        // every profile bundle, including ones no market index knows about.
+        '0.4.0': {
+          publishTimestamp: 1795331233,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a171a7290b48437c80bd6b6b145b170fc0192309',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
-        keywords: ['market', 'marketplace', 'plugin', 'batch'],
+        keywords: ['market', 'marketplace', 'plugin', 'batch', 'queue', 'installed', 'sidebar'],
       },
     },
     // ── Vendored third-party plugins ──

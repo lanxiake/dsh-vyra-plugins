@@ -48,7 +48,22 @@
       }
     },
     "labels": {},
-    "sortKeys": {}
+    "sortKeys": {
+      "stars": {
+        "title": {
+          "en": "Stars",
+          "zh": "星标"
+        },
+        "order": "desc"
+      },
+      "downloads": {
+        "title": {
+          "en": "Downloads",
+          "zh": "下载量"
+        },
+        "order": "desc"
+      }
+    }
   },
   "plugins": [
     {
@@ -1565,6 +1580,16 @@
       },
       "versions": [
         {
+          "version": "0.4.0",
+          "publishTimestamp": 1795331233,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "a171a7290b48437c80bd6b6b145b170fc0192309",
+            "path": "plugins/vyra-plugin-market"
+          }
+        },
+        {
           "version": "0.3.0",
           "publishTimestamp": 1795336200,
           "source": {
@@ -1711,7 +1736,10 @@
           "market",
           "marketplace",
           "plugin",
-          "batch"
+          "batch",
+          "queue",
+          "installed",
+          "sidebar"
         ]
       }
     },
@@ -1751,7 +1779,11 @@
           "telegram",
           "slack",
           "discord"
-        ]
+        ],
+        "sortKeys": {
+          "stars": 3737,
+          "downloads": 139513
+        }
       }
     },
     {
@@ -1804,7 +1836,10 @@
           "text-extraction",
           "pdf",
           "image"
-        ]
+        ],
+        "sortKeys": {
+          "downloads": 1195
+        }
       }
     },
     {
@@ -1879,7 +1914,11 @@
           "upgrade",
           "rollback",
           "gating"
-        ]
+        ],
+        "sortKeys": {
+          "stars": 134,
+          "downloads": 20088
+        }
       }
     },
     {
@@ -1916,7 +1955,11 @@
           "market",
           "plugins",
           "npm"
-        ]
+        ],
+        "sortKeys": {
+          "stars": 32,
+          "downloads": 5747
+        }
       }
     },
     {
@@ -1993,7 +2036,11 @@
           "learning",
           "skills",
           "lessons"
-        ]
+        ],
+        "sortKeys": {
+          "stars": 1509,
+          "downloads": 8046
+        }
       }
     },
     {
@@ -2033,7 +2080,11 @@
           "multi-agent",
           "preset",
           "dag"
-        ]
+        ],
+        "sortKeys": {
+          "stars": 16,
+          "downloads": 6848
+        }
       }
     },
     {
@@ -2073,7 +2124,11 @@
           "teams",
           "collaboration",
           "tasks"
-        ]
+        ],
+        "sortKeys": {
+          "stars": 3049,
+          "downloads": 64888
+        }
       }
     }
   ]
