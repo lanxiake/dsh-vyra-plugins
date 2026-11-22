@@ -1976,6 +1976,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.5.1 matches a market entry to an installed bundle even when the
+        // names differ (scope, display name, mirror), so search results mark
+        // plugins installed from another source as Installed.
+        '0.5.1': {
+          publishTimestamp: 1795336083,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'e00f7078342a113ac4a1dcfefffe71f1c8b559a6',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',

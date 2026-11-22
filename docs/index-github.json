@@ -1590,6 +1590,16 @@
       },
       "versions": [
         {
+          "version": "0.5.1",
+          "publishTimestamp": 1795336083,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "e00f7078342a113ac4a1dcfefffe71f1c8b559a6",
+            "path": "plugins/vyra-plugin-market"
+          }
+        },
+        {
           "version": "0.5.0",
           "publishTimestamp": 1795335394,
           "source": {
