@@ -2241,6 +2241,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.2.0 is the first usable release. 0.1.0 defined its stylesheet but
+        // never appended it to document.head, so the settings page rendered as
+        // bare HTML. This version also serves the Responses shape Codex speaks
+        // and writes the local port into Codex and Claude Code on one click.
+        '0.2.0': {
+          publishTimestamp: 1795478400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb42bb374670a0f8d27d6613dcb35cbae2ac9083',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
