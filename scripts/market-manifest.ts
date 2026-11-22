@@ -2204,7 +2204,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            commit: '10e37aca2deeff162f3d8ef7ff914fa0834ce0a8',
             path: 'plugins/dsh-our-free-model',
           },
         },
@@ -2538,7 +2538,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '677cc3aba9a7f07fcf0b81571be36abe77cbffa1',
+            commit: '10e37aca2deeff162f3d8ef7ff914fa0834ce0a8',
             path: 'plugins/dsh-agent-teams',
           },
         },
