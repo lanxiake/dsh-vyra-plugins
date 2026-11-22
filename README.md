@@ -44,6 +44,7 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 | `vyra-theme-styles` | 主题风格 | 把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」 |
 | `vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份 |
 | `vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
+| `vyra-studymate` | StudyMate 学习 | 学习技能与课程引擎：定计划、讲知识、做项目。每门课还能派生音频课、旁白视频和动手工作坊，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。基于 [Cattofu 的 StudyMate](https://github.com/Miaotofu01/Study-Mate)（MIT）
 
 插件的版本、图标、分类与安装来源以 [`docs/index.json`](docs/index.json) 为准——那份是生成物，改的是 [`scripts/market-manifest.ts`](scripts/market-manifest.ts)。
 
@@ -59,7 +60,6 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 | `@noob-stupid/dsh-plugin-console` | 插件控制台 | 框架升级安全与插件升级门控：一键升级、失败自动回滚、旧插件不适配自动禁用；自带多源插件市场，可指向内网私有源 | [Noob-stupid](https://github.com/Noob-stupid/dsh-plugin-gating-hub) |
 | `dsh-plugin` | 社区插件市场 | 社区插件市场，收录 23000+ 社区插件、6000+ 可一键安装的 npm 包，每日更新 | [dshplugin](https://github.com/dshplugin/dsh-plugin-hub) |
 | `@xiaoso/dsh-workflow-lite` | 轻量工作流 | 一个工作流就是一份 JSON（React Flow 原生），内联提示词，编译成模型自己执行的分派计划 | [xiaoso456](https://github.com/xiaoso456/dsh-workflow-lite) |
-| `@yunmiao/studymate` | StudyMate 学习 | StudyMate 学习技能与课程引擎 | [Cattofu](https://github.com/Miaotofu01/Study-Mate) |
 | `dsh-expert-orchestrator` | 专家编排 | 多智能体任务编排：分诊、PM 规划、专家委派、依赖 DAG 任务板、消息总线与经验池 | [mario841859784](https://github.com/mario841859784/dsh-expert-orchestrator) |
 | `@nanmicoder/dsh-agent-teams` | 智能体团队 | 多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板 | [NanmiCoder](https://github.com/NanmiCoder/dsh-agent-teams) |
 

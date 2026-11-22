@@ -23,7 +23,7 @@
 // 问答本身、上下文与落盘全归宿主那条会话，面板不拼 messages、不发模型请求、不写学习工作区
 // （#107 退役了那条「面板自己调模型」的旧路由 POST /api/studymate/ask 与它那份上下文组装）。
 window.__ModuleLoader__.load({
-  id: '@yunmiao/studymate',
+  id: 'vyra-studymate',
   factory(require) {
     const React = require('react');
 
@@ -1053,10 +1053,10 @@ body[data-ds-dark-theme] .smb-figure__frame > svg { filter: brightness(.85); }
     /** 样式注入：物化时执行一次。宿主会用 data-plugin 认领并在这份 bundle 卸载时清掉。 */
     function injectStyles(css) {
       if (typeof document === 'undefined') return;
-      const id = '@yunmiao/studymate/reading-client.css';
+      const id = 'vyra-studymate/reading-client.css';
       if (document.querySelector('style[data-plugin-css="' + id + '"]')) return;
       const tag = document.createElement('style');
-      tag.dataset.plugin = '@yunmiao/studymate';
+      tag.dataset.plugin = 'vyra-studymate';
       tag.dataset.pluginCss = id;
       tag.textContent = css;
       document.head.appendChild(tag);

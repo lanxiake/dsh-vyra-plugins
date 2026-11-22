@@ -39,4 +39,4 @@
   name: '@deepseek-ai/dsh-tool-skill'
 
 - id: studymate-qa-tools
-  name: '@yunmiao/studymate/qa-preset'
+  name: 'vyra-studymate/qa-preset'

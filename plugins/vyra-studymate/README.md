@@ -13,6 +13,8 @@
 
 <p align="center"><sub> StudyMate 是面向数学与计算机科目学习的助手，原则是「learn with doing」</sub></p>
 
+<p align="center"><sub>本仓库发布版 <b>vyra-studymate</b>：在原文基础上新增音频课、旁白视频和互动工作坊。原项目：<a href="https://github.com/Miaotofu01/Study-Mate">Miaotofu01/Study-Mate</a>（MIT）</sub></p>
+
 <p align="center">简体中文 · <a href="README.en.md">English</a></p>
 
 <p align="center"><a href="#快速开始">快速开始</a> · <a href="#它是什么">它是什么</a> · <a href="#核心功能">核心功能</a> · <a href="#常见问题">常见问题</a> · <a href="docs/使用/使用说明.md">使用说明</a> · <a href="docs/使用/Antigravity.md">Antigravity 说明</a></p>

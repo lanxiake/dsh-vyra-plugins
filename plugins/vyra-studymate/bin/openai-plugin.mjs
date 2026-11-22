@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { adaptAntigravitySkill, adaptAntigravityAgent, AGENT_ROLES } from './antigravity-skill-compat.mjs';
+import { adaptOpenAiSkill } from './openai-skill-compat.mjs';
+import { getOpenAiSkillUi } from './openai-skill-ui.mjs';
 import { writeDocsPayload } from './docs-payload.mjs';
 import { writeZip } from './zip.mjs';
 
@@ -34,95 +35,70 @@ function assertReplaceable(directory) {
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`输出不是独立目录：${directory}`);
   let metadata;
   try { metadata = JSON.parse(fs.readFileSync(path.join(directory, marker), 'utf8')); } catch { /* Unmanaged output. */ }
-  if (metadata?.generator === '@yunmiao/studymate') return;
-  // `--install` targets a plugin directory the host may have created empty; only an empty
-  // directory is adoptable, anything else would be silently destroyed.
-  if (fs.readdirSync(directory).length === 0) return;
-  throw new Error(`输出目录已有非构建文件，请选择其他 --output 目录：${directory}`);
+  if (metadata?.generator !== 'vyra-studymate') {
+    throw new Error(`输出目录已有非构建文件，请选择其他 --output 目录：${directory}`);
+  }
 }
 
-/** Build an Antigravity plugin with native agents and skills. */
-export function buildAntigravityPlugin({ output = path.resolve('dist/antigravity') } = {}) {
+/** Export a complete skills-only plugin, independent of the DSH installer. */
+export function buildOpenAiPlugin({ output = path.resolve('dist') } = {}) {
   const outputDir = path.resolve(output);
+  // Resolve symlinks before deciding whether output could overwrite build inputs.
   let existing = outputDir;
   const suffix = [];
   while (!fs.existsSync(existing)) {
-    if (path.dirname(existing) === existing) throw new Error(`输出目录所在磁盘不可访问：${outputDir}`);
+    if (path.dirname(existing) === existing) throw new Error(`输出目录所在磁盘或共享不可访问：${outputDir}`);
     suffix.unshift(path.basename(existing));
     existing = path.dirname(existing);
   }
   const realOutput = path.join(fs.realpathSync(existing), ...suffix);
   // 技能源在 preset/skills：产物不许落进构建输入里（原来这条列的是 .dsh，技能搬家后跟着走）
-  for (const name of ['preset', 'bin', 'scripts', 'schemas', 'templates', 'docs', 'antigravity']) {
+  for (const name of ['preset', 'bin', 'scripts', 'schemas', 'templates', 'docs', 'openai']) {
     if (inside(path.join(fs.realpathSync(source), name), realOutput)) {
       throw new Error(`输出目录不能位于构建源文件内：${outputDir}`);
     }
   }
-
-  const isDirectPluginDir = path.basename(realOutput) === 'studymate';
-  const target = isDirectPluginDir ? realOutput : path.join(realOutput, 'studymate');
-  const parentDir = isDirectPluginDir ? path.dirname(realOutput) : realOutput;
-
+  const target = path.join(realOutput, 'studymate');
   if (inside(target, fs.realpathSync(source))) throw new Error('输出目录不能覆盖项目源文件。');
   assertReplaceable(target);
-  fs.mkdirSync(parentDir, { recursive: true });
-
-  const archive = path.join(parentDir, 'studymate-antigravity.zip');
+  fs.mkdirSync(realOutput, { recursive: true });
+  const archive = path.join(realOutput, 'studymate-openai.zip');
   const archiveStat = fs.lstatSync(archive, { throwIfNoEntry: false });
   if (archiveStat && (!archiveStat.isFile() || archiveStat.isSymbolicLink())) {
     throw new Error(`ZIP 输出不是独立文件：${archive}`);
   }
-
-  const staging = fs.mkdtempSync(path.join(parentDir, '.studymate-build-'));
+  const staging = fs.mkdtempSync(path.join(realOutput, '.studymate-build-'));
   const plugin = path.join(staging, 'studymate');
   const packageInfo = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
   let preserveStaging = false;
-
   try {
-    // 1. Copy base templates from antigravity/studymate
-    copyTree(path.join(source, 'antigravity', 'studymate'), plugin);
-    const manifestPath = path.join(plugin, 'plugin.json');
+    copyTree(path.join(source, 'openai', 'studymate'), plugin);
+    const manifestPath = path.join(plugin, '.codex-plugin', 'plugin.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    // package.json remains the single source of release versions.
     manifest.version = packageInfo.version;
     fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
-    // 2. Generate agents/*.md for each role
-    fs.mkdirSync(path.join(plugin, 'agents'), { recursive: true });
-    for (const role of AGENT_ROLES) {
-      const skillPath = path.join(source, 'preset', 'skills', role, 'SKILL.md');
-      if (!fs.existsSync(skillPath)) {
-        // 静默跳过会建出「没有这个 agent」的插件，而总控照样会按 AGENT_ROLES 派工。
-        throw new Error(`Antigravity 插件缺少角色规格：${skillPath}`);
-      }
-      const agentContent = adaptAntigravityAgent(fs.readFileSync(skillPath, 'utf8'), role);
-      fs.writeFileSync(path.join(plugin, 'agents', `${role}.md`), agentContent);
-    }
-
-    // 3. Copy and adapt skills/
     for (const name of fs.readdirSync(path.join(source, 'preset', 'skills')).sort()) {
       const skillSource = path.join(source, 'preset', 'skills', name);
       if (!fs.statSync(skillSource).isDirectory()) continue;
       const destination = path.join(plugin, 'skills', name);
       copyTree(skillSource, destination);
       const skillFile = path.join(destination, 'SKILL.md');
-      fs.writeFileSync(skillFile, adaptAntigravitySkill(fs.readFileSync(skillFile, 'utf8'), name));
+      fs.writeFileSync(skillFile, adaptOpenAiSkill(fs.readFileSync(skillFile, 'utf8'), name));
+      fs.mkdirSync(path.join(destination, 'agents'), { recursive: true });
+      fs.writeFileSync(path.join(destination, 'agents', 'openai.yaml'), getOpenAiSkillUi(name));
     }
-
-    // 4. Copy templates, schemas, scripts, docs
     for (const name of ['templates', 'schemas']) copyTree(path.join(source, name), path.join(plugin, name));
     writeDocsPayload(source, plugin);
-
     copyTree(path.join(source, 'docs', 'images', 'logo.png'), path.join(plugin, 'assets', 'logo.png'));
     copyTree(path.join(source, 'LICENSE'), path.join(plugin, 'LICENSE'));
-
+    fs.writeFileSync(path.join(plugin, 'README.md'), '# StudyMate\n\nCodex / ChatGPT Work 学习插件。\n\n首次安装时导入 studymate-openai.zip；更新时下载最新 ZIP，在浏览器中打开已有插件的链接并上传新版本，随后新建任务。\n\n安装与使用见 [使用指南](docs/使用/Codex与ChatGPT.md)。\n\n本目录是已构建的完整插件，无需运行安装脚本或构建命令。学习数据应放在插件目录外。\n');
     fs.writeFileSync(path.join(plugin, marker), `${JSON.stringify({ generator: packageInfo.name, version: packageInfo.version })}\n`);
-
-    // 5. Build ZIP archive
     const zipFile = path.join(staging, path.basename(archive));
     // 确定性归档：固定时间戳、固定条目顺序、固定压缩档（见 bin/zip.mjs）。
     writeZip(plugin, zipFile);
 
-    // 6. Atomic swap
+    // Swap only our own generated output; preserve previous artifacts on failure.
     const replacements = [];
     try {
       for (const [fresh, destination] of [[plugin, target], [zipFile, archive]]) {
