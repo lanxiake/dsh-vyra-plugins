@@ -11,6 +11,10 @@
  * @module src/adapter.js
  */
 
+import { postKiloStreamed } from './kilo.js'
+import { toChatMessages, toToolDefs } from './messages.js'
+import { readChunks } from './stream.js'
+
 /** The one provider route this plugin publishes. */
 export const ROUTE = 'vyra-free'
 
@@ -37,6 +41,30 @@ const ROUTE_LABEL = '免费模型'
 
 /** Default ceiling for one reply when the model does not name its own. */
 const DEFAULT_MAX_TOKENS = 32768
+
+/**
+ * Resolve image blocks to data URLs for the wire.
+ *
+ * Returns `undefined` outright when the plugin has no resolver — the harness
+ * either provides one or it does not, and pretending lets the projection drop
+ * the picture silently instead of reporting it.
+ */
+function imageResolver(resolveImage, messages) {
+  if (typeof resolveImage !== 'function') return undefined
+  const cache = new Map()
+  return block => {
+    const key = block?.attachment?.attachmentId ?? ''
+    if (key !== '' && cache.has(key)) return cache.get(key)
+    let url
+    try {
+      url = resolveImage(block)
+    } catch {
+      url = undefined
+    }
+    if (key !== '') cache.set(key, url)
+    return url
+  }
+}
 
 export class KiloAdapter {
   /**
@@ -124,12 +152,89 @@ export class KiloAdapter {
   }
 
   /**
-   * Stream one turn. Implemented in Task 3.
+   * Stream one turn.
    *
+   * A refusal is reported as an `error` finish rather than thrown: the harness
+   * turns a finish into the turn's outcome, while a throw out of the generator
+   * surfaces as an unhandled fault. Only a genuinely broken adapter may throw.
+   *
+   * @param {object} options - GenerateOptions
+   * @param {object|null} [pinned] - the catalog row `prepareCall` froze
+   * @param {object} [snapshot] - the state generation `prepareCall` froze
    * @returns {AsyncIterable<object>}
    */
-  stream() {
-    throw new Error('NOT_IMPLEMENTED: the kilo lane is wired in Task 3')
+  async * stream(options, pinned, snapshot) {
+    const state = snapshot ?? this.deps.state()
+    const entry = pinned ?? state.catalog.find(candidate => candidate.id === options.model) ?? null
+    const model = options.model
+
+    if (options.signal?.aborted === true) {
+      yield { type: 'finish', reason: { kind: 'aborted', failure: { message: 'request aborted', code: 'ABORTED' } } }
+      return
+    }
+
+    const warnings = []
+    const body = {
+      model,
+      messages: toChatMessages(options.messages, imageResolver(this.deps.resolveImage, options.messages), warnings),
+      stream: true,
+    }
+    const tools = toToolDefs(options.tools)
+    if (tools.length > 0) body.tools = tools
+    if (Number.isFinite(options.maxTokens) && options.maxTokens > 0) body.max_tokens = Math.floor(options.maxTokens)
+    if (Number.isFinite(options.temperature)) body.temperature = options.temperature
+    if (Array.isArray(options.stop) && options.stop.length > 0) body.stop = options.stop
+
+    // Only a rung the model itself declared may go on the wire: the gateway
+    // validates the field and rejects anything outside the declared set.
+    const effort = options.reasoningEffort
+    if (typeof effort === 'string' && Array.isArray(entry?.efforts) && entry.efforts.includes(effort)) {
+      body.reasoning_effort = effort
+    }
+
+    const payloads = []
+    let done = false
+    let failure
+    const controller = new AbortController()
+    const onAbort = () => controller.abort()
+    options.signal?.addEventListener('abort', onAbort, { once: true })
+
+    try {
+      await postKiloStreamed({
+        body,
+        signal: options.signal === undefined ? controller.signal : AbortSignal.any([options.signal, controller.signal]),
+        fetchImpl: this.deps.fetchImpl,
+        onPayload: payload => { payloads.push(payload) },
+      })
+      done = true
+    } catch (error) {
+      failure = error
+    } finally {
+      options.signal?.removeEventListener('abort', onAbort)
+    }
+
+    if (failure !== undefined) {
+      const code = typeof failure.code === 'string' ? failure.code : 'SERVER'
+      if (code === 'ABORTED') {
+        yield { type: 'finish', reason: { kind: 'aborted', failure: { message: String(failure.message ?? 'aborted'), code } } }
+        return
+      }
+      yield {
+        type: 'finish',
+        reason: { kind: 'error', failure: { message: String(failure.message ?? 'upstream error'), code, ...(Number.isFinite(failure.status) ? { status: failure.status } : {}) } },
+      }
+      return
+    }
+
+    if (done) {
+      try {
+        yield* readChunks(payloads)
+      } catch (error) {
+        // An in-stream error envelope is still this turn's outcome.
+        const code = typeof error.code === 'string' ? error.code : 'SERVER'
+        yield { type: 'finish', reason: { kind: 'error', failure: { message: String(error.message ?? 'upstream error'), code } } }
+      }
+    }
   }
 
   /** Bound the image projection so one photo cannot blow the request size. */
