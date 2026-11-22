@@ -314,12 +314,12 @@ async def _list_conversations(limit: int = 200) -> list[dict[str, Any]]:
                         "source": "im",
                     }
                 )
-            if body.get("hasMore") not in (1, "1", True) or not items:
-                break
-            nxt = body.get("nextCursor")
-            if nxt is None:
-                break
-            cursor = nxt
+                if body.get("hasMore") not in (1, "1", True) or not items:
+                    break
+                nxt = body.get("nextCursor")
+                if nxt is None:
+                    break
+                cursor = nxt
     return out
 
 
@@ -682,6 +682,24 @@ def _emit(obj: dict[str, Any]) -> None:
 #   结果  {"id":1,"ok":true,"data":...} / {"id":1,"ok":false,"error":"..."}
 #   事件  {"event":"message",...} / {"event":"read",...}  （服务端推送）
 # ---------------------------------------------------------------------------
+def logger_serve(message: str) -> None:
+    """serve 进程的诊断日志走 stderr，不污染 stdout 的 JSON 协议。"""
+    try:
+        sys.stderr.write(f"[serve] {message}\n")
+        sys.stderr.flush()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _http_chats(limit: int) -> dict[str, Any]:
+    """HTTP 版会话列表（IM 分页被流控时的兜底）。"""
+    from goofish_cli.commands.message.list_chats import list_chats
+
+    data = list_chats(fetch_num=int(limit), watch_secs=0)
+    sessions = data.get("sessions") if isinstance(data, dict) else data
+    return {"sessions": sessions or [], "total": len(sessions or []), "source": "http"}
+
+
 async def _serve() -> None:
     from goofish_cli.core import Session
     from goofish_cli.core.errors import GoofishError
@@ -740,71 +758,87 @@ async def _serve() -> None:
         finally:
             pending.pop(mid, None)
 
+    im_chats_blocked_until = 0.0
+
     async def _chats(ws: Any, limit: int) -> dict[str, Any]:
+        nonlocal im_chats_blocked_until
+        # 被流控后先冷却一分钟，期间直接走 HTTP，别反复撞限流。
+        if im_chats_blocked_until and time.time() < im_chats_blocked_until:
+            raise GoofishError("会话列表冷却中（上一步被流控）")
         out: list[dict[str, Any]] = []
         cursor: Any = 9007199254740991
-        while len(out) < limit:
-            ack = await _call(
-                ws, "/r/Conversation/listNewestPagination",
-                [cursor, min(50, limit - len(out))],
-            )
-            body = (ack or {}).get("body") or {}
-            items = body.get("userConvs") or []
-            for raw in items:
-                conv = raw.get("singleChatUserConversation") or raw
-                single = conv.get("singleChatConversation") or {}
-                cid = str(single.get("cid") or "").split("@")[0]
-                if not cid:
-                    continue
-                first = str(single.get("pairFirst") or "").split("@")[0]
-                second = str(single.get("pairSecond") or "").split("@")[0]
-                peer = second if first == session.unb else first
-                if not peer or peer == "0":
-                    continue
-                ext = single.get("extension") or {}
-                if isinstance(ext, str):
-                    try:
-                        ext = json.loads(ext)
-                    except (ValueError, TypeError):
-                        ext = {}
-                last = (conv.get("lastMessage") or {}).get("message") or {}
-                last_ext = last.get("extension") or {}
-                if isinstance(last_ext, str):
-                    try:
-                        last_ext = json.loads(last_ext)
-                    except (ValueError, TypeError):
-                        last_ext = {}
-                sender = str((last_ext or {}).get("senderUserId") or "").split("@")[0]
-                nick = str((last_ext or {}).get("reminderTitle") or "")
-                squad = str((ext or {}).get(f"squadName_{peer}") or "") if isinstance(ext, dict) else ""
-                peer_nick = (nick if sender == peer and nick else "") or squad
-                content = last.get("content") or {}
-                custom = content.get("custom") or {}
-                text = str(custom.get("summary") or "")
-                if not text and custom.get("data"):
-                    try:
-                        payload = json.loads(base64.b64decode(custom["data"]))
-                        text_obj = payload.get("text") or {}
-                        text = text_obj.get("text", "") if isinstance(text_obj, dict) else str(text_obj)
-                    except (ValueError, TypeError, UnicodeDecodeError):
-                        text = ""
-                out.append({
-                    "session_id": cid,
-                    "peer_user_id": peer,
-                    "peer_nick": peer_nick,
-                    "last_msg": text[:60],
-                    "ts": int(conv.get("modifyTime") or 0) or None,
-                    "unread": int(conv.get("redPoint") or 0),
-                    "item_id": str((ext or {}).get("itemId") or "") if isinstance(ext, dict) else "",
-                    "item_title": str((ext or {}).get("itemTitle") or "") if isinstance(ext, dict) else "",
-                    "source": "im",
-                })
-            if body.get("hasMore") not in (1, "1", True) or not items:
-                break
-            nxt = body.get("nextCursor")
-            if nxt is None:
-                break
-            cursor = nxt
+        try:
+            while len(out) < limit:
+                ack = await _call(
+                    ws, "/r/Conversation/listNewestPagination",
+                    [cursor, min(50, limit - len(out))],
+                )
+                code = (ack or {}).get("code")
+                if code not in (200, None):
+                    # 闲鱼会流控（400 The request has been flow controled）；
+                    # 抛出去交给 HTTP 兜底，别把「被限流」当成「没有会话」。
+                    reason = ((ack or {}).get("body") or {}).get("reason") or f"code={code}"
+                    raise GoofishError(f"会话列表被拒绝：{reason}")
+                body = (ack or {}).get("body") or {}
+                items = body.get("userConvs") or []
+                for raw in items:
+                    conv = raw.get("singleChatUserConversation") or raw
+                    single = conv.get("singleChatConversation") or {}
+                    cid = str(single.get("cid") or "").split("@")[0]
+                    if not cid:
+                        continue
+                    first = str(single.get("pairFirst") or "").split("@")[0]
+                    second = str(single.get("pairSecond") or "").split("@")[0]
+                    peer = second if first == session.unb else first
+                    if not peer or peer == "0":
+                        continue
+                    ext = single.get("extension") or {}
+                    if isinstance(ext, str):
+                        try:
+                            ext = json.loads(ext)
+                        except (ValueError, TypeError):
+                            ext = {}
+                    last = (conv.get("lastMessage") or {}).get("message") or {}
+                    last_ext = last.get("extension") or {}
+                    if isinstance(last_ext, str):
+                        try:
+                            last_ext = json.loads(last_ext)
+                        except (ValueError, TypeError):
+                            last_ext = {}
+                    sender = str((last_ext or {}).get("senderUserId") or "").split("@")[0]
+                    nick = str((last_ext or {}).get("reminderTitle") or "")
+                    squad = str((ext or {}).get(f"squadName_{peer}") or "") if isinstance(ext, dict) else ""
+                    peer_nick = (nick if sender == peer and nick else "") or squad
+                    content = last.get("content") or {}
+                    custom = content.get("custom") or {}
+                    text = str(custom.get("summary") or "")
+                    if not text and custom.get("data"):
+                        try:
+                            payload = json.loads(base64.b64decode(custom["data"]))
+                            text_obj = payload.get("text") or {}
+                            text = text_obj.get("text", "") if isinstance(text_obj, dict) else str(text_obj)
+                        except (ValueError, TypeError, UnicodeDecodeError):
+                            text = ""
+                    out.append({
+                        "session_id": cid,
+                        "peer_user_id": peer,
+                        "peer_nick": peer_nick,
+                        "last_msg": text[:60],
+                        "ts": int(conv.get("modifyTime") or 0) or None,
+                        "unread": int(conv.get("redPoint") or 0),
+                        "item_id": str((ext or {}).get("itemId") or "") if isinstance(ext, dict) else "",
+                        "item_title": str((ext or {}).get("itemTitle") or "") if isinstance(ext, dict) else "",
+                        "source": "im",
+                    })
+                if body.get("hasMore") not in (1, "1", True) or not items:
+                    break
+                nxt = body.get("nextCursor")
+                if nxt is None:
+                    break
+                cursor = nxt
+        except Exception as exc:  # noqa: BLE001 — 流控/协议异常都退回 HTTP，别当空列表
+            logger_serve(f"IM 会话列表失败，改用 HTTP：{exc}")
+            out = []
         return {"sessions": out, "total": len(out)}
 
     async def _history(ws: Any, cid: str, limit: int) -> list[dict[str, Any]]:
@@ -904,7 +938,16 @@ async def _serve() -> None:
                 args = cmd.get("args") or {}
                 try:
                     if op == "chats":
-                        data = await _chats(ws, int(args.get("limit") or 60))
+                        limit = int(args.get("limit") or 60)
+                        try:
+                            data = await _chats(ws, limit)
+                        except Exception as exc:  # noqa: BLE001
+                            logger_serve(f"IM 会话列表失败：{exc}")
+                            im_chats_blocked_until = time.time() + 60
+                            data = {"sessions": []}
+                        if not data.get("sessions"):
+                            # IM 分页被流控时用 HTTP 会话列表兜底（短命令一直是这么做的）。
+                            data = await asyncio.to_thread(_http_chats, limit)
                     elif op == "history":
                         data = await _history(ws, str(args.get("cid") or ""), int(args.get("limit") or 30))
                     elif op == "send":

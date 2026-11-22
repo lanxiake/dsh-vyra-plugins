@@ -1628,6 +1628,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-xianyu-delivery',
           },
         },
+        // 0.9.1: flow-control (400) on the conversation list now falls back to
+        // HTTP with a cooldown; the host caches the list for 5s.
+        '0.9.1': {
+          publishTimestamp: 1795278000,
+          source: {
+            type: 'git',
+            url: 'https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git',
+            commit: '3bae6c75310607e3a8189a4155324f38139e8185',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
       },
       metadata: {
         category: 'integration',
