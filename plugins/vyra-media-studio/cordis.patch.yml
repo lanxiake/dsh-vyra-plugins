@@ -1,0 +1,6 @@
+# The media library lives in the browser half; the Host row only exists so the
+# bundle is a real Loader entry and its two authenticated routes are mounted.
+- insert:
+    - id: media-studio
+      name: 'vyra-media-studio'
+      config: {}

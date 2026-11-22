@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b1208"/>
+      <stop offset=".55" stop-color="#a7511d"/>
+      <stop offset="1" stop-color="#efb264"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe3b8" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#ffe3b8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .16"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="900" height="1200" fill="url(#bg)"/>
+  <g stroke="#ffe3b8" stroke-opacity=".2">
+    <path d="M90 0v1200M180 0v1200M270 0v1200M360 0v1200M450 0v1200M540 0v1200M630 0v1200M720 0v1200M810 0v1200"/>
+  </g>
+  <rect x="90" y="96" width="4" height="430" fill="url(#bar)"/>
+  <g fill="#fff4e2">
+    <text x="132" y="168" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="26" letter-spacing="9" opacity=".7">VERTICAL CUT</text>
+    <text x="126" y="620" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="360" font-weight="600" letter-spacing="-14">02</text>
+    <text x="132" y="1060" font-family="'Segoe UI', sans-serif" font-size="34" opacity=".82">竖版封面 · 9:16</text>
+    <text x="132" y="1112" font-family="Cascadia Mono, Consolas, monospace" font-size="22" opacity=".55">1080 × 1920 · RGB</text>
+  </g>
+  <circle cx="706" cy="260" r="116" fill="none" stroke="#fff4e2" stroke-opacity=".45" stroke-width="2"/>
+  <circle cx="706" cy="260" r="72" fill="none" stroke="#fff4e2" stroke-opacity=".28"/>
+  <rect width="900" height="1200" filter="url(#grain)" opacity=".5"/>
+</svg>

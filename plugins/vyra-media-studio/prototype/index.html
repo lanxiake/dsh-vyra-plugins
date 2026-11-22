@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>vyra-media-studio · 媒体库原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8.5 5.7 9.2 6.3-9.2 6.3z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5.5" width="3.2" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="13.8" y="5.5" width="3.2" height="13" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="5.5" width="13" height="13" rx="2.5"/><path d="m16 10 4.2-2.4v8.8L16 14z"/><path d="m8.5 9.5 4 2.5-4 2.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="8.6" cy="9.4" r="1.4"/><path d="m4.5 17 5.3-5 4 3.6 2.8-2.4 2.9 3.2"/></symbol>
+    <symbol id="i-audio" viewBox="0 0 24 24"><path d="M9 17.5V6.8l9-1.6v10.4"/><ellipse cx="6.7" cy="17.7" rx="2.2" ry="1.8"/><ellipse cx="15.7" cy="15.9" rx="2.2" ry="1.8"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.2 13.8a4 4 0 0 0 5.7 0l2.4-2.4a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M13.8 10.2a4 4 0 0 0-5.7 0l-2.4 2.4a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8 8"/><path d="M18.5 13.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V7A1.5 1.5 0 0 1 5 5.5h5.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 9.5 5 5 5-5"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.6v12.8L7.5 14.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.6v12.8L7.5 14.5H4z"/><path d="m16 9.5 4 5M20 9.5l-4 5"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></symbol>
+    <symbol id="i-loop" viewBox="0 0 24 24"><path d="M17.5 5.5H8a4 4 0 0 0-4 4v.5"/><path d="m15 3 2.5 2.5L15 8"/><path d="M6.5 18.5H16a4 4 0 0 0 4-4V14"/><path d="m9 21-2.5-2.5L9 16"/></symbol>
+    <symbol id="i-pip" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><rect x="12.5" y="12.5" width="6.5" height="5" rx="1.2"/></symbol>
+    <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8M10.5 7.5v6M7.5 10.5h6"/></symbol>
+    <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8M7.5 10.5h6"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 5.5v-1a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h1"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.3 4.3l1.4 1.4M18.3 18.3l1.4 1.4M2.5 12h2M19.5 12h2M4.3 19.7l1.4-1.4M18.3 5.7l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z"/></symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M14.5 4.5v15"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19.5V13M10 19.5V8M16 19.5V4.5M4 19.5h16"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 6.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 3.5 20h17z"/><path d="M12 9v5M12 17h.01"/></symbol>
+  </svg>
+
+  <div class="app" id="app">
+    <aside class="rail" aria-label="工作区导航">
+      <div class="brand">
+        <span class="logo"><span></span></span>
+        <div><strong>DSH</strong><small>media studio</small></div>
+      </div>
+      <div class="rail-workspace">
+        <span class="ws-dot"></span>
+        <div><strong>自媒体工作区</strong><small>~/work/creator</small></div>
+        <button class="ghost-mini" aria-label="工作区菜单"><svg><use href="#i-chevron"/></svg></button>
+      </div>
+      <nav class="rail-nav">
+        <a class="rail-item"><svg><use href="#i-chart"/></svg><span>会话</span><em>3</em></a>
+        <a class="rail-item"><svg><use href="#i-folder"/></svg><span>文件</span></a>
+        <a class="rail-item is-active"><svg><use href="#i-video"/></svg><span>媒体库</span><i class="live-dot"></i></a>
+        <a class="rail-item"><svg><use href="#i-clock"/></svg><span>最近</span></a>
+      </nav>
+      <div class="rail-label">今天</div>
+      <div class="session-list">
+        <button class="session is-active"><span class="s-avatar">开</span><span><b>新品开箱 · 复盘</b><small>12 个媒体 · 2 分钟前</small></span></button>
+        <button class="session"><span class="s-avatar alt">排</span><span><b>10 月内容排期</b><small>周四更新 · 昨天</small></span></button>
+        <button class="session"><span class="s-avatar alt2">B</span><span><b>BGM 素材整理</b><small>音频 8 条 · 3 天前</small></span></button>
+      </div>
+      <div class="rail-foot">
+        <button class="rail-item"><svg><use href="#i-dots"/></svg><span>更多</span></button>
+        <div class="avatar">LX</div>
+      </div>
+    </aside>
+
+    <main class="chat" aria-label="会话">
+      <header class="chat-head">
+        <div>
+          <div class="eyebrow"><span class="status-dot"></span>已连接 · 本地工作区</div>
+          <h1>新品开箱 · 剪辑复盘</h1>
+        </div>
+        <div class="chat-tools">
+          <span class="model-chip">V4.1 Flash</span>
+          <button class="icon-btn" aria-label="会话选项"><svg><use href="#i-dots"/></svg></button>
+        </div>
+      </header>
+      <div class="chat-body">
+        <div class="day-line"><span>今天 10:18</span></div>
+        <div class="msg user">
+          <p>帮我把这次开箱的素材过一遍，重点看片头和封面。右侧开个媒体库，我想直接在里面看。</p>
+        </div>
+        <div class="msg assistant">
+          <div class="tool-row">
+            <span class="tool-ico"><svg><use href="#i-folder"/></svg></span>
+            <div><b>扫描工作区媒体</b><small>12 个文件 · 视频 5 · 图片 5 · 音频 2</small></div>
+            <span class="tool-state">完成</span>
+          </div>
+          <p>片头 v3 的节奏可以，封面建议先用 <code>封面_横版_01</code>。媒体库已打开，视频可以在卡片里直接播，点开可以放大看。</p>
+          <div class="inline-file">
+            <span class="file-glyph"><svg><use href="#i-video"/></svg></span>
+            <div><b>片头_动态字幕_v3.mp4</b><small>960×540 · 6.0s · 64.2 MB</small></div>
+            <button class="mini-link" data-open-demo="opening">预览</button>
+          </div>
+        </div>
+        <div class="msg assistant quiet">
+          <p>需要的话我可以把 5 条视频按“片头 / 正片 / 花絮”分三组，媒体库里直接按文件夹筛。</p>
+        </div>
+      </div>
+      <div class="composer">
+        <div class="composer-box">
+          <span class="plus">+</span>
+          <input aria-label="继续追问" placeholder="继续追问，或拖入素材…" />
+          <button class="send" aria-label="发送"><svg><use href="#i-right"/></svg></button>
+        </div>
+        <div class="composer-foot"><span>Enter 发送 · Shift + Enter 换行</span><span>素材仅在本地处理</span></div>
+      </div>
+    </main>
+
+    <aside class="panel" id="panel" aria-label="右侧预览区">
+      <div class="panel-tabs">
+        <div class="tab-list" role="tablist">
+          <button class="panel-tab is-active" role="tab" aria-selected="true">
+            <svg><use href="#i-video"/></svg><span>媒体库</span><i class="tab-dot"></i>
+          </button>
+          <button class="panel-tab ghost" id="tabOpening" role="tab" aria-selected="false">
+            <span class="tab-kind">MP4</span><span>片头_动态字幕_v3</span><button class="tab-close" aria-label="关闭预览">×</button>
+          </button>
+        </div>
+        <div class="panel-tools">
+          <button class="icon-btn" id="themeBtn" aria-label="切换主题" title="切换主题"><svg><use href="#i-sun"/></svg></button>
+          <button class="icon-btn" id="focusBtn" aria-label="专注模式" title="专注模式"><svg><use href="#i-focus"/></svg></button>
+        </div>
+      </div>
+
+      <section class="library">
+        <header class="lib-head">
+          <div class="lib-title-row">
+            <div class="lib-title">
+              <h2>媒体库</h2>
+              <p><span id="countText">12 个媒体</span><span class="sep">·</span><span id="folderText">6 个文件夹</span><span class="sep">·</span><span class="mono" id="sizeText">1.2 GB</span></p>
+            </div>
+            <div class="lib-actions">
+              <button class="icon-btn" id="scanBtn" aria-label="重新扫描" title="重新扫描"><svg><use href="#i-refresh"/></svg></button>
+              <div class="seg" role="group" aria-label="视图">
+                <button class="seg-btn is-active" id="gridBtn" aria-pressed="true" title="网格视图"><svg><use href="#i-grid"/></svg></button>
+                <button class="seg-btn" id="listBtn" aria-pressed="false" title="列表视图"><svg><use href="#i-list"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="search-row">
+            <label class="search">
+              <svg><use href="#i-search"/></svg>
+              <input id="search" type="search" placeholder="搜索名称、文件夹或链接…" autocomplete="off" />
+              <kbd>/</kbd>
+            </label>
+            <button class="filter-btn" id="filterBtn" aria-expanded="false">
+              <svg><use href="#i-filter"/></svg><span>筛选</span><i class="filter-count" id="filterCount" hidden>0</i>
+            </button>
+          </div>
+
+          <div class="type-row" id="typeRow" role="group" aria-label="媒体类型"></div>
+
+          <div class="filter-panel" id="filterPanel" hidden>
+            <label class="field"><span>文件夹</span><select id="folderSelect"></select></label>
+            <label class="field"><span>时间</span><select id="timeSelect">
+              <option value="all">全部时间</option>
+              <option value="today">今天</option>
+              <option value="7d">近 7 天</option>
+              <option value="30d">近 30 天</option>
+            </select></label>
+            <label class="field"><span>大小</span><select id="sizeSelect">
+              <option value="all">全部大小</option>
+              <option value="small">小于 10 MB</option>
+              <option value="medium">10 – 100 MB</option>
+              <option value="large">大于 100 MB</option>
+            </select></label>
+            <label class="field"><span>排序</span><select id="sortSelect">
+              <option value="time">按时间</option>
+              <option value="name">按名称</option>
+              <option value="size">按大小</option>
+              <option value="type">按类型</option>
+            </select></label>
+            <button class="dir-btn" id="dirBtn" title="切换升序/降序" aria-label="切换排序方向">
+              <span class="mono" id="dirLabel">降序</span><svg><use href="#i-chevron"/></svg>
+            </button>
+            <button class="reset-btn" id="resetBtn">清除全部</button>
+          </div>
+
+          <div class="active-filters" id="activeFilters"></div>
+        </header>
+
+        <div class="lib-scroll" id="libScroll">
+          <div class="scan-banner" id="scanBanner" hidden>
+            <span class="scan-pulse"></span><span>正在扫描工作区，跳过构建目录…</span>
+          </div>
+          <div class="grid" id="grid" aria-live="polite"></div>
+          <div class="rows" id="list" hidden></div>
+          <div class="empty" id="empty" hidden>
+            <span class="empty-art"><svg><use href="#i-search"/></svg></span>
+            <b>没有匹配的媒体</b>
+            <p>试试减少筛选条件，或换一个文件夹。</p>
+            <button class="primary-btn" id="emptyReset">清除筛选</button>
+          </div>
+        </div>
+
+        <footer class="statusbar">
+          <span id="statusText">已扫描 34 个目录 · 跳过 3.2k 个构建目录</span>
+          <span class="status-right"><i class="local-dot"></i>本地媒体</span>
+        </footer>
+      </section>
+    </aside>
+  </div>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="overlay-backdrop" data-close-overlay></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+      <header class="sheet-head">
+        <div class="sheet-title">
+          <span class="kind-dot" id="ovKindDot"></span>
+          <h2 id="ovTitle">素材</h2>
+          <span class="sheet-path" id="ovFolder"></span>
+        </div>
+        <div class="sheet-actions">
+          <button class="ghost-btn" id="ovOpenTab"><svg><use href="#i-external"/></svg><span>在标签页打开</span></button>
+          <button class="icon-btn" id="ovClose" aria-label="关闭预览"><svg><use href="#i-close"/></svg></button>
+        </div>
+      </header>
+
+      <div class="stage" id="ovStage">
+        <div class="stage-media" id="ovMedia"></div>
+        <div class="stage-tools" id="ovStageTools"></div>
+        <div class="stage-hint" id="ovHint"></div>
+      </div>
+
+      <div class="controls" id="ovControls">
+        <button class="icon-btn strong" id="ovPlay" aria-label="播放"><svg><use href="#i-play"/></svg></button>
+        <span class="mono time" id="ovCurrent">00:00</span>
+        <input class="seek" id="ovSeek" type="range" min="0" max="1000" value="0" aria-label="播放进度" />
+        <span class="mono time" id="ovDuration">00:00</span>
+        <span class="ctrl-sep"></span>
+        <button class="icon-btn" id="ovMute" aria-label="静音"><svg><use href="#i-volume"/></svg></button>
+        <input class="volume" id="ovVolume" type="range" min="0" max="100" value="100" aria-label="音量" />
+        <select class="speed" id="ovSpeed" aria-label="播放速度">
+          <option value="0.5">0.5×</option>
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+        <button class="icon-btn" id="ovLoop" aria-label="循环播放"><svg><use href="#i-loop"/></svg></button>
+        <button class="icon-btn" id="ovPip" aria-label="画中画"><svg><use href="#i-pip"/></svg></button>
+        <button class="icon-btn" id="ovFull" aria-label="全屏"><svg><use href="#i-full"/></svg></button>
+        <span class="ctrl-sep"></span>
+        <button class="icon-btn" id="ovPrev" aria-label="上一个"><svg><use href="#i-left"/></svg></button>
+        <button class="icon-btn" id="ovNext" aria-label="下一个"><svg><use href="#i-right"/></svg></button>
+      </div>
+
+      <footer class="sheet-foot">
+        <div class="sheet-meta">
+          <span class="mono" id="ovMeta">—</span>
+          <span class="meta-note" id="ovIndex">1 / 12</span>
+        </div>
+        <div class="filmstrip" id="filmstrip" aria-label="当前筛选结果"></div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

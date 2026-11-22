@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f1ea"/>
+      <stop offset="1" stop-color="#ded8ca"/>
+    </linearGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#1f2933" fill-opacity=".12"/>
+    </pattern>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .1"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#paper)"/>
+  <rect width="1600" height="900" fill="url(#dots)"/>
+  <g fill="#1f2933">
+    <text x="80" y="92" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="30" letter-spacing="8" opacity=".66">STORYBOARD / 04</text>
+    <text x="80" y="838" font-family="Cascadia Mono, Consolas, monospace" font-size="20" opacity=".55">SCENE 01–06 · 15s · 30fps</text>
+  </g>
+  <g fill="none" stroke="#1f2933" stroke-opacity=".7" stroke-width="2">
+    <rect x="80" y="140" width="460" height="260"/>
+    <rect x="570" y="140" width="460" height="260"/>
+    <rect x="1060" y="140" width="460" height="260"/>
+    <rect x="80" y="440" width="460" height="260"/>
+    <rect x="570" y="440" width="460" height="260"/>
+    <rect x="1060" y="440" width="460" height="260"/>
+  </g>
+  <g fill="#1f2933" opacity=".82">
+    <path d="M130 350l120-130 80 74 70-54 80 110z"/>
+    <circle cx="800" cy="268" r="72"/>
+    <path d="M1210 360l90-180 90 180z"/>
+    <path d="M110 660c80-140 180-140 260 0s180 140 260 0" fill="none" stroke="#1f2933" stroke-width="8"/>
+    <path d="M610 640h340M610 684h280M610 728h310" stroke="#1f2933" stroke-width="10"/>
+    <path d="M1090 660l120-90 120 90v100h-240z"/>
+  </g>
+  <g fill="#1f2933" font-family="Cascadia Mono, Consolas, monospace" font-size="15" opacity=".62">
+    <text x="96" y="426">01 / WIDE</text><text x="586" y="426">02 / CLOSE</text><text x="1076" y="426">03 / INSERT</text>
+    <text x="96" y="726">04 / TRACK</text><text x="586" y="726">05 / TYPE</text><text x="1076" y="726">06 / END</text>
+  </g>
+  <rect width="1600" height="900" filter="url(#grain)" opacity=".7"/>
+</svg>
