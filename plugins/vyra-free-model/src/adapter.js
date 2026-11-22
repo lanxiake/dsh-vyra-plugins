@@ -229,7 +229,12 @@ export class KiloAdapter {
 
     if (done) {
       try {
-        yield* readChunks(payloads)
+        for await (const chunk of readChunks(payloads)) {
+          // Accounting rides the same stream the caller sees: one place counts a
+          // turn, so a cancelled or failed turn cannot be billed twice.
+          if (chunk.type === 'usage') this.deps.onUsage?.({ model, usage: chunk.usage })
+          yield chunk
+        }
       } catch (error) {
         // An in-stream error envelope is still this turn's outcome.
         const code = typeof error.code === 'string' ? error.code : 'SERVER'

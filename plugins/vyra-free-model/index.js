@@ -22,6 +22,8 @@ import os from 'node:os'
 import fs from 'node:fs'
 import { KiloAdapter, ROUTE } from './src/adapter.js'
 import { buildCatalog, fetchKiloListing } from './src/kilo.js'
+import { JsonStore } from './src/store.js'
+import { USAGE_INITIAL, recordUsage, pruneDays, todayTotals } from './src/usage.js'
 
 export const name = 'vyra-free-model'
 
@@ -54,8 +56,17 @@ export function apply(ctx, _config) {
   fs.mkdirSync(dataDir, { recursive: true })
   const cacheFile = path.join(dataDir, 'catalog.json')
 
-  /** Settings the adapter and the routes read. Task 6 owns the durable store. */
+  /** Settings the adapter and the routes read. Task 7 owns the durable store. */
   const settings = { enabled: true }
+
+  /** Today's token counts, and the durable file behind them. */
+  const usageFile = path.join(dataDir, 'usage.json')
+  const usageStore = new JsonStore(usageFile, USAGE_INITIAL, { log: message => logger.warn?.(message) })
+
+  /** Add one turn and keep the file to a sane size. */
+  function accountUsage({ model, usage }) {
+    usageStore.edit(value => pruneDays(recordUsage(value, { model, usage })))
+  }
 
   /**
    * The live catalog. It starts from last run's cache so the picker is populated
@@ -72,7 +83,10 @@ export function apply(ctx, _config) {
 
   const state = () => ({ catalog, settings })
 
-  const adapter = new KiloAdapter({ state })
+  const adapter = new KiloAdapter({
+    state,
+    onUsage: accountUsage,
+  })
 
   ctx.llm.registerAdapter([ROUTE], adapter)
 
@@ -124,6 +138,7 @@ export function apply(ctx, _config) {
       disposed = true
       clearTimeout(boot)
       if (timer !== undefined) clearTimeout(timer)
+      usageStore.dispose()
     }
   }, 'vyra-free-model: catalog refresh')
 
