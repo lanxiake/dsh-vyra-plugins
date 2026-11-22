@@ -45,6 +45,41 @@ window.__ModuleLoader__.load({
       HOME_SOURCE,
     ]
 
+    /**
+     * dshmarket.com's browsable directory is the same curated catalog that is
+     * published as a format-1 index on npm. It is a host source, not a virtual
+     * one: the Host already knows how to fetch, validate and annotate it.
+     */
+    const DSHMARKET_CATALOG = 'https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json'
+
+    /**
+     * dsh.so exposes a compact index of its own (≈11 MB, immutable, CORS *),
+     * but not in format 1. It is browsed by the adapter below rather than being
+     * written into the profile's index sources, which only accept format 1.
+     */
+    const DSH_SO_SOURCE = {
+      url: 'dsh-so://market',
+      title: { zh: 'dsh.so 插件市场', en: 'dsh.so market' },
+      builtin: true,
+    }
+    const DSH_SO_PAGE = 'https://www.dsh.so/zh/artifacts/'
+    /** Used when the page cannot be read; the page's own hash is preferred. */
+    const DSH_SO_FALLBACK_INDEX = 'https://www.dsh.so/assets/idx/9984f3eb98ae4bf8896e23b591ec8989/artifacts-index-zh.json'
+    const DSH_SO_CACHE_MS = 6 * 60 * 60 * 1000
+
+    /**
+     * A compact star/download overlay generated from the community catalog at
+     * publish time. Host indexes (including dshmarket.com's format-1 catalog)
+     * do not carry these numbers, so cards look them up here; a miss simply
+     * hides the metric. Never fetched per card.
+     */
+    const STATS_SOURCES = [
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/stats.json',
+      'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/stats.json',
+      'https://lanxiake.github.io/dsh-vyra-plugins/stats.json',
+    ]
+    const STATS_CACHE_MS = 6 * 60 * 60 * 1000
+
     /** Entries loaded before "Show more", and loaded again by each press. */
     const PAGE = 60
 
@@ -221,17 +256,428 @@ window.__ModuleLoader__.load({
     }
 
     // ---------------------------------------------------------------------------
-    // The batch runner
+    // Built-in aggregators
+    // ---------------------------------------------------------------------------
+
+    /** Compact counts in the same style dsh.so uses: 1.2k, 3.4M. */
+    function compactCount(value) {
+      const number = Number(value)
+      if (!Number.isFinite(number) || number < 0) return ''
+      if (number >= 1e6) return `${(number / 1e6).toFixed(number >= 1e7 ? 0 : 1).replace(/\.0$/, '')}M`
+      if (number >= 1e3) return `${(number / 1e3).toFixed(number >= 1e4 ? 0 : 1).replace(/\.0$/, '')}k`
+      return String(Math.round(number))
+    }
+
+    /**
+     * The npm package name inside an install spec, or '' when it is not an npm
+     * spec. `@scope/name@1.2.3` keeps the scope; a bare `name` is itself.
+     */
+    function npmSpecName(spec) {
+      const text = String(spec ?? '').trim()
+      if (text === '' || text.startsWith('github:') || text.startsWith('~')) return ''
+      if (text.startsWith('@')) {
+        const slash = text.indexOf('/')
+        if (slash === -1) return text
+        const at = text.indexOf('@', slash)
+        return at === -1 ? text : text.slice(0, at)
+      }
+      const at = text.indexOf('@')
+      return at <= 0 ? text : text.slice(0, at)
+    }
+
+    /** The version a spec pins, or '' when it pins none. */
+    function specVersion(spec) {
+      const text = String(spec ?? '').trim()
+      if (text === '') return ''
+      if (text.startsWith('github:')) {
+        const hash = text.indexOf('#')
+        if (hash === -1) return ''
+        const ref = text.slice(hash + 1).split('&')[0].replace(/^v/, '')
+        return /^\d+\.\d+\.\d+/.test(ref) ? ref : ''
+      }
+      const at = text.lastIndexOf('@')
+      if (at <= 0) return ''
+      const version = text.slice(at + 1).replace(/^v/, '')
+      return /^\d+\.\d+\.\d+/.test(version) ? version : ''
+    }
+
+    /** The artifact index URL the dsh.so page itself references. */
+    function dshSoIndexUrlFrom(html) {
+      const match = /\/assets\/idx\/[a-f0-9]+\/artifacts-index-(?:zh|en)\.json/.exec(String(html ?? ''))
+      return match === null ? null : new URL(match[0], 'https://www.dsh.so').href
+    }
+
+    /** A dsh.so artifact's repository page, following its URL-code field. */
+    function dshSoRepoUrl(raw) {
+      const owner = String(raw[2] ?? '').trim()
+      const repo = String(raw[3] ?? '').trim()
+      switch (Number(raw[10] ?? 4)) {
+        case 0: return owner === '' || repo === '' ? '' : `https://github.com/${owner}/${repo}`
+        case 1: return owner === '' || repo === '' ? '' : `https://gitlab.com/${owner}/${repo}`
+        case 2: return owner === '' || repo === '' ? '' : `https://gitee.com/${owner}/${repo}`
+        case 3: return ''
+        default: return String(raw[11] ?? '')
+      }
+    }
+
+    /** A dsh.so artifact's icon: a curated avatar, else the owner's avatar. */
+    function dshSoIcon(raw, dictionary) {
+      const avatar = Number(raw[28] ?? 0)
+      if (avatar > 0 && typeof dictionary?.av?.[avatar] === 'string') return dictionary.av[avatar]
+      const owner = String(raw[2] ?? '').trim()
+      if (owner === '') return ''
+      const code = Number(raw[10] ?? 4)
+      if (code === 0) return `https://github.com/${owner}.png`
+      if (code === 2) return `https://gitee.com/${owner}.png`
+      return ''
+    }
+
+    /**
+     * Turn dsh.so's compact artifact index into the entry shape the Host's
+     * pluginMarket returns, so cards, selection and the batch runner do not
+     * need a second code path. Non-plugins, entries with no install target and
+     * dsh-TUI-only specs are skipped.
+     */
+    function normalizeDshSo(data, now = Date.now()) {
+      const dictionary = data?.d ?? {}
+      const cats = Array.isArray(dictionary.cat) ? dictionary.cat : []
+      const catLabels = Array.isArray(dictionary.catL) ? dictionary.catL : []
+      const useCases = Array.isArray(dictionary.ucL) ? dictionary.ucL : []
+      const categories = {}
+      for (let index = 0; index < cats.length; index += 1) {
+        const label = String(catLabels[index] ?? cats[index])
+        categories[cats[index]] = { title: { en: label, zh: label } }
+      }
+      const byName = new Map()
+      for (const raw of Array.isArray(data?.i) ? data.i : []) {
+        if (!Array.isArray(raw)) continue
+        const flags = Number(raw[9] ?? 0)
+        const spec = String(raw[8] ?? '').trim()
+        // Bit 8 marks an artifact that is not a DSH plugin; `~` is dsh-TUI's
+        // own install command and cannot go through pluginManager.
+        if ((flags & 8) !== 0 || spec === '' || spec.startsWith('~')) continue
+        const display = String(raw[1] ?? raw[0] ?? '').trim()
+        if (display === '') continue
+        const npmName = spec.startsWith('github:') ? '' : npmSpecName(spec)
+        const name = npmName === '' ? display : npmName
+        const version = specVersion(spec)
+        const repoUrl = dshSoRepoUrl(raw)
+        const catIndexes = Array.isArray(raw[12]) ? raw[12] : []
+        const catIds = catIndexes.map((id) => cats[id]).filter(Boolean)
+        const categoryLabels = catIndexes.map((id) => catLabels[id]).filter(Boolean)
+        const labels = (Array.isArray(raw[13]) ? raw[13] : []).map((id) => useCases[id]).filter(Boolean)
+        const npm = data?.npm?.[String(raw[0] ?? '')]
+        const stars = Number(raw[5] ?? 0) || 0
+        const downloads = Array.isArray(npm) && Number.isFinite(Number(npm[1])) ? Number(npm[1]) : undefined
+        const downloadsWeek = Array.isArray(npm) && Number.isFinite(Number(npm[0])) ? Number(npm[0]) : undefined
+        const updated = Date.parse(String(raw[6] ?? ''))
+        const entry = {
+          name,
+          title: display,
+          description: String(raw[4] ?? ''),
+          icon: dshSoIcon(raw, dictionary),
+          author: String(raw[2] ?? ''),
+          ...(repoUrl === '' ? {} : { homepage: repoUrl, repository: { url: repoUrl } }),
+          metadata: {
+            ...(catIds.length === 0 ? {} : { category: catIds[0] }),
+            keywords: labels,
+            labels: [],
+            sortKeys: {
+              ...(stars > 0 ? { stars } : {}),
+              ...(downloads === undefined ? {} : { downloads }),
+            },
+          },
+          versions: [{
+            version: version === '' ? 'latest' : version,
+            publishTimestamp: Number.isFinite(updated) ? Math.floor(updated / 1000) : 0,
+            source: spec.startsWith('github:')
+              ? { type: 'git', url: repoUrl === '' ? spec : repoUrl, commit: '' }
+              : { type: 'npm' },
+            install: { spec },
+            compatibility: { compatible: true },
+            update: false,
+          }],
+          defaultVersion: version === '' ? 'latest' : version,
+          installation: { status: 'not-installed' },
+          external: true,
+          marketStats: {
+            ...(stars > 0 ? { stars } : {}),
+            ...(downloads === undefined ? {} : { downloads, downloadsWeek, window: 'total' }),
+          },
+          marketExtra: {
+            kind: (flags & 1) !== 0 ? 'app' : 'plugin',
+            verification: String(dictionary.ver?.[Number(raw[14] ?? 0)] ?? ''),
+            verificationShort: (/L\d/.exec(String(dictionary.verKey?.[Number(raw[15] ?? 0)] ?? '')) ?? [])[0] ?? '',
+            verificationTone: String(dictionary.verTone?.[Number(raw[16] ?? 0)] ?? ''),
+            security: String(dictionary.sec?.[Number(raw[17] ?? 0)] ?? ''),
+            securityTone: String(dictionary.secTone?.[Number(raw[18] ?? 0)] ?? ''),
+            health: String(dictionary.health?.[Number(raw[19] ?? 0)] ?? ''),
+            healthTone: String(dictionary.healthTone?.[Number(raw[20] ?? 0)] ?? ''),
+            trust: String(dictionary.trust?.[Number(raw[21] ?? 0)] ?? ''),
+            trustTone: String(dictionary.trustTone?.[Number(raw[22] ?? 0)] ?? ''),
+            quality: Number(raw[7] ?? 0) || 0,
+            license: String(dictionary.lic?.[Number(raw[24] ?? 0)] ?? ''),
+            releaseUrl: String(raw[27] ?? ''),
+            categories: catIds,
+            categoryLabels,
+            useCases: labels,
+            dshVersions: Number(raw[25] ?? 0) === 0
+              ? []
+              : (Array.isArray(dictionary.dv) ? dictionary.dv : []).filter((_value, index) => (Number(raw[25]) & (1 << index)) !== 0),
+          },
+        }
+        const score = (downloads ?? 0) * 1e6 + (stars ?? 0)
+        const existing = byName.get(name)
+        const oldScore = existing === undefined
+          ? -1
+          : (existing.marketStats.downloads ?? 0) * 1e6 + (existing.marketStats.stars ?? 0)
+        if (score > oldScore) byName.set(name, entry)
+      }
+      const entries = [...byName.values()].sort((left, right) =>
+        (right.marketStats.downloads ?? 0) - (left.marketStats.downloads ?? 0)
+        || (right.marketStats.stars ?? 0) - (left.marketStats.stars ?? 0)
+        || left.name.localeCompare(right.name))
+      return {
+        entries,
+        metadata: {
+          categories,
+          labels: {},
+          sortKeys: {
+            stars: { title: { en: 'Stars', zh: '星标' }, order: 'desc' },
+            downloads: { title: { en: 'Downloads', zh: '下载量' }, order: 'desc' },
+          },
+        },
+        fetchedAt: now,
+      }
+    }
+
+    /** Match one dsh.so entry against a query and score it. */
+    function dshSoScore(entry, words) {
+      if (words.length === 0) return 0
+      const name = String(entry.name ?? '').toLowerCase()
+      const title = String(entry.title ?? '').toLowerCase()
+      const description = String(entry.description ?? '').toLowerCase()
+      const author = String(entry.author ?? '').toLowerCase()
+      const repo = repoOfEntry(entry).toLowerCase()
+      const tags = [...(entry.marketExtra?.categories ?? []), ...(entry.metadata?.keywords ?? [])].join(' ').toLowerCase()
+      let score = 0
+      for (const word of words) {
+        if (name === word) score += 12
+        else if (name.startsWith(word)) score += 8
+        else if (name.includes(word)) score += 5
+        else if (title.includes(word)) score += 4
+        else if (author.includes(word)) score += 3
+        else if (tags.includes(word)) score += 2
+        else if (description.includes(word)) score += 1
+        else if (repo.includes(word)) score += 1
+        else return -1
+      }
+      return score
+    }
+
+    /** One page of the dsh.so index, in the shape the Host's search returns. */
+    function dshSoPage(data, query, offset, limit) {
+      const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
+      const scored = []
+      for (const entry of data.entries) {
+        if (query.category !== undefined && query.category !== null && entry.metadata.category !== query.category) continue
+        const score = dshSoScore(entry, words)
+        if (score >= 0) scored.push({ entry, score })
+      }
+      const sort = query.sort ?? { kind: 'index' }
+      if (sort.kind === 'relevance' && words.length > 0) {
+        scored.sort((left, right) => right.score - left.score || left.entry.name.localeCompare(right.entry.name))
+      } else if (sort.kind === 'published') {
+        const sign = sort.direction === 'asc' ? 1 : -1
+        scored.sort((left, right) => sign * (Math.max(...left.entry.versions.map((version) => version.publishTimestamp)) - Math.max(...right.entry.versions.map((version) => version.publishTimestamp))))
+      } else if (sort.kind === 'key') {
+        const sign = sort.direction === 'asc' ? 1 : -1
+        const value = (entry) => {
+          const candidate = entry.metadata?.sortKeys?.[sort.id]
+          return typeof candidate === 'number' ? candidate : undefined
+        }
+        scored.sort((left, right) => {
+          const a = value(left.entry)
+          const b = value(right.entry)
+          if (a === undefined || b === undefined) return a === b ? 0 : a === undefined ? 1 : -1
+          return sign * (a - b) || left.entry.name.localeCompare(right.entry.name)
+        })
+      }
+      const total = scored.length
+      const entries = scored.slice(offset, offset + limit).map((item) => item.entry)
+      return {
+        url: DSH_SO_SOURCE.url,
+        title: DSH_SO_SOURCE.title,
+        metadata: data.metadata,
+        fetchedAt: data.fetchedAt,
+        total,
+        nextOffset: offset + entries.length < total ? offset + limit : null,
+        entries,
+      }
+    }
+
+    /** dsh.so's index is large, immutable and CORS-enabled; keep it per session. */
+    let dshSoCache = { data: null, at: 0, pending: null }
+
+    /** Combine a caller's abort signal with a timeout where the runtime can. */
+    function withTimeout(signal, milliseconds) {
+      const timeout = AbortSignal.timeout(milliseconds)
+      if (signal === undefined || signal === null) return timeout
+      return typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : signal
+    }
+
+    /** Read and normalize dsh.so's artifact index, reusing it until it expires. */
+    function loadDshSoData(refresh, signal) {
+      if (!refresh && dshSoCache.data !== null && Date.now() - dshSoCache.at < DSH_SO_CACHE_MS) {
+        return Promise.resolve(dshSoCache.data)
+      }
+      if (dshSoCache.pending !== null) return dshSoCache.pending
+      const task = (async () => {
+        let indexUrl = DSH_SO_FALLBACK_INDEX
+        try {
+          const page = await fetch(DSH_SO_PAGE, { signal: withTimeout(signal, 20_000), headers: { accept: 'text/html' } })
+          if (page.ok) indexUrl = dshSoIndexUrlFrom(await page.text()) ?? indexUrl
+        } catch {
+          // The page is only a way to discover the hash; the fallback still works.
+        }
+        const response = await fetch(indexUrl, { signal: withTimeout(signal, 90_000), headers: { accept: 'application/json' } })
+        if (!response.ok) throw new Error(`dsh.so index: HTTP ${response.status}`)
+        const data = normalizeDshSo(await response.json())
+        dshSoCache = { data, at: Date.now(), pending: null }
+        return data
+      })()
+      dshSoCache.pending = task
+      return task.catch((error) => {
+        dshSoCache.pending = null
+        throw error
+      })
+    }
+
+    /** Index the compact stats overlay by package, repository and display name. */
+    function normalizeStats(raw) {
+      const byName = new Map()
+      const byNpm = new Map()
+      const byRepo = new Map()
+      for (const row of Array.isArray(raw?.plugins) ? raw.plugins : []) {
+        if (row === null || typeof row !== 'object') continue
+        const stars = Number(row.stars)
+        const downloads = Number(row.downloads)
+        const statistic = {
+          ...(Number.isFinite(stars) && stars > 0 ? { stars } : {}),
+          ...(Number.isFinite(downloads) && downloads >= 0 ? { downloads, window: '30d' } : {}),
+          ...(typeof row.start === 'string' ? { start: row.start } : {}),
+          ...(typeof row.end === 'string' ? { end: row.end } : {}),
+          ...(typeof row.checked === 'string' ? { checkedAt: row.checked } : {}),
+        }
+        if (statistic.stars === undefined && statistic.downloads === undefined) continue
+        if (typeof row.name === 'string' && row.name !== '') byName.set(row.name.toLowerCase(), statistic)
+        if (typeof row.npm === 'string' && row.npm !== '') byNpm.set(row.npm.toLowerCase(), statistic)
+        if (typeof row.repo === 'string' && row.repo !== '') byRepo.set(row.repo.toLowerCase(), statistic)
+      }
+      return { byName, byNpm, byRepo, updated: typeof raw?.updated === 'string' ? raw.updated : '' }
+    }
+
+    let statsCache = { data: null, at: 0, pending: null }
+    let statsFailureAt = 0
+
+    /** Read the shared stats overlay once per session; a failure is silent. */
+    function loadStatsData() {
+      if (statsCache.data !== null && Date.now() - statsCache.at < STATS_CACHE_MS) {
+        return Promise.resolve(statsCache.data)
+      }
+      if (statsCache.pending !== null) return statsCache.pending
+      if (statsFailureAt !== 0 && Date.now() - statsFailureAt < 10 * 60 * 1000) return Promise.resolve(null)
+      const task = (async () => {
+        for (const url of STATS_SOURCES) {
+          try {
+            const response = await fetch(url, { signal: AbortSignal.timeout(30_000), headers: { accept: 'application/json' } })
+            if (!response.ok) continue
+            const data = normalizeStats(await response.json())
+            if (data.byName.size === 0 && data.byNpm.size === 0 && data.byRepo.size === 0) continue
+            statsCache = { data, at: Date.now(), pending: null }
+            return data
+          } catch {
+            // Try the next mirror.
+          }
+        }
+        statsFailureAt = Date.now()
+        return null
+      })()
+      statsCache.pending = task
+      return task.catch(() => {
+        statsCache.pending = null
+        statsFailureAt = Date.now()
+        return null
+      })
+    }
+
+    /** The stats a card shows, from the entry itself or the shared overlay. */
+    function statsOfEntry(entry, overlay) {
+      if (entry.marketStats !== undefined) return entry.marketStats
+      const sortKeys = entry.metadata?.sortKeys ?? {}
+      if (typeof sortKeys.stars === 'number' || typeof sortKeys.downloads === 'number') {
+        return {
+          ...(typeof sortKeys.stars === 'number' ? { stars: sortKeys.stars } : {}),
+          ...(typeof sortKeys.downloads === 'number' ? { downloads: sortKeys.downloads, window: '30d' } : {}),
+        }
+      }
+      if (overlay === null || overlay === undefined) return null
+      const name = entry.name.toLowerCase()
+      const repo = repoOfEntry(entry).toLowerCase()
+      // One catalog row is indexed under all three keys, but an entry can
+      // match different rows (a display name and an npm package). Merge them
+      // so a repository row can contribute stars while the npm row contributes
+      // downloads; never add the two download sources together.
+      const candidates = [
+        overlay.byNpm.get(name),
+        repo === '' ? undefined : overlay.byRepo.get(repo),
+        overlay.byName.get(name),
+      ].filter((candidate) => candidate !== undefined)
+      if (candidates.length === 0) return null
+      const merged = {}
+      for (const candidate of candidates) {
+        if (merged.stars === undefined && candidate.stars !== undefined) merged.stars = candidate.stars
+        if (merged.downloads === undefined && candidate.downloads !== undefined) {
+          merged.downloads = candidate.downloads
+          merged.window = candidate.window
+          if (candidate.start !== undefined) merged.start = candidate.start
+          if (candidate.end !== undefined) merged.end = candidate.end
+        }
+        if (merged.checkedAt === undefined && candidate.checkedAt !== undefined) merged.checkedAt = candidate.checkedAt
+      }
+      return merged
+    }
+
+    // ---------------------------------------------------------------------------
+    // The install queue
     // ---------------------------------------------------------------------------
 
     /**
-     * A batch's state, module-scoped on purpose: leaving the Plugins page unmounts the tab
-     * component, and a run owned by that component would die with the unmount. The runner below
-     * owns the batch; the tab only subscribes and draws whatever state it finds on return.
+     * A queue's state, module-scoped on purpose: leaving the Plugins page
+     * unmounts the tab component, and a run owned by that component would die
+     * with the unmount. The runner below owns the queue; the tab and the toast
+     * only subscribe and draw whatever state they find on return.
      */
     const runner = (() => {
-      let state = { running: null, outcome: null, failures: new Map(), cancel: false }
+      let state = {
+        queue: [],
+        current: null,
+        running: null,
+        outcome: null,
+        failures: new Map(),
+        cancel: false,
+        canceling: false,
+        cancelNotice: null,
+        canceledQueue: 0,
+        completed: 0,
+        total: 0,
+      }
+      let logTimer = null
+      let pendingLog = ''
+      let pendingRequestId = null
+      let outcomeSeq = 0
       const listeners = new Set()
+      const notify = () => { for (const listener of listeners) listener(state) }
       return {
         get: () => state,
         subscribe(listener) {
@@ -240,12 +686,112 @@ window.__ModuleLoader__.load({
         },
         update(patch) {
           state = { ...state, ...patch }
-          for (const listener of listeners) listener(state)
+          notify()
+        },
+        /** Apply a Host phase to the current request only. */
+        progress(requestId, phase) {
+          if (state.current?.requestId !== requestId) return
+          state = {
+            ...state,
+            current: { ...state.current, phase },
+            running: state.running === null ? null : { ...state.running, phase },
+          }
+          notify()
+        },
+        /** Append pnpm output, coalescing renders to one per 180ms. */
+        appendLog(requestId, text) {
+          if (state.current?.requestId !== requestId) return
+          pendingRequestId = requestId
+          // pnpm colours its output; the log viewer is plain text.
+          pendingLog = `${pendingLog}${String(text ?? '').replace(/\x1b\[[0-9;]*m/g, '')}`.slice(-8000)
+          if (logTimer !== null) return
+          logTimer = setTimeout(() => {
+            logTimer = null
+            if (state.current?.requestId !== pendingRequestId) return
+            state = {
+              ...state,
+              current: { ...state.current, log: pendingLog },
+              running: state.running === null ? null : { ...state.running, log: pendingLog },
+            }
+            notify()
+          }, 180)
+        },
+        /** Drop one item that has not started yet. */
+        removeQueued(index) {
+          const queue = state.queue.slice()
+          if (index < 0 || index >= queue.length) return
+          queue.splice(index, 1)
+          state = {
+            ...state,
+            queue,
+            total: Math.max(state.completed + (state.current === null ? 0 : 1), state.total - 1),
+          }
+          notify()
+        },
+        /** Cancel the current item where the Host supports it, and clear the queue. */
+        requestCancel(remote, t) {
+          if (state.running === null || state.cancel) return
+          const current = state.current
+          // Remember the unrun tail before clearing it: the finish path
+          // reports that count, and a later enqueue starts a clean queue.
+          state = {
+            ...state,
+            cancel: true,
+            canceling: true,
+            canceledQueue: state.queue.length,
+            queue: [],
+          }
+          notify()
+          const cancellable = current !== null
+            && (current.order.action === 'install' || current.order.action === 'update')
+            && typeof remote.pluginManager.cancelInstall === 'function'
+          if (!cancellable) {
+            state = { ...state, canceling: false, cancelNotice: t('cancelUnsupported') }
+            notify()
+            return
+          }
+          Promise.resolve(remote.pluginManager.cancelInstall(current.requestId)).then((answer) => {
+            if (state.current?.requestId !== current.requestId) return
+            if (!answer.ok) {
+              state = { ...state, canceling: false, cancelNotice: answer.error.message }
+              notify()
+              return
+            }
+            const status = answer.value?.status
+            if (status === 'too-late') state = { ...state, canceling: false, cancelNotice: t('cancelTooLate') }
+            else if (status === 'not-running') state = { ...state, canceling: false }
+            notify()
+          }, (error) => {
+            if (state.current?.requestId !== current.requestId) return
+            state = { ...state, canceling: false, cancelNotice: String(error?.message ?? error) }
+            notify()
+          })
+        },
+        /** Finish the queue and publish an outcome for the toast. */
+        finish(outcome) {
+          if (logTimer !== null) { clearTimeout(logTimer); logTimer = null }
+          pendingLog = ''
+          pendingRequestId = null
+          outcomeSeq += 1
+          state = {
+            ...state,
+            queue: [],
+            current: null,
+            running: null,
+            cancel: false,
+            canceling: false,
+            cancelNotice: null,
+            canceledQueue: 0,
+            completed: 0,
+            total: 0,
+            outcome: { ...outcome, seq: outcomeSeq },
+          }
+          notify()
         },
       }
     })()
 
-    /** The running batch, kept across tab unmounts. */
+    /** The running queue, kept across tab unmounts. */
     function useRunner() {
       const [state, setState] = useState(runner.get)
       useEffect(() => runner.subscribe(setState), [])
@@ -258,36 +804,108 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * The completion toast, mounted in `shell.overlay` so it is visible after
+     * the market page or its Plugins tab has been left. It subscribes to the
+     * same module-level queue and only shows when a new outcome settles.
+     */
+    function MarketToast({ t, onOpen, canOpen }) {
+      const job = useRunner()
+      const outcome = job.outcome
+      // A ref, not state: setting `seen` would re-run this effect and its
+      // cleanup would clear the very timer that hides the toast.
+      const seen = useRef(runner.get().outcome?.seq ?? 0)
+      const [visible, setVisible] = useState(false)
+      useEffect(() => {
+        if (outcome === null || outcome.seq <= seen.current) return undefined
+        seen.current = outcome.seq
+        setVisible(true)
+        const timer = setTimeout(() => setVisible(false), outcome.failed > 0 ? 12_000 : 6_500)
+        if (typeof timer?.unref === 'function') timer.unref()
+        return () => clearTimeout(timer)
+      }, [outcome])
+      if (!visible || outcome === null) return null
+      const openable = onOpen !== undefined && (canOpen === undefined || canOpen())
+      return h('div', { className: 'vpm-toast' },
+        h('div', { className: 'vpm-toast-card' },
+          h('div', { className: 'vpm-toast-copy' },
+            h('p', { className: 'vpm-toast-title' }, t('toastTitle')),
+            h('p', { className: 'vpm-toast-body' },
+              [
+                t('toastBody', { ok: outcome.ok, failed: outcome.failed, restart: outcome.restart }),
+                outcome.canceled ? t('canceled', { n: outcome.skipped }) : null,
+              ].filter(Boolean).join(' · '))),
+          h('div', { className: 'vpm-toast-actions' },
+            openable ? h('button', {
+              className: 'vpm-btn small', onClick: () => { setVisible(false); onOpen() },
+            }, t('toastOpen')) : null,
+            h('button', {
+              className: 'vpm-btn small', onClick: () => { setVisible(false) },
+            }, t('toastClose')))))
+    }
+
+    /** A request id the Host can cancel; the wire only requires a string. */
+    let requestSeq = 0
+    function newRequestId() {
+      try {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+      } catch {
+        // Fall through to the counter.
+      }
+      requestSeq += 1
+      return `vpm-${Date.now().toString(36)}-${requestSeq}`
+    }
+
+    /**
      * Issue one order and read the Host's answer without judging it.
      * @param {object} order - one order from {@link orders}.
      * @param {object} remote - the injected Host namespaces.
-     * @returns {Promise<{pass: boolean, reason?: string, result?: object}>} the outcome.
+     * @param {string} requestId - names this attempt's Host progress and cancellation.
+     * @returns {Promise<{pass: boolean, canceled?: boolean, reason?: string, result?: object}>} the outcome.
      */
-    async function perform(order, remote) {
+    async function perform(order, remote, requestId) {
       let answer
+      // A built-in aggregator's display name is not always the installed
+      // package name (dsh.so shows the repository name). The profile's own
+      // bundle is the name the Host can remove or toggle.
+      const installed = order.bundle?.name ?? order.entry.name
       try {
         if (order.action === 'install') {
           answer = await remote.pluginManager.installBundle(order.version.install.spec, {
-            enabled: true, saveExact: true,
+            enabled: true, saveExact: true, requestId,
             ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
           })
         } else if (order.action === 'update') {
           answer = await remote.pluginManager.updateBundle(order.entry.name, order.version.version, {
             spec: order.version.install.spec,
+            requestId,
           })
         } else if (order.action === 'uninstall') {
-          answer = await remote.pluginManager.removeBundle(order.entry.name)
+          answer = await remote.pluginManager.removeBundle(installed)
         } else {
-          answer = await remote.pluginManager.setBundleEnabled(order.entry.name, order.action === 'enable')
+          answer = await remote.pluginManager.setBundleEnabled(installed, order.action === 'enable')
         }
       } catch (error) {
         return { pass: false, reason: String(error?.message ?? error) }
       }
-      if (!answer.ok) return { pass: false, reason: answer.error.message }
+      if (!answer.ok) {
+        return {
+          pass: false,
+          canceled: /cancel/i.test(answer.error.message),
+          reason: answer.error.message,
+        }
+      }
       // An update answers with its own step result and restores the removed
       // version when the replacement fails; both wrap one change result.
       const result = order.action === 'update' ? answer.value.result : answer.value
-      if (result === undefined || result.application === 'failed') {
+      if (result === undefined || result.application === 'cancelled') {
+        return {
+          pass: false,
+          canceled: true,
+          reason: result?.error?.diagnostic ?? '',
+          result,
+        }
+      }
+      if (result.application === 'failed') {
         // The run's own output says more than the code does — a failed
         // import, a refused build script — so it is part of the reason.
         return {
@@ -300,106 +918,154 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Run a batch: every order is attempted in turn, so one failure never hides the entries that
-     * follow it. A cancel does not reach into an order already on the Host — a git/pnpm run
-     * cannot be aborted from here — but it stops the batch issuing anything further and skips
-     * the repair pass, which is what pressing cancel should mean.
-     * @param {ReadonlyArray<object>} list - orders from {@link orders}.
-     * @param {object} remote - the injected Host namespaces.
-     * @param {Function} t - the active dictionary, for the few strings that are not ids.
+     * Put back a package that another writer stripped between two orders.
+     * A second failure is reported like any other instead of retried forever.
      */
-    async function runBatch(list, remote, t) {
-      if (list.length === 0 || runner.get().running !== null) return
+    async function repair(orders, failed, remote) {
+      const kept = orders.filter((order) => !failed.has(order.entry.name)
+        && order.action !== 'uninstall' && order.action !== 'disable')
+      if (kept.length === 0) return
+      const answer = await remote.pluginManager.listBundles()
+      if (!answer.ok) return
+      const present = new Map(answer.value.map((bundle) => [bundle.name, bundle]))
+      let repaired = false
+      for (const order of kept) {
+        const installed = order.bundle?.name ?? order.entry.name
+        if (present.get(installed)?.enabled === true) continue
+        repaired = true
+        try {
+          if (order.action === 'install' || order.action === 'update') {
+            await remote.pluginManager.installBundle(order.version.install.spec, { enabled: true, saveExact: true })
+          } else {
+            await remote.pluginManager.setBundleEnabled(installed, true)
+          }
+        } catch (error) {
+          try { await remote.pluginManager.setBundleEnabled(installed, true) }
+          catch (again) { failed.set(order.entry.name, String(again?.message ?? again)) }
+        }
+      }
+      // Only a second read tells whether the repair landed. A package that is
+      // back is not a failure, whatever the attempt said.
+      if (!repaired) return
+      const settled = await remote.pluginManager.listBundles()
+      if (!settled.ok) return
+      const now = new Map(settled.value.map((bundle) => [bundle.name, bundle]))
+      for (const order of kept) {
+        const installed = order.bundle?.name ?? order.entry.name
+        if (now.get(installed)?.enabled === true) failed.delete(order.entry.name)
+      }
+    }
+
+    /** Append orders to the live queue; the pump starts itself. */
+    function enqueue(list, remote, t) {
+      if (list.length === 0) return
+      const state = runner.get()
+      const fresh = state.running === null && state.queue.length === 0 && !pumping
       runner.update({
-        running: { action: list[0].action, done: 0, total: list.length, name: list[0].entry.name },
-        outcome: null, failures: new Map(), cancel: false,
+        queue: fresh ? [...list] : [...state.queue, ...list],
+        total: fresh ? list.length : state.total + list.length,
+        completed: fresh ? 0 : state.completed,
+        outcome: fresh ? null : state.outcome,
+        failures: fresh ? new Map() : new Map(state.failures),
+        cancel: false,
+        canceling: false,
+        cancelNotice: null,
+        canceledQueue: 0,
       })
+      void pump(remote, t)
+    }
+
+    /**
+     * Drain the queue one order at a time, then repair the profile once. A
+     * failure never stops the items behind it; a cancel stops the queue and
+     * asks the Host to abort the current install/update.
+     */
+    let pumping = false
+    async function pump(remote, t) {
+      if (pumping) return
+      pumping = true
+      const failed = new Map()
+      const attempted = []
       let ok = 0
       let restart = 0
       let builds = 0
-      let attempted = 0
       let canceled = false
-      // Keyed by entry, so the card that failed keeps its reason after the
-      // summary bar is gone — which is where the person looks for it.
-      const failed = new Map()
-      for (let index = 0; index < list.length; index += 1) {
-        if (runner.get().cancel) { canceled = true; break }
-        const order = list[index]
-        runner.update({ running: { action: order.action, done: index, total: list.length, name: order.entry.name } })
-        let outcome = null
-        for (let attempt = 0; attempt <= RETRY_DELAY_MS.length; attempt += 1) {
-          outcome = await perform(order, remote)
-          if (outcome.pass) break
-          // A permanent answer is the run's verdict, not the road's: retrying
-          // "not a bundle" or a refused version only wastes the person's time.
-          if (attempt === RETRY_DELAY_MS.length || !TRANSIENT_FAILURE.test(outcome.reason ?? '')) break
-          if (runner.get().cancel) break
-          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS[attempt]))
-          if (runner.get().cancel) break
-        }
-        attempted = index + 1
-        if (!outcome.pass) {
-          failed.set(order.entry.name, outcome.reason === '' ? t('loadFailed') : outcome.reason)
-        } else {
-          ok += 1
-          if (outcome.result.application === 'restart-required') restart += 1
-          if ((outcome.result.pendingBuilds?.length ?? 0) > 0) builds += 1
-        }
-        if (runner.get().cancel) { canceled = true; break }
-      }
-      const skipped = canceled ? list.length - attempted : 0
-      // A writer outside this batch — another tab, the Host's own plugin
-      // page, the third-party console's maintenance run — can rewrite
-      // `package.json` between two orders. The next pnpm run then prunes the
-      // package it no longer finds declared, so a batch silently loses a
-      // plugin it had just installed. Assert the state the batch meant to
-      // leave and put each lost entry back once; a second failure is
-      // reported like any other instead of retried forever. A cancelled
-      // batch skips this: putting back what the person just stopped would be
-      // the opposite of what they asked for.
-      if (skipped === 0) {
-        const kept = list.filter((order) => !failed.has(order.entry.name)
-          && order.action !== 'uninstall' && order.action !== 'disable')
-        if (kept.length > 0) {
-          const answer = await remote.pluginManager.listBundles()
-          if (answer.ok) {
-            const present = new Map(answer.value.map((bundle) => [bundle.name, bundle]))
-            let repaired = false
-            for (const order of kept) {
-              if (present.get(order.entry.name)?.enabled === true) continue
-              repaired = true
-              try {
-                if (order.action === 'install' || order.action === 'update') {
-                  await remote.pluginManager.installBundle(order.version.install.spec, { enabled: true, saveExact: true })
-                } else {
-                  await remote.pluginManager.setBundleEnabled(order.entry.name, true)
-                }
-              } catch (error) {
-                // Installed but switched off: re-enabling is all it needs.
-                try { await remote.pluginManager.setBundleEnabled(order.entry.name, true) }
-                catch (again) { failed.set(order.entry.name, String(again?.message ?? again)) }
+      try {
+        while (true) {
+          while (true) {
+            const state = runner.get()
+            if (state.cancel) { canceled = true; break }
+            const order = state.queue[0]
+            if (order === undefined) break
+            const requestId = newRequestId()
+            const startedAt = Date.now()
+            attempted.push(order)
+            runner.update({
+              queue: state.queue.slice(1),
+              current: { order, requestId, phase: 'starting', startedAt, log: '' },
+              running: {
+                action: order.action, done: state.completed, total: state.total,
+                name: order.entry.name, requestId, phase: 'starting', startedAt, log: '',
+              },
+              cancelNotice: null,
+            })
+            let outcome = null
+            for (let attempt = 0; attempt <= RETRY_DELAY_MS.length; attempt += 1) {
+              if (runner.get().cancel) break
+              if (attempt > 0) {
+                const retryId = newRequestId()
+                const current = runner.get()
+                runner.update({
+                  current: current.current === null ? null : { ...current.current, requestId: retryId, phase: 'starting', log: '' },
+                  running: current.running === null ? null : { ...current.running, requestId: retryId, phase: 'starting', log: '' },
+                })
               }
+              outcome = await perform(order, remote, runner.get().running?.requestId ?? requestId)
+              if (outcome.pass || outcome.canceled) break
+              // A permanent answer is the run's verdict, not the road's:
+              // retrying "not a bundle" or a refused version only wastes time.
+              if (attempt === RETRY_DELAY_MS.length || !TRANSIENT_FAILURE.test(outcome.reason ?? '')) break
+              if (runner.get().cancel) break
+              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS[attempt]))
+              if (runner.get().cancel) break
             }
-            // Only a second read tells whether the repair landed. A package
-            // that is back is not a failure, whatever the attempt said —
-            // `listBundles` omits plain dependencies, so an absence there is
-            // reported only when the re-enable that follows also failed.
-            if (repaired) {
-              const settled = await remote.pluginManager.listBundles()
-              if (settled.ok) {
-                const now = new Map(settled.value.map((bundle) => [bundle.name, bundle]))
-                for (const order of kept) {
-                  if (now.get(order.entry.name)?.enabled === true) failed.delete(order.entry.name)
-                }
-              }
+            const after = runner.get()
+            const wasCanceled = outcome?.canceled === true || (after.cancel && !outcome?.pass)
+            if (outcome?.pass) {
+              ok += 1
+              if (outcome.result.application === 'restart-required') restart += 1
+              if ((outcome.result.pendingBuilds?.length ?? 0) > 0) builds += 1
+            } else if (!wasCanceled) {
+              failed.set(order.entry.name, outcome?.reason === '' || outcome?.reason === undefined ? t('loadFailed') : outcome.reason)
             }
+            runner.update({
+              completed: after.completed + 1,
+              failures: new Map(failed),
+            })
+            if (wasCanceled) { canceled = true; break }
+            if (runner.get().cancel) { canceled = true; break }
           }
+          if (canceled || runner.get().cancel) { canceled = true; break }
+          await repair(attempted, failed, remote)
+          if (runner.get().queue.length === 0) break
+        }
+      } finally {
+        pumping = false
+        const state = runner.get()
+        if (!canceled && state.queue.length > 0) {
+          // Items appended while the repair pass ran: keep the queue alive.
+          void pump(remote, t)
+        } else {
+          runner.finish({
+            ok,
+            failed: failed.size,
+            restart,
+            builds,
+            canceled,
+            skipped: canceled ? state.canceledQueue : 0,
+          })
         }
       }
-      runner.update({
-        running: null, cancel: false, failures: failed,
-        outcome: { ok, failed: [...failed.keys()].length, restart, builds, canceled: skipped > 0, skipped },
-      })
     }
 
     // ---------------------------------------------------------------------------
@@ -408,6 +1074,15 @@ window.__ModuleLoader__.load({
 
     const ZH = {
       title: '插件市场',
+      eyebrow: 'DSH PLUGIN MARKET',
+      subtitle: '发现、安装与更新 DeepSeek Harness 插件。',
+      summary: '{total} 个插件 · {installed} 已安装 · {updates} 可更新',
+      emptyTitle: '这个源还没有插件',
+      emptyBody: '换一个市场源，或在「管理市场源」里添加新的索引。',
+      noMatchTitle: '没有匹配的插件',
+      noMatchBody: '试试更短的关键词，或清空分类筛选。',
+      loadingTitle: '正在载入市场',
+      loadingBody: '首次打开 dsh.so 或社区目录时，索引较大，请稍等。',
       search: '搜索插件',
       refresh: '刷新',
       loading: '加载中…',
@@ -462,6 +1137,48 @@ window.__ModuleLoader__.load({
       actEnable: '启用',
       actDisable: '停用',
       progress: '{action} {done}/{total}',
+      elapsed: '{n} 秒',
+      queue: '队列还有 {n} 项',
+      removeQueued: '移出队列',
+      phase_starting: '准备中',
+      phase_installing: '安装中',
+      phase_cancelling: '正在取消',
+      phase_applying: '正在应用',
+      phase_checking: '检查更新',
+      phase_removing: '移除旧版本',
+      phase_restoring: '恢复旧版本',
+      cancelTooLate: '已进入应用阶段，当前安装无法中止',
+      cancelUnsupported: '当前宿主不支持中止，已停止后续队列',
+      logShow: '查看日志',
+      logHide: '收起日志',
+      logEmpty: '暂无日志输出',
+      toastTitle: '插件安装完成',
+      toastBody: '成功 {ok} 项 · 失败 {failed} 项 · 需重启 {restart} 项',
+      toastOpen: '查看',
+      toastClose: '关闭',
+      viewMarket: '市场',
+      viewInstalled: '已安装',
+      searchInstalled: '搜索已安装插件',
+      installedSummary: '{total} 个已安装 · {enabled} 启用 · {disabled} 停用',
+      installedEmptyTitle: '没有可显示的插件',
+      installedEmptyBody: '手动安装或其他市场安装的插件会出现在这里。',
+      tagEnabled: '已启用',
+      tagOfficial: '客户端自带',
+      tagOptional: '可选',
+      tagReadOnly: '只读',
+      tagMissing: '文件缺失',
+      tagError: '读取失败',
+      installedDetailTitle: '插件详情',
+      detailReadmeLoading: '正在读取本地 README…',
+      detailReadmeFailed: 'README 读取失败，仅显示包信息。',
+      installedRows: '组件行',
+      installedOverrides: '覆盖项',
+      installedSource: '安装来源',
+      installedAvailability: '文件位置',
+      confirmUninstallInstalled: '卸载这个插件？',
+      confirmUninstallInstalledBody: '它提供的功能会消失，已装文件会被移除。',
+      actionFailed: '操作失败：{reason}',
+      restartNeeded: '需要重启客户端生效',
       done: '完成 {ok} 项',
       failed: '失败 {n} 项',
       needRestart: '{n} 项需要重启客户端才生效',
@@ -472,6 +1189,13 @@ window.__ModuleLoader__.load({
       copied: '已复制',
       clearError: '忽略',
       sourcesTitle: '市场源',
+      builtinSources: '内置聚合源',
+      recommendedSources: '推荐源',
+      builtinBadge: '内置',
+      builtinTrust: '内置源同样是第三方内容，安装前请确认来源可信。',
+      dshSoDesc: '32,000+ 条，带 star、npm 下载量、安全扫描与验证等级。',
+      dshmarketDesc: 'dshmarket.com 的精选目录，6,000+ 条可安装插件。',
+      addRecommended: '添加',
       manageSources: '管理市场源…',
       addSource: '添加',
       sourcePlaceholder: 'https://example.com/index.json',
@@ -487,6 +1211,15 @@ window.__ModuleLoader__.load({
 
     const EN = {
       title: 'Plugin market',
+      eyebrow: 'DSH PLUGIN MARKET',
+      subtitle: 'Discover, install and update DeepSeek Harness plugins.',
+      summary: '{total} plugins · {installed} installed · {updates} update(s)',
+      emptyTitle: 'No plugins in this source yet',
+      emptyBody: 'Switch to another market source, or add an index under Manage sources.',
+      noMatchTitle: 'No matching plugins',
+      noMatchBody: 'Try a shorter query, or clear the category filter.',
+      loadingTitle: 'Loading the market',
+      loadingBody: 'The first visit to dsh.so or the community catalog downloads a larger index.',
       search: 'Search plugins',
       refresh: 'Refresh',
       loading: 'Loading…',
@@ -541,6 +1274,48 @@ window.__ModuleLoader__.load({
       actEnable: 'Enabling',
       actDisable: 'Disabling',
       progress: '{action} {done}/{total}',
+      elapsed: '{n}s',
+      queue: '{n} more queued',
+      removeQueued: 'Remove from queue',
+      phase_starting: 'Preparing',
+      phase_installing: 'Installing',
+      phase_cancelling: 'Cancelling',
+      phase_applying: 'Applying',
+      phase_checking: 'Checking update',
+      phase_removing: 'Removing old version',
+      phase_restoring: 'Restoring old version',
+      cancelTooLate: 'Already applying; this install can no longer be stopped',
+      cancelUnsupported: 'This Host cannot abort an install; the rest of the queue was stopped',
+      logShow: 'Show log',
+      logHide: 'Hide log',
+      logEmpty: 'No log output yet',
+      toastTitle: 'Plugin install finished',
+      toastBody: '{ok} done · {failed} failed · {restart} need a restart',
+      toastOpen: 'View',
+      toastClose: 'Close',
+      viewMarket: 'Market',
+      viewInstalled: 'Installed',
+      searchInstalled: 'Search installed plugins',
+      installedSummary: '{total} installed · {enabled} enabled · {disabled} disabled',
+      installedEmptyTitle: 'Nothing to show',
+      installedEmptyBody: 'Plugins installed by hand or from another market appear here.',
+      tagEnabled: 'Enabled',
+      tagOfficial: 'Bundled',
+      tagOptional: 'Optional',
+      tagReadOnly: 'Read only',
+      tagMissing: 'Files missing',
+      tagError: 'Unreadable',
+      installedDetailTitle: 'Plugin details',
+      detailReadmeLoading: 'Loading the local README…',
+      detailReadmeFailed: 'Could not read the README; showing package facts.',
+      installedRows: 'Rows',
+      installedOverrides: 'Overrides',
+      installedSource: 'Install source',
+      installedAvailability: 'Files',
+      confirmUninstallInstalled: 'Uninstall this plugin?',
+      confirmUninstallInstalledBody: 'What it provides goes away and its installed files are removed.',
+      actionFailed: 'Action failed: {reason}',
+      restartNeeded: 'Restart the client to apply',
       done: '{ok} done',
       failed: '{n} failed',
       needRestart: '{n} need a client restart to take effect',
@@ -551,6 +1326,13 @@ window.__ModuleLoader__.load({
       copied: 'Copied',
       clearError: 'Dismiss',
       sourcesTitle: 'Market sources',
+      builtinSources: 'Built-in aggregators',
+      recommendedSources: 'Recommended',
+      builtinBadge: 'Built-in',
+      builtinTrust: 'Built-in sources are still third-party content; verify before installing.',
+      dshSoDesc: '32,000+ artifacts with stars, npm downloads, security scans and verification levels.',
+      dshmarketDesc: 'The curated dshmarket.com directory: 6,000+ installable plugins.',
+      addRecommended: 'Add',
       manageSources: 'Manage sources…',
       addSource: 'Add',
       sourcePlaceholder: 'https://example.com/index.json',
@@ -574,7 +1356,10 @@ window.__ModuleLoader__.load({
       return h('svg', { viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': 'true', ...stroke }, children)
     }
 
-    const SearchIcon = ({ size = 15 }) => icon(size, h('circle', { cx: 11, cy: 11, r: 7 }))
+    const SearchIcon = ({ size = 15 }) => icon(size, [
+      h('circle', { key: 'a', cx: 11, cy: 11, r: 7 }),
+      h('path', { key: 'b', d: 'M20 20l-3.5-3.5' }),
+    ])
     const ChevronIcon = ({ size = 12 }) => icon(size, h('path', { d: 'M6 9l6 6 6-6' }))
     const TrashIcon = ({ size = 14 }) => icon(size, [
       h('path', { key: 'a', d: 'M4 7h16' }),
@@ -597,6 +1382,12 @@ window.__ModuleLoader__.load({
       h('path', { key: 'a', d: 'M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' }),
       h('path', { key: 'b', d: 'M3.3 7L12 12l8.7-5' }),
       h('path', { key: 'c', d: 'M12 22V12' }),
+    ])
+    /** The sidebar row's mark: a storefront awning over a package. */
+    const MarketIcon = ({ size = 16 }) => icon(size, [
+      h('path', { key: 'a', d: 'M4 10h16l-1.2 9.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8L4 10z' }),
+      h('path', { key: 'b', d: 'M8 10V7a4 4 0 0 1 8 0v3' }),
+      h('path', { key: 'c', d: 'M9.5 14.5h5' }),
     ])
     // ---------------------------------------------------------------------------
     // Styles, expressed as DSH alias tokens so every theme repaints us
@@ -629,11 +1420,12 @@ window.__ModuleLoader__.load({
       // surface, and `brand-text` is near-black — pairing them painted a dark
       // button whose label matched its own fill and could not be read.
       btn: (primary, disabled) => ({
-        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 11px', borderRadius: '8px',
-        font: 'inherit', fontSize: '12.5px', flex: 'none', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
+        display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '999px',
+        font: 'inherit', fontSize: '12.5px', fontWeight: 500, flex: 'none', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
         border: `1px solid ${primary ? 'transparent' : 'var(--dsw-alias-border-l2)'}`,
         background: primary ? 'var(--dsw-alias-button-primary-fill)' : 'transparent',
         color: primary ? 'var(--dsw-alias-label-primary-foreground)' : 'var(--dsw-alias-label-primary)',
+        transition: 'transform .16s, background-color .16s, opacity .16s',
       }),
       squareBtn: {
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', padding: 0,
@@ -716,20 +1508,22 @@ window.__ModuleLoader__.load({
       progressFill: { height: '100%', borderRadius: '999px', background: 'var(--dsw-alias-brand-primary)', transition: 'width .3s ease' },
       backdrop: {
         position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,.45)',
+        background: 'rgba(15,23,42,.32)', backdropFilter: 'blur(8px)',
       },
       modal: {
         width: 'min(560px, calc(100vw - 48px))', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto', display: 'flex',
-        flexDirection: 'column', gap: '10px', padding: '16px 18px', borderRadius: '12px', border: BORDER,
+        flexDirection: 'column', gap: '10px', padding: '20px 22px', borderRadius: '20px', border: '0.5px solid var(--dsw-alias-settings-card-stroke, var(--dsw-alias-border-l2))',
         background: 'var(--dsw-alias-bg-layer-1)', color: 'var(--dsw-alias-label-primary)',
+        boxShadow: '0 28px 90px rgba(15,23,42,.26)',
       },
-      modalTitle: { fontSize: '14px', fontWeight: 600, margin: 0 },
+      modalTitle: { fontSize: '16px', fontWeight: 650, letterSpacing: '-.01em', margin: 0 },
       modalBody: { fontSize: '12.5px', lineHeight: '19px', color: 'var(--dsw-alias-label-secondary)', margin: 0 },
       modalFooter: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '2px' },
       list: { display: 'flex', flexDirection: 'column', gap: '6px', margin: 0, padding: 0, listStyle: 'none' },
       row: {
-        display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '8px',
-        border: BORDER, background: 'var(--dsw-alias-bg-layer-2)', minWidth: 0,
+        display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '12px',
+        border: '0.5px solid var(--dsw-alias-settings-card-stroke, var(--dsw-alias-border-l2))',
+        background: 'var(--dsw-alias-bg-layer-2)', minWidth: 0,
       },
       rowMain: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' },
       versionRow: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '8px', border: BORDER, background: 'var(--dsw-alias-bg-layer-2)', fontSize: '12.5px' },
@@ -746,6 +1540,134 @@ window.__ModuleLoader__.load({
       const tag = document.createElement('style')
       tag.dataset[KEYFRAMES.replace(/-(\w)/g, (_all, char) => char.toUpperCase())] = '1'
       tag.textContent = '@keyframes vpm-spin{to{transform:rotate(360deg)}}'
+      document.head.appendChild(tag)
+    }
+
+    /**
+     * Apple-like surface language for the list page. Static styling lives here
+     * so hover, focus, media queries and reduced motion are possible at all;
+     * only values React must compute (progress width, selected state) stay
+     * inline. Every colour is a DSH alias token, so light and dark themes and
+     * the user's own theme both repaint the page.
+     */
+    const APPLE_CSS = `
+      .vpm-page{display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;padding:22px 24px 0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--dsw-alias-label-primary)}
+      .vpm-page *,.vpm-page *::before,.vpm-page *::after{box-sizing:border-box}
+      .vpm-segment{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);align-self:flex-start}
+      .vpm-segment-item{height:28px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer;transition:background-color .16s,color .16s,box-shadow .16s}
+      .vpm-segment-item:hover{color:var(--dsw-alias-label-primary)}
+      .vpm-segment-item.on{background:var(--dsw-alias-settings-card-fill,var(--dsw-alias-bg-layer-1));color:var(--dsw-alias-label-primary);font-weight:650;box-shadow:0 1px 3px rgba(15,23,42,.10)}
+      .vpm-queue{display:flex;flex-direction:column;gap:5px;margin-top:4px;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l2)}
+      .vpm-queue-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);min-width:0}
+      .vpm-queue-item .vpm-queue-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+      .vpm-queue-remove{width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:14px;line-height:22px;cursor:pointer;flex:none}
+      .vpm-queue-remove:hover{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary)}
+      .vpm-log{margin:8px 0 0;max-height:150px;overflow:auto;padding:9px 11px;border-radius:11px;background:var(--dsw-alias-bg-layer-1);font-family:ui-monospace,Consolas,monospace;font-size:11px;line-height:16px;white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-secondary)}
+      .vpm-toast{position:fixed;right:22px;bottom:22px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+      .vpm-toast-card{pointer-events:auto;display:flex;align-items:center;gap:12px;min-width:280px;max-width:460px;padding:12px 14px;border-radius:16px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-bg-layer-1);box-shadow:0 18px 50px rgba(15,23,42,.22);box-sizing:border-box;backdrop-filter:blur(18px) saturate(170%)}
+      .vpm-toast-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+      .vpm-toast-title{font-size:13px;line-height:18px;font-weight:650;color:var(--dsw-alias-label-primary);margin:0}
+      .vpm-toast-body{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary);margin:0}
+      .vpm-toast-actions{display:flex;align-items:center;gap:6px;flex:none}
+      @media (max-width:680px){.vpm-toast{left:14px;right:14px;bottom:14px}.vpm-toast-card{min-width:0;max-width:none}}
+      .vpm-page-inner{display:flex;flex-direction:column;height:100%;min-height:0;gap:14px;width:100%;max-width:1160px;margin:0 auto}
+      .vpm-hero{position:relative;flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;padding:22px 24px;border-radius:24px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-bg-layer-1);overflow:hidden}
+      @supports (background:color-mix(in srgb,red 10%,blue)){.vpm-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--dsw-alias-brand-primary) 9%,var(--dsw-alias-bg-layer-1)) 0%,var(--dsw-alias-bg-layer-1) 58%)}}
+      .vpm-hero::after{content:"";position:absolute;right:-70px;top:-90px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--dsw-alias-brand-primary) 18%,transparent) 0%,transparent 68%);pointer-events:none}
+      .vpm-hero-copy{position:relative;z-index:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+      .vpm-eyebrow{font-size:10.5px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:var(--dsw-alias-label-tertiary)}
+      .vpm-title{margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--dsw-alias-label-primary)}
+      .vpm-subtitle{margin:0;font-size:12.5px;line-height:18px;color:var(--dsw-alias-label-secondary)}
+      .vpm-summary{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px;font-size:11.5px;color:var(--dsw-alias-label-tertiary)}
+      .vpm-summary b{font-weight:650;color:var(--dsw-alias-label-secondary)}
+      .vpm-summary .vpm-dot{width:3px;height:3px;border-radius:50%;background:var(--dsw-alias-border-l3);display:inline-block}
+      .vpm-hero-actions{position:relative;z-index:1;display:flex;align-items:center;gap:9px;flex:1;max-width:520px;justify-content:flex-end}
+      .vpm-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px}
+      .vpm-search .vpm-search-icon{position:absolute;left:13px;display:flex;color:var(--dsw-alias-label-tertiary);pointer-events:none}
+      .vpm-search input{width:100%;height:40px;padding:0 14px 0 38px;border-radius:13px;border:1px solid transparent;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;outline:none;transition:border-color .18s,box-shadow .18s,background-color .18s}
+      .vpm-search input::placeholder{color:var(--dsw-alias-label-tertiary)}
+      .vpm-search input:focus{border-color:var(--dsw-alias-border-selected);box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 16%,transparent);background:var(--dsw-alias-bg-layer-1)}
+      .vpm-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:13px;border:1px solid transparent;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);cursor:pointer;transition:transform .16s,background-color .16s}
+      .vpm-icon-btn:hover:not(:disabled){background:var(--dsw-alias-interactive-hover,var(--dsw-alias-bg-layer-1))}
+      .vpm-icon-btn:active:not(:disabled){transform:scale(.94)}
+      .vpm-icon-btn:disabled{opacity:.45;cursor:default}
+      .vpm-toolbar{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .vpm-source-btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;max-width:220px;transition:background-color .16s,transform .16s}
+      .vpm-source-btn:hover{background:var(--dsw-alias-bg-layer-2)}
+      .vpm-source-btn:active{transform:scale(.98)}
+      .vpm-menu{position:absolute;top:calc(100% + 7px);left:0;z-index:60;min-width:230px;padding:5px;display:flex;flex-direction:column;border-radius:14px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-bg-layer-1);box-shadow:0 18px 44px rgba(15,23,42,.18);backdrop-filter:blur(20px) saturate(170%)}
+      .vpm-menu.right{left:auto;right:0}
+      .vpm-menu-item{display:block;width:100%;padding:8px 11px;border:0;border-radius:9px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background-color .12s}
+      .vpm-menu-item:hover{background:var(--dsw-alias-bg-layer-2)}
+      .vpm-menu-item.on{font-weight:650;color:var(--dsw-alias-state-business-primary)}
+      .vpm-menu-sep{height:1px;margin:5px 3px;background:var(--dsw-alias-border-l2)}
+      .vpm-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:none;height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;transition:transform .16s,background-color .16s,opacity .16s}
+      .vpm-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2)}
+      .vpm-btn:active:not(:disabled){transform:scale(.97)}
+      .vpm-btn:disabled{opacity:.45;cursor:default}
+      .vpm-btn.primary{background:var(--dsw-alias-button-primary-fill);border-color:transparent;color:var(--dsw-alias-label-primary-foreground)}
+      .vpm-btn.primary:hover:not(:disabled){filter:brightness(.96);background:var(--dsw-alias-button-primary-fill)}
+      .vpm-btn.danger{background:var(--dsw-alias-state-error-primary);border-color:transparent;color:#fff}
+      .vpm-btn.danger:hover:not(:disabled){filter:brightness(.95);background:var(--dsw-alias-state-error-primary)}
+      .vpm-btn.small{height:26px;padding:0 11px;font-size:11.5px}
+      .vpm-pills{flex:none;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+      .vpm-pill{height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer;transition:background-color .14s,color .14s,border-color .14s,transform .14s}
+      .vpm-pill:hover{border-color:var(--dsw-alias-border-l3);color:var(--dsw-alias-label-primary)}
+      .vpm-pill:active{transform:scale(.97)}
+      .vpm-pill.on{background:var(--dsw-alias-label-primary);border-color:transparent;color:var(--dsw-alias-bg-layer-1);font-weight:600}
+      .vpm-bar{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 13px;border-radius:13px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);font-size:12.5px;color:var(--dsw-alias-label-primary)}
+      .vpm-bar.bulk{border-color:var(--dsw-alias-border-selected)}
+      .vpm-bar.error{color:var(--dsw-alias-state-error-primary)}
+      .vpm-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 2px 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l3) transparent}
+      .vpm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:0;padding:0;list-style:none;align-items:start}
+      .vpm-card{position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;min-height:164px;align-self:start;padding:16px;border-radius:18px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-settings-card-fill,var(--dsw-alias-bg-layer-1));cursor:pointer;transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,border-color .18s,background-color .18s}
+      .vpm-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(15,23,42,.11);border-color:var(--dsw-alias-border-l3)}
+      .vpm-card:active{transform:translateY(0) scale(.996)}
+      .vpm-card:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 20%,transparent)}
+      .vpm-card.picked{border-color:var(--dsw-alias-border-selected);background:var(--dsw-alias-bg-multi-select)}
+      .vpm-card-top{display:flex;align-items:flex-start;gap:11px;min-width:0}
+      .vpm-icon{flex:none;display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:14px;overflow:hidden;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)}
+      .vpm-icon img{width:100%;height:100%;object-fit:cover;display:block}
+      .vpm-card-head{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-top:1px}
+      .vpm-card-title{font-size:15px;line-height:20px;font-weight:650;letter-spacing:-.015em;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .vpm-card-sub{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .vpm-card-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+      .vpm-check{margin:1px 0 0;accent-color:var(--dsw-alias-brand-primary);cursor:pointer;flex:none}
+      .vpm-desc{margin:0;font-size:12.5px;line-height:19px;color:var(--dsw-alias-label-secondary);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+      .vpm-card-footer{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:auto}
+      .vpm-tag{padding:1px 9px;border-radius:999px;font-size:11px;line-height:17px;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);background:transparent;flex:none}
+      .vpm-tag.ok{border-color:var(--dsw-alias-state-success-primary);color:var(--dsw-alias-state-success-primary)}
+      .vpm-tag.warn{border-color:var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-state-warn-primary)}
+      .vpm-tag.error{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary);cursor:pointer;font:inherit}
+      .vpm-tag.bad{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
+      .vpm-metrics{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}
+      .vpm-metrics b{font-weight:650;color:var(--dsw-alias-label-secondary)}
+      .vpm-meta{margin:0;font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-tertiary)}
+      .vpm-state{padding:52px 16px;text-align:center;color:var(--dsw-alias-label-secondary);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:10px}
+      .vpm-state .vpm-state-mark{width:54px;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary)}
+      .vpm-state .vpm-state-title{font-size:15px;font-weight:650;color:var(--dsw-alias-label-primary);margin:0}
+      .vpm-state .vpm-state-body{margin:0;max-width:360px;font-size:12.5px;line-height:19px;color:var(--dsw-alias-label-secondary)}
+      .vpm-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:0;padding:0;list-style:none}
+      .vpm-skeleton-card{height:176px;border-radius:18px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:linear-gradient(100deg,var(--dsw-alias-bg-layer-2) 30%,var(--dsw-alias-bg-layer-1) 50%,var(--dsw-alias-bg-layer-2) 70%);background-size:220% 100%;animation:vpm-shimmer 1.4s ease-in-out infinite;opacity:.9}
+      .vpm-skeleton-card:nth-child(2){animation-delay:.08s}.vpm-skeleton-card:nth-child(3){animation-delay:.16s}
+      .vpm-skeleton-card:nth-child(4){animation-delay:.24s}.vpm-skeleton-card:nth-child(5){animation-delay:.32s}.vpm-skeleton-card:nth-child(6){animation-delay:.4s}
+      @keyframes vpm-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+      .vpm-skeleton-card,.vpm-card,.vpm-btn,.vpm-pill,.vpm-icon-btn{outline:none}
+      .vpm-card:focus-visible,.vpm-btn:focus-visible,.vpm-pill:focus-visible,.vpm-icon-btn:focus-visible,.vpm-source-btn:focus-visible,.vpm-search input:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,transparent)}
+      .vpm-spin{width:14px;height:14px;flex:none;border-radius:50%;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-brand-primary);animation:vpm-spin .9s linear infinite}
+      .vpm-progress{height:4px;border-radius:999px;background:var(--dsw-alias-bg-layer-1);overflow:hidden}
+      .vpm-progress > span{display:block;height:100%;border-radius:999px;background:var(--dsw-alias-brand-primary);transition:width .3s ease}
+      .vpm-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+      .vpm-grow{margin-right:auto}
+      @media (max-width:900px){.vpm-hero{flex-direction:column;align-items:stretch;padding:20px}.vpm-hero-actions{max-width:none;justify-content:flex-start}.vpm-title{font-size:23px;line-height:29px}}
+      @media (max-width:680px){.vpm-page{padding:14px 14px 0}.vpm-grid,.vpm-skeleton{grid-template-columns:minmax(0,1fr)}.vpm-toolbar{gap:6px}}
+      @media (prefers-reduced-motion:reduce){.vpm-card,.vpm-btn,.vpm-pill,.vpm-icon-btn,.vpm-search input{transition:none}.vpm-card:hover{transform:none}.vpm-skeleton-card{animation:none}}
+    `
+    const APPLE_STYLE = 'vpm-apple'
+    if (typeof document !== 'undefined' && document.querySelector(`style[data-${APPLE_STYLE}]`) === null) {
+      const tag = document.createElement('style')
+      tag.dataset[APPLE_STYLE.replace(/-(\w)/g, (_all, char) => char.toUpperCase())] = '1'
+      tag.textContent = APPLE_CSS
       document.head.appendChild(tag)
     }
 
@@ -778,8 +1700,12 @@ window.__ModuleLoader__.load({
     /** Where a version installs from, as one short line. */
     function sourceLine(version) {
       const { source } = version
-      if (source.type === 'npm') return source.registry === undefined ? 'npm' : source.registry
-      return `${source.url}@${source.commit.slice(0, 8)}${source.path === undefined ? '' : ` ${source.path}`}`
+      if (source.type === 'npm') {
+        return version.install?.spec === undefined ? 'npm' : version.install.spec
+      }
+      // Aggregators pin a tag rather than a commit, so there may be no SHA to
+      // shorten; fall back to the repository URL.
+      return `${source.url}${source.commit === '' || source.commit === undefined ? '' : `@${source.commit.slice(0, 8)}`}${source.path === undefined ? '' : ` ${source.path}`}`
     }
 
     /** Format a publish timestamp in the active language. */
@@ -789,6 +1715,41 @@ window.__ModuleLoader__.load({
       } catch {
         return ''
       }
+    }
+
+    /** The name a configured or built-in source carries in the picker. */
+    function marketSourceLabel(source, text, lang) {
+      if (VEYRA_SOURCES.includes(source.url)) return lang === 'zh' ? 'Veyra 精选' : 'Veyra picks'
+      if (source.url === DSHMARKET_CATALOG) return 'dshmarket.com'
+      if (source.url === DSH_SO_SOURCE.url) return text(source.title)
+      return source.title === undefined ? source.url : text(source.title)
+    }
+
+    /** A localized display string, accepting a plain string, a locale map, or nothing. */
+    function localizedValue(value, lang) {
+      if (typeof value === 'string') return value
+      if (value === null || typeof value !== 'object') return ''
+      const direct = value[lang] ?? value[lang === 'zh' ? 'zh-CN' : 'en'] ?? value.en
+      if (typeof direct === 'string') return direct
+      const first = Object.values(value).find((candidate) => typeof candidate === 'string')
+      return typeof first === 'string' ? first : ''
+    }
+
+    /** The short name a person reads: no scope, no `dsh-` prefix. */
+    function shortBundleName(name) {
+      const text = String(name ?? '')
+      const base = text.startsWith('@') ? text.slice(text.indexOf('/') + 1) : text
+      return base.replace(/^dsh-/, '') || text
+    }
+
+    /** One bundle's display title, from its localized metadata or its name. */
+    function bundleTitle(bundle, lang) {
+      return localizedValue(bundle?.meta?.title, lang) || shortBundleName(bundle?.name)
+    }
+
+    /** One bundle's description, from localized metadata or the manifest. */
+    function bundleDescription(bundle, lang) {
+      return localizedValue(bundle?.meta?.description, lang) || String(bundle?.description ?? '')
     }
 
     /** A dialog closed by Escape, its backdrop, or its own close control. */
@@ -829,7 +1790,7 @@ window.__ModuleLoader__.load({
     }
 
     /** Read and write the configured market sources. */
-    function SourcesDialog({ sources, t, text, saving, failure, onAdd, onRemove, onClose }) {
+    function SourcesDialog({ sources, lang, t, text, saving, failure, onAdd, onRemove, onClose }) {
       const [draft, setDraft] = useState('')
       const submit = (event) => {
         event.preventDefault()
@@ -843,10 +1804,27 @@ window.__ModuleLoader__.load({
         footer: h('button', { style: S.btn(false, false), onClick: onClose }, t('cancel')),
       },
       h('p', { style: S.modalBody }, t('sourceBody')),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+        h('span', { style: { ...S.meta, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' } }, t('builtinSources')),
+        h('ul', { style: S.list },
+          h('li', { key: 'dsh-so', style: S.row },
+            h('div', { style: S.rowMain },
+              h('span', { style: S.name }, text(DSH_SO_SOURCE.title)),
+              h('span', { style: S.mono }, t('dshSoDesc'))),
+            h('span', { style: S.tag('neutral') }, t('builtinBadge'))),
+          sources.some((source) => source.url === DSHMARKET_CATALOG) ? null : h('li', { key: 'dshmarket', style: S.row },
+            h('div', { style: S.rowMain },
+              h('span', { style: S.name }, 'dshmarket.com'),
+              h('span', { style: S.mono }, t('dshmarketDesc'))),
+            h('button', {
+              style: S.btn(true, saving), disabled: saving,
+              onClick: () => { onAdd(DSHMARKET_CATALOG) },
+            }, t('addRecommended')))),
+        h('p', { style: { ...S.meta, margin: 0 } }, t('builtinTrust'))),
       sources.length === 0 ? null : h('ul', { style: S.list },
         sources.map((source) => h('li', { key: source.url, style: S.row },
           h('div', { style: S.rowMain },
-            h('span', { style: S.name }, source.title === undefined ? source.url : text(source.title)),
+            h('span', { style: S.name }, marketSourceLabel(source, text, lang)),
             h('span', { style: S.mono }, source.url),
             source.error === undefined ? null : h('span', { style: { ...S.mono, ...S.error } }, source.error)),
           h('button', {
@@ -872,15 +1850,25 @@ window.__ModuleLoader__.load({
      * apply; the whole card opens this market's detail view. A failure this session left stays as
      * a tag whose tooltip holds the whole reason and whose press copies it.
      */
-    function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, onPick, onRun, onConfirm, onDetails, onCopyFailure, onClearFailure }) {
+    function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, stats, onPick, onRun, onConfirm, onDetails, onCopyFailure, onClearFailure }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
       const state = entryState(entry)
       const shown = presentedVersion(entry)
       const version = actionVersion(entry)
-      const date = shown === undefined ? '' : formatDate(shown.publishTimestamp, lang)
+      const date = shown === undefined || !shown.publishTimestamp ? '' : formatDate(shown.publishTimestamp, lang)
       const incompatible = state === 'available' && version === undefined
       const installed = state === 'installed' || state === 'updatable'
-      
+      const statistic = statsOfEntry(entry, stats)
+      const metrics = statistic === null ? [] : [
+        statistic.stars === undefined ? null : `★ ${compactCount(statistic.stars)}`,
+        statistic.downloads === undefined ? null : `↓ ${compactCount(statistic.downloads)}${statistic.window === '30d' ? '/30d' : ''}`,
+      ].filter(Boolean)
+      const statsTitle = statistic === null ? undefined : [
+        statistic.stars === undefined ? null : `${lang === 'zh' ? 'GitHub 仓库' : 'GitHub repository'} ${statistic.stars} stars`,
+        statistic.downloads === undefined ? null : `${lang === 'zh' ? 'npm 下载' : 'npm downloads'} ${statistic.downloads}${statistic.start !== undefined && statistic.end !== undefined ? ` (${statistic.start} ~ ${statistic.end})` : statistic.window === '30d' ? (lang === 'zh' ? '（近 30 天）' : ' (last 30 days)') : ''}`,
+        statistic.checkedAt === undefined ? null : `${lang === 'zh' ? '数据时间' : 'as of'} ${statistic.checkedAt.slice(0, 10)}`,
+      ].filter(Boolean).join(' · ')
+
       const currentVersion = bundle?.version
       const nextVersion = state === 'updatable' ? updateTarget(entry)?.version : undefined
 
@@ -888,7 +1876,7 @@ window.__ModuleLoader__.load({
       if (version !== undefined) {
         const update = state === 'updatable'
         actions.push(h('button', {
-          key: 'act', style: { ...S.btn(true, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+          key: 'act', className: 'vpm-btn small primary', disabled: busy,
           onClick: (event) => { event?.stopPropagation(); onRun([{ action: update ? 'update' : 'install', entry, version }]) },
         }, t(update ? 'update' : 'install')))
       }
@@ -899,14 +1887,14 @@ window.__ModuleLoader__.load({
         const removable = bundle !== undefined && bundle.removable !== false
         if (removable) {
           actions.push(h('button', {
-            key: 'remove', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+            key: 'remove', className: 'vpm-btn small', disabled: busy,
             onClick: (event) => { event?.stopPropagation(); onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
           }, t('uninstall')))
         }
         if (bundle !== undefined && bundle.readOnlyReason === undefined) {
           const disable = bundle.enabled
           actions.push(h('button', {
-            key: 'toggle', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+            key: 'toggle', className: 'vpm-btn small', disabled: busy,
             onClick: (event) => { event?.stopPropagation(); onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
           }, t(disable ? 'disable' : 'enable')))
         }
@@ -917,53 +1905,67 @@ window.__ModuleLoader__.load({
         // once it has been dealt with, so a card is not marked forever.
         tags.push(h('button', {
           key: 'f', type: 'button', title: failure, 'aria-label': `${t('failedTag')}: ${failure}`,
-          style: { ...S.tag('error'), cursor: 'pointer', font: 'inherit', margin: 0 },
+          className: 'vpm-tag error',
           onClick: (event) => { event?.stopPropagation(); void onCopyFailure(entry.name, failure) },
         }, copied === entry.name ? t('copied') : t('failedTag')))
         tags.push(h('button', {
           key: 'fc', type: 'button', title: t('clearError'), 'aria-label': t('clearError'),
-          style: { ...S.tag('error'), cursor: 'pointer', font: 'inherit', margin: 0, padding: '1px 6px' },
+          className: 'vpm-tag error',
           onClick: (event) => { event?.stopPropagation(); onClearFailure(entry.name) },
         }, '×'))
       }
-      if (state === 'provided') tags.push(h('span', { key: 'p', style: S.tag('neutral') }, t('tagProvided')))
-      if (state === 'updatable') tags.push(h('span', { key: 'u', style: S.tag('warn') }, t('tagUpdate')))
-      if (state === 'installed') tags.push(h('span', { key: 'i', style: S.tag('ok') }, t(bundle !== undefined && bundle.enabled === false ? 'tagDisabled' : 'tagInstalled')))
-      if (incompatible) tags.push(h('span', { key: 'x', style: S.tag('warn') }, t('tagIncompatible')))
-      if (shown !== undefined && prerelease(shown.version)) tags.push(h('span', { key: 'r', style: S.tag('neutral') }, t('tagPrerelease')))
+      if (state === 'provided') tags.push(h('span', { key: 'p', className: 'vpm-tag' }, t('tagProvided')))
+      if (state === 'updatable') tags.push(h('span', { key: 'u', className: 'vpm-tag warn' }, t('tagUpdate')))
+      if (state === 'installed') tags.push(h('span', { key: 'i', className: 'vpm-tag ok' }, t(bundle !== undefined && bundle.enabled === false ? 'tagDisabled' : 'tagInstalled')))
+      if (incompatible) tags.push(h('span', { key: 'x', className: 'vpm-tag warn' }, t('tagIncompatible')))
+      if (shown !== undefined && prerelease(shown.version)) tags.push(h('span', { key: 'r', className: 'vpm-tag' }, t('tagPrerelease')))
+      // dsh.so scores every artifact; one compact tag keeps the source's
+      // security/verification signal without turning the card into a report.
+      const quality = entry.marketExtra
+      if (quality?.verificationShort || quality?.security) {
+        const tone = quality.securityTone === 'green'
+          ? ' ok'
+          : quality.securityTone === 'amber' ? ' warn' : quality.securityTone === 'red' || quality.securityTone === 'darkred' ? ' bad' : ''
+        tags.push(h('span', {
+          key: 'q', className: `vpm-tag${tone}`,
+          title: [quality.verification, quality.security, quality.trust?.replace(/^./, (char) => char.toUpperCase())].filter(Boolean).join(' · '),
+        }, [quality.verificationShort, quality.security].filter(Boolean).join(' · ')))
+      }
 
-      // Static controls: the actions sit beside the state tags rather than appearing on hover, so
+      // Static controls: the actions sit in the top-right rather than appearing on hover, so
       // nothing moves under the pointer and an action is never missed. A click elsewhere on the
       // card opens this market's detail view; the checkbox and buttons stop propagation.
       const open = onDetails === undefined ? undefined : () => { onDetails(entry) }
+      const subtitle = [
+        entry.author === undefined ? null : entry.author,
+        shown === undefined ? null : `${t('version')} ${shown.version}`,
+        date === '' ? null : date,
+      ].filter(Boolean).join(' · ')
+      const metricNodes = statistic === null ? null : h('div', { className: 'vpm-metrics', title: statsTitle },
+        statistic.stars === undefined ? null : h('span', { key: 's' }, '★ ', h('b', null, compactCount(statistic.stars))),
+        statistic.downloads === undefined ? null : h('span', { key: 'd' }, '↓ ', h('b', null, compactCount(statistic.downloads)), statistic.window === '30d' ? ' /30d' : ''))
       return h('li', {
-        style: { ...S.card(picked), cursor: open === undefined ? 'default' : 'pointer' },
+        className: `vpm-card${picked ? ' picked' : ''}`,
         onClick: open,
       },
-        h('div', { style: S.cardTop },
+        h('div', { className: 'vpm-card-top' },
           h('input', {
-            type: 'checkbox', style: S.check, checked: picked, disabled: busy,
+            type: 'checkbox', className: 'vpm-check', checked: picked, disabled: busy,
             'aria-label': title, onChange: onPick,
             onClick: (event) => { event?.stopPropagation() },
           }),
-          h('span', { style: S.artwork }, h(Artwork, { src: entry.icon })),
-          h('div', { style: S.head },
-            h('div', { style: S.titleRow },
-              h('span', { style: S.name, title }, title),
-              h('div', { style: { ...S.titleTags, gap: '6px' } },
-                tags,
-                actions.length === 0 ? null : h('div', {
-                  style: S.titleActions,
-                  onClick: (event) => { event?.stopPropagation() },
-                }, actions)))),
-          date === '' ? null : h('span', { style: S.date }, date)),
-        entry.description === undefined ? null : h('p', { style: S.desc }, text(entry.description)),
-        h('p', { style: S.meta }, [
-          currentVersion !== undefined && nextVersion !== undefined && currentVersion !== nextVersion
-            ? `${currentVersion} → ${nextVersion}`
-            : shown === undefined ? null : `${t('version')} ${shown.version}`,
-          entry.author === undefined ? null : entry.author,
-        ].filter(Boolean).join(' · ')))
+          h('span', { className: 'vpm-icon' }, h(Artwork, { src: entry.icon })),
+          h('div', { className: 'vpm-card-head' },
+            h('span', { className: 'vpm-card-title', title }, title),
+            subtitle === '' ? null : h('span', { className: 'vpm-card-sub' }, subtitle)),
+          actions.length === 0 ? null : h('div', {
+            className: 'vpm-card-actions',
+            onClick: (event) => { event?.stopPropagation() },
+          }, actions)),
+        entry.description === undefined ? null : h('p', { className: 'vpm-desc' }, text(entry.description)),
+        h('div', { className: 'vpm-card-footer' },
+          tags.length === 0 ? null : h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } }, tags),
+          metricNodes))
     }
 
     /** Resolve `owner/repo` from the entry's repository or homepage, for fetching its README. */
@@ -1045,10 +2047,15 @@ window.__ModuleLoader__.load({
         const image = /^\s*!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)\s*$/.exec(line)
         if (image) {
           flush()
-          blocks.push(h('img', {
-            key: `${key}i${blocks.length}`, src: resolve(image[2]), alt: image[1],
-            style: S.mdImg, loading: 'lazy', referrerPolicy: 'no-referrer',
-          }))
+          const src = resolve(image[2])
+          // A local bundle README may use relative assets the client cannot
+          // fetch; skip them rather than draw a broken image box.
+          if (src !== '') {
+            blocks.push(h('img', {
+              key: `${key}i${blocks.length}`, src, alt: image[1],
+              style: S.mdImg, loading: 'lazy', referrerPolicy: 'no-referrer',
+            }))
+          }
           continue
         }
         const heading = /^\s{0,3}(#{1,6})\s+(.*)$/.exec(line)
@@ -1080,8 +2087,9 @@ window.__ModuleLoader__.load({
         .trim()
     }
 
-    function DetailDialog({ entry, bundle, lang, t, text, busy, onRun, onConfirm, onClose }) {
+    function DetailDialog({ entry, bundle, lang, t, text, busy, stats, onRun, onConfirm, onClose }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
+      const statistic = statsOfEntry(entry, stats)
       const urls = readmeUrls(entry)
       const [view, setView] = useState({ loading: true, md: '', error: '' })
 
@@ -1123,7 +2131,11 @@ window.__ModuleLoader__.load({
       const facts = [
         shown === undefined ? null : `${lang === 'zh' ? '版本' : 'version'} ${shown.version}`,
         entry.author === undefined ? null : `${lang === 'zh' ? '作者' : 'author'} ${entry.author}`,
-        entry.metadata && entry.metadata.category ? entry.metadata.category : null,
+        entry.marketExtra?.categoryLabels?.[0] ?? (entry.metadata && entry.metadata.category ? entry.metadata.category : null),
+        statistic?.stars === undefined ? null : `★ ${compactCount(statistic.stars)}`,
+        statistic?.downloads === undefined ? null : `↓ ${compactCount(statistic.downloads)}${statistic.window === '30d' ? '/30d' : ''}`,
+        entry.marketExtra?.verification === undefined || entry.marketExtra.verification === '' ? null : entry.marketExtra.verification,
+        entry.marketExtra?.security === undefined || entry.marketExtra.security === '' ? null : entry.marketExtra.security,
       ].filter(Boolean)
 
       const actions = []
@@ -1187,7 +2199,7 @@ window.__ModuleLoader__.load({
                 history.map((v) => h('li', { key: v.version, style: S.versionRow },
                   h('span', { style: { fontWeight: current === v.version ? 600 : 400 } }, v.version),
                   v.version === shown?.version ? h('span', { style: S.tag('ok') }, lang === 'zh' ? '最新' : 'Latest') : null,
-                  h('span', { style: { ...S.meta, marginLeft: 'auto' } }, formatDate(v.publishTimestamp, lang))))),
+                  h('span', { style: { ...S.meta, marginLeft: 'auto' } }, v.publishTimestamp ? formatDate(v.publishTimestamp, lang) : '')))),
               entry.versions.length > history.length
                 ? h('p', { style: S.meta }, lang === 'zh' ? `还有 ${entry.versions.length - history.length} 个更早版本未显示` : `${entry.versions.length - history.length} older versions not shown`)
                 : null),
@@ -1195,6 +2207,149 @@ window.__ModuleLoader__.load({
               '有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。'))
         )
       )
+    }
+
+    /**
+     * One bundle on the installed tab. It is deliberately not a market card:
+     * the bundle object carries no index entry, install target or market stats,
+     * and every action here is the Host's own bundle control.
+     */
+    function InstalledCard({ bundle, lang, t, busy, onDetails, onToggle, onUninstall }) {
+      const title = bundleTitle(bundle, lang)
+      const description = bundleDescription(bundle, lang)
+      const official = bundle.official === true || bundle.availability === 'installation'
+      const missing = bundle.availability === 'missing'
+      const tags = [
+        h('span', { key: 'state', className: `vpm-tag${bundle.enabled === true ? ' ok' : ''}` },
+          bundle.enabled === true ? t('tagEnabled') : t('tagDisabled')),
+        official ? h('span', { key: 'official', className: 'vpm-tag' }, t('tagOfficial')) : null,
+        bundle.optional === true ? h('span', { key: 'optional', className: 'vpm-tag' }, t('tagOptional')) : null,
+        missing ? h('span', { key: 'missing', className: 'vpm-tag bad' }, t('tagMissing')) : null,
+        bundle.readOnlyReason === undefined ? null : h('span', {
+          key: 'readonly', className: 'vpm-tag', title: bundle.readOnlyReason,
+        }, t('tagReadOnly')),
+        bundle.error === undefined ? null : h('span', {
+          key: 'error', className: 'vpm-tag bad',
+          title: bundle.error.diagnostic ?? bundle.error.code,
+        }, t('tagError')),
+      ].filter(Boolean)
+      const actions = [
+        h('button', {
+          key: 'details', className: 'vpm-btn small',
+          onClick: (event) => { event?.stopPropagation(); onDetails(bundle) },
+        }, t('open')),
+        bundle.readOnlyReason !== undefined || missing ? null : h('button', {
+          key: 'toggle', className: 'vpm-btn small', disabled: busy,
+          onClick: (event) => { event?.stopPropagation(); onToggle(bundle) },
+        }, bundle.enabled === true ? t('disable') : t('enable')),
+        bundle.removable === true && !missing ? h('button', {
+          key: 'uninstall', className: 'vpm-btn small', disabled: busy,
+          onClick: (event) => { event?.stopPropagation(); onUninstall(bundle) },
+        }, t('uninstall')) : null,
+      ].filter(Boolean)
+      return h('li', {
+        className: 'vpm-card',
+        onClick: () => { onDetails(bundle) },
+      },
+        h('div', { className: 'vpm-card-top' },
+          h('span', { className: 'vpm-icon' }, h(BoxIcon, { size: 20 })),
+          h('div', { className: 'vpm-card-head' },
+            h('span', { className: 'vpm-card-title', title }, title),
+            h('span', { className: 'vpm-card-sub' },
+              [bundle.name, bundle.version === undefined ? null : `v${bundle.version}`].filter(Boolean).join(' · '))),
+          h('div', { className: 'vpm-card-actions', onClick: (event) => { event?.stopPropagation() } }, actions)),
+        description === '' ? null : h('p', { className: 'vpm-desc' }, description),
+        h('div', { className: 'vpm-card-footer' },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } }, tags),
+          bundle.source === undefined || bundle.source === ''
+            ? null
+            : h('span', { className: 'vpm-meta vpm-ellipsis', style: { maxWidth: '58%' }, title: bundle.source }, bundle.source)))
+    }
+
+    /**
+     * Details for a bundle the profile holds, read from the local package
+     * (`readBundleDetail`) rather than from a market index. Older Hosts
+     * without that method still show the manifest facts.
+     */
+    function InstalledDetailDialog({ bundle, remote, lang, t, busy, onToggle, onUninstall, onClose }) {
+      const [view, setView] = useState({ loading: true, markdown: '', error: '' })
+      useEffect(() => {
+        let live = true
+        const read = remote.pluginManager.readBundleDetail
+        if (typeof read !== 'function') {
+          setView({ loading: false, markdown: '', error: '' })
+          return () => { live = false }
+        }
+        setView({ loading: true, markdown: '', error: '' })
+        Promise.resolve(read.call(remote.pluginManager, bundle.name, lang === 'zh' ? 'zh-CN' : 'en')).then(
+          (answer) => {
+            if (!live) return
+            if (answer.ok && answer.value.status === 'found') {
+              setView({ loading: false, markdown: answer.value.markdown, error: '' })
+            } else {
+              setView({ loading: false, markdown: '', error: answer.ok ? '' : answer.error.message })
+            }
+          },
+          (error) => {
+            if (live) setView({ loading: false, markdown: '', error: String(error?.message ?? error) })
+          },
+        )
+        return () => { live = false }
+      }, [bundle.name, lang, remote])
+
+      const title = bundleTitle(bundle, lang)
+      const description = bundleDescription(bundle, lang)
+      const official = bundle.official === true || bundle.availability === 'installation'
+      const missing = bundle.availability === 'missing'
+      const facts = [
+        bundle.version === undefined ? null : `v${bundle.version}`,
+        bundle.enabled === true ? t('tagEnabled') : t('tagDisabled'),
+        official ? t('tagOfficial') : null,
+        bundle.optional === true ? t('tagOptional') : null,
+        bundle.availability === undefined ? null : `${t('installedAvailability')}: ${bundle.availability}`,
+      ].filter(Boolean)
+      const footer = [
+        h('button', { key: 'close', className: 'vpm-btn small', onClick: onClose }, t('toastClose')),
+        bundle.readOnlyReason !== undefined || missing ? null : h('button', {
+          key: 'toggle', className: 'vpm-btn small', disabled: busy,
+          onClick: () => { onToggle(bundle) },
+        }, bundle.enabled === true ? t('disable') : t('enable')),
+        bundle.removable === true && !missing ? h('button', {
+          key: 'uninstall', className: 'vpm-btn small', disabled: busy,
+          onClick: () => { onUninstall(bundle) },
+        }, t('uninstall')) : null,
+      ].filter(Boolean)
+      const resolve = (src) => (/^(?:https?:|data:)/i.test(src) ? src : '')
+      return h(Modal, { title, onClose, footer },
+        h('p', { style: { ...S.modalBody, margin: 0, fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '11.5px', wordBreak: 'break-all' } }, bundle.name),
+        facts.length === 0 ? null : h('p', { style: { ...S.meta, margin: 0 } }, facts.join(' · ')),
+        description === '' ? null : h('p', { style: S.modalBody }, description),
+        bundle.readOnlyReason === undefined ? null : h('p', { style: { ...S.modalBody, ...S.error } }, `${t('tagReadOnly')}: ${bundle.readOnlyReason}`),
+        bundle.error === undefined ? null : h('p', { style: { ...S.modalBody, ...S.error } }, bundle.error.diagnostic ?? bundle.error.code),
+        h('div', { style: { marginTop: '4px' } },
+          view.loading
+            ? h('p', { style: S.meta }, t('detailReadmeLoading'))
+            : view.error !== ''
+              ? h('p', { style: S.meta }, `${t('detailReadmeFailed')} ${view.error}`)
+              : view.markdown === ''
+                ? null
+                : h('div', null, renderMarkdown(view.markdown, `${bundle.name}-installed`, resolve))),
+        bundle.source === undefined || bundle.source === ''
+          ? null
+          : h('p', { style: { ...S.meta, margin: 0, wordBreak: 'break-all' } }, `${t('installedSource')}: ${bundle.source}`),
+        bundle.rows === undefined || bundle.rows.length === 0 ? null : h('div', {
+          style: { marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--dsw-alias-border-l1)' },
+        },
+          h('h4', { style: S.mdHead }, t('installedRows')),
+          h('ul', { style: S.list },
+            bundle.rows.map((row) => h('li', { key: row.rowId, style: S.row },
+              h('div', { style: S.rowMain },
+                h('span', { style: S.name }, row.rowId),
+                h('span', { style: S.mono }, row.moduleName)))))),
+        bundle.overrides === undefined || bundle.overrides.length === 0 ? null : h('div', { style: { marginTop: '8px' } },
+          h('h4', { style: S.mdHead }, t('installedOverrides')),
+          h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } },
+            bundle.overrides.map((id) => h('span', { key: id, className: 'vpm-tag' }, id)))))
     }
 
     /**
@@ -1251,10 +2406,33 @@ window.__ModuleLoader__.load({
       const [sourceFailure, setSourceFailure] = useState(null)
       const [confirm, setConfirm] = useState(null)
       const [detailEntry, setDetailEntry] = useState(null)
+      const [statsIndex, setStatsIndex] = useState(null)
       const [refreshed, setRefreshed] = useState(false)
+      const [view, setView] = useState('market')
+      const [showLog, setShowLog] = useState(false)
+      const [clock, setClock] = useState(() => Date.now())
+      const [installedBusy, setInstalledBusy] = useState(null)
+      const [installedNotice, setInstalledNotice] = useState(null)
+      const [installedConfirm, setInstalledConfirm] = useState(null)
+      const [installedDetail, setInstalledDetail] = useState(null)
       /** The batch, owned outside this component so leaving the page does not stop it. */
       const job = useRunner()
       const { running, outcome } = job
+      // A new queue item starts a fresh log view; a retry of the same item
+      // keeps `startedAt`, so reopening the log is not lost on a retry.
+      useEffect(() => {
+        if (running === null) {
+          setShowLog(false)
+          return undefined
+        }
+        setShowLog(false)
+        setClock(Date.now())
+        const timer = setInterval(() => setClock(Date.now()), 1000)
+        // The headless render check never unmounts; an active Node interval
+        // would keep the process alive after the assertions finish.
+        if (typeof timer?.unref === 'function') timer.unref()
+        return () => clearInterval(timer)
+      }, [running?.startedAt])
       /** The entry whose failure text was just copied, for the tag's own feedback. */
       const [copied, setCopied] = useState(null)
       // ponytail: 快捷筛选状态（仅已安装/仅可更新）
@@ -1295,25 +2473,37 @@ window.__ModuleLoader__.load({
         }
         setSourcesFailure(null)
         let list = answer.value
-        // ponytail: 首次打开或列表为空时，自动添加 Veyra 源（优先使用 ghproxy 加速）
+        // The profile always gets Veyra back. The dshmarket.com catalog is
+        // seeded once; removing it later is a choice, not a missing default.
         const hasVeyra = list.some((item) => VEYRA_SOURCES.includes(item.url))
-        if ((list.length === 0 || !hasVeyra) && adopt) {
-          // 使用国内加速源作为默认
-          const defaultSource = VEYRA_SOURCES[0]
-          const added = await remote.pluginMarket.setIndexes([defaultSource, ...list.map((s) => s.url)])
+        const seeded = storeGet('vyra-market.sources-seeded') === '1'
+        const hasCatalog = list.some((item) => item.url === DSHMARKET_CATALOG)
+        // Seeing the catalog is itself the one-time choice: a profile that
+        // already carried it must not get it back after the user removes it.
+        if (!seeded && hasCatalog) storeSet('vyra-market.sources-seeded', '1')
+        const wantsVeyra = list.length === 0 || !hasVeyra
+        const wantsCatalog = !seeded && !hasCatalog
+        if (adopt && (wantsVeyra || wantsCatalog)) {
+          const additions = []
+          if (wantsVeyra) additions.push(VEYRA_SOURCES[0])
+          if (wantsCatalog) additions.push(DSHMARKET_CATALOG)
+          const added = await remote.pluginMarket.setIndexes([...additions, ...list.map((s) => s.url)])
           if (!alive.current) return
           if (added.ok) {
+            if (!seeded) storeSet('vyra-market.sources-seeded', '1')
             const reread = await remote.pluginMarket.listIndexes()
             if (!alive.current) return
             list = reread.ok ? reread.value : []
           }
         }
         setSources(list)
-        // ponytail: 优先激活 Veyra 源（任意一个）
+        // Prefer Veyra; when the Host has no sources at all, the built-in
+        // dsh.so browser is still a usable landing page.
         setActiveUrl((current) => {
+          if (current === DSH_SO_SOURCE.url) return current
           if (list.some((item) => item.url === current)) return current
           const veyra = list.find((item) => VEYRA_SOURCES.includes(item.url))
-          return veyra?.url ?? list[0]?.url ?? null
+          return veyra?.url ?? list[0]?.url ?? DSH_SO_SOURCE.url
         })
       }, [remote])
 
@@ -1321,8 +2511,50 @@ window.__ModuleLoader__.load({
       const loadBundles = useCallback(async () => {
         const answer = await remote.pluginManager.listBundles()
         if (!alive.current || !answer.ok) return
-        setBundles(new Map(answer.value.map((bundle) => [bundle.name, bundle])))
+        const next = new Map(answer.value.map((bundle) => [bundle.name, bundle]))
+        setBundles(next)
+        // Keep an open details dialog on the same bundle's fresh facts; a
+        // bundle removed meanwhile closes it rather than showing stale state.
+        setInstalledDetail((current) => current === null ? null : (next.get(current.name) ?? null))
       }, [remote])
+
+      /** Enable or disable any installed bundle, market-listed or not. */
+      const toggleInstalled = useCallback(async (bundle) => {
+        if (installedBusy !== null) return
+        setInstalledBusy(bundle.name)
+        setInstalledNotice(null)
+        try {
+          const answer = await remote.pluginManager.setBundleEnabled(bundle.name, bundle.enabled !== true)
+          if (!alive.current) return
+          if (!answer.ok) setInstalledNotice(t('actionFailed', { reason: answer.error.message }))
+          else if (answer.value?.application === 'restart-required') setInstalledNotice(t('restartNeeded'))
+          await loadBundles()
+        } catch (error) {
+          if (alive.current) setInstalledNotice(t('actionFailed', { reason: String(error?.message ?? error) }))
+        } finally {
+          if (alive.current) setInstalledBusy(null)
+        }
+      }, [installedBusy, loadBundles, remote, t])
+
+      /** Remove an installed bundle after the explicit confirmation. */
+      const uninstallInstalled = useCallback(async (bundle) => {
+        if (installedBusy !== null) return
+        setInstalledBusy(bundle.name)
+        setInstalledNotice(null)
+        setInstalledConfirm(null)
+        try {
+          const answer = await remote.pluginManager.removeBundle(bundle.name)
+          if (!alive.current) return
+          if (!answer.ok) setInstalledNotice(t('actionFailed', { reason: answer.error.message }))
+          else if (answer.value?.application === 'restart-required') setInstalledNotice(t('restartNeeded'))
+          setInstalledDetail(null)
+          await loadBundles()
+        } catch (error) {
+          if (alive.current) setInstalledNotice(t('actionFailed', { reason: String(error?.message ?? error) }))
+        } finally {
+          if (alive.current) setInstalledBusy(null)
+        }
+      }, [installedBusy, loadBundles, remote, t])
 
       /** Load one page of a source, replacing the results it answers. */
       const loadRef = useRef(null)
@@ -1342,26 +2574,35 @@ window.__ModuleLoader__.load({
         })
 
         try {
-          const answer = await remote.pluginMarket.search(url, {
-            ...next.text.trim() === '' ? {} : { text: next.text },
-            ...next.category === null ? {} : { category: next.category },
-            sort: next.sort, offset, limit,
-            ...fetchedAt === undefined ? {} : { fetchedAt },
-            ...refresh ? { refresh: true } : {},
-          })
+          let page
+          if (url === DSH_SO_SOURCE.url) {
+            // A built-in aggregator: its index is fetched and filtered here,
+            // not by the Host, because the Host only reads format 1.
+            const data = await loadDshSoData(refresh, signal)
+            if (signal.aborted || !alive.current) return
+            page = dshSoPage(data, next, offset, limit)
+          } else {
+            const answer = await remote.pluginMarket.search(url, {
+              ...next.text.trim() === '' ? {} : { text: next.text },
+              ...next.category === null ? {} : { category: next.category },
+              sort: next.sort, offset, limit,
+              ...fetchedAt === undefined ? {} : { fetchedAt },
+              ...refresh ? { refresh: true } : {},
+            })
 
-          // ponytail: 请求被取消，不更新状态
-          if (signal.aborted) return
-          if (!alive.current) return
+            // ponytail: 请求被取消，不更新状态
+            if (signal.aborted) return
+            if (!alive.current) return
 
-          if (!answer.ok) {
-            setListing({ url, query: next, status: 'error', value: null, failure: answer.error.message })
-            return
-          }
-          const page = answer.value
-          if (offset > 0 && page.fetchedAt !== fetchedAt) {
-            if (depth < 1) await loadRef.current(url, next, 0, Math.max(offset + limit, PAGE), undefined, depth + 1)
-            return
+            if (!answer.ok) {
+              setListing({ url, query: next, status: 'error', value: null, failure: answer.error.message })
+              return
+            }
+            page = answer.value
+            if (offset > 0 && page.fetchedAt !== fetchedAt) {
+              if (depth < 1) await loadRef.current(url, next, 0, Math.max(offset + limit, PAGE), undefined, depth + 1)
+              return
+            }
           }
           setListing((current) => {
             const kept = offset > 0 && current !== null && current.url === url && current.value !== null
@@ -1379,12 +2620,22 @@ window.__ModuleLoader__.load({
 
       useEffect(() => { void loadSources(true) }, [loadSources])
       useEffect(() => { void loadBundles() }, [loadBundles])
+      // The stats overlay is independent of the active source and is shared by
+      // every card; it never blocks the list.
+      useEffect(() => {
+        let live = true
+        void loadStatsData().then((data) => {
+          if (live && data !== null) setStatsIndex(data)
+        })
+        return () => { live = false }
+      }, [])
 
       // The Host announces every completed change, so a change made anywhere —
       // this tab, the Installed tab, or an agent — lands here too.
       useEffect(() => {
         const off = remote.$on('plugin-manager/changed', () => {
           void loadBundles()
+          if (view === 'installed') return
           setListing((current) => {
             if (current === null || current.status !== 'ready' || current.value === null) return current
             void load(current.url, current.query, 0, Math.max(current.value.entries.length, PAGE), undefined)
@@ -1392,7 +2643,7 @@ window.__ModuleLoader__.load({
           })
         })
         return off
-      }, [remote, loadBundles, load])
+      }, [remote, loadBundles, load, view])
 
       useEffect(() => {
         if (activeUrl !== null) void load(activeUrl, query, 0, PAGE, undefined)
@@ -1404,7 +2655,7 @@ window.__ModuleLoader__.load({
       const liveRef = useRef(null)
       liveRef.current = { listing, load, query }
       useEffect(() => {
-        if (draft === query.text) return undefined
+        if (view === 'installed' || draft === query.text) return undefined
         const timer = setTimeout(() => {
           const live = liveRef.current
           const next = withText(live.query, draft)
@@ -1413,23 +2664,69 @@ window.__ModuleLoader__.load({
           if (live.listing !== null) void live.load(live.listing.url, next, 0, PAGE, undefined)
         }, TEXT_DELAY_MS)
         return () => { clearTimeout(timer) }
-      }, [draft, query.text, rememberQuery])
+      }, [draft, query.text, rememberQuery, view])
 
       const entries = listing === null || listing.value === null ? [] : listing.value.entries
+
+      // A built-in aggregator has no Host-side installation annotation, so it
+      // is narrowed here against the bundles the profile actually holds. Host
+      // entries already carry the richer `provided` / update states.
+      const liveEntries = useMemo(() => entries.map((entry) => {
+        if (entry.external !== true) return entry
+        const bundle = bundles.get(entry.name)
+        return bundle === undefined
+          ? entry
+          : { ...entry, installation: { status: 'installed', installedVersion: bundle.version } }
+      }), [entries, bundles])
+
+      // The installed view is independent of any market source: every bundle
+      // the Host reports, including ones installed by hand or by another
+      // market, and the ones the client ships.
+      const installedBundles = useMemo(() => {
+        const rank = (bundle) => bundle.installed === true
+          ? 0
+          : bundle.availability === 'installation' || bundle.official === true || bundle.optional === true ? 1 : 2
+        return [...bundles.values()]
+          // `listBundles` also names on-demand catalog entries that are not
+          // installed. They belong to discovery, not to this tab; a shipped
+          // bundle (`installation`) and a profile dependency (`profile` or
+          // `installed`) do. An old Host without `availability` keeps its
+          // official/optional entries.
+          .filter((bundle) => bundle.installed === true
+            || bundle.availability === 'profile'
+            || bundle.availability === 'installation'
+            || (bundle.availability === undefined && (bundle.official === true || bundle.optional === true)))
+          .sort((left, right) => rank(left) - rank(right) || left.name.localeCompare(right.name))
+      }, [bundles])
+      const installedEnabled = installedBundles.filter((bundle) => bundle.enabled === true).length
+      const installedFiltered = useMemo(() => {
+        const terms = draft.toLowerCase().trim().split(/\s+/).filter(Boolean)
+        if (terms.length === 0) return installedBundles
+        return installedBundles.filter((bundle) => {
+          const haystack = [
+            bundle.name,
+            bundleTitle(bundle, lang),
+            bundleDescription(bundle, lang),
+            bundle.source ?? '',
+            bundle.availability ?? '',
+          ].join(' ').toLowerCase()
+          return terms.every((term) => haystack.includes(term))
+        })
+      }, [installedBundles, draft, lang])
 
       // ponytail: 快捷筛选 - 根据 quickFilter 过滤条目
       const filteredEntries = useMemo(() => {
         if (quickFilter === 'installed') {
-          return entries.filter((entry) => {
+          return liveEntries.filter((entry) => {
             const state = entryState(entry)
             return state === 'installed' || state === 'updatable' || state === 'provided'
           })
         }
         if (quickFilter === 'updatable') {
-          return entries.filter((entry) => entryState(entry) === 'updatable')
+          return liveEntries.filter((entry) => entryState(entry) === 'updatable')
         }
-        return entries
-      }, [entries, quickFilter])
+        return liveEntries
+      }, [liveEntries, quickFilter])
 
       const declarations = listing === null || listing.value === null ? undefined : listing.value.metadata
       const categories = useMemo(() => {
@@ -1492,7 +2789,7 @@ window.__ModuleLoader__.load({
        */
       const start = useCallback((list) => {
         setConfirm(null)
-        void runBatch(list, remote, t)
+        enqueue(list, remote, t)
       }, [remote, t])
 
       // The selection exists to describe what the one batch would touch, so it clears
@@ -1515,35 +2812,48 @@ window.__ModuleLoader__.load({
       }, [refreshed])
       const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
       const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
-      // This plugin's own market leads the source menu, without touching the
-      // configured order: the list belongs to Settings, and reordering it here
-      // would silently rewrite a preference the user set elsewhere.
-      const orderedSources = sources === null ? [] : [...sources].sort((left, right) => {
-        if (left.url === HOME_SOURCE) return -1
-        if (right.url === HOME_SOURCE) return 1
-        return 0
-      })
-      const active = sources === null ? undefined : sources.find((source) => source.url === activeUrl)
+      // The built-in dsh.so browser is always available; host-configured
+      // indexes follow it. Veyra leads, then dsh.so, then dshmarket.com.
+      const sourceRank = (source) => VEYRA_SOURCES.includes(source.url)
+        ? 0
+        : source.url === DSH_SO_SOURCE.url ? 1 : source.url === DSHMARKET_CATALOG ? 2 : 3
+      const orderedSources = [...(sources ?? []), DSH_SO_SOURCE].sort((left, right) => sourceRank(left) - sourceRank(right))
+      const active = orderedSources.find((source) => source.url === activeUrl)
       const market = active === undefined
         ? (activeUrl ?? t('noSources'))
-        : (active.title === undefined ? activeUrl : text(active.title))
+        : marketSourceLabel(active, text, lang)
       const pagePicked = filteredEntries.length > 0 && filteredEntries.every((entry) => picked.has(entry.name))
       const directed = query.sort.kind === 'published' || query.sort.kind === 'key'
       const buildable = plan.install.length + plan.update.length
+      const installedCount = liveEntries.filter((entry) => {
+        const state = entryState(entry)
+        return state === 'installed' || state === 'updatable' || state === 'provided'
+      }).length
+      const updatesCount = liveEntries.filter((entry) => entryState(entry) === 'updatable').length
 
-      if (sources === null && sourcesFailure === null) return h('div', { style: S.state }, t('loading'))
+      if (sources === null && sourcesFailure === null) {
+        return h('div', { className: 'vpm-page' },
+          h('div', { className: 'vpm-page-inner' },
+            h('div', { className: 'vpm-state' },
+              h('span', { className: 'vpm-spin' }),
+              h('p', { className: 'vpm-state-title' }, t('loadingTitle')),
+              h('p', { className: 'vpm-state-body' }, t('loadingBody')))))
+      }
       if (sourcesFailure !== null) {
-        return h('div', { style: S.state },
-          h('p', { style: S.error, role: 'alert' }, t('sourceFailed')),
-          h('p', { style: S.meta }, sourcesFailure),
-          h('button', { style: S.btn(false, false), onClick: () => { setSourcesFailure(null); void loadSources(true) } }, t('retry')))
+        return h('div', { className: 'vpm-page' },
+          h('div', { className: 'vpm-page-inner' },
+            h('div', { className: 'vpm-state' },
+              h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
+              h('p', { className: 'vpm-state-title', role: 'alert' }, t('sourceFailed')),
+              h('p', { className: 'vpm-state-body' }, sourcesFailure),
+              h('button', { className: 'vpm-btn', onClick: () => { setSourcesFailure(null); void loadSources(true) } }, t('retry')))))
       }
 
       const rows = []
       if (outcome !== null) {
         rows.push(h('p', {
           key: 'outcome', role: 'status',
-          style: { ...S.bar, ...outcome.failed > 0 ? S.error : {} },
+          className: `vpm-bar${outcome.failed > 0 ? ' error' : ''}`,
         }, [
           outcome.canceled ? t('canceled', { n: outcome.skipped }) : null,
           t('done', { ok: outcome.ok }),
@@ -1554,76 +2864,154 @@ window.__ModuleLoader__.load({
         ].filter(Boolean)))
       }
       if (running !== null) {
-        // A visible progress bar, not just a counter: a batch of ten installs can take a
-        // minute, and the person needs to see it moving rather than wonder if it hung.
-        const pct = running.total === 0 ? 0 : Math.round((running.done / running.total) * 100)
-        rows.push(h('div', { key: 'running', style: { ...S.bar, flexDirection: 'column', alignItems: 'stretch', gap: '6px' }, role: 'status' },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-            h('span', { style: S.spinner }),
-            h('span', { style: { flex: 1, minWidth: 0, ...S.ellipsis } },
+        // A visible progress bar, not a fake percentage: the Host does not
+        // report one, so `done/total` is the queue position and the phase is
+        // what the Host is actually doing.
+        const pct = running.total === 0 ? 0 : Math.min(100, Math.round((running.done / running.total) * 100))
+        const elapsed = Math.max(0, Math.round((clock - (running.startedAt ?? clock)) / 1000))
+        const phase = running.phase === undefined ? '' : t(`phase_${running.phase}`)
+        rows.push(h('div', {
+          key: 'running', role: 'status', className: 'vpm-bar',
+          style: { flexDirection: 'column', alignItems: 'stretch', gap: '7px' },
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
+            h('span', { className: 'vpm-spin' }),
+            h('span', { className: 'vpm-ellipsis', style: { flex: 1, minWidth: '140px' } },
               `${t('progress', { action: actionLabel(t, running.action), done: running.done, total: running.total })} — ${running.name}`),
-            h('span', { style: { ...S.meta, flex: 'none' } }, `${pct}%`),
-            // Cancel stops the batch after the order already on the Host returns — a
-            // pnpm/git run cannot be aborted from here — so the control says so while
-            // it waits, instead of looking like it did nothing.
+            phase === '' ? null : h('span', { className: 'vpm-tag' }, phase),
+            h('span', { className: 'vpm-meta' }, t('elapsed', { n: elapsed })),
             h('button', {
-              style: { ...S.btn(false, job.cancel), padding: '2px 9px', fontSize: '11.5px', flex: 'none' },
-              disabled: job.cancel,
-              onClick: () => { runner.update({ cancel: true }) },
-            }, t(job.cancel ? 'canceling' : 'cancelRun'))),
-          h('div', { style: S.progressTrack },
-            h('div', { style: { ...S.progressFill, width: `${pct}%` } }))))
+              className: 'vpm-btn small', disabled: job.canceling || job.cancel,
+              onClick: () => { runner.requestCancel(remote, t) },
+            }, t(job.canceling || job.cancel ? 'canceling' : 'cancelRun')),
+            h('button', {
+              className: 'vpm-btn small',
+              onClick: () => { setShowLog((value) => !value) },
+            }, t(showLog ? 'logHide' : 'logShow'))),
+          h('div', { className: 'vpm-progress' },
+            h('span', { style: { width: `${pct}%` } })),
+          job.cancelNotice ? h('p', { className: 'vpm-meta', style: { margin: 0, color: 'var(--dsw-alias-state-warn-primary)' } }, job.cancelNotice) : null,
+          job.queue.length === 0 ? null : h('div', { className: 'vpm-queue' },
+            h('span', { className: 'vpm-meta' }, t('queue', { n: job.queue.length })),
+            job.queue.map((order, index) => h('div', { key: `${order.entry.name}-${index}`, className: 'vpm-queue-item' },
+              h('span', { className: 'vpm-queue-name' }, `${actionLabel(t, order.action)} · ${order.entry.name}`),
+              h('button', {
+                className: 'vpm-queue-remove', 'aria-label': t('removeQueued'),
+                onClick: () => { runner.removeQueued(index) },
+              }, '×')))),
+          showLog ? h('pre', { className: 'vpm-log' }, running.log === undefined || running.log === '' ? t('logEmpty') : running.log) : null))
       }
       if (picked.size > 0) {
         const bulk = []
         if (buildable > 0) bulk.push(h('button', {
-          key: 'apply', style: S.btn(true, busy), disabled: busy,
+          key: 'apply', className: 'vpm-btn primary', disabled: busy,
           // An update is confirmed as one, so the dialog names the versions
           // being replaced rather than only what will be installed.
           onClick: () => { setConfirm({ action: plan.install.length === 0 ? 'update' : 'install', orders: orders(plan, plan.install.length === 0 ? 'update' : 'install') }) },
         }, t('bulkApply', { n: buildable })))
         if (plan.uninstall.length > 0) bulk.push(h('button', {
-          key: 'remove', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+          key: 'remove', className: 'vpm-btn small', disabled: busy,
           onClick: () => { setConfirm({ action: 'uninstall', orders: orders(plan, 'uninstall') }) },
         }, t('bulkUninstall', { n: plan.uninstall.length })))
         if (plan.enable.length > 0) bulk.push(h('button', {
-          key: 'enable', style: S.btn(false, busy), disabled: busy,
+          key: 'enable', className: 'vpm-btn', disabled: busy,
           onClick: () => { start(orders(plan, 'enable')) },
         }, t('bulkEnable', { n: plan.enable.length })))
         if (plan.disable.length > 0) bulk.push(h('button', {
-          key: 'disable', style: S.btn(false, busy), disabled: busy,
+          key: 'disable', className: 'vpm-btn', disabled: busy,
           onClick: () => { start(orders(plan, 'disable')) },
         }, t('bulkDisable', { n: plan.disable.length })))
         bulk.push(h('button', {
-          key: 'clear', style: S.btn(false, busy), disabled: busy,
+          key: 'clear', className: 'vpm-btn', disabled: busy,
           onClick: () => { setPicked(new Set()) },
         }, t('clear')))
-        rows.push(h('div', { key: 'bulk', style: { ...S.bar, ...S.bulkBar } },
-          h('span', { style: { fontWeight: 600, ...S.grow } }, t('selected', { n: picked.size })), bulk))
+        rows.push(h('div', { key: 'bulk', className: 'vpm-bar bulk' },
+          h('span', { className: 'vpm-grow', style: { fontWeight: 600 } }, t('selected', { n: picked.size })), bulk))
       }
 
-      return h('div', { style: S.root },
-        h('div', { style: S.toolbar },
-          h('div', { style: S.host, ref: sourceMenu },
-            h('button', {
-              style: S.sourceBtn, 'aria-haspopup': 'menu', 'aria-expanded': menu === 'source',
-              onClick: () => { setMenu(menu === 'source' ? null : 'source') },
-            }, h('span', { style: S.ellipsis }, market), h(ChevronIcon, {})),
-            menu !== 'source' ? null : h('div', { style: S.menu(false), role: 'menu' },
-              orderedSources.map((source) => h('button', {
-                key: source.url, role: 'menuitem', title: source.url,
-                style: S.menuItem(source.url === activeUrl),
-                onClick: () => { setMenu(null); setActiveUrl(source.url) },
-              }, source.title === undefined ? source.url : text(source.title))),
-              h('div', { style: S.menuSep }),
+      return h('div', { className: 'vpm-page' },
+        h('div', { className: 'vpm-page-inner' },
+        h('header', { className: 'vpm-hero' },
+          h('div', { className: 'vpm-hero-copy' },
+            h('div', { className: 'vpm-eyebrow' }, t('eyebrow')),
+            h('h2', { className: 'vpm-title' }, t('title')),
+            h('p', { className: 'vpm-subtitle' }, t('subtitle')),
+            h('div', { className: 'vpm-summary' },
+              view === 'installed'
+                ? t('installedSummary', {
+                  total: installedBundles.length,
+                  enabled: installedEnabled,
+                  disabled: installedBundles.length - installedEnabled,
+                })
+                : t('summary', { total: liveEntries.length, installed: installedCount, updates: updatesCount })),
+            h('div', { className: 'vpm-segment', role: 'tablist', 'aria-label': t('title') },
               h('button', {
-                role: 'menuitem', style: S.menuItem(false),
+                className: `vpm-segment-item${view === 'market' ? ' on' : ''}`,
+                role: 'tab', 'aria-selected': view === 'market',
+                onClick: () => { setView('market'); setDraft(query.text); setInstalledNotice(null) },
+              }, t('viewMarket')),
+              h('button', {
+                className: `vpm-segment-item${view === 'installed' ? ' on' : ''}`,
+                role: 'tab', 'aria-selected': view === 'installed',
+                onClick: () => { setView('installed'); setDraft(''); setInstalledNotice(null); void loadBundles() },
+              }, `${t('viewInstalled')} (${installedBundles.length})`))),
+          h('div', { className: 'vpm-hero-actions' },
+            h('div', { className: 'vpm-search' },
+              h('span', { className: 'vpm-search-icon' }, h(SearchIcon, {})),
+              h('input', {
+                type: 'search', value: draft, spellCheck: false,
+                placeholder: view === 'installed' ? t('searchInstalled') : t('search'),
+                'aria-label': view === 'installed' ? t('searchInstalled') : t('search'),
+                list: view === 'installed' ? undefined : 'vpm-recent-searches',
+                onChange: (event) => { setDraft(event.target.value) },
+              }),
+              // A native suggestion list: the browser/Electron draws and filters it, so no custom
+              // dropdown state, no positioning code, and it still works on a fresh profile.
+              recent.length === 0 ? null : h('datalist', { id: 'vpm-recent-searches' },
+                recent.map((term) => h('option', { key: term, value: term }))),
+              h('button', {
+                className: 'vpm-icon-btn', title: t('refresh'), 'aria-label': t('refresh'),
+                disabled: busy || (view === 'market' && (listing === null || loadingPage)),
+                onClick: async () => {
+                  if (view === 'installed') {
+                    await loadBundles()
+                    setRefreshed(true)
+                    return
+                  }
+                  if (listing === null) return
+                  try {
+                    // refresh=true 让 Host 绕过十分钟的索引缓存；顺带刷新安装状态。
+                    await load(listing.url, query, 0, PAGE, undefined, 0, true)
+                    await loadBundles()
+                    setRefreshed(true)
+                  } catch {
+                    // load 已经把失败写进 listing.failure
+                  }
+                },
+              }, h(RefreshIcon, {})),
+              refreshed ? h('span', { className: 'vpm-meta' }, lang === 'zh' ? '已刷新' : 'Refreshed') : null))),
+        h('div', { className: 'vpm-toolbar' },
+          view === 'market' ? h(React.Fragment, null,
+          h('div', { style: { position: 'relative', display: 'flex' }, ref: sourceMenu },
+            h('button', {
+              className: 'vpm-source-btn', 'aria-haspopup': 'menu', 'aria-expanded': menu === 'source',
+              onClick: () => { setMenu(menu === 'source' ? null : 'source') },
+            }, h('span', { className: 'vpm-ellipsis' }, market), h(ChevronIcon, {})),
+            menu !== 'source' ? null : h('div', { className: 'vpm-menu', role: 'menu' },
+              orderedSources.map((source) => h('button', {
+                key: source.url, role: 'menuitem', title: source.builtin === true ? undefined : source.url,
+                className: `vpm-menu-item${source.url === activeUrl ? ' on' : ''}`,
+                onClick: () => { setMenu(null); setActiveUrl(source.url) },
+              }, marketSourceLabel(source, text, lang))),
+              h('div', { className: 'vpm-menu-sep' }),
+              h('button', {
+                role: 'menuitem', className: 'vpm-menu-item',
                 onClick: () => { setMenu(null); setSourcesOpen(true) },
               }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } }, h(SlidersIcon, {}), t('manageSources'))),
-              h('div', { style: S.menuSep }),
+              h('div', { className: 'vpm-menu-sep' }),
               // A toggle, not a checkbox input: one row in a menu, no extra layout.
               h('button', {
-                role: 'menuitemcheckbox', 'aria-checked': autoCheckOn, style: S.menuItem(false),
+                role: 'menuitemcheckbox', 'aria-checked': autoCheckOn, className: 'vpm-menu-item',
                 onClick: () => {
                   const next = !autoCheckOn
                   setAutoCheckOn(next)
@@ -1631,109 +3019,143 @@ window.__ModuleLoader__.load({
                   setMenu(null)
                 },
               }, `${autoCheckOn ? '✓ ' : ''}${lang === 'zh' ? '启动时检查更新' : 'Check updates at startup'}`))),
-          h('div', { style: S.searchWrap },
-            h('span', { style: S.searchIcon }, h(SearchIcon, {})),
-            h('input', {
-              style: S.input, type: 'search', value: draft, spellCheck: false,
-              placeholder: t('search'), 'aria-label': t('search'), list: 'vpm-recent-searches',
-              onChange: (event) => { setDraft(event.target.value) },
-            }),
-            // A native suggestion list: the browser/Electron draws and filters it, so no custom
-            // dropdown state, no positioning code, and it still works on a fresh profile.
-            recent.length === 0 ? null : h('datalist', { id: 'vpm-recent-searches' },
-              recent.map((term) => h('option', { key: term, value: term })))),
-          h('div', { style: S.host, ref: sortMenu },
+          h('div', { style: { position: 'relative', display: 'flex' }, ref: sortMenu },
             h('button', {
-              style: S.btn(false, false), 'aria-haspopup': 'menu', 'aria-expanded': menu === 'sort',
+              className: 'vpm-btn', 'aria-haspopup': 'menu', 'aria-expanded': menu === 'sort',
               onClick: () => { setMenu(menu === 'sort' ? null : 'sort') },
             }, t('sortBy'), h(ChevronIcon, {})),
-            menu !== 'sort' ? null : h('div', { style: S.menu(true), role: 'menu' },
+            menu !== 'sort' ? null : h('div', { className: 'vpm-menu right', role: 'menu' },
               [
                 { kind: 'index', label: t('sortIndex') },
                 ...draft.trim() === '' ? [] : [{ kind: 'relevance', label: t('sortRelevance') }],
                 { kind: 'published', label: t('sortPublished') },
+                // A source may declare numeric sort keys (ours writes stars
+                // and downloads); the Host and the dsh.so adapter both honour
+                // `{ kind: 'key', id }`.
+                ...Object.entries(declarations?.sortKeys ?? {}).map(([id, declaration]) => ({
+                  kind: 'key', id, direction: declaration.order, label: text(declaration.title),
+                })),
               ].map((option) => h('button', {
-                key: option.kind, role: 'menuitemradio', 'aria-checked': query.sort.kind === option.kind,
-                style: S.menuItem(query.sort.kind === option.kind),
+                key: option.kind === 'key' ? `key-${option.id}` : option.kind,
+                role: 'menuitemradio',
+                'aria-checked': query.sort.kind === option.kind && (option.kind !== 'key' || query.sort.id === option.id),
+                className: `vpm-menu-item${query.sort.kind === option.kind && (option.kind !== 'key' || query.sort.id === option.id) ? ' on' : ''}`,
                 onClick: () => {
                   setMenu(null)
-                  search({ ...query, sort: option.kind === 'published' ? { kind: 'published', direction: 'desc' } : { kind: option.kind } })
+                  search({
+                    ...query,
+                    sort: option.kind === 'published'
+                      ? { kind: 'published', direction: 'desc' }
+                      : option.kind === 'key'
+                        ? { kind: 'key', id: option.id, direction: option.direction ?? 'desc' }
+                        : { kind: option.kind },
+                  })
                 },
               }, option.label)))),
           directed ? h('button', {
-            style: S.btn(false, busy), disabled: busy,
+            className: 'vpm-btn', disabled: busy,
             onClick: () => { search({ ...query, sort: { ...query.sort, direction: query.sort.direction === 'asc' ? 'desc' : 'asc' } }) },
           }, t('switchDirection', { dir: t(query.sort.direction === 'asc' ? 'ascending' : 'descending') })) : null,
           // ponytail: "全部更新"按钮 - 一键更新所有可更新插件
           allUpdatable.length > 0 && quickFilter !== 'updatable' ? h('button', {
-            style: S.btn(true, busy), disabled: busy,
+            className: 'vpm-btn primary', disabled: busy,
             onClick: () => {
               const updatePlan = planBulk(allUpdatable)
               const updateOrders = orders(updatePlan, 'update')
               if (updateOrders.length > 0) setConfirm({ action: 'update', orders: updateOrders })
             },
-          }, t('updateAll', { n: allUpdatable.length })) : null,
-          h('button', {
-            style: { ...S.squareBtn, opacity: loadingPage ? 0.45 : 1 },
-            title: t('refresh'), 'aria-label': t('refresh'),
-            disabled: busy || listing === null || loadingPage,
-            onClick: async () => {
-              if (listing === null) return
-              try {
-                // refresh=true 让 Host 绕过十分钟的索引缓存；顺带刷新安装状态。
-                await load(listing.url, query, 0, PAGE, undefined, 0, true)
-                await loadBundles()
-                setRefreshed(true)
-              } catch {
-                // load 已经把失败写进 listing.failure
-              }
-            },
-          }, h(RefreshIcon, {})),
-          refreshed ? h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)' } }, lang === 'zh' ? '已刷新' : 'Refreshed') : null),
+          }, t('updateAll', { n: allUpdatable.length })) : null
+          ) : (installedNotice === null ? null : h('p', { className: 'vpm-bar error' }, installedNotice)),
+          h('span', { className: 'vpm-grow' }),
+          view === 'market' ? h('button', {
+            className: 'vpm-btn', onClick: () => { setSourcesOpen(true) },
+          }, h(SlidersIcon, { size: 13 }), t('manageSources')) : null),
         // ponytail: 快捷筛选行 - 仅已安装、仅可更新
-        h('div', { style: S.pills, role: 'group', 'aria-label': t('all') },
+        view === 'market' ? h('div', { className: 'vpm-pills', role: 'group', 'aria-label': t('all') },
           h('button', {
-            style: S.pill(quickFilter === null), 'aria-pressed': quickFilter === null,
+            className: `vpm-pill${quickFilter === null ? ' on' : ''}`, 'aria-pressed': quickFilter === null,
             onClick: () => { setQuickFilter(null); setPicked(new Set()) },
           }, t('all')),
           h('button', {
-            style: S.pill(quickFilter === 'installed'), 'aria-pressed': quickFilter === 'installed',
+            className: `vpm-pill${quickFilter === 'installed' ? ' on' : ''}`, 'aria-pressed': quickFilter === 'installed',
             onClick: () => { setQuickFilter('installed'); setPicked(new Set()) },
           }, t('onlyInstalled')),
           h('button', {
-            style: S.pill(quickFilter === 'updatable'), 'aria-pressed': quickFilter === 'updatable',
+            className: `vpm-pill${quickFilter === 'updatable' ? ' on' : ''}`, 'aria-pressed': quickFilter === 'updatable',
             onClick: () => { setQuickFilter('updatable'); setPicked(new Set()) },
-          }, t('onlyUpdatable'))),
-        categories.length === 0 ? null : h('div', { style: S.pills, role: 'group', 'aria-label': t('all') },
+          }, t('onlyUpdatable'))) : null,
+        view === 'market' && categories.length > 0 ? h('div', { className: 'vpm-pills', role: 'group', 'aria-label': t('all') },
           h('button', {
-            style: S.pill(query.category === null), 'aria-pressed': query.category === null,
+            className: `vpm-pill${query.category === null ? ' on' : ''}`, 'aria-pressed': query.category === null,
             onClick: () => { search({ ...query, category: null }) },
           }, t('all')),
           categories.map((category) => h('button', {
-            key: category.id, style: S.pill(query.category === category.id), 'aria-pressed': query.category === category.id,
+            key: category.id, className: `vpm-pill${query.category === category.id ? ' on' : ''}`, 'aria-pressed': query.category === category.id,
             onClick: () => { search({ ...query, category: category.id }) },
-          }, category.title))),
+          }, category.title))) : null,
         rows,
-        h('div', { style: S.scroll },
-          listing === null ? h('div', { style: S.state }, t('loading'))
-            : listing.status === 'error' ? h('div', { style: S.state },
-              h('p', { style: S.error, role: 'alert' }, t('loadFailed')),
-              h('p', { style: S.meta }, listing.failure),
-              h('button', { style: S.btn(false, false), onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined, 0, true) } }, t('retry')))
-              : filteredEntries.length === 0 ? h('div', { style: S.state },
-                t(listing.status === 'loading' ? 'loading' : listing.query.text.trim() === '' && listing.query.category === null && quickFilter === null ? 'empty' : 'noMatch'))
+        h('div', { className: 'vpm-scroll' },
+          view === 'installed'
+            ? (installedFiltered.length === 0
+              ? h('div', { className: 'vpm-state' },
+                h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
+                h('p', { className: 'vpm-state-title' }, installedBundles.length === 0 ? t('installedEmptyTitle') : t('noMatchTitle')),
+                h('p', { className: 'vpm-state-body' }, installedBundles.length === 0 ? t('installedEmptyBody') : t('noMatchBody')))
+              : h('ul', { className: 'vpm-grid' },
+                installedFiltered.map((bundle) => h(InstalledCard, {
+                  key: bundle.name, bundle, lang, t,
+                  busy: installedBusy === bundle.name,
+                  onDetails: setInstalledDetail,
+                  onToggle: toggleInstalled,
+                  onUninstall: (target) => { setInstalledConfirm(target) },
+                }))))
+            : (listing === null ? h('div', null,
+            h('div', { className: 'vpm-state' },
+              h('span', { className: 'vpm-spin' }),
+              h('p', { className: 'vpm-state-title' }, t('loadingTitle')),
+              h('p', { className: 'vpm-state-body' }, t('loadingBody'))),
+            h('ul', { className: 'vpm-skeleton' },
+              Array.from({ length: 6 }, (_value, index) => h('li', { key: index, className: 'vpm-skeleton-card' }))))
+            : listing.status === 'error' ? h('div', { className: 'vpm-state' },
+              h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
+              h('p', { className: 'vpm-state-title', role: 'alert' }, t('loadFailed')),
+              h('p', { className: 'vpm-state-body' }, listing.failure),
+              h('button', { className: 'vpm-btn', onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined, 0, true) } }, t('retry')))
+              : filteredEntries.length === 0
+                ? (listing.status === 'loading'
+                  ? h('div', null,
+                    h('div', { className: 'vpm-state' },
+                      h('span', { className: 'vpm-spin' }),
+                      h('p', { className: 'vpm-state-title' }, t('loadingTitle')),
+                      h('p', { className: 'vpm-state-body' }, t('loadingBody'))),
+                    h('ul', { className: 'vpm-skeleton' },
+                      Array.from({ length: 6 }, (_value, index) => h('li', { key: index, className: 'vpm-skeleton-card' }))))
+                  : listing.query.text.trim() === '' && listing.query.category === null && quickFilter === null
+                    ? h('div', { className: 'vpm-state' },
+                      h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
+                      h('p', { className: 'vpm-state-title' }, t('emptyTitle')),
+                      h('p', { className: 'vpm-state-body' }, t('emptyBody')),
+                      h('button', { className: 'vpm-btn', onClick: () => { setSourcesOpen(true) } }, t('manageSources')))
+                    : h('div', { className: 'vpm-state' },
+                      h('span', { className: 'vpm-state-mark' }, h(SearchIcon, { size: 24 })),
+                      h('p', { className: 'vpm-state-title' }, t('noMatchTitle')),
+                      h('p', { className: 'vpm-state-body' }, t('noMatchBody')),
+                      h('button', {
+                        className: 'vpm-btn',
+                        onClick: () => { setQuickFilter(null); search({ text: '', category: null, sort: { kind: 'index' } }) },
+                      }, t('clear'))))
                 : h('div', null,
-                  h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px' } },
-                    h('label', { style: { ...S.meta, display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' } },
+                  h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 10px' } },
+                    h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }, className: 'vpm-meta' },
                       h('input', {
-                        type: 'checkbox', style: S.check, checked: pagePicked, disabled: busy,
+                        type: 'checkbox', className: 'vpm-check', checked: pagePicked, disabled: busy,
                         onChange: () => { setPicked(pagePicked ? new Set() : new Set(filteredEntries.map((entry) => entry.name))) },
                       }),
                       t('selectPage')),
-                    h('span', { style: S.meta }, t('total', { n: filteredEntries.length }))),
-                  h('ul', { style: S.grid },
+                    h('span', { className: 'vpm-meta' }, t('total', { n: filteredEntries.length }))),
+                  h('ul', { className: 'vpm-grid' },
                     filteredEntries.map((entry) => h(Card, {
-                      key: entry.name, entry, bundle: bundles.get(entry.name), lang, t, text, busy,
+                      key: entry.name, entry, bundle: bundles.get(entry.name), lang, t, text, busy, stats: statsIndex,
                       picked: picked.has(entry.name),
                       failure: job.failures.get(entry.name),
                       copied,
@@ -1753,10 +3175,10 @@ window.__ModuleLoader__.load({
                     }))),
                   listing.value.nextOffset === null ? null : h('div', { style: { display: 'flex', justifyContent: 'center', margin: '12px 0' } },
                     h('button', {
-                      style: S.btn(false, busy || listing.status !== 'ready'),
+                      className: 'vpm-btn',
                       disabled: busy || listing.status !== 'ready',
                       onClick: () => { void load(listing.url, listing.query, entries.length, PAGE, listing.value.fetchedAt) },
-                    }, t('more'))))),
+                    }, t('more')))))),
         h('div', { style: { height: '14px', flex: 'none' } }),
         confirm === null ? null : h(ConfirmDialog, {
           action: confirm.action, orders: confirm.orders, lang, t, text,
@@ -1764,13 +3186,32 @@ window.__ModuleLoader__.load({
           onRun: () => { start(confirm.orders) },
         }),
         detailEntry === null ? null : h(DetailDialog, {
-          entry: detailEntry, bundle: bundles.get(detailEntry.name), lang, t, text, busy,
+          entry: detailEntry, bundle: bundles.get(detailEntry.name), lang, t, text, busy, stats: statsIndex,
           onRun: start,
           onConfirm: setConfirm,
           onClose: () => { setDetailEntry(null) },
         }),
+        installedConfirm === null ? null : h(Modal, {
+          title: t('confirmUninstallInstalled'),
+          onClose: () => { setInstalledConfirm(null) },
+          footer: [
+            h('button', { key: 'cancel', className: 'vpm-btn small', onClick: () => { setInstalledConfirm(null) } }, t('cancel')),
+            h('button', {
+              key: 'run', className: 'vpm-btn small danger', disabled: installedBusy !== null,
+              onClick: () => { void uninstallInstalled(installedConfirm) },
+            }, t('uninstall')),
+          ],
+        },
+          h('p', { style: S.modalBody }, `${bundleTitle(installedConfirm, lang)} · ${installedConfirm.name}`),
+          h('p', { style: S.modalBody }, t('confirmUninstallInstalledBody'))),
+        installedDetail === null ? null : h(InstalledDetailDialog, {
+          bundle: installedDetail, remote, lang, t, busy: installedBusy === installedDetail.name,
+          onToggle: toggleInstalled,
+          onUninstall: (target) => { setInstalledDetail(null); setInstalledConfirm(target) },
+          onClose: () => { setInstalledDetail(null) },
+        }),
         sourcesOpen ? h(SourcesDialog, {
-          sources, t, text, saving: savingSources, failure: sourceFailure,
+          sources, lang, t, text, saving: savingSources, failure: sourceFailure,
           onAdd: async (url) => {
             setSavingSources(true)
             setSourceFailure(null)
@@ -1790,17 +3231,93 @@ window.__ModuleLoader__.load({
             await loadSources(false)
           },
           onClose: () => { setSourcesOpen(false) },
-        }) : null)
+        }) : null))
+    }
+
+    /**
+     * The tab slot hands down the host's locale hook. A `main` panel does not,
+     * so this builds the same shape from the locale service: a hook that
+     * subscribes to changes and returns the selected value. It is a plain
+     * function on purpose — it is called by React during render, like the
+     * host-provided one.
+     */
+    function makeLocaleHook(ctx) {
+      return (select) => {
+        const [snapshot, setSnapshot] = useState(() => ctx.locale.getSnapshot())
+        useEffect(() => {
+          const off = ctx.locale.subscribe(() => setSnapshot(ctx.locale.getSnapshot()))
+          return typeof off === 'function' ? off : undefined
+        }, [])
+        return select(snapshot)
+      }
+    }
+
+    /** The sidebar's main panel: the market page, filling the host's content area. */
+    function MarketPanel(props) {
+      return h('div', { style: { height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' } },
+        h(MarketTab, props))
     }
 
     return {
-      __internal: { marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText, TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset, runBatch, runner },
+      __internal: {
+        marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
+        TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset, enqueue, pump, newRequestId, runner,
+        compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
+        localizedValue, shortBundleName, bundleTitle, bundleDescription,
+      },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), `${NS}: dictionaries`)
         // A background update check at client startup; silent on any failure and behind a toggle.
         void autoCheck(ctx.remote)
         const t = ctx.locale.bind(NS)
+        // Host progress is useful only while the queue is running, but the
+        // subscription lives with the plugin so the queue survives a page
+        // switch. Events carry the request id we generated for each attempt.
+        ctx.effect(() => {
+          const offs = []
+          const listen = (event, handler) => {
+            try {
+              const off = ctx.remote.$on(event, handler)
+              if (typeof off === 'function') offs.push(off)
+            } catch {
+              // An older Host without this event keeps the coarse UI.
+            }
+          }
+          listen('plugin-manager/install-state', (progress) => {
+            if (progress?.requestId !== undefined) runner.progress(progress.requestId, progress.phase)
+          })
+          listen('plugin-manager/update-state', (progress) => {
+            if (progress?.requestId !== undefined) runner.progress(progress.requestId, progress.step)
+          })
+          listen('plugin-manager/install-log', (chunk) => {
+            if (chunk?.requestId !== undefined) runner.appendLog(chunk.requestId, chunk.text)
+          })
+          return () => { for (const off of offs) off() }
+        }, `${NS}: install events`)
+        // The toast's "view" button opens the sidebar panel when the Host
+        // exposes its layout service; older Hosts keep the message only.
+        let layout
+        try {
+          ctx.inject(['layout'], (scoped) => { layout = scoped.layout })
+        } catch {
+          // No layout service; the toast still reports the outcome.
+        }
+        const openMarket = () => {
+          try { layout?.selectPanel?.('vyra-market') } catch { /* no panel service */ }
+        }
+        try {
+          ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+            name: 'shell.overlay',
+            id: 'vyra-market-toast',
+          }, () => h(MarketToast, {
+            t,
+            onOpen: openMarket,
+            canOpen: () => typeof layout?.selectPanel === 'function',
+          })))
+        } catch {
+          // A Host without an overlay slot keeps the in-page outcome bar.
+        }
         ctx.slots.inject('plugins.tab', () => ctx.slots.register({
           name: 'plugins.tab',
           id: 'market',
@@ -1809,6 +3326,33 @@ window.__ModuleLoader__.load({
           label: () => t('title'),
           inject: () => ({ remote: ctx.remote, hooks: { locale: ctx.locale } }),
         }, MarketTab))
+        // The sidebar row and the panel it opens share one id: the host selects
+        // the `main` entry whose key matches the row's id, so no layout service
+        // or click handler is needed. Order 2 keeps it below Plugins.
+        const useLocale = makeLocaleHook(ctx)
+        try {
+          ctx.slots.inject('sidebar.panellist', () => {
+            const offRow = ctx.slots.register({
+              name: 'sidebar.panellist',
+              id: 'vyra-market',
+              order: 2,
+              locale: NS,
+              label: () => t('title'),
+            }, MarketIcon)
+            const offPanel = ctx.slots.register({
+              name: 'main',
+              key: 'vyra-market',
+              locale: NS,
+              inject: () => ({ remote: ctx.remote, t, useLocale }),
+            }, MarketPanel)
+            return () => {
+              if (typeof offRow === 'function') offRow()
+              if (typeof offPanel === 'function') offPanel()
+            }
+          })
+        } catch {
+          // A host before the sidebar panel slot keeps the Plugins tab.
+        }
       },
     }
   },

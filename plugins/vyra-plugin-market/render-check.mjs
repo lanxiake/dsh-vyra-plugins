@@ -14,6 +14,10 @@ import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import assert from 'node:assert/strict'
 
+// The tab now loads a stats overlay in the background. A headless check must
+// not reach the network (or wait for its 30s timeout); every read fails fast.
+globalThis.fetch = () => Promise.reject(new Error('offline in render check'))
+
 const root = resolve(import.meta.dirname)
 const source = readFileSync(join(root, 'client.js'), 'utf8')
 
@@ -173,6 +177,10 @@ function makeRemote(state) {
       updateBundle: (name, version, options) => { calls.push(['updateBundle', name, version, options]); return answer('updateBundle', ok({ result: { application: 'applied' } })) },
       removeBundle: (name) => { calls.push(['removeBundle', name]); return answer('removeBundle', ok({ application: 'applied' })) },
       setBundleEnabled: (name, enabled) => { calls.push(['setBundleEnabled', name, enabled]); return answer('setBundleEnabled', ok({ application: 'applied' })) },
+      readBundleDetail: (name, language) => {
+        calls.push(['readBundleDetail', name, language])
+        return ok({ status: 'found', origin: 'readme', path: 'README.md', markdown: '# Manual README' })
+      },
     },
   }
 }
@@ -200,8 +208,21 @@ function buttonByText(tree, label) {
   return findAll(tree, (node) => node.type === 'button' && texts(node).join('').trim() === label)[0]
 }
 
+/** A localStorage stand-in: `seeded` controls whether the profile already
+ *  made its one-time dshmarket.com catalog choice. */
+function makeStorage(seeded) {
+  const values = new Map()
+  if (seeded) values.set('vyra-market.sources-seeded', '1')
+  return {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => { values.set(key, String(value)) },
+    removeItem: (key) => { values.delete(key) },
+  }
+}
+
 /** Mount the tab, settle its reads, and return the drawn tree with its Remote. */
-async function mount({ sources = [{ url: 'https://example.invalid/index.json' }], entries = [entry('alpha'), entry('beta')], bundles = [], answers = {} } = {}) {
+async function mount({ sources = [{ url: 'https://example.invalid/index.json' }], entries = [entry('alpha'), entry('beta')], bundles = [], answers = {}, seeded = true } = {}) {
+  globalThis.localStorage = makeStorage(seeded)
   const react = makeReact()
   const bundle = loadBundle(react)
   assert.deepEqual(
@@ -213,9 +234,14 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
   let Component = null
   bundle.apply({
     effect: (fn) => fn(),
-    locale: { register: () => {}, bind: () => (key) => key },
+    locale: {
+      register: () => {}, bind: () => (key) => key,
+      getSnapshot: () => ({ active: 'en' }), subscribe: () => () => {},
+    },
     slots: {
-      inject: (name, register) => { assert.equal(name, 'plugins.tab', 'the tab registers beside Installed'); register() },
+      // Only the Plugins tab is mounted here; the sidebar row and panel are
+      // registered by the same apply call and covered by the registration block.
+      inject: (name, register) => { if (name === 'plugins.tab') register() },
       register: (_options, component) => { Component = component },
     },
     remote,
@@ -243,22 +269,36 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
   return { tree, remote, settle: () => render(3) }
 }
 
-// --- the registration targets the tab slot beside Installed ------------------
+// --- the registration targets: Plugins tab, sidebar row, main panel ----------
 await (async () => {
   const react = makeReact()
   const bundle = loadBundle(react)
-  let options = null
+  const options = []
   bundle.apply({
     effect: (fn) => fn(),
-    locale: { register: () => {}, bind: () => (key) => key },
-    slots: { inject: (_name, register) => { register() }, register: (seen) => { options = seen } },
+    locale: {
+      register: () => {}, bind: () => (key) => key,
+      getSnapshot: () => ({ active: 'en' }), subscribe: () => () => {},
+    },
+    slots: { inject: (_name, register) => { register() }, register: (seen) => { options.push(seen) } },
     remote: makeRemote({ sources: [], bundles: [], page: makePage([]) }),
   })
-  assert.equal(options.name, 'plugins.tab')
-  assert.equal(options.id, 'market')
-  assert.equal(options.locale, 'vyra-plugin-market')
-  assert.equal(typeof options.label, 'function')
-  assert.equal(options.order, 10, 'the tab sorts after the page\'s own Installed entry')
+  const tab = options.find((entry) => entry.name === 'plugins.tab')
+  const row = options.find((entry) => entry.name === 'sidebar.panellist')
+  const panel = options.find((entry) => entry.name === 'main')
+  assert.ok(tab !== undefined, 'the Plugins tab is still registered')
+  assert.equal(tab.id, 'market')
+  assert.equal(tab.locale, 'vyra-plugin-market')
+  assert.equal(typeof tab.label, 'function')
+  assert.equal(tab.order, 10, 'the tab sorts after the page\'s own Installed entry')
+  assert.ok(row !== undefined, 'the sidebar row is registered')
+  assert.equal(row.id, 'vyra-market', 'the row id is the panel key')
+  assert.equal(row.order, 2, 'the row sits below Plugins')
+  assert.equal(row.locale, 'vyra-plugin-market')
+  assert.ok(panel !== undefined, 'the sidebar main panel is registered')
+  assert.equal(panel.key, 'vyra-market', 'the row opens this panel')
+  assert.equal(panel.locale, 'vyra-plugin-market')
+  assert.equal(typeof panel.inject, 'function', 'the panel injects its own remote and locale hook')
 })()
 
 // --- a page draws one card per entry, with the source name in the toolbar -----
@@ -273,11 +313,15 @@ await (async () => {
 
 // --- an empty source list adopts our own market instead of showing nothing ---
 {
-  const { remote } = await mount({ sources: [], entries: [] })
+  const { remote } = await mount({ sources: [], entries: [], seeded: false })
   const set = remote.calls.find(([name]) => name === 'setIndexes')
   assert.ok(set !== undefined, 'an unconfigured profile gets a source added')
-  // The default source is the ghproxy mirror: reachable in CN without a GitHub detour.
-  assert.deepEqual(set[1], ['https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json'])
+  // Veyra leads with the ghproxy mirror (reachable in CN without a GitHub
+  // detour), and the dshmarket.com catalog is seeded once beside it.
+  assert.deepEqual(set[1], [
+    'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
+    'https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json',
+  ])
 }
 
 // --- this plugin's own market leads, whatever the configured order ----------
@@ -308,7 +352,8 @@ await (async () => {
   const menu = findAll(opened, (node) => node.props?.role === 'menu')[0]
   assert.ok(menu !== undefined, 'the source menu opened')
   const rowTexts = (menu.children ?? []).flatMap((row) => texts(row))
-  assert.ok(rowTexts[0]?.includes('lanxiake.github.io'), `our market leads the menu, got: ${JSON.stringify(rowTexts)}`)
+  assert.match(rowTexts[0] ?? '', /Veyra/, `our market leads the menu, got: ${JSON.stringify(rowTexts)}`)
+  assert.ok(rowTexts.some((line) => line.includes('dsh.so')), 'the built-in dsh.so browser is always available')
   assert.ok(rowTexts.some((line) => line.includes('cdn.example.invalid')), 'the other source is still listed')
 }
 
@@ -357,12 +402,59 @@ await (async () => {
   assert.ok(texts(tag).join('').includes('failedTag'), 'the tag renders the Failed label')
 }
 
+// --- the Installed view lists bundles no market index knows about ------------
+{
+  const bundle = {
+    name: 'manual-plugin', version: '1.2.3', description: 'Manual plugin',
+    installed: true, enabled: true, removable: true, rows: [], overrides: [],
+  }
+  const { tree, remote, settle } = await mount({ entries: [entry('alpha')], bundles: [bundle] })
+  const segment = findAll(tree, (node) => node.type === 'button' && texts(node).join('').includes('viewInstalled'))[0]
+  assert.ok(segment !== undefined, 'the market page has an Installed segment')
+  segment.props.onClick()
+  const installed = await settle()
+  const drawn = texts(installed).join(' | ')
+  assert.ok(drawn.includes('manual-plugin'), `the installed list names a bundle outside the market, got: ${drawn}`)
+  assert.ok(drawn.includes('Manual plugin'), 'the manifest description is shown')
+
+  const open = buttonByText(installed, 'open')
+  assert.ok(open !== undefined, 'an installed bundle offers Details')
+  open.props.onClick()
+  const detail = await settle()
+  assert.ok(remote.calls.some(([name, bundleName]) => name === 'readBundleDetail' && bundleName === 'manual-plugin'),
+    'Details reads the local bundle README through the Host')
+  assert.ok(texts(detail).join(' | ').includes('Manual README'), 'the local README is rendered')
+
+  const close = buttonByText(detail, 'toastClose')
+  close.props.onClick()
+  const back = await settle()
+  const disable = buttonByText(back, 'disable')
+  assert.ok(disable !== undefined, 'an enabled bundle offers Disable')
+  disable.props.onClick()
+  await settle()
+  assert.ok(remote.calls.some(([name, bundleName, enabled]) => name === 'setBundleEnabled' && bundleName === 'manual-plugin' && enabled === false),
+    'Disable reaches setBundleEnabled for a non-market bundle')
+
+  const uninstall = buttonByText(back, 'uninstall')
+  assert.ok(uninstall !== undefined, 'a removable bundle offers Uninstall')
+  uninstall.props.onClick()
+  const confirm = await settle()
+  const run = findAll(confirm, (node) => node.type === 'button' && String(node.props.className ?? '').includes('danger'))[0]
+  assert.ok(run !== undefined, 'Uninstall asks before removing')
+  run.props.onClick()
+  await settle()
+  assert.ok(remote.calls.some(([name, bundleName]) => name === 'removeBundle' && bundleName === 'manual-plugin'),
+    'the confirmed uninstall reaches removeBundle')
+}
+
 // --- a Host change re-reads the bundles --------------------------------------
 {
   const { remote } = await mount()
-  const subscription = remote.calls.find(([name]) => name === '$on')
-  assert.ok(subscription !== undefined, 'the tab subscribes to Host changes')
-  assert.equal(subscription[1], 'plugin-manager/changed')
+  const changed = remote.calls.find(([name, event]) => name === '$on' && event === 'plugin-manager/changed')
+  assert.ok(changed !== undefined, 'the tab subscribes to Host changes')
+  for (const event of ['plugin-manager/install-state', 'plugin-manager/update-state', 'plugin-manager/install-log']) {
+    assert.ok(remote.calls.some(([name, seen]) => name === '$on' && seen === event), `the queue subscribes to ${event}`)
+  }
 }
 
 console.log('vyra-plugin-market: render checks passed')

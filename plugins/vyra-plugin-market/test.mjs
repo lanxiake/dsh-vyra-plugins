@@ -43,6 +43,8 @@ const { __internal } = loadBundle()
 const {
   marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
   TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset,
+  compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
+  localizedValue, shortBundleName, bundleTitle, bundleDescription,
 } = __internal
 
 // --- README images: a <picture> block must become the Markdown image it wraps --
@@ -202,20 +204,33 @@ assert.deepEqual(withText({ text: '', sort: { kind: 'index' } }, 'foo').sort, { 
 assert.deepEqual(withText({ text: 'foo', sort: { kind: 'relevance' } }, '').sort, { kind: 'index' }, 'clearing returns to index order')
 assert.deepEqual(withText({ text: 'foo', sort: { kind: 'published', direction: 'desc' } }, '').sort, { kind: 'published', direction: 'desc' }, 'a chosen order is kept')
 
-// --- runBatch: a cancel stops the rest, the order already on the Host lands --
+// --- queue: a cancel stops the rest and asks the Host to abort the current --
+async function waitIdle() {
+  for (let turn = 0; turn < 100 && __internal.runner.get().running !== null; turn += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
+}
 {
   const performed = []
-  const { runBatch, runner } = __internal
+  const { enqueue, runner } = __internal
   const applied = { ok: true, value: { application: 'applied' } }
+  let canceled = false
   const remote = {
     pluginManager: {
-      installBundle: async (spec) => {
-        performed.push(spec)
-        // Cancel while the first install is under way, as a person would.
-        if (performed.length === 1) runner.update({ cancel: true })
-        return applied
+      installBundle: async (spec, options) => {
+        performed.push([spec, options])
+        if (performed.length === 1) {
+          // Cancel while the first install is under way, as a person would.
+          runner.requestCancel(remote, (key) => key)
+          await Promise.resolve()
+        }
+        return canceled ? { ok: true, value: { application: 'cancelled' } } : applied
       },
-      listBundles: async () => ({ ok: true, value: [] }),
+      cancelInstall: async (requestId) => {
+        canceled = true
+        return { ok: true, value: { status: 'cancelled', requestId } }
+      },
+      listBundles: async () => ({ ok: true, value: performed.map((name) => ({ name, enabled: true, removable: true })) }),
       setBundleEnabled: async () => applied,
       removeBundle: async () => applied,
     },
@@ -223,13 +238,156 @@ assert.deepEqual(withText({ text: 'foo', sort: { kind: 'published', direction: '
   const list = ['a', 'b', 'c'].map((name) => ({
     action: 'install', entry: { name }, version: { install: { spec: name } },
   }))
-  await runBatch(list, remote, (key) => key)
-  assert.deepEqual(performed, ['a'], 'the order already on the Host finished; the rest never start')
+  enqueue(list, remote, (key) => key)
+  await waitIdle()
+  assert.deepEqual(performed.map(([spec]) => spec), ['a'], 'the current item was the only one issued')
+  assert.ok(performed[0][1].requestId !== undefined, 'the current install carries a cancellable request id')
   const state = runner.get()
-  assert.equal(state.running, null, 'the batch does not hang after a cancel')
-  assert.equal(state.outcome.ok, 1)
+  assert.equal(state.running, null, 'the queue does not hang after a cancel')
+  assert.equal(state.outcome.ok, 0)
   assert.equal(state.outcome.canceled, true)
   assert.equal(state.outcome.skipped, 2, 'the unrun tail is reported, not hidden')
 }
+
+// --- queue: an install added while one is running is not dropped -----------
+{
+  const performed = []
+  const { enqueue, runner } = __internal
+  const applied = { ok: true, value: { application: 'applied' } }
+  let release
+  const first = new Promise((resolve) => { release = resolve })
+  const remote = {
+    pluginManager: {
+      installBundle: async (spec) => {
+        performed.push(spec)
+        if (spec === 'a') await first
+        return applied
+      },
+      listBundles: async () => ({ ok: true, value: performed.map((name) => ({ name, enabled: true, removable: true })) }),
+      setBundleEnabled: async () => applied,
+      removeBundle: async () => applied,
+    },
+  }
+  const order = (name) => ({ action: 'install', entry: { name }, version: { install: { spec: name } } })
+  enqueue([order('a'), order('b')], remote, (key) => key)
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  enqueue([order('c')], remote, (key) => key)
+  assert.deepEqual(performed, ['a'], 'the running item is not duplicated')
+  assert.equal(runner.get().queue.length, 2, 'b and the newly added c wait in the queue')
+  release()
+  await waitIdle()
+  assert.deepEqual(performed, ['a', 'b', 'c'], 'the queue drains in order')
+  assert.equal(runner.get().outcome.ok, 3)
+}
+
+// --- dsh.so adapter: npm specs, versions and compact counts -------------------
+assert.equal(npmSpecName('@scope/name@1.2.3'), '@scope/name', 'a scoped package keeps its scope')
+assert.equal(npmSpecName('@scope/name'), '@scope/name', 'a bare scoped package is itself')
+assert.equal(npmSpecName('plain@2.0.0'), 'plain')
+assert.equal(npmSpecName('github:o/r#v1.0.0'), '', 'a GitHub spec is not an npm name')
+assert.equal(specVersion('@scope/name@1.2.3'), '1.2.3')
+assert.equal(specVersion('plain'), '', 'a bare spec pins no version')
+assert.equal(specVersion('github:o/r#v1.2.3'), '1.2.3')
+assert.equal(specVersion('github:o/r#v1.2.3&path:/p'), '1.2.3')
+assert.equal(compactCount(999), '999')
+assert.equal(compactCount(1_234), '1.2k')
+assert.equal(compactCount(12_345), '12k')
+assert.equal(compactCount(1_234_567), '1.2M')
+
+// --- dsh.so adapter: normalize, filter, dedupe, search and page --------------
+{
+  const row = (slug, name, owner, repo, description, stars, install, flags = 0, extras = {}) => {
+    const value = Array(29).fill(0)
+    value[0] = slug; value[1] = name; value[2] = owner; value[3] = repo; value[4] = description
+    value[5] = stars; value[6] = '2026-11-20T00:00:00Z'; value[7] = 4; value[8] = install; value[9] = flags
+    value[12] = extras.categories ?? [0]; value[13] = extras.useCases ?? [0]
+    value[14] = extras.verification ?? 0; value[16] = 0; value[17] = extras.security ?? 0; value[18] = 0
+    value[19] = extras.health ?? 0; value[20] = 0; value[21] = extras.trust ?? 0; value[22] = 0
+    value[24] = extras.license ?? 0; value[28] = extras.avatar ?? 0
+    return value
+  }
+  const data = {
+    v: 4,
+    npm: { alpha: [120, 4500], dup: [10, 200] },
+    d: {
+      cat: ['dev', 'ui'], catL: ['Developer', 'UI'],
+      uc: ['git'], ucL: ['GitHub integration'],
+      ver: ['L4 · 生态插件'], verKey: ['L4'], verTone: ['cyan'],
+      sec: ['低风险'], secTone: ['green'], health: ['活跃'], healthTone: ['green'],
+      trust: ['金'], trustTone: ['amber'], lic: ['\u0000', 'MIT'], dv: ['0.2.1'], av: ['', 'https://a.invalid/avatar.png'],
+    },
+    i: [
+      row('alpha', '@scope/alpha', 'owner', 'alpha', 'Alpha plugin', 42, '@scope/alpha@1.2.3', 0, { categories: [0], security: 0, verification: 0, avatar: 1 }),
+      row('dup-old', 'dup', 'owner', 'dup', 'Dup old', 1, 'dup@1.0.0'),
+      row('dup-new', 'dup', 'owner2', 'dup2', 'Dup new', 99, 'dup@2.0.0'),
+      row('non', 'non', 'o', 'r', 'Non plugin', 100, 'non@1.0.0', 8),
+      row('noinstall', 'noinstall', 'o', 'r', 'No install target', 50, ''),
+      row('tui', 'tui', 'o', 'r', 'dsh-TUI only', 60, '~dsh-tui add github:o/r#v1.0.0'),
+      row('beta', 'beta', 'owner', 'beta', 'Beta plugin', 7, 'beta', 0, { categories: [1] }),
+    ],
+  }
+  const normalized = normalizeDshSo(data, 123)
+  assert.equal(normalized.entries.length, 3, 'non-plugins, no-install and dsh-TUI rows are skipped')
+  const alpha = normalized.entries.find((entry) => entry.name === '@scope/alpha')
+  assert.ok(alpha !== undefined, 'the npm name is the entry name')
+  assert.equal(alpha.title, '@scope/alpha')
+  assert.equal(alpha.versions[0].version, '1.2.3')
+  assert.equal(alpha.versions[0].install.spec, '@scope/alpha@1.2.3')
+  assert.equal(alpha.metadata.category, 'dev')
+  assert.deepEqual(alpha.metadata.sortKeys, { stars: 42, downloads: 4500 })
+  assert.equal(alpha.marketStats.downloads, 4500)
+  assert.equal(alpha.marketStats.stars, 42)
+  assert.equal(alpha.marketExtra.security, '低风险')
+  assert.equal(alpha.marketExtra.verificationShort, 'L4')
+  assert.equal(alpha.icon, 'https://a.invalid/avatar.png')
+  const dup = normalized.entries.find((entry) => entry.name === 'dup')
+  assert.equal(dup.versions[0].version, '2.0.0', 'a duplicate keeps the more popular artifact')
+  assert.equal(dup.marketStats.stars, 99)
+  assert.equal(normalized.metadata.categories.dev.title.en, 'Developer')
+  assert.equal(normalized.metadata.sortKeys.stars.order, 'desc')
+
+  const byText = dshSoPage(normalized, { text: 'alpha', sort: { kind: 'relevance' }, offset: 0, limit: 10 }, 0, 10)
+  assert.deepEqual(byText.entries.map((entry) => entry.name), ['@scope/alpha'], 'text search matches the package name')
+  const byCategory = dshSoPage(normalized, { category: 'ui', sort: { kind: 'index' }, offset: 0, limit: 10 }, 0, 10)
+  assert.deepEqual(byCategory.entries.map((entry) => entry.name), ['beta'], 'category filter uses the first category')
+  const byStars = dshSoPage(normalized, { sort: { kind: 'key', id: 'stars', direction: 'desc' }, offset: 0, limit: 10 }, 0, 10)
+  assert.deepEqual(byStars.entries.map((entry) => entry.name), ['dup', '@scope/alpha', 'beta'], 'numeric sort key works')
+  const paged = dshSoPage(normalized, { sort: { kind: 'index' }, offset: 1, limit: 1 }, 1, 1)
+  assert.equal(paged.entries.length, 1)
+  assert.equal(paged.total, 3)
+  assert.equal(paged.nextOffset, 2)
+  assert.equal(paged.fetchedAt, 123)
+
+  const overlay = normalizeStats({
+    updated: '2026-11-21',
+    plugins: [
+      { name: 'alpha', npm: '@scope/alpha', repo: 'owner/alpha', stars: 88, downloads: 9000, checked: '2026-11-21T00:00:00Z' },
+      { name: 'unused', stars: 0, downloads: 0 },
+    ],
+  })
+  const overlayed = statsOfEntry({ name: '@scope/alpha', title: '@scope/alpha', repository: { url: 'https://github.com/owner/alpha' } }, overlay)
+  assert.deepEqual(overlayed, { stars: 88, downloads: 9000, window: '30d', checkedAt: '2026-11-21T00:00:00Z' }, 'overlay matches by npm name')
+  assert.equal(statsOfEntry({ name: 'beta', metadata: { sortKeys: { stars: 7 } } }, overlay).stars, 7, 'index sort keys win over the overlay')
+}
+
+// --- dsh.so page discovers the current immutable index URL -------------------
+assert.equal(
+  dshSoIndexUrlFrom('<script>const u="/assets/idx/abc123/artifacts-index-zh.json?v=1"</script>'),
+  'https://www.dsh.so/assets/idx/abc123/artifacts-index-zh.json',
+)
+assert.equal(dshSoIndexUrlFrom('<html></html>'), null)
+
+// --- source labels: known URLs get product names, not raw URLs ---------------
+assert.equal(marketSourceLabel({ url: 'https://cdn.jsdelivr.net/npm/dsh-plugin-catalog/index.json' }, (value) => value.en, 'en'), 'dshmarket.com')
+assert.equal(marketSourceLabel({ url: 'dsh-so://market', title: { en: 'dsh.so market' } }, (value) => value.en, 'en'), 'dsh.so market')
+
+// --- installed bundle labels ------------------------------------------------
+assert.equal(shortBundleName('@scope/dsh-foo'), 'foo', 'a scoped dsh prefix is reduced to the short name')
+assert.equal(shortBundleName('manual-plugin'), 'manual-plugin', 'a plain name stays itself')
+assert.equal(localizedValue({ en: 'English', zh: '中文' }, 'zh'), '中文')
+assert.equal(localizedValue({ 'zh-CN': '简中', en: 'English' }, 'zh'), '简中')
+assert.equal(bundleTitle({ name: '@scope/dsh-foo', meta: { title: { en: 'Foo', zh: '福' } } }, 'zh'), '福')
+assert.equal(bundleTitle({ name: '@scope/dsh-foo' }, 'en'), 'foo')
+assert.equal(bundleDescription({ name: 'x', description: 'A manual bundle' }, 'en'), 'A manual bundle')
 
 console.log('vyra-plugin-market: all checks passed')
