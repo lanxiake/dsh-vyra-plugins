@@ -55,6 +55,20 @@ window.__ModuleLoader__.load({
         'models.more': '展开全部 {n} 个',
         'models.less': '收起',
         'models.offline': '所有模型都连不上。稍后再试，或登录账号换取更多额度。',
+
+        'accounts.title': '账号（可选）',
+        'accounts.hint': '不登录也能用上面的免费模型。登录一个国内账号，就能多一份额度。',
+        'accounts.login': '登录',
+        'accounts.pending': '登录中…',
+        'accounts.expired': '已过期',
+        'accounts.claim': '重新领取',
+        'accounts.claiming': '领取中…',
+        'accounts.credits': '{n} 积分',
+        'accounts.more': '更多',
+        'accounts.less': '收起',
+        'accounts.claimFailed': '上次自动领取没成功。',
+        'accounts.retry': '重试',
+        'accounts.ownedElsewhere': '账号功能已由 Our Free Model 接管。请到那里管理账号，这里继续用免费模型。',
       },
       en: {
         nav: 'Free models',
@@ -76,6 +90,20 @@ window.__ModuleLoader__.load({
         'models.more': 'Show all {n}',
         'models.less': 'Show less',
         'models.offline': 'No model is reachable right now. Try later, or sign in for more quota.',
+
+        'accounts.title': 'Accounts (optional)',
+        'accounts.hint': 'The free models above work without signing in. Sign into one account for extra quota.',
+        'accounts.login': 'Sign in',
+        'accounts.pending': 'Waiting…',
+        'accounts.expired': 'Expired',
+        'accounts.claim': 'Claim again',
+        'accounts.claiming': 'Claiming…',
+        'accounts.credits': '{n} credits',
+        'accounts.more': 'More',
+        'accounts.less': 'Show less',
+        'accounts.claimFailed': 'The last automatic claim did not succeed.',
+        'accounts.retry': 'Retry',
+        'accounts.ownedElsewhere': 'Our Free Model already manages accounts here. Manage them there; the free models keep working.',
       },
     }
 
@@ -163,12 +191,20 @@ window.__ModuleLoader__.load({
 .vfm_btn:disabled{opacity:.55;cursor:default}
 .vfm_center{display:flex;align-items:center;justify-content:center;padding:28px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .vfm_more{align-self:flex-start;margin-top:6px}
+.vfm_acct{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1)}
+.vfm_acct+.vfm_acct{margin-top:6px}
+.vfm_acctmain{display:flex;align-items:center;gap:8px;min-width:0}
+.vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfm_warn{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-state-warning-primary);font-size:12px;color:var(--dsw-alias-label-secondary)}
 `
 
     // ── the model block ──────────────────────────────────────────────────────
 
     /** How many rows a collapsed roster shows. */
     const COLLAPSED_ROWS = 8
+
+    /** How long a sign-in may stay open before the card gives up. */
+    const LOGIN_TIMEOUT_MS = 5 * 60_000
 
     /**
      * Which model to use.
@@ -229,6 +265,120 @@ window.__ModuleLoader__.load({
         laneOk === false && roster.length > 0 ? h('p', { className: 'vfm_note' }, t('models.offline')) : null)
     }
 
+    // ── the account block ────────────────────────────────────────────────────
+
+    /**
+     * The accounts a user can sign into.
+     *
+     * These are the domestic products whose free quota this plugin can actually
+     * reach. Three channels the pack also carries are deliberately absent:
+     * Qoder international, Cline and Gemini all need a network position that
+     * simply does not work from a normal connection here, and offering a login
+     * that cannot finish is worse than not offering it.
+     *
+     * `more: true` marks the one product that is uncommon enough to fold away,
+     * so the default view is six recognizable names.
+     */
+    const PROVIDERS = Object.freeze([
+      Object.freeze({ id: 'qodercn', label: 'Qoder 中国版' }),
+      Object.freeze({ id: 'trae', label: 'TRAE' }),
+      Object.freeze({ id: 'zcode', label: 'ZCode' }),
+      Object.freeze({ id: 'minimax', label: 'MiniMax' }),
+      Object.freeze({ id: 'lobsterai', label: '有道 LobsterAI' }),
+      Object.freeze({ id: 'loomy', label: '讯飞 Loomy' }),
+      Object.freeze({ id: 'raccoon', label: '商汤 Raccoon', more: true }),
+    ])
+
+    /** The states a card can be in, in words a user reads. */
+    function stateLabel(state) {
+      if (state === 'ready') return ''
+      if (state === 'pending') return t('accounts.pending')
+      if (state === 'expired') return t('accounts.expired')
+      return ''
+    }
+
+    /**
+     * One provider card.
+     *
+     * A card answers exactly two questions: am I signed in, and how do I change
+     * that. Everything else — the account id, the redirect, the token — stays
+     * out of the markup.
+     */
+    function providerRow(provider, entry, handlers) {
+      const status = entry ?? {}
+      const state = typeof status.state === 'string' ? status.state : ''
+      const ready = state === 'ready'
+      const pending = state === 'pending'
+      const nickname = typeof status.nickname === 'string' ? status.nickname : ''
+      const credits = Number.isFinite(status.credits) ? status.credits : undefined
+
+      return h('div', { className: 'vfm_acct', 'data-state': state },
+        h('div', { className: 'vfm_acctmain' },
+          h('span', { className: 'vfm_acctname' }, provider.label),
+          ready
+            ? h('span', { className: 'vfm_meta' },
+              nickname === '' ? null : h('span', {}, nickname),
+              credits === undefined ? null : h('span', { className: 'vfm_tag' }, t('accounts.credits', { n: credits })))
+            : h('span', { className: 'vfm_meta' }, stateLabel(state))),
+        h('div', { className: 'vfm_meta' },
+          ready
+            ? h('button', {
+              type: 'button',
+              className: 'vfm_btn',
+              disabled: status.claiming === true,
+              onClick: () => handlers.onClaim?.(provider.id),
+            }, status.claiming === true ? t('accounts.claiming') : t('accounts.claim'))
+            : h('button', {
+              type: 'button',
+              className: 'vfm_btn',
+              disabled: pending,
+              onClick: () => handlers.onLogin?.(provider.id),
+            }, pending ? t('accounts.pending') : t('accounts.login'))))
+    }
+
+    /**
+     * The accounts block.
+     *
+     * Signing in is the one step a user may not want to take, so it is presented
+     * as optional: the sentence above the cards says the free models work
+     * without it, and each card is a single button. Nothing here is required to
+     * start chatting.
+     */
+    function AccountsBlock({ providers, status, ownedElsewhere, claimFailedAt, onLogin, onClaim }) {
+      const [showMore, setShowMore] = useState(false)
+      const roster = Array.isArray(providers) && providers.length > 0 ? providers : PROVIDERS
+      const entries = status !== null && typeof status === 'object' ? status : {}
+      const handlers = { onLogin, onClaim }
+      const primary = roster.filter(entry => entry.more !== true)
+      const extra = roster.filter(entry => entry.more === true)
+
+      if (ownedElsewhere === true) {
+        return h('section', { className: 'vfm_card' },
+          h('div', { className: 'vfm_cardhead' }, h('h3', { className: 'vfm_cardtitle' }, t('accounts.title'))),
+          h('p', { className: 'vfm_note' }, t('accounts.ownedElsewhere')))
+      }
+
+      return h('section', { className: 'vfm_card' },
+        h('div', { className: 'vfm_cardhead' }, h('h3', { className: 'vfm_cardtitle' }, t('accounts.title'))),
+        h('p', { className: 'vfm_note' }, t('accounts.hint')),
+
+        claimFailedAt !== undefined && claimFailedAt !== null
+          ? h('div', { className: 'vfm_warn' },
+            h('span', {}, t('accounts.claimFailed')),
+            h('button', { type: 'button', className: 'vfm_btn', onClick: () => onClaim?.('') }, t('accounts.retry')))
+          : null,
+
+        ...primary.map(entry => providerRow(entry, entries[entry.id], handlers)),
+
+        extra.length > 0
+          ? (showMore
+            ? h(Fragment, {},
+              ...extra.map(entry => providerRow(entry, entries[entry.id], handlers)),
+              h('button', { type: 'button', className: 'vfm_btn vfm_more', onClick: () => setShowMore(false) }, t('accounts.less')))
+            : h('button', { type: 'button', className: 'vfm_btn vfm_more', onClick: () => setShowMore(true) }, t('accounts.more')))
+          : null)
+    }
+
     // ── the page ─────────────────────────────────────────────────────────────
 
     /**
@@ -242,6 +392,7 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState('')
       const [selected, setSelected] = useState('')
       const [busy, setBusy] = useState(false)
+      const [accountStatus, setAccountStatus] = useState({})
 
       const load = useCallback(async () => {
         try {
@@ -273,6 +424,100 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
+      /**
+       * Ask again until this account settles, then stop.
+       *
+       * Defined before the login handler that calls it: a `const` arrow used by
+       * another hook in the same body must already be initialised.
+       */
+      const pollAccounts = useCallback(async providerId => {
+        const deadline = Date.now() + LOGIN_TIMEOUT_MS
+        while (Date.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          try {
+            const payload = await api('/channel', {
+              method: 'POST',
+              body: { method: 'provider.status', payload: {} },
+              timeoutMs: 15000,
+            })
+            const rows = payload?.value?.providers ?? []
+            const mine = rows.find(row => row?.id === providerId)
+            const state = typeof mine?.state === 'string' ? mine.state : ''
+            if (state === 'ready' || state === 'expired') {
+              setAccountStatus(current => ({ ...current, [providerId]: { ...mine } }))
+              return
+            }
+          } catch { /* keep trying until the deadline */ }
+        }
+        setAccountStatus(current => ({ ...current, [providerId]: { state: '' } }))
+      }, [])
+
+      /**
+       * Sign one account in.
+       *
+       * The pack opens the authorization page; this side marks the card
+       * "waiting" and asks who has landed. Polling stops on its own: once
+       * nothing is pending, or after five minutes, whichever comes first — a
+       * user who closed the tab must not leave a spinner running forever.
+       */
+      const login = useCallback(async providerId => {
+        setAccountStatus(current => ({ ...current, [providerId]: { state: 'pending' } }))
+        try {
+          const payload = await api('/channel', {
+            method: 'POST',
+            body: { method: 'account.create', payload: { provider: providerId } },
+            timeoutMs: 30000,
+          })
+          const url = payload?.value?.loginUrl ?? payload?.value?.url
+          if (typeof url === 'string' && url !== '') {
+            window.open(url, '_blank', 'noopener,noreferrer')
+          }
+          await pollAccounts(providerId)
+        } catch (cause) {
+          setAccountStatus(current => ({ ...current, [providerId]: { state: '', message: String(cause?.message ?? cause) } }))
+        }
+      }, [pollAccounts])
+
+      /** Claim credits, for one provider when named, otherwise for all. */
+      const claim = useCallback(async providerId => {
+        const target = providerId === '' ? undefined : providerId
+        setAccountStatus(current => {
+          const next = { ...current }
+          for (const key of target === undefined ? Object.keys(next) : [target]) {
+            next[key] = { ...(next[key] ?? {}), claiming: true }
+          }
+          return next
+        })
+        try {
+          await api('/channel', {
+            method: 'POST',
+            body: { method: 'credits.claimAll', payload: target === undefined ? {} : { provider: target } },
+            timeoutMs: 60000,
+          })
+          const payload = await api('/channel', {
+            method: 'POST',
+            body: { method: 'provider.status', payload: {} },
+            timeoutMs: 15000,
+          })
+          const rows = payload?.value?.providers ?? []
+          setAccountStatus(current => {
+            const next = { ...current }
+            for (const row of rows) {
+              if (typeof row?.id === 'string') next[row.id] = { ...row, claiming: false }
+            }
+            return next
+          })
+        } catch {
+          setAccountStatus(current => {
+            const next = { ...current }
+            for (const key of target === undefined ? Object.keys(next) : [target]) {
+              next[key] = { ...(next[key] ?? {}), claiming: false }
+            }
+            return next
+          })
+        }
+      }, [])
+
       if (error !== '' && summary === undefined) {
         return h('div', { className: 'vfm_page' },
           h('div', { className: 'vfm_center' },
@@ -296,6 +541,14 @@ window.__ModuleLoader__.load({
           laneOk: summary?.lane?.ok === true,
           onRecheck: () => void recheck(),
           busy,
+        }),
+        h(AccountsBlock, {
+          providers: summary?.accounts?.providers ?? [],
+          status: accountStatus,
+          ownedElsewhere: summary?.accounts?.state === 'owned-elsewhere',
+          claimFailedAt: summary?.accounts?.claimFailedAt,
+          onLogin: id => void login(id),
+          onClaim: id => void claim(id),
         }))
     }
 
@@ -330,7 +583,7 @@ window.__ModuleLoader__.load({
     exports.inject = inject
     exports.name = 'vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
-    exports.__test = { h, t, formatContext, ModelBlock, SettingsPage, DICT, CSS, API }
+    exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, PROVIDERS, SettingsPage, DICT, CSS, API }
     return module.exports
   },
 })

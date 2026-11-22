@@ -124,6 +124,9 @@ export function apply(ctx, _config) {
   /** The account providers the pack publishes, once it is mounted. */
   const providers = []
 
+  /** When the last automatic claim failed, for the card to mention. */
+  let claimFailedAt
+
   /** Provider rows the account block renders. Task 11 reads these. */
   function accountProviders() {
     return providers
@@ -313,7 +316,7 @@ export function apply(ctx, _config) {
     settings,
     catalog: () => catalog,
     laneOk: () => laneOk,
-    accounts: () => ({ state: accountsState, providers: accountProviders() }),
+    accounts: () => ({ state: accountsState, providers: accountProviders(), claimFailedAt }),
     usage: () => todayTotals(usageStore.get()),
     forward: () => forwardState,
     refreshCatalog: () => refreshCatalog({ log: true }),
@@ -354,8 +357,7 @@ export function apply(ctx, _config) {
           }
           pack.apply(scoped, { disableOpencode: true })
           accountsState = 'ready'
-          providers.length = 0
-          providers.push(...readProviders())
+          await readProviders()
           logger.info?.(`vyra-free-model: account pack mounted with ${providers.length} providers`)
         } catch (error) {
           accountsState = 'failed'
@@ -365,6 +367,18 @@ export function apply(ctx, _config) {
       return () => { cancelled = true }
     }, 'vyra-free-model: account pack')
   })
+
+  // Claim once shortly after boot, then daily. Both timers are unref'd: a
+  // background courtesy must never be the reason the process stays alive.
+  const firstClaim = setTimeout(() => { void autoClaim() }, 60_000)
+  firstClaim.unref?.()
+  const dailyClaim = setInterval(() => { void autoClaim() }, 24 * 60 * 60_000)
+  dailyClaim.unref?.()
+
+  ctx.effect(() => () => {
+    clearTimeout(firstClaim)
+    clearInterval(dailyClaim)
+  }, 'vyra-free-model: credit claims')
 
   /**
    * The provider rows, read from the pack once it is up.
@@ -376,9 +390,32 @@ export function apply(ctx, _config) {
     try {
       const status = await callChannel('provider.status', {})
       const rows = Array.isArray(status?.providers) ? status.providers : []
-      return rows.filter(row => row !== null && typeof row === 'object' && typeof row.id === 'string')
+      providers.length = 0
+      providers.push(...rows.filter(row => row !== null && typeof row === 'object' && typeof row.id === 'string'))
+      if (Number.isFinite(status?.claimFailedAt)) claimFailedAt = status.claimFailedAt
+      return providers
     } catch {
       return []
+    }
+  }
+
+  /**
+   * Claim daily credits without being asked.
+   *
+   * Once shortly after boot, then once a day. A success says nothing — the
+   * credits simply appear. A failure records when, so the card can say the
+   * automatic claim did not work and offer one retry, instead of the user
+   * discovering empty quota at the moment they need it.
+   */
+  async function autoClaim() {
+    if (accountsState !== 'ready') return
+    try {
+      await callChannel('credits.claimAll', {})
+      claimFailedAt = undefined
+      await readProviders()
+    } catch (error) {
+      claimFailedAt = Date.now()
+      logger.warn?.(`vyra-free-model: automatic credit claim failed (${error?.message ?? error})`)
     }
   }
 }
@@ -472,6 +509,7 @@ export function createSummary({ version, catalog, laneOk, accounts, usage, forwa
     accounts: {
       state: accounts?.state ?? 'pending',
       providers: accounts?.providers ?? [],
+      ...(Number.isFinite(accounts?.claimFailedAt) ? { claimFailedAt: accounts.claimFailedAt } : {}),
     },
     usage: {
       input: usage?.input ?? 0,
