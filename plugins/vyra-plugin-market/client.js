@@ -79,6 +79,12 @@ window.__ModuleLoader__.load({
      * but not in format 1. It is browsed by the adapter below rather than being
      * written into the profile's index sources, which only accept format 1.
      */
+    /** A virtual source that searches every configured source in parallel. */
+    const ALL_SOURCES_SOURCE = {
+      url: 'all://market',
+      title: { zh: '全部市场源', en: 'All sources' },
+      builtin: true,
+    }
     const DSH_SO_SOURCE = {
       url: 'dsh-so://market',
       title: { zh: 'dsh.so 插件市场', en: 'dsh.so market' },
@@ -1456,6 +1462,9 @@ window.__ModuleLoader__.load({
       regionProbing: '检测中…',
       redetect: '重新检测',
       regionHint: '自动模式按延迟选择；切换后 Veyra 索引会换成对应区域，国内从 GitCode 安装，海外从 GitHub 安装。',
+      crossSource: '跨源搜索',
+      aggregateNote: '跨源结果：每源前 {n} 条',
+      sourceFailures: '{n} 个源读取失败',
       switchToDomestic: '切换到国内线路',
       switchToOverseas: '切换到海外线路',
       viewMarket: '市场',
@@ -1613,6 +1622,9 @@ window.__ModuleLoader__.load({
       regionProbing: 'Probing…',
       redetect: 'Probe again',
       regionHint: 'Auto picks by latency. Switching swaps the Veyra index edition: domestic installs from GitCode, overseas from GitHub.',
+      crossSource: 'Search all',
+      aggregateNote: 'All sources: first {n} per source',
+      sourceFailures: '{n} source(s) failed',
       switchToDomestic: 'Switch to domestic',
       switchToOverseas: 'Switch to overseas',
       viewMarket: 'Market',
@@ -2060,6 +2072,7 @@ window.__ModuleLoader__.load({
 
     /** The name a configured or built-in source carries in the picker. */
     function marketSourceLabel(source, text, lang) {
+      if (source.url === ALL_SOURCES_SOURCE.url) return text(source.title)
       if (VEYRA_SOURCES.includes(source.url)) {
         const line = VEYRA_DOMESTIC.includes(source.url)
           ? (lang === 'zh' ? '国内' : 'CN')
@@ -2254,6 +2267,13 @@ window.__ModuleLoader__.load({
         }
       }
       const tags = []
+      if (entry.marketSourceLabel !== undefined) {
+        const labels = entry.marketSourceLabels ?? [entry.marketSourceLabel]
+        const shown = labels.length > 2
+          ? `${labels.slice(0, 2).join(' / ')} +${labels.length - 2}`
+          : labels.join(' / ')
+        tags.push(h('span', { key: 'src', className: 'vpm-tag', title: labels.join('\n') }, shown))
+      }
       if (failure !== undefined) {
         // Hover reads the whole reason; a press copies it; the × drops the tag
         // once it has been dealt with, so a card is not marked forever.
@@ -2861,7 +2881,7 @@ window.__ModuleLoader__.load({
         // Prefer the region's Veyra source; when the Host has no sources at
         // all, the built-in dsh.so browser is still a usable landing page.
         setActiveUrl((current) => {
-          if (current === DSH_SO_SOURCE.url) return current
+          if (current === ALL_SOURCES_SOURCE.url || current === DSH_SO_SOURCE.url) return current
           if (list.some((item) => item.url === current)) return current
           const veyra = list.find((item) => VEYRA_SOURCES.includes(item.url))
           return veyra?.url ?? list[0]?.url ?? DSH_SO_SOURCE.url
@@ -2917,6 +2937,104 @@ window.__ModuleLoader__.load({
         }
       }, [installedBusy, loadBundles, remote, t])
 
+      /**
+       * Search every configured source at once. Each source answers its own
+       * first page; duplicates collapse to the copy with the best state
+       * (installed > available, then newest version), carrying every source
+       * label that offered it. This is the "all sources" view, not a full
+       * paginated merge.
+       */
+      const loadAggregate = useCallback(async (query, signal) => {
+        const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
+        const perSource = words.length === 0 ? 20 : 60
+        const hostSources = sources ?? []
+        const tasks = hostSources.map(async (source) => {
+          const label = marketSourceLabel(source, text, lang)
+          try {
+            const answer = await remote.pluginMarket.search(source.url, {
+              ...query.text.trim() === '' ? {} : { text: query.text },
+              sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
+              offset: 0, limit: perSource,
+            })
+            return answer.ok
+              ? { source, label, page: answer.value }
+              : { source, label, error: answer.error.message }
+          } catch (error) {
+            return { source, label, error: String(error?.message ?? error) }
+          }
+        })
+        tasks.push((async () => ({
+          source: DSH_SO_SOURCE,
+          label: marketSourceLabel(DSH_SO_SOURCE, text, lang),
+          page: dshSoPage(await loadDshSoData(false, signal), {
+            text: query.text,
+            sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
+            offset: 0, limit: perSource,
+          }, 0, perSource),
+        }))().catch((error) => ({ source: DSH_SO_SOURCE, label: 'dsh.so', error: String(error?.message ?? error) })))
+        const results = await Promise.all(tasks)
+        if (signal?.aborted) throw new Error('aborted')
+        const failures = results.filter((result) => result.error !== undefined)
+        if (failures.length === results.length) {
+          throw new Error(failures[0]?.error ?? 'all sources failed')
+        }
+        const merged = new Map()
+        const stateWeight = (entry) => {
+          const state = entryState(entry)
+          return state === 'updatable' ? 4 : state === 'installed' ? 3 : state === 'provided' ? 2 : 1
+        }
+        const versionWeight = (entry) => String(presentedVersion(entry)?.version ?? '')
+          .split(/[.+-]/).map((part) => Number.parseInt(part, 10) || 0)
+        const betterVersion = (left, right) => {
+          const a = versionWeight(left)
+          const b = versionWeight(right)
+          for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+            const diff = (a[i] ?? 0) - (b[i] ?? 0)
+            if (diff !== 0) return diff > 0
+          }
+          return (presentedVersion(left)?.publishTimestamp ?? 0) > (presentedVersion(right)?.publishTimestamp ?? 0)
+        }
+        for (const result of results) {
+          if (result.error !== undefined) continue
+          for (const entry of result.page.entries) {
+            const key = String(entry.name).toLowerCase()
+            const current = merged.get(key)
+            if (current === undefined) {
+              merged.set(key, { ...entry, marketSourceLabel: result.label, marketSourceLabels: [result.label] })
+              continue
+            }
+            const labels = [...new Set([...(current.marketSourceLabels ?? []), result.label])]
+            if (stateWeight(entry) > stateWeight(current)
+              || (stateWeight(entry) === stateWeight(current) && betterVersion(entry, current))) {
+              merged.set(key, { ...entry, marketSourceLabel: result.label, marketSourceLabels: labels })
+            } else {
+              current.marketSourceLabels = labels
+            }
+          }
+        }
+        const entries = [...merged.values()]
+        if (words.length > 0) {
+          entries.sort((left, right) => dshSoScore(right, words) - dshSoScore(left, words)
+            || stateWeight(right) - stateWeight(left)
+            || (betterVersion(left, right) ? -1 : betterVersion(right, left) ? 1 : 0)
+            || left.name.localeCompare(right.name))
+        } else if (query.sort?.kind === 'published') {
+          const sign = query.sort.direction === 'asc' ? 1 : -1
+          entries.sort((left, right) => sign * ((presentedVersion(left)?.publishTimestamp ?? 0) - (presentedVersion(right)?.publishTimestamp ?? 0)))
+        }
+        return {
+          url: ALL_SOURCES_SOURCE.url,
+          title: ALL_SOURCES_SOURCE.title,
+          metadata: { categories: {}, labels: {}, sortKeys: {} },
+          fetchedAt: Date.now(),
+          total: entries.length,
+          nextOffset: null,
+          sourceFailures: failures.map((result) => `${result.label}: ${result.error}`),
+          perSource,
+          entries,
+        }
+      }, [sources, remote, text, lang])
+
       /** Load one page of a source, replacing the results it answers. */
       const loadRef = useRef(null)
       const load = useCallback(async (url, next, offset, limit, fetchedAt, depth = 0, refresh = false) => {
@@ -2935,7 +3053,12 @@ window.__ModuleLoader__.load({
         })
 
         if (refresh) pageCache.clear()
-        const cacheKey = pageCacheKey(url, next, offset, limit)
+        // The aggregate depends on the configured source list, so its key
+        // carries that list; adding or removing a source changes the answer.
+        const cacheUrl = url === ALL_SOURCES_SOURCE.url
+          ? `${url}|${(sources ?? []).map((source) => source.url).join(',')}`
+          : url
+        const cacheKey = pageCacheKey(cacheUrl, next, offset, limit)
         const cached = refresh ? undefined : cachedPage(cacheKey, offset, fetchedAt)
         if (cached !== undefined) {
           // Answer the page we just showed instead of waiting for the Host to
@@ -2951,7 +3074,10 @@ window.__ModuleLoader__.load({
 
         try {
           let page
-          if (url === DSH_SO_SOURCE.url) {
+          if (url === ALL_SOURCES_SOURCE.url) {
+            page = await loadAggregate(next, signal)
+            if (signal.aborted || !alive.current) return
+          } else if (url === DSH_SO_SOURCE.url) {
             // A built-in aggregator: its index is fetched and filtered here,
             // not by the Host, because the Host only reads format 1.
             const data = await loadDshSoData(refresh, signal)
@@ -2992,7 +3118,7 @@ window.__ModuleLoader__.load({
           if (!alive.current) return
           setListing({ url, query: next, status: 'error', value: null, failure: error.message || '请求失败' })
         }
-      }, [remote, listing])
+      }, [remote, listing, loadAggregate, sources])
       loadRef.current = load
 
       useEffect(() => { void loadSources(true) }, [loadSources])
@@ -3129,6 +3255,10 @@ window.__ModuleLoader__.load({
       }, [liveEntries, quickFilter])
 
       const declarations = listing === null || listing.value === null ? undefined : listing.value.metadata
+      const aggregateNote = listing === null || listing.value === null || listing.value.perSource === undefined
+        ? null
+        : t('aggregateNote', { n: listing.value.perSource })
+      const aggregateFailures = listing === null || listing.value === null ? [] : (listing.value.sourceFailures ?? [])
       const categories = useMemo(() => {
         if (declarations === undefined) return []
         const collator = new Intl.Collator(lang)
@@ -3158,7 +3288,12 @@ window.__ModuleLoader__.load({
 
       /** Switch sources: category ids are source-local, so clear that filter. */
       const switchSource = useCallback((url) => {
-        setQuery((current) => ({ ...current, category: null }))
+        setQuery((current) => ({
+          ...current,
+          category: null,
+          // Numeric sort keys are source-local; the aggregate has no shared key.
+          ...(url === ALL_SOURCES_SOURCE.url && current.sort.kind === 'key' ? { sort: { kind: 'index' } } : {}),
+        }))
         setActiveUrl(url)
       }, [])
 
@@ -3221,13 +3356,15 @@ window.__ModuleLoader__.load({
       const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
       // The built-in dsh.so browser is always available; host-configured
       // indexes follow it. Veyra leads, then dsh.so, then dshmarket.com.
-      const sourceRank = (source) => VEYRA_SOURCES.includes(source.url)
-        ? 0
-        : source.url === DSH_SO_SOURCE.url ? 1
-          : source.url === DSHMARKET_CATALOG ? 2
-            : source.url === DSHOPEN_CATALOG ? 3
-              : source.url === DSH_GO_CATALOG ? 4 : 5
-      const orderedSources = [...(sources ?? []), DSH_SO_SOURCE].sort((left, right) => sourceRank(left) - sourceRank(right))
+      const sourceRank = (source) => source.url === ALL_SOURCES_SOURCE.url
+        ? -1
+        : VEYRA_SOURCES.includes(source.url) ? 0
+          : source.url === DSH_SO_SOURCE.url ? 1
+            : source.url === DSHMARKET_CATALOG ? 2
+              : source.url === DSHOPEN_CATALOG ? 3
+                : source.url === DSH_GO_CATALOG ? 4 : 5
+      const orderedSources = [ALL_SOURCES_SOURCE, ...(sources ?? []), DSH_SO_SOURCE]
+        .sort((left, right) => sourceRank(left) - sourceRank(right))
       const active = orderedSources.find((source) => source.url === activeUrl)
       const market = active === undefined
         ? (activeUrl ?? t('noSources'))
@@ -3377,6 +3514,15 @@ window.__ModuleLoader__.load({
                 onClick: () => { setView('installed'); setDraft(''); setInstalledNotice(null); void loadBundles() },
               }, `${t('viewInstalled')} (${installedBundles.length})`))),
           h('div', { className: 'vpm-hero-actions' },
+            h('button', {
+              className: `vpm-btn${activeUrl === ALL_SOURCES_SOURCE.url ? ' primary' : ''}`,
+              'aria-pressed': activeUrl === ALL_SOURCES_SOURCE.url,
+              onClick: () => {
+                switchSource(activeUrl === ALL_SOURCES_SOURCE.url
+                  ? preferredVeyraSource(region.snapshot().active)
+                  : ALL_SOURCES_SOURCE.url)
+              },
+            }, t('crossSource')),
             h('div', { className: 'vpm-search' },
               h('span', { className: 'vpm-search-icon' }, h(SearchIcon, {})),
               h('input', {
@@ -3488,7 +3634,7 @@ window.__ModuleLoader__.load({
               'aria-pressed': quickFilter === option.value,
               onClick: () => { setQuickFilter(option.value); setPicked(new Set()) },
             }, option.label))),
-          h('div', { style: { position: 'relative', display: 'flex' }, ref: categoryMenu },
+          activeUrl !== ALL_SOURCES_SOURCE.url && categories.length > 0 ? h('div', { style: { position: 'relative', display: 'flex' }, ref: categoryMenu },
             h('button', {
               className: 'vpm-btn', 'aria-haspopup': 'menu', 'aria-expanded': menu === 'category',
               onClick: () => { setMenu(menu === 'category' ? null : 'category') },
@@ -3503,7 +3649,7 @@ window.__ModuleLoader__.load({
                 key: category.id, role: 'menuitemradio', 'aria-checked': query.category === category.id,
                 className: `vpm-menu-item${query.category === category.id ? ' on' : ''}`,
                 onClick: () => { setMenu(null); search({ ...query, category: category.id }) },
-              }, category.title)))),
+              }, category.title)))) : null,
           h('div', { style: { position: 'relative', display: 'flex' }, ref: sortMenu },
             h('button', {
               className: 'vpm-btn', 'aria-haspopup': 'menu', 'aria-expanded': menu === 'sort',
@@ -3625,6 +3771,11 @@ window.__ModuleLoader__.load({
                       }),
                       t('selectPage')),
                     h('span', { className: 'vpm-meta' }, t('total', { n: filteredEntries.length }))),
+                  aggregateNote === null ? null : h('p', { className: 'vpm-meta', style: { margin: '0 0 6px' } }, aggregateNote),
+                  aggregateFailures.length === 0 ? null : h('p', {
+                    className: 'vpm-meta', title: aggregateFailures.join('\n'),
+                    style: { margin: '0 0 8px', color: 'var(--dsw-alias-state-warn-primary)' },
+                  }, t('sourceFailures', { n: aggregateFailures.length })),
                   h('ul', { className: 'vpm-grid' },
                     filteredEntries.map((entry) => h(Card, {
                       key: entry.name, entry, bundle: bundleOf(entry), lang, t, text, busy, stats: statsIndex,

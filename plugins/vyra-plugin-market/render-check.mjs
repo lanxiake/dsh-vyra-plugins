@@ -270,6 +270,26 @@ async function mount({ sources = [{ url: 'https://example.invalid/index.json' }]
   return { tree, remote, settle: () => render(3) }
 }
 
+// --- cross-source search queries every configured source ---------------------
+{
+  const ours = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
+  const other = 'https://cdn.example.invalid/market/index.json'
+  const { tree, remote, settle } = await mount({
+    sources: [{ url: ours }, { url: other }],
+    entries: [entry('alpha'), entry('beta')],
+  })
+  const cross = buttonByText(tree, 'crossSource')
+  assert.ok(cross !== undefined, 'the search box has a cross-source control')
+  cross.props.onClick()
+  const merged = await settle()
+  const searched = new Set(remote.calls.filter(([name]) => name === 'search').map(([, url]) => url))
+  assert.ok(searched.has(ours) && searched.has(other), 'both configured sources were queried')
+  const drawn = texts(merged).join(' | ')
+  assert.ok(drawn.includes('alpha') && drawn.includes('beta'), 'the merged page keeps the entries')
+  assert.ok(drawn.includes('Veyra picks'), 'cards name the market that offered them')
+  assert.ok(drawn.includes('aggregateNote'), 'the aggregate per-source limit is stated')
+}
+
 // --- the settings surface carries the two visibility switches ----------------
 {
   const { tree } = await mount({ slot: 'settings.section', surface: 'settings', bundles: [] })
@@ -373,7 +393,8 @@ await (async () => {
   const menu = findAll(opened, (node) => node.props?.role === 'menu')[0]
   assert.ok(menu !== undefined, 'the source menu opened')
   const rowTexts = (menu.children ?? []).flatMap((row) => texts(row))
-  assert.match(rowTexts[0] ?? '', /Veyra/, `our market leads the menu, got: ${JSON.stringify(rowTexts)}`)
+  assert.equal(rowTexts[0], 'All sources', 'the aggregate source leads the menu')
+  assert.match(rowTexts[1] ?? '', /Veyra/, `our market follows the aggregate, got: ${JSON.stringify(rowTexts)}`)
   assert.ok(rowTexts.some((line) => line.includes('dsh.so')), 'the built-in dsh.so browser is always available')
   assert.ok(rowTexts.some((line) => line.includes('cdn.example.invalid')), 'the other source is still listed')
 }
