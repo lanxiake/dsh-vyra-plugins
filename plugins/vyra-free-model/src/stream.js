@@ -33,6 +33,8 @@ class Blocks {
     this.emit = yieldChunk
     this.next = startIndex
     this.open = new Map()
+    /** The key a continuation delta with no index and no id belongs to. */
+    this.lastToolKey = undefined
   }
 
   slot(key, kind) {
@@ -143,9 +145,59 @@ function reasoningOf(delta) {
 /**
  * Feed one `tool_calls` delta array into its blocks.
  *
- * Filled in by Task 4; a no-op keeps Task 3 focused on text and reasoning.
+ * `tool_calls[].index` is the wire's accumulator key and is what real servers
+ * send; keying calls without one to a constant would merge every parallel call
+ * into a single block with the ids overwriting each other. The call id — present
+ * on exactly the shapes that omit the index — separates those, and a bare
+ * arguments continuation continues the call in front of it.
+ *
+ * The assembled `arguments` string is delivered verbatim even when it is not
+ * valid JSON: the harness repairs tool-call pairing on the next turn, and
+ * dropping or rewriting the fragment here would lose what the model actually
+ * asked for.
  */
-function toolCallDeltas(_blocks, _calls) {}
+function toolCallDeltas(blocks, calls) {
+  for (const call of calls) {
+    if (call === null || typeof call !== 'object') continue
+    const key = toolKey(blocks, call)
+    const block = blocks.slot(key, 'tool-call')
+
+    if (block.id === '' && typeof call.id === 'string' && call.id !== '') block.id = call.id
+    const name = call?.function?.name
+    if (block.name === '' && typeof name === 'string' && name !== '') block.name = name
+
+    const fragment = call?.function?.arguments
+    if (typeof fragment === 'string' && fragment !== '') {
+      block.args += fragment
+      blocks.emit({ type: 'tool-call-delta', index: block.index, id: block.id, name: block.name, argumentsDelta: fragment })
+    }
+  }
+}
+
+/**
+ * The accumulator key for one tool-call delta.
+ *
+ * Remembered per block map so a later call that omits both `index` and `id`
+ * continues the one in front of it rather than opening a phantom call.
+ */
+function toolKey(blocks, call) {
+  if (call.index !== undefined && call.index !== null) {
+    const key = `i${call.index}`
+    blocks.lastToolKey = key
+    return key
+  }
+  if (typeof call.id === 'string' && call.id !== '') {
+    for (const [key, block] of blocks.open) {
+      if (block.kind === 'tool-call' && block.id === call.id) {
+        blocks.lastToolKey = key
+        return key
+      }
+    }
+    blocks.lastToolKey = `id:${call.id}`
+    return blocks.lastToolKey
+  }
+  return blocks.lastToolKey ?? 'i0'
+}
 
 function usageOf(usage) {
   return {
