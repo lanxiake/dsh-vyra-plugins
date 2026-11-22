@@ -1,0 +1,101 @@
+# dsh-ffmpeg usage guide
+
+[Overview](../README.en.md) · [Changelog](../CHANGELOG.md) · [Validation](VALIDATION.md)
+
+## Frame output and source protection
+
+Default frame sequences go to a fresh `<input>-frames/run-*/` directory. An explicit pattern needs `overwrite=true` for existing outputs; even then it cannot overwrite any input/subtitle source or its file aliases.
+
+## Current improvements
+
+Relative paths resolve against the current session workspace. Explicit start / duration values must be valid; invalid values never silently fall back to full-video processing.
+
+## Installation
+
+```bash
+dsh plugin --profile web add dsh-ffmpeg
+```
+
+ffmpeg must be installed locally (`ffmpeg -version` should work); use `ffmpegPath` / `ffprobePath`, or the `DSH_FFMPEG_PATH` / `DSH_FFPROBE_PATH` environment variables, when it is not on PATH.
+
+## Uninstall
+
+```bash
+dsh plugin --profile web remove dsh-ffmpeg
+```
+
+Then restart the web service. To clean up fully, also remove the plugin entry from your profile `cordis.patch.yml` if you overrode it.
+
+## Configuration
+
+Override the plugin row in your profile's `cordis.patch.yml` (defaults apply when absent):
+
+```yaml
+- id: ffmpeg
+  name: 'dsh-ffmpeg'
+  config:
+    # ffmpegPath: C:\tools\ffmpeg\bin\ffmpeg.exe   # explicit path (or DSH_FFMPEG_PATH)
+    # ffprobePath: C:\tools\ffmpeg\bin\ffprobe.exe # or DSH_FFPROBE_PATH
+    timeoutMs: 300000                                # per-operation timeout (default 5 min, 10s - 2h)
+    # overwrite: true                                 # allow overwriting outputs (default auto-suffix _1/_2)
+```
+
+## Tools
+
+| Tool | Purpose | Key parameters |
+| :-- | :-- | :-- |
+| `ffmpeg_probe` | Probe media info (format/duration/resolution/fps/bitrate/audio/subtitle streams; multi-video files return a full videos list) | `input` required |
+| `ffmpeg_cut` | Cut a clip (stream copy by default, accurate re-encode optional) | `input` required; `start`/`end`/`duration` |
+| `ffmpeg_concat` | Join 2-20 clips; re-encoding normalizes size/fps/SAR with letterboxing and fills silent clips while keeping other audio | `inputs` required; with `reencode=true`, optionally set `width` + `height` and `fps` |
+| `ffmpeg_encode` | Transcode with presets (bilibili 1080p/4K, vertical 1080p, web-720p) plus crf/fps/scale overrides | `input` required; `preset` optional |
+| `ffmpeg_subtitle` | Burn subtitles (SRT/ASS hard subs) | `input` + `subtitle` required |
+| `ffmpeg_extract` | Extract audio (m4a; non-AAC is auto-transcoded to AAC) / frame sequences / single frame / subtitle stream | `input` + `what` required |
+| `ffmpeg_gif` | Video to high-quality GIF (two-pass palette) | `input` required; `fps`/`width`/`duration` optional |
+
+### Examples
+
+```text
+ffmpeg_probe { input: E:\videos\raw.mp4 }
+ffmpeg_cut { input: E:\videos\raw.mp4, start: 10, end: 30 }
+ffmpeg_encode { input: E:\videos\raw.mp4, preset: bilibili-1080p }
+ffmpeg_subtitle { input: E:\videos\raw.mp4, subtitle: E:\videos\subs.srt }
+ffmpeg_extract { input: E:\videos\raw.webm, what: audio }
+ffmpeg_gif { input: E:\videos\raw.mp4, duration: 3, width: 480 }
+```
+
+## Troubleshooting
+
+Run `ffmpeg_health` first: it probes ffmpeg and ffprobe separately, prints the executable actually used, and adds numbered next steps when a check fails.
+
+| Symptom | Cause and fix |
+| :-- | :-- |
+| `spawn ffmpeg ENOENT` / "could not start: executable not found" | FFmpeg is missing or not on PATH. Install FFmpeg (with ffprobe), or set `ffmpegPath` / `ffprobePath` in `cordis.patch.yml`, or `DSH_FFMPEG_PATH` / `DSH_FFPROBE_PATH` (absolute paths), then restart DSH and run `ffmpeg_health` again |
+| `failed (exit code N): …` | The tail of ffmpeg's own stderr. Read the last line first; unsupported codecs, subtitle paths and filter arguments are the usual causes |
+| The operation timed out | The default per-operation limit is 5 minutes. Raise `timeoutMs` (up to 2 hours) for large files or multi-input concat, or process in `start`/`end` slices |
+| "output over 4MB was truncated" | The probe output was truncated by the host and cannot be parsed. Narrow the probe (cut a slice first) or use a smaller input |
+| "frame output already exists … refusing to overwrite" | Frame sequences default to a fresh `<name>-frames/run-*` directory; with an explicit output, change the prefix or set `overwrite: true` |
+| "output path equals the input file" | Overwrite protection. Choose another output path; same-name outputs are auto-suffixed with `_1`/`_2` |
+| Reported times do not match exact frames | `ffmpeg_storyboard` reports sampling targets, and uniform sampling is not shot detection. For exact timecodes use `ffmpeg_probe` plus `ffmpeg_extract` |
+
+## Safety
+
+- **No shell**: every argument is passed as its own argv element — user input cannot inject commands
+- **Runs on the official DSH subprocess service**: the timeout AbortSignal now really drives tree-scoped termination (SIGTERM → kill; taskkill /T on Windows), zero runtime dependencies
+- **No accidental overwrites**: existing outputs get auto-suffixed; output == input is rejected
+- **Timeout clamps**: per-operation 10s - 2h; probes additionally capped at 60s
+- **Input validation**: time formats, preset enums, crf/fps/scale ranges are validated up front; directory inputs are rejected and extension-less frame-sequence outputs are auto-fixed
+
+## Development
+
+```bash
+pnpm install
+pnpm test       # build + 124 tests
+```
+
+## License
+
+MIT
+
+## Video contact sheet
+
+Use `ffmpeg_storyboard({input:"movie.mp4",count:12,columns:4,width:320})` to create one PNG. Optional `start` and `end` accept seconds or HH:MM:SS.mmm. Count is 2–36, columns 1–6 and cell width 160–640. Cells use a 16:9 letterbox and preserve source aspect ratio. The tool result maps each cell to a requested seek time, not an exact decoded frame timecode. Uniform sampling does not detect scenes or guarantee coverage of short shots. Requires a seekable local video with a known duration. Sources and existing outputs are preserved by default; cancellation/failure cleans scratch and publishes no partial sheet.

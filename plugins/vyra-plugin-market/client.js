@@ -38,12 +38,28 @@ window.__ModuleLoader__.load({
     /** Our own market index: the source this plugin exists to browse. */
     const HOME_SOURCE = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
 
-    /** Veyra 市场源候选列表（国内优先） */
-    const VEYRA_SOURCES = [
+    /**
+     * The same 25-plugin index comes in two regional editions. The domestic
+     * file installs from GitCode and is read through a proxy/CDN; the overseas
+     * file installs from GitHub and is read through jsDelivr/raw GitHub. The
+     * region probe below chooses which edition the Host is configured with.
+     */
+    const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
       'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
       HOME_SOURCE,
     ]
+    const VEYRA_OVERSEAS = [
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json',
+      'https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json',
+      'https://lanxiake.github.io/dsh-vyra-plugins/index-github.json',
+    ]
+    const VEYRA_SOURCES = [...VEYRA_DOMESTIC, ...VEYRA_OVERSEAS]
+
+    /** The first source of each region; the others are manual fallbacks. */
+    function preferredVeyraSource(active) {
+      return active === 'overseas' ? VEYRA_OVERSEAS[0] : VEYRA_DOMESTIC[0]
+    }
 
     /**
      * dshmarket.com's browsable directory is the same curated catalog that is
@@ -174,6 +190,103 @@ window.__ModuleLoader__.load({
     function useVisibility() {
       const [state, setState] = useState(visibility.get)
       useEffect(() => visibility.subscribe(setState), [])
+      return state
+    }
+
+    /**
+     * Network region: auto, domestic, or overseas. `auto` probes the npm
+     * registries and Git hosts and prefers the domestic line unless the
+     * overseas line is more than 1.5x faster; manual modes are an override.
+     * The result is cached for a day so a page switch does not re-probe.
+     */
+    const REGION_KEY = 'vyra-market.region'
+    const REGION_CACHE_KEY = 'vyra-market.region-cache'
+    const REGION_CACHE_MS = 24 * 60 * 60 * 1000
+    const REGION_PROBES = {
+      domestic: ['https://registry.npmmirror.com/-/ping', 'https://gitcode.com/robots.txt'],
+      overseas: ['https://registry.npmjs.org/-/ping', 'https://github.com/robots.txt'],
+    }
+    function readRegionCache() {
+      try {
+        const value = JSON.parse(storeGet(REGION_CACHE_KEY) ?? 'null')
+        if (value?.region !== 'domestic' && value?.region !== 'overseas') return null
+        if (typeof value.at !== 'number' || Date.now() - value.at >= REGION_CACHE_MS) return null
+        return value.region
+      } catch {
+        return null
+      }
+    }
+    const region = (() => {
+      const stored = storeGet(REGION_KEY)
+      let mode = stored === 'domestic' || stored === 'overseas' ? stored : 'auto'
+      let detected = readRegionCache()
+      let detectedAt = detected === null ? 0 : Date.now()
+      let pending = null
+      const listeners = new Set()
+      const snapshot = () => ({
+        mode,
+        detected,
+        active: mode === 'auto' ? (detected ?? 'domestic') : mode,
+        probing: pending !== null,
+      })
+      const notify = () => { const value = snapshot(); for (const listener of listeners) listener(value) }
+      async function probe(url) {
+        const started = Date.now()
+        try {
+          await fetch(url, {
+            method: 'GET', mode: 'no-cors', cache: 'no-store',
+            signal: AbortSignal.timeout(4500),
+          })
+          return Date.now() - started
+        } catch {
+          return null
+        }
+      }
+      function detect(force = false) {
+        if (pending !== null) return pending
+        if (!force && detected !== null && Date.now() - detectedAt < REGION_CACHE_MS) {
+          return Promise.resolve(snapshot())
+        }
+        const run = Promise.all([
+          ...REGION_PROBES.domestic.map(probe),
+          ...REGION_PROBES.overseas.map(probe),
+        ]).then((times) => {
+          const domestic = times.slice(0, REGION_PROBES.domestic.length).filter((value) => value !== null)
+          const overseas = times.slice(REGION_PROBES.domestic.length).filter((value) => value !== null)
+          const d = domestic.length === 0 ? null : Math.min(...domestic)
+          const o = overseas.length === 0 ? null : Math.min(...overseas)
+          let next = detected ?? 'domestic'
+          if (d === null && o !== null) next = 'overseas'
+          else if (d !== null && o === null) next = 'domestic'
+          else if (d !== null && o !== null) next = d <= o * 1.5 ? 'domestic' : 'overseas'
+          detected = next
+          detectedAt = Date.now()
+          storeSet(REGION_CACHE_KEY, JSON.stringify({ region: next, at: detectedAt }))
+          return snapshot()
+        })
+        pending = run
+        notify()
+        return run.finally(() => { pending = null; notify() })
+      }
+      return {
+        snapshot,
+        subscribe(listener) {
+          listeners.add(listener)
+          return () => { listeners.delete(listener) }
+        },
+        setMode(next) {
+          if (next !== 'auto' && next !== 'domestic' && next !== 'overseas') return
+          mode = next
+          storeSet(REGION_KEY, next)
+          notify()
+          if (next === 'auto' && detected === null) void detect(true)
+        },
+        detect,
+      }
+    })()
+    function useRegion() {
+      const [state, setState] = useState(region.snapshot)
+      useEffect(() => region.subscribe(setState), [])
       return state
     }
 
@@ -1335,12 +1448,24 @@ window.__ModuleLoader__.load({
       showSidebar: '左侧菜单栏',
       showPluginsTab: '插件页面',
       settingsNote: '设置菜单中始终保留插件市场入口。',
+      networkRegion: '网络线路',
+      regionAuto: '自动',
+      regionDomestic: '国内',
+      regionOverseas: '国外',
+      regionCurrent: '当前：{region}',
+      regionProbing: '检测中…',
+      redetect: '重新检测',
+      regionHint: '自动模式按延迟选择；切换后 Veyra 索引会换成对应区域，国内从 GitCode 安装，海外从 GitHub 安装。',
+      switchToDomestic: '切换到国内线路',
+      switchToOverseas: '切换到海外线路',
       viewMarket: '市场',
       viewInstalled: '已安装',
       searchInstalled: '搜索已安装插件',
       installedSummary: '{total} 个已安装 · {enabled} 启用 · {disabled} 停用',
       installedEmptyTitle: '没有可显示的插件',
       installedEmptyBody: '手动安装或其他市场安装的插件会出现在这里。',
+      installedProfileTitle: '已安装插件',
+      installedBundledTitle: 'DSH 内置插件',
       tagEnabled: '已启用',
       tagOfficial: '客户端自带',
       tagOptional: '可选',
@@ -1480,12 +1605,24 @@ window.__ModuleLoader__.load({
       showSidebar: 'Sidebar',
       showPluginsTab: 'Plugins page',
       settingsNote: 'Settings always keeps a market entry.',
+      networkRegion: 'Network line',
+      regionAuto: 'Auto',
+      regionDomestic: 'Domestic',
+      regionOverseas: 'Overseas',
+      regionCurrent: 'Current: {region}',
+      regionProbing: 'Probing…',
+      redetect: 'Probe again',
+      regionHint: 'Auto picks by latency. Switching swaps the Veyra index edition: domestic installs from GitCode, overseas from GitHub.',
+      switchToDomestic: 'Switch to domestic',
+      switchToOverseas: 'Switch to overseas',
       viewMarket: 'Market',
       viewInstalled: 'Installed',
       searchInstalled: 'Search installed plugins',
       installedSummary: '{total} installed · {enabled} enabled · {disabled} disabled',
       installedEmptyTitle: 'Nothing to show',
       installedEmptyBody: 'Plugins installed by hand or from another market appear here.',
+      installedProfileTitle: 'Installed plugins',
+      installedBundledTitle: 'Bundled with DSH',
       tagEnabled: 'Enabled',
       tagOfficial: 'Bundled',
       tagOptional: 'Optional',
@@ -1820,6 +1957,10 @@ window.__ModuleLoader__.load({
       .vpm-bar.error{color:var(--dsw-alias-state-error-primary)}
       .vpm-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 2px 20px;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l3) transparent}
       .vpm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:0;padding:0;list-style:none;align-items:start}
+      .vpm-installed-section{display:flex;flex-direction:column;gap:10px}
+      .vpm-installed-section + .vpm-installed-section{margin-top:24px;padding-top:18px;border-top:1px solid var(--dsw-alias-border-l2)}
+      .vpm-section-title{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;line-height:18px;font-weight:650;letter-spacing:-.01em;color:var(--dsw-alias-label-secondary)}
+      .vpm-section-title .vpm-count{font-size:11px;line-height:16px;font-weight:500;color:var(--dsw-alias-label-tertiary)}
       .vpm-card{position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;min-height:164px;align-self:start;padding:16px;border-radius:18px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-settings-card-fill,var(--dsw-alias-bg-layer-1));cursor:pointer;transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s,border-color .18s,background-color .18s}
       .vpm-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(15,23,42,.11);border-color:var(--dsw-alias-border-l3)}
       .vpm-card:active{transform:translateY(0) scale(.996)}
@@ -1919,7 +2060,12 @@ window.__ModuleLoader__.load({
 
     /** The name a configured or built-in source carries in the picker. */
     function marketSourceLabel(source, text, lang) {
-      if (VEYRA_SOURCES.includes(source.url)) return lang === 'zh' ? 'Veyra 精选' : 'Veyra picks'
+      if (VEYRA_SOURCES.includes(source.url)) {
+        const line = VEYRA_DOMESTIC.includes(source.url)
+          ? (lang === 'zh' ? '国内' : 'CN')
+          : (lang === 'zh' ? '海外' : 'Global')
+        return `${lang === 'zh' ? 'Veyra 精选' : 'Veyra picks'} · ${line}`
+      }
       if (source.url === DSHMARKET_CATALOG) return 'dshmarket.com'
       if (source.url === DSHOPEN_CATALOG) return lang === 'zh' ? '开放插件市场' : 'DSH Open Market'
       if (source.url === DSH_GO_CATALOG) return 'DSH Go Market'
@@ -2599,6 +2745,7 @@ window.__ModuleLoader__.load({
       const lang = useLocale((snapshot) => snapshot.active)
       const text = useCallback((value) => marketText(value, lang), [lang])
       const visibilityState = useVisibility()
+      const regionState = useRegion()
 
       const [sources, setSources] = useState(null)
       const [sourcesFailure, setSourcesFailure] = useState(null)
@@ -2681,39 +2828,38 @@ window.__ModuleLoader__.load({
         }
         setSourcesFailure(null)
         let list = answer.value
-        // The profile always gets Veyra back. The dshmarket.com catalog is
-        // seeded once; removing it later is a choice, not a missing default.
-        const hasVeyra = list.some((item) => VEYRA_SOURCES.includes(item.url))
-        // Seeding version 2 adds the newer built-in catalogs beside the
-        // original dshmarket.com one. A profile that already carries them is
-        // itself the choice: removing one later must not bring it back.
+        // The Veyra slot is one logical source whose URL follows the detected
+        // region. The dshmarket.com catalogs are seeded once; removing one is
+        // a choice and is not undone on a later load.
+        const activeRegion = region.snapshot().active
+        const targetVeyra = preferredVeyraSource(activeRegion)
         const seedState = storeGet('vyra-market.sources-seeded')
         const seeded = seedState === '2'
         const hasUrl = (url) => list.some((item) => item.url === url)
-        // Version 1 seeded only dshmarket.com. An upgraded profile that
-        // removed it made a choice; add the two new catalogs without undoing
-        // that choice.
+        const regionSources = activeRegion === 'overseas' ? VEYRA_OVERSEAS : VEYRA_DOMESTIC
+        const hasRegionVeyra = list.some((item) => regionSources.includes(item.url))
+        const otherRegionVeyra = list.some((item) => VEYRA_SOURCES.includes(item.url)
+          && !regionSources.includes(item.url))
         const missingCatalogs = BUILTIN_CATALOGS.filter((url) => !hasUrl(url)
           && !(seedState === '1' && url === DSHMARKET_CATALOG))
         if (!seeded && missingCatalogs.length === 0) storeSet('vyra-market.sources-seeded', '2')
-        const wantsVeyra = list.length === 0 || !hasVeyra
-        const wantsCatalogs = !seeded && missingCatalogs.length > 0
-        if (adopt && (wantsVeyra || wantsCatalogs)) {
-          const additions = []
-          if (wantsVeyra) additions.push(VEYRA_SOURCES[0])
-          if (wantsCatalogs) additions.push(...missingCatalogs)
-          const added = await remote.pluginMarket.setIndexes([...additions, ...list.map((s) => s.url)])
+        const wantsVeyra = list.length === 0 || !hasRegionVeyra || otherRegionVeyra
+        const wantsCatalogs = adopt && !seeded && missingCatalogs.length > 0
+        if (wantsVeyra || wantsCatalogs) {
+          const others = list.map((item) => item.url).filter((url) => !VEYRA_SOURCES.includes(url))
+          const nextUrls = [...new Set([targetVeyra, ...others, ...(wantsCatalogs ? missingCatalogs : [])])]
+          const added = await remote.pluginMarket.setIndexes(nextUrls)
           if (!alive.current) return
           if (added.ok) {
-            storeSet('vyra-market.sources-seeded', '2')
+            if (wantsCatalogs) storeSet('vyra-market.sources-seeded', '2')
             const reread = await remote.pluginMarket.listIndexes()
             if (!alive.current) return
             list = reread.ok ? reread.value : []
           }
         }
         setSources(list)
-        // Prefer Veyra; when the Host has no sources at all, the built-in
-        // dsh.so browser is still a usable landing page.
+        // Prefer the region's Veyra source; when the Host has no sources at
+        // all, the built-in dsh.so browser is still a usable landing page.
         setActiveUrl((current) => {
           if (current === DSH_SO_SOURCE.url) return current
           if (list.some((item) => item.url === current)) return current
@@ -2851,6 +2997,18 @@ window.__ModuleLoader__.load({
 
       useEffect(() => { void loadSources(true) }, [loadSources])
       useEffect(() => { void loadBundles() }, [loadBundles])
+      // Probe lazily when the market opens; a fresh cached answer skips it.
+      useEffect(() => { void region.detect() }, [])
+      // A region change swaps the Veyra index edition and invalidates pages
+      // fetched through the old line. Probe start/finish notifications keep
+      // the same active line, so they must not rewrite the source list.
+      const lastRegion = useRef(region.snapshot().active)
+      useEffect(() => region.subscribe((snapshot) => {
+        if (snapshot.active === lastRegion.current) return
+        lastRegion.current = snapshot.active
+        pageCache.clear()
+        void loadSources(false)
+      }), [loadSources])
       // The stats overlay is independent of the active source and is shared by
       // every card; it never blocks the list.
       useEffect(() => {
@@ -2949,6 +3107,12 @@ window.__ModuleLoader__.load({
           return terms.every((term) => haystack.includes(term))
         })
       }, [installedBundles, draft, lang])
+      // DSH's own bundles stay at the bottom under their own heading; a
+      // profile dependency is the person's plugin, a shipped one is the client.
+      const installedGroups = useMemo(() => ({
+        profile: installedFiltered.filter((bundle) => bundle.installed === true),
+        bundled: installedFiltered.filter((bundle) => bundle.installed !== true),
+      }), [installedFiltered])
 
       // ponytail: 快捷筛选 - 根据 quickFilter 过滤条目
       const filteredEntries = useMemo(() => {
@@ -3178,6 +3342,14 @@ window.__ModuleLoader__.load({
           h('span', { className: 'vpm-grow', style: { fontWeight: 600 } }, t('selected', { n: picked.size })), bulk))
       }
 
+      const installedCard = (bundle) => h(InstalledCard, {
+        key: bundle.name, bundle, lang, t,
+        busy: installedBusy === bundle.name,
+        onDetails: setInstalledDetail,
+        onToggle: toggleInstalled,
+        onUninstall: (target) => { setInstalledConfirm(target) },
+      })
+
       return h('div', { className: 'vpm-page' },
         h('div', { className: 'vpm-page-inner' },
         h('header', { className: 'vpm-hero' },
@@ -3254,6 +3426,26 @@ window.__ModuleLoader__.load({
             }),
             h('span', null, t('showPluginsTab'))),
           h('span', { className: 'vpm-meta' }, t('settingsNote'))) : null,
+        showVisibility ? h('div', { className: 'vpm-settings' },
+          h('span', { className: 'vpm-meta' }, t('networkRegion')),
+          h('div', { className: 'vpm-segment sm', role: 'group', 'aria-label': t('networkRegion') },
+            [
+              { value: 'auto', label: t('regionAuto') },
+              { value: 'domestic', label: t('regionDomestic') },
+              { value: 'overseas', label: t('regionOverseas') },
+            ].map((option) => h('button', {
+              key: option.value,
+              className: `vpm-segment-item${regionState.mode === option.value ? ' on' : ''}`,
+              'aria-pressed': regionState.mode === option.value,
+              onClick: () => { region.setMode(option.value) },
+            }, option.label))),
+          h('button', {
+            className: 'vpm-btn small', disabled: regionState.probing,
+            onClick: () => { void region.detect(true) },
+          }, regionState.probing ? t('regionProbing') : t('redetect')),
+          h('span', { className: 'vpm-meta' },
+            t('regionCurrent', { region: regionState.active === 'domestic' ? t('regionDomestic') : t('regionOverseas') })),
+          h('span', { className: 'vpm-meta' }, t('regionHint'))) : null,
         h('div', { className: 'vpm-toolbar' },
           view === 'market' ? h(React.Fragment, null,
           h('div', { style: { position: 'relative', display: 'flex' }, ref: sourceMenu },
@@ -3371,14 +3563,17 @@ window.__ModuleLoader__.load({
                 h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
                 h('p', { className: 'vpm-state-title' }, installedBundles.length === 0 ? t('installedEmptyTitle') : t('noMatchTitle')),
                 h('p', { className: 'vpm-state-body' }, installedBundles.length === 0 ? t('installedEmptyBody') : t('noMatchBody')))
-              : h('ul', { className: 'vpm-grid' },
-                installedFiltered.map((bundle) => h(InstalledCard, {
-                  key: bundle.name, bundle, lang, t,
-                  busy: installedBusy === bundle.name,
-                  onDetails: setInstalledDetail,
-                  onToggle: toggleInstalled,
-                  onUninstall: (target) => { setInstalledConfirm(target) },
-                }))))
+              : h('div', null,
+                installedGroups.profile.length === 0 ? null : h('section', { className: 'vpm-installed-section' },
+                  h('h3', { className: 'vpm-section-title' },
+                    t('installedProfileTitle'),
+                    h('span', { className: 'vpm-count' }, installedGroups.profile.length)),
+                  h('ul', { className: 'vpm-grid' }, installedGroups.profile.map(installedCard))),
+                installedGroups.bundled.length === 0 ? null : h('section', { className: 'vpm-installed-section' },
+                  h('h3', { className: 'vpm-section-title' },
+                    t('installedBundledTitle'),
+                    h('span', { className: 'vpm-count' }, installedGroups.bundled.length)),
+                  h('ul', { className: 'vpm-grid' }, installedGroups.bundled.map(installedCard)))))
             : (listing === null ? h('div', null,
             h('div', { className: 'vpm-state' },
               h('span', { className: 'vpm-spin' }),
@@ -3390,7 +3585,14 @@ window.__ModuleLoader__.load({
               h('span', { className: 'vpm-state-mark' }, h(BoxIcon, { size: 24 })),
               h('p', { className: 'vpm-state-title', role: 'alert' }, t('loadFailed')),
               h('p', { className: 'vpm-state-body' }, listing.failure),
-              h('button', { className: 'vpm-btn', onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined, 0, true) } }, t('retry')))
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' } },
+                h('button', { className: 'vpm-btn', onClick: () => { void load(listing.url, listing.query, 0, PAGE, undefined, 0, true) } }, t('retry')),
+                VEYRA_SOURCES.includes(listing.url) ? h('button', {
+                  className: 'vpm-btn',
+                  onClick: () => {
+                    region.setMode(region.snapshot().active === 'domestic' ? 'overseas' : 'domestic')
+                  },
+                }, t(region.snapshot().active === 'domestic' ? 'switchToOverseas' : 'switchToDomestic')) : null))
               : filteredEntries.length === 0
                 ? (listing.status === 'loading'
                   ? h('div', null,
@@ -3533,7 +3735,7 @@ window.__ModuleLoader__.load({
         marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
         TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset, enqueue, pump, newRequestId, runner,
         compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
-        localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility,
+        localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
         pageCacheKey, cachedPage, rememberPage, pageCache,
         parseRepoRef, specPath, buildBundleIndex,
       },

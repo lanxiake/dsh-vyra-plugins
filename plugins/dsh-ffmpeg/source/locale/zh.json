@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "FFmpeg",
+    "description": "基于本机 FFmpeg 的音视频处理工具集：媒体探测、剪辑拼接、预设转码、字幕烧录、视频总览图与 GIF 导出。"
+  }
+}

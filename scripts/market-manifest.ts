@@ -193,6 +193,9 @@ export const manifest: MarketManifest = {
       'integration': { title: { en: 'Integrations', zh: '外部集成' } },
       'browser': { title: { en: 'Browser and desktop', zh: '浏览器与桌面' } },
       'content': { title: { en: 'Content creation', zh: '内容创作' } },
+      'appearance': { title: { en: 'Appearance', zh: '界面外观' } },
+      'media': { title: { en: 'Media', zh: '媒体处理' } },
+      'model': { title: { en: 'Model access', zh: '模型接入' } },
     },
   },
   plugins: [
@@ -1988,6 +1991,28 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.5.2 groups DSH-provided bundles under their own heading below the
+        // profile's installed plugins.
+        '0.5.2': {
+          publishTimestamp: 1795341110,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
+        // 0.5.3 probes the network and swaps the Veyra index edition between
+        // GitCode installs (domestic) and GitHub installs (overseas).
+        '0.5.3': {
+          publishTimestamp: 1795343104,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '95a269fe0c6bcf64c7de9bda93a932daaf9f88b3',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
@@ -2002,6 +2027,167 @@ export const manifest: MarketManifest = {
     // copies these verbatim and the install source pins the commit that holds
     // the snapshot. An upstream release is picked up by re-vendoring, never by
     // a version bump here.
+    {
+      name: '@weibaohui/dsh-sync',
+      title: {
+        en: 'DSH Sync',
+        zh: '多机同步与备份',
+      },
+      description: {
+        en: 'Keep skills, sessions, settings and plugin lists aligned across machines through a private Git repository, WebDAV or a local folder.',
+        zh: '通过私有 Git 仓库、WebDAV 或本地文件夹，让多台机器上的技能、会话、设置和插件清单保持一致。',
+      },
+      author: 'weibaohui',
+      homepage: 'https://github.com/weibaohui/dsh-sync#readme',
+      repository: {
+        url: 'https://github.com/weibaohui/dsh-sync',
+      },
+      engines: { dsh: '>=0.1.7-rc.2' },
+      versions: {
+        '0.4.12': {
+          publishTimestamp: 1795341110,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            path: 'plugins/dsh-sync',
+          },
+        },
+      },
+      metadata: {
+        category: 'integration',
+        keywords: ['sync', 'backup', 'git', 'webdav', 'snapshot'],
+      },
+    },
+    {
+      name: '@iasiv5/dsh-skins',
+      title: {
+        en: 'DSH Skins',
+        zh: '主题皮肤',
+      },
+      description: {
+        en: 'Hot-switch sidebar skins, wallpapers and transparency, and return to the official look with one click.',
+        zh: '侧栏多皮肤热切换、壁纸与通透度个性化，一键回到官方界面。',
+      },
+      author: 'iasiv5',
+      homepage: 'https://github.com/iasiv5/dsh-skins#readme',
+      repository: {
+        url: 'https://github.com/iasiv5/dsh-skins',
+      },
+      icon: 'https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-skins/icon.svg',
+      versions: {
+        '1.5.34': {
+          publishTimestamp: 1795341110,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            path: 'plugins/dsh-skins',
+          },
+        },
+      },
+      metadata: {
+        category: 'appearance',
+        keywords: ['skin', 'theme', 'wallpaper', 'sidebar', 'personalization'],
+      },
+    },
+    {
+      name: 'dsh-ffmpeg',
+      title: {
+        en: 'FFmpeg',
+        zh: '音视频处理',
+      },
+      description: {
+        en: 'Probe, trim, transcode, burn subtitles, storyboard and export GIFs with the local FFmpeg/FFprobe.',
+        zh: '用本机 FFmpeg/FFprobe 探测、剪辑、转码、烧录字幕、生成分镜总览图与 GIF。',
+      },
+      author: 'stardustlc',
+      homepage: 'https://github.com/STARDUSTLC666/dsh-ffmpeg#readme',
+      repository: {
+        url: 'https://github.com/STARDUSTLC666/dsh-ffmpeg',
+      },
+      icon: 'https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-ffmpeg/assets/plugin-icon.webp',
+      engines: { dsh: '>=0.2.2-rc.3' },
+      versions: {
+        '0.7.20': {
+          publishTimestamp: 1795341110,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            path: 'plugins/dsh-ffmpeg',
+          },
+        },
+      },
+      metadata: {
+        category: 'media',
+        keywords: ['ffmpeg', 'video', 'audio', 'transcode', 'gif'],
+      },
+    },
+    {
+      name: 'dsh-music-panel',
+      title: {
+        en: 'Music Panel',
+        zh: '音乐面板',
+      },
+      description: {
+        en: 'A local and online music player for DSH: NetEase, QQ, KuGou, Navidrome, lyrics, EQ and crossfade.',
+        zh: 'DSH 本地与在线音乐播放器：网易云、QQ、酷狗、Navidrome、歌词、均衡器与智能过渡。',
+      },
+      author: 'Aliboder',
+      homepage: 'https://github.com/Aliboder/dsh-music-panel#readme',
+      repository: {
+        url: 'https://github.com/Aliboder/dsh-music-panel',
+      },
+      icon: 'https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-music-panel/icon.svg',
+      versions: {
+        '0.42.0': {
+          publishTimestamp: 1795341110,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            path: 'plugins/dsh-music-panel',
+          },
+        },
+      },
+      metadata: {
+        category: 'media',
+        keywords: ['music', 'player', 'lyrics', 'equalizer', 'navidrome'],
+      },
+    },
+    {
+      name: 'dsh-our-free-model',
+      title: {
+        en: 'Our Free Model',
+        zh: '免费模型',
+      },
+      description: {
+        en: 'Use frontier models in DSH without sign-up or an API key, with account channels, a local OpenAI gateway and usage dashboards.',
+        zh: '无需登录、注册或 API Key 即可在 DSH 使用前沿模型，并带账号渠道、本地 OpenAI 网关与用量看板。',
+      },
+      author: 'Ebony-Vinyl',
+      homepage: 'https://github.com/Ebony-Vinyl/dsh-our-free-model',
+      repository: {
+        url: 'https://github.com/Ebony-Vinyl/dsh-our-free-model',
+      },
+      icon: 'https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-our-free-model/icon.svg',
+      versions: {
+        '2.8.9': {
+          publishTimestamp: 1795341110,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
+            path: 'plugins/dsh-our-free-model',
+          },
+        },
+      },
+      metadata: {
+        category: 'model',
+        keywords: ['model', 'llm', 'free', 'provider', 'gateway'],
+      },
+    },
     {
       name: '@xmanrui/dsh-im',
       title: {

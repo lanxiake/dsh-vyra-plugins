@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Music",
+    "description": "Local + online music player: multi-root library; NetEase / QQ / KuGou / KuGou Concept / Bodian / Qishui / Navidrome; lyrics with translation, word-by-word and manual matching; online cache; EBU R128 volume leveling; 10-band EQ and AutoEQ; smart crossfade; listening stats; tag and cover editing. Open it from the Music item in the sidebar; sign in to online platforms or enter a server under Settings → Online. Account data and cache stay on this machine.",
+    "detail": "docs/使用详情-英文.md"
+  }
+}

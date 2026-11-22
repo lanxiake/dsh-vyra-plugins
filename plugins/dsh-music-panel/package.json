@@ -1,0 +1,104 @@
+{
+  "name": "dsh-music-panel",
+  "version": "0.42.0",
+  "type": "module",
+  "description": "Local + online music player for DSH: NetEase/QQ/KuGou/Navidrome, lyrics, cache, EBU R128, 10-band EQ + AutoEQ, smart crossfade, in-list search. · DSH 本地与在线音乐插件：四大在线平台、歌词、缓存、音量均衡、10 段均衡器与 AutoEQ、智能过渡、列表内搜索。",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aliboder/dsh-music-panel.git"
+  },
+  "homepage": "https://github.com/Aliboder/dsh-music-panel#readme",
+  "bugs": {
+    "url": "https://github.com/Aliboder/dsh-music-panel/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "music",
+    "player",
+    "audio",
+    "equalizer",
+    "autoeq",
+    "navidrome",
+    "crossfade"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "src/host/**/*.js",
+    "src/host/**/*.json",
+    "src/host/**/*.mjs",
+    "src/host/assets/**",
+    "src/host/vendor/**",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "docs/使用详情-英文.md",
+    "docs/使用详情.md",
+    "docs/preview.svg",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md",
+    "assets/qq-group.png"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "dependencies": {
+    "@neteasecloudmusicapienhanced/api": "4.41.1",
+    "@yakult-green-tea/qq-music-api": "3.3.6",
+    "axios": "1.21.1",
+    "big-integer": "1.6.52",
+    "bodian-music-api": "0.1.2",
+    "crypto-js": "4.2.0",
+    "dotenv": "16.6.1",
+    "express": "4.22.3",
+    "flac-tagger": "^2.1.0",
+    "framer-motion": "^14.14.0",
+    "music-metadata": "^12.3.4",
+    "node-forge": "1.4.3",
+    "node-id3": "^0.2.9",
+    "opencc-js": "^1.4.2",
+    "pako": "2.2.0",
+    "pinyin-pro": "^3.29.5",
+    "qishui-music-api": "0.2.2",
+    "qrcode": "1.5.4",
+    "safe-decode-uri-component": "1.2.1",
+    "wanakana": "^5.3.1"
+  },
+  "icon": "icon.svg",
+  "devDependencies": {
+    "@applemusic-like-lyrics/ttml": "^1.0.1",
+    "@tailwindcss/cli": "^4.3.5",
+    "@xmldom/xmldom": "^0.9.12",
+    "budoux": "^0.10.3",
+    "esbuild": "^0.28.2",
+    "lucide-react": "^1.73.0",
+    "tailwindcss": "^4.3.5"
+  }
+}

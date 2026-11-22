@@ -1,0 +1,115 @@
+{
+  "name": "dsh-music-panel",
+  "version": "0.43.0",
+  "type": "module",
+  "description": "Local + online music player for DSH: NetEase/QQ/KuGou/Navidrome, lyrics, cache, EBU R128, 10-band EQ + AutoEQ, smart crossfade, in-list search. · DSH 本地与在线音乐插件：四大在线平台、歌词、缓存、音量均衡、10 段均衡器与 AutoEQ、智能过渡、列表内搜索。",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aliboder/dsh-music-panel.git"
+  },
+  "homepage": "https://github.com/Aliboder/dsh-music-panel#readme",
+  "bugs": {
+    "url": "https://github.com/Aliboder/dsh-music-panel/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "music",
+    "player",
+    "audio",
+    "equalizer",
+    "autoeq",
+    "navidrome",
+    "crossfade"
+  ],
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "build:audio": "node scripts/build-audio.mjs",
+    "build:profile": "node scripts/build-profile.mjs",
+    "build:folia": "node scripts/build-pendolo.mjs && node scripts/build-backgrounds.mjs && node scripts/build-styles.mjs",
+    "import:autoeq": "node scripts/import-autoeq.mjs",
+    "test": "node test/host/config.test.mjs && node test/host/meta.test.mjs && node test/host/library.test.mjs && node test/host/routes.test.mjs && node test/host/lyrics.test.mjs && node test/host/lyric-state.test.mjs && node test/client/lyric-loader.test.mjs && node test/client/lyrics-folia.test.mjs && node test/host/lyrics-write.test.mjs && node test/host/tags.test.mjs && node test/host/online.test.mjs && node test/host/playlists.test.mjs && node test/host/favorites.test.mjs && node test/host/stats.test.mjs && node test/host/playback.test.mjs && node test/client/style.test.mjs && node test/client/client.smoke.test.mjs && node test/client/panel.render.test.mjs && node test/client/player-card.test.mjs && node test/client/style-random.test.mjs && node test/client/lyric-match-dialog.test.mjs && node test/client/lyric-segmentation.test.mjs && node test/host/trash.test.mjs && node test/client/theme.test.mjs && node test/client/eq.test.mjs && node test/client/audio-graph.test.mjs && node test/client/audio-folia.test.mjs && node test/client/folia-graph.test.mjs && node test/client/folia-transport.test.mjs && node test/client/player-folia-wiring.test.mjs && node test/client/player-folia-runtime.test.mjs && node test/host/eq-presets.test.mjs && node test/client/crossfade.test.mjs && node test/client/transition.test.mjs && node test/client/in-view-search.test.mjs && node test/host/json-store.test.mjs && node test/host/url-safety.test.mjs && node test/integration/package-exports.test.mjs && node test/host/kugou-session.test.mjs && node test/host/krc-fallback.test.mjs && node test/client/wave-color.test.mjs && node test/host/control.test.mjs && node test/host/navidrome.test.mjs && node test/host/navidrome-routes.test.mjs && node test/client/panel.hooks.test.mjs && node test/client/panel.album-open.test.mjs && node test/client/panel.cover.test.mjs && node test/host/core.test.mjs && node test/host/sources.test.mjs && node test/host/netease-upstream.test.mjs && node test/host/netease-playlist.test.mjs && node test/host/kugou-playlist-page.test.mjs && node test/host/qq-playlist-page.test.mjs && node test/client/online-playlist.test.mjs && node test/host/qq-upstream.test.mjs && node test/host/kugou-upstream.test.mjs && node test/host/login.test.mjs && node test/host/bodian.test.mjs && node test/host/qishui.test.mjs && node test/host/playback-reports.test.mjs && node test/host/album-source.test.mjs && node test/host/preview-stream.test.mjs && node test/host/qq-library.test.mjs && node test/host/kugou-library.test.mjs && node test/host/catalog-channels.test.mjs && node test/host/provider-store.test.mjs && node test/host/rich-fields.test.mjs && node test/host/lyrics-match.test.mjs && node test/host/lyrics-sources.test.mjs && node test/host/media-cache.test.mjs && node test/host/lyrics-match-service.test.mjs && node test/host/navidrome-gain.test.mjs && node test/client/volume-balance.test.mjs && node test/client/volume-balance-parity.test.mjs && node test/client/volume-balance-records.test.mjs && node test/client/profile.test.mjs && node test/client/automix-profile.test.mjs && node test/integration/runtime.test.mjs && node test/client/folia-pendolo.test.mjs && node test/client/folia-backgrounds.test.mjs && node test/client/folia-styles.test.mjs && node test/client/folia-audio.test.mjs && node test/client/folia-local-theme.test.mjs && node test/host/best-lyric-route.test.mjs && node test/host/plugin-data.test.mjs && node test/host/storage.test.mjs && node test/client/settings-data.test.mjs && node test/client/lyric-settings.test.mjs && node test/client/storage-settings.test.mjs && node test/client/playback-settings.test.mjs && node test/client/playback-internals.test.mjs && node test/client/replay-gain-modes.test.mjs && node test/host/online-stream-fallback.test.mjs && node test/host/audio-focus.test.mjs && node test/client/online-stream-errors.test.mjs && node test/client/track-details.test.mjs && node test/client/control-drainer.test.mjs",
+    "check": "node scripts/check-syntax.mjs && node scripts/check-i18n-keys.mjs && node scripts/build-audio.mjs --check && node scripts/build-profile.mjs --check && node scripts/build-client.mjs --check",
+    "pack:check": "npm pack --dry-run",
+    "build:lyrics": "node scripts/build-lyrics.mjs",
+    "build:icu-folia": "node scripts/build-icu-folia.mjs"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "src/host/**/*.js",
+    "src/host/**/*.json",
+    "src/host/**/*.mjs",
+    "src/host/assets/**",
+    "src/host/vendor/**",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "docs/使用详情-英文.md",
+    "docs/使用详情.md",
+    "docs/preview.svg",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  },
+  "dependencies": {
+    "@neteasecloudmusicapienhanced/api": "4.41.1",
+    "@yakult-green-tea/qq-music-api": "3.3.6",
+    "axios": "1.21.1",
+    "big-integer": "1.6.52",
+    "bodian-music-api": "0.1.2",
+    "crypto-js": "4.2.0",
+    "dotenv": "16.6.1",
+    "express": "4.22.3",
+    "flac-tagger": "^2.1.0",
+    "framer-motion": "^14.14.0",
+    "music-metadata": "^12.3.4",
+    "node-forge": "1.4.3",
+    "node-id3": "^0.2.9",
+    "opencc-js": "^1.4.2",
+    "pako": "2.2.0",
+    "pinyin-pro": "^3.29.5",
+    "qishui-music-api": "0.2.2",
+    "qrcode": "1.5.4",
+    "safe-decode-uri-component": "1.2.1",
+    "wanakana": "^5.3.1"
+  },
+  "icon": "icon.svg",
+  "devDependencies": {
+    "@applemusic-like-lyrics/ttml": "^1.0.1",
+    "@tailwindcss/cli": "^4.3.5",
+    "@xmldom/xmldom": "^0.9.12",
+    "budoux": "^0.10.3",
+    "esbuild": "^0.28.2",
+    "lucide-react": "^1.73.0",
+    "tailwindcss": "^4.3.5"
+  }
+}
