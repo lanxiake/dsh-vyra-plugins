@@ -18,6 +18,7 @@
     "src",
     "vendor",
     "locale",
+    "assets/qq-group.png",
     "icon.svg",
     "cordis.patch.yml",
     "LICENSE",
