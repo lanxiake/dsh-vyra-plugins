@@ -10,7 +10,7 @@
     "verify:index": "tsx scripts/verify-index.ts",
     "verify": "pnpm run contact && pnpm run check:installable && pnpm run build:index && pnpm run verify:index",
     "print:skills": "tsx scripts/print-skill-config.ts",
-    "test:market": "node plugins/vyra-plugin-market/test.mjs && node plugins/vyra-plugin-market/render-check.mjs",
+    "test:market": "node --check plugins/vyra-plugin-market/cli.mjs && node plugins/vyra-plugin-market/test.mjs && node plugins/vyra-plugin-market/render-check.mjs",
     "test:studymate-media": "node --experimental-strip-types plugins/vyra-studymate/scripts/tests/test_media_script.mjs && node --experimental-strip-types plugins/vyra-studymate/scripts/tests/test_media_tts.mjs && node --experimental-strip-types plugins/vyra-studymate/scripts/tests/test_media_library.mjs && node --experimental-strip-types plugins/vyra-studymate/scripts/tests/test_media_route.mjs && node --experimental-strip-types plugins/vyra-studymate/scripts/tests/test_media_game.mjs && node --experimental-strip-types plugins/vyra-studymate/scripts/tests/test_media_video.mjs",
     "media:plan": "node --experimental-strip-types plugins/vyra-studymate/scripts/media-plan.mjs",
     "media:audio": "node --experimental-strip-types plugins/vyra-studymate/scripts/media-audio.mjs",

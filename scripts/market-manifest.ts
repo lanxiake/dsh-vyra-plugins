@@ -2021,6 +2021,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.6.0 adds cross-source search and the Agent CLI/skill.
+        '0.6.0': {
+          publishTimestamp: 1795355020,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '665b7fbfa7f02c98b482579beb4765c505a1f0f5',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',

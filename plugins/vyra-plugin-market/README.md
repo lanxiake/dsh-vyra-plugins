@@ -11,6 +11,8 @@ DSH 自带的 Discover 是一次一个市场源、一次装一个；社区市场
 - **三个入口**：设置菜单、左侧栏、插件页标签页；左侧栏和插件页可以在设置页里单独开关
 - **多市场源**：Veyra 精选、dsh.so、dshmarket.com、DSH Open Market、DSH Go Market 开箱即用；源列表与「设置 → 插件 → 索引源」是同一份配置
 - **跨源安装识别**：搜索时会按包名、scope 短名、仓库+目录、Git 安装 spec 匹配 profile 里已安装的 bundle；从别的市场装过的插件会直接显示“已安装”，不会再次给出安装按钮
+- **跨源搜索**：搜索框旁的「跨源搜索」把所有已配置源并行查一遍，按包名去重，卡片上标出来源；每源取前 20/60 条
+- **Agent 可用**：`vyra-market` CLI 提供跨源搜索、版本、下载、安装/更新/卸载计划；配套技能指导 Agent 优先使用宿主的 `plugin_market` / `plugin_manager` 工具
 - **苹果式界面**：大标题、分段胶囊、圆角卡片、hover 抬升、骨架屏、亮暗主题自适应
 - **热度指标**：卡片显示 `★ stars` 与 `↓ npm 下载量`；format-1 源用 `metadata.sortKeys` 原生排序，第三方源用精简的 `stats.json` 覆盖层
 - **卡片式预览**：图标、名称、版本、作者、发布时间、状态标签（已安装 / 可更新 / 客户端自带 / 版本不兼容 / 预览版）；点卡片即开详情，不需要额外按钮
@@ -92,6 +94,44 @@ DSH 自带的 Discover 是一次一个市场源、一次装一个；社区市场
 - 宿主索引本身有约 10 分钟的缓存；dsh.so 的解析数据在会话内缓存 6 小时。
 - 刷新按钮会同时清掉客户端页面缓存并让宿主绕过索引缓存。
 - `plugin-manager/changed` 会清空页面缓存，避免安装状态过期。
+
+## 跨源搜索
+
+搜索框旁有「跨源搜索」按钮，源菜单里也有「全部市场源」：
+
+- 并行查询每个已配置源（Veyra、dsh.so、dshmarket.com、DSH Open Market、DSH Go Market 和自定义源）。
+- 卡片按包名去重；同一插件多个源都有时，优先已安装/可更新、再取较新版本。
+- 卡片标签显示来源；重复来源最多显示两个，其余用 `+N`。
+- 有文本时每源取前 60 条，无文本浏览时每源取前 20 条；跨源模式不做无限分页。
+- 某个源失败不影响其他源，页面上会提示失败数量；全部失败才进入错误态。
+- 普通单源浏览仍然保留完整分页和该源的分类/热度排序。
+
+## Agent CLI 与技能
+
+插件包内附带 `cli.mjs`，安装后也可作为 `vyra-market` 命令使用。默认只读：
+
+```sh
+node plugins/vyra-plugin-market/cli.mjs search "context" --limit 10 --json
+node plugins/vyra-plugin-market/cli.mjs info <package-name> --json
+node plugins/vyra-plugin-market/cli.mjs list --profile desktop --json
+node plugins/vyra-plugin-market/cli.mjs download <package-name> --dest ./vendor --json
+node plugins/vyra-plugin-market/cli.mjs install <package-name> --json   # 输出安装计划
+node plugins/vyra-plugin-market/cli.mjs update <package-name> --json    # 输出 remove+add 计划
+node plugins/vyra-plugin-market/cli.mjs uninstall <package-name> --json # 输出卸载计划
+```
+
+- `--source=veyra|dshmarket|dshopen|dshgo|URL` 限制源；默认全部内置源。
+- `--region=domestic|overseas` 选择 Veyra 索引版本。
+- `--apply` 才会运行官方 `dsh plugin --profile <p> add/remove`；需要 `--dsh`、`DSH_BIN` 或 PATH 里有 `dsh`。
+- 不 `--apply` 时输出 `installSpec` 和等价的 `plugin_manager` 工具调用，Agent 可以走宿主工具。
+- CLI 使用 10 分钟索引缓存和 `~/.dsh/market-downloads` 下载目录。
+
+配套技能在 `skills/vyra-plugin-market/SKILL.md`，说明 Agent 的推荐流程：
+
+- 搜索/版本：CLI 跨源搜索 + `plugin_market` 工具。
+- 安装/卸载/启停：优先宿主的 `plugin_manager` 工具（同一个 profile 锁、激活与回滚）。
+- 更新：市场 UI 的更新保留 Git 来源；CLI 的 update 是 remove+add，可能重置配置，需确认。
+- 安装第三方代码和构建脚本前先确认来源与信任。
 
 ## 它凭什么能装插件
 
