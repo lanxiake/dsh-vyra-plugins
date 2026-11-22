@@ -54,6 +54,80 @@ function requestFailure(status, code, message) {
   return Object.assign(new Error(message), { status, code })
 }
 
+/** A string property, ignoring getters that throw. */
+function safeString(value, key) {
+  try {
+    const inner = Reflect.get(value, key)
+    return typeof inner === 'string' && inner !== '' ? inner : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Resolve a Session's workspace root without depending on `workspaceFiles.scopeOf`.
+ *
+ * Older hosts expose `workspaceFiles` without that method, so this mirrors the
+ * Host's own resolution order: the sandbox policy's root for a live Session,
+ * then the session header's `cwd`, then a stored Session's header `cwd`. The
+ * projection cache's `workingDirectory` wins over the header, matching the
+ * workspace-files service.
+ * @param {object} ctx - Host context.
+ * @param {string} sessionId - Session identity.
+ * @param {AbortSignal} signal - request cancellation.
+ * @returns {Promise<string | undefined>} the workspace root, when known.
+ */
+async function workspaceRootOf(ctx, sessionId, signal) {
+  const scopeOf = ctx.workspaceFiles?.scopeOf
+  if (typeof scopeOf === 'function') {
+    try {
+      const scope = await scopeOf.call(ctx.workspaceFiles, sessionId, signal)
+      if (scope === undefined) throw requestFailure(404, 'unknown-session', `no Session "${sessionId}"`)
+      if (typeof scope.workspaceRoot === 'string' && scope.workspaceRoot !== '') return scope.workspaceRoot
+      return undefined
+    } catch (error) {
+      if (error?.code === 'unknown-session') throw error
+      /* fall through to the Host-side resolution */
+    }
+  }
+
+  const live = ctx.get?.('sessions')?.get?.(sessionId)
+  if (live !== undefined) {
+    const policy = ctx.get?.('sandboxPolicy')
+    if (typeof policy?.resolve === 'function') {
+      try {
+        const resolved = policy.resolve({ session: live })
+        if (typeof resolved?.workspaceRoot === 'string' && resolved.workspaceRoot !== '') return resolved.workspaceRoot
+      } catch { /* fall through to the header */ }
+    }
+    const headerCwd = safeString(live.header, 'cwd')
+    if (headerCwd !== undefined) return headerCwd
+    const liveCwd = safeString(live, 'cwd')
+    if (liveCwd !== undefined) return liveCwd
+    return undefined
+  }
+
+  const persistence = ctx.get?.('sessionPersistence')
+  if (typeof persistence?.stat === 'function') {
+    try {
+      const stored = await persistence.stat(sessionId, signal === undefined ? undefined : { signal })
+      if (stored === undefined) throw requestFailure(404, 'unknown-session', `no Session "${sessionId}"`)
+      const cache = ctx.get?.('sessionProjectionCache')
+      const cached = typeof cache?.cachedSnapshot === 'function'
+        ? safeString(cache.cachedSnapshot(stored.header, ['workingDirectory'])?.values, 'workingDirectory')
+        : undefined
+      if (cached !== undefined) return cached
+      const headerCwd = safeString(stored.header, 'cwd')
+      if (headerCwd !== undefined) return headerCwd
+      return undefined
+    } catch (error) {
+      if (error?.code === 'unknown-session') throw error
+      /* fall through to the final failure */
+    }
+  }
+  throw requestFailure(404, 'unknown-session', `no Session "${sessionId}"`)
+}
+
 /**
  * Resolve a Session's workspace root in this Host process, then the scan root
  * inside it. Containment is checked on the resolved targets, so `.` and `..`
@@ -65,14 +139,11 @@ function requestFailure(status, code, message) {
  * @returns {Promise<{ workspaceRoot: string, scanRoot: string, relativeRoot: string }>} resolved paths.
  */
 async function resolveScanRoot(ctx, sessionId, path, signal) {
-  const workspaceFiles = ctx.workspaceFiles
-  if (workspaceFiles === undefined || typeof workspaceFiles.scopeOf !== 'function') {
-    throw requestFailure(503, 'workspace-service-missing', 'ctx.workspaceFiles.scopeOf is unavailable on this Host')
+  if (typeof ctx.fs?.resolve !== 'function') {
+    throw requestFailure(503, 'fs-unavailable', 'ctx.fs is unavailable on this Host')
   }
-  const scope = await workspaceFiles.scopeOf(sessionId, signal)
-  if (scope === undefined) throw requestFailure(404, 'unknown-session', `no Session "${sessionId}"`)
-  const workspaceRoot = scope.workspaceRoot
-  if (typeof workspaceRoot !== 'string' || workspaceRoot === '') {
+  const workspaceRoot = await workspaceRootOf(ctx, sessionId, signal)
+  if (workspaceRoot === undefined) {
     throw requestFailure(409, 'no-workspace-root', 'this Session has no workspace directory')
   }
 
@@ -148,24 +219,17 @@ async function handleFile(request, ctx) {
     return new Response('missing sessionId', { status: 400, headers: { 'Cache-Control': 'no-store' } })
   }
 
-  const workspaceFiles = ctx.workspaceFiles
-  if (workspaceFiles === undefined || typeof workspaceFiles.scopeOf !== 'function') {
-    return new Response('ctx.workspaceFiles.scopeOf is unavailable on this Host', {
-      status: 503,
+  let workspaceRoot
+  try {
+    workspaceRoot = await workspaceRootOf(ctx, sessionId, request.signal)
+  } catch (error) {
+    return new Response(`session lookup failed: ${error?.message ?? error}`, {
+      status: error?.status ?? 500,
       headers: { 'Cache-Control': 'no-store' },
     })
   }
-
-  let workspaceRoot
-  try {
-    const scope = await workspaceFiles.scopeOf(sessionId, request.signal)
-    if (scope === undefined) return new Response('unknown session', { status: 404, headers: { 'Cache-Control': 'no-store' } })
-    workspaceRoot = scope.workspaceRoot
-    if (typeof workspaceRoot !== 'string' || workspaceRoot === '') {
-      return new Response('this Session has no workspace directory', { status: 409, headers: { 'Cache-Control': 'no-store' } })
-    }
-  } catch (error) {
-    return new Response(`session lookup failed: ${error?.message ?? error}`, { status: 500, headers: { 'Cache-Control': 'no-store' } })
+  if (workspaceRoot === undefined) {
+    return new Response('this Session has no workspace directory', { status: 409, headers: { 'Cache-Control': 'no-store' } })
   }
 
   return serveMediaFile({ request, fs: ctx.fs, workspaceRoot })
@@ -205,12 +269,16 @@ async function handleDiagnose(request, ctx) {
   if (fs === undefined) return json({ ...report, ok: false, error: 'ctx.fs is unavailable' }, 503)
 
   try {
-    const scope = await ctx.workspaceFiles?.scopeOf?.(sessionId, request.signal)
-    report.workspaceRoot = scope?.workspaceRoot ?? null
-    if (scope !== undefined) {
-      const target = await fs.resolve(scope.workspaceRoot, { signal: request.signal })
+    const root = await workspaceRootOf(ctx, sessionId, request.signal)
+    report.workspaceRoot = root ?? null
+    report.resolution = root === undefined ? 'unresolved' : 'available'
+    if (root !== undefined) {
+      const target = await fs.resolve(root, { signal: request.signal })
       report.workspacePath = targetPathOf(fs, target)
       report.workspaceStat = await fs.stat(target, request.signal) ?? null
+    } else {
+      report.ok = false
+      report.error = 'no live or stored Session exposes a workspace root'
     }
   } catch (error) {
     report.ok = false

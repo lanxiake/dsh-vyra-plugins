@@ -1,6 +1,6 @@
 {
   "name": "vyra-media-studio",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "右侧栏媒体库与音视频预览：Range 流式播放、网格/列表、多条件筛选、图片与在线直链。",
   "exports": {
