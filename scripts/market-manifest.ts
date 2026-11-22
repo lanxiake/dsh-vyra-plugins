@@ -2217,8 +2217,8 @@ export const manifest: MarketManifest = {
     {
       name: 'vyra-free-model',
       title: {
-        en: 'Free Models',
-        zh: '免费模型',
+        en: 'Vyra Free Models',
+        zh: 'Vyra 免费模型',
       },
       description: {
         en: 'Free models with no sign-up and no API key: pick one and chat. Signing into one domestic account for extra quota and exposing the models to Cursor or Claude Code are both optional, and the whole plugin is one settings page in three steps.',
