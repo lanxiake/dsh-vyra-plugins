@@ -2293,6 +2293,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.4.1 fixes the sign-in completion check (placeholder accounts),
+        // hides the relay blocks, and implements imageRequestPricing so context
+        // compaction can switch models.
+        '0.4.1': {
+          publishTimestamp: 1795737600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '5b1039207d9eabe7658ad21b845598e6c1761d37',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
