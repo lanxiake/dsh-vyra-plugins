@@ -1545,6 +1545,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       recording: null,
       progress: null,
       toast: null,
+      agentRecording: null,
     }
     const listeners = new Set()
     function getState() { return state }
@@ -1643,6 +1644,8 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     let timerHandle = null
     let pollHandle = null
     let finishing = false
+    let agentRun = null
+    let agentPollTimer = null
 
     function stopTimers() {
       if (timerHandle !== null) { clearInterval(timerHandle); timerHandle = null }
@@ -1820,6 +1823,70 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         await fetch(PREFIX + '/record/discard', { method: 'POST' }).catch(() => {})
       } finally {
         setState({ phase: 'idle', recording: null, progress: null })
+      }
+    }
+
+    async function pollAgent() {
+      let status
+      try { status = await apiJson('/agent/status') } catch { return }
+      const job = status.job
+      if (!job) {
+        if (agentRun && !agentRun.encoding) {
+          await stopMic(agentRun.mic)
+          agentRun = null
+          setState({ agentRecording: null })
+        }
+        return
+      }
+      if (job.status === 'recording') {
+        if (agentRun === null || agentRun.id !== job.id) {
+          if (agentRun) await stopMic(agentRun.mic)
+          const mic = job.includeMic === false ? null : await startMic()
+          agentRun = { id: job.id, mic, micStartedAt: mic ? mic.startedAt : Date.now(), encoding: false }
+          setState({ agentRecording: { id: job.id, startedAt: job.startedAt || Date.now() } })
+        }
+        return
+      }
+      if (job.status === 'encoding') {
+        if (agentRun === null || agentRun.id !== job.id) {
+          agentRun = { id: job.id, mic: null, micStartedAt: Date.now(), encoding: false }
+        }
+        if (agentRun.encoding) return
+        agentRun.encoding = true
+        setState({ agentRecording: null, phase: 'encoding', progress: { stage: L('Agent 录屏编码中…', 'Encoding agent recording…'), ratio: 0.05 } })
+        const micBlob = await stopMic(agentRun.mic)
+        try {
+          const encoded = await encodeRecording(job.manifest, micBlob, { mic: { startedAt: agentRun.micStartedAt } })
+          const response = await fetch(PREFIX + '/agent/save?id=' + encodeURIComponent(job.id), { method: 'POST', body: encoded.blob })
+          const text = await response.text()
+          let data = {}
+          try { data = text ? JSON.parse(text) : {} } catch { /* ignore */ }
+          if (!response.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + response.status))
+          toast(L('Agent 录屏已保存：', 'Agent recording saved: ') + data.file, { kind: 'success', path: data.file, dir: data.dir })
+        } catch (error) {
+          await fetch(PREFIX + '/agent/error?id=' + encodeURIComponent(job.id), {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ error: String((error && error.message) || error) }),
+          }).catch(() => {})
+          toast(L('Agent 录屏失败：', 'Agent recording failed: ') + friendly(error), { kind: 'error' })
+        } finally {
+          agentRun = null
+          setState({ phase: 'idle', progress: null, agentRecording: null })
+        }
+      }
+    }
+
+    function startAgentWatch() {
+      if (agentPollTimer !== null) return
+      agentPollTimer = setInterval(() => { void pollAgent() }, 2000)
+      void pollAgent()
+    }
+
+    function stopAgentWatch() {
+      if (agentPollTimer !== null) {
+        clearInterval(agentPollTimer)
+        agentPollTimer = null
       }
     }
 
@@ -2124,15 +2191,16 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const now = useNow(snapshot.phase === 'recording')
       const recording = snapshot.recording
       const seconds = recording ? Math.max(0, Math.floor((now - recording.startedAt) / 1000)) : 0
-      const busy = snapshot.phase === 'starting' || snapshot.phase === 'encoding'
+      const busy = snapshot.phase === 'starting' || snapshot.phase === 'encoding' || Boolean(snapshot.agentRecording)
       const isRecording = snapshot.phase === 'recording'
+      const agentLabel = L('Agent 正在录屏', 'Agent is recording')
       return h('div', { className: 'vsr-toolbar' },
         h('button', {
           type: 'button',
           className: 'vsr-btn' + (isRecording ? ' vsr-btn-rec' : ''),
           disabled: busy,
-          title: isRecording ? S.stop : S.record,
-          'aria-label': isRecording ? S.stop : S.record,
+          title: snapshot.agentRecording ? agentLabel : (isRecording ? S.stop : S.record),
+          'aria-label': snapshot.agentRecording ? agentLabel : (isRecording ? S.stop : S.record),
           onMouseDown: event => event.preventDefault(),
           onClick: () => { if (isRecording) void stopRecording(); else void openPicker() },
         }, isRecording
@@ -2147,7 +2215,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           onMouseDown: event => event.preventDefault(),
           onClick: () => { void takeScreenshot() },
         }, iconCamera()),
-        props && props.sessionId ? null : null,
       )
     }
 
@@ -2629,6 +2696,14 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         h('button', { type: 'button', className: 'vsr-link vsr-link-light', onClick: () => { void stopRecording() } }, S.stop))
     }
 
+    function AgentPill(props) {
+      const now = useNow(true)
+      const seconds = Math.max(0, Math.floor((now - props.agent.startedAt) / 1000))
+      return h('div', { className: 'vsr-rec-pill vsr-rec-pill-floating' },
+        h('span', { className: 'vsr-dot' }),
+        h('span', null, L('Agent 正在录屏 ', 'Agent recording ') + formatDuration(seconds)))
+    }
+
     function ProgressCard(props) {
       const ratio = Math.max(0, Math.min(1, props.ratio || 0))
       return h('div', { className: 'vsr-progress' },
@@ -2648,6 +2723,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const snapshot = useStore()
       const children = []
       if (snapshot.phase === 'recording' && snapshot.recording) children.push(h(RecordingPill, { key: 'rec', recording: snapshot.recording }))
+      if (snapshot.agentRecording) children.push(h(AgentPill, { key: 'agent', agent: snapshot.agentRecording }))
       if (snapshot.phase === 'starting') children.push(h(ProgressCard, { key: 'start', stage: S.preparing, ratio: 0.2 }))
       if (snapshot.phase === 'encoding' && snapshot.progress) children.push(h(ProgressCard, { key: 'enc', stage: snapshot.progress.stage, ratio: snapshot.progress.ratio }))
       if (snapshot.picker) children.push(h(Picker, { key: 'picker', picker: snapshot.picker }))
@@ -2762,10 +2838,16 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         }
         window.addEventListener('pagehide', onPageHide)
         ctx.effect(() => () => window.removeEventListener('pagehide', onPageHide), 'vyra-screen-recorder: pagehide')
+        startAgentWatch()
+        ctx.effect(() => () => stopAgentWatch(), 'vyra-screen-recorder: agent watch')
         // 插件热更/页面刷新后，宿主可能还挂着上一路录制；主动清掉，避免临时目录泄漏。
+        // Agent 队列里的录制不能清：它还要等本页面编码。
         apiJson('/record/status').then(status => {
-          if (status && status.recording) return apiJson('/record/discard', { method: 'POST' })
-          return null
+          if (!status || !status.recording) return null
+          return apiJson('/agent/status').then(agent => {
+            if (agent && agent.job) return null
+            return apiJson('/record/discard', { method: 'POST' })
+          })
         }).catch(() => {})
       } catch (error) {
         try { console.warn('[vyra-screen-recorder] apply failed', error) } catch { /* ignore */ }

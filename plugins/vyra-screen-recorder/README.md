@@ -4,6 +4,7 @@
 
 - **录屏**：点开「选择要录制的内容」——整个桌面、某台显示器、某个窗口，或者拖框自定义区域；可以同时录**系统声音**和**麦克风**。停止后自动编成一个 `.webm` 视频，挂进输入框附件，并保存到本机。
 - **截图**：抓整屏 → 拖框选区域 → 用画笔 / 矩形 / 箭头 / 文字标注 →「用这张」进附件。
+- **Agent 也能用**：插件初始化时会把技能和 `vsr` CLI 装进 `~/.dsh`，Agent 可以直接录屏、截图、枚举屏幕/窗口。
 - **不需要 Python、ffmpeg、Pillow、虚拟声卡**：抓屏、系统声音、编码全部用 Windows 自带能力和浏览器 WebCodecs 完成。
 
 ---
@@ -43,6 +44,39 @@ dsh plugin --profile desktop add vyra-screen-recorder
 
 `Esc` 取消，`Ctrl+Z` 撤销上一笔。
 
+### 给 Agent 用的技能 + CLI
+
+插件初始化时会把两样东西装进 DSH 家目录（默认 `~/.dsh`）：
+
+| 装什么 | 落点 |
+| --- | --- |
+| 技能 | `~/.dsh/skills/vyra-screen-recorder/SKILL.md` |
+| CLI | `~/.dsh/vyra-screen-recorder/bin/vsr`（sh）和 `vsr.cmd`（Windows） |
+
+Agent 的命令：
+
+```bash
+# 截图（不需要 DSH 运行）
+vsr shot --out ./shot.jpg
+vsr shot --out ./region.jpg --region 100,100,800,600
+
+# 枚举可录制源
+vsr sources --json
+
+# 录屏（需要 DSH Web 界面保持打开，界面负责编码）
+vsr record --duration 10 --out ./demo.webm --source desktop
+vsr record --duration 8  --out ./demo.webm --source monitor:1 --no-mic
+vsr record --duration 8  --out ./demo.webm --source window:123456
+vsr record --duration 8  --out ./demo.webm --source region:100,100,800,600 --no-audio
+```
+
+- 录屏流程：CLI 把请求写进本地队列 → 宿主开始抓屏 → DSH Web 界面用 WebCodecs 编码 → 保存到 `--out`。
+- **DSH Web 界面必须打开**；否则编码阶段会超时，CLI 会明确报错。
+- 默认录系统声音 + 麦克风；`--no-audio` / `--no-mic` 关闭。
+- 输出路径解析成绝对路径，父目录会自动创建。
+
+完整的 Agent 使用说明见包内的 [`skills/vyra-screen-recorder/SKILL.md`](skills/vyra-screen-recorder/SKILL.md)。
+
 ### 产物
 
 - 视频：`<DSH_HOME>/vyra-screen-recorder/recordings/录屏-YYYYMMDD-HHmmss.webm`
@@ -76,6 +110,7 @@ dsh plugin --profile desktop add vyra-screen-recorder
 5. **同时只允许一路录制。** 多开页面/多标签不会同时录。
 6. **麦克风用系统默认输入设备。** 暂不支持在插件里选设备。
 7. **目前只支持 Windows。** Mac / Linux 没有这套 GDI + WASAPI 实现。
+8. **Agent 录屏需要 DSH Web 界面打开。** 编码在界面里做；截图和源枚举可以完全离线跑。
 
 ---
 

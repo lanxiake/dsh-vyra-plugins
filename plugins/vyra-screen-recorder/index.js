@@ -30,7 +30,7 @@
  */
 import { spawn } from 'node:child_process'
 import { createReadStream } from 'node:fs'
-import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
@@ -39,14 +39,16 @@ import { fileURLToPath } from 'node:url'
 export const name = 'vyra-screen-recorder'
 export const inject = ['webServer']
 
+const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const PREFIX = '/plugins/vyra-screen-recorder'
-const LIB = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib')
+const LIB = path.join(ROOT, 'lib')
 const POWERSHELL = process.env.VSR_POWERSHELL || 'powershell.exe'
 const SAVE_LIMIT = 512 * 1024 * 1024
 const MAX_SECONDS = 600
 const SESSION_PREFIX = 'vyra-screen-recorder-'
 
 let recording = null
+let agentJob = null
 
 function log(...args) {
   try { console.log('[vyra-screen-recorder]', ...args) } catch { /* ignore */ }
@@ -196,6 +198,129 @@ async function countFrames(dir) {
     const files = await readdir(dir)
     return files.filter(file => file.endsWith('.jpg')).length
   } catch { return 0 }
+}
+
+// ------------------------------------------------------------- agent queue
+// CLI 录屏：CLI 把 req-<id>.json 写进 ~/.dsh/vyra-screen-recorder/agent，
+// 宿主轮询后开录/停录；状态写 state-<id>.json。编码由 DSH Web 界面完成，
+// 完成后 POST /agent/save 把 WebM 写到请求里的 --out。
+
+function agentDir() {
+  return path.join(dshHome(), 'vyra-screen-recorder', 'agent')
+}
+
+async function writeJsonAtomic(file, value) {
+  const temporary = file + '.tmp-' + process.pid
+  await writeFile(temporary, JSON.stringify(value))
+  await rename(temporary, file)
+}
+
+async function writeAgentState(id, value) {
+  await mkdir(agentDir(), { recursive: true })
+  await writeJsonAtomic(path.join(agentDir(), 'state-' + id + '.json'), value)
+}
+
+/** 插件初始化时把技能和 CLI shim 装进 DSH_HOME。 */
+async function installAgentAssets() {
+  const skillSource = path.join(ROOT, 'skills', 'vyra-screen-recorder', 'SKILL.md')
+  const skillText = await readFile(skillSource, 'utf8')
+  const skillDir = path.join(dshHome(), 'skills', 'vyra-screen-recorder')
+  await mkdir(skillDir, { recursive: true })
+  await writeFile(path.join(skillDir, 'SKILL.md'), skillText)
+
+  const binDir = path.join(dshHome(), 'vyra-screen-recorder', 'bin')
+  await mkdir(binDir, { recursive: true })
+  const cli = path.join(ROOT, 'bin', 'vsr.mjs')
+  await writeFile(path.join(binDir, 'vsr.cmd'), '@echo off\r\nnode "' + cli + '" %*\r\n')
+  await writeFile(path.join(binDir, 'vsr'), '#!/bin/sh\nexec node "' + cli.replace(/\\/g, '/') + '" "$@"\n')
+  await mkdir(agentDir(), { recursive: true })
+}
+
+async function beginAgentJob(request) {
+  const duration = clamp(request.duration, 2, MAX_SECONDS, 10)
+  const result = await startSession({
+    source: request.source,
+    fps: request.fps,
+    quality: request.quality,
+    maxEdge: request.maxEdge,
+    maxSeconds: duration,
+    includeSystemAudio: request.includeSystemAudio !== false,
+  })
+  agentJob = {
+    id: request.id,
+    request,
+    status: 'recording',
+    startedAt: result.startedAt,
+    timer: null,
+    encodingAt: 0,
+    manifest: null,
+  }
+  await writeAgentState(request.id, {
+    status: 'recording',
+    startedAt: result.startedAt,
+    duration,
+    includeMic: request.includeMic !== false,
+    out: request.out,
+  })
+  agentJob.timer = setTimeout(() => { void finishAgentJob() }, duration * 1000)
+  log('agent recording started', request.id, duration + 's')
+}
+
+async function finishAgentJob() {
+  if (agentJob === null || agentJob.status !== 'recording') return
+  const job = agentJob
+  job.status = 'stopping'
+  if (job.timer !== null) { clearTimeout(job.timer); job.timer = null }
+  try {
+    const manifest = await stopSession()
+    job.status = 'encoding'
+    job.encodingAt = Date.now()
+    job.manifest = manifest
+    await writeAgentState(job.id, {
+      status: 'encoding',
+      manifest,
+      includeMic: job.request.includeMic !== false,
+      out: job.request.out,
+    })
+    log('agent recording stopped, waiting for UI encode', job.id)
+  } catch (error) {
+    await failAgentJob('停止录制失败：' + String((error && error.message) || error))
+  }
+}
+
+async function failAgentJob(message) {
+  const job = agentJob
+  agentJob = null
+  if (job !== null && job.timer !== null) clearTimeout(job.timer)
+  if (job !== null) {
+    try { await writeAgentState(job.id, { status: 'error', error: message }) } catch { /* ignore */ }
+  }
+  await discardSession().catch(() => {})
+  log('agent job failed', message)
+}
+
+async function agentTick() {
+  if (agentJob !== null) {
+    if (agentJob.status === 'encoding' && Date.now() - agentJob.encodingAt > 300000) {
+      await failAgentJob('编码超时：请确认 DSH Web 界面已打开')
+    }
+    return
+  }
+  let names = []
+  try { names = await readdir(agentDir()) } catch { return }
+  for (const name of names.filter(item => /^req-.*\.json$/.test(item)).sort()) {
+    const id = name.slice(4, -5)
+    if (existsSync(path.join(agentDir(), 'state-' + id + '.json'))) continue
+    let request = null
+    try { request = JSON.parse(await readFile(path.join(agentDir(), name), 'utf8')) } catch { continue }
+    if (request === null || request.id !== id) continue
+    try {
+      await beginAgentJob(request)
+    } catch (error) {
+      await writeAgentState(id, { status: 'error', error: String((error && error.message) || error) }).catch(() => {})
+    }
+    return
+  }
 }
 
 function regionOf(value) {
@@ -576,6 +701,73 @@ async function handleReveal(req, res) {
   }
 }
 
+async function handleAgentStatus(req, res) {
+  if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
+  if (agentJob === null) { sendJson(res, 200, { ok: true, job: null }); return }
+  sendJson(res, 200, {
+    ok: true,
+    job: {
+      id: agentJob.id,
+      status: agentJob.status,
+      startedAt: agentJob.startedAt,
+      includeMic: agentJob.request.includeMic !== false,
+      out: agentJob.request.out,
+      manifest: agentJob.manifest,
+    },
+  })
+}
+
+async function handleAgentSave(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  const url = new URL(req.url || PREFIX, 'http://localhost')
+  const id = url.searchParams.get('id') || ''
+  if (agentJob === null || agentJob.id !== id || agentJob.status !== 'encoding') {
+    sendJson(res, 400, { ok: false, error: '没有等待编码的 Agent 录制' })
+    return
+  }
+  try {
+    const body = await readBody(req, SAVE_LIMIT)
+    if (body.length === 0) throw new Error('没有收到视频数据')
+    const requested = String(agentJob.request.out || '').trim()
+    const file = requested
+      ? path.resolve(requested)
+      : path.join(recordingsDir(), 'agent-' + id + '.webm')
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, body)
+    await writeAgentState(id, { status: 'done', file, dir: path.dirname(file), bytes: body.length })
+    const job = agentJob
+    agentJob = null
+    if (job !== null && job.timer !== null) clearTimeout(job.timer)
+    await discardSession().catch(() => {})
+    log('agent recording saved', file, body.length)
+    sendJson(res, 200, { ok: true, file, dir: path.dirname(file), bytes: body.length })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+async function handleAgentError(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  const url = new URL(req.url || PREFIX, 'http://localhost')
+  const id = url.searchParams.get('id') || ''
+  let message = '编码失败'
+  try {
+    const body = await readBody(req, 1024 * 1024)
+    const data = body.length ? JSON.parse(body.toString('utf8')) : {}
+    if (data && data.error) message = String(data.error)
+  } catch { /* 用默认错误 */ }
+  if (agentJob === null || agentJob.id !== id) {
+    sendJson(res, 400, { ok: false, error: '没有这个 Agent 录制' })
+    return
+  }
+  const job = agentJob
+  agentJob = null
+  if (job !== null && job.timer !== null) clearTimeout(job.timer)
+  await writeAgentState(id, { status: 'error', error: message }).catch(() => {})
+  await discardSession().catch(() => {})
+  sendJson(res, 200, { ok: true })
+}
+
 const ROUTES = [
   { kind: 'prefix', path: PREFIX + '/sources', handler: handleSources },
   { kind: 'prefix', path: PREFIX + '/shot', handler: handleShot },
@@ -589,6 +781,9 @@ const ROUTES = [
   { kind: 'prefix', path: PREFIX + '/record/discard', handler: async (req, res) => {
     try { sendJson(res, 200, await discardSession()) } catch (error) { sendJson(res, 500, { ok: false, error: String(error) }) }
   } },
+  { kind: 'prefix', path: PREFIX + '/agent/status', handler: handleAgentStatus },
+  { kind: 'prefix', path: PREFIX + '/agent/save', handler: handleAgentSave },
+  { kind: 'prefix', path: PREFIX + '/agent/error', handler: handleAgentError },
   { kind: 'prefix', path: PREFIX + '/reveal', handler: handleReveal },
 ]
 
@@ -609,6 +804,19 @@ function resolveWebServer(scope) {
 
 export function apply(ctx) {
   cleanupOldSessions().catch(() => {})
+  void installAgentAssets().catch(error => log('安装技能/CLI 失败：', (error && error.message) || error))
+  try {
+    const agentTimer = setInterval(() => { void agentTick() }, 500)
+    ctx.effect(() => () => {
+      clearInterval(agentTimer)
+      if (agentJob !== null) {
+        if (agentJob.timer !== null) clearTimeout(agentJob.timer)
+        agentJob = null
+      }
+    }, 'vyra-screen-recorder: agent queue')
+  } catch (error) {
+    log('agent queue 启动失败：', (error && error.message) || error)
+  }
   try {
     ctx.inject(['webServer'], (scope) => {
       const webServer = resolveWebServer(scope)

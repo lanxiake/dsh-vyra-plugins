@@ -5,6 +5,9 @@
   "type": "module",
   "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 WebM；截图带选区与基础标注。",
   "main": "./index.js",
+  "bin": {
+    "vsr": "bin/vsr.mjs"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -14,6 +17,8 @@
   "files": [
     "index.js",
     "client.js",
+    "bin",
+    "skills",
     "lib",
     "src",
     "scripts",
