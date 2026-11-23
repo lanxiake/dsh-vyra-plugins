@@ -41,6 +41,13 @@ export const ACTIONS = Object.freeze({
   'settings.list': { domain: 'settings', mutating: false, destructive: false, requiresClient: false },
   'settings.get': { domain: 'settings', mutating: false, destructive: false, requiresClient: false },
   'settings.set': { domain: 'settings', mutating: true, destructive: false, requiresClient: false },
+  'skill.list': { domain: 'catalog', mutating: false, destructive: false, requiresClient: false },
+  'mcp.list': { domain: 'catalog', mutating: false, destructive: false, requiresClient: false },
+  // A restart remounts the same configured entry, so it changes something real
+  // but is recoverable by running it again: mutating, not destructive, and
+  // therefore not behind the confirmation gate.
+  'mcp.restart': { domain: 'catalog', mutating: true, destructive: false, requiresClient: false },
+  'mcp.probe': { domain: 'catalog', mutating: false, destructive: false, requiresClient: false },
 })
 
 /**
