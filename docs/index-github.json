@@ -2185,7 +2185,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "be4cc83037d4eaa19ca2621687fc4d63008da144",
+            "commit": "80204fe5f1cb78a9ccecadd9d7d24e4025bbb68d",
             "path": "plugins/vyra-screen-recorder"
           }
         }
