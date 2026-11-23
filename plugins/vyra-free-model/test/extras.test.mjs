@@ -63,3 +63,52 @@ test('the picker label states the window and modality in one line', async () => 
   assert.equal(formatWindow(262_144), '256K')
   assert.equal(shortModelName('Baidu: ERNIE-5.5-Flash-Preview (free)'), 'ERNIE-5.5-Flash-Preview')
 })
+
+test('the automatic lane switches to a working model instead of failing', async () => {
+  let calls = 0
+  const fetchImpl = async (url, init) => {
+    calls += 1
+    const requested = JSON.parse(init.body).model
+    if (requested === 'kilo-auto/free') {
+      return new Response('{"error":{"message":"quota window"}}', { status: 429 })
+    }
+    return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n', {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+    })
+  }
+  const lane = new KiloAdapter({
+    state: () => ({
+      catalog: [
+        { id: 'kilo-auto/free', name: '自动选择', contextWindow: 256000, maxOutput: 32768, vision: false },
+        { id: 'b:free', name: 'B', contextWindow: 1000, maxOutput: 100, vision: false },
+      ],
+      settings: {},
+    }),
+    autoSwitch: () => true,
+    fallbackModels: () => ['b:free'],
+    fetchImpl,
+  })
+  const chunks = []
+  for await (const chunk of lane.stream({ model: 'kilo-auto/free', messages: [], maxTokens: 4 })) chunks.push(chunk)
+  assert.equal(calls, 2)
+  assert.ok(chunks.some(chunk => chunk.type === 'text-delta' && chunk.text === 'ok'))
+  assert.equal(chunks.filter(chunk => chunk.type === 'finish')[0].reason.kind, 'stop')
+})
+
+test('with the switch off the refusal is reported as before', async () => {
+  const fetchImpl = async () => new Response('{"error":{"message":"quota window"}}', { status: 429 })
+  const lane = new KiloAdapter({
+    state: () => ({
+      catalog: [{ id: 'kilo-auto/free', name: '自动选择', contextWindow: 256000, maxOutput: 32768, vision: false }],
+      settings: {},
+    }),
+    autoSwitch: () => false,
+    fallbackModels: () => ['b:free'],
+    fetchImpl,
+  })
+  const chunks = []
+  for await (const chunk of lane.stream({ model: 'kilo-auto/free', messages: [] })) chunks.push(chunk)
+  assert.equal(chunks[0].type, 'finish')
+  assert.equal(chunks[0].reason.kind, 'error')
+})

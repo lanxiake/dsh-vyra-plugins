@@ -250,7 +250,7 @@ test('the model count includes the automatic row so it matches what is shown', (
   ]
   const html = renderToString(h(ModelBlock, { models, selected: '', onSelect: () => {} }))
   // Two catalog models plus the automatic row the block draws itself.
-  assert.ok(html.includes('3 个可用'), 'the count must match the rows on screen')
+  assert.ok(html.includes('3 个模型'), 'the count must match the rows on screen')
   assert.equal((html.match(/className="vfm_row"/g) ?? []).length, 3)
 })
 

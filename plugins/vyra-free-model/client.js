@@ -53,12 +53,14 @@ window.__ModuleLoader__.load({
         'models.empty': '还没拿到模型列表。检查网络后点下面的按钮。',
         'models.recheck': '重新检测',
         'models.rechecking': '检测中…',
-        'models.count': '{n} 个可用',
+        'models.count': '{n} 个模型',
         'models.more': '展开全部 {n} 个',
         'models.less': '收起',
         'models.offline': '所有模型都连不上。稍后再试，或登录账号换取更多额度。',
         'models.source': '模型来自 Kilo AI 公共免费网关（kilo.ai），由上游免费提供。提示词可能被上游记录，别发敏感内容。',
         'models.switchHint': '模型在对话框顶部的选择器里切换；这里只显示可用状态。',
+        'models.autoSwitch': '自动切换模型',
+        'models.autoSwitchHint': '自动选择失败时，换一个可用模型重试一次；关闭后直接报错。',
         'models.probe.ok': '可用',
         'models.probe.limited': '限流',
         'models.probe.unavailable': '不可用',
@@ -92,6 +94,24 @@ window.__ModuleLoader__.load({
         'accounts.remove': '移除',
         'accounts.failed': '登录失败：{message}',
         'accounts.expiredHint': '登录已过期，请重新登录。',
+        'accounts.addAccount': '添加账号',
+        'accounts.toggleOff': '停用',
+        'accounts.toggleOn': '启用',
+        'accounts.delete': '删除',
+        'accounts.credit': '{n} {unit}',
+        'accounts.creditUnit': '积分',
+        'accounts.creditError': '积分查不到',
+        'accounts.creditsLoading': '查询积分中…',
+        'accounts.refreshCredits': '刷新积分',
+        'accounts.checkedIn': '今日已领',
+
+        'loginModal.title': '登录 {name}',
+        'loginModal.hint': '浏览器没有自动打开时，复制下面的链接，手动在浏览器里打开完成授权。',
+        'loginModal.open': '打开授权页',
+        'loginModal.copy': '复制链接',
+        'loginModal.copied': '已复制',
+        'loginModal.close': '关闭',
+        'loginModal.waiting': '等待授权完成…',
 
         'buddy.title': 'CodeBuddy / WorkBuddy（可选）',
         'buddy.hint': '登录腾讯账号后，它的模型会出现在上面的「免费模型」里。',
@@ -173,12 +193,14 @@ window.__ModuleLoader__.load({
         'models.empty': 'No models yet. Check the network, then retry below.',
         'models.recheck': 'Check again',
         'models.rechecking': 'Checking…',
-        'models.count': '{n} available',
+        'models.count': '{n} models',
         'models.more': 'Show all {n}',
         'models.less': 'Show less',
         'models.offline': 'No model is reachable right now. Try later, or sign in for more quota.',
         'models.source': 'Models come from the Kilo AI public free gateway (kilo.ai). Prompts may be logged upstream — avoid sensitive content.',
         'models.switchHint': 'Switch models in the picker above the composer; this list shows availability.',
+        'models.autoSwitch': 'Switch models automatically',
+        'models.autoSwitchHint': 'When the automatic pick fails, retry once on another working model; off means show the error.',
         'models.probe.ok': 'Works',
         'models.probe.limited': 'Rate-limited',
         'models.probe.unavailable': 'Unavailable',
@@ -212,6 +234,24 @@ window.__ModuleLoader__.load({
         'accounts.remove': 'Remove',
         'accounts.failed': 'Sign-in failed: {message}',
         'accounts.expiredHint': 'This sign-in expired; sign in again.',
+        'accounts.addAccount': 'Add account',
+        'accounts.toggleOff': 'Disable',
+        'accounts.toggleOn': 'Enable',
+        'accounts.delete': 'Delete',
+        'accounts.credit': '{n} {unit}',
+        'accounts.creditUnit': 'credits',
+        'accounts.creditError': 'Credits unavailable',
+        'accounts.creditsLoading': 'Checking credits…',
+        'accounts.refreshCredits': 'Refresh credits',
+        'accounts.checkedIn': 'Claimed today',
+
+        'loginModal.title': 'Sign in to {name}',
+        'loginModal.hint': 'If the browser did not open, copy this link and open it yourself to finish signing in.',
+        'loginModal.open': 'Open sign-in page',
+        'loginModal.copy': 'Copy link',
+        'loginModal.copied': 'Copied',
+        'loginModal.close': 'Close',
+        'loginModal.waiting': 'Waiting for authorization…',
 
         'buddy.title': 'CodeBuddy / WorkBuddy (optional)',
         'buddy.hint': 'Sign into a Tencent account and its models join the free-model group above.',
@@ -419,6 +459,7 @@ window.__ModuleLoader__.load({
 .vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vfm_acct{flex-wrap:wrap}
 .vfm_acct > .vfm_loginbox{flex-basis:100%;margin-top:2px}
+.vfm_acct > .vfm_acctlines{flex-basis:100%;width:100%;margin-top:4px}
 .vfm_autoNow{color:var(--dsw-alias-label-primary);font-size:11.5px}
 
 /* ── tool configuration ───────────────────────────────────────────────── */
@@ -523,6 +564,21 @@ window.__ModuleLoader__.load({
 .vfm_epurl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--dsw-alias-label-secondary);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vfm_epacts{display:flex;align-items:center;gap:6px;flex:none}
+
+/* ── account rows and the sign-in dialog ──────────────────────────────── */
+.vfm_accline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;
+  border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 70%,transparent)}
+.vfm_accline:first-child{border-top:none}
+.vfm_accline .vfm_acctline{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfm_accline .vfm_btn{padding:2px 7px;font-size:11px}
+.vfm_modalbackdrop{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:color-mix(in srgb,#000 42%,transparent)}
+.vfm_modal{width:min(460px,100%);display:flex;flex-direction:column;gap:12px;padding:20px 22px;border-radius:16px;
+  border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);
+  box-shadow:0 18px 60px color-mix(in srgb,#000 45%,transparent)}
+.vfm_modalTitle{margin:0;font-size:14px;font-weight:600}
+.vfm_modalurl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+.vfm_modalacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 `
 
     // ── primitives ───────────────────────────────────────────────────────────
@@ -719,6 +775,7 @@ window.__ModuleLoader__.load({
      */
     function ModelBlock({
       models, extraModels, auto, selected, onSelect, laneOk, onRecheck, busy,
+      autoSwitch, onToggleAutoSwitch,
       defaultOpen = true, collapsed = false,
     }) {
       const [expanded, setExpanded] = useState(false)
@@ -804,6 +861,15 @@ window.__ModuleLoader__.load({
           ? h(Btn, { kind: 'quiet', onClick: () => setExpanded(false) }, t('models.less'))
           : null),
 
+      h('div', { className: 'vfm_field' },
+        h('div', { className: 'vfm_toolmain' },
+          h('span', { className: 'vfm_label' }, t('models.autoSwitch')),
+          h('span', { className: 'vfm_toolhint' }, t('models.autoSwitchHint'))),
+        h(Btn, {
+          kind: autoSwitch !== false ? 'ghost' : 'primary',
+          onClick: () => onToggleAutoSwitch?.(autoSwitch === false),
+        }, autoSwitch !== false ? t('forward.off') : t('forward.on'))),
+
       roster.length === 0 ? h('p', { className: 'vfm_note' }, t('models.empty')) : null,
       laneOk === false && roster.length > 0 ? h('p', { className: 'vfm_note' }, t('models.offline')) : null)
     }
@@ -834,83 +900,86 @@ window.__ModuleLoader__.load({
       Object.freeze({ id: 'raccoon', label: '商汤 Raccoon', more: true }),
     ])
 
-    /** A login URL the page can always show, even when the popup was blocked. */
-    function LoginBox({ url, copied, onOpen, onCopy }) {
-      if (typeof url !== 'string' || url === '') return null
-      return h('div', { className: 'vfm_loginbox' },
-        h('span', { className: 'vfm_loginurl', title: url }, url),
-        h('div', { className: 'vfm_loginacts' },
-          h('a', {
-            className: 'vfm_link',
-            href: url,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-            onClick: event => { event.preventDefault(); onOpen?.(url) },
-          }, t('accounts.openLink')),
-          h(Btn, { kind: 'quiet', onClick: () => onCopy?.(url) }, copied ? t('accounts.copied') : t('accounts.copyLink'))))
+    /** The credit line for one account, when the provider published a balance. */
+    function creditLine(providerId, accountId, credits) {
+      const bucket = credits?.[providerId]
+      if (bucket === null || bucket === undefined) return null
+      const entry = Array.isArray(bucket.accounts) ? bucket.accounts.find(row => row?.id === accountId) : undefined
+      if (entry === undefined) return null
+      if (entry.credits === undefined && typeof entry.error === 'string' && entry.error !== '') {
+        return h('span', { className: 'vfm_tag', title: entry.error }, t('accounts.creditError'))
+      }
+      if (entry.credits === undefined) return null
+      const unit = typeof entry.unit === 'string' && entry.unit !== '' ? entry.unit : t('accounts.creditUnit')
+      return h('span', { className: 'vfm_tag' }, t('accounts.credit', { n: entry.credits, unit }))
     }
 
     /**
      * One provider card.
      *
-     * A card answers exactly two questions: am I signed in, and how do I change
-     * that. Everything else — the account id, the redirect, the token — stays
-     * out of the markup. When a sign-in is under way the authorization URL is
-     * shown with a link and a copy button, because a popup opened after an
-     * await is exactly the kind of thing a browser blocks silently.
+     * Shows every signed-in account under its provider, because the pack and
+     * the Tencent lane both allow several. A provider answers exactly two
+     * questions: who is signed in (with balance), and how do I change that.
+     * The authorization URL lives in a dialog — a popup opened after an await is
+     * what browsers block, and the user needs a visible link when that happens.
      */
-    function providerRow(provider, entry, handlers) {
+    function providerRow(provider, entry, handlers, credits) {
       const status = entry !== null && typeof entry === 'object' ? entry : {}
       const accounts = Array.isArray(status.accounts) ? status.accounts : []
       const pending = status.state === 'pending'
       const error = typeof status.message === 'string' ? status.message : ''
-      const copied = status.copied === true
       const claimable = provider.claimable === true
       const now = Date.now()
 
       const accountLines = accounts.map(account => {
         const expired = Number(account.expiresAt) > 0 && Number(account.expiresAt) < now
-        return h('span', { className: 'vfm_acctline' },
-          typeof account.nickname === 'string' && account.nickname !== '' ? account.nickname : account.id,
-          expired ? ` · ${t('accounts.expired')}` : '',
-          account.enabled === false ? ' · 已停用' : '')
+        const name = typeof account.nickname === 'string' && account.nickname !== '' ? account.nickname : account.id
+        return h('div', { className: 'vfm_accline', key: account.id },
+          h('span', { className: 'vfm_acctline' },
+            name,
+            expired ? ` · ${t('accounts.expired')}` : '',
+            account.enabled === false ? ` · ${t('accounts.toggleOn')}` : ''),
+          h('span', { className: 'vfm_meta' },
+            creditLine(provider.id, account.id, credits),
+            h(Btn, {
+              kind: 'quiet',
+              onClick: () => handlers.onToggle?.(provider.id, account.id, account.enabled === false),
+            }, account.enabled === false ? t('accounts.toggleOn') : t('accounts.toggleOff')),
+            h(Btn, { kind: 'quiet', onClick: () => handlers.onRemove?.(provider.id, account.id) }, t('accounts.delete'))))
       })
 
-      const action = accounts.length > 0
-        ? h('div', { className: 'vfm_meta' },
-          claimable
-            ? h(Btn, { disabled: status.claiming === true, onClick: () => handlers.onClaim?.(provider.id) },
-              status.claiming === true ? t('accounts.claiming') : t('accounts.claim'))
-            : null,
-          h(Btn, { kind: 'quiet', onClick: () => handlers.onLogin?.(provider.id) }, t('accounts.relogin')))
-        : h(Btn, {
-          kind: 'ghost',
+      const actions = h('div', { className: 'vfm_meta' },
+        claimable && accounts.length > 0
+          ? h(Btn, { disabled: status.claiming === true, onClick: () => handlers.onClaim?.(provider.id) },
+            status.claiming === true ? t('accounts.claiming') : t('accounts.claim'))
+          : null,
+        h(Btn, {
+          kind: accounts.length > 0 ? 'quiet' : 'ghost',
           disabled: pending,
-          onClick: () => handlers.onLogin?.(provider.id),
-        }, pending ? t('accounts.pending') : t('accounts.login'))
+          onClick: () => handlers.onLogin?.(provider),
+        }, pending ? t('accounts.pending') : (accounts.length > 0 ? t('accounts.addAccount') : t('accounts.login'))))
 
       return h('div', { className: 'vfm_acct', 'data-state': accounts.length > 0 ? 'ready' : '' },
         h('div', { className: 'vfm_acctmain' },
           h('span', { className: 'vfm_acctname' }, provider.label),
           accounts.length > 0
-            ? h('span', { className: 'vfm_acctlines' }, ...accountLines)
+            ? h('span', { className: 'vfm_meta' }, t('accounts.loggedIn', { n: accounts.length }))
             : h('span', { className: 'vfm_meta' }, t('accounts.notLogged'))),
-        h('div', { className: 'vfm_meta' }, action),
+        actions,
         pending || error !== ''
           ? h('div', { className: 'vfm_loginbox' },
             pending ? h('span', { className: 'vfm_acctline' }, t('accounts.waiting')) : null,
             error !== '' ? h('span', { className: 'vfm_error' }, t('accounts.failed', { message: truncate(error, 160) })) : null,
-            h(LoginBox, {
-              url: status.loginUrl,
-              copied,
-              onOpen: url => handlers.onOpen?.(url),
-              onCopy: url => handlers.onCopy?.(url, provider.id),
-            }),
+            pending && typeof status.loginUrl === 'string' && status.loginUrl !== ''
+              ? h('div', { className: 'vfm_loginacts' },
+                h(Btn, { onClick: () => handlers.onShowLogin?.(provider, status.loginUrl) }, t('loginModal.open')))
+              : null,
             error !== ''
               ? h('div', { className: 'vfm_loginacts' },
-                h(Btn, { kind: 'primary', onClick: () => handlers.onLogin?.(provider.id) }, t('accounts.retry')))
+                h(Btn, { kind: 'primary', onClick: () => handlers.onLogin?.(provider) }, t('accounts.retry')))
               : null)
-          : null)
+          : null,
+        accounts.length > 0 ? h('div', { className: 'vfm_acctlines' }, ...accountLines) : null)
     }
 
     /**
@@ -922,13 +991,14 @@ window.__ModuleLoader__.load({
      * start chatting.
      */
     function AccountsBlock({
-      providers, status, ownedElsewhere, claimFailedAt, onLogin, onClaim, onOpen, onCopy,
+      providers, status, credits, creditsLoading, ownedElsewhere, claimFailedAt, onLogin, onClaim,
+      onToggle, onRemove, onShowLogin, onRefreshCredits,
       defaultOpen = true, collapsed = false,
     }) {
       const [showMore, setShowMore] = useState(false)
       const roster = Array.isArray(providers) && providers.length > 0 ? providers : PROVIDERS
       const entries = status !== null && typeof status === 'object' ? status : {}
-      const handlers = { onLogin, onClaim, onOpen, onCopy }
+      const handlers = { onLogin, onClaim, onToggle, onRemove, onShowLogin }
       const primary = roster.filter(entry => entry.more !== true)
       const extra = roster.filter(entry => entry.more === true)
       const signedIn = roster.reduce((sum, entry) => sum + (Array.isArray(entry.accounts) ? entry.accounts.length : 0), 0)
@@ -951,6 +1021,8 @@ window.__ModuleLoader__.load({
           ? (signedIn > 0 ? t('accounts.loggedIn', { n: signedIn }) : t('accounts.notLogged'))
           : undefined,
         hint: t('accounts.hint'),
+        action: h(Btn, { kind: 'quiet', disabled: creditsLoading === true, onClick: () => onRefreshCredits?.() },
+          creditsLoading === true ? t('accounts.creditsLoading') : t('accounts.refreshCredits')),
       },
       claimFailedAt !== undefined && claimFailedAt !== null
         ? h('div', { className: 'vfm_warn' },
@@ -959,8 +1031,8 @@ window.__ModuleLoader__.load({
         : null,
 
       h('div', { className: 'vfm_accts' },
-        ...primary.map(entry => providerRow(entry, { ...(entries[entry.id] ?? {}), accounts: entry.accounts }, handlers)),
-        showMore ? extra.map(entry => providerRow(entry, { ...(entries[entry.id] ?? {}), accounts: entry.accounts }, handlers)) : []),
+        ...primary.map(entry => providerRow(entry, { ...(entries[entry.id] ?? {}), accounts: entry.accounts }, handlers, credits)),
+        showMore ? extra.map(entry => providerRow(entry, { ...(entries[entry.id] ?? {}), accounts: entry.accounts }, handlers, credits)) : []),
 
       extra.length > 0
         ? (showMore
@@ -1058,119 +1130,6 @@ window.__ModuleLoader__.load({
             h('span', { className: 'vfm_label' }, t('forward.forClaudeCode')),
             h(Btn, { onClick: () => void copy('claude', claudeCodeSnippet(port, realKey, model)) },
               copied === 'claude' ? t('forward.copied') : t('forward.copy')))))
-    }
-
-    // ── Tencent accounts (CodeBuddy / WorkBuddy) ─────────────────────────────
-
-    /** The two products the buddy lane can sign into. */
-    const BUDDY_PRODUCTS = Object.freeze([
-      Object.freeze({ id: 'buddy', label: t('buddy.product.buddy') }),
-      Object.freeze({ id: 'workbuddy', label: t('buddy.product.workbuddy') }),
-    ])
-
-    /**
-     * Sign-in for the two Tencent products.
-     *
-     * Their protocol is not in the bundled channel pack, so this block is the
-     * only place that can add the models. The login page is opened by the host
-     * (a system browser, not a popup), and the URL is repeated here with a copy
-     * button for the times the system browser does not come up.
-     */
-    function BuddyBlock({ products, accounts, defaultOpen = false, collapsed = false, onSummary }) {
-      const [state, setState] = useState({})
-      const [copied, setCopied] = useState('')
-      const list = Array.isArray(products) && products.length > 0 ? products : BUDDY_PRODUCTS
-      const rows = Array.isArray(accounts) ? accounts : []
-
-      const poll = async productId => {
-        const deadline = Date.now() + LOGIN_TIMEOUT_MS
-        while (Date.now() < deadline) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          try {
-            const payload = await api('/summary')
-            if ((payload?.extras?.buddy?.accounts ?? []).some(account => account.product === productId)) {
-              setState(current => ({ ...current, [productId]: {} }))
-              onSummary?.(payload)
-              return
-            }
-          } catch { /* keep waiting */ }
-        }
-        setState(current => ({ ...current, [productId]: { error: '登录超时，请重试。' } }))
-      }
-
-      const login = async productId => {
-        setState(current => ({ ...current, [productId]: { pending: true } }))
-        try {
-          const payload = await api('/buddy', {
-            method: 'POST',
-            body: { action: 'login', product: productId },
-            timeoutMs: 30000,
-          })
-          const url = payload?.value?.loginUrl
-          setState(current => ({ ...current, [productId]: { pending: true, loginUrl: url } }))
-          await poll(productId)
-        } catch (cause) {
-          setState(current => ({ ...current, [productId]: { error: String(cause?.message ?? cause) } }))
-        }
-      }
-
-      const remove = async id => {
-        try {
-          await api('/buddy', { method: 'POST', body: { action: 'remove', id }, timeoutMs: 20000 })
-          const payload = await api('/summary')
-          onSummary?.(payload)
-        } catch (cause) {
-          setState(current => ({ ...current, error: String(cause?.message ?? cause) }))
-        }
-      }
-
-      const copy = async url => {
-        try { await navigator.clipboard.writeText(url); setCopied(url) } catch { /* the link is still visible */ }
-      }
-
-      const signedIn = rows.length
-
-      return h(Card, {
-        title: h(BlockTitle, {}, t('buddy.title')),
-        collapsible: true,
-        defaultOpen,
-        summary: collapsed ? (signedIn > 0 ? t('accounts.loggedIn', { n: signedIn }) : t('buddy.none')) : undefined,
-        hint: t('buddy.hint'),
-      },
-      h('div', { className: 'vfm_accts' },
-        ...list.map(product => {
-          const mine = rows.filter(account => account.product === product.id)
-          const local = state[product.id] ?? {}
-          return h('div', { className: 'vfm_acct', 'data-state': mine.length > 0 ? 'ready' : '' },
-            h('div', { className: 'vfm_acctmain' },
-              h('span', { className: 'vfm_acctname' }, product.label ?? t(`buddy.product.${product.id}`)),
-              mine.length > 0
-                ? h('span', { className: 'vfm_acctlines' },
-                  ...mine.map(account => h('span', { className: 'vfm_acctline' },
-                    account.nickname || account.id,
-                    Number(account.expiresAt) > 0 && Number(account.expiresAt) < Date.now() ? ` · ${t('accounts.expired')}` : '')))
-                : h('span', { className: 'vfm_meta' }, t('buddy.none'))),
-            h('div', { className: 'vfm_meta' },
-              h(Btn, {
-                kind: mine.length > 0 ? 'quiet' : 'primary',
-                disabled: local.pending === true,
-                onClick: () => void login(product.id),
-              }, local.pending === true ? t('accounts.pending') : (mine.length > 0 ? t('buddy.relogin') : t('buddy.login'))),
-              mine.length > 0
-                ? h(Btn, { kind: 'quiet', onClick: () => void remove(mine[0].id) }, t('buddy.remove'))
-                : null),
-            local.pending === true || local.error !== undefined || local.loginUrl !== undefined
-              ? h('div', { className: 'vfm_loginbox' },
-                local.pending === true ? h('span', { className: 'vfm_acctline' }, t('buddy.waiting')) : null,
-                local.error === undefined ? null : h('span', { className: 'vfm_error' }, t('buddy.failed', { message: truncate(local.error, 160) })),
-                h(LoginBox, {
-                  url: local.loginUrl,
-                  copied: copied === local.loginUrl,
-                  onOpen: url => { try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* shown instead */ } },
-                  onCopy: url => void copy(url),
-                }))
-              : null)
-        })))
     }
 
     // ── keyed endpoints ──────────────────────────────────────────────────────
@@ -1360,6 +1319,44 @@ window.__ModuleLoader__.load({
     // ── the page ─────────────────────────────────────────────────────────────
 
     /**
+     * The sign-in dialog.
+     *
+     * It exists because the system browser is a convenience, not a guarantee: a
+     * browser blocked from opening, a remote session, or a locked-down desktop
+     * all need the URL itself. The link is selectable, copyable, and one more
+     * click can open it.
+     */
+    function LoginModal({ dialog, onClose, onCopy, onOpen }) {
+      const [copied, setCopied] = useState(false)
+      if (dialog === null || dialog === undefined) return null
+      const url = typeof dialog.url === 'string' ? dialog.url : ''
+      return h('div', {
+        className: 'vfm_modalbackdrop',
+        onClick: event => { if (event.target === event.currentTarget) onClose?.() },
+      },
+      h('div', {
+        className: 'vfm_modal',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': t('loginModal.title', { name: dialog.label ?? '' }),
+      },
+      h('h3', { className: 'vfm_modalTitle' }, t('loginModal.title', { name: dialog.label ?? '' })),
+      h('p', { className: 'vfm_note' }, t('loginModal.hint')),
+      h('p', { className: 'vfm_note' }, t('loginModal.waiting')),
+      h('input', {
+        className: 'vfm_input vfm_modalurl',
+        readOnly: true,
+        value: url,
+        onFocus: event => event.target.select(),
+        onClick: event => event.target.select(),
+      }),
+      h('div', { className: 'vfm_modalacts' },
+        h(Btn, { kind: 'primary', onClick: () => onOpen?.(url) }, t('loginModal.open')),
+        h(Btn, { onClick: () => { onCopy?.(url); setCopied(true) } }, copied ? t('loginModal.copied') : t('loginModal.copy')),
+        h(Btn, { kind: 'quiet', onClick: () => onClose?.() }, t('loginModal.close')))))
+    }
+
+    /**
      * The settings page.
      *
      * One read on mount; the three blocks render from that single document, so
@@ -1371,6 +1368,10 @@ window.__ModuleLoader__.load({
       const [selected, setSelected] = useState('')
       const [busy, setBusy] = useState(false)
       const [accountStatus, setAccountStatus] = useState({})
+      const [credits, setCredits] = useState({})
+      const [creditsLoading, setCreditsLoading] = useState(false)
+      /** The sign-in dialog: { label, url } or undefined. */
+      const [loginDialog, setLoginDialog] = useState(undefined)
       const [forwardKey, setForwardKey] = useState('')
       /** Per-tool configuration status, keyed by tool id. */
       const [configureStatus, setConfigureStatus] = useState({})
@@ -1419,68 +1420,109 @@ window.__ModuleLoader__.load({
         }
       }, [])
 
+      /** Balances for every signed-in account, from both lanes. */
+      const loadCredits = useCallback(async () => {
+        setCreditsLoading(true)
+        try {
+          const payload = await api('/credits', { timeoutMs: 40_000 })
+          setCredits(payload?.providers ?? {})
+        } catch {
+          /* the account cards keep whatever they showed before */
+        } finally {
+          setCreditsLoading(false)
+        }
+      }, [])
+
+      // Balances are a second, slower read; paint the page first, then fill them.
+      useEffect(() => { void loadCredits() }, [loadCredits])
+
       /**
        * Ask again until this account appears, then stop.
        *
-       * `account.list` is the authoritative answer for "did the browser
-       * sign-in land"; provider.status describes the pool, not the accounts.
+       * The two lanes answer different questions: `account.list` is the
+       * authoritative answer for the channel pack, while the Tencent accounts
+       * live in this plugin's own store and arrive with the summary.
        */
-      const pollAccounts = useCallback(async providerId => {
+      const pollAccounts = useCallback(async provider => {
+        const providerId = typeof provider === 'string' ? provider : provider.id
+        const isBuddy = typeof provider === 'object' && provider.kind === 'buddy'
+        const before = isBuddy
+          ? (summary?.accounts?.providers ?? []).find(row => row.id === providerId)?.accounts?.length ?? 0
+          : 0
         const deadline = Date.now() + LOGIN_TIMEOUT_MS
         while (Date.now() < deadline) {
           await new Promise(resolve => setTimeout(resolve, 2000))
           try {
-            const payload = await api('/channel', {
-              method: 'POST',
-              body: { method: 'account.list', payload: { provider: providerId } },
-              timeoutMs: 15000,
-            })
-            const accounts = payload?.value?.accounts ?? []
-            if (accounts.length > 0) {
-              setAccountStatus(current => ({ ...current, [providerId]: { accounts } }))
-              await load()
-              return
+            if (isBuddy) {
+              const payload = await api('/summary')
+              const rows = payload?.accounts?.providers ?? []
+              const mine = rows.find(row => row.id === providerId)
+              if (Array.isArray(mine?.accounts) && mine.accounts.length > before) {
+                setSummary(payload)
+                setLoginDialog(undefined)
+                await loadCredits()
+                return
+              }
+            } else {
+              const payload = await api('/channel', {
+                method: 'POST',
+                body: { method: 'account.list', payload: { provider: providerId } },
+                timeoutMs: 15000,
+              })
+              const accounts = payload?.value?.accounts ?? []
+              if (accounts.length > 0) {
+                setLoginDialog(undefined)
+                await load()
+                await loadCredits()
+                return
+              }
             }
           } catch { /* keep trying until the deadline */ }
         }
         setAccountStatus(current => ({ ...current, [providerId]: { message: '登录超时，请重试。' } }))
-      }, [load])
+      }, [load, loadCredits, summary])
 
       /**
        * Sign one account in.
        *
-       * The host opens the authorization page in the system browser. The URL is
-       * kept here as well: a popup opened after an await is what browsers block,
-       * and the page must still offer a way in when that happens.
+       * The host opens the authorization page in the system browser. A dialog
+       * repeats the URL with copy, because a popup opened after an await is
+       * exactly what browsers block — and that is when the user needs a link.
        */
-      const login = useCallback(async providerId => {
+      const login = useCallback(async provider => {
+        const providerId = typeof provider === 'string' ? provider : provider.id
+        const isBuddy = typeof provider === 'object' && provider.kind === 'buddy'
         setAccountStatus(current => ({ ...current, [providerId]: { state: 'pending' } }))
         try {
-          const payload = await api('/channel', {
-            method: 'POST',
-            body: { method: 'account.create', payload: { provider: providerId } },
-            timeoutMs: 30000,
-          })
+          const payload = isBuddy
+            ? await api('/buddy', {
+              method: 'POST',
+              body: { action: 'login', product: providerId },
+              timeoutMs: 30000,
+            })
+            : await api('/channel', {
+              method: 'POST',
+              body: { method: 'account.create', payload: { provider: providerId } },
+              timeoutMs: 30000,
+            })
           const url = payload?.value?.loginUrl ?? payload?.value?.url
           if (typeof url === 'string' && url !== '') {
             setAccountStatus(current => ({ ...current, [providerId]: { state: 'pending', loginUrl: url } }))
-            try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* shown instead */ }
+            setLoginDialog({ label: provider.label ?? providerId, url })
+            try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* the dialog has the link */ }
           }
-          await pollAccounts(providerId)
+          await pollAccounts(provider)
         } catch (cause) {
           setAccountStatus(current => ({ ...current, [providerId]: { message: String(cause?.message ?? cause) } }))
         }
       }, [pollAccounts])
 
-      /** Remember which login link was copied, for the button label. */
-      const copyLogin = useCallback((url, providerId) => {
-        try {
-          void navigator.clipboard?.writeText(url)
-          setAccountStatus(current => ({ ...current, [providerId]: { ...(current[providerId] ?? {}), copied: true } }))
-        } catch { /* the link text is visible anyway */ }
+      /** Copy the authorization link and show "已复制" in the dialog. */
+      const copyLogin = useCallback(url => {
+        try { void navigator.clipboard?.writeText(url) } catch { /* the link is selectable */ }
       }, [])
 
-      /** Claim credits, for one provider when named, otherwise for all claimable ones. */
+      /** Claim credits for one provider, or every claimable one. */
       const claim = useCallback(async providerId => {
         const targets = providerId === ''
           ? (summary?.accounts?.providers ?? []).filter(row => row.claimable === true).map(row => row.id)
@@ -1492,11 +1534,7 @@ window.__ModuleLoader__.load({
         })
         try {
           for (const target of targets) {
-            await api('/channel', {
-              method: 'POST',
-              body: { method: 'credits.claimAll', payload: { provider: target } },
-              timeoutMs: 60000,
-            })
+            await api('/credits/claim', { method: 'POST', body: { provider: target }, timeoutMs: 90000 })
           }
         } catch {
           /* the list below reloads whatever actually landed */
@@ -1507,7 +1545,55 @@ window.__ModuleLoader__.load({
           return next
         })
         await load()
+        await loadCredits()
+      }, [load, loadCredits, summary])
+
+      /** Enable or disable one account on either lane. */
+      const toggleAccount = useCallback(async (providerId, accountId, enabled) => {
+        try {
+          const provider = (summary?.accounts?.providers ?? []).find(row => row.id === providerId)
+          if (provider?.kind === 'buddy') {
+            await api('/buddy', { method: 'POST', body: { action: 'toggle', id: accountId, enabled }, timeoutMs: 20000 })
+          } else {
+            await api('/channel', {
+              method: 'POST',
+              body: { method: 'account.update', payload: { accountId, patch: { enabled } } },
+              timeoutMs: 20000,
+            })
+          }
+          await load()
+        } catch (cause) {
+          setError(String(cause?.message ?? cause))
+        }
       }, [load, summary])
+
+      /** Remove one account on either lane. */
+      const removeAccount = useCallback(async (providerId, accountId) => {
+        try {
+          const provider = (summary?.accounts?.providers ?? []).find(row => row.id === providerId)
+          if (provider?.kind === 'buddy') {
+            await api('/buddy', { method: 'POST', body: { action: 'remove', id: accountId }, timeoutMs: 20000 })
+          } else {
+            await api('/channel', {
+              method: 'POST',
+              body: { method: 'account.delete', payload: { accountId } },
+              timeoutMs: 20000,
+            })
+          }
+          await load()
+          await loadCredits()
+        } catch (cause) {
+          setError(String(cause?.message ?? cause))
+        }
+      }, [load, loadCredits, summary])
+
+      /** The automatic lane's retry switch. */
+      const toggleAutoSwitch = useCallback(async enabled => {
+        try {
+          const payload = await api('/auto-switch', { method: 'POST', body: { enabled } })
+          setSummary(current => (current === undefined ? current : { ...current, autoSwitch: payload?.autoSwitch === true }))
+        } catch { /* keep the current reading */ }
+      }, [])
 
       /**
        * Turn the local port on or off.
@@ -1637,6 +1723,8 @@ window.__ModuleLoader__.load({
           onSelect: setSelected,
           laneOk: summary?.lane?.ok === true,
           onRecheck: () => void recheck(),
+          autoSwitch: summary?.autoSwitch !== false,
+          onToggleAutoSwitch: enabled => void toggleAutoSwitch(enabled),
           busy,
           collapsed: true,
           defaultOpen: false,
@@ -1644,19 +1732,16 @@ window.__ModuleLoader__.load({
         h(AccountsBlock, {
           providers: summary?.accounts?.providers ?? [],
           status: accountStatus,
+          credits,
+          creditsLoading,
           ownedElsewhere: summary?.accounts?.state === 'owned-elsewhere',
           claimFailedAt: summary?.accounts?.claimFailedAt,
-          onLogin: id => void login(id),
+          onLogin: provider => void login(provider),
           onClaim: id => void claim(id),
-          onOpen: url => { try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* shown instead */ } },
-          onCopy: (url, id) => copyLogin(url, id),
-          collapsed: true,
-          defaultOpen: false,
-        }),
-        h(BuddyBlock, {
-          products: summary?.extras?.buddy?.products ?? [],
-          accounts: summary?.extras?.buddy?.accounts ?? [],
-          onSummary: payload => setSummary(payload),
+          onToggle: (providerId, accountId, enabled) => void toggleAccount(providerId, accountId, enabled),
+          onRemove: (providerId, accountId) => void removeAccount(providerId, accountId),
+          onShowLogin: (provider, url) => setLoginDialog({ label: provider.label, url }),
+          onRefreshCredits: () => void loadCredits(),
           collapsed: true,
           defaultOpen: false,
         }),
@@ -1695,7 +1780,13 @@ window.__ModuleLoader__.load({
               status: configureStatus[entry.id],
               onWrite: id => void writeTool(id),
               onRestore: id => void restoreTool(id),
-            })))))
+            })))),
+        h(LoginModal, {
+          dialog: loginDialog,
+          onClose: () => setLoginDialog(undefined),
+          onCopy: url => copyLogin(url),
+          onOpen: url => { try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* the URL is selectable */ } },
+        }))
     }
 
     // ── registration ─────────────────────────────────────────────────────────
@@ -1741,7 +1832,7 @@ window.__ModuleLoader__.load({
     exports.name = 'vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
     exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
-      BuddyBlock, EndpointsBlock, LoginBox, probeLabel, vendorOf, shortName,
+      EndpointsBlock, LoginModal, creditLine, probeLabel, vendorOf, shortName,
       cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API,
       Card, BlockTitle, Btn, StatusDot, ToolCard, truncate }
     return module.exports

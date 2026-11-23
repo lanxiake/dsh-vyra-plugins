@@ -201,6 +201,85 @@ export class KiloAdapter {
       return
     }
 
+    const requestedAuto = model === AUTO_ID
+    const attempts = this.attemptModels(model)
+
+    for (let index = 0; index < attempts.length; index += 1) {
+      if (options.signal?.aborted === true) {
+        yield { type: 'finish', reason: { kind: 'aborted', failure: { message: 'request aborted', code: 'ABORTED' } } }
+        return
+      }
+      const attemptModel = attempts[index]
+      const attemptEntry = attemptModel === model
+        ? entry
+        : this.allEntries().find(candidate => candidate.id === attemptModel) ?? null
+      const result = await this.collectAttempt(options, attemptModel, attemptEntry, requestedAuto)
+
+      if (result.aborted === true) {
+        yield { type: 'finish', reason: { kind: 'aborted', failure: { message: 'request aborted', code: 'ABORTED' } } }
+        return
+      }
+
+      if (result.failure !== undefined) {
+        // A transport-level refusal is worth one different model before the
+        // user sees it, but only for the automatic row.
+        if (index < attempts.length - 1) continue
+        const code = typeof result.failure.code === 'string' ? result.failure.code : 'SERVER'
+        yield {
+          type: 'finish',
+          reason: { kind: 'error', failure: { message: String(result.failure.message ?? 'upstream error'), code, ...(Number.isFinite(result.failure.status) ? { status: result.failure.status } : {}) } },
+        }
+        return
+      }
+
+      const chunks = result.chunks
+      const errored = chunks.some(chunk => chunk.type === 'finish' && chunk.reason?.kind === 'error')
+      const delivered = chunks.some(chunk => chunk.type !== 'usage' && chunk.type !== 'finish')
+      // Switching mid-answer would duplicate text on screen; only a refusal
+      // that produced nothing is retried on the next candidate.
+      if (errored && !delivered && index < attempts.length - 1) continue
+
+      for (const chunk of chunks) {
+        // Accounting rides the same stream the caller sees: one place counts a
+        // turn, so a cancelled or failed turn cannot be billed twice.
+        if (chunk.type === 'usage') this.deps.onUsage?.({ model: attemptModel, usage: chunk.usage })
+        yield chunk
+      }
+      return
+    }
+  }
+
+  /**
+   * The models one turn may use, in order.
+   *
+   * Automatic is a router that sometimes lands on a saturated upstream. When
+   * `autoSwitch` is on, a refusal with nothing delivered moves to the next
+   * candidate instead of failing the turn. Candidate order comes from the host:
+   * probed-working models first, then unprobed ones; never a model the probe
+   * proved dead.
+   */
+  attemptModels(requested) {
+    if (requested !== AUTO_ID || this.deps.autoSwitch?.() === false) return [requested]
+    const out = [requested]
+    const seen = new Set(out)
+    for (const candidate of this.deps.fallbackModels?.() ?? []) {
+      const id = typeof candidate === 'string' ? candidate : candidate?.id
+      if (typeof id !== 'string' || id === '' || seen.has(id)) continue
+      seen.add(id)
+      out.push(id)
+      if (out.length >= 3) break
+    }
+    return out
+  }
+
+  /**
+   * One request on one model: send, buffer the frames, parse them into chunks.
+   *
+   * The frames are buffered before parsing because the gateway has already
+   * answered by then; keeping the whole attempt in hand is what lets the
+   * automatic lane decide to retry without having shown the user anything.
+   */
+  async collectAttempt(options, model, entry, requestedAuto) {
     const warnings = []
     const body = {
       model,
@@ -221,12 +300,9 @@ export class KiloAdapter {
     }
 
     const payloads = []
-    let done = false
-    let failure
     const controller = new AbortController()
     const onAbort = () => controller.abort()
     options.signal?.addEventListener('abort', onAbort, { once: true })
-
     try {
       await postKiloStreamed({
         body,
@@ -236,7 +312,7 @@ export class KiloAdapter {
           payloads.push(payload)
           // The router tells us which upstream actually answered. Reading it
           // here keeps the page's "current model" honest without a second call.
-          if (model === AUTO_ID) {
+          if (requestedAuto) {
             try {
               const routed = JSON.parse(payload)?.model
               if (typeof routed === 'string' && routed !== '') this.deps.onRouted?.(routed)
@@ -244,39 +320,21 @@ export class KiloAdapter {
           }
         },
       })
-      done = true
     } catch (error) {
-      failure = error
+      if (options.signal?.aborted === true || error?.code === 'ABORTED') return { aborted: true }
+      return { failure: error }
     } finally {
       options.signal?.removeEventListener('abort', onAbort)
     }
 
-    if (failure !== undefined) {
-      const code = typeof failure.code === 'string' ? failure.code : 'SERVER'
-      if (code === 'ABORTED') {
-        yield { type: 'finish', reason: { kind: 'aborted', failure: { message: String(failure.message ?? 'aborted'), code } } }
-        return
-      }
-      yield {
-        type: 'finish',
-        reason: { kind: 'error', failure: { message: String(failure.message ?? 'upstream error'), code, ...(Number.isFinite(failure.status) ? { status: failure.status } : {}) } },
-      }
-      return
-    }
-
-    if (done) {
-      try {
-        for await (const chunk of readChunks(payloads)) {
-          // Accounting rides the same stream the caller sees: one place counts a
-          // turn, so a cancelled or failed turn cannot be billed twice.
-          if (chunk.type === 'usage') this.deps.onUsage?.({ model, usage: chunk.usage })
-          yield chunk
-        }
-      } catch (error) {
-        // An in-stream error envelope is still this turn's outcome.
-        const code = typeof error.code === 'string' ? error.code : 'SERVER'
-        yield { type: 'finish', reason: { kind: 'error', failure: { message: String(error.message ?? 'upstream error'), code } } }
-      }
+    try {
+      const chunks = []
+      for await (const chunk of readChunks(payloads)) chunks.push(chunk)
+      return { chunks }
+    } catch (error) {
+      // An in-stream error envelope is still this turn's outcome.
+      const code = typeof error.code === 'string' ? error.code : 'SERVER'
+      return { chunks: [{ type: 'finish', reason: { kind: 'error', failure: { message: String(error.message ?? 'upstream error'), code } } }] }
     }
   }
 

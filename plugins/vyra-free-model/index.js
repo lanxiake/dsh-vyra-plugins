@@ -33,6 +33,7 @@ import { PRODUCTS, beginBuddyLogin, completeBuddyLogin } from './src/buddy-login
 import {
   buddyExpired, refreshBuddyCredential, fetchBuddyModels, buddyCatalog, streamBuddyTurn,
 } from './src/buddy.js'
+import { fetchCreditOverview as fetchBuddyCreditOverview, claimDailyCredit as claimBuddyCredit } from './src/buddy-credits.js'
 import {
   sanitizeEndpoints, fetchEndpointModels, endpointModelId, streamEndpointTurn,
   isCallableBaseUrl, normalizeBaseUrl,
@@ -62,6 +63,7 @@ export const CHANNEL_METHODS = Object.freeze([
   'provider.status',
   'account.create',
   'account.list',
+  'account.update',
   'account.delete',
   'credits.claimAll',
   'credits.status',
@@ -134,8 +136,12 @@ export function apply(ctx, _config) {
 
   /** Settings the adapter and the routes read. */
   const settingsFile = path.join(dataDir, 'settings.json')
-  const settingsStore = new JsonStore(settingsFile, { enabled: true, endpoints: [] }, { log: message => logger.warn?.(message) })
-  settingsStore.edit(value => ({ ...value, endpoints: sanitizeEndpoints(value.endpoints) }))
+  const settingsStore = new JsonStore(settingsFile, { enabled: true, endpoints: [], autoSwitch: true }, { log: message => logger.warn?.(message) })
+  settingsStore.edit(value => ({
+    ...value,
+    endpoints: sanitizeEndpoints(value.endpoints),
+    autoSwitch: value.autoSwitch !== false,
+  }))
 
   /** Last probe result per Kilo model id. */
   const probeStore = new JsonStore(
@@ -241,9 +247,29 @@ export function apply(ctx, _config) {
   /** When the last automatic claim failed, for the card to mention. */
   let claimFailedAt
 
-  /** Provider rows the account block renders. Task 11 reads these. */
+  /** The Tencent products as account rows, shaped like the channel providers. */
+  function buddyProviderRows() {
+    return Object.entries(BUDDY_LABELS).map(([id, label]) => ({
+      id,
+      label,
+      kind: 'buddy',
+      more: false,
+      claimable: true,
+      accounts: buddyAccounts()
+        .filter(account => account.product === id)
+        .map(account => ({
+          id: account.id,
+          nickname: account.nickname,
+          enabled: account.enabled !== false,
+          expiresAt: Number(account.expiresAt) || 0,
+          refreshable: true,
+        })),
+    }))
+  }
+
+  /** Every account row the page renders — channel pack first, Tencent after. */
   function accountProviders() {
-    return providers
+    return [...providers, ...buddyProviderRows()]
   }
 
   /**
@@ -296,6 +322,14 @@ export function apply(ctx, _config) {
     autoModel,
     autoLabel,
     onRouted: noteRouted,
+    autoSwitch: () => settingsStore.get().autoSwitch !== false,
+    fallbackModels: () => {
+      const probes = probeStore.get().results ?? {}
+      const usable = catalog.filter(entry => entry.id !== AUTO_ID && probes[entry.id]?.state !== 'unavailable')
+      const working = usable.filter(entry => probes[entry.id]?.state === 'ok')
+      const rest = usable.filter(entry => probes[entry.id]?.state !== 'ok')
+      return [...working, ...rest].slice(0, 5).map(entry => entry.id)
+    },
     extraCatalog: () => extraCatalog,
     extraStream: (entry, options) => streamExtra(entry, options),
   })
@@ -448,6 +482,114 @@ export function apply(ctx, _config) {
       enabled: account.enabled !== false,
       expiresAt: Number(account.expiresAt) || 0,
     }))
+  }
+
+  /** Enable or disable one Tencent account without deleting its tokens. */
+  function toggleBuddyAccount(id, enabled) {
+    for (const account of buddyAccounts()) {
+      if (account.id !== id) continue
+      account.enabled = enabled === true
+      buddyStore.edit(value => value)
+      rebuildExtras()
+      try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+      break
+    }
+    return buddyAccounts().map(account => ({
+      id: account.id,
+      product: account.product,
+      nickname: account.nickname,
+      enabled: account.enabled !== false,
+      expiresAt: Number(account.expiresAt) || 0,
+    }))
+  }
+
+  /**
+   * Balance and check-in state for every signed-in account.
+   *
+   * The channel pack and the Tencent lane expose credits through different
+   * shapes; this normalises both into one map the page can render next to each
+   * account. A failure for one account is reported on that account, never as a
+   * failed page.
+   */
+  async function readCredits() {
+    const result = {}
+
+    for (const row of providers) {
+      if (row.accounts.length === 0) continue
+      try {
+        const value = await callChannel('credits.balances', { provider: row.id })
+        const accounts = Array.isArray(value?.accounts) ? value.accounts : []
+        result[row.id] = {
+          accounts: accounts.map(entry => {
+            const packages = Array.isArray(entry?.balance?.packages) ? entry.balance.packages : []
+            const units = [...new Set(packages.map(item => (typeof item?.unit === 'string' ? item.unit : '')).filter(Boolean))]
+            return {
+              id: String(entry?.accountId ?? ''),
+              credits: Number.isFinite(entry?.balance?.total) ? entry.balance.total : undefined,
+              unit: typeof entry?.balance?.unit === 'string' && entry.balance.unit !== ''
+                ? entry.balance.unit
+                : (units.length === 1 ? units[0] : ''),
+              error: typeof entry?.error === 'string' ? entry.error : '',
+            }
+          }),
+        }
+      } catch (error) {
+        result[row.id] = { error: String(error?.message ?? error).slice(0, 160) }
+      }
+    }
+
+    for (const productId of Object.keys(BUDDY_LABELS)) {
+      const product = PRODUCTS[productId]
+      const active = buddyAccounts().filter(account => account.product === productId)
+      if (product === undefined || active.length === 0) continue
+      const entries = []
+      for (const account of active) {
+        const credential = await usableBuddyCredential(product, account)
+        if (credential === undefined) {
+          entries.push({ id: account.id, error: '登录已过期，请重新登录' })
+          continue
+        }
+        try {
+          const overview = await fetchBuddyCreditOverview(product, credential)
+          const balance = overview?.balance
+          entries.push({
+            id: account.id,
+            credits: Number.isFinite(balance?.total) ? balance.total : undefined,
+            unit: typeof balance?.unit === 'string' ? balance.unit : '积分',
+            checkedIn: overview?.checkin?.checkedInToday === true,
+            canClaim: overview?.checkin?.canClaim === true,
+            error: typeof overview?.balanceError === 'string' ? overview.balanceError : '',
+          })
+        } catch (error) {
+          entries.push({ id: account.id, error: String(error?.message ?? error).slice(0, 160) })
+        }
+      }
+      result[productId] = { accounts: entries }
+    }
+
+    return result
+  }
+
+  /** Claim today's credits for one provider, on both lanes. */
+  async function claimCreditsFor(providerId) {
+    if (BUDDY_LABELS[providerId] !== undefined) {
+      const product = PRODUCTS[providerId]
+      if (product === undefined) return { error: '不支持的账号类型' }
+      const outcomes = []
+      for (const account of buddyAccounts().filter(row => row.product === providerId && row.enabled !== false)) {
+        const credential = await usableBuddyCredential(product, account)
+        if (credential === undefined) {
+          outcomes.push({ id: account.id, status: 'failed', message: '登录已过期' })
+          continue
+        }
+        const value = await claimBuddyCredit(product, credential)
+        outcomes.push({ id: account.id, ...value })
+      }
+      return { outcomes }
+    }
+    if (!CLAIMABLE_PROVIDERS.includes(providerId)) return { error: '这个渠道不支持每日领取' }
+    const value = await callChannel('credits.claimAll', { provider: providerId })
+    return { value }
   }
 
   /** Refresh one product's model catalog from its gateway. */
@@ -713,16 +855,16 @@ export function apply(ctx, _config) {
       return settingsStore.get().enabled === true
     },
     extras: () => rebuildExtras(),
-    buddyAccounts: () => buddyAccounts().map(account => ({
-      id: account.id,
-      product: account.product,
-      nickname: account.nickname,
-      enabled: account.enabled !== false,
-      expiresAt: Number(account.expiresAt) || 0,
-    })),
-    buddyProducts: () => Object.entries(BUDDY_LABELS).map(([id, label]) => ({ id, label })),
+    credits: () => readCredits(),
+    claimCredits: providerId => claimCreditsFor(providerId),
+    autoSwitch: () => settingsStore.get().autoSwitch !== false,
+    setAutoSwitch: async enabled => {
+      settingsStore.update({ autoSwitch: enabled === true })
+      return settingsStore.get().autoSwitch !== false
+    },
     buddyLogin: productId => startBuddyLogin(productId),
     buddyRemove: id => removeBuddyAccount(id),
+    buddyToggle: (id, enabled) => toggleBuddyAccount(id, enabled),
     buddyRefresh: productId => refreshBuddyModels(productId),
     endpoints: () => sanitizeEndpoints(settingsStore.get().endpoints).map(publicEndpoint),
     saveEndpoint,
@@ -968,6 +1110,16 @@ export function apply(ctx, _config) {
         logger.warn?.(`vyra-free-model: automatic credit claim for ${provider} failed (${error?.message ?? error})`)
       }
     }
+    // The Tencent lane keeps its own accounts; claim theirs too.
+    for (const productId of Object.keys(BUDDY_LABELS)) {
+      if (!buddyAccounts().some(account => account.product === productId && account.enabled !== false)) continue
+      try {
+        await claimCreditsFor(productId)
+      } catch (error) {
+        failures += 1
+        logger.warn?.(`vyra-free-model: automatic credit claim for ${productId} failed (${error?.message ?? error})`)
+      }
+    }
     claimFailedAt = failures > 0 ? Date.now() : undefined
     if (targets.length > 0) await readProviders()
   }
@@ -1096,12 +1248,13 @@ function writeCachedCatalog(file, models, logger) {
  */
 export function createSummary({
   version, catalog, probes, laneOk, laneSource, auto, accounts, usage, forward, enabled,
-  extras, buddyAccounts, buddyProducts, endpoints,
+  extras, endpoints, autoSwitch,
 }) {
   const probed = probes !== null && typeof probes === 'object' ? probes : {}
   return {
     version,
     enabled: enabled !== false,
+    autoSwitch: autoSwitch !== false,
     lane: {
       ok: laneOk === true,
       source: laneSource ?? null,
@@ -1126,8 +1279,8 @@ export function createSummary({
         lane: row.lane ?? '',
       })),
       buddy: {
-        products: buddyProducts ?? [],
-        accounts: buddyAccounts ?? [],
+        products: [],
+        accounts: [],
       },
       endpoints: endpoints ?? [],
     },
@@ -1188,9 +1341,10 @@ export function createApiRoutes(deps) {
 
       if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward'
         || routePath === '/forward/key' || routePath === '/channel' || routePath === '/enabled'
-        || routePath === '/buddy' || routePath === '/endpoints'
+        || routePath === '/buddy' || routePath === '/endpoints' || routePath === '/auto-switch'
+        || routePath === '/credits' || routePath === '/credits/claim'
         || routePath === '/configure' || routePath === '/configure/restore' || routePath === '/configure/status') {
-        const wantsGet = routePath === '/summary' || routePath === '/configure/status'
+        const wantsGet = routePath === '/summary' || routePath === '/configure/status' || routePath === '/credits'
         if (method !== 'POST' && !wantsGet) return send(405, { error: 'method-not-allowed' })
         if (wantsGet && method !== 'GET') return send(405, { error: 'method-not-allowed' })
       }
@@ -1228,6 +1382,33 @@ export function createApiRoutes(deps) {
         if (typeof deps.setEnabled !== 'function') return send(503, { error: 'settings-unavailable' })
         const value = await deps.setEnabled(enabled)
         return send(200, { enabled: value === true })
+      }
+
+      if (routePath === '/auto-switch' && method === 'POST') {
+        const body = await readJson(req)
+        if (typeof deps.setAutoSwitch !== 'function') return send(503, { error: 'settings-unavailable' })
+        const value = await deps.setAutoSwitch(body?.enabled === true)
+        return send(200, { autoSwitch: value === true })
+      }
+
+      if (routePath === '/credits' && method === 'GET') {
+        if (typeof deps.credits !== 'function') return send(503, { error: 'credits-unavailable' })
+        try {
+          return send(200, { providers: await deps.credits() })
+        } catch (error) {
+          return send(502, { error: String(error?.message ?? error).slice(0, 300) })
+        }
+      }
+
+      if (routePath === '/credits/claim' && method === 'POST') {
+        const body = await readJson(req)
+        if (typeof deps.claimCredits !== 'function') return send(503, { error: 'credits-unavailable' })
+        try {
+          const value = await deps.claimCredits(body?.provider)
+          return send(200, { value, providers: await deps.credits() })
+        } catch (error) {
+          return send(502, { error: String(error?.message ?? error).slice(0, 300) })
+        }
       }
 
       if (routePath === '/configure/status' && method === 'GET') {
@@ -1276,6 +1457,11 @@ export function createApiRoutes(deps) {
           if (body?.action === 'remove') {
             if (typeof deps.buddyRemove !== 'function') return send(503, { error: 'buddy-unavailable' })
             const accounts = await deps.buddyRemove(body?.id)
+            return send(200, { accounts })
+          }
+          if (body?.action === 'toggle') {
+            if (typeof deps.buddyToggle !== 'function') return send(503, { error: 'buddy-unavailable' })
+            const accounts = await deps.buddyToggle(body?.id, body?.enabled === true)
             return send(200, { accounts })
           }
           if (body?.action === 'refresh') {
@@ -1333,9 +1519,8 @@ function assemble(deps) {
     usage: deps.usage?.() ?? { input: 0, output: 0, total: 0 },
     forward: deps.forward?.() ?? { enabled: false, port: 0, key: '' },
     enabled: deps.isEnabled?.() !== false,
+    autoSwitch: deps.autoSwitch?.() !== false,
     extras: deps.extras?.(),
-    buddyAccounts: deps.buddyAccounts?.(),
-    buddyProducts: deps.buddyProducts?.(),
     endpoints: deps.endpoints?.(),
   })
 }

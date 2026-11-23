@@ -78,7 +78,7 @@ function loadBundle() {
 }
 
 const bundle = loadBundle()
-const { h, AccountsBlock, PROVIDERS, providerRow, BuddyBlock, EndpointsBlock, ModelBlock, probeLabel } = bundle.__test
+const { h, AccountsBlock, PROVIDERS, providerRow, LoginModal, EndpointsBlock, ModelBlock, probeLabel } = bundle.__test
 
 // The bundle runs in its own vm realm, so its arrays are not this realm's
 // Array: spread them before comparing structure.
@@ -179,15 +179,15 @@ test('one provider row renders its own state without the others', () => {
 
 // ── the new lanes ───────────────────────────────────────────────────────────
 
-test('a login URL is shown with a copy button when a popup could be blocked', () => {
-  const html = renderToString(providerRow(
-    { id: 'trae', label: 'TRAE' },
-    { state: 'pending', loginUrl: 'https://example.com/auth', copied: false },
-    { onOpen: () => {}, onCopy: () => {} },
-  ))
+test('the sign-in dialog shows the URL with copy and open', () => {
+  const html = renderToString(h(LoginModal, {
+    dialog: { label: 'TRAE', url: 'https://example.com/auth' },
+    onOpen: () => {}, onCopy: () => {}, onClose: () => {},
+  }))
   assert.ok(html.includes('https://example.com/auth'))
   assert.ok(html.includes('打开授权页'))
   assert.ok(html.includes('复制链接'))
+  assert.ok(html.includes('vfm_modalbackdrop'))
 })
 
 test('a failed sign-in shows its reason instead of a silent button', () => {
@@ -200,10 +200,16 @@ test('a failed sign-in shows its reason instead of a silent button', () => {
   assert.ok(html.includes('网络错误'))
 })
 
-test('both Tencent products are offered', () => {
-  const html = renderToString(h(BuddyBlock, { products: [], accounts: [], defaultOpen: true }))
+test('the Tencent products are listed beside the channel accounts', () => {
+  const providers = [
+    { id: 'trae', label: 'TRAE', claimable: true, accounts: [] },
+    { id: 'buddy', label: 'CodeBuddy（腾讯）', kind: 'buddy', claimable: true, accounts: [{ id: 'b1', nickname: '腾讯号' }] },
+    { id: 'workbuddy', label: 'WorkBuddy（国际版）', kind: 'buddy', claimable: true, accounts: [] },
+  ]
+  const html = renderToString(h(AccountsBlock, { providers, status: {}, defaultOpen: true }))
   assert.ok(html.includes('CodeBuddy（腾讯）'))
   assert.ok(html.includes('WorkBuddy（国际版）'))
+  assert.ok(html.includes('腾讯号'))
 })
 
 test('a saved endpoint shows its address and key state, never the key', () => {

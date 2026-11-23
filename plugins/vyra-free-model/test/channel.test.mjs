@@ -8,9 +8,9 @@ import { CHANNEL_METHODS, isChannelMethodAllowed, createApiRoutes } from '../ind
 const here = dirname(fileURLToPath(import.meta.url))
 const vendor = join(here, '..', 'vendor', 'channel-pack')
 
-test('only the six UI methods are allowed through the proxy', () => {
+test('only the UI methods are allowed through the proxy', () => {
   assert.deepEqual([...CHANNEL_METHODS].sort(), [
-    'account.create', 'account.delete', 'account.list',
+    'account.create', 'account.delete', 'account.list', 'account.update',
     'credits.claimAll', 'credits.status', 'provider.status',
   ])
   assert.equal(isChannelMethodAllowed('account.create'), true)

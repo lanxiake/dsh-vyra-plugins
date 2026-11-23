@@ -129,3 +129,36 @@ test('the in-process channel service is used, and a login URL is handed to the h
   for (const dispose of effects) if (typeof dispose === 'function') dispose()
   delete process.env.VYRA_NO_OPEN_BROWSER
 })
+
+test('the automatic switch defaults on and can be turned off', async () => {
+  const { handler, effects } = await boot()
+  const before = await call(handler, { path: '/summary' })
+  assert.equal(before.body.autoSwitch, true)
+  const off = await call(handler, { method: 'POST', path: '/auto-switch', body: { enabled: false } })
+  assert.equal(off.status, 200)
+  assert.equal(off.body.autoSwitch, false)
+  const after = await call(handler, { path: '/summary' })
+  assert.equal(after.body.autoSwitch, false)
+  for (const dispose of effects) if (typeof dispose === 'function') dispose()
+})
+
+test('credits claim and balances pass through the channel service', async () => {
+  const calls = []
+  const { handler, effects } = await boot({
+    channelPack: {
+      async call(method, payload) {
+        calls.push({ method, payload })
+        if (method === 'credits.claimAll') return { ok: true, value: { results: [] } }
+        if (method === 'credits.balances') return { ok: true, value: { accounts: [] } }
+        return { ok: true, value: {} }
+      },
+    },
+  })
+  const claim = await call(handler, { method: 'POST', path: '/credits/claim', body: { provider: 'trae' } })
+  assert.equal(claim.status, 200)
+  assert.deepEqual(calls[0], { method: 'credits.claimAll', payload: { provider: 'trae' } })
+  const listed = await call(handler, { path: '/credits' })
+  assert.equal(listed.status, 200)
+  assert.deepEqual(listed.body.providers, {})
+  for (const dispose of effects) if (typeof dispose === 'function') dispose()
+})

@@ -77,7 +77,7 @@ context.globalThis = context
 vm.createContext(context)
 vm.runInContext(source, context, { filename: 'client.js' })
 
-const { h, ModelBlock, AccountsBlock, ForwardBlock, BuddyBlock, EndpointsBlock, Card, BlockTitle, ToolCard, CSS } = registered.__test
+const { h, ModelBlock, AccountsBlock, ForwardBlock, EndpointsBlock, LoginModal, Card, BlockTitle, ToolCard, CSS } = registered.__test
 
 const models = [
   { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false, probe: null },
@@ -87,7 +87,7 @@ const models = [
   { id: 'liquid/lfm-3-1.7b:free', name: 'lfm-3-1.7b', contextWindow: 262144, vision: false, probe: { state: 'unavailable', reason: 'Model is unavailable' } },
 ]
 
-const body = render(h('div', { className: 'vfm_page' },
+const body = process.env.PREVIEW_MODAL === '1' ? render(h(LoginModal, { dialog: { label: 'TRAE', url: 'https://example.com/oauth/authorize?state=abc123&client=trae' }, onOpen: () => {}, onCopy: () => {}, onClose: () => {} })) : render(h('div', { className: 'vfm_page' },
   h('header', { className: 'vfm_head' },
     h('div', { className: 'vfm_headtext' },
       h('h2', { className: 'vfm_title' }, '免费模型'),
@@ -96,6 +96,7 @@ const body = render(h('div', { className: 'vfm_page' },
     models, extraModels: [{ id: 'buddy:buddy/hy4flash', name: 'CodeBuddy（腾讯） · Hy4 flash', contextWindow: 1000000, vision: true, source: 'buddy' }],
     auto: { id: 'baidu/ernie-5.5-flash-preview:free', name: 'Baidu: ERNIE-5.5-Flash-Preview (free)', contextWindow: 1024000, vision: false },
     selected: '', onSelect: () => {}, laneOk: true, onRecheck: () => {}, busy: false,
+    autoSwitch: true, onToggleAutoSwitch: () => {},
     collapsed: true, defaultOpen: expanded,
   }),
   h(AccountsBlock, {
@@ -108,15 +109,13 @@ const body = render(h('div', { className: 'vfm_page' },
       { id: 'lobsterai', label: '有道 LobsterAI', claimable: true, accounts: [] },
       { id: 'loomy', label: '讯飞 Loomy', claimable: true, accounts: [] },
       { id: 'cline', label: 'Cline', claimable: false, accounts: [] },
+      { id: 'buddy', label: 'CodeBuddy（腾讯）', kind: 'buddy', claimable: true, accounts: [{ id: 'b1', nickname: '腾讯号', expiresAt: 0 }] },
+      { id: 'workbuddy', label: 'WorkBuddy（国际版）', kind: 'buddy', claimable: true, accounts: [] },
     ],
     status: {},
+    credits: { qodercn: { accounts: [{ id: 'a1', credits: 128, unit: '积分' }] }, buddy: { accounts: [{ id: 'b1', credits: 320, unit: '积分' }] } },
     onLogin: () => {}, onClaim: () => {},
     collapsed: true, defaultOpen: expanded,
-  }),
-  h(BuddyBlock, {
-    products: [{ id: 'buddy', label: 'CodeBuddy（腾讯）' }, { id: 'workbuddy', label: 'WorkBuddy（国际版）' }],
-    accounts: [],
-    onSummary: () => {}, collapsed: true, defaultOpen: expanded,
   }),
   h(EndpointsBlock, {
     endpoints: [{ id: 'e1', name: '豆包（火山方舟）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', hasKey: true, models: [{ id: 'doubao-x' }], modelsAt: 0 }],
@@ -147,6 +146,6 @@ const html = `<!doctype html>
 </style></head>
 <body>${body}</body></html>`
 
-const output = expanded ? '../.preview-expanded.html' : '../.preview.html'
+const output = process.env.PREVIEW_MODAL === '1' ? '../.preview-modal.html' : (expanded ? '../.preview-expanded.html' : '../.preview.html')
 writeFileSync(new URL(output, import.meta.url), html)
 console.log(`wrote ${output}, ${html.length} bytes`)
