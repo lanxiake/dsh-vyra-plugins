@@ -192,7 +192,13 @@ test("unknown commands, missing prompts and blocked video generation report clea
   const noId = await vft(home, "wallpaper", "gen", "--prompt", "x");
   assert.equal(noId.exitCode, 1);
   assert.match(noId.payload.error, /缺少主题 id/);
+  // video needs a theme that exists before it can look for a still to animate
   const video = await vft(home, "wallpaper", "video", "x");
-  assert.equal(video.exitCode, 3);
-  assert.equal(video.payload.pending, "comfyui-video");
+  assert.equal(video.exitCode, 1);
+  assert.match(video.payload.error, /找不到主题/);
+  const noImage = await vft(home, "theme", "create", "--from", "nebula", "--id", "vid");
+  assert.equal(noImage.exitCode, 0, JSON.stringify(noImage.payload));
+  const videoNoImage = await vft(home, "wallpaper", "video", "vid");
+  assert.equal(videoNoImage.exitCode, 1);
+  assert.match(videoNoImage.payload.error, /找不到要动的图片/);
 });

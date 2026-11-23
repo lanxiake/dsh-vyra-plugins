@@ -21,6 +21,7 @@ import { SIDEBAR_PACKS, resolveSidebar, sidebarCss } from "../src/shared/persona
 import { rankPalettes, SCORE_THRESHOLD, scoreTheme } from "../src/shared/personalization/color-score.js";
 import { readSelection, writeSelection, isSelectableId, OFFICIAL_ID } from "../src/host/themes/selection.js";
 import { buildQwenImageWorkflow, validateWorkflow, WALLPAPER_SIZES, QWEN_IMAGE_DEFAULTS } from "../src/shared/comfy-workflow.js";
+import { buildHunyuanI2VWorkflow, validateVideoWorkflow, HUNYUAN_I2V_DEFAULTS, framesForSeconds } from "../src/shared/comfy-video-workflow.js";
 import { createComfyClient } from "../src/host/comfy.js";
 import { imageStats, isPng } from "../src/shared/png-stats.js";
 import { ART_RECIPES, ANIMATED_RECIPES, renderArt } from "../src/shared/art-recipes.js";
@@ -590,8 +591,12 @@ async function cmdWallpaperGen(paths, { positionals, flags }) {
   if (issues.length > 0) return fail(EXIT.gate, `工作流不合法：${issues.join("；")}`, { issues });
 
   const client = createComfyClient({ baseUrl: typeof flags["comfy-url"] === "string" ? flags["comfy-url"] : undefined, auth: typeof flags["comfy-auth"] === "string" ? flags["comfy-auth"] : undefined });
-  if (!(await client.ping())) {
-    return fail(EXIT.confirm, `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`, { comfy: client.baseUrl });
+  const probe = await client.probe();
+  if (!probe.ok) {
+    const reason = probe.status === 401 || probe.status === 403
+      ? `ComfyUI 在 ${client.baseUrl} 要求认证：${probe.status}。设 COMFYUI_AUTH=用户名:密码（或 Bearer <token>），或用 --comfy-auth 传`
+      : `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`;
+    return fail(EXIT.confirm, reason, { comfy: client.baseUrl, status: probe.status });
   }
 
   const promptId = await client.submit(workflow);
@@ -619,6 +624,99 @@ async function cmdWallpaperGen(paths, { positionals, flags }) {
     exitCode: EXIT.ok,
     payload: { ok: true, id, promptId, file: side, seed, size, stats },
     text: `已生成 ${side}（prompt ${promptId}，seed ${seed}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`,
+  };
+}
+
+﻿/**
+ * Turn an existing still into a moving wallpaper with local HunyuanVideo 1.5.
+ *
+ * The still is uploaded to ComfyUI, conditioned as the first frame, and the clip
+ * is written next to it. The still stays as the poster, so a browser that will
+ * not autoplay a video still shows the right picture.
+ */
+async function cmdWallpaperVideo(paths, { positionals, flags }) {
+  const id = positionals[0];
+  if (id === undefined) return fail(EXIT.error, "用法：vft wallpaper video <id> --image assets/x.png [--prompt 运动描述] [--seconds 2] [--fps 24] [--size desktop] [--seed N]");
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+
+  const themeDir = join(paths.userThemesDir, id);
+  const theme = JSON.parse(readFileSync(join(themeDir, "theme.json"), "utf8"));
+  const side = typeof flags.side === "string" ? flags.side : (theme.wallpaper?.dark === undefined ? "light" : "dark");
+  if (!["light", "dark"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark");
+
+  let imagePath = typeof flags.image === "string" ? resolve(flags.image) : null;
+  if (imagePath === null) {
+    const src = theme.wallpaper?.[side]?.src ?? theme.wallpaper?.light?.src ?? theme.wallpaper?.dark?.src;
+    if (typeof src === "string" && /\.(png|jpe?g|webp)$/i.test(src)) imagePath = join(themeDir, src);
+  }
+  if (imagePath === null || !existsSync(imagePath)) {
+    return fail(EXIT.error, "找不到要动的图片：用 --image 指定一张 png/jpg，或先 vft wallpaper gen / art 生成一张");
+  }
+  const source = readFileSync(imagePath);
+
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "desktop"] ?? WALLPAPER_SIZES.desktop;
+  const fps = flags.fps === undefined ? HUNYUAN_I2V_DEFAULTS.fps : Number(flags.fps);
+  const seconds = flags.seconds === undefined ? 2 : Number(flags.seconds);
+  if (!(seconds > 0) || seconds > 10) return fail(EXIT.error, "--seconds 取 0-10 之间（受显存与时长限制）");
+  const seed = flags.seed === undefined ? Math.floor(Math.random() * 2 ** 31) : Number(flags.seed);
+
+  const client = createComfyClient({
+    baseUrl: typeof flags["comfy-url"] === "string" ? flags["comfy-url"] : undefined,
+    auth: typeof flags["comfy-auth"] === "string" ? flags["comfy-auth"] : undefined,
+  });
+  const probe = await client.probe();
+  if (!probe.ok) {
+    const reason = probe.status === 401 || probe.status === 403
+      ? `ComfyUI 在 ${client.baseUrl} 要求认证：${probe.status}。设 COMFYUI_AUTH=用户名:密码（或 Bearer <token>），或用 --comfy-auth 传`
+      : `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`;
+    return fail(EXIT.confirm, reason, { comfy: client.baseUrl, status: probe.status });
+  }
+
+  const uploaded = await client.uploadImage(source, `vft-${id}-${seed}.png`);
+  const workflow = buildHunyuanI2VWorkflow({
+    image: uploaded,
+    prompt: typeof flags.prompt === "string" ? flags.prompt : undefined,
+    negative: typeof flags.negative === "string" ? flags.negative : undefined,
+    width: size.width,
+    height: size.height,
+    fps,
+    seconds,
+    seed,
+    steps: flags.steps === undefined ? HUNYUAN_I2V_DEFAULTS.steps : Number(flags.steps),
+    shift: flags.shift === undefined ? HUNYUAN_I2V_DEFAULTS.shift : Number(flags.shift),
+    cfg: flags.cfg === undefined ? HUNYUAN_I2V_DEFAULTS.cfg : Number(flags.cfg),
+    filenamePrefix: `vft/${id}`,
+  });
+  const issues = validateVideoWorkflow(workflow);
+  if (issues.length > 0) return fail(EXIT.gate, `工作流不合法：${issues.join("；")}`, { issues });
+
+  const promptId = await client.submit(workflow);
+  const timeoutMs = flags.timeout === undefined ? 1_800_000 : Number(flags.timeout) * 1000;
+  const { files } = await client.wait(promptId, { timeoutMs });
+  const clip = files.find((file) => /\.(mp4|webm|mov)$/i.test(file.filename ?? ""));
+  if (clip === undefined) return fail(EXIT.error, "ComfyUI 完成但没有输出视频文件");
+  const buffer = await client.download(clip);
+
+  mkdirSync(join(themeDir, "assets"), { recursive: true });
+  const baseName = typeof flags.file === "string" ? flags.file.replace(/\.(mp4|webm)$/i, "") : `${id}-${seed}`;
+  const mp4 = join(themeDir, "assets", `${baseName}.mp4`);
+  const posterName = `${baseName}.png`;
+  writeFileSync(mp4, buffer);
+  writeFileSync(join(themeDir, "assets", posterName), source);
+
+  const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${posterName}` };
+  const applied = mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = { ...(raw.wallpaper ?? {}), kind: "video", [side]: videoSide };
+  });
+  if (applied.exitCode !== EXIT.ok) return applied;
+  const stats = recordWallpaperStats(themeDir, side, source);
+  const frames = framesForSeconds(seconds, fps);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, promptId, file: videoSide.src, poster: videoSide.poster, bytes: buffer.byteLength, frames, fps, side, stats },
+    text: `已生成动态壁纸 ${videoSide.src}（${frames} 帧 @${fps}fps，${Math.round(buffer.byteLength / 1024)} KB）· 首帧沿用 ${basename(imagePath)}`,
   };
 }
 
@@ -859,7 +957,7 @@ export async function run(argv, options = {}) {
         case "anim": return await cmdWallpaperAnim(paths, ctx);
         case "recipes": return cmdWallpaperRecipes(ctx);
         case "gen": return await cmdWallpaperGen(paths, ctx);
-        case "video": return cmdWallpaperPending("video");
+        case "video": return await cmdWallpaperVideo(paths, ctx);
         default: return fail(EXIT.error, `未知子命令 wallpaper ${action ?? ""}`.trim());
       }
     }

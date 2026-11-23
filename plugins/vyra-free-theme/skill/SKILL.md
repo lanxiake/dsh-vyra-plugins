@@ -96,6 +96,16 @@ vft wallpaper gen <id> --prompt "画面描述" [--size desktop|portrait|square] 
 
 判据（同一 prompt、同一 seed 实测）：错的图边缘能量 0.019、相邻像素差 4.95（肉眼马赛克）；对的图 0.003 / 0.69（平滑渐变）。所以 `vft theme check` 之外，再看一眼 `stdLuma` 与 `edgeEnergy` 就能分辨。
 
+### ③b 让静帧动起来（图生视频，本机 HunyuanVideo 1.5）
+
+```bash
+vft wallpaper video <id> --image assets/x.png [--prompt 运动描述] [--seconds 2] [--fps 24] [--size desktop|portrait] [--seed N]
+```
+
+它把这张图上传成 **first frame**，用 `HunyuanVideo15ImageToVideo` 绑定首帧与 CLIP Vision，再按 `ModelSamplingSD3` shift 7 采样；cfg-distilled 的 checkpoint 跑 cfg=1。帧数会取成 4n+1（HunyuanVideo 1.5 会丢掉余数），静帧同时留作 poster，浏览器不自动播放时显示的仍是那张图。
+
+⚠️ ComfyUI 开了 Basic Auth 时，先设 `COMFYUI_AUTH=用户名:密码`（或 `--comfy-auth`）；401 与「不可达」是两种错，CLI 会分开报。
+
 ### ④ 视频 / 代码壁纸的写法
 
 视频/代码壁纸的 `theme.json` 写法：

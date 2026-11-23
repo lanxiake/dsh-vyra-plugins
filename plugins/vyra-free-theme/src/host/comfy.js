@@ -50,7 +50,7 @@ export function createComfyClient(options = {}) {
       return promptId;
     },
 
-    /** Poll until the prompt appears in history; returns its output images. */
+    /** Poll until the prompt appears in history; returns its output files. */
     async wait(promptId, { timeoutMs = 600_000, intervalMs = 2_000, onTick } = {}) {
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
@@ -63,16 +63,38 @@ export function createComfyClient(options = {}) {
             const message = status.messages?.find((pair) => pair?.[0] === "execution_error")?.[1]?.exception_message ?? "execution error";
             throw new Error(`ComfyUI execution failed: ${message}`);
           }
-          const images = [];
+          // Core SaveVideo registers under `images`; video helper nodes use
+          // `videos` / `gifs`. Collect all three so a clip is never mistaken for
+          // "the run produced nothing".
+          const files = [];
           for (const output of Object.values(entry.outputs ?? {})) {
-            for (const image of output?.images ?? []) images.push(image);
+            for (const key of ["images", "videos", "gifs"]) {
+              for (const file of output?.[key] ?? []) files.push(file);
+            }
           }
-          if (images.length > 0) return { images, entry };
+          if (files.length > 0) {
+            const images = files.filter((file) => /\.(png|jpe?g|webp)$/i.test(file.filename ?? ""));
+            return { files, images, entry };
+          }
         }
         onTick?.({ promptId, waitedMs: timeoutMs - Math.max(0, deadline - Date.now()) });
         await sleep(intervalMs);
       }
       throw new Error(`ComfyUI 在 ${Math.round(timeoutMs / 1000)} 秒内没有完成 prompt ${promptId}`);
+    },
+
+    /**
+     * Upload one local image so a LoadImage node can reference it.
+     * Returns the filename to put in the node (ComfyUI may rename on conflict).
+     */
+    async uploadImage(buffer, filename, { overwrite = true } = {}) {
+      const form = new FormData();
+      form.append("image", new Blob([buffer]), filename);
+      form.append("overwrite", overwrite ? "true" : "false");
+      const response = await call("/upload/image", { method: "POST", body: form, headers: {} });
+      const body = await response.json();
+      const stored = body?.name ?? filename;
+      return body?.subfolder ? `${body.subfolder}/${stored}` : stored;
     },
 
     /** Download one output image as bytes. */
@@ -87,14 +109,24 @@ export function createComfyClient(options = {}) {
       return buffer;
     },
 
-    /** Cheap reachability probe used for a clear error instead of a hang. */
-    async ping() {
+    /**
+     * Reachability probe with the HTTP status kept, so "down" and "needs auth"
+     * give different advice instead of one useless message. A 401 here is a
+     * configuration fact, not a crash: ComfyUI is running and wants COMFYUI_AUTH.
+     */
+    async probe() {
       try {
         const response = await fetchImpl(`${baseUrl}/system_stats`, { headers });
-        return response.ok;
-      } catch {
-        return false;
+        return { reachable: true, ok: response.ok, status: response.status };
+      } catch (error) {
+        return { reachable: false, ok: false, status: 0, error: error instanceof Error ? error.message : String(error) };
       }
+    },
+
+    /** Cheap reachability probe used for a clear error instead of a hang. */
+    async ping() {
+      const probe = await this.probe();
+      return probe.ok;
     },
   };
 }

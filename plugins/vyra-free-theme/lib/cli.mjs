@@ -1109,6 +1109,112 @@ function validateWorkflow(workflow) {
   return issues;
 }
 
+// src/shared/comfy-video-workflow.js
+var HUNYUAN_I2V_DEFAULTS = Object.freeze({
+  unet: "hunyuanvideo1.5_720p_i2v_cfg_distilled_fp8_scaled.safetensors",
+  clip: "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+  clipGlyph: "byt5_small_glyphxl_fp16.safetensors",
+  clipVision: "sigclip_vision_patch14_384.safetensors",
+  vae: "hunyuanvideo15_vae_fp16.safetensors",
+  width: 1280,
+  height: 720,
+  fps: 24,
+  steps: 20,
+  shift: 7,
+  cfg: 1,
+  sampler: "euler",
+  scheduler: "simple"
+});
+function framesForSeconds(seconds, fps = HUNYUAN_I2V_DEFAULTS.fps) {
+  const wanted = Math.max(1, Math.round(seconds * fps));
+  return Math.max(5, Math.round((wanted - 1) / 4) * 4 + 1);
+}
+function buildHunyuanI2VWorkflow(options) {
+  const {
+    image,
+    prompt = "The scene breathes slowly: soft light drifts, gradients bloom and fade, gentle organic motion. Fixed camera, no cuts.",
+    negative = "static, frozen, sudden motion, jump cut, shaking, text, watermark, people",
+    width = HUNYUAN_I2V_DEFAULTS.width,
+    height = HUNYUAN_I2V_DEFAULTS.height,
+    seconds = 2,
+    fps = HUNYUAN_I2V_DEFAULTS.fps,
+    seed = 1,
+    steps = HUNYUAN_I2V_DEFAULTS.steps,
+    shift = HUNYUAN_I2V_DEFAULTS.shift,
+    cfg = HUNYUAN_I2V_DEFAULTS.cfg,
+    sampler = HUNYUAN_I2V_DEFAULTS.sampler,
+    scheduler = HUNYUAN_I2V_DEFAULTS.scheduler,
+    unet = HUNYUAN_I2V_DEFAULTS.unet,
+    clip = HUNYUAN_I2V_DEFAULTS.clip,
+    clipGlyph = HUNYUAN_I2V_DEFAULTS.clipGlyph,
+    clipVision = HUNYUAN_I2V_DEFAULTS.clipVision,
+    vae = HUNYUAN_I2V_DEFAULTS.vae,
+    filenamePrefix = "vft/video"
+  } = options;
+  if (typeof image !== "string" || image.trim().length === 0) throw new Error("image is required");
+  const length = options.frames ?? framesForSeconds(seconds, fps);
+  return {
+    "1": { class_type: "UNETLoader", inputs: { unet_name: unet, weight_dtype: "default" } },
+    "2": {
+      class_type: "DualCLIPLoader",
+      inputs: { clip_name1: clip, clip_name2: clipGlyph, type: "hunyuan_video_15", device: "default" }
+    },
+    "3": { class_type: "VAELoader", inputs: { vae_name: vae } },
+    "4": { class_type: "CLIPVisionLoader", inputs: { clip_name: clipVision } },
+    "5": { class_type: "LoadImage", inputs: { image } },
+    "6": { class_type: "CLIPVisionEncode", inputs: { clip_vision: ["4", 0], image: ["5", 0], crop: "center" } },
+    "7": { class_type: "CLIPTextEncode", inputs: { text: prompt, clip: ["2", 0] } },
+    "8": { class_type: "CLIPTextEncode", inputs: { text: negative, clip: ["2", 0] } },
+    "9": {
+      class_type: "HunyuanVideo15ImageToVideo",
+      inputs: {
+        positive: ["7", 0],
+        negative: ["8", 0],
+        vae: ["3", 0],
+        start_image: ["5", 0],
+        clip_vision_output: ["6", 0],
+        width,
+        height,
+        length,
+        batch_size: 1
+      }
+    },
+    "10": { class_type: "ModelSamplingSD3", inputs: { model: ["1", 0], shift } },
+    "11": { class_type: "BasicScheduler", inputs: { model: ["10", 0], scheduler, steps, denoise: 1 } },
+    "12": { class_type: "KSamplerSelect", inputs: { sampler_name: sampler } },
+    "13": { class_type: "RandomNoise", inputs: { noise_seed: seed } },
+    "14": { class_type: "CFGGuider", inputs: { model: ["10", 0], positive: ["9", 0], negative: ["9", 1], cfg } },
+    "15": {
+      class_type: "SamplerCustomAdvanced",
+      inputs: {
+        noise: ["13", 0],
+        guider: ["14", 0],
+        sampler: ["12", 0],
+        sigmas: ["11", 0],
+        latent_image: ["9", 2]
+      }
+    },
+    "16": { class_type: "VAEDecode", inputs: { samples: ["15", 0], vae: ["3", 0] } },
+    "17": { class_type: "CreateVideo", inputs: { images: ["16", 0], fps } },
+    "18": { class_type: "SaveVideo", inputs: { video: ["17", 0], filename_prefix: filenamePrefix, format: "auto", codec: "h264" } }
+  };
+}
+function validateVideoWorkflow(workflow) {
+  const issues = [];
+  if (workflow === null || typeof workflow !== "object") return ["workflow must be an object"];
+  const types = Object.values(workflow).map((node) => node?.class_type);
+  if (!types.includes("HunyuanVideo15ImageToVideo")) issues.push("no HunyuanVideo15ImageToVideo: the start image would be ignored");
+  if (!types.includes("LoadImage")) issues.push("no LoadImage: nothing to animate");
+  if (!types.includes("CLIPVisionEncode")) issues.push("no CLIPVisionEncode: the clip drifts away from the still");
+  if (!types.includes("ModelSamplingSD3")) issues.push("no ModelSamplingSD3: this checkpoint renders washed out without its shift");
+  if (!types.includes("SaveVideo")) issues.push("no SaveVideo: the run would produce no clip");
+  const video = Object.values(workflow).find((node) => node?.class_type === "SaveVideo");
+  const length = Object.values(workflow).find((node) => node?.class_type === "HunyuanVideo15ImageToVideo")?.inputs?.length;
+  if (typeof length === "number" && (length - 1) % 4 !== 0) issues.push(`length ${length} is not 4n+1: HunyuanVideo 1.5 drops the remainder`);
+  if (video !== void 0 && workflow[video.inputs.video?.[0]] === void 0) issues.push("SaveVideo references a missing node");
+  return issues;
+}
+
 // src/host/comfy.js
 var DEFAULT_BASE = "http://127.0.0.1:8188";
 function authHeader(auth) {
@@ -1147,7 +1253,7 @@ function createComfyClient(options = {}) {
       if (typeof promptId !== "string") throw new Error("ComfyUI did not return a prompt_id");
       return promptId;
     },
-    /** Poll until the prompt appears in history; returns its output images. */
+    /** Poll until the prompt appears in history; returns its output files. */
     async wait(promptId, { timeoutMs = 6e5, intervalMs = 2e3, onTick } = {}) {
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
@@ -1160,16 +1266,34 @@ function createComfyClient(options = {}) {
             const message = status.messages?.find((pair) => pair?.[0] === "execution_error")?.[1]?.exception_message ?? "execution error";
             throw new Error(`ComfyUI execution failed: ${message}`);
           }
-          const images = [];
+          const files = [];
           for (const output of Object.values(entry.outputs ?? {})) {
-            for (const image of output?.images ?? []) images.push(image);
+            for (const key of ["images", "videos", "gifs"]) {
+              for (const file of output?.[key] ?? []) files.push(file);
+            }
           }
-          if (images.length > 0) return { images, entry };
+          if (files.length > 0) {
+            const images = files.filter((file) => /\.(png|jpe?g|webp)$/i.test(file.filename ?? ""));
+            return { files, images, entry };
+          }
         }
         onTick?.({ promptId, waitedMs: timeoutMs - Math.max(0, deadline - Date.now()) });
         await sleep(intervalMs);
       }
       throw new Error(`ComfyUI 在 ${Math.round(timeoutMs / 1e3)} 秒内没有完成 prompt ${promptId}`);
+    },
+    /**
+     * Upload one local image so a LoadImage node can reference it.
+     * Returns the filename to put in the node (ComfyUI may rename on conflict).
+     */
+    async uploadImage(buffer, filename, { overwrite = true } = {}) {
+      const form = new FormData();
+      form.append("image", new Blob([buffer]), filename);
+      form.append("overwrite", overwrite ? "true" : "false");
+      const response = await call("/upload/image", { method: "POST", body: form, headers: {} });
+      const body = await response.json();
+      const stored = body?.name ?? filename;
+      return body?.subfolder ? `${body.subfolder}/${stored}` : stored;
     },
     /** Download one output image as bytes. */
     async download(image) {
@@ -1182,14 +1306,23 @@ function createComfyClient(options = {}) {
       const buffer = Buffer.from(await response.arrayBuffer());
       return buffer;
     },
-    /** Cheap reachability probe used for a clear error instead of a hang. */
-    async ping() {
+    /**
+     * Reachability probe with the HTTP status kept, so "down" and "needs auth"
+     * give different advice instead of one useless message. A 401 here is a
+     * configuration fact, not a crash: ComfyUI is running and wants COMFYUI_AUTH.
+     */
+    async probe() {
       try {
         const response = await fetchImpl(`${baseUrl}/system_stats`, { headers });
-        return response.ok;
-      } catch {
-        return false;
+        return { reachable: true, ok: response.ok, status: response.status };
+      } catch (error) {
+        return { reachable: false, ok: false, status: 0, error: error instanceof Error ? error.message : String(error) };
       }
+    },
+    /** Cheap reachability probe used for a clear error instead of a hang. */
+    async ping() {
+      const probe = await this.probe();
+      return probe.ok;
     }
   };
 }
@@ -2719,13 +2852,6 @@ async function cmdWallpaperArt(paths, { positionals, flags }) {
     text: `已用 ${recipe} 生成 ${src}（${size.width}×${size.height}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`
   };
 }
-function cmdWallpaperPending(command) {
-  return fail(
-    EXIT.confirm,
-    `vft wallpaper ${command} 需要视频工作流（P6.1）：先用本机 ComfyUI 生成 mp4，再手改 theme.json 的 wallpaper 块（见技能文档）`,
-    { pending: "comfyui-video" }
-  );
-}
 var STATS_FILE = "wallpaper-stats.json";
 function recordWallpaperStats(themeDir, side, buffer) {
   if (!isPng(buffer)) return null;
@@ -2777,8 +2903,10 @@ async function cmdWallpaperGen(paths, { positionals, flags }) {
   const issues = validateWorkflow(workflow);
   if (issues.length > 0) return fail(EXIT.gate, `工作流不合法：${issues.join("；")}`, { issues });
   const client = createComfyClient({ baseUrl: typeof flags["comfy-url"] === "string" ? flags["comfy-url"] : void 0, auth: typeof flags["comfy-auth"] === "string" ? flags["comfy-auth"] : void 0 });
-  if (!await client.ping()) {
-    return fail(EXIT.confirm, `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`, { comfy: client.baseUrl });
+  const probe = await client.probe();
+  if (!probe.ok) {
+    const reason = probe.status === 401 || probe.status === 403 ? `ComfyUI 在 ${client.baseUrl} 要求认证：${probe.status}。设 COMFYUI_AUTH=用户名:密码（或 Bearer <token>），或用 --comfy-auth 传` : `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`;
+    return fail(EXIT.confirm, reason, { comfy: client.baseUrl, status: probe.status });
   }
   const promptId = await client.submit(workflow);
   const timeoutMs = flags.timeout === void 0 ? 9e5 : Number(flags.timeout) * 1e3;
@@ -2804,6 +2932,81 @@ async function cmdWallpaperGen(paths, { positionals, flags }) {
     exitCode: EXIT.ok,
     payload: { ok: true, id, promptId, file: side, seed, size, stats },
     text: `已生成 ${side}（prompt ${promptId}，seed ${seed}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`
+  };
+}
+async function cmdWallpaperVideo(paths, { positionals, flags }) {
+  const id = positionals[0];
+  if (id === void 0) return fail(EXIT.error, "用法：vft wallpaper video <id> --image assets/x.png [--prompt 运动描述] [--seconds 2] [--fps 24] [--size desktop] [--seed N]");
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+  const themeDir = join3(paths.userThemesDir, id);
+  const theme = JSON.parse(readFileSync3(join3(themeDir, "theme.json"), "utf8"));
+  const side = typeof flags.side === "string" ? flags.side : theme.wallpaper?.dark === void 0 ? "light" : "dark";
+  if (!["light", "dark"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark");
+  let imagePath = typeof flags.image === "string" ? resolve(flags.image) : null;
+  if (imagePath === null) {
+    const src = theme.wallpaper?.[side]?.src ?? theme.wallpaper?.light?.src ?? theme.wallpaper?.dark?.src;
+    if (typeof src === "string" && /\.(png|jpe?g|webp)$/i.test(src)) imagePath = join3(themeDir, src);
+  }
+  if (imagePath === null || !existsSync2(imagePath)) {
+    return fail(EXIT.error, "找不到要动的图片：用 --image 指定一张 png/jpg，或先 vft wallpaper gen / art 生成一张");
+  }
+  const source = readFileSync3(imagePath);
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "desktop"] ?? WALLPAPER_SIZES.desktop;
+  const fps = flags.fps === void 0 ? HUNYUAN_I2V_DEFAULTS.fps : Number(flags.fps);
+  const seconds = flags.seconds === void 0 ? 2 : Number(flags.seconds);
+  if (!(seconds > 0) || seconds > 10) return fail(EXIT.error, "--seconds 取 0-10 之间（受显存与时长限制）");
+  const seed = flags.seed === void 0 ? Math.floor(Math.random() * 2 ** 31) : Number(flags.seed);
+  const client = createComfyClient({
+    baseUrl: typeof flags["comfy-url"] === "string" ? flags["comfy-url"] : void 0,
+    auth: typeof flags["comfy-auth"] === "string" ? flags["comfy-auth"] : void 0
+  });
+  const probe = await client.probe();
+  if (!probe.ok) {
+    const reason = probe.status === 401 || probe.status === 403 ? `ComfyUI 在 ${client.baseUrl} 要求认证：${probe.status}。设 COMFYUI_AUTH=用户名:密码（或 Bearer <token>），或用 --comfy-auth 传` : `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`;
+    return fail(EXIT.confirm, reason, { comfy: client.baseUrl, status: probe.status });
+  }
+  const uploaded = await client.uploadImage(source, `vft-${id}-${seed}.png`);
+  const workflow = buildHunyuanI2VWorkflow({
+    image: uploaded,
+    prompt: typeof flags.prompt === "string" ? flags.prompt : void 0,
+    negative: typeof flags.negative === "string" ? flags.negative : void 0,
+    width: size.width,
+    height: size.height,
+    fps,
+    seconds,
+    seed,
+    steps: flags.steps === void 0 ? HUNYUAN_I2V_DEFAULTS.steps : Number(flags.steps),
+    shift: flags.shift === void 0 ? HUNYUAN_I2V_DEFAULTS.shift : Number(flags.shift),
+    cfg: flags.cfg === void 0 ? HUNYUAN_I2V_DEFAULTS.cfg : Number(flags.cfg),
+    filenamePrefix: `vft/${id}`
+  });
+  const issues = validateVideoWorkflow(workflow);
+  if (issues.length > 0) return fail(EXIT.gate, `工作流不合法：${issues.join("；")}`, { issues });
+  const promptId = await client.submit(workflow);
+  const timeoutMs = flags.timeout === void 0 ? 18e5 : Number(flags.timeout) * 1e3;
+  const { files } = await client.wait(promptId, { timeoutMs });
+  const clip = files.find((file) => /\.(mp4|webm|mov)$/i.test(file.filename ?? ""));
+  if (clip === void 0) return fail(EXIT.error, "ComfyUI 完成但没有输出视频文件");
+  const buffer = await client.download(clip);
+  mkdirSync3(join3(themeDir, "assets"), { recursive: true });
+  const baseName = typeof flags.file === "string" ? flags.file.replace(/\.(mp4|webm)$/i, "") : `${id}-${seed}`;
+  const mp4 = join3(themeDir, "assets", `${baseName}.mp4`);
+  const posterName = `${baseName}.png`;
+  writeFileSync3(mp4, buffer);
+  writeFileSync3(join3(themeDir, "assets", posterName), source);
+  const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${posterName}` };
+  const applied = mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = { ...raw.wallpaper ?? {}, kind: "video", [side]: videoSide };
+  });
+  if (applied.exitCode !== EXIT.ok) return applied;
+  const stats = recordWallpaperStats(themeDir, side, source);
+  const frames = framesForSeconds(seconds, fps);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, promptId, file: videoSide.src, poster: videoSide.poster, bytes: buffer.byteLength, frames, fps, side, stats },
+    text: `已生成动态壁纸 ${videoSide.src}（${frames} 帧 @${fps}fps，${Math.round(buffer.byteLength / 1024)} KB）· 首帧沿用 ${basename(imagePath)}`
   };
 }
 function cmdSidebarList(paths, { flags }) {
@@ -3060,7 +3263,7 @@ async function run(argv, options = {}) {
         case "gen":
           return await cmdWallpaperGen(paths, ctx);
         case "video":
-          return cmdWallpaperPending("video");
+          return await cmdWallpaperVideo(paths, ctx);
         default:
           return fail(EXIT.error, `未知子命令 wallpaper ${action ?? ""}`.trim());
       }
