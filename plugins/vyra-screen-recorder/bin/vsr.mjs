@@ -20,6 +20,8 @@ const SETTINGS_FILE = path.join(HOME, 'vyra-screen-recorder', 'settings.json')
 
 const DEFAULT_SETTINGS = {
   dir: '',
+  videoDir: '',
+  shotDir: '',
   format: 'mp4',
   fps: 8,
   quality: 65,
@@ -46,11 +48,15 @@ function libraryRoot(settings) {
 }
 
 function recordingsDir(settings) {
-  return process.env.VSR_RECORDINGS_DIR || path.join(libraryRoot(settings), 'recordings')
+  if (process.env.VSR_RECORDINGS_DIR) return process.env.VSR_RECORDINGS_DIR
+  if (settings.videoDir) return settings.videoDir
+  return path.join(libraryRoot(settings), 'recordings')
 }
 
 function screenshotsDir(settings) {
-  return process.env.VSR_SCREENSHOTS_DIR || path.join(libraryRoot(settings), 'screenshots')
+  if (process.env.VSR_SCREENSHOTS_DIR) return process.env.VSR_SCREENSHOTS_DIR
+  if (settings.shotDir) return settings.shotDir
+  return path.join(libraryRoot(settings), 'screenshots')
 }
 
 function timestamp() {
@@ -194,7 +200,16 @@ function listFiles(argv) {
     }
   }
   files.sort((left, right) => right.mtime - left.mtime)
-  if (options.json) { console.log(JSON.stringify({ ok: true, root: libraryRoot(settings), files })); return }
+  if (options.json) {
+    console.log(JSON.stringify({
+      ok: true,
+      root: libraryRoot(settings),
+      recordings: recordingsDir(settings),
+      screenshots: screenshotsDir(settings),
+      files,
+    }))
+    return
+  }
   for (const file of files) console.log(file.name + '\t' + file.size + '\t' + file.kind)
 }
 

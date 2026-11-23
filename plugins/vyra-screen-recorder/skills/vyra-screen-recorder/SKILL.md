@@ -46,7 +46,8 @@ vsr files
 ```
 
 返回录制目录和截图目录里的文件（名称、类型、大小、时间、路径）。
-默认根目录是 `我的视频/Vyra Screen Recorder`，可在 DSH 设置 → 录屏截图里改。
+视频和截图目录可以在 DSH 设置 → 录屏截图里分别配置；默认是
+`我的视频/Vyra Screen Recorder/recordings` 和 `.../screenshots`。
 
 ## 录屏（需要 DSH Web 界面打开）
 
