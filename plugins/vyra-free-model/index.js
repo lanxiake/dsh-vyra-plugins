@@ -22,11 +22,21 @@ import os from 'node:os'
 import fs from 'node:fs'
 import net from 'node:net'
 import crypto from 'node:crypto'
+import { spawn } from 'node:child_process'
 import { KiloAdapter, ROUTE } from './src/adapter.js'
 import { buildCatalog, fetchKiloListing, AUTO_ID } from './src/kilo.js'
+import { probeAll } from './src/probe.js'
 import { JsonStore } from './src/store.js'
 import { USAGE_INITIAL, recordUsage, pruneDays, todayTotals } from './src/usage.js'
 import { startGateway } from './src/gateway.js'
+import { PRODUCTS, beginBuddyLogin, completeBuddyLogin } from './src/buddy-login.js'
+import {
+  buddyExpired, refreshBuddyCredential, fetchBuddyModels, buddyCatalog, streamBuddyTurn,
+} from './src/buddy.js'
+import {
+  sanitizeEndpoints, fetchEndpointModels, endpointModelId, streamEndpointTurn,
+  isCallableBaseUrl, normalizeBaseUrl,
+} from './src/endpoints.js'
 import {
   TOOLS, configPathFor, planClaudeWrite, planCodexWrite, applyPlan, restoreFrom,
   listBackups, readStatus, scriptPathFor, starterScript,
@@ -77,6 +87,33 @@ export const inject = ['llm']
 /** Where this plugin keeps its own state. Never the profile's config file. */
 const DATA_DIR_NAME = 'vyra-free-model'
 
+/**
+ * Sign-in providers the bundled channel pack implements and this machine can
+ * actually reach. Gemini is deliberately absent: `accounts.google.com` and the
+ * Code Assist endpoints time out from a normal connection here, and a login
+ * button that cannot finish is worse than no button.
+ */
+const ACCOUNT_PROVIDERS = Object.freeze([
+  { id: 'qodercn', label: 'Qoder 中国版' },
+  { id: 'qoder', label: 'Qoder 国际版' },
+  { id: 'trae', label: 'TRAE' },
+  { id: 'zcode', label: 'ZCode' },
+  { id: 'minimax', label: 'MiniMax' },
+  { id: 'lobsterai', label: '有道 LobsterAI' },
+  { id: 'loomy', label: '讯飞 Loomy' },
+  { id: 'cline', label: 'Cline' },
+  { id: 'raccoon', label: '商汤 Raccoon', more: true },
+])
+
+/** Providers whose daily check-in the pack implements. */
+const CLAIMABLE_PROVIDERS = Object.freeze(['qodercn', 'qoder', 'trae', 'zcode', 'minimax', 'lobsterai', 'loomy'])
+
+/** Where the models come from, stated on the page rather than implied. */
+const LANE_SOURCE = Object.freeze({ name: 'Kilo AI 公共免费网关', url: 'https://kilo.ai' })
+
+/** The two Tencent products with the same login protocol. */
+const BUDDY_LABELS = Object.freeze({ buddy: 'CodeBuddy（腾讯）', workbuddy: 'WorkBuddy（腾讯国际版）' })
+
 /** How stale a cached roster may be before a background refresh runs. */
 const REFRESH_INTERVAL_MS = 30 * 60_000
 
@@ -97,8 +134,29 @@ export function apply(ctx, _config) {
 
   /** Settings the adapter and the routes read. */
   const settingsFile = path.join(dataDir, 'settings.json')
-  const settingsStore = new JsonStore(settingsFile, { enabled: true }, { log: message => logger.warn?.(message) })
-  const settings = settingsStore.get()
+  const settingsStore = new JsonStore(settingsFile, { enabled: true, endpoints: [] }, { log: message => logger.warn?.(message) })
+  settingsStore.edit(value => ({ ...value, endpoints: sanitizeEndpoints(value.endpoints) }))
+
+  /** Last probe result per Kilo model id. */
+  const probeStore = new JsonStore(
+    path.join(dataDir, 'probes.json'),
+    { at: 0, results: {} },
+    { log: message => logger.warn?.(message) },
+  )
+
+  /** Which upstream the automatic router actually used last. */
+  const autoStore = new JsonStore(
+    path.join(dataDir, 'auto.json'),
+    { id: '', name: '', contextWindow: 0, vision: false, at: 0 },
+    { log: message => logger.warn?.(message) },
+  )
+
+  /** CodeBuddy / WorkBuddy accounts and their cached model catalogs. */
+  const buddyStore = new JsonStore(
+    path.join(dataDir, 'buddy.json'),
+    { accounts: [], models: { buddy: [], workbuddy: [] }, modelsAt: {} },
+    { log: message => logger.warn?.(message) },
+  )
 
   /** Today's token counts, and the durable file behind them. */
   const usageFile = path.join(dataDir, 'usage.json')
@@ -123,6 +181,54 @@ export function apply(ctx, _config) {
   let disposed = false
 
   /**
+   * Rows the two extra lanes publish — one per Tencent product that has a
+   * signed-in account, plus every model of every enabled keyed endpoint.
+   *
+   * @type {Array<object>}
+   */
+  let extraCatalog = []
+
+  /** The catalog row the auto router last used, resolved for display. */
+  function autoModel() {
+    const routed = autoStore.get()
+    if (typeof routed?.id !== 'string' || routed.id === '') return undefined
+    return {
+      id: routed.id,
+      name: typeof routed.name === 'string' && routed.name !== '' ? routed.name : routed.id,
+      contextWindow: Number(routed.contextWindow) > 0 ? Number(routed.contextWindow) : 131072,
+      maxOutput: Number(routed.maxOutput) > 0 ? Number(routed.maxOutput) : 32768,
+      vision: routed.vision === true,
+    }
+  }
+
+  /** The picker label for the automatic row, naming the model it last used. */
+  function autoLabel() {
+    const routed = autoModel()
+    if (routed === undefined) return '自动选择（推荐）'
+    const context = formatWindow(routed.contextWindow)
+    const tags = [context, routed.vision ? '看图' : ''].filter(tag => tag !== '')
+    return `自动选择 · ${shortModelName(routed.name)}${tags.length === 0 ? '' : `（${tags.join(' · ')}）`}`
+  }
+
+  /** Remember which upstream answered, so the next frame can name it. */
+  function noteRouted(id) {
+    // One turn sends dozens of frames with the same routed id; only the first
+    // one needs to be remembered, and only a change should refresh the picker.
+    const current = autoStore.get()
+    if (current?.id === id && Date.now() - (Number(current.at) || 0) < 60_000) return
+    const entry = catalog.find(row => row.id === id)
+    autoStore.update({
+      id,
+      name: entry?.name ?? id,
+      contextWindow: entry?.contextWindow ?? 131072,
+      maxOutput: entry?.maxOutput ?? 32768,
+      vision: entry?.vision === true,
+      at: Date.now(),
+    })
+    try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+  }
+
+  /**
    * The channel pack's state: `pending` before its dynamic import settles,
    * `ready` once mounted, `failed` when it could not load, and
    * `owned-elsewhere` when another plugin already mounted it (Task 10).
@@ -143,17 +249,24 @@ export function apply(ctx, _config) {
   /**
    * Call one method on the channel pack.
    *
-   * The pack answers over its own RPC envelope, not a typed service call: it
-   * registers a buffered POST route and expects `{ type, rpcId, method,
-   * payload }` where the outer method is the endpoint name and the inner one is
-   * the call. Talking to it through that same envelope keeps this proxy honest —
-   * it exercises the surface the pack actually publishes rather than a private
-   * one that could drift.
+   * The pack publishes an in-process `channelPack` service (see the small patch
+   * at the end of its `registerChannelPackRpc`). That is the path that works:
+   * the HTTP route is fenced by browser auth, and the `connection.fetch` seam
+   * is a route registry rather than a callable. The HTTP path stays as a
+   * fallback for an older bundled pack that has not been rebuilt.
    */
   async function callChannel(method, payload) {
+    let service
+    try { service = ctx.get('channelPack') } catch { service = undefined }
+    if (service !== undefined && typeof service.call === 'function') {
+      const result = await service.call(method, payload ?? {})
+      if (result?.ok !== true) throw new Error(result?.error?.message ?? 'the channel pack refused the call')
+      return result.value
+    }
+
     const connection = ctx.get('connection')
     if (connection === undefined || typeof connection.fetch !== 'function') {
-      throw new Error('the channel pack is not mounted')
+      throw new Error('账号功能还没加载好，请重启 DSH 后再试')
     }
     const rpcId = crypto.randomUUID()
     const response = await connection.fetch(CHANNEL_PACK_PATH, {
@@ -174,17 +287,270 @@ export function apply(ctx, _config) {
     return message.result.value
   }
 
-  const state = () => ({ catalog, settings })
+  const state = () => ({ catalog, settings: settingsStore.get() })
 
   const adapter = new KiloAdapter({
     state,
     onUsage: accountUsage,
+    probes: () => probeStore.get().results ?? {},
+    autoModel,
+    autoLabel,
+    onRouted: noteRouted,
+    extraCatalog: () => extraCatalog,
+    extraStream: (entry, options) => streamExtra(entry, options),
   })
 
   ctx.llm.registerAdapter([ROUTE], adapter)
 
-  /** One listing round. Never throws: a failure keeps the previous roster. */
-  async function refreshCatalog({ log = false } = {}) {
+  // The picker should show a signed-in account's models on the first frame.
+  rebuildExtras()
+
+  // ── the extra lanes: Tencent accounts and keyed endpoints ───────────────
+
+  /** The stored Tencent accounts, defensively shaped. */
+  function buddyAccounts() {
+    const value = buddyStore.get().accounts
+    return Array.isArray(value) ? value.filter(account => account !== null && typeof account === 'object') : []
+  }
+
+  /** Recompute the rows the picker sees from both lanes. */
+  function rebuildExtras() {
+    const rows = []
+    const store = buddyStore.get()
+    for (const productId of Object.keys(BUDDY_LABELS)) {
+      const accounts = buddyAccounts().filter(account => account.product === productId && account.enabled !== false)
+      if (accounts.length === 0) continue
+      const product = PRODUCTS[productId]
+      if (product === undefined) continue
+      const models = buddyCatalog(product, store.models?.[productId])
+      for (const model of models) {
+        rows.push({
+          lane: 'buddy',
+          product: productId,
+          modelId: model.id,
+          id: `buddy:${productId}/${model.id}`,
+          name: `${BUDDY_LABELS[productId]} · ${model.name}`,
+          contextWindow: Number(model.contextWindow) > 0 ? Number(model.contextWindow) : 131072,
+          maxOutput: Number(model.maxOutputTokens ?? model.maxOutput) > 0
+            ? Number(model.maxOutputTokens ?? model.maxOutput)
+            : 32768,
+          vision: model.vision === true,
+          source: 'buddy',
+        })
+      }
+    }
+    for (const endpoint of sanitizeEndpoints(settingsStore.get().endpoints)) {
+      if (endpoint.enabled !== true) continue
+      for (const model of endpoint.models) {
+        rows.push({
+          lane: 'endpoint',
+          endpointId: endpoint.id,
+          modelId: model.id,
+          id: endpointModelId(endpoint.id, model.id),
+          name: `${endpoint.name} · ${model.name ?? model.id}`,
+          contextWindow: Number(model.contextWindow) > 0 ? Number(model.contextWindow) : 131072,
+          maxOutput: Number(model.maxOutput) > 0 ? Number(model.maxOutput) : 32768,
+          vision: model.vision === true,
+          source: 'endpoint',
+        })
+      }
+    }
+    extraCatalog = rows
+    return rows
+  }
+
+  /** A credential that is present and, when possible, refreshed first. */
+  async function usableBuddyCredential(product, account) {
+    let credential = account.credential
+    if (buddyExpired(credential) && typeof credential?.refresh_token === 'string' && credential.refresh_token !== '') {
+      const fresh = await refreshBuddyCredential(product, credential)
+      if (fresh !== undefined) {
+        account.credential = fresh
+        if (Number(fresh.expires_at) > 0) account.expiresAt = Number(fresh.expires_at)
+        buddyStore.edit(value => value)
+        credential = fresh
+      }
+    }
+    return typeof credential?.access_token === 'string' && credential.access_token !== '' ? credential : undefined
+  }
+
+  /** Hand a turn from an extra lane to its own transport. */
+  async function* streamExtra(entry, options) {
+    if (entry.lane === 'endpoint') {
+      const endpoint = sanitizeEndpoints(settingsStore.get().endpoints).find(row => row.id === entry.endpointId)
+      if (endpoint === undefined) {
+        yield { type: 'finish', reason: { kind: 'error', failure: { message: '这个端点已被删除', code: 'CLIENT_ERROR' } } }
+        return
+      }
+      yield* streamEndpointTurn({ endpoint, model: entry.modelId, options })
+      return
+    }
+
+    const product = PRODUCTS[entry.product]
+    const account = buddyAccounts().find(row => row.product === entry.product && row.enabled !== false)
+    if (product === undefined || account === undefined) {
+      yield { type: 'finish', reason: { kind: 'error', failure: { message: '没有已登录的账号，请先到设置页登录', code: 'INVALID_CREDENTIAL' } } }
+      return
+    }
+    const credential = await usableBuddyCredential(product, account)
+    if (credential === undefined) {
+      yield { type: 'finish', reason: { kind: 'error', failure: { message: '登录已过期，请重新登录', code: 'INVALID_CREDENTIAL' } } }
+      return
+    }
+    yield* streamBuddyTurn({
+      product,
+      credential,
+      ensureCredential: () => usableBuddyCredential(product, account),
+      options,
+    })
+  }
+
+  /** Start a Tencent sign-in. The browser is opened here; the page gets the URL too. */
+  async function startBuddyLogin(productId) {
+    const product = PRODUCTS[productId]
+    if (product === undefined) throw new Error(`不支持的账号类型：${String(productId)}`)
+    const started = await beginBuddyLogin({ product })
+    openExternal(started.loginUrl)
+    void completeBuddyLogin(started.state, { product })
+      .then(result => {
+        if (disposed) return
+        const accounts = [...buddyAccounts(), {
+          id: `${productId}-${crypto.randomBytes(3).toString('hex')}`,
+          product: productId,
+          nickname: typeof result.nickname === 'string' && result.nickname !== '' ? result.nickname : (result.userId || productId),
+          credential: result.credential,
+          expiresAt: result.expiresAt,
+          enabled: true,
+          createdAt: Date.now(),
+        }]
+        buddyStore.edit(value => ({ ...value, accounts }))
+        rebuildExtras()
+        try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+        logger.info?.(`vyra-free-model: ${productId} signed in as ${result.nickname || result.userId || '?'}`)
+        void refreshBuddyModels(productId)
+      })
+      .catch(error => {
+        logger.warn?.(`vyra-free-model: ${productId} sign-in failed (${error?.message ?? error})`)
+      })
+    return { loginUrl: started.loginUrl, product: productId }
+  }
+
+  /** Forget one Tencent account (its tokens go with it). */
+  function removeBuddyAccount(id) {
+    const next = buddyAccounts().filter(account => account.id !== id)
+    buddyStore.edit(value => ({ ...value, accounts: next }))
+    rebuildExtras()
+    try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+    return next.map(account => ({
+      id: account.id,
+      product: account.product,
+      nickname: account.nickname,
+      enabled: account.enabled !== false,
+      expiresAt: Number(account.expiresAt) || 0,
+    }))
+  }
+
+  /** Refresh one product's model catalog from its gateway. */
+  async function refreshBuddyModels(productId) {
+    const product = PRODUCTS[productId]
+    if (product === undefined) return []
+    const account = buddyAccounts().find(row => row.product === productId && row.enabled !== false)
+    if (account === undefined) return []
+    const credential = await usableBuddyCredential(product, account)
+    if (credential === undefined) return []
+    const models = await fetchBuddyModels(product, credential)
+    if (models.length === 0) return []
+    buddyStore.edit(value => ({
+      ...value,
+      models: { ...(value.models ?? {}), [productId]: models },
+      modelsAt: { ...(value.modelsAt ?? {}), [productId]: Date.now() },
+    }))
+    rebuildExtras()
+    try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+    return models
+  }
+
+  /** The endpoint document the page may see. The key itself never leaves. */
+  function publicEndpoint(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      baseUrl: row.baseUrl,
+      enabled: row.enabled !== false,
+      hasKey: typeof row.apiKey === 'string' && row.apiKey !== '',
+      models: Array.isArray(row.models) ? row.models : [],
+      modelsAt: Number(row.modelsAt) || 0,
+      lastError: typeof row.lastError === 'string' ? row.lastError : '',
+    }
+  }
+
+  /** Create or update one keyed endpoint. */
+  function saveEndpoint(input) {
+    const rows = sanitizeEndpoints(settingsStore.get().endpoints)
+    const id = typeof input?.id === 'string' && /^[a-z0-9-]{1,32}$/.test(input.id)
+      ? input.id
+      : `e${crypto.randomBytes(4).toString('hex')}`
+    const candidate = sanitizeEndpoints([{ ...input, id }])[0]
+    if (candidate === undefined || !isCallableBaseUrl(candidate.baseUrl)) {
+      throw new Error('Base URL 必须是可用的 http(s) 地址')
+    }
+    const previous = rows.find(row => row.id === id)
+    if (candidate.apiKey === '' && previous !== undefined) candidate.apiKey = previous.apiKey
+    if (candidate.name === candidate.baseUrl && previous !== undefined) candidate.name = previous.name
+    const next = [...rows.filter(row => row.id !== id), candidate]
+    settingsStore.update({ endpoints: next })
+    rebuildExtras()
+    try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+    return publicEndpoint(candidate)
+  }
+
+  /** Remove one keyed endpoint and its models. */
+  function removeEndpoint(id) {
+    const next = sanitizeEndpoints(settingsStore.get().endpoints).filter(row => row.id !== id)
+    settingsStore.update({ endpoints: next })
+    rebuildExtras()
+    try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+    return next.map(publicEndpoint)
+  }
+
+  /** Ask one endpoint for its model list, and remember what it said. */
+  async function discoverEndpointModels(id) {
+    const rows = sanitizeEndpoints(settingsStore.get().endpoints)
+    const row = rows.find(candidate => candidate.id === id)
+    if (row === undefined) throw new Error('找不到这个端点')
+    let models = []
+    let error = ''
+    try {
+      models = await fetchEndpointModels(row)
+    } catch (cause) {
+      error = String(cause?.message ?? cause).slice(0, 200)
+    }
+    const next = rows.map(candidate => candidate.id === id
+      ? {
+        ...candidate,
+        baseUrl: normalizeBaseUrl(candidate.baseUrl),
+        models: models.length > 0 ? models : candidate.models,
+        modelsAt: Date.now(),
+        lastError: models.length > 0 ? '' : error,
+      }
+      : candidate)
+    settingsStore.update({ endpoints: next })
+    rebuildExtras()
+    try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
+    const saved = next.find(candidate => candidate.id === id)
+    if (models.length === 0 && error !== '') throw new Error(error)
+    return { models: saved?.models ?? [], endpoint: saved === undefined ? undefined : publicEndpoint(saved) }
+  }
+
+  /**
+   * One listing round. Never throws: a failure keeps the previous roster.
+   *
+   * `probe: true` (the page's 重新检测 button) also asks every model for one
+   * token, because a listing that answers is not the same claim as a model that
+   * answers. A background refresh never probes — that would spend the pool's
+   * quota on a timer.
+   */
+  async function refreshCatalog({ log = false, probe = false } = {}) {
     try {
       const raw = await fetchKiloListing()
       if (disposed) return catalog
@@ -199,8 +565,13 @@ export function apply(ctx, _config) {
       catalog = next
       laneOk = true
       writeCachedCatalog(cacheFile, next, logger)
+      if (probe) {
+        const results = await probeAll(next.map(entry => entry.id).filter(id => id !== AUTO_ID))
+        if (disposed) return catalog
+        probeStore.update({ at: Date.now(), results: { ...probeStore.get().results, ...results } })
+      }
       try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels have no such method */ }
-      if (log) logger.info?.(`vyra-free-model: ${next.length} models available`)
+      if (log) logger.info?.(`vyra-free-model: ${next.length} models available${probe ? ' (probed)' : ''}`)
       return catalog
     } catch (error) {
       if (disposed) return catalog
@@ -236,6 +607,10 @@ export function apply(ctx, _config) {
         forwardServer = null
       }
       usageStore.dispose()
+      settingsStore.dispose()
+      probeStore.dispose()
+      autoStore.dispose()
+      buddyStore.dispose()
     }
   }, 'vyra-free-model: catalog refresh')
 
@@ -321,19 +696,53 @@ export function apply(ctx, _config) {
 
   const api = createApiRoutes({
     version: VERSION,
-    settings,
     catalog: () => catalog,
+    probes: () => probeStore.get().results ?? {},
     laneOk: () => laneOk,
+    laneSource: LANE_SOURCE,
+    auto: () => autoModel() ?? null,
     accounts: () => ({ state: accountsState, providers: accountProviders(), claimFailedAt }),
     usage: () => todayTotals(usageStore.get()),
     forward: () => forwardState,
-    refreshCatalog: () => refreshCatalog({ log: true }),
+    refreshCatalog: () => refreshCatalog({ log: true, probe: true }),
     setForward,
     channel: callChannel,
     isEnabled: () => settingsStore.get().enabled !== false,
     setEnabled: async enabled => {
       settingsStore.update({ enabled: enabled === true })
       return settingsStore.get().enabled === true
+    },
+    extras: () => rebuildExtras(),
+    buddyAccounts: () => buddyAccounts().map(account => ({
+      id: account.id,
+      product: account.product,
+      nickname: account.nickname,
+      enabled: account.enabled !== false,
+      expiresAt: Number(account.expiresAt) || 0,
+    })),
+    buddyProducts: () => Object.entries(BUDDY_LABELS).map(([id, label]) => ({ id, label })),
+    buddyLogin: productId => startBuddyLogin(productId),
+    buddyRemove: id => removeBuddyAccount(id),
+    buddyRefresh: productId => refreshBuddyModels(productId),
+    endpoints: () => sanitizeEndpoints(settingsStore.get().endpoints).map(publicEndpoint),
+    saveEndpoint,
+    removeEndpoint,
+    discoverEndpointModels,
+    openUrl: openExternal,
+    diag: () => {
+      let channelCallable = false
+      try { channelCallable = typeof ctx.get('channelPack')?.call === 'function' } catch { channelCallable = false }
+      return {
+        version: VERSION,
+        channelCallable,
+        accountsState,
+        providers: providers.map(row => ({ id: row.id, accounts: row.accounts.length })),
+        buddyAccounts: buddyAccounts().length,
+        endpoints: sanitizeEndpoints(settingsStore.get().endpoints).length,
+        probesAt: Number(probeStore.get().at) || 0,
+        models: catalog.length,
+        extras: extraCatalog.length,
+      }
     },
     configureStatus: () => TOOLS.map(tool => readStatus(tool, dshHome)),
     configure: async (tool, dryRun) => configureTool(tool, dryRun),
@@ -453,6 +862,27 @@ export function apply(ctx, _config) {
     }, 'vyra-free-model: account pack')
   })
 
+  // A signed-in Tencent account's catalog is refreshed shortly after boot when
+  // it is older than a day; the stored list keeps the picker populated meanwhile.
+  const buddyRefresh = setTimeout(() => {
+    if (disposed) return
+    const store = buddyStore.get()
+    for (const productId of Object.keys(BUDDY_LABELS)) {
+      if (!buddyAccounts().some(account => account.product === productId && account.enabled !== false)) continue
+      const at = Number(store.modelsAt?.[productId]) || 0
+      if (Date.now() - at > 24 * 60 * 60_000) void refreshBuddyModels(productId)
+    }
+  }, 4_000)
+  buddyRefresh.unref?.()
+
+  // The account pack mounts asynchronously; a failed first read leaves the
+  // block empty for the rest of the session. One retry costs nothing.
+  const providersRetry = setTimeout(() => {
+    if (disposed || accountsState !== 'ready' || providers.length > 0) return
+    void readProviders()
+  }, 6_000)
+  providersRetry.unref?.()
+
   // Claim once shortly after boot, then daily. Both timers are unref'd: a
   // background courtesy must never be the reason the process stays alive.
   const firstClaim = setTimeout(() => { void autoClaim() }, 60_000)
@@ -462,6 +892,8 @@ export function apply(ctx, _config) {
 
   ctx.effect(() => () => {
     clearTimeout(firstClaim)
+    clearTimeout(buddyRefresh)
+    clearTimeout(providersRetry)
     clearInterval(dailyClaim)
   }, 'vyra-free-model: credit claims')
 
@@ -473,13 +905,38 @@ export function apply(ctx, _config) {
    */
   async function readProviders() {
     try {
-      const status = await callChannel('provider.status', {})
-      const rows = Array.isArray(status?.providers) ? status.providers : []
+      const ids = ACCOUNT_PROVIDERS.map(provider => provider.id)
+      // The pack answers `provider.status` only when it is told which providers;
+      // an empty call is a bad request, which is why this block used to render
+      // an empty list forever.
+      const status = await callChannel('provider.status', { providers: ids })
+      const rows = []
+      for (const meta of ACCOUNT_PROVIDERS) {
+        let accounts = []
+        try {
+          const listed = await callChannel('account.list', { provider: meta.id })
+          accounts = Array.isArray(listed?.accounts) ? listed.accounts.map(account => ({
+            id: String(account?.id ?? ''),
+            nickname: typeof account?.nickname === 'string' ? account.nickname : '',
+            enabled: account?.enabled !== false,
+            expiresAt: Number(account?.expiresAt) || 0,
+            refreshable: account?.refreshable === true,
+          })) : []
+        } catch { /* one provider's list failing must not blank the others */ }
+        rows.push({
+          id: meta.id,
+          label: meta.label,
+          more: meta.more === true,
+          claimable: CLAIMABLE_PROVIDERS.includes(meta.id),
+          status: status?.statuses?.[meta.id] ?? null,
+          accounts,
+        })
+      }
       providers.length = 0
-      providers.push(...rows.filter(row => row !== null && typeof row === 'object' && typeof row.id === 'string'))
-      if (Number.isFinite(status?.claimFailedAt)) claimFailedAt = status.claimFailedAt
+      providers.push(...rows)
       return providers
-    } catch {
+    } catch (error) {
+      logger.warn?.(`vyra-free-model: could not read the account providers (${error?.message ?? error})`)
       return []
     }
   }
@@ -491,17 +948,25 @@ export function apply(ctx, _config) {
    * credits simply appear. A failure records when, so the card can say the
    * automatic claim did not work and offer one retry, instead of the user
    * discovering empty quota at the moment they need it.
+   *
+   * The pack requires a provider on every claim; claiming "all" is not a shape
+   * it has, which is why the old single call never worked.
    */
   async function autoClaim() {
     if (accountsState !== 'ready') return
-    try {
-      await callChannel('credits.claimAll', {})
-      claimFailedAt = undefined
-      await readProviders()
-    } catch (error) {
-      claimFailedAt = Date.now()
-      logger.warn?.(`vyra-free-model: automatic credit claim failed (${error?.message ?? error})`)
+    const rows = await readProviders()
+    const targets = rows.filter(row => row.claimable && row.accounts.length > 0).map(row => row.id)
+    let failures = 0
+    for (const provider of targets) {
+      try {
+        await callChannel('credits.claimAll', { provider })
+      } catch (error) {
+        failures += 1
+        logger.warn?.(`vyra-free-model: automatic credit claim for ${provider} failed (${error?.message ?? error})`)
+      }
     }
+    claimFailedAt = failures > 0 ? Date.now() : undefined
+    if (targets.length > 0) await readProviders()
   }
 }
 
@@ -519,6 +984,55 @@ const VERSION = readVersion()
 /** A fresh bearer token for the forward port. */
 function mintKey() {
   return `sk-${crypto.randomBytes(24).toString('base64url')}`
+}
+
+/**
+ * Open a URL in the machine's default browser.
+ *
+ * The page also shows the URL and a copy button, so this is a convenience, not
+ * the only way in: a browser popup opened after an await is blocked, and a
+ * system browser is not.
+ */
+export function openExternal(url) {
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false
+  // The offline suite must never launch a real browser.
+  if (process.env.VYRA_NO_OPEN_BROWSER === '1') return false
+  try {
+    let child
+    if (process.platform === 'win32') {
+      child = spawn('rundll32', ['url.dll,FileProtocolHandler', url], { detached: true, stdio: 'ignore' })
+    } else {
+      child = spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { detached: true, stdio: 'ignore' })
+    }
+    child.on('error', () => {})
+    child.unref()
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * `Baidu: ERNIE-5.5-Flash-Preview (free)` -> `ERNIE-5.5-Flash-Preview`.
+ *
+ * The picker row is one line; the vendor prefix and the `(free)` suffix repeat
+ * what the group already says.
+ */
+export function shortModelName(name) {
+  const value = String(name ?? '').trim()
+  const afterColon = value.includes(': ') ? value.slice(value.indexOf(': ') + 2) : value
+  return afterColon.replace(/\s*\(free\)\s*$/i, '').replace(/\s+/g, ' ').slice(0, 48)
+}
+
+/** `1024000` -> `1M`, `262144` -> `256K`, matching what the page shows. */
+export function formatWindow(value) {
+  if (!Number.isFinite(value) || value <= 0) return ''
+  if (value >= 1_000_000) {
+    const millions = Math.round((value / 1_000_000) * 10) / 10
+    return `${millions % 1 === 0 ? millions : millions.toFixed(1)}M`
+  }
+  if (value >= 1024) return `${Math.round(value / 1024)}K`
+  return String(value)
 }
 
 /**
@@ -577,12 +1091,18 @@ function writeCachedCatalog(file, models, logger) {
  * copy from the response of the call that creates it, which is the only moment
  * the value is legitimately on the wire.
  */
-export function createSummary({ version, catalog, laneOk, accounts, usage, forward, enabled }) {
+export function createSummary({
+  version, catalog, probes, laneOk, laneSource, auto, accounts, usage, forward, enabled,
+  extras, buddyAccounts, buddyProducts, endpoints,
+}) {
+  const probed = probes !== null && typeof probes === 'object' ? probes : {}
   return {
     version,
     enabled: enabled !== false,
     lane: {
       ok: laneOk === true,
+      source: laneSource ?? null,
+      auto: auto ?? null,
       models: (catalog ?? []).map(entry => ({
         id: entry.id,
         name: entry.name,
@@ -590,7 +1110,23 @@ export function createSummary({ version, catalog, laneOk, accounts, usage, forwa
         maxOutput: entry.maxOutput,
         vision: entry.vision === true,
         efforts: entry.efforts ?? null,
+        probe: probed[entry.id] ?? null,
       })),
+    },
+    extras: {
+      models: (extras ?? []).map(row => ({
+        id: row.id,
+        name: row.name,
+        contextWindow: row.contextWindow,
+        vision: row.vision === true,
+        source: row.source ?? '',
+        lane: row.lane ?? '',
+      })),
+      buddy: {
+        products: buddyProducts ?? [],
+        accounts: buddyAccounts ?? [],
+      },
+      endpoints: endpoints ?? [],
     },
     accounts: {
       state: accounts?.state ?? 'pending',
@@ -643,8 +1179,13 @@ export function createApiRoutes(deps) {
         return send(200, assemble(deps))
       }
 
+      if (routePath === '/diag' && method === 'GET') {
+        return send(200, typeof deps.diag === 'function' ? deps.diag() : { diag: 'unavailable' })
+      }
+
       if (routePath === '/summary' || routePath === '/recheck' || routePath === '/forward'
         || routePath === '/forward/key' || routePath === '/channel' || routePath === '/enabled'
+        || routePath === '/buddy' || routePath === '/endpoints'
         || routePath === '/configure' || routePath === '/configure/restore' || routePath === '/configure/status') {
         const wantsGet = routePath === '/summary' || routePath === '/configure/status'
         if (method !== 'POST' && !wantsGet) return send(405, { error: 'method-not-allowed' })
@@ -710,9 +1251,62 @@ export function createApiRoutes(deps) {
         if (typeof deps.channel !== 'function') return send(503, { error: 'channels-unavailable' })
         try {
           const value = await deps.channel(body.method, body?.payload)
+          // A browser popup opened after this await is blocked; a system browser
+          // is not. The page still gets the URL as a copyable fallback.
+          if (body.method === 'account.create' && typeof value?.loginUrl === 'string') {
+            deps.openUrl?.(value.loginUrl)
+          }
           return send(200, { value })
         } catch (error) {
           return send(502, { error: String(error?.message ?? error).slice(0, 300) })
+        }
+      }
+
+      if (routePath === '/buddy' && method === 'POST') {
+        const body = await readJson(req)
+        try {
+          if (body?.action === 'login') {
+            if (typeof deps.buddyLogin !== 'function') return send(503, { error: 'buddy-unavailable' })
+            const value = await deps.buddyLogin(body?.product)
+            return send(200, { value, accounts: deps.buddyAccounts?.() ?? [] })
+          }
+          if (body?.action === 'remove') {
+            if (typeof deps.buddyRemove !== 'function') return send(503, { error: 'buddy-unavailable' })
+            const accounts = await deps.buddyRemove(body?.id)
+            return send(200, { accounts })
+          }
+          if (body?.action === 'refresh') {
+            if (typeof deps.buddyRefresh !== 'function') return send(503, { error: 'buddy-unavailable' })
+            const models = await deps.buddyRefresh(body?.product)
+            return send(200, { models })
+          }
+          return send(400, { error: 'unknown action' })
+        } catch (error) {
+          return send(502, { error: String(error?.message ?? error).slice(0, 300) })
+        }
+      }
+
+      if (routePath === '/endpoints' && method === 'POST') {
+        const body = await readJson(req)
+        try {
+          if (body?.action === 'save') {
+            if (typeof deps.saveEndpoint !== 'function') return send(503, { error: 'endpoints-unavailable' })
+            const endpoint = await deps.saveEndpoint(body?.endpoint)
+            return send(200, { endpoint, endpoints: deps.endpoints?.() ?? [] })
+          }
+          if (body?.action === 'remove') {
+            if (typeof deps.removeEndpoint !== 'function') return send(503, { error: 'endpoints-unavailable' })
+            const endpoints = await deps.removeEndpoint(body?.id)
+            return send(200, { endpoints })
+          }
+          if (body?.action === 'models') {
+            if (typeof deps.discoverEndpointModels !== 'function') return send(503, { error: 'endpoints-unavailable' })
+            const value = await deps.discoverEndpointModels(body?.id)
+            return send(200, { ...value, endpoints: deps.endpoints?.() ?? [] })
+          }
+          return send(400, { error: 'unknown action' })
+        } catch (error) {
+          return send(409, { error: String(error?.message ?? error).slice(0, 300) })
         }
       }
 
@@ -728,11 +1322,18 @@ function assemble(deps) {
   return createSummary({
     version: deps.version ?? '0.0.0',
     catalog: deps.catalog?.() ?? [],
+    probes: deps.probes?.() ?? {},
     laneOk: deps.laneOk?.() === true,
+    laneSource: deps.laneSource,
+    auto: deps.auto?.(),
     accounts: deps.accounts?.() ?? { state: 'pending', providers: [] },
     usage: deps.usage?.() ?? { input: 0, output: 0, total: 0 },
     forward: deps.forward?.() ?? { enabled: false, port: 0, key: '' },
     enabled: deps.isEnabled?.() !== false,
+    extras: deps.extras?.(),
+    buddyAccounts: deps.buddyAccounts?.(),
+    buddyProducts: deps.buddyProducts?.(),
+    endpoints: deps.endpoints?.(),
   })
 }
 

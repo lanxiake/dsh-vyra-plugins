@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import vm from 'node:vm'
 
 const source = readFileSync(new URL('../client.js', import.meta.url), 'utf8')
+const expanded = process.env.PREVIEW_EXPANDED === '1'
 
 const flatten = children => {
   const out = []
@@ -76,14 +77,14 @@ context.globalThis = context
 vm.createContext(context)
 vm.runInContext(source, context, { filename: 'client.js' })
 
-const { h, ModelBlock, AccountsBlock, ForwardBlock, Card, BlockTitle, ToolCard, CSS } = registered.__test
+const { h, ModelBlock, AccountsBlock, ForwardBlock, BuddyBlock, EndpointsBlock, Card, BlockTitle, ToolCard, CSS } = registered.__test
 
 const models = [
-  { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false },
-  { id: 'particle-ai/particle-1:free', name: 'particle-1', contextWindow: 256000, vision: true },
-  { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'nemotron-3.5-super-vl', contextWindow: 131072, vision: true },
-  { id: 'baidu/ernie-5.5-flash-preview:free', name: 'ernie-5.5-flash-preview', contextWindow: 131072, vision: false },
-  { id: 'liquid/lfm-3-1.7b:free', name: 'lfm-3-1.7b', contextWindow: 32768, vision: false },
+  { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false, probe: null },
+  { id: 'particle-ai/particle-1:free', name: 'particle-1', contextWindow: 256000, vision: true, probe: { state: 'ok' } },
+  { id: 'nvidia/nemotron-3.5-super-vl:free', name: 'nemotron-3.5-super-vl', contextWindow: 1000000, vision: true, probe: { state: 'ok' } },
+  { id: 'baidu/ernie-5.5-flash-preview:free', name: 'ernie-5.5-flash-preview', contextWindow: 1024000, vision: false, probe: { state: 'limited', reason: '上游限流' } },
+  { id: 'liquid/lfm-3-1.7b:free', name: 'lfm-3-1.7b', contextWindow: 262144, vision: false, probe: { state: 'unavailable', reason: 'Model is unavailable' } },
 ]
 
 const body = render(h('div', { className: 'vfm_page' },
@@ -91,14 +92,38 @@ const body = render(h('div', { className: 'vfm_page' },
     h('div', { className: 'vfm_headtext' },
       h('h2', { className: 'vfm_title' }, '免费模型'),
       h('p', { className: 'vfm_sub' }, '装上就能用。选个模型，需要更多额度时登录一次国内账号。'))),
-  h(ModelBlock, { models, selected: '', onSelect: () => {}, laneOk: true, onRecheck: () => {}, busy: false }),
-  h(AccountsBlock, {
-    providers: undefined,
-    status: { qodercn: { state: 'ready', nickname: '小明', credits: 120 } },
-    onLogin: () => {}, onClaim: () => {},
+  h(ModelBlock, {
+    models, extraModels: [{ id: 'buddy:buddy/hy4flash', name: 'CodeBuddy（腾讯） · Hy4 flash', contextWindow: 1000000, vision: true, source: 'buddy' }],
+    auto: { id: 'baidu/ernie-5.5-flash-preview:free', name: 'Baidu: ERNIE-5.5-Flash-Preview (free)', contextWindow: 1024000, vision: false },
+    selected: '', onSelect: () => {}, laneOk: true, onRecheck: () => {}, busy: false,
+    collapsed: true, defaultOpen: expanded,
   }),
-  h(ForwardBlock, { enabled: true, port: 8899, hasKey: true, key: 'sk-x', model: '', onToggle: () => {} }),
-  h(Card, { title: h(BlockTitle, {}, '给别的工具用（可选）'), hint: '把本地地址写进下面两个工具的配置。写入前会整份备份，随时可还原；你原来的配置不会被动。' },
+  h(AccountsBlock, {
+    providers: [
+      { id: 'qodercn', label: 'Qoder 中国版', claimable: true, accounts: [{ id: 'a1', nickname: '小明', expiresAt: 0 }] },
+      { id: 'qoder', label: 'Qoder 国际版', claimable: true, accounts: [] },
+      { id: 'trae', label: 'TRAE', claimable: true, accounts: [] },
+      { id: 'zcode', label: 'ZCode', claimable: true, accounts: [] },
+      { id: 'minimax', label: 'MiniMax', claimable: true, accounts: [] },
+      { id: 'lobsterai', label: '有道 LobsterAI', claimable: true, accounts: [] },
+      { id: 'loomy', label: '讯飞 Loomy', claimable: true, accounts: [] },
+      { id: 'cline', label: 'Cline', claimable: false, accounts: [] },
+    ],
+    status: {},
+    onLogin: () => {}, onClaim: () => {},
+    collapsed: true, defaultOpen: expanded,
+  }),
+  h(BuddyBlock, {
+    products: [{ id: 'buddy', label: 'CodeBuddy（腾讯）' }, { id: 'workbuddy', label: 'WorkBuddy（国际版）' }],
+    accounts: [],
+    onSummary: () => {}, collapsed: true, defaultOpen: expanded,
+  }),
+  h(EndpointsBlock, {
+    endpoints: [{ id: 'e1', name: '豆包（火山方舟）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', hasKey: true, models: [{ id: 'doubao-x' }], modelsAt: 0 }],
+    onSummary: () => {}, collapsed: true, defaultOpen: expanded,
+  }),
+  h(ForwardBlock, { enabled: true, port: 8899, hasKey: true, key: 'sk-x', model: '', onToggle: () => {}, collapsed: true, defaultOpen: expanded }),
+  h(Card, { title: h(BlockTitle, {}, '给别的工具用（可选）'), hint: '把本地地址写进下面两个工具的配置。写入前会整份备份，随时可还原；你原来的配置不会被动。', collapsible: true, defaultOpen: expanded, summary: '未配置' },
     h('div', { className: 'vfm_tools' },
       h(ToolCard, { tool: 'codex', name: 'Codex', status: { configured: true, command: 'codex-vyra' }, onWrite: () => {}, onRestore: () => {} }),
       h(ToolCard, { tool: 'claude', name: 'Claude Code', status: { configured: false }, onWrite: () => {}, onRestore: () => {} })))
@@ -122,5 +147,6 @@ const html = `<!doctype html>
 </style></head>
 <body>${body}</body></html>`
 
-writeFileSync(new URL('../.preview.html', import.meta.url), html)
-console.log('wrote .preview.html,', html.length, 'bytes')
+const output = expanded ? '../.preview-expanded.html' : '../.preview.html'
+writeFileSync(new URL(output, import.meta.url), html)
+console.log(`wrote ${output}, ${html.length} bytes`)

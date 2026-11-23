@@ -56503,6 +56503,13 @@ function registerChannelPackEndpoints(ctx, pool, lobsterai, qoder, qoderCn, trae
         return { ok: false, error: { code: "bad-request", message: `unknown method: ${method}` } };
     }
   }
+  // In-process entry for the host half. The HTTP route above is for the browser;
+  // a host plugin calling it over fetch has to satisfy the browser session
+  // auth, which a server-side caller cannot. One provided service keeps the host
+  // on the same handler instead of a second, drifting copy.
+  if (ctx.get("channelPack") === void 0) {
+    ctx.provide("channelPack", { call: (method, payload) => handleMethod(method, payload) });
+  }
 }
 function reply(rpcId, result) {
   const value = typeof result === "object" && result !== null && result.ok === false ? { ...result, error: { ...result.error, details: {} } } : result;

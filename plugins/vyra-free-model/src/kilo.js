@@ -23,7 +23,7 @@
 export const KILO_BASE = (process.env.VYRA_KILO_BASE ?? 'https://ai-gateway.kilo.ai/api/v1').replace(/\/+$/, '')
 
 /** The attribution headers Kilo's own clients send; documented optional. */
-const ATTRIBUTION = {
+export const ATTRIBUTION = {
   'http-referer': 'https://kilo.ai/',
   'x-title': 'Vyra Free Model',
 }
@@ -245,7 +245,22 @@ export function parseSseText(text) {
  * can be split across two network reads; decoding each chunk on its own mangles
  * every Chinese character that happens to land on a frame boundary.
  */
-export async function postKiloStreamed({ body, signal, onPayload, timeoutMs = TURN_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
+export async function postKiloStreamed(options) {
+  return postChatStream({
+    ...options,
+    url: `${KILO_BASE}/chat/completions`,
+    headers: { 'content-type': 'application/json', accept: 'text/event-stream', ...ATTRIBUTION },
+  })
+}
+
+/**
+ * POST one OpenAI-compatible streaming turn to any endpoint.
+ *
+ * The Kilo lane and the user's own keyed endpoints differ only in URL and
+ * headers, so the framing (SSE vs. a whole JSON document, incremental UTF-8
+ * decode, partial-frame buffering) lives here once.
+ */
+export async function postChatStream({ url, headers = {}, body, signal, onPayload, timeoutMs = TURN_TIMEOUT_MS, fetchImpl = globalThis.fetch }) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   timer.unref?.()
@@ -254,13 +269,9 @@ export async function postKiloStreamed({ body, signal, onPayload, timeoutMs = TU
 
   let response
   try {
-    response = await fetchImpl(`${KILO_BASE}/chat/completions`, {
+    response = await fetchImpl(url, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        accept: 'text/event-stream',
-        ...ATTRIBUTION,
-      },
+      headers,
       body: JSON.stringify(body),
       redirect: 'error',
       signal: controller.signal,

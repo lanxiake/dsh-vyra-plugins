@@ -78,21 +78,21 @@ function loadBundle() {
 }
 
 const bundle = loadBundle()
-const { h, AccountsBlock, PROVIDERS, providerRow } = bundle.__test
+const { h, AccountsBlock, PROVIDERS, providerRow, BuddyBlock, EndpointsBlock, ModelBlock, probeLabel } = bundle.__test
 
 // The bundle runs in its own vm realm, so its arrays are not this realm's
 // Array: spread them before comparing structure.
-test('exactly seven providers are shown, in the spec order', () => {
+test('the reachable providers are shown, in the spec order', () => {
   assert.deepEqual([...PROVIDERS].map(entry => entry.id),
-    ['qodercn', 'trae', 'zcode', 'minimax', 'lobsterai', 'loomy', 'raccoon'])
+    ['qodercn', 'qoder', 'trae', 'zcode', 'minimax', 'lobsterai', 'loomy', 'cline', 'raccoon'])
 })
 
 test('the more bucket holds only raccoon', () => {
   assert.deepEqual([...PROVIDERS].filter(entry => entry.more === true).map(entry => entry.id), ['raccoon'])
 })
 
-test('the three excluded channels never appear', () => {
-  for (const id of ['qoder', 'cline', 'gemini']) {
+test('the unreachable channel never appears', () => {
+  for (const id of ['gemini']) {
     assert.equal(PROVIDERS.some(entry => entry.id === id), false, `${id} must not be offered`)
   }
 })
@@ -116,13 +116,15 @@ test('a logged-out card offers a login button', () => {
 })
 
 test('a logged-in card shows its name and offers a re-claim', () => {
+  const providers = PROVIDERS.map(entry => entry.id === 'qodercn'
+    ? { ...entry, claimable: true, accounts: [{ id: 'a1', nickname: '小明', enabled: true, expiresAt: 0 }] }
+    : entry)
   const out = renderToString(h(AccountsBlock, {
-    providers: PROVIDERS,
-    status: { qodercn: { state: 'ready', nickname: '小明', credits: 120 } },
+    providers,
+    status: {},
     onLogin: () => {}, onClaim: () => {},
   }))
   assert.ok(out.includes('小明'))
-  assert.ok(out.includes('120'))
   assert.ok(out.includes('重新领取'))
 })
 
@@ -136,9 +138,12 @@ test('a pending card says it is waiting instead of lying about success', () => {
 })
 
 test('an expired login is shown as expired, not as logged in', () => {
+  const providers = PROVIDERS.map(entry => entry.id === 'zcode'
+    ? { ...entry, accounts: [{ id: 'z1', nickname: '老账号', enabled: true, expiresAt: 1 }] }
+    : entry)
   const out = renderToString(h(AccountsBlock, {
-    providers: PROVIDERS,
-    status: { zcode: { state: 'expired' } },
+    providers,
+    status: {},
     onLogin: () => {}, onClaim: () => {},
   }))
   assert.ok(out.includes('已过期'))
@@ -166,8 +171,60 @@ test('the provider rows default the more bucket to hidden', () => {
 })
 
 test('one provider row renders its own state without the others', () => {
-  const html = renderToString(providerRow(PROVIDERS[0], { state: 'ready', nickname: 'A', credits: 5 }, {}))
+  const html = renderToString(providerRow(PROVIDERS[0], { accounts: [{ id: 'a1', nickname: 'A' }] }, {}))
   assert.ok(html.includes('Qoder'))
   assert.ok(html.includes('A'))
   assert.equal(html.includes('TRAE'), false)
+})
+
+// ── the new lanes ───────────────────────────────────────────────────────────
+
+test('a login URL is shown with a copy button when a popup could be blocked', () => {
+  const html = renderToString(providerRow(
+    { id: 'trae', label: 'TRAE' },
+    { state: 'pending', loginUrl: 'https://example.com/auth', copied: false },
+    { onOpen: () => {}, onCopy: () => {} },
+  ))
+  assert.ok(html.includes('https://example.com/auth'))
+  assert.ok(html.includes('打开授权页'))
+  assert.ok(html.includes('复制链接'))
+})
+
+test('a failed sign-in shows its reason instead of a silent button', () => {
+  const html = renderToString(providerRow(
+    { id: 'trae', label: 'TRAE' },
+    { message: '网络错误' },
+    { onLogin: () => {} },
+  ))
+  assert.ok(html.includes('登录失败'))
+  assert.ok(html.includes('网络错误'))
+})
+
+test('both Tencent products are offered', () => {
+  const html = renderToString(h(BuddyBlock, { products: [], accounts: [], defaultOpen: true }))
+  assert.ok(html.includes('CodeBuddy（腾讯）'))
+  assert.ok(html.includes('WorkBuddy（国际版）'))
+})
+
+test('a saved endpoint shows its address and key state, never the key', () => {
+  const html = renderToString(h(EndpointsBlock, {
+    endpoints: [{ id: 'e1', name: '豆包', baseUrl: 'https://ark.example/v3', hasKey: true, models: [{ id: 'x' }] }],
+    defaultOpen: true,
+  }))
+  assert.ok(html.includes('https://ark.example/v3'))
+  assert.ok(html.includes('已保存 Key'))
+  assert.ok(html.includes('1 个模型'))
+})
+
+test('probe states read as words, not colours alone', () => {
+  assert.equal(probeLabel({ state: 'ok' }), '可用')
+  assert.equal(probeLabel({ state: 'limited' }), '限流')
+  assert.equal(probeLabel({ state: 'unavailable' }), '不可用')
+  assert.equal(probeLabel(null), '未检测')
+})
+
+test('the model list states where the models come from', () => {
+  const html = renderToString(h(ModelBlock, { models: [{ id: 'a/free', name: 'A', contextWindow: 1000, vision: false }] }))
+  assert.ok(html.includes('kilo.ai'))
+  assert.ok(html.includes('对话框顶部的选择器'))
 })

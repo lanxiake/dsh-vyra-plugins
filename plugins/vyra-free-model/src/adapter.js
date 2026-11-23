@@ -11,7 +11,7 @@
  * @module src/adapter.js
  */
 
-import { postKiloStreamed } from './kilo.js'
+import { postKiloStreamed, AUTO_ID } from './kilo.js'
 import { toChatMessages, toToolDefs } from './messages.js'
 import { readChunks } from './stream.js'
 import { effortsFor, defaultEffortFor } from './effort.js'
@@ -82,6 +82,19 @@ export class KiloAdapter {
   }
 
   /**
+   * Kilo rows (minus the ones the probe proved dead) plus every row an extra
+   * lane publishes — a signed-in CodeBuddy account and the user's own keyed
+   * endpoints. One picker group, one route: the harness groups strictly by
+   * provider, and users should not have to learn which pool a model lives in.
+   */
+  allEntries() {
+    const state = this.deps.state()
+    const probes = this.deps.probes?.() ?? {}
+    const kilo = (state.catalog ?? []).filter(entry => probes[entry.id]?.state !== 'unavailable')
+    return [...kilo, ...(this.deps.extraCatalog?.() ?? [])]
+  }
+
+  /**
    * A fully resolved policy, not a configuration fragment: the backoff scheduler
    * reads the delay fields off the top level, and a nested object turns every
    * scheduled delay into NaN.
@@ -106,17 +119,17 @@ export class KiloAdapter {
     // The master switch takes the group out of the picker without unloading the
     // plugin: a route with no models is dropped by the client.
     if (state.settings?.enabled === false) return []
-    return state.catalog.map(entry => ({
+    return this.allEntries().map(entry => ({
       provider,
       id: entry.id,
-      name: entry.name,
+      name: entry.id === AUTO_ID ? this.deps.autoLabel?.() ?? entry.name : entry.name,
       inputModalities: entry.vision ? ['text', 'image'] : ['text'],
     }))
   }
 
   async resolveModel(provider, model) {
     const state = this.deps.state()
-    const entry = state.catalog.find(candidate => candidate.id === model)
+    const entry = this.allEntries().find(candidate => candidate.id === model)
     if (entry === undefined) {
       return {
         provider,
@@ -126,15 +139,21 @@ export class KiloAdapter {
         defaultMaxTokens: DEFAULT_MAX_TOKENS,
       }
     }
-    const efforts = menuFor(entry)
+    // "Automatic" is a router; the row above describes the rotation entry, but
+    // the turn will actually run on whichever upstream answered last. Once one
+    // has, the picker and the chat header describe that real model — its name,
+    // window and modality — rather than the router's placeholder.
+    const shown = model === AUTO_ID ? (this.deps.autoModel?.() ?? entry) : entry
+    const name = model === AUTO_ID ? (this.deps.autoLabel?.() ?? entry.name) : entry.name
+    const efforts = menuFor(shown)
     return {
       provider,
       id: entry.id,
-      name: entry.name,
-      inputModalities: entry.vision ? ['text', 'image'] : ['text'],
-      context: { contextWindow: entry.contextWindow },
-      defaultMaxTokens: Math.min(entry.maxOutput, DEFAULT_MAX_TOKENS),
-      ...efforts === undefined ? {} : { reasoning: { efforts, defaultEffort: defaultEffortFor(entry) } },
+      name,
+      inputModalities: shown.vision ? ['text', 'image'] : ['text'],
+      context: { contextWindow: shown.contextWindow },
+      defaultMaxTokens: Math.min(shown.maxOutput, DEFAULT_MAX_TOKENS),
+      ...efforts === undefined ? {} : { reasoning: { efforts, defaultEffort: defaultEffortFor(shown) } },
     }
   }
 
@@ -145,7 +164,7 @@ export class KiloAdapter {
    */
   async prepareCall(provider, model) {
     const snapshot = this.deps.state()
-    const entry = snapshot.catalog.find(candidate => candidate.id === model) ?? null
+    const entry = this.allEntries().find(candidate => candidate.id === model) ?? null
     return {
       model: await this.resolveModel(provider, model),
       stream: options => this.stream(options, entry, snapshot),
@@ -166,11 +185,19 @@ export class KiloAdapter {
    */
   async * stream(options, pinned, snapshot) {
     const state = snapshot ?? this.deps.state()
-    const entry = pinned ?? state.catalog.find(candidate => candidate.id === options.model) ?? null
+    const entry = pinned ?? this.allEntries().find(candidate => candidate.id === options.model) ?? null
     const model = options.model
 
     if (options.signal?.aborted === true) {
       yield { type: 'finish', reason: { kind: 'aborted', failure: { message: 'request aborted', code: 'ABORTED' } } }
+      return
+    }
+
+    // A row from another lane (CodeBuddy, a keyed endpoint) carries its own
+    // transport. The lane hands the turn over rather than pretending every model
+    // answers on the Kilo wire.
+    if (entry !== null && entry.lane !== undefined && typeof this.deps.extraStream === 'function') {
+      yield* this.deps.extraStream(entry, options)
       return
     }
 
@@ -205,7 +232,17 @@ export class KiloAdapter {
         body,
         signal: options.signal === undefined ? controller.signal : AbortSignal.any([options.signal, controller.signal]),
         fetchImpl: this.deps.fetchImpl,
-        onPayload: payload => { payloads.push(payload) },
+        onPayload: payload => {
+          payloads.push(payload)
+          // The router tells us which upstream actually answered. Reading it
+          // here keeps the page's "current model" honest without a second call.
+          if (model === AUTO_ID) {
+            try {
+              const routed = JSON.parse(payload)?.model
+              if (typeof routed === 'string' && routed !== '') this.deps.onRouted?.(routed)
+            } catch { /* a keepalive frame is not a route decision */ }
+          }
+        },
       })
       done = true
     } catch (error) {

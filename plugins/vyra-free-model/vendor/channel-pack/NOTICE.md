@@ -44,6 +44,7 @@ OFM_ESBUILD_DIR=/tmp/ofm-channel-build npm run channel-pack
 - `src/channel-pack-rpc.ts`：追加同一配置，关闭时拒绝 `opencode.*` 与通用 `account.create(provider=opencode)`。
 - 打包入口改为 `src/index.ts`；宿主模块仍保持外部，undici 内联。
 - 再构建使用 esbuild 0.25.12，undici 8.12.2 使用根目录锁文件，与插件和独立端的运行产物保持一致。
+- 在 `registerChannelPackRpc` 末尾新增一个进程内服务 `channelPack.call(method, payload)`，让宿主插件不必经过浏览器鉴权的 HTTP 路由；除新增这一处导出外，处理逻辑原样复用。
 - `src/credential-expiry.ts` 与 `src/credit-expiry-window.ts` 提供渠道间共享的纯函数。积分临时窗口默认 15 天，可通过 `DSH_CREDIT_EXPIRING_WINDOW_DAYS` 显式设置为非负天数。
 
 本目录**不含**上游的浏览器半身（`plugin-src/client`）与其设置页——

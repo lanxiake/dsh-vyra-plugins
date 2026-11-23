@@ -46,6 +46,8 @@ window.__ModuleLoader__.load({
         'models.title': '模型',
         'models.auto': '自动选择（推荐）',
         'models.autoHint': '自动挑一个当前能用的',
+        'models.autoCurrent': '当前 · {name}',
+        'models.autoUnknown': '运行一次后显示实际模型',
         'models.vision': '能看图',
         'models.context': '上下文',
         'models.empty': '还没拿到模型列表。检查网络后点下面的按钮。',
@@ -55,6 +57,17 @@ window.__ModuleLoader__.load({
         'models.more': '展开全部 {n} 个',
         'models.less': '收起',
         'models.offline': '所有模型都连不上。稍后再试，或登录账号换取更多额度。',
+        'models.source': '模型来自 Kilo AI 公共免费网关（kilo.ai），由上游免费提供。提示词可能被上游记录，别发敏感内容。',
+        'models.switchHint': '模型在对话框顶部的选择器里切换；这里只显示可用状态。',
+        'models.probe.ok': '可用',
+        'models.probe.limited': '限流',
+        'models.probe.unavailable': '不可用',
+        'models.probe.unknown': '未确认',
+        'models.probe.none': '未检测',
+        'models.extra': '更多来源',
+
+        'collapse.expand': '展开',
+        'collapse.collapse': '收起',
 
         'accounts.title': '账号（可选）',
         'accounts.hint': '不登录也能用上面的免费模型。登录一个国内账号，就能多一份额度。',
@@ -69,6 +82,46 @@ window.__ModuleLoader__.load({
         'accounts.claimFailed': '上次自动领取没成功。',
         'accounts.retry': '重试',
         'accounts.ownedElsewhere': '账号功能已由 Our Free Model 接管。请到那里管理账号，这里继续用免费模型。',
+        'accounts.notLogged': '未登录',
+        'accounts.loggedIn': '{n} 个已登录',
+        'accounts.waiting': '等待浏览器授权…',
+        'accounts.openLink': '打开授权页',
+        'accounts.copyLink': '复制链接',
+        'accounts.copied': '已复制',
+        'accounts.relogin': '再登录',
+        'accounts.remove': '移除',
+        'accounts.failed': '登录失败：{message}',
+        'accounts.expiredHint': '登录已过期，请重新登录。',
+
+        'buddy.title': 'CodeBuddy / WorkBuddy（可选）',
+        'buddy.hint': '登录腾讯账号后，它的模型会出现在上面的「免费模型」里。',
+        'buddy.product.buddy': 'CodeBuddy（腾讯）',
+        'buddy.product.workbuddy': 'WorkBuddy（国际版）',
+        'buddy.login': '登录',
+        'buddy.relogin': '再登录',
+        'buddy.remove': '移除',
+        'buddy.waiting': '请在浏览器里完成登录，完成后这里会自动更新。',
+        'buddy.failed': '登录失败：{message}',
+        'buddy.none': '还没登录',
+
+        'endpoints.title': '自带 Key 的模型（可选）',
+        'endpoints.hint': '支持豆包（火山方舟）、Kimi、智谱、SiliconFlow 等任何 OpenAI 兼容接口。Key 只保存在本机。',
+        'endpoints.add': '添加接口',
+        'endpoints.cancel': '取消',
+        'endpoints.preset': '快速填入',
+        'endpoints.name': '名称',
+        'endpoints.baseUrl': '接口地址',
+        'endpoints.apiKey': 'API Key（留空保持不变）',
+        'endpoints.save': '保存',
+        'endpoints.saving': '保存中…',
+        'endpoints.discover': '检测模型',
+        'endpoints.discovering': '检测中…',
+        'endpoints.remove': '删除',
+        'endpoints.hasKey': '已保存 Key',
+        'endpoints.models': '{n} 个模型',
+        'endpoints.empty': '还没有添加接口。',
+        'endpoints.failed': '失败：{message}',
+        'endpoints.saved': '已保存。',
 
         'forward.title': '让别的工具也用上（可选）',
         'forward.hint': '打开后，Cursor、Claude Code 这类工具就能用同一批免费模型。只在你这台电脑上有效。',
@@ -113,6 +166,8 @@ window.__ModuleLoader__.load({
         'models.title': 'Models',
         'models.auto': 'Automatic (recommended)',
         'models.autoHint': 'Picks one that works right now',
+        'models.autoCurrent': 'Now · {name}',
+        'models.autoUnknown': 'The real model appears after one turn',
         'models.vision': 'Sees images',
         'models.context': 'context',
         'models.empty': 'No models yet. Check the network, then retry below.',
@@ -122,6 +177,17 @@ window.__ModuleLoader__.load({
         'models.more': 'Show all {n}',
         'models.less': 'Show less',
         'models.offline': 'No model is reachable right now. Try later, or sign in for more quota.',
+        'models.source': 'Models come from the Kilo AI public free gateway (kilo.ai). Prompts may be logged upstream — avoid sensitive content.',
+        'models.switchHint': 'Switch models in the picker above the composer; this list shows availability.',
+        'models.probe.ok': 'Works',
+        'models.probe.limited': 'Rate-limited',
+        'models.probe.unavailable': 'Unavailable',
+        'models.probe.unknown': 'Unclear',
+        'models.probe.none': 'Not checked',
+        'models.extra': 'More sources',
+
+        'collapse.expand': 'Expand',
+        'collapse.collapse': 'Collapse',
 
         'accounts.title': 'Accounts (optional)',
         'accounts.hint': 'The free models above work without signing in. Sign into one account for extra quota.',
@@ -136,6 +202,46 @@ window.__ModuleLoader__.load({
         'accounts.claimFailed': 'The last automatic claim did not succeed.',
         'accounts.retry': 'Retry',
         'accounts.ownedElsewhere': 'Our Free Model already manages accounts here. Manage them there; the free models keep working.',
+        'accounts.notLogged': 'Not signed in',
+        'accounts.loggedIn': '{n} signed in',
+        'accounts.waiting': 'Waiting for the browser…',
+        'accounts.openLink': 'Open sign-in page',
+        'accounts.copyLink': 'Copy link',
+        'accounts.copied': 'Copied',
+        'accounts.relogin': 'Sign in again',
+        'accounts.remove': 'Remove',
+        'accounts.failed': 'Sign-in failed: {message}',
+        'accounts.expiredHint': 'This sign-in expired; sign in again.',
+
+        'buddy.title': 'CodeBuddy / WorkBuddy (optional)',
+        'buddy.hint': 'Sign into a Tencent account and its models join the free-model group above.',
+        'buddy.product.buddy': 'CodeBuddy (Tencent)',
+        'buddy.product.workbuddy': 'WorkBuddy (international)',
+        'buddy.login': 'Sign in',
+        'buddy.relogin': 'Sign in again',
+        'buddy.remove': 'Remove',
+        'buddy.waiting': 'Finish in the browser; this updates on its own.',
+        'buddy.failed': 'Sign-in failed: {message}',
+        'buddy.none': 'Not signed in',
+
+        'endpoints.title': 'Models with your own key (optional)',
+        'endpoints.hint': 'Works with Doubao (Volcengine Ark), Kimi, Zhipu, SiliconFlow and any OpenAI-compatible API. The key stays on this machine.',
+        'endpoints.add': 'Add endpoint',
+        'endpoints.cancel': 'Cancel',
+        'endpoints.preset': 'Quick fill',
+        'endpoints.name': 'Name',
+        'endpoints.baseUrl': 'Base URL',
+        'endpoints.apiKey': 'API key (leave blank to keep)',
+        'endpoints.save': 'Save',
+        'endpoints.saving': 'Saving…',
+        'endpoints.discover': 'Discover models',
+        'endpoints.discovering': 'Discovering…',
+        'endpoints.remove': 'Delete',
+        'endpoints.hasKey': 'Key saved',
+        'endpoints.models': '{n} models',
+        'endpoints.empty': 'No endpoint yet.',
+        'endpoints.failed': 'Failed: {message}',
+        'endpoints.saved': 'Saved.',
 
         'forward.title': 'Use these models elsewhere (optional)',
         'forward.hint': 'Once on, tools like Cursor or Claude Code can use the same free models. This machine only.',
@@ -222,8 +328,8 @@ window.__ModuleLoader__.load({
     /** `1048576` -> `1M`; `262144` -> `256K`. Users read sizes, not integers. */
     function formatContext(value) {
       if (!Number.isFinite(value) || value <= 0) return ''
-      if (value >= 1048576) {
-        const millions = value / 1048576
+      if (value >= 1_000_000) {
+        const millions = Math.round((value / 1_000_000) * 10) / 10
         return `${millions % 1 === 0 ? millions : millions.toFixed(1)}M`
       }
       if (value >= 1024) return `${Math.round(value / 1024)}K`
@@ -311,6 +417,9 @@ window.__ModuleLoader__.load({
 .vfm_acct[data-state="ready"]{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 38%,transparent)}
 .vfm_acctmain{display:flex;align-items:center;gap:9px;min-width:0}
 .vfm_acctname{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfm_acct{flex-wrap:wrap}
+.vfm_acct > .vfm_loginbox{flex-basis:100%;margin-top:2px}
+.vfm_autoNow{color:var(--dsw-alias-label-primary);font-size:11.5px}
 
 /* ── tool configuration ───────────────────────────────────────────────── */
 .vfm_tools{display:flex;flex-direction:column;gap:6px}
@@ -365,6 +474,55 @@ window.__ModuleLoader__.load({
   color:var(--dsw-alias-label-secondary);font-size:12.5px}
 .vfm_centerbox{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
 .vfm_more{align-self:flex-start;margin-top:2px}
+
+/* ── collapsible cards ────────────────────────────────────────────────── */
+/* Model and account blocks start folded: the page opens as four readable
+   rows, and only the block a user is working in takes vertical space. */
+.vfm_card[data-collapsed="1"]{gap:0;padding:14px 22px}
+.vfm_click{display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer;user-select:none;border-radius:8px;margin:-4px;padding:4px}
+.vfm_click:hover{background:var(--dsw-alias-bg-layer-2)}
+.vfm_click:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
+.vfm_chev{width:0;height:0;flex:none;border-top:4px solid transparent;border-bottom:4px solid transparent;
+  border-left:5px solid var(--dsw-alias-label-secondary);transition:transform .15s ease}
+.vfm_chev[data-open="1"]{transform:rotate(90deg)}
+.vfm_summary{margin-left:auto;color:var(--dsw-alias-label-secondary);font-size:12px;font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+.vfm_collapsebody{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+
+/* ── probe status ─────────────────────────────────────────────────────── */
+.vfm_probe{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--dsw-alias-label-secondary);flex:none}
+.vfm_probe::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-idle-primary)}
+.vfm_probe[data-state="ok"]::before{background:var(--dsw-alias-state-success-primary)}
+.vfm_probe[data-state="limited"]::before{background:var(--dsw-alias-state-warn-primary)}
+.vfm_probe[data-state="unavailable"]::before{background:var(--dsw-alias-state-error-primary)}
+.vfm_probe[data-state="unknown"]::before{background:var(--dsw-alias-state-warn-primary)}
+
+/* ── login link, account lines, endpoints ─────────────────────────────── */
+.vfm_loginbox{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:9px;
+  background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 80%,transparent);
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 60%,transparent)}
+.vfm_loginurl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfm_loginacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vfm_link{color:var(--dsw-alias-brand-primary);text-decoration:none;font-size:12px}
+.vfm_link:hover{text-decoration:underline}
+.vfm_acctlines{display:flex;flex-direction:column;gap:2px}
+.vfm_acctline{color:var(--dsw-alias-label-secondary);font-size:11.5px}
+.vfm_error{color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:1.5}
+.vfm_form{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:11px;
+  border:1px dashed color-mix(in srgb,var(--dsw-alias-border-l2) 80%,transparent)}
+.vfm_formrow{display:flex;flex-direction:column;gap:4px}
+.vfm_input{padding:6px 9px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2);
+  background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px;min-width:0}
+.vfm_input:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 70%,transparent);outline-offset:1px}
+.vfm_ep{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 13px;border-radius:11px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 62%,transparent);
+  background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 86%,transparent)}
+.vfm_epmain{display:flex;flex-direction:column;gap:3px;min-width:0}
+.vfm_epname{font-weight:500}
+.vfm_epurl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--dsw-alias-label-secondary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfm_epacts{display:flex;align-items:center;gap:6px;flex:none}
 `
 
     // ── primitives ───────────────────────────────────────────────────────────
@@ -376,17 +534,40 @@ window.__ModuleLoader__.load({
      * they belong to the same page, and the only way to guarantee that is to
      * have exactly one place that draws a card.
      */
-    function Card({ title, hint, action, children }) {
+    function Card({ title, hint, action, children, collapsible = false, defaultOpen = true, summary }) {
+      const [open, setOpen] = useState(defaultOpen)
       // `title` is a node, not a string, so the caller decides its own heading —
       // wrapping it here nested one <h3> inside another and doubled the markup.
-      return h('section', { className: 'vfm_card' },
-        title === undefined && action === undefined
-          ? null
-          : h('div', { className: 'vfm_cardhead' },
-            title === undefined ? null : (typeof title === 'string' ? h('h3', { className: 'vfm_cardtitle' }, title) : title),
-            action === undefined ? null : h('div', { className: 'vfm_meta' }, action)),
-        hint === undefined ? null : h('p', { className: 'vfm_note' }, hint),
-        children)
+      const heading = title === undefined ? null : (typeof title === 'string' ? h('h3', { className: 'vfm_cardtitle' }, title) : title)
+      const head = title === undefined && action === undefined && summary === undefined
+        ? null
+        : h('div', { className: 'vfm_cardhead' },
+          collapsible !== true
+            ? heading
+            : h('div', {
+              className: 'vfm_click',
+              role: 'button',
+              tabIndex: 0,
+              'aria-expanded': open ? 'true' : 'false',
+              onClick: () => setOpen(!open),
+              onKeyDown: event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen(!open) }
+              },
+            },
+            h('span', { className: 'vfm_chev', 'data-open': open ? '1' : '0' }),
+            heading,
+            summary === undefined ? null : h('span', { className: 'vfm_summary' }, summary)),
+          action === undefined ? null : h('div', { className: 'vfm_meta' }, action))
+
+      if (collapsible !== true) {
+        return h('section', { className: 'vfm_card' }, head,
+          hint === undefined ? null : h('p', { className: 'vfm_note' }, hint),
+          children)
+      }
+      return h('section', { className: 'vfm_card', 'data-collapsed': open ? '0' : '1' }, head,
+        open ? h('div', { className: 'vfm_collapsebody' },
+          hint === undefined ? null : h('p', { className: 'vfm_note' }, hint),
+          children) : null)
     }
 
     /** A section heading with the accent marker. */
@@ -477,6 +658,13 @@ window.__ModuleLoader__.load({
       Object.freeze({ id: 'claude', name: 'Claude Code' }),
     ])
 
+    /** One line for the folded tool card: how many of the two are written. */
+    function collapsedToolsSummary(status) {
+      const rows = Object.values(status ?? {})
+      const done = rows.filter(row => row !== null && typeof row === 'object' && row.configured === true).length
+      return done > 0 ? `${done}/${TOOL_LABELS.length}` : t('tools.idle')
+    }
+
     // ── the model block ──────────────────────────────────────────────────────
 
     /** How many rows a collapsed roster shows. */
@@ -493,9 +681,49 @@ window.__ModuleLoader__.load({
      * A model with an image ability gets a small tag, since that is the one
      * difference a user can actually feel.
      */
-    function ModelBlock({ models, selected, onSelect, laneOk, onRecheck, busy }) {
+    /** The one-word verdict for a probe result. */
+    function probeLabel(probe) {
+      if (probe === null || typeof probe !== 'object') return t('models.probe.none')
+      if (probe.state === 'ok') return t('models.probe.ok')
+      if (probe.state === 'limited') return t('models.probe.limited')
+      if (probe.state === 'unavailable') return t('models.probe.unavailable')
+      return t('models.probe.unknown')
+    }
+
+    /** `nvidia/x` -> `NVIDIA`; unknown prefixes are title-cased. */
+    const VENDOR_NAMES = {
+      nvidia: 'NVIDIA', baidu: '百度', inclusionai: 'inclusionAI', liquid: 'LiquidAI',
+      'particle-ai': 'Particle', recursive: 'Recursive', reflection: 'Reflection',
+      stealth: 'Stealth', openrouter: 'OpenRouter', kilo: 'Kilo',
+    }
+    function vendorOf(id) {
+      const prefix = String(id ?? '').split('/')[0]
+      if (prefix === '' || prefix === id) return ''
+      return VENDOR_NAMES[prefix] ?? prefix.charAt(0).toUpperCase() + prefix.slice(1)
+    }
+
+    /** A short name for the automatic row and the picker label. */
+    function shortName(name) {
+      const value = String(name ?? '').trim()
+      const after = value.includes(': ') ? value.slice(value.indexOf(': ') + 2) : value
+      return after.replace(/\s*\(free\)\s*$/i, '').replace(/\s+/g, ' ').slice(0, 48)
+    }
+
+    /**
+     * Which model to use.
+     *
+     * "Automatic" is first and is the default, because the honest answer to
+     * "which of these thirteen should I pick" is "you should not have to pick".
+     * Once the router has answered a turn, the row names the upstream it used
+     * and its window/modality, so the choice is no longer opaque.
+     */
+    function ModelBlock({
+      models, extraModels, auto, selected, onSelect, laneOk, onRecheck, busy,
+      defaultOpen = true, collapsed = false,
+    }) {
       const [expanded, setExpanded] = useState(false)
       const roster = Array.isArray(models) ? models : []
+      const extras = Array.isArray(extraModels) ? extraModels : []
       // The catalog already promotes the automatic model as its first row. Draw
       // the row once: two entries named "自动选择" read as a bug, not a choice.
       const automatic = roster.find(entry => entry.id === '' || entry.name === t('models.auto')
@@ -503,6 +731,7 @@ window.__ModuleLoader__.load({
       const others = roster.filter(entry => entry !== automatic)
       const shown = expanded ? others : others.slice(0, COLLAPSED_ROWS)
       const hidden = others.length - shown.length
+      const total = others.length + 1 + extras.length
 
       const row = (id, name, meta, isAuto) => h('button', {
         type: 'button',
@@ -511,32 +740,67 @@ window.__ModuleLoader__.load({
         onClick: () => onSelect?.(id),
       },
       h('span', { className: 'vfm_dot' }),
-      h('span', { className: 'vfm_name' }, name),
+      h('span', { className: 'vfm_name', title: String(name ?? '').length > 24 ? name : undefined }, name),
       h('span', { className: 'vfm_meta' }, ...meta))
+
+      const modelRow = entry => row(
+        entry.id,
+        entry.name ?? entry.id,
+        [
+          vendorOf(entry.id) === '' ? null : h('span', { className: 'vfm_tag' }, vendorOf(entry.id)),
+          formatContext(entry.contextWindow) === '' ? null : h('span', { className: 'vfm_tag' }, formatContext(entry.contextWindow)),
+          entry.vision === true ? h('span', { className: 'vfm_tag' }, t('models.vision')) : null,
+          h('span', {
+            className: 'vfm_probe',
+            'data-state': entry.probe?.state ?? '',
+            title: entry.probe?.reason ?? '',
+          }, probeLabel(entry.probe)),
+        ].filter(Boolean),
+        false,
+      )
+
+      const autoMeta = auto !== null && auto !== undefined
+        ? [
+          h('span', { className: 'vfm_autoNow' }, t('models.autoCurrent', { name: shortName(auto.name) })),
+          formatContext(auto.contextWindow) === '' ? null : h('span', { className: 'vfm_tag' }, formatContext(auto.contextWindow)),
+          auto.vision === true ? h('span', { className: 'vfm_tag' }, t('models.vision')) : null,
+        ].filter(Boolean)
+        : [h('span', {}, t('models.autoUnknown'))]
 
       return h(Card, {
         title: h(BlockTitle, {}, t('models.title')),
+        collapsible: true,
+        defaultOpen,
+        summary: collapsed
+          ? `${t('models.count', { n: total })} · ${auto === null || auto === undefined ? t('models.auto') : shortName(auto.name)}`
+          : undefined,
         action: [
-          h('span', { className: 'vfm_count' }, t('models.count', { n: others.length + 1 })),
+          collapsed === true ? null : h('span', { className: 'vfm_count' }, t('models.count', { n: total })),
           h(Btn, { disabled: busy === true, onClick: () => onRecheck?.() },
             busy === true ? t('models.rechecking') : t('models.recheck')),
         ],
       },
+      h('p', { className: 'vfm_note' }, t('models.source')),
+      h('p', { className: 'vfm_note' }, t('models.switchHint')),
       h('div', { className: 'vfm_rows' },
-        row('', t('models.auto'), [h('span', {}, t('models.autoHint'))], true),
-        ...shown.map(entry => row(
+        row('', t('models.auto'), autoMeta, true),
+        ...shown.map(modelRow),
+        ...(expanded ? extras.map(entry => row(
           entry.id,
           entry.name ?? entry.id,
           [
+            h('span', { className: 'vfm_tag' }, entry.source === 'buddy' ? 'CodeBuddy' : 'Key'),
             formatContext(entry.contextWindow) === '' ? null : h('span', { className: 'vfm_tag' }, formatContext(entry.contextWindow)),
             entry.vision === true ? h('span', { className: 'vfm_tag' }, t('models.vision')) : null,
           ].filter(Boolean),
           false,
-        ))),
+        )) : extras.length > 0
+          ? [h('p', { className: 'vfm_note' }, `${t('models.extra')}：${extras.length}`)]
+          : [])),
 
-      hidden > 0
-        ? h(Btn, { kind: 'quiet', onClick: () => setExpanded(true) }, t('models.more', { n: others.length }))
-        : (expanded && others.length > COLLAPSED_ROWS
+      hidden > 0 || (!expanded && extras.length > 0)
+        ? h(Btn, { kind: 'quiet', onClick: () => setExpanded(true) }, t('models.more', { n: others.length + extras.length }))
+        : (expanded && (others.length > COLLAPSED_ROWS || extras.length > 0)
           ? h(Btn, { kind: 'quiet', onClick: () => setExpanded(false) }, t('models.less'))
           : null),
 
@@ -560,20 +824,30 @@ window.__ModuleLoader__.load({
      */
     const PROVIDERS = Object.freeze([
       Object.freeze({ id: 'qodercn', label: 'Qoder 中国版' }),
+      Object.freeze({ id: 'qoder', label: 'Qoder 国际版' }),
       Object.freeze({ id: 'trae', label: 'TRAE' }),
       Object.freeze({ id: 'zcode', label: 'ZCode' }),
       Object.freeze({ id: 'minimax', label: 'MiniMax' }),
       Object.freeze({ id: 'lobsterai', label: '有道 LobsterAI' }),
       Object.freeze({ id: 'loomy', label: '讯飞 Loomy' }),
+      Object.freeze({ id: 'cline', label: 'Cline' }),
       Object.freeze({ id: 'raccoon', label: '商汤 Raccoon', more: true }),
     ])
 
-    /** The states a card can be in, in words a user reads. */
-    function stateLabel(state) {
-      if (state === 'ready') return ''
-      if (state === 'pending') return t('accounts.pending')
-      if (state === 'expired') return t('accounts.expired')
-      return ''
+    /** A login URL the page can always show, even when the popup was blocked. */
+    function LoginBox({ url, copied, onOpen, onCopy }) {
+      if (typeof url !== 'string' || url === '') return null
+      return h('div', { className: 'vfm_loginbox' },
+        h('span', { className: 'vfm_loginurl', title: url }, url),
+        h('div', { className: 'vfm_loginacts' },
+          h('a', {
+            className: 'vfm_link',
+            href: url,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            onClick: event => { event.preventDefault(); onOpen?.(url) },
+          }, t('accounts.openLink')),
+          h(Btn, { kind: 'quiet', onClick: () => onCopy?.(url) }, copied ? t('accounts.copied') : t('accounts.copyLink'))))
     }
 
     /**
@@ -581,38 +855,62 @@ window.__ModuleLoader__.load({
      *
      * A card answers exactly two questions: am I signed in, and how do I change
      * that. Everything else — the account id, the redirect, the token — stays
-     * out of the markup.
+     * out of the markup. When a sign-in is under way the authorization URL is
+     * shown with a link and a copy button, because a popup opened after an
+     * await is exactly the kind of thing a browser blocks silently.
      */
     function providerRow(provider, entry, handlers) {
-      const status = entry ?? {}
-      const state = typeof status.state === 'string' ? status.state : ''
-      const ready = state === 'ready'
-      const pending = state === 'pending'
-      const nickname = typeof status.nickname === 'string' ? status.nickname : ''
-      const credits = Number.isFinite(status.credits) ? status.credits : undefined
+      const status = entry !== null && typeof entry === 'object' ? entry : {}
+      const accounts = Array.isArray(status.accounts) ? status.accounts : []
+      const pending = status.state === 'pending'
+      const error = typeof status.message === 'string' ? status.message : ''
+      const copied = status.copied === true
+      const claimable = provider.claimable === true
+      const now = Date.now()
 
-      return h('div', { className: 'vfm_acct', 'data-state': state },
+      const accountLines = accounts.map(account => {
+        const expired = Number(account.expiresAt) > 0 && Number(account.expiresAt) < now
+        return h('span', { className: 'vfm_acctline' },
+          typeof account.nickname === 'string' && account.nickname !== '' ? account.nickname : account.id,
+          expired ? ` · ${t('accounts.expired')}` : '',
+          account.enabled === false ? ' · 已停用' : '')
+      })
+
+      const action = accounts.length > 0
+        ? h('div', { className: 'vfm_meta' },
+          claimable
+            ? h(Btn, { disabled: status.claiming === true, onClick: () => handlers.onClaim?.(provider.id) },
+              status.claiming === true ? t('accounts.claiming') : t('accounts.claim'))
+            : null,
+          h(Btn, { kind: 'quiet', onClick: () => handlers.onLogin?.(provider.id) }, t('accounts.relogin')))
+        : h(Btn, {
+          kind: 'ghost',
+          disabled: pending,
+          onClick: () => handlers.onLogin?.(provider.id),
+        }, pending ? t('accounts.pending') : t('accounts.login'))
+
+      return h('div', { className: 'vfm_acct', 'data-state': accounts.length > 0 ? 'ready' : '' },
         h('div', { className: 'vfm_acctmain' },
           h('span', { className: 'vfm_acctname' }, provider.label),
-          ready
-            ? h('span', { className: 'vfm_meta' },
-              nickname === '' ? null : h('span', {}, nickname),
-              credits === undefined ? null : h('span', { className: 'vfm_tag' }, t('accounts.credits', { n: credits })))
-            : h('span', { className: 'vfm_meta' }, stateLabel(state))),
-        h('div', { className: 'vfm_meta' },
-          ready
-            ? h('button', {
-              type: 'button',
-              className: 'vfm_btn',
-              disabled: status.claiming === true,
-              onClick: () => handlers.onClaim?.(provider.id),
-            }, status.claiming === true ? t('accounts.claiming') : t('accounts.claim'))
-            : h('button', {
-              type: 'button',
-              className: 'vfm_btn',
-              disabled: pending,
-              onClick: () => handlers.onLogin?.(provider.id),
-            }, pending ? t('accounts.pending') : t('accounts.login'))))
+          accounts.length > 0
+            ? h('span', { className: 'vfm_acctlines' }, ...accountLines)
+            : h('span', { className: 'vfm_meta' }, t('accounts.notLogged'))),
+        h('div', { className: 'vfm_meta' }, action),
+        pending || error !== ''
+          ? h('div', { className: 'vfm_loginbox' },
+            pending ? h('span', { className: 'vfm_acctline' }, t('accounts.waiting')) : null,
+            error !== '' ? h('span', { className: 'vfm_error' }, t('accounts.failed', { message: truncate(error, 160) })) : null,
+            h(LoginBox, {
+              url: status.loginUrl,
+              copied,
+              onOpen: url => handlers.onOpen?.(url),
+              onCopy: url => handlers.onCopy?.(url, provider.id),
+            }),
+            error !== ''
+              ? h('div', { className: 'vfm_loginacts' },
+                h(Btn, { kind: 'primary', onClick: () => handlers.onLogin?.(provider.id) }, t('accounts.retry')))
+              : null)
+          : null)
     }
 
     /**
@@ -623,23 +921,35 @@ window.__ModuleLoader__.load({
      * without it, and each card is a single button. Nothing here is required to
      * start chatting.
      */
-    function AccountsBlock({ providers, status, ownedElsewhere, claimFailedAt, onLogin, onClaim }) {
+    function AccountsBlock({
+      providers, status, ownedElsewhere, claimFailedAt, onLogin, onClaim, onOpen, onCopy,
+      defaultOpen = true, collapsed = false,
+    }) {
       const [showMore, setShowMore] = useState(false)
       const roster = Array.isArray(providers) && providers.length > 0 ? providers : PROVIDERS
       const entries = status !== null && typeof status === 'object' ? status : {}
-      const handlers = { onLogin, onClaim }
+      const handlers = { onLogin, onClaim, onOpen, onCopy }
       const primary = roster.filter(entry => entry.more !== true)
       const extra = roster.filter(entry => entry.more === true)
+      const signedIn = roster.reduce((sum, entry) => sum + (Array.isArray(entry.accounts) ? entry.accounts.length : 0), 0)
 
       if (ownedElsewhere === true) {
         return h(Card, {
           title: h(BlockTitle, {}, t('accounts.title')),
+          collapsible: true,
+          defaultOpen,
+          summary: t('accounts.ownedElsewhere'),
           hint: t('accounts.ownedElsewhere'),
         })
       }
 
       return h(Card, {
         title: h(BlockTitle, {}, t('accounts.title')),
+        collapsible: true,
+        defaultOpen,
+        summary: collapsed
+          ? (signedIn > 0 ? t('accounts.loggedIn', { n: signedIn }) : t('accounts.notLogged'))
+          : undefined,
         hint: t('accounts.hint'),
       },
       claimFailedAt !== undefined && claimFailedAt !== null
@@ -649,8 +959,8 @@ window.__ModuleLoader__.load({
         : null,
 
       h('div', { className: 'vfm_accts' },
-        ...primary.map(entry => providerRow(entry, entries[entry.id], handlers)),
-        showMore ? extra.map(entry => providerRow(entry, entries[entry.id], handlers)) : []),
+        ...primary.map(entry => providerRow(entry, { ...(entries[entry.id] ?? {}), accounts: entry.accounts }, handlers)),
+        showMore ? extra.map(entry => providerRow(entry, { ...(entries[entry.id] ?? {}), accounts: entry.accounts }, handlers)) : []),
 
       extra.length > 0
         ? (showMore
@@ -700,7 +1010,10 @@ window.__ModuleLoader__.load({
      * feature a beginner should not have to think about. When on, it shows the
      * two things needed to use it and a button per client.
      */
-    function ForwardBlock({ enabled, port, hasKey, key, model, onToggle, onCopy }) {
+    function ForwardBlock({
+      enabled, port, hasKey, key, model, onToggle, onCopy,
+      defaultOpen = true, collapsed = false,
+    }) {
       const [copied, setCopied] = useState('')
 
       const copy = async (which, text) => {
@@ -718,6 +1031,11 @@ window.__ModuleLoader__.load({
 
       return h(Card, {
         title: h(BlockTitle, {}, t('forward.title')),
+        collapsible: true,
+        defaultOpen,
+        summary: collapsed
+          ? (enabled === true ? `127.0.0.1:${port}` : t('forward.on'))
+          : undefined,
         action: h(Btn, { kind: enabled === true ? 'ghost' : 'primary', onClick: () => onToggle?.(!(enabled === true)) },
           enabled === true ? t('forward.off') : t('forward.on')),
       },
@@ -740,6 +1058,273 @@ window.__ModuleLoader__.load({
             h('span', { className: 'vfm_label' }, t('forward.forClaudeCode')),
             h(Btn, { onClick: () => void copy('claude', claudeCodeSnippet(port, realKey, model)) },
               copied === 'claude' ? t('forward.copied') : t('forward.copy')))))
+    }
+
+    // ── Tencent accounts (CodeBuddy / WorkBuddy) ─────────────────────────────
+
+    /** The two products the buddy lane can sign into. */
+    const BUDDY_PRODUCTS = Object.freeze([
+      Object.freeze({ id: 'buddy', label: t('buddy.product.buddy') }),
+      Object.freeze({ id: 'workbuddy', label: t('buddy.product.workbuddy') }),
+    ])
+
+    /**
+     * Sign-in for the two Tencent products.
+     *
+     * Their protocol is not in the bundled channel pack, so this block is the
+     * only place that can add the models. The login page is opened by the host
+     * (a system browser, not a popup), and the URL is repeated here with a copy
+     * button for the times the system browser does not come up.
+     */
+    function BuddyBlock({ products, accounts, defaultOpen = false, collapsed = false, onSummary }) {
+      const [state, setState] = useState({})
+      const [copied, setCopied] = useState('')
+      const list = Array.isArray(products) && products.length > 0 ? products : BUDDY_PRODUCTS
+      const rows = Array.isArray(accounts) ? accounts : []
+
+      const poll = async productId => {
+        const deadline = Date.now() + LOGIN_TIMEOUT_MS
+        while (Date.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          try {
+            const payload = await api('/summary')
+            if ((payload?.extras?.buddy?.accounts ?? []).some(account => account.product === productId)) {
+              setState(current => ({ ...current, [productId]: {} }))
+              onSummary?.(payload)
+              return
+            }
+          } catch { /* keep waiting */ }
+        }
+        setState(current => ({ ...current, [productId]: { error: '登录超时，请重试。' } }))
+      }
+
+      const login = async productId => {
+        setState(current => ({ ...current, [productId]: { pending: true } }))
+        try {
+          const payload = await api('/buddy', {
+            method: 'POST',
+            body: { action: 'login', product: productId },
+            timeoutMs: 30000,
+          })
+          const url = payload?.value?.loginUrl
+          setState(current => ({ ...current, [productId]: { pending: true, loginUrl: url } }))
+          await poll(productId)
+        } catch (cause) {
+          setState(current => ({ ...current, [productId]: { error: String(cause?.message ?? cause) } }))
+        }
+      }
+
+      const remove = async id => {
+        try {
+          await api('/buddy', { method: 'POST', body: { action: 'remove', id }, timeoutMs: 20000 })
+          const payload = await api('/summary')
+          onSummary?.(payload)
+        } catch (cause) {
+          setState(current => ({ ...current, error: String(cause?.message ?? cause) }))
+        }
+      }
+
+      const copy = async url => {
+        try { await navigator.clipboard.writeText(url); setCopied(url) } catch { /* the link is still visible */ }
+      }
+
+      const signedIn = rows.length
+
+      return h(Card, {
+        title: h(BlockTitle, {}, t('buddy.title')),
+        collapsible: true,
+        defaultOpen,
+        summary: collapsed ? (signedIn > 0 ? t('accounts.loggedIn', { n: signedIn }) : t('buddy.none')) : undefined,
+        hint: t('buddy.hint'),
+      },
+      h('div', { className: 'vfm_accts' },
+        ...list.map(product => {
+          const mine = rows.filter(account => account.product === product.id)
+          const local = state[product.id] ?? {}
+          return h('div', { className: 'vfm_acct', 'data-state': mine.length > 0 ? 'ready' : '' },
+            h('div', { className: 'vfm_acctmain' },
+              h('span', { className: 'vfm_acctname' }, product.label ?? t(`buddy.product.${product.id}`)),
+              mine.length > 0
+                ? h('span', { className: 'vfm_acctlines' },
+                  ...mine.map(account => h('span', { className: 'vfm_acctline' },
+                    account.nickname || account.id,
+                    Number(account.expiresAt) > 0 && Number(account.expiresAt) < Date.now() ? ` · ${t('accounts.expired')}` : '')))
+                : h('span', { className: 'vfm_meta' }, t('buddy.none'))),
+            h('div', { className: 'vfm_meta' },
+              h(Btn, {
+                kind: mine.length > 0 ? 'quiet' : 'primary',
+                disabled: local.pending === true,
+                onClick: () => void login(product.id),
+              }, local.pending === true ? t('accounts.pending') : (mine.length > 0 ? t('buddy.relogin') : t('buddy.login'))),
+              mine.length > 0
+                ? h(Btn, { kind: 'quiet', onClick: () => void remove(mine[0].id) }, t('buddy.remove'))
+                : null),
+            local.pending === true || local.error !== undefined || local.loginUrl !== undefined
+              ? h('div', { className: 'vfm_loginbox' },
+                local.pending === true ? h('span', { className: 'vfm_acctline' }, t('buddy.waiting')) : null,
+                local.error === undefined ? null : h('span', { className: 'vfm_error' }, t('buddy.failed', { message: truncate(local.error, 160) })),
+                h(LoginBox, {
+                  url: local.loginUrl,
+                  copied: copied === local.loginUrl,
+                  onOpen: url => { try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* shown instead */ } },
+                  onCopy: url => void copy(url),
+                }))
+              : null)
+        })))
+    }
+
+    // ── keyed endpoints ──────────────────────────────────────────────────────
+
+    /**
+     * Vendor presets. Only the address is filled in: the key belongs to the user
+     * and is never part of a preset.
+     */
+    const ENDPOINT_PRESETS = Object.freeze([
+      Object.freeze({ id: 'ark', name: '豆包（火山方舟）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3' }),
+      Object.freeze({ id: 'kimi', name: 'Kimi', baseUrl: 'https://api.moonshot.cn/v1' }),
+      Object.freeze({ id: 'zhipu', name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4' }),
+      Object.freeze({ id: 'siliconflow', name: 'SiliconFlow', baseUrl: 'https://api.siliconflow.cn/v1' }),
+      Object.freeze({ id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1' }),
+    ])
+
+    /**
+     * Bring-your-own-key endpoints.
+     *
+     * Doubao has no anonymous free API, so the honest way to offer it is a key
+     * the user already owns. The same block therefore covers every
+     * OpenAI-compatible vendor instead of one bespoke protocol each.
+     */
+    function EndpointsBlock({ endpoints, defaultOpen = false, collapsed = false, onSummary }) {
+      const [draft, setDraft] = useState(undefined)
+      const [busy, setBusy] = useState('')
+      const [error, setError] = useState('')
+      const [note, setNote] = useState('')
+      const list = Array.isArray(endpoints) ? endpoints : []
+
+      const openDraft = preset => setDraft({
+        id: '',
+        name: preset?.name ?? '',
+        baseUrl: preset?.baseUrl ?? '',
+        apiKey: '',
+      })
+      const setField = (key, value) => setDraft(current => ({ ...(current ?? {}), [key]: value }))
+
+      const save = async () => {
+        if (draft === undefined) return
+        setBusy('save')
+        setError('')
+        setNote('')
+        try {
+          const payload = await api('/endpoints', {
+            method: 'POST',
+            body: { action: 'save', endpoint: draft },
+            timeoutMs: 20000,
+          })
+          setDraft(undefined)
+          setNote(t('endpoints.saved'))
+          const summary = await api('/summary')
+          onSummary?.(summary)
+          return payload
+        } catch (cause) {
+          setError(String(cause?.message ?? cause))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const discover = async id => {
+        setBusy(id)
+        setError('')
+        setNote('')
+        try {
+          await api('/endpoints', { method: 'POST', body: { action: 'models', id }, timeoutMs: 30000 })
+          const summary = await api('/summary')
+          onSummary?.(summary)
+        } catch (cause) {
+          setError(String(cause?.message ?? cause))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const remove = async id => {
+        try {
+          await api('/endpoints', { method: 'POST', body: { action: 'remove', id }, timeoutMs: 20000 })
+          const summary = await api('/summary')
+          onSummary?.(summary)
+        } catch (cause) {
+          setError(String(cause?.message ?? cause))
+        }
+      }
+
+      return h(Card, {
+        title: h(BlockTitle, {}, t('endpoints.title')),
+        collapsible: true,
+        defaultOpen,
+        summary: collapsed ? (list.length > 0 ? t('endpoints.models', { n: list.reduce((sum, row) => sum + (row.models?.length ?? 0), 0) }) : t('endpoints.empty')) : undefined,
+        hint: t('endpoints.hint'),
+        action: h(Btn, { kind: 'primary', onClick: () => openDraft() }, t('endpoints.add')),
+      },
+      error !== '' ? h('p', { className: 'vfm_error' }, t('endpoints.failed', { message: truncate(error, 200) })) : null,
+      note !== '' ? h('p', { className: 'vfm_note' }, note) : null,
+
+      list.length === 0 && draft === undefined
+        ? h('p', { className: 'vfm_note' }, t('endpoints.empty'))
+        : h('div', { className: 'vfm_accts' },
+          ...list.map(row => h('div', { className: 'vfm_ep' },
+            h('div', { className: 'vfm_epmain' },
+              h('span', { className: 'vfm_epname' },
+                row.name,
+                row.hasKey === true ? h('span', { className: 'vfm_tag' }, t('endpoints.hasKey')) : null),
+              h('span', { className: 'vfm_epurl', title: row.baseUrl }, row.baseUrl),
+              h('span', { className: 'vfm_acctline' }, t('endpoints.models', { n: row.models?.length ?? 0 }))),
+            h('div', { className: 'vfm_epacts' },
+              h(Btn, { disabled: busy === row.id, onClick: () => void discover(row.id) },
+                busy === row.id ? t('endpoints.discovering') : t('endpoints.discover')),
+              h(Btn, { kind: 'quiet', onClick: () => void remove(row.id) }, t('endpoints.remove')))))),
+
+      draft === undefined
+        ? null
+        : h('div', { className: 'vfm_form' },
+          h('div', { className: 'vfm_loginacts' },
+            ...ENDPOINT_PRESETS.map(preset => h(Btn, {
+              key: preset.id,
+              kind: 'quiet',
+              onClick: () => setDraft(current => ({
+                ...(current ?? {}),
+                name: preset.name,
+                baseUrl: preset.baseUrl,
+              })),
+            }, preset.name))),
+          h('label', { className: 'vfm_formrow' },
+            h('span', { className: 'vfm_label' }, t('endpoints.name')),
+            h('input', {
+              className: 'vfm_input',
+              value: draft.name,
+              placeholder: t('endpoints.name'),
+              onChange: event => setField('name', event.target.value),
+            })),
+          h('label', { className: 'vfm_formrow' },
+            h('span', { className: 'vfm_label' }, t('endpoints.baseUrl')),
+            h('input', {
+              className: 'vfm_input',
+              value: draft.baseUrl,
+              placeholder: 'https://…/v1',
+              onChange: event => setField('baseUrl', event.target.value),
+            })),
+          h('label', { className: 'vfm_formrow' },
+            h('span', { className: 'vfm_label' }, t('endpoints.apiKey')),
+            h('input', {
+              className: 'vfm_input',
+              type: 'password',
+              value: draft.apiKey,
+              placeholder: 'sk-…',
+              onChange: event => setField('apiKey', event.target.value),
+            })),
+          h('div', { className: 'vfm_loginacts' },
+            h(Btn, { kind: 'primary', disabled: busy === 'save', onClick: () => void save() },
+              busy === 'save' ? t('endpoints.saving') : t('endpoints.save')),
+            h(Btn, { kind: 'quiet', onClick: () => setDraft(undefined) }, t('endpoints.cancel')))))
     }
 
     // ── degradation ──────────────────────────────────────────────────────────
@@ -823,7 +1408,8 @@ window.__ModuleLoader__.load({
       const recheck = useCallback(async () => {
         setBusy(true)
         try {
-          const payload = await api('/recheck', { method: 'POST' })
+          // Probing thirteen models takes longer than a normal status read.
+          const payload = await api('/recheck', { method: 'POST', timeoutMs: 90_000 })
           if (payload?.summary !== undefined) setSummary(payload.summary)
           setError('')
         } catch (cause) {
@@ -834,10 +1420,10 @@ window.__ModuleLoader__.load({
       }, [])
 
       /**
-       * Ask again until this account settles, then stop.
+       * Ask again until this account appears, then stop.
        *
-       * Defined before the login handler that calls it: a `const` arrow used by
-       * another hook in the same body must already be initialised.
+       * `account.list` is the authoritative answer for "did the browser
+       * sign-in land"; provider.status describes the pool, not the accounts.
        */
       const pollAccounts = useCallback(async providerId => {
         const deadline = Date.now() + LOGIN_TIMEOUT_MS
@@ -846,28 +1432,26 @@ window.__ModuleLoader__.load({
           try {
             const payload = await api('/channel', {
               method: 'POST',
-              body: { method: 'provider.status', payload: {} },
+              body: { method: 'account.list', payload: { provider: providerId } },
               timeoutMs: 15000,
             })
-            const rows = payload?.value?.providers ?? []
-            const mine = rows.find(row => row?.id === providerId)
-            const state = typeof mine?.state === 'string' ? mine.state : ''
-            if (state === 'ready' || state === 'expired') {
-              setAccountStatus(current => ({ ...current, [providerId]: { ...mine } }))
+            const accounts = payload?.value?.accounts ?? []
+            if (accounts.length > 0) {
+              setAccountStatus(current => ({ ...current, [providerId]: { accounts } }))
+              await load()
               return
             }
           } catch { /* keep trying until the deadline */ }
         }
-        setAccountStatus(current => ({ ...current, [providerId]: { state: '' } }))
-      }, [])
+        setAccountStatus(current => ({ ...current, [providerId]: { message: '登录超时，请重试。' } }))
+      }, [load])
 
       /**
        * Sign one account in.
        *
-       * The pack opens the authorization page; this side marks the card
-       * "waiting" and asks who has landed. Polling stops on its own: once
-       * nothing is pending, or after five minutes, whichever comes first — a
-       * user who closed the tab must not leave a spinner running forever.
+       * The host opens the authorization page in the system browser. The URL is
+       * kept here as well: a popup opened after an await is what browsers block,
+       * and the page must still offer a way in when that happens.
        */
       const login = useCallback(async providerId => {
         setAccountStatus(current => ({ ...current, [providerId]: { state: 'pending' } }))
@@ -879,52 +1463,51 @@ window.__ModuleLoader__.load({
           })
           const url = payload?.value?.loginUrl ?? payload?.value?.url
           if (typeof url === 'string' && url !== '') {
-            window.open(url, '_blank', 'noopener,noreferrer')
+            setAccountStatus(current => ({ ...current, [providerId]: { state: 'pending', loginUrl: url } }))
+            try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* shown instead */ }
           }
           await pollAccounts(providerId)
         } catch (cause) {
-          setAccountStatus(current => ({ ...current, [providerId]: { state: '', message: String(cause?.message ?? cause) } }))
+          setAccountStatus(current => ({ ...current, [providerId]: { message: String(cause?.message ?? cause) } }))
         }
       }, [pollAccounts])
 
-      /** Claim credits, for one provider when named, otherwise for all. */
-      const claim = useCallback(async providerId => {        const target = providerId === '' ? undefined : providerId
+      /** Remember which login link was copied, for the button label. */
+      const copyLogin = useCallback((url, providerId) => {
+        try {
+          void navigator.clipboard?.writeText(url)
+          setAccountStatus(current => ({ ...current, [providerId]: { ...(current[providerId] ?? {}), copied: true } }))
+        } catch { /* the link text is visible anyway */ }
+      }, [])
+
+      /** Claim credits, for one provider when named, otherwise for all claimable ones. */
+      const claim = useCallback(async providerId => {
+        const targets = providerId === ''
+          ? (summary?.accounts?.providers ?? []).filter(row => row.claimable === true).map(row => row.id)
+          : [providerId]
         setAccountStatus(current => {
           const next = { ...current }
-          for (const key of target === undefined ? Object.keys(next) : [target]) {
-            next[key] = { ...(next[key] ?? {}), claiming: true }
-          }
+          for (const key of targets) next[key] = { ...(next[key] ?? {}), claiming: true }
           return next
         })
         try {
-          await api('/channel', {
-            method: 'POST',
-            body: { method: 'credits.claimAll', payload: target === undefined ? {} : { provider: target } },
-            timeoutMs: 60000,
-          })
-          const payload = await api('/channel', {
-            method: 'POST',
-            body: { method: 'provider.status', payload: {} },
-            timeoutMs: 15000,
-          })
-          const rows = payload?.value?.providers ?? []
-          setAccountStatus(current => {
-            const next = { ...current }
-            for (const row of rows) {
-              if (typeof row?.id === 'string') next[row.id] = { ...row, claiming: false }
-            }
-            return next
-          })
+          for (const target of targets) {
+            await api('/channel', {
+              method: 'POST',
+              body: { method: 'credits.claimAll', payload: { provider: target } },
+              timeoutMs: 60000,
+            })
+          }
         } catch {
-          setAccountStatus(current => {
-            const next = { ...current }
-            for (const key of target === undefined ? Object.keys(next) : [target]) {
-              next[key] = { ...(next[key] ?? {}), claiming: false }
-            }
-            return next
-          })
+          /* the list below reloads whatever actually landed */
         }
-      }, [])
+        setAccountStatus(current => {
+          const next = { ...current }
+          for (const key of targets) next[key] = { ...(next[key] ?? {}), claiming: false }
+          return next
+        })
+        await load()
+      }, [load, summary])
 
       /**
        * Turn the local port on or off.
@@ -1048,11 +1631,15 @@ window.__ModuleLoader__.load({
         }),
         h(ModelBlock, {
           models: summary?.lane?.models ?? [],
+          extraModels: summary?.extras?.models ?? [],
+          auto: summary?.lane?.auto ?? null,
           selected,
           onSelect: setSelected,
           laneOk: summary?.lane?.ok === true,
           onRecheck: () => void recheck(),
           busy,
+          collapsed: true,
+          defaultOpen: false,
         }),
         h(AccountsBlock, {
           providers: summary?.accounts?.providers ?? [],
@@ -1061,6 +1648,23 @@ window.__ModuleLoader__.load({
           claimFailedAt: summary?.accounts?.claimFailedAt,
           onLogin: id => void login(id),
           onClaim: id => void claim(id),
+          onOpen: url => { try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* shown instead */ } },
+          onCopy: (url, id) => copyLogin(url, id),
+          collapsed: true,
+          defaultOpen: false,
+        }),
+        h(BuddyBlock, {
+          products: summary?.extras?.buddy?.products ?? [],
+          accounts: summary?.extras?.buddy?.accounts ?? [],
+          onSummary: payload => setSummary(payload),
+          collapsed: true,
+          defaultOpen: false,
+        }),
+        h(EndpointsBlock, {
+          endpoints: summary?.extras?.endpoints ?? [],
+          onSummary: payload => setSummary(payload),
+          collapsed: true,
+          defaultOpen: false,
         }),
         h(ForwardBlock, {
           enabled: summary?.forward?.enabled === true,
@@ -1069,10 +1673,15 @@ window.__ModuleLoader__.load({
           key: forwardKey,
           model: selected,
           onToggle: enabled => void toggleForward(enabled),
+          collapsed: true,
+          defaultOpen: false,
         }),
         h(Card, {
           title: h(BlockTitle, {}, t('tools.title')),
           hint: t('tools.hint'),
+          collapsible: true,
+          defaultOpen: false,
+          summary: collapsedToolsSummary(configureStatus),
         },
         // Writing needs a live port to point at, so the block says so instead of
         // offering a button that can only fail.
@@ -1132,6 +1741,7 @@ window.__ModuleLoader__.load({
     exports.name = 'vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
     exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
+      BuddyBlock, EndpointsBlock, LoginBox, probeLabel, vendorOf, shortName,
       cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API,
       Card, BlockTitle, Btn, StatusDot, ToolCard, truncate }
     return module.exports

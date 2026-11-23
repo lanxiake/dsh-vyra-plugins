@@ -11,3 +11,6 @@ __pycache__/
 # vyra-free-model preview artefacts
 plugins/vyra-free-model/.preview.html
 plugins/vyra-free-model/.preview.png
+plugins/vyra-free-model/.preview-expanded.html
+plugins/vyra-free-model/.preview-shot.png
+plugins/vyra-free-model/.preview-expanded.png
