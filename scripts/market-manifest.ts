@@ -2796,6 +2796,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.3 adds a current-session file filter backed by the Session header
+        // createdAt, sorted newest first.
+        '0.2.3': {
+          publishTimestamp: 1795426720,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '966faf738aa30717f90fc921c2e5ac3d52af6876',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',

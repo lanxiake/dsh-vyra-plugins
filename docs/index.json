@@ -2634,6 +2634,16 @@
       },
       "versions": [
         {
+          "version": "0.2.3",
+          "publishTimestamp": 1795426720,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "966faf738aa30717f90fc921c2e5ac3d52af6876",
+            "path": "plugins/vyra-media-studio"
+          }
+        },
+        {
           "version": "0.2.2",
           "publishTimestamp": 1795415426,
           "source": {
