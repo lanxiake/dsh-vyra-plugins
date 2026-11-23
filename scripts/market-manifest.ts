@@ -349,6 +349,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-agent-manager',
           },
         },
+        // 1.3.0 moves the editor into a right-side drawer, adds the AI create/edit
+        // flow (prefilled session + agent-builder skill + agent_manager preview),
+        // a usage tab read from the session projection cache, and error boundaries
+        // so one malformed preset cannot blank the whole panel.
+        '1.3.0': {
+          publishTimestamp: 1795410000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'fc2085e89e1bfba83061a206c12a96abeb855630',
+            path: 'plugins/vyra-agent-manager',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
