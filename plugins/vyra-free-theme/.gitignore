@@ -1,0 +1,4 @@
+node_modules/
+# 构建依赖锁：@deepseek-ai/* 的 peer 范围不在公共 registry 上，
+# 安装必须带 --legacy-peer-deps，锁文件对不同 npm 版本不稳定，故不入库。
+package-lock.json

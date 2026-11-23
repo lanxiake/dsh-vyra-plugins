@@ -349,15 +349,16 @@ git commit -m "feat(free-theme): extract host paths and add read-only legacy dat
 - [ ] **Step 1: 安装构建依赖**
 
 ```bash
-cd plugins/vyra-free-theme && npm install --no-audit --no-fund
+cd plugins/vyra-free-theme && npm install --no-audit --no-fund --legacy-peer-deps
 ```
 
-Expected: `node_modules/esbuild` 就位
+`--legacy-peer-deps` 是必须的：`@deepseek-ai/dsh-*` 的 peer 范围在公共 registry 上解析不到（实测 `ETARGET`），而上游本就用 pnpm 装开发依赖。锁文件不入库（见插件内 `.gitignore`）。
+Expected: `added N packages`、`node -e "import('esbuild')"` 打印 `0.28.2`
 
 - [ ] **Step 2: 跑构建**
 
 Run: `cd plugins/vyra-free-theme && npm run build`
-Expected: 输出两行 `built lib/...`；若报 `registration id` 不匹配，说明 `src/client/index.js` 的 `id` 与包名有出入
+Expected: `built lib/client.js (~348 KB)` 与 `built lib/index.js (~54 KB)`；若报 `registration id` 不匹配，说明 `src/client/index.js` 的 `id` 与包名有出入
 
 - [ ] **Step 3: 静态校验**
 
@@ -366,13 +367,14 @@ cd plugins/vyra-free-theme
 node --check lib/client.js && node --check lib/index.js
 grep -c 'id: "vyra-free-theme"' lib/client.js          # 期望 1
 grep -c '/vyra-free-theme/config' lib/index.js         # 期望 >=1
-! grep -q 'dsh-skins' lib/index.js && echo "host clean"
+grep -c 'dsh-skins' lib/index.js                       # 期望 2（仅 LEGACY_DIRS 迁移名单）
+grep -c '__VFT_ASSET_REV__' lib/client.js              # 期望 0（define 已替换）
 ```
 
 - [ ] **Step 4: 提交产物**
 
 ```bash
-git add plugins/vyra-free-theme/lib
+git add plugins/vyra-free-theme/lib plugins/vyra-free-theme/.gitignore
 git commit -m "build(free-theme): commit first vyra-free-theme bundles"
 ```
 
