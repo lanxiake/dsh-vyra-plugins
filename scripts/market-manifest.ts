@@ -2356,8 +2356,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 录屏截图',
       },
       description: {
-        en: 'Screen recording and annotated screenshots in the DSH composer: pick the whole desktop, a display, a window or a custom region; record system audio and microphone; encode to WebM in the browser with WebCodecs. Installs a vsr CLI and an agent skill so the model can take screenshots and start recordings. No Python or ffmpeg required.',
-        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，浏览器 WebCodecs 编成 WebM；截图支持选区与画笔 / 矩形 / 箭头 / 文字标注。同时安装 vsr CLI 和 Agent 技能，模型可以直接截图、录屏。不需要 Python 或 ffmpeg。',
+        en: 'Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM to a configurable library; manage files, format and shortcuts from a settings page; hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.',
+        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM 到可配置的存储目录；设置页管理文件、格式、快捷键和隐藏 DSH 截图；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2373,6 +2373,17 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '83a0b42fd48d5487cb2edf8045df5a6012f7fa64',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
+        // 0.2.0 adds the settings page, configurable library directory,
+        // MP4 export (and WebM -> MP4 conversion), shortcuts, and hide-DSH capture.
+        '0.2.0': {
+          publishTimestamp: 1795996800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '244b14aab16752f2ad6024286dc2f5921f713556',
             path: 'plugins/vyra-screen-recorder',
           },
         },
