@@ -76,8 +76,12 @@ determine rather than guessing.
   returns both — read the right column.
 - **Inventing a field.** `plugin.list` rows are keyed `entryId`, not `id`; `settings.list` rows
   have no `title`. Every key the tool returns exists on the real service.
+- **Inventing a settings namespace.** `settings.set` refuses an `ns` that `settings.list` does not
+  return — it will not create one, so a typo cannot leave an unreachable config section behind.
 - **Answering a `confirm-required` result by asking the user to approve.** Re-run with
   `confirm: true` when the action is genuinely what they asked for.
 - **Using the CLI to change something.** It cannot, by construction. Changes go through the tool,
   which takes the same profile lock, activation and rollback path as the Web UI.
-- **Trusting a config file over `console.actions`.** Files drift; the live registry does not.
+- **Trusting a config file over `console.actions` for which actions exist and which are refused.**
+  Files drift; the live registry does not. This is about the action surface only — the CLI below is
+  still the right way to read configuration, and it reports declared-not-running state as such.
