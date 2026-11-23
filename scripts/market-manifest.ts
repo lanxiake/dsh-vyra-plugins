@@ -2318,6 +2318,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.4.2 refreshes account rows after every action and removes a
+        // duplicate sign-in of an account that is already in the list.
+        '0.4.2': {
+          publishTimestamp: 1795824000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '24da94ed141af8959e9c22d53cd79034bfbdddf8',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
