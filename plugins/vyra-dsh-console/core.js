@@ -48,6 +48,20 @@ export const ACTIONS = Object.freeze({
   // therefore not behind the confirmation gate.
   'mcp.restart': { domain: 'catalog', mutating: true, destructive: false, requiresClient: false },
   'mcp.probe': { domain: 'catalog', mutating: false, destructive: false, requiresClient: false },
+  // The appearance actions are the only ones that MUST travel to the browser:
+  // theme, layout and locale live in the Client realm, so `requiresClient` is
+  // true for all of them and the Host half can only ask and relay the answer.
+  // `appearance.state` is a read and is marked as one; the other six change what
+  // the interface looks like. None of them changes what the agent may DO, so
+  // none is destructive and none is behind the confirmation gate — switching a
+  // theme is undone by switching back, not by asking the user first.
+  'appearance.state': { domain: 'appearance', mutating: false, destructive: false, requiresClient: true },
+  'appearance.setTheme': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
+  'appearance.setFontSize': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
+  'appearance.toggleSidebar': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
+  'appearance.openRightbar': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
+  'appearance.closeRightbar': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
+  'appearance.setLocale': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
 })
 
 /**

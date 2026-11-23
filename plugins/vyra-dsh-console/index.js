@@ -1,10 +1,12 @@
 import { createConsole } from './core.js'
+import { createChannel } from './channel.js'
 import { createConsoleTool } from './tool.js'
 import { consoleDomain } from './domains/console.js'
 import { pluginDomain } from './domains/plugin.js'
 import { modelDomain } from './domains/model.js'
 import { settingsDomain } from './domains/settings.js'
 import { catalogDomain } from './domains/catalog.js'
+import { appearanceDomain } from './domains/appearance.js'
 
 export const name = 'vyra-dsh-console'
 export const inject = ['tools']
@@ -26,6 +28,21 @@ export const inject = ['tools']
  * scoped one is the host's own build.
  */
 const SCHEMASTERY_SPECIFIERS = ['@deepseek-ai/schemastery', 'schemastery']
+
+/**
+ * How long an appearance action waits for the browser half before reporting
+ * `unavailable`, when the config says nothing.
+ *
+ * Declared ABOVE `buildConfigSchema`, which reads it: that function runs at
+ * module load (`export const Config = await buildConfigSchema()`), and a `const`
+ * declared below this point would still be in its temporal dead zone, throwing
+ * `Cannot access 'DEFAULT_CLIENT_TIMEOUT_MS' before initialization`. The
+ * surrounding `try/catch` would then swallow it and degrade `Config` to
+ * `undefined` on exactly the hosts that DO ship schemastery — silently losing the
+ * settings page on every real installation while this repo's own checkout (where
+ * schemastery is unresolvable and the function returns early) stayed green.
+ */
+const DEFAULT_CLIENT_TIMEOUT_MS = 5000
 
 async function loadSchemastery() {
   for (const specifier of SCHEMASTERY_SPECIFIERS) {
@@ -71,6 +88,12 @@ export async function buildConfigSchema(load = loadSchemastery) {
           'Require confirm: true on irreversible actions such as plugin.remove '
           + '(需要 confirm: true 才能执行 plugin.remove 等不可逆操作)',
         ),
+      clientTimeoutMs: Schema.number()
+        .default(DEFAULT_CLIENT_TIMEOUT_MS)
+        .description(
+          'How long an appearance action waits for the browser half before reporting '
+          + 'unavailable (界面操作等待浏览器应答的毫秒数，超时后报告 unavailable)',
+        ),
     })
   } catch {
     // A decoration the host's schemastery build does not support must not stop
@@ -106,7 +129,44 @@ function confirmDestructiveFrom(config) {
   return config?.confirmDestructive === true
 }
 
+/**
+ * Read `clientTimeoutMs` off the config the Loader supplied.
+ *
+ * Same two-case reasoning as `confirmDestructiveFrom`: with a resolved schema
+ * the `.default(5000)` has already been applied, and on a checkout without
+ * schemastery the raw config is all there is. Unlike the confirmation gate there
+ * is no safety asymmetry between the two readings — a wrong timeout costs a
+ * slower or earlier `unavailable`, never an unauthorized action — so a
+ * malformed value falls back to the default instead of being treated as an
+ * answer. `Number.isFinite(0)` is true, so an explicit immediate-timeout config
+ * is honoured rather than silently replaced.
+ */
+function clientTimeoutMsFrom(config) {
+  const value = config?.clientTimeoutMs
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : DEFAULT_CLIENT_TIMEOUT_MS
+}
+
 export function apply(ctx, config) {
+  // The Host side of the Host↔Client channel, mounted before the console is
+  // built so the appearance domain has something to read on its very first call.
+  //
+  // It rides on the context as a namespaced own property rather than a Cordis
+  // service. A service would be the idiomatic carrier, but providing one means
+  // declaring a name in the host's service table, and this channel is
+  // process-local state shared by the two halves of this one plugin — not an
+  // extension point anything else should resolve. The domain reads it per call
+  // (`channelOf`), so the reference is never captured: Task 7's endpoint and the
+  // Client half can attach and detach without re-applying the plugin.
+  //
+  // With no Client attached yet, every appearance action resolves to
+  // `unavailable` after the timeout. That is the intended state at boot and in
+  // every test in this repo; it is deliberately NOT an error, because the model
+  // is expected to try again once the user opens the interface.
+  const channel = createChannel({ timeoutMs: clientTimeoutMsFrom(config) })
+  ctx.__consoleChannel = channel
+
   // Every domain that backs a registered action must be wired here: the
   // dispatcher reports `no handler for domain "x"` for a registered action
   // whose domain is absent, which reads as a broken action rather than as a
@@ -124,6 +184,7 @@ export function apply(ctx, config) {
       model: modelDomain,
       settings: settingsDomain,
       catalog: catalogDomain,
+      appearance: appearanceDomain,
     },
     { confirmDestructive: confirmDestructiveFrom(config) },
   )

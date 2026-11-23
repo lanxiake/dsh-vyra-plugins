@@ -1210,6 +1210,9 @@ function schemaStub() {
   return {
     object: (dict) => build({ type: 'object', meta: {}, dict }),
     boolean: () => build({ type: 'boolean', meta: {}, dict: {} }),
+    // Added with Task 5's `clientTimeoutMs`; the object builder resolves whatever
+    // fields it is handed, so `number` is the only extra member the schema needs.
+    number: () => build({ type: 'number', meta: {}, dict: {} }),
   }
 }
 
@@ -1224,6 +1227,107 @@ test('buildConfigSchema declares confirmDestructive defaulting to false', async 
   assert.equal(schema({}).confirmDestructive, false, 'the default must be false')
   assert.equal(schema({ confirmDestructive: true }).confirmDestructive, true, 'a supplied value wins')
   assert.equal(schema({ confirmDestructive: false }).confirmDestructive, false)
+})
+
+test('buildConfigSchema declares the client timeout the channel is built with', async () => {
+  // Task 5's only other setting. It is the budget an appearance action waits for
+  // the browser half before reporting `unavailable`, so a profile that never sets
+  // it must still get the shipped 5s rather than an absent value.
+  const { buildConfigSchema } = await import('../index.js')
+  const schema = await buildConfigSchema(async () => ({ default: schemaStub() }))
+  assert.equal(schema({}).clientTimeoutMs, 5000, 'the shipped default must survive validation')
+  assert.equal(schema({ clientTimeoutMs: 250 }).clientTimeoutMs, 250, 'a supplied value wins')
+})
+
+test('the schema builder reads no binding that is still in its temporal dead zone', async () => {
+  // The defect this was written after, and why the obvious test is not enough.
+  //
+  // `Config` is built by a module-level `await buildConfigSchema()` (index.js),
+  // so every binding that function reads while it runs must already be
+  // initialized. A `const DEFAULT_CLIENT_TIMEOUT_MS` declared BELOW that export
+  // throws `Cannot access '…' before initialization`, the `try/catch` around the
+  // schema body swallows it, and `Config` silently degrades to `undefined` — which
+  // the Loader reads as "no settings page".
+  //
+  // A test that merely calls the exported `buildConfigSchema(...)` with a stub
+  // CANNOT see this: by then module evaluation has finished and the const is
+  // initialized, so the injected build succeeds either way. Verified — moving the
+  // declaration below the export left such a test green.
+  //
+  // What the failure actually needs is a schema build that runs DURING module
+  // evaluation, which is what a Host with a resolvable schemastery does. This
+  // checkout has none, so the test supplies one: it loads a copy of the module
+  // in a child process with a `schemastery` resolution hook, and asserts that
+  // `Config` came out as a schema rather than as the swallowed failure.
+  const { mkdtempSync, writeFileSync: write, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const { fileURLToPath, pathToFileURL } = await import('node:url')
+  const { execFileSync } = await import('node:child_process')
+
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-console-tdz-'))
+  try {
+    // The stub is answered through `module.register`, NOT a `--import` resolve
+    // hook: index.js resolves schemastery with a DYNAMIC `import(specifier)`, and
+    // a --import hook provably does not intercept that (verified — the child
+    // failed with ERR_MODULE_NOT_FOUND and the plugin degraded to `Config ===
+    // undefined`, which would have made this test pass for the wrong reason).
+    const stubPath = join(dir, 'stub.mjs')
+    const hooksPath = join(dir, 'hooks.mjs')
+    const probePath = join(dir, 'probe.mjs')
+    write(stubPath, [
+      'function build(spec) {',
+      '  const schema = function resolve(value = {}) {',
+      '    const out = {}',
+      '    for (const [key, field] of Object.entries(spec.dict)) {',
+      '      const supplied = value[key]',
+      '      out[key] = supplied === undefined ? field.meta.default : supplied',
+      '    }',
+      '    return out',
+      '  }',
+      '  schema.type = spec.type',
+      '  schema.meta = spec.meta',
+      '  schema.dict = spec.dict',
+      '  schema.default = (v) => { schema.meta.default = v; return schema }',
+      '  schema.description = (v) => { schema.meta.description = v; return schema }',
+      '  return schema',
+      '}',
+      'const Schema = {',
+      "  object: (dict) => build({ type: 'object', meta: {}, dict }),",
+      "  boolean: () => build({ type: 'boolean', meta: {}, dict: {} }),",
+      "  number: () => build({ type: 'number', meta: {}, dict: {} }),",
+      '}',
+      'export default Schema',
+      '',
+    ].join('\n'))
+    write(hooksPath, [
+      'export async function resolve(specifier, context, next) {',
+      "  if (specifier === 'schemastery' || specifier === '@deepseek-ai/schemastery') {",
+      `    return { url: ${JSON.stringify(pathToFileURL(stubPath).href)}, shortCircuit: true }`,
+      '  }',
+      '  return next(specifier, context)',
+      '}',
+      '',
+    ].join('\n'))
+    const indexPath = fileURLToPath(new URL('../index.js', import.meta.url))
+    write(probePath, [
+      "import { register } from 'node:module'",
+      `register(${JSON.stringify(pathToFileURL(hooksPath).href)})`,
+      `const mod = await import(${JSON.stringify(pathToFileURL(indexPath).href)})`,
+      "if (mod.Config === undefined) { console.log('DEGRADED'); process.exit(3) }",
+      'console.log(JSON.stringify(mod.Config({})))',
+      '',
+    ].join('\n'))
+
+    const out = execFileSync(process.execPath, [probePath], { encoding: 'utf8', stdio: 'pipe' })
+    assert.equal(
+      out.trim(),
+      '{"confirmDestructive":false,"clientTimeoutMs":5000}',
+      'a Host that ships schemastery must get a real schema, not a swallowed initialization failure',
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('buildConfigSchema produces a schema the settings service can project', async () => {
@@ -1275,6 +1379,7 @@ test('the plugin exports a Config schema whose confirmDestructive defaults to fa
     return
   }
   assert.equal(mod.Config({}).confirmDestructive, false)
+  assert.equal(mod.Config({}).clientTimeoutMs, 5000)
   assert.equal(mod.Config({ confirmDestructive: true }).confirmDestructive, true)
 })
 
