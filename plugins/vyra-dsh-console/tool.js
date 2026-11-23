@@ -29,7 +29,15 @@ export function createConsoleTool(console_) {
       render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
     },
     async execute(input) {
-      return console_.dispatch(input?.action ?? '', input?.args ?? {})
+      // `confirm` is declared as a top-level sibling of `args` — that is the
+      // surface the model sees — but the dispatcher reads it off the args
+      // object. Merge it across, and only when it is present: adding an
+      // `undefined` key would make the arguments unserializable, and the
+      // pipeline snapshots them before the call (dsh-tools/src/pipeline.ts).
+      // A copy is dispatched, never the caller's own object.
+      const args = { ...(input?.args ?? {}) }
+      if (input?.confirm !== undefined) args.confirm = input.confirm
+      return console_.dispatch(input?.action ?? '', args)
     },
   }
 }

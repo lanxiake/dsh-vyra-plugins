@@ -421,6 +421,22 @@ test('plugin.setEnabled reports a missing setter instead of throwing a TypeError
   assert.match(byBundle.reason, /setBundleEnabled/)
 })
 
+test('plugin.setEnabled rejects a call that names both an entry and a bundle', async () => {
+  // `id` and `name` address different levels through different setters. Rather
+  // than silently preferring one, say so: a caller that sent both does not know
+  // which it wants, and guessing would change the wrong thing.
+  const calls = []
+  const ctx = ctxWith({ pluginManager: {
+    setPluginEnabled: async (...a) => { calls.push(['entry', ...a]); return changeResult() },
+    setBundleEnabled: async (...a) => { calls.push(['bundle', ...a]); return changeResult() },
+  } })
+  const console_ = createConsole(ctx, { plugin: pluginDomain })
+  const result = await console_.dispatch('plugin.setEnabled', { id: 'e1', name: 'pkg-a', enabled: true })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /both|ambiguous/i)
+  assert.deepEqual(calls, [], 'an ambiguous call must not reach either setter')
+})
+
 test('plugin.install requires a spec and forwards it', async () => {
   const specs = []
   const ctx = ctxWith({ pluginManager: {
@@ -524,11 +540,60 @@ test('the same destructive action proceeds without confirm when confirmation is 
   assert.equal(result.status, 'ok')
 })
 
-test('the gate is not what refuses a destructive action that carries confirm: true', async () => {
+test('the dispatcher itself opens the gate when confirm is already inside args', async () => {
+  // Dispatch-level guard for the comparison. This does NOT prove the tool can
+  // open the gate — the tool has to get `confirm` into args first, which is what
+  // the next test covers.
   const ctx = ctxWith({ pluginManager: { removeBundle: async () => changeResult({ stage: 'remove', target: 'x' }) } })
   const console_ = createConsole(ctx, { plugin: pluginDomain }, { confirmDestructive: true })
   const result = await console_.dispatch('plugin.remove', { name: 'x', confirm: true })
   assert.equal(result.status, 'ok')
+})
+
+test('a destructive action is refused through the tool without confirm, and allowed with it', async () => {
+  // The gate has to be openable through the surface the model actually uses.
+  // dispatch() reads args.confirm, but the tool schema declares `confirm` as a
+  // top-level sibling of `args`, and the pipeline calls execute(exec.arguments)
+  // with the raw arguments object. An execute() that forwards only input.args
+  // makes the gate unsatisfiable: it refuses forever, and the reason it prints
+  // tells the caller to do the one thing that changes nothing.
+  const ctx = { get: (k) => (k === 'pluginManager' ? {
+    removeBundle: async () => ({ application: 'applied', changed: true, stage: 'remove', target: 'x' }),
+  } : undefined) }
+  const tool = createConsoleTool(createConsole(ctx, { plugin: pluginDomain }, { confirmDestructive: true }))
+
+  const refused = await tool.execute({ action: 'plugin.remove', args: { name: 'x' } })
+  assert.equal(refused.status, 'confirm-required')
+
+  const allowed = await tool.execute({ action: 'plugin.remove', args: { name: 'x' }, confirm: true })
+  assert.equal(allowed.status, 'ok')
+})
+
+test('the tool passes confirm through without inventing it when absent', async () => {
+  // Two things at once: a top-level confirm reaches the dispatcher, and a
+  // top-level `confirm: false` is carried as false rather than dropped, so the
+  // gate still refuses.
+  const seen = []
+  const ctx = { get: (k) => (k === 'pluginManager' ? {
+    listPlugins: async () => [],
+    listBundles: async () => [],
+  } : undefined) }
+  const spying = { dispatch: (action, args) => { seen.push(args); return { status: 'ok' } } }
+  const tool = createConsoleTool(spying)
+
+  await tool.execute({ action: 'plugin.list', args: { a: 1 } })
+  await tool.execute({ action: 'plugin.list', args: { a: 1 }, confirm: false })
+  await tool.execute({ action: 'plugin.list', args: { a: 1 }, confirm: true })
+  await tool.execute({ action: 'plugin.list' })
+
+  assert.deepEqual(seen[0], { a: 1 }, 'confirm absent: no confirm key is added')
+  assert.deepEqual(seen[1], { a: 1, confirm: false }, 'confirm: false is carried through as false')
+  assert.deepEqual(seen[2], { a: 1, confirm: true })
+  assert.deepEqual(seen[3], {}, 'no args at all still dispatches with an empty object')
+  // Reference safety: the caller's own args object must not be mutated.
+  const own = { a: 1 }
+  await tool.execute({ action: 'plugin.list', args: own, confirm: true })
+  assert.deepEqual(own, { a: 1 })
 })
 
 test('the confirmation gate never covers a non-destructive action', async () => {

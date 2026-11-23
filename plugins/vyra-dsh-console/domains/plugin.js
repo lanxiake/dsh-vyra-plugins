@@ -28,6 +28,12 @@ import { present, presentDeep, requireService } from '../core.js'
  * The optional fields go through `present()` so an unset one is omitted rather
  * than emitted as an `undefined` key, which the tool pipeline's lossless-JSON
  * snapshot would reject for the whole value.
+ *
+ * Every field is named here rather than spread in from the service, so this can
+ * never contribute a `status` key. Callers still set `status` *after* spreading
+ * the summary, so even a future field named `status` could not replace the
+ * status token — every action result carries one, and it is what the plugin's
+ * contract is read by.
  */
 function changeSummary(change) {
   return present({
@@ -84,9 +90,19 @@ export async function pluginDomain(ctx, { action, args }) {
         return { status: 'error', action, reason: 'plugin.setEnabled needs a boolean enabled' }
       }
       // An entryId selects the Loader entry; a package name selects the bundle
-      // layer. They are different identifiers on different methods, so the
-      // caller has to say which one it means.
-      if (typeof args.id === 'string' && args.id !== '') {
+      // layer. They are different identifiers on different methods, so a caller
+      // that sent both does not know which it means — say so rather than
+      // silently picking one and changing the wrong thing.
+      const hasId = typeof args.id === 'string' && args.id !== ''
+      const hasName = typeof args.name === 'string' && args.name !== ''
+      if (hasId && hasName) {
+        return {
+          status: 'error',
+          action,
+          reason: 'plugin.setEnabled is ambiguous: pass either a Loader entryId in id or a bundle package name in name, not both',
+        }
+      }
+      if (hasId) {
         if (typeof service.setPluginEnabled !== 'function') {
           return {
             status: 'error',
@@ -95,9 +111,9 @@ export async function pluginDomain(ctx, { action, args }) {
           }
         }
         const change = await service.setPluginEnabled(args.id, args.enabled)
-        return { status: 'ok', ...changeSummary(change) }
+        return { ...changeSummary(change), status: 'ok' }
       }
-      if (typeof args.name === 'string' && args.name !== '') {
+      if (hasName) {
         if (typeof service.setBundleEnabled !== 'function') {
           return {
             status: 'error',
@@ -106,7 +122,7 @@ export async function pluginDomain(ctx, { action, args }) {
           }
         }
         const change = await service.setBundleEnabled(args.name, args.enabled)
-        return { status: 'ok', ...changeSummary(change) }
+        return { ...changeSummary(change), status: 'ok' }
       }
       return {
         status: 'error',
@@ -119,14 +135,14 @@ export async function pluginDomain(ctx, { action, args }) {
         return { status: 'error', action, reason: 'plugin.install needs a package spec string in spec' }
       }
       const change = await service.installBundle(args.spec)
-      return { status: 'ok', ...changeSummary(change) }
+      return { ...changeSummary(change), status: 'ok' }
     }
     case 'plugin.remove': {
       if (typeof args.name !== 'string' || args.name === '') {
         return { status: 'error', action, reason: 'plugin.remove needs a bundle package name in name' }
       }
       const change = await service.removeBundle(args.name)
-      return { status: 'ok', ...changeSummary(change) }
+      return { ...changeSummary(change), status: 'ok' }
     }
     default:
       return { status: 'error', action, reason: `plugin domain has no action "${action}"` }
