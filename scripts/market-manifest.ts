@@ -86,6 +86,13 @@ const SYSTEM_SELECTION_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KICA8cGF0aCBkPSJNNCAzaDRNNCAzdjRNMjAgM2gtNE0yMCAzdjRNNCAyMWg0TTQgMjF2LTRNMjAgMjFoLTRNMjAgMjF2LTQiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05IDEyaDdNMTMgOWwzIDMtMyAzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=='
 
 /** Inline icon for `vyra-theme-styles`. */
+/**
+ * Icon for 自由主题: a framed wall with one bright field behind it — the plugin
+ * replaces the client's appearance, walls included.
+ */
+const FREE_THEME_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHZpZXdCb3g9IjAgMCAzNiAzNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ImRzaC1za2lucyI+DQogIDwhLS0gZHNoLXNraW5zIOearuiCpO+8muS4ieW8oOaJh+W9ouiJsuWNoe+8iOe0qy/pnZIv6JOd77yJ57uV5bqV6YOo5p6i6L20IMKxMzDCsCDlsZXlvIAgPSDlpJrlpZflk4HniYznmq7ogqTng63liIfmjaIgLS0+DQogIDxyZWN0IHg9IjExLjUiIHk9IjkuNSIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3LjUiIHJ4PSIzLjIiIGZpbGw9InVybCgjdikiIHRyYW5zZm9ybT0icm90YXRlKC0zMCAxOCAyOSkiLz4NCiAgPHJlY3QgeD0iMTEuNSIgeT0iOS41IiB3aWR0aD0iMTMiIGhlaWdodD0iMTcuNSIgcng9IjMuMiIgZmlsbD0idXJsKCN0KSIvPg0KICA8cmVjdCB4PSIxMS41IiB5PSI5LjUiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNy41IiByeD0iMy4yIiBmaWxsPSJ1cmwoI2IpIiB0cmFuc2Zvcm09InJvdGF0ZSgzMCAxOCAyOSkiLz4NCiAgPGRlZnM+DQogICAgPGxpbmVhckdyYWRpZW50IGlkPSJiIiB4MT0iMTEuNSIgeTE9IjkuNSIgeDI9IjI0LjUiIHkyPSIyNyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPg0KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzY5QjlGRiIvPg0KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzI0REUyIi8+DQogICAgPC9saW5lYXJHcmFkaWVudD4NCiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InQiIHgxPSIxMS41IiB5MT0iOS41IiB4Mj0iMjQuNSIgeTI9IjI3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+DQogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNDVFN0E0Ii8+DQogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwNTkwOUQiLz4NCiAgICA8L2xpbmVhckdyYWRpZW50Pg0KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idiIgeDE9IjExLjUiIHkxPSI5LjUiIHgyPSIyNC41IiB5Mj0iMjciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4NCiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiNCMThDRkYiLz4NCiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzZDNERFMiIvPg0KICAgIDwvbGluZWFyR3JhZGllbnQ+DQogIDwvZGVmcz4NCjwvc3ZnPg0K'
+
 const THEME_STYLES_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTEyIDNhOSA5IDAgMCAxIDAgMThjLTEuNCAwLTIuMi0uOS0yLjItMiAwLS42LjItMSAuNi0xLjQuNC0uNC42LS44LjYtMS4zIDAtMS0uOC0xLjgtMS44LTEuOEg3LjZBNC42IDQuNiAwIDAgMSAzIDkuOUMzIDYuMSA3IDMgMTIgM1oiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICA8Y2lyY2xlIGN4PSIxNS44IiBjeT0iOS40IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgo8L3N2Zz4K'
 
@@ -851,6 +858,35 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'browser',
         keywords: ['selection', 'translate', 'clipboard', 'windows'],
+      },
+    },
+    {
+      name: 'vyra-free-theme',
+      title: {
+        en: 'Free Theme',
+        zh: '自由主题',
+      },
+      description: {
+        en: 'Replaces the client appearance with a whole theme: colours, shape, sidebar treatment and a wallpaper that can be an image, a looping video or code. Ships several finished themes, and a CLI plus skill so an agent can build, check and switch them. The wallpaper can cover the left menu or stay in the conversation area.',
+        zh: '把客户端外观整体换掉：配色、圆角、左侧菜单样式，以及一张可以是图片、无缝循环视频或代码的壁纸。自带几套成品主题，并提供 CLI 与技能，让 Agent 能自己建主题、检配色、切换。壁纸可以选择覆盖左侧菜单，或只留在对话区。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-free-theme',
+      },
+      icon: FREE_THEME_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795449013,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0b99710f38803c1700e036f5fb6093eb6da7491b',
+            path: 'plugins/vyra-free-theme',
+          },
+        },
       },
     },
     {

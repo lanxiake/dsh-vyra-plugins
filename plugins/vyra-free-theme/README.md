@@ -209,3 +209,12 @@ URL 也能切皮肤：`/?skin=official`、`/?skin=openbmc`、`/?skin=uefi-harnes
 ---
 
 想读源码、自制皮肤或参与开发？请看 [docs/developers.md](./docs/developers.md)（工作原理、皮肤开发指南、本地验证与调试 API）。
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>
