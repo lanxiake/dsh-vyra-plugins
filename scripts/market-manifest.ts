@@ -2263,8 +2263,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 免费模型',
       },
       description: {
-        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, a sign-in dialog with the link when a browser blocks the popup, multiple accounts with balances on one page (CodeBuddy / WorkBuddy included), any OpenAI-compatible endpoint you already have a key for, and automatic retry on another model when the router fails.',
-        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、登录弹窗（浏览器被拦截时可复制链接）、多账号与积分管理（含 CodeBuddy / WorkBuddy）、任何已有 Key 的 OpenAI 兼容接口，以及自动选择失败时换模型重试。',
+        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, a sign-in dialog with the link when a browser blocks the popup, multiple accounts with balances on one page (CodeBuddy / WorkBuddy included), any OpenAI-compatible endpoint you already have a key for, and automatic retry on another model when the router fails. One click installs the Vyra plugin market and adds its index source, and the plugin ships a DSH onboarding skill that helps the agent recommend and install a plugin set for your needs.',
+        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、登录弹窗（浏览器被拦截时可复制链接）、多账号与积分管理（含 CodeBuddy / WorkBuddy）、任何已有 Key 的 OpenAI 兼容接口，以及自动选择失败时换模型重试。设置页可一键安装 Vyra 插件市场并添加索引源；插件还会初始化一个 DSH 使用指南技能，帮 Agent 按你的需求推荐并安装插件组合。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2340,6 +2340,17 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '24da94ed141af8959e9c22d53cd79034bfbdddf8',
+            path: 'plugins/vyra-free-model',
+          },
+        },
+        // 0.5.0 adds the one-click plugin-market install (with the Veyra index
+        // source), the vyra-dsh-guide onboarding skill, and DSH usage tips.
+        '0.5.0': {
+          publishTimestamp: 1795910400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f69c668810065a2de558a4fc9450bd6b8c9fb4f7',
             path: 'plugins/vyra-free-model',
           },
         },
