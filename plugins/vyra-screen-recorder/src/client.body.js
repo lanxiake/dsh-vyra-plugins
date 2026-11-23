@@ -20,6 +20,11 @@ window.__ModuleLoader__.load({
       /*__WEBM_MUXER__*/
       return module.exports
     })()
+    const Mp4Muxer = (function () {
+      const module = { exports: {} }
+      /*__MP4_MUXER__*/
+      return module.exports
+    })()
 
     // ---------------------------------------------------------------- constants
     const PREFIX = '/plugins/vyra-screen-recorder'
@@ -62,6 +67,19 @@ window.__ModuleLoader__.load({
       noRoute: L('宿主路由不可用，请完整重启 DSH 后再试', 'Host routes unavailable; fully restart DSH'),
     }
 
+    const DEFAULT_SETTINGS = {
+      dir: '',
+      format: 'mp4',
+      fps: 8,
+      quality: 65,
+      maxEdge: 1920,
+      maxSeconds: 600,
+      includeSystemAudio: true,
+      includeMic: true,
+      hideDshOnShot: false,
+      shortcuts: { screenshot: 'Ctrl+Alt+S', record: 'Ctrl+Alt+R' },
+    }
+
     // ------------------------------------------------------------------- store
     let state = {
       phase: 'idle', // idle | picking | starting | recording | encoding
@@ -71,6 +89,8 @@ window.__ModuleLoader__.load({
       progress: null,
       toast: null,
       agentRecording: null,
+      settings: DEFAULT_SETTINGS,
+      paths: null,
     }
     const listeners = new Set()
     function getState() { return state }
@@ -126,8 +146,8 @@ window.__ModuleLoader__.load({
       return data
     }
 
-    async function uploadBlob(blob, name) {
-      const response = await fetch(PREFIX + '/record/save?name=' + encodeURIComponent(name), {
+    async function uploadBlob(blob, name, kind) {
+      const response = await fetch(PREFIX + '/record/save?kind=' + (kind === 'image' ? 'image' : 'video') + '&name=' + encodeURIComponent(name), {
         method: 'POST',
         body: blob,
       })
@@ -136,6 +156,13 @@ window.__ModuleLoader__.load({
       try { data = text ? JSON.parse(text) : {} } catch { /* ignore */ }
       if (!response.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + response.status))
       return data
+    }
+
+    async function loadClientSettings() {
+      try {
+        const data = await apiJson('/settings')
+        setState({ settings: data.settings || DEFAULT_SETTINGS, paths: data.paths || null })
+      } catch { /* 保留默认值 */ }
     }
 
     // ------------------------------------------------------------- formatting
@@ -270,6 +297,7 @@ window.__ModuleLoader__.load({
 
     async function startRecording(choice, options) {
       const value = options || {}
+      const settings = state.settings || DEFAULT_SETTINGS
       closePicker()
       if (state.shot) closeShot()
       setState({ phase: 'starting', progress: { stage: S.preparing, ratio: 0 }, recording: null })
@@ -281,11 +309,11 @@ window.__ModuleLoader__.load({
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             source: choice,
-            fps: 8,
-            quality: 65,
-            maxEdge: 1920,
-            maxSeconds: 600,
-            includeSystemAudio: value.includeSystemAudio !== false,
+            fps: settings.fps,
+            quality: settings.quality,
+            maxEdge: settings.maxEdge,
+            maxSeconds: settings.maxSeconds,
+            includeSystemAudio: value.includeSystemAudio !== undefined ? value.includeSystemAudio : settings.includeSystemAudio,
           }),
         })
         if (mic === null && value.includeMic !== false) {
@@ -322,14 +350,16 @@ window.__ModuleLoader__.load({
       let manifest = null
       try {
         manifest = await apiJson('/record/stop', { method: 'POST' })
-        const encoded = await encodeRecording(manifest, micBlob, recording)
+        const format = (state.settings && state.settings.format) || 'mp4'
+        const encoded = await encodeRecording(manifest, micBlob, recording, format)
+        if (encoded.fallback) toast(L('当前环境不支持 H.264/AAC，已保存为 WebM', 'H.264/AAC unavailable; saved as WebM'), { kind: 'error' })
         const name = encoded.name
         const file = new File([encoded.blob], name, { type: 'video/webm' })
         const attached = attachFile(file)
         setState({ progress: { stage: L('正在保存…', 'Saving…'), ratio: 0.97 } })
         let saved = null
         try {
-          saved = await uploadBlob(encoded.blob, name)
+          saved = await uploadBlob(encoded.blob, name, 'video')
         } catch (error) {
           downloadBlob(encoded.blob, name)
           toast(L('保存到磁盘失败，已改为浏览器下载：', 'Save failed; downloaded instead: ') + friendly(error), { kind: 'error' })
@@ -388,8 +418,8 @@ window.__ModuleLoader__.load({
         setState({ agentRecording: null, phase: 'encoding', progress: { stage: L('Agent 录屏编码中…', 'Encoding agent recording…'), ratio: 0.05 } })
         const micBlob = await stopMic(agentRun.mic)
         try {
-          const encoded = await encodeRecording(job.manifest, micBlob, { mic: { startedAt: agentRun.micStartedAt } })
-          const response = await fetch(PREFIX + '/agent/save?id=' + encodeURIComponent(job.id), { method: 'POST', body: encoded.blob })
+          const encoded = await encodeRecording(job.manifest, micBlob, { mic: { startedAt: agentRun.micStartedAt } }, job.format || 'mp4')
+          const response = await fetch(PREFIX + '/agent/save?id=' + encodeURIComponent(job.id) + '&format=' + encodeURIComponent(encoded.format), { method: 'POST', body: encoded.blob })
           const text = await response.text()
           let data = {}
           try { data = text ? JSON.parse(text) : {} } catch { /* ignore */ }
@@ -428,19 +458,29 @@ window.__ModuleLoader__.load({
 
     async function takeScreenshot() {
       if (state.phase !== 'idle') return
+      const settings = state.settings || DEFAULT_SETTINGS
+      const hideDsh = settings.hideDshOnShot === true
       setState({ phase: 'starting', progress: { stage: L('正在截图…', 'Capturing…'), ratio: 0.2 }, toast: null })
       try {
         let response
-        try { response = await fetch(PREFIX + '/shot', { cache: 'no-store' }) } catch { throw new Error(S.noRoute) }
+        const query = (hideDsh ? '?hideDsh=1&ts=' : '?ts=') + Date.now()
+        try { response = await fetch(PREFIX + '/shot' + query, { cache: 'no-store' }) } catch { throw new Error(S.noRoute) }
         if (!response.ok) throw new Error('HTTP ' + response.status)
+        const hidden = response.headers.get('x-vsr-hidden') === '1'
         const blob = await response.blob()
         const url = URL.createObjectURL(blob)
         const image = await loadImage(url)
         setState({
           phase: 'idle',
           progress: null,
-          shot: { mode: 'shot', url, imageW: image.naturalWidth, imageH: image.naturalHeight, virtual: null, options: null },
+          shot: {
+            mode: 'shot', url, imageW: image.naturalWidth, imageH: image.naturalHeight,
+            virtual: null, options: null, hiddenDsh: hidden,
+          },
         })
+        if (hideDsh && !hidden) {
+          toast(L('没有找到可隐藏的 DSH 窗口，这张图里仍有 DSH 界面', 'No DSH window to hide; the screenshot still contains it'), { kind: 'error' })
+        }
       } catch (error) {
         setState({ phase: 'idle', progress: null })
         toast(L('截图失败：', 'Screenshot failed: ') + friendly(error), { kind: 'error' })
@@ -465,24 +505,66 @@ window.__ModuleLoader__.load({
     }
 
     // -------------------------------------------------------------- encoding
-    function pickVideoCodec(width, height, fps) {
+    function pickVideoCodec(width, height, fps, format) {
       const bitrate = Math.min(8000000, Math.max(1500000, Math.round(width * height * fps * 0.1)))
       return (async () => {
         if (typeof VideoEncoder === 'undefined') throw new Error(L('当前环境不支持 WebCodecs', 'WebCodecs unavailable'))
+        if (format === 'mp4') {
+          try {
+            const pixels = width * height
+            const level = pixels > 1920 * 1080 ? '32' : pixels > 1280 * 720 ? '28' : '1f'
+            const config = { codec: 'avc1.4200' + level, width, height, bitrate, framerate: fps, avc: { format: 'avc' } }
+            const support = await VideoEncoder.isConfigSupported(config)
+            if (support && support.supported) {
+              return {
+                container: 'mp4',
+                muxerCodec: 'avc',
+                config: { ...config, ...(support.config || {}), avc: { format: 'avc' } },
+                bitrate,
+                extension: 'mp4',
+              }
+            }
+          } catch { /* fall through to WebM */ }
+        }
         const candidates = [
-          { webm: 'V_VP9', codec: 'vp09.00.10.08' },
-          { webm: 'V_VP8', codec: 'vp8' },
+          { container: 'webm', muxerCodec: 'V_VP9', codec: 'vp09.00.10.08' },
+          { container: 'webm', muxerCodec: 'V_VP8', codec: 'vp8' },
         ]
         for (const candidate of candidates) {
           try {
             const support = await VideoEncoder.isConfigSupported({
               codec: candidate.codec, width, height, bitrate, framerate: fps,
             })
-            if (support && support.supported) return { ...candidate, config: support.config || { codec: candidate.codec, width, height, bitrate, framerate: fps }, bitrate }
+            if (support && support.supported) {
+              return {
+                container: 'webm',
+                muxerCodec: candidate.muxerCodec,
+                config: support.config || { codec: candidate.codec, width, height, bitrate, framerate: fps },
+                bitrate,
+                extension: 'webm',
+              }
+            }
           } catch { /* try next */ }
         }
         throw new Error(L('没有可用的视频编码器', 'No video encoder available'))
       })()
+    }
+
+    async function pickAudioCodec(container) {
+      if (typeof AudioEncoder === 'undefined') return null
+      const codec = container === 'mp4' ? 'mp4a.40.2' : 'opus'
+      try {
+        const support = await AudioEncoder.isConfigSupported({
+          codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 128000,
+        })
+        if (support && support.supported) {
+          return {
+            muxerCodec: container === 'mp4' ? 'aac' : 'opus',
+            config: { codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 },
+          }
+        }
+      } catch { /* no audio */ }
+      return null
     }
 
     async function mixAudio(manifest, micBlob, recording) {
@@ -528,22 +610,41 @@ window.__ModuleLoader__.load({
       try { return await offline.startRendering() } catch { return null }
     }
 
-    async function encodeRecording(manifest, micBlob, recording) {
+    async function encodeRecording(manifest, micBlob, recording, format) {
       const frames = manifest.frames || []
       if (frames.length === 0) throw new Error(S.noFrames)
       const width = manifest.width || 1280
       const height = manifest.height || 720
       const fps = manifest.fps || 8
+      const requested = format === 'webm' ? 'webm' : 'mp4'
       setState({ progress: { stage: L('正在混音…', 'Mixing audio…'), ratio: 0.05 } })
       const mixed = await mixAudio(manifest, micBlob, recording)
-      const videoCodec = await pickVideoCodec(width, height, fps)
-      const target = new WebMMuxer.ArrayBufferTarget()
-      const muxer = new WebMMuxer.Muxer({
-        target,
-        video: { codec: videoCodec.webm, width, height, frameRate: fps },
-        ...(mixed ? { audio: { codec: 'A_OPUS', sampleRate: 48000, numberOfChannels: 2 } } : {}),
-        firstTimestampBehavior: 'offset',
-      })
+      let videoCodec = await pickVideoCodec(width, height, fps, requested)
+      let audioCodec = mixed ? await pickAudioCodec(videoCodec.container) : null
+      let fallback = ''
+      if (requested === 'mp4' && videoCodec.container !== 'mp4') fallback = 'no-h264'
+      if (mixed && audioCodec === null && videoCodec.container === 'mp4') {
+        videoCodec = await pickVideoCodec(width, height, fps, 'webm')
+        audioCodec = await pickAudioCodec('webm')
+        fallback = 'no-aac'
+      }
+      const target = videoCodec.container === 'mp4'
+        ? new Mp4Muxer.ArrayBufferTarget()
+        : new WebMMuxer.ArrayBufferTarget()
+      const muxer = videoCodec.container === 'mp4'
+        ? new Mp4Muxer.Muxer({
+          target,
+          video: { codec: 'avc', width, height },
+          ...(mixed && audioCodec ? { audio: { codec: 'aac', sampleRate: 48000, numberOfChannels: 2 } } : {}),
+          fastStart: 'in-memory',
+          firstTimestampBehavior: 'offset',
+        })
+        : new WebMMuxer.Muxer({
+          target,
+          video: { codec: videoCodec.muxerCodec, width, height, frameRate: fps },
+          ...(mixed && audioCodec ? { audio: { codec: 'A_OPUS', sampleRate: 48000, numberOfChannels: 2 } } : {}),
+          firstTimestampBehavior: 'offset',
+        })
 
       let videoError = null
       const videoEncoder = new VideoEncoder({
@@ -590,14 +691,14 @@ window.__ModuleLoader__.load({
       }
       if (videoError) throw videoError
 
-      if (mixed) {
+      if (mixed && audioCodec) {
         setState({ progress: { stage: L('正在编码声音…', 'Encoding audio…'), ratio: 0.84 } })
         let audioError = null
         const audioEncoder = new AudioEncoder({
           output: (chunk, meta) => { try { muxer.addAudioChunk(chunk, meta) } catch (error) { audioError = error } },
           error: error => { audioError = error },
         })
-        audioEncoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 })
+        audioEncoder.configure(audioCodec.config)
         try {
           const left = mixed.getChannelData(0)
           const right = mixed.numberOfChannels > 1 ? mixed.getChannelData(1) : left
@@ -629,9 +730,12 @@ window.__ModuleLoader__.load({
 
       setState({ progress: { stage: L('正在封装…', 'Muxing…'), ratio: 0.95 } })
       muxer.finalize()
+      const extension = videoCodec.container === 'mp4' ? 'mp4' : 'webm'
       return {
-        blob: new Blob([target.buffer], { type: 'video/webm' }),
-        name: '录屏-' + stamp() + '.webm',
+        blob: new Blob([target.buffer], { type: extension === 'mp4' ? 'video/mp4' : 'video/webm' }),
+        name: '录屏-' + stamp() + '.' + extension,
+        format: extension,
+        fallback,
       }
     }
 
@@ -700,13 +804,338 @@ window.__ModuleLoader__.load({
       const file = new File([blob], name, { type: 'image/jpeg' })
       const attached = attachFile(file)
       let saved = null
-      try { saved = await uploadBlob(blob, name) } catch { /* 保存失败时仍以附件为准 */ }
+      try { saved = await uploadBlob(blob, name, 'image') } catch { /* 保存失败时仍以附件为准 */ }
       toast(
         attached
           ? L('截图已挂进输入框', 'Screenshot attached')
           : (saved ? L('截图已保存', 'Screenshot saved') : L('截图没能保存', 'Screenshot not saved')),
         { kind: attached || saved ? 'success' : 'error', path: saved ? saved.file : '', dir: saved ? saved.dir : '' },
       )
+    }
+
+    // ------------------------------------------------------------- settings
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return ''
+      if (bytes < 1024) return bytes + ' B'
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+      if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB'
+      return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+    }
+
+    function formatDate(ms) {
+      try { return new Date(ms).toLocaleString() } catch { return '' }
+    }
+
+    function keyName(event) {
+      const key = event.key
+      if (key === ' ' || key === 'Spacebar') return 'Space'
+      if (key.length === 1) return key.toUpperCase()
+      return key
+    }
+
+    function comboFromEvent(event) {
+      const parts = []
+      if (event.ctrlKey) parts.push('Ctrl')
+      if (event.altKey) parts.push('Alt')
+      if (event.shiftKey) parts.push('Shift')
+      if (event.metaKey) parts.push('Meta')
+      const key = keyName(event)
+      if (!['Control', 'Alt', 'Shift', 'Meta'].includes(key)) parts.push(key)
+      return parts.join('+')
+    }
+
+    function matchesShortcut(event, combo) {
+      if (!combo) return false
+      return comboFromEvent(event) === combo
+    }
+
+    function ShortcutInput(props) {
+      const [capturing, setCapturing] = useState(false)
+      return h('input', {
+        className: 'vsr-input vsr-shortcut-input',
+        value: capturing ? L('按下快捷键…', 'Press a shortcut…') : props.value,
+        readOnly: true,
+        onFocus: () => setCapturing(true),
+        onBlur: () => setCapturing(false),
+        onKeyDown: event => {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.key === 'Escape') { setCapturing(false); event.currentTarget.blur(); return }
+          const key = keyName(event)
+          if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return
+          const combo = comboFromEvent(event)
+          if (!combo) return
+          props.onChange(combo)
+          setCapturing(false)
+          event.currentTarget.blur()
+        },
+      })
+    }
+
+    function SettingsIcon() {
+      return h('svg', { viewBox: '0 0 16 16', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.25, 'aria-hidden': 'true' },
+        h('rect', { x: 2, y: 3, width: 12, height: 8.5, rx: 1.5 }),
+        h('circle', { cx: 8, cy: 7.25, r: 1.7, fill: 'currentColor', stroke: 'none' }),
+        h('path', { d: 'M6 14h4' }))
+    }
+
+    function SettingsPage() {
+      const [draft, setDraft] = useState(DEFAULT_SETTINGS)
+      const [paths, setPaths] = useState(null)
+      const [library, setLibrary] = useState([])
+      const [loading, setLoading] = useState(true)
+      const [saving, setSaving] = useState(false)
+      const [filter, setFilter] = useState('all')
+      const [converting, setConverting] = useState(null)
+      const [convertProgress, setConvertProgress] = useState(0)
+      const [error, setError] = useState('')
+
+      async function refreshLibrary() {
+        const data = await apiJson('/library')
+        setLibrary(data.files || [])
+      }
+
+      async function load() {
+        setLoading(true)
+        setError('')
+        try {
+          const data = await apiJson('/settings')
+          const settings = data.settings || DEFAULT_SETTINGS
+          setDraft({
+            ...DEFAULT_SETTINGS,
+            ...settings,
+            shortcuts: { ...DEFAULT_SETTINGS.shortcuts, ...(settings.shortcuts || {}) },
+          })
+          setPaths(data.paths || null)
+          setState({ settings, paths: data.paths || null })
+          await refreshLibrary()
+        } catch (failure) {
+          setError(friendly(failure))
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      useEffect(() => { void load() }, [])
+
+      async function save() {
+        setSaving(true)
+        try {
+          const data = await apiJson('/settings', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(draft),
+          })
+          setDraft({ ...DEFAULT_SETTINGS, ...data.settings, shortcuts: { ...DEFAULT_SETTINGS.shortcuts, ...(data.settings.shortcuts || {}) } })
+          setPaths(data.paths || null)
+          setState({ settings: data.settings, paths: data.paths || null })
+          await refreshLibrary()
+          toast(L('设置已保存', 'Settings saved'), { kind: 'success' })
+        } catch (failure) {
+          toast(L('保存失败：', 'Save failed: ') + friendly(failure), { kind: 'error' })
+        } finally {
+          setSaving(false)
+        }
+      }
+
+      async function pickDir() {
+        const picker = window.__DSH_DIRECTORY_PICKER__
+        if (!picker || typeof picker.pick !== 'function') {
+          toast(L('当前环境不支持文件夹选择，请手动输入路径', 'Folder picker unavailable; type the path'), { kind: 'error' })
+          return
+        }
+        try {
+          const dir = await picker.pick()
+          if (dir) setDraft(current => ({ ...current, dir }))
+        } catch { /* 用户取消 */ }
+      }
+
+      function openRoot() {
+        if (paths && paths.root) void reveal(paths.root)
+        else toast(L('先保存设置，宿主才能确定目录', 'Save settings first'), { kind: 'error' })
+      }
+
+      async function removeFile(file) {
+        if (typeof window.confirm === 'function' && !window.confirm(L('删除这个文件？\n', 'Delete this file?\n') + file.name)) return
+        try {
+          await apiJson('/library/delete', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ kind: file.kind, name: file.name }),
+          })
+          await refreshLibrary()
+          toast(L('已删除', 'Deleted'), { kind: 'success' })
+        } catch (failure) {
+          toast(L('删除失败：', 'Delete failed: ') + friendly(failure), { kind: 'error' })
+        }
+      }
+
+      async function convert(file) {
+        if (converting !== null) return
+        const mime = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2'
+        if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported(mime)) {
+          toast(L('当前环境不支持 MP4 转换', 'MP4 conversion unavailable'), { kind: 'error' })
+          return
+        }
+        setConverting(file.name)
+        setConvertProgress(0)
+        const video = document.createElement('video')
+        video.src = PREFIX + '/record/serve?kind=video&name=' + encodeURIComponent(file.name)
+        video.preload = 'auto'
+        video.style.cssText = 'position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none'
+        document.body.appendChild(video)
+        try {
+          await new Promise((resolve, reject) => {
+            video.onloadedmetadata = resolve
+            video.onerror = () => reject(new Error(L('加载视频失败', 'Failed to load video')))
+          })
+          const stream = typeof video.captureStream === 'function' ? video.captureStream() : null
+          if (!stream) throw new Error(L('浏览器不支持 captureStream', 'captureStream unavailable'))
+          const recorder = new MediaRecorder(stream, {
+            mimeType: mime,
+            videoBitsPerSecond: Math.min(8000000, Math.max(2000000, Math.round((video.videoWidth || 1280) * (video.videoHeight || 720) * 4))),
+          })
+          const chunks = []
+          recorder.ondataavailable = event => { if (event.data && event.data.size > 0) chunks.push(event.data) }
+          const stopped = new Promise(resolve => { recorder.onstop = resolve })
+          video.ontimeupdate = () => {
+            if (video.duration) setConvertProgress(Math.min(1, video.currentTime / video.duration))
+          }
+          recorder.start(1000)
+          await video.play()
+          await new Promise(resolve => {
+            video.onended = resolve
+            setTimeout(resolve, Math.max(3000, ((video.duration || 0) + 2) * 1000))
+          })
+          recorder.stop()
+          await stopped
+          const blob = new Blob(chunks, { type: 'video/mp4' })
+          const name = file.name.replace(/\.webm$/i, '') + '.mp4'
+          await uploadBlob(blob, name, 'video')
+          await refreshLibrary()
+          toast(L('已转成 MP4：', 'Converted to MP4: ') + name, { kind: 'success' })
+        } catch (failure) {
+          toast(L('转换失败：', 'Conversion failed: ') + friendly(failure), { kind: 'error' })
+        } finally {
+          video.remove()
+          setConverting(null)
+          setConvertProgress(0)
+        }
+      }
+
+      const field = (label, control, note) => h('label', { className: 'vsr-field' },
+        h('span', { className: 'vsr-field-label' }, label),
+        control,
+        note ? h('span', { className: 'vsr-field-note' }, note) : null)
+
+      if (loading) {
+        return h('div', { className: 'vsr-settings' },
+          h('div', { className: 'vsr-settings-head' }, h('h2', null, L('录屏与截图', 'Screen recorder'))),
+          h('div', { className: 'vsr-muted' }, L('正在读取设置…', 'Loading settings…')))
+      }
+
+      const files = library.filter(file => filter === 'all' || file.kind === filter)
+      return h('div', { className: 'vsr-settings' },
+        h('div', { className: 'vsr-settings-head' },
+          h('div', null,
+            h('h2', null, L('录屏与截图', 'Screen recorder')),
+            h('div', { className: 'vsr-muted' }, L('存储位置、录制格式、快捷键和文件都在这里管理。', 'Manage storage, format, shortcuts and files.'))),
+          h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void load() } }, L('刷新', 'Refresh'))),
+        error ? h('div', { className: 'vsr-error' }, error) : null,
+        h('section', { className: 'vsr-card' },
+          h('h3', null, L('存储位置', 'Storage')),
+          h('div', { className: 'vsr-storage-row' },
+            h('input', {
+              className: 'vsr-input vsr-grow',
+              value: draft.dir,
+              placeholder: paths ? paths.root : L('默认：我的视频 / Vyra Screen Recorder', 'Default: Videos / Vyra Screen Recorder'),
+              onChange: event => setDraft({ ...draft, dir: event.target.value }),
+            }),
+            h('button', { type: 'button', className: 'vsr-btn-outline', onClick: pickDir }, L('选择…', 'Choose…')),
+            h('button', { type: 'button', className: 'vsr-btn-outline', onClick: openRoot }, L('打开', 'Open')),
+            h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => setDraft({ ...draft, dir: '' }) }, L('默认', 'Default'))),
+          h('div', { className: 'vsr-muted vsr-path' }, L('实际保存目录：', 'Actual folder: ') + ((paths && paths.root) || '—') + L('（录屏 recordings / 截图 screenshots）', ' (recordings / screenshots)'))),
+        h('section', { className: 'vsr-card' },
+          h('h3', null, L('录制', 'Recording')),
+          h('div', { className: 'vsr-grid' },
+            field(L('格式', 'Format'), h('select', {
+              className: 'vsr-select',
+              value: draft.format,
+              onChange: event => setDraft({ ...draft, format: event.target.value }),
+            },
+            h('option', { value: 'mp4' }, 'MP4（H.264 / AAC）'),
+            h('option', { value: 'webm' }, 'WebM（VP9 / Opus）'))),
+            field(L('帧率', 'Frame rate'), h('select', {
+              className: 'vsr-select', value: String(draft.fps),
+              onChange: event => setDraft({ ...draft, fps: Number(event.target.value) }),
+            }, ...[5, 8, 10, 12].map(value => h('option', { key: value, value: String(value) }, value + ' fps')))),
+            field(L('JPEG 质量', 'JPEG quality'), h('input', {
+              className: 'vsr-input', type: 'number', min: 40, max: 90, value: draft.quality,
+              onChange: event => setDraft({ ...draft, quality: Number(event.target.value) }),
+            })),
+            field(L('长边上限', 'Max edge'), h('select', {
+              className: 'vsr-select', value: String(draft.maxEdge),
+              onChange: event => setDraft({ ...draft, maxEdge: Number(event.target.value) }),
+            }, ...[1280, 1920, 2560].map(value => h('option', { key: value, value: String(value) }, String(value))))),
+            field(L('最长时长', 'Max duration'), h('select', {
+              className: 'vsr-select', value: String(draft.maxSeconds),
+              onChange: event => setDraft({ ...draft, maxSeconds: Number(event.target.value) }),
+            }, ...[60, 180, 300, 600].map(value => h('option', { key: value, value: String(value) }, L(value / 60 + ' 分钟', value / 60 + ' min')))))),
+          h('div', { className: 'vsr-checks' },
+            h('label', { className: 'vsr-check' }, h('input', {
+              type: 'checkbox', checked: draft.includeSystemAudio,
+              onChange: event => setDraft({ ...draft, includeSystemAudio: event.target.checked }),
+            }), L('默认录系统声音', 'System audio by default')),
+            h('label', { className: 'vsr-check' }, h('input', {
+              type: 'checkbox', checked: draft.includeMic,
+              onChange: event => setDraft({ ...draft, includeMic: event.target.checked }),
+            }), L('默认录麦克风', 'Microphone by default')))),
+        h('section', { className: 'vsr-card' },
+          h('h3', null, L('快捷键', 'Shortcuts')),
+          h('div', { className: 'vsr-grid' },
+            field(L('截图', 'Screenshot'), h(ShortcutInput, {
+              value: draft.shortcuts.screenshot,
+              onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, screenshot: value } }),
+            })),
+            field(L('录屏 / 停止', 'Record / stop'), h(ShortcutInput, {
+              value: draft.shortcuts.record,
+              onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, record: value } }),
+            }))),
+          h('div', { className: 'vsr-muted' }, L('在 DSH 窗口内生效；点输入框后直接按组合键。', 'Active while DSH is focused; focus the input and press the combo.'))),
+        h('section', { className: 'vsr-card' },
+          h('h3', null, L('截图', 'Screenshot')),
+          h('label', { className: 'vsr-check' }, h('input', {
+            type: 'checkbox', checked: draft.hideDshOnShot,
+            onChange: event => setDraft({ ...draft, hideDshOnShot: event.target.checked }),
+          }), L('截图时先隐藏 DSH 界面', 'Hide DSH before capturing')),
+          h('div', { className: 'vsr-muted' }, L('用来截取被 DSH 挡住的窗口或其他应用；截图浮层里也可以临时切换。', 'Capture windows behind DSH; the overlay can toggle it too.'))),
+        h('div', { className: 'vsr-settings-actions' },
+          h('button', { type: 'button', className: 'vsr-btn-primary', disabled: saving, onClick: () => { void save() } },
+            saving ? L('保存中…', 'Saving…') : L('保存设置', 'Save settings')),
+          h('span', { className: 'vsr-muted' }, L('修改后点保存。', 'Save to apply.'))),
+        h('section', { className: 'vsr-card' },
+          h('div', { className: 'vsr-library-head' },
+            h('h3', null, L('文件', 'Files')),
+            h('div', { className: 'vsr-library-actions' },
+              h('button', { type: 'button', className: 'vsr-filter' + (filter === 'all' ? ' vsr-filter-on' : ''), onClick: () => setFilter('all') }, L('全部', 'All')),
+              h('button', { type: 'button', className: 'vsr-filter' + (filter === 'video' ? ' vsr-filter-on' : ''), onClick: () => setFilter('video') }, L('录屏', 'Videos')),
+              h('button', { type: 'button', className: 'vsr-filter' + (filter === 'image' ? ' vsr-filter-on' : ''), onClick: () => setFilter('image') }, L('截图', 'Images')),
+              h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void refreshLibrary() } }, L('刷新', 'Refresh')),
+              h('button', { type: 'button', className: 'vsr-settings-link', onClick: openRoot }, L('打开文件夹', 'Open folder')))),
+          converting !== null ? h('div', { className: 'vsr-convert' },
+            h('div', { className: 'vsr-muted' }, L('正在转 MP4：', 'Converting to MP4: ') + converting + '（会实时播放原音频）'),
+            h('div', { className: 'vsr-bar' }, h('div', { className: 'vsr-bar-fill', style: { width: Math.round(convertProgress * 100) + '%' } }))) : null,
+          files.length === 0
+            ? h('div', { className: 'vsr-empty' }, L('这里还没有文件。', 'No files yet.'))
+            : h('div', { className: 'vsr-file-list' }, ...files.map(file => h('div', { className: 'vsr-file-row', key: file.path },
+              h('span', { className: 'vsr-file-kind' + (file.kind === 'image' ? ' vsr-file-kind-image' : '') }, file.kind === 'image' ? L('截图', 'Image') : L('录屏', 'Video')),
+              h('span', { className: 'vsr-file-name', title: file.path }, file.name),
+              h('span', { className: 'vsr-file-meta' }, formatBytes(file.size) + ' · ' + formatDate(file.mtime)),
+              h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void reveal(file.path) } }, L('打开', 'Open')),
+              file.kind === 'video' && file.name.toLowerCase().endsWith('.webm')
+                ? h('button', { type: 'button', className: 'vsr-settings-link', disabled: converting !== null, onClick: () => { void convert(file) } }, L('转 MP4', 'To MP4'))
+                : null,
+              h('button', { type: 'button', className: 'vsr-settings-link vsr-danger', onClick: () => { void removeFile(file) } }, L('删除', 'Delete')))))))
     }
 
     // ---------------------------------------------------------------- icons
@@ -795,8 +1224,10 @@ window.__ModuleLoader__.load({
     function Picker(props) {
       const { picker } = props
       const [windowsOpen, setWindowsOpen] = useState(false)
-      const [systemAudio, setSystemAudio] = useState(true)
-      const [microphone, setMicrophone] = useState(true)
+      const storeSnapshot = useStore()
+      const defaults = storeSnapshot.settings || DEFAULT_SETTINGS
+      const [systemAudio, setSystemAudio] = useState(defaults.includeSystemAudio !== false)
+      const [microphone, setMicrophone] = useState(defaults.includeMic !== false)
       const image = useImage(picker.shotUrl)
       const lastKey = useMemo(() => {
         try { return sourceKey(JSON.parse(localStorage.getItem('vsr.lastSource') || 'null')) } catch { return '' }
@@ -877,7 +1308,7 @@ window.__ModuleLoader__.load({
           h('div', { className: 'vsr-modal-foot vsr-picker-foot' },
             h('label', { className: 'vsr-check' }, h('input', { type: 'checkbox', checked: systemAudio, onChange: event => setSystemAudio(event.target.checked) }), S.systemAudio),
             h('label', { className: 'vsr-check' }, h('input', { type: 'checkbox', checked: microphone, onChange: event => setMicrophone(event.target.checked) }), S.microphone),
-            h('span', { className: 'vsr-hint' }, S.hint))))
+            h('span', { className: 'vsr-hint' }, defaults.fps + ' fps · ' + Math.round(defaults.maxSeconds / 60) + L(' 分钟 · 窗口录制会录到遮挡物', ' min · window capture includes occluders')))))
     }
 
     // ------------------------------------------------------------ screenshot
@@ -893,6 +1324,9 @@ window.__ModuleLoader__.load({
       const [strokes, setStrokes] = useState([])
       const [draft, setDraft] = useState(null)
       const [textInput, setTextInput] = useState(null)
+      const [imageUrl, setImageUrl] = useState(shot.url)
+      const [hiddenDsh, setHiddenDsh] = useState(Boolean(shot.hiddenDsh))
+      const generatedUrls = useRef([])
       const wrapRef = useRef(null)
       const canvasRef = useRef(null)
       const dragRef = useRef(null)
@@ -915,6 +1349,35 @@ window.__ModuleLoader__.load({
         window.addEventListener('resize', onResize)
         return () => window.removeEventListener('resize', onResize)
       }, [])
+      useEffect(() => {
+        setImageUrl(shot.url)
+        setHiddenDsh(Boolean(shot.hiddenDsh))
+      }, [shot.url])
+      useEffect(() => () => {
+        for (const url of generatedUrls.current) { try { URL.revokeObjectURL(url) } catch { /* ignore */ } }
+      }, [])
+      async function toggleHideDsh() {
+        const next = !hiddenDsh
+        try {
+          const query = '?ts=' + Date.now() + (next ? '&hideDsh=1' : '')
+          const response = await fetch(PREFIX + '/shot' + query, { cache: 'no-store' })
+          if (!response.ok) throw new Error('HTTP ' + response.status)
+          const hidden = response.headers.get('x-vsr-hidden') === '1'
+          if (next && !hidden) {
+            toast(L('没有找到可隐藏的 DSH 窗口', 'No DSH window to hide'), { kind: 'error' })
+            return
+          }
+          const url = URL.createObjectURL(await response.blob())
+          generatedUrls.current.push(url)
+          setImageUrl(url)
+          setHiddenDsh(hidden)
+          setSel(null); selRef.current = null
+          setStrokes([]); draftRef.current = null; setDraft(null)
+          setPhase('select')
+        } catch (error) {
+          toast(L('切换底图失败：', 'Failed to switch base image: ') + friendly(error), { kind: 'error' })
+        }
+      }
       useEffect(() => {
         const old = document.body.style.overflow
         document.body.style.overflow = 'hidden'
@@ -1137,7 +1600,7 @@ window.__ModuleLoader__.load({
             if (blob) void saveScreenshot(blob, '截图-' + stamp() + '.jpg')
           }, 'image/jpeg', 0.9)
         }
-        image.src = shot.url
+        image.src = imageUrl
       }
 
       function confirmRegion() {
@@ -1186,7 +1649,7 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'vsr-overlay vsr-overlay-shot' },
         h('div', { className: 'vsr-shot-stage' },
           h('div', { ref: wrapRef, className: 'vsr-shot-wrap', style: { width: disp.w, height: disp.h }, onMouseDown: onDown, onMouseMove: onMove, onMouseUp: onUp, onMouseLeave: onUp },
-            h('img', { src: shot.url, className: 'vsr-shot-image', draggable: false, width: disp.w, height: disp.h, alt: '' }),
+            h('img', { src: imageUrl, className: 'vsr-shot-image', draggable: false, width: disp.w, height: disp.h, alt: '' }),
             h('canvas', { ref: canvasRef, className: 'vsr-shot-canvas' }),
             textInput ? h('input', {
               className: 'vsr-text-input',
@@ -1200,7 +1663,13 @@ window.__ModuleLoader__.load({
               },
               onBlur: commitText,
             }) : null),
-          h('div', { className: 'vsr-shot-topbar' }, isRegion ? S.regionHint : S.shotHint),
+          h('div', { className: 'vsr-shot-topbar' },
+            h('span', null, isRegion ? S.regionHint : S.shotHint),
+            h('button', {
+              type: 'button',
+              className: 'vsr-shot-hide' + (hiddenDsh ? ' vsr-shot-hide-on' : ''),
+              onClick: toggleHideDsh,
+            }, hiddenDsh ? L('显示 DSH 界面', 'Show DSH') : L('隐藏 DSH 界面', 'Hide DSH'))),
           phase === 'annotate' && !isRegion ? h('div', { className: 'vsr-toolbar-floating' },
             h('div', { className: 'vsr-toolgroup' },
               ...[['pen', '✎', S.pen], ['rect', '▭', S.rect], ['arrow', '↗', S.arrow], ['text', 'T', S.text]].map(([key, glyph, label]) =>
@@ -1315,7 +1784,10 @@ window.__ModuleLoader__.load({
 .vsr-shot-wrap { position: relative; cursor: crosshair; box-shadow: 0 20px 70px rgba(0,0,0,.45); border-radius: 2px; overflow: hidden; }
 .vsr-shot-image { display: block; user-select: none; pointer-events: none; }
 .vsr-shot-canvas { position: absolute; inset: 0; }
-.vsr-shot-topbar { color: #fff; font-size: 12px; opacity: .85; }
+.vsr-shot-topbar { display: flex; align-items: center; gap: 14px; color: #fff; font-size: 12px; opacity: .9; }
+.vsr-shot-hide { border: 1px solid rgba(255,255,255,.35); border-radius: 6px; background: rgba(0,0,0,.25); color: #fff; padding: 4px 9px; font: inherit; cursor: pointer; }
+.vsr-shot-hide:hover { background: rgba(255,255,255,.16); }
+.vsr-shot-hide-on { border-color: #4aa3ff; background: rgba(22,119,255,.35); }
 .vsr-text-input { position: absolute; z-index: 2; min-width: 80px; padding: 2px 4px; border: 1px dashed #fff; background: rgba(0,0,0,.35); color: #fff; font: 600 16px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; outline: none; }
 .vsr-toolbar-floating { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: rgba(24,24,27,.94); color: #fff; box-shadow: 0 16px 48px rgba(0,0,0,.45); backdrop-filter: blur(10px); }
 .vsr-toolgroup { display: flex; align-items: center; gap: 3px; }
@@ -1339,6 +1811,40 @@ window.__ModuleLoader__.load({
 .vsr-toast-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vsr-toast-x { border: 0; background: transparent; color: #fff; opacity: .55; cursor: pointer; font-size: 16px; line-height: 1; }
 .vsr-toast-x:hover { opacity: 1; }
+.vsr-settings { max-width: 900px; padding: 4px 2px 32px; display: flex; flex-direction: column; gap: 14px; color: var(--dsh-color-text-primary, #1f2329); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+.vsr-settings-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.vsr-settings-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+.vsr-card { border: 1px solid var(--dsh-color-border, rgba(0,0,0,.09)); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--dsh-color-bg-elevated, #fff); }
+.vsr-card h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.vsr-storage-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vsr-grow { flex: 1; min-width: 220px; }
+.vsr-input, .vsr-select { height: 32px; padding: 0 10px; border: 1px solid var(--dsh-color-border, rgba(0,0,0,.16)); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 13px; }
+.vsr-input[type="number"] { width: 90px; }
+.vsr-shortcut-input { width: 170px; cursor: pointer; }
+.vsr-btn-outline { border: 1px solid var(--dsh-color-border, rgba(0,0,0,.16)); background: transparent; color: inherit; border-radius: 8px; height: 32px; padding: 0 12px; cursor: pointer; font: inherit; font-size: 12px; }
+.vsr-btn-outline:hover { background: var(--dsh-color-fill-quaternary, rgba(0,0,0,.05)); }
+.vsr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 14px; }
+.vsr-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.vsr-field-label { color: var(--dsh-color-text-secondary, #6b7280); }
+.vsr-field-note { color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 11px; }
+.vsr-checks { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; }
+.vsr-path { word-break: break-all; }
+.vsr-settings-actions { display: flex; align-items: center; gap: 12px; }
+.vsr-settings-link { border: 0; background: transparent; color: var(--dsh-color-accent, #1677ff); cursor: pointer; font: inherit; font-size: 12px; padding: 0; }
+.vsr-settings-link:disabled { opacity: .45; cursor: default; }
+.vsr-danger { color: #e5484d; }
+.vsr-library-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.vsr-library-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vsr-filter { border: 1px solid var(--dsh-color-border, rgba(0,0,0,.16)); background: transparent; color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.vsr-filter-on { border-color: var(--dsh-color-accent, #1677ff); color: var(--dsh-color-accent, #1677ff); background: rgba(22,119,255,.1); }
+.vsr-file-list { display: flex; flex-direction: column; gap: 2px; max-height: 340px; overflow: auto; }
+.vsr-file-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--dsh-color-border, rgba(0,0,0,.07)); font-size: 12px; }
+.vsr-file-kind { flex: none; min-width: 36px; padding: 2px 6px; border-radius: 5px; background: rgba(22,119,255,.12); color: #1677ff; text-align: center; font-size: 11px; }
+.vsr-file-kind-image { background: rgba(46,164,79,.14); color: #2ea44f; }
+.vsr-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vsr-file-meta { flex: none; color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 11px; }
+.vsr-empty { color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 12px; padding: 12px 0; }
+.vsr-convert { display: flex; flex-direction: column; gap: 6px; }
 @media (prefers-color-scheme: dark) {
   .vsr-modal { background: #1f2329; color: #e8e9eb; }
   .vsr-modal-foot { border-top-color: rgba(255,255,255,.1); }
@@ -1357,6 +1863,7 @@ window.__ModuleLoader__.load({
     function apply(ctx) {
       try {
         installStyles()
+        void loadClientSettings()
         ctx.effect(() => ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
           name: 'conversation.input.left',
           id: 'vyra-screen-recorder.tools',
@@ -1367,6 +1874,37 @@ window.__ModuleLoader__.load({
           id: 'vyra-screen-recorder.overlay',
           order: 90,
         }, RootOverlay)), 'vyra-screen-recorder: overlay')
+        ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register({
+          name: 'settings.section',
+          id: 'vyra-screen-recorder',
+          order: 37,
+          label: () => L('录屏截图', 'Screen recorder'),
+        }, SettingsPage)), 'vyra-screen-recorder: settings')
+        ctx.effect(() => ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
+          name: 'settings.section.icon',
+          id: 'vyra-screen-recorder',
+          order: 37,
+        }, SettingsIcon)), 'vyra-screen-recorder: settings icon')
+        const onShortcut = event => {
+          if (event.repeat) return
+          const target = event.target
+          if (target && typeof target.closest === 'function' && target.closest('input,textarea,select,[contenteditable="true"]')) return
+          if (state.picker || state.shot) return
+          const settings = state.settings || DEFAULT_SETTINGS
+          if (matchesShortcut(event, settings.shortcuts.screenshot)) {
+            if (state.phase !== 'idle') return
+            event.preventDefault()
+            void takeScreenshot()
+            return
+          }
+          if (matchesShortcut(event, settings.shortcuts.record)) {
+            if (state.agentRecording) return
+            if (state.phase === 'recording') { event.preventDefault(); void stopRecording() }
+            else if (state.phase === 'idle') { event.preventDefault(); void openPicker() }
+          }
+        }
+        window.addEventListener('keydown', onShortcut, true)
+        ctx.effect(() => () => window.removeEventListener('keydown', onShortcut, true), 'vyra-screen-recorder: shortcuts')
         const onPageHide = () => {
           if (state.phase === 'recording' || state.phase === 'starting') {
             try { navigator.sendBeacon(PREFIX + '/record/discard', '') } catch { /* ignore */ }

@@ -86,8 +86,96 @@ function dshHome() {
   return process.env.DSH_HOME || path.join(homedir(), '.dsh')
 }
 
-function recordingsDir() {
-  return process.env.VSR_RECORDINGS_DIR || path.join(dshHome(), 'vyra-screen-recorder', 'recordings')
+const DEFAULT_SETTINGS = {
+  dir: '',
+  format: 'mp4',
+  fps: 8,
+  quality: 65,
+  maxEdge: 1920,
+  maxSeconds: 600,
+  includeSystemAudio: true,
+  includeMic: true,
+  hideDshOnShot: false,
+  shortcuts: { screenshot: 'Ctrl+Alt+S', record: 'Ctrl+Alt+R' },
+}
+
+function settingsPath() {
+  return path.join(dshHome(), 'vyra-screen-recorder', 'settings.json')
+}
+
+function normalizeShortcut(value, fallback) {
+  return typeof value === 'string' && /^([A-Za-z0-9+_-]{1,40})$/.test(value.trim()) ? value.trim() : fallback
+}
+
+function normalizeSettings(raw) {
+  const value = raw && typeof raw === 'object' ? raw : {}
+  const dir = typeof value.dir === 'string' && value.dir.trim() && path.isAbsolute(value.dir.trim())
+    ? value.dir.trim()
+    : ''
+  return {
+    dir,
+    format: value.format === 'webm' ? 'webm' : 'mp4',
+    fps: clamp(value.fps, 4, 12, DEFAULT_SETTINGS.fps),
+    quality: clamp(value.quality, 40, 90, DEFAULT_SETTINGS.quality),
+    maxEdge: clamp(value.maxEdge, 320, 2560, DEFAULT_SETTINGS.maxEdge),
+    maxSeconds: clamp(value.maxSeconds, 10, MAX_SECONDS, DEFAULT_SETTINGS.maxSeconds),
+    includeSystemAudio: value.includeSystemAudio !== false,
+    includeMic: value.includeMic !== false,
+    hideDshOnShot: value.hideDshOnShot === true,
+    shortcuts: {
+      screenshot: normalizeShortcut(value.shortcuts && value.shortcuts.screenshot, DEFAULT_SETTINGS.shortcuts.screenshot),
+      record: normalizeShortcut(value.shortcuts && value.shortcuts.record, DEFAULT_SETTINGS.shortcuts.record),
+    },
+  }
+}
+
+async function loadSettings() {
+  try {
+    const raw = JSON.parse(await readFile(settingsPath(), 'utf8'))
+    return normalizeSettings(raw)
+  } catch {
+    return normalizeSettings(DEFAULT_SETTINGS)
+  }
+}
+
+async function saveSettings(patch) {
+  const current = await loadSettings()
+  const value = patch && typeof patch === 'object' ? patch : {}
+  const merged = normalizeSettings({
+    ...current,
+    ...value,
+    shortcuts: { ...current.shortcuts, ...(value.shortcuts && typeof value.shortcuts === 'object' ? value.shortcuts : {}) },
+  })
+  await mkdir(path.dirname(settingsPath()), { recursive: true })
+  await writeFile(settingsPath(), JSON.stringify(merged, null, 2), { mode: 0o600 })
+  return merged
+}
+
+function libraryRoot(settings) {
+  const env = process.env.VSR_LIBRARY_DIR
+  if (env) return path.resolve(env)
+  if (settings && settings.dir) return settings.dir
+  return path.join(homedir(), 'Videos', 'Vyra Screen Recorder')
+}
+
+function recordingsDir(settings) {
+  return process.env.VSR_RECORDINGS_DIR || path.join(libraryRoot(settings), 'recordings')
+}
+
+function screenshotsDir(settings) {
+  return process.env.VSR_SCREENSHOTS_DIR || path.join(libraryRoot(settings), 'screenshots')
+}
+
+async function ensureLibrary(settings) {
+  await mkdir(recordingsDir(settings), { recursive: true })
+  await mkdir(screenshotsDir(settings), { recursive: true })
+}
+
+function timestampName() {
+  const now = new Date()
+  const pad = value => String(value).padStart(2, '0')
+  return String(now.getFullYear()) + pad(now.getMonth() + 1) + pad(now.getDate())
+    + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds())
 }
 
 function safeName(value, fallback) {
@@ -238,21 +326,25 @@ async function installAgentAssets() {
   await writeFile(path.join(binDir, 'vsr'),
     '#!/bin/sh\nexport ELECTRON_RUN_AS_NODE=1\nexec "' + node.replace(/\\/g, '/') + '" "' + cli.replace(/\\/g, '/') + '" "$@"\n')
   await mkdir(agentDir(), { recursive: true })
+  await ensureLibrary(await loadSettings())
 }
 
 async function beginAgentJob(request) {
-  const duration = clamp(request.duration, 2, MAX_SECONDS, 10)
+  const settings = await loadSettings()
+  const duration = clamp(request.duration, 2, MAX_SECONDS, settings.maxSeconds)
+  const format = request.format === 'webm' ? 'webm' : (request.format === 'mp4' ? 'mp4' : settings.format)
   const result = await startSession({
     source: request.source,
-    fps: request.fps,
-    quality: request.quality,
-    maxEdge: request.maxEdge,
+    fps: request.fps !== undefined ? request.fps : settings.fps,
+    quality: request.quality !== undefined ? request.quality : settings.quality,
+    maxEdge: request.maxEdge !== undefined ? request.maxEdge : settings.maxEdge,
     maxSeconds: duration,
     includeSystemAudio: request.includeSystemAudio !== false,
   })
   agentJob = {
     id: request.id,
     request,
+    format,
     status: 'recording',
     startedAt: result.startedAt,
     timer: null,
@@ -263,6 +355,7 @@ async function beginAgentJob(request) {
     status: 'recording',
     startedAt: result.startedAt,
     duration,
+    format,
     includeMic: request.includeMic !== false,
     out: request.out,
   })
@@ -283,6 +376,7 @@ async function finishAgentJob() {
     await writeAgentState(job.id, {
       status: 'encoding',
       manifest,
+      format: job.format,
       includeMic: job.request.includeMic !== false,
       out: job.request.out,
     })
@@ -535,15 +629,20 @@ async function handleShot(req, res) {
   if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
   const url = new URL(req.url || PREFIX, 'http://localhost')
   const region = url.searchParams.get('region') || ''
+  const hideDsh = url.searchParams.get('hideDsh') === '1'
   const dir = await mkdtemp(path.join(tmpdir(), SESSION_PREFIX + 'shot-'))
   const file = path.join(dir, 'shot.jpg')
   try {
     const args = ['-Out', file, '-Quality', '88']
     if (region) args.push('-Region', region)
+    if (hideDsh) args.push('-HideDsh', '-DshPid', String(process.ppid))
     const child = runPowerShell('shot.ps1', args)
     let stderr = ''
+    let stdout = ''
     child.stderr.setEncoding('utf8')
     child.stderr.on('data', chunk => { stderr += chunk })
+    child.stdout.setEncoding('utf8')
+    child.stdout.on('data', chunk => { stdout += chunk })
     const exited = await new Promise(resolve => {
       const timer = setTimeout(() => { try { child.kill() } catch { /* ignore */ } resolve(false) }, 20000)
       child.once('exit', code => { clearTimeout(timer); resolve(code === 0) })
@@ -552,10 +651,13 @@ async function handleShot(req, res) {
     if (!exited) throw new Error('截图超时' + (stderr ? '：' + stderr.slice(0, 200) : ''))
     const buffer = await readFile(file)
     if (buffer.length === 0) throw new Error('截图是空的')
+    const hiddenMatch = /hidden=(\d+)/.exec(stdout)
+    const hidden = hiddenMatch !== null && Number(hiddenMatch[1]) > 0
     res.writeHead(200, {
       'content-type': 'image/jpeg',
       'content-length': buffer.length,
       'cache-control': 'no-store',
+      'x-vsr-hidden': hidden ? '1' : '0',
     })
     res.end(buffer)
   } catch (error) {
@@ -651,15 +753,18 @@ async function handleAudio(req, res) {
 async function handleSave(req, res) {
   if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
   const url = new URL(req.url || PREFIX, 'http://localhost')
-  const name = safeName(url.searchParams.get('name'), 'recording.webm')
+  const kind = url.searchParams.get('kind') === 'image' ? 'image' : 'video'
+  const fallback = kind === 'image' ? '截图.jpg' : '录屏.webm'
+  const name = safeName(url.searchParams.get('name'), fallback)
   try {
     const body = await readBody(req, SAVE_LIMIT)
     if (body.length === 0) throw new Error('没有收到数据')
-    const dir = recordingsDir()
-    await mkdir(dir, { recursive: true })
+    const settings = await loadSettings()
+    await ensureLibrary(settings)
+    const dir = kind === 'image' ? screenshotsDir(settings) : recordingsDir(settings)
     const file = path.join(dir, name)
     await writeFile(file, body)
-    sendJson(res, 200, { ok: true, file, dir, bytes: body.length })
+    sendJson(res, 200, { ok: true, file, dir, bytes: body.length, kind })
   } catch (error) {
     sendJson(res, 500, { ok: false, error: String(error && error.message || error) })
   }
@@ -670,13 +775,20 @@ async function handleServe(req, res) {
   const url = new URL(req.url || PREFIX, 'http://localhost')
   const name = safeName(url.searchParams.get('name'), '')
   if (!name) { sendJson(res, 400, { ok: false, error: '文件名无效' }); return }
-  const full = path.join(recordingsDir(), name)
-  if (!existsSync(full)) { sendJson(res, 404, { ok: false, error: '文件不存在' }); return }
+  const settings = await loadSettings()
+  const kind = url.searchParams.get('kind')
+  const candidates = kind === 'image' ? [screenshotsDir(settings)]
+    : kind === 'video' ? [recordingsDir(settings)]
+      : [recordingsDir(settings), screenshotsDir(settings)]
+  const full = candidates.map(dir => path.join(dir, name)).find(candidate => existsSync(candidate))
+  if (!full) { sendJson(res, 404, { ok: false, error: '文件不存在' }); return }
   try {
     const info = await stat(full)
-    const type = name.toLowerCase().endsWith('.webm') ? 'video/webm'
-      : name.toLowerCase().endsWith('.jpg') || name.toLowerCase().endsWith('.jpeg') ? 'image/jpeg'
-        : 'application/octet-stream'
+    const lower = name.toLowerCase()
+    const type = lower.endsWith('.webm') ? 'video/webm'
+      : lower.endsWith('.mp4') ? 'video/mp4'
+        : lower.endsWith('.jpg') || lower.endsWith('.jpeg') ? 'image/jpeg'
+          : 'application/octet-stream'
     res.writeHead(200, { 'content-type': type, 'content-length': info.size, 'cache-control': 'no-store' })
     createReadStream(full).pipe(res)
   } catch (error) {
@@ -688,10 +800,14 @@ async function handleReveal(req, res) {
   if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
   const url = new URL(req.url || PREFIX, 'http://localhost')
   const target = url.searchParams.get('path') || ''
-  const root = path.resolve(recordingsDir())
+  const settings = await loadSettings()
+  const roots = [libraryRoot(settings), recordingsDir(settings), screenshotsDir(settings)].map(item => path.resolve(item))
   const full = path.resolve(target)
-  const relative = path.relative(root, full)
-  if (!full || relative.startsWith('..') || path.isAbsolute(relative)) {
+  const allowed = roots.some(root => {
+    const relative = path.relative(root, full)
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+  })
+  if (!full || !allowed) {
     sendJson(res, 400, { ok: false, error: '只能打开录制目录内的路径' })
     return
   }
@@ -706,6 +822,103 @@ async function handleReveal(req, res) {
   }
 }
 
+async function handleSettings(req, res) {
+  if (req.method === 'GET') {
+    try {
+      const settings = await loadSettings()
+      await ensureLibrary(settings)
+      sendJson(res, 200, {
+        ok: true,
+        settings,
+        paths: {
+          root: libraryRoot(settings),
+          recordings: recordingsDir(settings),
+          screenshots: screenshotsDir(settings),
+          settings: settingsPath(),
+        },
+      })
+    } catch (error) {
+      sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+    }
+    return
+  }
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 GET/POST' }); return }
+  try {
+    const body = await readBody(req, 1024 * 1024)
+    const payload = body.length ? JSON.parse(body.toString('utf8')) : {}
+    const settings = await saveSettings(payload)
+    await ensureLibrary(settings)
+    sendJson(res, 200, {
+      ok: true,
+      settings,
+      paths: {
+        root: libraryRoot(settings),
+        recordings: recordingsDir(settings),
+        screenshots: screenshotsDir(settings),
+        settings: settingsPath(),
+      },
+    })
+  } catch (error) {
+    sendJson(res, 400, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+async function handleLibrary(req, res) {
+  if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
+  try {
+    const settings = await loadSettings()
+    const sources = [
+      { kind: 'video', dir: recordingsDir(settings), extensions: ['.webm', '.mp4'] },
+      { kind: 'image', dir: screenshotsDir(settings), extensions: ['.jpg', '.jpeg', '.png'] },
+    ]
+    const files = []
+    for (const source of sources) {
+      let names = []
+      try { names = await readdir(source.dir) } catch { continue }
+      for (const name of names) {
+        const lower = name.toLowerCase()
+        if (!source.extensions.some(extension => lower.endsWith(extension))) continue
+        try {
+          const info = await stat(path.join(source.dir, name))
+          if (!info.isFile()) continue
+          files.push({
+            name,
+            kind: source.kind,
+            size: info.size,
+            mtime: info.mtimeMs,
+            path: path.join(source.dir, name),
+            dir: source.dir,
+          })
+        } catch { /* ignore */ }
+      }
+    }
+    files.sort((left, right) => right.mtime - left.mtime)
+    sendJson(res, 200, { ok: true, root: libraryRoot(settings), files: files.slice(0, 300) })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+async function handleLibraryDelete(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  try {
+    const body = await readBody(req, 1024 * 1024)
+    const payload = body.length ? JSON.parse(body.toString('utf8')) : {}
+    const kind = payload.kind === 'image' ? 'image' : 'video'
+    const name = safeName(payload.name, '')
+    if (!name) throw new Error('文件名无效')
+    const settings = await loadSettings()
+    const dir = kind === 'image' ? screenshotsDir(settings) : recordingsDir(settings)
+    const full = path.join(dir, name)
+    const relative = path.relative(dir, full)
+    if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('路径无效')
+    await rm(full, { force: true })
+    sendJson(res, 200, { ok: true, deleted: full })
+  } catch (error) {
+    sendJson(res, 400, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
 async function handleAgentStatus(req, res) {
   if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
   if (agentJob === null) { sendJson(res, 200, { ok: true, job: null }); return }
@@ -715,6 +928,7 @@ async function handleAgentStatus(req, res) {
       id: agentJob.id,
       status: agentJob.status,
       startedAt: agentJob.startedAt,
+      format: agentJob.format,
       includeMic: agentJob.request.includeMic !== false,
       out: agentJob.request.out,
       manifest: agentJob.manifest,
@@ -733,10 +947,18 @@ async function handleAgentSave(req, res) {
   try {
     const body = await readBody(req, SAVE_LIMIT)
     if (body.length === 0) throw new Error('没有收到视频数据')
+    const settings = await loadSettings()
+    await ensureLibrary(settings)
     const requested = String(agentJob.request.out || '').trim()
-    const file = requested
+    const actualFormat = url.searchParams.get('format') === 'webm' ? 'webm' : 'mp4'
+    let file = requested
       ? path.resolve(requested)
-      : path.join(recordingsDir(), 'agent-' + id + '.webm')
+      : path.join(recordingsDir(settings), '录屏-' + timestampName() + '.' + actualFormat)
+    if (requested) {
+      const extension = path.extname(file).toLowerCase()
+      const wanted = '.' + actualFormat
+      if (extension !== wanted) file = file.slice(0, extension ? -extension.length : file.length) + wanted
+    }
     await mkdir(path.dirname(file), { recursive: true })
     await writeFile(file, body)
     await writeAgentState(id, { status: 'done', file, dir: path.dirname(file), bytes: body.length })
@@ -789,6 +1011,9 @@ const ROUTES = [
   { kind: 'prefix', path: PREFIX + '/agent/status', handler: handleAgentStatus },
   { kind: 'prefix', path: PREFIX + '/agent/save', handler: handleAgentSave },
   { kind: 'prefix', path: PREFIX + '/agent/error', handler: handleAgentError },
+  { kind: 'prefix', path: PREFIX + '/settings', handler: handleSettings },
+  { kind: 'prefix', path: PREFIX + '/library/delete', handler: handleLibraryDelete },
+  { kind: 'prefix', path: PREFIX + '/library', handler: handleLibrary },
   { kind: 'prefix', path: PREFIX + '/reveal', handler: handleReveal },
 ]
 

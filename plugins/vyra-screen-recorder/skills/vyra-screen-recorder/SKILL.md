@@ -1,6 +1,6 @@
 ---
 name: vyra-screen-recorder
-description: Windows 录屏、截图与可录制源枚举（vyra-screen-recorder 插件提供的 vsr CLI）。截图不需要 DSH 运行；录屏需要 DSH Web 界面保持打开以完成 WebCodecs 编码。
+description: Windows 录屏、截图、录制源枚举与文件列表（vyra-screen-recorder 插件提供的 vsr CLI）。截图/枚举/文件列表不需要 DSH 运行；录屏需要 DSH Web 界面保持打开以完成 WebCodecs 编码。
 ---
 
 # 录屏 / 截图 CLI
@@ -20,11 +20,13 @@ PowerShell / cmd 用 `vsr.cmd`。
 ```bash
 vsr shot --out ./shot.jpg
 vsr shot --out ./region.jpg --region 100,100,800,600
-vsr shot --out ./small.jpg --max-edge 1920 --quality 80
+vsr shot --hide-dsh --out ./behind-dsh.jpg
+vsr shot                  # 省略 --out：保存到设置的截图目录
 ```
 
 - 默认抓整个虚拟桌面（所有显示器）。
 - `--region x,y,w,h` 只抓一块；`--max-edge` 缩放长边；`--quality` 是 JPEG 质量。
+- `--hide-dsh` 先隐藏 DSH 窗口再抓，用来截取被 DSH 挡住的其他应用。
 - 输出路径会解析成绝对路径，父目录不存在会自动创建。
 
 ## 列出可录制源
@@ -36,20 +38,34 @@ vsr sources --json
 返回 `virtual`、`monitors`、`windows`。窗口项里有 `hwnd`、`title`、`process` 和矩形，
 `hwnd` 用于 `--source window:<hwnd>`。
 
+## 列出已保存文件
+
+```bash
+vsr files --json
+vsr files
+```
+
+返回录制目录和截图目录里的文件（名称、类型、大小、时间、路径）。
+默认根目录是 `我的视频/Vyra Screen Recorder`，可在 DSH 设置 → 录屏截图里改。
+
 ## 录屏（需要 DSH Web 界面打开）
 
 ```bash
-vsr record --duration 10 --out ./demo.webm --source desktop
-vsr record --duration 15 --out ./demo.webm --source window:123456
-vsr record --duration 8  --out ./demo.webm --source monitor:1 --no-mic
-vsr record --duration 8  --out ./demo.webm --source region:100,100,800,600 --no-audio
+vsr record --duration 10 --out ./demo.mp4 --source desktop
+vsr record --duration 10 --source desktop          # 省略 --out：存到录制目录
+vsr record --duration 10 --format webm --out ./demo.webm --source desktop
+vsr record --duration 15 --out ./demo.mp4 --source window:123456
+vsr record --duration 8  --out ./demo.mp4 --source monitor:1 --no-mic
+vsr record --duration 8  --out ./demo.mp4 --source region:100,100,800,600 --no-audio
 ```
 
-- CLI 把请求写到本地队列；DSH 宿主开始抓屏，DSH 的 Web 界面用 WebCodecs 编成 WebM，
-  保存到 `--out`（覆盖同名文件）。
+- CLI 把请求写到本地队列；DSH 宿主开始抓屏，DSH 的 Web 界面用 WebCodecs 编码，
+  保存到 `--out`（覆盖同名文件）或默认录制目录。
 - **DSH Web 界面必须打开**。如果编码阶段超时，告诉用户先打开 DSH，再重试。
-- 默认录系统声音 + 麦克风；`--no-audio` / `--no-mic` 分别关闭。
-- 可调 `--fps`（4-12，默认 8）、`--quality`（40-90，默认 65）、`--max-edge`（默认 1920）。
+- 默认格式（MP4 / WebM）、帧率、质量、长边、最长时长、系统声音/麦克风都从设置页读取；
+  `--format`、`--fps`、`--quality`、`--max-edge`、`--no-audio` / `--no-mic` 可临时覆盖。
+- 默认 MP4（H.264 / AAC）；如果环境不支持 H.264/AAC，会自动落回 WebM，返回的 `file`
+  可能是 `.webm`，以实际路径为准。
 - `--json` 输出机器可读结果：`{"ok":true,"file":"...","bytes":123}`。
 - 一次只允许一路录制；用户已经在录时，CLI 会报错。
 
@@ -58,4 +74,4 @@ vsr record --duration 8  --out ./demo.webm --source region:100,100,800,600 --no-
 - 窗口录制录的是屏幕像素，别的窗口盖上去会一起录进去。
 - 受 DRM 保护的音频可能录不到。
 - 不要在用户没有明确要求时录制敏感内容。
-- 录屏最长 10 分钟；停止后需要等待编码完成。
+- 录屏最长 10 分钟（可在设置页调整）；停止后需要等待编码完成。

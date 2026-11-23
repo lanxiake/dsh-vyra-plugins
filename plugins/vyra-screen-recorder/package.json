@@ -1,9 +1,9 @@
 {
   "name": "vyra-screen-recorder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 WebM；截图带选区与基础标注。",
+  "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 MP4 / WebM；截图带选区与标注、设置页、快捷键和文件管理。",
   "main": "./index.js",
   "bin": {
     "vsr": "bin/vsr.mjs"

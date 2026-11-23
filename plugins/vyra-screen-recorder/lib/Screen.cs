@@ -148,6 +148,10 @@ public static class ScreenCapture
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
     [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")]
     private static extern bool GetCursorInfo(ref CURSORINFO pci);
     [DllImport("user32.dll")]
     private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
@@ -277,6 +281,53 @@ public static class ScreenCapture
             GetWindowRect(hWnd, out rect);
         }
         return rect;
+    }
+
+    /** 某个进程的可见顶层窗口。 */
+    public static long[] FindProcessWindows(int pid)
+    {
+        List<long> found = new List<long>();
+        EnumWindows(new EnumWindowsProc(delegate(IntPtr hWnd, IntPtr lParam)
+        {
+            uint windowPid;
+            GetWindowThreadProcessId(hWnd, out windowPid);
+            if (windowPid == (uint)pid && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0)
+                found.Add(hWnd.ToInt64());
+            return true;
+        }), IntPtr.Zero);
+        return found.ToArray();
+    }
+
+    /** 按标题包含关系找可见顶层窗口（找不到进程时兜底）。 */
+    public static long[] FindTitleWindows(string needle)
+    {
+        List<long> found = new List<long>();
+        EnumWindows(new EnumWindowsProc(delegate(IntPtr hWnd, IntPtr lParam)
+        {
+            if (!IsWindowVisible(hWnd)) return true;
+            int length = GetWindowTextLength(hWnd);
+            if (length <= 0) return true;
+            StringBuilder title = new StringBuilder(length + 1);
+            GetWindowText(hWnd, title, title.Capacity);
+            if (title.ToString().IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0)
+                found.Add(hWnd.ToInt64());
+            return true;
+        }), IntPtr.Zero);
+        return found.ToArray();
+    }
+
+    /** 隐藏窗口；截图前用它让 DSH 界面不挡住后面的窗口。 */
+    public static void HideWindow(long hwnd)
+    {
+        ShowWindow(new IntPtr(hwnd), 0);
+    }
+
+    /** 重新显示窗口并尝试取回前台。 */
+    public static void ShowWindowFor(long hwnd)
+    {
+        IntPtr handle = new IntPtr(hwnd);
+        ShowWindow(handle, 5);
+        try { SetForegroundWindow(handle); } catch { }
     }
 
     /** 窗口当前矩形；窗口失效/最小化时返回 null。 */

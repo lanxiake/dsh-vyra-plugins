@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,5 +38,28 @@ test('vsr shot 写出 JPEG', { skip: !windows, timeout }, async () => {
     assert.deepEqual([...buffer.subarray(0, 3)], [0xff, 0xd8, 0xff])
   } finally {
     await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('vsr files --json 读取设置目录', async () => {
+  const home = await mkdtemp(path.join(tmpdir(), 'vsr-cli-home-'))
+  try {
+    const library = path.join(home, 'library')
+    await mkdir(path.join(library, 'recordings'), { recursive: true })
+    await mkdir(path.join(library, 'screenshots'), { recursive: true })
+    await mkdir(path.join(home, 'vyra-screen-recorder'), { recursive: true })
+    await writeFile(path.join(home, 'vyra-screen-recorder', 'settings.json'), JSON.stringify({ dir: library }))
+    await writeFile(path.join(library, 'recordings', 'a.mp4'), 'x')
+    await writeFile(path.join(library, 'screenshots', 'b.jpg'), 'y')
+    const output = execFileSync(process.execPath, [cli, 'files', '--json'], {
+      encoding: 'utf8', timeout, windowsHide: true, env: { ...process.env, DSH_HOME: home },
+    })
+    const data = JSON.parse(output)
+    assert.equal(data.ok, true)
+    assert.equal(data.root, library)
+    assert.ok(data.files.some(file => file.name === 'a.mp4' && file.kind === 'video'))
+    assert.ok(data.files.some(file => file.name === 'b.jpg' && file.kind === 'image'))
+  } finally {
+    await rm(home, { recursive: true, force: true })
   }
 })

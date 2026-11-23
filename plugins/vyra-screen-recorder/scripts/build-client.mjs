@@ -5,10 +5,14 @@ import { fileURLToPath } from 'node:url'
 const scripts = path.dirname(fileURLToPath(import.meta.url))
 const plugin = path.dirname(scripts)
 const body = readFileSync(path.join(plugin, 'src/client.body.js'), 'utf8')
-const vendor = readFileSync(path.join(plugin, 'vendor/webm-muxer.js'), 'utf8')
-const marker = '/*__WEBM_MUXER__*/'
-if (!body.includes(marker)) throw new Error('src/client.body.js 缺少 ' + marker)
-const output = body.replace(marker, vendor)
+const webm = readFileSync(path.join(plugin, 'vendor/webm-muxer.js'), 'utf8')
+const mp4 = readFileSync(path.join(plugin, 'vendor/mp4-muxer.js'), 'utf8')
+if (!body.includes('/*__WEBM_MUXER__*/') || !body.includes('/*__MP4_MUXER__*/')) {
+  throw new Error('src/client.body.js 缺少 muxer 占位符')
+}
+const output = body
+  .replace('/*__WEBM_MUXER__*/', webm)
+  .replace('/*__MP4_MUXER__*/', mp4)
 const target = path.join(plugin, 'client.js')
 if (process.argv.includes('--check')) {
   const current = readFileSync(target, 'utf8')

@@ -16,19 +16,65 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 const AGENT_DIR = path.join(HOME, 'vyra-screen-recorder', 'agent')
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version
+const SETTINGS_FILE = path.join(HOME, 'vyra-screen-recorder', 'settings.json')
+
+const DEFAULT_SETTINGS = {
+  dir: '',
+  format: 'mp4',
+  fps: 8,
+  quality: 65,
+  maxEdge: 1920,
+  maxSeconds: 600,
+  includeSystemAudio: true,
+  includeMic: true,
+  hideDshOnShot: false,
+  shortcuts: { screenshot: 'Ctrl+Alt+S', record: 'Ctrl+Alt+R' },
+}
+
+function loadSettings() {
+  try {
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) }
+  } catch {
+    return DEFAULT_SETTINGS
+  }
+}
+
+function libraryRoot(settings) {
+  if (process.env.VSR_LIBRARY_DIR) return path.resolve(process.env.VSR_LIBRARY_DIR)
+  if (settings.dir) return settings.dir
+  return path.join(os.homedir(), 'Videos', 'Vyra Screen Recorder')
+}
+
+function recordingsDir(settings) {
+  return process.env.VSR_RECORDINGS_DIR || path.join(libraryRoot(settings), 'recordings')
+}
+
+function screenshotsDir(settings) {
+  return process.env.VSR_SCREENSHOTS_DIR || path.join(libraryRoot(settings), 'screenshots')
+}
+
+function timestamp() {
+  const now = new Date()
+  const pad = value => String(value).padStart(2, '0')
+  return String(now.getFullYear()) + pad(now.getMonth() + 1) + pad(now.getDate())
+    + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds())
+}
 
 const HELP = `vyra-screen-recorder ${VERSION}
 
 用法：
-  vsr shot    --out <文件> [--region x,y,w,h] [--max-edge N] [--quality 1-100] [--no-cursor] [--json]
+  vsr shot    [--out <文件>] [--region x,y,w,h] [--max-edge N] [--quality 1-100] [--no-cursor] [--hide-dsh] [--json]
   vsr sources [--json]
-  vsr record  --duration <秒> --out <文件> [--source desktop|monitor:<n>|window:<hwnd>|region:x,y,w,h]
+  vsr files   [--json]
+  vsr record  [--duration <秒>] [--out <文件>] [--format mp4|webm] [--source desktop|monitor:<n>|window:<hwnd>|region:x,y,w,h]
               [--fps 4-12] [--quality 40-90] [--max-edge N] [--no-audio] [--no-mic] [--json]
   vsr --help | --version
 
 说明：
-  - 截图和 sources 不依赖 DSH 运行。
-  - 录屏需要 DSH Web 界面保持打开：宿主抓屏，界面用 WebCodecs 编码并保存到 --out。
+  - 截图、sources、files 不依赖 DSH 运行。
+  - 截图省略 --out 时保存到设置的截图目录。
+  - 录屏省略 --out 时由宿主保存到设置的录制目录；默认格式读设置（默认 MP4）。
+  - 录屏需要 DSH Web 界面保持打开：宿主抓屏，界面用 WebCodecs 编码。
   - CLI 路径：${path.join(ROOT, 'bin', 'vsr.mjs')}
 `
 
@@ -109,18 +155,47 @@ function resolveSource(value) {
 
 function shot(argv) {
   const options = parseArgs(argv)
+  const settings = loadSettings()
   const out = options.out || options._[0]
-  if (!out) fail('shot 需要 --out <文件>')
-  const file = path.resolve(process.cwd(), String(out))
+  const file = out
+    ? path.resolve(process.cwd(), String(out))
+    : path.join(screenshotsDir(settings), '截图-' + timestamp() + '.jpg')
   fs.mkdirSync(path.dirname(file), { recursive: true })
   const args = ['-Out', file]
   if (options.region) args.push('-Region', String(options.region))
   if (options['max-edge']) args.push('-MaxEdge', String(options['max-edge']))
   if (options.quality) args.push('-Quality', String(options.quality))
   if (options['no-cursor']) args.push('-NoCursor')
+  if (options['hide-dsh']) args.push('-HideDsh')
   runPowerShell('shot.ps1', args)
   if (options.json) console.log(JSON.stringify({ ok: true, file }))
   else console.log('file=' + file)
+}
+
+function listFiles(argv) {
+  const options = parseArgs(argv)
+  const settings = loadSettings()
+  const sources = [
+    { kind: 'video', dir: recordingsDir(settings), extensions: ['.mp4', '.webm'] },
+    { kind: 'image', dir: screenshotsDir(settings), extensions: ['.jpg', '.jpeg', '.png'] },
+  ]
+  const files = []
+  for (const source of sources) {
+    let names = []
+    try { names = fs.readdirSync(source.dir) } catch { continue }
+    for (const name of names) {
+      const lower = name.toLowerCase()
+      if (!source.extensions.some(extension => lower.endsWith(extension))) continue
+      try {
+        const info = fs.statSync(path.join(source.dir, name))
+        if (!info.isFile()) continue
+        files.push({ name, kind: source.kind, size: info.size, mtime: info.mtimeMs, path: path.join(source.dir, name) })
+      } catch { /* ignore */ }
+    }
+  }
+  files.sort((left, right) => right.mtime - left.mtime)
+  if (options.json) { console.log(JSON.stringify({ ok: true, root: libraryRoot(settings), files })); return }
+  for (const file of files) console.log(file.name + '\t' + file.size + '\t' + file.kind)
 }
 
 function listSources(argv) {
@@ -152,9 +227,15 @@ function sleep(ms) {
 
 async function record(argv) {
   const options = parseArgs(argv)
+  const settings = loadSettings()
   const out = options.out || options._[0]
-  if (!out) fail('record 需要 --out <文件>')
-  const outFile = path.resolve(process.cwd(), String(out))
+  const outFile = out ? path.resolve(process.cwd(), String(out)) : ''
+  const lower = outFile.toLowerCase()
+  const format = options.format === 'webm' ? 'webm'
+    : options.format === 'mp4' ? 'mp4'
+      : lower.endsWith('.webm') ? 'webm'
+        : lower.endsWith('.mp4') ? 'mp4'
+          : (settings.format === 'webm' ? 'webm' : 'mp4')
   const duration = clampInt(options.duration, 2, 600, 10)
   const source = resolveSource(options.source)
   const id = 'vsr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
@@ -163,16 +244,17 @@ async function record(argv) {
     action: 'record',
     source,
     duration,
-    fps: clampInt(options.fps, 4, 12, 8),
-    quality: clampInt(options.quality, 40, 90, 65),
-    maxEdge: clampInt(options['max-edge'], 320, 2560, 1920),
-    includeSystemAudio: !options['no-audio'],
-    includeMic: !options['no-mic'],
+    format,
+    fps: clampInt(options.fps, 4, 12, settings.fps),
+    quality: clampInt(options.quality, 40, 90, settings.quality),
+    maxEdge: clampInt(options['max-edge'], 320, 2560, settings.maxEdge),
+    includeSystemAudio: options['no-audio'] ? false : settings.includeSystemAudio !== false,
+    includeMic: options['no-mic'] ? false : settings.includeMic !== false,
     out: outFile,
     createdAt: Date.now(),
   }
   fs.mkdirSync(AGENT_DIR, { recursive: true })
-  fs.mkdirSync(path.dirname(outFile), { recursive: true })
+  if (outFile) fs.mkdirSync(path.dirname(outFile), { recursive: true })
   writeAtomic(path.join(AGENT_DIR, 'req-' + id + '.json'), JSON.stringify(request))
   console.error('[vsr] 已提交录屏请求：' + duration + ' 秒，源 ' + source.type + '。录屏需要 DSH Web 界面保持打开。')
 
@@ -208,6 +290,8 @@ if (!command || command === 'help' || command === '--help' || command === '-h') 
   shot(rest)
 } else if (command === 'sources') {
   listSources(rest)
+} else if (command === 'files') {
+  listFiles(rest)
 } else if (command === 'record') {
   await record(rest)
 } else {

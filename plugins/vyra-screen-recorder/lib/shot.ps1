@@ -3,7 +3,9 @@
   [int]$MaxEdge = 0,
   [int]$Quality = 86,
   [string]$Region = '',
-  [switch]$NoCursor
+  [switch]$NoCursor,
+  [switch]$HideDsh,
+  [int]$DshPid = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,5 +39,21 @@ if ($MaxEdge -gt 0) {
   if ($outH -lt 2) { $outH = 2 }
 }
 
-[ScreenCapture]::CaptureToJpeg($x, $y, $w, $h, $outW, $outH, $Quality, $Out, (-not $NoCursor)) | Out-Null
-Write-Output 'OK'
+$hiddenWindows = @()
+if ($HideDsh) {
+  if ($DshPid -gt 0) {
+    $hiddenWindows = @([ScreenCapture]::FindProcessWindows($DshPid))
+  }
+  if ($hiddenWindows.Count -eq 0) {
+    $hiddenWindows = @([ScreenCapture]::FindTitleWindows('DeepSeek Harness'))
+  }
+  foreach ($handle in $hiddenWindows) { [ScreenCapture]::HideWindow($handle) }
+  if ($hiddenWindows.Count -gt 0) { Start-Sleep -Milliseconds 180 }
+}
+
+try {
+  [ScreenCapture]::CaptureToJpeg($x, $y, $w, $h, $outW, $outH, $Quality, $Out, (-not $NoCursor)) | Out-Null
+} finally {
+  foreach ($handle in $hiddenWindows) { [ScreenCapture]::ShowWindowFor($handle) }
+}
+Write-Output ('OK hidden=' + $hiddenWindows.Count)
