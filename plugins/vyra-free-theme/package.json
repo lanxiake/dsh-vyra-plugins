@@ -17,6 +17,9 @@
     "themes",
     "presets",
     "locale",
+    "cli",
+    "skill",
+    "bin",
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
@@ -24,6 +27,9 @@
     "NOTICE.md",
     "icon.svg"
   ],
+  "bin": {
+    "vft": "./bin/vft"
+  },
   "homepage": "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/vyra-free-theme#readme",
   "repository": {
     "type": "git",

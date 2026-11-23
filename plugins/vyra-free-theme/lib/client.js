@@ -3755,6 +3755,42 @@ ${references.join("\n")}`,
     return { installed, problems };
   }
 
+  // src/client/selection-sync.js
+  var SELECTION_ROUTE = "/vyra-free-theme/selection";
+  var ACTIVE_EVENT2 = "vyra-free-theme:active-changed";
+  async function adoptHostSelection({ runtime, fetchImpl = fetch }) {
+    try {
+      const response = await fetchImpl(SELECTION_ROUTE, { cache: "no-store" });
+      if (!response.ok) return { adopted: null };
+      const body = await response.json();
+      if (typeof body?.skinId !== "string") return { adopted: null };
+      if (runtime.active() === body.skinId) return { adopted: body.skinId, changed: false };
+      runtime.select(body.skinId);
+      return { adopted: body.skinId, changed: true };
+    } catch {
+      return { adopted: null };
+    }
+  }
+  function publishSelection({ fetchImpl = fetch, target = window } = {}) {
+    if (typeof target?.addEventListener !== "function") return () => {
+    };
+    const listener = (event) => {
+      const skinId = event?.detail;
+      if (typeof skinId !== "string" || skinId.length === 0) return;
+      try {
+        fetchImpl(SELECTION_ROUTE, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ skinId })
+        }).catch(() => {
+        });
+      } catch {
+      }
+    };
+    target.addEventListener(ACTIVE_EVENT2, listener);
+    return () => target.removeEventListener(ACTIVE_EVENT2, listener);
+  }
+
   // src/client/builtin-assets.js
   var SEGMENT_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
   function builtinAssetUrl(skinId, assetKey, extension = "webp") {
@@ -4628,9 +4664,11 @@ ${references.join("\n")}`,
         ctx.effect(() => {
           if (fileThemesStarted) return;
           fileThemesStarted = true;
+          publishSelection();
           installFileThemes({ runtime, jsx: jsxRuntime.jsx, profile }).then(({ installed, problems }) => {
             if (problems.length > 0) console.warn("[vyra-free-theme] theme problems:", problems);
             if (installed.length > 0) runtime.refreshSelection();
+            return adoptHostSelection({ runtime });
           }).catch((error) => console.warn("[vyra-free-theme] file themes unavailable:", error));
         }, "vyra-free-theme: file themes");
         try {

@@ -183,7 +183,7 @@ export function createOfficialRejection(ctx) {
 }
 
 export function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets } = options;
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets, selection } = options;
   const disposers = [];
 
   const fence = (request, response) => {
@@ -279,6 +279,43 @@ export function mountPersonalizationRoutes(host, options) {
       },
     });
     disposers.push(themeAssetRoute);
+  }
+
+  // --- selection: GET / POST (exact) -----------------------------------------
+  //
+  // Host-owned active theme (spec §11). The client treats this as authoritative
+  // and writes back on every user switch, which is what makes `vft theme apply`
+  // work: an agent writes the same file the panel writes.
+
+  if (typeof selection === "function") {
+    const selectionRoute = host.webServer.register({
+      kind: "exact",
+      path: "/vyra-free-theme/selection",
+      handler: async (request, response) => {
+        if (!fence(request, response)) return;
+        if (method(request, response, "GET")) {
+          const record = selection().read();
+          return sendJson(response, 200, { skinId: record?.skinId ?? null, updatedAt: record?.updatedAt ?? null });
+        }
+        if (!method(request, response, "POST")) return;
+        let body;
+        try {
+          body = await readJsonBody(request, 4 * 1024);
+        } catch {
+          return sendJson(response, 400, { error: "invalid body", code: "INVALID_BODY" });
+        }
+        const skinId = body?.skinId;
+        if (typeof skinId !== "string" || !/^(official|[a-z][a-z0-9-]{1,39})$/.test(skinId)) {
+          return sendJson(response, 400, { error: "invalid skin id", code: "INVALID_SKIN_ID" });
+        }
+        try {
+          return sendJson(response, 200, selection().write(skinId));
+        } catch (error) {
+          return sendError(response, error);
+        }
+      },
+    });
+    disposers.push(selectionRoute);
   }
 
   // --- recovery confirmation (branch A commit) ------------------------------

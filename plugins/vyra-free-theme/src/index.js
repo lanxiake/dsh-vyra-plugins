@@ -7,6 +7,8 @@ import { createBuiltinAssetServer } from "./host/builtin-assets.js";
 import { resolveTrustedHosts } from "./host/trusted-hosts.js";
 import { createThemeRepository } from "./host/themes/repository.js";
 import { readThemeAsset } from "./host/themes/assets.js";
+import { readSelection, writeSelection } from "./host/themes/selection.js";
+import { installSkillAndShims, packageRootFrom } from "./host/install-skill.js";
 import { dataDirForProfile, dshHome, hostProfileFor } from "./host/paths.js";
 
 export const name = "vyra-free-theme";
@@ -25,7 +27,8 @@ export function apply(ctx) {
     // Themes ship inside the package (builtin) and live in the data directory
     // (user). Registration into the shared catalog happens before any route is
     // used, so the store can validate a theme's overrides from its first write.
-    const packageThemesDir = join(dirname(fileURLToPath(import.meta.url)), "..", "themes");
+    const packageRoot = packageRootFrom(import.meta.url);
+    const packageThemesDir = join(packageRoot, "themes");
     const themes = createThemeRepository({
       dirs: [
         { source: "builtin", dir: packageThemesDir },
@@ -34,6 +37,13 @@ export function apply(ctx) {
       profile,
     });
     themes.sync();
+
+    // Skill document + CLI launchers, so an agent can drive this plugin without
+    // the user copying commands. Best effort: a read-only DSH_HOME never breaks
+    // theme loading.
+    try {
+      installSkillAndShims({ dshHome: root, packageRoot });
+    } catch {}
 
     hostContext.effect(() => {
       // Builtin artwork delivery (ADR-0023): package assets served over the
@@ -60,6 +70,10 @@ export function apply(ctx) {
           const dir = themes.assetDirFor(id);
           return dir === null ? null : readThemeAsset(dir, relativePath);
         },
+        selection: () => ({
+          read: () => readSelection(dataDir),
+          write: (skinId) => writeSelection(dataDir, skinId),
+        }),
       });
     }, "vyra-free-theme: personalization routes");
   });
