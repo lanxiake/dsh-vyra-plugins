@@ -159,11 +159,13 @@ test('an unknown action fails instead of throwing', async () => {
   assert.match(result.reason, /unknown action/i)
 })
 
-test('a missing optional service reports unavailable rather than throwing', async () => {
+test('an action with no handler yet is reported, not thrown', async () => {
+  // Task 1 declares only console.actions; Task 2 adds plugin.list together with
+  // its domain handler. Until a domain exists, dispatch must say so clearly.
   const console_ = createConsole(bareCtx())
   const result = await console_.dispatch('plugin.list', {})
-  assert.equal(result.status, 'unavailable')
-  assert.match(result.reason, /pluginManager/)
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /unknown action/i)
 })
 ```
 
@@ -218,8 +220,9 @@ export const ACTIONS = Object.freeze({
  * Build the console over a Cordis context.
  *
  * @param ctx a Cordis context, or a bare `{ get }` stub in tests.
- * @param handlers optional `{ [domain]: (ctx, args) => Promise<object> }`; later
+ * @param handlers optional `{ [domain]: (ctx, request) => Promise<object> }`; later
  *   tasks pass their domain in, so this file never imports a service directly.
+ *   Every domain in this plugin has the signature `(ctx, { action, args, spec })`.
  */
 export function createConsole(ctx, handlers = {}) {
   async function dispatch(action, args = {}) {
@@ -234,7 +237,7 @@ export function createConsole(ctx, handlers = {}) {
     if (!handler) {
       return { status: 'error', action, reason: `no handler for domain "${spec.domain}"` }
     }
-    return handler({ action, args, spec, ctx })
+    return handler(ctx, { action, args, spec })
   }
 
   return {
@@ -254,14 +257,10 @@ export function requireService(ctx, key, action) {
 }
 ```
 
-Note: the test expects `plugin.list` to return `unavailable` when `pluginManager` is absent, so Task 2 supplies a plugin handler that calls `requireService`.
-
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `node --test plugins/vyra-dsh-console/test/core.test.mjs`
-Expected: PASS (5 tests). `plugin.list` currently fails with "no handler for domain" — so adjust Step 5's `ACTIONS` to only declare `console.actions` for now, and add `plugin.list` in Task 2 together with its handler.
-
-Correction: declare only `console.actions` in `ACTIONS` now, and change the last test to assert the no-handler message. Task 2 replaces that test with the `unavailable` assertion.
+Expected: PASS (5 tests)
 
 - [ ] **Step 7: Create the Host entry point**
 
@@ -413,7 +412,14 @@ export function createConsoleTool(console_) {
       additionalProperties: false,
     },
     async execute(input) {
-      return console_.dispatch(input?.action ?? '', input?.args ?? {})
+      // `confirm` is declared as a top-level sibling of `args` — that is the
+      // surface the model sees — but the dispatcher reads it off the args
+      // object. Merge it across, and only when present: adding an
+      // `undefined` key would make the arguments unserializable, and the
+      // pipeline snapshots them before the call.
+      const args = { ...(input?.args ?? {}) }
+      if (input?.confirm !== undefined) args.confirm = input.confirm
+      return console_.dispatch(input?.action ?? '', args)
     },
   }
 }
@@ -500,6 +506,22 @@ test('a destructive action without confirm is refused when confirmation is on', 
   const console_ = createConsole(bareCtx(), { plugin: pluginDomain }, { confirmDestructive: true })
   const result = await console_.dispatch('plugin.remove', { name: 'x' })
   assert.equal(result.status, 'confirm-required')
+})
+
+// The dispatch-level pair above proves only the `!== true` comparison. The gate
+// is reached through the TOOL, so it must be tested there too: `execute` has to
+// carry the top-level `confirm` into the args, or the model can never open it.
+test('a destructive action is refused through the tool without confirm, and allowed with it', async () => {
+  const ctx = { get: (k) => (k === 'pluginManager' ? {
+    removeBundle: async () => ({ application: 'applied', changed: true, stage: 'done', target: 'x' }),
+  } : undefined) }
+  const tool = createConsoleTool(createConsole(ctx, { plugin: pluginDomain }, { confirmDestructive: true }))
+
+  const refused = await tool.execute({ action: 'plugin.remove', args: { name: 'x' } })
+  assert.equal(refused.status, 'confirm-required')
+
+  const allowed = await tool.execute({ action: 'plugin.remove', args: { name: 'x' }, confirm: true })
+  assert.equal(allowed.status, 'ok')
 })
 
 test('the same destructive action proceeds without confirm when confirmation is off', async () => {
