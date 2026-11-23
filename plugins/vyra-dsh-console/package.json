@@ -40,5 +40,5 @@
     "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
     "directory": "plugins/vyra-dsh-console"
   },
-  "scripts": { "test": "node --test test/core.test.mjs test/channel.test.mjs test/client.test.mjs test/host.test.mjs test/bridge.test.mjs" }
+  "scripts": { "test": "node --test test/core.test.mjs test/channel.test.mjs test/client.test.mjs test/host.test.mjs test/bridge.test.mjs test/cli.test.mjs" }
 }
