@@ -555,6 +555,15 @@ export function createDeliveryAdapter({
       const result = await coreController.sendProactiveText(botId, normalized, text, options);
       return options.receipt === true ? result : { sent: true };
     },
+    async sendFile(botId, target, file, options = {}) {
+      const normalized = normalizeDeliveryTarget(channel, targetWithoutSessionSync(target));
+      if (typeof coreController.sendProactiveFile !== 'function') {
+        const error = new Error('This channel cannot send files proactively');
+        error.code = 'capability-unavailable';
+        throw error;
+      }
+      return coreController.sendProactiveFile(botId, normalized, file, options);
+    },
     async setSessionSync(botId, targetId, enabled) {
       if (typeof workspaces.setDeliveryTargetSessionSync !== 'function') {
         throw sessionSyncUnavailable();

@@ -15,7 +15,42 @@
 5. 填写或确认 `Target ID`、目标类型和平台原生 ID。
 6. 点击「测试」。目标收到 `DSH-IM 主动投递测试成功。` 后，再点击「保存目标」。
 7. 在已保存目标上点击「复制调用参数」，得到可供应用保存的 `{ botId, targetId }`。
-8. 使用 HTTP POST、同 Host 的 `ctx.dshIm.send()` 或 Connection RPC 的 `message.send` 发送消息。
+8. 使用 Agent 工具、`dsh-im` CLI、HTTP POST、同 Host 的 `ctx.dshIm.send()` 或 Connection RPC 的 `message.send` 发送消息。
+
+## 通过 Agent 工具发送（推荐）
+
+插件加载后会向所有 Session 注册三个工具，Agent 不需要知道 HTTP、端口或源码：
+
+| 工具 | 用途 |
+| --- | --- |
+| `dsh_im_delivery_targets` | 不带参数列出机器人；带 `botId` 列出该机器人的目标。**不返回平台原生路由** |
+| `dsh_im_send_message` | 发一条文字：`{ botId, targetId, text, format? }` |
+| `dsh_im_send_file` | 发一个本地文件/图片：`{ botId, targetId, path, asImage? }`；飞书、微信、企业微信、钉钉、QQ 支持 |
+
+同时会挂载 `dsh-im-delivery` 技能（`skills/dsh-im-delivery/SKILL.md`），说明配置、渠道差异和错误处理。技能随插件升级，不写用户的 `~/.dsh/skills`。
+
+约束：
+
+- 工具只在用户明确要求或定时任务指令要求时使用；不要用它回答当前会话。
+- 一次一个目标；多个目标分别调用。
+- `{ sent: true }` 只表示平台接受，不代表送达/已读。
+- 超时或 `delivery-failed` 不要自动重试，可能已发出。
+- 文件路径在 Host 机器上读取，最大 30 MB。
+
+## 通过 `dsh-im` CLI 发送
+
+```bash
+dsh-im send --bot <botId> --target <targetId> --text "构建已完成"
+echo "构建已完成" | dsh-im send --bot <botId> --target <targetId> --stdin
+dsh-im send --bot <botId> --target <targetId> --text "# 日报" --format markdown
+dsh-im send --bot <botId> --target <targetId> --file ./report.pdf
+dsh-im send --bot <botId> --target <targetId> --file ./chart.png --image
+dsh-im bots
+dsh-im targets --bot <botId>
+dsh-im endpoint
+```
+
+Host 地址优先级：`--url` > `DSH_IM_URL` > `<dshHome>/integrations/dsh-im/delivery-http.json` > `http://127.0.0.1:3080`。Host 在注册投递路由时自动写该文件，因此同一台机器通常不需要传 `--url`。
 
 ## 配置投递目标
 
@@ -161,11 +196,38 @@ curl --request POST \
 { "sent": true }
 ```
 
-请求体接受必填的 `botId`、`targetId`、`text` 和可选的 `format`（`plain` 或 `markdown`，默认 `plain`），JSON 总大小不能超过 1 MiB。不要附加平台原生路由、`sessionId`、`chatRef`、临时 Webhook 或 `idempotencyKey`。
+请求体接受必填的 `botId`、`targetId`、`text` 和可选的 `format`（`plain` 或 `markdown`，默认 `plain`）、`idempotencyKey`（1–128 位字母、数字、`.` `_` `:` `-`），JSON 总大小不能超过 1 MiB。不要附加平台原生路由、`sessionId`、`chatRef` 或临时 Webhook。
 
 接口路径固定为 `POST /api/dsh-im/delivery/messages`，复用当前 DSH Host 的 WebServer，不会另开端口。示例中的 `3080` 是 Web profile 的默认端口；实际地址以 Host 启动时显示的地址为准。
 
 当前 HTTP 接口不包含鉴权，也不提供 CORS。只应在本机或可信网络中使用，不要直接暴露到公网。
+
+### 发送文件／图片
+
+```bash
+curl -X POST http://127.0.0.1:3080/api/dsh-im/delivery/files \
+  -H 'Content-Type: application/json' \
+  -d '{"botId":"bot_xxx","targetId":"release-alerts","path":"/abs/report.pdf"}'
+```
+
+- body 只接受 `botId`、`targetId`、`path` 和可选的 `asImage`（布尔）、`idempotencyKey`。`path` 由 Host 读取。
+- 上限 30 MB；`asImage` 省略时按扩展名判断（png/jpg/jpeg/gif/webp/bmp）。
+- 成功返回 `{ "sent": true, "fileName", "size", "asImage" }`。
+- 主动文件已支持飞书、微信、企业微信（机器人/应用）、钉钉、QQ；其他渠道返回 `capability-unavailable`（HTTP 501）。
+
+### 查询机器人与目标
+
+```bash
+curl -X POST http://127.0.0.1:3080/api/dsh-im/delivery/query \
+  -H 'Content-Type: application/json' \
+  -d '{"op":"bots"}'
+
+curl -X POST http://127.0.0.1:3080/api/dsh-im/delivery/query \
+  -H 'Content-Type: application/json' \
+  -d '{"op":"targets","botId":"bot_xxx"}'
+```
+
+返回 `{ bots }` 或 `{ botId, channel, targets }`；目标只包含 `targetId`、`name?`、`kind`，不返回平台原生路由。
 
 ## 在同一 Host 的插件中发送
 
@@ -288,7 +350,7 @@ const result = await callDelivery(connection, 'message.send', {
 // result: { sent: true }
 ```
 
-`message.send` 接受 `{ botId, targetId, text, format? }`；`format` 只允许 `plain` 或 `markdown`。不要附加平台路由、`sessionId`、`chatRef`、临时 Webhook 或 `idempotencyKey`。
+`message.send` 接受 `{ botId, targetId, text, format?, idempotencyKey? }`；`format` 只允许 `plain` 或 `markdown`。不要附加平台路由、`sessionId`、`chatRef`、临时 Webhook 或 `idempotencyKey`。
 
 ### 示例：投递每日报告
 
@@ -345,6 +407,7 @@ HTTP 失败响应格式为 `{ "error": { "code", "message", "details" } }`。同
 | `bot-not-connected` | 503 | 机器人当前离线；恢复连接后由调用方决定是否重试 |
 | `target-rejected` | 422 | 平台明确拒绝目标或机器人缺少发送权限；检查平台权限和目标 ID |
 | `delivery-failed` | 502 | 网络、平台或其他无法安全细分的发送失败；检查连接状态和 Host 日志 |
+| `capability-unavailable` | 501 | 当前渠道没有主动文件能力；飞书/微信/企业微信/钉钉/QQ 支持 | 改用文字，或在对应 IM 会话内用 `dsh_im_return_file` |
 | `session-sync-unavailable` | — | 目标不是可确认的当前 Host 私聊，尚无当前 Session，或渠道使用远程 Harness；先从已聊私聊创建目标并建立 Session |
 | `cancelled` | 408 | 调用被取消；按业务需要结束或重新发起 |
 
@@ -352,11 +415,13 @@ HTTP 协议层还可能返回 `method-not-allowed`（405）、`unsupported-media
 
 ## 投递语义与限制
 
-- 当前主动投递只发送非空文字，不支持在该接口中发送图片、文件、卡片或富文本。
+- 文字投递只发送非空文字，不支持卡片或富文本。
+- 主动文件已支持飞书、微信、企业微信（机器人/应用）、钉钉、QQ（`POST /api/dsh-im/delivery/files`、`dsh_im_send_file`、`dsh-im send --file`），上限 30 MB；其他渠道返回 `capability-unavailable`。
 - HTTP JSON 请求体上限为 1 MiB。
 - `{ sent: true }` 表示平台发送接口接受请求或 SDK 成功返回，不承诺最终送达或已读。
-- DSH-IM 不保存主动投递历史，不生成 `deliveryHandle` 或 `idempotencyKey`，也不自动重试。
-- 调用方超时后重试可能产生重复消息；需要业务幂等时，由调用方保存自己的业务事件 ID 和处理结果。
+- DSH-IM 不保存主动投递历史，也不自动重试。
+- 传 `idempotencyKey` 时，Host 在进程内 24h 内按 `botId + targetId + key` 抑制重复，重复调用返回 `{ sent: true, duplicate: true }`；失败的那次释放 key。窗口不跨 Host 重启。
+- 调用方超时后重试可能产生重复消息；重试时复用同一个 `idempotencyKey`。跨 Host 重启或需要长期幂等时，仍由调用方保存自己的业务事件 ID 和处理结果。
 - 正式发送只使用已保存的 `botId + targetId`。平台原生路由保存在目标配置中，不应随每次消息发送。
 - 一个调用只发送到一个目标。需要通知多个目标时，应分别调用并分别处理结果。
 - 机器人离线时仍可编辑目标，但不能测试或主动发送。

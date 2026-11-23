@@ -1,6 +1,6 @@
 {
   "name": "@xmanrui/dsh-im",
-  "version": "5.10.0",
+  "version": "5.12.0",
   "icon": "./assets/logo-plugin-message-link-gradient.webp",
   "description": "把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix接入DSH。 Connect Telegram, WhatsApp, Slack, Discord, Matrix, WeChat, Feishu, WeCom, DingTalk, and QQ to DSH.",
   "keywords": [
@@ -42,6 +42,14 @@
   "bin": {
     "dsh-im": "bin/dsh-im.mjs"
   },
+  "scripts": {
+    "build": "node plugin-src/host/build.mjs",
+    "verify:agent-tools": "node scripts/verify-agent-tools.mjs",
+    "verify:cli": "node scripts/verify-cli.mjs",
+    "verify:service-file": "node scripts/verify-service-file.mjs",
+    "verify:idempotency": "node scripts/verify-idempotency.mjs",
+    "verify": "node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs"
+  },
   "main": "./lib/index.js",
   "exports": {
     ".": "./lib/index.js",
@@ -53,10 +61,15 @@
     "assets",
     "bin",
     "cordis.patch.yml",
+    "skills",
     "lib",
     "locale/*.json",
     "plugin-src",
     "scripts/telegram-menu-scopes.mjs",
+    "scripts/verify-agent-tools.mjs",
+    "scripts/verify-cli.mjs",
+    "scripts/verify-service-file.mjs",
+    "scripts/verify-idempotency.mjs",
     "scripts/verify-interface-language.mjs",
     "scripts/verify-injected-context.mjs",
     "scripts/verify-lan-management.mjs",
@@ -113,6 +126,14 @@
     "nodemailer": "^10.1.4",
     "qrcode": "1.5.4",
     "undici": "7.30.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-skill-filesystem": "^0.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-skill-filesystem": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",

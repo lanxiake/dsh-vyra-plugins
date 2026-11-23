@@ -202,6 +202,8 @@ A GitHub-source installation fetches and builds a Git dependency directly. With 
 
 After installation, follow the built-in instructions on each channel page to scan a QR code or enter credentials. Secrets and Tokens are sent only to the local Harness Host and stored through its protected credential provider; status responses and bot lists never return them.
 
+On load, the plugin mounts the `dsh-im-delivery` skill and registers `dsh_im_delivery_targets`, `dsh_im_send_message`, and `dsh_im_send_file` in every Session, plus a `dsh-im send|bots|targets|endpoint` CLI. An Agent needs neither the source nor the port. See [PROACTIVE_DELIVERY.en.md](PROACTIVE_DELIVERY.en.md#agent-tools-recommended).
+
 If this machine must use a forward proxy to reach Feishu, set `HTTPS_PROXY` to a full HTTP proxy URL before starting `dsh web` (for example, `http://proxy:8080`; lowercase `https_proxy` is also supported, with `HTTP_PROXY` accepted as a fallback), then restart the Host after changing it. Feishu registration and credential verification reuse the SDK's proxy-aware HTTP client, while the message WebSocket explicitly uses that proxy; the WebSocket path does not currently read `ALL_PROXY` or `NO_PROXY`.
 
 If this machine cannot reach the Telegram Bot API directly, use Node.js 22.21 or newer and enable Node's environment proxy support before starting `dsh web`:

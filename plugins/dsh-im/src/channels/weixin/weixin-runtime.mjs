@@ -430,4 +430,53 @@ export class WeixinRuntime {
     }
     return { sent: true };
   }
+
+  /**
+   * Send one file or image to a saved WeChat target without a Session.
+   * Mirrors the in-chat artifact path: upload to the WeChat CDN, then send the
+   * media item with the target's most recent context token.
+   * @param target - normalized delivery target (`kind: 'user'`, `route.toUserId`).
+   * @param file - `{ fileName, bytes, asImage? }`.
+   * @param options.signal - caller cancellation.
+   */
+  async sendProactiveFile(target, file, { signal, asImage = false } = {}) {
+    const toUserId = typeof target?.route?.toUserId === 'string'
+      ? target.route.toUserId.trim() : '';
+    if (target?.kind !== 'user' || !toUserId) {
+      const error = new TypeError('Invalid Weixin proactive delivery target');
+      error.code = 'invalid-target';
+      throw error;
+    }
+    if (!this.#status.ready || !this.#abortController) {
+      const error = new Error('Weixin runtime is not connected');
+      error.code = 'bot-not-connected';
+      throw error;
+    }
+    const method = asImage ? 'sendImage' : 'sendFile';
+    if (typeof this.#api[method] !== 'function') {
+      throw Object.assign(new Error('capability-unavailable'), { code: 'capability-unavailable' });
+    }
+    const sendSignal = signal ?? this.#abortController.signal;
+    sendSignal.throwIfAborted();
+    try {
+      await this.#api[method]({
+        baseUrl: this.#config.baseUrl,
+        token: this.#token,
+        toUserId,
+        file,
+        contextToken: this.#state.contextTokenFor?.(toUserId),
+        signal: sendSignal,
+      });
+    } catch (cause) {
+      if (sendSignal.aborted) throw cause;
+      const code = cause?.code;
+      const error = new Error(cause?.message ?? 'Weixin proactive file delivery failed', { cause });
+      error.code = code === 'artifact-too-large' || code === 'artifact-permission-required'
+        || code === 'artifact-provider-rejected'
+        ? 'target-rejected'
+        : 'delivery-failed';
+      throw error;
+    }
+    return { sent: true };
+  }
 }

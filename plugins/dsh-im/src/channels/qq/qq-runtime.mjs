@@ -7,7 +7,12 @@ import {
 } from '../shared/connection-test.mjs';
 import { t } from '../shared/i18n.mjs';
 import { evaluateInboundAccess } from '../shared/inbound-access.mjs';
-import { createQqBridgeStatus, QqHarnessBridge } from './qq-bridge.mjs';
+import {
+  createQqBridgeStatus,
+  QqHarnessBridge,
+  sendQqFile,
+  sendQqImage,
+} from './qq-bridge.mjs';
 import { isQqMessageAddressed, normalizeQqMentions } from './qq-mention.mjs';
 import { sendMarkdownReply } from './markdown-reply.mjs';
 
@@ -146,6 +151,50 @@ export class QqRuntime {
       return { sent: true };
     }
     return this.#bot.sendText(replyTarget, text);
+  }
+
+  /**
+   * Send one file or image to a saved QQ target without a Session.
+   * The bridge's artifact helpers already own the upload and timeout handling.
+   * @param target - normalized delivery target (`route.userOpenId` or `route.groupOpenId`).
+   * @param file - `{ fileName, bytes, asImage? }`.
+   * @param options.signal - caller cancellation.
+   */
+  async sendProactiveFile(target, file, { signal, asImage = false } = {}) {
+    const nativeId = target?.kind === 'user'
+      ? (typeof target?.route?.userOpenId === 'string' ? target.route.userOpenId.trim() : '')
+      : target?.kind === 'group'
+        ? (typeof target?.route?.groupOpenId === 'string' ? target.route.groupOpenId.trim() : '')
+        : '';
+    if (!nativeId) {
+      const error = new TypeError('Invalid QQ proactive delivery target');
+      error.code = 'invalid-target';
+      throw error;
+    }
+    if (!this.#status.ready || !this.#bot) {
+      const error = new Error('QQ bot is not connected');
+      error.code = 'bot-not-connected';
+      throw error;
+    }
+    signal?.throwIfAborted();
+    const replyTarget = {
+      scope: target.kind === 'user' ? 'c2c' : 'group',
+      targetId: nativeId,
+    };
+    try {
+      if (asImage) await sendQqImage(this.#bot, replyTarget, file, { signal });
+      else await sendQqFile(this.#bot, replyTarget, file, { signal });
+    } catch (cause) {
+      if (signal?.aborted) throw cause;
+      const code = cause?.code;
+      const error = new Error(cause?.message ?? 'QQ proactive file delivery failed', { cause });
+      error.code = code === 'artifact-too-large' || code === 'artifact-permission-required'
+        || code === 'artifact-provider-rejected'
+        ? 'target-rejected'
+        : 'delivery-failed';
+      throw error;
+    }
+    return { sent: true };
   }
 
   async start() {

@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { readFile, stat } from 'node:fs/promises';
+import { basename, extname, resolve } from 'node:path';
 import { normalizeDeliveryTarget } from './delivery-adapter.mjs';
 import { deliverySuggestionFromConversationKey } from './delivery-suggestions.mjs';
 import { COMPETITIVE_APPROVAL_CHANNELS } from '../../src/channels/shared/harness-approval.mjs';
@@ -9,6 +11,15 @@ const BOT_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const TARGET_ID_PATTERN = /^[A-Za-z0-9._:@-]{1,128}$/;
 const CHANNEL_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
 const DRAFT_TARGET_ID = '__test__';
+/** Feishu's stream-upload ceiling; other channels reject earlier themselves. */
+const MAX_FILE_BYTES = 30 * 1024 * 1024;
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp']);
+
+/** How long a caller's idempotency key suppresses a duplicate send. */
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+/** Bounded so an Agent loop cannot grow the map without limit. */
+const IDEMPOTENCY_MAX_ENTRIES = 1_000;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
 const ADAPTER_METHODS = Object.freeze([
   'ownsBot',
@@ -65,6 +76,20 @@ function deliveryError(code, message = code, options) {
   const error = new Error(message, options);
   error.code = code;
   return error;
+}
+
+/** Validate an optional caller idempotency key; `undefined` means "no dedupe". */
+function idempotencyKeyOf(value) {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !IDEMPOTENCY_KEY_PATTERN.test(value)) {
+    throw deliveryError('bad-request', 'Invalid idempotency key');
+  }
+  return value;
+}
+
+/** Scope one key to its bot and saved target. */
+function idempotencyScope(botId, targetId, key) {
+  return `${botId}\u0000${targetId}\u0000${key}`;
 }
 
 function botIdOf(value) {
@@ -146,6 +171,7 @@ function sessionSyncState(value, available) {
 
 export class DeliveryService {
   #adapters = new Map();
+  #idempotency = new Map();
   #unavailableSessionSyncChannels;
   #logger;
   dsBot;
@@ -738,7 +764,7 @@ export class DeliveryService {
     } catch (error) { throw publicOperationError(error); }
   }
 
-  async send(botId, targetIdOrDraft, text, { signal, format = 'plain' } = {}) {
+  async send(botId, targetIdOrDraft, text, { signal, format = 'plain', idempotencyKey } = {}) {
     const id = botIdOf(botId);
     const targetKey = typeof targetIdOrDraft === 'string'
       ? targetIdOf(targetIdOrDraft)
@@ -750,29 +776,156 @@ export class DeliveryService {
     if (format !== 'plain' && format !== 'markdown') {
       throw deliveryError('bad-request', 'Message format must be plain or markdown');
     }
+    idempotencyKeyOf(idempotencyKey);
     cancellation(signal);
-    const adapter = await this.#adapterFor(id);
-    try {
-      let target;
-      if (draft) {
-        target = { targetId: DRAFT_TARGET_ID, ...draft };
-      } else {
+    const deliver = async () => {
+      const adapter = await this.#adapterFor(id);
+      try {
+        let target;
+        if (draft) {
+          target = { targetId: DRAFT_TARGET_ID, ...draft };
+        } else {
+          const targets = await adapter.listTargets(id);
+          if (!Array.isArray(targets)) throw new TypeError('Adapter returned invalid targets');
+          target = targets.find((candidate) => candidate?.targetId === targetKey);
+          if (!target) throw deliveryError('unknown-target', 'Unknown target');
+        }
+        cancellation(signal);
+        await adapter.sendText(id, target, text, {
+          signal,
+          ...(format === 'markdown' ? { format } : {}),
+        });
+        return { sent: true };
+      } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+          throw deliveryError('cancelled', 'Request cancelled', { cause: error });
+        }
+        throw publicOperationError(error);
+      }
+    };
+    if (targetKey !== null && idempotencyKey !== undefined) {
+      return this.#idempotent(idempotencyScope(id, targetKey, idempotencyKey), deliver);
+    }
+    return deliver();
+  }
+
+  /**
+   * Send one local file or image to a saved target.
+   *
+   * The Host reads the bytes; callers only name a path. Channels without a
+   * proactive file path answer `capability-unavailable`, so adding a channel
+   * later does not change this contract.
+   * @param botId - connected bot.
+   * @param targetId - saved target alias.
+   * @param file - `{ path, asImage? }`.
+   * @param options.signal - caller cancellation.
+   * @returns `{ sent: true, fileName, size, asImage }`.
+   */
+  async sendFile(botId, targetId, file, { signal, idempotencyKey } = {}) {
+    const id = botIdOf(botId);
+    const targetKey = targetIdOf(targetId);
+    if (!file || typeof file !== 'object' || typeof file.path !== 'string' || !file.path.trim()) {
+      throw deliveryError('bad-request', 'A file path is required');
+    }
+    idempotencyKeyOf(idempotencyKey);
+    const { asImage } = file;
+    cancellation(signal);
+    const deliver = async () => {
+      const adapter = await this.#adapterFor(id);
+      if (typeof adapter.sendFile !== 'function') {
+        throw deliveryError('capability-unavailable', 'This channel cannot send files proactively');
+      }
+      const path = resolve(file.path);
+      let info;
+      try {
+        info = await stat(path);
+      } catch {
+        throw deliveryError('bad-request', 'File is not readable');
+      }
+      if (!info.isFile()) throw deliveryError('bad-request', 'Path is not a regular file');
+      if (info.size === 0) throw deliveryError('bad-request', 'File is empty');
+      if (info.size > MAX_FILE_BYTES) {
+        throw deliveryError('bad-request', `File exceeds the ${MAX_FILE_BYTES / 1024 / 1024} MB limit`);
+      }
+      const fileName = basename(path);
+      const image = asImage === true
+        || (asImage === undefined && IMAGE_EXTENSIONS.has(extname(fileName).toLowerCase()));
+      let bytes;
+      try {
+        bytes = await readFile(path);
+      } catch {
+        throw deliveryError('bad-request', 'File is not readable');
+      }
+      try {
+        cancellation(signal);
         const targets = await adapter.listTargets(id);
         if (!Array.isArray(targets)) throw new TypeError('Adapter returned invalid targets');
-        target = targets.find((candidate) => candidate?.targetId === targetKey);
+        const target = targets.find((candidate) => candidate?.targetId === targetKey);
         if (!target) throw deliveryError('unknown-target', 'Unknown target');
+        await adapter.sendFile(id, target, { fileName, bytes, asImage: image }, { signal });
+        return { sent: true, fileName, size: bytes.length, asImage: image };
+      } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+          throw deliveryError('cancelled', 'Request cancelled', { cause: error });
+        }
+        throw publicOperationError(error);
       }
-      cancellation(signal);
-      await adapter.sendText(id, target, text, {
-        signal,
-        ...(format === 'markdown' ? { format } : {}),
-      });
-      return { sent: true };
+    };
+    if (idempotencyKey !== undefined) {
+      return this.#idempotent(idempotencyScope(id, targetKey, idempotencyKey), deliver);
+    }
+    return deliver();
+  }
+
+  /**
+   * Run one delivery at most once per idempotency key.
+   *
+   * The window is in-process: it absorbs Agent retries and duplicate tool
+   * calls, and is intentionally not durable. A failed attempt releases its key
+   * so the caller can correct the request and try again.
+   * @param key - scoped idempotency key.
+   * @param operation - the actual send.
+   */
+  async #idempotent(key, operation) {
+    const now = Date.now();
+    const existing = this.#idempotency.get(key);
+    if (existing && existing.expiresAt > now) {
+      // Join an in-flight attempt instead of starting a second one.
+      await existing.promise.catch(() => {});
+      if (existing.error) throw existing.error;
+      return { ...existing.result, duplicate: true };
+    }
+    const entry = {
+      expiresAt: now + IDEMPOTENCY_TTL_MS,
+      result: null,
+      error: null,
+      promise: null,
+    };
+    entry.promise = (async () => {
+      entry.result = await operation();
+      return entry.result;
+    })();
+    // A duplicate may be the only waiter; keep an unhandled rejection from
+    // surfacing for the attempt that nobody awaited.
+    entry.promise.catch(() => {});
+    this.#idempotency.set(key, entry);
+    this.#evictIdempotency(now);
+    try {
+      return await entry.promise;
     } catch (error) {
-      if (signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
-        throw deliveryError('cancelled', 'Request cancelled', { cause: error });
-      }
-      throw publicOperationError(error);
+      entry.error = error;
+      if (this.#idempotency.get(key) === entry) this.#idempotency.delete(key);
+      throw error;
+    }
+  }
+
+  #evictIdempotency(now) {
+    for (const [key, entry] of this.#idempotency) {
+      if (entry.expiresAt > now) break;
+      this.#idempotency.delete(key);
+    }
+    while (this.#idempotency.size > IDEMPOTENCY_MAX_ENTRIES) {
+      this.#idempotency.delete(this.#idempotency.keys().next().value);
     }
   }
 

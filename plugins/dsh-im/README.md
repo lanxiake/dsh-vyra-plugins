@@ -205,6 +205,8 @@ GitHub 源安装会直接拉取并构建 Git 依赖；pnpm 10 及以上版本可
 
 安装后，在对应渠道页面按照内置引导完成扫码或凭据配置。所有 Secret 和 Token 只提交给本机 Harness Host，并写入受保护的凭据存储；状态接口和机器人列表不会回传这些凭据。
 
+插件加载时会自动挂载 `dsh-im-delivery` 技能，并向所有 Session 注册 `dsh_im_delivery_targets`、`dsh_im_send_message`、`dsh_im_send_file` 三个工具；同时提供 `dsh-im send|bots|targets|endpoint` CLI。Agent 不需要读源码或猜端口。详见 [PROACTIVE_DELIVERY.md](PROACTIVE_DELIVERY.md#通过-agent-工具发送推荐)。
+
 如果本机必须通过正向代理访问飞书，请在启动 `dsh web` 前把 `HTTPS_PROXY` 设置为包含协议的 HTTP 代理 URL（例如 `http://proxy:8080`；也支持小写 `https_proxy`，并兼容使用 `HTTP_PROXY` 作为回退），修改后重启 Host。飞书注册和凭据验证会复用 SDK 的代理感知 HTTP 客户端，消息长连接会显式通过这个代理建立 WebSocket；长连接目前不读取 `ALL_PROXY` 或 `NO_PROXY`。
 
 如果本机无法直连 Telegram Bot API，请使用 Node.js 22.21 或更高版本，并在启动 `dsh web` 前启用 Node 的环境变量代理支持：
