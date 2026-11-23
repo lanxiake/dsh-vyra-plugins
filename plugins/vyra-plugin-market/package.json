@@ -1,6 +1,6 @@
 {
   "name": "vyra-plugin-market",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "左侧栏与插件页里的插件市场：Veyra、dsh.so、dshmarket.com、DSH Open Market、DSH Go Market 多源聚合与跨源搜索，苹果式卡片，展示 star 与 npm 下载量，并批量安装、更新、卸载、启用或停用；附带 Agent 可用的 vyra-market CLI。",
   "bin": {
