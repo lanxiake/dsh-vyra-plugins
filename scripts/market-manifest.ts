@@ -2236,8 +2236,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 免费模型',
       },
       description: {
-        en: 'Free models with no sign-up and no API key: pick one and chat. Signing into one domestic account for extra quota and exposing the models to Cursor or Claude Code are both optional, and the whole plugin is one settings page in three steps.',
-        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。登录一个国内账号换更多额度、让 Cursor 或 Claude Code 共用这批模型，两步都可选——整个插件就一屏设置页，三步配置完。',
+        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, one-click domestic account sign-in, CodeBuddy / WorkBuddy, and any OpenAI-compatible endpoint you already have a key for — all optional, all on one folded settings page.',
+        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、一键登录国内账号、CodeBuddy / WorkBuddy，以及任何已有 Key 的 OpenAI 兼容接口——都可选，都在一屏可收起的设置页里。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2266,6 +2266,19 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'eb42bb374670a0f8d27d6613dcb35cbae2ac9083',
+            path: 'plugins/vyra-free-model',
+          },
+        },
+        // 0.3.0 repairs the account block (the HTTP proxy it used could never
+        // pass browser auth), adds real per-model probes, folds the page by
+        // default, names the model the auto router actually used, and adds the
+        // Tencent and bring-your-own-key lanes.
+        '0.3.0': {
+          publishTimestamp: 1795404693,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9001ce9c3e1dd15b57245e26fc63595944b00549',
             path: 'plugins/vyra-free-model',
           },
         },
