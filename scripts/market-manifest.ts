@@ -2422,8 +2422,8 @@ export const manifest: MarketManifest = {
         zh: '即时通讯桥接',
       },
       description: {
-        en: 'Connect WeChat, Feishu, WeCom, DingTalk, QQ, Telegram, WhatsApp, Slack, Discord and Matrix to DSH.',
-        zh: '把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH。',
+        en: 'Connect WeChat, Feishu, WeCom, DingTalk, QQ, Telegram, WhatsApp, Slack, Discord and Matrix to DSH, with Agent tools for proactive messages and files.',
+        zh: '把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH；Agent 可直接主动发送文字和文件。',
       },
       author: 'xmanrui',
       homepage: 'https://github.com/xmanrui/dsh-im#readme',
@@ -2440,10 +2440,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/dsh-im',
           },
         },
+        '5.12.0': {
+          publishTimestamp: 1795445895,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b95ac069ad576ce2c9b2b84e0ddf9020d1008af1',
+            path: 'plugins/dsh-im',
+          },
+        },
       },
       metadata: {
         category: 'integration',
-        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord'],
+        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord', 'agent', 'skill'],
       },
     },
     {
