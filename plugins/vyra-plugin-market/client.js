@@ -1388,6 +1388,7 @@ window.__ModuleLoader__.load({
       updateAll: '全部更新 ({n})',
       onlyInstalled: '仅已安装',
       onlyUpdatable: '仅可更新',
+      onlyNotInstalled: '未安装',
       sortBy: '排序',
       category: '分类',
       allCategories: '全部分类',
@@ -1513,6 +1514,7 @@ window.__ModuleLoader__.load({
       addRecommended: '添加',
       manageSources: '管理市场源…',
       addSource: '添加',
+      copySource: '复制地址',
       sourcePlaceholder: 'https://example.com/index.json',
       remove: '移除',
       sourceBody: '与「设置 → 插件 → 索引源」是同一份配置，两处看到的一样。',
@@ -1547,6 +1549,7 @@ window.__ModuleLoader__.load({
       all: 'All',
       updateAll: 'Update all ({n})',
       onlyInstalled: 'Installed only',
+      onlyNotInstalled: 'Not installed',
       onlyUpdatable: 'Updatable only',
       sortBy: 'Sort',
       category: 'Category',
@@ -1673,6 +1676,7 @@ window.__ModuleLoader__.load({
       addRecommended: 'Add',
       manageSources: 'Manage sources…',
       addSource: 'Add',
+      copySource: 'Copy URL',
       sourcePlaceholder: 'https://example.com/index.json',
       remove: 'Remove',
       sourceBody: 'The same list Settings -> Plugins -> Index sources edits; both show the same thing.',
@@ -1703,6 +1707,18 @@ window.__ModuleLoader__.load({
       h('path', { key: 'a', d: 'M4 7h16' }),
       h('path', { key: 'b', d: 'M10 7V5h4v2' }),
       h('path', { key: 'c', d: 'M6 7l1 13h10l1-13' }),
+    ])
+    const CopyIcon = ({ size = 14 }) => icon(size, [
+      h('rect', { key: 'a', x: 9, y: 9, width: 11, height: 11, rx: 2 }),
+      h('path', { key: 'b', d: 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1' }),
+    ])
+    const DragIcon = ({ size = 14 }) => icon(size, [
+      h('circle', { key: 'a', cx: 9, cy: 6, r: 1 }),
+      h('circle', { key: 'b', cx: 15, cy: 6, r: 1 }),
+      h('circle', { key: 'c', cx: 9, cy: 12, r: 1 }),
+      h('circle', { key: 'd', cx: 15, cy: 12, r: 1 }),
+      h('circle', { key: 'e', cx: 9, cy: 18, r: 1 }),
+      h('circle', { key: 'f', cx: 15, cy: 18, r: 1 }),
     ])
     const SlidersIcon = ({ size = 14 }) => icon(size, [
       h('path', { key: 'a', d: 'M4 8h9' }),
@@ -1981,6 +1997,7 @@ window.__ModuleLoader__.load({
       .vpm-card-top{display:flex;align-items:flex-start;gap:11px;min-width:0}
       .vpm-icon{flex:none;display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:14px;overflow:hidden;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)}
       .vpm-icon img{width:100%;height:100%;object-fit:cover;display:block}
+      .vpm-icon-badge{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;line-height:1;color:#fff;letter-spacing:0}
       .vpm-card-head{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-top:1px}
       .vpm-card-title{font-size:15px;line-height:20px;font-weight:650;letter-spacing:-.015em;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .vpm-card-sub{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2040,10 +2057,30 @@ window.__ModuleLoader__.load({
       return ref
     }
 
-    /** A card's artwork, falling back to the box glyph when it cannot load. */
-    function Artwork({ src }) {
+    /** A stable hue for a name, so its placeholder tile keeps the same colour. */
+    function iconColor(seed) {
+      let hash = 0
+      for (const char of seed) hash = (hash * 31 + char.codePointAt(0)) % 360
+      return `hsl(${hash} 58% 46%)`
+    }
+
+    /**
+     * A card's artwork. A source without an icon (or whose icon fails to load)
+     * gets a rounded tile carrying the title's first character over a colour
+     * derived from the title, so entries are still told apart at a glance.
+     */
+    function Artwork({ src, title }) {
       const [failed, setFailed] = useState(null)
-      if (src === undefined || src === null || src === '' || src === failed) return h(BoxIcon, {})
+      // A load failure falls back to the glyph, not the tile: a source that
+      // declares an icon but cannot serve it is usually a known-image URL
+      // being blocked, and a colour tile would misrepresent it.
+      if (src === failed) return h(BoxIcon, {})
+      if (src === undefined || src === null || src === '') {
+        const name = String(title ?? '').trim()
+        const initial = Array.from(name)[0]
+        if (initial === undefined) return h(BoxIcon, {})
+        return h('span', { className: 'vpm-icon-badge', style: { background: iconColor(name) }, 'aria-hidden': 'true' }, initial.toUpperCase())
+      }
       return h('img', {
         style: S.img, src, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer',
         onError: () => { setFailed(src) },
@@ -2151,8 +2188,30 @@ window.__ModuleLoader__.load({
     }
 
     /** Read and write the configured market sources. */
-    function SourcesDialog({ sources, lang, t, text, saving, failure, onAdd, onRemove, onClose }) {
+    function SourcesDialog({ sources, lang, t, text, saving, failure, onAdd, onRemove, onReorder, onClose }) {
       const [draft, setDraft] = useState('')
+      const [dragUrl, setDragUrl] = useState(null)
+      const [copiedUrl, setCopiedUrl] = useState(null)
+      const copyUrl = async (url) => {
+        try {
+          await navigator.clipboard.writeText(url)
+          setCopiedUrl(url)
+          setTimeout(() => { setCopiedUrl((current) => (current === url ? null : current)) }, 1600)
+        } catch {
+          /* No clipboard here; the URL is still visible to select by hand. */
+        }
+      }
+      const dropOn = (targetUrl) => {
+        const from = dragUrl
+        setDragUrl(null)
+        if (from === null || from === targetUrl) return
+        const urls = sources.map((source) => source.url)
+        const fromIndex = urls.indexOf(from)
+        const toIndex = urls.indexOf(targetUrl)
+        if (fromIndex === -1 || toIndex === -1) return
+        urls.splice(toIndex, 0, urls.splice(fromIndex, 1)[0])
+        onReorder(urls)
+      }
       // Recommended host catalogs that the profile does not carry yet.
       const recommended = [
         { url: DSHMARKET_CATALOG, label: 'dshmarket.com', desc: t('dshmarketDesc') },
@@ -2189,11 +2248,34 @@ window.__ModuleLoader__.load({
             }, t('addRecommended'))))),
         h('p', { style: { ...S.meta, margin: 0 } }, t('builtinTrust'))),
       sources.length === 0 ? null : h('ul', { style: S.list },
-        sources.map((source) => h('li', { key: source.url, style: S.row },
+        sources.map((source) => h('li', {
+          key: source.url,
+          style: {
+            ...S.row,
+            cursor: saving ? 'default' : 'grab',
+            opacity: dragUrl === source.url ? 0.45 : 1,
+          },
+          draggable: !saving,
+          onDragStart: (event) => {
+            setDragUrl(source.url)
+            // Firefox refuses to start a drag without data on the transfer.
+            event.dataTransfer?.setData('text/plain', source.url)
+            if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+          },
+          onDragOver: (event) => { event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = 'move' },
+          onDrop: (event) => { event.preventDefault(); dropOn(source.url) },
+          onDragEnd: () => { setDragUrl(null) },
+        },
+          h('span', { style: { display: 'flex', color: 'var(--dsw-alias-label-tertiary)', flex: 'none' }, 'aria-hidden': 'true' }, h(DragIcon, {})),
           h('div', { style: S.rowMain },
             h('span', { style: S.name }, marketSourceLabel(source, text, lang)),
             h('span', { style: S.mono }, source.url),
             source.error === undefined ? null : h('span', { style: { ...S.mono, ...S.error } }, source.error)),
+          h('button', {
+            style: S.squareBtn, title: copiedUrl === source.url ? t('copied') : t('copySource'),
+            'aria-label': `${copiedUrl === source.url ? t('copied') : t('copySource')} ${source.url}`,
+            onClick: () => { void copyUrl(source.url) },
+          }, h(CopyIcon, {})),
           h('button', {
             style: S.squareBtn, title: t('remove'), 'aria-label': `${t('remove')} ${source.url}`,
             disabled: saving, onClick: () => { onRemove(source.url) },
@@ -2233,6 +2315,9 @@ window.__ModuleLoader__.load({
       const statsTitle = statistic === null ? undefined : [
         statistic.stars === undefined ? null : `${lang === 'zh' ? 'GitHub 仓库' : 'GitHub repository'} ${statistic.stars} stars`,
         statistic.downloads === undefined ? null : `${lang === 'zh' ? 'npm 下载' : 'npm downloads'} ${statistic.downloads}${statistic.start !== undefined && statistic.end !== undefined ? ` (${statistic.start} ~ ${statistic.end})` : statistic.window === '30d' ? (lang === 'zh' ? '（近 30 天）' : ' (last 30 days)') : ''}`,
+        // dsh.so carries npm's weekly figure beside the total; the card shows
+        // the total, the tooltip adds the week so a stale total reads in context.
+        statistic.downloadsWeek === undefined ? null : `${lang === 'zh' ? '近一周 npm 下载' : 'npm downloads this week'} ${statistic.downloadsWeek}`,
         statistic.checkedAt === undefined ? null : `${lang === 'zh' ? '数据时间' : 'as of'} ${statistic.checkedAt.slice(0, 10)}`,
       ].filter(Boolean).join(' · ')
 
@@ -2328,7 +2413,7 @@ window.__ModuleLoader__.load({
             'aria-label': title, onChange: onPick,
             onClick: (event) => { event?.stopPropagation() },
           }),
-          h('span', { className: 'vpm-icon' }, h(Artwork, { src: entry.icon })),
+          h('span', { className: 'vpm-icon' }, h(Artwork, { src: entry.icon, title })),
           h('div', { className: 'vpm-card-head' },
             h('span', { className: 'vpm-card-title', title }, title),
             subtitle === '' ? null : h('span', { className: 'vpm-card-sub' }, subtitle)),
@@ -2545,7 +2630,7 @@ window.__ModuleLoader__.load({
         },
           // --- header ---
           h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 'none', padding: '16px 18px 12px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
-            h('span', { style: { ...S.artwork, width: '44px', height: '44px' } }, h(Artwork, { src: entry.icon })),
+            h('span', { style: { ...S.artwork, width: '44px', height: '44px' } }, h(Artwork, { src: entry.icon, title })),
             h('div', { style: { flex: 1, minWidth: 0 } },
               h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
                 h('h3', { style: { ...S.modalTitle, margin: 0 } }, title),
@@ -3251,6 +3336,9 @@ window.__ModuleLoader__.load({
         if (quickFilter === 'updatable') {
           return liveEntries.filter((entry) => entryState(entry) === 'updatable')
         }
+        if (quickFilter === 'notInstalled') {
+          return liveEntries.filter((entry) => entryState(entry) === 'available')
+        }
         return liveEntries
       }, [liveEntries, quickFilter])
 
@@ -3354,17 +3442,10 @@ window.__ModuleLoader__.load({
       const sourceMenu = useMenu(menu === 'source', () => { setMenu(null) })
       const categoryMenu = useMenu(menu === 'category', () => { setMenu(null) })
       const sortMenu = useMenu(menu === 'sort', () => { setMenu(null) })
-      // The built-in dsh.so browser is always available; host-configured
-      // indexes follow it. Veyra leads, then dsh.so, then dshmarket.com.
-      const sourceRank = (source) => source.url === ALL_SOURCES_SOURCE.url
-        ? -1
-        : VEYRA_SOURCES.includes(source.url) ? 0
-          : source.url === DSH_SO_SOURCE.url ? 1
-            : source.url === DSHMARKET_CATALOG ? 2
-              : source.url === DSHOPEN_CATALOG ? 3
-                : source.url === DSH_GO_CATALOG ? 4 : 5
+      // The built-in dsh.so browser is always available. User-configured
+      // indexes keep the order set in "Manage market sources"; the drag handle
+      // there writes that order straight into the profile.
       const orderedSources = [ALL_SOURCES_SOURCE, ...(sources ?? []), DSH_SO_SOURCE]
-        .sort((left, right) => sourceRank(left) - sourceRank(right))
       const active = orderedSources.find((source) => source.url === activeUrl)
       const market = active === undefined
         ? (activeUrl ?? t('noSources'))
@@ -3628,6 +3709,7 @@ window.__ModuleLoader__.load({
               { value: null, label: t('all') },
               { value: 'installed', label: t('onlyInstalled') },
               { value: 'updatable', label: t('onlyUpdatable') },
+              { value: 'notInstalled', label: t('onlyNotInstalled') },
             ].map((option) => h('button', {
               key: String(option.value),
               className: `vpm-segment-item${quickFilter === option.value ? ' on' : ''}`,
@@ -3848,6 +3930,17 @@ window.__ModuleLoader__.load({
             setSavingSources(true)
             setSourceFailure(null)
             const answer = await remote.pluginMarket.setIndexes(sources.map((source) => source.url).filter((item) => item !== url))
+            if (!alive.current) return
+            setSavingSources(false)
+            if (!answer.ok) { setSourceFailure(answer.error.message); return }
+            await loadSources(false)
+          },
+          // Reordering is the same write: setIndexes replaces the list in the order given,
+          // so the picker (which reads that list) follows automatically.
+          onReorder: async (urls) => {
+            setSavingSources(true)
+            setSourceFailure(null)
+            const answer = await remote.pluginMarket.setIndexes(urls)
             if (!alive.current) return
             setSavingSources(false)
             if (!answer.ok) { setSourceFailure(answer.error.message); return }

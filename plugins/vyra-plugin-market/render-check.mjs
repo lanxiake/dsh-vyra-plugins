@@ -381,7 +381,7 @@ await (async () => {
   assert.equal(remote.calls.some(([name]) => name === 'setIndexes'), false, 'opening the tab wrote no source list')
 }
 
-// --- our market is the first row of the source menu -------------------------
+// --- the source menu keeps the configured order -----------------------------
 {
   const ours = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
   const other = 'https://cdn.example.invalid/market/index.json'
@@ -394,9 +394,72 @@ await (async () => {
   assert.ok(menu !== undefined, 'the source menu opened')
   const rowTexts = (menu.children ?? []).flatMap((row) => texts(row))
   assert.equal(rowTexts[0], 'All sources', 'the aggregate source leads the menu')
-  assert.match(rowTexts[1] ?? '', /Veyra/, `our market follows the aggregate, got: ${JSON.stringify(rowTexts)}`)
+  // The drag-to-reorder in "Manage sources" writes the profile list; the menu
+  // must show that order rather than imposing its own ranking.
+  assert.ok(rowTexts[1]?.includes('cdn.example.invalid'), `the configured order is kept, got: ${JSON.stringify(rowTexts)}`)
+  assert.match(rowTexts[2] ?? '', /Veyra/, `our market stays second as configured, got: ${JSON.stringify(rowTexts)}`)
   assert.ok(rowTexts.some((line) => line.includes('dsh.so')), 'the built-in dsh.so browser is always available')
-  assert.ok(rowTexts.some((line) => line.includes('cdn.example.invalid')), 'the other source is still listed')
+}
+
+// --- the "Not installed" filter hides entries already in the profile ---------
+{
+  const { tree, settle } = await mount({
+    entries: [entry('alpha'), entry('beta', { installation: { status: 'installed' } })],
+    bundles: [{ name: 'beta', version: '1.0.0', installed: true, enabled: true, removable: true, rows: [], overrides: [] }],
+  })
+  const filter = buttonByText(tree, 'onlyNotInstalled')
+  assert.ok(filter !== undefined, 'the toolbar offers a Not installed filter')
+  filter.props.onClick()
+  const filtered = await settle()
+  const drawn = texts(filtered).join(' | ')
+  assert.ok(drawn.includes('alpha'), `an installable entry stays, got: ${drawn}`)
+  assert.ok(!findAll(filtered, (node) => node.type === 'li' && node.props?.className === 'vpm-card' && texts(node).join('').includes('beta')).length, 'an installed entry is filtered out')
+}
+
+// --- a source without an icon gets a coloured initial tile -------------------
+{
+  const { tree } = await mount({ entries: [entry('alpha')] })
+  const badge = findAll(tree, (node) => node.type === 'span' && node.props?.className === 'vpm-icon-badge')[0]
+  assert.ok(badge !== undefined, 'a source without an icon draws an initial tile')
+  assert.equal(texts(badge).join(''), 'A', 'the tile carries the title\'s first letter')
+  assert.match(String(badge.props.style?.background ?? ''), /^hsl\(/, 'the tile colour comes from the title')
+}
+
+// --- managing sources: copy the URL and drag to reorder -----------------------
+{
+  const ours = 'https://lanxiake.github.io/dsh-vyra-plugins/index.json'
+  const other = 'https://cdn.example.invalid/market/index.json'
+  const copied = []
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { clipboard: { writeText: async (text) => { copied.push(text) } } }, configurable: true,
+  })
+  try {
+    const { tree, remote, settle } = await mount({ sources: [{ url: ours }, { url: other }], entries: [entry('alpha')] })
+    const anchor = findAll(tree, (node) => node.props?.['aria-haspopup'] === 'menu' && node.props?.['aria-expanded'] !== undefined)[0]
+    anchor.props.onClick()
+    const opened = await settle()
+    buttonByText(opened, 'manageSources').props.onClick()
+    const dialog = await settle()
+
+    const copy = findAll(dialog, (node) => node.type === 'button' && String(node.props?.['aria-label'] ?? '').includes('copySource'))[0]
+    assert.ok(copy !== undefined, 'each source row offers a copy button')
+    copy.props.onClick()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.deepEqual(copied, [ours], 'the copy button writes the source URL')
+
+    const rows = findAll(dialog, (node) => node.type === 'li' && node.props?.draggable === true)
+    assert.equal(rows.length, 2, 'configured sources are draggable')
+    rows[0].props.onDragStart({ dataTransfer: { setData: () => {}, effectAllowed: '' } })
+    const dragging = await settle()
+    const fresh = findAll(dragging, (node) => node.type === 'li' && node.props?.draggable === true)
+    fresh[1].props.onDrop({ preventDefault: () => {} })
+    await settle()
+    const write = remote.calls.filter(([name]) => name === 'setIndexes').at(-1)
+    assert.deepEqual(write?.[1], [other, ours], 'the drop order is written to the profile')
+  } finally {
+    Object.defineProperty(globalThis, 'navigator', original)
+  }
 }
 
 // --- Install on a card reaches installBundle, not updateBundle ----------------
