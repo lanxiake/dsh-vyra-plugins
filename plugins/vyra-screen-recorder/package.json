@@ -1,0 +1,58 @@
+{
+  "name": "vyra-screen-recorder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 WebM；截图带选区与基础标注。",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "src",
+    "scripts",
+    "vendor",
+    "assets",
+    "icon.svg",
+    "cordis.patch.yml",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "check:client": "node scripts/build-client.mjs --check",
+    "check": "node scripts/check-syntax.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "screen-recorder",
+    "screenshot",
+    "webcodecs",
+    "录屏",
+    "截图"
+  ],
+  "license": "MIT"
+}
