@@ -136,10 +136,30 @@ export function presentDeep(value) {
  */
 export function createConsole(ctx, handlers = {}, options = {}) {
   async function dispatch(action, args = {}) {
-    if (FORBIDDEN[action]) {
+    // OWN properties only, and this is a correctness requirement rather than a
+    // style choice. `FORBIDDEN[action]` walks the prototype chain, so every
+    // inherited `Object.prototype` name matched: a caller sending
+    // `action: "toString"` — or `"constructor"`, `"valueOf"`, `"__proto__"` —
+    // was told a real operation is forbidden when no such operation exists, and
+    // the spread of a function put NO `reason` and NO `alternative` in the
+    // envelope. That breaks the contract this whole boundary rests on: a
+    // refusal must always explain itself and name the user-facing alternative,
+    // because that text is what the model and the panel show a person.
+    //
+    // `hasOwn` is the same guard `client.js`'s `OPS` lookup already carries for
+    // the same reason. It is a LOOKUP change only: FORBIDDEN is still decided
+    // first, before the ACTIONS lookup and before the confirmation gate, so no
+    // option and no action name can make a forbidden operation confirmable.
+    if (Object.hasOwn(FORBIDDEN, action)) {
       return { status: 'forbidden', action, ...FORBIDDEN[action] }
     }
-    const spec = ACTIONS[action]
+    // The SAME prototype hazard, one line down, and the same fix. `ACTIONS` is
+    // an object literal, so `ACTIONS[action]` answers a function for every
+    // inherited name — truthy, so the `!spec` guard below never fired and
+    // `"toString"` fell through to `spec.domain === undefined`, reported as
+    // "no handler for domain undefined". The honest answer is that no such
+    // action exists, which is what `hasOwn` restores.
+    const spec = Object.hasOwn(ACTIONS, action) ? ACTIONS[action] : undefined
     if (!spec) {
       return { status: 'error', action, reason: `unknown action "${action}"` }
     }

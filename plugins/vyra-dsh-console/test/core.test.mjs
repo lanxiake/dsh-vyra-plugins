@@ -18,6 +18,25 @@ function bareCtx() {
 }
 
 /**
+ * Find the first undefined-valued key anywhere in a value, as a path string.
+ *
+ * The walk is on the OBJECT, never on a JSON round trip: `JSON.stringify` drops
+ * an undefined value silently, so a text-level check cannot distinguish a
+ * written hole from a correct omission. (The same helper the host suite uses,
+ * for the same reason.)
+ */
+function scanForUndefined(value, path = '$') {
+  if (value === null || typeof value !== 'object') return 'none'
+  for (const key of Reflect.ownKeys(value)) {
+    const entry = value[key]
+    if (entry === undefined) return `${path}.${String(key)}`
+    const found = scanForUndefined(entry, `${path}.${String(key)}`)
+    if (found !== 'none') return found
+  }
+  return 'none'
+}
+
+/**
  * Run the plugin's real `apply()` against a bare ctx and dispatch one action
  * through the tool it registers.
  *
@@ -41,12 +60,54 @@ async function applyAndDispatch(action, { config, services = {}, args, confirm }
 }
 
 test('every forbidden action is refused with a reason and an alternative', async () => {
+  // Swept rather than spot-checked: the envelope's two explanatory fields are
+  // the whole point of the boundary — the model and the panel both read them —
+  // so a fifth forbidden action added without them has to fail here.
   const console_ = createConsole(bareCtx())
-  for (const name of Object.keys(FORBIDDEN)) {
+  const names = Object.keys(FORBIDDEN)
+  assert.ok(names.length >= 4, 'the four authority-changing actions must all be present')
+  for (const name of names) {
     const result = await console_.dispatch(name, {})
     assert.equal(result.status, 'forbidden', `${name} must be forbidden`)
-    assert.ok(result.reason, `${name} must explain why`)
-    assert.ok(result.alternative, `${name} must name the user-facing alternative`)
+    assert.equal(typeof result.reason, 'string', `${name} must explain why`)
+    assert.ok(result.reason.length > 0, `${name}'s reason must say something`)
+    assert.equal(typeof result.alternative, 'string', `${name} must name the user-facing alternative`)
+    assert.ok(result.alternative.length > 0, `${name}'s alternative must say something`)
+  }
+})
+
+test('an inherited Object.prototype name is an unknown action, not a refusal', async () => {
+  // `FORBIDDEN[action]` used to walk the prototype chain, so every inherited
+  // name matched and was reported as a forbidden operation that does not exist.
+  // Worse, the spread of a function carried no `reason` and no `alternative`, so
+  // the envelope broke the contract the boundary rests on: a refusal must always
+  // explain itself. Anything reachable from an HTTP body or a tool call must get
+  // the honest "unknown action" here.
+  const console_ = createConsole(bareCtx())
+  for (const name of ['toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf']) {
+    const result = await console_.dispatch(name, {})
+    assert.notEqual(result.status, 'forbidden', `${name} is not an operation and must not be refused as one`)
+    assert.equal(result.status, 'error', `${name} must be an unknown action`)
+    assert.match(result.reason, /unknown action/i, `${name} must be reported honestly`)
+  }
+})
+
+test('no dispatch result ever lacks a status, whichever name is sent', async () => {
+  // The envelope contract, swept over names chosen to land in each branch and
+  // over the prototype names that used to escape it.
+  const console_ = createConsole(bareCtx())
+  const probes = [
+    ...Object.keys(ACTIONS), ...Object.keys(FORBIDDEN),
+    'toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf',
+    'propertyIsEnumerable', 'toLocaleString', '', 'nope.real', 'sandbox', 'constructor.name',
+  ]
+  for (const name of probes) {
+    const result = await console_.dispatch(name, {})
+    assert.equal(typeof result, 'object', `${name} must answer with an object`)
+    assert.equal(typeof result.status, 'string', `${name} produced a result with no status`)
+    // Forbidden if and only if the name is an own entry of the table.
+    if (Object.hasOwn(FORBIDDEN, name)) assert.equal(result.status, 'forbidden', `${name} must stay forbidden`)
+    else assert.notEqual(result.status, 'forbidden', `${name} must not be forbidden`)
   }
 })
 
@@ -54,8 +115,11 @@ test('the permission boundary names exactly the authority-changing actions', () 
   // These four are the spec's §2.2 exclusions. If one disappears, the agent
   // silently regains the ability to widen its own authority.
   for (const name of ['sandbox.setMode', 'permission.setPreset', 'approval.answer', 'credentials.set']) {
-    assert.ok(FORBIDDEN[name], `${name} must be forbidden`)
+    assert.ok(Object.hasOwn(FORBIDDEN, name), `${name} must be forbidden`)
   }
+  // And nothing else is: the table is a closed list, so a stray entry that is
+  // merely inherited must never be counted as part of the boundary.
+  assert.equal(Object.keys(FORBIDDEN).length, 4, 'exactly the four stated exclusions')
 })
 
 test('a non-mutating action is marked non-mutating and non-destructive', () => {
@@ -69,6 +133,45 @@ test('an unknown action fails instead of throwing', async () => {
   const result = await console_.dispatch('nope.notReal', {})
   assert.equal(result.status, 'error')
   assert.match(result.reason, /unknown action/i)
+})
+
+test('the tool reports an inherited name as an unknown action too', async () => {
+  // The same boundary through the FIRST of the two callers. The tool is what the
+  // model drives, so a prototype name arriving here — from a model that read it
+  // out of a URI or a JSON key — must not be answered with a refusal that has
+  // nothing to show a person.
+  const tool = createConsoleTool(createConsole(bareCtx()))
+  for (const name of ['toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf']) {
+    const result = await tool.execute({ action: name, args: {} })
+    assert.equal(result.status, 'error', `${name} must be an unknown action through the tool`)
+    assert.match(result.reason, /unknown action/i)
+    assert.notEqual(result.status, 'forbidden', `${name} must never be refused as real`)
+  }
+})
+
+test('the tool still refuses the four real forbidden actions, with their fields', async () => {
+  // The sweep, through the tool rather than the dispatcher, so the boundary is
+  // proven on the path the model actually uses.
+  const tool = createConsoleTool(createConsole(bareCtx()))
+  for (const name of Object.keys(FORBIDDEN)) {
+    const result = await tool.execute({ action: name, args: {} })
+    assert.equal(result.status, 'forbidden', `${name} must be forbidden through the tool`)
+    assert.ok(result.reason, `${name} must explain why`)
+    assert.ok(result.alternative, `${name} must name the user-facing alternative`)
+  }
+})
+
+test('no dispatch result carries an undefined-valued key, whichever name is sent', async () => {
+  // The lossless-JSON rule the whole plugin follows, applied to the branch this
+  // fix touched: a spread of a non-object put no fields at all in the envelope,
+  // which is the shape that fooled the old guard. Every result here is walked at
+  // every depth.
+  const console_ = createConsole(bareCtx())
+  for (const name of [...Object.keys(ACTIONS), ...Object.keys(FORBIDDEN), 'toString', 'constructor',
+    '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'nope.real', '']) {
+    const result = await console_.dispatch(name, {})
+    assert.equal(scanForUndefined(result), 'none', `${name} produced a hole at ${scanForUndefined(result)}`)
+  }
 })
 
 test('plugin.list reports unavailable when pluginManager is absent', async () => {

@@ -12,6 +12,7 @@ import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
 import { apply } from '../index.js'
+import { ACTIONS, FORBIDDEN } from '../core.js'
 
 const PATH = '/api/vyra-console/rpc'
 
@@ -904,6 +905,63 @@ test('an unknown action posted panel-style is reported, not silently accepted', 
   assert.equal(res.statusCode, 200)
   assert.equal(res.json.status, 'error')
   assert.match(res.json.reason, /unknown action/u)
+})
+
+test('an inherited Object.prototype name posted panel-style is an unknown action', async () => {
+  // The boundary's own table did this once: `FORBIDDEN[action]` walked the
+  // prototype chain, so `action: "toString"` came back `forbidden` — a real
+  // refusal for an operation that does not exist, and with no `reason` and no
+  // `alternative`, which is the one thing a refusal must always carry. The panel
+  // renders exactly those two fields, so an envelope without them shows a user a
+  // blank refusal.
+  //
+  // Driven over HTTP because that is the path the panel uses and the path that
+  // made this newly reachable.
+  const { handler } = handlerFor()
+  for (const name of ['toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf']) {
+    const res = await post(handler, { action: name, args: {} })
+    assert.equal(res.statusCode, 200, `${name} must answer, not fail the route`)
+    assert.notEqual(res.json.status, 'forbidden', `${name} is not an operation and must not be refused as one`)
+    assert.equal(res.json.status, 'error', `${name} must be an unknown action`)
+    assert.match(res.json.reason, /unknown action/u, `${name} must be reported honestly`)
+    assert.equal(scanForUndefined(res.json), 'none', `${name} produced a hole`)
+  }
+})
+
+test('every real forbidden action posted panel-style carries a reason and an alternative', async () => {
+  // Swept over the whole table rather than spot-checked, on the HTTP path: the
+  // panel and the skill both read these two fields, so a fifth forbidden action
+  // added without them must fail here.
+  const { handler } = handlerFor()
+  const names = Object.keys(FORBIDDEN)
+  assert.ok(names.length >= 4, 'the four authority-changing actions must all be present')
+  for (const name of names) {
+    const res = await post(handler, { action: name, args: {} })
+    assert.equal(res.json.status, 'forbidden', `${name} must be refused over HTTP`)
+    assert.equal(typeof res.json.reason, 'string', `${name} must explain why`)
+    assert.ok(res.json.reason.length > 0, `${name}'s reason must say something`)
+    assert.equal(typeof res.json.alternative, 'string', `${name} must name the user-facing alternative`)
+    assert.ok(res.json.alternative.length > 0, `${name}'s alternative must say something`)
+    assert.equal(scanForUndefined(res.json), 'none', `${name} produced a hole`)
+  }
+})
+
+test('no action response ever lacks a status, whatever name is posted', async () => {
+  // The envelope contract, swept over the whole surface the route exposes: real
+  // actions, the forbidden table, the prototype names, and junk.
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const probes = [
+    ...Object.keys(ACTIONS), ...Object.keys(FORBIDDEN),
+    'toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf',
+    'propertyIsEnumerable', 'toLocaleString', '', 'nope.real',
+  ]
+  for (const name of probes) {
+    const res = await post(handler, { action: name, args: {} })
+    assert.equal(res.statusCode, 200, `${name} must answer`)
+    assert.equal(typeof res.json, 'object', `${name} must answer with an object`)
+    assert.equal(typeof res.json.status, 'string', `${name} produced a response with no status`)
+    assert.equal(scanForUndefined(res.json), 'none', `${name} produced a hole`)
+  }
 })
 
 test('a non-string action is refused rather than coerced into dispatching', async () => {
