@@ -39,7 +39,10 @@ function cmdShim(nodePath, cliPath) {
 export function installSkillAndShims({ dshHome, packageRoot, nodePath = process.execPath }) {
   const result = { skill: null, shims: [] };
   const packageSkill = join(packageRoot, "skill", "SKILL.md");
-  const cliPath = join(packageRoot, "cli", "vft.mjs");
+  // Prefer the bundled CLI: the published package ships lib/ + cli/ but not
+  // src/, and cli/vft.mjs imports the shared model. lib/cli.mjs is standalone.
+  const bundledCli = join(packageRoot, "lib", "cli.mjs");
+  const cliPath = existsSync(bundledCli) ? bundledCli : join(packageRoot, "cli", "vft.mjs");
   if (!existsSync(cliPath)) return result;
 
   if (existsSync(packageSkill)) {

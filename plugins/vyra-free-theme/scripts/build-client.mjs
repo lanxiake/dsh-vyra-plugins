@@ -37,11 +37,28 @@ const hostOptions = {
   sourcemap: false,
 };
 
+// The CLI is bundled too: the published package ships `lib/` and `cli/` but not
+// `src/`, and cli/vft.mjs imports the shared model. One self-contained ESM file
+// keeps the installed CLI runnable with nothing but Node.
+const cliOptions = {
+  entryPoints: ["cli/vft.mjs"],
+  outfile: "lib/cli.mjs",
+  bundle: true,
+  format: "esm",
+  platform: "node",
+  target: "node22",
+  packages: "external",
+  legalComments: "none",
+  charset: "utf8",
+  sourcemap: false,
+};
+
 async function validateOutputs() {
   const { name } = JSON.parse(await readFile("package.json", "utf8"));
-  const [client, host] = await Promise.all([
+  const [client, host, cli] = await Promise.all([
     readFile(clientOptions.outfile, "utf8"),
     readFile(hostOptions.outfile, "utf8"),
+    readFile(cliOptions.outfile, "utf8"),
   ]);
   // The registration id must equal the package name: the boot page keys
   // __DSH_BOOT__ entries by package name, and dsh-client-modules throws
@@ -57,15 +74,19 @@ async function validateOutputs() {
   if (host.includes("/vyra-free-theme/update") || host.includes("self-update routes")) {
     throw new Error("generated host bundle still contains self-update remnants");
   }
+  if (!cli.includes("vyra-free-theme CLI") || !cli.includes("vyra-free-theme/selection.json") && !cli.includes("selection.json")) {
+    throw new Error("generated CLI bundle is missing its command surface");
+  }
   console.log(`built ${clientOptions.outfile} (${Buffer.byteLength(client)} bytes)`);
   console.log(`built ${hostOptions.outfile} (${Buffer.byteLength(host)} bytes)`);
+  console.log(`built ${cliOptions.outfile} (${Buffer.byteLength(cli)} bytes)`);
 }
 
 if (process.argv.includes("--watch")) {
-  const [client, host] = await Promise.all([context(clientOptions), context(hostOptions)]);
-  await Promise.all([client.watch(), host.watch()]);
-  console.log("watching src/client -> lib/client.js and src/host -> lib/index.js");
+  const [client, host, cli] = await Promise.all([context(clientOptions), context(hostOptions), context(cliOptions)]);
+  await Promise.all([client.watch(), host.watch(), cli.watch()]);
+  console.log("watching src/ -> lib/client.js, lib/index.js and cli/ -> lib/cli.mjs");
 } else {
-  await Promise.all([build(clientOptions), build(hostOptions)]);
+  await Promise.all([build(clientOptions), build(hostOptions), build(cliOptions)]);
   await validateOutputs();
 }
