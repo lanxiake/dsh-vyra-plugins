@@ -2416,7 +2416,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: '@xmanrui/dsh-im',
+      name: '@lanxiake/dsh-im',
       title: {
         en: 'Instant Messaging Bridge',
         zh: '即时通讯桥接',
@@ -2425,34 +2425,25 @@ export const manifest: MarketManifest = {
         en: 'Connect WeChat, Feishu, WeCom, DingTalk, QQ, Telegram, WhatsApp, Slack, Discord and Matrix to DSH, with Agent tools for proactive messages and files.',
         zh: '把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH；Agent 可直接主动发送文字和文件。',
       },
-      author: 'xmanrui',
-      homepage: 'https://github.com/xmanrui/dsh-im#readme',
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/dsh-im#readme',
       repository: {
-        url: 'https://github.com/xmanrui/dsh-im',
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
       },
       versions: {
-        '5.10.0': {
-          publishTimestamp: 1794967200,
+        '5.13.0': {
+          publishTimestamp: 1795446358,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
-            path: 'plugins/dsh-im',
-          },
-        },
-        '5.12.0': {
-          publishTimestamp: 1795445895,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'b95ac069ad576ce2c9b2b84e0ddf9020d1008af1',
+            commit: '036c3dbc58eef1304f4a0e36741c436fdf7ba3d7',
             path: 'plugins/dsh-im',
           },
         },
       },
       metadata: {
         category: 'integration',
-        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord', 'agent', 'skill'],
+        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord', 'agent', 'skill', 'lanxiake'],
       },
     },
     {
