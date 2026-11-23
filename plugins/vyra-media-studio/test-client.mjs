@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import React from 'react'
 import ReactDOM from 'react-dom'
+import { renderToString } from 'react-dom/server'
 
 const noop = () => {}
 const styleElements = []
@@ -93,4 +94,29 @@ test('client bundle loads and registers the library plus media tabs', () => {
   ])
   assert.ok(bodies.every(body => typeof body.component === 'function'))
   assert.equal(opened.length, 0)
+})
+
+test('library and media tab render without undeclared references', () => {
+  const bodies = []
+  const ctx = {
+    effect(callback) { const dispose = callback(); if (typeof dispose === 'function') dispose() },
+    sidebarRightTabs: { register() { return noop } },
+    slots: { inject(_name, callback) { return callback() }, register(spec, component) { bodies.push({ spec, component }); return noop } },
+    sidebarRight: { openTab() {} },
+  }
+  loaded.apply(ctx)
+  const library = bodies.find(body => body.spec.key === 'vyra-media-studio/library').component
+  const media = bodies.find(body => body.spec.key === 'vyra-media-studio/video').component
+  const useTabInfo = () => ({
+    tab: {
+      kind: 'media',
+      visible: true,
+      contentId: 'dsh-resource://file/session/s-1/clip.mp4',
+      actions: { openResource() {} },
+    },
+  })
+  const html = renderToString(React.createElement(library, { sessionId: 's-1', useTabInfo, openBrowser() {} }))
+  assert.match(html, /文件管理/u)
+  const mediaHtml = renderToString(React.createElement(media, { sessionId: 's-1', useTabInfo, openLibrary() {} }))
+  assert.match(mediaHtml, /clip.mp4/u)
 })

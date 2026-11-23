@@ -15,7 +15,7 @@ import { insertComposerText } from './composer.js'
 import { Icon, IconButton } from './icons.js'
 import {
   CARD_MAX, CARD_MIN, DAY, PAGE_SIZE, TYPE_CHIPS, TYPE_LABEL, apiUrl, compareItems,
-  detectLinkKind, folderOf, folderSegments, formatBytes, makeLinkItem, mentionToken,
+  detectLinkKind, folderOf, folderSegments, formatBytes, makeLinkItem, mediaSrc, mentionToken,
   parseFileAddress, postJson, readLinks, readPrefs, sessionFileAddress, typeLabel,
   writeLinks, writePrefs,
 } from './helpers.js'
@@ -124,6 +124,7 @@ export function LibraryBody(props) {
   const metaRef = useRef({})
   const pendingMeta = useRef(new Set())
   const generation = useRef(0)
+  const gridRef = useRef(null)
 
   useEffect(() => { writePrefs({ view, cardSize, detail, sort, dir, showHidden, includeBuild }) },
     [view, cardSize, detail, sort, dir, showHidden, includeBuild])

@@ -4315,7 +4315,7 @@ function apiUrl(path, params) {
 function localFileUrl(sessionId, path, version2) {
   return apiUrl("api/vyra-media/file", { sessionId, path, v: version2 });
 }
-function mediaSrc2(sessionId, item) {
+function mediaSrc(sessionId, item) {
   return item.source === "url" ? item.url : localFileUrl(sessionId, item.relativePath);
 }
 async function postJson(path, body, signal) {
@@ -4446,7 +4446,7 @@ function folderSegments(folder) {
   return String(folder ?? "").split("/").filter(Boolean);
 }
 function slideFor(item, index, sessionId) {
-  const src = mediaSrc2(sessionId, item);
+  const src = mediaSrc(sessionId, item);
   if (item.kind === "image") {
     return {
       type: "image",
@@ -4660,7 +4660,7 @@ function MediaThumb({ item, sessionId, lazy = true }) {
   if (item.kind === "image") {
     return failed ? h(VideoFallback, { item, icon: "fileError" }) : h("img", {
       className: "vms-poster",
-      src: mediaSrc2(sessionId, item),
+      src: mediaSrc(sessionId, item),
       alt: "",
       loading: "lazy",
       decoding: "async",
@@ -4674,7 +4674,7 @@ function MediaThumb({ item, sessionId, lazy = true }) {
       { ref: boxRef, className: "vms-thumb-box" },
       visible && h("video", {
         className: "vms-thumb-video",
-        src: mediaSrc2(sessionId, item),
+        src: mediaSrc(sessionId, item),
         preload: "metadata",
         muted: true,
         playsInline: true,
@@ -4756,7 +4756,7 @@ function DurationBadge({ item }) {
   return h("span", { className: "vms-duration" }, item.ext.toUpperCase() || "FILE");
 }
 function InlineMedia({ item, sessionId, onExpand }) {
-  const src = mediaSrc2(sessionId, item);
+  const src = mediaSrc(sessionId, item);
   if (item.kind === "audio") {
     return h(
       "div",
@@ -5090,7 +5090,7 @@ function TextDocument({ item, sessionId }) {
 function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, onMenu, onOpenItem }) {
   const isPdf = item.ext === "pdf";
   const isText = item.kind === "document" && isTextExtension(item.ext);
-  const src = mediaSrc2(sessionId, item);
+  const src = mediaSrc(sessionId, item);
   const size = meta?.size ?? item.size;
   return h(
     "div",
@@ -5165,7 +5165,7 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   if (current === void 0) return null;
-  const src = mediaSrc2(sessionId, current);
+  const src = mediaSrc(sessionId, current);
   const size = meta?.[current.id]?.size ?? current.size;
   return h(
     "div",
@@ -5257,7 +5257,7 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
   );
 }
 function NativeMedia({ item, sessionId, visible = true }) {
-  const src = mediaSrc2(sessionId, item);
+  const src = mediaSrc(sessionId, item);
   const videoRef = (0, import_react4.useRef)(null);
   const [failed, setFailed] = (0, import_react4.useState)(false);
   const [failure, setFailure] = (0, import_react4.useState)(null);
@@ -5555,6 +5555,7 @@ function LibraryBody(props) {
   const metaRef = (0, import_react6.useRef)({});
   const pendingMeta = (0, import_react6.useRef)(/* @__PURE__ */ new Set());
   const generation = (0, import_react6.useRef)(0);
+  const gridRef = (0, import_react6.useRef)(null);
   (0, import_react6.useEffect)(
     () => {
       writePrefs({ view, cardSize, detail, sort, dir, showHidden, includeBuild });

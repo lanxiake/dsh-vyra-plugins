@@ -1,6 +1,6 @@
 {
   "name": "vyra-media-studio",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "右侧栏文件管理：全类型扫描、网格缩放、列表详细度、文档预览与重命名/复制/删除等文件操作。",
   "exports": {
