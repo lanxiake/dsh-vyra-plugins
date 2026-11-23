@@ -991,7 +991,9 @@ test('every catalog action degrades to unavailable without its service', async (
   }
 })
 
-test('console.actions lists the catalog actions with their mutation flags', async () => {
+test('the registry declares the catalog actions with their mutation flags', async () => {
+  // Table-level only: this never dispatches, so the domain coverage for
+  // console.actions lives in the console-domain tests further down.
   const console_ = createConsole(bareCtx())
   const names = console_.listActions().map((a) => a.name)
   for (const name of ['skill.list', 'mcp.list', 'mcp.restart', 'mcp.probe']) {
@@ -1104,32 +1106,36 @@ test('every registered action has a wired handler', async () => {
   }
 })
 
-test('every domain an action name implies is actually wired in index.js', async () => {
-  // Belt and braces: the check above is the behavioural one; this asserts the
-  // wiring directly, naming the offending domain.
-  const wired = new Set()
-  for (const name of Object.keys(ACTIONS)) {
-    // dispatch() resolves the handler by the spec's `domain`, so a domain that
-    // is absent from index.js is exactly what must not happen.
-    wired.add(ACTIONS[name].domain)
-  }
-  for (const domain of wired) {
-    const result = await applyAndDispatch('console.actions')
-    assert.ok(result.status === 'ok', 'console.actions must answer, so the list is readable')
-    assert.ok(
-      result.actions.some((a) => a.domain === domain),
-      `domain "${domain}" is used by a registered action`,
+test('every domain an action resolves to is wired, reported per domain', async () => {
+  // Complements the per-action guard above by keying on the domain rather than
+  // the action, so a domain with NO registered action at all (nothing to
+  // dispatch) still cannot claim coverage, and the failure names the domain.
+  //
+  // Deliberately NOT asserted here: that `apply()` wires only these domains.
+  // The handlers index.js passes to createConsole are a closed-over literal
+  // with no seam to observe from outside, so a test that "checked" that set
+  // would be reading a table rebuilt in this file rather than the real wiring —
+  // vacuous by construction. The per-action guard is the one with teeth; it is
+  // mutation-tested (see task-3b-report.md).
+  const domains = new Set(Object.values(ACTIONS).map((spec) => spec.domain))
+  assert.ok(domains.size > 0, 'the registry must use at least one domain')
+  for (const domain of domains) {
+    // Pick any action in this domain and prove it reaches a handler.
+    const name = Object.keys(ACTIONS).find((n) => ACTIONS[n].domain === domain)
+    const result = await applyAndDispatch(name)
+    assert.doesNotMatch(
+      String(result.reason ?? ''),
+      /no handler for domain/,
+      `domain "${domain}" (via ${name}) reaches no handler — index.js wires it nowhere`,
     )
   }
-  // Every domain used by ACTIONS is named by at least one action row, and the
-  // behaviour guard above proves each of those resolves to a handler.
-  assert.ok(wired.size > 0)
 })
 
-test('the check above would have caught the missing console handler', async () => {
-  // Proves the guard has teeth: with the console domain deliberately omitted,
-  // dispatching console.actions reports the missing-handler failure the real
-  // guard asserts against.
+test('an unwired domain yields the missing-handler reason the guard matches on', async () => {
+  // Pins the failure STRING the guard above matches on, so the guard cannot
+  // pass merely because dispatch stopped emitting it. This hand-builds a
+  // handler map on purpose: it is testing dispatch()'s own wording, not the
+  // plugin's wiring.
   const console_ = createConsole(bareCtx(), { plugin: pluginDomain })
   const result = await console_.dispatch('console.actions', {})
   assert.equal(result.status, 'error')
