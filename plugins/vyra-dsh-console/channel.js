@@ -25,7 +25,7 @@
  * Client half (Task 6) never sees this file at all.
  */
 
-import { presentDeep } from './core.js'
+import { present, presentDeep } from './core.js'
 
 /** The single answer when nobody is listening. One wording, one meaning. */
 const NO_INTERFACE = 'no interface is connected; open the DSH Web UI and retry'
@@ -91,6 +91,13 @@ export function createChannel({ timeoutMs = 5000 } = {}) {
       entry.timer = setTimeout(() => {
         settle(id, { status: 'unavailable', op, reason: NO_INTERFACE })
       }, timeoutMs)
+      // `unref` where the host has it, so a request that nobody answers does not
+      // hold a short-lived process open for the whole timeout. Measured: one
+      // unanswered request with `timeoutMs: 1500` delayed exit by ~1570 ms. The
+      // long-lived Host does not care, but any CLI or test process that exits on
+      // its own does. Optional-called because a browser timer handle has no
+      // `unref`, and this file must stay loadable in both realms.
+      entry.timer.unref?.()
       listener({ id, op, args })
     })
   }
@@ -114,16 +121,29 @@ export function createChannel({ timeoutMs = 5000 } = {}) {
     if (reply.ok !== true) {
       return settle(id, { status: 'error', reason: String(reply?.error ?? 'client refused'), op: entry.op })
     }
-    // `op` last, and the value cleaned deeply, for the same reason every action
-    // envelope in this plugin writes `status` last: this object is assembled from
-    // data the browser supplied. `reply.value` is arbitrary JSON written by the
-    // Client half, so it can carry a key holding `undefined` at any depth, which
-    // the tool pipeline's lossless snapshot (`dsh-util-values` walks with
-    // Reflect.ownKeys) rejects as INVALID_TOOL_OUTPUT for the WHOLE result — one
-    // hole in the browser's answer would turn a successful theme change into a
-    // harness error. `presentDeep` is exactly the helper for a value that came
-    // from elsewhere, so it is reused rather than re-implemented here.
-    return settle(id, { status: 'ok', value: presentDeep(reply.value), op: entry.op })
+    // Two separate jobs, and `presentDeep` alone only does one of them.
+    //
+    // `presentDeep` cleans holes INSIDE a value the browser wrote: `reply.value`
+    // is arbitrary JSON from the Client half, so it can carry a key holding
+    // `undefined` at any depth, and the pipeline's lossless snapshot
+    // (`dsh-util-values` walks with Reflect.ownKeys) rejects the WHOLE result as
+    // INVALID_TOOL_OUTPUT for one such key.
+    //
+    // It cannot clean the envelope key this function writes itself. An answer of
+    // `{ ok: true }` with nothing to report — a `toggleSidebar`, an
+    // `openRightbar`, anything whose result the browser has no reason to send
+    // back — would otherwise create a real own key holding `undefined`, which
+    // fails the same snapshot. So the key is OMITTED via `present`, never
+    // assigned as `undefined`; `value: false`/`0`/`''`/`null` are real answers
+    // and are relayed unchanged.
+    //
+    // `op` last, for the same reason every action envelope in this plugin writes
+    // `status` last: this object is assembled from data the browser supplied.
+    return settle(id, present({
+      status: 'ok',
+      value: reply.value === undefined ? undefined : presentDeep(reply.value),
+      op: entry.op,
+    }))
   }
 
   return {
@@ -134,8 +154,15 @@ export function createChannel({ timeoutMs = 5000 } = {}) {
      *
      * Assignment rather than `addEventListener`: there is exactly one client
      * half, and a second registration replacing the first is easier to reason
-     * about than two listeners racing to answer the same request. A throwing
-     * listener cannot strand the request either — the timeout still settles it.
+     * about than two listeners racing to answer the same request.
+     *
+     * What this does and does not cover, measured against the real code: a
+     * listener that never responds does not strand the request — the timeout
+     * settles it. A listener that throws SYNCHRONOUSLY is not caught here: the
+     * throw propagates out of `request()`, so the caller's promise rejects
+     * rather than resolving `unavailable`. An async listener that rejects does
+     * resolve via the timeout; an async throw inside a callback is an uncaught
+     * exception and escapes both. Only the first of those is a guarantee.
      */
     onRequest(handler) { listener = typeof handler === 'function' ? handler : () => {} },
     /** How many requests are still awaiting an answer; 0 whenever all settled. */

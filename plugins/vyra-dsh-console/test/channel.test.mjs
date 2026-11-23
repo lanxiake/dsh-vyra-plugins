@@ -495,6 +495,59 @@ test('a client-owned payload that holds undefined is cleaned before it reaches t
   assert.deepEqual(result.value, { theme: 'dark', nested: { keep: 1 }, list: [1, 'two'] })
 })
 
+test('an ok reply carrying no value yields no value key at all', async () => {
+  // The regression this was written after, and the reason `presentDeep` alone was
+  // not enough. `presentDeep` cleans holes INSIDE a value; it cannot clean the
+  // envelope key the channel writes itself. A client answering `{ ok: true }`
+  // with nothing to report — a `toggleSidebar`, an `openRightbar`, any action
+  // whose result the browser has no reason to send back — produced a real own key
+  // holding `undefined`, and the pipeline's recursive snapshot rejects the WHOLE
+  // call for it.
+  //
+  // NOTE the assertion style, which is the other half of this fix: a
+  // `JSON.parse(JSON.stringify(...))` round trip PASSES on this bug, because
+  // `JSON.stringify` silently drops undefined values. That blindness is precisely
+  // why the suite missed it, so the check has to be an own-key walk.
+  const absent = createChannel({ timeoutMs: 1000 })
+  absent.onRequest((req) => absent.respond({ id: req.id, ok: true }))
+  const withoutValue = await absent.request('appearance.toggleSidebar', {})
+  assert.equal(withoutValue.status, 'ok')
+  assert.equal('value' in withoutValue, false, 'an absent value must be omitted, not written as undefined')
+  assert.equal(Reflect.ownKeys(withoutValue).includes('value'), false)
+  assert.equal(scanForUndefined(withoutValue), 'none')
+
+  // The same when the client is explicit about it.
+  const explicit = createChannel({ timeoutMs: 1000 })
+  explicit.onRequest((req) => explicit.respond({ id: req.id, ok: true, value: undefined }))
+  const undefinedValue = await explicit.request('appearance.toggleSidebar', {})
+  assert.equal(undefinedValue.status, 'ok')
+  assert.equal('value' in undefinedValue, false)
+  assert.equal(scanForUndefined(undefinedValue), 'none')
+
+  // And through the real tool path, which is where the pipeline walks it.
+  const { ctx, dispatch } = applyPlugin()
+  ctx.__consoleChannel = absent
+  const throughTool = await dispatch('appearance.toggleSidebar', {})
+  assert.equal(throughTool.status, 'ok')
+  assert.equal(scanForUndefined(throughTool), 'none', 'the tool result must carry no hole')
+  assert.equal(Reflect.ownKeys(throughTool).includes('value'), false)
+})
+
+test('a falsy value is relayed, not mistaken for an absent one', async () => {
+  // The counter-test to the one above: omitting only `undefined` must not become
+  // omitting everything falsy, or a legitimate `false`/`0`/`''` answer would be
+  // reported as "the client sent nothing".
+  for (const value of [false, 0, '', null, []]) {
+    const channel = createChannel({ timeoutMs: 1000 })
+    channel.onRequest((req) => channel.respond({ id: req.id, ok: true, value }))
+    const result = await channel.request('appearance.toggleSidebar', {})
+    assert.equal(result.status, 'ok')
+    assert.ok('value' in result, `${JSON.stringify(value)} must be relayed, not dropped`)
+    assert.deepEqual(result.value, value)
+    assert.equal(scanForUndefined(result), 'none')
+  }
+})
+
 test('a client answer can never replace the operation outcome', async () => {
   // `status` and `op` are written last in the channel's envelope, because the
   // value it describes comes from the browser. Driven against the real channel so
@@ -513,6 +566,66 @@ test('a client answer can never replace the operation outcome', async () => {
   assert.equal(result.op, 'appearance.openRightbar', 'the op must name what was actually requested')
   assert.equal('value' in result, false, 'a refusal carries no value')
   assert.equal(result.reason, 'the layout service is unavailable')
+})
+
+test('an unanswered request does not hold a short-lived process open', async () => {
+  // The timeout is `unref`'d, so a pending request cannot keep a CLI or test
+  // process alive for the whole budget. Measured independently: without the call,
+  // one request with `timeoutMs: 1500` delayed exit by ~1570 ms; with it, exit is
+  // immediate.
+  //
+  // Driven in a child process, because "does this handle keep the loop alive" is
+  // not observable from inside the process that owns it.
+  const { mkdtempSync, writeFileSync: write, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const { execFileSync } = await import('node:child_process')
+
+  const dir = mkdtempSync(join(tmpdir(), 'vyra-console-unref-'))
+  try {
+    const channelUrl = new URL('../channel.js', import.meta.url).href
+    const probe = join(dir, 'probe.mjs')
+    write(probe, [
+      `import { createChannel } from ${JSON.stringify(channelUrl)}`,
+      'const started = Date.now()',
+      "const channel = createChannel({ timeoutMs: 60000 })",
+      // A request nobody answers: were the timer ref'd, this process would sit
+      // here for a full minute.
+      "channel.request('appearance.state', {})",
+      // Its own ref'd timer, so the process does not exit before printing.
+      'setTimeout(() => {',
+      "  console.log('still-running', Date.now() - started < 30000)",
+      '}, 300)',
+      '',
+    ].join('\n'))
+    const out = execFileSync(process.execPath, [probe], { encoding: 'utf8', stdio: 'pipe', timeout: 20000 })
+    assert.equal(out.trim(), 'still-running true', 'the request timer must not keep the process alive')
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('a listener that never responds does not strand the request', async () => {
+  // The narrow claim the `onRequest` comment makes. (A listener that throws
+  // SYNCHRONOUSLY is deliberately not covered here: that throw propagates out of
+  // `request()` and rejects the caller's promise, which is documented in the
+  // source rather than asserted as a guarantee.)
+  const channel = createChannel({ timeoutMs: 30 })
+  channel.onRequest(() => {})
+  const result = await channel.request('appearance.state', {})
+  assert.equal(result.status, 'unavailable')
+  assert.match(result.reason, /no interface is connected/i)
+  assert.equal(channel.pendingCount(), 0)
+})
+
+test('a non-callable handler is ignored rather than stored', async () => {
+  // `onRequest(undefined)` must not replace the listener with something that
+  // throws when a request is dispatched.
+  const channel = createChannel({ timeoutMs: 30 })
+  channel.onRequest(undefined)
+  const result = await channel.request('appearance.state', {})
+  assert.equal(result.status, 'unavailable')
+  assert.equal(channel.pendingCount(), 0)
 })
 
 /** Find the first undefined-valued key anywhere in a value, as a path string. */
