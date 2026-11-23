@@ -2168,8 +2168,8 @@
         "zh": "Vyra 录屏截图"
       },
       "description": {
-        "en": "Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM to a configurable library; manage files, format and shortcuts from a settings page; hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.",
-        "zh": "DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM 到可配置的存储目录；设置页管理文件、格式、快捷键和隐藏 DSH 截图；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。"
+        "en": "Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM; configure separate video and screenshot folders, format and shortcuts in the settings page; screenshots stay fast with no loading overlay and can hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.",
+        "zh": "DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM；设置页可分别配置视频与截图的存储目录、格式和快捷键；截图走常驻服务、不显示加载提示，单张几十毫秒，也可以隐藏 DSH 截取其他应用；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。"
       },
       "icon": "undefined",
       "author": "lanxiake",
@@ -2179,6 +2179,16 @@
         "directory": "plugins/vyra-screen-recorder"
       },
       "versions": [
+        {
+          "version": "0.3.0",
+          "publishTimestamp": 1796083200,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "9a5a7c54d330abe302975d12b839a4ee15e01665",
+            "path": "plugins/vyra-screen-recorder"
+          }
+        },
         {
           "version": "0.2.0",
           "publishTimestamp": 1795996800,
