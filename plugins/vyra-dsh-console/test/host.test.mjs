@@ -949,7 +949,18 @@ test('every real forbidden action posted panel-style carries a reason and an alt
 test('no action response ever lacks a status, whatever name is posted', async () => {
   // The envelope contract, swept over the whole surface the route exposes: real
   // actions, the forbidden table, the prototype names, and junk.
-  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  //
+  // `clientTimeoutMs` is set short HERE and nowhere else, because this is the
+  // only test that dispatches the `requiresClient` actions: each of those queues
+  // an appearance request and blocks until the channel gives up, so without a
+  // bound this test sits out the production 5s six times over. The coverage is
+  // the point — every action in the table goes through the route — so the wait
+  // is what gets shortened, not the sweep. `longPollMs` is set alongside it for
+  // the same reason the endpoint tests set it.
+  const { handler } = handlerFor({
+    config: { clientTimeoutMs: 40, longPollMs: 40 },
+    services: { pluginManager: pluginManagerStub() },
+  })
   const probes = [
     ...Object.keys(ACTIONS), ...Object.keys(FORBIDDEN),
     'toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf',
