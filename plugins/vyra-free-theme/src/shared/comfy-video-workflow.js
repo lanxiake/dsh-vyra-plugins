@@ -47,7 +47,7 @@ export function framesForSeconds(seconds, fps = HUNYUAN_I2V_DEFAULTS.fps) {
  *          seed?: number, steps?: number, shift?: number, cfg?: number,
  *          sampler?: string, scheduler?: string, unet?: string, clip?: string,
  *          clipGlyph?: string, clipVision?: string, vae?: string,
- *          filenamePrefix?: string}} options
+ *          filenamePrefix?: string, tiled?: boolean}} options
  */
 export function buildHunyuanI2VWorkflow(options) {
   const {
@@ -70,6 +70,7 @@ export function buildHunyuanI2VWorkflow(options) {
     clipVision = HUNYUAN_I2V_DEFAULTS.clipVision,
     vae = HUNYUAN_I2V_DEFAULTS.vae,
     filenamePrefix = "vft/video",
+    tiled = true,
   } = options;
   if (typeof image !== "string" || image.trim().length === 0) throw new Error("image is required");
   const length = options.frames ?? framesForSeconds(seconds, fps);
@@ -114,7 +115,15 @@ export function buildHunyuanI2VWorkflow(options) {
         latent_image: ["9", 2],
       },
     },
-    "16": { class_type: "VAEDecode", inputs: { samples: ["15", 0], vae: ["3", 0] } },
+    // Long clips at 720p do not fit in one decode pass on a 16GB card: the model
+    // then thrashes for many minutes after sampling is already done. The tiled
+    // decode is the template's own answer to that, and is the default here.
+    "16": tiled
+      ? {
+        class_type: "VAEDecodeTiled",
+        inputs: { samples: ["15", 0], vae: ["3", 0], tile_size: 512, overlap: 64, temporal_size: 64, temporal_overlap: 4096 },
+      }
+      : { class_type: "VAEDecode", inputs: { samples: ["15", 0], vae: ["3", 0] } },
     "17": { class_type: "CreateVideo", inputs: { images: ["16", 0], fps } },
     "18": { class_type: "SaveVideo", inputs: { video: ["17", 0], filename_prefix: filenamePrefix, format: "auto", codec: "h264" } },
   };

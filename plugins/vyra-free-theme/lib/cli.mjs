@@ -1149,7 +1149,8 @@ function buildHunyuanI2VWorkflow(options) {
     clipGlyph = HUNYUAN_I2V_DEFAULTS.clipGlyph,
     clipVision = HUNYUAN_I2V_DEFAULTS.clipVision,
     vae = HUNYUAN_I2V_DEFAULTS.vae,
-    filenamePrefix = "vft/video"
+    filenamePrefix = "vft/video",
+    tiled = true
   } = options;
   if (typeof image !== "string" || image.trim().length === 0) throw new Error("image is required");
   const length = options.frames ?? framesForSeconds(seconds, fps);
@@ -1194,7 +1195,13 @@ function buildHunyuanI2VWorkflow(options) {
         latent_image: ["9", 2]
       }
     },
-    "16": { class_type: "VAEDecode", inputs: { samples: ["15", 0], vae: ["3", 0] } },
+    // Long clips at 720p do not fit in one decode pass on a 16GB card: the model
+    // then thrashes for many minutes after sampling is already done. The tiled
+    // decode is the template's own answer to that, and is the default here.
+    "16": tiled ? {
+      class_type: "VAEDecodeTiled",
+      inputs: { samples: ["15", 0], vae: ["3", 0], tile_size: 512, overlap: 64, temporal_size: 64, temporal_overlap: 4096 }
+    } : { class_type: "VAEDecode", inputs: { samples: ["15", 0], vae: ["3", 0] } },
     "17": { class_type: "CreateVideo", inputs: { images: ["16", 0], fps } },
     "18": { class_type: "SaveVideo", inputs: { video: ["17", 0], filename_prefix: filenamePrefix, format: "auto", codec: "h264" } }
   };
@@ -1229,7 +1236,8 @@ function comfyConfigFromEnv(env = process.env) {
   return { baseUrl: baseUrl.replace(/\/+$/, ""), auth };
 }
 function createComfyClient(options = {}) {
-  const config = { ...comfyConfigFromEnv(options.env), ...options };
+  const defined = Object.fromEntries(Object.entries(options).filter(([, value]) => value !== void 0));
+  const config = { ...comfyConfigFromEnv(options.env), ...defined };
   const baseUrl = String(config.baseUrl ?? DEFAULT_BASE).replace(/\/+$/, "");
   const fetchImpl = config.fetchImpl ?? fetch;
   const sleep = config.sleep ?? ((ms) => new Promise((resolve2) => setTimeout(resolve2, ms)));

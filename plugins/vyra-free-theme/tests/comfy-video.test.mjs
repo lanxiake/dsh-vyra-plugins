@@ -4,7 +4,7 @@ import { buildHunyuanI2VWorkflow, framesForSeconds, HUNYUAN_I2V_DEFAULTS, valida
 import { createComfyClient } from "../src/host/comfy.js";
 
 test("the image-to-video graph binds the still as the first frame", () => {
-  const workflow = buildHunyuanI2VWorkflow({ image: "still.png", seconds: 2, seed: 9 });
+  const workflow = buildHunyuanI2VWorkflow({ image: "still.png", seconds: 2, seed: 9, tiled: false });
   assert.deepEqual(validateVideoWorkflow(workflow), []);
   const types = Object.values(workflow).map((node) => node.class_type);
   assert.deepEqual(types, [
@@ -49,6 +49,33 @@ test("video validation names the silent mistakes", () => {
   assert.ok(validateVideoWorkflow(badLength).some((issue) => issue.includes("4n+1")));
 
   assert.throws(() => buildHunyuanI2VWorkflow({ image: "  " }), /image is required/);
+});
+
+test("tiled decode is the default, and can be turned off", () => {
+  assert.equal(buildHunyuanI2VWorkflow({ image: "x.png" })["16"].class_type, "VAEDecodeTiled");
+  assert.equal(buildHunyuanI2VWorkflow({ image: "x.png", tiled: false })["16"].class_type, "VAEDecode");
+  const tiled = buildHunyuanI2VWorkflow({ image: "x.png" })["16"].inputs;
+  assert.equal(tiled.tile_size, 512);
+  assert.equal(tiled.temporal_size, 64);
+});
+
+test("an explicitly undefined option does not erase the environment config", async () => {
+  // The CLI passes flags straight through, so auth: undefined used to shadow
+  // COMFYUI_AUTH and every run came back 401 from a correctly configured server.
+  const seen = [];
+  const fetchImpl = async (url, init = {}) => {
+    seen.push(init.headers ?? {});
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  const client = createComfyClient({
+    baseUrl: undefined,
+    auth: undefined,
+    env: { COMFYUI_AUTH: "admin:secret" },
+    fetchImpl,
+    sleep: async () => {},
+  });
+  await client.probe();
+  assert.equal(seen[0].authorization, "Basic " + Buffer.from("admin:secret", "utf8").toString("base64"));
 });
 
 test("the client uploads a still and reports auth separately from being down", async () => {

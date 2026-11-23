@@ -22,7 +22,12 @@ export function comfyConfigFromEnv(env = process.env) {
 }
 
 export function createComfyClient(options = {}) {
-  const config = { ...comfyConfigFromEnv(options.env), ...options };
+  // Explicit `undefined` must not win over the environment: callers routinely
+  // pass every flag through (`{ baseUrl: flags.url, auth: flags.auth }`), and
+  // spreading those over the env config silently dropped COMFYUI_AUTH, which
+  // showed up as a 401 from a server that was configured correctly.
+  const defined = Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined));
+  const config = { ...comfyConfigFromEnv(options.env), ...defined };
   const baseUrl = String(config.baseUrl ?? DEFAULT_BASE).replace(/\/+$/, "");
   const fetchImpl = config.fetchImpl ?? fetch;
   const sleep = config.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
@@ -88,10 +93,24 @@ export function createComfyClient(options = {}) {
      * Returns the filename to put in the node (ComfyUI may rename on conflict).
      */
     async uploadImage(buffer, filename, { overwrite = true } = {}) {
+      const type = /\.jpe?g$/i.test(filename) ? "image/jpeg" : /\.webp$/i.test(filename) ? "image/webp" : "image/png";
       const form = new FormData();
-      form.append("image", new Blob([buffer]), filename);
+      // ComfyUI rejects a part without a content type (HTTP 400), so the MIME
+      // type has to be set explicitly rather than left to the default.
+      form.append("image", new Blob([buffer], { type }), filename);
       form.append("overwrite", overwrite ? "true" : "false");
-      const response = await call("/upload/image", { method: "POST", body: form, headers: {} });
+      // Not through call(): its default content-type is application/json, and a
+      // multipart body declared as JSON is an automatic 400. fetch fills in the
+      // multipart boundary itself as long as we do not set content-type.
+      const response = await fetchImpl(`${baseUrl}/upload/image`, {
+        method: "POST",
+        headers: { ...(authHeader(config.auth) ?? {}) },
+        body: form,
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`ComfyUI /upload/image → HTTP ${response.status}${text ? `: ${text.slice(0, 200)}` : ""}`);
+      }
       const body = await response.json();
       const stored = body?.name ?? filename;
       return body?.subfolder ? `${body.subfolder}/${stored}` : stored;
