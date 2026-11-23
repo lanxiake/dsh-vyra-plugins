@@ -109,6 +109,21 @@ test('an unknown op is refused rather than silently ignored', () => {
   const result = exports.__internal.applyOp(services, 'appearance.nope', {})
   assert.equal(result.status, 'error')
   assert.deepEqual(calls, [], 'nothing is called for an unknown op')
+  // The reason must name the op and the op set it was matched against. Asserting
+  // only `status === 'error'` would pass for the wrong reason now that a catch
+  // wraps the dispatch: dereferencing a missing handler also yields an error,
+  // but it leaks "handler is not a function" instead of naming the bad op.
+  assert.match(result.reason, /unknown appearance op "appearance\.nope"/)
+})
+
+test('an unknown op never degrades into a leaked implementation detail', () => {
+  // The guard that names the op runs before the dispatch, so an unknown op is
+  // answered without ever reaching a handler lookup — the failure is about the
+  // request, not about this file's internals.
+  const { services } = spyServices()
+  const result = exports.__internal.applyOp(services, 'appearance.definitelyNotAnOp', {})
+  assert.doesNotMatch(result.reason, /is not a function/)
+  assert.doesNotMatch(result.reason, /\bhandler\b/)
 })
 
 test('a Client service that is missing reports an error, not a false success', () => {
@@ -183,6 +198,127 @@ test('every op, including the read, names its missing service', () => {
   }
 })
 
+test('a throwing Client service becomes a status, keeping the service message', () => {
+  // `theme.setTheme` really does throw on an unregistered id
+  // (`ui-theme/src/client/index.ts`: `theme "${id}" is not registered`), and a
+  // registered-but-unknown id is an ordinary user mistake rather than a crash.
+  // The message is the valuable part: it is the only thing that tells the agent
+  // what to correct, and it is lost if the throw escapes as a harness error.
+  const services = {
+    theme: {
+      setTheme: (id) => { throw new Error(`theme "${id}" is not registered`) },
+      setFontSize: (role, px) => { throw new Error(`${role} font size ${px} is outside 10..22`) },
+    },
+  }
+  const theme = exports.__internal.applyOp(services, 'appearance.setTheme', { id: 'nope' })
+  assert.equal(theme.status, 'error')
+  assert.match(theme.reason, /theme "nope" is not registered/)
+
+  const font = exports.__internal.applyOp(services, 'appearance.setFontSize', { role: 'body', px: 999 })
+  assert.equal(font.status, 'error')
+  assert.match(font.reason, /999 is outside 10\.\.22/)
+})
+
+test('a throwing locale service becomes a status too', () => {
+  // `locale.setLocale` throws the same way on an unregistered id.
+  const result = exports.__internal.applyOp(
+    { locale: { setLocale: (id) => { throw new Error(`locale "${id}" is not registered`) } } },
+    'appearance.setLocale', { id: 'zz' },
+  )
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /locale "zz" is not registered/)
+})
+
+test('no op can throw out of applyOp', () => {
+  // The contract is "returns a status". A unit that sometimes returns and
+  // sometimes raises violates its own contract, and Task 7's transport has no
+  // way to tell that failure apart from a broken harness.
+  const boom = () => { throw new Error('service exploded') }
+  const services = {
+    theme: { getTheme: boom, setTheme: boom, setFontSize: boom },
+    layout: { toggleSidebar: boom, openRightbar: boom, closeRightbar: boom },
+    locale: { getLocale: boom, setLocale: boom },
+  }
+  for (const [op, args] of [
+    ['appearance.state', {}],
+    ['appearance.setTheme', { id: 'dark' }],
+    ['appearance.setFontSize', { role: 'text', px: 15 }],
+    ['appearance.toggleSidebar', {}],
+    ['appearance.openRightbar', {}],
+    ['appearance.closeRightbar', {}],
+    ['appearance.setLocale', { id: 'en' }],
+  ]) {
+    let result
+    assert.doesNotThrow(() => { result = exports.__internal.applyOp(services, op, args) }, `${op} must not raise`)
+    assert.equal(result.status, 'error', `${op} must report the failure as a status`)
+    assert.match(result.reason, /service exploded/, `${op} must carry the service's own message`)
+  }
+})
+
+test('a caught throw is a JSON-safe status with no undefined-valued key', () => {
+  const services = {
+    theme: { setTheme: () => { throw new Error('theme "x" is not registered') } },
+  }
+  const result = exports.__internal.applyOp(services, 'appearance.setTheme', { id: 'x' })
+  assert.deepEqual(Object.keys(result).sort(), ['reason', 'status'])
+  assert.doesNotThrow(() => JSON.parse(JSON.stringify(result)))
+  for (const [key, item] of Object.entries(result)) assert.notEqual(item, undefined, `${key} is undefined`)
+})
+
+test('a thrown non-Error is still reported as a reason', () => {
+  // Services are third-party code; a bare string or a rejected non-Error must
+  // not turn the reason into "undefined" or lose the message entirely.
+  const result = exports.__internal.applyOp(
+    { theme: { setTheme: () => { throw 'theme "x" is not registered' } } },
+    'appearance.setTheme', { id: 'x' },
+  )
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /theme "x" is not registered/)
+})
+
+test('a read whose getter throws is reported, not raised', () => {
+  const result = exports.__internal.applyOp(
+    { theme: { getTheme: () => { throw new Error('theme store is gone') } }, locale: { getLocale: () => ({ active: 'zh' }) } },
+    'appearance.state', {},
+  )
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /theme store is gone/)
+})
+
+test('a state read whose theme snapshot lacks colorScheme reports null, not undefined', () => {
+  // `ThemeDefinition.colorScheme` is required, so a healthy service always
+  // supplies it — but the "no undefined-valued key" constraint is absolute, and
+  // copying the field straight through would write a real own key holding
+  // `undefined` (which JSON then drops, reading back as "absent").
+  const result = exports.__internal.applyOp({
+    theme: { getTheme: () => ({ preference: 'dark', active: { id: 'dark' } }) },
+    locale: { getLocale: () => ({ active: 'zh' }) },
+  }, 'appearance.state', {})
+  assert.equal(result.status, 'ok')
+  assert.equal(result.value.theme.colorScheme, null)
+  assert.ok(Object.hasOwn(result.value.theme, 'colorScheme'), 'the key is present and JSON-safe')
+  assert.ok(!Object.values(result.value.theme).includes(undefined))
+  assert.doesNotThrow(() => JSON.parse(JSON.stringify(result)))
+})
+
+test('every optional field of the reported theme snapshot is coerced, never left undefined', () => {
+  // The snapshot's `colorScheme` and `preference` are both required by
+  // `ThemeSnapshot`, so neither is reachable as absent through a healthy
+  // service — but each is copied by hand, and a hand copy is exactly where an
+  // `undefined`-valued key gets in. Both are driven here with nothing supplied.
+  const result = exports.__internal.applyOp({
+    theme: { getTheme: () => ({ active: { id: 'unknown' } }) },
+    locale: { getLocale: () => ({ active: 'zh' }) },
+  }, 'appearance.state', {})
+  assert.equal(result.status, 'ok')
+  assert.deepEqual(result.value.theme, { id: 'unknown', colorScheme: null, preference: null })
+  for (const [key, value] of Object.entries(result.value.theme)) {
+    assert.notEqual(value, undefined, `theme.${key} must be null rather than undefined`)
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(result.value.theme)), result.value.theme,
+    'nothing is dropped by serialization, so the Host reads back what was meant')
+})
+
 test('no returned value carries an undefined-valued key at any depth', () => {
   // Task 5's Critical: a raw `undefined` under a JSON-serialized envelope is not
   // a missing field, it is a `null` the Host then reads back as a real value.
@@ -195,19 +331,30 @@ test('no returned value carries an undefined-valued key at any depth', () => {
       seen(item, `${path}.${key}`)
     }
   }
-  for (const [op, args] of [
-    ['appearance.state', {}],
-    ['appearance.setTheme', { id: 'dark' }],
-    ['appearance.setFontSize', { role: 'text', px: 15 }],
-    ['appearance.toggleSidebar', {}],
-    ['appearance.openRightbar', {}],
-    ['appearance.closeRightbar', {}],
-    ['appearance.setLocale', { id: 'en' }],
-    ['appearance.nope', {}],
-  ]) {
-    const result = exports.__internal.applyOp(services, op, args)
-    assert.doesNotThrow(() => JSON.parse(JSON.stringify(result)), `${op} must survive JSON`)
-    seen(result, `${op} result`)
+  const boom = () => { throw new Error('service exploded') }
+  const throwing = {
+    theme: { getTheme: boom, setTheme: boom, setFontSize: boom },
+    layout: { toggleSidebar: boom, openRightbar: boom, closeRightbar: boom },
+    locale: { getLocale: boom, setLocale: boom },
+  }
+  // Both branches: the success path and the caught-throw path each have their
+  // own way of writing a key, so both are swept.
+  for (const throwingServices of [false, true]) {
+    for (const [op, args] of [
+      ['appearance.state', {}],
+      ['appearance.setTheme', { id: 'dark' }],
+      ['appearance.setFontSize', { role: 'text', px: 15 }],
+      ['appearance.toggleSidebar', {}],
+      ['appearance.openRightbar', {}],
+      ['appearance.closeRightbar', {}],
+      ['appearance.setLocale', { id: 'en' }],
+      ['appearance.nope', {}],
+    ]) {
+      const result = exports.__internal.applyOp(throwingServices ? throwing : services, op, args)
+      const where = throwingServices ? `${op} (throwing)` : op
+      assert.doesNotThrow(() => JSON.parse(JSON.stringify(result)), `${where} must survive JSON`)
+      seen(result, `${where} result`)
+    }
   }
 })
 

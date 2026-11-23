@@ -70,7 +70,15 @@ window.__ModuleLoader__.load({
         status: 'ok',
         value: {
           theme: active
-            ? { id: active.id, colorScheme: active.colorScheme, preference: snapshot.preference }
+            ? {
+              id: active.id,
+              // `ThemeDefinition.colorScheme` is required, so a healthy service
+              // always supplies it — but copying it straight through would write
+              // a real own key holding `undefined` if it ever did not, which
+              // JSON then drops and the Host reads back as "absent".
+              colorScheme: active.colorScheme ?? null,
+              preference: snapshot.preference ?? null,
+            }
             : null,
           locale: locale.service.getLocale()?.active ?? null,
         },
@@ -127,6 +135,16 @@ window.__ModuleLoader__.load({
      * implementation serves the panel and the Host bridge and can be driven by
      * a test double. The panel and the agent tool share this one path.
      *
+     * This function returns a status for every input and never raises. That is
+     * not defensive padding: the Client services deliberately throw precise,
+     * recoverable errors — `theme.setTheme` on an unregistered id,
+     * `theme.setFontSize` on an out-of-range px — and `domains/appearance.js`
+     * forwards `setFontSize` to them *because* they "reject an out-of-range
+     * value with a precise message". That message is the answer the agent needs,
+     * and it only survives if it comes back as a `reason` rather than as a
+     * stack. One boundary around the whole dispatch, not a catch per op: the
+     * contract belongs to this function, so this is where it is enforced.
+     *
      * @param services - `{ theme, layout, locale }`, any of them possibly absent.
      * @param op - one of `domains/appearance.js`'s `CLIENT_ACTIONS`.
      * @param args - the action's arguments, as received over the channel.
@@ -141,7 +159,13 @@ window.__ModuleLoader__.load({
       if (services === null || services === undefined) {
         return { status: 'error', reason: 'no Client services are available' }
       }
-      return handler(services, args || {})
+      try {
+        return handler(services, args || {})
+      } catch (err) {
+        // The service's own message carries what to fix; a non-Error throw is
+        // stringified so the reason is never the literal "undefined".
+        return { status: 'error', reason: String(err?.message ?? err) }
+      }
     }
 
     return {
