@@ -2751,7 +2751,7 @@
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "0000000000000000000000000000000000000000",
+            "commit": "2e72b533b1917f0637c5a6c94ca10ce7efb12e19",
             "path": "plugins/vyra-dsh-console"
           }
         }
