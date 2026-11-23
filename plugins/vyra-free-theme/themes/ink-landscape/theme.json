@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "ink-landscape",
+  "version": "0.1.0",
+  "author": "vyra",
+  "name": { "zh": "山水", "en": "Ink Landscape" },
+  "brand": {
+    "title": { "zh": "山水", "en": "Ink Landscape" },
+    "slogans": { "zh": "留白处 · 见天地", "en": "In the blank, the world appears" }
+  },
+  "colors": {
+    "light": {
+      "--dsw-alias-bg-base": "#F6F1E7",
+      "--dsw-alias-bg-layer-1": "#FCF8F0",
+      "--dsw-alias-bg-layer-2": "#EDE5D6",
+      "--dsw-alias-bg-layer-3": "#E2D8C5",
+      "--dsw-alias-bg-module-platform": "#F1E9DB",
+      "--dsw-specific-sidebar-fill": "#F2EBDE",
+      "--dsw-alias-brand-primary": "#2F4F45",
+      "--dsw-alias-label-primary": "#23201B",
+      "--dsw-alias-label-secondary": "rgba(35, 32, 27, 0.72)",
+      "--dsw-alias-border-l1": "rgba(47, 79, 69, 0.18)"
+    },
+    "dark": {
+      "--dsw-alias-bg-base": "#121214",
+      "--dsw-alias-bg-layer-1": "#1A1C1F",
+      "--dsw-alias-bg-layer-2": "#232629",
+      "--dsw-alias-bg-layer-3": "#2C3033",
+      "--dsw-alias-bg-module-platform": "#1D2023",
+      "--dsw-specific-sidebar-fill": "#16181B",
+      "--dsw-alias-brand-primary": "#8FB3A3",
+      "--dsw-alias-label-primary": "#ECEAE4",
+      "--dsw-alias-label-secondary": "rgba(236, 234, 228, 0.72)",
+      "--dsw-alias-border-l1": "rgba(143, 179, 163, 0.20)"
+    }
+  },
+  "shape": {
+    "--dsw-alias-radius-lg": "10px"
+  },
+  "translucency": { "web": 50, "desktop": 66 },
+  "coverage": { "shell": false, "scopes": ["sidebar"] }
+}

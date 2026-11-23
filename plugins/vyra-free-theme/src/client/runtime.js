@@ -917,6 +917,20 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     };
   }
 
+  /**
+   * Re-resolve the stored / ?skin= selection after late registration.
+   *
+   * File-backed themes arrive after the first apply(): a stored theme id is
+   * unknown at boot, so apply() falls back to a registered skin without
+   * touching storage. Once the theme is registered this re-applies the user's
+   * real choice.
+   */
+  function refreshSelection() {
+    const next = resolveSelectedId();
+    if (next === selectedId && mounted !== null) return selectedId;
+    return select(next);
+  }
+
   return {
     officialId: OFFICIAL_SKIN_ID,
     register,
@@ -926,6 +940,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     unmount,
     updateActive,
     setPersonalization,
+    refreshSelection,
     active: () => selectedId,
   };
 }

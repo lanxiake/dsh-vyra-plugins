@@ -7,10 +7,27 @@
   var ASSET_ID_PATTERN = /^u_[0-9a-f]{32}$/;
   var BUILTIN_REF_PATTERN = /^builtin:([a-z0-9][a-z0-9-]*):([a-z0-9][a-z0-9-]*)$/;
   function defaultWallpaperRef(skinId) {
-    const skin = SKINS[skinId];
-    if (skin === void 0) return void 0;
+    const skin = skinEntry(skinId);
+    if (skin === void 0 || skin === null) return void 0;
     const field = skin.fields.find((candidate) => candidate.key === "wallpaper");
     return field?.default ?? void 0;
+  }
+  var EXTERNAL_SKINS = /* @__PURE__ */ new Map();
+  function registerExternalSkin({ id, fields, builtinAssets = {} }) {
+    if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) {
+      throw new Error(`[vyra-free-theme] external skin id "${id}" is malformed`);
+    }
+    if (Object.hasOwn(SKINS, id)) {
+      throw new Error(`[vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
+    }
+    if (!Array.isArray(fields) || fields.length === 0) {
+      throw new Error(`[vyra-free-theme] external skin "${id}" needs at least one field`);
+    }
+    EXTERNAL_SKINS.set(id, { id, fields, builtinAssets });
+    return id;
+  }
+  function skinEntry(skinId) {
+    return Object.hasOwn(SKINS, skinId) ? SKINS[skinId] : EXTERNAL_SKINS.get(skinId) ?? null;
   }
   var USER_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
   var WALLPAPER_FIELD = {
@@ -134,13 +151,17 @@
     }
   };
   function getSkinSchema(skinId, profile = "web") {
+    if (!Object.hasOwn(SKINS, skinId)) {
+      const external = EXTERNAL_SKINS.get(skinId);
+      if (external === void 0) return null;
+      return { skinId, fields: external.fields, builtinAssets: external.builtinAssets };
+    }
     const entry = SKINS[skinId];
-    if (entry === void 0) return null;
     const fields = profile === "desktop" ? entry.fields.map((field) => field.key === "panelOpacity" ? { ...field, default: 66 } : field) : entry.fields;
     return { skinId, fields, builtinAssets: entry.builtinAssets };
   }
   function getField(skinId, key) {
-    return SKINS[skinId]?.fields.find((field) => field.key === key) ?? null;
+    return skinEntry(skinId)?.fields.find((field) => field.key === key) ?? null;
   }
   function defaultsFor(skinId, profile = "web") {
     const values = {};
@@ -212,7 +233,7 @@
     if (ref === null) return false;
     if (ref.kind === "builtin") {
       if (ref.skinId !== skinId) return false;
-      return SKINS[skinId]?.builtinAssets[ref.assetKey] !== void 0;
+      return skinEntry(skinId)?.builtinAssets[ref.assetKey] !== void 0;
     }
     if (meta === void 0 || meta === null) return true;
     return metaSatisfiesField(field, meta);
@@ -1013,6 +1034,11 @@ ${darkSelector}{${dark.join(";")}}`;
         selectedId = null;
       };
     }
+    function refreshSelection() {
+      const next = resolveSelectedId();
+      if (next === selectedId && mounted !== null) return selectedId;
+      return select(next);
+    }
     return {
       officialId: OFFICIAL_SKIN_ID,
       register,
@@ -1022,6 +1048,7 @@ ${darkSelector}{${dark.join(";")}}`;
       unmount,
       updateActive,
       setPersonalization,
+      refreshSelection,
       active: () => selectedId
     };
   }
@@ -2973,29 +3000,107 @@ ${references.join("\n")}`,
     return api;
   }
 
-  // src/client/builtin-assets.js
-  var SEGMENT_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
-  function builtinAssetUrl(skinId, assetKey, extension = "webp") {
-    if (typeof skinId !== "string" || !SEGMENT_PATTERN.test(skinId)) {
-      throw new RangeError(`builtinAssetUrl: invalid skinId ${JSON.stringify(skinId)}`);
-    }
-    if (typeof assetKey !== "string" || !SEGMENT_PATTERN.test(assetKey)) {
-      throw new RangeError(`builtinAssetUrl: invalid assetKey ${JSON.stringify(assetKey)}`);
-    }
-    if (typeof extension !== "string" || !/^[a-z0-9]+$/.test(extension)) {
-      throw new RangeError(`builtinAssetUrl: invalid extension ${JSON.stringify(extension)}`);
-    }
-    const rev = "0.1.0";
-    return `/vyra-free-theme/assets/b_${skinId}_${assetKey}.${extension}?v=${rev}`;
+  // src/shared/personalization/theme-model.js
+  var TRANSLUCENT_TOKENS = [
+    "--dsw-alias-bg-base",
+    "--dsw-alias-bg-layer-1",
+    "--dsw-alias-bg-layer-2",
+    "--dsw-alias-bg-layer-3",
+    "--dsw-alias-bg-module-platform",
+    "--dsw-specific-sidebar-fill"
+  ];
+  var SLOGAN_MAX = 40;
+  function bodyAttributeFor(id) {
+    return `vft${id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
   }
-
-  // src/client/skins/meirenzhi/wallpapers.js
-  var WALLPAPER_YUNTAI = builtinAssetUrl("meirenzhi", "yuntai");
-  var WALLPAPER_MUPEILING = builtinAssetUrl("meirenzhi", "mupeiling");
-  var WALLPAPER_ZILING = builtinAssetUrl("meirenzhi", "ziling");
-  var WALLPAPER_NANGONGWAN = builtinAssetUrl("meirenzhi", "nangongwan");
-  var WALLPAPER_NANGONGQUE = builtinAssetUrl("meirenzhi", "nangongque");
-  var WALLPAPER_YINYUE = builtinAssetUrl("meirenzhi", "yinyue");
+  function wallpaperField(theme) {
+    return {
+      key: "wallpaper",
+      type: "image",
+      scope: "single",
+      labelKey: "personalization.wallpaper",
+      default: null,
+      allowedUserMime: USER_IMAGE_MIMES,
+      maxBytes: GLOBAL_MAX_BYTES,
+      maxWidth: 16384,
+      maxHeight: 16384,
+      maxPixels: GLOBAL_MAX_PIXELS,
+      builtinChoices: []
+    };
+  }
+  function fieldsFromTheme(theme, profile = "web") {
+    const opacity = profile === "desktop" ? theme.translucency.desktop : theme.translucency.web;
+    return [
+      wallpaperField(theme),
+      {
+        key: "slogan",
+        type: "text",
+        scope: "locale",
+        labelKey: "personalization.slogan",
+        maxLength: SLOGAN_MAX,
+        default: theme.brand.slogans
+      },
+      {
+        key: "panelOpacity",
+        type: "range",
+        scope: "single",
+        labelKey: "personalization.panelTranslucency",
+        min: 0,
+        max: 100,
+        step: 1,
+        unit: "%",
+        default: opacity
+      }
+    ];
+  }
+  function hexToRgb(hex) {
+    return `${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}`;
+  }
+  function tableFromTheme(theme, profile = "web") {
+    const riding = {};
+    const constantTokens = {};
+    const anchor = profile === "desktop" ? theme.translucency.desktop : theme.translucency.web;
+    for (const token of Object.keys(theme.colors.light)) {
+      if (TRANSLUCENT_TOKENS.includes(token)) {
+        const baked = theme.translucency.baked[token] ?? anchor;
+        riding[token] = {
+          light: [hexToRgb(theme.colors.light[token]), baked],
+          dark: [hexToRgb(theme.colors.dark[token]), baked]
+        };
+      } else {
+        constantTokens[token] = { light: theme.colors.light[token], dark: theme.colors.dark[token] };
+      }
+    }
+    for (const [token, value] of Object.entries(theme.shape)) {
+      constantTokens[token] = { light: value, dark: value };
+    }
+    const baseLight = hexToRgb(theme.colors.light["--dsw-alias-bg-base"]);
+    const baseDark = hexToRgb(theme.colors.dark["--dsw-alias-bg-base"]);
+    return {
+      bodyAttribute: bodyAttributeFor(theme.id),
+      titleBrand: theme.brand.title?.zh ?? theme.name.zh,
+      favicon: theme.brand.favicon,
+      anchor,
+      riding,
+      constantTokens: Object.keys(constantTokens).length > 0 ? constantTokens : null,
+      // A two-stop base-tone gradient: the same projection branch compiled-in
+      // skins use for their artwork, so "no wallpaper asset yet" renders the
+      // theme's base tone at the slider's alpha instead of nothing at all.
+      scrim: {
+        kind: "baked-gradient",
+        stops: {
+          light: [[baseLight, anchor], [baseLight, anchor]],
+          dark: [[baseDark, anchor], [baseDark, anchor]]
+        },
+        artLayer: ""
+      },
+      blur: { max: 12 },
+      glassVar: "--vft-glass-blur",
+      desktopBlur: { rate: 55, dark: "boost" },
+      wallpaper: { kind: "assets" },
+      staticCss: ""
+    };
+  }
 
   // src/client/skins/translucency.js
   function glassRule(bodyAttribute, glassVar) {
@@ -3058,6 +3163,77 @@ ${references.join("\n")}`,
       };
     };
   }
+
+  // src/client/themes.js
+  var THEMES_ROUTE = "/vyra-free-theme/themes";
+  function brandComponents(theme, jsx) {
+    const title = theme.brand.title?.zh ?? theme.name.zh;
+    const Mark = () => jsx(
+      "svg",
+      { width: 18, height: 18, viewBox: "0 0 18 18", "aria-hidden": "true", focusable: "false" },
+      jsx("circle", { cx: 9, cy: 9, r: 6.5, fill: "none", stroke: "currentColor", strokeWidth: 1.6 })
+    );
+    const Name = () => jsx("span", { className: "vft-brand-name" }, title);
+    return { Mark, Name };
+  }
+  async function installFileThemes({ runtime, jsx, profile, fetchImpl = fetch }) {
+    const response = await fetchImpl(THEMES_ROUTE, { cache: "no-store" });
+    if (!response.ok) throw new Error(`themes route answered HTTP ${response.status}`);
+    const payload = await response.json();
+    const entries = Array.isArray(payload?.themes) ? payload.themes : [];
+    const problems = Array.isArray(payload?.problems) ? payload.problems : [];
+    const known = new Set(runtime.list().map((skin) => skin.id));
+    const installed = [];
+    for (const entry of entries) {
+      const theme = entry?.theme;
+      if (!theme || typeof theme.id !== "string") continue;
+      if (known.has(theme.id)) {
+        installed.push(theme.id);
+        continue;
+      }
+      try {
+        const { Mark, Name } = brandComponents(theme, jsx);
+        registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets: {} });
+        runtime.register({
+          id: theme.id,
+          label: theme.name,
+          description: theme.brand.slogans.zh ? theme.brand.slogans : theme.name,
+          Mark,
+          Name,
+          project: createProjection(tableFromTheme(theme, profile)),
+          builtinAssets: {}
+        });
+        installed.push(theme.id);
+      } catch (error) {
+        problems.push({ source: entry?.source ?? "user", id: theme.id, issues: [{ code: "register-failed", path: "theme.json", message: String(error.message ?? error) }] });
+      }
+    }
+    return { installed, problems };
+  }
+
+  // src/client/builtin-assets.js
+  var SEGMENT_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+  function builtinAssetUrl(skinId, assetKey, extension = "webp") {
+    if (typeof skinId !== "string" || !SEGMENT_PATTERN.test(skinId)) {
+      throw new RangeError(`builtinAssetUrl: invalid skinId ${JSON.stringify(skinId)}`);
+    }
+    if (typeof assetKey !== "string" || !SEGMENT_PATTERN.test(assetKey)) {
+      throw new RangeError(`builtinAssetUrl: invalid assetKey ${JSON.stringify(assetKey)}`);
+    }
+    if (typeof extension !== "string" || !/^[a-z0-9]+$/.test(extension)) {
+      throw new RangeError(`builtinAssetUrl: invalid extension ${JSON.stringify(extension)}`);
+    }
+    const rev = "0.1.0";
+    return `/vyra-free-theme/assets/b_${skinId}_${assetKey}.${extension}?v=${rev}`;
+  }
+
+  // src/client/skins/meirenzhi/wallpapers.js
+  var WALLPAPER_YUNTAI = builtinAssetUrl("meirenzhi", "yuntai");
+  var WALLPAPER_MUPEILING = builtinAssetUrl("meirenzhi", "mupeiling");
+  var WALLPAPER_ZILING = builtinAssetUrl("meirenzhi", "ziling");
+  var WALLPAPER_NANGONGWAN = builtinAssetUrl("meirenzhi", "nangongwan");
+  var WALLPAPER_NANGONGQUE = builtinAssetUrl("meirenzhi", "nangongque");
+  var WALLPAPER_YINYUE = builtinAssetUrl("meirenzhi", "yinyue");
 
   // src/client/skins/decoration.js
   var BUBBLE_HOOKS = {
@@ -3898,12 +4074,21 @@ ${references.join("\n")}`,
         configClient.boot();
       }
       const inject = ["slots", "locale", "theme", "connection"];
+      let fileThemesStarted = false;
       function apply(ctx) {
         installRemoteThemePersistence(ctx);
         ctx.effect(() => runtime.apply(ctx), "vyra-free-theme: active skin");
         if (configClient !== null) {
           ctx.effect(() => () => configClient.dispose(), "vyra-free-theme: config client");
         }
+        ctx.effect(() => {
+          if (fileThemesStarted) return;
+          fileThemesStarted = true;
+          installFileThemes({ runtime, jsx: jsxRuntime.jsx, profile }).then(({ installed, problems }) => {
+            if (problems.length > 0) console.warn("[vyra-free-theme] theme problems:", problems);
+            if (installed.length > 0) runtime.refreshSelection();
+          }).catch((error) => console.warn("[vyra-free-theme] file themes unavailable:", error));
+        }, "vyra-free-theme: file themes");
         try {
           installSidebarSwitcher(ctx, {
             runtime,

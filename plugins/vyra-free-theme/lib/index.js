@@ -1,6 +1,6 @@
 // src/index.js
-import { readFileSync as readFileSync3 } from "node:fs";
-import { dirname as dirname3, join as join4 } from "node:path";
+import { readFileSync as readFileSync4 } from "node:fs";
+import { dirname as dirname3, join as join5 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // src/host/personalization/store.js
@@ -159,6 +159,26 @@ var GIF_MAX_PIXELS = 12e6;
 var ASSET_ID_PATTERN = /^u_[0-9a-f]{32}$/;
 var ASSET_ID_PREFIX = "u_";
 var BUILTIN_REF_PATTERN = /^builtin:([a-z0-9][a-z0-9-]*):([a-z0-9][a-z0-9-]*)$/;
+var EXTERNAL_SKINS = /* @__PURE__ */ new Map();
+function registerExternalSkin({ id, fields, builtinAssets = {} }) {
+  if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) {
+    throw new Error(`[vyra-free-theme] external skin id "${id}" is malformed`);
+  }
+  if (Object.hasOwn(SKINS, id)) {
+    throw new Error(`[vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
+  }
+  if (!Array.isArray(fields) || fields.length === 0) {
+    throw new Error(`[vyra-free-theme] external skin "${id}" needs at least one field`);
+  }
+  EXTERNAL_SKINS.set(id, { id, fields, builtinAssets });
+  return id;
+}
+function unregisterExternalSkin(id) {
+  EXTERNAL_SKINS.delete(id);
+}
+function skinEntry(skinId) {
+  return Object.hasOwn(SKINS, skinId) ? SKINS[skinId] : EXTERNAL_SKINS.get(skinId) ?? null;
+}
 var USER_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 var WALLPAPER_FIELD = {
   key: "wallpaper",
@@ -281,16 +301,20 @@ var SKINS = {
   }
 };
 function getSkinSchema(skinId, profile = "web") {
+  if (!Object.hasOwn(SKINS, skinId)) {
+    const external = EXTERNAL_SKINS.get(skinId);
+    if (external === void 0) return null;
+    return { skinId, fields: external.fields, builtinAssets: external.builtinAssets };
+  }
   const entry = SKINS[skinId];
-  if (entry === void 0) return null;
   const fields = profile === "desktop" ? entry.fields.map((field) => field.key === "panelOpacity" ? { ...field, default: 66 } : field) : entry.fields;
   return { skinId, fields, builtinAssets: entry.builtinAssets };
 }
 function getField(skinId, key) {
-  return SKINS[skinId]?.fields.find((field) => field.key === key) ?? null;
+  return skinEntry(skinId)?.fields.find((field) => field.key === key) ?? null;
 }
 function listAssetFields(skinId) {
-  return SKINS[skinId]?.fields.filter((field) => field.type === "image") ?? [];
+  return skinEntry(skinId)?.fields.filter((field) => field.type === "image") ?? [];
 }
 function defaultsFor(skinId, profile = "web") {
   const values = {};
@@ -362,7 +386,7 @@ function validateImageRef(value, field, skinId, meta) {
   if (ref === null) return false;
   if (ref.kind === "builtin") {
     if (ref.skinId !== skinId) return false;
-    return SKINS[skinId]?.builtinAssets[ref.assetKey] !== void 0;
+    return skinEntry(skinId)?.builtinAssets[ref.assetKey] !== void 0;
   }
   if (meta === void 0 || meta === null) return true;
   return metaSatisfiesField(field, meta);
@@ -1200,7 +1224,7 @@ function createOfficialRejection(ctx) {
   };
 }
 function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset } = options;
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes } = options;
   const disposers = [];
   const fence = (request, response) => {
     if (rejection !== void 0 && rejection(request) !== void 0) {
@@ -1229,6 +1253,22 @@ function mountPersonalizationRoutes(host, options) {
       }
     });
     disposers.push(configRoute);
+    if (typeof themes === "function") {
+      const themesRoute = host.webServer.register({
+        kind: "exact",
+        path: "/vyra-free-theme/themes",
+        handler: async (request, response) => {
+          if (!fence(request, response)) return;
+          if (!method(request, response, "GET")) return;
+          try {
+            return sendJson(response, 200, themes());
+          } catch (error) {
+            return sendError(response, error);
+          }
+        }
+      });
+      disposers.push(themesRoute);
+    }
     const recoveryRoute = host.webServer.register({
       kind: "exact",
       path: "/vyra-free-theme/recovery",
@@ -1368,10 +1408,355 @@ function resolveTrustedHosts(ctx) {
   return startup?.trustedHosts ?? runtime?.trustedHosts ?? [];
 }
 
+// src/host/themes/repository.js
+import { existsSync as existsSync2, readFileSync as readFileSync3, readdirSync as readdirSync2 } from "node:fs";
+import { join as join3 } from "node:path";
+
+// src/shared/personalization/theme-model.js
+var THEME_SCHEMA_VERSION = 1;
+var TRANSLUCENT_TOKENS = [
+  "--dsw-alias-bg-base",
+  "--dsw-alias-bg-layer-1",
+  "--dsw-alias-bg-layer-2",
+  "--dsw-alias-bg-layer-3",
+  "--dsw-alias-bg-module-platform",
+  "--dsw-specific-sidebar-fill"
+];
+var COVERAGE_SCOPES = ["sidebar", "topbar", "rightpanel"];
+var ID_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
+var TOKEN_PATTERN = /^--[a-z0-9-]+$/;
+var HEX_PATTERN = /^#[0-9a-f]{6}$/i;
+var CONTROL_CHARS2 = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+var KNOWN_KEYS = /* @__PURE__ */ new Set([
+  "schema",
+  "id",
+  "name",
+  "author",
+  "version",
+  "brand",
+  "colors",
+  "shape",
+  "translucency",
+  "wallpaper",
+  "coverage",
+  "sidebar",
+  "decorations"
+]);
+var TEXT_MAX = 64;
+var NAME_MAX = 60;
+var SLOGAN_MAX = 40;
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function boundedText(value, max) {
+  return typeof value === "string" && value.length > 0 && value.length <= max && !CONTROL_CHARS2.test(value);
+}
+function validLocalePair(value, max) {
+  return isPlainObject(value) && Object.keys(value).length === 2 && boundedText(value.zh, max) && boundedText(value.en, max);
+}
+function parsePercent(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100 ? Math.round(value) : null;
+}
+function normalizeTheme(raw) {
+  const issues = [];
+  const fail = (code, path, message) => issues.push({ code, path, message });
+  if (!isPlainObject(raw)) {
+    fail("bad-shape", "", "theme.json 必须是一个对象");
+    return { ok: false, issues };
+  }
+  for (const key of Object.keys(raw)) {
+    if (!KNOWN_KEYS.has(key)) fail("unknown-key", key, `未知字段 "${key}"（schema v1 不接受）`);
+  }
+  if (raw.schema !== THEME_SCHEMA_VERSION) {
+    fail("schema-version", "schema", `schema 必须是 ${THEME_SCHEMA_VERSION}`);
+  }
+  const id = raw.id;
+  if (typeof id !== "string" || !ID_PATTERN.test(id)) {
+    fail("bad-id", "id", "id 必须是 2–40 位小写字母/数字/连字符，以字母开头");
+  }
+  if (!validLocalePair(raw.name, NAME_MAX)) {
+    fail("bad-name", "name", "name 必须是 { zh, en } 两个非空字符串（各 ≤60 字）");
+  }
+  if (!isPlainObject(raw.colors)) {
+    fail("bad-colors", "colors", "colors 必须是 { light, dark }");
+  } else {
+    for (const mode of ["light", "dark"]) {
+      const table = raw.colors[mode];
+      if (!isPlainObject(table) || Object.keys(table).length === 0) {
+        fail("bad-colors", `colors.${mode}`, `${mode} 至少需要一个令牌`);
+        continue;
+      }
+      for (const [token, value] of Object.entries(table)) {
+        if (!TOKEN_PATTERN.test(token)) fail("bad-token", `colors.${mode}.${token}`, `非法令牌名 "${token}"`);
+        if (!boundedText(value, TEXT_MAX)) {
+          fail("bad-token-value", `colors.${mode}.${token}`, "令牌值必须是非空字符串（≤64 字）");
+        } else if (TRANSLUCENT_TOKENS.includes(token) && !HEX_PATTERN.test(value)) {
+          fail("bad-translucent-color", `colors.${mode}.${token}`, "随动令牌必须是 #RRGGBB，才能按通透度换算 alpha");
+        }
+      }
+    }
+    const lightKeys = Object.keys(raw.colors.light ?? {}).sort();
+    const darkKeys = Object.keys(raw.colors.dark ?? {}).sort();
+    if (lightKeys.join() !== darkKeys.join()) {
+      fail("color-token-mismatch", "colors", "light 与 dark 必须声明完全相同的令牌集合");
+    }
+    if (!isPlainObject(raw.colors.light) || !HEX_PATTERN.test(raw.colors.light["--dsw-alias-bg-base"] ?? "")) {
+      fail("missing-bg-base", "colors.light.--dsw-alias-bg-base", "必须声明 #RRGGBB 形式的 --dsw-alias-bg-base");
+    }
+  }
+  if (raw.shape !== void 0) {
+    if (!isPlainObject(raw.shape)) fail("bad-shape", "shape", "shape 必须是对象");
+    else {
+      for (const [token, value] of Object.entries(raw.shape)) {
+        if (!TOKEN_PATTERN.test(token)) fail("bad-token", `shape.${token}`, `非法令牌名 "${token}"`);
+        if (!boundedText(value, TEXT_MAX)) fail("bad-token-value", `shape.${token}`, "令牌值必须是非空字符串");
+      }
+    }
+  }
+  let translucency = { web: 55, desktop: 66, baked: {} };
+  if (raw.translucency !== void 0) {
+    if (!isPlainObject(raw.translucency)) {
+      fail("bad-translucency", "translucency", "translucency 必须是对象");
+    } else {
+      for (const key of Object.keys(raw.translucency)) {
+        if (!["web", "desktop", "baked"].includes(key)) {
+          fail("unknown-key", `translucency.${key}`, `未知字段 "${key}"`);
+        }
+      }
+      for (const mode of ["web", "desktop"]) {
+        if (raw.translucency[mode] === void 0) continue;
+        const value = parsePercent(raw.translucency[mode]);
+        if (value === null) fail("bad-translucency", `translucency.${mode}`, "必须是 0–100 的数字");
+        else translucency[mode] = value;
+      }
+      if (raw.translucency.baked !== void 0) {
+        if (!isPlainObject(raw.translucency.baked)) {
+          fail("bad-translucency", "translucency.baked", "baked 必须是 { 令牌: 0–100 }");
+        } else {
+          for (const [token, value] of Object.entries(raw.translucency.baked)) {
+            if (!TRANSLUCENT_TOKENS.includes(token)) {
+              fail("bad-translucency", `translucency.baked.${token}`, "只有随动令牌可以声明 baked");
+            }
+            const points = parsePercent(value);
+            if (points === null) fail("bad-translucency", `translucency.baked.${token}`, "必须是 0–100 的数字");
+            else translucency.baked[token] = points;
+          }
+        }
+      }
+    }
+  }
+  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" } };
+  if (raw.brand !== void 0) {
+    if (!isPlainObject(raw.brand)) fail("bad-brand", "brand", "brand 必须是对象");
+    else {
+      for (const key of Object.keys(raw.brand)) {
+        if (!["title", "mark", "favicon", "slogans"].includes(key)) {
+          fail("unknown-key", `brand.${key}`, `未知字段 "${key}"`);
+        }
+      }
+      if (raw.brand.title !== void 0) {
+        if (!validLocalePair(raw.brand.title, NAME_MAX)) fail("bad-brand", "brand.title", "title 必须是 { zh, en }");
+        else brand.title = { zh: raw.brand.title.zh, en: raw.brand.title.en };
+      }
+      if (raw.brand.mark !== void 0 && raw.brand.mark !== null) {
+        if (!boundedText(raw.brand.mark, 256)) fail("bad-brand", "brand.mark", "mark 必须是路径或内联 SVG 字符串");
+        else brand.mark = raw.brand.mark;
+      }
+      if (raw.brand.favicon !== void 0 && raw.brand.favicon !== null) {
+        const favicon = raw.brand.favicon;
+        if (!isPlainObject(favicon) || !boundedText(favicon.href, 2048) || !boundedText(favicon.mime, 64)) {
+          fail("bad-brand", "brand.favicon", "favicon 必须是 { href, mime }");
+        } else brand.favicon = { href: favicon.href, mime: favicon.mime };
+      }
+      if (raw.brand.slogans !== void 0) {
+        if (!validLocalePair(raw.brand.slogans, SLOGAN_MAX)) {
+          fail("bad-brand", "brand.slogans", "slogans 必须是 { zh, en }（各 ≤40 字）");
+        } else brand.slogans = { zh: raw.brand.slogans.zh, en: raw.brand.slogans.en };
+      }
+    }
+  }
+  let wallpaper = null;
+  if (raw.wallpaper !== void 0 && raw.wallpaper !== null) {
+    if (!isPlainObject(raw.wallpaper)) fail("bad-wallpaper", "wallpaper", "wallpaper 必须是对象");
+    else if (!["image", "video", "animated", "code"].includes(raw.wallpaper.kind)) {
+      fail("unsupported-wallpaper-kind", "wallpaper.kind", "kind 必须是 image / video / animated / code");
+    } else if (raw.wallpaper.kind !== "image") {
+      fail("unsupported-wallpaper-kind", "wallpaper.kind", `kind "${raw.wallpaper.kind}" 在 P1 尚未支持`);
+    } else {
+      wallpaper = { kind: "image", light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
+      for (const mode of ["light", "dark"]) {
+        const side = wallpaper[mode];
+        if (side === null) continue;
+        if (!isPlainObject(side) || !boundedText(side.src, 256)) {
+          fail("bad-wallpaper", `wallpaper.${mode}`, "每一侧必须是 { src, poster?, overlay?, blur? }");
+        }
+      }
+    }
+  }
+  let coverage = { shell: false, scopes: ["sidebar"] };
+  if (raw.coverage !== void 0) {
+    if (!isPlainObject(raw.coverage)) fail("bad-coverage", "coverage", "coverage 必须是对象");
+    else {
+      if (raw.coverage.shell !== void 0) {
+        if (typeof raw.coverage.shell !== "boolean") fail("bad-coverage", "coverage.shell", "shell 必须是布尔值");
+        else coverage.shell = raw.coverage.shell;
+      }
+      if (raw.coverage.scopes !== void 0) {
+        if (!Array.isArray(raw.coverage.scopes) || raw.coverage.scopes.some((scope) => !COVERAGE_SCOPES.includes(scope))) {
+          fail("bad-coverage", "coverage.scopes", `scopes 只能取 ${COVERAGE_SCOPES.join(" / ")}`);
+        } else coverage.scopes = [...raw.coverage.scopes];
+      }
+    }
+  }
+  if (raw.sidebar !== void 0 && raw.sidebar !== null && !isPlainObject(raw.sidebar)) {
+    fail("bad-sidebar", "sidebar", "sidebar 必须是对象（P3 校验其字段形状）");
+  }
+  if (raw.decorations !== void 0 && raw.decorations !== null && !Array.isArray(raw.decorations)) {
+    fail("bad-decorations", "decorations", "decorations 必须是数组");
+  }
+  if (issues.length > 0) return { ok: false, issues };
+  return {
+    ok: true,
+    issues: [],
+    theme: {
+      schema: THEME_SCHEMA_VERSION,
+      id: raw.id,
+      name: { zh: raw.name.zh, en: raw.name.en },
+      author: typeof raw.author === "string" ? raw.author : null,
+      version: typeof raw.version === "string" ? raw.version : null,
+      brand,
+      colors: { light: { ...raw.colors.light }, dark: { ...raw.colors.dark } },
+      shape: raw.shape === void 0 ? {} : { ...raw.shape },
+      translucency,
+      wallpaper,
+      coverage,
+      sidebar: raw.sidebar ?? null,
+      decorations: raw.decorations ?? null
+    }
+  };
+}
+function wallpaperField(theme) {
+  return {
+    key: "wallpaper",
+    type: "image",
+    scope: "single",
+    labelKey: "personalization.wallpaper",
+    default: null,
+    allowedUserMime: USER_IMAGE_MIMES,
+    maxBytes: GLOBAL_MAX_BYTES,
+    maxWidth: 16384,
+    maxHeight: 16384,
+    maxPixels: GLOBAL_MAX_PIXELS,
+    builtinChoices: []
+  };
+}
+function fieldsFromTheme(theme, profile = "web") {
+  const opacity = profile === "desktop" ? theme.translucency.desktop : theme.translucency.web;
+  return [
+    wallpaperField(theme),
+    {
+      key: "slogan",
+      type: "text",
+      scope: "locale",
+      labelKey: "personalization.slogan",
+      maxLength: SLOGAN_MAX,
+      default: theme.brand.slogans
+    },
+    {
+      key: "panelOpacity",
+      type: "range",
+      scope: "single",
+      labelKey: "personalization.panelTranslucency",
+      min: 0,
+      max: 100,
+      step: 1,
+      unit: "%",
+      default: opacity
+    }
+  ];
+}
+
+// src/host/themes/repository.js
+var THEME_FILE = "theme.json";
+function readTheme(dir) {
+  const file = join3(dir, THEME_FILE);
+  if (!existsSync2(file)) return null;
+  let raw;
+  try {
+    raw = JSON.parse(readFileSync3(file, "utf8"));
+  } catch (error) {
+    return { issues: [{ code: "bad-json", path: THEME_FILE, message: String(error.message ?? error) }] };
+  }
+  const result = normalizeTheme(raw);
+  if (!result.ok) return { issues: result.issues };
+  return { theme: result.theme };
+}
+function createThemeRepository({ dirs, profile = "web" }) {
+  let registered = [];
+  function discover() {
+    const themes = [];
+    const problems = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const { source, dir } of dirs) {
+      if (!existsSync2(dir)) continue;
+      let entries;
+      try {
+        entries = readdirSync2(dir, { withFileTypes: true });
+      } catch (error) {
+        problems.push({ source, id: null, issues: [{ code: "unreadable-dir", path: dir, message: String(error.message ?? error) }] });
+        continue;
+      }
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const themeDir = join3(dir, entry.name);
+        const parsed = readTheme(themeDir);
+        if (parsed === null) continue;
+        if (parsed.issues !== void 0) {
+          problems.push({ source, id: entry.name, issues: parsed.issues });
+          continue;
+        }
+        if (parsed.theme.id !== entry.name) {
+          problems.push({
+            source,
+            id: entry.name,
+            issues: [{ code: "dir-id-mismatch", path: THEME_FILE, message: `目录名与 theme.id "${parsed.theme.id}" 不一致` }]
+          });
+          continue;
+        }
+        if (seen.has(parsed.theme.id)) {
+          problems.push({
+            source,
+            id: entry.name,
+            issues: [{ code: "shadowed", path: THEME_FILE, message: "同 id 的主题已被内置主题占用，此项未加载" }]
+          });
+          continue;
+        }
+        seen.add(parsed.theme.id);
+        themes.push({ source, dir: themeDir, theme: parsed.theme });
+      }
+    }
+    return { themes, problems };
+  }
+  function sync() {
+    for (const id of registered) unregisterExternalSkin(id);
+    const { themes, problems } = discover();
+    registered = [];
+    for (const { theme } of themes) {
+      registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets: {} });
+      registered.push(theme.id);
+    }
+    return {
+      themes: themes.map(({ source, theme }) => ({ source, theme })),
+      problems
+    };
+  }
+  return { discover, sync, registeredIds: () => [...registered] };
+}
+
 // src/host/paths.js
 import { homedir } from "node:os";
-import { basename, dirname as dirname2, join as join3, resolve } from "node:path";
-import { cpSync, existsSync as existsSync2, mkdtempSync, readdirSync as readdirSync2, renameSync as renameSync3, rmSync, statSync as statSync2 } from "node:fs";
+import { basename, dirname as dirname2, join as join4, resolve } from "node:path";
+import { cpSync, existsSync as existsSync3, mkdtempSync, readdirSync as readdirSync3, renameSync as renameSync3, rmSync, statSync as statSync2 } from "node:fs";
 var DATA_DIRS = {
   web: "vyra-free-theme",
   desktop: "vyra-free-theme-desktop"
@@ -1382,16 +1767,16 @@ var LEGACY_DIRS = {
 };
 function expandHomePath(path) {
   if (path === "~") return homedir();
-  if (path.startsWith("~/") || path.startsWith("~\\")) return join3(homedir(), path.slice(2));
+  if (path.startsWith("~/") || path.startsWith("~\\")) return join4(homedir(), path.slice(2));
   return path;
 }
 function dshHome() {
   const configured = process.env.DSH_HOME?.trim();
-  return resolve(expandHomePath(configured || join3(homedir(), ".dsh")));
+  return resolve(expandHomePath(configured || join4(homedir(), ".dsh")));
 }
 function hostProfileFor(root, cwd = process.cwd()) {
   const normalized = (path) => process.platform === "win32" ? resolve(path).toLowerCase() : resolve(path);
-  return normalized(cwd) === normalized(join3(expandHomePath(root), "profiles", "desktop")) ? "desktop" : "web";
+  return normalized(cwd) === normalized(join4(expandHomePath(root), "profiles", "desktop")) ? "desktop" : "web";
 }
 function isDirectory(path) {
   try {
@@ -1402,33 +1787,33 @@ function isDirectory(path) {
 }
 function migrationSource(home, legacyNames) {
   for (const name2 of legacyNames) {
-    const candidate = join3(home, name2);
+    const candidate = join4(home, name2);
     if (isDirectory(candidate)) return candidate;
   }
   return null;
 }
 function adoptLegacyOnce(home, target, legacyNames) {
-  if (existsSync2(target)) return target;
+  if (existsSync3(target)) return target;
   const legacy = migrationSource(home, legacyNames);
   if (legacy === null) return target;
-  const stage = mkdtempSync(join3(home, `.${basename(target)}-migrate-`));
+  const stage = mkdtempSync(join4(home, `.${basename(target)}-migrate-`));
   try {
-    for (const name2 of readdirSync2(legacy)) {
-      cpSync(join3(legacy, name2), join3(stage, name2), { recursive: true, force: false, errorOnExist: true });
+    for (const name2 of readdirSync3(legacy)) {
+      cpSync(join4(legacy, name2), join4(stage, name2), { recursive: true, force: false, errorOnExist: true });
     }
     renameSync3(stage, target);
   } catch (error) {
-    if (!existsSync2(target)) throw error;
+    if (!existsSync3(target)) throw error;
   } finally {
     if (dirname2(resolve(stage)) !== resolve(home)) throw new Error("unsafe migration staging path");
-    if (existsSync2(stage)) rmSync(stage, { recursive: true, force: true });
+    if (existsSync3(stage)) rmSync(stage, { recursive: true, force: true });
   }
   return target;
 }
 function dataDirForProfile(root, profile = "web") {
   const home = resolve(expandHomePath(root));
   const key = Object.hasOwn(DATA_DIRS, profile) ? profile : "web";
-  return adoptLegacyOnce(home, join3(home, DATA_DIRS[key]), LEGACY_DIRS[key]);
+  return adoptLegacyOnce(home, join4(home, DATA_DIRS[key]), LEGACY_DIRS[key]);
 }
 
 // src/index.js
@@ -1437,15 +1822,22 @@ function apply(ctx) {
   ctx.inject(["webServer"], (hostContext) => {
     const root = dshHome();
     const profile = hostProfileFor(root);
-    const personalization = createPersonalizationStore({
-      dataDir: dataDirForProfile(root, profile),
+    const dataDir = dataDirForProfile(root, profile);
+    const personalization = createPersonalizationStore({ dataDir, profile });
+    const packageThemesDir = join5(dirname3(fileURLToPath(import.meta.url)), "..", "themes");
+    const themes = createThemeRepository({
+      dirs: [
+        { source: "builtin", dir: packageThemesDir },
+        { source: "user", dir: join5(dataDir, "themes") }
+      ],
       profile
     });
+    themes.sync();
     hostContext.effect(() => {
       let serveBuiltinAsset;
       try {
-        const assetsDir = join4(dirname3(fileURLToPath(import.meta.url)), "..", "assets");
-        const manifest = JSON.parse(readFileSync3(join4(assetsDir, "manifest.json"), "utf8"));
+        const assetsDir = join5(dirname3(fileURLToPath(import.meta.url)), "..", "assets");
+        const manifest = JSON.parse(readFileSync4(join5(assetsDir, "manifest.json"), "utf8"));
         serveBuiltinAsset = createBuiltinAssetServer({ assetsDir, manifest }).serveBuiltinAsset;
       } catch {
       }
@@ -1453,7 +1845,8 @@ function apply(ctx) {
         store: personalization,
         trustedHosts: () => resolveTrustedHosts(ctx),
         rejection: createOfficialRejection(ctx),
-        serveBuiltinAsset
+        serveBuiltinAsset,
+        themes: () => themes.sync()
       });
     }, "vyra-free-theme: personalization routes");
   });

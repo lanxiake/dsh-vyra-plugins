@@ -51,10 +51,57 @@ export const BUILTIN_REF_PATTERN = /^builtin:([a-z0-9][a-z0-9-]*):([a-z0-9][a-z0
  * select()-time preload warms the effective-or-default wallpaper).
  */
 export function defaultWallpaperRef(skinId) {
-  const skin = SKINS[skinId];
-  if (skin === undefined) return undefined;
+  const skin = skinEntry(skinId);
+  if (skin === undefined || skin === null) return undefined;
   const field = skin.fields.find((candidate) => candidate.key === "wallpaper");
   return field?.default ?? undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime (file-backed) skins
+// ---------------------------------------------------------------------------
+//
+// A theme loaded from `theme.json` is a skin like any other as far as this
+// catalog is concerned: same three fields, same value validation, same
+// persistence. Registering it here is what lets the Host store and the client
+// panel validate its overrides without knowing where the theme came from.
+
+const EXTERNAL_SKINS = new Map();
+
+/**
+ * Register a file-backed skin. `fields` must already be profile-resolved
+ * (defaults per the running profile), `builtinAssets` maps asset keys to
+ * `{ url, mime }` entries served by the Host.
+ */
+export function registerExternalSkin({ id, fields, builtinAssets = {} }) {
+  if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) {
+    throw new Error(`[vyra-free-theme] external skin id "${id}" is malformed`);
+  }
+  if (Object.hasOwn(SKINS, id)) {
+    throw new Error(`[vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
+  }
+  if (!Array.isArray(fields) || fields.length === 0) {
+    throw new Error(`[vyra-free-theme] external skin "${id}" needs at least one field`);
+  }
+  EXTERNAL_SKINS.set(id, { id, fields, builtinAssets });
+  return id;
+}
+
+export function unregisterExternalSkin(id) {
+  EXTERNAL_SKINS.delete(id);
+}
+
+export function getExternalSkin(id) {
+  return EXTERNAL_SKINS.get(id) ?? null;
+}
+
+export function listExternalSkinIds() {
+  return [...EXTERNAL_SKINS.keys()];
+}
+
+/** Built-in first (compiled-in wins on a collision), then file-backed. */
+function skinEntry(skinId) {
+  return Object.hasOwn(SKINS, skinId) ? SKINS[skinId] : (EXTERNAL_SKINS.get(skinId) ?? null);
 }
 
 export const USER_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -186,8 +233,12 @@ export const SKINS = {
 // ---------------------------------------------------------------------------
 
 export function getSkinSchema(skinId, profile = "web") {
+  if (!Object.hasOwn(SKINS, skinId)) {
+    const external = EXTERNAL_SKINS.get(skinId);
+    if (external === undefined) return null;
+    return { skinId, fields: external.fields, builtinAssets: external.builtinAssets };
+  }
   const entry = SKINS[skinId];
-  if (entry === undefined) return null;
   // Profile-specific factory point: Web keeps the catalog defaults (openbmc /
   // uefi-harness P=55 baked-anchor, meirenzhi P=35 curve anchor) while the
   // Desktop app starts (and resets) every skin at P=66. No default is
@@ -199,11 +250,11 @@ export function getSkinSchema(skinId, profile = "web") {
 }
 
 export function getField(skinId, key) {
-  return SKINS[skinId]?.fields.find((field) => field.key === key) ?? null;
+  return skinEntry(skinId)?.fields.find((field) => field.key === key) ?? null;
 }
 
 export function listAssetFields(skinId) {
-  return SKINS[skinId]?.fields.filter((field) => field.type === "image") ?? [];
+  return skinEntry(skinId)?.fields.filter((field) => field.type === "image") ?? [];
 }
 
 export function defaultsFor(skinId, profile = "web") {
@@ -309,7 +360,7 @@ function validateImageRef(value, field, skinId, meta) {
   if (ref.kind === "builtin") {
     // Builtin refs must belong to the owning skin's registered assets.
     if (ref.skinId !== skinId) return false;
-    return SKINS[skinId]?.builtinAssets[ref.assetKey] !== undefined;
+    return skinEntry(skinId)?.builtinAssets[ref.assetKey] !== undefined;
   }
   if (meta === undefined || meta === null) return true;
   // Field-level constraints from trusted metadata (design §6).

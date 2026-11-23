@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "nebula",
+  "version": "0.1.0",
+  "author": "vyra",
+  "name": { "zh": "星云", "en": "Nebula" },
+  "brand": {
+    "title": { "zh": "星云", "en": "Nebula" },
+    "slogans": { "zh": "于无声处 · 见星河", "en": "Where silence becomes a galaxy" }
+  },
+  "colors": {
+    "light": {
+      "--dsw-alias-bg-base": "#F4F2FF",
+      "--dsw-alias-bg-layer-1": "#FBF9FF",
+      "--dsw-alias-bg-layer-2": "#EEEAFB",
+      "--dsw-alias-bg-layer-3": "#E4DEF6",
+      "--dsw-alias-bg-module-platform": "#EFEBFC",
+      "--dsw-specific-sidebar-fill": "#F0ECFD",
+      "--dsw-alias-brand-primary": "#6D4AFF",
+      "--dsw-alias-label-primary": "#211B33",
+      "--dsw-alias-label-secondary": "rgba(33, 27, 51, 0.72)",
+      "--dsw-alias-border-l1": "rgba(109, 74, 255, 0.16)"
+    },
+    "dark": {
+      "--dsw-alias-bg-base": "#0E0B1A",
+      "--dsw-alias-bg-layer-1": "#171226",
+      "--dsw-alias-bg-layer-2": "#221A38",
+      "--dsw-alias-bg-layer-3": "#2C2246",
+      "--dsw-alias-bg-module-platform": "#1B1530",
+      "--dsw-specific-sidebar-fill": "#14102A",
+      "--dsw-alias-brand-primary": "#A78BFF",
+      "--dsw-alias-label-primary": "#F3EEFF",
+      "--dsw-alias-label-secondary": "rgba(243, 238, 255, 0.72)",
+      "--dsw-alias-border-l1": "rgba(167, 139, 255, 0.18)"
+    }
+  },
+  "shape": {
+    "--dsw-alias-radius-lg": "16px"
+  },
+  "translucency": { "web": 45, "desktop": 66 },
+  "coverage": { "shell": false, "scopes": ["sidebar"] }
+}

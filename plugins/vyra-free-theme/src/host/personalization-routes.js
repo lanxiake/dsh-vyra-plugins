@@ -183,7 +183,7 @@ export function createOfficialRejection(ctx) {
 }
 
 export function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset } = options;
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes } = options;
   const disposers = [];
 
   const fence = (request, response) => {
@@ -221,6 +221,28 @@ export function mountPersonalizationRoutes(host, options) {
     },
   });
   disposers.push(configRoute);
+
+  // --- themes: GET the file-backed theme catalog (exact) ---------------------
+  //
+  // The client builds one skin per theme from this payload, so it must be
+  // served before any personalization write that targets a theme id.
+
+  if (typeof themes === "function") {
+    const themesRoute = host.webServer.register({
+      kind: "exact",
+      path: "/vyra-free-theme/themes",
+      handler: async (request, response) => {
+        if (!fence(request, response)) return;
+        if (!method(request, response, "GET")) return;
+        try {
+          return sendJson(response, 200, themes());
+        } catch (error) {
+          return sendError(response, error);
+        }
+      },
+    });
+    disposers.push(themesRoute);
+  }
 
   // --- recovery confirmation (branch A commit) ------------------------------
 

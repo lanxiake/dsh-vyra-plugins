@@ -2,6 +2,7 @@ import { createSkinRuntime } from "./runtime.js";
 import { installSidebarSwitcher } from "./sidebar-switcher.js";
 import { installRemoteThemePersistence, readLocalThemePreference } from "./theme-persistence.js";
 import { createConfigClient } from "./personalization/config-client.js";
+import { installFileThemes } from "./themes.js";
 import { createMeirenzhiSkin } from "./skins/meirenzhi/index.js";
 import { createOpenBmcHarness } from "./skins/openbmc-harness/index.js";
 import { createUefiHarness } from "./skins/uefi-harness/index.js";
@@ -68,12 +69,27 @@ window.__ModuleLoader__.load({
 
     const inject = ["slots", "locale", "theme", "connection"];
 
+    let fileThemesStarted = false;
+
     function apply(ctx) {
       installRemoteThemePersistence(ctx);
       ctx.effect(() => runtime.apply(ctx), "vyra-free-theme: active skin");
       if (configClient !== null) {
         ctx.effect(() => () => configClient.dispose(), "vyra-free-theme: config client");
       }
+      // File-backed themes need one HTTP round-trip, so they land after the
+      // first paint. Registering them is additive; refreshSelection() then
+      // re-applies a stored theme id that was unknown during apply().
+      ctx.effect(() => {
+        if (fileThemesStarted) return;
+        fileThemesStarted = true;
+        installFileThemes({ runtime, jsx: jsxRuntime.jsx, profile })
+          .then(({ installed, problems }) => {
+            if (problems.length > 0) console.warn("[vyra-free-theme] theme problems:", problems);
+            if (installed.length > 0) runtime.refreshSelection();
+          })
+          .catch((error) => console.warn("[vyra-free-theme] file themes unavailable:", error));
+      }, "vyra-free-theme: file themes");
       try {
         installSidebarSwitcher(ctx, {
           runtime,

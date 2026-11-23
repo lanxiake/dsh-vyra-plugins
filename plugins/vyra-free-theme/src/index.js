@@ -5,6 +5,7 @@ import { createPersonalizationStore } from "./host/personalization/store.js";
 import { createOfficialRejection, mountPersonalizationRoutes } from "./host/personalization-routes.js";
 import { createBuiltinAssetServer } from "./host/builtin-assets.js";
 import { resolveTrustedHosts } from "./host/trusted-hosts.js";
+import { createThemeRepository } from "./host/themes/repository.js";
 import { dataDirForProfile, dshHome, hostProfileFor } from "./host/paths.js";
 
 export const name = "vyra-free-theme";
@@ -17,10 +18,22 @@ export function apply(ctx) {
   ctx.inject(["webServer"], (hostContext) => {
     const root = dshHome();
     const profile = hostProfileFor(root);
-    const personalization = createPersonalizationStore({
-      dataDir: dataDirForProfile(root, profile),
+    const dataDir = dataDirForProfile(root, profile);
+    const personalization = createPersonalizationStore({ dataDir, profile });
+
+    // Themes ship inside the package (builtin) and live in the data directory
+    // (user). Registration into the shared catalog happens before any route is
+    // used, so the store can validate a theme's overrides from its first write.
+    const packageThemesDir = join(dirname(fileURLToPath(import.meta.url)), "..", "themes");
+    const themes = createThemeRepository({
+      dirs: [
+        { source: "builtin", dir: packageThemesDir },
+        { source: "user", dir: join(dataDir, "themes") },
+      ],
       profile,
     });
+    themes.sync();
+
     hostContext.effect(() => {
       // Builtin artwork delivery (ADR-0023): package assets served over the
       // same /vyra-free-theme/assets/ prefix as gallery uploads. src/ and lib/ both
@@ -41,6 +54,7 @@ export function apply(ctx) {
         trustedHosts: () => resolveTrustedHosts(ctx),
         rejection: createOfficialRejection(ctx),
         serveBuiltinAsset,
+        themes: () => themes.sync(),
       });
     }, "vyra-free-theme: personalization routes");
   });
