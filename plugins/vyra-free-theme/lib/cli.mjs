@@ -1013,14 +1013,26 @@ function writeSelection(dataDir, skinId, { now = () => (/* @__PURE__ */ new Date
 }
 
 // src/shared/comfy-workflow.js
+var TURBO_SIGMAS = Object.freeze([
+  1,
+  0.978453,
+  0.95418,
+  0.926626,
+  0.89508,
+  0.845148,
+  0.704534,
+  0.414568,
+  0
+]);
 var QWEN_IMAGE_DEFAULTS = Object.freeze({
   unet: "qwen_image_2.1_turbo_int8_convrot.safetensors",
-  clip: "qwen3.5_9b_qwen_image_2.1_pe_t2i_w4a8.safetensors",
+  clip: "qwen3vl_8b_w4a8.safetensors",
   vae: "qwen_image_2.1_vae_bf16.safetensors",
-  steps: 4,
-  cfg: 1,
   sampler: "euler",
-  scheduler: "simple"
+  cfg: 1,
+  /** Bucket hint the 2.1 encoder wants; 1024 is the native conditioning size. */
+  resolution: 1024,
+  sigmas: TURBO_SIGMAS.join(", ")
 });
 var WALLPAPER_SIZES = Object.freeze({
   desktop: { width: 2048, height: 1280 },
@@ -1031,43 +1043,46 @@ function buildQwenImageWorkflow(options) {
   const {
     prompt,
     negative = "",
-    width = WALLPAPER_SIZES.portrait.width,
-    height = WALLPAPER_SIZES.portrait.height,
+    width = WALLPAPER_SIZES.desktop.width,
+    height = WALLPAPER_SIZES.desktop.height,
     seed = 1,
-    steps = QWEN_IMAGE_DEFAULTS.steps,
     cfg = QWEN_IMAGE_DEFAULTS.cfg,
     sampler = QWEN_IMAGE_DEFAULTS.sampler,
-    scheduler = QWEN_IMAGE_DEFAULTS.scheduler,
+    resolution = QWEN_IMAGE_DEFAULTS.resolution,
+    sigmas = QWEN_IMAGE_DEFAULTS.sigmas,
     unet = QWEN_IMAGE_DEFAULTS.unet,
     clip = QWEN_IMAGE_DEFAULTS.clip,
     vae = QWEN_IMAGE_DEFAULTS.vae,
     filenamePrefix = "vft/wallpaper"
   } = options;
   if (typeof prompt !== "string" || prompt.trim().length === 0) throw new Error("prompt is required");
+  if (typeof sigmas !== "string" || sigmas.trim().length === 0) throw new Error("sigmas is required");
   return {
     "1": { class_type: "UNETLoader", inputs: { unet_name: unet, weight_dtype: "default" } },
-    "2": { class_type: "CLIPLoader", inputs: { clip_name: clip, type: "qwen_image" } },
+    "2": { class_type: "CLIPLoader", inputs: { clip_name: clip, type: "qwen_image", device: "default" } },
     "3": { class_type: "VAELoader", inputs: { vae_name: vae } },
-    "4": { class_type: "CLIPTextEncode", inputs: { text: prompt, clip: ["2", 0] } },
-    "5": { class_type: "CLIPTextEncode", inputs: { text: negative, clip: ["2", 0] } },
-    "6": { class_type: "EmptySD3LatentImage", inputs: { width, height, batch_size: 1 } },
-    "7": {
-      class_type: "KSampler",
+    "4": {
+      class_type: "TextEncodeQwenImage21",
+      inputs: { clip: ["2", 0], prompt, negative_prompt: negative, resolution }
+    },
+    "5": { class_type: "QwenImage21Cache", inputs: { model: ["1", 0], device: "auto", dtype: "default" } },
+    "6": { class_type: "CFGGuider", inputs: { model: ["5", 0], positive: ["4", 0], negative: ["4", 1], cfg } },
+    "7": { class_type: "KSamplerSelect", inputs: { sampler_name: sampler } },
+    "8": { class_type: "RandomNoise", inputs: { noise_seed: seed } },
+    "9": { class_type: "ManualSigmas", inputs: { sigmas } },
+    "10": { class_type: "EmptyLatentImage", inputs: { width, height, batch_size: 1 } },
+    "11": {
+      class_type: "SamplerCustomAdvanced",
       inputs: {
-        model: ["1", 0],
-        positive: ["4", 0],
-        negative: ["5", 0],
-        latent_image: ["6", 0],
-        seed,
-        steps,
-        cfg,
-        sampler_name: sampler,
-        scheduler,
-        denoise: 1
+        noise: ["8", 0],
+        guider: ["6", 0],
+        sampler: ["7", 0],
+        sigmas: ["9", 0],
+        latent_image: ["10", 0]
       }
     },
-    "8": { class_type: "VAEDecode", inputs: { samples: ["7", 0], vae: ["3", 0] } },
-    "9": { class_type: "SaveImage", inputs: { images: ["8", 0], filename_prefix: filenamePrefix } }
+    "12": { class_type: "VAEDecode", inputs: { samples: ["11", 0], vae: ["3", 0] } },
+    "13": { class_type: "SaveImage", inputs: { images: ["12", 0], filename_prefix: filenamePrefix } }
   };
 }
 function validateWorkflow(workflow) {
@@ -1088,6 +1103,9 @@ function validateWorkflow(workflow) {
       }
     }
   }
+  const types = Object.values(workflow).map((node) => node.class_type);
+  if (!types.includes("ManualSigmas")) issues.push("no ManualSigmas: the turbo checkpoint needs its own schedule or it renders mosaic noise");
+  if (!types.includes("TextEncodeQwenImage21")) issues.push("no TextEncodeQwenImage21: a plain CLIPTextEncode does not fit the 2.1 text encoder");
   return issues;
 }
 
@@ -2738,7 +2756,7 @@ function recordWallpaperStats(themeDir, side, buffer) {
 async function cmdWallpaperGen(paths, { positionals, flags }) {
   const id = positionals[0];
   if (typeof flags.prompt !== "string" || flags.prompt.trim().length === 0) {
-    return fail(EXIT.error, '用法：vft wallpaper gen <id> --prompt "画面描述" [--size portrait|desktop|square] [--seed N] [--file 名称.png] [--mode light|dark|both]');
+    return fail(EXIT.error, '用法：vft wallpaper gen <id> --prompt "画面描述" [--size portrait|desktop|square] [--seed N] [--file 名称.png] [--mode light|dark|both] [--resolution 1024] [--sigmas 1.0,0.97,...]');
   }
   const found = findTheme(paths, id);
   if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
@@ -2751,8 +2769,9 @@ async function cmdWallpaperGen(paths, { positionals, flags }) {
     width: size.width,
     height: size.height,
     seed,
-    steps: flags.steps === void 0 ? QWEN_IMAGE_DEFAULTS.steps : Number(flags.steps),
     cfg: flags.cfg === void 0 ? QWEN_IMAGE_DEFAULTS.cfg : Number(flags.cfg),
+    resolution: flags.resolution === void 0 ? QWEN_IMAGE_DEFAULTS.resolution : Number(flags.resolution),
+    sigmas: typeof flags.sigmas === "string" ? flags.sigmas : QWEN_IMAGE_DEFAULTS.sigmas,
     filenamePrefix: `vft/${id}`
   });
   const issues = validateWorkflow(workflow);

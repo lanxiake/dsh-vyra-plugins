@@ -80,6 +80,24 @@ vft wallpaper anim my-kiro --recipe fluid --size desktop --frames 48 --fps 24   
 
 ### ③ 用 ComfyUI 出壁纸（需要本机 GPU）
 
+```bash
+vft wallpaper gen <id> --prompt "画面描述" [--size desktop|portrait|square] [--seed N] [--mode light|dark|both]
+```
+
+它走的是本机 Qwen-Image 2.1 turbo 的**正确管线**，不是「UNETLoader + CLIPTextEncode + KSampler」那种看起来能跑、出来却是马赛克的图：
+
+| 决定 | 值 | 错开会怎样 |
+| --- | --- | --- |
+| 文本编码器 | `qwen3vl_8b_*`（4096 维），`CLIPLoader` 的 type = `qwen_image` | 用 `qwen3.5_9b_*_pe_t2i` 会报 shape 不匹配——那是**提示词改写**模型，不是条件编码器 |
+| 条件节点 | `TextEncodeQwenImage21` | 裸 `CLIPTextEncode` 不匹配 2.1 |
+| 噪声计划 | `ManualSigmas` + 该 checkpoint 自带的下降序列 | **用 KSampler 默认计划就是满屏马赛克** |
+| 采样 | `SamplerCustomAdvanced` + `CFGGuider` + `KSamplerSelect(euler)` + `RandomNoise`，cfg=1 | — |
+| 模型包装 | `QwenImage21Cache` | 2.1 图要求它 |
+
+判据（同一 prompt、同一 seed 实测）：错的图边缘能量 0.019、相邻像素差 4.95（肉眼马赛克）；对的图 0.003 / 0.69（平滑渐变）。所以 `vft theme check` 之外，再看一眼 `stdLuma` 与 `edgeEnergy` 就能分辨。
+
+### ④ 视频 / 代码壁纸的写法
+
 视频/代码壁纸的 `theme.json` 写法：
 
 ```json
@@ -105,7 +123,7 @@ export const art = {
 
 它跑在不透明源的沙箱 iframe 里，CSP 禁止一切网络；首帧 2 秒未出或抛错 → 自动降级成主题渐变，界面不受影响。
 
-### ③ 导入 / 导出 / 回滚
+### ⑤ 导入 / 导出 / 回滚
 
 ```bash
 vft theme export my-kiro --out ./my-kiro.vft

@@ -567,7 +567,7 @@ function recordWallpaperStats(themeDir, side, buffer) {
 async function cmdWallpaperGen(paths, { positionals, flags }) {
   const id = positionals[0];
   if (typeof flags.prompt !== "string" || flags.prompt.trim().length === 0) {
-    return fail(EXIT.error, "用法：vft wallpaper gen <id> --prompt \"画面描述\" [--size portrait|desktop|square] [--seed N] [--file 名称.png] [--mode light|dark|both]");
+    return fail(EXIT.error, "用法：vft wallpaper gen <id> --prompt \"画面描述\" [--size portrait|desktop|square] [--seed N] [--file 名称.png] [--mode light|dark|both] [--resolution 1024] [--sigmas 1.0,0.97,...]");
   }
   const found = findTheme(paths, id);
   if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
@@ -581,8 +581,9 @@ async function cmdWallpaperGen(paths, { positionals, flags }) {
     width: size.width,
     height: size.height,
     seed,
-    steps: flags.steps === undefined ? QWEN_IMAGE_DEFAULTS.steps : Number(flags.steps),
     cfg: flags.cfg === undefined ? QWEN_IMAGE_DEFAULTS.cfg : Number(flags.cfg),
+    resolution: flags.resolution === undefined ? QWEN_IMAGE_DEFAULTS.resolution : Number(flags.resolution),
+    sigmas: typeof flags.sigmas === "string" ? flags.sigmas : QWEN_IMAGE_DEFAULTS.sigmas,
     filenamePrefix: `vft/${id}`,
   });
   const issues = validateWorkflow(workflow);

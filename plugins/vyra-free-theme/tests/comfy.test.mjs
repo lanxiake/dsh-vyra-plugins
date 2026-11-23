@@ -33,33 +33,38 @@ test("the qwen-image graph wires the installed models and a retrievable output",
   assert.deepEqual(validateWorkflow(workflow), []);
   const classes = Object.values(workflow).map((node) => node.class_type);
   assert.deepEqual(classes, [
-    "UNETLoader", "CLIPLoader", "VAELoader", "CLIPTextEncode", "CLIPTextEncode",
-    "EmptySD3LatentImage", "KSampler", "VAEDecode", "SaveImage",
+    "UNETLoader", "CLIPLoader", "VAELoader", "TextEncodeQwenImage21", "QwenImage21Cache",
+    "CFGGuider", "KSamplerSelect", "RandomNoise", "ManualSigmas", "EmptyLatentImage",
+    "SamplerCustomAdvanced", "VAEDecode", "SaveImage",
   ]);
   assert.equal(workflow["1"].inputs.unet_name, QWEN_IMAGE_DEFAULTS.unet);
+  assert.equal(workflow["2"].inputs.clip_name, QWEN_IMAGE_DEFAULTS.clip, "the 4096-dim Qwen3-VL encoder, not the prompt enhancer");
   assert.equal(workflow["2"].inputs.type, "qwen_image");
   assert.equal(workflow["3"].inputs.vae_name, QWEN_IMAGE_DEFAULTS.vae);
-  assert.equal(workflow["6"].inputs.width, 1024);
-  assert.equal(workflow["6"].inputs.height, 1536);
-  assert.equal(workflow["7"].inputs.seed, 42);
-  assert.equal(workflow["7"].inputs.steps, QWEN_IMAGE_DEFAULTS.steps);
-  assert.equal(workflow["9"].inputs.filename_prefix, "vft/wallpaper");
+  assert.equal(workflow["4"].inputs.prompt, "deep space nebula, violet haze");
+  assert.equal(workflow["4"].inputs.resolution, QWEN_IMAGE_DEFAULTS.resolution);
+  assert.equal(workflow["10"].inputs.width, 1024);
+  assert.equal(workflow["10"].inputs.height, 1536);
+  assert.equal(workflow["8"].inputs.noise_seed, 42);
+  assert.equal(workflow["9"].inputs.sigmas, QWEN_IMAGE_DEFAULTS.sigmas);
+  assert.equal(workflow["6"].inputs.cfg, 1);
+  assert.equal(workflow["13"].inputs.filename_prefix, "vft/wallpaper");
 });
 
 test("a prompt is mandatory and sizes come from the preset table", () => {
   assert.throws(() => buildQwenImageWorkflow({ prompt: "  " }), /prompt is required/);
   const desktop = buildQwenImageWorkflow({ prompt: "x", width: WALLPAPER_SIZES.desktop.width, height: WALLPAPER_SIZES.desktop.height });
-  assert.equal(desktop["6"].inputs.width, 2048);
-  assert.equal(desktop["6"].inputs.height, 1280);
+  assert.equal(desktop["10"].inputs.width, 2048);
+  assert.equal(desktop["10"].inputs.height, 1280);
 });
 
 test("graph validation catches dangling references and missing outputs", () => {
   const workflow = buildQwenImageWorkflow({ prompt: "x" });
-  delete workflow["9"];
+  delete workflow["13"];
   assert.ok(validateWorkflow(workflow).some((issue) => issue.includes("SaveImage")));
 
   const broken = buildQwenImageWorkflow({ prompt: "x" });
-  broken["8"].inputs.samples = ["99", 0];
+  broken["12"].inputs.samples = ["99", 0];
   assert.ok(validateWorkflow(broken).some((issue) => issue.includes("missing node 99")));
 });
 
@@ -70,14 +75,14 @@ test("the ComfyUI client drives submit → poll → download with injected fetch
     calls.push({ url, method: init.method ?? "GET" });
     if (url.endsWith("/system_stats")) return { ok: true };
     if (url.endsWith("/prompt")) {
-      assert.equal(JSON.parse(init.body).prompt["9"].class_type, "SaveImage");
+      assert.equal(JSON.parse(init.body).prompt["13"].class_type, "SaveImage");
       return { ok: true, json: async () => ({ prompt_id: "pid-1" }) };
     }
     if (url.includes("/history/pid-1")) {
       return {
         ok: true,
         json: async () => ({
-          "pid-1": { status: { status_str: "success" }, outputs: { "9": { images: [{ filename: "vft_0001.png", subfolder: "vft", type: "output" }] } } },
+          "pid-1": { status: { status_str: "success" }, outputs: { "13": { images: [{ filename: "vft_0001.png", subfolder: "vft", type: "output" }] } } },
         }),
       };
     }
