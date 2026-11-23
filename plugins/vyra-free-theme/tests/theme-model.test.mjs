@@ -125,7 +125,7 @@ test("the theme table projects into a valid SkinEffects draft", () => {
   assert.equal(effects.tokenOverrides["--dsw-alias-bg-base"].dark, "rgba(16, 16, 22, 0.55)");
   // non-translucent colours stay constant pairs
   assert.deepEqual(effects.tokenOverrides["--dsw-alias-brand-primary"], { light: "#5B3FD9", dark: "#9B8CFF" });
-  // no wallpaper asset yet �?the base-tone scrim gradient
+  // no wallpaper asset yet �?the base-tone scrim gradient
   assert.match(effects.backdrop.imageLight, /^linear-gradient\(/);
 });
 
@@ -142,4 +142,22 @@ test("panel opacity drives alpha and blur", () => {
   assert.match(low.backdrop.imageLight, /rgba\(247, 245, 242, 0\.00\)/);
   assert.match(high.backdrop.imageLight, /rgba\(247, 245, 242, 1\.00\)/);
   assert.equal(low.backdrop.overlayLight, null);
+});
+
+test("a video wallpaper may not keep an image side", () => {
+  // This is what the CLI used to produce when only one side was regenerated:
+  // kind: "video" plus a leftover .png side, which the model rejects.
+  const theme = {
+    schema: 1,
+    id: "mixed",
+    name: { zh: "混合", en: "Mixed" },
+    colors: { light: { "--dsw-alias-bg-base": "#FFFFFF" }, dark: { "--dsw-alias-bg-base": "#111111" } },
+    wallpaper: {
+      kind: "video",
+      light: { src: "assets/a.png" },
+      dark: { src: "assets/b.mp4", poster: "assets/b.png" },
+    },
+  };
+  const result = normalizeTheme(theme);
+  assert.ok(result.issues.some((issue) => issue.message.includes(".mp4")), JSON.stringify(result.issues));
 });

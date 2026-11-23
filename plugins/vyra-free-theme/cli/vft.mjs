@@ -476,11 +476,9 @@ async function cmdWallpaperAnim(paths, { positionals, flags }) {
 
   const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${baseName}.png` };
   const applied = mutateUserTheme(paths, id, (raw) => {
-    raw.wallpaper = {
-      kind: "video",
-      light: side === "dark" ? (raw.wallpaper?.light ?? null) : videoSide,
-      dark: side === "light" ? (raw.wallpaper?.dark ?? null) : videoSide,
-    };
+    // Both modes get the clip: a leftover image side on a video wallpaper is a
+    // validation error ("必须是 .mp4 或 .webm"), and one clip already serves both.
+    raw.wallpaper = { kind: "video", light: videoSide, dark: videoSide };
   });
   if (applied.exitCode !== EXIT.ok) return applied;
   const stats = recordWallpaperStats(themeDir, side, result.poster);
@@ -648,8 +646,12 @@ async function cmdWallpaperVideo(paths, { positionals, flags }) {
 
   let imagePath = typeof flags.image === "string" ? resolve(flags.image) : null;
   if (imagePath === null) {
-    const src = theme.wallpaper?.[side]?.src ?? theme.wallpaper?.light?.src ?? theme.wallpaper?.dark?.src;
-    if (typeof src === "string" && /\.(png|jpe?g|webp)$/i.test(src)) imagePath = join(themeDir, src);
+    // Re-animating a theme that is already a video: its poster is the still the
+    // clip started from, so that is the honest source rather than an error.
+    const entry = theme.wallpaper?.[side] ?? theme.wallpaper?.light ?? theme.wallpaper?.dark ?? {};
+    if (typeof entry.poster === "string" && /\.(png|jpe?g|webp)$/i.test(entry.poster)) imagePath = join(themeDir, entry.poster);
+    else if (typeof entry.src === "string" && /\.(png|jpe?g|webp)$/i.test(entry.src)) imagePath = join(themeDir, entry.src);
+    else if (typeof theme.wallpaper?.light?.src === "string" && /\.(png|jpe?g|webp)$/i.test(theme.wallpaper.light.src)) imagePath = join(themeDir, theme.wallpaper.light.src);
   }
   if (imagePath === null || !existsSync(imagePath)) {
     return fail(EXIT.error, "找不到要动的图片：用 --image 指定一张 png/jpg，或先 vft wallpaper gen / art 生成一张");
@@ -708,7 +710,9 @@ async function cmdWallpaperVideo(paths, { positionals, flags }) {
 
   const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${posterName}` };
   const applied = mutateUserTheme(paths, id, (raw) => {
-    raw.wallpaper = { ...(raw.wallpaper ?? {}), kind: "video", [side]: videoSide };
+    // Same rule as the code-animated path: the clip replaces both sides, so a
+    // stale image side can never survive into a kind: "video" theme.
+    raw.wallpaper = { kind: "video", light: videoSide, dark: videoSide };
   });
   if (applied.exitCode !== EXIT.ok) return applied;
   const stats = recordWallpaperStats(themeDir, side, source);

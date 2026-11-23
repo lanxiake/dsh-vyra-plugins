@@ -1295,10 +1295,19 @@ function createComfyClient(options = {}) {
      * Returns the filename to put in the node (ComfyUI may rename on conflict).
      */
     async uploadImage(buffer, filename, { overwrite = true } = {}) {
+      const type = /\.jpe?g$/i.test(filename) ? "image/jpeg" : /\.webp$/i.test(filename) ? "image/webp" : "image/png";
       const form = new FormData();
-      form.append("image", new Blob([buffer]), filename);
+      form.append("image", new Blob([buffer], { type }), filename);
       form.append("overwrite", overwrite ? "true" : "false");
-      const response = await call("/upload/image", { method: "POST", body: form, headers: {} });
+      const response = await fetchImpl(`${baseUrl}/upload/image`, {
+        method: "POST",
+        headers: { ...authHeader(config.auth) ?? {} },
+        body: form
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`ComfyUI /upload/image → HTTP ${response.status}${text ? `: ${text.slice(0, 200)}` : ""}`);
+      }
       const body = await response.json();
       const stored = body?.name ?? filename;
       return body?.subfolder ? `${body.subfolder}/${stored}` : stored;
@@ -2812,11 +2821,7 @@ async function cmdWallpaperAnim(paths, { positionals, flags }) {
   });
   const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${baseName}.png` };
   const applied = mutateUserTheme(paths, id, (raw) => {
-    raw.wallpaper = {
-      kind: "video",
-      light: side === "dark" ? raw.wallpaper?.light ?? null : videoSide,
-      dark: side === "light" ? raw.wallpaper?.dark ?? null : videoSide
-    };
+    raw.wallpaper = { kind: "video", light: videoSide, dark: videoSide };
   });
   if (applied.exitCode !== EXIT.ok) return applied;
   const stats = recordWallpaperStats(themeDir, side, result.poster);
@@ -2954,8 +2959,10 @@ async function cmdWallpaperVideo(paths, { positionals, flags }) {
   if (!["light", "dark"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark");
   let imagePath = typeof flags.image === "string" ? resolve(flags.image) : null;
   if (imagePath === null) {
-    const src = theme.wallpaper?.[side]?.src ?? theme.wallpaper?.light?.src ?? theme.wallpaper?.dark?.src;
-    if (typeof src === "string" && /\.(png|jpe?g|webp)$/i.test(src)) imagePath = join3(themeDir, src);
+    const entry = theme.wallpaper?.[side] ?? theme.wallpaper?.light ?? theme.wallpaper?.dark ?? {};
+    if (typeof entry.poster === "string" && /\.(png|jpe?g|webp)$/i.test(entry.poster)) imagePath = join3(themeDir, entry.poster);
+    else if (typeof entry.src === "string" && /\.(png|jpe?g|webp)$/i.test(entry.src)) imagePath = join3(themeDir, entry.src);
+    else if (typeof theme.wallpaper?.light?.src === "string" && /\.(png|jpe?g|webp)$/i.test(theme.wallpaper.light.src)) imagePath = join3(themeDir, theme.wallpaper.light.src);
   }
   if (imagePath === null || !existsSync2(imagePath)) {
     return fail(EXIT.error, "找不到要动的图片：用 --image 指定一张 png/jpg，或先 vft wallpaper gen / art 生成一张");
@@ -3006,7 +3013,7 @@ async function cmdWallpaperVideo(paths, { positionals, flags }) {
   writeFileSync3(join3(themeDir, "assets", posterName), source);
   const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${posterName}` };
   const applied = mutateUserTheme(paths, id, (raw) => {
-    raw.wallpaper = { ...raw.wallpaper ?? {}, kind: "video", [side]: videoSide };
+    raw.wallpaper = { kind: "video", light: videoSide, dark: videoSide };
   });
   if (applied.exitCode !== EXIT.ok) return applied;
   const stats = recordWallpaperStats(themeDir, side, source);
