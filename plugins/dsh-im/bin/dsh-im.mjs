@@ -13,9 +13,10 @@ import {
   sendMessage,
 } from '../src/cli/delivery-client.mjs';
 
-const PACKAGE_NAME = '@xmanrui/dsh-im';
-const DEFAULT_SOURCE = 'github:xmanrui/dsh-im';
+const PACKAGE_NAME = '@lanxiake/dsh-im';
+const DEFAULT_SOURCE = 'github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im';
 const LEGACY_PACKAGES = [
+  '@xmanrui/dsh-im',
   '@xmanrui/dsh-feishu',
   '@xmanrui/dsh-weixin',
   '@xmanrui/dsh-dingtalk',
@@ -43,7 +44,7 @@ function usage() {
   dsh-im endpoint
 
 Examples:
-  npx -y github:xmanrui/dsh-im install
+  dsh plugin --profile desktop add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
   dsh-im send --bot bot_x --target release-alerts --text "构建已完成"
   echo "构建已完成" | dsh-im send --bot bot_x --target release-alerts --stdin
   dsh-im send --bot bot_x --target release-alerts --file ./report.pdf

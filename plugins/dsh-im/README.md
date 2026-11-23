@@ -71,22 +71,22 @@
 ---
 
 > [!IMPORTANT]
-> **安装请认准完整包名：`@xmanrui/dsh-im`**
+> **安装请认准完整包名：`@lanxiake/dsh-im`**
 >
 > 为避免名称混淆，在插件市场搜索、插件安装框中填写或使用命令安装时，请复制下方完整包名。
 >
 > ```text
-> @xmanrui/dsh-im
+> @lanxiake/dsh-im
 > ```
 >
 > 选择对应的一条命令：**Desktop** 在内置终端执行，**Web** 在启动当前 Harness 的终端执行。
 >
 > ```sh
-> dsh plugin --profile desktop add -w @xmanrui/dsh-im
+> dsh plugin --profile desktop add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 > ```
 >
 > ```sh
-> dsh plugin --profile web add -w @xmanrui/dsh-im
+> dsh plugin --profile web add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 > ```
 >
 > 安装后重启 Desktop 或 `dsh web`，Web 刷新浏览器，再打开「设置 → IM机器人」。
@@ -173,12 +173,12 @@ WhatsApp、飞书、Telegram、Discord、Slack、QQ 支持自动保存实际收�
 
 ## 安装
 
-推荐从 npm 安装已发布的稳定版本 **`@xmanrui/dsh-im`**。请按实际使用的运行方式选择对应命令：
+推荐从 **DSH 插件市场**安装 **`@lanxiake/dsh-im`**（搜索「即时通讯桥接」）。也可以直接用 Git 源安装，按实际运行方式选择：
 
 **DSH Desktop**：在当前 Desktop 的内置终端中执行：
 
 ```sh
-dsh plugin --profile desktop add -w @xmanrui/dsh-im
+dsh plugin --profile desktop add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 ```
 
 安装完成后重启 DSH Desktop。
@@ -186,7 +186,7 @@ dsh plugin --profile desktop add -w @xmanrui/dsh-im
 **DSH Web**：在启动当前 Harness 的终端环境中执行：
 
 ```sh
-dsh plugin --profile web add -w @xmanrui/dsh-im
+dsh plugin --profile web add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 ```
 
 安装完成后重启 `dsh web`，并刷新浏览器。
@@ -195,13 +195,13 @@ dsh plugin --profile web add -w @xmanrui/dsh-im
 
 本机 `dsh web` 和 DSH Desktop 默认直接复用当前 Host 的内部服务：通过 Typert Gateway 调用 Session Controller 和 Workspace Controller，不需要配置 Harness 地址，也不绕行本机 HTTP 端口。Desktop 的兼容模式、扩展窗口和增强模式均无需开启“允许在浏览器中打开”或局域网访问。渠道配置中显式设置的 `harnessBaseUrl` 仅保留给旧版远程 HTTP/WebSocket Harness；内部调用失败不会自动改连其他 Host。
 
-如需试用尚未发布到 npm 的最新代码，可以改用 GitHub 源安装器：
+`@lanxiake/dsh-im` 是 `@xmanrui/dsh-im` 的分支版本，包名已经更换，两者**不能同时启用**：
 
-```sh
-npx -y github:xmanrui/dsh-im install
-```
+1. 先从插件市场或 `dsh plugin --profile <profile> remove @xmanrui/dsh-im` 卸载旧包。
+2. 再安装 `@lanxiake/dsh-im`。
+3. 重启 Host。已有机器人、凭据、工作区、Agent Preset、会话绑定和投递目标保存在 `~/.dsh/integrations/dsh-*`，不会因换包丢失。
 
-GitHub 源安装会直接拉取并构建 Git 依赖；pnpm 10 及以上版本可能要求先在 profile 的 `pnpm-workspace.yaml` 中允许该依赖执行构建脚本。普通用户建议优先使用 npm 稳定版。
+Git 源安装会直接拉取并构建 Git 依赖；pnpm 10 及以上版本可能要求先在 profile 的 `pnpm-workspace.yaml` 中允许该依赖执行构建脚本。
 
 安装后，在对应渠道页面按照内置引导完成扫码或凭据配置。所有 Secret 和 Token 只提交给本机 Harness Host，并写入受保护的凭据存储；状态接口和机器人列表不会回传这些凭据。
 

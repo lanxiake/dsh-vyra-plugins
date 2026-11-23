@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import semver from 'semver';
 
-export const PACKAGE_NAME = '@xmanrui/dsh-im';
+export const PACKAGE_NAME = '@lanxiake/dsh-im';
 export const NPM_REGISTRY = 'https://registry.npmjs.org/';
 
 const INSTALL_TIMEOUT_MS = 15 * 60_000;
