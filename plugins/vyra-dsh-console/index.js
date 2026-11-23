@@ -1,5 +1,6 @@
 import { createConsole } from './core.js'
 import { createConsoleTool } from './tool.js'
+import { consoleDomain } from './domains/console.js'
 import { pluginDomain } from './domains/plugin.js'
 import { modelDomain } from './domains/model.js'
 import { settingsDomain } from './domains/settings.js'
@@ -14,6 +15,7 @@ export function apply(ctx) {
   // whose domain is absent, which reads as a broken action rather than as a
   // missing service.
   const console_ = createConsole(ctx, {
+    console: consoleDomain,
     plugin: pluginDomain,
     model: modelDomain,
     settings: settingsDomain,

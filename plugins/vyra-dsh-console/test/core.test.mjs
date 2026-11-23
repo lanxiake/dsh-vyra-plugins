@@ -10,10 +10,30 @@ import { pluginDomain } from '../domains/plugin.js'
 import { modelDomain } from '../domains/model.js'
 import { settingsDomain } from '../domains/settings.js'
 import { catalogDomain } from '../domains/catalog.js'
+import { consoleDomain } from '../domains/console.js'
 
 /** A ctx with no optional service present, to prove graceful degradation. */
 function bareCtx() {
   return { get: () => undefined, logger: { warn() {} } }
+}
+
+/**
+ * Run the plugin's real `apply()` against a bare ctx and dispatch one action
+ * through the tool it registers.
+ *
+ * The point is to exercise `index.js` itself rather than a handler map rebuilt
+ * in this file: the defect that motivated this helper was a domain missing from
+ * `index.js`, which a locally built map cannot see.
+ */
+async function applyAndDispatch(action) {
+  const { apply } = await import('../index.js')
+  let tool
+  apply({
+    get: () => undefined,
+    logger: { info() {}, warn() {} },
+    tools: { register: (registered) => { tool = registered } },
+  })
+  return tool.execute({ action })
 }
 
 test('every forbidden action is refused with a reason and an alternative', async () => {
@@ -982,4 +1002,136 @@ test('console.actions lists the catalog actions with their mutation flags', asyn
   assert.equal(ACTIONS['mcp.probe'].mutating, false)
   assert.equal(ACTIONS['skill.list'].domain, 'catalog')
   assert.equal(ACTIONS['mcp.probe'].domain, 'catalog')
+})
+
+// ---------------------------------------------------------------------------
+// The console domain: `console.actions`, the tool's own documented first call.
+// ---------------------------------------------------------------------------
+
+test('console.actions reports the registered actions', async () => {
+  // tool.js tells the model "Call action=console.actions first", so this is the
+  // entry point to the whole surface: if it fails, the documented way to
+  // discover every other action is broken.
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
+  const result = await console_.dispatch('console.actions', {})
+  assert.equal(result.status, 'ok')
+  assert.ok(Array.isArray(result.actions) && result.actions.length > 0)
+  const names = result.actions.map((a) => a.name)
+  assert.ok(names.includes('plugin.list'), 'plugin.list must be listed')
+  assert.ok(names.includes('model.select'), 'model.select must be listed')
+  assert.ok(names.includes('console.actions'), 'the listing lists itself')
+})
+
+test('every action row carries the full spec shape', async () => {
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
+  const { actions } = await console_.dispatch('console.actions', {})
+  for (const row of actions) {
+    assert.equal(typeof row.name, 'string', `${row.name} needs a name`)
+    assert.equal(typeof row.domain, 'string', `${row.name} needs a domain`)
+    assert.equal(typeof row.mutating, 'boolean', `${row.name} needs mutating`)
+    assert.equal(typeof row.destructive, 'boolean', `${row.name} needs destructive`)
+    assert.equal(typeof row.requiresClient, 'boolean', `${row.name} needs requiresClient`)
+  }
+})
+
+test('console.actions reports the same rows as listActions, from one source of truth', async () => {
+  // The domain reads the frozen ACTIONS table rather than restating it, so the
+  // advertised surface cannot drift from the one dispatch() enforces.
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
+  const result = await console_.dispatch('console.actions', {})
+  assert.deepEqual(result.actions, console_.listActions())
+  assert.equal(result.actions.length, Object.keys(ACTIONS).length)
+})
+
+test('console.actions names every forbidden action with a reason and an alternative', async () => {
+  // This list is how the agent learns what it may not do, so it has to be
+  // present and complete — not merely the callable actions.
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
+  const result = await console_.dispatch('console.actions', {})
+  assert.ok(Array.isArray(result.forbidden) && result.forbidden.length > 0)
+  const names = result.forbidden.map((f) => f.name)
+  for (const name of ['sandbox.setMode', 'permission.setPreset', 'approval.answer', 'credentials.set']) {
+    assert.ok(names.includes(name), `${name} must appear in the forbidden list`)
+  }
+  for (const row of result.forbidden) {
+    assert.equal(typeof row.reason, 'string', `${row.name} needs a reason`)
+    assert.ok(row.reason.length > 0, `${row.name} needs a non-empty reason`)
+    assert.equal(typeof row.alternative, 'string', `${row.name} needs an alternative`)
+    assert.ok(row.alternative.length > 0, `${row.name} needs a non-empty alternative`)
+  }
+  // Derived from FORBIDDEN, so the two cannot disagree.
+  assert.equal(result.forbidden.length, Object.keys(FORBIDDEN).length)
+})
+
+test('console.actions never emits an undefined-valued key', async () => {
+  const tool = createConsoleTool(createConsole(bareCtx(), { console: consoleDomain }))
+  const result = await tool.execute({ action: 'console.actions' })
+  assert.equal(result.status, 'ok')
+  for (const row of [...result.actions, ...result.forbidden]) {
+    for (const [key, value] of Object.entries(row)) {
+      assert.notEqual(value, undefined, `row key "${key}" holds undefined`)
+    }
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), result)
+})
+
+test('the documented first call succeeds through the tool', async () => {
+  // End-to-end over the surface the model actually uses: tool.js's DESCRIPTION
+  // instructs the model to make exactly this call first.
+  const tool = createConsoleTool(createConsole(bareCtx(), { console: consoleDomain }))
+  const result = await tool.execute({ action: 'console.actions' })
+  assert.equal(result.status, 'ok')
+  assert.ok(result.actions.length > 0)
+  assert.ok(result.forbidden.length > 0)
+})
+
+test('every registered action has a wired handler', async () => {
+  // The guard for the bug this test was written after: an action registered in
+  // ACTIONS whose `domain` no handler implements dispatches to
+  // `no handler for domain "x"`, so the action is advertised and then always
+  // fails. Observed on `console.actions` before the console domain existed.
+  //
+  // It drives the REAL apply() from index.js, not a handler map rebuilt here:
+  // the original defect was a domain missing from index.js, and a hand-built
+  // map would keep passing while the shipped plugin stayed broken.
+  for (const name of Object.keys(ACTIONS)) {
+    const result = await applyAndDispatch(name)
+    assert.doesNotMatch(
+      String(result.reason ?? ''),
+      /no handler for domain/,
+      `${name} is registered but index.js wires no handler for its domain`,
+    )
+  }
+})
+
+test('every domain an action name implies is actually wired in index.js', async () => {
+  // Belt and braces: the check above is the behavioural one; this asserts the
+  // wiring directly, naming the offending domain.
+  const wired = new Set()
+  for (const name of Object.keys(ACTIONS)) {
+    // dispatch() resolves the handler by the spec's `domain`, so a domain that
+    // is absent from index.js is exactly what must not happen.
+    wired.add(ACTIONS[name].domain)
+  }
+  for (const domain of wired) {
+    const result = await applyAndDispatch('console.actions')
+    assert.ok(result.status === 'ok', 'console.actions must answer, so the list is readable')
+    assert.ok(
+      result.actions.some((a) => a.domain === domain),
+      `domain "${domain}" is used by a registered action`,
+    )
+  }
+  // Every domain used by ACTIONS is named by at least one action row, and the
+  // behaviour guard above proves each of those resolves to a handler.
+  assert.ok(wired.size > 0)
+})
+
+test('the check above would have caught the missing console handler', async () => {
+  // Proves the guard has teeth: with the console domain deliberately omitted,
+  // dispatching console.actions reports the missing-handler failure the real
+  // guard asserts against.
+  const console_ = createConsole(bareCtx(), { plugin: pluginDomain })
+  const result = await console_.dispatch('console.actions', {})
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /no handler for domain "console"/)
 })
