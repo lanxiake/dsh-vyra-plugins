@@ -152,6 +152,17 @@ window.__ModuleLoader__.load({
      *   success carries `value` only when there is one to carry.
      */
     function applyOp(services, op, args) {
+      // A string first, before anything below coerces or interpolates `op`.
+      // Both the own-property lookup and the reason template run `ToPropertyKey`
+      // / `ToString` on their argument, so a boxed or overridden value satisfies
+      // the lookup and then dispatches a real mutation — `{ toString: () =>
+      // 'appearance.toggleSidebar' }` was reaching `layout.toggleSidebar()`,
+      // and a Symbol threw out of the reason template. Reachable as soon as
+      // Task 7 forwards a request body, so the type is checked here rather than
+      // trusted from the caller.
+      if (typeof op !== 'string') {
+        return { status: 'error', reason: 'an appearance op must be a string' }
+      }
       // Own properties only. `OPS[op]` walks the prototype chain, so `toString`,
       // `valueOf`, `hasOwnProperty` and friends would resolve as "handlers" and
       // be *called*: `constructor` returns the OPS object itself, and the rest

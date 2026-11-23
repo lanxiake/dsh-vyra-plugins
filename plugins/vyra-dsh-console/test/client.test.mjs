@@ -168,6 +168,117 @@ test('the "constructor" op does not return the handler map', () => {
   assert.doesNotMatch(JSON.stringify(result), /setTheme|toggleSidebar|getLocale/)
 })
 
+// A non-string op must be refused *before* the own-property lookup. `Object.hasOwn`
+// and the reason template both coerce their argument, so an object whose `toString`
+// returns a real op name satisfies the lookup and then dispatches a real mutation.
+// The call list is asserted alongside the status: a status-only assertion passes
+// even when the handler ran and something later went wrong, which is the whole
+// point here.
+for (const [label, op] of [
+  ['an object whose toString names a real op', { toString: () => 'appearance.toggleSidebar' }],
+  ['a single-element array naming a real op', ['appearance.toggleSidebar']],
+  ['an array with an overridden toString', Object.assign([], { toString: () => 'appearance.toggleSidebar', join: () => 'appearance.toggleSidebar' })],
+  ['an object whose valueOf names a real op', { valueOf: () => 'appearance.toggleSidebar', toString: null }],
+  ['a boxed String naming a real op', Object('appearance.toggleSidebar')],
+]) {
+  test(`${label} is refused and dispatches nothing`, () => {
+    const { services, calls } = spyServices()
+    let result
+    assert.doesNotThrow(() => { result = exports.__internal.applyOp(services, op, {}) }, 'must not raise')
+    assert.equal(result.status, 'error')
+    assert.deepEqual(calls, [], 'the handler must never be reached')
+    assert.match(result.reason, /must be a string/)
+  })
+}
+
+test('a Symbol op returns a status instead of throwing out', () => {
+  // The reason template interpolates `op`, and a Symbol cannot be stringified —
+  // so this is exactly the contract break the previous round closed, arriving
+  // through a different door.
+  const { services, calls } = spyServices()
+  let result
+  assert.doesNotThrow(() => {
+    result = exports.__internal.applyOp(services, Symbol('appearance.toggleSidebar'), {})
+  })
+  assert.equal(result.status, 'error')
+  assert.deepEqual(calls, [])
+  assert.match(result.reason, /must be a string/)
+})
+
+test('a non-string op is never handed to a coercing API', () => {
+  // The ordering requirement made observable. `Object.hasOwn` runs
+  // `ToPropertyKey` on its argument, so if the lookup came first a hostile `op`
+  // would get its `toString`/`Symbol.toPrimitive` invoked before any check —
+  // and it would be free to run code or to return a real op name on a second
+  // call. With the guard first, `op` reaches no coercing API at all.
+  let coercions = 0
+  const hostile = {
+    toString: () => { coercions += 1; return 'appearance.toggleSidebar' },
+    valueOf: () => { coercions += 1; return 'appearance.toggleSidebar' },
+    [Symbol.toPrimitive]: () => { coercions += 1; return 'appearance.toggleSidebar' },
+  }
+  const { services, calls } = spyServices()
+  const result = exports.__internal.applyOp(services, hostile, {})
+  assert.equal(result.status, 'error')
+  assert.deepEqual(calls, [])
+  assert.equal(coercions, 0, 'the op must not be coerced before the type check')
+})
+
+test('no op can throw out of applyOp, whatever the op is', () => {
+  // Swept over every non-string category in one place, including the Symbol
+  // that used to escape through the reason template's interpolation.
+  const { services, calls } = spyServices()
+  const symbols = [Symbol('x'), Symbol.iterator, Symbol.toPrimitive]
+  const others = [null, undefined, 7, NaN, true, false, {}, [], () => {}, 0n,
+    { toString: () => 'appearance.toggleSidebar' }, ['appearance.toggleSidebar']]
+  for (const op of [...symbols, ...others]) {
+    let result
+    assert.doesNotThrow(() => { result = exports.__internal.applyOp(services, op, {}) },
+      `op ${String(op)} must not raise`)
+    assert.equal(result.status, 'error', `op ${String(op)} must be refused`)
+    assert.equal(typeof result.reason, 'string', `op ${String(op)} must carry a string reason`)
+    assert.doesNotThrow(() => JSON.parse(JSON.stringify(result)))
+  }
+  assert.deepEqual(calls, [], 'no op in the sweep may reach a handler')
+})
+test('a Symbol-keyed own property on the handler map is unreachable', () => {
+  // The worse variant: `Object.hasOwn` is `true` for a symbol-keyed own member,
+  // so the own-property rule alone does not stop it. The type guard does.
+  const symbol = Symbol('smuggled')
+  exports.__internal.OPS[symbol] = () => ({ status: 'ok', reason: 'dispatched' })
+  try {
+    const { services, calls } = spyServices()
+    const result = exports.__internal.applyOp(services, symbol, {})
+    assert.equal(result.status, 'error')
+    assert.match(result.reason, /must be a string/)
+    assert.deepEqual(calls, [])
+  } finally {
+    delete exports.__internal.OPS[symbol]
+  }
+})
+
+for (const [label, op] of [
+  ['null', null],
+  ['undefined', undefined],
+  ['a number', 7],
+  ['NaN', NaN],
+  ['a boolean', true],
+  ['a plain object', {}],
+  ['a function', () => 'appearance.toggleSidebar'],
+]) {
+  test(`${label} as an op is refused with no throw and no undefined key`, () => {
+    const { services, calls } = spyServices()
+    let result
+    assert.doesNotThrow(() => { result = exports.__internal.applyOp(services, op, {}) })
+    assert.equal(result.status, 'error')
+    assert.match(result.reason, /must be a string/)
+    assert.deepEqual(calls, [])
+    assert.deepEqual(Object.keys(result).sort(), ['reason', 'status'])
+    assert.doesNotThrow(() => JSON.parse(JSON.stringify(result)))
+    for (const [key, item] of Object.entries(result)) assert.notEqual(item, undefined, `${key} is undefined`)
+  })
+}
+
 test('a Client service that is missing reports an error, not a false success', () => {
   const result = exports.__internal.applyOp({}, 'appearance.setTheme', { id: 'dark' })
   assert.equal(result.status, 'error')
