@@ -231,8 +231,12 @@ async function installAgentAssets() {
   const binDir = path.join(dshHome(), 'vyra-screen-recorder', 'bin')
   await mkdir(binDir, { recursive: true })
   const cli = path.join(ROOT, 'bin', 'vsr.mjs')
-  await writeFile(path.join(binDir, 'vsr.cmd'), '@echo off\r\nnode "' + cli + '" %*\r\n')
-  await writeFile(path.join(binDir, 'vsr'), '#!/bin/sh\nexec node "' + cli.replace(/\\/g, '/') + '" "$@"\n')
+  // 用 DSH 自己的 Node 运行时（process.execPath），不依赖用户 PATH 上的 node。
+  const node = process.execPath
+  await writeFile(path.join(binDir, 'vsr.cmd'),
+    '@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"' + node + '" "' + cli + '" %*\r\n')
+  await writeFile(path.join(binDir, 'vsr'),
+    '#!/bin/sh\nexport ELECTRON_RUN_AS_NODE=1\nexec "' + node.replace(/\\/g, '/') + '" "' + cli.replace(/\\/g, '/') + '" "$@"\n')
   await mkdir(agentDir(), { recursive: true })
 }
 
