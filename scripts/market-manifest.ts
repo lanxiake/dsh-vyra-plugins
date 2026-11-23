@@ -2274,7 +2274,7 @@ export const manifest: MarketManifest = {
         // default, names the model the auto router actually used, and adds the
         // Tencent and bring-your-own-key lanes.
         '0.3.0': {
-          publishTimestamp: 1795404693,
+          publishTimestamp: 1795564800,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',

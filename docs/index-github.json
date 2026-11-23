@@ -2072,7 +2072,7 @@
       "versions": [
         {
           "version": "0.3.0",
-          "publishTimestamp": 1795404693,
+          "publishTimestamp": 1795564800,
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
