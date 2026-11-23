@@ -47,10 +47,14 @@ export function renderArtVideo(options) {
   const frameCount = Math.max(2, Math.min(240, Math.round(frames)));
   const frameRate = Math.max(1, Math.min(60, Math.round(fps)));
   const work = mkdtempSync(join(tmpdir(), "vft-anim-"));
+  // The clip's own length is what recipes loop against: any integer number of
+  // cycles inside `duration` lands frame `frameCount` exactly on frame 0, so the
+  // video closes without a jump even though the last frame ships.
+  const duration = frameCount / frameRate;
   try {
     let poster = null;
     for (let index = 0; index < frameCount; index += 1) {
-      const png = renderArt(recipe, { width, height, seed, tone, time: index / frameRate });
+      const png = renderArt(recipe, { width, height, seed, tone, time: index / frameRate, duration });
       if (index === 0) poster = png;
       writeFileSync(join(work, `frame-${String(index).padStart(4, "0")}.png`), png);
     }

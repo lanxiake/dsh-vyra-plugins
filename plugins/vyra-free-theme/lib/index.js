@@ -1628,13 +1628,20 @@ function normalizeTheme(raw) {
       }
     }
   }
-  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" } };
+  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" }, heroMark: "auto" };
   if (raw.brand !== void 0) {
     if (!isPlainObject(raw.brand)) fail("bad-brand", "brand", "brand 必须是对象");
     else {
       for (const key of Object.keys(raw.brand)) {
-        if (!["title", "mark", "favicon", "slogans"].includes(key)) {
+        if (!["title", "mark", "favicon", "slogans", "heroMark"].includes(key)) {
           fail("unknown-key", `brand.${key}`, `未知字段 "${key}"`);
+        }
+      }
+      if (raw.brand.heroMark !== void 0) {
+        if (!["auto", "ring", "text", "none"].includes(raw.brand.heroMark)) {
+          fail("bad-brand", "brand.heroMark", "heroMark 必须是 auto / ring / text / none");
+        } else {
+          brand.heroMark = raw.brand.heroMark;
         }
       }
       if (raw.brand.title !== void 0) {

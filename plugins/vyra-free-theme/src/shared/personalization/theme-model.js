@@ -174,13 +174,24 @@ export function normalizeTheme(raw) {
     }
   }
 
-  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" } };
+  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" }, heroMark: "auto" };
   if (raw.brand !== undefined) {
     if (!isPlainObject(raw.brand)) fail("bad-brand", "brand", "brand 必须是对象");
     else {
       for (const key of Object.keys(raw.brand)) {
-        if (!["title", "mark", "favicon", "slogans"].includes(key)) {
+        if (!["title", "mark", "favicon", "slogans", "heroMark"].includes(key)) {
           fail("unknown-key", `brand.${key}`, `未知字段 "${key}"`);
+        }
+      }
+      if (raw.brand.heroMark !== undefined) {
+        // What the new-session hero puts above the headline:
+        //   auto — an image if `mark` is given, otherwise the neutral ring
+        //   ring — the neutral glyph; text — the brand title as a wordmark;
+        //   none — nothing, letting the headline own the space.
+        if (!["auto", "ring", "text", "none"].includes(raw.brand.heroMark)) {
+          fail("bad-brand", "brand.heroMark", "heroMark 必须是 auto / ring / text / none");
+        } else {
+          brand.heroMark = raw.brand.heroMark;
         }
       }
       if (raw.brand.title !== undefined) {

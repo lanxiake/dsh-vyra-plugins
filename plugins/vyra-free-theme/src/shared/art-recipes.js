@@ -10,8 +10,9 @@
  * canvas art (`themes/<id>/art.js`), which is live rather than pre-rendered.
  */
 import { encodePng } from "./png-stats.js";
+import { PREMIUM_ANIMATED, PREMIUM_FNS, PREMIUM_META } from "./art-recipes-premium.js";
 
-export const ART_RECIPES = Object.freeze({
+export const ART_RECIPES_BASE = Object.freeze({
   starfield: {
     label: { zh: "星云", en: "Starfield" },
     description: "深空底色 + 星云光雾 + 三层星点，静帧版的星云主题",
@@ -37,6 +38,9 @@ export const ART_RECIPES = Object.freeze({
     description: "分层山脊 + 大气透视 + 天光渐变",
   },
 });
+
+/** Every recipe: the first-generation set plus the premium overrides/additions. */
+export const ART_RECIPES = Object.freeze({ ...ART_RECIPES_BASE, ...PREMIUM_META });
 
 function mulberry32(seed) {
   let state = seed >>> 0;
@@ -318,13 +322,21 @@ const RECIPE_FNS = {
   },
 };
 
+// The premium set replaces starfield / ink-wash / fluid and adds silk and
+// aurora-veil. Overrides happen here so the first-generation bodies above stay
+// readable as the "simple" reference implementation.
+Object.assign(RECIPE_FNS, PREMIUM_FNS);
+
 /**
  * Render one recipe to a PNG buffer.
  * `time` is the animation clock in seconds (default 0). Recipes that support it
  * produce a different frame per `time`, which is how a code recipe becomes a
  * video wallpaper (`vft wallpaper anim`); at `time: 0` they render the still.
+ * `duration` is the length of the clip being rendered. Animated recipes derive
+ * every moving value from `loopPhase(time, duration, cycles)`, so an integer
+ * number of cycles closes the loop with no visible seam.
  * @param {keyof ART_RECIPES} recipe
- * @param {{width?: number, height?: number, seed?: number, tone?: "light"|"dark", time?: number}} options
+ * @param {{width?: number, height?: number, seed?: number, tone?: "light"|"dark", time?: number, duration?: number}} options
  */
 export function renderArt(recipe, options = {}) {
   const fn = RECIPE_FNS[recipe];
@@ -335,8 +347,9 @@ export function renderArt(recipe, options = {}) {
   const height = Math.max(16, Math.min(4096, Math.round(options.height ?? 1536)));
   const seed = Number.isFinite(options.seed) ? Math.abs(Math.floor(options.seed)) : 1;
   const time = Number.isFinite(options.time) ? options.time : 0;
-  return fn({ width, height, seed, time, tone: options.tone === "dark" ? "dark" : "light" });
+  const duration = Number.isFinite(options.duration) && options.duration > 0 ? options.duration : 0;
+  return fn({ width, height, seed, time, duration, tone: options.tone === "dark" ? "dark" : "light" });
 }
 
 /** Recipes that animate: they change with `time`. */
-export const ANIMATED_RECIPES = Object.freeze(["starfield", "fluid"]);
+export const ANIMATED_RECIPES = PREMIUM_ANIMATED;

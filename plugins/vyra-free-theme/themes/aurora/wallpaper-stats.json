@@ -1,7 +1,9 @@
 {
+  "recipe": "aurora-blobs",
+  "seed": 3,
   "light": {
-    "stdLuma": 0.1856,
-    "edgeEnergy": 0.0022,
+    "stdLuma": 0.0598,
+    "edgeEnergy": 0.0047,
     "width": 1280,
     "height": 720
   }

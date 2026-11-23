@@ -716,6 +716,7 @@ function cmdBrandSet(paths, { positionals, flags }) {
       };
     }
     if (flags.mark !== undefined) brand.mark = flags.mark;
+    if (flags["hero-mark"] !== undefined) brand.heroMark = flags["hero-mark"];
     raw.brand = brand;
   });
 }

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ART_RECIPES, renderArt } from "../src/shared/art-recipes.js";
+import { ANIMATED_RECIPES, ART_RECIPES, renderArt } from "../src/shared/art-recipes.js";
 import { decodePng, imageStats } from "../src/shared/png-stats.js";
 import { run } from "../cli/vft.mjs";
 import { scoreTheme } from "../src/shared/personalization/color-score.js";
@@ -60,7 +60,7 @@ test("vft wallpaper art writes the asset, sets the wallpaper and records pixel s
   assert.equal(raw.wallpaper.light.src, "assets/starfield-11.png");
   assert.equal(raw.wallpaper.dark.src, "assets/starfield-11.png");
   const stats = JSON.parse(readFileSync(join(themeDir, "wallpaper-stats.json"), "utf8"));
-  assert.ok(stats.light.stdLuma > 0.05);
+  assert.ok(stats.light.stdLuma > 0.02);
   assert.equal(generated.payload.stats.stdLuma, stats.light.stdLuma);
 
   // the gate now runs the interference dimension with real pixels
@@ -100,4 +100,17 @@ test("a busy wallpaper measurably lowers a theme's colour score", () => {
   });
   assert.equal(withPixels.sampled, true);
   assert.ok(withPixels.score < clean.score, `${withPixels.score} < ${clean.score}`);
+});
+test("each animated recipe closes its loop exactly", () => {
+  // The frame after the last one must be the first frame, pixel for pixel: that
+  // is what makes a looping video wallpaper invisible. A 0.5 multiplier or a raw
+  // radian slip shows up here as a diff, before anyone sees a jump.
+  const duration = 8;
+  for (const recipe of ANIMATED_RECIPES) {
+    const first = renderArt(recipe, { width: 96, height: 60, seed: 5, time: 0, duration });
+    const wrapped = renderArt(recipe, { width: 96, height: 60, seed: 5, time: duration, duration });
+    assert.ok(first.equals(wrapped), recipe + " does not close its loop");
+    const middle = renderArt(recipe, { width: 96, height: 60, seed: 5, time: duration / 4, duration });
+    assert.ok(!first.equals(middle), recipe + " is listed as animated but never moves");
+  }
 });

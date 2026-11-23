@@ -100,6 +100,37 @@ test("one bad theme does not stop the others and is reported", async () => {
   }
 });
 
+test("the hero mark can be a ring, a text wordmark, an image or nothing", async () => {
+  const cases = [
+    { brand: { heroMark: "text", title: { zh: "星云", en: "Nebula" } }, expect: "text" },
+    { brand: { heroMark: "none" }, expect: "none" },
+    { brand: { heroMark: "ring" }, expect: "ring" },
+    { brand: { heroMark: "auto", mark: "assets/mark.png" }, expect: "image" },
+    { brand: { heroMark: "auto" }, expect: "ring" },
+  ];
+  for (const [index, entry] of cases.entries()) {
+    const fake = runtime();
+    const id = `hero-mark-${index}`;
+    try {
+      const result = await installFileThemes({
+        runtime: fake, jsx, profile: "web",
+        fetchImpl: catalog([{ source: "builtin", theme: { ...normalizeTheme(themeRaw(id)).theme, brand: { ...entry.brand, slogans: { zh: "", en: "" } } } }]),
+      });
+      assert.deepEqual(result.installed, [id]);
+      const node = fake.skins.get(id).Mark();
+      assert.equal(node.props["data-vft-hero-mark"], entry.expect, JSON.stringify(entry.brand));
+      if (entry.expect === "image") {
+        assert.match(node.props.src, new RegExp(`^/vyra-free-theme/theme/${id}/assets/mark\\.png$`));
+      }
+      if (entry.expect === "text") {
+        assert.equal(node.children[0], "星云");
+      }
+    } finally {
+      unregisterExternalSkin(id);
+    }
+  }
+});
+
 test("an unreachable catalog rejects instead of silently installing nothing", async () => {
   const fake = runtime();
   await assert.rejects(

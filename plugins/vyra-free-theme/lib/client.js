@@ -3709,13 +3709,40 @@ ${references.join("\n")}`,
 
   // src/client/themes.js
   var THEMES_ROUTE = "/vyra-free-theme/themes";
+  function themeAssetUrl2(id, path) {
+    return `${THEME_ASSET_BASE}/${id}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
+  }
   function brandComponents(theme, jsx) {
     const title = theme.brand.title?.zh ?? theme.name.zh;
-    const Mark = () => jsx(
-      "svg",
-      { width: 18, height: 18, viewBox: "0 0 18 18", "aria-hidden": "true", focusable: "false" },
-      jsx("circle", { cx: 9, cy: 9, r: 6.5, fill: "none", stroke: "currentColor", strokeWidth: 1.6 })
-    );
+    const mode = theme.brand.heroMark ?? "auto";
+    const markPath = theme.brand.mark;
+    const Mark = () => {
+      if (mode === "none") {
+        return jsx("span", { "data-vft-hero-mark": "none", "aria-hidden": "true", style: { display: "none" } });
+      }
+      if (mode === "text") {
+        return jsx("span", {
+          "data-vft-hero-mark": "text",
+          style: { fontSize: "0.86em", fontWeight: 600, letterSpacing: "0.14em", opacity: 0.9, whiteSpace: "nowrap" }
+        }, title);
+      }
+      if ((mode === "auto" || mode === "image") && typeof markPath === "string" && mimeForAssetPath(markPath) !== null) {
+        return jsx("img", {
+          "data-vft-hero-mark": "image",
+          src: themeAssetUrl2(theme.id, markPath),
+          alt: "",
+          style: { maxHeight: "52px", maxWidth: "220px", objectFit: "contain" }
+        });
+      }
+      return jsx("svg", {
+        "data-vft-hero-mark": "ring",
+        width: 18,
+        height: 18,
+        viewBox: "0 0 18 18",
+        "aria-hidden": "true",
+        focusable: "false"
+      }, jsx("circle", { cx: 9, cy: 9, r: 6.5, fill: "none", stroke: "currentColor", strokeWidth: 1.6 }));
+    };
     const Name = () => jsx("span", { className: "vft-brand-name" }, title);
     return { Mark, Name };
   }

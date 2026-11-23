@@ -414,13 +414,20 @@ function normalizeTheme(raw) {
       }
     }
   }
-  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" } };
+  let brand = { title: null, mark: null, favicon: null, slogans: { zh: "", en: "" }, heroMark: "auto" };
   if (raw.brand !== void 0) {
     if (!isPlainObject(raw.brand)) fail2("bad-brand", "brand", "brand 必须是对象");
     else {
       for (const key of Object.keys(raw.brand)) {
-        if (!["title", "mark", "favicon", "slogans"].includes(key)) {
+        if (!["title", "mark", "favicon", "slogans", "heroMark"].includes(key)) {
           fail2("unknown-key", `brand.${key}`, `未知字段 "${key}"`);
+        }
+      }
+      if (raw.brand.heroMark !== void 0) {
+        if (!["auto", "ring", "text", "none"].includes(raw.brand.heroMark)) {
+          fail2("bad-brand", "brand.heroMark", "heroMark 必须是 auto / ring / text / none");
+        } else {
+          brand.heroMark = raw.brand.heroMark;
         }
       }
       if (raw.brand.title !== void 0) {
@@ -1347,8 +1354,550 @@ function encodePng({ width, height, pixels }) {
   ]);
 }
 
+// src/shared/art-design.js
+var FOG = Object.freeze({ light: [232, 236, 240], dark: [18, 22, 30] });
+var clampByte2 = (value) => Math.min(255, Math.max(0, Math.round(value)));
+var lerp = (a, b, t) => a + (b - a) * t;
+var smoothstep = (t) => {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+};
+function grade(rgb, { shadowShift = [2, 4, 12], highlightShift = [6, 3, -4] } = {}) {
+  const [r, g, b] = rgb;
+  const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const shadow = 1 - luma;
+  return [
+    clampByte2(r + shadowShift[0] * shadow + highlightShift[0] * luma),
+    clampByte2(g + shadowShift[1] * shadow + highlightShift[1] * luma),
+    clampByte2(b + shadowShift[2] * shadow + highlightShift[2] * luma)
+  ];
+}
+function tonalLadder(t, dark, mid, light) {
+  const x = Math.min(1, Math.max(0, t));
+  const eased = smoothstep(x);
+  const from = eased < 0.5 ? dark : mid;
+  const to = eased < 0.5 ? mid : light;
+  const local = eased < 0.5 ? eased * 2 : (eased - 0.5) * 2;
+  return [lerp(from[0], to[0], local), lerp(from[1], to[1], local), lerp(from[2], to[2], local)];
+}
+function atmosphere(rgb, fog, amount) {
+  const a = Math.min(1, Math.max(0, amount));
+  return [lerp(rgb[0], fog[0], a), lerp(rgb[1], fog[1], a), lerp(rgb[2], fog[2], a)];
+}
+function vignette(u, v, { strength = 0.28, radius = 0.75, cx = 0.5, cy = 0.5 } = {}) {
+  const d = Math.hypot(u - cx, v - cy) / radius;
+  return 1 - Math.min(1, d * d) * strength;
+}
+function quietZone(u, v, { cx = 0.42, cy = 0.44, rx = 0.62, ry = 0.52, strength = 0.34 } = {}) {
+  const d = Math.hypot((u - cx) / rx, (v - cy) / ry);
+  return smoothstep(1 - d) * strength;
+}
+var BAYER = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5]
+];
+function dither(x, y, amplitude = 1.6) {
+  const value = BAYER[y & 3][x & 3] / 15 - 0.5;
+  return value * amplitude;
+}
+function grain(x, y, seed, amplitude = 3.2) {
+  let h = x * 374761393 + y * 668265263 + seed * 2147483647 >>> 0;
+  h = (h ^ h >>> 13) * 1274126177 >>> 0;
+  h = (h ^ h >>> 16) >>> 0;
+  return (h % 1e3 / 1e3 - 0.5) * amplitude;
+}
+function screenBlend(rgb, glow2, amount) {
+  const a = Math.min(1, Math.max(0, amount));
+  const screen = (base, light) => 255 - (255 - base) * (255 - light) / 255;
+  return [
+    lerp(rgb[0], screen(rgb[0], glow2[0] * 255), a),
+    lerp(rgb[1], screen(rgb[1], glow2[1] * 255), a),
+    lerp(rgb[2], screen(rgb[2], glow2[2] * 255), a)
+  ];
+}
+function loopPhase(time, duration, cycles = 1, phase = 0) {
+  const span = duration > 0 ? duration : 1;
+  const cyclesInt = Math.max(1, Math.round(cycles));
+  const fraction = (time / span % 1 + 1) % 1;
+  return fraction * Math.PI * 2 * cyclesInt + phase;
+}
+function loopSwing(time, duration, cycles = 1, phase = 0) {
+  return 0.5 - 0.5 * Math.cos(loopPhase(time, duration, cycles, phase));
+}
+function softBlob(u, v, { cx, cy, radius, feather = 2.4 }) {
+  const d = Math.hypot(u - cx, v - cy) / radius;
+  if (d >= 1) return 0;
+  return (1 - d) ** feather;
+}
+function bloom(u, v, { cx, cy, radius, strength = 0.8 }) {
+  const d = Math.hypot(u - cx, v - cy) / radius;
+  if (d >= 1) return 0;
+  return (1 - d) ** 3 * strength;
+}
+function makeFbm(seed) {
+  let state = seed >>> 0;
+  const random = () => {
+    state = state * 1664525 + 1013904223 >>> 0;
+    return state / 4294967296;
+  };
+  const grids = [];
+  for (let octave = 0; octave < 4; octave += 1) {
+    const size = 4 << octave;
+    const table = new Float32Array((size + 1) * (size + 1));
+    for (let index = 0; index < table.length; index += 1) table[index] = random();
+    grids.push({ size, table });
+  }
+  const sample = (grid, u, v) => {
+    const x = u * grid.size;
+    const y = v * grid.size;
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const tx = smoothstep(x - x0);
+    const ty = smoothstep(y - y0);
+    const at = (gx, gy) => grid.table[gy % (grid.size + 1) * (grid.size + 1) + gx % (grid.size + 1)];
+    const top = lerp(at(x0, y0), at(x0 + 1, y0), tx);
+    const bottom = lerp(at(x0, y0 + 1), at(x0 + 1, y0 + 1), tx);
+    return lerp(top, bottom, ty);
+  };
+  return (u, v, { octaves = 3, gain = 0.5 } = {}) => {
+    let value = 0;
+    let amplitude = 1;
+    let total = 0;
+    for (let octave = 0; octave < Math.min(octaves, grids.length); octave += 1) {
+      value += sample(grids[octave], u, v) * amplitude;
+      total += amplitude;
+      amplitude *= gain;
+    }
+    return value / total;
+  };
+}
+function finishPixel(rgb, { u, v, x, y, seed = 1, quiet = 0.34, vignetteStrength = 0.26, grainAmount = 2.6, ditherAmount = 1.4, surface = [20, 24, 32] }) {
+  let out = grade(rgb);
+  const calm = quietZone(u, v, { strength: quiet });
+  if (calm > 0) out = atmosphere(out, surface, calm);
+  const vig = vignette(u, v, { strength: vignetteStrength });
+  out = [out[0] * vig, out[1] * vig, out[2] * vig];
+  const offset = dither(x, y, ditherAmount) + grain(x, y, seed, grainAmount);
+  return [clampByte2(out[0] + offset), clampByte2(out[1] + offset), clampByte2(out[2] + offset)];
+}
+
+// src/shared/art-recipes-premium.js
+var clampByte3 = (value) => Math.min(255, Math.max(0, Math.round(value)));
+var clamp01 = (value) => Math.min(1, Math.max(0, value));
+var lerp2 = (a, b, t) => a + (b - a) * t;
+function paintPixels(width, height, fn) {
+  const pixels = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const [r, g, b] = fn(x / width, y / height, x, y);
+      const base = (y * width + x) * 3;
+      pixels[base] = clampByte3(r);
+      pixels[base + 1] = clampByte3(g);
+      pixels[base + 2] = clampByte3(b);
+    }
+  }
+  return pixels;
+}
+function paint(width, height, fn) {
+  return encodePng({ width, height, pixels: paintPixels(width, height, fn) });
+}
+function addLight(pixels, width, height, cx, cy, radius, colour, intensity) {
+  const reach = Math.ceil(radius);
+  for (let dy = -reach; dy <= reach; dy += 1) {
+    const py = Math.round(cy) + dy;
+    if (py < 0 || py >= height) continue;
+    for (let dx = -reach; dx <= reach; dx += 1) {
+      const px = Math.round(cx) + dx;
+      if (px < 0 || px >= width) continue;
+      const d = Math.hypot(dx, dy) / radius;
+      if (d >= 1) continue;
+      const weight = (1 - d) ** 3 * intensity;
+      const base = (py * width + px) * 3;
+      pixels[base] = clampByte3(pixels[base] + colour[0] * weight);
+      pixels[base + 1] = clampByte3(pixels[base + 1] + colour[1] * weight);
+      pixels[base + 2] = clampByte3(pixels[base + 2] + colour[2] * weight);
+    }
+  }
+}
+var seedRandom = (seed) => {
+  let state = seed >>> 0;
+  return () => {
+    state = state * 1664525 + 1013904223 >>> 0;
+    return state / 4294967296;
+  };
+};
+function starfield({ width, height, seed, time = 0, duration = 0, tone = "light" }) {
+  const fbm = makeFbm(seed);
+  const random = seedRandom(seed);
+  const stars = Array.from({ length: 780 }, () => ({
+    u: random(),
+    v: random(),
+    size: 0.5 + random() * 1.9,
+    bright: 0.35 + random() * 0.65,
+    warm: random() > 0.78,
+    // integer harmonics only: every star returns to its start on the last frame
+    cycle: 1 + Math.floor(random() * 2),
+    phase: random() * Math.PI * 2
+  }));
+  const drift = loopSwing(time, duration || 1, 1);
+  const pixels = paintPixels(width, height, (u, v, x, y) => {
+    const depth = clamp01((v - 0.08) / 0.92);
+    let rgb = tonalLadder(depth, [7, 8, 18], [12, 14, 34], [26, 22, 54]);
+    const veil = fbm(u * 1.5 + 0.11 + drift * 0.02, v * 1.25 - 0.07, { octaves: 4 });
+    const core = fbm(u * 3.1 - 0.23, v * 2.7 + 0.19, { octaves: 3 });
+    const band = Math.exp(-((v - 0.42 - drift * 0.01) ** 2) / 0.045);
+    rgb = screenBlend(rgb, [0.16, 0.1, 0.42], band * veil * 0.85);
+    rgb = screenBlend(rgb, [0.34, 0.12, 0.3], Math.max(0, core - 0.45) * 1.6);
+    rgb = screenBlend(rgb, [0.55, 0.42, 1], bloom(u, v, { cx: 0.34, cy: 0.36, radius: 0.46, strength: 0.42 }));
+    rgb = screenBlend(rgb, [0.3, 0.78, 0.86], bloom(u, v, { cx: 0.76, cy: 0.66, radius: 0.3, strength: 0.2 }));
+    return finishPixel(rgb, { u, v, x, y, seed, quiet: tone === "dark" ? 0.3 : 0.4, surface: [10, 11, 24], grainAmount: 2.2 });
+  });
+  for (const star of stars) {
+    const phase = loopPhase(time, duration || 1, star.cycle, star.phase);
+    const sway = Math.sin(phase) * 0.012;
+    const cx = (star.u + sway) * (width - 1);
+    const cy = star.v * (height - 1);
+    const twinkle = 0.72 + 0.28 * (0.5 + 0.5 * Math.cos(phase * 3));
+    addLight(pixels, width, height, cx, cy, Math.max(1.4, star.size * 2.4), star.warm ? [255, 214, 178] : [206, 218, 255], star.bright * twinkle);
+  }
+  return encodePng({ width, height, pixels });
+}
+function inkWash({ width, height, seed, time = 0, duration = 0, tone = "light" }) {
+  const fiber = makeFbm(seed + 17);
+  const cloud = makeFbm(seed + 41);
+  const dark = tone === "dark";
+  const paper = dark ? [26, 28, 33] : [247, 242, 232];
+  const paperLight = dark ? [40, 43, 50] : [253, 249, 242];
+  const ink = dark ? [176, 188, 200] : [24, 26, 28];
+  const fog = dark ? [18, 20, 26] : [236, 230, 218];
+  const ridges = [
+    { base: 0.5, amp: 0.055, freq: 1.7, phase: 0.2, density: 0.26, fog: 0.42 },
+    { base: 0.6, amp: 0.08, freq: 1.15, phase: 1.6, density: 0.42, fog: 0.3 },
+    { base: 0.72, amp: 0.055, freq: 2.3, phase: 3.1, density: 0.66, fog: 0.16 },
+    { base: 0.85, amp: 0.038, freq: 3.2, phase: 5.2, density: 0.9, fog: 0.05 }
+  ];
+  const drift = Math.sin(loopPhase(time, duration || 1, 1)) * 4e-3;
+  return paint(width, height, (u, v, x, y) => {
+    const fibre = fiber(u * 3.1, v * 3.1, { octaves: 3 });
+    const stain = cloud(u * 1.2 + 0.3, v * 1.1 - 0.2, { octaves: 2 });
+    let rgb = tonalLadder(0.25 + stain * 0.35, paper, paperLight, paperLight);
+    rgb = [rgb[0] + (fibre - 0.5) * 7, rgb[1] + (fibre - 0.5) * 6.4, rgb[2] + (fibre - 0.5) * 5.6];
+    for (const ridge of ridges) {
+      const warp = (cloud(u * 2.4 + ridge.phase, v * 0.6, { octaves: 3 }) - 0.5) * ridge.amp * 1.1;
+      const profile = ridge.base + Math.sin((u * ridge.freq + ridge.phase + drift) * Math.PI * 2) * ridge.amp + Math.sin((u * ridge.freq * 2.6 + ridge.phase) * Math.PI * 2) * ridge.amp * 0.3 + warp;
+      if (v < profile) continue;
+      const depth = Math.min(1, (v - profile) / 0.2);
+      const wet = Math.exp(-((v - profile) ** 2) / 35e-6) * 0.3;
+      const density = Math.min(1, ridge.density * (0.5 + depth * 0.7) + wet);
+      const texture = 0.9 + fiber(u * 7, v * 7, { octaves: 2 }) * 0.2;
+      const ridgeColour = atmosphere(ink, fog, ridge.fog + (1 - depth) * 0.1);
+      rgb = [
+        lerp2(rgb[0], ridgeColour[0], density * texture),
+        lerp2(rgb[1], ridgeColour[1], density * texture),
+        lerp2(rgb[2], ridgeColour[2], density * texture)
+      ];
+    }
+    const fade = clamp01((v - 0.8) / 0.2);
+    rgb = atmosphere(rgb, paper, fade ** 1.6 * 0.55);
+    return finishPixel(rgb, {
+      u,
+      v,
+      x,
+      y,
+      seed,
+      quiet: dark ? 0.34 : 0.28,
+      surface: paper,
+      grainAmount: dark ? 2.4 : 3,
+      vignetteStrength: dark ? 0.3 : 0.16
+    });
+  });
+}
+function fluid({ width, height, seed, time = 0, duration = 0, tone = "light" }) {
+  const warpField = makeFbm(seed);
+  const flowField = makeFbm(seed + 91);
+  const dark = tone === "dark";
+  const clock = loopSwing(time, duration || 1, 1) * 0.12;
+  const deep = dark ? [10, 16, 30] : [30, 34, 58];
+  const mid = dark ? [22, 62, 82] : [56, 132, 140];
+  const bright = dark ? [46, 132, 150] : [236, 178, 168];
+  return paint(width, height, (u, v, x, y) => {
+    const w1 = warpField(u + clock, v - clock * 0.6, { octaves: 4 });
+    const w2 = warpField(u + w1 * 0.42 - clock * 0.4, v - w1 * 0.3 + clock * 0.25, { octaves: 3 });
+    const flow = flowField(u + w2 * 0.55, v + w1 * 0.45 - clock * 0.18, { octaves: 3 });
+    const ridge = 1 - Math.abs(flow * 2 - 1);
+    let rgb = tonalLadder(ridge, deep, mid, bright);
+    rgb = screenBlend(rgb, [0.5, 0.75, 0.9], bloom(u, v, { cx: 0.66, cy: 0.34, radius: 0.42, strength: 0.22 }));
+    rgb = screenBlend(rgb, [0.9, 0.55, 0.5], bloom(u, v, { cx: 0.3, cy: 0.7, radius: 0.34, strength: 0.14 }));
+    return finishPixel(rgb, { u, v, x, y, seed, quiet: dark ? 0.3 : 0.36, surface: deep, grainAmount: 2.2, vignetteStrength: 0.24 });
+  });
+}
+function auroraBlobs({ width, height, seed, time = 0, duration = 0 }) {
+  const haze = makeFbm(seed + 13);
+  const span = duration || 1;
+  const slow = loopPhase(time, span, 1);
+  const breathe = loopPhase(time, span, 2);
+  const blobs = [
+    { tint: [0.909, 0.271, 0.604], cx: 0.34, cy: 0.4, r: 0.3, ox: 0.055, oy: 0.035, phase: 0, strength: 0.98 },
+    { tint: [1, 0.71, 0.278], cx: 0.63, cy: 0.32, r: 0.24, ox: 0.04, oy: 0.05, phase: 2.1, strength: 0.74 },
+    { tint: [0.478, 0.302, 1], cx: 0.5, cy: 0.68, r: 0.34, ox: 0.06, oy: 0.028, phase: 4.2, strength: 0.62 }
+  ];
+  const base = [11, 6, 16];
+  return paint(width, height, (u, v, x, y) => {
+    let rgb = tonalLadder(clamp01(v * 0.55 + 0.15), base, [24, 12, 32], [40, 21, 54]);
+    rgb = atmosphere(rgb, [11, 6, 16], 0.25);
+    const cloud = haze(u * 1.4 + slow * 0.06, v * 1.2, { octaves: 3 }) - 0.5;
+    rgb = [rgb[0] + cloud * 6, rgb[1] + cloud * 4, rgb[2] + cloud * 8];
+    let heat = 0;
+    for (const blob of blobs) {
+      const cx = blob.cx + Math.sin(slow + blob.phase) * blob.ox;
+      const cy = blob.cy + Math.cos(slow + blob.phase) * blob.oy;
+      const radius = blob.r * (1 + Math.sin(breathe + blob.phase) * 0.06);
+      const field = softBlob(u, v, { cx, cy, radius, feather: 2.6 });
+      heat += field * blob.strength;
+      rgb = screenBlend(rgb, blob.tint, field * blob.strength);
+    }
+    rgb = screenBlend(rgb, [1, 0.94, 0.98], clamp01((heat - 0.58) / 0.5) * 0.55);
+    rgb = screenBlend(rgb, [0.35, 0.2, 0.5], bloom(u, v, { cx: 0.42, cy: 0.48, radius: 0.9, strength: 0.14 }));
+    return finishPixel(rgb, {
+      u,
+      v,
+      x,
+      y,
+      seed,
+      quiet: 0.22,
+      surface: [11, 6, 16],
+      grainAmount: 2.4,
+      vignetteStrength: 0.34,
+      ditherAmount: 1.8
+    });
+  });
+}
+function liquidBlob({ width, height, seed, time = 0, duration = 0 }) {
+  const surface = makeFbm(seed + 29);
+  const span = duration || 1;
+  const slow = loopPhase(time, span, 1);
+  const balls = [
+    { cx: 0.46, cy: 0.46, r: 0.26, ax: 0.1, ay: 0.07, phase: 0 },
+    { cx: 0.58, cy: 0.52, r: 0.2, ax: 0.08, ay: 0.09, phase: 1.7 },
+    { cx: 0.4, cy: 0.6, r: 0.17, ax: 0.07, ay: 0.05, phase: 3.4 },
+    { cx: 0.56, cy: 0.4, r: 0.13, ax: 0.09, ay: 0.06, phase: 5.1 }
+  ];
+  const ink = [86, 58, 255];
+  const deep = [9, 7, 20];
+  return paint(width, height, (u, v, x, y) => {
+    let field = 0;
+    for (const ball of balls) {
+      const cx = ball.cx + Math.sin(slow + ball.phase) * ball.ax;
+      const cy = ball.cy + Math.cos(slow * 2 + ball.phase) * ball.ay;
+      const radius = ball.r * (1 + Math.sin(slow + ball.phase * 1.5) * 0.1);
+      field += softBlob(u, v, { cx, cy, radius, feather: 3.2 }) * (0.55 + radius);
+    }
+    const body = clamp01((field - 0.42) / 0.34);
+    const rim = Math.exp(-((field - 0.46) ** 2) / 4e-3) * 0.9;
+    let rgb = tonalLadder(clamp01(v * 0.6), deep, [18, 13, 38], [28, 20, 54]);
+    const sheen = surface(u * 2.2 + slow * 0.08, v * 2 - slow * 0.05, { octaves: 3 });
+    rgb = screenBlend(rgb, [ink[0] / 255, ink[1] / 255, ink[2] / 255], body * (0.85 + sheen * 0.45));
+    rgb = screenBlend(rgb, [0.72, 0.62, 1], rim * 0.75);
+    rgb = [rgb[0] * (1 + body * 0.12), rgb[1] * (1 + body * 0.1), rgb[2] * (1 + body * 0.12)];
+    rgb = screenBlend(rgb, [0.86, 0.8, 1], clamp01((body - 0.5) / 0.5) * 0.4);
+    return finishPixel(rgb, {
+      u,
+      v,
+      x,
+      y,
+      seed,
+      quiet: 0.22,
+      surface: deep,
+      grainAmount: 2.4,
+      vignetteStrength: 0.32
+    });
+  });
+}
+function inkRibbon({ width, height, seed, time = 0, duration = 0, tone = "light" }) {
+  const paper = tone === "dark" ? [22, 23, 28] : [246, 243, 235];
+  const ink = tone === "dark" ? [188, 198, 210] : [22, 24, 27];
+  const accent = tone === "dark" ? [96, 156, 230] : [43, 84, 160];
+  const fibre = makeFbm(seed + 5);
+  const span = duration || 1;
+  const slow = loopPhase(time, span, 1);
+  const drift = Math.sin(slow) * 0.018;
+  return paint(width, height, (u, v, x, y) => {
+    const grainField = fibre(u * 3.4, v * 3.4, { octaves: 3 });
+    let rgb = [paper[0] + (grainField - 0.5) * 5, paper[1] + (grainField - 0.5) * 5, paper[2] + (grainField - 0.5) * 4];
+    const centre = 0.44 + Math.sin((u * 1.15 + 0.1 + drift) * Math.PI * 2) * 0.1 + Math.sin((u * 2.3 - 0.35) * Math.PI * 2) * 0.045;
+    const widthField = 0.035 + Math.sin((u * 1.7 + 0.6) * Math.PI * 2) * 0.012;
+    const d = Math.abs(v - centre);
+    if (d < widthField) {
+      const edge = clamp01(1 - (d / widthField) ** 4);
+      rgb = [lerp2(rgb[0], ink[0], edge), lerp2(rgb[1], ink[1], edge), lerp2(rgb[2], ink[2], edge)];
+    } else if (d < widthField * 2.4) {
+      const echo = 1 - (d - widthField) / (widthField * 1.4);
+      const weight = clamp01(echo) ** 2 * 0.22;
+      rgb = [lerp2(rgb[0], ink[0], weight), lerp2(rgb[1], ink[1], weight), lerp2(rgb[2], ink[2], weight)];
+    }
+    if (Math.abs(v - 0.52) < 0.03 && u > 0.12 && u < 0.42) {
+      rgb = [lerp2(rgb[0], accent[0], 0.85), lerp2(rgb[1], accent[1], 0.85), lerp2(rgb[2], accent[2], 0.85)];
+    }
+    rgb = atmosphere(rgb, paper, clamp01((u - 0.1) / 0.5) * 0.18);
+    return finishPixel(rgb, {
+      u,
+      v,
+      x,
+      y,
+      seed,
+      quiet: tone === "dark" ? 0.26 : 0.2,
+      surface: paper,
+      grainAmount: tone === "dark" ? 2.2 : 2.6,
+      vignetteStrength: tone === "dark" ? 0.28 : 0.14
+    });
+  });
+}
+function magnetField({ width, height, seed, time = 0, duration = 0, tone = "light" }) {
+  const dark = tone === "dark";
+  const paper = dark ? [24, 26, 30] : [244, 241, 234];
+  const charcoal = dark ? [214, 210, 200] : [30, 42, 47];
+  const accent = dark ? [42, 178, 160] : [15, 156, 140];
+  const span = duration || 1;
+  const slow = loopPhase(time, span, 1);
+  const dot = Math.max(1.6, Math.min(width, height) / 300);
+  const count = 1200;
+  const pixels = paintPixels(width, height, (u, v, x, y) => {
+    let rgb = paper;
+    const lift = dark ? 0 : 2.5;
+    rgb = [rgb[0] + lift, rgb[1] + lift, rgb[2] + lift];
+    return finishPixel(rgb, { u, v, x, y, seed, quiet: 0.16, surface: paper, grainAmount: dark ? 2 : 1.6, vignetteStrength: dark ? 0.24 : 0.1 });
+  });
+  for (let index = 0; index < count; index += 1) {
+    const angle = index * 2.399963229728653;
+    const radius = Math.sqrt(index / count) * 0.52;
+    const swirl = slow + radius * 2.4;
+    const u = 0.5 + Math.cos(angle + swirl) * radius * 1.18;
+    const v = 0.5 + Math.sin(angle + swirl) * radius * 0.94;
+    if (u < 0 || u > 1 || v < 0 || v > 1) continue;
+    const depth = clamp01(1 - radius / 0.52);
+    const focal = Math.hypot(u - 0.62, v - 0.38) < 0.16;
+    const colour = focal ? accent : charcoal;
+    const alpha = (0.55 + depth * 0.4) * (focal ? 1 : 0.9);
+    const cx = u * (width - 1);
+    const cy = v * (height - 1);
+    const half = dot / 2;
+    for (let dy = 0; dy < Math.ceil(dot); dy += 1) {
+      for (let dx = 0; dx < Math.ceil(dot); dx += 1) {
+        const px = Math.round(cx - half + dx);
+        const py = Math.round(cy - half + dy);
+        if (px < 0 || py < 0 || px >= width || py >= height) continue;
+        const base = (py * width + px) * 3;
+        pixels[base] = clampByte3(lerp2(pixels[base], colour[0], alpha));
+        pixels[base + 1] = clampByte3(lerp2(pixels[base + 1], colour[1], alpha));
+        pixels[base + 2] = clampByte3(lerp2(pixels[base + 2], colour[2], alpha));
+      }
+    }
+  }
+  return encodePng({ width, height, pixels });
+}
+function silk({ width, height, seed, time = 0, duration = 0, tone = "dark" }) {
+  const folds = makeFbm(seed + 7);
+  const dark = tone === "dark";
+  const shadow = dark ? [16, 18, 26] : [222, 214, 206];
+  const mid = dark ? [38, 42, 56] : [238, 228, 216];
+  const light = dark ? [126, 132, 156] : [252, 248, 242];
+  const gold = [196, 168, 122];
+  const drift = Math.sin(loopPhase(time, duration || 1, 1)) * 0.05;
+  return paint(width, height, (u, v, x, y) => {
+    const s = u * 0.82 + v * 0.28 + drift;
+    const t = v * 0.94 - u * 0.16;
+    const fold = folds(s * 1.6, t * 3.4, { octaves: 4 });
+    const ridge = 1 - Math.abs(fold * 2 - 1);
+    const sheen = Math.max(0, ridge - 0.72) * 3.2;
+    let rgb = tonalLadder(ridge, shadow, mid, light);
+    rgb = screenBlend(rgb, [gold[0] / 255, gold[1] / 255, gold[2] / 255], sheen * 0.3);
+    rgb = screenBlend(rgb, [0.9, 0.93, 1], bloom(u, v, { cx: 0.62, cy: 0.3, radius: 0.5, strength: 0.12 }));
+    return finishPixel(rgb, { u, v, x, y, seed, quiet: 0.3, surface: shadow, grainAmount: 2.6, vignetteStrength: 0.3 });
+  });
+}
+function auroraVeil({ width, height, seed, time = 0, duration = 0 }) {
+  const curtains = makeFbm(seed + 3);
+  const random = seedRandom(seed + 5);
+  const stars = Array.from({ length: 220 }, () => ({ u: random(), v: random() * 0.7, b: 0.2 + random() * 0.6 }));
+  const span = duration || 1;
+  const slow = loopPhase(time, span, 1);
+  const ripplePhase = loopPhase(time, span, 2);
+  const pixels = paintPixels(width, height, (u, v, x, y) => {
+    let rgb = tonalLadder(Math.min(1, v / 0.9), [6, 8, 20], [10, 14, 34], [18, 22, 48]);
+    const layers = [
+      { cx: 0.32, width: 0.17, tint: [0.22, 0.85, 0.72], speed: 1, strength: 0.74 },
+      { cx: 0.52, width: 0.13, tint: [0.35, 0.95, 0.62], speed: 2, strength: 0.38 },
+      { cx: 0.71, width: 0.2, tint: [0.5, 0.45, 1], speed: 1, strength: 0.3 }
+    ];
+    for (const layer of layers) {
+      const sway = Math.sin(slow * layer.speed + layer.cx * 6) * 0.022;
+      const ripple = (curtains(u * 1.3 + layer.cx * 4, v * 0.55 + ripplePhase * 0.03, { octaves: 3 }) - 0.5) * 0.16;
+      const centre = layer.cx + sway + ripple * 0.4;
+      const d = Math.abs(u - centre) / layer.width;
+      const vertical = Math.exp(-((v - 0.3) ** 2) / 0.09) * (1 - clamp01((v - 0.55) / 0.45) * 0.6);
+      const edge = Math.exp(-(d ** 4));
+      rgb = screenBlend(rgb, layer.tint, edge * vertical * layer.strength);
+    }
+    rgb = screenBlend(rgb, [0.2, 0.6, 0.5], bloom(u, v, { cx: 0.5, cy: 0.78, radius: 0.55, strength: 0.16 }));
+    return finishPixel(rgb, { u, v, x, y, seed, quiet: 0.3, surface: [8, 10, 22], grainAmount: 2, vignetteStrength: 0.3 });
+  });
+  for (const star of stars) {
+    const cx = star.u * (width - 1);
+    const cy = star.v * (height - 1);
+    addLight(pixels, width, height, cx, cy, 2.2, [220, 230, 250], star.b * 0.8);
+  }
+  return encodePng({ width, height, pixels });
+}
+var PREMIUM_FNS = Object.freeze({
+  starfield,
+  "ink-wash": inkWash,
+  fluid,
+  "aurora-blobs": auroraBlobs,
+  "liquid-blob": liquidBlob,
+  "ink-ribbon": inkRibbon,
+  "magnet-field": magnetField,
+  silk,
+  "aurora-veil": auroraVeil
+});
+var PREMIUM_META = Object.freeze({
+  "aurora-blobs": {
+    label: { zh: "极光色团", en: "Aurora blobs" },
+    description: "三团柔光色场 + 单一主光，深梅黑底，8 秒无缝循环；最接近高级主视觉的做法"
+  },
+  "liquid-blob": {
+    label: { zh: "液态色块", en: "Liquid blob" },
+    description: "单一高饱和色相的金属球融合，形状自身分裂回流，没有硬切"
+  },
+  "ink-ribbon": {
+    label: { zh: "墨带", en: "Ink ribbon" },
+    description: "纸面上只有一条丝带，带一层回声轮廓，文字区保持干净"
+  },
+  "magnet-field": {
+    label: { zh: "磁点场", en: "Magnet field" },
+    description: "暖纸底 + 一千余方形点缓慢涡旋，青色只出现在焦点环"
+  },
+  silk: {
+    label: { zh: "绸缎", en: "Silk" },
+    description: "斜向褶皱 + 金色光泽 + 最安静的对比，长文阅读友好"
+  },
+  "aurora-veil": {
+    label: { zh: "极光幕", en: "Aurora veil" },
+    description: "三层视差光幕 + 星点 + 地平辉光，无缝循环"
+  }
+});
+var PREMIUM_ANIMATED = Object.freeze([
+  "starfield",
+  "fluid",
+  "aurora-blobs",
+  "liquid-blob",
+  "magnet-field",
+  "aurora-veil"
+]);
+
 // src/shared/art-recipes.js
-var ART_RECIPES = Object.freeze({
+var ART_RECIPES_BASE = Object.freeze({
   starfield: {
     label: { zh: "星云", en: "Starfield" },
     description: "深空底色 + 星云光雾 + 三层星点，静帧版的星云主题"
@@ -1374,6 +1923,7 @@ var ART_RECIPES = Object.freeze({
     description: "分层山脊 + 大气透视 + 天光渐变"
   }
 });
+var ART_RECIPES = Object.freeze({ ...ART_RECIPES_BASE, ...PREMIUM_META });
 function mulberry32(seed) {
   let state = seed >>> 0;
   return () => {
@@ -1386,7 +1936,7 @@ function mulberry32(seed) {
 }
 var clamp = (value) => Math.min(255, Math.max(0, Math.round(value)));
 var mix = (a, b, t) => a + (b - a) * t;
-var smoothstep = (t) => t * t * (3 - 2 * t);
+var smoothstep2 = (t) => t * t * (3 - 2 * t);
 function makeNoise(random, gridSize = 8) {
   const table = new Float32Array((gridSize + 1) * (gridSize + 1));
   for (let index = 0; index < table.length; index += 1) table[index] = random();
@@ -1396,14 +1946,14 @@ function makeNoise(random, gridSize = 8) {
     const y = v * gridSize;
     const x0 = Math.floor(x);
     const y0 = Math.floor(y);
-    const tx = smoothstep(x - x0);
-    const ty = smoothstep(y - y0);
+    const tx = smoothstep2(x - x0);
+    const ty = smoothstep2(y - y0);
     const top = mix(at(x0, y0), at(x0 + 1, y0), tx);
     const bottom = mix(at(x0, y0 + 1), at(x0 + 1, y0 + 1), tx);
     return mix(top, bottom, ty);
   };
 }
-function paint(width, height, fn) {
+function paint2(width, height, fn) {
   const pixels = Buffer.alloc(width * height * 3);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -1440,7 +1990,7 @@ var RECIPE_FNS = {
       speed: 3e-3 + random() * 0.01
     }));
     const shimmer = 0.5 + 0.5 * Math.sin(time * 0.9);
-    const px = paint(width, height, (u, v) => {
+    const px = paint2(width, height, (u, v) => {
       const depth = 1 - v;
       let r = mix(16, 6, depth);
       let g = mix(13, 4, depth);
@@ -1494,11 +2044,11 @@ var RECIPE_FNS = {
       { y: 0.88, amp: 0.035, freq: 3.6, shift: 5.3 }
     ].map((ridge, index) => ({ ...ridge, tone: inkTones[index] }));
     const specks = Array.from({ length: 420 }, () => ({ u: random(), v: 0.45 + random() * 0.55, s: random() }));
-    return finish(width, height, paint(width, height, (u, v) => {
-      const grain = (fiber(u * 3, v * 3) - 0.5) * (dark ? 8 : 14);
-      let r = paper[0] + grain;
-      let g = paper[1] + grain;
-      let b = paper[2] + grain * 0.8;
+    return finish(width, height, paint2(width, height, (u, v) => {
+      const grain2 = (fiber(u * 3, v * 3) - 0.5) * (dark ? 8 : 14);
+      let r = paper[0] + grain2;
+      let g = paper[1] + grain2;
+      let b = paper[2] + grain2 * 0.8;
       r -= Math.abs(Math.sin(u * 220 + v * 8)) * 2.4;
       g -= Math.abs(Math.sin(u * 220 + v * 8)) * 2.2;
       const inkRgb = dark ? [186, 196, 206] : [28, 30, 30];
@@ -1521,7 +2071,7 @@ var RECIPE_FNS = {
           b = mix(b, inkRgb[2], 0.35);
         }
       }
-      const fade = smoothstep(Math.min(1, Math.max(0, (v - 0.82) / 0.18)));
+      const fade = smoothstep2(Math.min(1, Math.max(0, (v - 0.82) / 0.18)));
       return [
         mix(r, paper[0] + 2, fade * 0.75),
         mix(g, paper[1] + 2, fade * 0.75),
@@ -1534,7 +2084,7 @@ var RECIPE_FNS = {
     const warp = makeNoise(random, 10);
     const flow = makeNoise(random, 5);
     const clock = time * 0.06;
-    return finish(width, height, paint(width, height, (u, v) => {
+    return finish(width, height, paint2(width, height, (u, v) => {
       const w1 = warp(u + clock, v - clock * 0.6);
       const w2 = warp(u + w1 * 0.35 - clock * 0.4, v - w1 * 0.28 + clock * 0.3);
       const t = Math.min(1, Math.max(0, flow(u + w2 * 0.5 + clock * 0.2, v + w1 * 0.4 - clock * 0.15)));
@@ -1551,7 +2101,7 @@ var RECIPE_FNS = {
     const random = mulberry32(seed);
     const sky = makeNoise(random, 7);
     const horizon = 0.62;
-    return finish(width, height, paint(width, height, (u, v) => {
+    return finish(width, height, paint2(width, height, (u, v) => {
       if (v < horizon) {
         const depth2 = 1 - v / horizon;
         let r2 = mix(58, 12, depth2);
@@ -1585,13 +2135,13 @@ var RECIPE_FNS = {
   "paper-grain"({ width, height, seed }) {
     const random = mulberry32(seed);
     const fiber = makeNoise(random, 36);
-    return finish(width, height, paint(width, height, (u, v) => {
-      const grain = (fiber(u * 5, v * 5) - 0.5) * 10 + (random() - 0.5) * 6;
-      const vignette = 1 - Math.min(1, (Math.hypot(u - 0.5, v - 0.5) / 0.85) ** 2) * 0.28;
+    return finish(width, height, paint2(width, height, (u, v) => {
+      const grain2 = (fiber(u * 5, v * 5) - 0.5) * 10 + (random() - 0.5) * 6;
+      const vignette2 = 1 - Math.min(1, (Math.hypot(u - 0.5, v - 0.5) / 0.85) ** 2) * 0.28;
       return [
-        (243 + grain) * vignette,
-        (234 + grain) * vignette,
-        (214 + grain * 0.9) * vignette
+        (243 + grain2) * vignette2,
+        (234 + grain2) * vignette2,
+        (214 + grain2 * 0.9) * vignette2
       ];
     }));
   },
@@ -1604,7 +2154,7 @@ var RECIPE_FNS = {
       { base: 0.72, amp: 0.06, freq: 2.4, tone: [74, 82, 104], phase: 3.4 },
       { base: 0.84, amp: 0.04, freq: 3.1, tone: [42, 48, 66], phase: 5.1 }
     ];
-    return finish(width, height, paint(width, height, (u, v) => {
+    return finish(width, height, paint2(width, height, (u, v) => {
       const skyT = Math.min(1, v / 0.65);
       let r = mix(252, 214, skyT);
       let g = mix(226, 186, skyT);
@@ -1624,6 +2174,7 @@ var RECIPE_FNS = {
     }));
   }
 };
+Object.assign(RECIPE_FNS, PREMIUM_FNS);
 function renderArt(recipe, options = {}) {
   const fn = RECIPE_FNS[recipe];
   if (fn === void 0) {
@@ -1633,9 +2184,10 @@ function renderArt(recipe, options = {}) {
   const height = Math.max(16, Math.min(4096, Math.round(options.height ?? 1536)));
   const seed = Number.isFinite(options.seed) ? Math.abs(Math.floor(options.seed)) : 1;
   const time = Number.isFinite(options.time) ? options.time : 0;
-  return fn({ width, height, seed, time, tone: options.tone === "dark" ? "dark" : "light" });
+  const duration = Number.isFinite(options.duration) && options.duration > 0 ? options.duration : 0;
+  return fn({ width, height, seed, time, duration, tone: options.tone === "dark" ? "dark" : "light" });
 }
-var ANIMATED_RECIPES = Object.freeze(["starfield", "fluid"]);
+var ANIMATED_RECIPES = PREMIUM_ANIMATED;
 
 // src/host/art-video.js
 import { spawnSync } from "node:child_process";
@@ -1664,10 +2216,11 @@ function renderArtVideo(options) {
   const frameCount = Math.max(2, Math.min(240, Math.round(frames)));
   const frameRate = Math.max(1, Math.min(60, Math.round(fps)));
   const work = mkdtempSync(join2(tmpdir(), "vft-anim-"));
+  const duration = frameCount / frameRate;
   try {
     let poster = null;
     for (let index = 0; index < frameCount; index += 1) {
-      const png = renderArt(recipe, { width, height, seed, tone, time: index / frameRate });
+      const png = renderArt(recipe, { width, height, seed, tone, time: index / frameRate, duration });
       if (index === 0) poster = png;
       writeFileSync2(join2(work, `frame-${String(index).padStart(4, "0")}.png`), png);
     }
@@ -2325,6 +2878,7 @@ function cmdBrandSet(paths, { positionals, flags }) {
       };
     }
     if (flags.mark !== void 0) brand.mark = flags.mark;
+    if (flags["hero-mark"] !== void 0) brand.heroMark = flags["hero-mark"];
     raw.brand = brand;
   });
 }

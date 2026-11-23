@@ -8,21 +8,56 @@
  * nothing distinguishes a JSON theme from a built-in one: the switcher lists
  * it, the panel edits it, the runtime mounts it.
  */
-import { builtinAssetsFromTheme, fieldsFromTheme, tableFromTheme } from "../shared/personalization/theme-model.js";
+import { builtinAssetsFromTheme, fieldsFromTheme, mimeForAssetPath, tableFromTheme, THEME_ASSET_BASE } from "../shared/personalization/theme-model.js";
 import { registerExternalSkin } from "../shared/personalization/catalog.js";
 import { createProjection } from "./skins/translucency.js";
 
 const THEMES_ROUTE = "/vyra-free-theme/themes";
 
+function themeAssetUrl(id, path) {
+  return `${THEME_ASSET_BASE}/${id}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/**
+ * Brand seats. The new-session hero (`conversation.hero.brand.mark`) can show an
+ * image, a text wordmark, or nothing at all — `brand.heroMark` decides, so a
+ * theme can drop the logo and let its title + headline carry the screen.
+ */
 function brandComponents(theme, jsx) {
   const title = theme.brand.title?.zh ?? theme.name.zh;
-  // A neutral glyph rather than a host icon: a theme replaces the product
-  // wordmark, so rendering DeepSeek Harness artwork here would be inconsistent.
-  const Mark = () => jsx(
-    "svg",
-    { width: 18, height: 18, viewBox: "0 0 18 18", "aria-hidden": "true", focusable: "false" },
-    jsx("circle", { cx: 9, cy: 9, r: 6.5, fill: "none", stroke: "currentColor", strokeWidth: 1.6 }),
-  );
+  const mode = theme.brand.heroMark ?? "auto";
+  const markPath = theme.brand.mark;
+
+  const Mark = () => {
+    if (mode === "none") {
+      return jsx("span", { "data-vft-hero-mark": "none", "aria-hidden": "true", style: { display: "none" } });
+    }
+    if (mode === "text") {
+      return jsx("span", {
+        "data-vft-hero-mark": "text",
+        style: { fontSize: "0.86em", fontWeight: 600, letterSpacing: "0.14em", opacity: 0.9, whiteSpace: "nowrap" },
+      }, title);
+    }
+    if ((mode === "auto" || mode === "image") && typeof markPath === "string" && mimeForAssetPath(markPath) !== null) {
+      return jsx("img", {
+        "data-vft-hero-mark": "image",
+        src: themeAssetUrl(theme.id, markPath),
+        alt: "",
+        style: { maxHeight: "52px", maxWidth: "220px", objectFit: "contain" },
+      });
+    }
+    // Neutral glyph rather than host artwork: a theme replaces the product
+    // wordmark, so rendering DeepSeek Harness art here would be inconsistent.
+    return jsx("svg", {
+      "data-vft-hero-mark": "ring",
+      width: 18,
+      height: 18,
+      viewBox: "0 0 18 18",
+      "aria-hidden": "true",
+      focusable: "false",
+    }, jsx("circle", { cx: 9, cy: 9, r: 6.5, fill: "none", stroke: "currentColor", strokeWidth: 1.6 }));
+  };
+
   const Name = () => jsx("span", { className: "vft-brand-name" }, title);
   return { Mark, Name };
 }
