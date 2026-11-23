@@ -851,6 +851,9 @@ export function apply(ctx, _config) {
           }
           pack.apply(scoped, { disableOpencode: true })
           accountsState = 'ready'
+          // Cordis publishes a service on the next tick; the first read would
+          // otherwise miss it and the block would stay empty until the retry.
+          await new Promise(resolve => setTimeout(resolve, 50))
           await readProviders()
           logger.info?.(`vyra-free-model: account pack mounted with ${providers.length} providers`)
         } catch (error) {
