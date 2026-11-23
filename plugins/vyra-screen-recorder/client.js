@@ -1841,9 +1841,16 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       if (job.status === 'recording') {
         if (agentRun === null || agentRun.id !== job.id) {
           if (agentRun) await stopMic(agentRun.mic)
-          const mic = job.includeMic === false ? null : await startMic()
-          agentRun = { id: job.id, mic, micStartedAt: mic ? mic.startedAt : Date.now(), encoding: false }
+          agentRun = { id: job.id, mic: null, micStartedAt: Date.now(), encoding: false, startingMic: true }
           setState({ agentRecording: { id: job.id, startedAt: job.startedAt || Date.now() } })
+          const mic = job.includeMic === false ? null : await startMic()
+          if (agentRun !== null && agentRun.id === job.id) {
+            agentRun.mic = mic
+            agentRun.micStartedAt = mic ? mic.startedAt : Date.now()
+            agentRun.startingMic = false
+          } else {
+            await stopMic(mic)
+          }
         }
         return
       }
@@ -1887,6 +1894,10 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       if (agentPollTimer !== null) {
         clearInterval(agentPollTimer)
         agentPollTimer = null
+      }
+      if (agentRun !== null) {
+        void stopMic(agentRun.mic)
+        agentRun = null
       }
     }
 

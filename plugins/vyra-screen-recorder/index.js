@@ -346,6 +346,7 @@ function normalizeSource(source) {
 }
 
 async function startSession(payload) {
+  if (agentJob !== null) throw new Error('Agent 正在录屏或编码')
   if (recording !== null) {
     if (!recording.stopped) throw new Error('已经有一路录制在进行')
     await discardSession()
