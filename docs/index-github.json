@@ -2076,7 +2076,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
-            "commit": "462f872bb5013437cc568e9239dfe84102b0b653",
+            "commit": "d45271ab659d3688a0acb5e8565c71306ee7af33",
             "path": "plugins/vyra-free-model"
           }
         },
