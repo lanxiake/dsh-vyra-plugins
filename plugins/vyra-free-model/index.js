@@ -244,6 +244,12 @@ export function apply(ctx, _config) {
   /** The account providers the pack publishes, once it is mounted. */
   const providers = []
 
+  /** When the account rows were last read, so summary reads stay cheap. */
+  let providersAt = 0
+
+  /** Pending Tencent sign-in errors, keyed by product. */
+  const buddyLoginErrors = new Map()
+
   /** When the last automatic claim failed, for the card to mention. */
   let claimFailedAt
 
@@ -454,11 +460,21 @@ export function apply(ctx, _config) {
   async function startBuddyLogin(productId) {
     const product = PRODUCTS[productId]
     if (product === undefined) throw new Error(`不支持的账号类型：${String(productId)}`)
+    buddyLoginErrors.delete(productId)
     const started = await beginBuddyLogin({ product })
     openExternal(started.loginUrl)
     void completeBuddyLogin(started.state, { product })
       .then(result => {
         if (disposed) return
+        const identity = credentialIdentity(result.credential)
+          || (typeof result.userId === 'string' && result.userId !== '' ? `user_id:${result.userId}` : '')
+        const duplicate = identity !== ''
+          && buddyAccounts().some(account => account.product === productId && credentialIdentity(account.credential) === identity)
+        if (duplicate) {
+          buddyLoginErrors.set(productId, '这个账号已经登录过了，已保留原来的账号。')
+          return
+        }
+        buddyLoginErrors.delete(productId)
         const accounts = [...buddyAccounts(), {
           id: `${productId}-${crypto.randomBytes(3).toString('hex')}`,
           product: productId,
@@ -854,7 +870,14 @@ export function apply(ctx, _config) {
     laneOk: () => laneOk,
     laneSource: LANE_SOURCE,
     auto: () => autoModel() ?? null,
-    accounts: () => ({ state: accountsState, providers: accountProviders(), claimFailedAt }),
+    accounts: () => ({
+      state: accountsState,
+      providers: accountProviders(),
+      claimFailedAt,
+      buddyLoginErrors: Object.fromEntries(buddyLoginErrors),
+    }),
+    refreshAccounts: force => refreshAccounts(force === true),
+    dedupeAccount: (provider, accountId) => dedupeAccount(provider, accountId),
     usage: () => todayTotals(usageStore.get()),
     forward: () => forwardState,
     refreshCatalog: () => refreshCatalog({ log: true, probe: true }),
@@ -1066,8 +1089,9 @@ export function apply(ctx, _config) {
       // an empty call is a bad request, which is why this block used to render
       // an empty list forever.
       const status = await callChannel('provider.status', { providers: ids })
-      const rows = []
-      for (const meta of ACCOUNT_PROVIDERS) {
+      // Local reads, but nine of them; in parallel so a device holding the
+      // credential store open cannot push a summary request past its timeout.
+      const rows = await Promise.all(ACCOUNT_PROVIDERS.map(async meta => {
         let accounts = []
         try {
           const listed = await callChannel('account.list', { provider: meta.id })
@@ -1090,21 +1114,97 @@ export function apply(ctx, _config) {
             }
           }) : []
         } catch { /* one provider's list failing must not blank the others */ }
-        rows.push({
+        return {
           id: meta.id,
           label: meta.label,
           more: meta.more === true,
           claimable: CLAIMABLE_PROVIDERS.includes(meta.id),
           status: status?.statuses?.[meta.id] ?? null,
           accounts,
-        })
-      }
+        }
+      }))
       providers.length = 0
       providers.push(...rows)
+      providersAt = Date.now()
       return providers
     } catch (error) {
       logger.warn?.(`vyra-free-model: could not read the account providers (${error?.message ?? error})`)
       return []
+    }
+  }
+
+  /** Re-read the account rows; summary reads use a short cache. */
+  async function refreshAccounts(force = false) {
+    if (force !== true && Date.now() - providersAt < 1500) return providers
+    return readProviders()
+  }
+
+  /**
+   * Which real person an account credential belongs to.
+   *
+   * The stable ids differ by vendor, but every one of them names the same user
+   * across a re-login; access tokens do not, which is why they are not used.
+   * Returns an empty string when the credential declares no identity.
+   */
+  function credentialIdentity(credential) {
+    if (credential === null || typeof credential !== 'object') return ''
+    for (const key of ['user_id', 'uid', 'sub', 'account_id', 'accountId', 'phone', 'email', 'account_name', 'accountName']) {
+      const value = credential[key]
+      if (typeof value === 'string' && value.trim() !== '') return `${key}:${value.trim()}`
+      if (typeof value === 'number' && Number.isFinite(value)) return `${key}:${value}`
+    }
+    return ''
+  }
+
+  /** Resolve one account's credential JSON, or its nickname when unavailable. */
+  async function identityOfAccount(account) {
+    const nickname = typeof account?.nickname === 'string' ? account.nickname : ''
+    const fallback = nickname !== '' && nickname !== account?.id ? `nickname:${nickname}` : ''
+    let credentials
+    try { credentials = ctx.get('credentials') } catch { credentials = undefined }
+    if (credentials === undefined || typeof credentials.resolve !== 'function') return fallback
+    try {
+      const resolved = await credentials.resolve(account.credentialRef)
+      if (typeof resolved?.value === 'string') {
+        const identity = credentialIdentity(JSON.parse(resolved.value))
+        if (identity !== '') return identity
+      }
+    } catch { /* fall back to the nickname */ }
+    return fallback
+  }
+
+  /**
+   * Remove a newly signed-in account when it is the same person as one that is
+   * already in the pool.
+   *
+   * Sign-in is the only moment the identity is available: `account.list` hides
+   * credential refs, but the raw entries carry them, and the credential JSON
+   * names the user. When identity cannot be read, the nickname is the fallback.
+   */
+  async function dedupeAccount(providerId, accountId) {
+    try {
+      const listed = await callChannel('account.list', { provider: providerId })
+      const accounts = Array.isArray(listed?.accounts) ? listed.accounts : []
+      const target = accounts.find(account => account?.id === accountId)
+      if (target === undefined) return { duplicate: false }
+      const targetIdentity = await identityOfAccount(target)
+      if (targetIdentity === '') return { duplicate: false }
+
+      for (const other of accounts) {
+        if (other?.id === accountId) continue
+        if (await identityOfAccount(other) !== targetIdentity) continue
+        await callChannel('account.delete', { accountId })
+        await refreshAccounts(true)
+        return {
+          duplicate: true,
+          kept: typeof other.nickname === 'string' && other.nickname !== '' ? other.nickname : other.id,
+        }
+      }
+      return { duplicate: false }
+    } catch (error) {
+      // A dedupe check is a courtesy; never lose a usable login over it.
+      logger.warn?.(`vyra-free-model: could not compare the new account (${error?.message ?? error})`)
+      return { duplicate: false }
     }
   }
 
@@ -1310,6 +1410,9 @@ export function createSummary({
       state: accounts?.state ?? 'pending',
       providers: accounts?.providers ?? [],
       ...(Number.isFinite(accounts?.claimFailedAt) ? { claimFailedAt: accounts.claimFailedAt } : {}),
+      ...(accounts?.buddyLoginErrors !== undefined && Object.keys(accounts.buddyLoginErrors).length > 0
+        ? { buddyLoginErrors: accounts.buddyLoginErrors }
+        : {}),
     },
     usage: {
       input: usage?.input ?? 0,
@@ -1354,7 +1457,23 @@ export function createApiRoutes(deps) {
 
     try {
       if (routePath === '/summary' && method === 'GET') {
+        // Account rows are cheap local state, but actions (delete, toggle,
+        // sign-in) change them; a 1.5s cache keeps a polling page from reading
+        // nine providers every tick while still showing the result of a click.
+        try { await deps.refreshAccounts?.(false) } catch { /* keep the previous rows */ }
         return send(200, assemble(deps))
+      }
+
+      if (routePath === '/accounts/refresh' && method === 'POST') {
+        try { await deps.refreshAccounts?.(true) } catch { /* keep the previous rows */ }
+        return send(200, { providers: deps.accounts?.().providers ?? [] })
+      }
+
+      if (routePath === '/accounts/dedupe' && method === 'POST') {
+        const body = await readJson(req)
+        if (typeof deps.dedupeAccount !== 'function') return send(503, { error: 'accounts-unavailable' })
+        const value = await deps.dedupeAccount(body?.provider, body?.accountId)
+        return send(200, value ?? { duplicate: false })
       }
 
       if (routePath === '/diag' && method === 'GET') {
@@ -1365,6 +1484,7 @@ export function createApiRoutes(deps) {
         || routePath === '/forward/key' || routePath === '/channel' || routePath === '/enabled'
         || routePath === '/buddy' || routePath === '/endpoints' || routePath === '/auto-switch'
         || routePath === '/credits' || routePath === '/credits/claim'
+        || routePath === '/accounts/refresh' || routePath === '/accounts/dedupe'
         || routePath === '/configure' || routePath === '/configure/restore' || routePath === '/configure/status') {
         const wantsGet = routePath === '/summary' || routePath === '/configure/status' || routePath === '/credits'
         if (method !== 'POST' && !wantsGet) return send(405, { error: 'method-not-allowed' })

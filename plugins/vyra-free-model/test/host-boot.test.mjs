@@ -162,3 +162,43 @@ test('credits claim and balances pass through the channel service', async () => 
   assert.deepEqual(listed.body.providers, {})
   for (const dispose of effects) if (typeof dispose === 'function') dispose()
 })
+
+test('account rows can be refreshed on demand', async () => {
+  const { handler, effects } = await boot()
+  const response = await call(handler, { method: 'POST', path: '/accounts/refresh' })
+  assert.equal(response.status, 200)
+  assert.ok(Array.isArray(response.body.providers))
+  // Even without the channel pack the two Tencent products are always offered.
+  assert.deepEqual(response.body.providers.map(row => row.id).sort(), ['buddy', 'workbuddy'])
+  for (const dispose of effects) if (typeof dispose === 'function') dispose()
+})
+
+test('a second sign-in of the same nickname is removed as a duplicate', async () => {
+  const calls = []
+  const { handler, effects } = await boot({
+    channelPack: {
+      async call(method, payload) {
+        calls.push({ method, payload })
+        if (method === 'account.list') {
+          return { ok: true, value: { accounts: [
+            { id: 'a1', nickname: '小明', enabled: true },
+            { id: 'a2', nickname: '小明', enabled: true },
+          ] } }
+        }
+        if (method === 'account.delete') return { ok: true, value: undefined }
+        if (method === 'provider.status') return { ok: true, value: { statuses: {} } }
+        return { ok: true, value: {} }
+      },
+    },
+  })
+  const response = await call(handler, {
+    method: 'POST',
+    path: '/accounts/dedupe',
+    body: { provider: 'trae', accountId: 'a2' },
+  })
+  assert.equal(response.status, 200)
+  assert.equal(response.body.duplicate, true)
+  assert.equal(response.body.kept, '小明')
+  assert.ok(calls.some(call => call.method === 'account.delete' && call.payload.accountId === 'a2'))
+  for (const dispose of effects) if (typeof dispose === 'function') dispose()
+})

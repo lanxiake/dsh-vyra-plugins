@@ -1430,6 +1430,9 @@ window.__ModuleLoader__.load({
       const succeedLogin = useCallback(async () => {
         if (!alive.current) return
         setLoginDialog(undefined)
+        // Force the row read: the summary's short cache would otherwise show the
+        // list from before the sign-in.
+        try { await api('/accounts/refresh', { method: 'POST', timeoutMs: 20000 }) } catch { /* load reads anyway */ }
         await load()
         await loadCredits()
       }, [load, loadCredits])
@@ -1458,6 +1461,11 @@ window.__ModuleLoader__.load({
           try {
             if (isBuddy) {
               const payload = await api('/summary')
+              const error = payload?.accounts?.buddyLoginErrors?.[providerId]
+              if (typeof error === 'string' && error !== '') {
+                failLogin(providerId, error)
+                return
+              }
               const mine = (payload?.accounts?.providers ?? []).find(row => row.id === providerId)
               const count = Array.isArray(mine?.accounts) ? mine.accounts.filter(account => account?.pending !== true).length : 0
               if (count > before) {
@@ -1497,6 +1505,20 @@ window.__ModuleLoader__.load({
             const expiresAt = Number(mine.expiresAt) || 0
             const refreshable = mine.refreshable === true
             if ((nickname !== '' && nickname !== accountId) || expiresAt > 0 || refreshable) {
+              // The person behind this sign-in may already be in the pool under
+              // another account row; remove the new duplicate before showing it.
+              try {
+                const check = await api('/accounts/dedupe', {
+                  method: 'POST',
+                  body: { provider: providerId, accountId },
+                  timeoutMs: 30000,
+                })
+                if (check?.duplicate === true) {
+                  failLogin(providerId, `这个账号已经登录过了，已保留原来的账号${check.kept ? `（${check.kept}）` : ''}。`)
+                  await load()
+                  return
+                }
+              } catch { /* a failed check must not lose the login */ }
               await succeedLogin()
               return
             }
@@ -1588,6 +1610,7 @@ window.__ModuleLoader__.load({
               timeoutMs: 20000,
             })
           }
+          await api('/accounts/refresh', { method: 'POST', timeoutMs: 20000 }).catch(() => {})
           await load()
         } catch (cause) {
           setError(String(cause?.message ?? cause))
@@ -1607,6 +1630,7 @@ window.__ModuleLoader__.load({
               timeoutMs: 20000,
             })
           }
+          await api('/accounts/refresh', { method: 'POST', timeoutMs: 20000 }).catch(() => {})
           await load()
           await loadCredits()
         } catch (cause) {

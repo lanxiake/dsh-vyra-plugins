@@ -1,6 +1,6 @@
 {
   "name": "vyra-free-model",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "type": "module",
   "description": "装上就能用的免费模型：零配置聊天，多账号与积分管理、自带 Key 端点、真实可用性检测和自动换模型重试，一屏设置页。",
