@@ -2236,8 +2236,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 免费模型',
       },
       description: {
-        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, one-click domestic account sign-in, CodeBuddy / WorkBuddy, and any OpenAI-compatible endpoint you already have a key for — all optional, all on one folded settings page.',
-        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、一键登录国内账号、CodeBuddy / WorkBuddy，以及任何已有 Key 的 OpenAI 兼容接口——都可选，都在一屏可收起的设置页里。',
+        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, a sign-in dialog with the link when a browser blocks the popup, multiple accounts with balances on one page (CodeBuddy / WorkBuddy included), any OpenAI-compatible endpoint you already have a key for, and automatic retry on another model when the router fails.',
+        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、登录弹窗（浏览器被拦截时可复制链接）、多账号与积分管理（含 CodeBuddy / WorkBuddy）、任何已有 Key 的 OpenAI 兼容接口，以及自动选择失败时换模型重试。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2279,6 +2279,17 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '753b46e54f777ef148e1b4f91ff237530f5c7926',
+            path: 'plugins/vyra-free-model',
+          },
+        },
+        // 0.4.0 adds the sign-in dialog, multi-account balances (Tencent merged
+        // into the same list) and the automatic model retry.
+        '0.4.0': {
+          publishTimestamp: 1795651200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '462f872bb5013437cc568e9239dfe84102b0b653',
             path: 'plugins/vyra-free-model',
           },
         },
