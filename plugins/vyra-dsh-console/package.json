@@ -8,6 +8,7 @@
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
+    "./panel": "./panel.js",
     "./cli": "./cli.mjs",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg",
@@ -18,6 +19,7 @@
     "core.js",
     "channel.js",
     "client.js",
+    "panel.js",
     "cli.mjs",
     "cordis.patch.yml",
     "locale/*.json",

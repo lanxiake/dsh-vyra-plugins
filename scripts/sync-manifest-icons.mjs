@@ -33,40 +33,61 @@ const ICONS = {
   'vyra-agent-cli-manager': 'AGENT_CLI_MANAGER_ICON',
   'vyra-plugin-market': 'PLUGIN_MARKET_ICON',
   'vyra-media-studio': 'MEDIA_STUDIO_ICON',
+  'vyra-dsh-console': 'DSH_CONSOLE_ICON',
 }
 
 const lines = []
+const COMMENT = (plugin) => `/** Inline icon for \`${plugin}\`. */`
 for (const [plugin, constant] of Object.entries(ICONS)) {
   // A hand-written SVG can carry a BOM (`vyra-agent-manager`'s does); left in,
   // it lands before the `<svg` root and some renderers reject the image.
   const svg = readFileSync(join(root, 'plugins', plugin, 'icon.svg'), 'utf8').replace(/^﻿/u, '')
   const encoded = Buffer.from(svg, 'utf8').toString('base64')
-  lines.push(
-    `/** Inline icon for \`${plugin}\`. */`,
-    `const ${constant} =`,
-    `  'data:image/svg+xml;base64,${encoded}'`,
-    '',
-  )
+  lines.push(COMMENT(plugin), `const ${constant} =`, `  'data:image/svg+xml;base64,${encoded}'`)
 }
 
 const file = join(root, 'scripts', 'market-manifest.ts')
 let source = readFileSync(file, 'utf8')
 
+// The line ending the manifest itself uses. Read rather than assumed, so this
+// script is safe on a checkout with `core.autocrlf=false` too — where the whole
+// file is LF, and writing CRLF into it would show up as every line changed.
+const EOL = source.includes('\r\n') ? '\r\n' : '\n'
+
 // Remove the constants this script owns before writing fresh ones. It used to
 // insert before the marker only, so a second run left the first copy in place
 // and the manifest stopped compiling on a duplicate declaration.
-for (const constant of Object.values(ICONS)) {
-  const declared = new RegExp(
-    `(?:/\\*\\* Inline icon for \`[^\`]+\`\\. \\*/\r?\n)?const ${constant} =\r?\n  '[^']*'\r?\n\r?\n?`,
-    'gu',
-  )
-  source = source.replace(declared, '')
-}
-
+//
+// The removal is done as ONE span rather than one constant at a time, and that
+// is the fix for the defect this script actually had. Matching each constant
+// separately let a matcher for `SMART_COMPACTION_ICON` begin at
+// `vyra-agent-manager`'s comment and run through agent-manager's encoded body
+// to its own declaration; with `g`, that leftmost match wins over the intended
+// one eight kilobytes later, so six of the ten constants resolved to the SAME
+// span and each deleted the whole intervening block. Measured: one run moved the
+// `LocalizedText` marker from 12903 to 5885, matched `DSH_CONSOLE_ICON` zero
+// times, and every run after that chewed further.
+//
+// Taking the span from the first owned comment to the marker makes the
+// ambiguity impossible: there is exactly one match, it is exactly the region
+// this script writes, and the surrounding file is untouched by construction.
 const END = "/** The validated index's localized-text union. */"
-const end = source.indexOf(END)
-if (end === -1) throw new Error('icon block marker not found in market-manifest.ts')
+const marker = source.indexOf(END)
+if (marker === -1) throw new Error('icon block marker not found in market-manifest.ts')
 
-const block = `\n${lines.join('\n').trimEnd()}\n\n`
-writeFileSync(file, `${source.slice(0, end)}${block}${source.slice(end)}`)
+const firstConstant = Object.values(ICONS)[0]
+const firstDeclaration = source.indexOf(`const ${firstConstant} =`)
+if (firstDeclaration === -1) throw new Error(`the first owned constant ${firstConstant} is missing`)
+const firstComment = source.lastIndexOf('/** Inline icon for ', firstDeclaration)
+if (firstComment === -1) throw new Error(`the comment above ${firstConstant} is missing`)
+
+// Everything from the first owned comment to the marker is this script's own
+// output, so it is replaced wholesale. The head is trimmed of its trailing blank
+// lines so the block below supplies the only separator, and the marker's own
+// leading blank lines are trimmed for the same reason — both are what the old
+// implementation accumulated by a line per run.
+const head = source.slice(0, firstComment).replace(/(?:\r?\n)+$/u, '')
+const tail = source.slice(marker).replace(/^(?:\r?\n)+/u, '')
+const block = `${lines.join(EOL)}${EOL}`
+writeFileSync(file, `${head}${EOL}${EOL}${block}${EOL}${tail}`)
 console.log(`sync-manifest-icons: wrote ${Object.keys(ICONS).length} icon(s)`)

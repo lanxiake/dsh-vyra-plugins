@@ -1,6 +1,7 @@
 # DSH Console
 
 让 Agent 操作 DeepSeek Harness 自身的控制台：查看与切换模型、读写设置、管理插件、调整主题与布局。
+也可以直接在侧栏打开**管理面板**，用点击完成同一批操作。
 
 这个插件的重点不只是「能做什么」，更是「不能做什么」。Agent 可以改变 harness **长什么样、怎么配置**，但永远不能改变自己**握有多大的权限**——沙箱模式、权限预设、审批应答、凭据写入这四类动作在 `core.js` 的 `FORBIDDEN` 表里被永久拒绝，并附带给用户的操作替代方案。所有动作经由同一张 `ACTIONS` 注册表分派，因此边界只有一处定义、两个调用方（Agent 工具与客户端面板）共用。
 
@@ -14,6 +15,37 @@ plugin_manager install_bundle plugins/vyra-dsh-console
 
 安装后重载界面；Host 侧改动需要重启 DSH。
 
+## 管理面板
+
+装好后侧栏会多一个入口，打开就是控制台面板，分六页：
+
+| 页 | 做什么 |
+|---|---|
+| 总览 | 当前模型、当前外观、插件包与 MCP 数量，以及权限边界的一句话说明 |
+| 外观 | 主题（跟随系统 / 浅色 / 深色）、语言、侧栏与右栏 |
+| 模型 | 列出已注册的服务商与当前默认，改新建会话用的默认选择 |
+| 插件 | 插件包与插件行两层，各自启停；受保护的项按钮置灰 |
+| MCP | 每个服务的连接状态，可探测或重启 |
+| 动作与边界 | `console.actions` 的原样表格，**外加被永久拒绝的动作、原因与该由谁来做** |
+
+### 面板和工具调用的是同一份实现
+
+这是这个插件最重要的设计约束，也是面板存在的意义：
+
+- **外观类**（主题、语言、侧栏、右栏）面板直接调用 `applyOp(services, op, args)` —— 就是 Host 经通道下发请求时走的那个函数。不是「同样的逻辑再写一遍」，是同一个函数。
+- **Host 类**（模型、插件、MCP）面板 POST 到 `/api/vyra-console/rpc`，由 `core.js` 分派。这条路径和 `dsh_console` 工具完全相同。
+- 面板**不带自己的动作清单**：动作、域、是否改动、是否不可逆、是否需要界面，全部读 `console.actions` 的返回。新增一个动作，面板自动多一行；删掉一个，面板自动少一行。
+
+因此面板永远不会和 Agent 看到的不一致——它们看到的是同一份数据经过同一条路径。
+
+### 被拒绝的动作是**可见的**，不是藏起来的
+
+「动作与边界」页会列出 `FORBIDDEN` 里的每一个动作，并原样显示 `core.js` 写的 `reason`（为什么拒绝）和 `alternative`（该由用户在哪里做）。静默隐藏会让用户反复追问「为什么它就是不做」，把拒绝摊开来说才是这个边界的价值。
+
+### 面板坏了也不会白屏
+
+面板整体包在一个错误边界里：组件抛异常时显示错误和「重试」，侧栏其他入口照常可用。某个服务或 Host 端点不可用时，对应那一页显示原因横幅而不是空白。React 组件一旦抛出去，整个 `main` 插槽就是一片空白且毫无提示——这是必须避免的失败模式。
+
 ## 结构
 
 ```
@@ -23,11 +55,23 @@ vyra-dsh-console/
 ├── index.js           # Host 入口
 ├── core.js            # 动作注册表、权限边界与分派器
 ├── channel.js         # Host ↔ Client 请求/响应通道
-├── client.js          # Client 半：主题、布局、语言
+├── client.js          # Client 半：外观桥、面板注册、文案字典
+├── panel.js           # 管理面板（React，纯浏览器模块）
 ├── cli.mjs            # 只读 CLI：vyra-console
-├── test/              # node --test：边界、通道、CLI 自检
+├── locale/            # 面板文案 zh + en（由 client.js 生成，见下）
+├── icon.svg           # 插件图标
+├── test/              # node --test：边界、通道、面板、CLI 自检
 └── assets/            # 交流群二维码
 ```
+
+`locale/*.json` 是**生成物**，来源是 `client.js` 里 `i18n:zh` / `i18n:en` 标记之间那份字典。浏览器 bundle 不能 `import` 包内文件（`require` 在那个 realm 里解析的是 shell 交给它的东西），所以文案必须以字面量随 bundle 走；`locale/*.json` 是给市场卡片和插件详情页读的。两份用脚本生成，就不会各说各话：
+
+```powershell
+node plugins/vyra-dsh-console/scripts/build-locale.mjs
+```
+
+`test/client.test.mjs` 会断言两者的键集合完全一致，改了一边忘了另一边会直接失败。
+
 
 ## CLI（只读）
 
@@ -97,6 +141,13 @@ node --test plugins/vyra-dsh-console/test/cli.test.mjs
 
 ```powershell
 node --test plugins/vyra-dsh-console/test/core.test.mjs plugins/vyra-dsh-console/test/channel.test.mjs plugins/vyra-dsh-console/test/client.test.mjs plugins/vyra-dsh-console/test/host.test.mjs plugins/vyra-dsh-console/test/bridge.test.mjs plugins/vyra-dsh-console/test/cli.test.mjs
+```
+
+改动 `icon.svg` 或新增插件后，重新生成市场清单里的内联图标：
+
+```powershell
+node scripts/sync-manifest-icons.mjs
+node --test scripts/test/manifest-icons.test.mjs   # 校验生成器幂等且图标未被写坏
 ```
 
 ## 交流群
