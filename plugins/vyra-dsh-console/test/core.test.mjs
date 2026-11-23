@@ -474,6 +474,36 @@ function authorityCtx({ describe, plugins = [], update }) {
 /** The real permission-presets entry, as the desktop profile declares it. */
 const PERMISSION_ENTRY = { entryId: 'permission', moduleName: '@deepseek-ai/dsh-permission-presets' }
 
+/**
+ * A settings service that models the REAL `describe` contract for `secrets`.
+ *
+ * `@deepseek-ai/dsh-settings` attaches `secrets` only when called with
+ * `{ redactSecrets: true }` (`...options?.redactSecrets ? { secrets: redacted.secrets } : {}`),
+ * so a bare `describe()` never carries the field. A stub that always returns
+ * `secrets` cannot tell the two apart, and would let the guard's credential
+ * branch pass while being dead against the real service.
+ *
+ * @param descriptors the full rows, `secrets` included.
+ */
+function describeHonouringRedaction(descriptors) {
+  const calls = []
+  return {
+    calls,
+    service: {
+      describe: (options) => {
+        calls.push(options)
+        return descriptors.map((d) => {
+          if (options?.redactSecrets !== true) {
+            const { secrets, ...rest } = d
+            return rest
+          }
+          return d
+        })
+      },
+    },
+  }
+}
+
 test('settings.set refuses the permission namespace and never calls update', async () => {
   // Asserts the CALL LIST, not just the status: a status-only assertion passes
   // if the write happened first and the refusal was reported afterwards.
@@ -518,21 +548,102 @@ test('the permission guard follows the package, not the namespace name', async (
 test('settings.set refuses a namespace whose descriptor carries secrets', async () => {
   // `secrets` marks a descriptor holding credential material — the
   // `credentials.set` outcome, refused for the same reason.
+  //
+  // Driven through the redaction-honouring stub, so this fails if the guard
+  // stops asking for `redactSecrets: true`: the field would be absent and the
+  // write would go through. That is the point — a stub which always returned
+  // `secrets` would pass against a guard that is dead in production.
   const writes = []
-  const ctx = authorityCtx({
-    plugins: [{ entryId: 'llm-deepseek', moduleName: '@deepseek-ai/dsh-llm-deepseek' }],
-    describe: () => [{
-      ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live',
-      secrets: { apiKey: true },
-    }],
-    update: async (ns, patch) => { writes.push([ns, patch]) },
+  const { service, calls } = describeHonouringRedaction([
+    { ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live', secrets: { apiKey: true } },
+  ])
+  const ctx = ctxWith({
+    settings: { describe: service.describe, update: async (ns, patch) => { writes.push([ns, patch]) } },
+    pluginManager: {
+      listPlugins: async () => [{ entryId: 'llm-deepseek', moduleName: '@deepseek-ai/dsh-llm-deepseek' }],
+      listBundles: async () => [],
+    },
   })
   const console_ = createConsole(ctx, { settings: settingsDomain })
   const result = await console_.dispatch('settings.set', { ns: 'llm-deepseek', patch: { apiKey: 'sk-x' } })
+
   assert.equal(result.status, 'forbidden')
   assert.ok(result.reason.length > 0)
   assert.ok(result.alternative.length > 0)
   assert.deepEqual(writes, [], 'a secrets-bearing namespace must never reach update()')
+  // And the guard demonstrably asked for the field it decides on.
+  assert.ok(calls.some((options) => options?.redactSecrets === true),
+    'the authority guard must describe with redactSecrets: true, or `secrets` is never present')
+})
+
+test('the guard reads secrets, which a bare describe() never returns', async () => {
+  // Pins the host contract the branch depends on: without the option the field
+  // is absent, so a guard calling `describe()` would let the write through.
+  const writes = []
+  const { service } = describeHonouringRedaction([
+    { ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live', secrets: { apiKey: true } },
+  ])
+  assert.equal('secrets' in service.describe()[0], false, 'a bare describe() must not expose secrets')
+  assert.equal(service.describe({ redactSecrets: true })[0].secrets.apiKey, true, 'and must expose it when asked')
+
+  const ctx = ctxWith({
+    settings: { describe: service.describe, update: async (ns, patch) => { writes.push([ns, patch]) } },
+    pluginManager: {
+      listPlugins: async () => [{ entryId: 'llm-deepseek', moduleName: '@deepseek-ai/dsh-llm-deepseek' }],
+      listBundles: async () => [],
+    },
+  })
+  const console_ = createConsole(ctx, { settings: settingsDomain })
+  const result = await console_.dispatch('settings.set', { ns: 'llm-deepseek', patch: { apiKey: 'sk-x' } })
+  assert.equal(result.status, 'forbidden')
+  assert.deepEqual(writes, [])
+})
+
+test('the read paths do not ask for redaction, so their output is unchanged', async () => {
+  // `settings.list`/`settings.get` hand configuration back to a caller; the
+  // guard's option is deliberately not applied to them.
+  const { service, calls } = describeHonouringRedaction([
+    { ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: { temperature: 0.2 }, revision: 3, applies: 'live' },
+  ])
+  const ctx = ctxWith({ settings: { describe: service.describe, update: async () => {} } })
+  const tool = createConsoleTool(createConsole(ctx, { settings: settingsDomain }))
+  const listed = await tool.execute({ action: 'settings.list' })
+  const got = await tool.execute({ action: 'settings.get', args: { ns: 'llm-deepseek' } })
+
+  assert.equal(listed.status, 'ok')
+  assert.equal(got.status, 'ok')
+  assert.equal(got.namespace.value.temperature, 0.2, 'the value must reach the caller intact')
+  assert.deepEqual(calls, [undefined, undefined], 'the read paths must call describe() with no options')
+})
+
+test('a listed entry with no usable package name refuses, like an unlisted one', async () => {
+  // Both are "the owning package cannot be established", so both must fail in
+  // the same direction. Letting this one through while refusing the unlisted
+  // case would fail closed in one and open in the other for the same reason.
+  // Mutation-tested: restoring a bare `entry.moduleName === undefined` check
+  // makes this fail.
+  const writes = []
+  for (const moduleName of [undefined, null, '', 0, {}]) {
+    const ctx = ctxWith({
+      settings: {
+        describe: () => [
+          { ns: 'mystery', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+        ],
+        update: async (ns, patch) => { writes.push([ns, patch]) },
+      },
+      pluginManager: {
+        listPlugins: async () => [{ entryId: 'mystery', moduleName }],
+        listBundles: async () => [],
+      },
+    })
+    const console_ = createConsole(ctx, { settings: settingsDomain })
+    const result = await console_.dispatch('settings.set', { ns: 'mystery', patch: { x: 1 } })
+    assert.equal(result.status, 'forbidden',
+      `moduleName ${JSON.stringify(moduleName)} cannot be checked, so it must refuse`)
+    assert.ok(result.reason.length > 0)
+    assert.ok(result.alternative.length > 0)
+  }
+  assert.deepEqual(writes, [], 'no nameless entry may reach update()')
 })
 
 test('settings.set still writes an ordinary namespace', async () => {

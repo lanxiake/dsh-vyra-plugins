@@ -74,6 +74,32 @@ const UNJUDGEABLE = Object.freeze({
 })
 
 /**
+ * The descriptors the authority guard decides on.
+ *
+ * `redactSecrets: true` is REQUIRED here, and a bare `describe()` cannot be used
+ * instead: the host attaches the `secrets` field only when that option is passed
+ * (`@deepseek-ai/dsh-settings`, `...options?.redactSecrets ? { secrets:
+ * redacted.secrets } : {}`). Without it no descriptor ever carries `secrets`, so
+ * the credential branch below would be unreachable — present in the code and
+ * dead at runtime, which is the worst of both: it reads as a protection that is
+ * not there.
+ *
+ * `dsh-workflow-lite` calls it the same way (`lib/index.mjs`, `describe({
+ * redactSecrets: true })`), and it reads `value`/`base` off the result as normal
+ * values, so the option redacts the `secrets` field rather than the
+ * configuration beside it.
+ *
+ * A SEPARATE call from the ones `settings.list`/`settings.get` make. Those hand
+ * configuration back to a caller, and this guard has no business changing what
+ * they see; redaction is asked for only where the `secrets` field is the thing
+ * being read. A read path that never needed the option keeps its behaviour
+ * exactly.
+ */
+function guardDescriptors(service) {
+  return service.describe({ redactSecrets: true })
+}
+
+/**
  * Decide whether `ns` may be written, and say why not when it may not.
  *
  * Exported as one function rather than an inline condition in the `switch`, so
@@ -82,8 +108,8 @@ const UNJUDGEABLE = Object.freeze({
  *
  * @param ctx the dispatcher's context, used to reach `pluginManager`.
  * @param ns the namespace being written; also the Loader entry id.
- * @param descriptor the live `SettingsDescriptor` for `ns`, already resolved by
- *   the caller. Its `secrets` field is the credential outcome.
+ * @param descriptor the live `SettingsDescriptor` for `ns`, taken from
+ *   {@link guardDescriptors} so that its `secrets` field is actually present.
  * @returns `null` when the write may proceed, otherwise the refusal body.
  */
 export async function refuseAuthorityNamespace(ctx, ns, descriptor) {
@@ -116,7 +142,20 @@ export async function refuseAuthorityNamespace(ctx, ns, descriptor) {
   // the namespace passed `describe()`, so it exists — refusing is the safe read.
   if (!entry) return UNJUDGEABLE
 
-  const known = entry.moduleName === undefined ? undefined : AUTHORITY_PACKAGES[entry.moduleName]
+  // A listed entry with no usable package name is the SAME situation as an
+  // unlisted one: the owning package cannot be established, so the namespace
+  // cannot be checked. Refusing only the unlisted case while letting this one
+  // through would fail closed in one direction and open in the other for the
+  // same reason, which is not a boundary anyone can reason about. `undefined`
+  // and `''` are both "no name"; `null` is not a string either.
+  //
+  // Unreachable through the shipped host — a nameless entry throws on import and
+  // never gets a fiber, so it can never own a settings namespace — but that is
+  // exactly the region where this guard's guarantee is claimed, so it is pinned
+  // rather than left to hold by accident.
+  if (typeof entry.moduleName !== 'string' || entry.moduleName === '') return UNJUDGEABLE
+
+  const known = AUTHORITY_PACKAGES[entry.moduleName]
   if (known === undefined) return null
 
   // `because` names the FORBIDDEN action this namespace would otherwise reach.
@@ -174,7 +213,7 @@ export async function settingsDomain(ctx, { action, args }) {
     case 'settings.set': {
       // Refuse a namespace that does not exist, so a typo cannot silently
       // create an unreachable config section.
-      const descriptor = service.describe().find((d) => d.ns === args.ns)
+      const descriptor = guardDescriptors(service).find((d) => d.ns === args.ns)
       if (!descriptor) {
         return { status: 'error', action, reason: `no settings namespace "${args.ns}"` }
       }
