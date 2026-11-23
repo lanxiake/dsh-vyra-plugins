@@ -23,6 +23,7 @@ export function apply(ctx) {
       case 'get': return manager.getAgent(String(body.id || ''));
       case 'save': return manager.saveAgent(body.agent, { create: Boolean(body.create) });
       case 'delete': return manager.deleteAgent(String(body.id || ''));
+      case 'preview': return manager.previewAgent(body.agent || {});
       default: throw new Error(`unknown operation "${body.op}"`);
     }
   }

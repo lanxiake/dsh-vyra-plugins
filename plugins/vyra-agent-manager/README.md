@@ -5,10 +5,14 @@ Visual agent creation and management panel for DeepSeek Harness, with agent-faci
 ## 功能特性
 
 - ✅ **可视化 Agent 构建器**：通过精致的 UI 创建自定义 Agent，配置系统提示词、能力集、工具限制和优选技能
+- ✅ **全屏分区编辑器**：左侧分区导航、中间表单、右侧实时摘要（工具/技能/团队计数、必填项、安装状态），并可预览将要安装的插件行
+- ✅ **统一的详情页**：系统预设与自建 Agent 使用同一套版式；系统预设能推断的能力、模块与提示词照实展示，其余标注"未公开"，完整 YAML 折叠在末尾
 - ✅ **动态发现**：能力、工具和技能从运行时的 DSH 读取，无硬编码列表
 - ✅ **对话中管理**：主 Agent 可通过 `agent_manager` 工具按同一规范创建/更新/列出/删除 Agent
 - ✅ **系统预设查看**：系统预设卡片支持查看详情（能力配置、提示词等），只读模式
 - ✅ **预设安装**：每个保存的 Agent 作为真实的 `@deepseek-ai/dsh-agent-preset` bundle 安装，可在新会话创建时选择
+- ✅ **一键进入会话**：卡片与详情里的「新建会话」直接以该 Agent 启动新任务（走 DSH 原生 `startSession`）
+- ✅ **缺失即清理**：bundle 记录被 profile 恢复弄丢的 Agent，删除时直接清理目录与悬空链接；卡片提供「修复安装」重新登记
 - ✅ **视觉设计**：渐变头像、卡片悬停效果、流畅动画、语义色彩（brand/success/warn/error 半透明混合），遵循 DSH `--dsw-alias-*` 主题 token
 
 ## Agent 与团队
@@ -37,7 +41,8 @@ dsh-agent-manager/
 ├── core.js               # Agent CRUD: meta, listAgents, saveAgent, deleteAgent, getAgent
 ├── tool.js               # agent_manager tool definition (catalog/list/get/create/update/delete)
 ├── tool-policy.js        # Preset-mountable plugin: hides selected global tools from one agent
-├── client.js             # React panel: tabs, cards, editor drawer, RPC fetch
+├── client.js             # React panel: cards, unified detail drawer, full-screen editor, RPC fetch
+├── test/                 # node --test: orphan cleanup + system-preset YAML reader
 ├── icon.svg              # Sidebar icon (purple gradient topology)
 └── locale/
     ├── en.json           # English metadata

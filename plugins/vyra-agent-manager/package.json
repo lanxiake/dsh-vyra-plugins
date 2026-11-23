@@ -1,6 +1,6 @@
 {
   "name": "vyra-agent-manager",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "可视化智能体管理：为每个智能体定制自己的提示词、工具与技能，也可以让主智能体自己创建它们。",
   "exports": {

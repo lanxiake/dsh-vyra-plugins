@@ -54,6 +54,10 @@ window.__ModuleLoader__.load({
       'card.delete': '删除',
       'card.confirmDelete': '再点一次确认删除',
       'card.viewDetails': '查看详情',
+      'card.use': '新建会话',
+      'card.repair': '修复安装',
+      'card.needsRepair': '需修复',
+      'card.unknown': '状态未知',
       'editor.titleEdit': '编辑 Agent',
       'editor.titleCreate': '新建 Agent',
       'editor.close': '关闭',
@@ -109,6 +113,26 @@ window.__ModuleLoader__.load({
       'editor.installing': '正在安装…',
       'editor.saveReinstall': '保存并重新安装',
       'editor.createInstall': '创建并安装',
+      'editor.navOverview': '概览',
+      'editor.navBasics': '基本信息',
+      'editor.navPrompt': '提示词',
+      'editor.navCaps': '能力',
+      'editor.navTools': '工具与 MCP',
+      'editor.navSkills': '技能',
+      'editor.navTeam': '团队',
+      'editor.summaryTitle': '实时摘要',
+      'editor.statusTitle': '安装状态',
+      'editor.statusPresent': '已在 profile 中',
+      'editor.statusMissing': '安装记录缺失',
+      'editor.statusUnknown': '状态未知',
+      'editor.statusLive': '已启用',
+      'editor.statusOff': '未启用',
+      'editor.statusBroken': '加载失败',
+      'editor.preview': '预览将安装的配置',
+      'editor.previewTitle': '将安装的配置',
+      'editor.previewFailed': '预览失败：{error}',
+      'editor.required': '还有 {n} 项必填内容未完成',
+      'editor.requiredAll': '必填内容已齐全',
       'viewer.description': '描述',
       'viewer.noDescription': '无描述',
       'viewer.summary': '模式说明',
@@ -124,6 +148,18 @@ window.__ModuleLoader__.load({
       'viewer.yamlError': '无法读取该预设的配置',
       'viewer.systemNote': '系统预设由 DSH 管理，这里只读。',
       'viewer.close': '关闭',
+      'viewer.kindManaged': '自建 Agent',
+      'viewer.kindSystem': '系统预设',
+      'viewer.status': '状态',
+      'viewer.installed': '已安装',
+      'viewer.notInstalled': '未安装',
+      'viewer.disabled': '已停用',
+      'viewer.broken': '加载失败',
+      'viewer.notDeclared': '系统预设未在配置中公开这一项',
+      'viewer.modules': '包含的模块',
+      'viewer.rawConfig': '完整声明（只读 YAML）',
+      'viewer.promptExpr': '该提示词由内联表达式生成，这里按原文显示',
+      'viewer.use': '用此 Agent 新建会话',
       'app.title': 'Agent 管理',
       'app.subtitle': '为不同任务创建专用 Agent：各自的提示词、工具与技能。主 Agent 也可以用 agent_manager 工具按同一规范创建。',
       'app.newAgent': '新建 Agent',
@@ -144,6 +180,10 @@ window.__ModuleLoader__.load({
       'toast.saved': '「{name}」已保存：{warnings}',
       'toast.restartHint': '需要重启后生效',
       'toast.deleted': '已删除',
+      'toast.pruned': '已清理安装记录缺失的 Agent',
+      'toast.repaired': '「{name}」已修复安装',
+      'toast.noWorkspace': '当前客户端无法从面板新建会话',
+      'toast.starting': '已切换到一个新会话',
       'toast.warnSep': '；',
     };
     // i18n:zh:end
@@ -167,6 +207,10 @@ window.__ModuleLoader__.load({
       'card.delete': 'Delete',
       'card.confirmDelete': 'Click again to confirm',
       'card.viewDetails': 'View details',
+      'card.use': 'New session',
+      'card.repair': 'Repair install',
+      'card.needsRepair': 'Needs repair',
+      'card.unknown': 'Status unknown',
       'editor.titleEdit': 'Edit Agent',
       'editor.titleCreate': 'New Agent',
       'editor.close': 'Close',
@@ -222,6 +266,26 @@ window.__ModuleLoader__.load({
       'editor.installing': 'Installing…',
       'editor.saveReinstall': 'Save and reinstall',
       'editor.createInstall': 'Create and install',
+      'editor.navOverview': 'Overview',
+      'editor.navBasics': 'Basics',
+      'editor.navPrompt': 'Prompt',
+      'editor.navCaps': 'Capabilities',
+      'editor.navTools': 'Tools & MCP',
+      'editor.navSkills': 'Skills',
+      'editor.navTeam': 'Team',
+      'editor.summaryTitle': 'Live summary',
+      'editor.statusTitle': 'Install status',
+      'editor.statusPresent': 'In the profile',
+      'editor.statusMissing': 'Install record missing',
+      'editor.statusUnknown': 'Status unknown',
+      'editor.statusLive': 'Active',
+      'editor.statusOff': 'Not active',
+      'editor.statusBroken': 'Load failed',
+      'editor.preview': 'Preview the installed configuration',
+      'editor.previewTitle': 'Configuration to install',
+      'editor.previewFailed': 'Preview failed: {error}',
+      'editor.required': '{n} required fields are still missing',
+      'editor.requiredAll': 'All required fields are set',
       'viewer.description': 'Description',
       'viewer.noDescription': 'No description',
       'viewer.summary': 'Mode description',
@@ -237,6 +301,18 @@ window.__ModuleLoader__.load({
       'viewer.yamlError': 'Could not read this preset’s configuration',
       'viewer.systemNote': 'System presets are managed by DSH and are read-only here.',
       'viewer.close': 'Close',
+      'viewer.kindManaged': 'Custom agent',
+      'viewer.kindSystem': 'System preset',
+      'viewer.status': 'Status',
+      'viewer.installed': 'Installed',
+      'viewer.notInstalled': 'Not installed',
+      'viewer.disabled': 'Disabled',
+      'viewer.broken': 'Load failed',
+      'viewer.notDeclared': 'This preset does not expose this field',
+      'viewer.modules': 'Modules',
+      'viewer.rawConfig': 'Full declaration (read-only YAML)',
+      'viewer.promptExpr': 'This prompt comes from an inline expression; shown as written',
+      'viewer.use': 'Start a new session with this agent',
       'app.title': 'Agent manager',
       'app.subtitle': 'Create a dedicated Agent for each kind of task, with its own prompt, tools and skills. The main Agent can create them the same way through the agent_manager tool.',
       'app.newAgent': 'New Agent',
@@ -257,6 +333,10 @@ window.__ModuleLoader__.load({
       'toast.saved': '“{name}” saved: {warnings}',
       'toast.restartHint': 'takes effect after a restart',
       'toast.deleted': 'Deleted',
+      'toast.pruned': 'Removed an Agent whose install record was missing',
+      'toast.repaired': '“{name}” reinstalled',
+      'toast.noWorkspace': 'This client cannot start a session from the panel',
+      'toast.starting': 'Switched to a new session',
       'toast.warnSep': '; ',
     };
     // i18n:en:end
@@ -346,6 +426,47 @@ window.__ModuleLoader__.load({
 .am-banner.warn{color:var(--dsw-alias-state-warn-primary);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 9%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 28%,transparent)}
 .am-veil{position:absolute;inset:0;z-index:20;background:color-mix(in srgb,var(--dsw-alias-bg-base) 55%,transparent);backdrop-filter:blur(2px);animation:am-fade .15s ease}
 .am-drawer{position:absolute;top:0;right:0;bottom:0;z-index:21;width:min(640px,100%);display:flex;flex-direction:column;background:var(--dsw-alias-bg-overlay);border-left:1px solid var(--dsw-alias-border-l1);box-shadow:-18px 0 40px color-mix(in srgb,var(--dsw-alias-label-primary) 14%,transparent);animation:am-in .2s cubic-bezier(.2,.8,.2,1)}
+.am-drawer-wide{width:min(820px,100%)}
+.am-screen-veil{position:fixed;inset:0;z-index:89;background:color-mix(in srgb,var(--dsw-alias-bg-base) 70%,transparent);backdrop-filter:blur(3px);animation:am-fade .15s ease}
+.am-editor{position:fixed;inset:0;z-index:90;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:am-fade .18s ease}
+.am-editor-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.am-editor-body{display:grid;grid-template-columns:190px minmax(0,1fr) 300px;min-height:0}
+.am-editor-nav{display:flex;flex-direction:column;gap:2px;padding:14px 10px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto;background:var(--dsw-alias-bg-layer-1)}
+.am-nav-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border:0;border-radius:9px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-weight:500;text-align:left;cursor:pointer}
+.am-nav-item:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.am-nav-item.on{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1)}
+.am-nav-dot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-state-warn-primary);flex:none}
+.am-editor-form{min-width:0;overflow:auto;padding:22px 28px 40px}
+.am-editor-form>*{max-width:820px}
+.am-editor-side{min-height:0;overflow:auto;padding:18px 16px;border-left:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);display:flex;flex-direction:column;gap:16px}
+.am-side-block{display:flex;flex-direction:column;gap:8px}
+.am-side-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);letter-spacing:.03em}
+.am-side-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.am-side-stats div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base)}
+.am-side-stats b{font-size:15px}
+.am-side-stats span{font-size:11.5px;color:var(--dsw-alias-label-secondary)}
+.am-side-list{display:flex;flex-direction:column;gap:4px}
+.am-side-item{font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary);background:transparent;border:0;padding:0;text-align:left}
+.am-side-item.warn{color:var(--dsw-alias-state-warn-primary);cursor:pointer}
+.am-editor-foot{display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.am-editor-foot .grow{flex:1;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.4}
+.am-editor-hero{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.am-editor-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 4px}
+.am-editor-stat{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.am-editor-stat b{font-size:17px}
+.am-editor-stat span{font-size:11.5px;color:var(--dsw-alias-label-secondary)}
+.am-area-tall{min-height:420px}
+.am-list-tall{max-height:420px}
+.am-view-text{white-space:pre-wrap;line-height:1.65}
+.am-raw{margin-top:20px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1);padding:10px 12px}
+.am-raw summary{cursor:pointer;font-weight:600;color:var(--dsw-alias-label-secondary);font-size:12px}
+.am-raw-code{margin:10px 0 0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;line-height:1.55;max-height:360px;overflow:auto}
+.am-preview-veil{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(0,0,0,.45)}
+.am-preview{width:min(860px,calc(100vw - 48px));max-height:calc(100vh - 80px);display:flex;flex-direction:column;border-radius:12px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-overlay);box-shadow:0 18px 50px rgba(0,0,0,.35);overflow:hidden}
+.am-preview-body{flex:1;overflow:auto;padding:14px 18px}
+.am-preview-code{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.6}
+@media (max-width:1200px){.am-editor-body{grid-template-columns:170px minmax(0,1fr)}.am-editor-side{display:none}}
+@media (max-width:760px){.am-editor-body{grid-template-columns:1fr}.am-editor-nav{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1)}.am-editor-cards{grid-template-columns:1fr 1fr}}
 @keyframes am-in{from{transform:translateX(28px);opacity:0}}
 @keyframes am-fade{from{opacity:0}}
 .am-dhead{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--dsw-alias-border-l1)}
@@ -412,9 +533,193 @@ window.__ModuleLoader__.load({
 
     const emptyForm = () => ({ team: [], id: '', name: '', description: '', summary: '', usage: '', systemPrompt: '', capabilities: ['files', 'todo'], denyTools: [], denyMcp: [], skills: [] });
 
+    // --- System preset reading -------------------------------------------------
+    //
+    // `agentPresets.read` returns the preset's declared child rows as entry-list
+    // YAML, never as objects. To put a system preset into the same detail layout
+    // as a custom Agent, this small parser reads exactly that shape: block
+    // sequences of mappings, scalar values, quoted strings, `!!js` tags and block
+    // text. Anything else returns null and the viewer keeps the raw YAML.
+
+    function parseEntryYaml(text) {
+      const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+      let index = 0;
+      const indentOf = (line) => line.length - line.trimStart().length;
+      const blank = (line) => line.trim() === '' || line.trimStart().startsWith('#');
+      const skipBlank = () => { while (index < lines.length && blank(lines[index])) index += 1; };
+
+      function scalar(raw) {
+        let value = raw.trim();
+        if (/^!!js\b/.test(value)) value = value.slice(4).trim();
+        else if (value.startsWith('!!')) value = value.replace(/^!!\S+\s*/, '');
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          return value.slice(1, -1).replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        }
+        if (/^-?\d+$/.test(value)) return Number(value);
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        if (value === 'null' || value === '~' || value === '') return value === '' ? '' : null;
+        return value;
+      }
+
+      function splitKey(text) {
+        const match = /^([A-Za-z0-9_@./$-]+):(?:\s+(.*))?$/.exec(text);
+        return match === null ? null : { key: match[1], raw: match[2] ?? '' };
+      }
+
+      function blockText(parentIndent) {
+        const collected = [];
+        while (index < lines.length) {
+          const line = lines[index];
+          if (line.trim() === '') { collected.push(''); index += 1; continue; }
+          if (indentOf(line) <= parentIndent) break;
+          collected.push(line.slice(Math.min(indentOf(line), parentIndent + 2)));
+          index += 1;
+        }
+        return collected.join('\n').replace(/\n+$/, '');
+      }
+
+      function assign(target, pair, keyIndent) {
+        if (pair.raw === '' || pair.raw === '|' || pair.raw === '>') {
+          skipBlank();
+          if (pair.raw === '') {
+            target[pair.key] = index < lines.length && indentOf(lines[index]) > keyIndent
+              ? parseBlock(indentOf(lines[index])) : null;
+          } else {
+            target[pair.key] = blockText(keyIndent);
+          }
+          return;
+        }
+        target[pair.key] = scalar(pair.raw);
+      }
+
+      function parseMapping(indent) {
+        const out = {};
+        while (index < lines.length) {
+          skipBlank();
+          if (index >= lines.length) break;
+          const line = lines[index];
+          if (indentOf(line) !== indent || line.trimStart().startsWith('- ')) break;
+          const pair = splitKey(line.trimStart());
+          if (pair === null) break;
+          index += 1;
+          assign(out, pair, indent);
+        }
+        return out;
+      }
+
+      function parseSequence(indent) {
+        const out = [];
+        while (index < lines.length) {
+          skipBlank();
+          if (index >= lines.length) break;
+          const line = lines[index];
+          const body = line.trimStart();
+          if (indentOf(line) !== indent || !(body.startsWith('- ') || body === '-')) break;
+          const rest = body.slice(1).trimStart();
+          index += 1;
+          const pair = rest === '' ? null : splitKey(rest);
+          if (pair === null) { out.push(rest === '' ? parseBlock(indent + 2) : scalar(rest)); continue; }
+          const map = {};
+          const itemIndent = indent + 2;
+          assign(map, pair, itemIndent);
+          while (index < lines.length) {
+            skipBlank();
+            if (index >= lines.length) break;
+            const next = lines[index];
+            if (indentOf(next) !== itemIndent || next.trimStart().startsWith('- ')) break;
+            const more = splitKey(next.trimStart());
+            if (more === null) break;
+            index += 1;
+            assign(map, more, itemIndent);
+          }
+          out.push(map);
+        }
+        return out;
+      }
+
+      function parseBlock(indent) {
+        skipBlank();
+        if (index >= lines.length) return undefined;
+        const body = lines[index].trimStart();
+        return body.startsWith('- ') || body === '-' ? parseSequence(indent) : parseMapping(indent);
+      }
+
+      try {
+        const start = lines.findIndex((line) => !blank(line));
+        if (start < 0) return null;
+        index = start;
+        const value = parseBlock(indentOf(lines[start]));
+        return Array.isArray(value) ? value : null;
+      } catch {
+        return null;
+      }
+    }
+
+    /** Every row in a parsed entry list, including rows nested in a group. */
+    function flatRows(rows) {
+      const out = [];
+      const walk = (list) => {
+        for (const row of list || []) {
+          if (row === null || typeof row !== 'object') continue;
+          out.push(row);
+          if (Array.isArray(row.config)) walk(row.config);
+        }
+      };
+      walk(rows);
+      return out;
+    }
+
+    /** Capability ids a module list provides, using the live catalog's own rows. */
+    function capabilitiesOfModules(modules, meta) {
+      if (!modules || modules.length === 0 || !meta) return [];
+      const present = new Set(modules);
+      return meta.capabilities.filter((c) => (c.modules || []).every((m) => present.has(m))).map((c) => c.id);
+    }
+
+    /**
+     * One read-only model for both kinds of Agent, so the details drawer can use
+     * a single layout: a custom Agent fills every section from its spec, a system
+     * preset fills what its declaration exposes and marks the rest as not
+     * declared rather than drawing a different page.
+     */
+    function detailModel(data, meta) {
+      if (!data) return null;
+      if (data.managed) {
+        const spec = data.spec;
+        return {
+          kind: 'managed', id: spec.id, name: spec.name, description: spec.description,
+          summary: spec.summary, usage: spec.usage,
+          capabilities: spec.capabilities || [], deniedTools: spec.denyTools || [], skills: spec.skills || [], team: spec.team || [],
+          prompt: spec.systemPrompt || '', promptExpression: false, modules: [],
+          rows: null, raw: '', readError: '',
+          installed: data.installed !== false, bundle: data.bundle || null, broken: data.broken || null,
+          useId: data.installed !== false ? spec.id : null,
+        };
+      }
+      const preset = data.preset || {};
+      const parsed = parseEntryYaml(data.yaml || '');
+      const rows = parsed ? flatRows(parsed) : [];
+      const modules = data.modules && data.modules.length
+        ? data.modules
+        : [...new Set(rows.map((row) => row.name).filter((name) => typeof name === 'string' && name !== 'cordis:group'))];
+      const persona = rows.find((row) => row.name === '@deepseek-ai/dsh-persona');
+      const prefix = persona && persona.config && typeof persona.config === 'object' ? persona.config.prefix : undefined;
+      const prompt = typeof prefix === 'string' ? prefix : '';
+      return {
+        kind: 'system', id: preset.id, name: preset.name || preset.id, description: preset.description || '',
+        summary: '', usage: '', capabilities: (data.capabilities && data.capabilities.length) ? data.capabilities : capabilitiesOfModules(modules, meta),
+        deniedTools: [], skills: [], team: [],
+        prompt, promptExpression: /^(?:\(|async\b|function\b|\(?[\w$,\s]*\)?\s*=>)/.test(prompt.trim()),
+        modules, rows: parsed, raw: data.yaml || '', readError: data.readError || '',
+        installed: !preset.broken, bundle: null, broken: preset.broken || null,
+        useId: preset.broken ? null : preset.id,
+      };
+    }
+
     function Chip({ kind, children, title }) { return h('span', { className: 'am-chip' + (kind ? ' ' + kind : ''), title }, children); }
 
-    function AgentCard({ item, meta, onEdit, onDelete, onView }) {
+    function AgentCard({ item, meta, onEdit, onDelete, onView, onUse, onRepair }) {
       const t = useT();
       const [armed, setArmed] = useState(false);
       useEffect(() => { if (!armed) return undefined; const timer = setTimeout(() => setArmed(false), 3500); return () => clearTimeout(timer); }, [armed]);
@@ -423,36 +728,56 @@ window.__ModuleLoader__.load({
       const id = sys ? item.id : spec.id;
       const name = sys ? item.name : spec.name;
       const desc = sys ? (item.description || t('card.sysDesc')) : spec.description;
-      const capLabels = !sys ? spec.capabilities.map((c) => (meta.capabilities.find((x) => x.id === c) || {}).label || c) : [];
+      // Both card kinds show their capabilities: a system preset infers them from
+      // its composition, a custom Agent declares them. Same chips, same layout.
+      const capIds = sys ? (item.capabilities || []) : (spec.capabilities || []);
+      const capLabels = capIds.map((c) => (meta.capabilities.find((x) => x.id === c) || {}).label || c);
       const shown = capLabels.slice(0, 4);
+      const bundle = sys ? null : (item.bundle || { present: null });
+      const repair = !sys && bundle.present === false && Boolean(spec);
+      const status = sys
+        ? h(Chip, { kind: item.broken ? 'error' : 'ok' }, t(item.shipped ? 'card.shipped' : 'card.external'))
+        : bundle.present === false
+          ? h(Chip, { kind: 'warn' }, t('card.needsRepair'))
+          : bundle.present === null
+            ? h(Chip, null, t('card.unknown'))
+            : item.installed ? h(Chip, { kind: 'ok' }, t('card.active')) : h(Chip, { kind: 'warn' }, t('card.inactive'));
+      const usable = sys ? (!item.broken && Boolean(onUse)) : (item.installed && Boolean(onUse));
       return h('div', { className: 'am-card' + (sys ? ' sys' : ''), style: { '--h': hueOf(id) } },
         h('div', { className: 'am-card-top' },
           h('div', { className: 'am-avatar' }, (name || id).trim().slice(0, 1).toUpperCase()),
           h('div', { style: { minWidth: 0, flex: 1 } },
             h('div', { className: 'am-name', title: name }, name),
             h('div', { className: 'am-idline' }, id)),
-          sys ? h(Chip, null, t(item.shipped ? 'card.shipped' : 'card.external')) : (item.installed ? h(Chip, { kind: 'ok' }, t('card.active')) : h(Chip, { kind: 'warn' }, t('card.inactive')))),
+          status),
         h('div', { className: 'am-desc', title: desc }, desc),
         item.broken ? h(Chip, { kind: 'error', title: item.broken }, t('card.broken')) : null,
-        !sys ? h('div', { className: 'am-chips' },
+        h('div', { className: 'am-chips' },
           shown.map((l) => h(Chip, { key: l, kind: 'accent' }, l)),
           capLabels.length > shown.length ? h(Chip, { key: 'more' }, '+' + (capLabels.length - shown.length)) : null,
-          spec.skills.length ? h(Chip, { key: 'sk' }, t('card.skillCount', { n: spec.skills.length })) : null,
-          (spec.team || []).length ? h(Chip, { key: 'tm', kind: 'accent' }, t('card.teamCount', { n: spec.team.length })) : null,
-          spec.denyTools.length ? h(Chip, { key: 'dn', kind: 'warn' }, t('card.denyCount', { n: spec.denyTools.length })) : null,
-          !capLabels.length ? h(Chip, { key: 'none' }, t('card.chatOnly')) : null) : null,
-        !sys ? h('div', { className: 'am-actions' },
-          h('button', { className: 'am-btn sm', onClick: () => onView(id) }, t('card.details')),
-          h('button', { className: 'am-btn sm', onClick: () => onEdit(spec) }, t('card.edit')),
-          h('button', { className: 'am-btn sm danger' + (armed ? ' armed' : ''), onClick: () => (armed ? onDelete(spec.id) : setArmed(true)) }, armed ? t('card.confirmDelete') : t('card.delete')))
-          : h('div', { className: 'am-actions' }, h('button', { className: 'am-btn sm', onClick: () => onView(id) }, t('card.viewDetails'))));
+          !sys && (spec.skills || []).length ? h(Chip, { key: 'sk' }, t('card.skillCount', { n: spec.skills.length })) : null,
+          !sys && (spec.team || []).length ? h(Chip, { key: 'tm', kind: 'accent' }, t('card.teamCount', { n: spec.team.length })) : null,
+          !sys && (spec.denyTools || []).length ? h(Chip, { key: 'dn', kind: 'warn' }, t('card.denyCount', { n: spec.denyTools.length })) : null,
+          !capLabels.length && !sys ? h(Chip, { key: 'none' }, t('card.chatOnly')) : null),
+        sys
+          ? h('div', { className: 'am-actions' },
+            usable ? h('button', { className: 'am-btn sm primary', onClick: () => onUse(id) }, t('card.use')) : null,
+            h('button', { className: 'am-btn sm', onClick: () => onView(id) }, t('card.viewDetails')))
+          : h('div', { className: 'am-actions' },
+            usable ? h('button', { className: 'am-btn sm primary', onClick: () => onUse(id) }, t('card.use')) : null,
+            repair ? h('button', { className: 'am-btn sm', onClick: () => onRepair(spec) }, t('card.repair')) : null,
+            h('button', { className: 'am-btn sm', onClick: () => onView(id) }, t('card.details')),
+            h('button', { className: 'am-btn sm', onClick: () => onEdit(spec) }, t('card.edit')),
+            h('button', { className: 'am-btn sm danger' + (armed ? ' armed' : ''), onClick: () => (armed ? onDelete(spec.id) : setArmed(true)) }, armed ? t('card.confirmDelete') : t('card.delete'))));
     }
 
-    function Editor({ mode, initial, meta, peers, onClose, onSave, saving, error }) {
+    function Editor({ mode, initial, meta, peers, status, onUse, onClose, onSave, saving, error }) {
       const t = useT();
       const [f, setF] = useState(initial);
+      const [nav, setNav] = useState('overview');
       const [toolQuery, setToolQuery] = useState('');
       const [skillQuery, setSkillQuery] = useState('');
+      const [preview, setPreview] = useState(null);
       const [idTouched, setIdTouched] = useState(mode === 'edit');
       const set = (patch) => setF((p) => ({ ...p, ...patch }));
       const toggle = (key, value) => setF((p) => ({ ...p, [key]: p[key].includes(value) ? p[key].filter((x) => x !== value) : [...p[key], value] }));
@@ -460,9 +785,9 @@ window.__ModuleLoader__.load({
       const groups = useMemo(() => { const m = new Map(); caps.forEach((c) => { if (!m.has(c.group)) m.set(c.group, []); m.get(c.group).push(c); }); return [...m.entries()]; }, [caps]);
       const covered = useMemo(() => new Set(caps.flatMap((c) => c.tools)), [caps]);
       const mcpServers = meta.mcpServers || [];
-      const extraTools = useMemo(() => meta.tools.filter((t) => !covered.has(t.name) && !t.name.startsWith('mcp__')), [meta.tools, covered]);
+      const extraTools = useMemo(() => meta.tools.filter((tool) => !covered.has(tool.name) && !tool.name.startsWith('mcp__')), [meta.tools, covered]);
       const q = toolQuery.trim().toLowerCase();
-      const visibleTools = extraTools.filter((t) => !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+      const visibleTools = extraTools.filter((tool) => !q || tool.name.toLowerCase().includes(q) || tool.description.toLowerCase().includes(q));
       const sq = skillQuery.trim().toLowerCase();
       const visibleSkills = meta.skills.filter((s) => !sq || s.name.toLowerCase().includes(sq) || s.description.toLowerCase().includes(sq));
       const hasSkillsCap = f.capabilities.includes('skills');
@@ -470,7 +795,7 @@ window.__ModuleLoader__.load({
       const candidates = (peers || []).filter((p) => p.id !== f.id);
       const deniedMcp = f.denyMcp || [];
       const mcpToolCount = mcpServers.filter((s) => !deniedMcp.includes(s.name)).reduce((n, s) => n + s.toolCount, 0);
-      const toolCount = caps.filter((c) => f.capabilities.includes(c.id)).reduce((n, c) => n + c.tools.length, 0) + extraTools.filter((t) => !f.denyTools.includes(t.name)).length + mcpToolCount;
+      const toolCount = caps.filter((c) => f.capabilities.includes(c.id)).reduce((n, c) => n + c.tools.length, 0) + extraTools.filter((tool) => !f.denyTools.includes(tool.name)).length + mcpToolCount;
       const idErr = f.id && !ID_RE.test(f.id) ? t('editor.idError') : '';
       const ready = ID_RE.test(f.id) && f.name.trim() && f.description.trim() && f.summary.trim() && f.usage.trim() && f.systemPrompt.trim();
       const onName = (v) => {
@@ -478,114 +803,262 @@ window.__ModuleLoader__.load({
         if (!idTouched) patch.id = v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/^[^a-z]+/, '').slice(0, 40);
         set(patch);
       };
-      const applyTemplate = (t) => { setIdTouched(false); setF((p) => ({ ...p, name: p.name || t.name, id: p.id || t.id, description: p.description || t.description, systemPrompt: t.prompt, summary: p.summary || t.summary, usage: p.usage || t.usage, capabilities: t.caps.filter((c) => caps.some((x) => x.id === c && x.available)) })); };
+      const applyTemplate = (tpl) => { setIdTouched(false); setF((p) => ({ ...p, name: p.name || tpl.name, id: p.id || tpl.id, description: p.description || tpl.description, systemPrompt: tpl.prompt, summary: p.summary || tpl.summary, usage: p.usage || tpl.usage, capabilities: tpl.caps.filter((c) => caps.some((x) => x.id === c && x.available)) })); };
 
-      return h(React.Fragment, null,
-        h('div', { className: 'am-veil', onClick: saving ? undefined : onClose }),
-        h('div', { className: 'am-drawer', role: 'dialog', 'aria-label': mode === 'edit' ? t('editor.titleEdit') : t('editor.titleCreate') },
-          h('div', { className: 'am-dhead' }, h('h2', null, mode === 'edit' ? t('editor.titleEdit') : t('editor.titleCreate')),
-            h('button', { className: 'am-btn ghost sm', onClick: onClose, disabled: saving, 'aria-label': t('editor.close') }, Icon(I.close))),
-          h('div', { className: 'am-dbody' },
-            mode === 'create' ? h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, t('editor.fromTemplate'), h('small', null, t('editor.fromTemplateHint'))),
-              h('div', { className: 'am-tpl' }, TEMPLATES.map((tpl) => h('button', { key: tpl.id, className: 'am-pill', onClick: () => applyTemplate(tpl) }, t('tpl.' + tpl.id))))) : null,
-            h('div', { className: 'am-row2' },
-              h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, t('editor.name')),
-                h('input', { className: 'am-input', value: f.name, maxLength: 40, placeholder: t('editor.namePlaceholder'), onChange: (e) => onName(e.target.value), autoFocus: mode === 'create' })),
-              h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, t('editor.id'), h('small', null, mode === 'edit' ? t('editor.idLocked') : t('editor.idFixed'))),
+      // What the save is missing, grouped by the section it lives in so a person
+      // can jump there instead of scrolling a long form looking for a red hint.
+      const missing = [];
+      if (!ID_RE.test(f.id)) missing.push(['basics', t('editor.id')]);
+      if (!f.name.trim()) missing.push(['basics', t('editor.name')]);
+      if (!f.description.trim()) missing.push(['basics', t('editor.whenToUse')]);
+      if (!f.summary.trim()) missing.push(['basics', t('editor.summary')]);
+      if (!f.usage.trim()) missing.push(['basics', t('editor.usage')]);
+      if (!f.systemPrompt.trim()) missing.push(['prompt', t('editor.prompt')]);
+      const warnings = [];
+      if (f.team.length && !hasDelegation) warnings.push(t('editor.teamNeedCap'));
+      if (f.skills.length && !hasSkillsCap) warnings.push(t('editor.skillsNeedCap'));
+      if (idErr) warnings.push(idErr);
+      const issueAt = (id) => missing.some(([section]) => section === id)
+        || (id === 'team' && f.team.length > 0 && !hasDelegation)
+        || (id === 'skills' && f.skills.length > 0 && !hasSkillsCap);
+
+      const bundleState = status && status.bundle ? status.bundle : null;
+      const statusChips = [];
+      if (mode === 'edit') {
+        if (bundleState === null || bundleState.present === null) statusChips.push([null, t('editor.statusUnknown')]);
+        else if (!bundleState.present) statusChips.push(['warn', t('editor.statusMissing')]);
+        else {
+          statusChips.push(['ok', t('editor.statusPresent')]);
+          statusChips.push([bundleState.enabled ? 'ok' : 'warn', t(bundleState.enabled ? 'editor.statusLive' : 'editor.statusOff')]);
+        }
+        if (status && status.broken) statusChips.push(['error', t('editor.statusBroken')]);
+      }
+
+      const NAV = [
+        ['overview', t('editor.navOverview')],
+        ['basics', t('editor.navBasics')],
+        ['prompt', t('editor.navPrompt')],
+        ['caps', t('editor.navCaps')],
+        ['tools', t('editor.navTools')],
+        ['skills', t('editor.navSkills')],
+        ['team', t('editor.navTeam')],
+      ];
+
+      const openPreview = async () => {
+        setPreview({ loading: true, error: '', rows: null });
+        try {
+          const answer = await call('preview', { agent: { ...f, skills: hasSkillsCap ? f.skills : [], team: hasDelegation ? f.team : [] } });
+          setPreview({ loading: false, error: (answer.errors || []).join('；'), rows: answer.rows || [] });
+        } catch (e) {
+          setPreview({ loading: false, error: String(e.message || e), rows: null });
+        }
+      };
+
+      const field = (label, node, extra) => h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, label, extra || null), node);
+
+      const sectionBody = {
+        overview: h(React.Fragment, null,
+          h('div', { className: 'am-editor-hero' },
+            h('div', { className: 'am-avatar', style: { '--h': hueOf(f.id || 'agent') } }, (f.name || f.id || 'A').trim().slice(0, 1).toUpperCase()),
+            h('div', { style: { minWidth: 0 } },
+              h('div', { className: 'am-name' }, f.name || t('editor.titleCreate')),
+              h('div', { className: 'am-idline' }, f.id || '—'))),
+          h('div', { className: 'am-chips', style: { marginTop: 12 } },
+            statusChips.map(([kind, label], i) => h(Chip, { key: i, kind: kind || undefined }, label))),
+          h('div', { className: 'am-editor-cards' },
+            h('div', { className: 'am-editor-stat' }, h('b', null, toolCount), h('span', null, t('editor.sumTools'))),
+            h('div', { className: 'am-editor-stat' }, h('b', null, f.capabilities.length), h('span', null, t('editor.sumCaps'))),
+            h('div', { className: 'am-editor-stat' }, h('b', null, hasSkillsCap ? f.skills.length : 0), h('span', null, t('editor.sumSkills'))),
+            h('div', { className: 'am-editor-stat' }, h('b', null, hasDelegation ? f.team.length : 0), h('span', null, t('editor.navTeam')))),
+          f.description ? h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, t('editor.whenToUse')), h('p', { className: 'am-hint' }, f.description)) : null,
+          f.summary ? h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, t('editor.summary')), h('p', { className: 'am-hint' }, f.summary)) : null,
+          f.systemPrompt ? h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, t('editor.prompt'), h('small', null, t('editor.promptCount', { n: f.systemPrompt.length }))), h('p', { className: 'am-hint', style: { maxHeight: 130, overflow: 'auto', whiteSpace: 'pre-wrap' } }, f.systemPrompt.slice(0, 600) + (f.systemPrompt.length > 600 ? ' …' : ''))) : null),
+
+        basics: h(React.Fragment, null,
+          mode === 'create' ? h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, t('editor.fromTemplate'), h('small', null, t('editor.fromTemplateHint'))),
+            h('div', { className: 'am-tpl' }, TEMPLATES.map((tpl) => h('button', { key: tpl.id, className: 'am-pill', onClick: () => applyTemplate(tpl) }, t('tpl.' + tpl.id))))) : null,
+          h('div', { className: 'am-row2' },
+            field(t('editor.name'), h('input', { className: 'am-input', value: f.name, maxLength: 40, placeholder: t('editor.namePlaceholder'), onChange: (e) => onName(e.target.value), autoFocus: mode === 'create' })),
+            field(h(React.Fragment, null, t('editor.id'), ' ', h('small', null, mode === 'edit' ? t('editor.idLocked') : t('editor.idFixed'))),
+              h(React.Fragment, null,
                 h('input', { className: 'am-input', value: f.id, disabled: mode === 'edit', placeholder: 'code-reviewer', onChange: (e) => { setIdTouched(true); set({ id: e.target.value.toLowerCase() }); } }),
-                idErr ? h('div', { className: 'am-hint err' }, idErr) : null)),
-            h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, t('editor.whenToUse'), h('small', null, f.description.length + '/300')),
-              h('input', { className: 'am-input', value: f.description, maxLength: 300, placeholder: t('editor.whenToUsePlaceholder'), onChange: (e) => set({ description: e.target.value }) })),
-            h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, t('editor.summary'), h('small', null, f.summary.length + '/600')),
-              h('textarea', { className: 'am-area', style: { minHeight: 84, fontFamily: 'inherit', fontSize: 13 }, value: f.summary, maxLength: 600, placeholder: t('editor.summaryPlaceholder'), onChange: (e) => set({ summary: e.target.value }) })),
-            h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, t('editor.usage'), h('small', null, f.usage.length + '/1200')),
-              h('textarea', { className: 'am-area', style: { minHeight: 84, fontFamily: 'inherit', fontSize: 13 }, value: f.usage, maxLength: 1200, placeholder: t('editor.usagePlaceholder'), onChange: (e) => set({ usage: e.target.value }) })),
-            h('div', { className: 'am-field' }, h('label', { className: 'am-label' }, t('editor.prompt'), h('small', null, t('editor.promptCount', { n: f.systemPrompt.length }))),
-              h('textarea', { className: 'am-area', value: f.systemPrompt, placeholder: t('editor.promptPlaceholder'), onChange: (e) => set({ systemPrompt: e.target.value }) }),
-              h('div', { className: 'am-hint' }, t('editor.promptHint'))),
-            h('div', { className: 'am-field', style: { marginTop: 24 } }, h('div', { className: 'am-label' }, t('editor.caps'), h('small', null, t('editor.capsHint')))),
-            groups.map(([group, list]) => h('div', { key: group },
-              h('div', { className: 'am-group' }, group),
-              h('div', { className: 'am-caps' }, list.map((c) => {
-                const on = f.capabilities.includes(c.id);
-                const risk = RISK[c.risk];
-                return h('button', { key: c.id, type: 'button', className: 'am-cap' + (on ? ' on' : ''), disabled: !c.available, onClick: () => toggle('capabilities', c.id), 'aria-pressed': on },
-                  h('div', { className: 'am-cap-top' }, h('b', null, c.label), h('span', { className: 'am-sw' })),
-                  h('p', null, c.available ? c.description : t('editor.capUnavailable')),
-                  h('div', { className: 'am-chips' }, risk ? h(Chip, { kind: risk[1] }, t(risk[0])) : null, h('span', { className: 'am-mini' }, c.tools.slice(0, 3).join(' · ') + (c.tools.length > 3 ? ' …' : ''))));
-              })))),
-            h('div', { className: 'am-field', style: { marginTop: 24 } },
-              h('div', { className: 'am-label' }, t('editor.otherTools'), h('small', null, extraTools.length ? t('editor.otherToolsHint') : '')),
-              extraTools.length > 6 ? h('input', { className: 'am-input', value: toolQuery, placeholder: t('editor.searchTools'), onChange: (e) => setToolQuery(e.target.value) }) : null,
-              extraTools.length ? h('div', { className: 'am-list' }, visibleTools.map((tool) => {
-                const on = !f.denyTools.includes(tool.name);
-                return h('button', { key: tool.name, type: 'button', className: 'am-tool' + (on ? ' on' : ''), onClick: () => toggle('denyTools', tool.name), 'aria-pressed': on },
-                  h('div', { className: 'tx' }, h('b', null, tool.name), h('span', null, tool.description || t('editor.noDescription'))), h('span', { className: 'am-sw' }));
-              }), !visibleTools.length ? h('div', { className: 'am-hint', style: { padding: 12 } }, t('editor.noToolMatch')) : null)
-                : h('div', { className: 'am-hint' }, t('editor.noExtraTools'))),
-            h('div', { className: 'am-field', style: { marginTop: 24 } },
-              h('div', { className: 'am-label' }, t('editor.mcp'), h('small', null, mcpServers.length ? t('editor.mcpHint') : '')),
-              mcpServers.length ? h('div', { className: 'am-list' }, mcpServers.map((s) => {
-                const on = !deniedMcp.includes(s.name);
-                return h('button', { key: s.name, type: 'button', className: 'am-tool' + (on ? ' on' : ''), onClick: () => toggle('denyMcp', s.name), 'aria-pressed': on },
-                  h('div', { className: 'tx' }, h('b', null, s.name), h('span', null, t('editor.mcpToolCount', { n: s.toolCount }))), h('span', { className: 'am-sw' }));
-              })) : h('div', { className: 'am-hint' }, t('editor.noMcp'))),
-            h('div', { className: 'am-field', style: { marginTop: 24 } },
-              h('div', { className: 'am-label' }, t('editor.skills'), h('small', null, t('editor.skillsInstalled', { n: meta.skills.length }))),
-              !hasSkillsCap ? h('div', { className: 'am-hint' }, t('editor.skillsNeedCap')) : null,
-              meta.skills.length > 8 ? h('input', { className: 'am-input', value: skillQuery, placeholder: t('editor.searchSkills'), disabled: !hasSkillsCap, onChange: (e) => setSkillQuery(e.target.value) }) : null,
-              meta.skills.length ? h('div', { className: 'am-pick', style: { opacity: hasSkillsCap ? 1 : 0.5 } }, visibleSkills.map((s) =>
-                h('button', { key: s.name, type: 'button', title: s.description, disabled: !hasSkillsCap, className: 'am-pill' + (f.skills.includes(s.name) ? ' on' : ''), onClick: () => toggle('skills', s.name) }, s.name)))
-                : h('div', { className: 'am-hint' }, t('editor.noSkills'))),
-            h('div', { className: 'am-field', style: { marginTop: 24 } },
-              h('div', { className: 'am-label' }, t('editor.team'), h('small', null, hasDelegation ? t('editor.teamCount', { n: f.team.length }) : '')),
-              !hasDelegation ? h('div', { className: 'am-hint' }, t('editor.teamNeedCap')) : null,
-              hasDelegation && !candidates.length ? h('div', { className: 'am-hint' }, t('editor.noTeamCandidates')) : null,
-              hasDelegation && candidates.length ? h('div', { className: 'am-pick' }, candidates.map((p) =>
-                h('button', { key: p.id, type: 'button', title: p.description, className: 'am-pill' + (f.team.includes(p.id) ? ' on' : ''), onClick: () => toggle('team', p.id) }, p.name || p.id))) : null),
-            h('div', { className: 'am-sum' }, h('span', null, t('editor.sumTools'), h('b', null, toolCount)), h('span', null, t('editor.sumCaps'), h('b', null, f.capabilities.length)), h('span', null, t('editor.sumSkills'), h('b', null, hasSkillsCap ? f.skills.length : 0)), h('span', null, t('editor.sumDenied'), h('b', null, f.denyTools.length + deniedMcp.length)))),
-          h('div', { className: 'am-dfoot' },
+                idErr ? h('div', { className: 'am-hint err' }, idErr) : null))),
+          field(t('editor.whenToUse'), h('input', { className: 'am-input', value: f.description, maxLength: 300, placeholder: t('editor.whenToUsePlaceholder'), onChange: (e) => set({ description: e.target.value }) }), h('small', null, f.description.length + '/300')),
+          field(t('editor.summary'), h('textarea', { className: 'am-area', style: { minHeight: 110, fontFamily: 'inherit', fontSize: 13 }, value: f.summary, maxLength: 600, placeholder: t('editor.summaryPlaceholder'), onChange: (e) => set({ summary: e.target.value }) }), h('small', null, f.summary.length + '/600')),
+          field(t('editor.usage'), h('textarea', { className: 'am-area', style: { minHeight: 110, fontFamily: 'inherit', fontSize: 13 }, value: f.usage, maxLength: 1200, placeholder: t('editor.usagePlaceholder'), onChange: (e) => set({ usage: e.target.value }) }), h('small', null, f.usage.length + '/1200'))),
+
+        prompt: h(React.Fragment, null,
+          field(h(React.Fragment, null, t('editor.prompt'), ' ', h('small', null, t('editor.promptCount', { n: f.systemPrompt.length }))),
+            h(React.Fragment, null,
+              h('textarea', { className: 'am-area am-area-tall', value: f.systemPrompt, placeholder: t('editor.promptPlaceholder'), onChange: (e) => set({ systemPrompt: e.target.value }) }),
+              h('div', { className: 'am-hint' }, t('editor.promptHint'))))),
+
+        caps: h(React.Fragment, null,
+          h('p', { className: 'am-hint', style: { marginTop: 0 } }, t('editor.capsHint')),
+          groups.map(([group, list]) => h('div', { key: group },
+            h('div', { className: 'am-group' }, group),
+            h('div', { className: 'am-caps' }, list.map((c) => {
+              const on = f.capabilities.includes(c.id);
+              const risk = RISK[c.risk];
+              return h('button', { key: c.id, type: 'button', className: 'am-cap' + (on ? ' on' : ''), disabled: !c.available, onClick: () => toggle('capabilities', c.id), 'aria-pressed': on },
+                h('div', { className: 'am-cap-top' }, h('b', null, c.label), h('span', { className: 'am-sw' })),
+                h('p', null, c.available ? c.description : t('editor.capUnavailable')),
+                h('div', { className: 'am-chips' }, risk ? h(Chip, { kind: risk[1] }, t(risk[0])) : null, h('span', { className: 'am-mini' }, c.tools.slice(0, 3).join(' · ') + (c.tools.length > 3 ? ' …' : ''))));
+            }))))),
+
+        tools: h(React.Fragment, null,
+          h('div', { className: 'am-field', style: { marginTop: 0 } },
+            h('div', { className: 'am-label' }, t('editor.otherTools'), h('small', null, extraTools.length ? t('editor.otherToolsHint') : '')),
+            extraTools.length > 6 ? h('input', { className: 'am-input', value: toolQuery, placeholder: t('editor.searchTools'), onChange: (e) => setToolQuery(e.target.value) }) : null,
+            extraTools.length ? h('div', { className: 'am-list am-list-tall' }, visibleTools.map((tool) => {
+              const on = !f.denyTools.includes(tool.name);
+              return h('button', { key: tool.name, type: 'button', className: 'am-tool' + (on ? ' on' : ''), onClick: () => toggle('denyTools', tool.name), 'aria-pressed': on },
+                h('div', { className: 'tx' }, h('b', null, tool.name), h('span', null, tool.description || t('editor.noDescription'))), h('span', { className: 'am-sw' }));
+            }), !visibleTools.length ? h('div', { className: 'am-hint', style: { padding: 12 } }, t('editor.noToolMatch')) : null)
+              : h('div', { className: 'am-hint' }, t('editor.noExtraTools'))),
+          h('div', { className: 'am-field', style: { marginTop: 24 } },
+            h('div', { className: 'am-label' }, t('editor.mcp'), h('small', null, mcpServers.length ? t('editor.mcpHint') : '')),
+            mcpServers.length ? h('div', { className: 'am-list am-list-tall' }, mcpServers.map((s) => {
+              const on = !deniedMcp.includes(s.name);
+              return h('button', { key: s.name, type: 'button', className: 'am-tool' + (on ? ' on' : ''), onClick: () => toggle('denyMcp', s.name), 'aria-pressed': on },
+                h('div', { className: 'tx' }, h('b', null, s.name), h('span', null, t('editor.mcpToolCount', { n: s.toolCount }))), h('span', { className: 'am-sw' }));
+            })) : h('div', { className: 'am-hint' }, t('editor.noMcp')))),
+
+        skills: h(React.Fragment, null,
+          h('div', { className: 'am-label' }, t('editor.skills'), h('small', null, t('editor.skillsInstalled', { n: meta.skills.length }))),
+          !hasSkillsCap ? h('div', { className: 'am-hint err' }, t('editor.skillsNeedCap')) : null,
+          meta.skills.length > 8 ? h('input', { className: 'am-input', value: skillQuery, placeholder: t('editor.searchSkills'), disabled: !hasSkillsCap, onChange: (e) => setSkillQuery(e.target.value) }) : null,
+          meta.skills.length ? h('div', { className: 'am-pick', style: { marginTop: 12, opacity: hasSkillsCap ? 1 : 0.5 } }, visibleSkills.map((s) =>
+            h('button', { key: s.name, type: 'button', title: s.description, disabled: !hasSkillsCap, className: 'am-pill' + (f.skills.includes(s.name) ? ' on' : ''), onClick: () => toggle('skills', s.name) }, s.name)))
+            : h('div', { className: 'am-hint' }, t('editor.noSkills'))),
+
+        team: h(React.Fragment, null,
+          h('div', { className: 'am-label' }, t('editor.team'), h('small', null, hasDelegation ? t('editor.teamCount', { n: f.team.length }) : '')),
+          !hasDelegation ? h('div', { className: 'am-hint err' }, t('editor.teamNeedCap')) : null,
+          hasDelegation && !candidates.length ? h('div', { className: 'am-hint' }, t('editor.noTeamCandidates')) : null,
+          hasDelegation && candidates.length ? h('div', { className: 'am-pick', style: { marginTop: 12 } }, candidates.map((p) =>
+            h('button', { key: p.id, type: 'button', title: p.description, className: 'am-pill' + (f.team.includes(p.id) ? ' on' : ''), onClick: () => toggle('team', p.id) }, p.name || p.id))) : null),
+      };
+
+      const summary = h('aside', { className: 'am-editor-side' },
+        h('div', { className: 'am-side-block' },
+          h('div', { className: 'am-side-title' }, t('editor.statusTitle')),
+          h('div', { className: 'am-chips' }, statusChips.length
+            ? statusChips.map(([kind, label], i) => h(Chip, { key: i, kind: kind || undefined }, label))
+            : h(Chip, null, t('editor.titleCreate'))),
+          mode === 'edit' && status && status.installed && onUse
+            ? h('button', { className: 'am-btn sm', style: { marginTop: 10 }, onClick: () => onUse(f.id) }, t('card.use')) : null),
+        h('div', { className: 'am-side-block' },
+          h('div', { className: 'am-side-title' }, t('editor.summaryTitle')),
+          h('div', { className: 'am-side-stats' },
+            h('div', null, h('b', null, toolCount), h('span', null, t('editor.sumTools'))),
+            h('div', null, h('b', null, f.capabilities.length), h('span', null, t('editor.sumCaps'))),
+            h('div', null, h('b', null, hasSkillsCap ? f.skills.length : 0), h('span', null, t('editor.sumSkills'))),
+            h('div', null, h('b', null, f.denyTools.length + deniedMcp.length), h('span', null, t('editor.sumDenied'))),
+            h('div', null, h('b', null, f.systemPrompt.length), h('span', null, t('editor.prompt'))))),
+        h('div', { className: 'am-side-block' },
+          h('div', { className: 'am-side-title' }, missing.length ? t('editor.required', { n: missing.length }) : t('editor.requiredAll')),
+          missing.length ? h('div', { className: 'am-side-list' }, missing.map(([section, label], i) =>
+            h('button', { key: i, className: 'am-side-item warn', onClick: () => setNav(section) }, label))) : null,
+          warnings.map((text, i) => h('div', { key: 'w' + i, className: 'am-side-item' }, text))),
+        h('button', { className: 'am-btn sm', style: { marginTop: 10 }, onClick: openPreview }, t('editor.preview')));
+
+      const title = mode === 'edit' ? t('editor.titleEdit') : t('editor.titleCreate');
+      return h(React.Fragment, null,
+        h('div', { className: 'am-veil am-screen-veil' }),
+        h('div', { className: 'am-editor', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+          h('div', { className: 'am-editor-head' },
+            h('div', null,
+              h('h2', { style: { margin: 0, fontSize: 17, fontWeight: 650 } }, title),
+              h('div', { className: 'am-idline' }, f.name || f.id || '—')),
+            h('button', { className: 'am-btn ghost sm', onClick: onClose, disabled: saving, 'aria-label': t('editor.close') }, Icon(I.close))),
+          h('div', { className: 'am-editor-body' },
+            h('nav', { className: 'am-editor-nav', 'aria-label': title }, NAV.map(([id, label]) =>
+              h('button', { key: id, className: 'am-nav-item' + (nav === id ? ' on' : ''), onClick: () => setNav(id) },
+                h('span', null, label),
+                issueAt(id) ? h('i', { className: 'am-nav-dot' }) : null))),
+            h('div', { className: 'am-editor-form' }, sectionBody[nav] || null),
+            summary),
+          h('div', { className: 'am-editor-foot' },
             h('div', { className: 'grow' }, error ? h('span', { style: { color: 'var(--dsw-alias-state-error-primary)' } }, error) : t('editor.footNote')),
             h('button', { className: 'am-btn', onClick: onClose, disabled: saving }, t('editor.cancel')),
-            h('button', { className: 'am-btn primary', disabled: !ready || saving, onClick: () => onSave({ ...f, skills: hasSkillsCap ? f.skills : [], team: hasDelegation ? f.team : [] }) }, saving ? h(React.Fragment, null, h('span', { className: 'am-spin' }), t('editor.installing')) : (mode === 'edit' ? t('editor.saveReinstall') : t('editor.createInstall'))))));
+            h('button', { className: 'am-btn primary', disabled: !ready || saving, onClick: () => onSave({ ...f, skills: hasSkillsCap ? f.skills : [], team: hasDelegation ? f.team : [] }) },
+              saving ? h(React.Fragment, null, h('span', { className: 'am-spin' }), t('editor.installing')) : (mode === 'edit' ? t('editor.saveReinstall') : t('editor.createInstall'))))),
+        preview === null ? null : h('div', { className: 'am-preview-veil', onClick: () => setPreview(null) },
+          h('div', { className: 'am-preview', onClick: (e) => e.stopPropagation() },
+            h('div', { className: 'am-editor-head' },
+              h('h2', { style: { margin: 0, fontSize: 16, fontWeight: 650 } }, t('editor.previewTitle')),
+              h('button', { className: 'am-btn ghost sm', onClick: () => setPreview(null), 'aria-label': t('editor.close') }, Icon(I.close))),
+            h('div', { className: 'am-preview-body' },
+              preview.loading ? h('div', { className: 'am-hint' }, t('editor.installing'))
+                : preview.error ? h('div', { className: 'am-hint err' }, preview.error)
+                  : h('pre', { className: 'am-preview-code' }, JSON.stringify(preview.rows, null, 2))))));
     }
 
-    // Read-only detail drawer for both my agents and shipped presets.
-    function Viewer({ data, meta, onClose }) {
+
+    // One read-only detail layout for both kinds of Agent. A custom Agent fills
+    // every section; a system preset fills what its declaration exposes and marks
+    // the rest as not declared, so the two pages read the same rather than being
+    // two different products.
+    function Viewer({ data, meta, onClose, onUse }) {
       const t = useT();
-      const managed = Boolean(data.managed);
-      const spec = managed ? data.spec : null;
-      const title = managed ? spec.name : data.preset.name;
-      const desc = managed ? spec.description : data.preset.description;
-      const id = managed ? spec.id : data.preset.id;
-      const capIds = managed ? spec.capabilities : (data.capabilities || []);
+      const model = detailModel(data, meta);
+      if (!model) return null;
+      const declared = model.kind === 'managed';
       const labelOf = (c) => (meta.capabilities.find((x) => x.id === c) || {}).label || c;
-      const section = (label, body) => (body ? h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, label), body) : null);
-      const text = (s) => h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: 1.65 } }, s);
+      const section = (label, body) => h('div', { className: 'am-field' }, h('div', { className: 'am-label' }, label), body);
+      const text = (value) => h('div', { className: 'am-view-text' }, value);
       const chips = (list, kind) => h('div', { className: 'am-chips' }, list.map((l) => h(Chip, { key: l, kind }, l)));
+      const notDeclared = h('div', { className: 'am-hint' }, t('viewer.notDeclared'));
+      const statusChips = [];
+      if (model.broken) statusChips.push(['error', t('viewer.broken')]);
+      if (model.kind === 'system') {
+        statusChips.push([model.installed ? 'ok' : 'warn', t(model.installed ? 'card.active' : 'card.inactive')]);
+      } else {
+        const present = !model.bundle || model.bundle.present !== false;
+        statusChips.push([present ? 'ok' : 'warn', t(present ? 'viewer.installed' : 'viewer.notInstalled')]);
+        if (model.bundle && model.bundle.present && model.bundle.enabled === false) statusChips.push(['warn', t('viewer.disabled')]);
+      }
+
       return h(React.Fragment, null,
         h('div', { className: 'am-veil', onClick: onClose }),
-        h('div', { className: 'am-drawer', role: 'dialog', 'aria-label': title },
-          h('div', { className: 'am-dhead' }, h('h2', null, title),
+        h('div', { className: 'am-drawer am-drawer-wide', role: 'dialog', 'aria-label': model.name },
+          h('div', { className: 'am-dhead' },
+            h('div', { style: { minWidth: 0 } },
+              h('h2', null, model.name),
+              h('div', { className: 'am-idline' }, model.id)),
+            h('div', { className: 'am-chips' }, h(Chip, { kind: declared ? 'accent' : null }, t(declared ? 'viewer.kindManaged' : 'viewer.kindSystem'))),
             h('button', { className: 'am-btn ghost sm', onClick: onClose, 'aria-label': t('viewer.close') }, Icon(I.close))),
           h('div', { className: 'am-dbody' },
-            h('div', { className: 'am-idline', style: { marginTop: 14 } }, id),
-            section(t('viewer.description'), desc ? text(desc) : h('span', { className: 'am-hint' }, t('viewer.noDescription'))),
-            managed ? section(t('viewer.summary'), text(spec.summary || t('viewer.empty'))) : null,
-            managed ? section(t('viewer.usage'), text(spec.usage || t('viewer.empty'))) : null,
-            capIds.length ? section(managed ? t('viewer.capsGranted') : t('viewer.capsDetected'), chips(capIds.map(labelOf), 'accent')) : null,
-            managed && spec.denyTools.length ? section(t('viewer.deniedTools'), chips(spec.denyTools, 'warn')) : null,
-            managed && spec.skills.length ? section(t('viewer.skills'), chips(spec.skills)) : null,
-            managed && (spec.team || []).length ? section(t('viewer.team'), chips(spec.team, 'accent')) : null,
-            managed ? section(t('viewer.prompt'), h('textarea', { className: 'am-area', readOnly: true, value: spec.systemPrompt })) : null,
-            !managed ? section(t('viewer.yaml'), data.yaml
-              ? h('textarea', { className: 'am-area', readOnly: true, value: data.yaml, style: { minHeight: 360 } })
-              : h('div', { className: 'am-hint err' }, data.readError || t('viewer.yamlError'))) : null),
-          h('div', { className: 'am-dfoot' }, h('div', { className: 'grow' }, managed ? '' : t('viewer.systemNote')),
-            h('button', { className: 'am-btn primary', onClick: onClose }, t('viewer.close')))));
+            h('div', { className: 'am-chips', style: { marginTop: 14 } },
+              statusChips.map(([kind, label], i) => h(Chip, { key: i, kind: kind || undefined }, label))),
+            section(t('viewer.description'), model.description ? text(model.description) : h('span', { className: 'am-hint' }, t('viewer.noDescription'))),
+            section(t('viewer.summary'), declared ? text(model.summary || t('viewer.empty')) : notDeclared),
+            section(t('viewer.usage'), declared ? text(model.usage || t('viewer.empty')) : notDeclared),
+            section(t(declared ? 'viewer.capsGranted' : 'viewer.capsDetected'),
+              model.capabilities.length ? chips(model.capabilities.map(labelOf), 'accent') : notDeclared),
+            declared && model.deniedTools.length ? section(t('viewer.deniedTools'), chips(model.deniedTools, 'warn')) : null,
+            declared && model.skills.length ? section(t('viewer.skills'), chips(model.skills)) : null,
+            declared && model.team.length ? section(t('viewer.team'), chips(model.team, 'accent')) : null,
+            section(t('viewer.prompt'),
+              model.prompt
+                ? h(React.Fragment, null,
+                  model.promptExpression ? h('div', { className: 'am-hint', style: { marginBottom: 6 } }, t('viewer.promptExpr')) : null,
+                  h('textarea', { className: 'am-area', readOnly: true, value: model.prompt }))
+                : notDeclared),
+            !declared && model.modules.length ? section(t('viewer.modules'), chips(model.modules)) : null,
+            !declared ? h('details', { className: 'am-raw' },
+              h('summary', null, t('viewer.rawConfig')),
+              model.raw
+                ? h('pre', { className: 'am-raw-code' }, model.raw)
+                : h('div', { className: 'am-hint err' }, model.readError || t('viewer.yamlError'))) : null),
+          h('div', { className: 'am-dfoot' },
+            h('div', { className: 'grow' }, declared ? '' : t('viewer.systemNote')),
+            model.useId && onUse ? h('button', { className: 'am-btn primary', onClick: () => { onUse(model.useId); onClose(); } }, t('viewer.use')) : null,
+            h('button', { className: declared ? 'am-btn primary' : 'am-btn', onClick: onClose }, t('viewer.close')))));
     }
 
-    function AgentManager() {
+    function AgentManager({ workspace }) {
       const t = useT();
       const [meta, setMeta] = useState(null);
       const [agents, setAgents] = useState(null);
@@ -621,7 +1094,30 @@ window.__ModuleLoader__.load({
         } catch (e) { setSaveError(String(e.message || e)); } finally { setSaving(false); }
       };
       const remove = async (id) => {
-        try { await call('delete', { id }); notify(t('toast.deleted'), 'ok'); await load(); } catch (e) { notify(String(e.message || e), 'error'); }
+        try {
+          const r = await call('delete', { id });
+          notify(r.pruned ? t('toast.pruned') : t('toast.deleted'), 'ok');
+          await load();
+        } catch (e) { notify(String(e.message || e), 'error'); }
+      };
+
+      /** Reinstall an Agent whose profile bundle record was lost to a profile restore. */
+      const repair = async (spec) => {
+        try {
+          await call('save', { agent: spec, create: false });
+          notify(t('toast.repaired', { name: spec.name }), 'ok');
+          await load();
+        } catch (e) { notify(String(e.message || e), 'error'); }
+      };
+
+      /** Start a new task under this preset; DSH's own new-session picker does the same. */
+      const use = (id) => {
+        const ui = workspace && workspace();
+        if (!ui || typeof ui.startSession !== 'function') { notify(t('toast.noWorkspace'), 'error'); return; }
+        try {
+          ui.startSession(undefined, { clearPreviousDraft: false, agentPreset: id });
+          notify(t('toast.starting'), 'ok');
+        } catch (e) { notify(String(e.message || e), 'error'); }
       };
 
       const viewSystem = async (id) => {
@@ -654,27 +1150,37 @@ window.__ModuleLoader__.load({
           !loading && !error && meta && agents ? h(React.Fragment, null,
             scope !== 'sys' ? h(React.Fragment, null,
               h('div', { className: 'am-section' }, t('app.sectionMine', { n: mine.length })),
-              mine.length ? h('div', { className: 'am-grid' }, mine.map((a) => h(AgentCard, { key: a.spec.id, item: a, meta, onEdit: (spec) => { setSaveError(''); setEditor({ mode: 'edit', initial: { ...emptyForm(), ...spec } }); }, onDelete: remove, onView: viewSystem })))
+              mine.length ? h('div', { className: 'am-grid' }, mine.map((a) => h(AgentCard, { key: a.spec.id, item: a, meta, onUse: use, onRepair: repair, onEdit: (spec) => { setSaveError(''); setEditor({ mode: 'edit', initial: { ...emptyForm(), ...spec } }); }, onDelete: remove, onView: viewSystem })))
                 : h('div', { className: 'am-empty' }, h('b', null, query ? t('app.emptyNoMatch') : t('app.emptyNone')),
                   h('span', null, query ? t('app.emptyNoMatchHint') : t('app.emptyNoneHint')),
                   !query ? h('button', { className: 'am-btn primary', onClick: () => { setSaveError(''); setEditor({ mode: 'create', initial: emptyForm() }); } }, Icon(I.plus, 15), t('app.newAgent')) : null)) : null,
             scope !== 'mine' && sys.length ? h(React.Fragment, null,
               h('div', { className: 'am-section' }, t('app.sectionSys', { n: sys.length })),
-              h('div', { className: 'am-grid' }, sys.map((a) => h(AgentCard, { key: a.id, item: a, meta, onView: viewSystem })))) : null,
+              h('div', { className: 'am-grid' }, sys.map((a) => h(AgentCard, { key: a.id, item: a, meta, onUse: use, onView: viewSystem })))) : null,
             !total ? null : h('div', { style: { height: 8 } })) : null)),
-        editor && meta ? h(Editor, { key: editor.mode + (editor.initial.id || 'new'), mode: editor.mode, initial: editor.initial, meta, peers: merged, saving, error: saveError, onClose: () => setEditor(null), onSave: save }) : null,
-        viewingSystem && meta ? h(Viewer, { data: viewingSystem, meta, onClose: () => setViewingSystem(null) }) : null,
+        editor && meta ? h(Editor, {
+          key: editor.mode + (editor.initial.id || 'new'), mode: editor.mode, initial: editor.initial, meta, peers: merged, saving, error: saveError,
+          status: editor.mode === 'edit' && agents ? agents.managed.find((a) => a.spec.id === editor.initial.id) : null,
+          onUse: use, onClose: () => setEditor(null), onSave: save,
+        }) : null,
+        viewingSystem && meta ? h(Viewer, { data: viewingSystem, meta, onUse: use, onClose: () => setViewingSystem(null) }) : null,
         toast ? h('div', { className: 'am-toast', role: 'status' }, h('i', { style: { background: toast.kind === 'error' ? 'var(--dsw-alias-state-error-primary)' : 'var(--dsw-alias-state-success-primary)' } }), toast.text) : null);
     }
 
     return {
+      __internal: { parseEntryYaml, flatRows, capabilitiesOfModules, detailModel },
       inject: ['slots', 'locale'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), 'agent-manager: dictionaries');
         localeApi = ctx.locale;
         t = ctx.locale.bind(NS);
         ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: 'agent-manager', order: 5, label: () => t('app.title') }, PanelIcon));
-        ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'agent-manager' }, AgentManager));
+        ctx.slots.inject('main', () => ctx.slots.register({
+          name: 'main', key: 'agent-manager',
+          // Read lazily: the workspace UI may mount after this panel, and an older
+          // client without it should still render the manager with the button hidden.
+          inject: () => ({ workspace: () => ctx.get('uiWorkspace') }),
+        }, AgentManager));
       },
     };
   },

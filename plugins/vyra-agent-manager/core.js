@@ -215,7 +215,7 @@ export function createManager(ctx) {
       const mods = [...flatModules(c.rows)];
       const available = live ? mods.every((m) => live.has(m)) : true;
       const { rows, ...pub } = c;
-      return { ...pub, available };
+      return { ...pub, modules: mods, available };
     });
     return { capabilities, tools: globalTools(), mcpServers: mcpServers(), skills: await skillList(), platform: process.platform };
   }
@@ -225,10 +225,65 @@ export function createManager(ctx) {
     return JSON.parse(raw);
   }
 
+  /** Which capability ids a module list provides, using the same rows the editor offers. */
+  function capabilitiesFromModules(modules) {
+    if (!modules || modules.length === 0) return [];
+    const present = new Set(modules);
+    return capabilityDefs(environment(ctx))
+      .filter((def) => [...flatModules(def.rows)].every((module) => present.has(module)))
+      .map((def) => def.id);
+  }
+
+  /**
+   * One preset's bundle as the plugin manager sees it. `undefined` means the
+   * list itself was unreadable (a decision cannot be made), `null` means the
+   * name is not in the profile at all — the orphaned-record case, where there
+   * is nothing to uninstall and only the manager's own files remain.
+   */
+  async function bundleNamed(pm, name) {
+    try {
+      const list = await pm.listBundles();
+      return (Array.isArray(list) ? list : []).find((b) => b?.name === name) || null;
+    } catch (err) {
+      log('warn', `agent-manager: listBundles failed: ${err?.message || err}`);
+      return undefined;
+    }
+  }
+
+  /** Why the plugin manager refuses to remove this bundle, in words a person can act on. */
+  function removalProblem(bundle) {
+    if (bundle.readOnlyReason === 'management-required') return '该 Agent 包含受保护的插件，不能移除';
+    if (bundle.availability === 'installation' || bundle.optional) return '该 Agent 由客户端安装提供，不能删除';
+    if (bundle.error?.code === 'stop-profile') return '该 Agent 正在运行，重启 DSH 后再删除';
+    return `插件管理器拒绝移除（${bundle.readOnlyReason || bundle.error?.code || 'not-removable'}）`;
+  }
+
+  /** Remove the profile's `@local` link for a preset whose bundle record is gone. */
+  async function pruneStaleLink(id) {
+    const profile = ctx.get('profileContext');
+    const dir = profile?.dir || profile?.profileDir;
+    if (!dir) return;
+    await rm(join(dir, 'node_modules', '@local', `agent-preset-${id}`), { recursive: true, force: true })
+      .catch(() => {});
+  }
+
   async function listAgents() {
     const presets = ctx.get('agentPresets');
     const live = presets ? await presets.list() : [];
     const liveById = new Map(live.map((p) => [p.id, p]));
+    // Bundle status is what deletion and installation actually act on; a preset
+    // the loader knows can still lack a profile dependency (the record was lost
+    // to a profile restore), and the preset directory alone cannot be uninstalled.
+    const pm = ctx.get('pluginManager');
+    let bundles = null;
+    if (pm) {
+      try { bundles = new Map((await pm.listBundles()).map((b) => [b.name, b])); }
+      catch (err) { log('warn', `agent-manager: listBundles unavailable: ${err?.message || err}`); }
+    }
+    let modulesById = new Map();
+    try {
+      for (const composition of presets?.inspectCompositions?.() ?? []) modulesById.set(composition.id, composition.modules ?? []);
+    } catch { /* inventory is a nicety; the YAML view still works */ }
     const managed = [];
     let dirs = [];
     try { dirs = await readdir(presetsRoot(), { withFileTypes: true }); } catch { /* none yet */ }
@@ -237,13 +292,25 @@ export function createManager(ctx) {
       try {
         const spec = await readSpec(d.name);
         const lp = liveById.get(spec.id);
-        managed.push({ spec, installed: Boolean(lp), broken: lp?.broken || null });
+        const bundle = bundles === null ? undefined : bundles.get(bundleName(spec.id));
+        managed.push({
+          spec, installed: Boolean(lp), broken: lp?.broken || null,
+          bundle: bundles === null
+            ? { present: null }
+            : bundle === undefined
+              ? { present: false }
+              : { present: true, enabled: bundle.enabled, removable: bundle.removable, availability: bundle.availability, optional: bundle.optional === true, readOnlyReason: bundle.readOnlyReason || null, error: bundle.error || null },
+        });
       } catch { /* unreadable spec: skip */ }
     }
     const managedIds = new Set(managed.map((m) => m.spec.id));
-    const system = live.filter((p) => !managedIds.has(p.id)).map((p) => ({
-      id: p.id, name: p.name || p.id, description: p.description || '', broken: p.broken || null, shipped: RESERVED_IDS.has(p.id),
-    }));
+    const system = live.filter((p) => !managedIds.has(p.id)).map((p) => {
+      const modules = modulesById.get(p.id) || [];
+      return {
+        id: p.id, name: p.name || p.id, description: p.description || '', broken: p.broken || null, shipped: RESERVED_IDS.has(p.id),
+        modules, capabilities: capabilitiesFromModules(modules),
+      };
+    });
     managed.sort((a, b) => a.spec.name.localeCompare(b.spec.name));
     return { managed, system };
   }
@@ -380,8 +447,16 @@ export function createManager(ctx) {
     const isManaged = managed.some((a) => a.spec.id === spec.id);
     if (create && (isManaged || system.some((p) => p.id === spec.id))) throw new Error(`id「${spec.id}」已存在`);
     if (!create && !isManaged) throw new Error(`Agent「${spec.id}」不是由 Agent 管理器创建的，无法修改`);
-    const dir = await writeBundle(spec);
+    // Decide on the old bundle before writing: a protected copy must not even have
+    // its files overwritten, and a lost record has nothing to uninstall.
+    let existing = null;
     if (isManaged) {
+      existing = await bundleNamed(pm, bundleName(spec.id));
+      if (existing === undefined) throw new Error('无法读取插件列表，暂时不能保存');
+      if (existing !== null && !existing.removable) throw new Error(removalProblem(existing));
+    }
+    const dir = await writeBundle(spec);
+    if (existing !== null) {
       const removed = await pm.removeBundle(bundleName(spec.id));
       if (removed?.application === 'failed') throw new Error(`替换旧版本失败：${describeFailure(removed)}`);
     }
@@ -395,13 +470,26 @@ export function createManager(ctx) {
 
   async function deleteAgent(id) {
     const { managed } = await listAgents();
-    if (!managed.some((a) => a.spec.id === id)) throw new Error(`Agent「${id}」不是由 Agent 管理器创建的，不能删除`);
+    const hit = managed.find((a) => a.spec.id === id);
+    if (!hit) throw new Error(`Agent「${id}」不是由 Agent 管理器创建的，不能删除`);
     const pm = ctx.get('pluginManager');
     if (!pm) throw new Error('pluginManager 服务不可用');
-    const res = await pm.removeBundle(bundleName(id));
-    if (res?.application === 'failed') throw new Error(`卸载失败：${describeFailure(res)}`);
+    const state = hit.bundle || { present: null };
+    if (state.present === null) throw new Error('无法读取插件列表，暂时不能删除');
+    let pruned = false;
+    if (state.present) {
+      if (!state.removable) throw new Error(removalProblem(state));
+      const res = await pm.removeBundle(bundleName(id));
+      if (res?.application === 'failed') throw new Error(`卸载失败：${describeFailure(res)}`);
+    } else {
+      // The profile no longer knows this bundle: there is nothing to uninstall.
+      // Only the manager's own preset directory and a possibly dangling
+      // `@local` link remain, and both belong to this plugin.
+      pruned = true;
+    }
+    await pruneStaleLink(id);
     await rm(pathFor(id), { recursive: true, force: true });
-    return { id };
+    return { id, pruned };
   }
 
   async function getAgent(id) {
@@ -424,11 +512,22 @@ export function createManager(ctx) {
         log('warn', `agent-manager: readDocument(${id}) failed: ${readError}`);
       }
       const defs = capabilityDefs(environment(ctx));
-      const capabilities = yaml ? defs.filter((d) => [...flatModules(d.rows)].every((m) => yaml.includes(m))).map((d) => d.id) : [];
-      return { managed: false, preset: sys, yaml, readError, capabilities };
+      const capabilities = sys.capabilities && sys.capabilities.length
+        ? sys.capabilities
+        : yaml ? defs.filter((d) => [...flatModules(d.rows)].every((m) => yaml.includes(m))).map((d) => d.id) : [];
+      return { managed: false, preset: sys, modules: sys.modules || [], yaml, readError, capabilities };
     }
     throw new Error(`没有找到 Agent「${id}」`);
   }
 
-  return { meta, listAgents, getAgent, saveAgent, deleteAgent };
+  /** The rows a save would install, for the editor's read-only preview. */
+  async function previewAgent(input) {
+    const m = await meta();
+    const { managed, system } = await listAgents();
+    const presetIds = new Set([...managed.map((a) => a.spec.id), ...system.map((p) => p.id)]);
+    const { spec, errors, warnings } = normalize(input || {}, m.capabilities, m.tools, presetIds, new Set(m.mcpServers.map((s) => s.name)));
+    return { errors, warnings, rows: errors.length ? [] : buildRows(spec, environment(ctx)) };
+  }
+
+  return { meta, listAgents, getAgent, saveAgent, deleteAgent, previewAgent };
 }
