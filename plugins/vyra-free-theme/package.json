@@ -1,0 +1,87 @@
+{
+  "name": "vyra-free-theme",
+  "description": "自由主题：主题、壁纸（静态/视频/动图/代码）与左侧菜单样式一体化，明暗自适应，Web 与 Desktop 通用。",
+  "icon": "./icon.svg",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "assets",
+    "themes",
+    "locale",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "NOTICE.md",
+    "icon.svg"
+  ],
+  "homepage": "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/vyra-free-theme#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-free-theme"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "theme",
+    "skin",
+    "wallpaper",
+    "personalization"
+  ],
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.1 || >=0.2.1-rc.1"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.2",
+    "@deepseek-ai/dsh-client-connection": ">=0.2.0-rc.1 || >=0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-locale": ">=0.2.0-rc.1 || >=0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-runtime": ">=0.2.0-rc.1 || >=0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-ui-conversation": ">=0.2.0-rc.1 || >=0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-ui-sidebar": ">=0.2.0-rc.1 || >=0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-ui-theme": ">=0.2.0-rc.1 || >=0.2.1-rc.1"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "watch": "node scripts/build-client.mjs --watch",
+    "test": "node --test tests/*.test.mjs",
+    "verify:hooks": "node scripts/verify-upstream-hooks.mjs",
+    "verify:contrast": "node scripts/verify-contrast.mjs",
+    "verify:bundle": "node scripts/verify-bundle-guard.mjs",
+    "check": "npm run build && node --check lib/client.js && node --check lib/index.js && npm test"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "playwright-core": "1.62.1",
+    "semver": "^7.8.5"
+  }
+}
