@@ -7,7 +7,7 @@ import { createOfficialRejection, mountPersonalizationRoutes } from "./host/pers
 import { createBuiltinAssetServer } from "./host/builtin-assets.js";
 import { resolveTrustedHosts } from "./host/trusted-hosts.js";
 
-export const name = "@iasiv5/dsh-skins";
+export const name = "vyra-free-theme";
 
 function expandHomePath(path) {
   if (path === "~") return homedir();
@@ -30,15 +30,15 @@ export function hostProfileFor(root, cwd = process.cwd()) {
 
 export function dataDirForProfile(root, profile) {
   root = resolve(expandHomePath(root));
-  const legacy = join(root, "dsh-skins");
+  const legacy = join(root, "vyra-free-theme");
   if (profile !== "desktop") return legacy; // unchanged Web path
-  const desktop = join(root, "dsh-skins-desktop");
+  const desktop = join(root, "vyra-free-theme-desktop");
   if (existsSync(desktop) || !existsSync(legacy)) return desktop;
   // Pre-1.5.4 Desktop stored everything in the legacy directory. Copy once,
   // never move or modify it: an existing Web installation may own it too.
   // Publish the complete copy with a same-parent directory rename so an
   // interrupted copy cannot be mistaken for a valid new Desktop store.
-  const stage = mkdtempSync(join(root, ".dsh-skins-desktop-migrate-"));
+  const stage = mkdtempSync(join(root, ".vyra-free-theme-desktop-migrate-"));
   try {
     for (const name of readdirSync(legacy)) {
       cpSync(join(legacy, name), join(stage, name), { recursive: true, force: false, errorOnExist: true });
@@ -64,7 +64,7 @@ export function apply(ctx) {
     });
     hostContext.effect(() => {
       // Builtin artwork delivery (ADR-0023): package assets served over the
-      // same /dsh-skins/assets/ prefix as gallery uploads. src/ and lib/ both
+      // same /vyra-free-theme/assets/ prefix as gallery uploads. src/ and lib/ both
       // sit one level below the package root, so "../assets" resolves in dev
       // and in the built bundle alike. Best-effort mount: a missing manifest
       // simply leaves serveBuiltinAsset undefined and b_ requests 404 —
@@ -83,6 +83,6 @@ export function apply(ctx) {
         rejection: createOfficialRejection(ctx),
         serveBuiltinAsset,
       });
-    }, "dsh-skins: personalization routes");
+    }, "vyra-free-theme: personalization routes");
   });
 }

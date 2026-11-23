@@ -19,7 +19,7 @@ const TIMEOUT_MS = 30000;
 
 async function hostReachable() {
   try {
-    const res = await fetch(`${BASE}/dsh-skins/config`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BASE}/vyra-free-theme/config`, { signal: AbortSignal.timeout(5000) });
     return res.ok;
   } catch {
     return false;

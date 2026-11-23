@@ -23,7 +23,7 @@ import { ASSET_ID_PATTERN } from "../../shared/personalization/catalog.js";
  *     normal snapshot lands; failed/unchanged refetches never blind-retry,
  *     and unchanged normal snapshots surface the conflict instead;
  *     STORE_READONLY downgrades to read-only with no refetch;
- *   - writes emit `dsh-skins:config-changed` + a BroadcastChannel ping so
+ *   - writes emit `vyra-free-theme:config-changed` + a BroadcastChannel ping so
  *     other tabs refetch; window focus refetch is the fallback path;
  *   - retry exhaustion or an unchanged normal refetch lands in the conflict
  *     notice; ordinary failures land in the kind-exclusive error notice;
@@ -33,7 +33,7 @@ import { ASSET_ID_PATTERN } from "../../shared/personalization/catalog.js";
 
 import { defaultsFor, isSameOverrideValue } from "../../shared/personalization/catalog.js";
 
-const CHANNEL = "dsh-skins";
+const CHANNEL = "vyra-free-theme";
 const FETCH_TIMEOUT_MS = 3000;
 // Uploads carry up to 20MB bodies (the Host's GLOBAL_MAX_BYTES) over WAN
 // upstreams, so the 3s config-fetch window must never govern them —
@@ -45,7 +45,7 @@ const UPLOAD_TIMEOUT_MS = 120_000;
 // ADR-0018: the write dialect's retry sentinel — a conflict/unknown-409 policy
 // returns this (instead of a final result) to spend the single retry on a
 // fresh baseRevision. Symbol so it can never collide with a result object.
-const RETRY = Symbol("dsh-skins:write-dialect-retry");
+const RETRY = Symbol("vyra-free-theme:write-dialect-retry");
 
 function cloneSkins(skins) {
   return skins === undefined || skins === null ? {} : structuredClone(skins);
@@ -57,7 +57,7 @@ function cloneSkins(skins) {
 // default followed by a hot-update (design §7.1). The server snapshot stays
 // authoritative: the hint only fills in before the first snapshot lands, and
 // anything unexpected in it is ignored.
-const FIRST_PAINT_HINT_KEY = "dsh-skins:first-paint-hint";
+const FIRST_PAINT_HINT_KEY = "vyra-free-theme:first-paint-hint";
 const FIRST_PAINT_HINT_MAX_CHARS = 262_144;
 const FIRST_PAINT_EXTENSION = /^[a-z0-9]+$/; // the URL segment assetUrl() interpolates
 
@@ -115,7 +115,7 @@ function readFirstPaintHint(storage) {
 
 export function createConfigClient(options = {}) {
   const fetchImpl = options.fetchImpl ?? (typeof fetch === "function" ? fetch : null);
-  const baseUrl = options.baseUrl ?? "/dsh-skins";
+  const baseUrl = options.baseUrl ?? "/vyra-free-theme";
   const profile = options.profile === "desktop" ? "desktop" : "web";
   const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
   const uploadTimeoutMs = options.uploadTimeoutMs ?? UPLOAD_TIMEOUT_MS;
@@ -365,7 +365,7 @@ export function createConfigClient(options = {}) {
               // so would leak the sentinel to callers — fail closed instead,
               // in the same spirit as the retained typeof guard (ADR-0017 D5).
               if (decision === RETRY) {
-                throw new Error("[dsh-skins] onRecoveryRequired must resolve, never RETRY");
+                throw new Error("[vyra-free-theme] onRecoveryRequired must resolve, never RETRY");
               }
               return decision;
             }
@@ -532,7 +532,7 @@ export function createConfigClient(options = {}) {
   function announce() {
     try {
       if (typeof window !== "undefined" && typeof CustomEvent === "function") {
-        window.dispatchEvent(new CustomEvent("dsh-skins:config-changed"));
+        window.dispatchEvent(new CustomEvent("vyra-free-theme:config-changed"));
       }
     } catch {}
     try {

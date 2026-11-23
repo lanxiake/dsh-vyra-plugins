@@ -165,7 +165,7 @@ ${provenance.join("\n")}
  */
 
 // 交付通道 (ADR-0023): bytes live in assets/meirenzhi/*.webp, served over the
-// host /dsh-skins/assets/ route (b_ keys, immutable + etag); this module only
+// host /vyra-free-theme/assets/ route (b_ keys, immutable + etag); this module only
 // carries route URLs. Byte-drift guards moved to assets/manifest.json checks
 // (scripts/verify-bundle-guard.mjs).
 

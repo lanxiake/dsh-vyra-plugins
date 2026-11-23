@@ -1,8 +1,8 @@
-# dsh-skins — DSH 多皮肤插件
+# vyra-free-theme — DSH 多皮肤插件
 
-[![CI](https://img.shields.io/github/actions/workflow/status/iasiv5/dsh-skins/ci.yml?branch=main&label=CI)](../../actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/@iasiv5/dsh-skins?label=npm)](https://www.npmjs.com/package/@iasiv5/dsh-skins)
-[![License](https://img.shields.io/github/license/iasiv5/dsh-skins?label=License)](./LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/iasiv5/vyra-free-theme/ci.yml?branch=main&label=CI)](../../actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/vyra-free-theme?label=npm)](https://www.npmjs.com/package/vyra-free-theme)
+[![License](https://img.shields.io/github/license/iasiv5/vyra-free-theme?label=License)](./LICENSE)
 [![DSH](https://img.shields.io/badge/DSH-0.2.2--rc.5%20verified-2563eb)](#faq)
 
 [English](./README.en.md) · 中文
@@ -16,7 +16,7 @@
 本节回答：怎么装上、怎么换皮肤。
 
 ```sh
-dsh plugin --profile web add @iasiv5/dsh-skins
+dsh plugin --profile web add vyra-free-theme
 ```
 
 1. 执行上面的安装命令。
@@ -27,17 +27,17 @@ dsh plugin --profile web add @iasiv5/dsh-skins
 首次安装且尚无已保存的选择时，默认启用「OpenBMC Studio」（出厂皮肤，v1.0.6 起；此前为美人志）。需要可复现安装时，固定到精确版本：
 
 ```sh
-dsh plugin --profile web add @iasiv5/dsh-skins@1.0.0
+dsh plugin --profile web add vyra-free-theme@1.0.0
 ```
 
 更新与卸载：
 
 ```sh
-dsh plugin --profile web update @iasiv5/dsh-skins    # 更新
-dsh plugin --profile web remove @iasiv5/dsh-skins    # 卸载
+dsh plugin --profile web update vyra-free-theme    # 更新
+dsh plugin --profile web remove vyra-free-theme    # 卸载
 ```
 
-**DSH Desktop 应用**：在应用自带的插件页安装，或执行 `dsh plugin --profile desktop add @iasiv5/dsh-skins`，重启应用后生效。
+**DSH Desktop 应用**：在应用自带的插件页安装，或执行 `dsh plugin --profile desktop add vyra-free-theme`，重启应用后生效。
 
 安装了 [dsh-m](https://github.com/iasiv5/dsh-m) 插件市场的话，也可以直接在 DSH Web 界面里一键安装 / 卸载本插件。
 
@@ -54,8 +54,8 @@ dsh plugin --profile web remove @iasiv5/dsh-skins    # 卸载
 把下面这段整体复制给 DSH Web 里的 Agent：
 
 ```text
-帮我安装 DSH 皮肤插件 @iasiv5/dsh-skins：
-1. 执行 dsh plugin --profile web add @iasiv5/dsh-skins；
+帮我安装 DSH 皮肤插件 vyra-free-theme：
+1. 执行 dsh plugin --profile web add vyra-free-theme；
 2. 安装成功后重启 DSH Web（若由 systemd 管理，重启对应服务即可）；
 3. 最后提醒我刷新页面。
 若安装失败，把命令输出原样发给我，最多重试一次。
@@ -137,7 +137,7 @@ dsh plugin --profile web remove @iasiv5/dsh-skins    # 卸载
 
 ### 配置存在哪、会不会丢
 
-- Web profile 的配置与图库存于 `$DSH_HOME/dsh-skins/`；Desktop profile 自 v1.5.4 起存于 `$DSH_HOME/dsh-skins-desktop/`。Desktop 首次启动会从旧目录复制一次既有配置与图库，**不删除或改写旧目录**，此后两端独立。两处都与插件安装目录物理隔离：插件升级只替换插件安装目录。
+- Web profile 的配置与图库存于 `$DSH_HOME/vyra-free-theme/`；Desktop profile 自 v1.5.4 起存于 `$DSH_HOME/vyra-free-theme-desktop/`。Desktop 首次启动会从旧目录复制一次既有配置与图库，**不删除或改写旧目录**，此后两端独立。两处都与插件安装目录物理隔离：插件升级只替换插件安装目录。
 - 配置只存「改过什么」：未改动的字段自动跟随新版本的默认值，已下线皮肤或字段的残留会在加载时自动清理（v1.4.0 移除 tgcf 皮肤即走这条路径）。
 - 配置文件损坏时进入恢复模式：只重建索引、隔离坏文件，绝不清除你的图片。
 - 上传走魔数校验与尺寸上限；并发写入按字段合并，互不覆盖。
@@ -170,7 +170,7 @@ URL 也能切皮肤：`/?skin=official`、`/?skin=openbmc`、`/?skin=uefi-harnes
 
 本节回答：插件怎么更新。
 
-插件不自带更新器（ADR-0008）：更新发现与安装交给 dsh-m 市场，或 DSH 官方 CLI——升级用 `dsh plugin --profile web update @iasiv5/dsh-skins`；回滚 = 重装旧精确版本 `dsh plugin add --profile web @iasiv5/dsh-skins@X.Y.Z`。npm 上 `@iasiv5/dsh-skins` 的 latest 精确版本仍是唯一分发形态，版本策略维持严格 X.Y.Z。
+插件不自带更新器（ADR-0008）：更新发现与安装交给 dsh-m 市场，或 DSH 官方 CLI——升级用 `dsh plugin --profile web update vyra-free-theme`；回滚 = 重装旧精确版本 `dsh plugin add --profile web vyra-free-theme@X.Y.Z`。npm 上 `vyra-free-theme` 的 latest 精确版本仍是唯一分发形态，版本策略维持严格 X.Y.Z。
 
 ## FAQ
 
@@ -193,7 +193,7 @@ URL 也能切皮肤：`/?skin=official`、`/?skin=openbmc`、`/?skin=uefi-harnes
 在 DSH 所在机器的浏览器（loopback）上，偏好由 DSH Host 持久化，天然共享。其他远程浏览器由插件将偏好存入本地 `localStorage`，各浏览器独立、互不覆盖。
 
 **个性化配置会随升级丢吗？**
-不会。配置与图库存放在 `$DSH_HOME/dsh-skins/` 数据目录，升级只替换插件安装目录（无论经哪个通道），物理上碰不到它；回滚同样保留。只有磁盘级损坏可能丢失配置——那时恢复模式仍会保住图库图片。
+不会。配置与图库存放在 `$DSH_HOME/vyra-free-theme/` 数据目录，升级只替换插件安装目录（无论经哪个通道），物理上碰不到它；回滚同样保留。只有磁盘级损坏可能丢失配置——那时恢复模式仍会保住图库图片。
 
 ## 已知边界
 

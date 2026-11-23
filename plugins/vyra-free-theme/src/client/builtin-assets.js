@@ -1,8 +1,8 @@
 /**
  * Builtin asset URL construction (ADR-0023 Decision 5): the single source
- * for `/dsh-skins/assets/b_<skinId>_<assetKey>.<ext>?v=<rev>` URLs.
+ * for `/vyra-free-theme/assets/b_<skinId>_<assetKey>.<ext>?v=<rev>` URLs.
  *
- * The rev comes from the esbuild define key `globalThis.__DSH_SKINS_ASSET_REV__`
+ * The rev comes from the esbuild define key `globalThis.__VFT_ASSET_REV__`
  * (injected from package.json at build time — esbuild only substitutes the
  * fully-qualified property-access key, so the define MUST use the
  * `globalThis.` prefix). Unbundled direct runs (unit tests) fall back to "0";
@@ -26,6 +26,6 @@ export function builtinAssetUrl(skinId, assetKey, extension = "webp") {
   if (typeof extension !== "string" || !/^[a-z0-9]+$/.test(extension)) {
     throw new RangeError(`builtinAssetUrl: invalid extension ${JSON.stringify(extension)}`);
   }
-  const rev = globalThis.__DSH_SKINS_ASSET_REV__ ?? "0";
-  return `/dsh-skins/assets/b_${skinId}_${assetKey}.${extension}?v=${rev}`;
+  const rev = globalThis.__VFT_ASSET_REV__ ?? "0";
+  return `/vyra-free-theme/assets/b_${skinId}_${assetKey}.${extension}?v=${rev}`;
 }

@@ -1,7 +1,7 @@
 /**
  * Builtin asset delivery (ADR-0023): the non-factory skins' bundled artwork
  * lives in the package's assets/ directory and is served over the same
- * /dsh-skins/assets/ prefix as user gallery uploads — one seam, two adapters.
+ * /vyra-free-theme/assets/ prefix as user gallery uploads — one seam, two adapters.
  *
  * Trust discipline mirrors store.serveAsset: the request URL is stripped of
  * its query, the single segment after the prefix is matched against a strict
@@ -20,7 +20,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const BUILTIN_FILE_PATTERN = /^b_([a-z0-9][a-z0-9-]*)_([a-z0-9][a-z0-9-]*)\.webp$/;
-const ASSETS_PREFIX_PATTERN = /\/dsh-skins\/assets\/([^/]+)$/;
+const ASSETS_PREFIX_PATTERN = /\/vyra-free-theme\/assets\/([^/]+)$/;
 
 export function createBuiltinAssetServer({ assetsDir, manifest }) {
   const byName = new Map();

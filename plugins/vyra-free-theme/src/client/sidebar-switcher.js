@@ -2,7 +2,7 @@ import { DICTS, NS, formatTemplate } from "./dicts.js";
 import { createPersonalizationPanel, PANEL_CSS } from "./personalization/panel.js";
 import { getSkinSchema } from "../shared/personalization/catalog.js";
 
-const TAG_ID = "dsh-skins/sidebar.css";
+const TAG_ID = "vyra-free-theme/sidebar.css";
 
 /** The shell width/height animation beat (keep in sync with the CSS below). */
 const SWEEP_MS = 200;
@@ -87,8 +87,8 @@ export function sweepShellHeight(shell, { from, fromWidth, maxHeight, duration =
     shell.style.width = "";
     shell.style.transition = "";
     shell.style.overflow = "";
-    shell.style.removeProperty?.("--dsh-skins-sweep-panel-basis");
-    shell.classList?.remove?.("dsh-skins-sweeping");
+    shell.style.removeProperty?.("--vyra-free-theme-sweep-panel-basis");
+    shell.classList?.remove?.("vyra-free-theme-sweeping");
   };
   // Hold the panel column at its SETTLED width for the morph: measured here
   // at the frozen settled layout, then pinned via the sweeping class (fixed
@@ -99,15 +99,15 @@ export function sweepShellHeight(shell, { from, fromWidth, maxHeight, duration =
   // rewrapping) against the dead-still list column — the residual open-
   // direction jitter. The CSS var carries the measured width; the class
   // only bites in the wide row layout (desktop media query).
-  const panelColumn = shell.querySelector?.(".dsh-skins-pz-panel") ?? null;
+  const panelColumn = shell.querySelector?.(".vyra-free-theme-pz-panel") ?? null;
   const panelBasis = panelColumn === null ? 0 : panelColumn.getBoundingClientRect().width;
   // The inline transition REPLACES the stylesheet's width-only transition —
   // it must restate width, or the box would snap horizontally mid-sweep.
   // Both axes are pinned first (the class already says "final", so width
   // would otherwise jump pre-paint), then released together on one beat.
-  shell.classList?.add?.("dsh-skins-sweeping"); // clip-reveal: no scrollbars while clamped
+  shell.classList?.add?.("vyra-free-theme-sweeping"); // clip-reveal: no scrollbars while clamped
   if (panelBasis > 0) {
-    shell.style.setProperty?.("--dsh-skins-sweep-panel-basis", `${Math.round(panelBasis * 100) / 100}px`);
+    shell.style.setProperty?.("--vyra-free-theme-sweep-panel-basis", `${Math.round(panelBasis * 100) / 100}px`);
   }
   shell.style.height = `${from}px`;
   shell.style.width = `${startWidth}px`;
@@ -138,18 +138,18 @@ const THEME_CHOICES = [
 const SHELL_CSS = [
   '[data-slot="sidebar.footer.action"]{display:flex!important;flex-direction:column;width:100%;min-width:0}',
   '[data-slot="sidebar.footer.action"]>*{flex:none;min-width:0}',
-  '.dsh-skins-switcher-wrap{width:100%}',
-  '.dsh-skins-switcher-wrap.rail{display:flex;justify-content:center}',
+  '.vyra-free-theme-switcher-wrap{width:100%}',
+  '.vyra-free-theme-switcher-wrap.rail{display:flex;justify-content:center}',
   // 2026-11-09（对齐 dsh-m issue #55）：弃 width+4px/margin -2px/10-8 不对称 padding 的全宽外溢
   // trick，改宿主规范形——border-inline 透明边吃 paint-inset + padding 9/9，内容起点 8+3+9=20px
   // 与官方面板行/设置行/dsh-m 入口同刻度（原 14px，dsh-m 对齐后本条成为唯一 6px 出列者，主人截图实证）
-  '.dsh-skins-switcher-btn{box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;height:42px;margin:4px 0;padding:0 9px;border:0;border-inline:var(--dsh-sidebar-paint-inset,3px) solid transparent;border-radius:var(--dsw-radius-md,12px);background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:22px;cursor:pointer;overflow:hidden}',
-  '.dsh-skins-switcher-wrap.rail .dsh-skins-switcher-btn{width:36px;height:36px;margin:8px 0 10px;padding:0;justify-content:center;border-radius:50%;gap:0}',
-  '.dsh-skins-switcher-btn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-  '.dsh-skins-switcher-btn.on,.dsh-skins-switcher-btn[aria-expanded=true]{background:var(--dsw-specific-sidebar-nav-item-active)}',
-  '.dsh-skins-switcher-btn svg{flex:none;width:16px;height:16px}',
-  '.dsh-skins-switcher-wrap.rail .dsh-skins-switcher-btn svg{width:18px;height:18px}',
-  '.dsh-skins-switcher-btn span{white-space:nowrap;overflow:hidden}',
+  '.vyra-free-theme-switcher-btn{box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;height:42px;margin:4px 0;padding:0 9px;border:0;border-inline:var(--dsh-sidebar-paint-inset,3px) solid transparent;border-radius:var(--dsw-radius-md,12px);background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:14px;line-height:22px;cursor:pointer;overflow:hidden}',
+  '.vyra-free-theme-switcher-wrap.rail .vyra-free-theme-switcher-btn{width:36px;height:36px;margin:8px 0 10px;padding:0;justify-content:center;border-radius:50%;gap:0}',
+  '.vyra-free-theme-switcher-btn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+  '.vyra-free-theme-switcher-btn.on,.vyra-free-theme-switcher-btn[aria-expanded=true]{background:var(--dsw-specific-sidebar-nav-item-active)}',
+  '.vyra-free-theme-switcher-btn svg{flex:none;width:16px;height:16px}',
+  '.vyra-free-theme-switcher-wrap.rail .vyra-free-theme-switcher-btn svg{width:18px;height:18px}',
+  '.vyra-free-theme-switcher-btn span{white-space:nowrap;overflow:hidden}',
   // 毛玻璃弹层（dsh-quota-watch 同款配方）：86% 不透明底 + blur14 提饱和，
   // 下层文字被底色盖住、只余柔光，弹层文字保持清晰可读；首条 solid 声明
   // 兜底不支持 color-mix 的浏览器。
@@ -163,86 +163,86 @@ const SHELL_CSS = [
   // 抽屉同层竞争。dsh-client-ui-layout 在视口 <768px 时抽屉遮罩为 z-70、侧栏
   // 列为 z-71；旧值 z-60 让弹层整块压在抽屉之下（只余遮罩模糊后的轮廓，点不到）。
   // z-80 高于抽屉、低于宿主 z-100 起的各层（ADR-0021 的 z 全集）。
-  '.dsh-skins-pop{position:fixed;z-index:80;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;width:min(390px,calc(100vw - 32px));max-height:calc(100vh - 24px);padding:14px;border:1px solid var(--dsw-alias-border-l2);border-radius:14px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-overlay));background:color-mix(in srgb,var(--dsw-alias-bg-base,#1f1f1f) 86%,transparent);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-shadow-lv3,0 8px 24px rgba(0,0,0,.14));overflow-y:auto;transition:width .2s ease-out}',
+  '.vyra-free-theme-pop{position:fixed;z-index:80;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;width:min(390px,calc(100vw - 32px));max-height:calc(100vh - 24px);padding:14px;border:1px solid var(--dsw-alias-border-l2);border-radius:14px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-overlay));background:color-mix(in srgb,var(--dsw-alias-bg-base,#1f1f1f) 86%,transparent);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-shadow-lv3,0 8px 24px rgba(0,0,0,.14));overflow-y:auto;transition:width .2s ease-out}',
   // Slim themed scrollbars for the shell's own scroll region (list-only
   // popover): thin + token-colored thumb, WebKit and Firefox both covered.
-  '.dsh-skins-pop{scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent}',
-  '.dsh-skins-pop::-webkit-scrollbar{width:8px;height:8px}',
-  '.dsh-skins-pop::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:4px}',
-  '.dsh-skins-pop::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-label-secondary)}',
-  '.dsh-skins-pop::-webkit-scrollbar-track{background:transparent}',
-  // 【共享原子】.dsh-skins-pop-title is shared vocabulary: the panel module
+  '.vyra-free-theme-pop{scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent}',
+  '.vyra-free-theme-pop::-webkit-scrollbar{width:8px;height:8px}',
+  '.vyra-free-theme-pop::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:4px}',
+  '.vyra-free-theme-pop::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-label-secondary)}',
+  '.vyra-free-theme-pop::-webkit-scrollbar-track{background:transparent}',
+  // 【共享原子】.vyra-free-theme-pop-title is shared vocabulary: the panel module
   // reuses it for its header heading (styled contextually in PANEL_CSS).
-  '.dsh-skins-pop-title{font-size:13.5px;line-height:20px;font-weight:500;color:var(--dsw-alias-label-primary);padding:0 4px}',
-  '.dsh-skins-theme-grid{display:flex;align-items:stretch;gap:8px}',
-  '.dsh-skins-theme-card{box-sizing:border-box;display:flex;flex:1;min-width:0;height:72px;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 5px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}',
-  '.dsh-skins-theme-card:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-  '.dsh-skins-theme-card-on,.dsh-skins-theme-card-on:hover{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
-  '.dsh-skins-theme-card svg{width:18px;height:18px;flex:none}',
-  '.dsh-skins-pop-divider{height:1px;margin:4px 0;background:var(--dsw-alias-border-l2)}',
-  '.dsh-skins-pop-card{box-sizing:border-box;display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;width:100%;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer}',
-  '.dsh-skins-pop-card:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-  '.dsh-skins-pop-card-on,.dsh-skins-pop-card-on:hover{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
-  '.dsh-skins-pop-card-label{font-size:14px;line-height:20px;font-weight:500}',
-  '.dsh-skins-pop-card-desc{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}',
-  // 【共享原子】.dsh-skins-spinner (+ its keyframes and the
+  '.vyra-free-theme-pop-title{font-size:13.5px;line-height:20px;font-weight:500;color:var(--dsw-alias-label-primary);padding:0 4px}',
+  '.vyra-free-theme-theme-grid{display:flex;align-items:stretch;gap:8px}',
+  '.vyra-free-theme-theme-card{box-sizing:border-box;display:flex;flex:1;min-width:0;height:72px;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 5px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}',
+  '.vyra-free-theme-theme-card:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+  '.vyra-free-theme-theme-card-on,.vyra-free-theme-theme-card-on:hover{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
+  '.vyra-free-theme-theme-card svg{width:18px;height:18px;flex:none}',
+  '.vyra-free-theme-pop-divider{height:1px;margin:4px 0;background:var(--dsw-alias-border-l2)}',
+  '.vyra-free-theme-pop-card{box-sizing:border-box;display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;width:100%;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:0 0;color:var(--dsw-alias-label-primary);font:inherit;cursor:pointer}',
+  '.vyra-free-theme-pop-card:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+  '.vyra-free-theme-pop-card-on,.vyra-free-theme-pop-card-on:hover{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
+  '.vyra-free-theme-pop-card-label{font-size:14px;line-height:20px;font-weight:500}',
+  '.vyra-free-theme-pop-card-desc{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}',
+  // 【共享原子】.vyra-free-theme-spinner (+ its keyframes and the
   // reduced-motion opt-out) is the personalization panel's delete-badge
   // loading indicator, styled here with the shell's base atoms.
-  '.dsh-skins-spinner{width:16px;height:16px;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-brand-primary);border-radius:50%;animation:dsh-skins-spin .8s linear infinite}',
-  '@keyframes dsh-skins-spin{to{transform:rotate(360deg)}}',
-  '@media (prefers-reduced-motion:reduce){.dsh-skins-spinner{animation:none}}',
+  '.vyra-free-theme-spinner{width:16px;height:16px;border:2px solid var(--dsw-alias-border-l2);border-top-color:var(--dsw-alias-brand-primary);border-radius:50%;animation:vyra-free-theme-spin .8s linear infinite}',
+  '@keyframes vyra-free-theme-spin{to{transform:rotate(360deg)}}',
+  '@media (prefers-reduced-motion:reduce){.vyra-free-theme-spinner{animation:none}}',
   // -- personalization gear + panel -------------------------------------------
-  '.dsh-skins-pop-card-row{display:flex;width:100%;min-width:0;gap:6px;align-items:stretch}',
-  '.dsh-skins-pop-card-row .dsh-skins-pop-card{flex:1;min-width:0}',
-  '.dsh-skins-pz-gear{position:relative;flex:none;align-self:center;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;opacity:.75;transition:opacity .15s}',
-  '.dsh-skins-pz-gear:hover,.dsh-skins-pz-gear:focus-visible,.dsh-skins-pz-gear.touch{opacity:1;border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-interactive-bg-hover)}',
+  '.vyra-free-theme-pop-card-row{display:flex;width:100%;min-width:0;gap:6px;align-items:stretch}',
+  '.vyra-free-theme-pop-card-row .vyra-free-theme-pop-card{flex:1;min-width:0}',
+  '.vyra-free-theme-pz-gear{position:relative;flex:none;align-self:center;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;opacity:.75;transition:opacity .15s}',
+  '.vyra-free-theme-pz-gear:hover,.vyra-free-theme-pz-gear:focus-visible,.vyra-free-theme-pz-gear.touch{opacity:1;border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-interactive-bg-hover)}',
   // Expanded state (declared after the hover rule so the brand tint wins
   // while hovering too): the gear IS the panel toggle — make that legible in
   // both states, same visual language as the selected skin card.
-  '.dsh-skins-pz-gear[aria-expanded="true"]{opacity:1;border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
-  '.dsh-skins-pz-gear svg{width:16px;height:16px}',
+  '.vyra-free-theme-pz-gear[aria-expanded="true"]{opacity:1;border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
+  '.vyra-free-theme-pz-gear svg{width:16px;height:16px}',
   // Deep dark surfaces: meirenzhi/openbmc/uefi tint the bg-overlay token
   // with their own families, but in the OFFICIAL skin no token override exists
   // and the pop inherited the host's washed mid-gray (#61666b). Scope a
   // deep charcoal to the no-skin state (ruling #16); skinned modes keep
   // their token-driven overlay.
-  'body[data-ds-dark-theme]:not([data-dsh-meirenzhi-skin]):not([data-dsh-openbmc-skin]):not([data-dsh-uefi-harness]) .dsh-skins-pop{background:rgba(41,42,44,0.97)}',
+  'body[data-ds-dark-theme]:not([data-dsh-meirenzhi-skin]):not([data-dsh-openbmc-skin]):not([data-dsh-uefi-harness]) .vyra-free-theme-pop{background:rgba(41,42,44,0.97)}',
   // -- combined shell (Q44/Q46): list column + docked panel column ----------
-  '.dsh-skins-pop.dsh-skins-wide{flex-direction:row;align-items:stretch;width:min(1105px,calc(100vw - 24px))}',
+  '.vyra-free-theme-pop.vyra-free-theme-wide{flex-direction:row;align-items:stretch;width:min(1105px,calc(100vw - 24px))}',
   // List column: exactly 360px wherever the 390px narrow shell fits (the
   // v2.5 宽度恒定 ruling #10/#11), shrinking only BELOW a 414px viewport —
   // a fixed 360px column inside a narrower pop overflowed horizontally and
   // pushed the gear column behind the pop's right edge (same field report).
-  '.dsh-skins-pop-main{display:flex;flex-direction:column;gap:8px;min-width:0;width:min(360px,100%);flex:none}',
-  '.dsh-skins-pop.dsh-skins-wide .dsh-skins-pop-main{flex:0 0 360px}',
+  '.vyra-free-theme-pop-main{display:flex;flex-direction:column;gap:8px;min-width:0;width:min(360px,100%);flex:none}',
+  '.vyra-free-theme-pop.vyra-free-theme-wide .vyra-free-theme-pop-main{flex:0 0 360px}',
   // box-sizing is NOT inherited: without border-box here, the sweep's
   // measured rect width feeds flex-basis as a CONTENT width (+15px padding/
   // border), so the panel would sit 15px wide through the morph and snap
   // back at release — border-box makes the measured rect and the basis the
   // same quantity.
   // The panel COLUMN container is rendered by this shell (粘连外壳), so its
-  // styles are shell-owned; the panel module's own root is .dsh-skins-pz.
+  // styles are shell-owned; the panel module's own root is .vyra-free-theme-pz.
   // The class name is part of the panel module's published interface to the
   // shell — the sweep rules below target it by name.
-  '.dsh-skins-pz-panel{box-sizing:border-box;flex:0 1 700px;min-width:0;display:flex;flex-direction:column;gap:10px;padding-left:14px;border-left:1px solid var(--dsw-alias-border-l2);overflow-x:hidden;transform:translateX(16px);opacity:0;animation:dsh-skins-pz-in .2s ease-out forwards}',
-  '@keyframes dsh-skins-pz-in{to{transform:none;opacity:1}}',
-  '@media (prefers-reduced-motion:reduce){.dsh-skins-pz-panel{animation:none;transform:none;opacity:1}.dsh-skins-pop{transition:none}}',
+  '.vyra-free-theme-pz-panel{box-sizing:border-box;flex:0 1 700px;min-width:0;display:flex;flex-direction:column;gap:10px;padding-left:14px;border-left:1px solid var(--dsw-alias-border-l2);overflow-x:hidden;transform:translateX(16px);opacity:0;animation:vyra-free-theme-pz-in .2s ease-out forwards}',
+  '@keyframes vyra-free-theme-pz-in{to{transform:none;opacity:1}}',
+  '@media (prefers-reduced-motion:reduce){.vyra-free-theme-pz-panel{animation:none;transform:none;opacity:1}.vyra-free-theme-pop{transition:none}}',
   // Stacked sheet (≤904px + panel open): the shell becomes a near-full-
   // viewport sheet and the PANEL COLUMN owns the scroll (flex-fills the
   // shell, slim scrollbar) — anchoring a growing panel above the trigger
   // crammed list + panel into one sliver (field report: 窄视窗小条条).
   // Specificity (0,3,0) still beats the wide-scroll base rule below for
   // flex/basis; overflow-y now INHERITS that base rule instead of opting out.
-  '@media (max-width:904px){.dsh-skins-pop.dsh-skins-wide{flex-direction:column;width:min(390px,calc(100vw - 24px))}.dsh-skins-pz-panel{flex:1 1 auto;min-height:0;flex-basis:auto;padding-left:0;border-left:0;border-top:1px solid var(--dsw-alias-border-l2);padding-top:12px;transform:translateY(12px)}}',
-  '.dsh-skins-pz-panel{scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent}',
-  '.dsh-skins-pz-panel::-webkit-scrollbar{width:8px;height:8px}',
-  '.dsh-skins-pz-panel::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:4px}',
-  '.dsh-skins-pz-panel::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-label-secondary)}',
-  '.dsh-skins-pz-panel::-webkit-scrollbar-track{background:transparent}',
+  '@media (max-width:904px){.vyra-free-theme-pop.vyra-free-theme-wide{flex-direction:column;width:min(390px,calc(100vw - 24px))}.vyra-free-theme-pz-panel{flex:1 1 auto;min-height:0;flex-basis:auto;padding-left:0;border-left:0;border-top:1px solid var(--dsw-alias-border-l2);padding-top:12px;transform:translateY(12px)}}',
+  '.vyra-free-theme-pz-panel{scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent}',
+  '.vyra-free-theme-pz-panel::-webkit-scrollbar{width:8px;height:8px}',
+  '.vyra-free-theme-pz-panel::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:4px}',
+  '.vyra-free-theme-pz-panel::-webkit-scrollbar-thumb:hover{background:var(--dsw-alias-label-secondary)}',
+  '.vyra-free-theme-pz-panel::-webkit-scrollbar-track{background:transparent}',
   // -- field issue #2: a dedicated scroll region for the panel column -----
   //    (the cell corner-badges / sticky action bar half of the same ruling
   //    lives in the panel's own PANEL_CSS now) --------------------------------
-  '.dsh-skins-wide .dsh-skins-pz-panel{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}',
+  '.vyra-free-theme-wide .vyra-free-theme-pz-panel{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}',
   // While the shell is mid-sweep its height is pinned below the panel's
   // content extent, so scrollbars would flash on for the ~200ms of the
   // morph: the whole shell clips (both axes — the panel column is held wide
@@ -252,14 +252,14 @@ const SHELL_CSS = [
   // stacked sheet keeps the panel's own scroll region and clips with it.
   // Sweep is SHELL motion behaviour: these rules are written against the
   // panel column's class name — the declared interface use mentioned above.
-  '.dsh-skins-sweeping{overflow:hidden}',
-  '.dsh-skins-sweeping .dsh-skins-pz-panel{overflow-y:hidden}',
+  '.vyra-free-theme-sweeping{overflow:hidden}',
+  '.vyra-free-theme-sweeping .vyra-free-theme-pz-panel{overflow-y:hidden}',
   // Clip-reveal hold (issue #13 rev. 2): the panel column stays at its
   // settled width for the whole beat — measured into the CSS var by the
   // sweep — so its content never reflows while it fades in. Desktop wide
   // row layout only; in the stacked column layout a fixed flex-basis would
   // be a HEIGHT, and the stacked panel never reflows horizontally anyway.
-  '@media (min-width:905px){.dsh-skins-sweeping.dsh-skins-wide .dsh-skins-pz-panel{flex:0 0 var(--dsh-skins-sweep-panel-basis,700px)}}',
+  '@media (min-width:905px){.vyra-free-theme-sweeping.vyra-free-theme-wide .vyra-free-theme-pz-panel{flex:0 0 var(--vyra-free-theme-sweep-panel-basis,700px)}}',
 ].join("\n");
 
 /** Single style tag composition: shell chrome first, then the surface
@@ -397,13 +397,13 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
       const onPointer = (event) => {
         const node = event.target;
         if (!node || typeof node.closest !== "function") return;
-        if (node.closest(".dsh-skins-pop, .dsh-skins-switcher-wrap")) return;
+        if (node.closest(".vyra-free-theme-pop, .vyra-free-theme-switcher-wrap")) return;
         closeShell();
       };
       const onKey = (event) => {
         // A modal <dialog> owns Escape while confirmation is pending. Closing
         // the whole shell here would bypass its cancel event/focus restore.
-        if (event.key === "Escape" && !document.querySelector?.("dialog.dsh-skins-pz-dialog[open]")) closeShell();
+        if (event.key === "Escape" && !document.querySelector?.("dialog.vyra-free-theme-pz-dialog[open]")) closeShell();
       };
       document.addEventListener("pointerdown", onPointer, true);
       window.addEventListener("keydown", onKey);
@@ -415,8 +415,8 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
 
     react.useEffect(() => {
       const onChange = () => setActiveId(runtime.active());
-      window.addEventListener("dsh-skins:active-changed", onChange);
-      return () => window.removeEventListener("dsh-skins:active-changed", onChange);
+      window.addEventListener("vyra-free-theme:active-changed", onChange);
+      return () => window.removeEventListener("vyra-free-theme:active-changed", onChange);
     }, []);
 
     react.useEffect(() => ctx.on("theme/change", (snapshot) => {
@@ -433,7 +433,7 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
 
     const themeCards = THEME_CHOICES.map((choice) => jsx("button", {
       type: "button",
-      className: `dsh-skins-theme-card${themePreference === choice.id ? " dsh-skins-theme-card-on" : ""}`,
+      className: `vyra-free-theme-theme-card${themePreference === choice.id ? " vyra-free-theme-theme-card-on" : ""}`,
       "aria-pressed": themePreference === choice.id,
       onClick: () => {
         ctx.theme.setTheme(choice.id);
@@ -457,7 +457,7 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
         role: "menuitemradio",
         "aria-checked": activeId === skin.id,
         "data-skin-id": skin.id, // ADR-0021/R21: stable hook for tests and headless verification — never match on localized labels
-        className: `dsh-skins-pop-card${activeId === skin.id ? " dsh-skins-pop-card-on" : ""}`,
+        className: `vyra-free-theme-pop-card${activeId === skin.id ? " vyra-free-theme-pop-card-on" : ""}`,
         onClick: () => {
           // Panel open → the card is a panel-target switch (design §7.2,
           // v2.4.1): the panel follows the selection so active and panel
@@ -471,17 +471,17 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
           setActiveId(skin.id);
         },
         children: [
-          jsx("span", { className: "dsh-skins-pop-card-label", children: skin.label }),
-          jsx("span", { className: "dsh-skins-pop-card-desc", children: skin.description }),
+          jsx("span", { className: "vyra-free-theme-pop-card-label", children: skin.label }),
+          jsx("span", { className: "vyra-free-theme-pop-card-desc", children: skin.description }),
         ],
       }, skin.id);
       if (!personalizable) return card;
-      return jsx("div", { className: "dsh-skins-pop-card-row", children: [
+      return jsx("div", { className: "vyra-free-theme-pop-card-row", children: [
         card,
         jsx("button", {
           type: "button",
           id: `${skin.id}-gear`,
-          className: "dsh-skins-pz-gear",
+          className: "vyra-free-theme-pz-gear",
           "aria-label": localeTranslate("personalization.title"),
           title: localeTranslate("personalization.title"),
           "aria-expanded": personalizeId === skin.id,
@@ -558,20 +558,20 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
     const panel = open && box && typeof document !== "undefined"
       ? reactDom.createPortal(jsx("div", {
         ref: shellRef,
-        className: `dsh-skins-pop${showPersonalization ? " dsh-skins-wide" : ""}`,
+        className: `vyra-free-theme-pop${showPersonalization ? " vyra-free-theme-wide" : ""}`,
         role: "dialog",
         "aria-label": showPersonalization ? localeTranslate("personalization.title") : tr("skins.switch"),
         style: { left: shellLeft, bottom: stackedSheet ? 12 : box.bottom, maxHeight: shellMaxHeight },
         children: [
-          jsx("div", { key: "main", className: "dsh-skins-pop-main", children: [
-            jsx("div", { key: "appearance", className: "dsh-skins-pop-title", children: tr("appearance.title") }),
-            jsx("div", { key: "grid", className: "dsh-skins-theme-grid", children: themeCards }),
-            jsx("div", { key: "d1", className: "dsh-skins-pop-divider", "aria-hidden": "true" }),
-            jsx("div", { key: "skins", className: "dsh-skins-pop-title", children: tr("skins.title") }),
+          jsx("div", { key: "main", className: "vyra-free-theme-pop-main", children: [
+            jsx("div", { key: "appearance", className: "vyra-free-theme-pop-title", children: tr("appearance.title") }),
+            jsx("div", { key: "grid", className: "vyra-free-theme-theme-grid", children: themeCards }),
+            jsx("div", { key: "d1", className: "vyra-free-theme-pop-divider", "aria-hidden": "true" }),
+            jsx("div", { key: "skins", className: "vyra-free-theme-pop-title", children: tr("skins.title") }),
             ...skinCards,
           ] }),
           showPersonalization ? jsx("div", {
-            key: "panel", className: "dsh-skins-pz-panel",
+            key: "panel", className: "vyra-free-theme-pz-panel",
             role: "region", "aria-label": localeTranslate("personalization.panelLabel"),
             children: jsx(PersonalizationPanel, {
               skinId: personalizeId,
@@ -583,12 +583,12 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
       : null;
 
     return jsx("div", {
-      className: `dsh-skins-switcher-wrap${wide ? "" : " rail"}`,
+      className: `vyra-free-theme-switcher-wrap${wide ? "" : " rail"}`,
       children: [
         jsx("button", {
           ref: buttonRef,
           type: "button",
-          className: `dsh-skins-switcher-btn${open ? " on" : ""}`,
+          className: `vyra-free-theme-switcher-btn${open ? " on" : ""}`,
           "aria-label": tr("skins.switch"),
           "aria-expanded": open,
           title: tr("skins.switch"),
@@ -602,16 +602,16 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
 
   ctx.effect(() => {
     const tag = document.createElement("style");
-    tag.dataset.plugin = "dsh-skins";
+    tag.dataset.plugin = "vyra-free-theme";
     tag.dataset.pluginCss = TAG_ID;
     tag.textContent = CSS;
     document.head.appendChild(tag);
     return () => tag.remove();
-  }, "dsh-skins: sidebar switcher style");
+  }, "vyra-free-theme: sidebar switcher style");
 
   ctx.effect(() => {
     try { return ctx.locale.register(NS, DICTS); } catch { return () => {}; }
-  }, "dsh-skins: sidebar switcher dictionary");
+  }, "vyra-free-theme: sidebar switcher dictionary");
 
   // Shell-takeover sentinel (2026-10-13 ds-bot native foot): the sidebar foot
   // belongs to whoever registers sidebar.workspaces (ui-sidebar doc: "the foot

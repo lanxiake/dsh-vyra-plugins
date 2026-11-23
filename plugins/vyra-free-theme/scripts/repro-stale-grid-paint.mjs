@@ -6,7 +6,7 @@
 // compositor could paint the center column over the sidebar column — layout
 // and hit-testing stayed correct while the rail (base + icons) went visually
 // missing. The fix pins the sidebar column one explicit stacking step up
-// (style tag `dsh-skins/<id>.paintorder.css`, symbol "paintorder").
+// (style tag `vyra-free-theme/<id>.paintorder.css`, symbol "paintorder").
 //
 // Viewport contract (DSH 0.2.2-rc.1 layout bands, measured on the live host):
 // the gate measures the COLLAPSED RAIL — a 56px sidebar column at x≈0. The rail
@@ -77,7 +77,7 @@ const fingerprintOnly = has("--fingerprint-only");
 const noFingerprint = has("--no-fingerprint");
 const gate = has("--gate");
 const SYMBOL = "paintorder"; // fix marker inside the served client bundle
-const SKIN_STORAGE_KEY = "dsh-skins:active"; // runtime.js persistence key
+const SKIN_STORAGE_KEY = "vyra-free-theme:active"; // runtime.js persistence key
 // Red-baseline fallback: old bundles predate the data-skin-id hook (R21), so
 // card lookup falls back to known label text (current UI language either way).
 const LABEL_FALLBACK = {
@@ -159,7 +159,7 @@ async function fingerprint(page) {
 }
 
 async function openSwitcher(page) {
-  await page.locator(".dsh-skins-switcher-btn").first().click();
+  await page.locator(".vyra-free-theme-switcher-btn").first().click();
   await page.waitForTimeout(500);
 }
 
@@ -174,7 +174,7 @@ async function ensureDarkSignature(page) {
   const dark = () => page.evaluate(() => document.body.hasAttribute("data-ds-dark-theme"));
   if (await dark()) return;
   await openSwitcher(page);
-  await page.locator(".dsh-skins-theme-grid button", { hasText: /Dark|深色/ }).first().click();
+  await page.locator(".vyra-free-theme-theme-grid button", { hasText: /Dark|深色/ }).first().click();
   await page.waitForTimeout(800);
   await page.keyboard.press("Escape");
   await page.waitForTimeout(500);
@@ -197,7 +197,7 @@ async function pickSkin(page, id) {
     // Old bundle (red baseline): no data-skin-id — fall back to label text.
     const pattern = LABEL_FALLBACK[id];
     if (!pattern) throw new Error(`no label fallback for skin "${id}"`);
-    await page.locator(".dsh-skins-pop-card", { hasText: pattern }).first().click();
+    await page.locator(".vyra-free-theme-pop-card", { hasText: pattern }).first().click();
   }
   await page.waitForTimeout(1000);
 }

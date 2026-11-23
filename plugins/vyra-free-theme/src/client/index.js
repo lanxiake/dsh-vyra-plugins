@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
   // cordis.patch.yml): the boot page emits __DSH_BOOT__ entries keyed by the
   // package name, and dsh-client-modules rejects a bundle whose registration
   // does not match its graph-row id ("loaded without registering …").
-  id: "@iasiv5/dsh-skins",
+  id: "vyra-free-theme",
   factory: (require) => {
     const jsxRuntime = require("react/jsx-runtime");
     const react = require("react");
@@ -70,9 +70,9 @@ window.__ModuleLoader__.load({
 
     function apply(ctx) {
       installRemoteThemePersistence(ctx);
-      ctx.effect(() => runtime.apply(ctx), "dsh-skins: active skin");
+      ctx.effect(() => runtime.apply(ctx), "vyra-free-theme: active skin");
       if (configClient !== null) {
-        ctx.effect(() => () => configClient.dispose(), "dsh-skins: config client");
+        ctx.effect(() => () => configClient.dispose(), "vyra-free-theme: config client");
       }
       try {
         installSidebarSwitcher(ctx, {
@@ -84,11 +84,11 @@ window.__ModuleLoader__.load({
           skinsById: (id) => skinById.get(id) ?? null,
         });
       } catch (error) {
-        console.warn("[dsh-skins] sidebar switcher registration failed:", error);
+        console.warn("[vyra-free-theme] sidebar switcher registration failed:", error);
       }
     }
 
-    window.__DSH_SKINS__ = {
+    window.__VFT__ = {
       list: runtime.list,
       select: runtime.select,
       active: runtime.active,

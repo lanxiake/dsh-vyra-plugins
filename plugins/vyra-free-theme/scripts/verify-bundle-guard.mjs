@@ -108,7 +108,7 @@ if (!seen.has("uefi-harness:art")) {
 // during redelivery): the build-time define must have substituted the rev
 // (minified shape: `rev = "<version>"` feeding the `?v=${rev}` template —
 // the contiguous string `?v=<version>` never appears), with zero unresolved
-// __DSH_SKINS_ASSET_REV__ residue. verify:delivery re-asserts on the PACKED
+// __VFT_ASSET_REV__ residue. verify:delivery re-asserts on the PACKED
 // artifact (the one npm actually ships).
 {
   const version = JSON.parse(readFileSync("package.json", "utf8")).version;
@@ -116,7 +116,7 @@ if (!seen.has("uefi-harness:art")) {
   const revEscaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (!new RegExp(`rev\\s*=\\s*"${revEscaped}"`).test(clientText)) problems.push(`lib/client.js lacks the asset-rev define literal rev = "${version}"`);
   if (!clientText.includes("?v=")) problems.push("lib/client.js lacks the ?v= cache-busting template");
-  if (clientText.includes("__DSH_SKINS_ASSET_REV__")) problems.push("lib/client.js carries unresolved __DSH_SKINS_ASSET_REV__");
+  if (clientText.includes("__VFT_ASSET_REV__")) problems.push("lib/client.js carries unresolved __VFT_ASSET_REV__");
 }
 
 // Reverse drift check (ADR-0023 review R-1): the forward pass above is

@@ -66,8 +66,8 @@ const HOST_PAGE = `<!doctype html>
     const skinId = params.get("skin");
     const dark = params.get("mode") === "dark";
     // Deterministic per-cell state: storage keys are rewritten every load.
-    localStorage.setItem("dsh-skins:active", skinId);
-    localStorage.setItem("dsh-skins:theme-preference", dark ? "dark" : "light");
+    localStorage.setItem("vyra-free-theme:active", skinId);
+    localStorage.setItem("vyra-free-theme:theme-preference", dark ? "dark" : "light");
     if (dark) document.body.setAttribute("data-ds-dark-theme", "");
 
     // Module loader + require stubs — the contract shape smoke-test.cjs runs.
@@ -123,7 +123,7 @@ const HOST_PAGE = `<!doctype html>
     window.addEventListener("error", (e) => { window.__AB_PAGE_ERROR__ = String(e.message); });
 
     const bootTimer = setInterval(() => {
-      const mod = registrations["@iasiv5/dsh-skins"];
+      const mod = registrations["vyra-free-theme"];
       if (mod === undefined) return;
       clearInterval(bootTimer);
       try {
@@ -157,7 +157,7 @@ async function startTreeServer(treeDir, { serveBuiltinAssets }) {
     } else if (path === "/client.js") {
       response.writeHead(200, { "content-type": "application/javascript" });
       response.end(clientJs);
-    } else if (builtin !== null && path.startsWith("/dsh-skins/assets/")) {
+    } else if (builtin !== null && path.startsWith("/vyra-free-theme/assets/")) {
       const blob = builtin.serveBuiltinAsset(String(request.url ?? ""));
       if (blob === null) {
         response.writeHead(404, { "content-type": "application/json" });
@@ -184,7 +184,7 @@ async function startTreeServer(treeDir, { serveBuiltinAssets }) {
 async function captureCell(context, baseUrl, skinId, mode, { abort } = {}) {
   const page = await context.newPage();
   if (abort) {
-    await page.route(/\/dsh-skins\/assets\/b_/, (route) => route.abort());
+    await page.route(/\/vyra-free-theme\/assets\/b_/, (route) => route.abort());
   }
   await page.goto(`${baseUrl}/?skin=${skinId}&mode=${mode}`, { waitUntil: "networkidle", timeout: 30_000 });
   await page.waitForFunction(() => window.__AB_READY__ === true, null, { timeout: 10_000 });

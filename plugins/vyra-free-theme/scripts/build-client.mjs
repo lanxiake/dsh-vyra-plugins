@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 import process from "node:process";
 
 // Asset cache-busting rev (ADR-0023 Decision 4): injected as the esbuild
-// define key `globalThis.__DSH_SKINS_ASSET_REV__`. The fully-qualified key is
-// required — a bare `__DSH_SKINS_ASSET_REV__` define does NOT substitute
+// define key `globalThis.__VFT_ASSET_REV__`. The fully-qualified key is
+// required — a bare `__VFT_ASSET_REV__` define does NOT substitute
 // `globalThis.X` property reads (verified against esbuild 0.28.2), and the
 // bundle would silently pin every asset URL to the "0" fallback.
 const { version } = JSON.parse(await readFile("package.json", "utf8"));
@@ -20,7 +20,7 @@ const clientOptions = {
   charset: "utf8",
   sourcemap: false,
   define: {
-    "globalThis.__DSH_SKINS_ASSET_REV__": JSON.stringify(version),
+    "globalThis.__VFT_ASSET_REV__": JSON.stringify(version),
   },
 };
 
@@ -51,10 +51,10 @@ async function validateOutputs() {
       `generated client bundle is missing the DSH module wrapper: expected registration id "${name}" (src/client/index.js must register under the package.json name)`,
     );
   }
-  if (!host.includes("/dsh-skins/config") || !host.includes("personalization routes")) {
+  if (!host.includes("/vyra-free-theme/config") || !host.includes("personalization routes")) {
     throw new Error("generated host bundle is missing the personalization routes");
   }
-  if (host.includes("/dsh-skins/update") || host.includes("self-update routes")) {
+  if (host.includes("/vyra-free-theme/update") || host.includes("self-update routes")) {
     throw new Error("generated host bundle still contains self-update remnants");
   }
   console.log(`built ${clientOptions.outfile} (${Buffer.byteLength(client)} bytes)`);

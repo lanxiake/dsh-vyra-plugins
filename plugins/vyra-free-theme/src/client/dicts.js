@@ -1,5 +1,5 @@
 /** Dictionary namespace owned by this plugin. */
-export const NS = "dsh-skins.ui";
+export const NS = "vyra-free-theme.ui";
 
 /**
  * UI dictionaries. `zh` is the key-set source of truth; `en` must stay

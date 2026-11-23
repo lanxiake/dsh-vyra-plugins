@@ -10,14 +10,14 @@
 export function frostFamilyCss(scope, tints) {
   const { frost, menu } = tints;
   return `/* 浮层毛玻璃家族（配方与选择器并集的唯一来源；裁决与修订史见 ADR-0007，单点生成见 ADR-0012）
-   * 宿主 Modal（设置页各弹窗、风险确认）、dsh-m / dsh-skins / dsh-context 等
+   * 宿主 Modal（设置页各弹窗、风险确认）、dsh-m / vyra-free-theme / dsh-context 等
    * 插件弹层、dockkit 悬浮窗壳与宿主对话框兜底、下拉菜单面、右栏内嵌卡与
    * 提示卡的统一配方：86% 不透明皮肤底色 + blur(14px) saturate(1.3) 提饱和
    * （.lc-tip 经主人两轮实测定 96% 特例浓度），下层内容被盖住只余柔光；
    * --dsw-mask-blur 点亮官方默认 none 的遮罩模糊，弹窗四周一并磨砂。
    * 浮层族全部为固定值，不随通透度旋钮联动。遮罩/对话框由宿主 CSS modules
    * 渲染、类名不可测 → role/aria 属性定位；.dshm-* / .dsvm-* / .lc-* /
-   * .dsh-skins-pop 为各插件自有稳定类名；结构钩子 _float_ / _dialog_ 由
+   * .vyra-free-theme-pop 为各插件自有稳定类名；结构钩子 _float_ / _dialog_ 由
    * verify-upstream-hooks 钉住。1.5.1 豁免（ADR-0007 amendment）：dsh-m 截图
    * 灯箱 .dsvm-lightbox 根同带 role/aria 语义，浅色 tint 会把影院式黑遮罩染
    * 成浅毛玻璃、白色控件整体隐形（用户双模式实拍）——影院遮罩归 dsh-m 自有
@@ -39,7 +39,7 @@ export function frostFamilyCss(scope, tints) {
   ${scope} .dshm-panel,
   ${scope} .dshm-compat-dialog,
   ${scope} .dshm-dshchip-tip,
-  ${scope} .dsh-skins-pop {
+  ${scope} .vyra-free-theme-pop {
     background: color-mix(in srgb, rgb(${frost.light}) 86%, transparent);
     backdrop-filter: blur(14px) saturate(1.3);
     -webkit-backdrop-filter: blur(14px) saturate(1.3);
@@ -49,7 +49,7 @@ export function frostFamilyCss(scope, tints) {
   ${scope}[data-ds-dark-theme] .dshm-panel,
   ${scope}[data-ds-dark-theme] .dshm-compat-dialog,
   ${scope}[data-ds-dark-theme] .dshm-dshchip-tip,
-  ${scope}[data-ds-dark-theme] .dsh-skins-pop {
+  ${scope}[data-ds-dark-theme] .vyra-free-theme-pop {
     background: color-mix(in srgb, rgb(${frost.dark}) 86%, transparent);
   }
   ${scope} .dshm-overlay,

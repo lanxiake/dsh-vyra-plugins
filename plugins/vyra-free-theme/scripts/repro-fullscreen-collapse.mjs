@@ -65,7 +65,7 @@ const skinId = argOf("--skin-id") ?? "openbmc-harness";
 const fingerprintOnly = has("--fingerprint-only");
 const noFingerprint = has("--no-fingerprint");
 const gate = has("--gate");
-const SKIN_STORAGE_KEY = "dsh-skins:active"; // runtime.js persistence key
+const SKIN_STORAGE_KEY = "vyra-free-theme:active"; // runtime.js persistence key
 const GATE_MARKER = 'data-sidebar-right-open="true"'; // fix marker inside the emitted fullscreen.css
 
 // PNG decode + bright counting come from ./lib/paint-metrics.mjs (shared,
@@ -105,9 +105,9 @@ async function fingerprint(page) {
 async function ensureDark(page) {
   const dark = () => page.evaluate(() => document.body.hasAttribute("data-ds-dark-theme"));
   if (await dark()) return;
-  await page.locator(".dsh-skins-switcher-btn").first().click();
+  await page.locator(".vyra-free-theme-switcher-btn").first().click();
   await page.waitForTimeout(500);
-  await page.locator(".dsh-skins-theme-grid button", { hasText: /Dark|深色/ }).first().click();
+  await page.locator(".vyra-free-theme-theme-grid button", { hasText: /Dark|深色/ }).first().click();
   await page.waitForTimeout(800);
   await page.keyboard.press("Escape");
   await page.waitForTimeout(500);

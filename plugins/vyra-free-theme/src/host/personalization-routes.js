@@ -183,7 +183,7 @@ export function createOfficialRejection(ctx) {
 }
 
 export function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/dsh-skins/assets", trustedHosts = [], rejection, serveBuiltinAsset } = options;
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset } = options;
   const disposers = [];
 
   const fence = (request, response) => {
@@ -206,7 +206,7 @@ export function mountPersonalizationRoutes(host, options) {
 
   const configRoute = host.webServer.register({
     kind: "exact",
-    path: "/dsh-skins/config",
+    path: "/vyra-free-theme/config",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (request.method === "GET") return sendJson(response, 200, store.snapshot());
@@ -226,7 +226,7 @@ export function mountPersonalizationRoutes(host, options) {
 
   const recoveryRoute = host.webServer.register({
     kind: "exact",
-    path: "/dsh-skins/recovery",
+    path: "/vyra-free-theme/recovery",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (!method(request, response, "POST")) return;
@@ -243,7 +243,7 @@ export function mountPersonalizationRoutes(host, options) {
 
   const libraryRoute = host.webServer.register({
     kind: "exact",
-    path: "/dsh-skins/library",
+    path: "/vyra-free-theme/library",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (request.method === "GET") return sendJson(response, 200, store.snapshot());
@@ -267,12 +267,12 @@ export function mountPersonalizationRoutes(host, options) {
 
   const libraryDeleteRoute = host.webServer.register({
     kind: "prefix",
-    path: "/dsh-skins/library",
+    path: "/vyra-free-theme/library",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (!method(request, response, "DELETE")) return;
       const path = String(request.url ?? "").split("?")[0];
-      const match = /\/dsh-skins\/library\/([^/]+)$/.exec(path);
+      const match = /\/vyra-free-theme\/library\/([^/]+)$/.exec(path);
       const suffix = match?.[1] ?? "";
       if (!ASSET_ID_PATTERN.test(suffix)) {
         return sendJson(response, 400, { error: "invalid asset id", code: "INVALID_ASSET_ID" });

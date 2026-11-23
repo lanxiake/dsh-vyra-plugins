@@ -1,5 +1,5 @@
 /**
- * PersonalizationStore — the single owner of `$DSH_HOME/dsh-skins/` mutable
+ * PersonalizationStore — the single owner of `$DSH_HOME/vyra-free-theme/` mutable
  * state (design §5). Every mutating Host route goes through here; route
  * handlers only do trust fencing, HTTP codec and error mapping.
  *
@@ -773,7 +773,7 @@ export function createPersonalizationStore(options = {}) {
   function serveAsset(url) {
     init();
     const path = String(url ?? "").split("?")[0];
-    const match = /\/dsh-skins\/assets\/([^/]+)$/.exec(path);
+    const match = /\/vyra-free-theme\/assets\/([^/]+)$/.exec(path);
     if (match === null) return null;
     const name = match[1];
     if (!/^u_[0-9a-f]{32}\.(png|jpe?g|webp|gif)$/.test(name)) return null;

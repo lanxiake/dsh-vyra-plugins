@@ -32,12 +32,12 @@ import { resolveHostErrorText } from "../host-errors.js";
 
 /**
  * The personalization panel's own visual interface: every module-owned
- * class (root `.dsh-skins-pz` and below) is styled here. Shared atoms
- * (.dsh-skins-pop-title, .dsh-skins-spinner) carry their base
+ * class (root `.vyra-free-theme-pz` and below) is styled here. Shared atoms
+ * (.vyra-free-theme-pop-title, .vyra-free-theme-spinner) carry their base
  * styles in the shell's CSS and are only contextually adapted here.
  * The switcher composes this into its single style tag — the class
  * vocabulary is therefore part of this module's interface to the shell
- * (the sweep rules in the shell target `.dsh-skins-pz-panel`, the shell-
+ * (the sweep rules in the shell target `.vyra-free-theme-pz-panel`, the shell-
  * rendered panel column, by name). Rules are copied verbatim from the
  * switcher's CSS array (style-ownership refactor); keep each rule a
  * single-line string — the parity check anchors on whole-line literals.
@@ -48,81 +48,81 @@ export const PANEL_CSS = [
   // margin-left:auto keeps it alone at the header's far right — the reset
   // control stays by the title on the left, separated by the flexible gap,
   // so aiming for « cannot mis-fire a destructive reset.
-  '.dsh-skins-pz-collapse{flex:none;align-self:center;margin-left:auto;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;opacity:.75;transition:opacity .15s}',
-  '.dsh-skins-pz-collapse:hover,.dsh-skins-pz-collapse:focus-visible{opacity:1;border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-interactive-bg-hover)}',
-  '.dsh-skins-pz-collapse svg{width:14px;height:14px}',
-  '.dsh-skins-pz{display:flex;flex-direction:column;gap:10px}',
-  '.dsh-skins-pz-head{display:flex;align-items:center;gap:8px}',
+  '.vyra-free-theme-pz-collapse{flex:none;align-self:center;margin-left:auto;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;opacity:.75;transition:opacity .15s}',
+  '.vyra-free-theme-pz-collapse:hover,.vyra-free-theme-pz-collapse:focus-visible{opacity:1;border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-interactive-bg-hover)}',
+  '.vyra-free-theme-pz-collapse svg{width:14px;height:14px}',
+  '.vyra-free-theme-pz{display:flex;flex-direction:column;gap:10px}',
+  '.vyra-free-theme-pz-head{display:flex;align-items:center;gap:8px}',
   // Title does NOT grow (flex:0 1 auto): the reset control must sit right
   // after the title text on the header's LEFT side (v1.0.0 ruling) — a
   // growing title would push it to the right end, adjacent to the collapse
   // chevron, and aiming for « could mis-fire a destructive reset.
-  '.dsh-skins-pz-head .dsh-skins-pop-title{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;outline:none}',
-  '.dsh-skins-pz-row{display:flex;flex-direction:column;gap:6px}',
-  '.dsh-skins-pz-label{font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary);font-weight:500}',
-  '.dsh-skins-pz-fields{display:flex;flex-direction:column;gap:6px}',
-  '.dsh-skins-pz-colors{flex-direction:row;gap:14px}',
-  '.dsh-skins-pz-color{display:flex;align-items:center;gap:6px}',
-  '.dsh-skins-pz-color input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);cursor:pointer}',
-  '.dsh-skins-pz-range{display:flex;align-items:center;gap:8px}',
-  '.dsh-skins-pz-range input[type=range]{flex:1;min-width:0;accent-color:var(--dsw-alias-brand-primary)}',
-  '.dsh-skins-pz-range output{flex:none;min-width:44px;text-align:right;font-size:12px;color:var(--dsw-alias-label-secondary)}',
-  '.dsh-skins-pz-input{box-sizing:border-box;width:100%;height:32px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}',
-  '.dsh-skins-pz-btn{flex:none;height:28px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}',
-  '.dsh-skins-pz-btn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
-  '.dsh-skins-pz-btn:disabled{opacity:.55;cursor:default}',
-  '.dsh-skins-pz-group{display:flex;flex-direction:column;gap:6px}',
-  '.dsh-skins-pz-thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}',
+  '.vyra-free-theme-pz-head .vyra-free-theme-pop-title{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;outline:none}',
+  '.vyra-free-theme-pz-row{display:flex;flex-direction:column;gap:6px}',
+  '.vyra-free-theme-pz-label{font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary);font-weight:500}',
+  '.vyra-free-theme-pz-fields{display:flex;flex-direction:column;gap:6px}',
+  '.vyra-free-theme-pz-colors{flex-direction:row;gap:14px}',
+  '.vyra-free-theme-pz-color{display:flex;align-items:center;gap:6px}',
+  '.vyra-free-theme-pz-color input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);cursor:pointer}',
+  '.vyra-free-theme-pz-range{display:flex;align-items:center;gap:8px}',
+  '.vyra-free-theme-pz-range input[type=range]{flex:1;min-width:0;accent-color:var(--dsw-alias-brand-primary)}',
+  '.vyra-free-theme-pz-range output{flex:none;min-width:44px;text-align:right;font-size:12px;color:var(--dsw-alias-label-secondary)}',
+  '.vyra-free-theme-pz-input{box-sizing:border-box;width:100%;height:32px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}',
+  '.vyra-free-theme-pz-btn{flex:none;height:28px;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}',
+  '.vyra-free-theme-pz-btn:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+  '.vyra-free-theme-pz-btn:disabled{opacity:.55;cursor:default}',
+  '.vyra-free-theme-pz-group{display:flex;flex-direction:column;gap:6px}',
+  '.vyra-free-theme-pz-thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}',
   // Grid helpers must span the full row: squeezed into one ~110px column
   // track, the "还有 N 张未显示" button and the empty-library hint wrapped
   // into multi-line stubs (field report). Centered full-row reads as the
   // load-more affordance; the hint stays left-aligned with its group label.
-  '.dsh-skins-pz-thumbs>.dsh-skins-pz-btn{grid-column:1/-1;justify-self:center;white-space:nowrap}',
-  '.dsh-skins-pz-thumbs>.dsh-skins-pz-muted{grid-column:1/-1;white-space:nowrap}',
-  '.dsh-skins-pz-thumb{position:relative;aspect-ratio:4/3;padding:0;border:2px solid transparent;border-radius:10px;overflow:hidden;background:var(--dsw-alias-bg-layer-2);cursor:pointer}',
-  '.dsh-skins-pz-thumb img{width:100%;height:100%;object-fit:cover}',
-  '.dsh-skins-pz-thumb.on{border-color:var(--dsw-alias-brand-primary)}',
-  '.dsh-skins-pz-thumb:disabled{opacity:.55;cursor:default}',
-  '.dsh-skins-pz-muted{font-size:11px;line-height:16px;color:var(--dsw-alias-label-primary)}',
-  '.dsh-skins-pz-strip{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);font-size:12px}',
-  '.dsh-skins-pz-status{display:flex;align-items:center;gap:8px;justify-content:space-between}',
-  '.dsh-skins-pz-warn{border-color:var(--dsw-alias-state-warning,#c77d00)}',
-  '.dsh-skins-pz-asset{display:flex;align-items:center;gap:8px}',
-  '.dsh-skins-pz-asset img{flex:none;width:44px;height:33px;border-radius:6px;object-fit:cover;border:1px solid var(--dsw-alias-border-l2)}',
-  '.dsh-skins-pz-asset-copy{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-  '.dsh-skins-pz-gallery{display:flex;flex-direction:column;gap:8px}',
+  '.vyra-free-theme-pz-thumbs>.vyra-free-theme-pz-btn{grid-column:1/-1;justify-self:center;white-space:nowrap}',
+  '.vyra-free-theme-pz-thumbs>.vyra-free-theme-pz-muted{grid-column:1/-1;white-space:nowrap}',
+  '.vyra-free-theme-pz-thumb{position:relative;aspect-ratio:4/3;padding:0;border:2px solid transparent;border-radius:10px;overflow:hidden;background:var(--dsw-alias-bg-layer-2);cursor:pointer}',
+  '.vyra-free-theme-pz-thumb img{width:100%;height:100%;object-fit:cover}',
+  '.vyra-free-theme-pz-thumb.on{border-color:var(--dsw-alias-brand-primary)}',
+  '.vyra-free-theme-pz-thumb:disabled{opacity:.55;cursor:default}',
+  '.vyra-free-theme-pz-muted{font-size:11px;line-height:16px;color:var(--dsw-alias-label-primary)}',
+  '.vyra-free-theme-pz-strip{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);font-size:12px}',
+  '.vyra-free-theme-pz-status{display:flex;align-items:center;gap:8px;justify-content:space-between}',
+  '.vyra-free-theme-pz-warn{border-color:var(--dsw-alias-state-warning,#c77d00)}',
+  '.vyra-free-theme-pz-asset{display:flex;align-items:center;gap:8px}',
+  '.vyra-free-theme-pz-asset img{flex:none;width:44px;height:33px;border-radius:6px;object-fit:cover;border:1px solid var(--dsw-alias-border-l2)}',
+  '.vyra-free-theme-pz-asset-copy{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.vyra-free-theme-pz-gallery{display:flex;flex-direction:column;gap:8px}',
   // field issue #2: library cell corner-badges and the sticky action bar
   // (the scroll-region half of the same ruling lives in the shell's CSS —
   // it styles the shell-rendered panel column).
-  '.dsh-skins-pz-cell{position:relative;display:block}',
-  '.dsh-skins-pz-cell .dsh-skins-pz-thumb{width:100%}',
-  '.dsh-skins-pz-del{position:absolute;top:4px;right:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font:inherit;font-size:14px;line-height:1;cursor:pointer}',
-  '.dsh-skins-pz-del:hover{background:rgba(0,0,0,.78)}',
-  '.dsh-skins-pz-del:disabled{opacity:.55;cursor:default}',
-  '.dsh-skins-pz-del .dsh-skins-spinner{width:12px;height:12px;border-width:2px}',
-  '.dsh-skins-pz-rowbtns{display:flex;gap:6px;flex-wrap:wrap}',
-  '.dsh-skins-pz-actions{position:sticky;bottom:0;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:2px;padding:10px 2px 2px;background:var(--dsw-alias-bg-overlay);border-top:1px solid var(--dsw-alias-border-l2)}',
-  '.dsh-skins-pz-cluster{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}',
-  '.dsh-skins-pz-cluster-status{flex-direction:column;align-items:flex-start;gap:4px;flex-wrap:nowrap}',
-  '.dsh-skins-pz-primary{background:var(--dsh-alias-brand-primary,#C3272B);border-color:transparent;color:#fff}',
-  '.dsh-skins-pz-primary:hover{filter:brightness(1.06)}',
-  '.dsh-skins-pz-danger{color:var(--dsw-alias-error-text,var(--dsw-static-red-500,#d33));border-color:var(--dsw-alias-error-text,var(--dsw-static-red-500,#d33))}',
-  '.dsh-skins-pz-fields-locale{flex-direction:row;gap:6px}',
-  '.dsh-skins-pz-fields-locale .dsh-skins-pz-input{flex:1;min-width:0}',
+  '.vyra-free-theme-pz-cell{position:relative;display:block}',
+  '.vyra-free-theme-pz-cell .vyra-free-theme-pz-thumb{width:100%}',
+  '.vyra-free-theme-pz-del{position:absolute;top:4px;right:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font:inherit;font-size:14px;line-height:1;cursor:pointer}',
+  '.vyra-free-theme-pz-del:hover{background:rgba(0,0,0,.78)}',
+  '.vyra-free-theme-pz-del:disabled{opacity:.55;cursor:default}',
+  '.vyra-free-theme-pz-del .vyra-free-theme-spinner{width:12px;height:12px;border-width:2px}',
+  '.vyra-free-theme-pz-rowbtns{display:flex;gap:6px;flex-wrap:wrap}',
+  '.vyra-free-theme-pz-actions{position:sticky;bottom:0;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:2px;padding:10px 2px 2px;background:var(--dsw-alias-bg-overlay);border-top:1px solid var(--dsw-alias-border-l2)}',
+  '.vyra-free-theme-pz-cluster{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}',
+  '.vyra-free-theme-pz-cluster-status{flex-direction:column;align-items:flex-start;gap:4px;flex-wrap:nowrap}',
+  '.vyra-free-theme-pz-primary{background:var(--dsh-alias-brand-primary,#C3272B);border-color:transparent;color:#fff}',
+  '.vyra-free-theme-pz-primary:hover{filter:brightness(1.06)}',
+  '.vyra-free-theme-pz-danger{color:var(--dsw-alias-error-text,var(--dsw-static-red-500,#d33));border-color:var(--dsw-alias-error-text,var(--dsw-static-red-500,#d33))}',
+  '.vyra-free-theme-pz-fields-locale{flex-direction:row;gap:6px}',
+  '.vyra-free-theme-pz-fields-locale .vyra-free-theme-pz-input{flex:1;min-width:0}',
   // HTML <dialog>.showModal() stays inside the renderer's top layer: unlike
   // window.confirm(), it never opens the Windows/Electron JavaScript dialog
   // that can leave the Desktop window unfocused after dismissal.
-  '.dsh-skins-pz-dialog{box-sizing:border-box;width:min(480px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:20px;border:1px solid var(--dsw-alias-border-l2);border-radius:14px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-overlay));color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-shadow-lv3,0 8px 24px rgba(0,0,0,.25));font:inherit}',
-  '.dsh-skins-pz-dialog::backdrop{background:rgba(0,0,0,.45)}',
-  '.dsh-skins-pz-dialog-message{margin:0 0 20px;white-space:pre-line;line-height:1.6;font-size:14px}',
-  '.dsh-skins-pz-dialog-intro{margin:0;font-size:14px;line-height:1.6}.dsh-skins-pz-dialog-outro{margin:0 0 20px;font-size:14px;line-height:1.6}',
-  '.dsh-skins-pz-dialog-tags{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px;padding:0;list-style:none}',
-  '.dsh-skins-pz-dialog-tag{box-sizing:border-box;display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 10px;border:1px solid var(--dsw-alias-border-l2);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 42%,transparent);border-radius:999px;background:var(--dsw-alias-bg-layer-1);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,var(--dsw-alias-bg-overlay));color:var(--dsw-alias-label-primary);font-size:13px;line-height:18px;font-weight:600;white-space:normal}',
-  '.dsh-skins-pz-dialog-tag::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-brand-primary)}',
-  '.dsh-skins-pz-dialog-actions{display:flex;justify-content:flex-end;gap:8px}',
+  '.vyra-free-theme-pz-dialog{box-sizing:border-box;width:min(480px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:20px;border:1px solid var(--dsw-alias-border-l2);border-radius:14px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-overlay));color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-shadow-lv3,0 8px 24px rgba(0,0,0,.25));font:inherit}',
+  '.vyra-free-theme-pz-dialog::backdrop{background:rgba(0,0,0,.45)}',
+  '.vyra-free-theme-pz-dialog-message{margin:0 0 20px;white-space:pre-line;line-height:1.6;font-size:14px}',
+  '.vyra-free-theme-pz-dialog-intro{margin:0;font-size:14px;line-height:1.6}.vyra-free-theme-pz-dialog-outro{margin:0 0 20px;font-size:14px;line-height:1.6}',
+  '.vyra-free-theme-pz-dialog-tags{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 16px;padding:0;list-style:none}',
+  '.vyra-free-theme-pz-dialog-tag{box-sizing:border-box;display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 10px;border:1px solid var(--dsw-alias-border-l2);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 42%,transparent);border-radius:999px;background:var(--dsw-alias-bg-layer-1);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,var(--dsw-alias-bg-overlay));color:var(--dsw-alias-label-primary);font-size:13px;line-height:18px;font-weight:600;white-space:normal}',
+  '.vyra-free-theme-pz-dialog-tag::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-brand-primary)}',
+  '.vyra-free-theme-pz-dialog-actions{display:flex;justify-content:flex-end;gap:8px}',
   // Stacked (<904px) resets MUST come after the rules they override — the
   // array order is the cascade order among equal-specificity selectors.
-  '@media (max-width:904px){.dsh-skins-pz-thumbs{grid-template-columns:repeat(4,1fr)}}',
+  '@media (max-width:904px){.vyra-free-theme-pz-thumbs{grid-template-columns:repeat(4,1fr)}}',
 ].join("\n");
 
 // Library grid folds after three full rows (3 × 6 per row, user ruling #18):
@@ -143,14 +143,14 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
   function TextField({ field, value, onValue, disabled }) {
     const inputs = field.scope === "locale"
       ? ["zh", "en"].map((locale) => jsx("input", {
-          key: locale, type: "text", className: "dsh-skins-pz-input",
+          key: locale, type: "text", className: "vyra-free-theme-pz-input",
           value: value?.[locale] ?? "", maxLength: field.maxLength,
           disabled, "aria-label": `${tr(field.labelKey)} (${locale.toUpperCase()})`,
           placeholder: field.default?.[locale] ?? "",
           onChange: (event) => onValue({ ...value, [locale]: event.target.value }),
         }, locale))
       : [jsx("input", {
-          key: "single", type: "text", className: "dsh-skins-pz-input",
+          key: "single", type: "text", className: "vyra-free-theme-pz-input",
           value: value ?? "", maxLength: field.maxLength, disabled,
           "aria-label": tr(field.labelKey),
           placeholder: field.default ?? "",
@@ -158,10 +158,10 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
         })];
     // Locale inputs sit side by side (v2.4.1 #3): the wide panel makes the
     // stacked zh/en pair both ugly and needlessly tall.
-    return jsx("label", { className: "dsh-skins-pz-row", children: [
-      jsx("span", { className: "dsh-skins-pz-label", children: tr(field.labelKey) }),
+    return jsx("label", { className: "vyra-free-theme-pz-row", children: [
+      jsx("span", { className: "vyra-free-theme-pz-label", children: tr(field.labelKey) }),
       jsx("div", {
-        className: `dsh-skins-pz-fields${field.scope === "locale" ? " dsh-skins-pz-fields-locale" : ""}`,
+        className: `vyra-free-theme-pz-fields${field.scope === "locale" ? " vyra-free-theme-pz-fields-locale" : ""}`,
         children: inputs,
       }),
     ] });
@@ -169,9 +169,9 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
 
   function RangeField({ field, value, onValue, disabled }) {
     const current = value ?? field.default;
-    return jsx("label", { className: "dsh-skins-pz-row", children: [
-      jsx("span", { className: "dsh-skins-pz-label", children: tr(field.labelKey) }),
-      jsx("div", { className: "dsh-skins-pz-fields", children: jsx("div", { className: "dsh-skins-pz-range", children: [
+    return jsx("label", { className: "vyra-free-theme-pz-row", children: [
+      jsx("span", { className: "vyra-free-theme-pz-label", children: tr(field.labelKey) }),
+      jsx("div", { className: "vyra-free-theme-pz-fields", children: jsx("div", { className: "vyra-free-theme-pz-range", children: [
         jsx("input", {
           type: "range", min: field.min, max: field.max, step: field.step,
           value: current, disabled,
@@ -184,10 +184,10 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
   }
 
   function SelectField({ field, value, onValue, disabled }) {
-    return jsx("label", { className: "dsh-skins-pz-row", children: [
-      jsx("span", { className: "dsh-skins-pz-label", children: tr(field.labelKey) }),
-      jsx("div", { className: "dsh-skins-pz-fields", children: jsx("select", {
-        className: "dsh-skins-pz-input", value: value ?? field.default, disabled,
+    return jsx("label", { className: "vyra-free-theme-pz-row", children: [
+      jsx("span", { className: "vyra-free-theme-pz-label", children: tr(field.labelKey) }),
+      jsx("div", { className: "vyra-free-theme-pz-fields", children: jsx("select", {
+        className: "vyra-free-theme-pz-input", value: value ?? field.default, disabled,
         "aria-label": tr(field.labelKey),
         onChange: (event) => onValue(event.target.value),
         children: field.options.map((option) => jsx("option", {
@@ -279,16 +279,16 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
       });
     };
 
-    return jsx("div", { className: "dsh-skins-pz-row", children: [
-      jsx("span", { className: "dsh-skins-pz-label", children: tr(field.labelKey) }),
-      jsx("div", { className: "dsh-skins-pz-fields", children: [
-        choices.length > 0 ? jsx("div", { className: "dsh-skins-pz-group", children: [
-          jsx("div", { className: "dsh-skins-pz-muted", children: tr("personalization.builtin") }),
-          jsx("div", { className: "dsh-skins-pz-thumbs", children: choices.map((key) => {
+    return jsx("div", { className: "vyra-free-theme-pz-row", children: [
+      jsx("span", { className: "vyra-free-theme-pz-label", children: tr(field.labelKey) }),
+      jsx("div", { className: "vyra-free-theme-pz-fields", children: [
+        choices.length > 0 ? jsx("div", { className: "vyra-free-theme-pz-group", children: [
+          jsx("div", { className: "vyra-free-theme-pz-muted", children: tr("personalization.builtin") }),
+          jsx("div", { className: "vyra-free-theme-pz-thumbs", children: choices.map((key) => {
             const asset = builtins[key];
             const ref = `builtin:${skinId}:${key}`;
             return jsx("button", {
-              type: "button", className: `dsh-skins-pz-thumb${value === ref ? " on" : ""}`,
+              type: "button", className: `vyra-free-theme-pz-thumb${value === ref ? " on" : ""}`,
               disabled, title: tr(asset?.labelKey ?? "personalization.builtin.default"),
               "aria-pressed": value === ref,
               onClick: () => onValue(ref),
@@ -296,14 +296,14 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
             }, key);
           }) }),
         ] }) : null,
-        jsx("div", { className: "dsh-skins-pz-group", children: [
-          jsx("div", { className: "dsh-skins-pz-muted", children: tr("personalization.library") }),
-          jsx("div", { className: "dsh-skins-pz-thumbs", children: [
+        jsx("div", { className: "vyra-free-theme-pz-group", children: [
+          jsx("div", { className: "vyra-free-theme-pz-muted", children: tr("personalization.library") }),
+          jsx("div", { className: "vyra-free-theme-pz-thumbs", children: [
             ...library.slice(0, visible).map((asset) => jsx("div", {
-              key: asset.id, className: `dsh-skins-pz-cell${value === asset.id ? " on" : ""}`,
+              key: asset.id, className: `vyra-free-theme-pz-cell${value === asset.id ? " on" : ""}`,
               children: [
                 jsx("button", {
-                  type: "button", className: `dsh-skins-pz-thumb${value === asset.id ? " on" : ""}`,
+                  type: "button", className: `vyra-free-theme-pz-thumb${value === asset.id ? " on" : ""}`,
                   disabled, title: asset.displayName,
                   "aria-pressed": value === asset.id,
                   onClick: () => onValue(asset.id),
@@ -311,35 +311,35 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
                 }, asset.id),
                 jsx("button", {
                   type: "button",
-                  className: `dsh-skins-pz-del${deletingId === asset.id ? " dsh-skins-pz-del-busy" : ""}`,
+                  className: `vyra-free-theme-pz-del${deletingId === asset.id ? " vyra-free-theme-pz-del-busy" : ""}`,
                   disabled: disabled || deletingId !== null || clearing,
                   "aria-label": `${tr("personalization.library.delete")}: ${asset.displayName}`,
                   onClick: () => removeAsset(asset),
                   children: deletingId === asset.id
-                    ? jsx("span", { className: "dsh-skins-spinner", "aria-hidden": "true" })
+                    ? jsx("span", { className: "vyra-free-theme-spinner", "aria-hidden": "true" })
                     : "×",
                 }, `${asset.id}-del`),
               ],
             })),
             library.length > visible ? jsx("button", {
-              type: "button", className: "dsh-skins-pz-btn",
+              type: "button", className: "vyra-free-theme-pz-btn",
               onClick: () => setVisible(visible + PAGE_SIZE),
               children: tr("personalization.library.more", { count: library.length - visible }),
             }) : null,
             library.length === 0 ? jsx("span", {
-              className: "dsh-skins-pz-muted", children: tr("personalization.library.empty"),
+              className: "vyra-free-theme-pz-muted", children: tr("personalization.library.empty"),
             }) : null,
           ] }),
-          message === null ? null : jsx("div", { className: "dsh-skins-pz-status dsh-skins-pz-muted", children: message }),
-          jsx("div", { className: "dsh-skins-pz-rowbtns", children: [
+          message === null ? null : jsx("div", { className: "vyra-free-theme-pz-status vyra-free-theme-pz-muted", children: message }),
+          jsx("div", { className: "vyra-free-theme-pz-rowbtns", children: [
             jsx("button", {
-              type: "button", className: "dsh-skins-pz-btn",
+              type: "button", className: "vyra-free-theme-pz-btn",
               disabled: disabled || deletingId !== null || clearing,
               onClick: () => uploadRef.current?.click(),
               children: tr("personalization.library.upload"),
             }),
             library.length > 0 ? jsx("button", {
-              type: "button", className: "dsh-skins-pz-btn dsh-skins-pz-danger",
+              type: "button", className: "vyra-free-theme-pz-btn vyra-free-theme-pz-danger",
               disabled: disabled || deletingId !== null || clearing,
               onClick: clearLibrary,
               children: tr("personalization.library.clear"),
@@ -513,33 +513,33 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
     // now lives in the header row, whose height is fixed.
     const statusCluster = [];
     if (state.mode === "recovery") {
-      statusCluster.push(jsx("div", { key: "recovery", className: "dsh-skins-pz-status dsh-skins-pz-warn", children: [
+      statusCluster.push(jsx("div", { key: "recovery", className: "vyra-free-theme-pz-status vyra-free-theme-pz-warn", children: [
         jsx("div", { children: tr("personalization.status.recovery") }),
-        jsx("div", { className: "dsh-skins-pz-muted", children: tr("personalization.status.recoveryHint") }),
+        jsx("div", { className: "vyra-free-theme-pz-muted", children: tr("personalization.status.recoveryHint") }),
         jsx("button", {
-          type: "button", className: "dsh-skins-pz-btn",
+          type: "button", className: "vyra-free-theme-pz-btn",
           onClick: () => configClient.confirmRecovery(),
           children: tr("personalization.recovery.confirm"),
         }),
       ] }));
     }
     if (state.status === "loading") {
-      statusCluster.push(jsx("div", { key: "loading", className: "dsh-skins-pz-status", children: [
+      statusCluster.push(jsx("div", { key: "loading", className: "vyra-free-theme-pz-status", children: [
         jsx("span", { children: tr("personalization.status.loading") }),
       ] }));
     }
     if (state.status === "offline-failed") {
-      statusCluster.push(jsx("div", { key: "offline", className: "dsh-skins-pz-status", children: [
+      statusCluster.push(jsx("div", { key: "offline", className: "vyra-free-theme-pz-status", children: [
         jsx("span", { children: tr("personalization.status.offline") }),
         jsx("button", {
-          type: "button", className: "dsh-skins-pz-btn",
+          type: "button", className: "vyra-free-theme-pz-btn",
           onClick: () => configClient.refetch(),
           children: tr("personalization.status.retry"),
         }),
       ] }));
     }
     if (state.status === "unsupported-readonly") {
-      statusCluster.push(jsx("div", { key: "ro", className: "dsh-skins-pz-status", children: [
+      statusCluster.push(jsx("div", { key: "ro", className: "vyra-free-theme-pz-status", children: [
         jsx("span", { children: tr("personalization.status.unsupported") }),
       ] }));
     }
@@ -550,13 +550,13 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
     const conflictNotice = notices.find((notice) => notice.kind === "conflict");
     const errorNotice = notices.find((notice) => notice.kind === "error");
     if (conflictNotice !== undefined) {
-      statusCluster.push(jsx("div", { key: "save-conflict", className: "dsh-skins-pz-status dsh-skins-pz-warn", children: [
+      statusCluster.push(jsx("div", { key: "save-conflict", className: "vyra-free-theme-pz-status vyra-free-theme-pz-warn", children: [
         jsx("span", { children: tr("personalization.saveConflict") }),
       ] }));
     } else if (errorNotice !== undefined) {
-      statusCluster.push(jsx("div", { key: "save-error", className: "dsh-skins-pz-status dsh-skins-pz-warn", children: [
+      statusCluster.push(jsx("div", { key: "save-error", className: "vyra-free-theme-pz-status vyra-free-theme-pz-warn", children: [
         jsx("span", { children: tr("personalization.saveFailed") }),
-        jsx("div", { className: "dsh-skins-pz-muted", children: errorNotice.message }),
+        jsx("div", { className: "vyra-free-theme-pz-muted", children: errorNotice.message }),
       ] }));
     }
     // Dangling-preview reversions (ADR-0015): the client excised a preview
@@ -565,30 +565,30 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
     // the transient footer strip slot and existing classes (zero new CSS).
     const revertedNotice = notices.find((notice) => notice.kind === "reverted");
     if (revertedNotice !== undefined && revertedNotice.fields.length > 0) {
-      statusCluster.push(jsx("div", { key: "reverted", className: "dsh-skins-pz-status", children: [
+      statusCluster.push(jsx("div", { key: "reverted", className: "vyra-free-theme-pz-status", children: [
         jsx("div", { children: tr("personalization.fieldReverted") }),
         jsx("div", {
-          className: "dsh-skins-pz-muted",
+          className: "vyra-free-theme-pz-muted",
           children: revertedNotice.fields.map((entry) => `${labelFor(entry.skinId)} · ${entry.key}`).join("、"),
         }),
       ] }));
     }
 
-    return jsx("div", { className: "dsh-skins-pz", children: [
-      // Header row (`.dsh-skins-pz-head`): the heading stays the focus
+    return jsx("div", { className: "vyra-free-theme-pz", children: [
+      // Header row (`.vyra-free-theme-pz-head`): the heading stays the focus
       // target (issue #12); the reset and collapse controls pack at its
       // right end so both are discoverable where the user is looking —
       // the gear that opened it is a full column away (user ruling). The
       // reset appears only while the skin has overrides, and its appearing
       // can no longer change the panel's height (v1.0.0 ruling).
-      jsx("div", { className: "dsh-skins-pz-head", children: [
+      jsx("div", { className: "vyra-free-theme-pz-head", children: [
         jsx("div", {
-          ref: headerRef, className: "dsh-skins-pop-title",
+          ref: headerRef, className: "vyra-free-theme-pop-title",
           tabIndex: -1, role: "heading", "aria-level": 2,
           children: `${tr("personalization.title")} · ${labelFor(skinId)}`,
         }),
         hasAnyOverride ? jsx("button", {
-          type: "button", className: "dsh-skins-pz-btn dsh-skins-pz-danger",
+          type: "button", className: "vyra-free-theme-pz-btn vyra-free-theme-pz-danger",
           disabled: writesBlocked,
           onClick: () => {
             // Destructive + immediate (auto-save, ADR-0003) → confirm first,
@@ -607,7 +607,7 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
         }) : null,
         onCollapse ? jsx("button", {
           type: "button",
-          className: "dsh-skins-pz-collapse",
+          className: "vyra-free-theme-pz-collapse",
           "aria-label": tr("personalization.collapse"),
           title: tr("personalization.collapse"),
           onClick: onCollapse,
@@ -615,31 +615,31 @@ export function createPersonalizationPanel({ jsx, react, configClient, tr, built
         }) : null,
       ] }),
       ...fieldRows,
-      statusCluster.length > 0 ? jsx("div", { className: "dsh-skins-pz-actions", children:
-        jsx("div", { className: "dsh-skins-pz-cluster dsh-skins-pz-cluster-status", children: statusCluster }),
+      statusCluster.length > 0 ? jsx("div", { className: "vyra-free-theme-pz-actions", children:
+        jsx("div", { className: "vyra-free-theme-pz-cluster vyra-free-theme-pz-cluster-status", children: statusCluster }),
       }) : null,
       confirmation === null ? null : jsx("dialog", {
-        ref: dialogRef, className: "dsh-skins-pz-dialog", "aria-labelledby": "dsh-skins-confirm-title",
+        ref: dialogRef, className: "vyra-free-theme-pz-dialog", "aria-labelledby": "vyra-free-theme-confirm-title",
         onCancel: (event) => { event.preventDefault(); cancelConfirm(); },
         children: [
-          jsx("div", { id: "dsh-skins-confirm-title", className: "dsh-skins-pop-title", children: tr("personalization.confirmTitle") }),
+          jsx("div", { id: "vyra-free-theme-confirm-title", className: "vyra-free-theme-pop-title", children: tr("personalization.confirmTitle") }),
           confirmation.detailItems === null
-            ? jsx("p", { className: "dsh-skins-pz-dialog-message", children: confirmation.message })
+            ? jsx("p", { className: "vyra-free-theme-pz-dialog-message", children: confirmation.message })
             : jsx("div", { children: [
-                jsx("p", { className: "dsh-skins-pz-dialog-intro", children: tr("personalization.resetConfirmIntro") }),
+                jsx("p", { className: "vyra-free-theme-pz-dialog-intro", children: tr("personalization.resetConfirmIntro") }),
                 confirmation.detailItems.length > 0
-                  ? jsx("ul", { className: "dsh-skins-pz-dialog-tags", children: confirmation.detailItems.map((label) =>
-                      jsx("li", { className: "dsh-skins-pz-dialog-tag", children: label }, label)) })
-                  : jsx("p", { className: "dsh-skins-pz-dialog-message", children: "—" }),
-                jsx("p", { className: "dsh-skins-pz-dialog-outro", children: tr("personalization.resetConfirmOutro") }),
+                  ? jsx("ul", { className: "vyra-free-theme-pz-dialog-tags", children: confirmation.detailItems.map((label) =>
+                      jsx("li", { className: "vyra-free-theme-pz-dialog-tag", children: label }, label)) })
+                  : jsx("p", { className: "vyra-free-theme-pz-dialog-message", children: "—" }),
+                jsx("p", { className: "vyra-free-theme-pz-dialog-outro", children: tr("personalization.resetConfirmOutro") }),
               ] }),
-          jsx("div", { className: "dsh-skins-pz-dialog-actions", children: [
+          jsx("div", { className: "vyra-free-theme-pz-dialog-actions", children: [
             jsx("button", {
-              type: "button", className: "dsh-skins-pz-btn", autoFocus: true,
+              type: "button", className: "vyra-free-theme-pz-btn", autoFocus: true,
               onClick: cancelConfirm, children: tr("personalization.cancel"),
             }),
             jsx("button", {
-              type: "button", className: "dsh-skins-pz-btn dsh-skins-pz-danger",
+              type: "button", className: "vyra-free-theme-pz-btn vyra-free-theme-pz-danger",
               disabled: writesBlocked, onClick: acceptConfirm,
               children: tr("personalization.confirm"),
             }),

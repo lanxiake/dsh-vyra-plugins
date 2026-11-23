@@ -1,13 +1,13 @@
 import { projectSkin } from "./personalization/projector.js";
 import { BUILTIN_REF_PATTERN, defaultWallpaperRef } from "../shared/personalization/catalog.js";
 
-const SKIN_STORAGE_KEY = "dsh-skins:active";
+const SKIN_STORAGE_KEY = "vyra-free-theme:active";
 const SKIN_URL_PARAM = "skin";
 const OFFICIAL_SKIN_ID = "official";
 const LEGACY_OFFICIAL_ALIAS = "default";
 const HERO_NS = "conversation";
 const HERO_KEY = "hero.headline";
-const ACTIVE_EVENT = "dsh-skins:active-changed";
+const ACTIVE_EVENT = "vyra-free-theme:active-changed";
 
 /** dataset camelCase → attribute name: dshMeirenzhiSkin → data-dsh-meirenzhi-skin. */
 function datasetAttribute(key) {
@@ -35,7 +35,7 @@ export function resolvePreloadUrl(skins, personalization, skinId, defaultRef) {
   if (match === null) return null; // user library ref (or garbage): cache-warm via panel anyway
   const asset = skins.get?.(match[1])?.builtinAssets?.[match[2]];
   const url = asset?.url;
-  return typeof url === "string" && url.startsWith("/dsh-skins/assets/") ? url : null;
+  return typeof url === "string" && url.startsWith("/vyra-free-theme/assets/") ? url : null;
 }
 
 /** Create the registry and single-mounted-skin runtime. */
@@ -117,7 +117,7 @@ function buildShellAlignmentCss(bodyAttribute, opaqueFills, backdrop) {
   const body = `body[${datasetAttribute(bodyAttribute)}]`;
   const scoped = `html[data-windows-titlebar] ${body}`;
   const lines = [
-    "/* dsh-skins shell-frame alignment (ADR-0009): solid chrome + wallpaper in the conversation area on Windows desktop */",
+    "/* vyra-free-theme shell-frame alignment (ADR-0009): solid chrome + wallpaper in the conversation area on Windows desktop */",
     'html[data-windows-titlebar] [class*="_frame"]:has(> [class*="_sidebarCol"])::before{background:0 0}',
     'html[data-windows-titlebar] [class*="_frame"] > [class*="_sidebarCol"]{background:0 0}',
     'html[data-windows-titlebar] [class*="_sidebarCol"] > [class*="_root"]{background:0 0}',
@@ -202,7 +202,7 @@ export function buildFullscreenBaseCss(bodyAttribute, opaqueFills) {
   const dockPanel = ` [data-sidebar-right-panel="fullscreen"]${openGate}${emptyPaneGuard}`;
   const dockPane = ` [data-sidebar-right-panel="fullscreen"]${openGate} [data-dockkit-pane]${emptyPaneGuard}`;
   return [
-    "/* dsh-skins fullscreen base (ADR-0020): solid skin-tone base while data-rightbar-fullscreen is set — the fullscreen dockkit PANE paints a translucent bg token where the official theme paints opaque white (DOM-dump evidence), so the pane is the bleed surface; solid matches the official look. Docked column untouched. Sheet rules gated on data-sidebar-right-open (stale-fullscreen collapse, ADR-0021 amendment 四) */",
+    "/* vyra-free-theme fullscreen base (ADR-0020): solid skin-tone base while data-rightbar-fullscreen is set — the fullscreen dockkit PANE paints a translucent bg token where the official theme paints opaque white (DOM-dump evidence), so the pane is the bleed surface; solid matches the official look. Docked column untouched. Sheet rules gated on data-sidebar-right-open (stale-fullscreen collapse, ADR-0021 amendment 四) */",
     `${body}${column},${body}${dockPanel},${body}${dockPane}{background-color:${opaqueFills.light}!important}`,
     `${body}[data-ds-dark-theme]${column},${body}[data-ds-dark-theme]${dockPanel},${body}[data-ds-dark-theme]${dockPane}{background-color:${opaqueFills.dark}!important}`,
   ].join("\n");
@@ -223,7 +223,7 @@ export function buildReadingBaseCss(bodyAttribute, opaqueFills) {
   const body = `body[${datasetAttribute(bodyAttribute)}]`;
   const panel = ' [data-plugin-panel="true"]';
   return [
-    "/* dsh-skins reading base (ADR-0022): solid skin-tone base under the plugin panel route container — the live page paints the whole route transparent over the wallpaper while the official theme paints an opaque bg token (DOM-dump evidence 2026-10-30), so text sits on a translucent token x wallpaper composite; solid matches the official look. Element-bound: the route leaves the DOM with the page, no state gate needed. Layer pin per ADR-0021 amendment doctrine (large-area cover rules always carry the pin). */",
+    "/* vyra-free-theme reading base (ADR-0022): solid skin-tone base under the plugin panel route container — the live page paints the whole route transparent over the wallpaper while the official theme paints an opaque bg token (DOM-dump evidence 2026-10-30), so text sits on a translucent token x wallpaper composite; solid matches the official look. Element-bound: the route leaves the DOM with the page, no state gate needed. Layer pin per ADR-0021 amendment doctrine (large-area cover rules always carry the pin). */",
     `${body}${panel}{position:relative;z-index:0;background-color:${opaqueFills.light}!important}`,
     `${body}[data-ds-dark-theme]${panel}{position:relative;z-index:0;background-color:${opaqueFills.dark}!important}`,
   ].join("\n");
@@ -249,17 +249,17 @@ export function createSkinRuntime({ profile = "web" } = {}) {
 
   function register(skin) {
     if (!skin || typeof skin.id !== "string" || skin.id.length === 0) {
-      throw new Error("[dsh-skins] every skin needs a non-empty id");
+      throw new Error("[vyra-free-theme] every skin needs a non-empty id");
     }
     if (skin.id === OFFICIAL_SKIN_ID || skin.id === LEGACY_OFFICIAL_ALIAS) {
-      throw new Error(`[dsh-skins] skin id "${skin.id}" is reserved for the official appearance`);
+      throw new Error(`[vyra-free-theme] skin id "${skin.id}" is reserved for the official appearance`);
     }
     for (const key of Object.keys(skin)) {
       if (!PRODUCTION_FIELDS.has(key)) {
-        throw new Error(`[dsh-skins] unknown skin field "${key}" on "${skin.id}" — the skin interface is exactly PRODUCTION_FIELDS (ADR-0014)`);
+        throw new Error(`[vyra-free-theme] unknown skin field "${key}" on "${skin.id}" — the skin interface is exactly PRODUCTION_FIELDS (ADR-0014)`);
       }
     }
-    if (skins.has(skin.id)) throw new Error(`[dsh-skins] duplicate skin id "${skin.id}"`);
+    if (skins.has(skin.id)) throw new Error(`[vyra-free-theme] duplicate skin id "${skin.id}"`);
     skins.set(skin.id, skin);
     order.push(skin.id);
   }
@@ -346,7 +346,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     let tag = document.querySelector(`style[data-plugin-css=${JSON.stringify(id)}]`);
     if (tag === null) {
       tag = document.createElement("style");
-      tag.dataset.plugin = "dsh-skins";
+      tag.dataset.plugin = "vyra-free-theme";
       tag.dataset.pluginCss = id;
       document.head.appendChild(tag);
     }
@@ -416,7 +416,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
   // plugins copy the "obvious" priority -10 for the single brand seats. A
   // latecomer registering the SAME priority on a single slot throws inside
   // its own apply() and its whole activation dies (cordis fiber state=3), so
-  // dsh-skins must never sit on the magnet value. We claim a deep, unlikely
+  // vyra-free-theme must never sit on the magnet value. We claim a deep, unlikely
   // base seat instead and probe the slot ledger before registering: blind
   // -10 latecomers then register cleanly and get shadowed ("lowest
   // renders") instead of crashing.
@@ -447,10 +447,10 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         return ctx.slots.register({ name, priority }, component);
       } catch (error) {
         if (!/already has a registration/.test(String(error?.message ?? error))) throw error;
-        console.warn(`[dsh-skins] brand seat "${name}" priority ${priority} taken; retrying deeper`);
+        console.warn(`[vyra-free-theme] brand seat "${name}" priority ${priority} taken; retrying deeper`);
       }
     }
-    console.warn(`[dsh-skins] brand seat "${name}" stays with its occupant; skin mounts without it`);
+    console.warn(`[vyra-free-theme] brand seat "${name}" stays with its occupant; skin mounts without it`);
     return () => {};
   }
 
@@ -467,7 +467,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
    * exploded to full width and snapped back while the panel was open). The
    * original double-rAF dance PAINTED the unstyled window — the ADR's
    * "about one frame, imperceptible" cost turned out to be very perceptible —
-   * and its `dsh-skins/` prefix also swept the switcher's own sidebar.css,
+   * and its `vyra-free-theme/` prefix also swept the switcher's own sidebar.css,
    * collapsing the popover layout for those frames. The heal only needs the
    * style invalidation, not a painted unstyled frame: empty each tag's
    * textContent, force a synchronous style+layout flush (read a layout
@@ -478,7 +478,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
    * paint-dirty but never reaches a frame; the next paint rasters the FINAL
    * styles over everything — same compositor unstick, zero flash. Two
    * further scopings:
-   *   - only SKIN tags are swept: `dsh-skins/sidebar.css` (switcher shell +
+   *   - only SKIN tags are swept: `vyra-free-theme/sidebar.css` (switcher shell +
    *     panel CSS) is excluded — it is not a skin surface, and its absence
    *     mid-intermediate would also reset the panel column's scroll position;
    *   - applyEffects sweeps only on a real skin change; same-skin hot
@@ -488,7 +488,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
    * Inert in DOM-stub environments.
    */
   const SWEEP_SELECTOR =
-    'style[data-plugin-css^="dsh-skins/"]:not([data-plugin-css="dsh-skins/sidebar.css"])';
+    'style[data-plugin-css^="vyra-free-theme/"]:not([data-plugin-css="vyra-free-theme/sidebar.css"])';
   function flushStylesForSweep() {
     // Reading a layout property forces the pending style recalc + layout to
     // run NOW, committing the invalidation as paint dirt before the sweep's
@@ -517,7 +517,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
    * Fullscreen→dock stale-frame unstick (ADR-0021 amendment): when the right
    * panel leaves fullscreen, the compositor can keep painting the last
    * fullscreen frame while layout and hit-testing are already correct
-   * (field evidence 2026-10-29: removing any dsh-skins style tag snapped the
+   * (field evidence 2026-10-29: removing any vyra-free-theme style tag snapped the
    * view back). Removing and re-adding our fullscreen.css tag forces exactly
    * that proven style-invalidation repaint, scoped to our own tag. Installed
    * once per runtime; inert in DOM-stub environments without MutationObserver.
@@ -539,7 +539,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         tag.remove();
         requestAnimationFrame(() => requestAnimationFrame(() => {
           const fresh = document.createElement("style");
-          fresh.dataset.plugin = "dsh-skins";
+          fresh.dataset.plugin = "vyra-free-theme";
           fresh.dataset.pluginCss = id;
           fresh.textContent = content;
           document.head.append(fresh);
@@ -559,7 +559,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
    * Returns the unwind function; throws only after self-cleanup.
    */
   function buildEffects(skin, effects) {
-    if (!ctx) throw new Error("[dsh-skins] mount before apply");
+    if (!ctx) throw new Error("[vyra-free-theme] mount before apply");
     const body = document.body;
     const stops = [];
     const unwind = () => {
@@ -606,7 +606,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
       }
 
       if (effects.staticCss !== null) {
-        const tag = styleTag(`dsh-skins/${skin.id}.css`, effects.staticCss);
+        const tag = styleTag(`vyra-free-theme/${skin.id}.css`, effects.staticCss);
         stops.push(() => tag.remove());
       }
 
@@ -619,7 +619,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
       // the skin, removed with it; no runtime scheduling, no timing
       // dependence (an earlier grid-nudge family was rejected — see ADR).
       {
-        const tag = styleTag(`dsh-skins/${skin.id}.paintorder.css`,
+        const tag = styleTag(`vyra-free-theme/${skin.id}.paintorder.css`,
           sidebarPaintOrderCss(effects.bodyAttribute));
         stops.push(() => tag.remove());
       }
@@ -642,7 +642,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
           imageLight: effects.backdrop.imageLight,
           imageDark: effects.backdrop.imageDark,
         };
-        const tag = styleTag(`dsh-skins/${skin.id}.shell.css`,
+        const tag = styleTag(`vyra-free-theme/${skin.id}.shell.css`,
           buildShellAlignmentCss(effects.bodyAttribute, opaqueFills, backdrop));
         stops.push(() => tag.remove());
         // Fullscreen frost base (ADR-0020): state-scoped by the layout's
@@ -653,7 +653,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         // (inert-but-harmless under the Desktop opaque occupant rules).
         const fullscreenCss = buildFullscreenBaseCss(effects.bodyAttribute, opaqueFills);
         if (fullscreenCss !== "") {
-          const fullscreenTag = styleTag(`dsh-skins/${skin.id}.fullscreen.css`, fullscreenCss);
+          const fullscreenTag = styleTag(`vyra-free-theme/${skin.id}.fullscreen.css`, fullscreenCss);
           stops.push(() => fullscreenTag.remove());
         }
         // Reading base (ADR-0022): the plugin panel route container paints
@@ -663,7 +663,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         // identical on Web and Desktop.
         const readingCss = buildReadingBaseCss(effects.bodyAttribute, opaqueFills);
         if (readingCss !== "") {
-          const readingTag = styleTag(`dsh-skins/${skin.id}.reading.css`, readingCss);
+          const readingTag = styleTag(`vyra-free-theme/${skin.id}.reading.css`, readingCss);
           stops.push(() => readingTag.remove());
         }
 
@@ -674,32 +674,32 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         // by construction).
         const sidebarFadeCss = fills === null ? "" : buildSidebarFadeCss(effects.bodyAttribute);
         if (sidebarFadeCss !== "") {
-          const fadeTag = styleTag(`dsh-skins/${skin.id}.sidebarfade.css`, sidebarFadeCss);
+          const fadeTag = styleTag(`vyra-free-theme/${skin.id}.sidebarfade.css`, sidebarFadeCss);
           stops.push(() => fadeTag.remove());
         }
       }
 
       const backdrop = backdropCss(effects);
       if (backdrop !== null) {
-        const tag = styleTag(`dsh-skins/${skin.id}.backdrop.css`, backdrop);
+        const tag = styleTag(`vyra-free-theme/${skin.id}.backdrop.css`, backdrop);
         stops.push(() => tag.remove());
       }
 
       const variables = variablesCss(effects);
       if (variables !== null) {
-        const tag = styleTag(`dsh-skins/${skin.id}.vars.css`, variables);
+        const tag = styleTag(`vyra-free-theme/${skin.id}.vars.css`, variables);
         stops.push(() => tag.remove());
       }
 
       if (effects.decorations !== null) {
         for (const decoration of effects.decorations) {
-          const tag = styleTag(`dsh-skins/${skin.id}.decor.${decoration.key}.css`, decoration.css);
+          const tag = styleTag(`vyra-free-theme/${skin.id}.decor.${decoration.key}.css`, decoration.css);
           stops.push(() => tag.remove());
         }
       }
 
       if (effects.tokenOverrides !== null && typeof ctx.theme?.overrideTokens === "function") {
-        const disposeTokens = ctx.theme.overrideTokens(`dsh-skins/${skin.id}`, effects.tokenOverrides);
+        const disposeTokens = ctx.theme.overrideTokens(`vyra-free-theme/${skin.id}`, effects.tokenOverrides);
         stops.push(disposeTokens);
       }
 
@@ -782,7 +782,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     try {
       stop = buildEffects(skin, effects);
     } catch (error) {
-      console.warn(`[dsh-skins] mounting "${skin.id}" failed`, error);
+      console.warn(`[vyra-free-theme] mounting "${skin.id}" failed`, error);
       restorePrevious(previous, error);
       return false;
     }
@@ -810,7 +810,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
           return;
         }
       } catch (restoreError) {
-        console.error("[dsh-skins] restoring the previous skin failed; falling back to official", restoreError);
+        console.error("[vyra-free-theme] restoring the previous skin failed; falling back to official", restoreError);
       }
     }
     void cause;
@@ -823,14 +823,14 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     const overrides = overridesFor(skin.id);
     const result = projectSkin(skin, overrides, projectionContext());
     if (result.effects === null) {
-      console.warn(`[dsh-skins] skin "${skin.id}" failed to project`);
+      console.warn(`[vyra-free-theme] skin "${skin.id}" failed to project`);
       if (mounted !== null) return false; // projection failed, current skin untouched
       selectedId = OFFICIAL_SKIN_ID; // first boot fail-closed
       announce(OFFICIAL_SKIN_ID);
       return false;
     }
     if (result.degraded !== "none") {
-      console.warn(`[dsh-skins] skin "${skin.id}" projected with degraded defaults (${result.degraded})`);
+      console.warn(`[vyra-free-theme] skin "${skin.id}" projected with degraded defaults (${result.degraded})`);
     }
     return applyEffects(skin, result.effects, overrides);
   }
@@ -846,7 +846,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     const overrides = overridesFor(skin.id);
     const result = projectSkin(skin, overrides, projectionContext());
     if (result.effects === null) {
-      console.warn("[dsh-skins] config hot-update failed to project; keeping current effects");
+      console.warn("[vyra-free-theme] config hot-update failed to project; keeping current effects");
       return { applied: false, reason: "projection-failed" };
     }
     const applied = applyEffects(skin, result.effects, overrides);
@@ -874,7 +874,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     const normalizedId = normalizeChoiceId(id);
     const skin = skins.get(normalizedId);
     if (normalizedId !== OFFICIAL_SKIN_ID && !skin) {
-      throw new Error(`[dsh-skins] unknown skin "${id}" — available: ${[OFFICIAL_SKIN_ID, ...order].join(", ")}`);
+      throw new Error(`[vyra-free-theme] unknown skin "${id}" — available: ${[OFFICIAL_SKIN_ID, ...order].join(", ")}`);
     }
     if (selectedId === normalizedId && mounted !== null) return normalizedId;
 
@@ -891,7 +891,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
     if (mountSkin(skin)) {
       try { localStorage.setItem(SKIN_STORAGE_KEY, normalizedId); } catch {}
     } else {
-      console.warn(`[dsh-skins] selection of "${normalizedId}" did not take effect`);
+      console.warn(`[vyra-free-theme] selection of "${normalizedId}" did not take effect`);
     }
     return normalizedId;
   }
@@ -908,7 +908,7 @@ export function createSkinRuntime({ profile = "web" } = {}) {
       selectedId = OFFICIAL_SKIN_ID;
     } else {
       const skin = skins.get(id) ?? skins.get(order[0]);
-      if (!skin) throw new Error("[dsh-skins] no skins registered");
+      if (!skin) throw new Error("[vyra-free-theme] no skins registered");
       if (!mountSkin(skin)) selectedId = OFFICIAL_SKIN_ID; // fail-closed first boot
     }
     return () => {

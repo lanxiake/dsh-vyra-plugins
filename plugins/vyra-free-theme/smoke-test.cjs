@@ -44,7 +44,7 @@ class MutationObserver {
 }
 global.MutationObserver = MutationObserver;
 
-const storage = new Map([["dsh-skins:theme-preference", "dark"]]);
+const storage = new Map([["vyra-free-theme:theme-preference", "dark"]]);
 global.localStorage = {
 	getItem(key) { return storage.has(key) ? storage.get(key) : null; },
 	setItem(key, value) { storage.set(key, String(value)); }
@@ -173,15 +173,15 @@ const ctx = {
 	effect(setup, label) { const d = setup(); effects.push({ label, d }); },
 };
 mod.apply(ctx);
-if (window.__DSH_SKINS__.active() !== "openbmc") throw new Error("first load must land on the factory skin (openbmc, the v1.0.6 default)");
+if (window.__VFT__.active() !== "openbmc") throw new Error("first load must land on the factory skin (openbmc, the v1.0.6 default)");
 console.log("✓ factory skin (openbmc) mounts on first load");
 if (themeSnapshot.preference !== "dark") throw new Error("remote fallback should restore dark, got " + themeSnapshot.preference);
-if (window.__DSH_SKINS__.themePreference() !== "dark") throw new Error("diagnostic preference should report dark");
+if (window.__VFT__.themePreference() !== "dark") throw new Error("diagnostic preference should report dark");
 ctx.theme.setTheme("light");
-if (storage.get("dsh-skins:theme-preference") !== "light") throw new Error("theme/change should persist light");
+if (storage.get("vyra-free-theme:theme-preference") !== "light") throw new Error("theme/change should persist light");
 console.log("✓ remote theme fallback restored dark and persisted later light selection");
 
-const styleTag = (id) => head.children.find((c) => c.tagName === "style" && c.dataset.pluginCss === "dsh-skins/" + id + ".css");
+const styleTag = (id) => head.children.find((c) => c.tagName === "style" && c.dataset.pluginCss === "vyra-free-theme/" + id + ".css");
 
 // initial mount: skin slots + per-skin style tag + backdrop + favicon
 const skinSlots = slotRegistrations.filter((r) => r.opts.priority !== undefined);
@@ -195,8 +195,8 @@ const tagOpenbmc = styleTag("openbmc");
 if (!tagOpenbmc) throw new Error("openbmc style tag missing on factory boot");
 if (document.title !== "OpenBMC Studio") throw new Error("openbmc factory boot must rebrand the bare tab title, got " + document.title);
 console.log("✓ factory boot rebrand:", tagOpenbmc.dataset.pluginCss, "→", document.title);
-window.__DSH_SKINS__.select("meirenzhi");
-if (window.__DSH_SKINS__.active() !== "meirenzhi") throw new Error("select(meirenzhi) must stick");
+window.__VFT__.select("meirenzhi");
+if (window.__VFT__.active() !== "meirenzhi") throw new Error("select(meirenzhi) must stick");
 
 const tagMeirenzhi = styleTag("meirenzhi");
 if (!tagMeirenzhi) throw new Error("meirenzhi style tag missing");
@@ -231,12 +231,12 @@ if (!injectedSlotKeys.includes("sidebar.footer.action")) throw new Error("sideba
 const switcher = slotRegistrations.find((r) => r.opts.id === "skins-switcher");
 if (!switcher) throw new Error("sidebar switcher not registered");
 if (switcher.opts.name !== "sidebar.footer.action") throw new Error("switcher slot name wrong: " + switcher.opts.name);
-if (registeredDictObjects["dsh-skins.ui"].zh["skins.switch"] !== "主题切换") throw new Error("zh dict missing skins.switch");
-if (registeredDictObjects["dsh-skins.ui"].en["skins.switch"] !== "Theme Switcher") throw new Error("en dict missing skins.switch");
-if (registeredDictObjects["dsh-skins.ui"].zh["appearance.title"] !== "外观配色") throw new Error("zh dict missing appearance.title");
-if (registeredDictObjects["dsh-skins.ui"].zh["appearance.system"] !== "跟随系统") throw new Error("zh dict missing appearance.system");
-if (registeredDictObjects["dsh-skins.ui"].zh["skins.official.label"] !== "DeepSeek Harness（官方）") throw new Error("zh dict missing official skin label");
-if (registeredDictObjects["dsh-skins.ui"].en["skins.official.label"] !== "DeepSeek Harness (Official)") throw new Error("en dict missing official skin label");
+if (registeredDictObjects["vyra-free-theme.ui"].zh["skins.switch"] !== "主题切换") throw new Error("zh dict missing skins.switch");
+if (registeredDictObjects["vyra-free-theme.ui"].en["skins.switch"] !== "Theme Switcher") throw new Error("en dict missing skins.switch");
+if (registeredDictObjects["vyra-free-theme.ui"].zh["appearance.title"] !== "外观配色") throw new Error("zh dict missing appearance.title");
+if (registeredDictObjects["vyra-free-theme.ui"].zh["appearance.system"] !== "跟随系统") throw new Error("zh dict missing appearance.system");
+if (registeredDictObjects["vyra-free-theme.ui"].zh["skins.official.label"] !== "DeepSeek Harness（官方）") throw new Error("zh dict missing official skin label");
+if (registeredDictObjects["vyra-free-theme.ui"].en["skins.official.label"] !== "DeepSeek Harness (Official)") throw new Error("en dict missing official skin label");
 const renderThrough = (el) => (el && typeof el.type === "function" ? el.type(el.props) : el); // 穿过壳接管 gatekeeper（SidebarAction→Body）
 const swTree = renderThrough(switcher.comp({ wide: true })); // t 传空 → 引擎内置词条兜底
 const swBtn = swTree.props.children[0];
@@ -248,8 +248,8 @@ if (railTree.props.children[0].props.children[1] !== null) throw new Error("rail
 console.log("✓ sidebar switcher registered (order " + switcher.opts.order + "); button 主题切换; rail mode hides label");
 
 // zh/en dictionary parity gate — no key may exist in only one language.
-const zhKeys = Object.keys(registeredDictObjects["dsh-skins.ui"].zh);
-const enKeys = Object.keys(registeredDictObjects["dsh-skins.ui"].en);
+const zhKeys = Object.keys(registeredDictObjects["vyra-free-theme.ui"].zh);
+const enKeys = Object.keys(registeredDictObjects["vyra-free-theme.ui"].en);
 const zhOnly = zhKeys.filter((key) => !enKeys.includes(key));
 const enOnly = enKeys.filter((key) => !zhKeys.includes(key));
 if (zhOnly.length || enOnly.length) throw new Error("dict key parity broken: zh-only=" + zhOnly + " en-only=" + enOnly);
@@ -269,8 +269,8 @@ if (!meirenzhiEn.description.includes("Moonlit silks") || meirenzhiEn.descriptio
 activeLocale = "zh";
 
 // unified card style: every description is a "mark · backdrop · palette" triple
-const officialEn = registeredDictObjects["dsh-skins.ui"].en["skins.official.description"];
-const officialZh = registeredDictObjects["dsh-skins.ui"].zh["skins.official.description"];
+const officialEn = registeredDictObjects["vyra-free-theme.ui"].en["skins.official.description"];
+const officialZh = registeredDictObjects["vyra-free-theme.ui"].zh["skins.official.description"];
 for (const [id, text] of [["official", officialEn], ["openbmc", openbmcEn.description], ["uefi-harness", uefiEn.description], ["meirenzhi", meirenzhiEn.description]]) {
 	if ((text.match(/ · /g) || []).length !== 2) throw new Error(`en description for ${id} must be a three-part triple: ${text}`);
 }
@@ -296,12 +296,12 @@ const openTree = renderThrough(switcher.comp({ wide: true })); // 穿过壳接�
 const portal = openTree.props.children[1];
 if (!portal?.$$portal) throw new Error("open switcher should render a portal");
 const panel = portal.children;
-// Combined shell (Q46): the list lives inside .dsh-skins-pop-main.
+// Combined shell (Q46): the list lives inside .vyra-free-theme-pop-main.
 const shellChildren = panel.props.children;
 const mainColumn = Array.isArray(shellChildren)
-  ? shellChildren.find((node) => String(node?.props?.className ?? "").includes("dsh-skins-pop-main"))
+  ? shellChildren.find((node) => String(node?.props?.className ?? "").includes("vyra-free-theme-pop-main"))
   : null;
-if (!mainColumn) throw new Error("combined shell must wrap the list in dsh-skins-pop-main");
+if (!mainColumn) throw new Error("combined shell must wrap the list in vyra-free-theme-pop-main");
 const panelChildren = mainColumn.props.children;
 if (!Array.isArray(panelChildren)) throw new Error("list view must render a section array");
 
@@ -309,11 +309,11 @@ if (!Array.isArray(panelChildren)) throw new Error("list view must render a sect
 const nodeByText = (text) => panelChildren.find((node) => node?.props?.children === text);
 const appearanceTitle = nodeByText("外观配色");
 if (!appearanceTitle) throw new Error("appearance section missing");
-const themeGrid = panelChildren.find((node) => String(node?.props?.className ?? "").includes("dsh-skins-theme-grid"));
+const themeGrid = panelChildren.find((node) => String(node?.props?.className ?? "").includes("vyra-free-theme-theme-grid"));
 if (!themeGrid) throw new Error("theme grid missing");
 const themeCards = themeGrid.props.children;
 if (!Array.isArray(themeCards) || themeCards.length !== 3) throw new Error("appearance section needs 3 buttons");
-if (!String(themeCards[1].props.className).includes("dsh-skins-theme-card-on")) throw new Error("dark appearance button should be selected");
+if (!String(themeCards[1].props.className).includes("vyra-free-theme-theme-card-on")) throw new Error("dark appearance button should be selected");
 if (!nodeByText("选择皮肤")) throw new Error("skin section must follow appearance section");
 
 // Skin cards may be bare buttons (official) or card rows with a personalization
@@ -322,11 +322,11 @@ const skinCards = [];
 const gears = [];
 for (const node of panelChildren) {
   const className = String(node?.props?.className ?? "");
-  if (className.includes("dsh-skins-pop-card-row")) {
+  if (className.includes("vyra-free-theme-pop-card-row")) {
     const [card, gear] = node.props.children;
     skinCards.push(card);
     gears.push(gear);
-  } else if (className.includes("dsh-skins-pop-card")) {
+  } else if (className.includes("vyra-free-theme-pop-card")) {
     skinCards.push(node);
   }
 }
@@ -340,7 +340,7 @@ if (skinCards[2].props.children[0].props.children !== "UEFI Studio") throw new E
 if (skinCards[3].props.children[0].props.children !== "凡人修仙传 · 美人志") throw new Error("meirenzhi must be registered and listed last");
 themeCards[2].props.onClick();
 if (themeSnapshot.preference !== "system") throw new Error("system button must call official theme.setTheme");
-if (storage.get("dsh-skins:theme-preference") !== "system") throw new Error("system selection must persist remotely");
+if (storage.get("vyra-free-theme:theme-preference") !== "system") throw new Error("system selection must persist remotely");
 console.log("✓ popover: appearance(3) + skins(4: official first, openbmc second, uefi third, meirenzhi last) + gears(3); system theme persisted");
 
 
@@ -349,10 +349,10 @@ console.log("✓ popover: appearance(3) + skins(4: official first, openbmc secon
 // (meirenzhi) — so the cleanup assertions reference meirenzhi artifacts.
 const meirenzhiFavicon = head.children.find((c) => c.rel === "icon" && !c.removed);
 mod.selectSkin("official");
-if (window.__DSH_SKINS__.active() !== "official") throw new Error("official appearance must become active");
-if (storage.get("dsh-skins:active") !== "official") throw new Error("official appearance selection must persist");
+if (window.__VFT__.active() !== "official") throw new Error("official appearance must become active");
+if (storage.get("vyra-free-theme:active") !== "official") throw new Error("official appearance selection must persist");
 if (mod.selectSkin("default") !== "official") throw new Error("legacy \"default\" alias must normalize to official");
-if (storage.get("dsh-skins:active") !== "official") throw new Error("legacy \"default\" alias must persist as official");
+if (storage.get("vyra-free-theme:active") !== "official") throw new Error("legacy \"default\" alias must persist as official");
 if (!tagMeirenzhi.removed) throw new Error("custom skin style must be removed for the official appearance");
 if (styleTag("meirenzhi.backdrop") !== undefined && !styleTag("meirenzhi.backdrop").removed) throw new Error("official appearance must remove the meirenzhi backdrop stylesheet");
 if (body.dataset.dshMeirenzhiSkin !== undefined) throw new Error("official appearance must remove the meirenzhi body scope");
@@ -379,9 +379,9 @@ console.log("✓ UEFI body scope attr after switch:", body.dataset.dshUefiHarnes
 // UEFI → openbmc switch: the default-P projection must reproduce the baked
 // visuals byte-for-byte (P=55 anchors to the baked alpha strings).
 mod.selectSkin("openbmc");
-if (window.__DSH_SKINS__.active() !== "openbmc") throw new Error("openbmc must become active");
+if (window.__VFT__.active() !== "openbmc") throw new Error("openbmc must become active");
 if (body.dataset.dshOpenbmcSkin !== "") throw new Error("openbmc body scope attr missing");
-const obmcThemeLayer = ctx.theme._layers.get("dsh-skins/openbmc");
+const obmcThemeLayer = ctx.theme._layers.get("vyra-free-theme/openbmc");
 if (!obmcThemeLayer) throw new Error("openbmc must register a token override layer (ADR-0004)");
 if (typeof obmcThemeLayer["--dsw-alias-bg-base"].light !== "string" || !obmcThemeLayer["--dsw-alias-bg-base"].light.startsWith("rgba(247, 250, 252,")) {
 	throw new Error("panel opacity must derive translucent panel bases at the default P=55");
@@ -396,23 +396,23 @@ if (!obmcCss || obmcCss.removed) throw new Error("openbmc static css missing");
 if (obmcCss.textContent.includes('[id="root"]{backdrop-filter')) throw new Error("no wallpaper glass rule at the default P=55 (blur 0)");
 if (!obmcCss.textContent.includes("--dsw-mask-blur: blur(10px)")) throw new Error("openbmc must frost host modal masks (popup readability)");
 if (!obmcCss.textContent.includes("color-mix(in srgb, rgb(247, 250, 252) 86%, transparent)")) throw new Error("openbmc popup family must use the quota-watch recipe (86% opaque base + blur)");
-if (!obmcCss.textContent.includes(".dshm-panel") || !obmcCss.textContent.includes(".dsh-skins-pop")) throw new Error("openbmc popup family must cover dsh-m and dsh-skins panels");
+if (!obmcCss.textContent.includes(".dshm-panel") || !obmcCss.textContent.includes(".vyra-free-theme-pop")) throw new Error("openbmc popup family must cover dsh-m and vyra-free-theme panels");
 console.log("✓ openbmc active: baked-default token layer + backdrop + no wallpaper glass at default P + popup frost family");
 
 // ---- meirenzhi: token layer + backdrop + hot-update ----
 // Direct UEFI → openbmc → meirenzhi switch (no official detour): teardown-first
 // mounting restores the official brand segment before meirenzhi rebrands it.
 mod.selectSkin("meirenzhi");
-if (window.__DSH_SKINS__.active() !== "meirenzhi") throw new Error("meirenzhi must become active");
+if (window.__VFT__.active() !== "meirenzhi") throw new Error("meirenzhi must become active");
 if (body.dataset.dshMeirenzhiSkin !== "") throw new Error("meirenzhi body scope attr missing");
 const mrzBackdrop = styleTag("meirenzhi.backdrop");
 if (!mrzBackdrop || mrzBackdrop.removed) throw new Error("meirenzhi backdrop stylesheet missing");
-if (!mrzBackdrop.textContent.includes('url("/dsh-skins/assets/b_meirenzhi_yuntai.webp')) throw new Error("meirenzhi backdrop must reference the routed factory wallpaper (ADR-0023)");
+if (!mrzBackdrop.textContent.includes('url("/vyra-free-theme/assets/b_meirenzhi_yuntai.webp')) throw new Error("meirenzhi backdrop must reference the routed factory wallpaper (ADR-0023)");
 // ADR-0010 hinge floor: the WEB wallpaper rule (pointer-events terminator)
 // carries no blur; the marker-scoped desktopBlur candidate may still appear.
 if (mrzBackdrop.textContent.includes("pointer-events:none;filter:blur(")) throw new Error("meirenzhi factory P=35 sits on the ADR-0010 hinge floor — the web wallpaper rule must ship with zero blur");
 if (!mrzBackdrop.textContent.includes("linear-gradient(rgba(252, 250, 246, 0.040)")) throw new Error("meirenzhi scrim overlay must derive from the translucency curve at the default P=35");
-const mrzThemeLayer = ctx.theme._layers.get("dsh-skins/meirenzhi");
+const mrzThemeLayer = ctx.theme._layers.get("vyra-free-theme/meirenzhi");
 if (!mrzThemeLayer) throw new Error("meirenzhi must register a token override layer");
 if (mrzThemeLayer["--dsw-alias-brand-primary"].light !== "#B8433F") throw new Error("accent default must map to the brand-primary token");
 if (mrzThemeLayer["--dsw-specific-bubble"].dark !== "rgba(24, 24, 34, 0.90)") throw new Error("bubble default must map to the specific-bubble token");
@@ -427,9 +427,9 @@ console.log("✓ meirenzhi active: backdrop + tokens + title + ambient motion (r
 // hot-update: change overrides through the runtime's personalization hook,
 // then confirm the projected effects swap without touching the selection.
 mod.selectSkin("official");
-if (ctx.theme._layers.get("dsh-skins/meirenzhi")) throw new Error("switching to official must dispose the meirenzhi token layer");
+if (ctx.theme._layers.get("vyra-free-theme/meirenzhi")) throw new Error("switching to official must dispose the meirenzhi token layer");
 mod.selectSkin("meirenzhi");
-if (!ctx.theme._layers.get("dsh-skins/meirenzhi")) throw new Error("re-selecting meirenzhi must re-register the token layer");
+if (!ctx.theme._layers.get("vyra-free-theme/meirenzhi")) throw new Error("re-selecting meirenzhi must re-register the token layer");
 console.log("✓ token override layers dispose and re-register across skin switches");
 
 // Hot-update (the config sync wiring fires this on every page load): the
@@ -437,14 +437,14 @@ console.log("✓ token override layers dispose and re-register across skin switc
 // live skin (the 9c19d5c regression this now guards against).
 const mrzCssBefore = styleTag("meirenzhi");
 const mrzTitleBefore = document.title;
-const hotUpdate = window.__DSH_SKINS__.hotUpdate();
+const hotUpdate = window.__VFT__.hotUpdate();
 if (hotUpdate.applied !== true) throw new Error("hot update must apply, got " + JSON.stringify(hotUpdate));
 if (!styleTag("meirenzhi") || styleTag("meirenzhi").removed) throw new Error("hot update must keep the meirenzhi style tag alive");
 if (!styleTag("meirenzhi.backdrop") || styleTag("meirenzhi.backdrop").removed) throw new Error("hot update must keep the backdrop tag alive");
 if (body.dataset.dshMeirenzhiSkin !== "") throw new Error("hot update must keep the body scope attribute");
-if (!ctx.theme._layers.get("dsh-skins/meirenzhi")) throw new Error("hot update must re-register the token layer");
+if (!ctx.theme._layers.get("vyra-free-theme/meirenzhi")) throw new Error("hot update must re-register the token layer");
 if (document.title !== mrzTitleBefore) throw new Error("hot update must keep the rebranded title, got " + document.title);
-if (window.__DSH_SKINS__.active() !== "meirenzhi") throw new Error("hot update must not change the active skin");
+if (window.__VFT__.active() !== "meirenzhi") throw new Error("hot update must not change the active skin");
 void mrzCssBefore;
 console.log("✓ hot-update rebuilt effects with the live skin intact");
 

@@ -99,7 +99,7 @@ async function newPage(colorScheme) {
   });
   const page = await context.newPage();
   await page.goto(`${baseUrl}/?skin=${skin}`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector(".dsh-skins-switcher-btn", { timeout: 30_000 });
+  await page.waitForSelector(".vyra-free-theme-switcher-btn", { timeout: 30_000 });
   await page.waitForTimeout(2_500); // let React settle and the backdrop paint
   await dismissNotices(page);
   const uiLocale = await observedLocale(page);
@@ -167,14 +167,14 @@ async function hideForeignBanners(page) {
 
 /** Selected appearance card index: 0 light, 1 dark, 2 system. */
 async function selectedThemeIndex(page) {
-  return page.locator('.dsh-skins-pop .dsh-skins-theme-card[aria-pressed="true"]').evaluateAll(
+  return page.locator('.vyra-free-theme-pop .vyra-free-theme-theme-card[aria-pressed="true"]').evaluateAll(
     (nodes) => nodes.map((node, i) => node.getAttribute("aria-pressed") === "true" ? i : -1).filter((i) => i >= 0)[0] ?? null,
   );
 }
 
 async function openSwitcher(page) {
-  await page.click(".dsh-skins-switcher-btn");
-  await page.waitForSelector(".dsh-skins-pop", { timeout: 10_000 });
+  await page.click(".vyra-free-theme-switcher-btn");
+  await page.waitForSelector(".vyra-free-theme-pop", { timeout: 10_000 });
   await page.waitForTimeout(600);
 }
 
@@ -185,7 +185,7 @@ async function closeSwitcher(page) {
 
 async function clickThemeCard(page, index) {
   await openSwitcher(page);
-  await page.locator(".dsh-skins-pop .dsh-skins-theme-card").nth(index).click();
+  await page.locator(".vyra-free-theme-pop .vyra-free-theme-theme-card").nth(index).click();
   await page.waitForTimeout(700);
   await closeSwitcher(page);
 }
@@ -212,8 +212,8 @@ async function writeShot(name, buffer) {
  * list-only frame during the shell's width sweep. */
 async function waitForPersonalizationFrame(page) {
   await page.waitForFunction(() => {
-    const shell = document.querySelector(".dsh-skins-pop.dsh-skins-wide");
-    const panel = document.querySelector(".dsh-skins-pz-panel");
+    const shell = document.querySelector(".vyra-free-theme-pop.vyra-free-theme-wide");
+    const panel = document.querySelector(".vyra-free-theme-pz-panel");
     if (shell === null || panel === null) return false;
     const shellRect = shell.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
@@ -221,8 +221,8 @@ async function waitForPersonalizationFrame(page) {
     return shellRect.width >= 600 && panelRect.width >= 240 && opacity >= 0.99;
   }, undefined, { timeout: 5_000 });
   return page.evaluate(() => {
-    const shell = document.querySelector(".dsh-skins-pop.dsh-skins-wide").getBoundingClientRect();
-    const panel = document.querySelector(".dsh-skins-pz-panel").getBoundingClientRect();
+    const shell = document.querySelector(".vyra-free-theme-pop.vyra-free-theme-wide").getBoundingClientRect();
+    const panel = document.querySelector(".vyra-free-theme-pz-panel").getBoundingClientRect();
     return { shellWidth: Math.round(shell.width), panelWidth: Math.round(panel.width) };
   });
 }
@@ -236,8 +236,8 @@ if (probe) {
   console.log(`new-session clicked: ${started}; expanded workspace rows: ${privacy.expandedCount}`);
   console.log("workspace rows:", JSON.stringify(privacy.workspaces));
   const webp = await toWebp(page, await page.screenshot(), 0.9);
-  writeFileSync("/tmp/dsh-skins-probe.webp", webp);
-  console.log(`probe shot -> /tmp/dsh-skins-probe.webp (${(webp.length / 1024).toFixed(0)} KiB)`);
+  writeFileSync("/tmp/vyra-free-theme-probe.webp", webp);
+  console.log(`probe shot -> /tmp/vyra-free-theme-probe.webp (${(webp.length / 1024).toFixed(0)} KiB)`);
   await context.close();
   await browser.close();
   process.exit(0);
@@ -275,8 +275,8 @@ if (gate) {
   // decides which skin's panel the gate exercises (the old `.last()` always
   // hit the last card regardless of --skin).
   await openSwitcher(gpage);
-  const gears = gpage.locator(".dsh-skins-pz-gear");
-  const skinIds = await gpage.evaluate(() => window.__DSH_SKINS__.list().map((item) => item.id));
+  const gears = gpage.locator(".vyra-free-theme-pz-gear");
+  const skinIds = await gpage.evaluate(() => window.__VFT__.list().map((item) => item.id));
   check(await gears.count() === skinIds.length, `personalization gear on all ${skinIds.length} catalog skins (got ${await gears.count()})`);
   const targetIndex = skinIds.indexOf(skin);
   if (targetIndex < 0) throw new Error(`unknown or non-personalizable gate skin: ${skin}`);
@@ -286,11 +286,11 @@ if (gate) {
 
   // 2. Gear docks the panel column; Escape closes the WHOLE combined shell.
   await gpage.keyboard.press("Enter");
-  await gpage.waitForSelector(".dsh-skins-pz-panel", { timeout: 5_000 });
+  await gpage.waitForSelector(".vyra-free-theme-pz-panel", { timeout: 5_000 });
   check(true, "personalization panel docks beside the list");
   await gpage.keyboard.press("Escape");
   await gpage.waitForTimeout(300);
-  check(await gpage.locator(".dsh-skins-pop").count() === 0, "Escape closes the combined shell");
+  check(await gpage.locator(".vyra-free-theme-pop").count() === 0, "Escape closes the combined shell");
 
   // 3. Auto-save flow (ADR-0003): edit the slogan → the debounced flush
   //    persists it with NO save action; it survives a reload. Then
@@ -301,7 +301,7 @@ if (gate) {
   //    input, independent of host DOM.
   // Slogan input: match on the "(ZH)" suffix — the label text itself
   // ("标语 Slogan") is dict copy and may be reworded.
-  const sloganInput = () => gpage.locator('.dsh-skins-pz-panel input[aria-label$="(ZH)"]');
+  const sloganInput = () => gpage.locator('.vyra-free-theme-pz-panel input[aria-label$="(ZH)"]');
   // Factory slogans per gate skin: 恢复默认 must land back on the skin's OWN
   // catalog default (complete map — every --skin target is covered).
   const FACTORY_SLOGANS_ZH = {
@@ -312,7 +312,7 @@ if (gate) {
   const openPanel = async () => {
     await openSwitcher(gpage);
     await targetGear.click();
-    await gpage.waitForSelector(".dsh-skins-pz-panel", { timeout: 5_000 });
+    await gpage.waitForSelector(".vyra-free-theme-pz-panel", { timeout: 5_000 });
   };
   await openPanel();
   await sloganInput().fill("验收实验标语");
@@ -327,7 +327,7 @@ if (gate) {
   // playwright auto-DISMISSES native dialogs, which would silently no-op the
   // reset, so accept it explicitly.
   gpage.once("dialog", (dialog) => dialog.accept());
-  await gpage.locator('.dsh-skins-pz-panel button', { hasText: labelRegex(UI.restoreDefaults) }).click();
+  await gpage.locator('.vyra-free-theme-pz-panel button', { hasText: labelRegex(UI.restoreDefaults) }).click();
   await gpage.waitForTimeout(1200);
   await gpage.reload();
   await preparePrivateCapture(gpage);
@@ -343,7 +343,7 @@ if (gate) {
   // old code unconditionally called openSwitcher() again, which TOGGLED the
   // shell closed (the trigger is a toggle) and raced the gear click against
   // the unmounting node. Reuse the open panel instead.
-  await gpage.waitForSelector(".dsh-skins-pz-panel", { timeout: 5_000 });
+  await gpage.waitForSelector(".vyra-free-theme-pz-panel", { timeout: 5_000 });
   const frame = await waitForPersonalizationFrame(gpage);
   check(true, `personalization evidence frame settled (shell ${frame.shellWidth}px, panel ${frame.panelWidth}px)`);
   await writeShot(`${skin}-personalize.webp`, await toWebp(gpage, await gpage.screenshot()));
@@ -381,8 +381,8 @@ await writeShot(`${skin}-light.webp`, await toWebp(page, await page.screenshot()
 // 3. Switcher close-up (dark): popover AND its 皮肤切换 trigger button in one frame
 await clickThemeCard(page, 1);
 await openSwitcher(page);
-const pop = await page.locator(".dsh-skins-pop").boundingBox();
-const btn = await page.locator(".dsh-skins-switcher-btn").boundingBox();
+const pop = await page.locator(".vyra-free-theme-pop").boundingBox();
+const btn = await page.locator(".vyra-free-theme-switcher-btn").boundingBox();
 const pad = 24;
 const clip = {
   x: Math.max(0, Math.floor(Math.min(pop.x, btn.x) - pad)),

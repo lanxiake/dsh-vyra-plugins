@@ -14,7 +14,7 @@
  *      (facts pinned against dsh-host-webserver 0.2.1-rc.5 and src/index.js):
  *        ctx.inject(["webServer"], cb) — services list is exact;
  *        cb(host) with host.webServer.register(route) → sync disposer;
- *        host.effect(setup, "dsh-skins: personalization routes") — setup runs
+ *        host.effect(setup, "vyra-free-theme: personalization routes") — setup runs
  *        synchronously, its return value is the disposer;
  *        ctx.get() must only ever be asked for "webStartup"/"webRuntime"
  *        (trusted-hosts.js fallback chain), lazily, never throwing the mount.
@@ -29,14 +29,14 @@
  *      simulating webStartup at all.
  *   4. Assert, in two stages:
  *      Stage 1 (always, today's baseline): five routes registered with the
- *      expected path/kind sequence; GET /dsh-skins/config answers 200 with a
+ *      expected path/kind sequence; GET /vyra-free-theme/config answers 200 with a
  *      JSON snapshot; dispose tears down exactly the five registrations.
  *      Stage 2 (when the package ships assets/manifest.json, i.e. after the
  *      ADR-0023 replay): every packaged asset file must answer 200 over its
  *      b_ route with immutable caching and an etag; an unknown b_ key must
  *      answer a discernible non-200 (fail-open contract) without crashing
  *      the host; `lib/client.js` must carry the `?v=<version>` literal and
- *      zero __DSH_SKINS_ASSET_REV__ residue (verified by verify-bundle-guard,
+ *      zero __VFT_ASSET_REV__ residue (verified by verify-bundle-guard,
  *      gated on the same manifest presence).
  *   5. Disposal symmetry: effect disposers run, all five route disposals fire.
  *
@@ -56,14 +56,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const PACKAGE_NAME = "@iasiv5/dsh-skins";
-const EFFECT_LABEL = "dsh-skins: personalization routes";
+const PACKAGE_NAME = "vyra-free-theme";
+const EFFECT_LABEL = "vyra-free-theme: personalization routes";
 const EXPECTED_ROUTES = [
-	{ kind: "exact", path: "/dsh-skins/config" },
-	{ kind: "exact", path: "/dsh-skins/recovery" },
-	{ kind: "exact", path: "/dsh-skins/library" },
-	{ kind: "prefix", path: "/dsh-skins/library" },
-	{ kind: "prefix", path: "/dsh-skins/assets" },
+	{ kind: "exact", path: "/vyra-free-theme/config" },
+	{ kind: "exact", path: "/vyra-free-theme/recovery" },
+	{ kind: "exact", path: "/vyra-free-theme/library" },
+	{ kind: "prefix", path: "/vyra-free-theme/library" },
+	{ kind: "prefix", path: "/vyra-free-theme/assets" },
 ];
 
 const problems = [];
@@ -73,7 +73,7 @@ let port = 0; // assigned once the gate's listener is up; read by get()
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const version = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
 
-const workDir = mkdtempSync(join(tmpdir(), "dsh-skins-delivery-"));
+const workDir = mkdtempSync(join(tmpdir(), "vyra-free-theme-delivery-"));
 const packDir = join(workDir, "pack");
 const extractDir = join(workDir, "extracted");
 const dshHome = join(workDir, "dsh-home");
@@ -128,7 +128,7 @@ const get = (path) =>
 try {
 	// --- 1. pack + extract the exact npm artifact ----------------------------
 	run("pnpm pack", "pnpm", ["pack", "--pack-destination", packDir]);
-	const tarballs = existsSync(packDir) ? readdirSync(packDir).filter((name) => /^iasiv5-dsh-skins-\d+\.\d+\.\d+.*\.tgz$/.test(name)) : [];
+	const tarballs = existsSync(packDir) ? readdirSync(packDir).filter((name) => /^iasiv5-vyra-free-theme-\d+\.\d+\.\d+.*\.tgz$/.test(name)) : [];
 	if (tarballs.length !== 1) {
 		problem(`expected exactly one packed tarball in ${packDir}, got ${tarballs.length}`);
 	} else {
@@ -190,12 +190,12 @@ try {
 	port = server.address().port;
 
 	// Stage 1: the host answers, with a parseable config snapshot.
-	const configResponse = await get("/dsh-skins/config");
-	if (configResponse.status !== 200) problem(`/dsh-skins/config expected 200, got ${configResponse.status}`);
+	const configResponse = await get("/vyra-free-theme/config");
+	if (configResponse.status !== 200) problem(`/vyra-free-theme/config expected 200, got ${configResponse.status}`);
 	else {
 		const snapshot = await configResponse.json().catch(() => null);
-		if (!snapshot || typeof snapshot !== "object") problem("/dsh-skins/config did not return a JSON object");
-		else if (!Number.isFinite(snapshot.revision)) problem("/dsh-skins/config snapshot has no numeric revision");
+		if (!snapshot || typeof snapshot !== "object") problem("/vyra-free-theme/config did not return a JSON object");
+		else if (!Number.isFinite(snapshot.revision)) problem("/vyra-free-theme/config snapshot has no numeric revision");
 	}
 
 	// Stage 2: only when the package ships the builtin-asset manifest.
@@ -211,16 +211,16 @@ try {
 		const revEscaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 		if (!new RegExp(`rev\\s*=\\s*"${revEscaped}"`).test(clientText)) problem(`lib/client.js lacks the asset-rev define literal rev = "${version}"`);
 		if (!clientText.includes("?v=")) problem("lib/client.js lacks the ?v= cache-busting template");
-		if (clientText.includes("__DSH_SKINS_ASSET_REV__")) problem("lib/client.js carries unresolved __DSH_SKINS_ASSET_REV__");
+		if (clientText.includes("__VFT_ASSET_REV__")) problem("lib/client.js carries unresolved __VFT_ASSET_REV__");
 
 		// Route key is the SINGLE-SEGMENT b_ basename (store.serveAsset matches
-		// /dsh-skins/assets/<one segment>), not the packaged relative path.
+		// /vyra-free-theme/assets/<one segment>), not the packaged relative path.
 		for (const entry of entries) {
 			const ext = (entry.file ?? "").split(".").pop() ?? "webp";
 			const key = `b_${entry.skinId}_${entry.assetKey}.${ext}`;
 			const onDisk = join(packageDir, "assets", entry.file ?? "");
 			if (!existsSync(onDisk)) problem(`asset ${key}: manifest file assets/${entry.file} missing from the package`);
-			const assetResponse = await get(`/dsh-skins/assets/${key}?v=${version}`);
+			const assetResponse = await get(`/vyra-free-theme/assets/${key}?v=${version}`);
 			if (assetResponse.status !== 200) {
 				problem(`asset ${key}: expected 200, got ${assetResponse.status}`);
 				continue;
@@ -233,9 +233,9 @@ try {
 
 		// Fail-open negative control: an unknown b_ key must be a discernible
 		// non-200 and must not take the host down with it.
-		const miss = await get(`/dsh-skins/assets/b_missing-skin_missing-key.webp?v=${version}`);
+		const miss = await get(`/vyra-free-theme/assets/b_missing-skin_missing-key.webp?v=${version}`);
 		if (miss.status === 200) problem("negative control: unknown b_ key unexpectedly served 200");
-		const stillAlive = await get("/dsh-skins/config");
+		const stillAlive = await get("/vyra-free-theme/config");
 		if (stillAlive.status !== 200) problem(`negative control: host degraded after b_ miss (config → ${stillAlive.status})`);
 		console.log(`verify:delivery: builtin-asset assertions ran over ${entries.length} packaged file(s)`);
 	} else {

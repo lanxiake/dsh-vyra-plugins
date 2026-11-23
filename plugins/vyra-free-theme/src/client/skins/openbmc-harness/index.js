@@ -171,7 +171,7 @@ const SPEC = {
     "badge",
     "\n\n  /* ---------- ⑥ 会话气泡装饰：品牌描边 + 流式呼吸光条 ----------\n   * 用户气泡填充（明色品牌蓝 tint / 暗色深冰蓝）已随常量族迁声明表\n   * （ADR-0016 C1：--dsw-specific-bubble(-highlight)）。 */\n  /* 用户+目标气泡描边（ADR-0006 并集挂接谱系，goal v1.0.4 扩入；结构分支\n   * 不命中 goal 面板气泡、goal 经自己的 _stack 并集描边——全谱系说明见\n   * ../decoration.js 头注）：规则唯一来源在 decoration.js（ADR-0016），\n   * 本皮肤只持描边色。 */\n  ",
     "decoration",
-    "\n  /* 助手消息流式输出中：左侧品牌色呼吸光条——规则唯一来源在\n   * ../decoration.js streamingCss（ADR-0016 视觉窗口；keyframes 家族化改名\n   * obmc-stream-pulse → dsh-skins-stream-pulse，像素不变）。 */\n  ",
+    "\n  /* 助手消息流式输出中：左侧品牌色呼吸光条——规则唯一来源在\n   * ../decoration.js streamingCss（ADR-0016 视觉窗口；keyframes 家族化改名\n   * obmc-stream-pulse → vyra-free-theme-stream-pulse，像素不变）。 */\n  ",
     "streaming",
     "\n  /* ---------- ⑦ 根容器清底（防御，鲸吟同款家族化 ADR-0016；滚动条同系\n   * token 已随常量族迁声明表） ---------- */\n  ",
     "rootclear",

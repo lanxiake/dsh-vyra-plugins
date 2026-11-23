@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Upstream-hooks guard (ADR-0006): the hooks dsh-skins decorations pin against
+ * Upstream-hooks guard (ADR-0006): the hooks vyra-free-theme decorations pin against
  * upstream build artifacts must still exist in the installed DSH runtime.
  *
  * Why: css-modules hash classes drift on every upstream rebuild (0.1.2-rc.1
@@ -69,7 +69,7 @@
  *
  *   9. sidebar fade  the Web session list's bottom veil span structural
  *                    local name `*_scrollFade` still exists in
- *                    dsh-client-ui-sidebar (2026-11-12 seam fix: dsh-skins
+ *                    dsh-client-ui-sidebar (2026-11-12 seam fix: vyra-free-theme
  *                    neutralizes [class*="_scrollFade"] while a translucent
  *                    skin owns the sidebar; a rename means re-derive).
  *                    Pre-veil runtimes (sidebar build <=0.2.2-rc.1) skip the
@@ -544,7 +544,7 @@ if (pluginManager === "") {
 
 // 2026-11-12 sidebar seam fix: the Web session list ends in a 24px
 // `*_scrollFade` veil gradient (transparent →
-// var(--dsw-specific-sidebar-fill)); dsh-skins neutralizes
+// var(--dsw-specific-sidebar-fill)); vyra-free-theme neutralizes
 // [class*="_scrollFade"] while a translucent skin owns the sidebar. Pin the
 // structural local name against its owning package — class-selector shape
 // only, so JS identifiers can never trip it.

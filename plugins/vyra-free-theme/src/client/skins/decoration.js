@@ -95,11 +95,11 @@ export function badgeCss(scope, className, colors, metrics) {
  * var(--dsw-alias-brand-primary)，palette 只持呼吸「衰减色」一个自由度：
  * openbmc/uefi 取各自暗色态品牌主色 @0.20，meirenzhi 取鎏金
  * rgba(217, 180, 92, 0.20)（Q10 主人裁定例外，与萤火虫同源色）。
- * 家族 keyframes 名 dsh-skins-stream-pulse（openbmc 旧名 obmc-stream-pulse
+ * 家族 keyframes 名 vyra-free-theme-stream-pulse（openbmc 旧名 obmc-stream-pulse
  * 随收拢统一，无任何测试/外部引用）。
  */
 export function streamingCss(scope, palette) {
-  const KEYFRAMES = "dsh-skins-stream-pulse";
+  const KEYFRAMES = "vyra-free-theme-stream-pulse";
   return [
     `${scope} [data-streaming]{border-radius:4px;box-shadow:inset 3px 0 0 var(--dsw-alias-brand-primary)}`,
     `@keyframes ${KEYFRAMES}{from{box-shadow:inset 3px 0 0 var(--dsw-alias-brand-primary)}to{box-shadow:inset 3px 0 0 rgba(${palette.decay}, 0.20)}}`,
