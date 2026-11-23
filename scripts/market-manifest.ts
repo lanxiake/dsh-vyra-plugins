@@ -2727,6 +2727,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.2 adds the tree view, single/multi type filters, Ctrl batch
+        // selection, Markdown/HTML/CSV/JSON/code previews and folder actions.
+        '0.2.2': {
+          publishTimestamp: 1795415426,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'cfae71a15d15bbed7f383c568236db8311476daf',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
