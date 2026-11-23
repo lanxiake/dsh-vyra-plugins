@@ -1,8 +1,8 @@
 {
   "name": "vyra-media-studio",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
-  "description": "右侧栏文件管理：文件树、网格缩放、多格式预览、批量勾选，以及文件/文件夹重命名、复制、删除等操作。",
+  "description": "右侧栏文件管理：文件树、多格式预览、批量勾选、文件夹操作，以及只看本会话文件的筛选。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

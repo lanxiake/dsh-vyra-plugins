@@ -604,3 +604,14 @@
   .vms-selection-bar { padding: 6px 10px; }
   .vms-selection-bar .vms-ghost-btn { font-size: 9.5px; padding: 0 7px; }
 }
+
+/* Session-only filter. */
+.vms-session-row { display: flex; align-items: center; gap: 6px; margin-top: 9px; }
+.vms-session-btn {
+  display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;
+  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);
+  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;
+}
+.vms-session-btn:hover:not(:disabled) { background: var(--vms-layer2); color: var(--vms-ink2); }
+.vms-session-btn.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }
+.vms-session-btn:disabled { opacity: .45; cursor: default; }

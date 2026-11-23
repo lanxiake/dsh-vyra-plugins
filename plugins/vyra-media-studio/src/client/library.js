@@ -156,6 +156,7 @@ export function LibraryBody(props) {
   const [dir, setDir] = useState(INITIAL_PREFS.dir)
   const [showHidden, setShowHidden] = useState(INITIAL_PREFS.showHidden)
   const [includeBuild, setIncludeBuild] = useState(INITIAL_PREFS.includeBuild)
+  const [sessionOnly, setSessionOnly] = useState(INITIAL_PREFS.sessionOnly)
   const [filterOpen, setFilterOpen] = useState(false)
   const [folderOpen, setFolderOpen] = useState(false)
   const [inlineId, setInlineId] = useState(null)
@@ -180,8 +181,8 @@ export function LibraryBody(props) {
   const gridRef = useRef(null)
   const expandedInitialized = useRef(false)
 
-  useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild }) },
-    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild])
+  useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly }) },
+    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly])
 
   const treeMode = view === 'list' && listMode === 'tree'
 
@@ -250,6 +251,10 @@ export function LibraryBody(props) {
   }, [state.error, sessionId])
 
   useEffect(() => {
+    if (sessionOnly && state.scan !== null && typeof state.scan.sessionCreatedAt !== 'number') setSessionOnly(false)
+  }, [sessionOnly, state.scan])
+
+  useEffect(() => {
     if (notice === '') return undefined
     const timer = setTimeout(() => setNotice(''), 2200)
     return () => clearTimeout(timer)
@@ -270,7 +275,7 @@ export function LibraryBody(props) {
     return () => element.removeEventListener('wheel', onWheel)
   }, [view])
 
-  const filterKey = JSON.stringify({ query, types, folder, time, size, sort, dir })
+  const filterKey = JSON.stringify({ query, types, folder, time, size, sort, dir, sessionOnly })
   useEffect(() => {
     setInlineId(null)
     setLimit(PAGE_SIZE)
@@ -304,7 +309,7 @@ export function LibraryBody(props) {
     return undefined
   }, [meta])
 
-  const needAllMeta = time !== 'all' || size !== 'all' || sort === 'time' || sort === 'size' || (treeMode && detail === 'detailed')
+  const needAllMeta = sessionOnly || time !== 'all' || size !== 'all' || sort === 'time' || sort === 'size' || (treeMode && detail === 'detailed')
   const localPaths = useMemo(() => state.items.map(item => item.id), [state.items])
 
   const ensureMeta = useCallback(paths => {
@@ -366,6 +371,11 @@ export function LibraryBody(props) {
         if (treeMode ? !nested : !exact) return false
       }
       const info = metaFor(item)
+      if (sessionOnly) {
+        if (item.source === 'url') return false
+        const startedAt = state.scan?.sessionCreatedAt
+        if (typeof startedAt !== 'number' || info?.mtimeMs === undefined || info.mtimeMs < startedAt) return false
+      }
       // Metadata arrives in batches. While a batch is in flight, keep the
       // item visible instead of flickering an empty result set; the filter
       // applies as soon as its size/mtime is known.
@@ -381,10 +391,10 @@ export function LibraryBody(props) {
       }
       return true
     }).sort((left, right) => compareItems(left, right, sort, dir, meta))
-  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir, treeMode])
+  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir, treeMode, sessionOnly, state.scan])
 
   const treeItems = useMemo(() => filtered.map(item => item.source === 'url' ? { ...item, folder: '' } : item), [filtered])
-  const filterActive = types.length > 0 || query.trim() !== '' || time !== 'all' || size !== 'all'
+  const filterActive = sessionOnly || types.length > 0 || query.trim() !== '' || time !== 'all' || size !== 'all'
   const showEmptyFolders = treeMode && !filterActive
   const forceExpanded = useMemo(() => {
     if (!treeMode || !filterActive) return new Set()
@@ -467,6 +477,14 @@ export function LibraryBody(props) {
 
   const clearFilters = () => {
     setTypes([]); setFolder(''); setTime('all'); setSize('all'); setQuery(''); setSort('name'); setDir('asc')
+  }
+
+  const toggleSessionOnly = () => {
+    setSessionOnly(previous => {
+      const next = !previous
+      if (next) { setSort('time'); setDir('desc') }
+      return next
+    })
   }
 
   const toggleType = (kind, event) => {
@@ -673,18 +691,21 @@ export function LibraryBody(props) {
   }
 
   const chips = []
+  if (sessionOnly) chips.push({ key: 'session', label: '本会话' })
   for (const kind of types) chips.push({ key: `type:${kind}`, label: TYPE_LABEL[kind] })
   if (folder) chips.push({ key: 'folder', label: folder })
   if (time !== 'all') chips.push({ key: 'time', label: { today: '今天', '7d': '近 7 天', '30d': '近 30 天' }[time] })
   if (size !== 'all') chips.push({ key: 'size', label: { small: '小于 10 MB', medium: '10–100 MB', large: '大于 100 MB' }[size] })
 
   const removeChip = key => {
-    if (key.startsWith('type:')) setTypes(previous => previous.filter(kind => kind !== key.slice(5)))
+    if (key === 'session') setSessionOnly(false)
+    else if (key.startsWith('type:')) setTypes(previous => previous.filter(kind => kind !== key.slice(5)))
     else if (key === 'folder') setFolder('')
     else if (key === 'time') setTime('all')
     else if (key === 'size') setSize('all')
   }
 
+  const waitingForMeta = metaLoading && (sessionOnly || time !== 'all' || size !== 'all')
   const segments = folderSegments(folder)
   const mediaOverlayItems = useMemo(() => overlayItems.filter(item => MEDIA_KINDS.has(item.kind)), [overlayItems])
   const mediaOverlayIndex = overlayItem === undefined ? 0 : Math.max(0, mediaOverlayItems.findIndex(item => item.id === overlayItem.id))
@@ -734,6 +755,17 @@ export function LibraryBody(props) {
           title: '点击单选，Ctrl / Cmd 点击多选',
           onClick: event => toggleType(kind, event),
         }, h(Icon, { name: kind === 'other' ? 'file' : kind, size: 12 }), TYPE_LABEL[kind], h('b', null, counts[kind] ?? 0)))),
+      h('div', { className: 'vms-session-row' },
+        h('button', {
+          type: 'button',
+          className: `vms-session-btn${sessionOnly ? ' is-active' : ''}`,
+          'aria-pressed': sessionOnly,
+          title: typeof state.scan?.sessionCreatedAt === 'number'
+            ? '只显示本会话开始后创建或修改的文件'
+            : '当前会话没有可用的创建时间',
+          disabled: typeof state.scan?.sessionCreatedAt !== 'number',
+          onClick: toggleSessionOnly,
+        }, h(Icon, { name: 'clock', size: 12 }), '只看本会话文件')),
       h('div', { className: 'vms-folder-row' },
         h('div', { className: 'vms-crumb' },
           h('button', { type: 'button', className: `vms-crumb-seg${folder === '' ? ' is-active' : ''}`, onClick: () => setFolder('') }, '全部文件夹'),
@@ -800,7 +832,7 @@ export function LibraryBody(props) {
         h('p', null, state.error),
         diagnostic !== null && h('pre', { className: 'vms-diagnostic' }, JSON.stringify(diagnostic, null, 2)),
         h('button', { type: 'button', className: 'vms-primary-btn', onClick: refresh }, '重试')),
-      !state.loading && !state.error && filtered.length === 0 && !(treeMode && showEmptyFolders && folders.length > 0) && h('div', { className: 'vms-empty' },
+      !state.loading && !state.error && filtered.length === 0 && !waitingForMeta && !(treeMode && showEmptyFolders && folders.length > 0) && h('div', { className: 'vms-empty' },
         h('span', { className: 'vms-empty-art' }, h(Icon, { name: 'search', size: 20 })),
         h('b', null, '没有匹配的文件'),
         h('p', null, items.length === 0 ? '这个工作区还没有文件。' : '试试减少筛选条件，或换一个文件夹。'),
@@ -859,7 +891,7 @@ export function LibraryBody(props) {
       h('span', null, state.error
         ? '扫描失败'
         : filtered.length === items.length
-          ? `找到 ${items.length} 个文件 · 扫描 ${folders.length} 个文件夹${state.scan?.truncated ? ' · 结果已截断' : ''}`
+          ? `${sessionOnly ? '本会话 ' : ''}找到 ${items.length} 个文件 · 扫描 ${folders.length} 个文件夹${state.scan?.truncated ? ' · 结果已截断' : ''}`
           : `筛选出 ${filtered.length} / ${items.length} 个文件`),
       h('span', { className: 'vms-status-right' }, h('i', null), '本地工作区')),
     menu !== null && h(FileMenu, {

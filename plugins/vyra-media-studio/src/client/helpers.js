@@ -285,6 +285,7 @@ const PREF_DEFAULTS = {
   dir: 'asc',
   showHidden: false,
   includeBuild: false,
+  sessionOnly: false,
 }
 
 export function readPrefs() {
@@ -303,6 +304,7 @@ export function readPrefs() {
       dir: merged.dir === 'desc' ? 'desc' : 'asc',
       showHidden: merged.showHidden === true,
       includeBuild: merged.includeBuild === true,
+      sessionOnly: merged.sessionOnly === true,
     }
   } catch {
     return { ...PREF_DEFAULTS }

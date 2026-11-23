@@ -333,6 +333,7 @@ test('handleList resolves a session root, scopes folders and returns metadata', 
 
     const ctx = {
       workspaceFiles: { scopeOf: async (sessionId) => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      get: name => name === 'sessions' ? { get: id => id === 's' ? { header: { createdAt: 123456 } } : undefined } : undefined,
       fs: {
         async resolve(path, opts = {}) {
           const value = path.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(path)
@@ -350,6 +351,7 @@ test('handleList resolves a session root, scopes folders and returns metadata', 
     const body = await all.json()
     assert.equal(body.ok, true)
     assert.equal(body.root, root)
+    assert.equal(body.sessionCreatedAt, 123456)
     assert.deepEqual(body.entries.map(entry => entry.relativePath).sort(), ['作品/a.mp4', '作品/readme.md', '作品/sub/b.png'])
     assert.deepEqual(body.folders.sort(), ['作品', '作品/sub'])
     assert.ok(body.entries.every(entry => entry.size === undefined && entry.mtimeMs === undefined))

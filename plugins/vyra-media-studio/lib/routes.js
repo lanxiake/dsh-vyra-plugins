@@ -88,6 +88,30 @@ function safeString(value, key) {
  * @param {AbortSignal} signal - request cancellation.
  * @returns {Promise<string | undefined>} the workspace root, when known.
  */
+function numberField(value, key) {
+  try {
+    const inner = Reflect.get(value, key)
+    return typeof inner === 'number' && Number.isFinite(inner) ? inner : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** The Session's creation time in epoch milliseconds, when a live or stored header exposes it. */
+async function sessionCreatedAtOf(ctx, sessionId, signal) {
+  const live = ctx.get?.('sessions')?.get?.(sessionId)
+  const liveCreated = numberField(live?.header, 'createdAt')
+  if (liveCreated !== undefined) return liveCreated
+  const persistence = ctx.get?.('sessionPersistence')
+  if (typeof persistence?.stat === 'function') {
+    try {
+      const stored = await persistence.stat(sessionId, signal === undefined ? undefined : { signal })
+      return numberField(stored?.header, 'createdAt')
+    } catch { /* fall through to unknown */ }
+  }
+  return undefined
+}
+
 async function workspaceRootOf(ctx, sessionId, signal) {
   const scopeOf = ctx.workspaceFiles?.scopeOf
   if (typeof scopeOf === 'function') {
@@ -206,6 +230,7 @@ async function handleList(request, ctx) {
     const refresh = ['1', 'true', 'yes'].includes((url.searchParams.get('refresh') ?? '').toLowerCase())
     if (refresh) invalidateScanCache()
     const result = await scanMediaCached(options)
+    const sessionCreatedAt = await sessionCreatedAtOf(ctx, sessionId, request.signal)
     return json({
       ok: true,
       sessionId,
@@ -213,6 +238,7 @@ async function handleList(request, ctx) {
       scanRoot: resolved.relativeRoot,
       includeHidden,
       includeBuild,
+      sessionCreatedAt,
       ...result,
     })
   } catch (error) {

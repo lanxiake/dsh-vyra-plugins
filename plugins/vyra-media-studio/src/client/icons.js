@@ -1,7 +1,7 @@
 /** Lucide icon mapping (ISC), so the plugin does not hand-draw its glyphs. */
 import {
   AlertTriangle, AppWindow, ArrowLeft, ArrowRight, AtSign, Check, ChevronDown,
-  ChevronLeft, ChevronRight, ClipboardCopy, Copy, Download, Ellipsis,
+  ChevronLeft, ChevronRight, ClipboardCopy, Clock, Copy, Download, Ellipsis,
   ExternalLink, File, FileArchive, FileCode, FileSpreadsheet, FileText, Folder,
   FolderOpen, Image, ImageOff, Info, LayoutGrid, Link2, List, MapPin, Maximize,
   Music2, Pause, Pencil, PictureInPicture2, Play, Plus, RefreshCw, Scan, Search,
@@ -20,6 +20,7 @@ const ICONS = {
   chevronLeft: ChevronLeft,
   chevronRight: ChevronRight,
   clipboard: ClipboardCopy,
+  clock: Clock,
   close: X,
   code: FileCode,
   copy: Copy,
