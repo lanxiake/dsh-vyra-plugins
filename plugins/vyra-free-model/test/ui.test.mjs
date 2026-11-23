@@ -95,7 +95,10 @@ function loadBundle() {
 }
 
 const bundle = loadBundle()
-const { h, Card, BlockTitle, Btn, StatusDot, ToolCard, SettingsPage, CSS, ModelBlock, truncate } = bundle.__test
+const {
+  h, Card, BlockTitle, Btn, StatusDot, ToolCard, SettingsPage, CSS, ModelBlock, truncate,
+  WorkbenchCard, marketInstallSpec, marketInstalled, ensureMarketSource,
+} = bundle.__test
 
 // ── the design language ─────────────────────────────────────────────────────
 
@@ -258,4 +261,61 @@ test('a long reason is trimmed with an ellipsis rather than cut mid-word', () =>
   const trimmed = truncate('x'.repeat(300), 20)
   assert.ok(trimmed.length <= 21)
   assert.ok(trimmed.endsWith('…'))
+})
+
+test('marketInstallSpec 生成 plugin_manager 接受的 git spec', () => {
+  assert.equal(marketInstallSpec({
+    name: 'vyra-plugin-market',
+    versions: [{ source: { type: 'git', url: 'https://gitcode.com/a/b.git', commit: 'abc', path: 'plugins/vyra-plugin-market' } }],
+  }), 'git+https://gitcode.com/a/b.git#abc&path:/plugins/vyra-plugin-market')
+  assert.equal(marketInstallSpec({
+    name: 'x',
+    versions: [{ install: { spec: 'git+https://example.com/x.git#1' } }],
+  }), 'git+https://example.com/x.git#1')
+  assert.equal(marketInstallSpec({ name: 'x', versions: [{ version: '1.2.3' }] }), 'x@1.2.3')
+  assert.equal(marketInstallSpec({ name: 'x', versions: [] }), null)
+})
+
+test('更多插件卡片带一键安装和 DSH 使用提示', () => {
+  const html = renderToString(h(WorkbenchCard))
+  assert.ok(html.includes('一键安装插件市场'))
+  assert.ok(html.includes('怎么开始'))
+  assert.ok(html.includes('根据我的需求推荐一组插件'))
+  assert.ok(html.includes('vfm_tips'))
+})
+
+test('marketInstalled 读宿主 bundle 列表', async () => {
+  const remote = {
+    pluginManager: {
+      async listBundles() {
+        return { ok: true, value: [{ name: 'vyra-plugin-market', enabled: true }, { name: 'other' }] }
+      },
+    },
+  }
+  assert.equal(await marketInstalled(remote), true)
+  assert.equal(await marketInstalled({ pluginManager: { async listBundles() { return { ok: true, value: [] } } } }), false)
+  assert.equal(await marketInstalled({}), null)
+  assert.equal(await marketInstalled({ pluginManager: { async listBundles() { throw new Error('no') } } }), null)
+})
+
+test('ensureMarketSource 只在没有 Veyra 源时追加，且不改动其他源', async () => {
+  const calls = []
+  const remote = {
+    pluginMarket: {
+      async listIndexes() { return { ok: true, value: [{ url: 'https://other.example/index.json' }] } },
+      async setIndexes(next) { calls.push(next); return { ok: true } },
+    },
+  }
+  const added = await ensureMarketSource(remote, 'https://ghproxy.net/veyra.json')
+  assert.equal(added, true)
+  // The bundle runs in a vm context, so its arrays have another realm's prototype.
+  assert.equal(JSON.stringify(calls[0]), JSON.stringify(['https://ghproxy.net/veyra.json', 'https://other.example/index.json']))
+
+  const already = {
+    pluginMarket: {
+      async listIndexes() { return { ok: true, value: [{ url: 'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json' }] } },
+      async setIndexes() { throw new Error('must not be called') },
+    },
+  }
+  assert.equal(await ensureMarketSource(already, 'https://ghproxy.net/veyra.json'), false)
 })

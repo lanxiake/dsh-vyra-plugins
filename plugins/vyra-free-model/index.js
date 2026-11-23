@@ -126,8 +126,48 @@ export function resolveDshHome() {
   return path.join(os.homedir(), '.dsh')
 }
 
+/** The onboarding skill this plugin drops into the harness' skills directory. */
+export const GUIDE_SKILL = 'vyra-dsh-guide'
+
+/**
+ * Install (or refresh) the DSH onboarding skill.
+ *
+ * The file is only written when its text changed. Rewriting it on every boot
+ * would bump its mtime and make the harness reload a skill that did not move.
+ *
+ * @param {{ warn?: (message: string) => void }} logger - the plugin's logger.
+ * @returns {{ ok: boolean, file?: string, changed?: boolean, reason?: string }}
+ */
+export function installGuideSkill(logger) {
+  let text
+  try {
+    text = fs.readFileSync(path.join(import.meta.dirname, 'skills', GUIDE_SKILL, 'SKILL.md'), 'utf8')
+  } catch (error) {
+    const reason = String(error?.message ?? error)
+    logger?.warn?.(`vyra-free-model: 使用指南技能缺失（${reason}）`)
+    return { ok: false, reason }
+  }
+  const dir = path.join(resolveDshHome(), 'skills', GUIDE_SKILL)
+  const file = path.join(dir, 'SKILL.md')
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    let current = null
+    try { current = fs.readFileSync(file, 'utf8') } catch { /* first install */ }
+    const changed = current !== text
+    if (changed) fs.writeFileSync(file, text)
+    return { ok: true, file, changed }
+  } catch (error) {
+    const reason = String(error?.message ?? error)
+    logger?.warn?.(`vyra-free-model: 无法安装使用指南技能（${reason}）`)
+    return { ok: false, reason }
+  }
+}
+
 export function apply(ctx, _config) {
   const logger = ctx.logger ?? console
+  // The guide ships with the plugin; installing it here is what makes a fresh
+  // install teach the user's agent how to use DSH, not just how to chat.
+  installGuideSkill(logger)
   /** The user's home, where the other tools keep their configuration. */
   const dshHome = os.homedir()
   const dataDir = path.resolve(resolveDshHome(), DATA_DIR_NAME)
