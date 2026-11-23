@@ -198,12 +198,22 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
   }
 
   /**
-   * One action row's arguments, built from the panel's own controls.
+   * One action row's arguments, built from the panel's own controls, or `null`
+   * when this panel cannot drive the action at all.
    *
    * Only the actions this panel actually drives are given a form; everything
    * else is read-only in the panel and named as such, because a generic
    * "arguments" text box would be a second, unvalidated way to invoke an
    * operation whose real validation lives in the domain handler.
+   *
+   * `null` is the single answer to "can the panel run this?", and the Actions
+   * tab renders those rows as a chip rather than a Run button. That matters
+   * because a Run button which can only fail is a false affordance: pressing it
+   * on `plugin.remove` returns `confirm-required` (this panel never sends
+   * `confirm: true`), and `mcp.probe` returns "needs a non-empty server name"
+   * until a name has been typed. Both fail honestly, but the control promised
+   * something the panel cannot deliver. Anything the panel CAN run must be
+   * shaped here, so the two never drift apart.
    */
   function argsFor(row, draft) {
     switch (row.name) {
@@ -215,6 +225,22 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
       case 'settings.get':
       case 'settings.set':
         return null // read-only in the panel: a namespace picker is the tool's job
+      case 'plugin.setEnabled':
+        // Either identifier, and the domain refuses a call that sends both. The
+        // panel has controls for the bundle case only.
+        return draft.name ? { name: draft.name, enabled: draft.enabled === true } : null
+      case 'plugin.install':
+        return draft.spec ? { spec: draft.spec } : null
+      case 'plugin.remove':
+        // Destructive, and the confirmation gate is the tool's to open: this
+        // panel has no way to send `confirm: true`, so it must not offer a Run
+        // button that can only ever come back `confirm-required`.
+        return null
+      case 'console.actions':
+        // Runnable with no arguments, but this tab IS its output: the row is the
+        // catalogue the user is already reading, so a button would re-fetch what
+        // is on screen. Marked tool-only for that reason, not for incapability.
+        return null
       case 'mcp.restart':
       case 'mcp.probe':
         return draft.name ? { name: draft.name } : null
@@ -223,7 +249,41 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
     }
   }
 
-  const isReadOnly = (row) => row.name === 'settings.get' || row.name === 'settings.set'
+  /**
+   * Whether the Actions tab can offer a Run button for this row.
+   *
+   * Read off `argsFor` rather than restated, so a row cannot advertise a control
+   * whose arguments the panel does not actually build.
+   */
+  const canRun = (row, draft = {}) => argsFor(row, draft) !== null
+
+  /**
+   * What the Actions tab renders at the end of one row: `'run'` for a button,
+   * `'chip'` for a non-interactive marker.
+   *
+   * A separate function from `canRun` on purpose, so the RENDER decision is a
+   * named thing a test can call. Asserting only that `canRun` returns false
+   * would leave the row free to ignore it and draw a button anyway.
+   */
+  const rowAffordance = (row) => (canRun(row) ? 'run' : 'chip')
+
+  /**
+   * The element one Actions row ends with: a Run button, or a tool-only chip.
+   *
+   * Extracted out of the row's JSX-equivalent so the RENDER decision is a named
+   * function a test can call and inspect, rather than something only assertable
+   * by pattern-matching this file's source text. `rowAffordance` decides; this
+   * function is the only thing that builds the control, so the two cannot drift
+   * apart without the element actually changing.
+   */
+  function rowControl({ row, t, busy, run }) {
+    if (rowAffordance(row) !== 'run') return h(Chip, null, t('actions.toolOnly'))
+    return h('button', {
+      className: 'vc-btn sm',
+      disabled: busy !== null,
+      onClick: () => run(row.name, argsFor(row, {}), row.name),
+    }, t('actions.run'))
+  }
 
   // --- the panel -------------------------------------------------------------
 
@@ -445,7 +505,7 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
         tab === 'models' ? h(Models, { t, models, modelError, busy, run, draft, setDraft }) : null,
         tab === 'plugins' ? h(Plugins, { t, plugins, pluginError, busy, run }) : null,
         tab === 'mcp' ? h(Mcp, { t, mcps, mcpError, busy, run, draft, setDraft }) : null,
-        tab === 'actions' ? h(Actions, { t, grouped, catalogue: catalogueView, catalogueError, busy, run, argsFor, isReadOnly }) : null)),
+        tab === 'actions' ? h(Actions, { t, grouped, catalogue: catalogueView, catalogueError, busy, run, argsFor, canRun }) : null)),
       toast ? h('div', { className: 'vc-toast', role: 'status' },
         h('i', { style: { background: toast.kind === 'error' ? 'var(--dsw-alias-state-error-primary)' : toast.kind === 'warn' ? 'var(--dsw-alias-state-warn-primary)' : 'var(--dsw-alias-state-success-primary)' } }),
         toast.text) : null)
@@ -657,7 +717,7 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
    * here is authored by the panel — the strings come from `core.js` and are
    * shown verbatim, in the language the console wrote them in.
    */
-  function Actions({ t, grouped, catalogue, catalogueError, busy, run, argsFor, isReadOnly }) {
+  function Actions({ t, grouped, catalogue, catalogueError, busy, run, argsFor, canRun }) {
     const emptyCatalogue = catalogue.actions.length === 0 && catalogue.forbidden.length === 0
     const rows = grouped.map(({ domain, rows: group }) => h('div', { key: domain },
       h('div', { className: 'vc-section' }, domain),
@@ -669,13 +729,11 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
               row.destructive ? t('actions.destructive') : '',
               row.requiresClient ? t('actions.requiresClient') : ''].filter(Boolean).join(' · '))),
         row.destructive ? h(Chip, { kind: 'warn' }, t('actions.destructive')) : null,
-        isReadOnly(row) || row.name === 'console.actions'
-          ? h(Chip, null, t('actions.toolOnly'))
-          : h('button', {
-            className: 'vc-btn sm',
-            disabled: busy !== null,
-            onClick: () => run(row.name, argsFor(row, {}), row.name),
-          }, t('actions.run')))))))
+        // A row the panel cannot actually drive gets a chip, not a Run button.
+        // `rowControl` is the only builder, and it decides through `rowAffordance`
+        // → `argsFor`, so a control is only ever offered where the arguments
+        // exist to back it.
+        rowControl({ row, t, busy, run }))))))
 
     const refused = catalogue.forbidden.length === 0 ? null : h('div', null,
       h('div', { className: 'vc-section' }, t('actions.sectionForbidden')),
@@ -702,5 +760,8 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
   // `h` rides back out because the slot registration in `client.js` builds the
   // element for the main key: the panel module must not need a separate import
   // of React just to be mounted.
-  return { Panel, PanelIcon, h, __internal: { deriveActions, groupByDomain, describeStatus, APPEARANCE, CSS } }
+  // `argsFor`/`canRun` ride out through `__internal` so the panel's own rule —
+  // that a Run button is only offered where the panel can actually build the
+  // arguments — is testable directly rather than by rendering a React tree.
+  return { Panel, PanelIcon, h, __internal: { deriveActions, groupByDomain, describeStatus, argsFor, canRun, rowAffordance, rowControl, APPEARANCE, CSS } }
 }

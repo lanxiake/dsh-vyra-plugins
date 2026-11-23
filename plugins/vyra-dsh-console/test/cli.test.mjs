@@ -909,7 +909,61 @@ test('services reports declaration evidence per row, never a live service list',
     assert.deepEqual(rows.im.evidence, [])
     assert.match(value.caveats.join(' '), /unavailable/)
     // A row never claims liveness.
-    for (const row of value.services) assert.match(row.note, /running DSH|active/)
+    for (const row of value.services) assert.match(row.note, /running DSH|active|Client-realm/)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('services accounts for every registered action, including the Client-realm ones', () => {
+  // The defect this closes: `services` covered 13 of the 21 actions while
+  // `doctor` reported all 21, so the 7 `appearance.*` ones appeared nowhere and
+  // a reader could not tell an omission from "needs nothing". Silently
+  // under-reporting is what the CLI's own honesty rule forbids.
+  const { home } = makeHome()
+  try {
+    const value = runCli(home, ['services', '--json']).json
+    const covered = new Set(value.services.flatMap((row) => row.requiredBy))
+
+    // The appearance actions are now named, and attributed to the three
+    // Client-realm services rather than to a package that cannot declare them.
+    for (const action of ['appearance.setTheme', 'appearance.toggleSidebar', 'appearance.setLocale']) {
+      assert.ok(covered.has(action), `${action} must appear in some row`)
+    }
+    for (const service of ['theme', 'layout', 'locale']) {
+      const row = value.services.find((r) => r.service === service)
+      assert.ok(row, `${service} must be reported`)
+      assert.equal(row.declared, false, 'a Client-realm service can never be profile-declared')
+    }
+    // A null-package row explains WHY it can carry no evidence, so `false` does
+    // not read as "the user forgot to install it".
+    assert.match(value.services.find((r) => r.service === 'theme').note, /Client-realm|host/)
+
+    // And the command now states its own completeness rather than leaving the
+    // reader to add up the rows.
+    assert.match(value.caveats.join(' '), /Every one of the \d+ registered actions/)
+    assert.doesNotMatch(value.caveats.join(' '), /INCOMPLETE/)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('services distinguishes "no package can declare it" from "this profile lacks it"', () => {
+  // Both render as no-evidence rows, but they mean opposite things: one is a
+  // property of the service (nothing to install, ever), the other is a gap in
+  // this installation. Collapsing them would report a permanent property as a
+  // fault. `declarable` carries the distinction in the data.
+  const { home } = makeHome()
+  try {
+    const value = runCli(home, ['services', '--json']).json
+    const rows = Object.fromEntries(value.services.map((row) => [row.service, row]))
+    assert.equal(rows.theme.declarable, false, 'a Client-realm service has no package to install')
+    assert.equal(rows.settings.declarable, false, 'settings is host-provided')
+    assert.equal(rows.im.declarable, true, 'im is a real package that this profile simply lacks')
+
+    const human = runCli(home, ['services']).stdout
+    assert.match(human, /host\/client\s+theme/, 'a Client-realm row is labelled for what it is')
+    assert.match(human, /unknown\s+im/, 'a genuinely absent package still reads as unknown')
   } finally {
     rmSync(home, { recursive: true, force: true })
   }

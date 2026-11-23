@@ -1199,6 +1199,82 @@ function panelInternals() {
   return exports.__internal.loadPanel().__internal
 }
 
+// --- the Actions tab's Run affordance ----------------------------------------
+//
+// The panel offered a live Run button for every row it did not mark read-only,
+// while `argsFor` returned `{}` for the actions outside its switch. Pressing Run
+// on `plugin.remove` could therefore only ever return `confirm-required` (the
+// panel never sends `confirm: true`), and `mcp.probe` only "needs a non-empty
+// server name". Neither is destructive and both fail honestly, so this is a
+// wrong affordance rather than a wrong outcome — but the control promises
+// something the panel cannot deliver.
+
+test('the panel offers no Run button for an action whose arguments it cannot build', () => {
+  const { canRun, rowAffordance } = panelInternals()
+
+  // Rows that must NOT be offered as runnable, with no draft typed.
+  for (const name of ['console.actions', 'settings.get', 'settings.set', 'plugin.remove', 'plugin.install', 'plugin.setEnabled', 'mcp.probe', 'mcp.restart']) {
+    assert.equal(canRun({ name }, {}), false, `${name} must not offer a Run button the panel cannot back`)
+    // Asserted on the RENDER decision too, not only on the predicate: a row free
+    // to ignore `canRun` would still draw the button. Mutation-tested — making
+    // the tab render a button unconditionally makes this fail.
+    assert.equal(rowAffordance({ name }), 'chip', `${name} must render as a chip, not a Run button`)
+  }
+
+  // Rows the panel genuinely drives, so the rule is not simply "refuse".
+  for (const name of ['plugin.list', 'model.list', 'model.select', 'skill.list', 'mcp.list', 'appearance.state']) {
+    assert.equal(canRun({ name }, {}), true, `${name} is runnable from the panel`)
+    assert.equal(rowAffordance({ name }), 'run', `${name} must keep its Run button`)
+  }
+})
+
+test('the Actions tab builds each row\'s control through rowControl, and it is a chip where it must be', () => {
+  // The render is the half that matters, so this inspects the ELEMENT the row
+  // builder produces rather than pattern-matching source text — a source match
+  // still passes when the condition is short-circuited (`|| true`), which is
+  // exactly the mutation that exposed the earlier, weaker version of this test.
+  const { rowControl, rowAffordance } = panelInternals()
+  const t = (key) => key
+  const run = () => {}
+
+  for (const name of ['plugin.remove', 'plugin.install', 'plugin.setEnabled', 'mcp.probe', 'mcp.restart', 'settings.get', 'settings.set', 'console.actions']) {
+    const element = rowControl({ row: { name }, t, busy: null, run })
+    // `Chip` is a component, so the element's type is that function; what matters
+    // is that it is NOT a button and carries no handler.
+    assert.notEqual(element.type, 'button', `${name} must not render a Run button`)
+    assert.equal(element.props?.onClick, undefined, `${name} must carry nothing to press`)
+    assert.equal(rowAffordance({ name }), 'chip')
+  }
+
+  const buttonFor = rowControl({ row: { name: 'plugin.list' }, t, busy: null, run })
+  assert.equal(buttonFor.type, 'button', 'a runnable row renders a real button')
+  assert.equal(typeof buttonFor.props.onClick, 'function', 'and it is wired to run')
+  assert.equal(buttonFor.props.className.includes('vc-btn'), true)
+
+  assert.equal(rowControl({ row: { name: 'plugin.list' }, t, busy: 'x', run }).props.disabled, true,
+    'a busy panel disables the button rather than racing the next call')
+})
+
+test('a runnable row is runnable only once the panel can actually build its arguments', () => {
+  const { argsFor, canRun } = panelInternals()
+
+  // These need a value from the panel's own controls. Before it is typed the
+  // panel cannot build a valid call, so the Run button stays away rather than
+  // invoking the action to be told it was wrong.
+  assert.equal(canRun({ name: 'mcp.probe' }, {}), false)
+  assert.deepEqual(argsFor({ name: 'mcp.probe' }, { name: 'mcp' }), { name: 'mcp' })
+  assert.equal(canRun({ name: 'mcp.probe' }, { name: 'mcp' }), true)
+})
+
+test('the panel never builds arguments that could open the destructive gate', () => {
+  // `plugin.remove` is destructive and its confirmation lives in the tool. A
+  // panel that sent `confirm: true` on the user's behalf would forge the
+  // confirmation the gate exists to require, so it must send neither the call
+  // nor the flag.
+  const { argsFor } = panelInternals()
+  assert.equal(argsFor({ name: 'plugin.remove' }, { name: 'pkg', confirm: true }), null)
+})
+
 test('the action catalogue is read off the console reply, in the console\'s own order', () => {
   const { deriveActions } = panelInternals()
   const reply = {

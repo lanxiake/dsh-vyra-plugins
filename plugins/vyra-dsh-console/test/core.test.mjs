@@ -404,10 +404,21 @@ test('settings.set rejects a missing namespace', async () => {
 
 test('settings.set writes the namespace and never invents a value field', async () => {
   const writes = []
-  const ctx = ctxWith({ settings: {
-    describe: () => [{ ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' }],
-    update: async (ns, patch) => { writes.push([ns, patch]) },
-  } })
+  // The pluginManager is required now that settings.set checks the target's
+  // owning package before writing: without entry information the guard cannot
+  // tell an ordinary namespace from an authority-bearing one and refuses. Every
+  // realistic profile declares `dsh-plugin` (the desktop one does), so this is
+  // the ordinary case rather than a special one.
+  const ctx = ctxWith({
+    settings: {
+      describe: () => [{ ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' }],
+      update: async (ns, patch) => { writes.push([ns, patch]) },
+    },
+    pluginManager: {
+      listPlugins: async () => [{ entryId: 'llm-deepseek', moduleName: '@deepseek-ai/dsh-llm-deepseek' }],
+      listBundles: async () => [],
+    },
+  })
   const tool = createConsoleTool(createConsole(ctx, { settings: settingsDomain }))
   const result = await tool.execute({ action: 'settings.set', args: { ns: 'llm-deepseek', patch: { temperature: 0.2 } } })
   assert.equal(result.status, 'ok')
@@ -428,6 +439,189 @@ test('settings.set refuses a namespace the profile does not declare', async () =
   assert.equal(result.status, 'error')
   assert.match(result.reason, /typo/)
   assert.equal(updated, false, 'an unknown namespace must not be written')
+})
+
+// ---------------------------------------------------------------------------
+// The authority boundary through settings.set.
+//
+// A settings namespace IS a Loader entry id, and `update(ns, patch)` merges the
+// patch into that entry's `config`. The real desktop profile declares
+//
+//   - id: permission
+//     name: '@deepseek-ai/dsh-permission-presets'
+//     config: { presets: {…}, defaultPreset: danger-full-access }
+//
+// so `settings.set { ns: 'permission', patch: { defaultPreset: … } }` reaches the
+// session's own sandbox and approval policy — the exact outcome
+// `permission.setPreset` is refused for. Without a guard the boundary is
+// cosmetic: same effect, opposite verdict.
+//
+// The guard keys on the owning PACKAGE, not on a namespace string. `describe()`
+// alone cannot supply that (a SettingsDescriptor carries only ns, autoGenerate,
+// schema, value, revision, applies and optional base/user/secrets), but the
+// namespace is a Loader entry id and `pluginManager.listPlugins()` maps every
+// `entryId` to its `moduleName` — the package. A renamed entry stays covered.
+// ---------------------------------------------------------------------------
+
+/** A profile-shaped stub: settings + the pluginManager that names each entry. */
+function authorityCtx({ describe, plugins = [], update }) {
+  return ctxWith({
+    settings: { describe, update },
+    pluginManager: { listPlugins: async () => plugins, listBundles: async () => [] },
+  })
+}
+
+/** The real permission-presets entry, as the desktop profile declares it. */
+const PERMISSION_ENTRY = { entryId: 'permission', moduleName: '@deepseek-ai/dsh-permission-presets' }
+
+test('settings.set refuses the permission namespace and never calls update', async () => {
+  // Asserts the CALL LIST, not just the status: a status-only assertion passes
+  // if the write happened first and the refusal was reported afterwards.
+  const writes = []
+  const ctx = authorityCtx({
+    plugins: [PERMISSION_ENTRY, { entryId: 'web-search', moduleName: 'dsh-web-search' }],
+    describe: () => [
+      { ns: 'permission', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+      { ns: 'web-search', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+    ],
+    update: async (ns, patch) => { writes.push([ns, patch]) },
+  })
+  const console_ = createConsole(ctx, { settings: settingsDomain })
+  const result = await console_.dispatch('settings.set', {
+    ns: 'permission',
+    patch: { defaultPreset: 'danger-full-access' },
+  })
+
+  assert.equal(result.status, 'forbidden')
+  assert.equal(result.action, 'settings.set')
+  assert.ok(result.reason && result.reason.length > 0, 'a refusal must explain itself')
+  assert.ok(result.alternative && result.alternative.length > 0, 'a refusal must name the user-facing route')
+  assert.deepEqual(writes, [], 'the authority-bearing namespace must never reach update()')
+})
+
+test('the permission guard follows the package, not the namespace name', async () => {
+  // A renamed entry must stay covered: the guard matches on what the entry IS.
+  const writes = []
+  const ctx = authorityCtx({
+    plugins: [{ entryId: 'my-sandbox-knobs', moduleName: '@deepseek-ai/dsh-permission-presets' }],
+    describe: () => [
+      { ns: 'my-sandbox-knobs', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+    ],
+    update: async (ns, patch) => { writes.push([ns, patch]) },
+  })
+  const console_ = createConsole(ctx, { settings: settingsDomain })
+  const result = await console_.dispatch('settings.set', { ns: 'my-sandbox-knobs', patch: { defaultPreset: 'x' } })
+  assert.equal(result.status, 'forbidden', 'the owning package decides, not the entry id')
+  assert.deepEqual(writes, [])
+})
+
+test('settings.set refuses a namespace whose descriptor carries secrets', async () => {
+  // `secrets` marks a descriptor holding credential material — the
+  // `credentials.set` outcome, refused for the same reason.
+  const writes = []
+  const ctx = authorityCtx({
+    plugins: [{ entryId: 'llm-deepseek', moduleName: '@deepseek-ai/dsh-llm-deepseek' }],
+    describe: () => [{
+      ns: 'llm-deepseek', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live',
+      secrets: { apiKey: true },
+    }],
+    update: async (ns, patch) => { writes.push([ns, patch]) },
+  })
+  const console_ = createConsole(ctx, { settings: settingsDomain })
+  const result = await console_.dispatch('settings.set', { ns: 'llm-deepseek', patch: { apiKey: 'sk-x' } })
+  assert.equal(result.status, 'forbidden')
+  assert.ok(result.reason.length > 0)
+  assert.ok(result.alternative.length > 0)
+  assert.deepEqual(writes, [], 'a secrets-bearing namespace must never reach update()')
+})
+
+test('settings.set still writes an ordinary namespace', async () => {
+  // The guard must not break the feature it sits in front of.
+  const writes = []
+  const ctx = authorityCtx({
+    plugins: [
+      { entryId: 'web-search', moduleName: 'dsh-web-search' },
+      PERMISSION_ENTRY,
+    ],
+    describe: () => [
+      { ns: 'web-search', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+    ],
+    update: async (ns, patch) => { writes.push([ns, patch]) },
+  })
+  const console_ = createConsole(ctx, { settings: settingsDomain })
+  const result = await console_.dispatch('settings.set', { ns: 'web-search', patch: { maxResults: 5 } })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.ns, 'web-search')
+  assert.deepEqual(writes, [['web-search', { maxResults: 5 }]])
+})
+
+test('the same refusal is reported through the tool, not only the dispatcher', async () => {
+  const writes = []
+  const ctx = authorityCtx({
+    plugins: [PERMISSION_ENTRY],
+    describe: () => [
+      { ns: 'permission', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+    ],
+    update: async (ns, patch) => { writes.push([ns, patch]) },
+  })
+  const tool = createConsoleTool(createConsole(ctx, { settings: settingsDomain }))
+  const result = await tool.execute({
+    action: 'settings.set',
+    args: { ns: 'permission', patch: { defaultPreset: 'danger-full-access' } },
+  })
+  assert.equal(result.status, 'forbidden')
+  assert.ok(result.reason.length > 0)
+  assert.ok(result.alternative.length > 0)
+  assert.deepEqual(writes, [])
+  // The refusal must survive the pipeline's lossless snapshot like any result.
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), result)
+})
+
+test('a pluginManager that cannot answer leaves the guard unable to judge, and it refuses', async () => {
+  // Fail closed. Without entry information the owning package is unknown, and an
+  // unknown namespace cannot be proven safe. Every way of losing that information
+  // is covered here, because each opens the gate if it is treated as "no match":
+  //   - no pluginManager at all (a minimal profile);
+  //   - one whose listPlugins throws (a loader that failed);
+  //   - one that answers but does not list the entry (the namespace passed
+  //     describe(), so it exists — an unlisted one is unknown, not safe).
+  // Mutation-tested: turning any of these into "allow" makes this fail.
+  const writes = []
+  const describe = () => [
+    { ns: 'permission', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+  ]
+  const answer = async () => { writes.push(['called']) }
+  const managers = [
+    ['absent', undefined],
+    ['throwing', { listPlugins: async () => { throw new Error('no loader') } }],
+    ['listing other entries', { listPlugins: async () => [{ entryId: 'something-else', moduleName: 'x' }] }],
+    ['listing nothing', { listPlugins: async () => [] }],
+  ]
+  for (const [label, pluginManager] of managers) {
+    const ctx = ctxWith({ settings: { describe, update: answer }, pluginManager })
+    const console_ = createConsole(ctx, { settings: settingsDomain })
+    const result = await console_.dispatch('settings.set', { ns: 'permission', patch: { defaultPreset: 'x' } })
+    assert.notEqual(result.status, 'ok', `an unjudgeable namespace must not be written (${label})`)
+  }
+  assert.deepEqual(writes, [])
+})
+
+test('a listed entry under an ordinary package is written, not merely tolerated', async () => {
+  // The complement of the guard: once the entry IS identified and its package is
+  // not an authority-bearing one, the write goes through. Without this, a guard
+  // that refused everything would pass the tests above.
+  const writes = []
+  const ctx = authorityCtx({
+    plugins: [{ entryId: 'permission', moduleName: 'some-innocent-plugin' }],
+    describe: () => [
+      { ns: 'permission', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+    ],
+    update: async (ns, patch) => { writes.push([ns, patch]) },
+  })
+  const console_ = createConsole(ctx, { settings: settingsDomain })
+  const result = await console_.dispatch('settings.set', { ns: 'permission', patch: { x: 1 } })
+  assert.equal(result.status, 'ok', 'the decision is the package, not the entry id')
+  assert.deepEqual(writes, [['permission', { x: 1 }]])
 })
 
 test('settings.list maps the descriptor fields that exist, without inventing a title', async () => {

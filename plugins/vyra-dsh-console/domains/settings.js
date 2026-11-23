@@ -13,7 +13,121 @@ import { present, presentDeep, requireService } from '../core.js'
  * `secrets`. It has no `title` and no display name of any kind — the Client
  * panel resolves those from its own locales — so `settings.list` maps the real
  * fields only.
+ *
+ * ## Why `settings.set` is not a way around `FORBIDDEN`
+ *
+ * A namespace IS a Loader entry id, and `update()` writes that entry's `config`.
+ * On the real desktop profile one such entry is
+ *
+ *     - id: permission
+ *       name: '@deepseek-ai/dsh-permission-presets'
+ *       config: { presets: {…}, defaultPreset: danger-full-access }
+ *
+ * so `settings.set { ns: 'permission', patch: { defaultPreset: … } }` reaches
+ * this session's own sandbox and approval policy — the outcome `FORBIDDEN`
+ * refuses `permission.setPreset` for. The same holds for the other refused
+ * actions: any entry whose config carries a sandbox mode, an approval policy, an
+ * approval answer or a credential is reachable by writing that entry's config.
+ *
+ * `settings.set` therefore stands aside from those namespaces BEFORE calling the
+ * service, and reports the same shape as a `FORBIDDEN` entry so a caller and the
+ * panel treat the two identically.
+ *
+ * ## What the guard can and cannot prove
+ *
+ * This is a denylist of consequence, not a proof of safety. It refuses a write
+ * when the target entry is one whose config is known to carry authority, and
+ * when the target's owning package cannot be established at all. It does NOT
+ * claim that every other namespace is harmless: a plugin could expose the same
+ * knobs under a differently-named entry, and this plugin cannot enumerate the
+ * meaning of arbitrary configuration. What it does guarantee is that the
+ * specific entries that carry the withheld authority are named here explicitly,
+ * so adding one is a visible, reviewable edit rather than an accident.
+ *
+ * The decision keys on the entry's PACKAGE rather than on a namespace string.
+ * `describe()` cannot supply the package — no descriptor field names it — but
+ * the namespace is an entry id, and `pluginManager.listPlugins()` maps every
+ * `entryId` to its `moduleName`, which is the package. A renamed entry is
+ * therefore still covered, which a hard-coded namespace would not be.
  */
+
+/**
+ * Packages whose Loader config carries authority this plugin withholds from the
+ * agent. Adding to this list is the one place the boundary is widened or
+ * narrowed, and each entry names the `FORBIDDEN` action it corresponds to.
+ */
+const AUTHORITY_PACKAGES = Object.freeze({
+  '@deepseek-ai/dsh-permission-presets': {
+    because: 'permission.setPreset',
+    reason: 'That namespace configures this session\'s own sandbox and approval policy.',
+    alternative: 'Ask the user to change it in Settings → Permissions, or via /permission.',
+  },
+})
+
+/**
+ * The refusal used when the target belongs to an entry whose owning package
+ * cannot be established: an unjudgeable namespace is not a safe one.
+ */
+const UNJUDGEABLE = Object.freeze({
+  reason: 'That namespace belongs to an entry this profile does not report, so it cannot be checked against the authority boundary.',
+  alternative: 'Ask the user to change it in Settings, or use the owning plugin\'s own settings form.',
+})
+
+/**
+ * Decide whether `ns` may be written, and say why not when it may not.
+ *
+ * Exported as one function rather than an inline condition in the `switch`, so
+ * there is exactly one place this decision is made and it can be tested
+ * directly.
+ *
+ * @param ctx the dispatcher's context, used to reach `pluginManager`.
+ * @param ns the namespace being written; also the Loader entry id.
+ * @param descriptor the live `SettingsDescriptor` for `ns`, already resolved by
+ *   the caller. Its `secrets` field is the credential outcome.
+ * @returns `null` when the write may proceed, otherwise the refusal body.
+ */
+export async function refuseAuthorityNamespace(ctx, ns, descriptor) {
+  // The credential outcome, and the one signal a descriptor carries on its own:
+  // `secrets` marks fields holding secret material, which is what
+  // `credentials.set` is refused for. Checked before the package lookup because
+  // it needs no entry information.
+  if (descriptor !== undefined && descriptor.secrets !== undefined) {
+    return {
+      reason: 'That namespace holds credential material, which is reserved for the user.',
+      alternative: 'Ask the user to enter it in Settings.',
+    }
+  }
+
+  const pluginManager = ctx.get('pluginManager')
+  if (!pluginManager || typeof pluginManager.listPlugins !== 'function') {
+    return UNJUDGEABLE
+  }
+
+  let entries
+  try {
+    entries = await pluginManager.listPlugins()
+  } catch {
+    // A loader that cannot answer is not evidence that the namespace is safe.
+    return UNJUDGEABLE
+  }
+
+  const entry = Array.isArray(entries) ? entries.find((candidate) => candidate?.entryId === ns) : undefined
+  // An entry the manager does not list is one whose package cannot be checked;
+  // the namespace passed `describe()`, so it exists — refusing is the safe read.
+  if (!entry) return UNJUDGEABLE
+
+  const known = entry.moduleName === undefined ? undefined : AUTHORITY_PACKAGES[entry.moduleName]
+  if (known === undefined) return null
+
+  // `because` names the FORBIDDEN action this namespace would otherwise reach.
+  // It rides in the refusal so the correspondence is visible to whoever reads
+  // the result, not only to whoever reads this file.
+  return {
+    reason: `${known.reason} (reaches the same authority as the refused action "${known.because}")`,
+    alternative: known.alternative,
+  }
+}
+
 export async function settingsDomain(ctx, { action, args }) {
   // Argument validation comes first, so a malformed call is reported as a bad
   // request even on a profile that has no settings service at all. Resolving the
@@ -60,8 +174,17 @@ export async function settingsDomain(ctx, { action, args }) {
     case 'settings.set': {
       // Refuse a namespace that does not exist, so a typo cannot silently
       // create an unreachable config section.
-      if (!service.describe().some((d) => d.ns === args.ns)) {
+      const descriptor = service.describe().find((d) => d.ns === args.ns)
+      if (!descriptor) {
         return { status: 'error', action, reason: `no settings namespace "${args.ns}"` }
+      }
+      // Checked BEFORE `update()`, never after: this is a refusal to perform the
+      // write, not a report on one that already happened.
+      const refusal = await refuseAuthorityNamespace(ctx, args.ns, descriptor)
+      if (refusal) {
+        // The same envelope a FORBIDDEN action produces, so both callers and the
+        // panel read the authority boundary as one thing.
+        return { status: 'forbidden', action, ...refusal }
       }
       await service.update(args.ns, args.patch)
       return { status: 'ok', ns: args.ns }

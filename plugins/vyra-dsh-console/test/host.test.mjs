@@ -879,6 +879,63 @@ test('the args travel with the action, unflattened', async () => {
   assert.deepEqual(seen, [{ provider: 'deepseek', model: 'deepseek-reasoner' }], 'the args must arrive as the domain expects')
 })
 
+test('the authority boundary holds over HTTP: settings.set on the permission namespace is refused', async () => {
+  // The panel posts through this route, so the boundary has to hold here and not
+  // only for the tool. `settings.set` reaches a Loader entry's own config, and on
+  // the real profile that is where the session's sandbox and approval policy
+  // live — the same authority `permission.setPreset` is refused for.
+  const writes = []
+  const { handler } = handlerFor({
+    services: {
+      settings: {
+        describe: () => [
+          { ns: 'permission', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+        ],
+        update: async (ns, patch) => { writes.push([ns, patch]) },
+      },
+      pluginManager: {
+        listPlugins: async () => [{ entryId: 'permission', moduleName: '@deepseek-ai/dsh-permission-presets' }],
+        listBundles: async () => [],
+      },
+    },
+  })
+  const res = await post(handler, {
+    action: 'settings.set',
+    args: { ns: 'permission', patch: { defaultPreset: 'danger-full-access' } },
+  })
+
+  assert.equal(res.statusCode, 200, 'a refusal is data, not an HTTP failure')
+  assert.equal(res.json.status, 'forbidden')
+  assert.equal(res.json.action, 'settings.set')
+  assert.ok(res.json.reason.length > 0)
+  assert.ok(res.json.alternative.length > 0, 'the panel renders this as the user-facing route')
+  assert.deepEqual(writes, [], 'the write must never reach the service over HTTP either')
+  assert.equal(scanForUndefined(res.json), 'none', 'the refusal must survive the lossless snapshot')
+})
+
+test('an ordinary settings.set still succeeds over HTTP', async () => {
+  // The guard must not turn the endpoint into a wall.
+  const writes = []
+  const { handler } = handlerFor({
+    services: {
+      settings: {
+        describe: () => [
+          { ns: 'web-search', autoGenerate: true, schema: {}, value: {}, revision: 0, applies: 'live' },
+        ],
+        update: async (ns, patch) => { writes.push([ns, patch]) },
+      },
+      pluginManager: {
+        listPlugins: async () => [{ entryId: 'web-search', moduleName: 'dsh-web-search' }],
+        listBundles: async () => [],
+      },
+    },
+  })
+  const res = await post(handler, { action: 'settings.set', args: { ns: 'web-search', patch: { maxResults: 5 } } })
+  assert.equal(res.json.status, 'ok')
+  assert.equal(res.json.ns, 'web-search')
+  assert.deepEqual(writes, [['web-search', { maxResults: 5 }]])
+})
+
 test('an action posted with no args gets an empty object, not undefined', async () => {
   const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
   const res = await post(handler, { action: 'plugin.list' })

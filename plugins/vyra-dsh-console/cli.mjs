@@ -904,8 +904,20 @@ function buildServices(profile) {
     evidence: evidenceFor(spec.package),
     declared: evidenceFor(spec.package).length > 0,
     requiredBy: spec.actions,
-    note: 'declared means the profile installs it; only the running DSH knows whether it is active',
+    // Whether a package could declare this service at all. Carried as data rather
+    // than re-derived by the renderers from the note text: "no evidence" and "no
+    // package exists to give evidence" are different facts and must not look the
+    // same in the output.
+    declarable: spec.package !== null,
+    // A row with no package cannot be evidenced by an installation. Saying which
+    // of the two reasons applies stops "declared: false" from reading as
+    // "missing", which would be a false alarm rather than a report.
+    note: spec.package === null
+      ? 'provided by the host, or Client-realm; no installable package declares it, so there is nothing to look for'
+      : 'declared means the profile installs it; only the running DSH knows whether it is active',
   }))
+
+  const uncovered = uncoveredActions()
 
   return {
     profile: { name: profile.name, dir: profile.dir, source: profile.source, present: existsSync(profile.dir) },
@@ -915,6 +927,13 @@ function buildServices(profile) {
     caveats: [
       `This is the declaration half only. Which services are actually provided is process state, and is `
         + `reported by ${TOOL_CALL}: an action on a profile without its service answers "unavailable".`,
+      // Reported rather than assumed: if this is ever non-empty the command is
+      // under-describing the surface, and a reader must be able to see that here
+      // instead of inferring it from a count that does not add up.
+      uncovered.length === 0
+        ? `Every one of the ${Object.keys(ACTIONS).length} registered actions appears in a row above, `
+          + `or is listed as needing no service.`
+        : `INCOMPLETE: ${uncovered.length} registered action(s) appear in no row: ${uncovered.join(', ')}.`,
     ],
   }
 }
@@ -924,10 +943,23 @@ function buildServices(profile) {
  *
  * The service names are the `ctx.get('…')` keys the domains use
  * (`domains/catalog.js`, `domains/plugin.js`, `domains/model.js`,
- * `domains/settings.js`); the package names are the ones this installation's own
- * profile lists. `settings` has no package of its own — it is schema-derived
- * from the Loader's entries, inside the host — and is reported as such rather
- * than attributed to a package that does not exist.
+ * `domains/settings.js`, `domains/appearance.js`); the package names are the ones
+ * this installation's own profile lists.
+ *
+ * `package: null` means the service is NOT provided by an installable package and
+ * therefore cannot appear in a profile's `package.json` — so a row for it can
+ * never carry evidence, and saying so is the honest report rather than an
+ * omission. Two different reasons land here:
+ *   - `settings`, `skills` and `mcpManager` are provided by the host itself
+ *     (settings is schema-derived from the Loader's entries), so no package
+ *     declares them;
+ *   - `theme`, `layout` and `locale` are Client-realm services: they exist only
+ *     in the browser, which is why the appearance actions go through the channel
+ *     and answer `unavailable` when no interface is connected.
+ *
+ * EVERY action in `core.js`'s ACTIONS must appear in exactly one row here (or be
+ * accounted for as service-free). A row missing its actions reads as "this action
+ * needs nothing", which is the silence the CLI's own rule forbids.
  */
 const ACTION_SERVICES = {
   pluginManager: { package: 'dsh-plugin', actions: ['plugin.list', 'plugin.setEnabled', 'plugin.install', 'plugin.remove'] },
@@ -935,7 +967,43 @@ const ACTION_SERVICES = {
   settings: { package: null, actions: ['settings.list', 'settings.get', 'settings.set'] },
   skills: { package: null, actions: ['skill.list'] },
   mcpManager: { package: null, actions: ['mcp.list', 'mcp.restart', 'mcp.probe'] },
+  theme: { package: null, actions: ['appearance.setTheme', 'appearance.setFontSize'] },
+  layout: {
+    package: null,
+    actions: ['appearance.toggleSidebar', 'appearance.openRightbar', 'appearance.closeRightbar'],
+  },
+  locale: { package: null, actions: ['appearance.setLocale'] },
   im: { package: 'im', actions: [] },
+}
+
+/**
+ * Actions that resolve no service at all, so no row above can list them.
+ *
+ * `appearance.state` READS the Client-realm services the appearance rows name,
+ * but it is served by the appearance domain itself rather than by a service this
+ * plugin looks up; `console.actions` reads only the frozen ACTIONS/FORBIDDEN
+ * tables. Named explicitly so the completeness check below can distinguish
+ * "needs nothing" from "was forgotten".
+ */
+const SERVICE_FREE_ACTIONS = ['console.actions', 'appearance.state']
+
+/**
+ * Which registered actions no row above accounts for.
+ *
+ * The failure this guards against is silence: when `services` covered 13 of the
+ * 21 actions, the 7 `appearance.*` ones appeared nowhere while `doctor` reported
+ * all 21, so the command quietly under-reported the surface it exists to
+ * describe. A reader cannot tell an omission from "needs nothing", which is
+ * exactly what the CLI's own honesty rule forbids.
+ *
+ * @returns the unexplained action ids, empty when the table is complete.
+ */
+function uncoveredActions() {
+  const covered = new Set(SERVICE_FREE_ACTIONS)
+  for (const spec of Object.values(ACTION_SERVICES)) {
+    for (const action of spec.actions) covered.add(action)
+  }
+  return Object.keys(ACTIONS).filter((name) => !covered.has(name))
 }
 
 function run(command, options) {
@@ -1120,8 +1188,14 @@ function serviceLines(value) {
   ]
   if (value.manifestError !== null) lines.push(`  manifest: ${value.manifestError}`, '')
   for (const row of value.services) {
-    const evidence = row.evidence.length === 0 ? 'no evidence in this profile' : row.evidence.join('; ')
-    lines.push(`  ${row.declared ? 'declared' : 'unknown '}  ${row.service}  (${evidence})`)
+    // Three states, not two. A service no package can declare is never going to
+    // acquire evidence on any profile, so printing "unknown" for it would report
+    // a permanent property of the service as a gap in this installation.
+    const label = row.declared ? 'declared' : (row.declarable ? 'unknown' : 'host/client')
+    const evidence = row.evidence.length > 0
+      ? row.evidence.join('; ')
+      : (row.declarable ? 'no evidence in this profile' : 'no package declares it')
+    lines.push(`  ${label.padEnd(11)}  ${row.service}  (${evidence})`)
   }
   lines.push('')
   for (const caveat of value.caveats) lines.push(`  - ${caveat}`)
