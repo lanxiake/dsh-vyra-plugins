@@ -2372,7 +2372,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '80204fe5f1cb78a9ccecadd9d7d24e4025bbb68d',
+            commit: '83a0b42fd48d5487cb2edf8045df5a6012f7fa64',
             path: 'plugins/vyra-screen-recorder',
           },
         },
