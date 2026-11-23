@@ -81,3 +81,11 @@ test('the tool refuses a forbidden action without calling any handler', async ()
   assert.equal(result.status, 'forbidden')
   assert.equal(called, false, 'a forbidden action never reaches a domain handler')
 })
+
+test('the tool definition declares the output contract registration requires', () => {
+  // tools.register() throws "tool ... must declare output { schema, render,
+  // presentationMeta? }" without this, which fails the whole plugin's apply().
+  const tool = createConsoleTool(createConsole(bareCtx()))
+  assert.equal(typeof tool.output?.render, 'function')
+  assert.ok(tool.output?.schema, 'the output schema is what registration validates values against')
+})

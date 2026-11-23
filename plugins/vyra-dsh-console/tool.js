@@ -18,6 +18,16 @@ export function createConsoleTool(console_) {
       required: ['action'],
       additionalProperties: false,
     },
+    // Registration rejects a definition without this (`dsh-tools/src/index.ts`),
+    // which would fail apply() and take the whole plugin down with it. The schema
+    // is deliberately permissive: every console action returns an object with a
+    // status, and it is validated against each of those values.
+    // No timeoutMs: that field asserts the tool forwards exec.signal, and
+    // `execute` here ignores exec.
+    output: {
+      schema: { type: 'object', properties: { status: { type: 'string' } }, required: ['status'] },
+      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
+    },
     async execute(input) {
       return console_.dispatch(input?.action ?? '', input?.args ?? {})
     },
