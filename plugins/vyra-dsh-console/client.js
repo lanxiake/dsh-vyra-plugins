@@ -152,7 +152,15 @@ window.__ModuleLoader__.load({
      *   success carries `value` only when there is one to carry.
      */
     function applyOp(services, op, args) {
-      const handler = OPS[op]
+      // Own properties only. `OPS[op]` walks the prototype chain, so `toString`,
+      // `valueOf`, `hasOwnProperty` and friends would resolve as "handlers" and
+      // be *called*: `constructor` returns the OPS object itself, and the rest
+      // fail inside the dispatch and surface as a plausible-looking error for an
+      // op that does not exist. `domains/appearance.js` filters with
+      // `CLIENT_ACTIONS.has(action)` before it gets here, but Task 7's HTTP route
+      // and Task 10's panel post ops in directly, so this function must refuse on
+      // its own rather than trust a caller's guard.
+      const handler = Object.hasOwn(OPS, op) ? OPS[op] : undefined
       if (handler === undefined) {
         return { status: 'error', reason: `unknown appearance op "${op}"` }
       }

@@ -126,6 +126,48 @@ test('an unknown op never degrades into a leaked implementation detail', () => {
   assert.doesNotMatch(result.reason, /\bhandler\b/)
 })
 
+// The lookup must be own-property only. `OPS[op]` walks the prototype chain, so
+// every `Object.prototype` name resolves as a "handler": `constructor` returns
+// the OPS object itself — which is why the leak is real, not theoretical — and
+// the rest report a plausible-looking error for an op that does not exist.
+// `domains/appearance.js` filters with `CLIENT_ACTIONS.has(action)` today, but
+// Task 7's HTTP route and Task 10's panel do not, so this function must refuse
+// on its own rather than relying on a caller's guard.
+for (const op of ['toString', 'valueOf', 'constructor', '__proto__', 'hasOwnProperty',
+  'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'then', 'length']) {
+  test(`the inherited name "${op}" is refused, not resolved as a handler`, () => {
+    const { services, calls } = spyServices()
+    let result
+    assert.doesNotThrow(() => { result = exports.__internal.applyOp(services, op, {}) },
+      `"${op}" must not raise`)
+    // The contract is `{ status }`: a bare string or a status-less object is a
+    // contract violation even when it does not throw.
+    assert.equal(typeof result, 'object', `"${op}" must return an object`)
+    assert.notEqual(result, null)
+    assert.equal(result.status, 'error', `"${op}" must be refused`)
+    assert.match(result.reason, /unknown appearance op/, `"${op}" must be named as unknown`)
+    assert.deepEqual(calls, [], `"${op}" must call nothing`)
+    // No internals in the payload: the services must never appear in a return.
+    const serialized = JSON.stringify(result)
+    assert.ok(!serialized.includes('toggleSidebar'), `"${op}" must not leak a service object`)
+    assert.equal(Object.hasOwn(result, 'theme'), false)
+    assert.equal(Object.hasOwn(result, 'layout'), false)
+    assert.equal(Object.hasOwn(result, 'locale'), false)
+  })
+}
+
+test('the "constructor" op does not return the handler map', () => {
+  // The sharpest case: `OPS.constructor` is `Object`, whose call returns the
+  // object passed in — the live service bag. Asserted directly rather than only
+  // through the loop above, because this is the one that leaks real state.
+  const { services } = spyServices()
+  const result = exports.__internal.applyOp(services, 'constructor', {})
+  assert.equal(result.status, 'error')
+  assert.notEqual(result, services)
+  assert.notEqual(result.theme, services.theme)
+  assert.doesNotMatch(JSON.stringify(result), /setTheme|toggleSidebar|getLocale/)
+})
+
 test('a Client service that is missing reports an error, not a false success', () => {
   const result = exports.__internal.applyOp({}, 'appearance.setTheme', { id: 'dark' })
   assert.equal(result.status, 'error')
@@ -274,6 +316,53 @@ test('a thrown non-Error is still reported as a reason', () => {
   )
   assert.equal(result.status, 'error')
   assert.match(result.reason, /theme "x" is not registered/)
+})
+
+test('the reason is the service message exactly, with no "Error: " prefix', () => {
+  // The reason is text the model reads. `String(err)` would prepend `Error: `,
+  // and an unanchored regex cannot tell the difference — so this pins the whole
+  // string. The service's message is the contract; the wrapper's name is noise.
+  const services = {
+    theme: {
+      setTheme: () => { throw new Error('theme "nope" is not registered') },
+      setFontSize: () => { throw new Error('body font size 999 is outside 10..22') },
+    },
+    locale: { setLocale: () => { throw new Error('locale "zz" is not registered') } },
+  }
+  assert.equal(
+    exports.__internal.applyOp(services, 'appearance.setTheme', { id: 'nope' }).reason,
+    'theme "nope" is not registered',
+  )
+  assert.equal(
+    exports.__internal.applyOp(services, 'appearance.setFontSize', { role: 'body', px: 999 }).reason,
+    'body font size 999 is outside 10..22',
+  )
+  assert.equal(
+    exports.__internal.applyOp(services, 'appearance.setLocale', { id: 'zz' }).reason,
+    'locale "zz" is not registered',
+  )
+})
+
+test('every caught throw reports its bare message, prefixed by nothing', () => {
+  // Swept across all seven ops so no single op's error path can regress to
+  // `String(err)` unnoticed; the expected value is the message verbatim.
+  const boom = () => { throw new Error('service exploded') }
+  const services = {
+    theme: { getTheme: boom, setTheme: boom, setFontSize: boom },
+    layout: { toggleSidebar: boom, openRightbar: boom, closeRightbar: boom },
+    locale: { getLocale: boom, setLocale: boom },
+  }
+  for (const [op, args] of [
+    ['appearance.state', {}],
+    ['appearance.setTheme', { id: 'dark' }],
+    ['appearance.setFontSize', { role: 'text', px: 15 }],
+    ['appearance.toggleSidebar', {}],
+    ['appearance.openRightbar', {}],
+    ['appearance.closeRightbar', {}],
+    ['appearance.setLocale', { id: 'en' }],
+  ]) {
+    assert.equal(exports.__internal.applyOp(services, op, args).reason, 'service exploded', `${op}`)
+  }
 })
 
 test('a read whose getter throws is reported, not raised', () => {
