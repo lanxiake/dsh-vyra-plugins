@@ -529,5 +529,79 @@ export function createManager(ctx) {
     return { errors, warnings, rows: errors.length ? [] : buildRows(spec, environment(ctx)) };
   }
 
-  return { meta, listAgents, getAgent, saveAgent, deleteAgent, previewAgent };
+  /**
+   * Per-preset usage from the host's own projection cache. One cache record
+   * exists per session (root or subagent) and carries `agentPreset`,
+   * `sessionStats`, token totals and the subagent identity, so this is a read
+   * of already-persisted facts rather than a second log format.
+   */
+  async function stats() {
+    const dir = join(dshHome(), 'storages', 'session_projcache', 'sessions');
+    let files = [];
+    try { files = await readdir(dir); }
+    catch { return { generatedAt: Date.now(), presets: [], skipped: 0, unavailable: true }; }
+    const byPreset = new Map();
+    let skipped = 0;
+    const number = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      let record;
+      try { record = JSON.parse(await readFile(join(dir, file), 'utf8'))?.record; }
+      catch { skipped += 1; continue; }
+      const rows = record?.rows;
+      if (rows === undefined) { skipped += 1; continue; }
+      const preset = typeof rows.agentPreset?.val === 'string' && rows.agentPreset.val !== '' ? rows.agentPreset.val : '(none)';
+      const sessionStats = rows.sessionStats?.val ?? {};
+      const tokens = rows.tokenUsage?.val?.totals ?? {};
+      const listed = rows.sessionListMetadata?.val ?? {};
+      const createdAt = number(record.identity?.createdAt);
+      const lastUsedAt = number(listed.lastPromptAt) || createdAt;
+      let entry = byPreset.get(preset);
+      if (entry === undefined) {
+        entry = {
+          id: preset, sessions: 0, rootSessions: 0, memberSessions: 0,
+          turns: 0, steps: 0, llmMs: 0, toolMs: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
+          inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, firstUsedAt: 0, lastUsedAt: 0,
+        };
+        byPreset.set(preset, entry);
+      }
+      entry.sessions += 1;
+      // The projection exists on every session; a member is the one carrying a
+      // subagent identity, not merely a row whose value happens to be null.
+      if (rows.subagent?.val?.identity === undefined) entry.rootSessions += 1; else entry.memberSessions += 1;
+      entry.turns += number(sessionStats.turns);
+      entry.steps += number(sessionStats.steps);
+      entry.llmMs += number(sessionStats.llmMs);
+      entry.toolMs += number(sessionStats.toolMs);
+      entry.ttftMs += number(sessionStats.ttftMs);
+      entry.ttftSteps += number(sessionStats.ttftSteps);
+      entry.decodeMs += number(sessionStats.decodeMs);
+      entry.decodeTokens += number(sessionStats.decodeTokens);
+      entry.inputTokens += number(tokens.uncachedInputTokens);
+      entry.outputTokens += number(tokens.outputTokens);
+      entry.cacheReadTokens += number(tokens.cacheReadTokens);
+      entry.cacheWriteTokens += number(tokens.cacheWriteTokens);
+      if (createdAt > 0 && (entry.firstUsedAt === 0 || createdAt < entry.firstUsedAt)) entry.firstUsedAt = createdAt;
+      if (lastUsedAt > entry.lastUsedAt) entry.lastUsedAt = lastUsedAt;
+    }
+    const presets = [...byPreset.values()]
+      .map((entry) => ({
+        ...entry,
+        avgLlmMs: entry.sessions === 0 ? 0 : Math.round(entry.llmMs / entry.sessions),
+        avgToolMs: entry.sessions === 0 ? 0 : Math.round(entry.toolMs / entry.sessions),
+      }))
+      .sort((left, right) => right.sessions - left.sessions || right.lastUsedAt - left.lastUsedAt);
+    const totals = presets.reduce((sum, entry) => ({
+      sessions: sum.sessions + entry.sessions,
+      turns: sum.turns + entry.turns,
+      steps: sum.steps + entry.steps,
+      llmMs: sum.llmMs + entry.llmMs,
+      toolMs: sum.toolMs + entry.toolMs,
+      inputTokens: sum.inputTokens + entry.inputTokens,
+      outputTokens: sum.outputTokens + entry.outputTokens,
+    }), { sessions: 0, turns: 0, steps: 0, llmMs: 0, toolMs: 0, inputTokens: 0, outputTokens: 0 });
+    return { generatedAt: Date.now(), presets, totals, skipped };
+  }
+
+  return { meta, listAgents, getAgent, saveAgent, deleteAgent, previewAgent, stats };
 }

@@ -133,6 +133,8 @@ window.__ModuleLoader__.load({
       'editor.previewFailed': '预览失败：{error}',
       'editor.required': '还有 {n} 项必填内容未完成',
       'editor.requiredAll': '必填内容已齐全',
+      'boundary.title': '这一个 Agent 没渲染出来',
+      'boundary.hint': '详情数据可能来自一份未预期的预设声明。错误已写入控制台；关闭后其他 Agent 不受影响。',
       'viewer.description': '描述',
       'viewer.noDescription': '无描述',
       'viewer.summary': '模式说明',
@@ -160,6 +162,7 @@ window.__ModuleLoader__.load({
       'viewer.rawConfig': '完整声明（只读 YAML）',
       'viewer.promptExpr': '该提示词由内联表达式生成，这里按原文显示',
       'viewer.use': '用此 Agent 新建会话',
+      'loading': '加载中…',
       'app.title': 'Agent 管理',
       'app.subtitle': '为不同任务创建专用 Agent：各自的提示词、工具与技能。主 Agent 也可以用 agent_manager 工具按同一规范创建。',
       'app.newAgent': '新建 Agent',
@@ -185,6 +188,38 @@ window.__ModuleLoader__.load({
       'toast.noWorkspace': '当前客户端无法从面板新建会话',
       'toast.starting': '已切换到一个新会话',
       'toast.warnSep': '；',
+      'ai.button': 'AI 创建',
+      'ai.edit': 'AI 修改',
+      'ai.titleCreate': 'AI 创建 Agent',
+      'ai.titleEdit': 'AI 修改 Agent',
+      'ai.goal': '你想让这个 Agent 做什么？',
+      'ai.goalPlaceholder': '例如：一个只读的代码审查员，重点查并发与安全问题；或者：把现有 Agent 改得更简洁，减少工具。',
+      'ai.includeSpec': '把当前配置一起交给 AI',
+      'ai.start': '开始在会话中编辑',
+      'ai.cancel': '取消',
+      'ai.hint': '会新开一个会话，模型用 agent_manager 工具起草、预览并保存；完成后回到面板刷新即可看到。',
+      'toast.aiStarted': '已打开 AI 编辑会话',
+      'stats.tabAgents': 'Agents',
+      'stats.tabStats': '统计',
+      'stats.title': 'Agent 调用统计',
+      'stats.refresh': '刷新',
+      'stats.export': '导出 CSV',
+      'stats.agent': 'Agent',
+      'stats.sessions': '会话',
+      'stats.turns': '轮次',
+      'stats.steps': '步骤',
+      'stats.llm': '模型耗时',
+      'stats.tool': '工具耗时',
+      'stats.tokens': 'Tokens（入/出）',
+      'stats.first': '首次使用',
+      'stats.last': '最近使用',
+      'stats.member': '团队',
+      'stats.empty': '还没有可统计的会话。',
+      'stats.unavailable': '宿主没有可用的投影缓存。',
+      'stats.skipped': '{n} 条缓存记录无法读取。',
+      'stats.note': '数据来自宿主的会话投影缓存，每个轮次结束后更新；未缓存的历史会话不计入。',
+      'stats.none': '未指定 Agent',
+      'stats.total': '合计',
     };
     // i18n:zh:end
     // i18n:en:start
@@ -286,6 +321,8 @@ window.__ModuleLoader__.load({
       'editor.previewFailed': 'Preview failed: {error}',
       'editor.required': '{n} required fields are still missing',
       'editor.requiredAll': 'All required fields are set',
+      'boundary.title': 'This Agent could not render',
+      'boundary.hint': 'Its detail data may come from an unexpected preset declaration. The error is logged; closing it leaves every other Agent usable.',
       'viewer.description': 'Description',
       'viewer.noDescription': 'No description',
       'viewer.summary': 'Mode description',
@@ -313,6 +350,7 @@ window.__ModuleLoader__.load({
       'viewer.rawConfig': 'Full declaration (read-only YAML)',
       'viewer.promptExpr': 'This prompt comes from an inline expression; shown as written',
       'viewer.use': 'Start a new session with this agent',
+      'loading': 'Loading…',
       'app.title': 'Agent manager',
       'app.subtitle': 'Create a dedicated Agent for each kind of task, with its own prompt, tools and skills. The main Agent can create them the same way through the agent_manager tool.',
       'app.newAgent': 'New Agent',
@@ -338,6 +376,38 @@ window.__ModuleLoader__.load({
       'toast.noWorkspace': 'This client cannot start a session from the panel',
       'toast.starting': 'Switched to a new session',
       'toast.warnSep': '; ',
+      'ai.button': 'AI create',
+      'ai.edit': 'AI edit',
+      'ai.titleCreate': 'Create an Agent with AI',
+      'ai.titleEdit': 'Edit this Agent with AI',
+      'ai.goal': 'What should this Agent do?',
+      'ai.goalPlaceholder': 'e.g. a read-only code reviewer focused on concurrency and security; or make the current Agent simpler with fewer tools.',
+      'ai.includeSpec': 'Give the AI the current configuration',
+      'ai.start': 'Start in a session',
+      'ai.cancel': 'Cancel',
+      'ai.hint': 'Opens a new session where the model drafts, previews and saves through the agent_manager tool. Refresh the panel when it finishes.',
+      'toast.aiStarted': 'Opened the AI editing session',
+      'stats.tabAgents': 'Agents',
+      'stats.tabStats': 'Usage',
+      'stats.title': 'Agent usage',
+      'stats.refresh': 'Refresh',
+      'stats.export': 'Export CSV',
+      'stats.agent': 'Agent',
+      'stats.sessions': 'Sessions',
+      'stats.turns': 'Turns',
+      'stats.steps': 'Steps',
+      'stats.llm': 'Model time',
+      'stats.tool': 'Tool time',
+      'stats.tokens': 'Tokens (in/out)',
+      'stats.first': 'First used',
+      'stats.last': 'Last used',
+      'stats.member': 'team',
+      'stats.empty': 'No sessions to report yet.',
+      'stats.unavailable': 'The host has no projection cache available.',
+      'stats.skipped': '{n} cache records could not be read.',
+      'stats.note': 'Read from the host session projection cache; updated after each turn. Sessions without a cache are not included.',
+      'stats.none': 'No Agent',
+      'stats.total': 'Total',
     };
     // i18n:en:end
 
@@ -378,6 +448,15 @@ window.__ModuleLoader__.load({
 .am-scroll{flex:1;min-height:0;overflow:auto;padding:28px 32px 40px}
 .am-wrap{max-width:1120px;margin:0 auto}
 .am-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}
+.am-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.am-ai{position:absolute;z-index:40;left:50%;top:18%;transform:translateX(-50%);width:min(520px,calc(100% - 32px));display:flex;flex-direction:column;border-radius:12px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-overlay);box-shadow:0 18px 50px color-mix(in srgb,var(--dsw-alias-label-primary) 22%,transparent)}
+.am-check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--dsw-alias-label-secondary);cursor:pointer}
+.am-stats-wrap{overflow:auto;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1);max-height:calc(100vh - 220px)}
+.am-table{width:100%;border-collapse:collapse;font-size:12px}
+.am-table th,.am-table td{padding:8px 10px;border-bottom:1px solid var(--dsw-alias-border-l1);text-align:left;white-space:nowrap;vertical-align:top}
+.am-table th{position:sticky;top:0;z-index:1;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font-weight:600}
+.am-table tbody tr:hover{background:var(--dsw-alias-bg-layer-2)}
+.am-table td .am-hint{display:inline}
 .am-title{margin:0;font-size:22px;font-weight:650;letter-spacing:-.01em}
 .am-sub{margin:6px 0 0;color:var(--dsw-alias-label-secondary);line-height:1.5;max-width:560px}
 .am-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s,opacity .15s;white-space:nowrap}
@@ -427,28 +506,19 @@ window.__ModuleLoader__.load({
 .am-veil{position:absolute;inset:0;z-index:20;background:color-mix(in srgb,var(--dsw-alias-bg-base) 55%,transparent);backdrop-filter:blur(2px);animation:am-fade .15s ease}
 .am-drawer{position:absolute;top:0;right:0;bottom:0;z-index:21;width:min(640px,100%);display:flex;flex-direction:column;background:var(--dsw-alias-bg-overlay);border-left:1px solid var(--dsw-alias-border-l1);box-shadow:-18px 0 40px color-mix(in srgb,var(--dsw-alias-label-primary) 14%,transparent);animation:am-in .2s cubic-bezier(.2,.8,.2,1)}
 .am-drawer-wide{width:min(820px,100%)}
-.am-screen-veil{position:fixed;inset:0;z-index:89;background:color-mix(in srgb,var(--dsw-alias-bg-base) 70%,transparent);backdrop-filter:blur(3px);animation:am-fade .15s ease}
-.am-editor{position:fixed;inset:0;z-index:90;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;animation:am-fade .18s ease}
-.am-editor-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
-.am-editor-body{display:grid;grid-template-columns:190px minmax(0,1fr) 300px;min-height:0}
-.am-editor-nav{display:flex;flex-direction:column;gap:2px;padding:14px 10px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto;background:var(--dsw-alias-bg-layer-1)}
-.am-nav-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border:0;border-radius:9px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-weight:500;text-align:left;cursor:pointer}
+.am-screen-veil{display:none}
+.am-editor{position:absolute;top:0;right:0;bottom:0;z-index:31;width:min(560px,100%);display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);font-size:13px;border-left:1px solid var(--dsw-alias-border-l1);box-shadow:-18px 0 40px color-mix(in srgb,var(--dsw-alias-label-primary) 14%,transparent);animation:am-in .2s cubic-bezier(.2,.8,.2,1)}
+.am-editor-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.am-editor-head-chips{flex:1;justify-content:flex-end;flex-wrap:wrap}
+.am-editor-body{display:flex;flex-direction:column;min-height:0}
+.am-editor-nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:3px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-l1);overflow:auto;background:var(--dsw-alias-bg-layer-1)}
+.am-nav-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;font-weight:500;cursor:pointer}
 .am-nav-item:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .am-nav-item.on{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l1)}
-.am-nav-dot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-state-warn-primary);flex:none}
-.am-editor-form{min-width:0;overflow:auto;padding:22px 28px 40px}
-.am-editor-form>*{max-width:820px}
-.am-editor-side{min-height:0;overflow:auto;padding:18px 16px;border-left:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);display:flex;flex-direction:column;gap:16px}
-.am-side-block{display:flex;flex-direction:column;gap:8px}
-.am-side-title{font-size:12px;font-weight:600;color:var(--dsw-alias-label-secondary);letter-spacing:.03em}
-.am-side-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.am-side-stats div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base)}
-.am-side-stats b{font-size:15px}
-.am-side-stats span{font-size:11.5px;color:var(--dsw-alias-label-secondary)}
-.am-side-list{display:flex;flex-direction:column;gap:4px}
-.am-side-item{font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary);background:transparent;border:0;padding:0;text-align:left}
-.am-side-item.warn{color:var(--dsw-alias-state-warn-primary);cursor:pointer}
-.am-editor-foot{display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.am-nav-dot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-warn-primary);flex:none}
+.am-editor-form{flex:1;min-height:0;overflow:auto;padding:16px 18px 28px}
+.am-editor-form>*{max-width:none}
+.am-editor-summary{display:flex;flex-direction:column;gap:14px;margin-top:20px;padding-top:14px;border-top:1px solid var(--dsw-alias-border-l1)}
 .am-editor-foot .grow{flex:1;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.4}
 .am-editor-hero{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .am-editor-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 4px}
@@ -465,8 +535,8 @@ window.__ModuleLoader__.load({
 .am-preview{width:min(860px,calc(100vw - 48px));max-height:calc(100vh - 80px);display:flex;flex-direction:column;border-radius:12px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-overlay);box-shadow:0 18px 50px rgba(0,0,0,.35);overflow:hidden}
 .am-preview-body{flex:1;overflow:auto;padding:14px 18px}
 .am-preview-code{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.6}
-@media (max-width:1200px){.am-editor-body{grid-template-columns:170px minmax(0,1fr)}.am-editor-side{display:none}}
-@media (max-width:760px){.am-editor-body{grid-template-columns:1fr}.am-editor-nav{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1)}.am-editor-cards{grid-template-columns:1fr 1fr}}
+
+@media (max-width:760px){.am-editor{width:100%}.am-editor-head-chips{display:none}.am-editor-cards{grid-template-columns:1fr 1fr}}
 @keyframes am-in{from{transform:translateX(28px);opacity:0}}
 @keyframes am-fade{from{opacity:0}}
 .am-dhead{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--dsw-alias-border-l1)}
@@ -719,7 +789,33 @@ window.__ModuleLoader__.load({
 
     function Chip({ kind, children, title }) { return h('span', { className: 'am-chip' + (kind ? ' ' + kind : ''), title }, children); }
 
-    function AgentCard({ item, meta, onEdit, onDelete, onView, onUse, onRepair }) {
+    /**
+     * Keep one bad preset from taking the whole panel down: a detail render that
+     * throws shows its own error and a close button, while the list stays usable.
+     */
+    class Boundary extends React.Component {
+      constructor(props) { super(props); this.state = { error: null }; }
+      static getDerivedStateFromError(error) { return { error }; }
+      componentDidCatch(error, info) {
+        try { console.error('[agent-manager] detail render failed', error, info); } catch { /* no console */ }
+      }
+      render() {
+        if (this.state.error === null) return this.props.children;
+        const t = this.props.t;
+        return h('div', { className: 'am-veil' },
+          h('div', { className: 'am-drawer' },
+            h('div', { className: 'am-dhead' }, h('h2', null, t('boundary.title'))),
+            h('div', { className: 'am-dbody' },
+              h('p', { className: 'am-hint err' }, String(this.state.error?.message || this.state.error)),
+              h('p', { className: 'am-hint' }, t('boundary.hint'))),
+            h('div', { className: 'am-dfoot' }, h('button', {
+              className: 'am-btn primary',
+              onClick: () => { this.setState({ error: null }); if (this.props.onClose) this.props.onClose(); },
+            }, t('viewer.close')))));
+      }
+    }
+
+    function AgentCard({ item, meta, onEdit, onDelete, onView, onUse, onRepair, onAi }) {
       const t = useT();
       const [armed, setArmed] = useState(false);
       useEffect(() => { if (!armed) return undefined; const timer = setTimeout(() => setArmed(false), 3500); return () => clearTimeout(timer); }, [armed]);
@@ -765,13 +861,14 @@ window.__ModuleLoader__.load({
             h('button', { className: 'am-btn sm', onClick: () => onView(id) }, t('card.viewDetails')))
           : h('div', { className: 'am-actions' },
             usable ? h('button', { className: 'am-btn sm primary', onClick: () => onUse(id) }, t('card.use')) : null,
+            onAi ? h('button', { className: 'am-btn sm', onClick: () => onAi(spec) }, t('ai.edit')) : null,
             repair ? h('button', { className: 'am-btn sm', onClick: () => onRepair(spec) }, t('card.repair')) : null,
             h('button', { className: 'am-btn sm', onClick: () => onView(id) }, t('card.details')),
             h('button', { className: 'am-btn sm', onClick: () => onEdit(spec) }, t('card.edit')),
             h('button', { className: 'am-btn sm danger' + (armed ? ' armed' : ''), onClick: () => (armed ? onDelete(spec.id) : setArmed(true)) }, armed ? t('card.confirmDelete') : t('card.delete'))));
     }
 
-    function Editor({ mode, initial, meta, peers, status, onUse, onClose, onSave, saving, error }) {
+    function Editor({ mode, initial, meta, peers, status, onUse, onAi, onClose, onSave, saving, error }) {
       const t = useT();
       const [f, setF] = useState(initial);
       const [nav, setNav] = useState('overview');
@@ -940,7 +1037,7 @@ window.__ModuleLoader__.load({
             h('button', { key: p.id, type: 'button', title: p.description, className: 'am-pill' + (f.team.includes(p.id) ? ' on' : ''), onClick: () => toggle('team', p.id) }, p.name || p.id))) : null),
       };
 
-      const summary = h('aside', { className: 'am-editor-side' },
+      const summary = h('div', { className: 'am-editor-summary' },
         h('div', { className: 'am-side-block' },
           h('div', { className: 'am-side-title' }, t('editor.statusTitle')),
           h('div', { className: 'am-chips' }, statusChips.length
@@ -965,20 +1062,25 @@ window.__ModuleLoader__.load({
 
       const title = mode === 'edit' ? t('editor.titleEdit') : t('editor.titleCreate');
       return h(React.Fragment, null,
-        h('div', { className: 'am-veil am-screen-veil' }),
+        h('div', { className: 'am-veil', onClick: saving ? undefined : onClose }),
         h('div', { className: 'am-editor', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
           h('div', { className: 'am-editor-head' },
-            h('div', null,
+            h('div', { style: { minWidth: 0 } },
               h('h2', { style: { margin: 0, fontSize: 17, fontWeight: 650 } }, title),
               h('div', { className: 'am-idline' }, f.name || f.id || '—')),
-            h('button', { className: 'am-btn ghost sm', onClick: onClose, disabled: saving, 'aria-label': t('editor.close') }, Icon(I.close))),
+            h('div', { className: 'am-chips am-editor-head-chips' },
+              statusChips.length ? statusChips.map(([kind, label], i) => h(Chip, { key: i, kind: kind || undefined }, label)) : null),
+            h('div', { style: { display: 'flex', gap: 6, alignItems: 'center', flex: 'none' } },
+              mode === 'edit' && onAi ? h('button', { className: 'am-btn sm', onClick: () => onAi({ ...f }) }, t('ai.edit')) : null,
+              h('button', { className: 'am-btn ghost sm', onClick: onClose, disabled: saving, 'aria-label': t('editor.close') }, Icon(I.close)))),
           h('div', { className: 'am-editor-body' },
             h('nav', { className: 'am-editor-nav', 'aria-label': title }, NAV.map(([id, label]) =>
               h('button', { key: id, className: 'am-nav-item' + (nav === id ? ' on' : ''), onClick: () => setNav(id) },
                 h('span', null, label),
                 issueAt(id) ? h('i', { className: 'am-nav-dot' }) : null))),
-            h('div', { className: 'am-editor-form' }, sectionBody[nav] || null),
-            summary),
+            h('div', { className: 'am-editor-form' }, nav === 'overview'
+              ? h(React.Fragment, null, sectionBody.overview, summary)
+              : sectionBody[nav] || null)),
           h('div', { className: 'am-editor-foot' },
             h('div', { className: 'grow' }, error ? h('span', { style: { color: 'var(--dsw-alias-state-error-primary)' } }, error) : t('editor.footNote')),
             h('button', { className: 'am-btn', onClick: onClose, disabled: saving }, t('editor.cancel')),
@@ -1000,7 +1102,7 @@ window.__ModuleLoader__.load({
     // every section; a system preset fills what its declaration exposes and marks
     // the rest as not declared, so the two pages read the same rather than being
     // two different products.
-    function Viewer({ data, meta, onClose, onUse }) {
+    function Viewer({ data, meta, onClose, onUse, onAi }) {
       const t = useT();
       const model = detailModel(data, meta);
       if (!model) return null;
@@ -1055,7 +1157,83 @@ window.__ModuleLoader__.load({
           h('div', { className: 'am-dfoot' },
             h('div', { className: 'grow' }, declared ? '' : t('viewer.systemNote')),
             model.useId && onUse ? h('button', { className: 'am-btn primary', onClick: () => { onUse(model.useId); onClose(); } }, t('viewer.use')) : null,
+            declared && data.spec && onAi ? h('button', { className: 'am-btn', onClick: () => { onAi(data.spec); onClose(); } }, t('ai.edit')) : null,
             h('button', { className: declared ? 'am-btn primary' : 'am-btn', onClick: onClose }, t('viewer.close')))));
+    }
+
+/** One prompt box for the AI create/edit entry; the actual work runs in a new session. */
+    function AiDialog({ mode, t, onCancel, onStart }) {
+      const [goal, setGoal] = useState('');
+      const [include, setInclude] = useState(mode === 'edit');
+      return h(React.Fragment, null,
+        h('div', { className: 'am-veil', onClick: onCancel }),
+        h('div', { className: 'am-ai', role: 'dialog', 'aria-label': t(mode === 'create' ? 'ai.titleCreate' : 'ai.titleEdit') },
+          h('div', { className: 'am-dhead' }, h('h2', null, t(mode === 'create' ? 'ai.titleCreate' : 'ai.titleEdit'))),
+          h('div', { className: 'am-dbody' },
+            h('div', { className: 'am-field', style: { marginTop: 4 } },
+              h('label', { className: 'am-label' }, t('ai.goal')),
+              h('textarea', {
+                className: 'am-area', style: { minHeight: 120, fontFamily: 'inherit', fontSize: 13 }, value: goal,
+                placeholder: t('ai.goalPlaceholder'), onChange: (event) => { setGoal(event.target.value) },
+              })),
+            mode === 'edit' ? h('label', { className: 'am-check' },
+              h('input', { type: 'checkbox', checked: include, onChange: (event) => { setInclude(event.target.checked) } }),
+              t('ai.includeSpec')) : null,
+            h('div', { className: 'am-hint', style: { marginTop: 10 } }, t('ai.hint'))),
+          h('div', { className: 'am-dfoot' },
+            h('div', { className: 'grow' }),
+            h('button', { className: 'am-btn', onClick: onCancel }, t('ai.cancel')),
+            h('button', { className: 'am-btn primary', disabled: goal.trim() === '', onClick: () => { onStart(goal.trim(), include) } }, t('ai.start')))));
+    }
+
+    const fmtMs = (ms) => ms <= 0 ? '—' : ms < 1000 ? `${Math.round(ms)}ms` : ms < 60000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 60000).toFixed(1)}m`;
+    const fmtTokens = (n) => n <= 0 ? '—' : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+    const fmtDate = (ts) => ts > 0 ? new Date(ts).toLocaleDateString() : '—';
+
+    /**
+     * Per-Agent usage from the host's projection cache. The table is derived and
+     * read-only; the CSV export is the hand-off to further analysis.
+     */
+    function StatsView({ stats, error, agents, t, onRefresh, onExport }) {
+      const nameOf = (id) => {
+        const managed = agents === null ? undefined : agents.managed.find((item) => item.spec.id === id);
+        if (managed !== undefined) return managed.spec.name;
+        const system = agents === null ? undefined : agents.system.find((item) => item.id === id);
+        if (system !== undefined) return system.name;
+        return id === '(none)' ? t('stats.none') : id;
+      };
+      if (error !== '') {
+        return h('div', { className: 'am-empty' },
+          h('b', null, t('app.loadFailed', { error })),
+          h('button', { className: 'am-btn sm', onClick: onRefresh }, t('stats.refresh')));
+      }
+      if (stats === null) return h('div', { className: 'am-empty' }, t('loading'));
+      if (stats.unavailable === true) return h('div', { className: 'am-empty' }, h('b', null, t('stats.unavailable')));
+      const presets = stats.presets || [];
+      return h('div', null,
+        h('div', { className: 'am-bar' },
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('h2', { style: { margin: 0, fontSize: 16, fontWeight: 650 } }, t('stats.title')),
+            h('div', { className: 'am-hint' }, t('stats.note'))),
+          h('button', { className: 'am-btn sm', onClick: onRefresh }, t('stats.refresh')),
+          h('button', { className: 'am-btn sm', onClick: onExport, disabled: presets.length === 0 }, t('stats.export'))),
+        presets.length === 0 ? h('div', { className: 'am-empty' }, h('b', null, t('stats.empty'))) : h('div', { className: 'am-stats-wrap' },
+          h('table', { className: 'am-table' },
+            h('thead', null, h('tr', null, [
+              t('stats.agent'), t('stats.sessions'), t('stats.turns'), t('stats.steps'),
+              t('stats.llm'), t('stats.tool'), t('stats.tokens'), t('stats.first'), t('stats.last'),
+            ].map((label) => h('th', { key: label }, label)))),
+            h('tbody', null, presets.map((row) => h('tr', { key: row.id },
+              h('td', null, h('b', null, nameOf(row.id)), h('div', { className: 'am-idline' }, row.id)),
+              h('td', null, row.sessions, row.memberSessions > 0 ? h('span', { className: 'am-hint' }, ` · ${t('stats.member')} ${row.memberSessions}`) : null),
+              h('td', null, row.turns),
+              h('td', null, row.steps),
+              h('td', null, fmtMs(row.llmMs), h('span', { className: 'am-hint' }, ` / ${fmtMs(row.avgLlmMs)}`)),
+              h('td', null, fmtMs(row.toolMs)),
+              h('td', null, `${fmtTokens(row.inputTokens)} / ${fmtTokens(row.outputTokens)}`),
+              h('td', null, fmtDate(row.firstUsedAt)),
+              h('td', null, fmtDate(row.lastUsedAt))))))),
+        stats.skipped > 0 ? h('div', { className: 'am-hint', style: { marginTop: 8 } }, t('stats.skipped', { n: stats.skipped })) : null);
     }
 
     function AgentManager({ workspace }) {
@@ -1070,6 +1248,10 @@ window.__ModuleLoader__.load({
       const [saveError, setSaveError] = useState('');
       const [toast, setToast] = useState(null);
       const [viewingSystem, setViewingSystem] = useState(null);
+      const [tab, setTab] = useState('agents');
+      const [stats, setStats] = useState(null);
+      const [statsError, setStatsError] = useState('');
+      const [ai, setAi] = useState(null);
       const toastTimer = useRef(0);
 
       const notify = useCallback((text, kind) => { setToast({ text, kind }); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 4200); }, []);
@@ -1120,10 +1302,63 @@ window.__ModuleLoader__.load({
         } catch (e) { notify(String(e.message || e), 'error'); }
       };
 
+      const aiEdit = (spec) => { setSaveError(''); setAi({ mode: 'edit', spec }) };
+
       const viewSystem = async (id) => {
         try {
           const r = await call('get', { id });
           setViewingSystem(r);
+        } catch (e) { notify(String(e.message || e), 'error'); }
+      };
+
+      /** Read the projection-cache aggregate for the Usage tab. */
+      const loadStats = useCallback(async () => {
+        setStatsError('');
+        try { setStats(await call('stats')); } catch (e) { setStatsError(String(e.message || e)); }
+      }, []);
+      useEffect(() => { if (tab === 'stats') void loadStats(); }, [tab, loadStats]);
+
+      // Coming back from an AI session should show its saved Agent without a manual reload.
+      useEffect(() => {
+        const onFocus = () => { void load(); if (tab === 'stats') void loadStats(); };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+      }, [load, loadStats, tab]);
+
+      const exportStats = () => {
+        if (stats === null || !Array.isArray(stats.presets)) return;
+        const header = ['agent', 'sessions', 'root_sessions', 'member_sessions', 'turns', 'steps', 'llm_ms', 'tool_ms', 'ttft_ms', 'input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_write_tokens', 'first_used', 'last_used'];
+        const lines = [header, ...stats.presets.map((row) => [
+          row.id, row.sessions, row.rootSessions, row.memberSessions, row.turns, row.steps, row.llmMs, row.toolMs, row.ttftMs,
+          row.inputTokens, row.outputTokens, row.cacheReadTokens, row.cacheWriteTokens,
+          row.firstUsedAt === 0 ? '' : new Date(row.firstUsedAt).toISOString(),
+          row.lastUsedAt === 0 ? '' : new Date(row.lastUsedAt).toISOString(),
+        ])];
+        const csv = lines.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'agent-stats.csv';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      /** Hand the goal to a fresh conversation; the model drives agent_manager. */
+      const startAi = (goal, includeSpec) => {
+        const ui = workspace && workspace();
+        if (!ui || typeof ui.startSession !== 'function') { notify(t('toast.noWorkspace'), 'error'); return; }
+        const mode = ai && ai.mode === 'edit' ? 'edit' : 'create';
+        const spec = ai && ai.spec;
+        const parts = [
+          `Use the agent_manager tool to ${mode === 'edit' ? 'update the existing DSH Agent' : 'create a new DSH Agent'}.`,
+          `Goal: ${goal}`,
+          mode === 'edit' && includeSpec && spec ? 'Current spec (keep everything the goal does not mention):\n```json\n' + JSON.stringify(spec, null, 2) + '\n```' : '',
+          'Load the "agent-builder" skill if it is available, then: call agent_manager(action="catalog"), draft the complete spec, call agent_manager(action="preview", ...) and fix every error and warning, then call agent_manager(action="' + (mode === 'edit' ? 'update' : 'create') + '", ...). Report the id and warnings when done.',
+        ].filter(Boolean);
+        try {
+          ui.startSession(undefined, { clearPreviousDraft: false, prompt: parts.join('\n\n') });
+          setAi(null);
+          notify(t('toast.aiStarted'), 'ok');
         } catch (e) { notify(String(e.message || e), 'error'); }
       };
 
@@ -1140,8 +1375,17 @@ window.__ModuleLoader__.load({
           h('div', { className: 'am-head' },
             h('div', null, h('h1', { className: 'am-title' }, t('app.title')),
               h('p', { className: 'am-sub' }, t('app.subtitle'))),
-            h('button', { className: 'am-btn primary', disabled: !meta, onClick: () => { setSaveError(''); setEditor({ mode: 'create', initial: emptyForm() }); } }, Icon(I.plus, 15), t('app.newAgent'))),
+            h('div', { className: 'am-head-actions' },
+              h('div', { className: 'am-seg', role: 'tablist' }, [['agents', t('stats.tabAgents')], ['stats', t('stats.tabStats')]].map(([key, label]) =>
+                h('button', { key, className: tab === key ? 'on' : '', onClick: () => { setTab(key); if (key === 'stats') void loadStats(); } }, label))),
+              tab === 'agents' ? h(React.Fragment, null,
+                h('button', { className: 'am-btn', disabled: !meta, onClick: () => { setSaveError(''); setAi({ mode: 'create', spec: null }); } }, t('ai.button')),
+                h('button', { className: 'am-btn primary', disabled: !meta, onClick: () => { setSaveError(''); setEditor({ mode: 'create', initial: emptyForm() }); } }, Icon(I.plus, 15), t('app.newAgent')))
+                : h(React.Fragment, null,
+                  h('button', { className: 'am-btn', onClick: loadStats }, t('stats.refresh')),
+                  h('button', { className: 'am-btn', onClick: exportStats }, t('stats.export'))))),
           error ? h('div', { className: 'am-banner error' }, Icon(I.warn, 16), h('div', { style: { flex: 1 } }, t('app.loadFailed', { error })), h('button', { className: 'am-btn sm', onClick: load }, t('app.retry'))) : null,
+          tab === 'stats' ? h(StatsView, { stats, error: statsError, agents, t, onRefresh: loadStats, onExport: exportStats }) : h(React.Fragment, null,
           meta && meta.capabilities.some((c) => !c.available) ? h('div', { className: 'am-banner warn' }, Icon(I.warn, 16), h('div', null, t('app.capWarn'))) : null,
           h('div', { className: 'am-bar' },
             h('div', { className: 'am-searchbox' }, Icon(I.search, 15), h('input', { className: 'am-search', value: query, placeholder: t('app.searchPlaceholder'), onChange: (e) => setQuery(e.target.value) })),
@@ -1150,25 +1394,26 @@ window.__ModuleLoader__.load({
           !loading && !error && meta && agents ? h(React.Fragment, null,
             scope !== 'sys' ? h(React.Fragment, null,
               h('div', { className: 'am-section' }, t('app.sectionMine', { n: mine.length })),
-              mine.length ? h('div', { className: 'am-grid' }, mine.map((a) => h(AgentCard, { key: a.spec.id, item: a, meta, onUse: use, onRepair: repair, onEdit: (spec) => { setSaveError(''); setEditor({ mode: 'edit', initial: { ...emptyForm(), ...spec } }); }, onDelete: remove, onView: viewSystem })))
+              mine.length ? h('div', { className: 'am-grid' }, mine.map((a) => h(AgentCard, { key: a.spec.id, item: a, meta, onUse: use, onRepair: repair, onAi: aiEdit, onEdit: (spec) => { setSaveError(''); setEditor({ mode: 'edit', initial: { ...emptyForm(), ...spec } }); }, onDelete: remove, onView: viewSystem })))
                 : h('div', { className: 'am-empty' }, h('b', null, query ? t('app.emptyNoMatch') : t('app.emptyNone')),
                   h('span', null, query ? t('app.emptyNoMatchHint') : t('app.emptyNoneHint')),
                   !query ? h('button', { className: 'am-btn primary', onClick: () => { setSaveError(''); setEditor({ mode: 'create', initial: emptyForm() }); } }, Icon(I.plus, 15), t('app.newAgent')) : null)) : null,
             scope !== 'mine' && sys.length ? h(React.Fragment, null,
               h('div', { className: 'am-section' }, t('app.sectionSys', { n: sys.length })),
               h('div', { className: 'am-grid' }, sys.map((a) => h(AgentCard, { key: a.id, item: a, meta, onUse: use, onView: viewSystem })))) : null,
-            !total ? null : h('div', { style: { height: 8 } })) : null)),
-        editor && meta ? h(Editor, {
+            !total ? null : h('div', { style: { height: 8 } })) : null))),
+        editor && meta ? h(Boundary, { t, key: 'editor:' + editor.mode + (editor.initial.id || 'new'), onClose: () => setEditor(null) }, h(Editor, {
           key: editor.mode + (editor.initial.id || 'new'), mode: editor.mode, initial: editor.initial, meta, peers: merged, saving, error: saveError,
           status: editor.mode === 'edit' && agents ? agents.managed.find((a) => a.spec.id === editor.initial.id) : null,
-          onUse: use, onClose: () => setEditor(null), onSave: save,
-        }) : null,
-        viewingSystem && meta ? h(Viewer, { data: viewingSystem, meta, onUse: use, onClose: () => setViewingSystem(null) }) : null,
+          onUse: use, onAi: aiEdit, onClose: () => setEditor(null), onSave: save,
+        })) : null,
+        viewingSystem && meta ? h(Boundary, { t, key: 'viewer:' + (viewingSystem.spec?.id || viewingSystem.preset?.id || 'x'), onClose: () => setViewingSystem(null) }, h(Viewer, { data: viewingSystem, meta, onUse: use, onAi: aiEdit, onClose: () => setViewingSystem(null) })) : null,
+        ai === null ? null : h(AiDialog, { mode: ai.mode, t, onCancel: () => setAi(null), onStart: startAi }),
         toast ? h('div', { className: 'am-toast', role: 'status' }, h('i', { style: { background: toast.kind === 'error' ? 'var(--dsw-alias-state-error-primary)' : 'var(--dsw-alias-state-success-primary)' } }), toast.text) : null);
     }
 
     return {
-      __internal: { parseEntryYaml, flatRows, capabilitiesOfModules, detailModel },
+      __internal: { parseEntryYaml, flatRows, capabilitiesOfModules, detailModel, Viewer },
       inject: ['slots', 'locale'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), 'agent-manager: dictionaries');
@@ -1180,7 +1425,7 @@ window.__ModuleLoader__.load({
           // Read lazily: the workspace UI may mount after this panel, and an older
           // client without it should still render the manager with the button hidden.
           inject: () => ({ workspace: () => ctx.get('uiWorkspace') }),
-        }, AgentManager));
+        }, (props) => h(Boundary, { t, onClose: () => {} }, h(AgentManager, props))));
       },
     };
   },

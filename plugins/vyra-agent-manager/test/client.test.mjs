@@ -22,6 +22,7 @@ const window = {
         useMemo: () => undefined,
         useRef: () => ({ current: undefined }),
         useCallback: (fn) => fn,
+        Component: class { constructor(props) { this.props = props; this.state = {}; } setState() {} },
       }))
     },
   },

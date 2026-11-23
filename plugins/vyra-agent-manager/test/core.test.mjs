@@ -88,4 +88,73 @@ test('a removable bundle goes through removeBundle before the directory', async 
   }
 })
 
+test('stats aggregate the projection cache by Agent preset', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'am-stats-'))
+  const dir = join(home, 'storages', 'session_projcache', 'sessions')
+  await mkdir(dir, { recursive: true })
+  const record = (preset, subagent, stats, createdAt, lastPromptAt, tokens = {}) => ({
+    version: 1,
+    record: {
+      identity: { formatVersion: 4, createdAt, cwd: '/w', isSeeded: false, inheritedEventCount: 0 },
+      rows: {
+        agentPreset: { val: preset },
+        ...subagent === null ? {} : { subagent: { val: { identity: subagent } } },
+        sessionStats: { val: stats },
+        tokenUsage: { val: { totals: tokens } },
+        sessionListMetadata: { val: { lastPromptAt } },
+      },
+    },
+  })
+  await writeFile(join(dir, 'a1.json'), JSON.stringify(record('alpha', null, { turns: 2, steps: 5, llmMs: 1000, toolMs: 100 }, 1000, 2000, { uncachedInputTokens: 10, outputTokens: 2 })))
+  await writeFile(join(dir, 'a2.json'), JSON.stringify(record('alpha', { mode: 'continuable', label: 'team:worker' }, { turns: 1, steps: 2, llmMs: 500 }, 1500, 1500)))
+  await writeFile(join(dir, 'b1.json'), JSON.stringify(record('beta', null, { turns: 3, steps: 3, llmMs: 300 }, 1200, 1200)))
+  await writeFile(join(dir, 'broken.json'), '{ not json')
+  process.env.DSH_HOME = home
+  try {
+    const ctx = { get: () => undefined, logger: { warn() {} } }
+    const result = await createManager(ctx).stats()
+    const alpha = result.presets.find((row) => row.id === 'alpha')
+    assert.equal(alpha.sessions, 2)
+    assert.equal(alpha.rootSessions, 1, 'a root session and a team-member session are distinguished')
+    assert.equal(alpha.memberSessions, 1)
+    assert.equal(alpha.turns, 3)
+    assert.equal(alpha.steps, 7)
+    assert.equal(alpha.llmMs, 1500)
+    assert.equal(alpha.avgLlmMs, 750)
+    assert.equal(alpha.inputTokens, 10)
+    assert.equal(alpha.firstUsedAt, 1000)
+    assert.equal(alpha.lastUsedAt, 2000)
+    assert.equal(result.presets.find((row) => row.id === 'beta').sessions, 1)
+    assert.equal(result.skipped, 1, 'a corrupt cache record is counted, not fatal')
+    assert.equal(result.totals.sessions, 3)
+  } finally {
+    delete process.env.DSH_HOME
+    await rm(home, { recursive: true, force: true })
+  }
+})
+
+test('previewAgent validates without installing and reports the rows a save would use', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'am-preview-'))
+  process.env.DSH_HOME = home
+  try {
+    const ctx = {
+      get: (key) => (key === 'agentPresets' ? { list: async () => [], inspectCompositions: () => [] } : undefined),
+      logger: { warn() {} },
+    }
+    const manager = createManager(ctx)
+    const valid = await manager.previewAgent({
+      id: 'reviewer', name: 'Reviewer', description: 'when', summary: 'what', usage: 'how',
+      systemPrompt: 'prompt', capabilities: ['files'], denyTools: [], denyMcp: [], skills: [], team: [],
+    })
+    assert.deepEqual(valid.errors, [])
+    assert.ok(valid.rows.length > 0, 'a valid spec previews the rows it would install')
+    const invalid = await manager.previewAgent({ id: 'Reviewer', name: 'x' })
+    assert.ok(invalid.errors.length > 0)
+    assert.deepEqual(invalid.rows, [], 'an invalid spec previews no rows')
+  } finally {
+    delete process.env.DSH_HOME
+    await rm(home, { recursive: true, force: true })
+  }
+})
+
 console.log('vyra-agent-manager: core checks passed')

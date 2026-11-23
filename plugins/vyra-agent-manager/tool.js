@@ -5,6 +5,7 @@ const DESCRIPTION = [
   'summary (mode description shown to users: what this mode does, what it can and cannot do), usage (how to use it, with 1-3 example prompts),',
   'system_prompt (role, scope, working rules, output format; must not contain double curly braces), capabilities (ids from the catalog; grant the minimum the role needs).',
   'Optional: deny_tools (global tool names to hide from this agent), deny_mcp (MCP server names whose tools to hide), skills (skill names to prefer; needs the "skills" capability).',
+  'Use action=preview with the same fields to validate without saving: it returns errors, warnings and the plugin rows a save would install.',
   'A saved agent is selectable for NEW sessions; running sessions are unchanged. update replaces the whole spec, so send every field.',
 ].join(' ');
 
@@ -14,7 +15,7 @@ export function createAgentTool(manager) {
   const parameters = {
     type: 'object',
     properties: {
-      action: { type: 'string', enum: ['catalog', 'list', 'get', 'create', 'update', 'delete'] },
+      action: { type: 'string', enum: ['catalog', 'list', 'get', 'preview', 'create', 'update', 'delete'] },
       id: { type: 'string', description: 'Agent id.' },
       name: { type: 'string' },
       description: { type: 'string', description: 'When to use this agent.' },
@@ -71,6 +72,10 @@ export function createAgentTool(manager) {
           const r = await manager.getAgent(a.id);
           if (r.managed) return { status: 'ok', managed: true, spec: r.spec, installed: r.installed, broken: r.broken };
           return { status: 'ok', managed: false, preset: r.preset, capabilities: r.capabilities, read_error: r.readError || null, yaml: String(r.yaml || '').slice(0, 8000) };
+        }
+        case 'preview': {
+          const r = await manager.previewAgent(spec());
+          return { status: 'ok', errors: r.errors, warnings: r.warnings, rows: r.rows };
         }
         case 'create':
         case 'update': {
