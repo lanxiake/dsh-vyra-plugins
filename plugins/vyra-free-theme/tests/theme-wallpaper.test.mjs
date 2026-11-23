@@ -5,6 +5,7 @@ import {
   fieldsFromTheme,
   normalizeTheme,
   tableFromTheme,
+  wallpaperLayersFromTheme,
   THEME_ASSET_BASE,
 } from "../src/shared/personalization/theme-model.js";
 import { createProjection } from "../src/client/skins/translucency.js";
@@ -74,12 +75,6 @@ test("animated wallpapers accept gif and webp only", () => {
   assert.ok(png.issues.some((issue) => issue.code === "bad-wallpaper"));
 });
 
-test("video and code channels are still rejected with a clear code", () => {
-  for (const kind of ["video", "code"]) {
-    const result = normalizeTheme(raw({ wallpaper: { kind } }));
-    assert.ok(result.issues.some((issue) => issue.code === "unsupported-wallpaper-kind"), kind);
-  }
-});
 
 test("a served dark asset reaches the projected dark backdrop", () => {
   const theme = ok({
@@ -98,6 +93,61 @@ test("a served dark asset reaches the projected dark backdrop", () => {
   }, { wallpaper: builtinAssetsFromTheme(theme).art }));
   assert.match(effects.backdrop.imageLight, /assets\/light\.webp/);
   assert.match(effects.backdrop.imageDark, /assets\/dark\.webp/);
+});
+
+test("video wallpapers accept mp4/webm with an optional poster", () => {
+  const theme = ok({
+    wallpaper: {
+      kind: "video",
+      light: { src: "assets/light.mp4", poster: "assets/light.webp" },
+      dark: { src: "assets/dark.webm" },
+    },
+  });
+  assert.equal(theme.wallpaper.kind, "video");
+  const bad = normalizeTheme(raw({ wallpaper: { kind: "video", light: { src: "assets/clip.avi" } } }));
+  assert.ok(bad.issues.some((issue) => issue.code === "bad-wallpaper"));
+  const badPoster = normalizeTheme(raw({
+    wallpaper: { kind: "video", light: { src: "assets/clip.mp4", poster: "assets/p.mp4" } },
+  }));
+  assert.ok(badPoster.issues.some((issue) => issue.code === "bad-wallpaper"));
+});
+
+test("code wallpapers require a .js entry inside the theme", () => {
+  const theme = ok({ wallpaper: { kind: "code", entry: "art.js" } });
+  assert.equal(theme.wallpaper.kind, "code");
+  assert.ok(normalizeTheme(raw({ wallpaper: { kind: "code", entry: "art.mjs" } }))
+    .issues.some((issue) => issue.code === "bad-wallpaper"));
+});
+
+test("element layers are emitted for video and code, and suppressed by an image choice", () => {
+  const video = ok({ wallpaper: { kind: "video", light: { src: "assets/loop.mp4" } } });
+  const videoLayers = wallpaperLayersFromTheme(video);
+  assert.equal(videoLayers.length, 1);
+  assert.equal(videoLayers[0].kind, "video");
+  assert.equal(videoLayers[0].light.src, `${THEME_ASSET_BASE}/nebula/assets/loop.mp4`);
+  assert.equal(videoLayers[0].dark, null);
+
+  const project = createProjection(tableFromTheme(video, "web"));
+  const withLayer = normalizeEffects(project({ wallpaper: null, slogan: { zh: "", en: "" }, panelOpacity: 45 }, {}));
+  assert.equal(withLayer.backdrop.layers.length, 1);
+  const replaced = normalizeEffects(project({
+    wallpaper: `u_${"a".repeat(32)}`,
+    slogan: { zh: "", en: "" },
+    panelOpacity: 45,
+  }, { wallpaper: { url: "/vyra-free-theme/assets/abc.webp", mime: "image/webp" } }));
+  assert.equal(replaced.backdrop.layers, null);
+  assert.match(replaced.backdrop.imageLight, /abc\.webp/);
+
+  const code = ok({ wallpaper: { kind: "code", entry: "art.js" } });
+  const codeLayers = wallpaperLayersFromTheme(code);
+  assert.deepEqual(codeLayers, [{ kind: "code", entry: `${THEME_ASSET_BASE}/nebula/art.js` }]);
+});
+
+test("image and animated wallpapers emit no element layer", () => {
+  const image = ok({ wallpaper: { kind: "image", light: { src: "assets/a.webp" } } });
+  assert.deepEqual(wallpaperLayersFromTheme(image), []);
+  const animated = ok({ wallpaper: { kind: "animated", light: { src: "assets/a.gif" } } });
+  assert.deepEqual(wallpaperLayersFromTheme(animated), []);
 });
 
 test("coverage travels from theme.json through projection", () => {

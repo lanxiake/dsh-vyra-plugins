@@ -48,6 +48,28 @@ function optionalString(value) {
  * recursively IMMUTABLE structure — or null when structurally invalid
  * (triggers layer-2 fallback).
  */
+function validLayers(layers) {
+  if (!Array.isArray(layers)) return false;
+  for (const layer of layers) {
+    if (!isPlainObject(layer)) return false;
+    if (layer.kind === "video") {
+      for (const side of [layer.light, layer.dark]) {
+        if (side === null || side === undefined) continue;
+        if (!isPlainObject(side) || typeof side.src !== "string" || side.src.length === 0) return false;
+        if (side.poster !== null && side.poster !== undefined && typeof side.poster !== "string") return false;
+      }
+      if (layer.light == null && layer.dark == null) return false;
+      continue;
+    }
+    if (layer.kind === "code") {
+      if (typeof layer.entry !== "string" || layer.entry.length === 0) return false;
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 export function normalizeEffects(draft) {
   let source;
   try {
@@ -117,6 +139,11 @@ export function normalizeEffects(draft) {
     }
   }
 
+  // Element-backed wallpaper layers (spec §6.1): video / code art. Validated
+  // defensively — a malformed layer drops the layer list, never the skin.
+  const layers = source.backdrop?.layers ?? null;
+  if (layers !== null && !validLayers(layers)) return null;
+
   // Shell coverage (spec §6.2): which chrome regions let the wallpaper through.
   // Absent means "the host decides", i.e. the historical opaque shell.
   const coverage = source.coverage ?? null;
@@ -139,6 +166,7 @@ export function normalizeEffects(draft) {
       overlayDark: backdrop.overlayDark ?? null,
       blur: backdrop.blur ?? 0,
       desktopBlur: backdrop.desktopBlur ?? null,
+      layers,
     },
     tokenOverrides,
     cssVariables,

@@ -72,8 +72,9 @@ test("--dsw-alias-bg-base is required", () => {
 
 test("unknown top-level keys and unsupported wallpaper kinds are rejected", () => {
   assert.ok(codes(normalizeTheme(baseTheme({ surprise: 1 }))).includes("unknown-key"));
-  const video = baseTheme({ wallpaper: { kind: "video" } });
-  assert.ok(codes(normalizeTheme(video)).includes("unsupported-wallpaper-kind"));
+  assert.ok(codes(normalizeTheme(baseTheme({ wallpaper: { kind: "nonsense" } }))).includes("unsupported-wallpaper-kind"));
+  // video is a valid kind since P2, but a side is mandatory
+  assert.ok(codes(normalizeTheme(baseTheme({ wallpaper: { kind: "video" } }))).includes("bad-wallpaper"));
 });
 
 test("wallpaper image kind is accepted and carried through", () => {
@@ -124,7 +125,7 @@ test("the theme table projects into a valid SkinEffects draft", () => {
   assert.equal(effects.tokenOverrides["--dsw-alias-bg-base"].dark, "rgba(16, 16, 22, 0.55)");
   // non-translucent colours stay constant pairs
   assert.deepEqual(effects.tokenOverrides["--dsw-alias-brand-primary"], { light: "#5B3FD9", dark: "#9B8CFF" });
-  // no wallpaper asset yet â†’ the base-tone scrim gradient
+  // no wallpaper asset yet â†?the base-tone scrim gradient
   assert.match(effects.backdrop.imageLight, /^linear-gradient\(/);
 });
 

@@ -38,5 +38,6 @@
     "--dsw-alias-radius-lg": "16px"
   },
   "translucency": { "web": 45, "desktop": 66 },
+  "wallpaper": { "kind": "code", "entry": "art.js" },
   "coverage": { "shell": false, "scopes": ["sidebar"] }
 }

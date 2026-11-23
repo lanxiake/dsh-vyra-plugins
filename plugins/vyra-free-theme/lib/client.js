@@ -312,6 +312,27 @@
     if (value === void 0 || value === null) return null;
     return typeof value === "string" ? value : void 0;
   }
+  function validLayers(layers) {
+    if (!Array.isArray(layers)) return false;
+    for (const layer of layers) {
+      if (!isPlainObject(layer)) return false;
+      if (layer.kind === "video") {
+        for (const side of [layer.light, layer.dark]) {
+          if (side === null || side === void 0) continue;
+          if (!isPlainObject(side) || typeof side.src !== "string" || side.src.length === 0) return false;
+          if (side.poster !== null && side.poster !== void 0 && typeof side.poster !== "string") return false;
+        }
+        if (layer.light == null && layer.dark == null) return false;
+        continue;
+      }
+      if (layer.kind === "code") {
+        if (typeof layer.entry !== "string" || layer.entry.length === 0) return false;
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
   function normalizeEffects(draft) {
     let source;
     try {
@@ -368,6 +389,8 @@
         if (!isPlainObject(decoration) || typeof decoration.key !== "string" || decoration.key.length === 0 || typeof decoration.css !== "string") return null;
       }
     }
+    const layers = source.backdrop?.layers ?? null;
+    if (layers !== null && !validLayers(layers)) return null;
     const coverage = source.coverage ?? null;
     if (coverage !== null) {
       if (!isPlainObject(coverage) || typeof coverage.shell !== "boolean") return null;
@@ -385,7 +408,8 @@
         overlayLight: backdrop.overlayLight ?? null,
         overlayDark: backdrop.overlayDark ?? null,
         blur: backdrop.blur ?? 0,
-        desktopBlur: backdrop.desktopBlur ?? null
+        desktopBlur: backdrop.desktopBlur ?? null,
+        layers
       },
       tokenOverrides,
       cssVariables,
@@ -426,6 +450,219 @@
     const second = safeAttempt(defaultsFor(skin.id, context.profile));
     if (second.normalized !== null) return { effects: second.normalized, issues: first.issues, degraded: "defaults" };
     return { effects: null, issues: first.issues, degraded: "failed" };
+  }
+
+  // src/client/wallpaper-art.js
+  var CODE_ART_LIMITS = Object.freeze({
+    maxSourceBytes: 256 * 1024,
+    firstFrameTimeoutMs: 2e3,
+    maxFps: 30
+  });
+  var CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:";
+  function inlineArtSource(source) {
+    let text = String(source ?? "");
+    text = text.replace(/\bexport\s+default\s+/g, "window.art = ");
+    text = text.replace(/\bexport\s+(const|let|var|function|class)\s+art\b/g, "$1 art");
+    if (!/\bwindow\.art\s*=/.test(text)) {
+      text += '\n;window.art = typeof art !== "undefined" ? art : window.art;';
+    }
+    return text.replace(/<\/script/gi, "<\\/script");
+  }
+  function buildCodeArtDocument({ source, mode = "light", reducedMotion = false }) {
+    const art = inlineArtSource(source);
+    const safeMode = mode === "dark" ? "dark" : "light";
+    return `<!doctype html>
+<html><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${CSP}">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:transparent}
+  canvas{display:block;width:100%;height:100%}
+</style></head>
+<body><canvas id="vft-art"></canvas>
+<script>${art}<\/script>
+<script>
+(function () {
+  var canvas = document.getElementById("vft-art");
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  var reduced = ${reducedMotion ? "true" : "false"};
+  var env = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    dpr: dpr,
+    mode: ${JSON.stringify(safeMode)},
+    reducedMotion: reduced
+  };
+  function resize() {
+    canvas.width = Math.max(1, Math.floor(window.innerWidth * dpr));
+    canvas.height = Math.max(1, Math.floor(window.innerHeight * dpr));
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  window.addEventListener("message", function (event) {
+    var data = event.data || {};
+    if (data && data.vft === "mode" && (data.mode === "light" || data.mode === "dark")) {
+      env.mode = data.mode;
+    }
+  });
+  var handle = null;
+  try {
+    if (!window.art || typeof window.art.mount !== "function") {
+      throw new Error("art.js must expose art.mount(canvas, env)");
+    }
+    handle = window.art.mount(canvas, env);
+    // Publish "ready" only after a frame actually reached the canvas.
+    requestAnimationFrame(function () {
+      parent.postMessage({ vft: "ready" }, "*");
+    });
+  } catch (error) {
+    parent.postMessage({ vft: "error", message: String((error && error.message) || error) }, "*");
+  }
+  window.addEventListener("pagehide", function () {
+    try { if (handle && typeof handle.destroy === "function") handle.destroy(); } catch (e) {}
+  });
+})();
+<\/script></body></html>`;
+  }
+
+  // src/client/wallpaper-layer.js
+  var HOST_ATTR = "data-vft-wallpaper";
+  function prefersReducedMotion() {
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  }
+  function isDark() {
+    return document.body?.hasAttribute("data-ds-dark-theme") ?? false;
+  }
+  function mountVideoLayer(host, layer) {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.loop = true;
+    video.preload = "auto";
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("aria-hidden", "true");
+    video.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover";
+    const reduced = prefersReducedMotion();
+    if (reduced) video.autoplay = false;
+    const side = () => isDark() ? layer.dark ?? layer.light : layer.light ?? layer.dark;
+    let current = null;
+    const applySide = () => {
+      const next = side();
+      if (next === null || next === void 0) return;
+      if (current === next.src) return;
+      current = next.src;
+      if (next.poster) video.poster = next.poster;
+      video.src = next.src;
+      if (!reduced) video.play?.().catch(() => {
+      });
+    };
+    applySide();
+    const onVisibility = () => {
+      if (reduced) return;
+      if (document.hidden) video.pause?.();
+      else video.play?.().catch(() => {
+      });
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    const observer = new MutationObserver(() => applySide());
+    if (document.body) {
+      observer.observe(document.body, { attributes: true, attributeFilter: ["data-ds-dark-theme", "data-ds-light-theme"] });
+    }
+    host.appendChild(video);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      video.pause?.();
+      video.removeAttribute("src");
+      video.load?.();
+      video.remove();
+    };
+  }
+  function mountCodeLayer(host, layer) {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.setAttribute("referrerpolicy", "no-referrer");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0";
+    host.appendChild(iframe);
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    let ready = false;
+    let disposed = false;
+    let watchdog = null;
+    const dispose = () => {
+      if (disposed) return;
+      disposed = true;
+      if (watchdog !== null) clearTimeout(watchdog);
+      controller?.abort();
+      iframe.remove();
+    };
+    const onMessage = (event) => {
+      if (event.source !== iframe.contentWindow) return;
+      const data = event.data ?? {};
+      if (data.vft === "ready") {
+        ready = true;
+        if (watchdog !== null) clearTimeout(watchdog);
+      } else if (data.vft === "error") {
+        dispose();
+      }
+    };
+    window.addEventListener("message", onMessage);
+    const postMode = () => {
+      try {
+        iframe.contentWindow?.postMessage({ vft: "mode", mode: isDark() ? "dark" : "light" }, "*");
+      } catch {
+      }
+    };
+    const observer = new MutationObserver(postMode);
+    if (document.body) {
+      observer.observe(document.body, { attributes: true, attributeFilter: ["data-ds-dark-theme", "data-ds-light-theme"] });
+    }
+    fetch(layer.entry, { cache: "no-store", signal: controller?.signal }).then((response) => {
+      if (!response.ok) throw new Error(`art.js answered HTTP ${response.status}`);
+      return response.text();
+    }).then((source) => {
+      if (disposed) return;
+      if (source.length > CODE_ART_LIMITS.maxSourceBytes) throw new Error("art.js is too large");
+      iframe.srcdoc = buildCodeArtDocument({
+        source,
+        mode: isDark() ? "dark" : "light",
+        reducedMotion: prefersReducedMotion()
+      });
+      watchdog = setTimeout(() => {
+        if (!ready) dispose();
+      }, CODE_ART_LIMITS.firstFrameTimeoutMs);
+    }).catch(() => {
+      if (!disposed) dispose();
+    });
+    return () => {
+      window.removeEventListener("message", onMessage);
+      observer.disconnect();
+      dispose();
+    };
+  }
+  function mountWallpaperLayers({ layers, skinId }) {
+    if (!Array.isArray(layers) || layers.length === 0) return null;
+    if (!document.body) return null;
+    const host = document.createElement("div");
+    host.setAttribute(HOST_ATTR, skinId);
+    host.style.cssText = "position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none";
+    const disposers = [];
+    for (const layer of layers) {
+      if (layer?.kind === "video") disposers.push(mountVideoLayer(host, layer));
+      else if (layer?.kind === "code") disposers.push(mountCodeLayer(host, layer));
+    }
+    if (disposers.length === 0) return null;
+    document.body.appendChild(host);
+    return () => {
+      for (const dispose of disposers) {
+        try {
+          dispose();
+        } catch {
+        }
+      }
+      host.remove();
+    };
   }
 
   // src/client/runtime.js
@@ -850,6 +1087,11 @@ ${darkSelector}{${dark.join(";")}}`;
           const tag = styleTag(`vyra-free-theme/${skin.id}.backdrop.css`, backdrop);
           stops.push(() => tag.remove());
         }
+        const wallpaperStop = mountWallpaperLayers({
+          layers: effects.backdrop?.layers ?? null,
+          skinId: skin.id
+        });
+        if (wallpaperStop !== null) stops.push(wallpaperStop);
         const variables = variablesCss(effects);
         if (variables !== null) {
           const tag = styleTag(`vyra-free-theme/${skin.id}.vars.css`, variables);
@@ -3061,6 +3303,21 @@ ${references.join("\n")}`,
     }
     return { art: asset };
   }
+  function wallpaperLayersFromTheme(theme) {
+    const wallpaper = theme.wallpaper;
+    if (wallpaper === null) return [];
+    if (wallpaper.kind === "video") {
+      const side = (value) => value === null ? null : {
+        src: themeAssetUrl(theme.id, value.src),
+        poster: value.poster ? themeAssetUrl(theme.id, value.poster) : null
+      };
+      return [{ kind: "video", light: side(wallpaper.light), dark: side(wallpaper.dark) }];
+    }
+    if (wallpaper.kind === "code") {
+      return [{ kind: "code", entry: themeAssetUrl(theme.id, wallpaper.entry) }];
+    }
+    return [];
+  }
   function wallpaperField(theme) {
     const hasArt = theme.wallpaper !== null && theme.wallpaper.kind === "image";
     return {
@@ -3147,6 +3404,7 @@ ${references.join("\n")}`,
       glassVar: "--vft-glass-blur",
       desktopBlur: { rate: 55, dark: "boost" },
       wallpaper: { kind: "assets" },
+      layers: wallpaperLayersFromTheme(theme),
       coverage: theme.coverage,
       staticCss: ""
     };
@@ -3206,7 +3464,18 @@ ${references.join("\n")}`,
         slogans: values.slogan,
         titleBrand: table.titleBrand,
         favicon: table.favicon,
-        backdrop: { imageLight, imageDark, overlayLight, overlayDark, blur: blurPx, desktopBlur: desktopBlurPair },
+        backdrop: {
+          imageLight,
+          imageDark,
+          overlayLight,
+          overlayDark,
+          blur: blurPx,
+          desktopBlur: desktopBlurPair,
+          // Element-backed layers (video / code art). A user- or catalog-chosen
+          // image replaces them: the image channel is the override, exactly as a
+          // built-in skin's gallery pick replaces its own art.
+          layers: values.wallpaper == null && Array.isArray(table.layers) && table.layers.length > 0 ? table.layers : null
+        },
         // Shell coverage (spec §6.2): a file-backed theme may opt the chrome in.
         // Compiled-in themes leave it undefined → normalizeEffects emits null.
         coverage: table.coverage ?? null,

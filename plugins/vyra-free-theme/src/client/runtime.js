@@ -1,4 +1,5 @@
 import { projectSkin } from "./personalization/projector.js";
+import { mountWallpaperLayers } from "./wallpaper-layer.js";
 import { BUILTIN_REF_PATTERN, defaultWallpaperRef } from "../shared/personalization/catalog.js";
 
 const SKIN_STORAGE_KEY = "vyra-free-theme:active";
@@ -689,6 +690,15 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         const tag = styleTag(`vyra-free-theme/${skin.id}.backdrop.css`, backdrop);
         stops.push(() => tag.remove());
       }
+
+      // Element-backed wallpaper (video / code art): mounted with the skin
+      // transaction so a theme switch or unmount disposes nodes, observers and
+      // in-flight fetches together.
+      const wallpaperStop = mountWallpaperLayers({
+        layers: effects.backdrop?.layers ?? null,
+        skinId: skin.id,
+      });
+      if (wallpaperStop !== null) stops.push(wallpaperStop);
 
       const variables = variablesCss(effects);
       if (variables !== null) {

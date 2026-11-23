@@ -201,10 +201,35 @@ export function normalizeTheme(raw) {
     if (!isPlainObject(raw.wallpaper)) fail("bad-wallpaper", "wallpaper", "wallpaper 必须是对象");
     else if (!["image", "video", "animated", "code"].includes(raw.wallpaper.kind)) {
       fail("unsupported-wallpaper-kind", "wallpaper.kind", "kind 必须是 image / video / animated / code");
-    } else if (raw.wallpaper.kind === "video" || raw.wallpaper.kind === "code") {
-      // P2b opens the moving/code channels; until then a theme asking for them
-      // is rejected instead of silently rendering nothing.
-      fail("unsupported-wallpaper-kind", "wallpaper.kind", `kind "${raw.wallpaper.kind}" 尚未支持`);
+    } else if (raw.wallpaper.kind === "code") {
+      if (!boundedText(raw.wallpaper.entry, 256) || mimeForAssetPath(raw.wallpaper.entry) !== THEME_ASSET_MIME[".js"]) {
+        fail("bad-wallpaper", "wallpaper.entry", "代码壁纸必须声明一个 theme 内的 .js 入口");
+      } else {
+        wallpaper = { kind: "code", entry: raw.wallpaper.entry };
+      }
+    } else if (raw.wallpaper.kind === "video") {
+      wallpaper = { kind: "video", light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
+      if (wallpaper.light === null && wallpaper.dark === null) {
+        fail("bad-wallpaper", "wallpaper", "至少需要 light 或 dark 一侧");
+      }
+      for (const mode of ["light", "dark"]) {
+        const side = wallpaper[mode];
+        if (side === null) continue;
+        if (!isPlainObject(side) || !boundedText(side.src, 256)) {
+          fail("bad-wallpaper", `wallpaper.${mode}`, "每一侧必须是 { src, poster?, overlay?, blur? }");
+          continue;
+        }
+        const mime = mimeForAssetPath(side.src);
+        if (mime !== "video/mp4" && mime !== "video/webm") {
+          fail("bad-wallpaper", `wallpaper.${mode}.src`, "视频壁纸必须是 .mp4 或 .webm");
+        }
+        if (side.poster !== undefined && side.poster !== null) {
+          const posterMime = mimeForAssetPath(side.poster);
+          if (!boundedText(side.poster, 256) || posterMime === null || !posterMime.startsWith("image/")) {
+            fail("bad-wallpaper", `wallpaper.${mode}.poster`, "poster 必须是 theme 内的图片路径");
+          }
+        }
+      }
     } else {
       wallpaper = { kind: raw.wallpaper.kind, light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
       if (wallpaper.light === null && wallpaper.dark === null) {
@@ -335,6 +360,28 @@ export function builtinAssetsFromTheme(theme) {
   return { art: asset };
 }
 
+/**
+ * Element-backed wallpaper layers for a theme (spec §6.1): `video` and `code`
+ * cannot be expressed as a CSS background, so they travel as layer descriptors
+ * the runtime mounts as real nodes. Static/animated art stays on the image
+ * channel and contributes no layer.
+ */
+export function wallpaperLayersFromTheme(theme) {
+  const wallpaper = theme.wallpaper;
+  if (wallpaper === null) return [];
+  if (wallpaper.kind === "video") {
+    const side = (value) => (value === null ? null : {
+      src: themeAssetUrl(theme.id, value.src),
+      poster: value.poster ? themeAssetUrl(theme.id, value.poster) : null,
+    });
+    return [{ kind: "video", light: side(wallpaper.light), dark: side(wallpaper.dark) }];
+  }
+  if (wallpaper.kind === "code") {
+    return [{ kind: "code", entry: themeAssetUrl(theme.id, wallpaper.entry) }];
+  }
+  return [];
+}
+
 function wallpaperField(theme) {
   const hasArt = theme.wallpaper !== null && theme.wallpaper.kind === "image";
   return {
@@ -437,6 +484,7 @@ export function tableFromTheme(theme, profile = "web") {
     glassVar: "--vft-glass-blur",
     desktopBlur: { rate: 55, dark: "boost" },
     wallpaper: { kind: "assets" },
+    layers: wallpaperLayersFromTheme(theme),
     coverage: theme.coverage,
     staticCss: "",
   };

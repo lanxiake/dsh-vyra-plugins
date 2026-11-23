@@ -95,7 +95,15 @@ export function createProjection(table) {
       slogans: values.slogan,
       titleBrand: table.titleBrand,
       favicon: table.favicon,
-      backdrop: { imageLight, imageDark, overlayLight, overlayDark, blur: blurPx, desktopBlur: desktopBlurPair },
+      backdrop: {
+        imageLight, imageDark, overlayLight, overlayDark, blur: blurPx, desktopBlur: desktopBlurPair,
+        // Element-backed layers (video / code art). A user- or catalog-chosen
+        // image replaces them: the image channel is the override, exactly as a
+        // built-in skin's gallery pick replaces its own art.
+        layers: values.wallpaper == null && Array.isArray(table.layers) && table.layers.length > 0
+          ? table.layers
+          : null,
+      },
       // Shell coverage (spec §6.2): a file-backed theme may opt the chrome in.
       // Compiled-in themes leave it undefined → normalizeEffects emits null.
       coverage: table.coverage ?? null,
