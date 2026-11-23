@@ -2618,12 +2618,12 @@ export const manifest: MarketManifest = {
     {
       name: 'vyra-media-studio',
       title: {
-        en: 'Media Studio',
-        zh: '媒体库',
+        en: 'File Manager',
+        zh: '文件管理',
       },
       description: {
-        en: 'A media library in the right Sidebar: browse workspace videos, images, audio and direct URLs in grid or list, filter and sort by name, type, folder, time and size, play clips inline, and open images, videos, audio and links in an in-panel lightbox. Large local files stream through an authenticated Range route.',
-        zh: '右侧栏媒体库：以网格或列表浏览工作区里的视频、图片、音频与在线直链，按名称、类型、文件夹、时间、大小筛选排序，卡片内直接播放，点击在面板内灯箱放大查看。本地大文件通过认证的 Range 路由流式读取，可拖动进度。',
+        en: 'A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and text in the panel, and rename, copy, delete, reveal or insert files into the composer.',
+        zh: '右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与文本，并支持重命名、复制、删除、打开所在位置及引用到输入框。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2668,10 +2668,22 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.0 turns the media library into a file manager: every file type,
+        // deferred metadata, a zoomable grid, detailed list mode, document
+        // previews and rename/copy/delete/reveal/open actions.
+        '0.2.0': {
+          publishTimestamp: 1795407787,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'd1653955e7cc82117464361d3a5bd7e2a3ba5427',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
-        keywords: ['media', 'video', 'audio', 'gallery', 'lightbox', 'creator'],
+        keywords: ['files', 'file-manager', 'media', 'document', 'video', 'audio', 'gallery'],
       },
     },
   ],
