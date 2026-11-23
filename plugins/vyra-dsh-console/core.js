@@ -34,7 +34,74 @@ export const ACTIONS = Object.freeze({
   'console.actions': { domain: 'console', mutating: false, destructive: false, requiresClient: false },
   'plugin.list': { domain: 'plugin', mutating: false, destructive: false, requiresClient: false },
   'plugin.setEnabled': { domain: 'plugin', mutating: true, destructive: false, requiresClient: false },
+  'plugin.install': { domain: 'plugin', mutating: true, destructive: false, requiresClient: false },
+  'plugin.remove': { domain: 'plugin', mutating: true, destructive: true, requiresClient: false },
+  'model.list': { domain: 'model', mutating: false, destructive: false, requiresClient: false },
+  'model.select': { domain: 'model', mutating: true, destructive: false, requiresClient: false },
+  'settings.list': { domain: 'settings', mutating: false, destructive: false, requiresClient: false },
+  'settings.get': { domain: 'settings', mutating: false, destructive: false, requiresClient: false },
+  'settings.set': { domain: 'settings', mutating: true, destructive: false, requiresClient: false },
 })
+
+/**
+ * Build an object from `[key, value]` entries, dropping every entry whose value
+ * is `undefined`.
+ *
+ * A tool return value is snapshotted as lossless JSON
+ * (`dsh-tools/src/pipeline.ts` snapshotToolValue → `dsh-util-values`
+ * walkJsonValue). That walk visits the value recursively, so a key holding
+ * `undefined` — at any depth, not only the top level — makes the whole value
+ * unserializable and the snapshot fails as INVALID_TOOL_OUTPUT. An optional
+ * field must therefore be omitted, never assigned as `undefined`.
+ *
+ * This filters one level. Use {@link presentDeep} for a value that came from
+ * elsewhere and may carry `undefined` below its own top-level keys.
+ */
+export function present(entries) {
+  const out = {}
+  for (const [key, value] of Object.entries(entries)) {
+    if (value !== undefined) out[key] = value
+  }
+  return out
+}
+
+/**
+ * Recursively drop every `undefined`-valued key from a value read off a service.
+ *
+ * `present` guards the keys this plugin writes itself, but a value passed
+ * through from a service (a settings descriptor, a package manager result) can
+ * carry `undefined` deeper down, where `present` cannot see it — and the
+ * snapshot walk that enforces lossless JSON visits every level, so one such
+ * value rejects the whole result.
+ *
+ * A key is dropped entirely. Inside an array a gap is not representable in JSON
+ * and cannot be dropped without renumbering the entries, so an array holding an
+ * `undefined` element is itself dropped rather than silently shortened: a gap
+ * means the producer's data is not JSON, and reporting less is better than
+ * reporting something that did not happen.
+ *
+ * @returns the cleaned value, or `undefined` when it cannot be represented.
+ */
+export function presentDeep(value) {
+  if (value === null || typeof value !== 'object') return value
+  if (Array.isArray(value)) {
+    const out = []
+    for (const item of value) {
+      const cleaned = presentDeep(item)
+      if (cleaned === undefined) return undefined
+      out.push(cleaned)
+    }
+    return out
+  }
+  const out = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry === undefined) continue
+    const cleaned = presentDeep(entry)
+    if (cleaned === undefined) continue
+    out[key] = cleaned
+  }
+  return out
+}
 
 /**
  * Build the console over a Cordis context.
@@ -43,8 +110,10 @@ export const ACTIONS = Object.freeze({
  * @param handlers optional `{ [domain]: (ctx, request) => Promise<object> }`; later
  *   tasks pass their domain in, so this file never imports a service directly.
  *   Every domain in this plugin has the signature `(ctx, { action, args, spec })`.
+ * @param options `confirmDestructive` makes a destructive action refuse until the
+ *   caller re-runs it with `confirm: true`.
  */
-export function createConsole(ctx, handlers = {}) {
+export function createConsole(ctx, handlers = {}, options = {}) {
   async function dispatch(action, args = {}) {
     if (FORBIDDEN[action]) {
       return { status: 'forbidden', action, ...FORBIDDEN[action] }
@@ -52,6 +121,15 @@ export function createConsole(ctx, handlers = {}) {
     const spec = ACTIONS[action]
     if (!spec) {
       return { status: 'error', action, reason: `unknown action "${action}"` }
+    }
+    // Checked after FORBIDDEN and before the handler: the authority boundary is
+    // decided first, so no option can make a forbidden action confirmable.
+    if (spec.destructive && options.confirmDestructive && args.confirm !== true) {
+      return {
+        status: 'confirm-required',
+        action,
+        reason: `"${action}" is irreversible; re-run with confirm: true, or ask the user first.`,
+      }
     }
     const handler = handlers[spec.domain]
     if (!handler) {
