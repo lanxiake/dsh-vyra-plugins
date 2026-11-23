@@ -909,9 +909,14 @@ window.__ModuleLoader__.load({
       if (entry.credits === undefined && typeof entry.error === 'string' && entry.error !== '') {
         return h('span', { className: 'vfm_tag', title: entry.error }, t('accounts.creditError'))
       }
-      if (entry.credits === undefined) return null
       const unit = typeof entry.unit === 'string' && entry.unit !== '' ? entry.unit : t('accounts.creditUnit')
-      return h('span', { className: 'vfm_tag' }, t('accounts.credit', { n: entry.credits, unit }))
+      return h('span', { className: 'vfm_meta' },
+        entry.credits === undefined
+          ? null
+          : h('span', { className: 'vfm_tag' }, t('accounts.credit', { n: entry.credits, unit })),
+        entry.checkedIn === true
+          ? h('span', { className: 'vfm_tag' }, t('accounts.checkedIn'))
+          : null)
     }
 
     /**
