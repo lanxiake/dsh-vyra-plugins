@@ -5,6 +5,8 @@ import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
 import { createConsole, ACTIONS, FORBIDDEN } from '../core.js'
+import { createConsoleTool } from '../tool.js'
+import { pluginDomain } from '../domains/plugin.js'
 
 /** A ctx with no optional service present, to prove graceful degradation. */
 function bareCtx() {
@@ -43,10 +45,39 @@ test('an unknown action fails instead of throwing', async () => {
 })
 
 test('an action with no handler yet is reported, not thrown', async () => {
-  // Task 1 declares only console.actions; Task 2 adds plugin.list together with
-  // its domain handler. Until a domain exists, dispatch must say so clearly.
-  const console_ = createConsole(bareCtx())
+  // plugin.list is declared in ACTIONS from Task 2 on, but a bare ctx has no
+  // pluginManager, so the domain must degrade to `unavailable` instead of throwing.
+  const console_ = createConsole(bareCtx(), { plugin: pluginDomain })
   const result = await console_.dispatch('plugin.list', {})
-  assert.equal(result.status, 'error')
-  assert.match(result.reason, /unknown action/i)
+  assert.equal(result.status, 'unavailable')
+  assert.match(result.reason, /pluginManager/)
+})
+
+test('plugin.list returns the running entries with their own enabled state', async () => {
+  // The stub mirrors the real PluginInfo/BundleInfo field names: a running entry
+  // is keyed by `entryId`/`moduleName`, never by `id`.
+  const ctx = {
+    get: (k) => (k === 'pluginManager' ? {
+      listPlugins: async () => [
+        { entryId: 'a', moduleName: 'pkg-a', enabled: true, fiberPhase: 'active' },
+        { entryId: 'b', moduleName: 'pkg-b', enabled: false, fiberPhase: null },
+      ],
+      listBundles: async () => [],
+    } : undefined),
+  }
+  const console_ = createConsole(ctx, { plugin: pluginDomain })
+  const result = await console_.dispatch('plugin.list', {})
+  assert.equal(result.status, 'ok')
+  assert.deepEqual(result.plugins.map((p) => p.entryId), ['a', 'b'])
+  assert.deepEqual(result.plugins.map((p) => p.enabled), [true, false])
+  assert.deepEqual(result.bundles, [])
+})
+
+test('the tool refuses a forbidden action without calling any handler', async () => {
+  let called = false
+  const console_ = createConsole({ get: () => undefined }, { plugin: () => { called = true } })
+  const tool = createConsoleTool(console_)
+  const result = await tool.execute({ action: 'sandbox.setMode' })
+  assert.equal(result.status, 'forbidden')
+  assert.equal(called, false, 'a forbidden action never reaches a domain handler')
 })
