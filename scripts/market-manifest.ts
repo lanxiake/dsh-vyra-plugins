@@ -2067,6 +2067,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.7.0: Not installed filter, per-source copy and drag reorder, and
+        // initial-letter tiles for entries without an icon.
+        '0.7.0': {
+          publishTimestamp: 1795420502,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '59f7357925115f39b8996423f3779f2365010739',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
