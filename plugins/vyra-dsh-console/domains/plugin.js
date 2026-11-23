@@ -20,22 +20,25 @@ export async function pluginDomain(ctx, { action, args }) {
       const [plugins, bundles] = await Promise.all([service.listPlugins(), service.listBundles()])
       return {
         status: 'ok',
+        // Optional fields are spread conditionally, never assigned: an own key
+        // holding `undefined` is not lossless JSON, and the tool pipeline
+        // snapshots every successful value and rejects it (INVALID_TOOL_OUTPUT).
         plugins: plugins.map((p) => ({
           entryId: p.entryId,
           moduleName: p.moduleName,
           enabled: p.enabled,
           fiberPhase: p.fiberPhase,
-          diagnostic: p.diagnostic,
-          readOnlyReason: p.readOnlyReason,
+          ...(p.diagnostic === undefined ? {} : { diagnostic: p.diagnostic }),
+          ...(p.readOnlyReason === undefined ? {} : { readOnlyReason: p.readOnlyReason }),
         })),
         bundles: bundles.map((b) => ({
           name: b.name,
-          version: b.version,
           enabled: b.enabled,
           installed: b.installed,
           available: b.availability,
           removable: b.removable,
-          readOnlyReason: b.readOnlyReason,
+          ...(b.version === undefined ? {} : { version: b.version }),
+          ...(b.readOnlyReason === undefined ? {} : { readOnlyReason: b.readOnlyReason }),
         })),
       }
     }

@@ -44,7 +44,7 @@ test('an unknown action fails instead of throwing', async () => {
   assert.match(result.reason, /unknown action/i)
 })
 
-test('an action with no handler yet is reported, not thrown', async () => {
+test('plugin.list reports unavailable when pluginManager is absent', async () => {
   // plugin.list is declared in ACTIONS from Task 2 on, but a bare ctx has no
   // pluginManager, so the domain must degrade to `unavailable` instead of throwing.
   const console_ = createConsole(bareCtx(), { plugin: pluginDomain })
@@ -88,4 +88,61 @@ test('the tool definition declares the output contract registration requires', (
   const tool = createConsoleTool(createConsole(bareCtx()))
   assert.equal(typeof tool.output?.render, 'function')
   assert.ok(tool.output?.schema, 'the output schema is what registration validates values against')
+})
+
+test('plugin.list never emits an undefined-valued key, which the output pipeline rejects', async () => {
+  // The pipeline snapshots every successful value as lossless JSON
+  // (dsh-tools/src/pipeline.ts snapshotToolValue). An own key holding `undefined`
+  // does not round-trip, so it throws INVALID_TOOL_OUTPUT. Optional PluginInfo /
+  // BundleInfo fields must therefore be omitted, never emitted as undefined.
+  const ctx = { get: (k) => (k === 'pluginManager' ? {
+    listPlugins: async () => [{ entryId: 'e1', moduleName: 'm', enabled: true, fiberPhase: 'active' }],
+    listBundles: async () => [{ name: 'b', enabled: true, installed: true, availability: 'profile', removable: true }],
+  } : undefined) }
+  const tool = createConsoleTool(createConsole(ctx, { plugin: pluginDomain }))
+  const result = await tool.execute({ action: 'plugin.list' })
+  assert.equal(result.status, 'ok')
+  const rows = [...result.plugins, ...result.bundles]
+  for (const row of rows) {
+    for (const [key, value] of Object.entries(row)) {
+      assert.notEqual(value, undefined, `row key "${key}" holds undefined`)
+    }
+  }
+})
+
+test('a plugin.list result survives a JSON round trip unchanged', async () => {
+  // The exact property the pipeline enforces, asserted directly so a future
+  // nested value cannot slip an undefined past the flat scan above.
+  const ctx = { get: (k) => (k === 'pluginManager' ? {
+    listPlugins: async () => [{ entryId: 'e1', moduleName: 'm', enabled: true, fiberPhase: 'active' }],
+    listBundles: async () => [
+      { name: 'b1', enabled: true, installed: true, availability: 'profile', removable: true },
+      { name: 'b2', enabled: false, installed: false, availability: 'missing', removable: false, version: '1.2.3' },
+    ],
+  } : undefined) }
+  const tool = createConsoleTool(createConsole(ctx, { plugin: pluginDomain }))
+  const result = await tool.execute({ action: 'plugin.list' })
+  assert.equal(result.status, 'ok')
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), result, 'the value must round-trip losslessly')
+  // A present optional field is kept, an absent one stays absent.
+  assert.equal(result.bundles[1].version, '1.2.3')
+  assert.equal('version' in result.bundles[0], false)
+  assert.equal('diagnostic' in result.plugins[0], false)
+  assert.equal('readOnlyReason' in result.plugins[0], false)
+})
+
+test('plugin.list keeps an optional field when the service supplies it', async () => {
+  const ctx = { get: (k) => (k === 'pluginManager' ? {
+    listPlugins: async () => [{
+      entryId: 'e1', moduleName: 'm', enabled: true, fiberPhase: 'failed',
+      diagnostic: 'boom', readOnlyReason: 'management-required',
+    }],
+    listBundles: async () => [{ name: 'b', enabled: true, installed: true, availability: 'profile', removable: true, version: '9.9.9' }],
+  } : undefined) }
+  const tool = createConsoleTool(createConsole(ctx, { plugin: pluginDomain }))
+  const result = await tool.execute({ action: 'plugin.list' })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.plugins[0].diagnostic, 'boom')
+  assert.equal(result.plugins[0].readOnlyReason, 'management-required')
+  assert.equal(result.bundles[0].version, '9.9.9')
 })
