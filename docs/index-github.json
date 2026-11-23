@@ -191,6 +191,16 @@
       },
       "versions": [
         {
+          "version": "1.2.0",
+          "publishTimestamp": 1795338000,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "6391caf77e702593122cc37d372b27f5d6b4e89a",
+            "path": "plugins/vyra-agent-manager"
+          }
+        },
+        {
           "version": "1.1.0",
           "publishTimestamp": 1794551488,
           "source": {

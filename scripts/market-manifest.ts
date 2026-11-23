@@ -334,6 +334,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-agent-manager',
           },
         },
+        // 1.2.0 edits in a full-screen sectioned layout with a live summary and a
+        // preview of the rows to install; system presets and custom Agents share
+        // one detail page (capabilities and persona prefix are inferred from the
+        // declaration); deleting an Agent whose profile bundle record was lost
+        // now cleans up the preset directory and stale link, and a Repair action
+        // re-registers it; cards and details can start a new session with a preset.
+        '1.2.0': {
+          publishTimestamp: 1795338000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6391caf77e702593122cc37d372b27f5d6b4e89a',
+            path: 'plugins/vyra-agent-manager',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
