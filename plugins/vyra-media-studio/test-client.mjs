@@ -71,8 +71,9 @@ test('client bundle loads and registers the library plus media tabs', () => {
   assert.ok(library)
   assert.ok(video)
   assert.ok(audio)
-  assert.equal(library.title(), '媒体库')
+  assert.equal(library.title(), '文件管理')
   assert.equal(library.guide.length, 1)
+  assert.equal(library.guide[0].title(), '文件管理')
   assert.ok(video.patterns.includes('*.mp4'))
   assert.ok(video.patterns.includes('*.webm'))
   assert.ok(audio.patterns.includes('*.mp3'))
@@ -84,7 +85,8 @@ test('client bundle loads and registers the library plus media tabs', () => {
   assert.equal(video.canOpen('dsh-resource://file/absolute/C:/a.mp4'), false)
   assert.equal(video.title(sessionAddress), 'a.mp4')
 
-  assert.deepEqual(bodies.map(body => body.spec.key).sort(), [
+  assert.deepEqual(bodies.map(body => body.spec.key ?? body.spec.id).sort(), [
+    'vyra-media-studio.composer-bridge',
     'vyra-media-studio/audio',
     'vyra-media-studio/library',
     'vyra-media-studio/video',

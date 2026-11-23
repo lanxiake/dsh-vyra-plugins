@@ -4,13 +4,14 @@
  * platform modules stay external and resolve through the shell's module table.
  */
 import React from 'react'
-import { MonitorPlay } from 'lucide-react'
+import { FolderOpen } from 'lucide-react'
 import counterCss from 'yet-another-react-lightbox/plugins/counter.css'
 import thumbnailsCss from 'yet-another-react-lightbox/plugins/thumbnails.css'
 import lightboxCss from 'yet-another-react-lightbox/styles.css'
 import extraCss from './extra.css'
 import pluginCss from './styles.css'
 import { LibraryBody, MediaTab } from './library.js'
+import { ComposerBridge } from './composer.js'
 import { AUDIO_ID, AUDIO_EXT, LIBRARY_ID, LIBRARY_KIND, VIDEO_EXT, VIDEO_ID, parseFileAddress } from './helpers.js'
 
 function installStyles() {
@@ -26,13 +27,13 @@ function libraryDefinition() {
     id: LIBRARY_ID,
     kind: LIBRARY_KIND,
     priority: 'extension',
-    title: () => '媒体库',
+    title: () => '文件管理',
     guide: [{
       id: 'library',
       order: 20,
-      title: () => '媒体库',
-      description: () => '视频、图片、音频与在线直链',
-      icon: MonitorPlay,
+      title: () => '文件管理',
+      description: () => '浏览、预览与管理工作区文件',
+      icon: FolderOpen,
     }],
   }
 }
@@ -86,6 +87,11 @@ const plugin = {
     ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
       name: 'sidebar.right.pane.tab', key: AUDIO_ID, inject: injectFace,
     }, MediaTab)), 'vyra-media-studio: audio body')
+
+    // Capture the active composer so the panel can insert `@path` mentions.
+    ctx.effect(() => ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
+      name: 'conversation.input.left', id: 'vyra-media-studio.composer-bridge',
+    }, ComposerBridge)), 'vyra-media-studio: composer bridge')
   },
 }
 

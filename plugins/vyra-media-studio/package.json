@@ -1,8 +1,8 @@
 {
   "name": "vyra-media-studio",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
-  "description": "右侧栏媒体库与音视频预览：Range 流式播放、网格/列表、多条件筛选、图片与在线直链。",
+  "description": "右侧栏文件管理：全类型扫描、网格缩放、列表详细度、文档预览与重命名/复制/删除等文件操作。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -41,6 +41,8 @@
     "media",
     "video",
     "audio",
+    "files",
+    "file-manager",
     "gallery"
   ],
   "license": "MIT",

@@ -1,4 +1,4 @@
-/** Shared client constants and pure helpers. */
+/** Shared client constants, preferences and pure helpers. */
 
 export const LIBRARY_ID = 'vyra-media-studio/library'
 export const VIDEO_ID = 'vyra-media-studio/video'
@@ -8,12 +8,30 @@ export const LIBRARY_KIND = 'media'
 export const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'webm', 'ogv', 'mkv', 'avi', 'wmv', 'flv'])
 export const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'wma', 'aiff', 'aif'])
 export const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'bmp', 'ico', 'svg', 'tif', 'tiff'])
+export const TEXT_EXT = new Set([
+  'txt', 'md', 'markdown', 'log', 'csv', 'tsv', 'rtf', 'tex',
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'jsonc', 'yaml', 'yml',
+  'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
+  'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
+  'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
+  'ini', 'conf', 'env', 'gitignore', 'dockerfile', 'makefile',
+])
 
-export const TYPE_LABEL = { all: '全部', video: '视频', image: '图片', audio: '音频', link: '链接' }
-export const TYPE_ORDER = { video: 0, image: 1, audio: 2, link: 3 }
+export const TYPE_LABEL = {
+  all: '全部', image: '图片', video: '视频', audio: '音频', document: '文档',
+  archive: '压缩包', code: '代码', other: '其他', link: '链接',
+}
+export const TYPE_ORDER = {
+  image: 0, video: 1, audio: 2, document: 3, archive: 4, code: 5, other: 6, link: 7,
+}
+export const TYPE_CHIPS = ['image', 'video', 'audio', 'document', 'archive', 'code', 'other', 'link']
+
 export const COLLATOR = new Intl.Collator('zh-CN', { numeric: true, sensitivity: 'base' })
 export const DAY = 86_400_000
 export const PAGE_SIZE = 120
+export const CARD_MIN = 96
+export const CARD_MAX = 300
+export const CARD_DEFAULT = 158
 
 const COVERS = [
   ['#1d3f5c', '#081520'],
@@ -39,10 +57,15 @@ export function extensionOf(value) {
 }
 
 export function kindOfExtension(extension) {
-  if (VIDEO_EXT.has(extension)) return 'video'
-  if (IMAGE_EXT.has(extension)) return 'image'
-  if (AUDIO_EXT.has(extension)) return 'audio'
+  const ext = String(extension ?? '').toLowerCase()
+  if (VIDEO_EXT.has(ext)) return 'video'
+  if (IMAGE_EXT.has(ext)) return 'image'
+  if (AUDIO_EXT.has(ext)) return 'audio'
   return undefined
+}
+
+export function isTextExtension(extension) {
+  return TEXT_EXT.has(String(extension ?? '').toLowerCase())
 }
 
 export function mimeOfExtension(extension) {
@@ -94,7 +117,7 @@ export function domainOf(item) {
 }
 
 export function typeLabel(kind) {
-  return TYPE_LABEL[kind] ?? '媒体'
+  return TYPE_LABEL[kind] ?? '文件'
 }
 
 export function coverOf(item, index) {
@@ -157,6 +180,44 @@ export function mediaSrc(sessionId, item) {
   return item.source === 'url' ? item.url : localFileUrl(sessionId, item.relativePath)
 }
 
+/**
+ * POST JSON to a plugin route and return the `ok: true` body.
+ * @param {string} path - route path.
+ * @param {object} body - JSON body.
+ * @param {AbortSignal} [signal] - cancellation.
+ * @returns {Promise<object>} the response body.
+ */
+export async function postJson(path, body, signal) {
+  const response = await fetch(apiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'same-origin',
+    signal,
+  })
+  let data
+  try {
+    data = await response.json()
+  } catch {
+    data = undefined
+  }
+  if (!response.ok || data?.ok !== true) {
+    const code = data?.code ?? `http-${response.status}`
+    const error = new Error(`${code}：${data?.error ?? `HTTP ${response.status}`}`)
+    error.code = code
+    error.canPermanent = data?.canPermanent === true
+    error.status = response.status
+    throw error
+  }
+  return data
+}
+
+/** `@path` mention token understood by the chat composer. */
+export function mentionToken(path) {
+  const slashed = String(path).trim().replace(/\\/gu, '/')
+  return /\s/u.test(slashed) ? `@"${slashed}" ` : `@${slashed} `
+}
+
 export function detectLinkKind(url) {
   try {
     const parsed = new URL(url)
@@ -212,15 +273,57 @@ export function writeLinks(root, links) {
   try { localStorage.setItem(linksKey(root), JSON.stringify(links)) } catch { /* storage may be unavailable */ }
 }
 
-export function compareItems(left, right, sort, dir) {
+const PREFS_KEY = 'vyra-media-studio.prefs.v1'
+const PREF_DEFAULTS = {
+  view: 'grid',
+  cardSize: CARD_DEFAULT,
+  detail: 'compact',
+  sort: 'name',
+  dir: 'asc',
+  showHidden: false,
+  includeBuild: false,
+}
+
+export function readPrefs() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null')
+    if (parsed === null || typeof parsed !== 'object') return { ...PREF_DEFAULTS }
+    const merged = { ...PREF_DEFAULTS, ...parsed }
+    return {
+      view: merged.view === 'list' ? 'list' : 'grid',
+      cardSize: Number.isFinite(merged.cardSize)
+        ? Math.min(CARD_MAX, Math.max(CARD_MIN, merged.cardSize))
+        : CARD_DEFAULT,
+      detail: merged.detail === 'detailed' ? 'detailed' : 'compact',
+      sort: ['name', 'time', 'size', 'type'].includes(merged.sort) ? merged.sort : 'name',
+      dir: merged.dir === 'desc' ? 'desc' : 'asc',
+      showHidden: merged.showHidden === true,
+      includeBuild: merged.includeBuild === true,
+    }
+  } catch {
+    return { ...PREF_DEFAULTS }
+  }
+}
+
+export function writePrefs(prefs) {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)) } catch { /* storage may be unavailable */ }
+}
+
+export function compareItems(left, right, sort, dir, meta) {
   const factor = dir === 'asc' ? 1 : -1
+  const sizeOf = item => meta?.[item.id]?.size ?? item.size ?? -1
+  const timeOf = item => meta?.[item.id]?.mtimeMs ?? item.mtimeMs ?? 0
   let result = 0
   if (sort === 'name') result = COLLATOR.compare(left.title, right.title)
-  else if (sort === 'size') result = (left.size ?? -1) - (right.size ?? -1)
+  else if (sort === 'size') result = sizeOf(left) - sizeOf(right)
   else if (sort === 'type') result = (TYPE_ORDER[left.kind] - TYPE_ORDER[right.kind]) || COLLATOR.compare(left.title, right.title)
-  else result = left.mtimeMs - right.mtimeMs
+  else result = timeOf(left) - timeOf(right)
   if (result === 0) result = COLLATOR.compare(left.title, right.title)
   return result * factor
+}
+
+export function folderSegments(folder) {
+  return String(folder ?? '').split('/').filter(Boolean)
 }
 
 export function slideFor(item, index, sessionId) {

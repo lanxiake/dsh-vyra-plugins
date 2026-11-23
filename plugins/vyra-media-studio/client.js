@@ -44,7 +44,7 @@ __export(entry_exports, {
   default: () => entry_default
 });
 module.exports = __toCommonJS(entry_exports);
-var import_react6 = __toESM(require("react"), 1);
+var import_react7 = __toESM(require("react"), 1);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
 var import_react2 = require("react");
@@ -192,7 +192,7 @@ var createLucideIcon = (iconName, iconNode) => {
   return Component;
 };
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-left.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/app-window.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -200,10 +200,25 @@ var createLucideIcon = (iconName, iconNode) => {
  * See the LICENSE file in the root directory of this source tree.
  */
 var __iconNode = [
+  ["rect", { x: "2", y: "4", width: "20", height: "16", rx: "2", key: "izxlao" }],
+  ["path", { d: "M10 4v4", key: "pp8u80" }],
+  ["path", { d: "M2 8h20", key: "d11cs7" }],
+  ["path", { d: "M6 4v4", key: "1svtjw" }]
+];
+var AppWindow = createLucideIcon("app-window", __iconNode);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-left.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode2 = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-var ArrowLeft = createLucideIcon("arrow-left", __iconNode);
+var ArrowLeft = createLucideIcon("arrow-left", __iconNode2);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/arrow-right.js
 /**
@@ -212,11 +227,24 @@ var ArrowLeft = createLucideIcon("arrow-left", __iconNode);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode2 = [
+var __iconNode3 = [
   ["path", { d: "M5 12h14", key: "1ays0h" }],
   ["path", { d: "m12 5 7 7-7 7", key: "xquz4c" }]
 ];
-var ArrowRight = createLucideIcon("arrow-right", __iconNode2);
+var ArrowRight = createLucideIcon("arrow-right", __iconNode3);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/at-sign.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode4 = [
+  ["circle", { cx: "12", cy: "12", r: "4", key: "4exip2" }],
+  ["path", { d: "M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8", key: "7n84p3" }]
+];
+var AtSign = createLucideIcon("at-sign", __iconNode4);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/check.js
 /**
@@ -225,8 +253,8 @@ var ArrowRight = createLucideIcon("arrow-right", __iconNode2);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode3 = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-var Check = createLucideIcon("check", __iconNode3);
+var __iconNode5 = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+var Check = createLucideIcon("check", __iconNode5);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-down.js
 /**
@@ -235,8 +263,44 @@ var Check = createLucideIcon("check", __iconNode3);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode4 = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-var ChevronDown = createLucideIcon("chevron-down", __iconNode4);
+var __iconNode6 = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+var ChevronDown = createLucideIcon("chevron-down", __iconNode6);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-left.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode7 = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+var ChevronLeft = createLucideIcon("chevron-left", __iconNode7);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chevron-right.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode8 = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+var ChevronRight = createLucideIcon("chevron-right", __iconNode8);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/clipboard-copy.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode9 = [
+  ["rect", { width: "8", height: "4", x: "8", y: "2", rx: "1", ry: "1", key: "tgr4d6" }],
+  ["path", { d: "M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2", key: "4jdomd" }],
+  ["path", { d: "M16 4h2a2 2 0 0 1 2 2v4", key: "3hqy98" }],
+  ["path", { d: "M21 14H11", key: "1bme5i" }],
+  ["path", { d: "m15 10-4 4 4 4", key: "5dvupr" }]
+];
+var ClipboardCopy = createLucideIcon("clipboard-copy", __iconNode9);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/copy.js
 /**
@@ -245,11 +309,11 @@ var ChevronDown = createLucideIcon("chevron-down", __iconNode4);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode5 = [
+var __iconNode10 = [
   ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
   ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-var Copy = createLucideIcon("copy", __iconNode5);
+var Copy = createLucideIcon("copy", __iconNode10);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/download.js
 /**
@@ -258,12 +322,12 @@ var Copy = createLucideIcon("copy", __iconNode5);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode6 = [
+var __iconNode11 = [
   ["path", { d: "M12 15V3", key: "m9g1x1" }],
   ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
   ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
 ];
-var Download = createLucideIcon("download", __iconNode6);
+var Download = createLucideIcon("download", __iconNode11);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/ellipsis.js
 /**
@@ -272,12 +336,12 @@ var Download = createLucideIcon("download", __iconNode6);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode7 = [
+var __iconNode12 = [
   ["circle", { cx: "12", cy: "12", r: "1", key: "41hilf" }],
   ["circle", { cx: "19", cy: "12", r: "1", key: "1wjl8i" }],
   ["circle", { cx: "5", cy: "12", r: "1", key: "1pcz8c" }]
 ];
-var Ellipsis = createLucideIcon("ellipsis", __iconNode7);
+var Ellipsis = createLucideIcon("ellipsis", __iconNode12);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/external-link.js
 /**
@@ -286,12 +350,138 @@ var Ellipsis = createLucideIcon("ellipsis", __iconNode7);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode8 = [
+var __iconNode13 = [
   ["path", { d: "M15 3h6v6", key: "1q9fwt" }],
   ["path", { d: "M10 14 21 3", key: "gplh6r" }],
   ["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", key: "a6xqqp" }]
 ];
-var ExternalLink = createLucideIcon("external-link", __iconNode8);
+var ExternalLink = createLucideIcon("external-link", __iconNode13);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-archive.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode14 = [
+  [
+    "path",
+    {
+      d: "M13.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v11.5",
+      key: "4pqfef"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
+  ["path", { d: "M8 12v-1", key: "1ej8lb" }],
+  ["path", { d: "M8 18v-2", key: "qcmpov" }],
+  ["path", { d: "M8 7V6", key: "1nbb54" }],
+  ["circle", { cx: "8", cy: "20", r: "2", key: "ckkr5m" }]
+];
+var FileArchive = createLucideIcon("file-archive", __iconNode14);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-code.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode15 = [
+  [
+    "path",
+    {
+      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+      key: "1oefj6"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
+  ["path", { d: "M10 12.5 8 15l2 2.5", key: "1tg20x" }],
+  ["path", { d: "m14 12.5 2 2.5-2 2.5", key: "yinavb" }]
+];
+var FileCode = createLucideIcon("file-code", __iconNode15);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-spreadsheet.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode16 = [
+  [
+    "path",
+    {
+      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+      key: "1oefj6"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
+  ["path", { d: "M8 13h2", key: "yr2amv" }],
+  ["path", { d: "M14 13h2", key: "un5t4a" }],
+  ["path", { d: "M8 17h2", key: "2yhykz" }],
+  ["path", { d: "M14 17h2", key: "10kma7" }]
+];
+var FileSpreadsheet = createLucideIcon("file-spreadsheet", __iconNode16);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-text.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode17 = [
+  [
+    "path",
+    {
+      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+      key: "1oefj6"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
+  ["path", { d: "M10 9H8", key: "b1mrlr" }],
+  ["path", { d: "M16 13H8", key: "t4e002" }],
+  ["path", { d: "M16 17H8", key: "z1uh3a" }]
+];
+var FileText = createLucideIcon("file-text", __iconNode17);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode18 = [
+  [
+    "path",
+    {
+      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+      key: "1oefj6"
+    }
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }]
+];
+var File = createLucideIcon("file", __iconNode18);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder-open.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode19 = [
+  [
+    "path",
+    {
+      d: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2",
+      key: "usdka0"
+    }
+  ]
+];
+var FolderOpen = createLucideIcon("folder-open", __iconNode19);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder.js
 /**
@@ -300,7 +490,7 @@ var ExternalLink = createLucideIcon("external-link", __iconNode8);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode9 = [
+var __iconNode20 = [
   [
     "path",
     {
@@ -309,7 +499,7 @@ var __iconNode9 = [
     }
   ]
 ];
-var Folder = createLucideIcon("folder", __iconNode9);
+var Folder = createLucideIcon("folder", __iconNode20);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image-off.js
 /**
@@ -318,7 +508,7 @@ var Folder = createLucideIcon("folder", __iconNode9);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode10 = [
+var __iconNode21 = [
   ["line", { x1: "2", x2: "22", y1: "2", y2: "22", key: "a6p6uj" }],
   ["path", { d: "M10.41 10.41a2 2 0 1 1-2.83-2.83", key: "1bzlo9" }],
   ["line", { x1: "13.5", x2: "6", y1: "13.5", y2: "21", key: "1q0aeu" }],
@@ -332,7 +522,7 @@ var __iconNode10 = [
   ],
   ["path", { d: "M21 15V5a2 2 0 0 0-2-2H9", key: "43el77" }]
 ];
-var ImageOff = createLucideIcon("image-off", __iconNode10);
+var ImageOff = createLucideIcon("image-off", __iconNode21);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image.js
 /**
@@ -341,12 +531,26 @@ var ImageOff = createLucideIcon("image-off", __iconNode10);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode11 = [
+var __iconNode22 = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2", key: "1m3agn" }],
   ["circle", { cx: "9", cy: "9", r: "2", key: "af1f0g" }],
   ["path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21", key: "1xmnt7" }]
 ];
-var Image = createLucideIcon("image", __iconNode11);
+var Image = createLucideIcon("image", __iconNode22);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/info.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode23 = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "M12 16v-4", key: "1dtifu" }],
+  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+];
+var Info = createLucideIcon("info", __iconNode23);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/layout-grid.js
 /**
@@ -355,13 +559,13 @@ var Image = createLucideIcon("image", __iconNode11);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode12 = [
+var __iconNode24 = [
   ["rect", { width: "7", height: "7", x: "3", y: "3", rx: "1", key: "1g98yp" }],
   ["rect", { width: "7", height: "7", x: "14", y: "3", rx: "1", key: "6d4xhi" }],
   ["rect", { width: "7", height: "7", x: "14", y: "14", rx: "1", key: "nxv5o0" }],
   ["rect", { width: "7", height: "7", x: "3", y: "14", rx: "1", key: "1bb6yr" }]
 ];
-var LayoutGrid = createLucideIcon("layout-grid", __iconNode12);
+var LayoutGrid = createLucideIcon("layout-grid", __iconNode24);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/link-2.js
 /**
@@ -370,12 +574,12 @@ var LayoutGrid = createLucideIcon("layout-grid", __iconNode12);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode13 = [
+var __iconNode25 = [
   ["path", { d: "M9 17H7A5 5 0 0 1 7 7h2", key: "8i5ue5" }],
   ["path", { d: "M15 7h2a5 5 0 1 1 0 10h-2", key: "1b9ql8" }],
   ["line", { x1: "8", x2: "16", y1: "12", y2: "12", key: "1jonct" }]
 ];
-var Link2 = createLucideIcon("link-2", __iconNode13);
+var Link2 = createLucideIcon("link-2", __iconNode25);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/list.js
 /**
@@ -384,7 +588,7 @@ var Link2 = createLucideIcon("link-2", __iconNode13);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode14 = [
+var __iconNode26 = [
   ["path", { d: "M3 5h.01", key: "18ugdj" }],
   ["path", { d: "M3 12h.01", key: "nlz23k" }],
   ["path", { d: "M3 19h.01", key: "noohij" }],
@@ -392,194 +596,9 @@ var __iconNode14 = [
   ["path", { d: "M8 12h13", key: "1za7za" }],
   ["path", { d: "M8 19h13", key: "m83p4d" }]
 ];
-var List = createLucideIcon("list", __iconNode14);
+var List = createLucideIcon("list", __iconNode26);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/maximize.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode15 = [
-  ["path", { d: "M8 3H5a2 2 0 0 0-2 2v3", key: "1dcmit" }],
-  ["path", { d: "M21 8V5a2 2 0 0 0-2-2h-3", key: "1e4gt3" }],
-  ["path", { d: "M3 16v3a2 2 0 0 0 2 2h3", key: "wsl5sc" }],
-  ["path", { d: "M16 21h3a2 2 0 0 0 2-2v-3", key: "18trek" }]
-];
-var Maximize = createLucideIcon("maximize", __iconNode15);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/monitor-play.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode16 = [
-  [
-    "path",
-    {
-      d: "M15.033 9.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56V7.648a.645.645 0 0 1 .967-.56z",
-      key: "vbtd3f"
-    }
-  ],
-  ["path", { d: "M12 17v4", key: "1riwvh" }],
-  ["path", { d: "M8 21h8", key: "1ev6f3" }],
-  ["rect", { x: "2", y: "3", width: "20", height: "14", rx: "2", key: "x3v2xh" }]
-];
-var MonitorPlay = createLucideIcon("monitor-play", __iconNode16);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/music-2.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode17 = [
-  ["circle", { cx: "8", cy: "18", r: "4", key: "1fc0mg" }],
-  ["path", { d: "M12 18V2l7 4", key: "g04rme" }]
-];
-var Music2 = createLucideIcon("music-2", __iconNode17);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/pause.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode18 = [
-  ["rect", { x: "14", y: "3", width: "5", height: "18", rx: "1", key: "kaeet6" }],
-  ["rect", { x: "5", y: "3", width: "5", height: "18", rx: "1", key: "1wsw3u" }]
-];
-var Pause = createLucideIcon("pause", __iconNode18);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/picture-in-picture-2.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode19 = [
-  ["path", { d: "M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4", key: "daa4of" }],
-  ["rect", { width: "10", height: "7", x: "12", y: "13", rx: "2", key: "1nb8gs" }]
-];
-var PictureInPicture2 = createLucideIcon("picture-in-picture-2", __iconNode19);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/play.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode20 = [
-  [
-    "path",
-    {
-      d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z",
-      key: "10ikf1"
-    }
-  ]
-];
-var Play = createLucideIcon("play", __iconNode20);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/plus.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode21 = [
-  ["path", { d: "M5 12h14", key: "1ays0h" }],
-  ["path", { d: "M12 5v14", key: "s699le" }]
-];
-var Plus = createLucideIcon("plus", __iconNode21);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/refresh-cw.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode22 = [
-  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
-  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
-  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
-  ["path", { d: "M8 16H3v5", key: "1cv678" }]
-];
-var RefreshCw = createLucideIcon("refresh-cw", __iconNode22);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/scan.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode23 = [
-  ["path", { d: "M3 7V5a2 2 0 0 1 2-2h2", key: "aa7l1z" }],
-  ["path", { d: "M17 3h2a2 2 0 0 1 2 2v2", key: "4qcy5o" }],
-  ["path", { d: "M21 17v2a2 2 0 0 1-2 2h-2", key: "6vwrx8" }],
-  ["path", { d: "M7 21H5a2 2 0 0 1-2-2v-2", key: "ioqczr" }]
-];
-var Scan = createLucideIcon("scan", __iconNode23);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/search.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode24 = [
-  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
-  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
-];
-var Search = createLucideIcon("search", __iconNode24);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode25 = [
-  ["path", { d: "M10 5H3", key: "1qgfaw" }],
-  ["path", { d: "M12 19H3", key: "yhmn1j" }],
-  ["path", { d: "M14 3v4", key: "1sua03" }],
-  ["path", { d: "M16 17v4", key: "1q0r14" }],
-  ["path", { d: "M21 12h-9", key: "1o4lsq" }],
-  ["path", { d: "M21 19h-5", key: "1rlt1p" }],
-  ["path", { d: "M21 5h-7", key: "1oszz2" }],
-  ["path", { d: "M8 10v4", key: "tgpxqk" }],
-  ["path", { d: "M8 12H3", key: "a7s4jb" }]
-];
-var SlidersHorizontal = createLucideIcon("sliders-horizontal", __iconNode25);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/trash-2.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode26 = [
-  ["path", { d: "M10 11v6", key: "nco0om" }],
-  ["path", { d: "M14 11v6", key: "outv1u" }],
-  ["path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", key: "miytrc" }],
-  ["path", { d: "M3 6h18", key: "d0wm0j" }],
-  ["path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", key: "e791ji" }]
-];
-var Trash2 = createLucideIcon("trash-2", __iconNode26);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/triangle-alert.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/map-pin.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -590,6 +609,208 @@ var __iconNode27 = [
   [
     "path",
     {
+      d: "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0",
+      key: "1r0f0z"
+    }
+  ],
+  ["circle", { cx: "12", cy: "10", r: "3", key: "ilqhr7" }]
+];
+var MapPin = createLucideIcon("map-pin", __iconNode27);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/maximize.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode28 = [
+  ["path", { d: "M8 3H5a2 2 0 0 0-2 2v3", key: "1dcmit" }],
+  ["path", { d: "M21 8V5a2 2 0 0 0-2-2h-3", key: "1e4gt3" }],
+  ["path", { d: "M3 16v3a2 2 0 0 0 2 2h3", key: "wsl5sc" }],
+  ["path", { d: "M16 21h3a2 2 0 0 0 2-2v-3", key: "18trek" }]
+];
+var Maximize = createLucideIcon("maximize", __iconNode28);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/music-2.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode29 = [
+  ["circle", { cx: "8", cy: "18", r: "4", key: "1fc0mg" }],
+  ["path", { d: "M12 18V2l7 4", key: "g04rme" }]
+];
+var Music2 = createLucideIcon("music-2", __iconNode29);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/pause.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode30 = [
+  ["rect", { x: "14", y: "3", width: "5", height: "18", rx: "1", key: "kaeet6" }],
+  ["rect", { x: "5", y: "3", width: "5", height: "18", rx: "1", key: "1wsw3u" }]
+];
+var Pause = createLucideIcon("pause", __iconNode30);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/pencil.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode31 = [
+  [
+    "path",
+    {
+      d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
+      key: "1a8usu"
+    }
+  ],
+  ["path", { d: "m15 5 4 4", key: "1mk7zo" }]
+];
+var Pencil = createLucideIcon("pencil", __iconNode31);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/picture-in-picture-2.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode32 = [
+  ["path", { d: "M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4", key: "daa4of" }],
+  ["rect", { width: "10", height: "7", x: "12", y: "13", rx: "2", key: "1nb8gs" }]
+];
+var PictureInPicture2 = createLucideIcon("picture-in-picture-2", __iconNode32);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/play.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode33 = [
+  [
+    "path",
+    {
+      d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z",
+      key: "10ikf1"
+    }
+  ]
+];
+var Play = createLucideIcon("play", __iconNode33);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/plus.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode34 = [
+  ["path", { d: "M5 12h14", key: "1ays0h" }],
+  ["path", { d: "M12 5v14", key: "s699le" }]
+];
+var Plus = createLucideIcon("plus", __iconNode34);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/refresh-cw.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode35 = [
+  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+  ["path", { d: "M8 16H3v5", key: "1cv678" }]
+];
+var RefreshCw = createLucideIcon("refresh-cw", __iconNode35);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/scan.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode36 = [
+  ["path", { d: "M3 7V5a2 2 0 0 1 2-2h2", key: "aa7l1z" }],
+  ["path", { d: "M17 3h2a2 2 0 0 1 2 2v2", key: "4qcy5o" }],
+  ["path", { d: "M21 17v2a2 2 0 0 1-2 2h-2", key: "6vwrx8" }],
+  ["path", { d: "M7 21H5a2 2 0 0 1-2-2v-2", key: "ioqczr" }]
+];
+var Scan = createLucideIcon("scan", __iconNode36);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/search.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode37 = [
+  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
+  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
+];
+var Search = createLucideIcon("search", __iconNode37);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode38 = [
+  ["path", { d: "M10 5H3", key: "1qgfaw" }],
+  ["path", { d: "M12 19H3", key: "yhmn1j" }],
+  ["path", { d: "M14 3v4", key: "1sua03" }],
+  ["path", { d: "M16 17v4", key: "1q0r14" }],
+  ["path", { d: "M21 12h-9", key: "1o4lsq" }],
+  ["path", { d: "M21 19h-5", key: "1rlt1p" }],
+  ["path", { d: "M21 5h-7", key: "1oszz2" }],
+  ["path", { d: "M8 10v4", key: "tgpxqk" }],
+  ["path", { d: "M8 12H3", key: "a7s4jb" }]
+];
+var SlidersHorizontal = createLucideIcon("sliders-horizontal", __iconNode38);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/trash-2.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode39 = [
+  ["path", { d: "M10 11v6", key: "nco0om" }],
+  ["path", { d: "M14 11v6", key: "outv1u" }],
+  ["path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", key: "miytrc" }],
+  ["path", { d: "M3 6h18", key: "d0wm0j" }],
+  ["path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", key: "e791ji" }]
+];
+var Trash2 = createLucideIcon("trash-2", __iconNode39);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/triangle-alert.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode40 = [
+  [
+    "path",
+    {
       d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
       key: "wmoenq"
     }
@@ -597,7 +818,7 @@ var __iconNode27 = [
   ["path", { d: "M12 9v4", key: "juzpu7" }],
   ["path", { d: "M12 17h.01", key: "p32p05" }]
 ];
-var TriangleAlert = createLucideIcon("triangle-alert", __iconNode27);
+var TriangleAlert = createLucideIcon("triangle-alert", __iconNode40);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/video.js
 /**
@@ -606,7 +827,7 @@ var TriangleAlert = createLucideIcon("triangle-alert", __iconNode27);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode28 = [
+var __iconNode41 = [
   [
     "path",
     {
@@ -616,7 +837,7 @@ var __iconNode28 = [
   ],
   ["rect", { x: "2", y: "6", width: "14", height: "12", rx: "2", key: "158x01" }]
 ];
-var Video = createLucideIcon("video", __iconNode28);
+var Video = createLucideIcon("video", __iconNode41);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/volume-2.js
 /**
@@ -625,7 +846,7 @@ var Video = createLucideIcon("video", __iconNode28);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode29 = [
+var __iconNode42 = [
   [
     "path",
     {
@@ -636,7 +857,7 @@ var __iconNode29 = [
   ["path", { d: "M16 9a5 5 0 0 1 0 6", key: "1q6k2b" }],
   ["path", { d: "M19.364 18.364a9 9 0 0 0 0-12.728", key: "ijwkga" }]
 ];
-var Volume2 = createLucideIcon("volume-2", __iconNode29);
+var Volume2 = createLucideIcon("volume-2", __iconNode42);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/volume-x.js
 /**
@@ -645,7 +866,7 @@ var Volume2 = createLucideIcon("volume-2", __iconNode29);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode30 = [
+var __iconNode43 = [
   [
     "path",
     {
@@ -656,7 +877,7 @@ var __iconNode30 = [
   ["line", { x1: "22", x2: "16", y1: "9", y2: "15", key: "1ewh16" }],
   ["line", { x1: "16", x2: "22", y1: "9", y2: "15", key: "5ykzw1" }]
 ];
-var VolumeX = createLucideIcon("volume-x", __iconNode30);
+var VolumeX = createLucideIcon("volume-x", __iconNode43);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/x.js
 /**
@@ -665,11 +886,11 @@ var VolumeX = createLucideIcon("volume-x", __iconNode30);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode31 = [
+var __iconNode44 = [
   ["path", { d: "M18 6 6 18", key: "1bl5f8" }],
   ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
 ];
-var X = createLucideIcon("x", __iconNode31);
+var X = createLucideIcon("x", __iconNode44);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/zoom-in.js
 /**
@@ -678,13 +899,13 @@ var X = createLucideIcon("x", __iconNode31);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode32 = [
+var __iconNode45 = [
   ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }],
   ["line", { x1: "21", x2: "16.65", y1: "21", y2: "16.65", key: "13gj7c" }],
   ["line", { x1: "11", x2: "11", y1: "8", y2: "14", key: "1vmskp" }],
   ["line", { x1: "8", x2: "14", y1: "11", y2: "11", key: "durymu" }]
 ];
-var ZoomIn = createLucideIcon("zoom-in", __iconNode32);
+var ZoomIn = createLucideIcon("zoom-in", __iconNode45);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/zoom-out.js
 /**
@@ -693,12 +914,12 @@ var ZoomIn = createLucideIcon("zoom-in", __iconNode32);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode33 = [
+var __iconNode46 = [
   ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }],
   ["line", { x1: "21", x2: "16.65", y1: "21", y2: "16.65", key: "13gj7c" }],
   ["line", { x1: "8", x2: "14", y1: "11", y2: "11", key: "durymu" }]
 ];
-var ZoomOut = createLucideIcon("zoom-out", __iconNode33);
+var ZoomOut = createLucideIcon("zoom-out", __iconNode46);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/lucide-react.js
 /**
@@ -1027,10 +1248,10 @@ var extra_default = `/* Native media, the media tab, and the lightbox host. */\r
 `;
 
 // src/client/styles.css
-var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 54px 62px 60px 68px 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-meta, .vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 500px) {\r\n  .vms-row { grid-template-columns: 48px minmax(0, 1fr) 52px 28px; }\r\n  .vms-row-meta, .vms-row-size, .vms-row-time { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n';
+var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-list-head {\r\n  display: grid; grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px;\r\n  gap: 9px; padding: 7px 8px 5px; font-size: 9px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r\n}\r\n.vms-list-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-list-head button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }\n.vms-list-head button:hover { color: var(--vms-ink2); }\n.vms-list-head button.is-active { color: var(--vms-ink); font-weight: 600; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n.vms-row[data-detail="detailed"] { grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster, .vms-row-thumb .vms-doc-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar,\r\n.vms-row-thumb .vms-doc-lines, .vms-row-thumb .vms-doc-snippet { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-thumb .vms-doc-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-kind[data-kind="document"] { color: #6f8fd8; }\r\n.vms-row-kind[data-kind="archive"] { color: #c99a5b; }\r\n.vms-row-kind[data-kind="code"] { color: #7fb99a; }\r\n.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 560px) {\r\n  .vms-row[data-detail="detailed"] { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-row[data-detail="detailed"] .vms-row-time,\r\n  .vms-row[data-detail="detailed"] .vms-row-size { display: none; }\r\n  .vms-list-head { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-list-head > :nth-child(3), .vms-list-head > :nth-child(5) { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n/* File-manager additions: zoom, folder navigation, document cards, menus, dialogs. */\r\n.vms-zoom { display: flex; align-items: center; gap: 2px; flex: none; padding: 2px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); }\r\n.vms-zoom .vms-icon-btn { width: 25px; height: 25px; }\r\n.vms-zoom-range { width: 66px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-detail-seg { gap: 2px; }\r\n.vms-seg-text { height: 24px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); font-size: 10px; }\r\n.vms-seg-text.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-folder-row { position: relative; display: flex; align-items: center; gap: 7px; margin-top: 9px; min-width: 0; }\r\n.vms-crumb { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; flex: 1; }\r\n.vms-crumb-seg { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 2px 5px; border-radius: 6px; color: var(--vms-ink3); font-size: 10.5px; }\r\n.vms-crumb-seg:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-crumb-seg.is-active { color: var(--vms-ink); font-weight: 550; }\r\n.vms-crumb-sep { color: var(--vms-ink4); flex: none; }\r\n.vms-folder-btn { flex: none; }\r\n.vms-folder-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-pop {\r\n  position: absolute; z-index: 31; top: calc(100% + 5px); right: 0; width: min(320px, calc(100% - 4px));\r\n  max-height: 300px; overflow: auto; padding: 5px; border: 0.5px solid var(--vms-line2);\r\n  border-radius: var(--vms-radius-md); background: var(--vms-layer);\r\n  box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-folder-item { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-folder-item:hover { background: var(--vms-layer2); }\r\n.vms-folder-item.is-active { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-check { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--vms-ink3); white-space: nowrap; }\r\n.vms-check input { accent-color: var(--vms-accent); margin: 0; }\r\n\r\n/* Designed thumbnails for documents, archives, code and unknown files. */\r\n.vms-doc-poster {\r\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\r\n  padding: 12px; overflow: hidden; color: #fff;\r\n  background: linear-gradient(140deg, color-mix(in srgb, var(--vms-cover-a, #203047) 82%, #0d1722), var(--vms-cover-b, #0d1722));\r\n}\r\n.vms-doc-poster::before { content: ""; position: absolute; inset: 9px; border-radius: 5px; background: rgba(255,255,255,.055); border: 0.5px solid rgba(255,255,255,.12); }\r\n.vms-doc-fold { position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; background: linear-gradient(225deg, rgba(255,255,255,.22) 50%, transparent 50%); border-top-right-radius: 4px; }\r\n.vms-doc-glyph { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: rgba(255,255,255,.11); }\r\n.vms-doc-glyph.is-large { width: 38px; height: 38px; border-radius: 10px; z-index: 1; }\r\n.vms-doc-ext { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.7); z-index: 1; }\r\n.vms-doc-ext.is-large { font-size: 10px; color: rgba(255,255,255,.86); }\r\n.vms-doc-lines { position: relative; z-index: 1; display: grid; gap: 3px; width: 54%; margin-top: 2px; }\r\n.vms-doc-lines i { height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }\r\n.vms-doc-lines i:nth-child(2) { width: 78%; }\r\n.vms-doc-lines i:nth-child(3) { width: 55%; }\r\n.vms-doc-poster[data-kind="document"] { background: linear-gradient(145deg, #223553, #0c141f); }\r\n.vms-doc-poster[data-kind="archive"] { background: linear-gradient(145deg, #3f2d16, #150e06); }\r\n.vms-doc-poster[data-kind="code"] { background: linear-gradient(145deg, #183a33, #071410); }\r\n.vms-doc-poster[data-kind="other"] { background: linear-gradient(145deg, #2b2f38, #0d1015); }\r\n.vms-doc-poster.is-text { display: block; padding: 10px 10px 22px; background: #f7f5ef; color: #2a2b2f; }\r\n.vms-doc-poster.is-text::before { inset: 7px 7px 19px; background: #fffdf8; border-color: rgba(30,30,30,.10); }\r\n.vms-doc-snippet {\r\n  position: relative; z-index: 1; margin: 2px 3px 0; padding: 2px 4px; height: calc(100% - 2px);\r\n  overflow: hidden; white-space: pre; font-family: var(--dsh-font-family-code, monospace);\r\n  font-size: 6.5px; line-height: 1.45; color: #4b4b52;\r\n}\r\n.vms-doc-snippet.is-empty { display: grid; place-items: center; text-align: center; color: #9a968c; font-family: inherit; font-size: 9px; }\r\n.vms-doc-poster.is-text .vms-doc-foot {\r\n  position: absolute; left: 9px; right: 9px; bottom: 5px; z-index: 2; display: flex; align-items: center; gap: 4px; color: #7a7468;\r\n}\r\n.vms-doc-poster.is-text .vms-doc-glyph { width: 16px; height: 16px; background: rgba(0,0,0,.06); border-radius: 4px; }\r\n.vms-doc-poster.is-text .vms-doc-ext { color: #7a7468; font-size: 7px; }\r\n.vms-row-thumb .vms-doc-poster.is-text { display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #e6e1d3, #f7f5ef); }\r\n.vms-row-thumb .vms-doc-poster.is-text::before { display: none; }\r\n\r\n/* Batch-metadata banner. */\r\n.vms-meta-banner {\r\n  position: sticky; bottom: 8px; z-index: 6; width: max-content; margin: 0 auto 10px;\r\n  display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;\r\n  background: var(--vms-ink); color: var(--vms-bg); font-size: 9.5px; box-shadow: 0 8px 24px rgba(0,0,0,.18);\r\n}\r\n.vms-meta-banner i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-bg); animation: vms-pulse 1.2s infinite; }\r\n\r\n/* File action menu. */\r\n.vms-menu {\r\n  position: fixed; z-index: 120; width: 196px; padding: 5px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 22px 60px rgba(0,0,0,.28);\r\n  animation: vms-panel-in 140ms var(--vms-ease);\r\n}\r\n.vms-menu-head { display: flex; align-items: center; gap: 6px; padding: 5px 7px 6px; border-bottom: 0.5px solid var(--vms-line); margin-bottom: 4px; color: var(--vms-ink3); }\r\n.vms-menu-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 550; color: var(--vms-ink2); }\r\n.vms-menu-item { display: flex; align-items: center; gap: 7px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-menu-item:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-menu-item.is-danger { color: var(--vms-danger); }\r\n.vms-menu-item.is-danger:hover { background: color-mix(in srgb, var(--vms-danger) 12%, transparent); }\r\n.vms-menu-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-menu-item.is-danger svg { color: inherit; }\r\n\r\n/* Dialogs. */\r\n.vms-dialog-layer { position: absolute; inset: 0; z-index: 60; display: flex; padding: 18px; }\r\n.vms-dialog-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.42); backdrop-filter: blur(6px); animation: vms-fade 160ms var(--vms-ease); }\r\n.vms-dialog {\r\n  position: relative; margin: auto; width: min(360px, 100%); padding: 12px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 28px 80px rgba(0,0,0,.34);\r\n  animation: vms-sheet-in 200ms var(--vms-ease);\r\n}\r\n.vms-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }\r\n.vms-dialog-head b { font-size: 12.5px; font-weight: 600; }\r\n.vms-dialog-form { display: grid; gap: 9px; }\r\n.vms-dialog-field { display: grid; gap: 5px; }\r\n.vms-dialog-field > span { font-size: 9.5px; color: var(--vms-ink4); }\r\n.vms-dialog-hint { font-size: 9px; color: var(--vms-ink4); line-height: 1.45; }\r\n.vms-dialog-text { margin: 0; font-size: 11px; line-height: 1.55; color: var(--vms-ink2); }\r\n.vms-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }\r\n.vms-primary-btn.is-danger { background: var(--vms-danger); color: #fff; }\r\n\r\n/* Document / PDF preview. */\r\n.vms-sheet-stage.is-pdf { background: #202124; }\r\n.vms-pdf-frame { width: 100%; height: 100%; border: 0; background: #fff; }\r\n.vms-sheet-stage.is-text { background: var(--vms-bg); }\r\n.vms-text-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\r\n.vms-text-content {\r\n  flex: 1; min-height: 0; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre;\r\n  font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6;\r\n  color: var(--vms-ink); background: var(--vms-bg); tab-size: 2;\r\n}\r\n.vms-preview-note { flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 9.5px; color: var(--vms-ink3); background: var(--vms-layer2); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-stage.is-text > .vms-preview-note:only-child { margin: auto; border: 0; background: transparent; }\r\n.vms-generic-preview { margin: auto; display: grid; justify-items: center; gap: 9px; padding: 32px; text-align: center; color: var(--vms-ink2); }\r\n.vms-generic-glyph { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink3); }\r\n.vms-generic-preview b { font-size: 14px; font-weight: 550; }\r\n.vms-generic-preview p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); }\r\n.vms-generic-preview small { font-size: 9.5px; color: var(--vms-ink4); }\r\n';
 
 // src/client/library.js
-var import_react5 = __toESM(require("react"), 1);
+var import_react6 = __toESM(require("react"), 1);
 
 // node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
 var React = __toESM(require("react"), 1);
@@ -3875,11 +4096,92 @@ var LIBRARY_KIND = "media";
 var VIDEO_EXT = /* @__PURE__ */ new Set(["mp4", "m4v", "mov", "webm", "ogv", "mkv", "avi", "wmv", "flv"]);
 var AUDIO_EXT = /* @__PURE__ */ new Set(["mp3", "wav", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif"]);
 var IMAGE_EXT = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "ico", "svg", "tif", "tiff"]);
-var TYPE_LABEL = { all: "\u5168\u90E8", video: "\u89C6\u9891", image: "\u56FE\u7247", audio: "\u97F3\u9891", link: "\u94FE\u63A5" };
-var TYPE_ORDER = { video: 0, image: 1, audio: 2, link: 3 };
+var TEXT_EXT = /* @__PURE__ */ new Set([
+  "txt",
+  "md",
+  "markdown",
+  "log",
+  "csv",
+  "tsv",
+  "rtf",
+  "tex",
+  "js",
+  "mjs",
+  "cjs",
+  "ts",
+  "tsx",
+  "jsx",
+  "json",
+  "jsonc",
+  "yaml",
+  "yml",
+  "toml",
+  "xml",
+  "html",
+  "htm",
+  "css",
+  "scss",
+  "less",
+  "py",
+  "rb",
+  "go",
+  "rs",
+  "java",
+  "kt",
+  "swift",
+  "c",
+  "h",
+  "cc",
+  "cpp",
+  "hpp",
+  "cs",
+  "php",
+  "lua",
+  "sh",
+  "bash",
+  "zsh",
+  "ps1",
+  "bat",
+  "cmd",
+  "sql",
+  "vue",
+  "svelte",
+  "astro",
+  "ini",
+  "conf",
+  "env",
+  "gitignore",
+  "dockerfile",
+  "makefile"
+]);
+var TYPE_LABEL = {
+  all: "\u5168\u90E8",
+  image: "\u56FE\u7247",
+  video: "\u89C6\u9891",
+  audio: "\u97F3\u9891",
+  document: "\u6587\u6863",
+  archive: "\u538B\u7F29\u5305",
+  code: "\u4EE3\u7801",
+  other: "\u5176\u4ED6",
+  link: "\u94FE\u63A5"
+};
+var TYPE_ORDER = {
+  image: 0,
+  video: 1,
+  audio: 2,
+  document: 3,
+  archive: 4,
+  code: 5,
+  other: 6,
+  link: 7
+};
+var TYPE_CHIPS = ["image", "video", "audio", "document", "archive", "code", "other", "link"];
 var COLLATOR = new Intl.Collator("zh-CN", { numeric: true, sensitivity: "base" });
 var DAY = 864e5;
 var PAGE_SIZE = 120;
+var CARD_MIN = 96;
+var CARD_MAX = 300;
+var CARD_DEFAULT = 158;
 var COVERS = [
   ["#1d3f5c", "#081520"],
   ["#4a2a12", "#160a05"],
@@ -3907,10 +4209,14 @@ function extensionOf(value) {
   return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
 }
 function kindOfExtension(extension) {
-  if (VIDEO_EXT.has(extension)) return "video";
-  if (IMAGE_EXT.has(extension)) return "image";
-  if (AUDIO_EXT.has(extension)) return "audio";
+  const ext = String(extension ?? "").toLowerCase();
+  if (VIDEO_EXT.has(ext)) return "video";
+  if (IMAGE_EXT.has(ext)) return "image";
+  if (AUDIO_EXT.has(ext)) return "audio";
   return void 0;
+}
+function isTextExtension(extension) {
+  return TEXT_EXT.has(String(extension ?? "").toLowerCase());
 }
 function mimeOfExtension(extension) {
   return MIME[String(extension).toLowerCase()] ?? "application/octet-stream";
@@ -3957,7 +4263,7 @@ function domainOf(item) {
   }
 }
 function typeLabel(kind) {
-  return TYPE_LABEL[kind] ?? "\u5A92\u4F53";
+  return TYPE_LABEL[kind] ?? "\u6587\u4EF6";
 }
 function coverOf(item, index) {
   const pair = COVERS[(index + String(item.id).length) % COVERS.length];
@@ -4009,8 +4315,36 @@ function apiUrl(path, params) {
 function localFileUrl(sessionId, path, version2) {
   return apiUrl("api/vyra-media/file", { sessionId, path, v: version2 });
 }
-function mediaSrc(sessionId, item) {
+function mediaSrc2(sessionId, item) {
   return item.source === "url" ? item.url : localFileUrl(sessionId, item.relativePath);
+}
+async function postJson(path, body, signal) {
+  const response = await fetch(apiUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+    signal
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = void 0;
+  }
+  if (!response.ok || data?.ok !== true) {
+    const code = data?.code ?? `http-${response.status}`;
+    const error = new Error(`${code}\uFF1A${data?.error ?? `HTTP ${response.status}`}`);
+    error.code = code;
+    error.canPermanent = data?.canPermanent === true;
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+function mentionToken(path) {
+  const slashed = String(path).trim().replace(/\\/gu, "/");
+  return /\s/u.test(slashed) ? `@"${slashed}" ` : `@${slashed} `;
 }
 function detectLinkKind(url) {
   try {
@@ -4062,18 +4396,57 @@ function writeLinks(root, links) {
   } catch {
   }
 }
-function compareItems(left, right, sort, dir) {
+var PREFS_KEY = "vyra-media-studio.prefs.v1";
+var PREF_DEFAULTS = {
+  view: "grid",
+  cardSize: CARD_DEFAULT,
+  detail: "compact",
+  sort: "name",
+  dir: "asc",
+  showHidden: false,
+  includeBuild: false
+};
+function readPrefs() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null");
+    if (parsed === null || typeof parsed !== "object") return { ...PREF_DEFAULTS };
+    const merged = { ...PREF_DEFAULTS, ...parsed };
+    return {
+      view: merged.view === "list" ? "list" : "grid",
+      cardSize: Number.isFinite(merged.cardSize) ? Math.min(CARD_MAX, Math.max(CARD_MIN, merged.cardSize)) : CARD_DEFAULT,
+      detail: merged.detail === "detailed" ? "detailed" : "compact",
+      sort: ["name", "time", "size", "type"].includes(merged.sort) ? merged.sort : "name",
+      dir: merged.dir === "desc" ? "desc" : "asc",
+      showHidden: merged.showHidden === true,
+      includeBuild: merged.includeBuild === true
+    };
+  } catch {
+    return { ...PREF_DEFAULTS };
+  }
+}
+function writePrefs(prefs) {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+  }
+}
+function compareItems(left, right, sort, dir, meta) {
   const factor = dir === "asc" ? 1 : -1;
+  const sizeOf = (item) => meta?.[item.id]?.size ?? item.size ?? -1;
+  const timeOf = (item) => meta?.[item.id]?.mtimeMs ?? item.mtimeMs ?? 0;
   let result = 0;
   if (sort === "name") result = COLLATOR.compare(left.title, right.title);
-  else if (sort === "size") result = (left.size ?? -1) - (right.size ?? -1);
+  else if (sort === "size") result = sizeOf(left) - sizeOf(right);
   else if (sort === "type") result = TYPE_ORDER[left.kind] - TYPE_ORDER[right.kind] || COLLATOR.compare(left.title, right.title);
-  else result = left.mtimeMs - right.mtimeMs;
+  else result = timeOf(left) - timeOf(right);
   if (result === 0) result = COLLATOR.compare(left.title, right.title);
   return result * factor;
 }
+function folderSegments(folder) {
+  return String(folder ?? "").split("/").filter(Boolean);
+}
 function slideFor(item, index, sessionId) {
-  const src = mediaSrc(sessionId, item);
+  const src = mediaSrc2(sessionId, item);
   if (item.kind === "image") {
     return {
       type: "image",
@@ -4111,32 +4484,46 @@ function slideFor(item, index, sessionId) {
 var import_react3 = __toESM(require("react"), 1);
 var ICONS = {
   alert: TriangleAlert,
+  app: AppWindow,
+  archive: FileArchive,
+  at: AtSign,
   audio: Music2,
   check: Check,
   chevron: ChevronDown,
+  chevronLeft: ChevronLeft,
+  chevronRight: ChevronRight,
+  clipboard: ClipboardCopy,
   close: X,
+  code: FileCode,
   copy: Copy,
+  document: FileText,
   download: Download,
   external: ExternalLink,
+  file: File,
   fileError: ImageOff,
   filter: SlidersHorizontal,
   fit: Scan,
   folder: Folder,
+  folderOpen: FolderOpen,
   full: Maximize,
   grid: LayoutGrid,
   image: Image,
+  info: Info,
   left: ArrowLeft,
   link: Link2,
   list: List,
   more: Ellipsis,
   mute: VolumeX,
   pause: Pause,
+  pencil: Pencil,
   pip: PictureInPicture2,
   play: Play,
   plus: Plus,
   refresh: RefreshCw,
+  reveal: MapPin,
   right: ArrowRight,
   search: Search,
+  sheet: FileSpreadsheet,
   trash: Trash2,
   video: Video,
   volume: Volume2,
@@ -4163,16 +4550,28 @@ function IconButton3({ name, label, onClick, active, disabled, className = "" })
     onClick
   }, import_react3.default.createElement(Icon2, { name }));
 }
+function kindIcon(kind, ext = "") {
+  if (kind === "archive") return "archive";
+  if (kind === "code") return "code";
+  if (kind === "document") {
+    if (["xls", "xlsx", "csv", "tsv", "ods"].includes(ext)) return "sheet";
+    return "document";
+  }
+  if (kind === "other") return "file";
+  return kind;
+}
 
 // src/client/components.js
 var h = import_react4.default.createElement;
-function MediaThumb({ item, sessionId, lazy = true }) {
-  const boxRef = (0, import_react4.useRef)(null);
+var TEXT_CACHE = /* @__PURE__ */ new Map();
+function useVisible(ref, lazy) {
   const [visible, setVisible] = (0, import_react4.useState)(!lazy);
-  const [failed, setFailed] = (0, import_react4.useState)(false);
   (0, import_react4.useEffect)(() => {
-    if (!lazy) return void 0;
-    const element = boxRef.current;
+    if (!lazy) {
+      setVisible(true);
+      return void 0;
+    }
+    const element = ref.current;
     if (element === null) return void 0;
     if (typeof IntersectionObserver === "undefined") {
       setVisible(true);
@@ -4186,11 +4585,82 @@ function MediaThumb({ item, sessionId, lazy = true }) {
     }, { rootMargin: "180px" });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [lazy, item.id]);
+  }, [lazy]);
+  return [visible, setVisible];
+}
+function useTextWindow(key, url, enabled) {
+  const cached = enabled ? TEXT_CACHE.get(key) : void 0;
+  const [state, setState] = (0, import_react4.useState)(cached ?? { loading: enabled, text: "", failed: false });
+  (0, import_react4.useEffect)(() => {
+    const hit = TEXT_CACHE.get(key);
+    if (hit !== void 0) {
+      setState(hit);
+      return void 0;
+    }
+    if (!enabled) return void 0;
+    const controller = new AbortController();
+    setState({ loading: true, text: "", failed: false });
+    fetch(url, { signal: controller.signal, credentials: "same-origin" }).then(async (response) => {
+      let body;
+      try {
+        body = await response.json();
+      } catch {
+        body = void 0;
+      }
+      if (!response.ok || body?.ok !== true) throw new Error(body?.error ?? `HTTP ${response.status}`);
+      return body;
+    }).then((body) => {
+      const entry = { loading: false, text: body.text ?? "", truncated: body.truncated === true, failed: false };
+      TEXT_CACHE.set(key, entry);
+      setState(entry);
+    }).catch((error) => {
+      if (error?.name === "AbortError") return;
+      const entry = { loading: false, text: "", truncated: false, failed: true };
+      TEXT_CACHE.set(key, entry);
+      setState(entry);
+    });
+    return () => controller.abort();
+  }, [key, url, enabled]);
+  return state;
+}
+function TextDocThumb({ item, sessionId }) {
+  const boxRef = (0, import_react4.useRef)(null);
+  const [visible] = useVisible(boxRef, true);
+  const key = `snippet:${sessionId}:${item.relativePath}`;
+  const url = apiUrl("api/vyra-media/text", { sessionId, path: item.relativePath, maxBytes: 600 });
+  const state = useTextWindow(key, url, visible);
+  const lines = state.text ? state.text.split("\n").slice(0, 7).map((line) => line.slice(0, 90)) : [];
+  return h(
+    "div",
+    { ref: boxRef, className: "vms-doc-poster is-text", style: coverOf(item, 0) },
+    lines.length > 0 ? h("div", { className: "vms-doc-snippet" }, lines.join("\n")) : h("div", { className: "vms-doc-snippet is-empty" }, state.loading ? "\u8BFB\u53D6\u4E2D\u2026" : "\u6587\u672C\u6587\u4EF6"),
+    h(
+      "div",
+      { className: "vms-doc-foot" },
+      h("span", { className: "vms-doc-glyph" }, h(Icon2, { name: "document", size: 13 })),
+      h("span", { className: "vms-doc-ext" }, item.ext.toUpperCase() || "TXT")
+    )
+  );
+}
+function DocPoster({ item }) {
+  const icon = kindIcon(item.kind, item.ext);
+  return h(
+    "div",
+    { className: "vms-doc-poster", "data-kind": item.kind, style: coverOf(item, 0) },
+    h("div", { className: "vms-doc-fold" }),
+    h("span", { className: "vms-doc-glyph is-large" }, h(Icon2, { name: icon, size: 24 })),
+    h("b", { className: "vms-doc-ext is-large" }, item.ext.toUpperCase() || "FILE"),
+    h("div", { className: "vms-doc-lines" }, h("i", null), h("i", null), h("i", null))
+  );
+}
+function MediaThumb({ item, sessionId, lazy = true }) {
+  const boxRef = (0, import_react4.useRef)(null);
+  const [visible] = useVisible(boxRef, lazy);
+  const [failed, setFailed] = (0, import_react4.useState)(false);
   if (item.kind === "image") {
-    return failed ? import_react4.default.createElement(VideoFallback, { item, icon: "fileError" }) : h("img", {
+    return failed ? h(VideoFallback, { item, icon: "fileError" }) : h("img", {
       className: "vms-poster",
-      src: mediaSrc(sessionId, item),
+      src: mediaSrc2(sessionId, item),
       alt: "",
       loading: "lazy",
       decoding: "async",
@@ -4204,7 +4674,7 @@ function MediaThumb({ item, sessionId, lazy = true }) {
       { ref: boxRef, className: "vms-thumb-box" },
       visible && h("video", {
         className: "vms-thumb-video",
-        src: mediaSrc(sessionId, item),
+        src: mediaSrc2(sessionId, item),
         preload: "metadata",
         muted: true,
         playsInline: true,
@@ -4221,14 +4691,16 @@ function MediaThumb({ item, sessionId, lazy = true }) {
     );
   }
   if (item.kind === "audio") return h(AudioPoster, { item });
-  return h(LinkPoster, { item });
+  if (item.kind === "link") return h(LinkPoster, { item });
+  if (item.kind === "document" && isTextExtension(item.ext)) return h(TextDocThumb, { item, sessionId });
+  return h(DocPoster, { item });
 }
 function VideoFallback({ item, icon = "video" }) {
   return h(
     "div",
     { className: "vms-video-fallback" },
     h(Icon2, { name: icon, size: 18 }),
-    h("span", null, item.kind === "link" ? domainOf(item) : item.ext.toUpperCase())
+    h("span", null, item.kind === "link" ? domainOf(item) : (item.ext || item.kind).toUpperCase())
   );
 }
 function AudioPoster({ item }) {
@@ -4274,16 +4746,17 @@ function KindBadge({ kind }) {
   );
 }
 function DurationBadge({ item }) {
-  if (item.kind === "video" || item.kind === "audio") {
-    return item.duration ? h("span", { className: "vms-duration" }, formatTime(item.duration)) : null;
+  if ((item.kind === "video" || item.kind === "audio") && item.duration) {
+    return h("span", { className: "vms-duration" }, formatTime(item.duration));
   }
   if (item.kind === "image") {
     return h("span", { className: "vms-duration" }, item.width && item.height ? `${item.width}\xD7${item.height}` : item.ext.toUpperCase());
   }
-  return h("span", { className: "vms-duration" }, "\u7F51\u9875");
+  if (item.kind === "link") return h("span", { className: "vms-duration" }, "\u7F51\u9875");
+  return h("span", { className: "vms-duration" }, item.ext.toUpperCase() || "FILE");
 }
 function InlineMedia({ item, sessionId, onExpand }) {
-  const src = mediaSrc(sessionId, item);
+  const src = mediaSrc2(sessionId, item);
   if (item.kind === "audio") {
     return h(
       "div",
@@ -4309,9 +4782,22 @@ function InlineMedia({ item, sessionId, onExpand }) {
     h("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h(Icon2, { name: "full", size: 12 }))
   );
 }
-function GridCard({ item, index, sessionId, active, onOpen, onInline }) {
+function MoreButton({ item, onMenu }) {
+  return h("button", {
+    type: "button",
+    className: "vms-mini-action",
+    title: "\u66F4\u591A\u64CD\u4F5C",
+    "aria-label": "\u66F4\u591A\u64CD\u4F5C",
+    onClick: (event) => {
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      onMenu(item, rect.left - 170, rect.bottom + 4);
+    }
+  }, h(Icon2, { name: "more", size: 12 }));
+}
+function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMenu }) {
   const canPlay = item.kind === "video" || item.kind === "audio";
-  const meta = `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${formatBytes(item.size)} \xB7 ${formatDate(item.mtimeMs)}`;
+  const detail = meta === void 0 ? `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)}` : `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)} \xB7 ${formatBytes(meta.size)}`;
   return h(
     "article",
     {
@@ -4320,6 +4806,10 @@ function GridCard({ item, index, sessionId, active, onOpen, onInline }) {
       "data-playing": active ? "" : void 0,
       "aria-label": `${item.title}\uFF0C${typeLabel(item.kind)}`,
       onClick: () => onOpen(item),
+      onContextMenu: (event) => {
+        event.preventDefault();
+        onMenu(item, event.clientX, event.clientY);
+      },
       onKeyDown: (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
@@ -4342,6 +4832,24 @@ function GridCard({ item, index, sessionId, active, onOpen, onInline }) {
           onInline(item);
         }
       }, h(Icon2, { name: "play", size: 17 })),
+      !canPlay && item.kind !== "link" && h("button", {
+        type: "button",
+        className: "vms-play-btn",
+        "aria-label": `\u67E5\u770B ${item.title}`,
+        onClick: (event) => {
+          event.stopPropagation();
+          onOpen(item);
+        }
+      }, h(Icon2, { name: "full", size: 17 })),
+      item.kind === "link" && h("button", {
+        type: "button",
+        className: "vms-play-btn",
+        "aria-label": "\u6253\u5F00\u94FE\u63A5",
+        onClick: (event) => {
+          event.stopPropagation();
+          onOpen(item);
+        }
+      }, h(Icon2, { name: "external", size: 17 })),
       h(
         "div",
         { className: "vms-card-actions" },
@@ -4352,37 +4860,36 @@ function GridCard({ item, index, sessionId, active, onOpen, onInline }) {
         h("button", { type: "button", className: "vms-mini-action", title: "\u653E\u5927\u67E5\u770B", "aria-label": "\u653E\u5927\u67E5\u770B", onClick: (event) => {
           event.stopPropagation();
           onOpen(item);
-        } }, h(Icon2, { name: item.kind === "link" ? "external" : "full", size: 12 }))
+        } }, h(Icon2, { name: item.kind === "link" ? "external" : "full", size: 12 })),
+        h(MoreButton, { item, onMenu })
       ),
-      active && canPlay && h(InlineMedia, { item, sessionId, onExpand: () => onOpen(item) }),
-      !active && item.kind === "link" && h("button", {
-        type: "button",
-        className: "vms-play-btn",
-        "aria-label": "\u6253\u5F00\u94FE\u63A5",
-        onClick: (event) => {
-          event.stopPropagation();
-          onOpen(item);
-        }
-      }, h(Icon2, { name: "external", size: 17 }))
+      active && canPlay && h(InlineMedia, { item, sessionId, onExpand: () => onOpen(item) })
     ),
     h(
       "div",
       { className: "vms-card-info" },
       h("h3", { title: item.title }, item.title),
-      h("p", null, meta),
+      h("p", null, detail),
       active && h("span", { className: "vms-playing-note" }, h("i", null), "\u6B63\u5728\u64AD\u653E")
     )
   );
 }
-function ListRow({ item, sessionId, onOpen, onPlay }) {
+function ListRow({ item, sessionId, detail = "compact", meta, onOpen, onMenu }) {
   const canPlay = item.kind === "video" || item.kind === "audio";
+  const detailed = detail === "detailed";
+  const shortType = canPlay ? formatTime(item.duration) : item.ext.toUpperCase() || typeLabel(item.kind);
   return h(
     "div",
     {
       className: "vms-row",
       tabIndex: 0,
       "data-kind": item.kind,
+      "data-detail": detailed ? "detailed" : "compact",
       onClick: () => onOpen(item),
+      onContextMenu: (event) => {
+        event.preventDefault();
+        onMenu(item, event.clientX, event.clientY);
+      },
       onKeyDown: (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -4394,27 +4901,363 @@ function ListRow({ item, sessionId, onOpen, onPlay }) {
       "div",
       { className: "vms-row-thumb" },
       h(MediaThumb, { item, sessionId, lazy: true }),
-      h("span", { className: "vms-row-duration" }, canPlay ? formatTime(item.duration) : typeLabel(item.kind))
+      h("span", { className: "vms-row-duration" }, shortType)
     ),
-    h("div", { className: "vms-row-main" }, h("b", null, item.title), h("small", null, folderOf(item) || "\u6839\u76EE\u5F55")),
-    h("div", { className: "vms-row-kind", "data-kind": item.kind }, h("i", null), typeLabel(item.kind)),
-    h("div", { className: "vms-row-meta" }, item.kind === "image" ? item.width && item.height ? `${item.width}\xD7${item.height}` : item.ext.toUpperCase() : item.kind === "link" ? domainOf(item) : formatTime(item.duration)),
-    h("div", { className: "vms-row-size" }, formatBytes(item.size)),
-    h("div", { className: "vms-row-time" }, formatDate(item.mtimeMs)),
+    h(
+      "div",
+      { className: "vms-row-main" },
+      h("b", null, item.title),
+      h("small", null, folderOf(item) || "\u6839\u76EE\u5F55")
+    ),
+    detailed && h("div", { className: "vms-row-time" }, formatDate(meta?.mtimeMs)),
+    detailed && h("div", { className: "vms-row-kind", "data-kind": item.kind }, h("i", null), typeLabel(item.kind)),
+    detailed && h("div", { className: "vms-row-size" }, formatBytes(meta?.size)),
     h("button", {
       type: "button",
       className: "vms-row-play",
-      title: canPlay ? "\u64AD\u653E" : "\u67E5\u770B",
+      title: "\u66F4\u591A\u64CD\u4F5C",
+      "aria-label": "\u66F4\u591A\u64CD\u4F5C",
       onClick: (event) => {
         event.stopPropagation();
-        if (canPlay) onPlay(item);
-        else onOpen(item);
+        const rect = event.currentTarget.getBoundingClientRect();
+        onMenu(item, rect.left - 170, rect.bottom + 4);
       }
-    }, h(Icon2, { name: canPlay ? "play" : item.kind === "link" ? "external" : "full", size: 12 }))
+    }, h(Icon2, { name: "more", size: 14 }))
+  );
+}
+function FileMenu({ state, actions, onSelect, onClose }) {
+  (0, import_react4.useEffect)(() => {
+    if (state === null) return void 0;
+    const onKey = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    const onPointer = (event) => {
+      const target = event.target;
+      if (typeof target?.closest === "function" && target.closest(".vms-menu") !== null) return;
+      onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer, true);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer, true);
+    };
+  }, [state, onClose]);
+  if (state === null) return null;
+  const width = 196;
+  const height = actions.length * 32 + 12;
+  const left = Math.max(8, Math.min(state.x, (typeof window === "undefined" ? 1200 : window.innerWidth) - width - 8));
+  const top = Math.max(8, Math.min(state.y, (typeof window === "undefined" ? 800 : window.innerHeight) - height - 8));
+  return h(
+    "div",
+    {
+      className: "vms-menu",
+      role: "menu",
+      style: { left: `${left}px`, top: `${top}px` },
+      onPointerDown: (event) => event.stopPropagation()
+    },
+    h("div", { className: "vms-menu-head" }, h(Icon2, { name: kindIcon(state.item.kind, state.item.ext), size: 13 }), h("b", null, state.item.title)),
+    actions.map((action) => h("button", {
+      key: action.key,
+      type: "button",
+      className: `vms-menu-item${action.danger ? " is-danger" : ""}`,
+      role: "menuitem",
+      onClick: () => {
+        onClose();
+        onSelect(action.key, state.item);
+      }
+    }, h(Icon2, { name: action.icon, size: 13 }), h("span", null, action.label)))
+  );
+}
+function Dialog({ title, children, onClose }) {
+  (0, import_react4.useEffect)(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return h(
+    "div",
+    { className: "vms-dialog-layer", role: "dialog", "aria-modal": "true", "aria-label": title },
+    h("div", { className: "vms-dialog-backdrop", onClick: onClose }),
+    h(
+      "div",
+      { className: "vms-dialog" },
+      h("div", { className: "vms-dialog-head" }, h("b", null, title), h("button", { type: "button", className: "vms-icon-btn", "aria-label": "\u5173\u95ED", onClick: onClose }, h(Icon2, { name: "close" }))),
+      children
+    )
+  );
+}
+function RenameDialog({ item, error, onClose, onSubmit }) {
+  const [value, setValue] = (0, import_react4.useState)(item.name);
+  const submit = (event) => {
+    event.preventDefault();
+    const next = value.trim();
+    if (next === "") return;
+    onSubmit(next);
+  };
+  return h(
+    Dialog,
+    { title: "\u91CD\u547D\u540D", onClose },
+    h(
+      "form",
+      { className: "vms-dialog-form", onSubmit: submit },
+      h(
+        "label",
+        { className: "vms-dialog-field" },
+        h("span", null, "\u65B0\u6587\u4EF6\u540D"),
+        h("input", { className: "vms-input", autoFocus: true, value, onChange: (event) => setValue(event.target.value) })
+      ),
+      error !== "" && h("p", { className: "vms-form-error" }, error),
+      h(
+        "div",
+        { className: "vms-dialog-actions" },
+        h("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h("button", { type: "submit", className: "vms-primary-btn" }, "\u4FDD\u5B58")
+      )
+    )
+  );
+}
+function CopyDialog({ item, folders, error, onClose, onSubmit }) {
+  const [folder, setFolder] = (0, import_react4.useState)(item.folder ?? "");
+  return h(
+    Dialog,
+    { title: "\u590D\u5236\u5230\u6587\u4EF6\u5939", onClose },
+    h(
+      "form",
+      { className: "vms-dialog-form", onSubmit: (event) => {
+        event.preventDefault();
+        onSubmit(folder);
+      } },
+      h(
+        "label",
+        { className: "vms-dialog-field" },
+        h("span", null, `\u590D\u5236\u300C${item.name}\u300D\u5230`),
+        h(
+          "select",
+          { className: "vms-input", value: folder, onChange: (event) => setFolder(event.target.value) },
+          h("option", { value: "" }, "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"),
+          folders.map((value) => h("option", { key: value, value }, value))
+        ),
+        h("small", { className: "vms-dialog-hint" }, "\u91CD\u540D\u65F6\u4F1A\u81EA\u52A8\u751F\u6210\u201C\u6587\u4EF6\u540D (2).\u6269\u5C55\u540D\u201D\u3002")
+      ),
+      error !== "" && h("p", { className: "vms-form-error" }, error),
+      h(
+        "div",
+        { className: "vms-dialog-actions" },
+        h("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h("button", { type: "submit", className: "vms-primary-btn" }, "\u590D\u5236")
+      )
+    )
+  );
+}
+function ConfirmDialog({ title, message, confirmLabel, danger, onClose, onConfirm }) {
+  return h(
+    Dialog,
+    { title, onClose },
+    h(
+      "div",
+      { className: "vms-dialog-form" },
+      h("p", { className: "vms-dialog-text" }, message),
+      h(
+        "div",
+        { className: "vms-dialog-actions" },
+        h("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h("button", { type: "button", className: `vms-primary-btn${danger ? " is-danger" : ""}`, onClick: onConfirm }, confirmLabel)
+      )
+    )
+  );
+}
+function TextDocument({ item, sessionId }) {
+  const key = `text:${sessionId}:${item.relativePath}`;
+  const url = apiUrl("api/vyra-media/text", { sessionId, path: item.relativePath, maxBytes: 1024 * 1024 });
+  const state = useTextWindow(key, url, true);
+  if (state.failed) {
+    return h("div", { className: "vms-preview-note" }, h(Icon2, { name: "alert", size: 17 }), "\u6587\u672C\u8BFB\u53D6\u5931\u8D25");
+  }
+  if (state.loading) return h("div", { className: "vms-preview-note" }, "\u8BFB\u53D6\u4E2D\u2026");
+  return h(
+    "div",
+    { className: "vms-text-view" },
+    state.truncated && h("div", { className: "vms-preview-note" }, "\u6587\u4EF6\u8F83\u5927\uFF0C\u53EA\u663E\u793A\u524D 1 MB\u3002"),
+    h("pre", { className: "vms-text-content" }, state.text || "\uFF08\u7A7A\u6587\u4EF6\uFF09")
+  );
+}
+function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, onMenu, onOpenItem }) {
+  const isPdf = item.ext === "pdf";
+  const isText = item.kind === "document" && isTextExtension(item.ext);
+  const src = mediaSrc2(sessionId, item);
+  const size = meta?.size ?? item.size;
+  return h(
+    "div",
+    { className: "vms-overlay", role: "dialog", "aria-modal": "true", "aria-label": item.title },
+    h("div", { className: "vms-overlay-backdrop", onClick: onClose }),
+    h(
+      "div",
+      { className: "vms-sheet" },
+      h(
+        "header",
+        { className: "vms-sheet-head" },
+        h(
+          "div",
+          { className: "vms-sheet-title" },
+          h("span", { className: "vms-kind-dot", "data-kind": item.kind }),
+          h("h2", null, item.title),
+          h(
+            "span",
+            { className: "vms-sheet-path" },
+            `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)} \xB7 ${formatBytes(size)}`
+          )
+        ),
+        h(
+          "div",
+          { className: "vms-sheet-actions" },
+          h("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", item) }, h(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
+          h("button", { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(item) }, h(Icon2, { name: "external", size: 13 }), "\u5728\u6807\u7B7E\u9875\u6253\u5F00"),
+          h("a", { className: "vms-icon-btn", href: src, download: item.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h(Icon2, { name: "download", size: 15 })),
+          h("button", {
+            type: "button",
+            className: "vms-icon-btn",
+            title: "\u66F4\u591A\u64CD\u4F5C",
+            "aria-label": "\u66F4\u591A\u64CD\u4F5C",
+            onClick: (event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onMenu(item, rect.left - 170, rect.bottom + 4);
+            }
+          }, h(Icon2, { name: "more", size: 15 })),
+          h("button", { type: "button", className: "vms-icon-btn", title: "\u5173\u95ED\u9884\u89C8", "aria-label": "\u5173\u95ED\u9884\u89C8", onClick: onClose }, h(Icon2, { name: "close", size: 15 }))
+        )
+      ),
+      h(
+        "div",
+        { className: `vms-sheet-stage${isPdf ? " is-pdf" : isText ? " is-text" : ""}` },
+        isPdf && h("iframe", { className: "vms-pdf-frame", src, title: item.title }),
+        isText && h(TextDocument, { item, sessionId }),
+        !isPdf && !isText && h(
+          "div",
+          { className: "vms-generic-preview" },
+          h("span", { className: "vms-generic-glyph" }, h(Icon2, { name: kindIcon(item.kind, item.ext), size: 44 })),
+          h("b", null, item.title),
+          h("p", null, `${typeLabel(item.kind)} \xB7 ${formatBytes(size)}`),
+          h("small", null, "\u8FD9\u79CD\u6587\u4EF6\u6D4F\u89C8\u5668\u65E0\u6CD5\u76F4\u63A5\u9884\u89C8\uFF0C\u8BF7\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00\u3002"),
+          h("button", { type: "button", className: "vms-primary-btn", onClick: () => onAction("open", item) }, h(Icon2, { name: "app", size: 13 }), "\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00")
+        )
+      )
+    )
+  );
+}
+function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenItem, onOpenBrowser, onRemoveLink, onAction, onMenu, Lightbox: Lightbox2, plugins }) {
+  const [currentIndex, setCurrentIndex] = (0, import_react4.useState)(initialIndex);
+  const current = items[currentIndex] ?? items[0];
+  const slides = import_react4.default.useMemo(() => items.map((item, index) => slideFor(item, index, sessionId)), [items, sessionId]);
+  (0, import_react4.useEffect)(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  if (current === void 0) return null;
+  const src = mediaSrc2(sessionId, current);
+  const size = meta?.[current.id]?.size ?? current.size;
+  return h(
+    "div",
+    { className: "vms-overlay", role: "dialog", "aria-modal": "true", "aria-label": current.title },
+    h("div", { className: "vms-overlay-backdrop", onClick: onClose }),
+    h(
+      "div",
+      { className: "vms-sheet" },
+      h(
+        "header",
+        { className: "vms-sheet-head" },
+        h(
+          "div",
+          { className: "vms-sheet-title" },
+          h("span", { className: "vms-kind-dot", "data-kind": current.kind }),
+          h("h2", null, current.title),
+          h("span", { className: "vms-sheet-path" }, `${folderOf(current) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(current.kind)} \xB7 ${formatBytes(size)}`)
+        ),
+        h(
+          "div",
+          { className: "vms-sheet-actions" },
+          current.source === "url" && h("button", { type: "button", className: "vms-icon-btn", title: "\u79FB\u9664\u94FE\u63A5", "aria-label": "\u79FB\u9664\u94FE\u63A5", onClick: () => onRemoveLink(current) }, h(Icon2, { name: "trash", size: 15 })),
+          current.source !== "url" && h("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", current) }, h(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
+          h(
+            "button",
+            { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(current) },
+            h(Icon2, { name: current.kind === "link" || current.source === "url" ? "external" : "full", size: 12 }),
+            h("span", null, current.kind === "link" ? "\u5728\u6D4F\u89C8\u5668\u6253\u5F00" : current.source === "url" ? "\u65B0\u7A97\u53E3\u64AD\u653E" : "\u5728\u6807\u7B7E\u9875\u6253\u5F00")
+          ),
+          current.kind !== "link" && h("a", { className: "vms-icon-btn", href: src, download: current.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h(Icon2, { name: "download", size: 15 })),
+          h("button", {
+            type: "button",
+            className: "vms-icon-btn",
+            title: "\u66F4\u591A\u64CD\u4F5C",
+            "aria-label": "\u66F4\u591A\u64CD\u4F5C",
+            onClick: (event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onMenu(current, rect.left - 170, rect.bottom + 4);
+            }
+          }, h(Icon2, { name: "more", size: 15 })),
+          h("button", { type: "button", className: "vms-icon-btn", title: "\u5173\u95ED\u9884\u89C8", "aria-label": "\u5173\u95ED\u9884\u89C8", onClick: onClose }, h(Icon2, { name: "close", size: 15 }))
+        )
+      ),
+      h(
+        "div",
+        { className: "vms-lightbox-stage" },
+        h(Lightbox2, {
+          open: true,
+          index: initialIndex,
+          close: () => {
+          },
+          slides,
+          plugins,
+          on: { view: ({ index }) => setCurrentIndex(index) },
+          inline: { className: "vms-lightbox" },
+          carousel: { finite: true, padding: 0 },
+          animation: { swipe: 260, navigation: 260 },
+          controller: { aria: true, touchAction: "pan-y" },
+          zoom: { maxZoomPixelRatio: 3, scrollToZoom: true },
+          video: { controls: true, playsInline: true, autoPlay: true },
+          thumbnails: {
+            position: "bottom",
+            width: 58,
+            height: 34,
+            border: 0,
+            borderRadius: 6,
+            gap: 5,
+            padding: 0,
+            imageFit: "cover",
+            vignette: false,
+            hidden: false,
+            showToggle: false
+          },
+          render: { slide: lightboxRenderSlide(onOpenBrowser), thumbnail: renderLightboxThumbnail },
+          labels: {
+            Close: "\u5173\u95ED",
+            Next: "\u4E0B\u4E00\u4E2A",
+            Previous: "\u4E0A\u4E00\u4E2A",
+            "Zoom in": "\u653E\u5927",
+            "Zoom out": "\u7F29\u5C0F",
+            "Enter fullscreen": "\u5168\u5C4F",
+            "Exit fullscreen": "\u9000\u51FA\u5168\u5C4F",
+            "Show thumbnails": "\u663E\u793A\u7F29\u7565\u56FE",
+            "Hide thumbnails": "\u9690\u85CF\u7F29\u7565\u56FE"
+          }
+        })
+      )
+    )
   );
 }
 function NativeMedia({ item, sessionId, visible = true }) {
-  const src = mediaSrc(sessionId, item);
+  const src = mediaSrc2(sessionId, item);
   const videoRef = (0, import_react4.useRef)(null);
   const [failed, setFailed] = (0, import_react4.useState)(false);
   const [failure, setFailure] = (0, import_react4.useState)(null);
@@ -4580,13 +5423,42 @@ function renderLightboxThumbnail({ slide }) {
   return void 0;
 }
 
+// src/client/composer.js
+var import_react5 = require("react");
+var composers = /* @__PURE__ */ new Map();
+function attachComposer(sessionId, actions) {
+  composers = new Map(composers).set(sessionId, actions);
+  return () => {
+    if (composers.get(sessionId) !== actions) return;
+    composers = new Map([...composers].filter(([id]) => id !== sessionId));
+  };
+}
+function insertComposerText(sessionId, text) {
+  const composer = composers.get(sessionId);
+  if (composer === void 0) throw new Error("\u5F53\u524D\u4F1A\u8BDD\u7684\u8F93\u5165\u6846\u6CA1\u6709\u6253\u5F00");
+  if (!composer.insertText(text, composer.captureInsertion())) throw new Error("\u8F93\u5165\u6846\u6682\u65F6\u4E0D\u63A5\u53D7\u8F93\u5165");
+  return true;
+}
+function ComposerBridge(props) {
+  const { sessionId, inputActions } = props;
+  (0, import_react5.useEffect)(() => attachComposer(sessionId, inputActions), [sessionId, inputActions]);
+  return null;
+}
+
 // src/client/library.js
-var h2 = import_react5.default.createElement;
+var h2 = import_react6.default.createElement;
 var LIGHTBOX_PLUGINS = [Inline, Video2, Zoom, Thumbnails, Counter, Fullscreen];
+var INITIAL_PREFS = readPrefs();
+var MEDIA_KINDS = /* @__PURE__ */ new Set(["image", "video", "audio", "link"]);
+function chunks(values, size) {
+  const output = [];
+  for (let index = 0; index < values.length; index += size) output.push(values.slice(index, index + size));
+  return output;
+}
 function AddLinkForm({ onSubmit, onClose }) {
-  const [url, setUrl] = (0, import_react5.useState)("");
-  const [title, setTitle] = (0, import_react5.useState)("");
-  const [error, setError] = (0, import_react5.useState)("");
+  const [url, setUrl] = (0, import_react6.useState)("");
+  const [title, setTitle] = (0, import_react6.useState)("");
+  const [error, setError] = (0, import_react6.useState)("");
   return h2(
     "form",
     {
@@ -4617,127 +5489,96 @@ function AddLinkForm({ onSubmit, onClose }) {
     )
   );
 }
-function MediaOverlay({ items, initialIndex, sessionId, onClose, onOpenItem, onOpenBrowser, onRemoveLink }) {
-  const [currentIndex, setCurrentIndex] = (0, import_react5.useState)(initialIndex);
-  const current = items[currentIndex] ?? items[0];
-  const slides = (0, import_react5.useMemo)(() => items.map((item, index) => slideFor(item, index, sessionId)), [items, sessionId]);
-  const renderSlide = (0, import_react5.useMemo)(() => lightboxRenderSlide(onOpenBrowser), [onOpenBrowser]);
-  (0, import_react5.useEffect)(() => {
-    const onKey = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  if (current === void 0) return null;
-  const src = mediaSrc(sessionId, current);
-  return h2(
-    "div",
-    { className: "vms-overlay", role: "dialog", "aria-modal": "true", "aria-label": current.title },
-    h2("div", { className: "vms-overlay-backdrop", onClick: onClose }),
-    h2(
-      "div",
-      { className: "vms-sheet" },
-      h2(
-        "header",
-        { className: "vms-sheet-head" },
-        h2(
-          "div",
-          { className: "vms-sheet-title" },
-          h2("span", { className: "vms-kind-dot", "data-kind": current.kind }),
-          h2("h2", null, current.title),
-          h2("span", { className: "vms-sheet-path" }, `${folderOf(current) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(current.kind)} \xB7 ${formatBytes(current.size)}`)
-        ),
-        h2(
-          "div",
-          { className: "vms-sheet-actions" },
-          current.source === "url" && h2(IconButton3, { name: "trash", label: "\u79FB\u9664\u94FE\u63A5", onClick: () => onRemoveLink(current) }),
-          h2(
-            "button",
-            { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(current) },
-            h2(Icon2, { name: current.kind === "link" || current.source === "url" ? "external" : "full", size: 12 }),
-            h2("span", null, current.kind === "link" ? "\u5728\u6D4F\u89C8\u5668\u6253\u5F00" : current.source === "url" ? "\u65B0\u7A97\u53E3\u64AD\u653E" : "\u5728\u6807\u7B7E\u9875\u6253\u5F00")
-          ),
-          current.kind !== "link" && h2("a", { className: "vms-icon-btn", href: src, download: current.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h2(Icon2, { name: "download", size: 15 })),
-          h2(IconButton3, { name: "close", label: "\u5173\u95ED\u9884\u89C8", onClick: onClose })
-        )
-      ),
-      h2(
-        "div",
-        { className: "vms-lightbox-stage" },
-        h2(Lightbox, {
-          open: true,
-          index: initialIndex,
-          close: () => {
-          },
-          slides,
-          plugins: LIGHTBOX_PLUGINS,
-          on: { view: ({ index }) => setCurrentIndex(index) },
-          inline: { className: "vms-lightbox" },
-          carousel: { finite: true, padding: 0 },
-          animation: { swipe: 260, navigation: 260 },
-          controller: { aria: true, touchAction: "pan-y" },
-          zoom: { maxZoomPixelRatio: 3, scrollToZoom: true },
-          video: { controls: true, playsInline: true, autoPlay: true },
-          thumbnails: {
-            position: "bottom",
-            width: 58,
-            height: 34,
-            border: 0,
-            borderRadius: 6,
-            gap: 5,
-            padding: 0,
-            imageFit: "cover",
-            vignette: false,
-            hidden: false,
-            showToggle: false
-          },
-          render: { slide: renderSlide, thumbnail: renderLightboxThumbnail },
-          labels: {
-            Close: "\u5173\u95ED",
-            Next: "\u4E0B\u4E00\u4E2A",
-            Previous: "\u4E0A\u4E00\u4E2A",
-            "Zoom in": "\u653E\u5927",
-            "Zoom out": "\u7F29\u5C0F",
-            "Enter fullscreen": "\u5168\u5C4F",
-            "Exit fullscreen": "\u9000\u51FA\u5168\u5C4F",
-            "Show thumbnails": "\u663E\u793A\u7F29\u7565\u56FE",
-            "Hide thumbnails": "\u9690\u85CF\u7F29\u7565\u56FE"
-          }
-        })
-      )
-    )
-  );
+function libraryMenuActions(item) {
+  const actions = menuActions(item);
+  if (item.source === "url" || item.kind === "link") return actions;
+  const index = actions.findIndex((action) => action.key === "reveal");
+  return [
+    ...actions.slice(0, index),
+    { key: "locate", label: "\u5B9A\u4F4D\u5230\u6587\u4EF6\u5939", icon: "folder" },
+    ...actions.slice(index)
+  ];
+}
+function menuActions(item) {
+  if (item.source === "url" || item.kind === "link") {
+    return [
+      { key: "preview", label: "\u9884\u89C8 / \u6253\u5F00", icon: "full" },
+      { key: "copyLink", label: "\u590D\u5236\u94FE\u63A5", icon: "clipboard" },
+      { key: "openLink", label: "\u5728\u6D4F\u89C8\u5668\u6253\u5F00", icon: "external" },
+      { key: "removeLink", label: "\u79FB\u9664\u94FE\u63A5", icon: "trash", danger: true }
+    ];
+  }
+  return [
+    { key: "preview", label: "\u9884\u89C8 / \u64AD\u653E", icon: "full" },
+    { key: "insert", label: "\u5F15\u7528\u5230\u8F93\u5165\u6846", icon: "at" },
+    { key: "copyTo", label: "\u590D\u5236\u5230\u2026", icon: "copy" },
+    { key: "copyPath", label: "\u590D\u5236\u6587\u4EF6\u5730\u5740", icon: "clipboard" },
+    { key: "rename", label: "\u91CD\u547D\u540D", icon: "pencil" },
+    { key: "reveal", label: "\u6253\u5F00\u6240\u5728\u4F4D\u7F6E", icon: "reveal" },
+    { key: "open", label: "\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00", icon: "app" },
+    { key: "delete", label: "\u5220\u9664", icon: "trash", danger: true }
+  ];
 }
 function LibraryBody(props) {
   const { sessionId, useTabInfo, openBrowser } = props;
   const { tab } = useTabInfo();
-  const [reloadKey, setReloadKey] = (0, import_react5.useState)(0);
-  const [state, setState] = (0, import_react5.useState)({ items: [], root: "", loading: true, error: null, scan: null });
-  const [links, setLinks] = (0, import_react5.useState)([]);
-  const [view, setView] = (0, import_react5.useState)("grid");
-  const [query, setQuery] = (0, import_react5.useState)("");
-  const [types, setTypes] = (0, import_react5.useState)([]);
-  const [folder, setFolder] = (0, import_react5.useState)("");
-  const [time, setTime] = (0, import_react5.useState)("all");
-  const [size, setSize] = (0, import_react5.useState)("all");
-  const [sort, setSort] = (0, import_react5.useState)("time");
-  const [dir, setDir] = (0, import_react5.useState)("desc");
-  const [filterOpen, setFilterOpen] = (0, import_react5.useState)(false);
-  const [inlineId, setInlineId] = (0, import_react5.useState)(null);
-  const [overlayId, setOverlayId] = (0, import_react5.useState)(null);
-  const [addOpen, setAddOpen] = (0, import_react5.useState)(false);
-  const [limit, setLimit] = (0, import_react5.useState)(PAGE_SIZE);
-  const [notice, setNotice] = (0, import_react5.useState)("");
-  const [diagnostic, setDiagnostic] = (0, import_react5.useState)(null);
-  (0, import_react5.useEffect)(() => {
+  const [reloadKey, setReloadKey] = (0, import_react6.useState)(0);
+  const forceRefresh = (0, import_react6.useRef)(false);
+  const [state, setState] = (0, import_react6.useState)({ items: [], root: "", loading: true, error: null, scan: null });
+  const [links, setLinks] = (0, import_react6.useState)([]);
+  const [view, setView] = (0, import_react6.useState)(INITIAL_PREFS.view);
+  const [cardSize, setCardSize] = (0, import_react6.useState)(INITIAL_PREFS.cardSize);
+  const [detail, setDetail] = (0, import_react6.useState)(INITIAL_PREFS.detail);
+  const [query, setQuery] = (0, import_react6.useState)("");
+  const [types, setTypes] = (0, import_react6.useState)([]);
+  const [folder, setFolder] = (0, import_react6.useState)("");
+  const [time, setTime] = (0, import_react6.useState)("all");
+  const [size, setSize] = (0, import_react6.useState)("all");
+  const [sort, setSort] = (0, import_react6.useState)(INITIAL_PREFS.sort);
+  const [dir, setDir] = (0, import_react6.useState)(INITIAL_PREFS.dir);
+  const [showHidden, setShowHidden] = (0, import_react6.useState)(INITIAL_PREFS.showHidden);
+  const [includeBuild, setIncludeBuild] = (0, import_react6.useState)(INITIAL_PREFS.includeBuild);
+  const [filterOpen, setFilterOpen] = (0, import_react6.useState)(false);
+  const [folderOpen, setFolderOpen] = (0, import_react6.useState)(false);
+  const [inlineId, setInlineId] = (0, import_react6.useState)(null);
+  const [overlayId, setOverlayId] = (0, import_react6.useState)(null);
+  const [addOpen, setAddOpen] = (0, import_react6.useState)(false);
+  const [limit, setLimit] = (0, import_react6.useState)(PAGE_SIZE);
+  const [notice, setNotice] = (0, import_react6.useState)("");
+  const [diagnostic, setDiagnostic] = (0, import_react6.useState)(null);
+  const [meta, setMeta] = (0, import_react6.useState)({});
+  const [metaLoading, setMetaLoading] = (0, import_react6.useState)(false);
+  const [menu, setMenu] = (0, import_react6.useState)(null);
+  const [renameDialog, setRenameDialog] = (0, import_react6.useState)(null);
+  const [copyDialog, setCopyDialog] = (0, import_react6.useState)(null);
+  const [deleteDialog, setDeleteDialog] = (0, import_react6.useState)(null);
+  const metaRef = (0, import_react6.useRef)({});
+  const pendingMeta = (0, import_react6.useRef)(/* @__PURE__ */ new Set());
+  const generation = (0, import_react6.useRef)(0);
+  (0, import_react6.useEffect)(
+    () => {
+      writePrefs({ view, cardSize, detail, sort, dir, showHidden, includeBuild });
+    },
+    [view, cardSize, detail, sort, dir, showHidden, includeBuild]
+  );
+  (0, import_react6.useEffect)(() => {
     const controller = new AbortController();
     let alive = true;
+    generation.current += 1;
+    const currentGeneration = generation.current;
     setState((previous) => ({ ...previous, loading: true, error: null }));
-    fetch(apiUrl("api/vyra-media/list", { sessionId }), { signal: controller.signal, credentials: "same-origin" }).then(async (response) => {
+    setMeta({});
+    metaRef.current = {};
+    pendingMeta.current.clear();
+    setMetaLoading(false);
+    const force = forceRefresh.current;
+    forceRefresh.current = false;
+    fetch(apiUrl("api/vyra-media/list", {
+      sessionId,
+      includeHidden: showHidden ? "1" : "",
+      includeBuild: includeBuild ? "1" : "",
+      refresh: force ? "1" : ""
+    }), { signal: controller.signal, credentials: "same-origin" }).then(async (response) => {
       let body;
       try {
         body = await response.json();
@@ -4751,21 +5592,17 @@ function LibraryBody(props) {
       }
       return body;
     }).then((body) => {
-      if (!alive) return;
-      const entries = body.entries.map((entry) => {
-        const slash = entry.relativePath.lastIndexOf("/");
-        return {
-          ...entry,
-          id: entry.relativePath,
-          folder: slash === -1 ? "" : entry.relativePath.slice(0, slash),
-          title: entry.name,
-          fileName: entry.name,
-          source: "local",
-          duration: 0,
-          width: 0,
-          height: 0
-        };
-      });
+      if (!alive || generation.current !== currentGeneration) return;
+      const entries = body.entries.map((entry) => ({
+        ...entry,
+        id: entry.relativePath,
+        title: entry.name,
+        fileName: entry.name,
+        source: "local",
+        duration: 0,
+        width: 0,
+        height: 0
+      }));
       setState({ items: entries, root: body.root, loading: false, error: null, scan: body });
     }).catch((error) => {
       if (!alive || controller.signal.aborted) return;
@@ -4775,11 +5612,11 @@ function LibraryBody(props) {
       alive = false;
       controller.abort();
     };
-  }, [sessionId, reloadKey]);
-  (0, import_react5.useEffect)(() => {
+  }, [sessionId, reloadKey, showHidden, includeBuild]);
+  (0, import_react6.useEffect)(() => {
     if (state.root !== "") setLinks(readLinks(state.root));
   }, [state.root]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (!state.error) {
       setDiagnostic(null);
       return void 0;
@@ -4789,24 +5626,84 @@ function LibraryBody(props) {
     });
     return () => controller.abort();
   }, [state.error, sessionId]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (notice === "") return void 0;
-    const timer = setTimeout(() => setNotice(""), 2e3);
+    const timer = setTimeout(() => setNotice(""), 2200);
     return () => clearTimeout(timer);
   }, [notice]);
+  (0, import_react6.useEffect)(() => {
+    if (view !== "grid") return void 0;
+    const element = gridRef.current;
+    if (element === null) return void 0;
+    const onWheel = (event) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      setCardSize((value) => Math.max(CARD_MIN, Math.min(CARD_MAX, value + (event.deltaY < 0 ? 16 : -16))));
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  }, [view]);
   const filterKey = JSON.stringify({ query, types, folder, time, size, sort, dir });
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     setInlineId(null);
     setLimit(PAGE_SIZE);
   }, [filterKey]);
-  const items = (0, import_react5.useMemo)(() => [...state.items, ...links], [state.items, links]);
-  const counts = (0, import_react5.useMemo)(() => {
-    const next = { video: 0, image: 0, audio: 0, link: 0 };
-    for (const item of items) next[item.kind] += 1;
+  const items = (0, import_react6.useMemo)(() => [...state.items, ...links], [state.items, links]);
+  const counts = (0, import_react6.useMemo)(() => {
+    const next = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 };
+    for (const item of items) next[item.kind] = (next[item.kind] ?? 0) + 1;
     return next;
   }, [items]);
-  const folders = (0, import_react5.useMemo)(() => [...new Set(items.map((item) => folderOf(item)).filter(Boolean))].sort(COLLATOR.compare), [items]);
-  const filtered = (0, import_react5.useMemo)(() => {
+  const folders = (0, import_react6.useMemo)(() => state.scan?.folders ?? [], [state.scan]);
+  const metaFor = (0, import_react6.useCallback)((item) => {
+    const values = meta[item.id];
+    if (values !== void 0) return values;
+    if (item.source === "url") return { size: item.size, mtimeMs: item.mtimeMs, absolutePath: void 0 };
+    return void 0;
+  }, [meta]);
+  const needAllMeta = time !== "all" || size !== "all" || sort === "time" || sort === "size";
+  const localPaths = (0, import_react6.useMemo)(() => state.items.map((item) => item.id), [state.items]);
+  const ensureMeta = (0, import_react6.useCallback)((paths) => {
+    const currentGeneration = generation.current;
+    const missing = [...new Set(paths)].filter((path) => metaRef.current[path] === void 0 && !pendingMeta.current.has(path));
+    if (missing.length === 0) return;
+    for (const path of missing) pendingMeta.current.add(path);
+    setMetaLoading(true);
+    const batches = chunks(missing, 150);
+    const results = [];
+    const worker = async () => {
+      while (batches.length > 0) {
+        const batch = batches.shift();
+        try {
+          results.push(await postJson("api/vyra-media/stat", { sessionId, paths: batch }));
+        } catch {
+        }
+      }
+    };
+    Promise.all([worker(), worker()]).then(() => {
+      if (generation.current !== currentGeneration) return;
+      const patch = {};
+      for (const result of results) {
+        for (const entry of result.entries ?? []) {
+          if (entry?.error !== void 0) continue;
+          patch[entry.path] = {
+            size: entry.size,
+            mtimeMs: entry.mtimeMs,
+            absolutePath: entry.absolutePath
+          };
+        }
+      }
+      metaRef.current = { ...metaRef.current, ...patch };
+      setMeta(metaRef.current);
+    }).finally(() => {
+      for (const path of missing) pendingMeta.current.delete(path);
+      if (generation.current === currentGeneration) setMetaLoading(false);
+    });
+  }, [sessionId]);
+  (0, import_react6.useEffect)(() => {
+    if (needAllMeta && localPaths.length > 0) ensureMeta(localPaths);
+  }, [needAllMeta, localPaths, ensureMeta]);
+  const filtered = (0, import_react6.useMemo)(() => {
     const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
@@ -4814,27 +5711,36 @@ function LibraryBody(props) {
     return items.filter((item) => {
       if (types.length > 0 && !types.includes(item.kind)) return false;
       if (folder !== "" && folderOf(item) !== folder) return false;
-      if (floor !== null && item.mtimeMs < floor) return false;
-      if (size !== "all") {
-        if (item.size === void 0) return false;
-        if (size === "small" && !(item.size < 1e7)) return false;
-        if (size === "medium" && !(item.size >= 1e7 && item.size <= 1e8)) return false;
-        if (size === "large" && !(item.size > 1e8)) return false;
+      const info = metaFor(item);
+      if (floor !== null && info?.mtimeMs !== void 0 && info.mtimeMs < floor) return false;
+      if (size !== "all" && info?.size !== void 0) {
+        if (size === "small" && !(info.size < 1e7)) return false;
+        if (size === "medium" && !(info.size >= 1e7 && info.size <= 1e8)) return false;
+        if (size === "large" && !(info.size > 1e8)) return false;
       }
       if (tokens.length > 0) {
-        const haystack = `${item.title} ${item.fileName} ${folderOf(item)} ${item.ext} ${item.url ?? ""}`.toLowerCase();
+        const haystack = `${item.title} ${item.fileName} ${folderOf(item)} ${item.ext} ${typeLabel(item.kind)} ${item.url ?? ""}`.toLowerCase();
         if (!tokens.every((token) => haystack.includes(token))) return false;
       }
       return true;
-    }).sort((left, right) => compareItems(left, right, sort, dir));
-  }, [items, query, types, folder, time, size, sort, dir]);
-  const shown = filtered.slice(0, limit);
-  const overlayItems = filtered.slice(0, Math.max(limit, PAGE_SIZE));
+    }).sort((left, right) => compareItems(left, right, sort, dir, meta));
+  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir]);
+  const shown = (0, import_react6.useMemo)(() => filtered.slice(0, limit), [filtered, limit]);
+  const visiblePaths = (0, import_react6.useMemo)(() => shown.filter((item) => item.source === "local").map((item) => item.id), [shown]);
+  (0, import_react6.useEffect)(() => {
+    if (!needAllMeta && visiblePaths.length > 0) ensureMeta(visiblePaths);
+  }, [needAllMeta, visiblePaths, ensureMeta]);
+  const overlayItems = (0, import_react6.useMemo)(() => filtered.slice(0, Math.max(limit, PAGE_SIZE)), [filtered, limit]);
   const overlayIdSafe = overlayId !== null && items.some((item) => item.id === overlayId) ? overlayId : null;
-  const overlayIndex = overlayIdSafe === null ? -1 : overlayItems.findIndex((item) => item.id === overlayIdSafe);
-  const overlayItem = overlayIdSafe === null ? void 0 : overlayItems[overlayIndex >= 0 ? overlayIndex : 0];
+  const overlayItem = overlayIdSafe === null ? void 0 : filtered.find((item) => item.id === overlayIdSafe);
   const activeFilterCount = types.length + (folder ? 1 : 0) + (time !== "all" ? 1 : 0) + (size !== "all" ? 1 : 0);
-  const totalSize = items.reduce((sum, item) => sum + (item.size ?? 0), 0);
+  const localItems = state.items;
+  const sizeReady = localItems.length > 0 && localItems.every((item) => meta[item.id]?.size !== void 0);
+  const totalSize = localItems.reduce((sum, item) => sum + (meta[item.id]?.size ?? 0), 0);
+  const refresh = () => {
+    forceRefresh.current = true;
+    setReloadKey((value) => value + 1);
+  };
   const openResource = (item) => {
     if (item.source === "local") {
       tab.actions.openResource(sessionFileAddress(sessionId, item.relativePath));
@@ -4873,8 +5779,136 @@ function LibraryBody(props) {
     setTime("all");
     setSize("all");
     setQuery("");
-    setSort("time");
-    setDir("desc");
+    setSort("name");
+    setDir("asc");
+  };
+  const sortBy = (key) => {
+    if (sort === key) setDir((value) => value === "asc" ? "desc" : "asc");
+    else {
+      setSort(key);
+      setDir("asc");
+    }
+  };
+  const insertReference = (item) => {
+    try {
+      insertComposerText(sessionId, mentionToken(item.relativePath));
+      setNotice("\u5DF2\u5F15\u7528\u5230\u8F93\u5165\u6846");
+    } catch (error) {
+      setNotice(error?.message ?? "\u5F15\u7528\u5931\u8D25");
+    }
+  };
+  const absolutePathOf = async (item) => {
+    const cached = metaRef.current[item.id]?.absolutePath;
+    if (cached !== void 0) return cached;
+    const result = await postJson("api/vyra-media/stat", { sessionId, paths: [item.id] });
+    const entry = result.entries?.find((value) => value.path === item.id);
+    if (entry?.absolutePath === void 0) throw new Error("\u627E\u4E0D\u5230\u6587\u4EF6\u5730\u5740");
+    const patch = { ...metaRef.current?.[item.id] ?? {}, ...entry };
+    metaRef.current = { ...metaRef.current, [item.id]: patch };
+    setMeta(metaRef.current);
+    return entry.absolutePath;
+  };
+  const copyAddress = async (item) => {
+    try {
+      const absolute = await absolutePathOf(item);
+      await navigator.clipboard.writeText(absolute);
+      setNotice("\u5DF2\u590D\u5236\u6587\u4EF6\u5730\u5740");
+    } catch (error) {
+      setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error?.message ?? error}`);
+    }
+  };
+  const runAction = async (key, item) => {
+    if (key === "preview") {
+      setOverlayId(item.id);
+      return;
+    }
+    if (key === "insert") {
+      insertReference(item);
+      return;
+    }
+    if (key === "copyPath") {
+      await copyAddress(item);
+      return;
+    }
+    if (key === "copyLink") {
+      try {
+        await navigator.clipboard.writeText(item.url);
+        setNotice("\u5DF2\u590D\u5236\u94FE\u63A5");
+      } catch {
+        setNotice("\u590D\u5236\u5931\u8D25");
+      }
+      return;
+    }
+    if (key === "copyTo") {
+      setCopyDialog({ item, error: "" });
+      return;
+    }
+    if (key === "rename") {
+      setRenameDialog({ item, error: "" });
+      return;
+    }
+    if (key === "delete") {
+      setDeleteDialog({ item, step: 0, error: "" });
+      return;
+    }
+    if (key === "removeLink") {
+      removeLink(item);
+      return;
+    }
+    if (key === "openLink") {
+      openBrowser(item.url);
+      return;
+    }
+    if (key === "reveal" || key === "open") {
+      try {
+        await postJson(`api/vyra-media/${key}`, { sessionId, path: item.relativePath });
+        setNotice(key === "reveal" ? "\u5DF2\u6253\u5F00\u6587\u4EF6\u6240\u5728\u4F4D\u7F6E" : "\u5DF2\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00");
+      } catch (error) {
+        setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error?.message ?? error}`);
+      }
+    }
+  };
+  const submitRename = async (name) => {
+    const item = renameDialog?.item;
+    if (item === void 0) return;
+    try {
+      await postJson("api/vyra-media/rename", { sessionId, path: item.relativePath, name });
+      setRenameDialog(null);
+      if (overlayIdSafe === item.id) setOverlayId(null);
+      setNotice("\u5DF2\u91CD\u547D\u540D");
+      refresh();
+    } catch (error) {
+      setRenameDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    }
+  };
+  const submitCopy = async (toFolder) => {
+    const item = copyDialog?.item;
+    if (item === void 0) return;
+    try {
+      const result = await postJson("api/vyra-media/copy", { sessionId, path: item.relativePath, toFolder });
+      setCopyDialog(null);
+      setNotice(`\u5DF2\u590D\u5236\u5230 ${result.relativePath}`);
+      refresh();
+    } catch (error) {
+      setCopyDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    }
+  };
+  const submitDelete = async (permanent) => {
+    const item = deleteDialog?.item;
+    if (item === void 0) return;
+    try {
+      const result = await postJson("api/vyra-media/delete", { sessionId, path: item.relativePath, permanent });
+      setDeleteDialog(null);
+      if (overlayIdSafe === item.id) setOverlayId(null);
+      setNotice(result.recycled ? "\u5DF2\u79FB\u5230\u56DE\u6536\u7AD9" : "\u5DF2\u6C38\u4E45\u5220\u9664");
+      refresh();
+    } catch (error) {
+      if (permanent !== true && error?.canPermanent === true) {
+        setDeleteDialog((previous) => previous === null ? previous : { ...previous, step: 1, error: error?.message ?? String(error) });
+        return;
+      }
+      setDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    }
   };
   const chips = [];
   for (const kind of types) chips.push({ key: `type:${kind}`, label: TYPE_LABEL[kind] });
@@ -4887,6 +5921,9 @@ function LibraryBody(props) {
     else if (key === "time") setTime("all");
     else if (key === "size") setSize("all");
   };
+  const segments = folderSegments(folder);
+  const mediaOverlayItems = (0, import_react6.useMemo)(() => overlayItems.filter((item) => MEDIA_KINDS.has(item.kind)), [overlayItems]);
+  const mediaOverlayIndex = overlayItem === void 0 ? 0 : Math.max(0, mediaOverlayItems.findIndex((item) => item.id === overlayItem.id));
   return h2(
     "div",
     { className: "vms-root" },
@@ -4899,22 +5936,22 @@ function LibraryBody(props) {
         h2(
           "div",
           { className: "vms-title" },
-          h2("h2", null, "\u5A92\u4F53\u5E93"),
+          h2("h2", null, "\u6587\u4EF6\u7BA1\u7406"),
           h2(
             "p",
             null,
-            h2("span", null, `${items.length} \u4E2A\u5A92\u4F53`),
+            h2("span", null, `${items.length} \u4E2A\u6587\u4EF6`),
             h2("span", null, "\xB7"),
             h2("span", null, `${folders.length} \u4E2A\u6587\u4EF6\u5939`),
             h2("span", null, "\xB7"),
-            h2("span", { className: "vms-mono" }, formatBytes(totalSize))
+            h2("span", { className: "vms-mono" }, sizeReady ? formatBytes(totalSize) : "\u2014")
           )
         ),
         h2(
           "div",
           { className: "vms-actions" },
           h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => setAddOpen((value) => !value) }, h2(Icon2, { name: "plus", size: 13 }), "\u94FE\u63A5"),
-          h2(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: () => setReloadKey((value) => value + 1) }),
+          h2(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: refresh }),
           h2(
             "div",
             { className: "vms-seg" },
@@ -4930,7 +5967,29 @@ function LibraryBody(props) {
           "label",
           { className: "vms-search" },
           h2(Icon2, { name: "search", size: 14 }),
-          h2("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u6587\u4EF6\u5939\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
+          h2("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
+        ),
+        view === "grid" && h2(
+          "div",
+          { className: "vms-zoom" },
+          h2(IconButton3, { name: "zoomOut", label: "\u7F29\u5C0F\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.max(CARD_MIN, value - 16)) }),
+          h2("input", {
+            type: "range",
+            min: CARD_MIN,
+            max: CARD_MAX,
+            step: 4,
+            value: cardSize,
+            "aria-label": "\u7F29\u7565\u56FE\u5927\u5C0F",
+            className: "vms-zoom-range",
+            onChange: (event) => setCardSize(Number(event.target.value))
+          }),
+          h2(IconButton3, { name: "zoomIn", label: "\u653E\u5927\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.min(CARD_MAX, value + 16)) })
+        ),
+        view === "list" && h2(
+          "div",
+          { className: "vms-seg vms-detail-seg" },
+          h2("button", { type: "button", className: `vms-seg-text${detail === "compact" ? " is-active" : ""}`, "aria-pressed": detail === "compact", onClick: () => setDetail("compact") }, "\u7B80\u6D01"),
+          h2("button", { type: "button", className: `vms-seg-text${detail === "detailed" ? " is-active" : ""}`, "aria-pressed": detail === "detailed", onClick: () => setDetail("detailed") }, "\u8BE6\u7EC6")
         ),
         h2(
           "button",
@@ -4950,13 +6009,57 @@ function LibraryBody(props) {
           "\u5168\u90E8",
           h2("b", null, items.length)
         ),
-        ["video", "image", "audio", "link"].map((kind) => h2("button", {
+        TYPE_CHIPS.map((kind) => h2("button", {
           key: kind,
           type: "button",
           "data-kind": kind,
           className: `vms-type-chip${types.includes(kind) ? " is-active" : ""}`,
           onClick: () => setTypes((previous) => previous.includes(kind) ? previous.filter((entry) => entry !== kind) : [...previous, kind])
-        }, h2(Icon2, { name: kind, size: 12 }), TYPE_LABEL[kind], h2("b", null, counts[kind])))
+        }, h2(Icon2, { name: kind === "other" ? "file" : kind, size: 12 }), TYPE_LABEL[kind], h2("b", null, counts[kind] ?? 0)))
+      ),
+      h2(
+        "div",
+        { className: "vms-folder-row" },
+        h2(
+          "div",
+          { className: "vms-crumb" },
+          h2("button", { type: "button", className: `vms-crumb-seg${folder === "" ? " is-active" : ""}`, onClick: () => setFolder("") }, "\u5168\u90E8\u6587\u4EF6\u5939"),
+          segments.map((segment, index) => h2(
+            import_react6.default.Fragment,
+            { key: `${segment}:${index}` },
+            h2(Icon2, { name: "chevronRight", size: 11, className: "vms-crumb-sep" }),
+            h2("button", {
+              type: "button",
+              className: `vms-crumb-seg${index === segments.length - 1 ? " is-active" : ""}`,
+              onClick: () => setFolder(segments.slice(0, index + 1).join("/"))
+            }, segment)
+          ))
+        ),
+        h2(
+          "button",
+          { type: "button", className: `vms-ghost-btn vms-folder-btn${folderOpen ? " is-open" : ""}`, "aria-expanded": folderOpen, onClick: () => setFolderOpen((value) => !value) },
+          h2(Icon2, { name: "folder", size: 13 }),
+          "\u6587\u4EF6\u5939",
+          h2(Icon2, { name: "chevron", size: 11 })
+        ),
+        folderOpen && h2(
+          "div",
+          { className: "vms-folder-pop" },
+          h2("button", { type: "button", className: `vms-folder-item${folder === "" ? " is-active" : ""}`, onClick: () => {
+            setFolder("");
+            setFolderOpen(false);
+          } }, "\u5168\u90E8\u6587\u4EF6\u5939"),
+          folders.map((value) => h2("button", {
+            key: value,
+            type: "button",
+            className: `vms-folder-item${folder === value ? " is-active" : ""}`,
+            style: { paddingLeft: `${10 + (value.split("/").length - 1) * 14}px` },
+            onClick: () => {
+              setFolder(value);
+              setFolderOpen(false);
+            }
+          }, h2(Icon2, { name: "folder", size: 11 }), value.split("/").pop()))
+        )
       ),
       filterOpen && h2(
         "div",
@@ -5005,8 +6108,8 @@ function LibraryBody(props) {
           h2(
             "select",
             { value: sort, onChange: (event) => setSort(event.target.value) },
-            h2("option", { value: "time" }, "\u6309\u65F6\u95F4"),
             h2("option", { value: "name" }, "\u6309\u540D\u79F0"),
+            h2("option", { value: "time" }, "\u6309\u65F6\u95F4"),
             h2("option", { value: "size" }, "\u6309\u5927\u5C0F"),
             h2("option", { value: "type" }, "\u6309\u7C7B\u578B")
           )
@@ -5017,6 +6120,8 @@ function LibraryBody(props) {
           h2("span", { className: "vms-mono" }, dir === "asc" ? "\u5347\u5E8F" : "\u964D\u5E8F"),
           h2(Icon2, { name: "chevron", size: 12 })
         ),
+        h2("label", { className: "vms-check" }, h2("input", { type: "checkbox", checked: showHidden, onChange: (event) => setShowHidden(event.target.checked) }), "\u663E\u793A\u9690\u85CF\u6587\u4EF6"),
+        h2("label", { className: "vms-check" }, h2("input", { type: "checkbox", checked: includeBuild, onChange: (event) => setIncludeBuild(event.target.checked) }), "\u5305\u542B\u4F9D\u8D56/\u6784\u5EFA\u76EE\u5F55\uFF08\u6162\uFF09"),
         h2("button", { type: "button", className: "vms-reset-btn", onClick: clearFilters }, "\u6E05\u9664\u5168\u90E8")
       ),
       chips.length > 0 && h2(
@@ -5044,34 +6149,53 @@ function LibraryBody(props) {
         "div",
         { className: "vms-empty" },
         h2("span", { className: "vms-empty-art" }, h2(Icon2, { name: "alert", size: 20 })),
-        h2("b", null, "\u5A92\u4F53\u5E93\u52A0\u8F7D\u5931\u8D25"),
+        h2("b", null, "\u6587\u4EF6\u5217\u8868\u52A0\u8F7D\u5931\u8D25"),
         h2("p", null, state.error),
         diagnostic !== null && h2("pre", { className: "vms-diagnostic" }, JSON.stringify(diagnostic, null, 2)),
-        h2("button", { type: "button", className: "vms-primary-btn", onClick: () => setReloadKey((value) => value + 1) }, "\u91CD\u8BD5")
+        h2("button", { type: "button", className: "vms-primary-btn", onClick: refresh }, "\u91CD\u8BD5")
       ),
       !state.loading && !state.error && filtered.length === 0 && h2(
         "div",
         { className: "vms-empty" },
         h2("span", { className: "vms-empty-art" }, h2(Icon2, { name: "search", size: 20 })),
-        h2("b", null, "\u6CA1\u6709\u5339\u914D\u7684\u5A92\u4F53"),
-        h2("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u5A92\u4F53\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
+        h2("b", null, "\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6"),
+        h2("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
         items.length > 0 && h2("button", { type: "button", className: "vms-primary-btn", onClick: clearFilters }, "\u6E05\u9664\u7B5B\u9009")
       ),
-      !state.error && filtered.length > 0 && (view === "grid" ? h2("div", { className: "vms-grid" }, shown.map((item, index) => h2(GridCard, {
+      !state.error && filtered.length > 0 && (view === "grid" ? h2("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item, index) => h2(GridCard, {
         key: item.id,
         item,
         index,
         sessionId,
+        meta: metaFor(item),
         active: inlineId === item.id,
         onOpen: (entry) => setOverlayId(entry.id),
-        onInline: (entry) => setInlineId((current) => current === entry.id ? null : entry.id)
-      }))) : h2("div", { className: "vms-rows" }, shown.map((item) => h2(ListRow, {
-        key: item.id,
-        item,
-        sessionId,
-        onOpen: (entry) => setOverlayId(entry.id),
-        onPlay: (entry) => setOverlayId(entry.id)
-      })))),
+        onInline: (entry) => setInlineId((current) => current === entry.id ? null : entry.id),
+        onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
+      }))) : h2(
+        "div",
+        { className: "vms-rows" },
+        detail === "detailed" && h2(
+          "div",
+          { className: "vms-list-head" },
+          h2("span", null, ""),
+          h2("button", { type: "button", className: sort === "name" ? "is-active" : "", onClick: () => sortBy("name") }, `\u540D\u79F0${sort === "name" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h2("button", { type: "button", className: sort === "time" ? "is-active" : "", onClick: () => sortBy("time") }, `\u4FEE\u6539\u65E5\u671F${sort === "time" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h2("button", { type: "button", className: sort === "type" ? "is-active" : "", onClick: () => sortBy("type") }, `\u7C7B\u578B${sort === "type" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h2("button", { type: "button", className: sort === "size" ? "is-active" : "", onClick: () => sortBy("size") }, `\u5927\u5C0F${sort === "size" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h2("span", null, "")
+        ),
+        shown.map((item) => h2(ListRow, {
+          key: item.id,
+          item,
+          sessionId,
+          detail,
+          meta: metaFor(item),
+          onOpen: (entry) => setOverlayId(entry.id),
+          onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
+        }))
+      )),
+      metaLoading && h2("div", { className: "vms-meta-banner" }, h2("i", null), "\u6B63\u5728\u8BFB\u53D6\u6587\u4EF6\u4FE1\u606F\u2026"),
       filtered.length > limit && h2(
         "div",
         { className: "vms-more" },
@@ -5081,18 +6205,58 @@ function LibraryBody(props) {
     h2(
       "footer",
       { className: "vms-status" },
-      h2("span", null, state.error ? "\u626B\u63CF\u5931\u8D25" : filtered.length === items.length ? `\u627E\u5230 ${items.length} \u4E2A\u5A92\u4F53 \xB7 \u626B\u63CF ${state.scan?.scannedDirectories ?? 0} \u4E2A\u76EE\u5F55` : `\u7B5B\u9009\u51FA ${filtered.length} / ${items.length} \u4E2A\u5A92\u4F53`),
-      h2("span", { className: "vms-status-right" }, h2("i", null), "\u672C\u5730\u5A92\u4F53")
+      h2("span", null, state.error ? "\u626B\u63CF\u5931\u8D25" : filtered.length === items.length ? `\u627E\u5230 ${items.length} \u4E2A\u6587\u4EF6 \xB7 \u626B\u63CF ${folders.length} \u4E2A\u6587\u4EF6\u5939${state.scan?.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u65AD" : ""}` : `\u7B5B\u9009\u51FA ${filtered.length} / ${items.length} \u4E2A\u6587\u4EF6`),
+      h2("span", { className: "vms-status-right" }, h2("i", null), "\u672C\u5730\u5DE5\u4F5C\u533A")
     ),
-    overlayItem !== void 0 && h2(MediaOverlay, {
-      items: overlayItems.length > 0 ? overlayItems : [overlayItem],
-      initialIndex: overlayIndex >= 0 ? overlayIndex : 0,
+    menu !== null && h2(FileMenu, {
+      state: menu,
+      actions: libraryMenuActions(menu.item),
+      onSelect: runAction,
+      onClose: () => setMenu(null)
+    }),
+    renameDialog !== null && h2(RenameDialog, {
+      item: renameDialog.item,
+      error: renameDialog.error,
+      onClose: () => setRenameDialog(null),
+      onSubmit: submitRename
+    }),
+    copyDialog !== null && h2(CopyDialog, {
+      item: copyDialog.item,
+      folders,
+      error: copyDialog.error,
+      onClose: () => setCopyDialog(null),
+      onSubmit: submitCopy
+    }),
+    deleteDialog !== null && h2(ConfirmDialog, {
+      title: deleteDialog.step === 0 ? "\u79FB\u5230\u56DE\u6536\u7AD9" : "\u6C38\u4E45\u5220\u9664",
+      message: deleteDialog.step === 0 ? `\u786E\u5B9A\u628A\u300C${deleteDialog.item.name}\u300D\u79FB\u5230\u7CFB\u7EDF\u56DE\u6536\u7AD9\u5417\uFF1F${deleteDialog.error !== "" ? `\uFF08\u4E0A\u6B21\u5931\u8D25\uFF1A${deleteDialog.error}\uFF09` : ""}` : `\u79FB\u5230\u56DE\u6536\u7AD9\u5931\u8D25\uFF1A${deleteDialog.error}\u3002\u6C38\u4E45\u5220\u9664\u540E\u5C06\u65E0\u6CD5\u6062\u590D\uFF0C\u786E\u5B9A\u7EE7\u7EED\u5417\uFF1F`,
+      confirmLabel: deleteDialog.step === 0 ? "\u79FB\u5230\u56DE\u6536\u7AD9" : "\u6C38\u4E45\u5220\u9664",
+      danger: deleteDialog.step === 1,
+      onClose: () => setDeleteDialog(null),
+      onConfirm: () => submitDelete(deleteDialog.step === 1)
+    }),
+    overlayItem !== void 0 && (MEDIA_KINDS.has(overlayItem.kind) ? h2(MediaOverlay, {
+      items: mediaOverlayItems.length > 0 ? mediaOverlayItems : [overlayItem],
+      initialIndex: mediaOverlayIndex,
       sessionId,
+      meta,
+      Lightbox,
+      plugins: LIGHTBOX_PLUGINS,
       onClose: () => setOverlayId(null),
       onOpenItem: handleOverlayTab,
       onOpenBrowser: openBrowser,
-      onRemoveLink: removeLink
-    }),
+      onRemoveLink: removeLink,
+      onAction: runAction,
+      onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
+    }) : h2(FilePreviewOverlay, {
+      item: overlayItem,
+      meta: metaFor(overlayItem),
+      sessionId,
+      onClose: () => setOverlayId(null),
+      onAction: runAction,
+      onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
+      onOpenItem: handleOverlayTab
+    })),
     notice !== "" && h2("div", { className: "vms-toast" }, h2(Icon2, { name: "check", size: 13 }), notice)
   );
 }
@@ -5100,6 +6264,15 @@ function MediaTab(props) {
   const { sessionId, useTabInfo, openLibrary } = props;
   const { tab } = useTabInfo();
   const parsed = parseFileAddress(tab.contentId);
+  const [notice, setNotice] = (0, import_react6.useState)("");
+  const [menu, setMenu] = (0, import_react6.useState)(null);
+  const [renameDialog, setRenameDialog] = (0, import_react6.useState)(null);
+  const [deleteDialog, setDeleteDialog] = (0, import_react6.useState)(null);
+  (0, import_react6.useEffect)(() => {
+    if (notice === "") return void 0;
+    const timer = setTimeout(() => setNotice(""), 2e3);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const kind = tab.kind === "audio" ? "audio" : "video";
   if (parsed === void 0) {
     return h2(
@@ -5126,6 +6299,72 @@ function MediaTab(props) {
     width: 0,
     height: 0
   };
+  const act = async (key) => {
+    if (key === "insert") {
+      try {
+        insertComposerText(sessionId, mentionToken(parsed.path));
+        setNotice("\u5DF2\u5F15\u7528\u5230\u8F93\u5165\u6846");
+      } catch (error) {
+        setNotice(error?.message ?? "\u5F15\u7528\u5931\u8D25");
+      }
+      return;
+    }
+    if (key === "copyPath") {
+      try {
+        const result = await postJson("api/vyra-media/stat", { sessionId, paths: [parsed.path] });
+        const entry = result.entries?.find((value) => value.path === parsed.path);
+        if (entry?.absolutePath === void 0) throw new Error("\u627E\u4E0D\u5230\u6587\u4EF6\u5730\u5740");
+        await navigator.clipboard.writeText(entry.absolutePath);
+        setNotice("\u5DF2\u590D\u5236\u6587\u4EF6\u5730\u5740");
+      } catch (error) {
+        setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error?.message ?? error}`);
+      }
+      return;
+    }
+    try {
+      await postJson(`api/vyra-media/${key}`, { sessionId, path: parsed.path });
+      setNotice(key === "reveal" ? "\u5DF2\u6253\u5F00\u6587\u4EF6\u6240\u5728\u4F4D\u7F6E" : "\u5DF2\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00");
+    } catch (error) {
+      setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error?.message ?? error}`);
+    }
+  };
+  const submitTabRename = async (nextName) => {
+    try {
+      await postJson("api/vyra-media/rename", { sessionId, path: parsed.path, name: nextName });
+      setRenameDialog(null);
+      setNotice("\u5DF2\u91CD\u547D\u540D\uFF0C\u91CD\u65B0\u6253\u5F00\u6807\u7B7E\u9875\u540E\u663E\u793A\u65B0\u540D\u79F0");
+    } catch (error) {
+      setRenameDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    }
+  };
+  const submitTabDelete = async (permanent) => {
+    try {
+      const result = await postJson("api/vyra-media/delete", { sessionId, path: parsed.path, permanent });
+      setDeleteDialog(null);
+      setNotice(result.recycled ? "\u5DF2\u79FB\u5230\u56DE\u6536\u7AD9" : "\u5DF2\u6C38\u4E45\u5220\u9664");
+    } catch (error) {
+      if (permanent !== true && error?.canPermanent === true) {
+        setDeleteDialog((previous) => previous === null ? previous : { ...previous, step: 1, error: error?.message ?? String(error) });
+        return;
+      }
+      setDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    }
+  };
+  const tabMenuAction = (key) => {
+    if (key === "insert") return act("insert");
+    if (key === "copyPath") return act("copyPath");
+    if (key === "reveal") return act("reveal");
+    if (key === "open") return act("open");
+    if (key === "rename") {
+      setRenameDialog({ item, error: "" });
+      return void 0;
+    }
+    if (key === "delete") {
+      setDeleteDialog({ item, step: 0, error: "" });
+      return void 0;
+    }
+    return void 0;
+  };
   return h2(
     "div",
     { className: "vms-root vms-media-tab" },
@@ -5142,7 +6381,10 @@ function MediaTab(props) {
       h2(
         "div",
         { className: "vms-media-tab-actions" },
-        h2("button", { type: "button", className: "vms-ghost-btn", onClick: openLibrary }, h2(Icon2, { name: "grid", size: 12 }), "\u5A92\u4F53\u5E93"),
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("insert") }, h2(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("reveal") }, h2(Icon2, { name: "reveal", size: 12 }), "\u6240\u5728\u4F4D\u7F6E"),
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("copyPath") }, h2(Icon2, { name: "clipboard", size: 12 }), "\u5730\u5740"),
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: openLibrary }, h2(Icon2, { name: "grid", size: 12 }), "\u6587\u4EF6\u7BA1\u7406"),
         h2("a", { className: "vms-icon-btn", href: mediaSrc(sessionId, item), download: name, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h2(Icon2, { name: "download", size: 15 }))
       )
     ),
@@ -5150,7 +6392,8 @@ function MediaTab(props) {
       "div",
       { className: "vms-media-tab-body" },
       h2(NativeMedia, { item, sessionId, visible: tab.visible })
-    )
+    ),
+    notice !== "" && h2("div", { className: "vms-toast" }, h2(Icon2, { name: "check", size: 13 }), notice)
   );
 }
 
@@ -5167,13 +6410,13 @@ function libraryDefinition() {
     id: LIBRARY_ID,
     kind: LIBRARY_KIND,
     priority: "extension",
-    title: () => "\u5A92\u4F53\u5E93",
+    title: () => "\u6587\u4EF6\u7BA1\u7406",
     guide: [{
       id: "library",
       order: 20,
-      title: () => "\u5A92\u4F53\u5E93",
-      description: () => "\u89C6\u9891\u3001\u56FE\u7247\u3001\u97F3\u9891\u4E0E\u5728\u7EBF\u76F4\u94FE",
-      icon: MonitorPlay
+      title: () => "\u6587\u4EF6\u7BA1\u7406",
+      description: () => "\u6D4F\u89C8\u3001\u9884\u89C8\u4E0E\u7BA1\u7406\u5DE5\u4F5C\u533A\u6587\u4EF6",
+      icon: FolderOpen
     }]
   };
 }
@@ -5229,6 +6472,10 @@ var plugin = {
       key: AUDIO_ID,
       inject: injectFace
     }, MediaTab)), "vyra-media-studio: audio body");
+    ctx.effect(() => ctx.slots.inject("conversation.input.left", () => ctx.slots.register({
+      name: "conversation.input.left",
+      id: "vyra-media-studio.composer-bridge"
+    }, ComposerBridge)), "vyra-media-studio: composer bridge");
   }
 };
 var entry_default = plugin;

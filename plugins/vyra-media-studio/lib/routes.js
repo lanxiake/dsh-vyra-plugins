@@ -6,13 +6,23 @@
  * and confines the result to that root. The bridge supplies authentication;
  * direct callers must still target a live browser Peer.
  */
-import { SCAN_DEFAULTS, scanMedia } from './scan.js'
+import { SCAN_DEFAULTS, invalidateScanCache, scanMediaCached } from './scan.js'
 import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
+import {
+  copyFileInto, deleteFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
+} from './file-ops.js'
 
 const LIST_PATH = '/api/vyra-media/list'
 const FILE_PATH = '/api/vyra-media/file'
 const DIAGNOSE_PATH = '/api/vyra-media/diagnose'
+const STAT_PATH = '/api/vyra-media/stat'
+const TEXT_PATH = '/api/vyra-media/text'
+const RENAME_PATH = '/api/vyra-media/rename'
+const COPY_PATH = '/api/vyra-media/copy'
+const DELETE_PATH = '/api/vyra-media/delete'
+const REVEAL_PATH = '/api/vyra-media/reveal'
+const OPEN_PATH = '/api/vyra-media/open'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -181,20 +191,27 @@ async function handleList(request, ctx) {
   }
 
   try {
-    const result = await scanMedia({
+    const includeHidden = ['1', 'true', 'yes'].includes((url.searchParams.get('includeHidden') ?? '').toLowerCase())
+    const includeBuild = ['1', 'true', 'yes'].includes((url.searchParams.get('includeBuild') ?? '').toLowerCase())
+    const options = {
       root: resolved.scanRoot,
       workspaceRoot: resolved.workspaceRoot,
-      maxEntries: integer(url.searchParams.get('maxEntries'), SCAN_DEFAULTS.maxEntries, 1, 10_000),
+      maxEntries: integer(url.searchParams.get('maxEntries'), SCAN_DEFAULTS.maxEntries, 1, 20_000),
       maxDepth: integer(url.searchParams.get('maxDepth'), SCAN_DEFAULTS.maxDepth, 0, 32),
       budgetMs: integer(url.searchParams.get('budgetMs'), SCAN_DEFAULTS.budgetMs, 500, 30_000),
-      includeHidden: ['1', 'true', 'yes'].includes((url.searchParams.get('includeHidden') ?? '').toLowerCase()),
-      signal: request.signal,
-    })
+      includeHidden,
+      includeBuild,
+    }
+    const refresh = ['1', 'true', 'yes'].includes((url.searchParams.get('refresh') ?? '').toLowerCase())
+    if (refresh) invalidateScanCache()
+    const result = await scanMediaCached(options)
     return json({
       ok: true,
       sessionId,
       root: resolved.workspaceRoot,
       scanRoot: resolved.relativeRoot,
+      includeHidden,
+      includeBuild,
       ...result,
     })
   } catch (error) {
@@ -288,7 +305,166 @@ async function handleDiagnose(request, ctx) {
 }
 
 /**
- * Register both routes on the Host connection Fetch registry.
+ * Resolve the workspace root for a JSON action, then run it. Every failure is
+ * reported as `{ ok: false, code, error }` so the panel shows the real reason.
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @param {(input: object) => Promise<object>} operation - action body.
+ * @returns {Promise<Response>} the action result.
+ */
+async function handleAction(request, ctx, operation) {
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return json({ ok: false, code: 'bad-json', error: 'request body is not valid JSON' }, 400)
+  }
+  const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : ''
+  if (sessionId === '') return json({ ok: false, code: 'bad-request', error: 'missing sessionId' }, 400)
+
+  let workspaceRoot
+  try {
+    workspaceRoot = await workspaceRootOf(ctx, sessionId, request.signal)
+  } catch (error) {
+    return json({
+      ok: false,
+      code: error.code ?? 'resolve-failed',
+      error: error.message ?? 'cannot resolve workspace',
+    }, error.status ?? 500)
+  }
+  if (workspaceRoot === undefined) {
+    return json({ ok: false, code: 'no-workspace-root', error: 'this Session has no workspace directory' }, 409)
+  }
+
+  try {
+    const result = await operation({ body, fs: ctx.fs, workspaceRoot, signal: request.signal })
+    return json({ ok: true, ...result })
+  } catch (error) {
+    return json({
+      ok: false,
+      code: error?.code ?? 'action-failed',
+      error: error?.message ?? String(error),
+      ...(error?.canPermanent === true ? { canPermanent: true } : {}),
+    }, error?.status ?? 500)
+  }
+}
+
+/**
+ * POST /api/vyra-media/stat
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} batched size/mtime metadata.
+ */
+async function handleStat(request, ctx) {
+  return handleAction(request, ctx, async ({ body, fs, workspaceRoot, signal }) => ({
+    entries: await statFiles({ paths: body?.paths, fs, workspaceRoot, signal }),
+  }))
+}
+
+/**
+ * POST /api/vyra-media/rename
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} the renamed entry.
+ */
+async function handleRename(request, ctx) {
+  return handleAction(request, ctx, ({ body, fs, workspaceRoot, signal }) =>
+    renameFile({ path: body?.path, name: body?.name, fs, workspaceRoot, signal }))
+}
+
+/**
+ * POST /api/vyra-media/copy
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} the copied entry.
+ */
+async function handleCopy(request, ctx) {
+  return handleAction(request, ctx, ({ body, fs, workspaceRoot, signal }) =>
+    copyFileInto({ path: body?.path, toFolder: body?.toFolder ?? '', fs, workspaceRoot, signal }))
+}
+
+/**
+ * POST /api/vyra-media/delete
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} recycle/permanent delete outcome.
+ */
+async function handleDelete(request, ctx) {
+  return handleAction(request, ctx, ({ body, fs, workspaceRoot, signal }) =>
+    deleteFile({ path: body?.path, permanent: body?.permanent === true, fs, workspaceRoot, signal }))
+}
+
+/**
+ * POST /api/vyra-media/reveal
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} launch outcome.
+ */
+async function handleReveal(request, ctx) {
+  return handleAction(request, ctx, async ({ body, fs, workspaceRoot, signal }) => {
+    await revealFile({ path: body?.path, fs, workspaceRoot, signal })
+    return {}
+  })
+}
+
+/**
+ * POST /api/vyra-media/open
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} launch outcome.
+ */
+async function handleOpen(request, ctx) {
+  return handleAction(request, ctx, async ({ body, fs, workspaceRoot, signal }) => {
+    await openFileWithSystem({ path: body?.path, fs, workspaceRoot, signal })
+    return {}
+  })
+}
+
+/**
+ * GET /api/vyra-media/text
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} a UTF-8 text window.
+ */
+async function handleText(request, ctx) {
+  const url = new URL(request.url)
+  const sessionId = url.searchParams.get('sessionId')
+  if (sessionId === null || sessionId === '') return json({ ok: false, code: 'bad-request', error: 'missing sessionId' }, 400)
+
+  let workspaceRoot
+  try {
+    workspaceRoot = await workspaceRootOf(ctx, sessionId, request.signal)
+  } catch (error) {
+    return json({
+      ok: false,
+      code: error.code ?? 'resolve-failed',
+      error: error.message ?? 'cannot resolve workspace',
+    }, error.status ?? 500)
+  }
+  if (workspaceRoot === undefined) {
+    return json({ ok: false, code: 'no-workspace-root', error: 'this Session has no workspace directory' }, 409)
+  }
+
+  try {
+    const result = await readTextFile({
+      path: url.searchParams.get('path') ?? '',
+      maxBytes: integer(url.searchParams.get('maxBytes'), 256 * 1024, 1, 1024 * 1024),
+      fs: ctx.fs,
+      workspaceRoot,
+      signal: request.signal,
+    })
+    return json({ ok: true, ...result })
+  } catch (error) {
+    return json({
+      ok: false,
+      code: error?.code ?? 'text-failed',
+      error: error?.message ?? String(error),
+    }, error?.status ?? 500)
+  }
+}
+
+/**
+ * Register every route on the Host connection Fetch registry.
  * @param {object} ctx - Host context.
  * @param {object} connection - `ctx.connection`.
  * @returns {boolean} true when the registry is present.
@@ -314,9 +490,33 @@ export function registerMediaRoutes(ctx, connection) {
       requestBody: 'buffered',
       fetch: request => handleDiagnose(request, ctx),
     }),
+    connection.fetch.register({
+      path: TEXT_PATH,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: request => handleText(request, ctx),
+    }),
+    ...[
+      [STAT_PATH, handleStat],
+      [RENAME_PATH, handleRename],
+      [COPY_PATH, handleCopy],
+      [DELETE_PATH, handleDelete],
+      [REVEAL_PATH, handleReveal],
+      [OPEN_PATH, handleOpen],
+    ].map(([path, handler]) => connection.fetch.register({
+      path,
+      methods: ['POST'],
+      requestBody: 'buffered',
+      fetch: request => handler(request, ctx),
+    })),
   ]
   ctx.effect(() => () => { for (const dispose of disposers) void dispose() }, 'vyra-media-studio: routes')
   return true
 }
 
-export { LIST_PATH, FILE_PATH, DIAGNOSE_PATH, handleDiagnose, handleFile, handleList }
+export {
+  LIST_PATH, FILE_PATH, DIAGNOSE_PATH, STAT_PATH, TEXT_PATH, RENAME_PATH, COPY_PATH,
+  DELETE_PATH, REVEAL_PATH, OPEN_PATH,
+  handleDiagnose, handleFile, handleList, handleStat, handleText, handleRename,
+  handleCopy, handleDelete, handleReveal, handleOpen,
+}

@@ -119,8 +119,12 @@ export async function serveMediaFile({ request, fs, workspaceRoot, maxBytes = MA
     : undefined
   const extension = extensionOf(target.displayPath)
   const etag = entityTagOf(info.version)
+  // Chrome refuses to render its built-in PDF viewer inside a `sandbox`
+  // document; keep the CSP but drop `sandbox` for PDFs so the iframe preview
+  // works. Other responses keep the stricter header.
   const headers = {
     ...BASE_HEADERS,
+    ...(extension === 'pdf' ? { 'Content-Security-Policy': "default-src 'none'" } : {}),
     'Accept-Ranges': 'bytes',
     'Content-Type': mimeOf(extension),
     'Cache-Control': 'private, max-age=0, must-revalidate',

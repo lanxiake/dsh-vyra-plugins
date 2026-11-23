@@ -1,11 +1,15 @@
 /**
- * Media extension vocabulary shared by the workspace scan and the byte route.
- * No DSH imports: this file is plain Node and is unit-tested on its own.
+ * File vocabulary shared by the workspace scan, the byte route and the text
+ * preview. No DSH imports: this file is plain Node and is unit-tested on its own.
+ *
+ * Every file the scan sees gets a kind. Unknown extensions and extension-less
+ * files fall into `other`, so the panel behaves like a file manager rather than
+ * a media filter.
  */
 
 import mime from 'mime-types'
 
-/** @typedef {'video' | 'image' | 'audio'} MediaKind */
+/** @typedef {'video' | 'image' | 'audio' | 'document' | 'archive' | 'code' | 'other'} FileKind */
 
 const VIDEO = [
   'mp4', 'm4v', 'mov', 'webm', 'ogv', 'mkv', 'avi', 'wmv', 'flv',
@@ -16,16 +20,44 @@ const IMAGE = [
 const AUDIO = [
   'mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'wma', 'aiff', 'aif',
 ]
+const DOCUMENT = [
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'markdown',
+  'rtf', 'csv', 'tsv', 'odt', 'ods', 'odp', 'epub', 'log', 'tex', 'pages',
+  'numbers', 'key',
+]
+const ARCHIVE = [
+  'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'iso',
+]
+const CODE = [
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'jsonc', 'yaml', 'yml',
+  'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
+  'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
+  'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
+  'ini', 'conf', 'env', 'gitignore', 'dockerfile', 'makefile',
+]
 
-/** Extension → kind. Built once so the scan and the client never disagree. */
-export const MEDIA_KINDS = new Map([
+/** Extension → kind. Built once so the scan, routes and verdicts never disagree. */
+export const FILE_KINDS = new Map([
   ...VIDEO.map(extension => [extension, 'video']),
   ...IMAGE.map(extension => [extension, 'image']),
   ...AUDIO.map(extension => [extension, 'audio']),
+  ...DOCUMENT.map(extension => [extension, 'document']),
+  ...ARCHIVE.map(extension => [extension, 'archive']),
+  ...CODE.map(extension => [extension, 'code']),
 ])
 
-/** Every media extension the scan accepts. */
-export const MEDIA_EXTENSIONS = new Set(MEDIA_KINDS.keys())
+/** Every extension the scan classifies explicitly; anything else is `other`. */
+export const KNOWN_EXTENSIONS = new Set(FILE_KINDS.keys())
+
+/** Extensions whose bytes are safe to show as UTF-8 text in the panel. */
+export const TEXT_EXTENSIONS = new Set([
+  'txt', 'md', 'markdown', 'log', 'csv', 'tsv', 'rtf', 'tex',
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'jsonc', 'yaml', 'yml',
+  'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
+  'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
+  'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
+  'ini', 'conf', 'env', 'gitignore', 'dockerfile', 'makefile',
+])
 
 /**
  * Lower-case extension of a path or URL pathname.
@@ -41,10 +73,18 @@ export function extensionOf(value) {
 
 /**
  * @param {string} extension - extension without a dot.
- * @returns {MediaKind | undefined} media kind, or undefined for non-media files.
+ * @returns {FileKind} the file kind; unknown extensions are `other`.
  */
 export function kindOf(extension) {
-  return MEDIA_KINDS.get(String(extension).toLowerCase())
+  return FILE_KINDS.get(String(extension).toLowerCase()) ?? 'other'
+}
+
+/**
+ * @param {string} extension - extension without a dot.
+ * @returns {boolean} whether the extension can be previewed as text.
+ */
+export function isTextExtension(extension) {
+  return TEXT_EXTENSIONS.has(String(extension).toLowerCase())
 }
 
 /**
