@@ -2,6 +2,16 @@
 #
 # The Host half registers the `dsh_console` tool; the Client half answers
 # theme/layout/locale requests, which exist only in the browser realm.
+#
+# Set confirmDestructive to require an explicit `confirm: true` on irreversible
+# actions such as plugin.remove; it defaults to false, so an existing profile is
+# unaffected until you opt in. It never covers a forbidden action (sandbox mode,
+# permission presets, approvals, credentials) — those are refused for every
+# caller and no configuration can make them confirmable.
+#
+# The user's patch layer survives plugin upgrades.
 - insert:
     - id: vyra-dsh-console
       name: 'vyra-dsh-console'
+      # config:
+      #   confirmDestructive: true

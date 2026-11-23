@@ -24,16 +24,20 @@ function bareCtx() {
  * The point is to exercise `index.js` itself rather than a handler map rebuilt
  * in this file: the defect that motivated this helper was a domain missing from
  * `index.js`, which a locally built map cannot see.
+ *
+ * `config` is the raw config Cordis resolves against the exported `Config`
+ * schema before calling `apply`; passing it here is the only way to exercise
+ * the plugin's *configuration* path rather than `createConsole`'s options.
  */
-async function applyAndDispatch(action) {
+async function applyAndDispatch(action, { config, services = {}, args, confirm } = {}) {
   const { apply } = await import('../index.js')
   let tool
   apply({
-    get: () => undefined,
+    get: (key) => services[key],
     logger: { info() {}, warn() {} },
     tools: { register: (registered) => { tool = registered } },
-  })
-  return tool.execute({ action })
+  }, config)
+  return tool.execute({ action, args, confirm })
 }
 
 test('every forbidden action is refused with a reason and an alternative', async () => {
@@ -1146,3 +1150,214 @@ test('an unwired domain yields the missing-handler reason the guard matches on',
   assert.equal(result.status, 'error')
   assert.match(result.reason, /no handler for domain "console"/)
 })
+
+// ---------------------------------------------------------------------------
+// Task 4: the `Config` schema and the `confirmDestructive` option reaching
+// `createConsole` through the real `apply()`.
+//
+// `Config` is built from a dynamically imported schemastery, because this
+// plugin is plain ESM with no build step and no node_modules: a static import
+// of `@deepseek-ai/schemastery` is unresolvable from this repo's paths
+// (`ERR_MODULE_NOT_FOUND`) and would take the whole plugin — and every test in
+// this file — down with it. Following dsh-expert-orchestrator/lib/host-settings.js
+// (the same situation, resolved the same way), an absent schemastery yields
+// `Config === undefined`, which the Loader reads as "no settings page" while
+// still loading the plugin. The option is therefore read from the config in a
+// way that works both when the schema resolved and when it did not.
+// ---------------------------------------------------------------------------
+
+/** A pluginManager whose removeBundle succeeds, for the confirmation tests. */
+function pluginManagerStub() {
+  return {
+    removeBundle: async (name) => ({ changed: true, application: 'applied', stage: 'remove', target: name }),
+    listPlugins: async () => [],
+    listBundles: async () => [],
+  }
+}
+
+/**
+ * A faithful stand-in for the parts of schemastery that `buildConfigSchema`
+ * uses, so the schema-building code can be exercised on a checkout where the
+ * real module is unreachable (which is this repo's own test environment).
+ *
+ * It mirrors the real contract at the three points index.js depends on: a
+ * schema is *callable* and resolves defaults when called (real schemastery does
+ * `Schema.prototype = Object.create(Function.prototype)`), `.default()` and
+ * `.description()` are chainable, and `~standard.validate` is present because
+ * that is the entrypoint Cordis itself resolves config through.
+ */
+function schemaStub() {
+  function build(spec) {
+    const schema = function resolve(value = {}) {
+      const out = {}
+      for (const [key, field] of Object.entries(spec.dict)) {
+        const supplied = value[key]
+        out[key] = supplied === undefined ? field.meta.default : supplied
+      }
+      return out
+    }
+    schema.type = spec.type
+    schema.meta = spec.meta
+    schema.dict = spec.dict
+    schema.default = (v) => { schema.meta.default = v; return schema }
+    schema.description = (v) => { schema.meta.description = v; return schema }
+    schema.toJSON = () => ({ type: schema.type, meta: schema.meta, dict: schema.dict })
+    Object.defineProperty(schema, '~standard', {
+      get: () => ({ version: 1, vendor: 'stub', validate: (value) => ({ value: schema(value) }) }),
+    })
+    return schema
+  }
+  return {
+    object: (dict) => build({ type: 'object', meta: {}, dict }),
+    boolean: () => build({ type: 'boolean', meta: {}, dict: {} }),
+  }
+}
+
+test('buildConfigSchema declares confirmDestructive defaulting to false', async () => {
+  // Driven through the exported builder with an injected stub, so this executes
+  // the real schema code rather than reading a `Config` that is `undefined` in
+  // this environment. Mutation-tested: making buildConfigSchema return
+  // `undefined` unconditionally makes this fail.
+  const { buildConfigSchema } = await import('../index.js')
+  const schema = await buildConfigSchema(async () => ({ default: schemaStub() }))
+  assert.ok(schema, 'the builder must produce a schema when schemastery resolves')
+  assert.equal(schema({}).confirmDestructive, false, 'the default must be false')
+  assert.equal(schema({ confirmDestructive: true }).confirmDestructive, true, 'a supplied value wins')
+  assert.equal(schema({ confirmDestructive: false }).confirmDestructive, false)
+})
+
+test('buildConfigSchema produces a schema the settings service can project', async () => {
+  const { buildConfigSchema } = await import('../index.js')
+  const schema = await buildConfigSchema(async () => ({ default: schemaStub() }))
+  assert.equal(typeof schema.toJSON, 'function', 'a projectable Config must carry toJSON')
+  assert.ok(schema['~standard'], "Cordis resolves config through the schema's ~standard entrypoint")
+})
+
+test('buildConfigSchema degrades to undefined when schemastery is unusable', async () => {
+  // The host may ship no schemastery, an older copy, or a different module
+  // shape. None of those may throw out of the module: an exception here would
+  // fail the plugin's load rather than merely hide its settings page.
+  const { buildConfigSchema } = await import('../index.js')
+  assert.equal(await buildConfigSchema(async () => null), undefined, 'unresolvable')
+  assert.equal(await buildConfigSchema(async () => ({})), undefined, 'module with no default export')
+  assert.equal(await buildConfigSchema(async () => ({ default: {} })), undefined, 'module without the builders')
+})
+
+test('buildConfigSchema survives a schemastery whose decoration throws', async () => {
+  // `.description()` is a decoration, not a requirement. A host build without
+  // it must still yield a working schema rather than take the plugin down.
+  const { buildConfigSchema } = await import('../index.js')
+  const stub = schemaStub()
+  const hostile = {
+    object: (dict) => {
+      const s = stub.object(dict)
+      s.dict = { confirmDestructive: { meta: {} } }
+      return s
+    },
+    boolean: () => {
+      const b = stub.boolean()
+      b.description = () => { throw new Error('this build has no .description()') }
+      return b
+    },
+  }
+  const schema = await buildConfigSchema(async () => ({ default: hostile }))
+  assert.equal(schema, undefined, 'a throwing decoration degrades to no settings page, not a failed load')
+})
+
+test('the plugin exports a Config schema whose confirmDestructive defaults to false', async () => {
+  // The top-level export is `undefined` whenever schemastery cannot be resolved
+  // from this checkout — the loader then shows no settings page and still
+  // starts the plugin. The builder is covered directly above, so this test
+  // pins the export's contract rather than re-testing the schema.
+  const mod = await import('../index.js')
+  if (mod.Config === undefined) {
+    assert.equal(typeof mod.apply, 'function', 'apply must survive an absent schema')
+    return
+  }
+  assert.equal(mod.Config({}).confirmDestructive, false)
+  assert.equal(mod.Config({ confirmDestructive: true }).confirmDestructive, true)
+})
+
+test('confirmDestructive: true, passed through apply(), makes plugin.remove refuse without confirm', async () => {
+  // The config path, end to end: `apply(ctx, config)` → `createConsole(..., {
+  // confirmDestructive })` → the gate in dispatch(). The tool path is pinned
+  // separately above; this pins that the *option* reaches createConsole at all.
+  const result = await applyAndDispatch('plugin.remove', {
+    config: { confirmDestructive: true },
+    services: { pluginManager: pluginManagerStub() },
+    args: { name: 'pkg-a' },
+  })
+  assert.equal(result.status, 'confirm-required')
+})
+
+test('the same config lets plugin.remove through when confirm is supplied', async () => {
+  const result = await applyAndDispatch('plugin.remove', {
+    config: { confirmDestructive: true },
+    services: { pluginManager: pluginManagerStub() },
+    args: { name: 'pkg-a' },
+    confirm: true,
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.target, 'pkg-a')
+})
+
+test('an absent config leaves the confirmation gate off', async () => {
+  // The default is false, so a profile that never sets the option must behave
+  // exactly as it did before this task: destructive actions proceed.
+  const result = await applyAndDispatch('plugin.remove', {
+    services: { pluginManager: pluginManagerStub() },
+    args: { name: 'pkg-a' },
+  })
+  assert.equal(result.status, 'ok')
+})
+
+test('an explicit false config leaves the confirmation gate off', async () => {
+  const result = await applyAndDispatch('plugin.remove', {
+    config: { confirmDestructive: false },
+    services: { pluginManager: pluginManagerStub() },
+    args: { name: 'pkg-a' },
+  })
+  assert.equal(result.status, 'ok')
+})
+
+test('a config for another plugin cannot open or close this gate', async () => {
+  // Cordis passes each entry its own config. A neighbouring key must not be
+  // mistaken for confirmDestructive.
+  const withNoise = await applyAndDispatch('plugin.remove', {
+    config: { confirmDestroy: true, confirmDestructive: undefined, other: 1 },
+    services: { pluginManager: pluginManagerStub() },
+    args: { name: 'pkg-a' },
+  })
+  assert.equal(withNoise.status, 'ok', 'an unrelated key must not enable the gate')
+})
+
+test('only a literal true opens the gate, never a truthy stand-in', async () => {
+  // The option guards an irreversible action, so it is read with `=== true`
+  // rather than for truthiness: a `"true"` string, a `1`, or an object from a
+  // hand-edited config file must not be read as consent. Mutation-tested —
+  // loosening `=== true` to `Boolean(...)` in index.js makes this fail.
+  for (const value of ['true', 'yes', 1, {}, []]) {
+    const result = await applyAndDispatch('plugin.remove', {
+      config: { confirmDestructive: value },
+      services: { pluginManager: pluginManagerStub() },
+      args: { name: 'pkg-a' },
+    })
+    assert.equal(result.status, 'ok', `confirmDestructive: ${JSON.stringify(value)} must not open the gate`)
+  }
+})
+
+test('confirmDestructive does not cover a non-destructive action through apply()', async () => {
+  const result = await applyAndDispatch('plugin.list', {
+    config: { confirmDestructive: true },
+    services: { pluginManager: pluginManagerStub() },
+  })
+  assert.equal(result.status, 'ok')
+})
+
+test('a forbidden action stays forbidden through apply() even with confirmation on', async () => {
+  // FORBIDDEN is decided before the gate, so no configuration can make an
+  // authority-changing action confirmable.
+  const result = await applyAndDispatch('credentials.set', { config: { confirmDestructive: true } })
+  assert.equal(result.status, 'forbidden')
+})
+
