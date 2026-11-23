@@ -2168,8 +2168,8 @@
         "zh": "Vyra 录屏截图"
       },
       "description": {
-        "en": "Screen recording and annotated screenshots in the DSH composer: pick the whole desktop, a display, a window or a custom region; record system audio and microphone; encode to WebM in the browser with WebCodecs. No Python or ffmpeg required.",
-        "zh": "DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，浏览器 WebCodecs 编成 WebM；截图支持选区与画笔 / 矩形 / 箭头 / 文字标注。不需要 Python 或 ffmpeg。"
+        "en": "Screen recording and annotated screenshots in the DSH composer: pick the whole desktop, a display, a window or a custom region; record system audio and microphone; encode to WebM in the browser with WebCodecs. Installs a vsr CLI and an agent skill so the model can take screenshots and start recordings. No Python or ffmpeg required.",
+        "zh": "DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，浏览器 WebCodecs 编成 WebM；截图支持选区与画笔 / 矩形 / 箭头 / 文字标注。同时安装 vsr CLI 和 Agent 技能，模型可以直接截图、录屏。不需要 Python 或 ffmpeg。"
       },
       "icon": "undefined",
       "author": "lanxiake",
@@ -2185,7 +2185,7 @@
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "34cbb27127a431e4e2488531c91ad48f8dee2523",
+            "commit": "be4cc83037d4eaa19ca2621687fc4d63008da144",
             "path": "plugins/vyra-screen-recorder"
           }
         }
