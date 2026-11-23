@@ -1,58 +1,17 @@
-import { homedir } from "node:os";
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPersonalizationStore } from "./host/personalization/store.js";
 import { createOfficialRejection, mountPersonalizationRoutes } from "./host/personalization-routes.js";
 import { createBuiltinAssetServer } from "./host/builtin-assets.js";
 import { resolveTrustedHosts } from "./host/trusted-hosts.js";
+import { dataDirForProfile, dshHome, hostProfileFor } from "./host/paths.js";
 
 export const name = "vyra-free-theme";
 
-function expandHomePath(path) {
-  if (path === "~") return homedir();
-  if (path.startsWith("~/") || path.startsWith("~\\")) return join(homedir(), path.slice(2));
-  return path;
-}
-
-function dshHome() {
-  const configured = process.env.DSH_HOME?.trim();
-  return resolve(expandHomePath(configured || join(homedir(), ".dsh")));
-}
-
-export function hostProfileFor(root, cwd = process.cwd()) {
-  // dsh-desktop-host launches the Host with cwd = $DSH_HOME/profiles/desktop;
-  // normal Web launchers do not. Never infer the profile from the mere
-  // existence of a Desktop installation alongside this Web process.
-  const normalized = (path) => process.platform === "win32" ? resolve(path).toLowerCase() : resolve(path);
-  return normalized(cwd) === normalized(join(expandHomePath(root), "profiles", "desktop")) ? "desktop" : "web";
-}
-
-export function dataDirForProfile(root, profile) {
-  root = resolve(expandHomePath(root));
-  const legacy = join(root, "vyra-free-theme");
-  if (profile !== "desktop") return legacy; // unchanged Web path
-  const desktop = join(root, "vyra-free-theme-desktop");
-  if (existsSync(desktop) || !existsSync(legacy)) return desktop;
-  // Pre-1.5.4 Desktop stored everything in the legacy directory. Copy once,
-  // never move or modify it: an existing Web installation may own it too.
-  // Publish the complete copy with a same-parent directory rename so an
-  // interrupted copy cannot be mistaken for a valid new Desktop store.
-  const stage = mkdtempSync(join(root, ".vyra-free-theme-desktop-migrate-"));
-  try {
-    for (const name of readdirSync(legacy)) {
-      cpSync(join(legacy, name), join(stage, name), { recursive: true, force: false, errorOnExist: true });
-    }
-    renameSync(stage, desktop);
-  } catch (error) {
-    if (!existsSync(desktop)) throw error;
-    // Another Desktop Host completed the one-time migration first.
-  } finally {
-    if (dirname(resolve(stage)) !== resolve(root)) throw new Error("unsafe Desktop migration staging path");
-    if (existsSync(stage)) rmSync(stage, { recursive: true, force: true });
-  }
-  return desktop;
-}
+// Kept as re-exports: the delivery and upgrade scripts import these from the
+// package entry, and they are the only supported way to learn where data lives.
+export { dataDirForProfile, hostProfileFor } from "./host/paths.js";
 
 export function apply(ctx) {
   ctx.inject(["webServer"], (hostContext) => {
