@@ -1451,9 +1451,8 @@ window.__ModuleLoader__.load({
       const pollAccounts = useCallback(async provider => {
         const providerId = typeof provider === 'string' ? provider : provider.id
         const isBuddy = typeof provider === 'object' && provider.kind === 'buddy'
-        const before = isBuddy
-          ? (summary?.accounts?.providers ?? []).find(row => row.id === providerId)?.accounts?.length ?? 0
-          : 0
+        const before = (summary?.accounts?.providers ?? [])
+          .find(row => row.id === providerId)?.accounts?.length ?? 0
         const deadline = Date.now() + LOGIN_TIMEOUT_MS
         while (Date.now() < deadline) {
           await new Promise(resolve => setTimeout(resolve, 2000))
@@ -1475,7 +1474,7 @@ window.__ModuleLoader__.load({
                 timeoutMs: 15000,
               })
               const accounts = payload?.value?.accounts ?? []
-              if (accounts.length > 0) {
+              if (accounts.length > before) {
                 setLoginDialog(undefined)
                 await load()
                 await loadCredits()

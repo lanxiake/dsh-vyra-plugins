@@ -421,22 +421,33 @@ export function apply(ctx, _config) {
     }
 
     const product = PRODUCTS[entry.product]
-    const account = buddyAccounts().find(row => row.product === entry.product && row.enabled !== false)
-    if (product === undefined || account === undefined) {
+    const accounts = buddyAccounts().filter(row => row.product === entry.product && row.enabled !== false)
+    if (product === undefined || accounts.length === 0) {
       yield { type: 'finish', reason: { kind: 'error', failure: { message: '没有已登录的账号，请先到设置页登录', code: 'INVALID_CREDENTIAL' } } }
       return
     }
-    const credential = await usableBuddyCredential(product, account)
-    if (credential === undefined) {
-      yield { type: 'finish', reason: { kind: 'error', failure: { message: '登录已过期，请重新登录', code: 'INVALID_CREDENTIAL' } } }
+
+    // Several accounts on one product is a quota strategy, so a refusal before
+    // any content moves to the next account instead of failing the turn.
+    for (let index = 0; index < accounts.length; index += 1) {
+      const account = accounts[index]
+      const credential = await usableBuddyCredential(product, account)
+      if (credential === undefined) continue
+      const chunks = []
+      for await (const chunk of streamBuddyTurn({
+        product,
+        credential,
+        ensureCredential: () => usableBuddyCredential(product, account),
+        options,
+      })) chunks.push(chunk)
+
+      const errored = chunks.some(chunk => chunk.type === 'finish' && chunk.reason?.kind === 'error')
+      const delivered = chunks.some(chunk => chunk.type !== 'usage' && chunk.type !== 'finish')
+      if (errored && !delivered && index < accounts.length - 1) continue
+      for (const chunk of chunks) yield chunk
       return
     }
-    yield* streamBuddyTurn({
-      product,
-      credential,
-      ensureCredential: () => usableBuddyCredential(product, account),
-      options,
-    })
+    yield { type: 'finish', reason: { kind: 'error', failure: { message: '所有账号都不可用，请重新登录', code: 'INVALID_CREDENTIAL' } } }
   }
 
   /** Start a Tencent sign-in. The browser is opened here; the page gets the URL too. */
