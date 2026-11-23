@@ -2162,6 +2162,48 @@
       }
     },
     {
+      "name": "vyra-screen-recorder",
+      "title": {
+        "en": "Vyra Screen Recorder",
+        "zh": "Vyra 录屏截图"
+      },
+      "description": {
+        "en": "Screen recording and annotated screenshots in the DSH composer: pick the whole desktop, a display, a window or a custom region; record system audio and microphone; encode to WebM in the browser with WebCodecs. No Python or ffmpeg required.",
+        "zh": "DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，浏览器 WebCodecs 编成 WebM；截图支持选区与画笔 / 矩形 / 箭头 / 文字标注。不需要 Python 或 ffmpeg。"
+      },
+      "icon": "undefined",
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
+      "repository": {
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/vyra-screen-recorder"
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1795910400,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "34cbb27127a431e4e2488531c91ad48f8dee2523",
+            "path": "plugins/vyra-screen-recorder"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "media",
+        "keywords": [
+          "screen",
+          "record",
+          "screenshot",
+          "capture",
+          "video",
+          "录屏",
+          "截图"
+        ]
+      }
+    },
+    {
       "name": "@xmanrui/dsh-im",
       "title": {
         "en": "Instant Messaging Bridge",

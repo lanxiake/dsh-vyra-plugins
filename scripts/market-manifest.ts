@@ -29,6 +29,9 @@ export type LocaleMap = { readonly en: string; readonly zh?: string }
 const VYRA_FREE_MODEL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNSIgZmlsbD0iIzEyMTYxRiIvPgogIDxyZWN0IHg9IjIuNzUiIHk9IjIuNzUiIHdpZHRoPSI1OC41IiBoZWlnaHQ9IjU4LjUiIHJ4PSIxNC4yNSIgc3Ryb2tlPSIjMkIzMjQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxwYXRoIGQ9Ik0xNS41IDM4LjVjLTIuOSAwLTUuMS0yLjYtNS4xLTYuNXMyLjItNi41IDUuMS02LjVjMy42IDAgNi4xIDMuNCA4LjYgNy42IDIuMSAzLjUgNCA2LjQgNi40IDYuNCAyLjEgMCAzLjQtMS42IDMuNC00cy0xLjMtNC0zLjQtNGMtMi40IDAtNC4zIDIuOS02LjQgNi40LTIuNSA0LjItNSA3LjYtOC42IDcuNiIKICAgICAgICBzdHJva2U9IiM0QzhERkYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTQ4LjUgMjUuNWMyLjkgMCA1LjEgMi42IDUuMSA2LjVzLTIuMiA2LjUtNS4xIDYuNWMtMy42IDAtNi4xLTMuNC04LjYtNy42IgogICAgICAgIHN0cm9rZT0iIzRDOERGRiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiLz4KICA8cGF0aCBkPSJNMzUuNiAyMC41IDI5LjggMzFoNS42bC0yLjIgMTIuNUw0MSAzMS40aC01Ljl6IiBmaWxsPSIjRjVDNTQyIi8+Cjwvc3ZnPg=='
 
+const VYRA_SCREEN_RECORDER_ICON =
+  'undefined'
+
 const TOOL_USAGE_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZDRlZDgiLz48ZyBmaWxsPSIjZmZmIj48cmVjdCB4PSIxNiIgeT0iMzYiIHdpZHRoPSI3IiBoZWlnaHQ9IjE0IiByeD0iMiIvPjxyZWN0IHg9IjI4LjUiIHk9IjI2IiB3aWR0aD0iNyIgaGVpZ2h0PSIyNCIgcng9IjIiLz48cmVjdCB4PSI0MSIgeT0iMTYiIHdpZHRoPSI3IiBoZWlnaHQ9IjM0IiByeD0iMiIvPjwvZz48L3N2Zz4='
 
@@ -2344,6 +2347,39 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'model',
         keywords: ['model', 'llm', 'free', 'provider'],
+      },
+    },
+    {
+      name: 'vyra-screen-recorder',
+      title: {
+        en: 'Vyra Screen Recorder',
+        zh: 'Vyra 录屏截图',
+      },
+      description: {
+        en: 'Screen recording and annotated screenshots in the DSH composer: pick the whole desktop, a display, a window or a custom region; record system audio and microphone; encode to WebM in the browser with WebCodecs. No Python or ffmpeg required.',
+        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，浏览器 WebCodecs 编成 WebM；截图支持选区与画笔 / 矩形 / 箭头 / 文字标注。不需要 Python 或 ffmpeg。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-screen-recorder',
+      },
+      icon: VYRA_SCREEN_RECORDER_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795910400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '34cbb27127a431e4e2488531c91ad48f8dee2523',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
+      },
+      metadata: {
+        category: 'media',
+        keywords: ['screen', 'record', 'screenshot', 'capture', 'video', '录屏', '截图'],
       },
     },
     {
