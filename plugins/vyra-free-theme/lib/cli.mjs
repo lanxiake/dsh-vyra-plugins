@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // cli/vft.mjs
-import { copyFileSync, existsSync as existsSync2, mkdirSync as mkdirSync2, readdirSync, readFileSync as readFileSync2, renameSync as renameSync2, rmSync, statSync, writeFileSync as writeFileSync2 } from "node:fs";
-import { basename, dirname, extname, join as join2, resolve } from "node:path";
+import { copyFileSync, existsSync as existsSync2, mkdirSync as mkdirSync3, readdirSync, readFileSync as readFileSync3, renameSync as renameSync2, rmSync as rmSync2, statSync, writeFileSync as writeFileSync3 } from "node:fs";
+import { basename, dirname as dirname2, extname, join as join3, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 
@@ -1005,8 +1005,707 @@ function writeSelection(dataDir, skinId, { now = () => (/* @__PURE__ */ new Date
   return record;
 }
 
+// src/shared/comfy-workflow.js
+var QWEN_IMAGE_DEFAULTS = Object.freeze({
+  unet: "qwen_image_2.1_turbo_int8_convrot.safetensors",
+  clip: "qwen3.5_9b_qwen_image_2.1_pe_t2i_w4a8.safetensors",
+  vae: "qwen_image_2.1_vae_bf16.safetensors",
+  steps: 4,
+  cfg: 1,
+  sampler: "euler",
+  scheduler: "simple"
+});
+var WALLPAPER_SIZES = Object.freeze({
+  desktop: { width: 2048, height: 1280 },
+  portrait: { width: 1024, height: 1536 },
+  square: { width: 1280, height: 1280 }
+});
+function buildQwenImageWorkflow(options) {
+  const {
+    prompt,
+    negative = "",
+    width = WALLPAPER_SIZES.portrait.width,
+    height = WALLPAPER_SIZES.portrait.height,
+    seed = 1,
+    steps = QWEN_IMAGE_DEFAULTS.steps,
+    cfg = QWEN_IMAGE_DEFAULTS.cfg,
+    sampler = QWEN_IMAGE_DEFAULTS.sampler,
+    scheduler = QWEN_IMAGE_DEFAULTS.scheduler,
+    unet = QWEN_IMAGE_DEFAULTS.unet,
+    clip = QWEN_IMAGE_DEFAULTS.clip,
+    vae = QWEN_IMAGE_DEFAULTS.vae,
+    filenamePrefix = "vft/wallpaper"
+  } = options;
+  if (typeof prompt !== "string" || prompt.trim().length === 0) throw new Error("prompt is required");
+  return {
+    "1": { class_type: "UNETLoader", inputs: { unet_name: unet, weight_dtype: "default" } },
+    "2": { class_type: "CLIPLoader", inputs: { clip_name: clip, type: "qwen_image" } },
+    "3": { class_type: "VAELoader", inputs: { vae_name: vae } },
+    "4": { class_type: "CLIPTextEncode", inputs: { text: prompt, clip: ["2", 0] } },
+    "5": { class_type: "CLIPTextEncode", inputs: { text: negative, clip: ["2", 0] } },
+    "6": { class_type: "EmptySD3LatentImage", inputs: { width, height, batch_size: 1 } },
+    "7": {
+      class_type: "KSampler",
+      inputs: {
+        model: ["1", 0],
+        positive: ["4", 0],
+        negative: ["5", 0],
+        latent_image: ["6", 0],
+        seed,
+        steps,
+        cfg,
+        sampler_name: sampler,
+        scheduler,
+        denoise: 1
+      }
+    },
+    "8": { class_type: "VAEDecode", inputs: { samples: ["7", 0], vae: ["3", 0] } },
+    "9": { class_type: "SaveImage", inputs: { images: ["8", 0], filename_prefix: filenamePrefix } }
+  };
+}
+function validateWorkflow(workflow) {
+  const issues = [];
+  if (workflow === null || typeof workflow !== "object") return ["workflow must be an object"];
+  const ids = Object.keys(workflow);
+  if (ids.length === 0) return ["workflow is empty"];
+  for (const [id, node] of Object.entries(workflow)) {
+    if (typeof node?.class_type !== "string") issues.push(`node ${id}: missing class_type`);
+    if (node?.inputs === void 0 || typeof node.inputs !== "object") issues.push(`node ${id}: missing inputs`);
+  }
+  const outputs = ids.filter((id) => workflow[id].class_type === "SaveImage");
+  if (outputs.length === 0) issues.push("no SaveImage node: the run would produce nothing retrievable");
+  for (const [id, node] of Object.entries(workflow)) {
+    for (const [key, value] of Object.entries(node.inputs ?? {})) {
+      if (Array.isArray(value) && value.length === 2 && typeof value[0] === "string") {
+        if (workflow[value[0]] === void 0) issues.push(`node ${id}.${key} references missing node ${value[0]}`);
+      }
+    }
+  }
+  return issues;
+}
+
+// src/host/comfy.js
+var DEFAULT_BASE = "http://127.0.0.1:8188";
+function authHeader(auth) {
+  if (typeof auth !== "string" || auth.length === 0) return null;
+  if (auth.startsWith("Basic ")) return { authorization: auth };
+  if (auth.startsWith("Bearer ")) return { authorization: auth };
+  return { authorization: `Basic ${Buffer.from(auth, "utf8").toString("base64")}` };
+}
+function comfyConfigFromEnv(env = process.env) {
+  const baseUrl = env.COMFYUI_URL?.trim() || DEFAULT_BASE;
+  const auth = env.COMFYUI_AUTH?.trim() || env.COMFYUI_BASIC_AUTH?.trim() || "";
+  return { baseUrl: baseUrl.replace(/\/+$/, ""), auth };
+}
+function createComfyClient(options = {}) {
+  const config = { ...comfyConfigFromEnv(options.env), ...options };
+  const baseUrl = String(config.baseUrl ?? DEFAULT_BASE).replace(/\/+$/, "");
+  const fetchImpl = config.fetchImpl ?? fetch;
+  const sleep = config.sleep ?? ((ms) => new Promise((resolve2) => setTimeout(resolve2, ms)));
+  const headers = { "content-type": "application/json", ...authHeader(config.auth) ?? {} };
+  async function call(path, init = {}) {
+    const response = await fetchImpl(`${baseUrl}${path}`, { ...init, headers: { ...headers, ...init.headers ?? {} } });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`ComfyUI ${path} → HTTP ${response.status}${body ? `: ${body.slice(0, 200)}` : ""}`);
+    }
+    return response;
+  }
+  return {
+    baseUrl,
+    /** Queue one API-format workflow; returns its prompt id. */
+    async submit(workflow, { clientId = "vyra-free-theme" } = {}) {
+      const response = await call("/prompt", { method: "POST", body: JSON.stringify({ prompt: workflow, client_id: clientId }) });
+      const body = await response.json();
+      if (body?.error !== void 0) throw new Error(`ComfyUI rejected the workflow: ${JSON.stringify(body.error).slice(0, 300)}`);
+      const promptId = body?.prompt_id;
+      if (typeof promptId !== "string") throw new Error("ComfyUI did not return a prompt_id");
+      return promptId;
+    },
+    /** Poll until the prompt appears in history; returns its output images. */
+    async wait(promptId, { timeoutMs = 6e5, intervalMs = 2e3, onTick } = {}) {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const response = await call(`/history/${encodeURIComponent(promptId)}`);
+        const history = await response.json();
+        const entry = history?.[promptId];
+        if (entry !== void 0) {
+          const status = entry.status ?? {};
+          if (status.status_str === "error") {
+            const message = status.messages?.find((pair) => pair?.[0] === "execution_error")?.[1]?.exception_message ?? "execution error";
+            throw new Error(`ComfyUI execution failed: ${message}`);
+          }
+          const images = [];
+          for (const output of Object.values(entry.outputs ?? {})) {
+            for (const image of output?.images ?? []) images.push(image);
+          }
+          if (images.length > 0) return { images, entry };
+        }
+        onTick?.({ promptId, waitedMs: timeoutMs - Math.max(0, deadline - Date.now()) });
+        await sleep(intervalMs);
+      }
+      throw new Error(`ComfyUI 在 ${Math.round(timeoutMs / 1e3)} 秒内没有完成 prompt ${promptId}`);
+    },
+    /** Download one output image as bytes. */
+    async download(image) {
+      const query = new URLSearchParams({
+        filename: image.filename,
+        subfolder: image.subfolder ?? "",
+        type: image.type ?? "output"
+      });
+      const response = await call(`/view?${query.toString()}`);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return buffer;
+    },
+    /** Cheap reachability probe used for a clear error instead of a hang. */
+    async ping() {
+      try {
+        const response = await fetchImpl(`${baseUrl}/system_stats`, { headers });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    }
+  };
+}
+
+// src/shared/png-stats.js
+import { deflateSync, inflateSync } from "node:zlib";
+var PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+function isPng(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length > 8 && buffer.subarray(0, 8).equals(PNG_SIGNATURE);
+}
+var CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 3988292384 ^ value >>> 1 : value >>> 1;
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+function crc32(buffer) {
+  let crc = 4294967295;
+  for (const byte of buffer) crc = CRC_TABLE[(crc ^ byte) & 255] ^ crc >>> 8;
+  return (crc ^ 4294967295) >>> 0;
+}
+function paeth(a, b, c) {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  return pb <= pc ? b : c;
+}
+function decodePng(buffer) {
+  if (!isPng(buffer)) throw new Error("not a PNG");
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  let interlace = 0;
+  const idat = [];
+  let palette = null;
+  while (offset + 8 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    const data = buffer.subarray(offset + 8, offset + 8 + length);
+    offset += 12 + length;
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      bitDepth = data[8];
+      colorType = data[9];
+      interlace = data[12];
+    } else if (type === "PLTE") {
+      palette = data;
+    } else if (type === "IDAT") {
+      idat.push(data);
+    } else if (type === "IEND") {
+      break;
+    }
+  }
+  if (width <= 0 || height <= 0) throw new Error("PNG has no dimensions");
+  if (bitDepth !== 8) throw new Error(`unsupported PNG bit depth ${bitDepth}`);
+  if (interlace !== 0) throw new Error("interlaced PNG is not supported");
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colorType];
+  if (channels === void 0) throw new Error(`unsupported PNG colour type ${colorType}`);
+  const raw = inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const out = Buffer.alloc(stride * height);
+  let previous = Buffer.alloc(stride);
+  for (let row = 0; row < height; row += 1) {
+    const filter = raw[row * (stride + 1)];
+    const line = raw.subarray(row * (stride + 1) + 1, row * (stride + 1) + 1 + stride);
+    const target = out.subarray(row * stride, row * stride + stride);
+    for (let index = 0; index < stride; index += 1) {
+      const left = index >= channels ? target[index - channels] : 0;
+      const up = previous[index];
+      const upLeft = index >= channels ? previous[index - channels] : 0;
+      let value;
+      switch (filter) {
+        case 0:
+          value = line[index];
+          break;
+        case 1:
+          value = line[index] + left;
+          break;
+        case 2:
+          value = line[index] + up;
+          break;
+        case 3:
+          value = line[index] + (left + up >> 1);
+          break;
+        case 4:
+          value = line[index] + paeth(left, up, upLeft);
+          break;
+        default:
+          throw new Error(`unknown PNG filter ${filter}`);
+      }
+      target[index] = value & 255;
+    }
+    previous = target;
+  }
+  return { width, height, channels, colorType, palette, data: out };
+}
+function lumaAt(image, pixelIndex) {
+  const { channels, colorType, data, palette } = image;
+  if (colorType === 3) {
+    const entry = data[pixelIndex];
+    if (palette === null || entry * 3 + 2 >= palette.length) return 0;
+    const r = palette[entry * 3];
+    const g = palette[entry * 3 + 1];
+    const b = palette[entry * 3 + 2];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  if (channels === 1) return data[pixelIndex];
+  if (channels === 2) return data[pixelIndex * 2];
+  const base = pixelIndex * channels;
+  return 0.2126 * data[base] + 0.7152 * data[base + 1] + 0.0722 * data[base + 2];
+}
+function imageStats(buffer, { step = 1 } = {}) {
+  const image = decodePng(buffer);
+  const stride = Math.max(1, Math.floor(step));
+  const values = [];
+  const rows = [];
+  for (let y = 0; y < image.height; y += stride) {
+    const row = [];
+    for (let x = 0; x < image.width; x += stride) {
+      const luma = lumaAt(image, y * image.width + x);
+      row.push(luma);
+      values.push(luma);
+    }
+    rows.push(row);
+  }
+  const count = values.length;
+  const mean = count === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / count;
+  const variance = count === 0 ? 0 : values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / count;
+  const stdLuma = Math.sqrt(variance) / 255;
+  let edgeTotal = 0;
+  let edgeCount = 0;
+  for (const row of rows) {
+    for (let index = 1; index < row.length; index += 1) {
+      edgeTotal += Math.abs(row[index] - row[index - 1]);
+      edgeCount += 1;
+    }
+  }
+  for (let y = 1; y < rows.length; y += 1) {
+    for (let x = 0; x < rows[y].length; x += 1) {
+      edgeTotal += Math.abs(rows[y][x] - rows[y - 1][x]);
+      edgeCount += 1;
+    }
+  }
+  const edgeEnergy = edgeCount === 0 ? 0 : Math.min(1, edgeTotal / edgeCount / 255);
+  return { width: image.width, height: image.height, stdLuma: Number(stdLuma.toFixed(4)), edgeEnergy: Number(edgeEnergy.toFixed(4)) };
+}
+function encodePng({ width, height, pixels }) {
+  const stride = width * 3;
+  const raw = Buffer.alloc((stride + 1) * height);
+  for (let y = 0; y < height; y += 1) {
+    raw[y * (stride + 1)] = 0;
+    pixels.copy(raw, y * (stride + 1) + 1, y * stride, y * stride + stride);
+  }
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const typeAndData = Buffer.concat([Buffer.from(type, "ascii"), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(typeAndData));
+    return Buffer.concat([length, typeAndData, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0))
+  ]);
+}
+
+// src/shared/art-recipes.js
+var ART_RECIPES = Object.freeze({
+  starfield: {
+    label: { zh: "星云", en: "Starfield" },
+    description: "深空底色 + 星云光雾 + 三层星点，静帧版的星云主题"
+  },
+  "ink-wash": {
+    label: { zh: "水墨", en: "Ink wash" },
+    description: "宣纸底 + 米氏云山剪影 + 飞白噪点，静帧版的山水主题"
+  },
+  fluid: {
+    label: { zh: "流体", en: "Fluid" },
+    description: "域扭曲噪声 + 双色映射，柔和的抽象流体"
+  },
+  "neon-grid": {
+    label: { zh: "霓虹网格", en: "Neon grid" },
+    description: "地平线辉光 + 透视网格 + 扫描线"
+  },
+  "paper-grain": {
+    label: { zh: "纸纹", en: "Paper grain" },
+    description: "暖纸底 + 纤维噪声 + 暗角"
+  },
+  "ridge-dawn": {
+    label: { zh: "晨雾山脊", en: "Ridge at dawn" },
+    description: "分层山脊 + 大气透视 + 天光渐变"
+  }
+});
+function mulberry32(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = state + 1831565813 >>> 0;
+    let t = state;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+var clamp = (value) => Math.min(255, Math.max(0, Math.round(value)));
+var mix = (a, b, t) => a + (b - a) * t;
+var smoothstep = (t) => t * t * (3 - 2 * t);
+function makeNoise(random, gridSize = 8) {
+  const table = new Float32Array((gridSize + 1) * (gridSize + 1));
+  for (let index = 0; index < table.length; index += 1) table[index] = random();
+  const at = (x, y) => table[y % (gridSize + 1) * (gridSize + 1) + x % (gridSize + 1)];
+  return (u, v) => {
+    const x = u * gridSize;
+    const y = v * gridSize;
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const tx = smoothstep(x - x0);
+    const ty = smoothstep(y - y0);
+    const top = mix(at(x0, y0), at(x0 + 1, y0), tx);
+    const bottom = mix(at(x0, y0 + 1), at(x0 + 1, y0 + 1), tx);
+    return mix(top, bottom, ty);
+  };
+}
+function paint(width, height, fn) {
+  const pixels = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const [r, g, b] = fn(x / width, y / height, x, y);
+      const base = (y * width + x) * 3;
+      pixels[base] = clamp(r);
+      pixels[base + 1] = clamp(g);
+      pixels[base + 2] = clamp(b);
+    }
+  }
+  return pixels;
+}
+function finish(width, height, pixels) {
+  return encodePng({ width, height, pixels });
+}
+function glow(u, v, cx, cy, radius, strength) {
+  const dx = u - cx;
+  const dy = v - cy;
+  const d = Math.sqrt(dx * dx + dy * dy) / radius;
+  if (d >= 1) return 0;
+  return (1 - d) ** 2 * strength;
+}
+var RECIPE_FNS = {
+  starfield({ width, height, seed, time = 0 }) {
+    const random = mulberry32(seed);
+    const haze = makeNoise(random, 6);
+    const stars = Array.from({ length: 900 }, () => ({
+      u: random(),
+      v: random(),
+      size: 0.4 + random() * 1.8,
+      bright: 60 + random() * 195,
+      tint: random(),
+      phase: random() * Math.PI * 2,
+      speed: 3e-3 + random() * 0.01
+    }));
+    const shimmer = 0.5 + 0.5 * Math.sin(time * 0.9);
+    const px = paint(width, height, (u, v) => {
+      const depth = 1 - v;
+      let r = mix(16, 6, depth);
+      let g = mix(13, 4, depth);
+      let b = mix(38, 12, depth);
+      const hazeValue = haze(u * 1.4 + 0.1, v * 1.1);
+      const band = Math.exp(-((v - 0.45) ** 2) / 0.05) * hazeValue * (0.8 + 0.4 * shimmer);
+      r += band * 70 + glow(u, v, 0.32, 0.34, 0.42, 42);
+      g += band * 34 + glow(u, v, 0.32, 0.34, 0.42, 24);
+      b += band * 120 + glow(u, v, 0.32, 0.34, 0.42, 92);
+      r += glow(u, v, 0.76, 0.66, 0.3, 46);
+      g += glow(u, v, 0.76, 0.66, 0.3, 18);
+      b += glow(u, v, 0.76, 0.66, 0.3, 74);
+      return [r, g, b];
+    });
+    for (const star of stars) {
+      const driftU = (star.u + time * star.speed) % 1;
+      const cx = Math.round(driftU * (width - 1));
+      const cy = Math.round(star.v * (height - 1));
+      const radius = star.size;
+      const twinkle = 0.78 + 0.22 * Math.sin(time * 2.1 + star.phase);
+      const bright = star.bright * twinkle;
+      const tintR = mix(bright, bright * 0.72, star.tint);
+      const tintB = mix(bright, bright * 1, star.tint);
+      for (let dy = -Math.ceil(radius * 2); dy <= Math.ceil(radius * 2); dy += 1) {
+        for (let dx = -Math.ceil(radius * 2); dx <= Math.ceil(radius * 2); dx += 1) {
+          const x = cx + dx;
+          const y = cy + dy;
+          if (x < 0 || y < 0 || x >= width || y >= height) continue;
+          const d = Math.sqrt(dx * dx + dy * dy) / (radius * 2);
+          if (d > 1) continue;
+          const weight = (1 - d) ** 3;
+          const base = (y * width + x) * 3;
+          px[base] = clamp(px[base] + tintR * weight);
+          px[base + 1] = clamp(px[base + 1] + tintR * 0.92 * weight);
+          px[base + 2] = clamp(px[base + 2] + tintB * weight);
+        }
+      }
+    }
+    return finish(width, height, px);
+  },
+  "ink-wash"({ width, height, seed, tone = "light" }) {
+    const random = mulberry32(seed);
+    const fiber = makeNoise(random, 24);
+    const dark = tone === "dark";
+    const paper = dark ? [22, 24, 28] : [246, 241, 231];
+    const inkTones = dark ? [0.42, 0.32, 0.22, 0.14] : [0.34, 0.52, 0.76, 0.95];
+    const ridges = [
+      { y: 0.52, amp: 0.055, freq: 2.1, shift: 0 },
+      { y: 0.62, amp: 0.075, freq: 1.5, shift: 1.7 },
+      { y: 0.76, amp: 0.05, freq: 2.8, shift: 3.1 },
+      { y: 0.88, amp: 0.035, freq: 3.6, shift: 5.3 }
+    ].map((ridge, index) => ({ ...ridge, tone: inkTones[index] }));
+    const specks = Array.from({ length: 420 }, () => ({ u: random(), v: 0.45 + random() * 0.55, s: random() }));
+    return finish(width, height, paint(width, height, (u, v) => {
+      const grain = (fiber(u * 3, v * 3) - 0.5) * (dark ? 8 : 14);
+      let r = paper[0] + grain;
+      let g = paper[1] + grain;
+      let b = paper[2] + grain * 0.8;
+      r -= Math.abs(Math.sin(u * 220 + v * 8)) * 2.4;
+      g -= Math.abs(Math.sin(u * 220 + v * 8)) * 2.2;
+      const inkRgb = dark ? [186, 196, 206] : [28, 30, 30];
+      for (const ridge of ridges) {
+        const profile = ridge.y + Math.sin((u * ridge.freq + ridge.shift) * Math.PI * 2) * ridge.amp + Math.sin((u * ridge.freq * 2.7 + ridge.shift) * Math.PI * 2) * ridge.amp * 0.32;
+        if (v < profile) continue;
+        const depth = Math.min(1, (v - profile) / 0.22);
+        const wet = Math.exp(-((v - profile) ** 2) / 4e-5) * 0.35;
+        const ink = (ridge.tone * (0.55 + depth * 0.45) + wet) * (0.92 + fiber(u * 9, v * 9) * 0.16);
+        r = mix(r, inkRgb[0], Math.min(0.94, ink));
+        g = mix(g, inkRgb[1], Math.min(0.94, ink));
+        b = mix(b, inkRgb[2], Math.min(0.94, ink));
+      }
+      for (const speck of specks) {
+        const dx = (u - speck.u) * width;
+        const dy = (v - speck.v) * height;
+        if (dx * dx + dy * dy < 2.2 + speck.s * 3) {
+          r = mix(r, inkRgb[0], 0.35);
+          g = mix(g, inkRgb[1], 0.35);
+          b = mix(b, inkRgb[2], 0.35);
+        }
+      }
+      const fade = smoothstep(Math.min(1, Math.max(0, (v - 0.82) / 0.18)));
+      return [
+        mix(r, paper[0] + 2, fade * 0.75),
+        mix(g, paper[1] + 2, fade * 0.75),
+        mix(b, paper[2] + 2, fade * 0.75)
+      ];
+    }));
+  },
+  fluid({ width, height, seed, time = 0 }) {
+    const random = mulberry32(seed);
+    const warp = makeNoise(random, 10);
+    const flow = makeNoise(random, 5);
+    const clock = time * 0.06;
+    return finish(width, height, paint(width, height, (u, v) => {
+      const w1 = warp(u + clock, v - clock * 0.6);
+      const w2 = warp(u + w1 * 0.35 - clock * 0.4, v - w1 * 0.28 + clock * 0.3);
+      const t = Math.min(1, Math.max(0, flow(u + w2 * 0.5 + clock * 0.2, v + w1 * 0.4 - clock * 0.15)));
+      const violet = [58, 44, 128];
+      const teal = [38, 138, 148];
+      const blush = [214, 132, 168];
+      const mid = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+      const base = t < 0.5 ? [mix(violet[0], teal[0], mid), mix(violet[1], teal[1], mid), mix(violet[2], teal[2], mid)] : [mix(teal[0], blush[0], mid), mix(teal[1], blush[1], mid), mix(teal[2], blush[2], mid)];
+      const sheen = (1 - Math.abs(w2 - 0.5) * 2) * 26;
+      return [base[0] + sheen, base[1] + sheen * 0.8, base[2] + sheen * 1.1];
+    }));
+  },
+  "neon-grid"({ width, height, seed }) {
+    const random = mulberry32(seed);
+    const sky = makeNoise(random, 7);
+    const horizon = 0.62;
+    return finish(width, height, paint(width, height, (u, v) => {
+      if (v < horizon) {
+        const depth2 = 1 - v / horizon;
+        let r2 = mix(58, 12, depth2);
+        let g2 = mix(16, 6, depth2);
+        let b2 = mix(86, 22, depth2);
+        r2 += sky(u, v) * 40;
+        b2 += sky(u, v) * 70;
+        r2 += glow(u, v, 0.5, horizon, 0.45, 90);
+        g2 += glow(u, v, 0.5, horizon, 0.45, 30);
+        b2 += glow(u, v, 0.5, horizon, 0.45, 120);
+        return [r2, g2, b2];
+      }
+      const depth = (v - horizon) / (1 - horizon);
+      const scale = 1 / Math.max(1e-4, depth);
+      const horizonGlow = Math.exp(-depth * 5) * 120;
+      const gx = Math.abs(u * scale * 6 % 1 - 0.5);
+      const gy = Math.abs(scale * 0.9 % 1 - 0.5);
+      const line = Math.min(gx, gy);
+      const glowLine = Math.max(0, 1 - line / 0.06);
+      const scan = 0.5 + 0.5 * Math.sin(v * 900);
+      let r = 8 + horizonGlow * 0.5;
+      let g = 4 + horizonGlow * 0.25;
+      let b = 18 + horizonGlow * 0.8;
+      r += glowLine * (120 + 90 * (1 - depth));
+      g += glowLine * (40 + 30 * (1 - depth));
+      b += glowLine * (200 + 55 * (1 - depth));
+      const dim = 0.85 + scan * 0.15;
+      return [r * dim, g * dim, b * dim];
+    }));
+  },
+  "paper-grain"({ width, height, seed }) {
+    const random = mulberry32(seed);
+    const fiber = makeNoise(random, 36);
+    return finish(width, height, paint(width, height, (u, v) => {
+      const grain = (fiber(u * 5, v * 5) - 0.5) * 10 + (random() - 0.5) * 6;
+      const vignette = 1 - Math.min(1, (Math.hypot(u - 0.5, v - 0.5) / 0.85) ** 2) * 0.28;
+      return [
+        (243 + grain) * vignette,
+        (234 + grain) * vignette,
+        (214 + grain * 0.9) * vignette
+      ];
+    }));
+  },
+  "ridge-dawn"({ width, height, seed }) {
+    const random = mulberry32(seed);
+    const haze = makeNoise(random, 8);
+    const layers = [
+      { base: 0.5, amp: 0.06, freq: 1.7, tone: [148, 150, 168], phase: 0.4 },
+      { base: 0.6, amp: 0.08, freq: 1.2, tone: [112, 118, 140], phase: 1.9 },
+      { base: 0.72, amp: 0.06, freq: 2.4, tone: [74, 82, 104], phase: 3.4 },
+      { base: 0.84, amp: 0.04, freq: 3.1, tone: [42, 48, 66], phase: 5.1 }
+    ];
+    return finish(width, height, paint(width, height, (u, v) => {
+      const skyT = Math.min(1, v / 0.65);
+      let r = mix(252, 214, skyT);
+      let g = mix(226, 186, skyT);
+      let b = mix(198, 176, skyT);
+      r += glow(u, v, 0.72, 0.34, 0.5, 60);
+      g += glow(u, v, 0.72, 0.34, 0.5, 40);
+      b += glow(u, v, 0.72, 0.34, 0.5, 18);
+      for (const layer of layers) {
+        const profile = layer.base + Math.sin((u * layer.freq + layer.phase) * Math.PI * 2) * layer.amp + Math.sin((u * layer.freq * 3.1 + layer.phase) * Math.PI * 2) * layer.amp * 0.28;
+        if (v < profile) continue;
+        const blend = 0.78 + haze(u * 2, v * 2) * 0.22;
+        r = mix(r, layer.tone[0] * blend, 0.9);
+        g = mix(g, layer.tone[1] * blend, 0.9);
+        b = mix(b, layer.tone[2] * blend, 0.9);
+      }
+      return [r, g, b];
+    }));
+  }
+};
+function renderArt(recipe, options = {}) {
+  const fn = RECIPE_FNS[recipe];
+  if (fn === void 0) {
+    throw new Error(`unknown art recipe "${recipe}" (available: ${Object.keys(RECIPE_FNS).join(", ")})`);
+  }
+  const width = Math.max(16, Math.min(4096, Math.round(options.width ?? 1024)));
+  const height = Math.max(16, Math.min(4096, Math.round(options.height ?? 1536)));
+  const seed = Number.isFinite(options.seed) ? Math.abs(Math.floor(options.seed)) : 1;
+  const time = Number.isFinite(options.time) ? options.time : 0;
+  return fn({ width, height, seed, time, tone: options.tone === "dark" ? "dark" : "light" });
+}
+var ANIMATED_RECIPES = Object.freeze(["starfield", "fluid"]);
+
+// src/host/art-video.js
+import { spawnSync } from "node:child_process";
+import { mkdirSync as mkdirSync2, mkdtempSync, readFileSync as readFileSync2, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
+import { dirname, join as join2 } from "node:path";
+import { tmpdir } from "node:os";
+var MAX_BYTES = 50 * 1024 * 1024;
+function hasFfmpeg(ffmpegPath = process.env.FFMPEG_PATH ?? "ffmpeg") {
+  const result = spawnSync(ffmpegPath, ["-version"], { encoding: "utf8" });
+  return result.status === 0;
+}
+function renderArtVideo(options) {
+  const {
+    recipe,
+    width,
+    height,
+    seed = 1,
+    tone = "light",
+    frames = 48,
+    fps = 24,
+    crf = 20,
+    output,
+    posterPath,
+    ffmpegPath = process.env.FFMPEG_PATH ?? "ffmpeg"
+  } = options;
+  const frameCount = Math.max(2, Math.min(240, Math.round(frames)));
+  const frameRate = Math.max(1, Math.min(60, Math.round(fps)));
+  const work = mkdtempSync(join2(tmpdir(), "vft-anim-"));
+  try {
+    let poster = null;
+    for (let index = 0; index < frameCount; index += 1) {
+      const png = renderArt(recipe, { width, height, seed, tone, time: index / frameRate });
+      if (index === 0) poster = png;
+      writeFileSync2(join2(work, `frame-${String(index).padStart(4, "0")}.png`), png);
+    }
+    mkdirSync2(dirname(output), { recursive: true });
+    const result = spawnSync(ffmpegPath, [
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-framerate",
+      String(frameRate),
+      "-i",
+      join2(work, "frame-%04d.png"),
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-crf",
+      String(crf),
+      "-movflags",
+      "+faststart",
+      "-an",
+      output
+    ], { encoding: "utf8" });
+    if (result.status !== 0) {
+      throw new Error(`ffmpeg failed: ${(result.stderr ?? "").slice(0, 400) || `exit ${result.status}`}`);
+    }
+    const bytes = readFileSync2(output).byteLength;
+    if (bytes > MAX_BYTES) throw new Error(`generated clip is ${Math.round(bytes / 1024 / 1024)}MB, over the 50MB wallpaper limit`);
+    if (posterPath !== void 0) writeFileSync2(posterPath, poster);
+    return { bytes, frames: frameCount, fps: frameRate, poster };
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
 // cli/vft.mjs
-var PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+var PACKAGE_ROOT = resolve(dirname2(fileURLToPath(import.meta.url)), "..");
 var EXIT = { ok: 0, error: 1, gate: 2, confirm: 3 };
 var THEME_ID = /^[a-z][a-z0-9-]{1,39}$/;
 function parseArgs(argv) {
@@ -1038,38 +1737,38 @@ function fail(code, message, extra = {}) {
   return { exitCode: code, payload: { ok: false, code, error: message, ...extra } };
 }
 function resolvePaths({ dshHome, profile } = {}) {
-  const home = resolve(dshHome ?? process.env.DSH_HOME ?? join2(homedir(), ".dsh"));
-  const resolvedProfile = profile ?? (existsSync2(join2(home, "vyra-free-theme-desktop")) ? "desktop" : "web");
-  const dataDir = join2(home, resolvedProfile === "desktop" ? "vyra-free-theme-desktop" : "vyra-free-theme");
+  const home = resolve(dshHome ?? process.env.DSH_HOME ?? join3(homedir(), ".dsh"));
+  const resolvedProfile = profile ?? (existsSync2(join3(home, "vyra-free-theme-desktop")) ? "desktop" : "web");
+  const dataDir = join3(home, resolvedProfile === "desktop" ? "vyra-free-theme-desktop" : "vyra-free-theme");
   return {
     home,
     profile: resolvedProfile,
     dataDir,
-    userThemesDir: join2(dataDir, "themes"),
-    selectionFile: join2(dataDir, "selection.json"),
-    stateFile: join2(dataDir, "state.json"),
+    userThemesDir: join3(dataDir, "themes"),
+    selectionFile: join3(dataDir, "selection.json"),
+    stateFile: join3(dataDir, "state.json"),
     packageRoot: PACKAGE_ROOT
   };
 }
 function sources(paths) {
   return [
     { kind: "user", dir: paths.userThemesDir },
-    { kind: "builtin", dir: join2(paths.packageRoot, "themes") },
-    { kind: "preset", dir: join2(paths.packageRoot, "presets", "colors") }
+    { kind: "builtin", dir: join3(paths.packageRoot, "themes") },
+    { kind: "preset", dir: join3(paths.packageRoot, "presets", "colors") }
   ];
 }
 function listIds(dir) {
   if (!existsSync2(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory() && existsSync2(join2(dir, entry.name, "theme.json"))).map((entry) => entry.name).sort();
+  return readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory() && existsSync2(join3(dir, entry.name, "theme.json"))).map((entry) => entry.name).sort();
 }
 function findTheme(paths, id) {
   for (const source of sources(paths)) {
-    const dir = join2(source.dir, id);
-    const file = join2(dir, "theme.json");
+    const dir = join3(source.dir, id);
+    const file = join3(dir, "theme.json");
     if (!existsSync2(file)) continue;
     let raw;
     try {
-      raw = JSON.parse(readFileSync2(file, "utf8"));
+      raw = JSON.parse(readFileSync3(file, "utf8"));
     } catch (error) {
       return { kind: source.kind, id, dir, error: `theme.json 解析失败：${error.message}` };
     }
@@ -1088,9 +1787,9 @@ function normalizeOrThrow(raw) {
   return result.theme;
 }
 function writeJsonAtomic(file, value) {
-  mkdirSync2(dirname(file), { recursive: true });
+  mkdirSync3(dirname2(file), { recursive: true });
   const stage = `${file}.tmp-${process.pid}`;
-  writeFileSync2(stage, `${JSON.stringify(value, null, 2)}
+  writeFileSync3(stage, `${JSON.stringify(value, null, 2)}
 `, "utf8");
   renameSync2(stage, file);
 }
@@ -1103,7 +1802,7 @@ function mutateUserTheme(paths, id, mutate) {
   const next = { ...found.raw };
   mutate(next);
   const normalized = normalizeOrThrow(next);
-  writeJsonAtomic(join2(found.dir, "theme.json"), next);
+  writeJsonAtomic(join3(found.dir, "theme.json"), next);
   return { exitCode: EXIT.ok, payload: { ok: true, id, theme: normalized } };
 }
 function summarise(paths, id, kind, raw) {
@@ -1133,7 +1832,7 @@ function cmdThemeList(paths, { flags }) {
       seen.add(id);
       let raw;
       try {
-        raw = JSON.parse(readFileSync2(join2(source.dir, id, "theme.json"), "utf8"));
+        raw = JSON.parse(readFileSync3(join3(source.dir, id, "theme.json"), "utf8"));
       } catch {
         rows.push({ id, kind: source.kind, error: "theme.json 解析失败" });
         continue;
@@ -1178,7 +1877,7 @@ function cmdThemeCreate(paths, { flags }) {
   if (!THEME_ID.test(id)) return fail(EXIT.error, `非法主题 id "${id}"（2–40 位小写字母/数字/连字符）`);
   const found = findTheme(paths, from);
   if (found === null) return fail(EXIT.error, `找不到来源主题 "${from}"`);
-  const targetDir = join2(paths.userThemesDir, id);
+  const targetDir = join3(paths.userThemesDir, id);
   if (existsSync2(targetDir)) return fail(EXIT.confirm, `"${id}" 已存在；先删除或换一个 id`);
   const next = JSON.parse(JSON.stringify(found.raw));
   next.id = id;
@@ -1186,18 +1885,18 @@ function cmdThemeCreate(paths, { flags }) {
   if (typeof flags["name-en"] === "string" && next.name.en === next.name.zh) next.name.en = flags["name-en"];
   next.version = next.version ?? "0.1.0";
   normalizeOrThrow(next);
-  mkdirSync2(targetDir, { recursive: true });
-  writeJsonAtomic(join2(targetDir, "theme.json"), next);
-  const assetsDir = join2(found.dir, "assets");
+  mkdirSync3(targetDir, { recursive: true });
+  writeJsonAtomic(join3(targetDir, "theme.json"), next);
+  const assetsDir = join3(found.dir, "assets");
   if (existsSync2(assetsDir)) {
-    mkdirSync2(join2(targetDir, "assets"), { recursive: true });
+    mkdirSync3(join3(targetDir, "assets"), { recursive: true });
     for (const name of readdirSync(assetsDir)) {
-      copyFileSync(join2(assetsDir, name), join2(targetDir, "assets", name));
+      copyFileSync(join3(assetsDir, name), join3(targetDir, "assets", name));
     }
   }
-  const entry = extname(found.dir) === ".js" ? null : join2(found.dir, found.raw.wallpaper?.entry ?? "");
+  const entry = extname(found.dir) === ".js" ? null : join3(found.dir, found.raw.wallpaper?.entry ?? "");
   if (found.raw.wallpaper?.kind === "code" && entry !== null && existsSync2(entry)) {
-    copyFileSync(entry, join2(targetDir, found.raw.wallpaper.entry));
+    copyFileSync(entry, join3(targetDir, found.raw.wallpaper.entry));
   }
   return { exitCode: EXIT.ok, payload: { ok: true, id, from, kind: "user", dir: targetDir }, text: `已创建 ${id}（来源 ${from}）→ ${targetDir}` };
 }
@@ -1217,7 +1916,7 @@ function cmdThemeDelete(paths, { positionals, flags }) {
   if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
   if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind === "builtin" ? "内置" : "预设"}主题，不可删除`);
   if (flags.force !== true) return fail(EXIT.confirm, `删除 "${id}" 不可撤销；确认后加 --force 重跑`, { id });
-  rmSync(found.dir, { recursive: true, force: true });
+  rmSync2(found.dir, { recursive: true, force: true });
   return { exitCode: EXIT.ok, payload: { ok: true, id, deleted: true }, text: `已删除 ${id}` };
 }
 function cmdThemeApply(paths, { positionals, flags }) {
@@ -1243,7 +1942,7 @@ function cmdThemeReset(paths, { positionals }) {
   if (!existsSync2(paths.stateFile)) return { exitCode: EXIT.ok, payload: { ok: true, id, cleared: false }, text: "没有个性化状态文件，无需复位" };
   let state;
   try {
-    state = JSON.parse(readFileSync2(paths.stateFile, "utf8"));
+    state = JSON.parse(readFileSync3(paths.stateFile, "utf8"));
   } catch (error) {
     return fail(EXIT.error, `state.json 解析失败：${error.message}`);
   }
@@ -1263,29 +1962,29 @@ function cmdThemeExport(paths, { positionals, flags }) {
   return { exitCode: EXIT.ok, payload: { ok: true, id, out: outDir }, text: `已导出 ${id} → ${outDir}` };
 }
 function copyDirRecursive(from, to) {
-  mkdirSync2(to, { recursive: true });
+  mkdirSync3(to, { recursive: true });
   for (const entry of readdirSync(from, { withFileTypes: true })) {
-    const source = join2(from, entry.name);
-    const target = join2(to, entry.name);
+    const source = join3(from, entry.name);
+    const target = join3(to, entry.name);
     if (entry.isDirectory()) copyDirRecursive(source, target);
     else copyFileSync(source, target);
   }
 }
 function cmdThemeImport(paths, { positionals, flags }) {
   const fromDir = resolve(positionals[0] ?? "");
-  if (!existsSync2(join2(fromDir, "theme.json"))) return fail(EXIT.error, `"${fromDir}" 不是主题目录（缺 theme.json）`);
+  if (!existsSync2(join3(fromDir, "theme.json"))) return fail(EXIT.error, `"${fromDir}" 不是主题目录（缺 theme.json）`);
   let raw;
   try {
-    raw = JSON.parse(readFileSync2(join2(fromDir, "theme.json"), "utf8"));
+    raw = JSON.parse(readFileSync3(join3(fromDir, "theme.json"), "utf8"));
   } catch (error) {
     return fail(EXIT.error, `theme.json 解析失败：${error.message}`);
   }
   if (typeof flags.id === "string") raw.id = flags.id;
   const theme = normalizeOrThrow(raw);
-  const targetDir = join2(paths.userThemesDir, theme.id);
+  const targetDir = join3(paths.userThemesDir, theme.id);
   if (existsSync2(targetDir)) return fail(EXIT.confirm, `"${theme.id}" 已存在；换 id 或先删除`);
   copyDirRecursive(fromDir, targetDir);
-  writeJsonAtomic(join2(targetDir, "theme.json"), raw);
+  writeJsonAtomic(join3(targetDir, "theme.json"), raw);
   return { exitCode: EXIT.ok, payload: { ok: true, id: theme.id, dir: targetDir }, text: `已导入 ${theme.id} → ${targetDir}` };
 }
 var IMAGE_MIME = { ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".avif": "image/avif", ".gif": "image/gif" };
@@ -1293,7 +1992,7 @@ function cmdWallpaperList(paths, { positionals, flags }) {
   const id = positionals[0];
   const found = findTheme(paths, id);
   if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
-  const assetsDir = join2(found.dir, "assets");
+  const assetsDir = join3(found.dir, "assets");
   const files = existsSync2(assetsDir) ? readdirSync(assetsDir).filter((name) => IMAGE_MIME[extname(name).toLowerCase()] !== void 0) : [];
   const wallpaper = found.raw.wallpaper ?? null;
   const payload = { ok: true, id, kind: found.kind, wallpaper, files };
@@ -1313,8 +2012,8 @@ function cmdWallpaperAdd(paths, { positionals, flags }) {
   const mode = typeof flags.mode === "string" ? flags.mode : "both";
   if (!["light", "dark", "both"].includes(mode)) return fail(EXIT.error, "--mode 只能是 light / dark / both");
   return mutateUserTheme(paths, id, (raw) => {
-    const themeDir = join2(paths.userThemesDir, id);
-    mkdirSync2(join2(themeDir, "assets"), { recursive: true });
+    const themeDir = join3(paths.userThemesDir, id);
+    mkdirSync3(join3(themeDir, "assets"), { recursive: true });
     const added = [];
     for (const file of files) {
       const absolute = resolve(file);
@@ -1322,7 +2021,13 @@ function cmdWallpaperAdd(paths, { positionals, flags }) {
       const mime = IMAGE_MIME[extname(absolute).toLowerCase()];
       if (mime === void 0) throw new Error(`${basename(absolute)}：只接受 webp/png/jpg/avif/gif`);
       const name = basename(absolute);
-      copyFileSync(absolute, join2(themeDir, "assets", name));
+      copyFileSync(absolute, join3(themeDir, "assets", name));
+      if (extname(name).toLowerCase() === ".png") {
+        try {
+          recordWallpaperStats(themeDir, mode, readFileSync3(absolute));
+        } catch {
+        }
+      }
       added.push({ src: `assets/${name}`, mime });
     }
     const first = added[0];
@@ -1347,12 +2052,187 @@ function cmdWallpaperSet(paths, { positionals, flags }) {
     };
   });
 }
+function cmdWallpaperRecipes({ flags }) {
+  const recipes = Object.entries(ART_RECIPES).map(([id, recipe]) => ({ id, ...recipe }));
+  if (flags.json === true) return { exitCode: EXIT.ok, payload: { ok: true, recipes } };
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, recipes },
+    text: recipes.map((recipe) => `${recipe.id.padEnd(12)} ${recipe.label.zh}  ${recipe.description}`).join("\n")
+  };
+}
+async function cmdWallpaperAnim(paths, { positionals, flags }) {
+  const id = positionals[0];
+  const recipe = typeof flags.recipe === "string" ? flags.recipe : null;
+  if (recipe === null || !ANIMATED_RECIPES.includes(recipe)) {
+    return fail(EXIT.error, `用法：vft wallpaper anim <id> --recipe <${ANIMATED_RECIPES.join("|")}> [--size portrait|desktop|square] [--frames 48] [--fps 24] [--side light|dark|both] [--seed N]`);
+  }
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+  const ffmpegPath = typeof flags.ffmpeg === "string" ? flags.ffmpeg : process.env.FFMPEG_PATH ?? "ffmpeg";
+  if (!hasFfmpeg(ffmpegPath)) {
+    return fail(EXIT.confirm, `找不到 ffmpeg（试过 "${ffmpegPath}"）：动态壁纸需要它编码 mp4；用 --ffmpeg 指定，或改用 wallpaper art 生成静帧`, { missing: "ffmpeg" });
+  }
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "portrait"] ?? WALLPAPER_SIZES.portrait;
+  const seed = flags.seed === void 0 ? 1 : Number(flags.seed);
+  const frames = flags.frames === void 0 ? 48 : Number(flags.frames);
+  const fps = flags.fps === void 0 ? 24 : Number(flags.fps);
+  const side = typeof flags.side === "string" ? flags.side : "both";
+  if (!["light", "dark", "both"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark / both");
+  const themeDir = join3(paths.userThemesDir, id);
+  mkdirSync3(join3(themeDir, "assets"), { recursive: true });
+  const baseName = typeof flags.file === "string" ? flags.file.replace(/\.(mp4|webm)$/i, "") : `${recipe}-${seed}`;
+  const mp4 = join3(themeDir, "assets", `${baseName}.mp4`);
+  const poster = join3(themeDir, "assets", `${baseName}.png`);
+  const result = renderArtVideo({
+    recipe,
+    width: size.width,
+    height: size.height,
+    seed,
+    tone: flags.tone === "dark" ? "dark" : "light",
+    frames,
+    fps,
+    crf: flags.crf === void 0 ? 20 : Number(flags.crf),
+    output: mp4,
+    posterPath: poster,
+    ffmpegPath
+  });
+  const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${baseName}.png` };
+  const applied = mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = {
+      kind: "video",
+      light: side === "dark" ? raw.wallpaper?.light ?? null : videoSide,
+      dark: side === "light" ? raw.wallpaper?.dark ?? null : videoSide
+    };
+  });
+  if (applied.exitCode !== EXIT.ok) return applied;
+  const stats = recordWallpaperStats(themeDir, side, result.poster);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, recipe, file: videoSide.src, poster: videoSide.poster, bytes: result.bytes, frames: result.frames, fps: result.fps, side, stats },
+    text: `已生成动态壁纸 ${videoSide.src}（${result.frames} 帧 @${result.fps}fps，${Math.round(result.bytes / 1024)} KB）`
+  };
+}
+async function cmdWallpaperArt(paths, { positionals, flags }) {
+  const id = positionals[0];
+  const recipe = typeof flags.recipe === "string" ? flags.recipe : null;
+  if (recipe === null || ART_RECIPES[recipe] === void 0) {
+    return fail(EXIT.error, `用法：vft wallpaper art <id> --recipe <${Object.keys(ART_RECIPES).join("|")}> [--size portrait|desktop|square] [--side light|dark|both] [--seed N]`);
+  }
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "portrait"] ?? WALLPAPER_SIZES.portrait;
+  const seed = flags.seed === void 0 ? 1 : Number(flags.seed);
+  const side = typeof flags.side === "string" ? flags.side : "both";
+  if (!["light", "dark", "both"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark / both");
+  const buffer = renderArt(recipe, { width: size.width, height: size.height, seed });
+  const themeDir = join3(paths.userThemesDir, id);
+  mkdirSync3(join3(themeDir, "assets"), { recursive: true });
+  const fileName = typeof flags.file === "string" ? flags.file : `${recipe}-${seed}.png`;
+  writeFileSync3(join3(themeDir, "assets", fileName), buffer);
+  const src = `assets/${fileName}`;
+  const applied = mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = {
+      kind: "image",
+      light: side === "dark" ? raw.wallpaper?.light ?? null : { src },
+      dark: side === "light" ? raw.wallpaper?.dark ?? null : { src }
+    };
+  });
+  if (applied.exitCode !== EXIT.ok) return applied;
+  const stats = recordWallpaperStats(themeDir, side, buffer);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, recipe, file: src, seed, size, side, stats },
+    text: `已用 ${recipe} 生成 ${src}（${size.width}×${size.height}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`
+  };
+}
 function cmdWallpaperPending(command) {
   return fail(
     EXIT.confirm,
-    `vft wallpaper ${command} 需要本机 ComfyUI（P6 接线）：目前请用 ComfyUI 生成图片后执行 vft wallpaper add`,
-    { pending: "comfyui" }
+    `vft wallpaper ${command} 需要视频工作流（P6.1）：先用本机 ComfyUI 生成 mp4，再手改 theme.json 的 wallpaper 块（见技能文档）`,
+    { pending: "comfyui-video" }
   );
+}
+var STATS_FILE = "wallpaper-stats.json";
+function recordWallpaperStats(themeDir, side, buffer) {
+  if (!isPng(buffer)) return null;
+  let stats;
+  try {
+    stats = imageStats(buffer);
+  } catch {
+    return null;
+  }
+  const file = join3(themeDir, STATS_FILE);
+  let all = {};
+  if (existsSync2(file)) {
+    try {
+      all = JSON.parse(readFileSync3(file, "utf8"));
+    } catch {
+      all = {};
+    }
+  }
+  const record = { stdLuma: stats.stdLuma, edgeEnergy: stats.edgeEnergy, width: stats.width, height: stats.height };
+  if (side === "dark") all.dark = record;
+  else if (side === "both") {
+    all.light = record;
+    all.dark = record;
+  } else all.light = record;
+  writeJsonAtomic(file, all);
+  return record;
+}
+async function cmdWallpaperGen(paths, { positionals, flags }) {
+  const id = positionals[0];
+  if (typeof flags.prompt !== "string" || flags.prompt.trim().length === 0) {
+    return fail(EXIT.error, '用法：vft wallpaper gen <id> --prompt "画面描述" [--size portrait|desktop|square] [--seed N] [--file 名称.png] [--mode light|dark|both]');
+  }
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "portrait"] ?? WALLPAPER_SIZES.portrait;
+  const seed = flags.seed === void 0 ? Math.floor(Math.random() * 2 ** 31) : Number(flags.seed);
+  const workflow = buildQwenImageWorkflow({
+    prompt: flags.prompt,
+    negative: typeof flags.negative === "string" ? flags.negative : "",
+    width: size.width,
+    height: size.height,
+    seed,
+    steps: flags.steps === void 0 ? QWEN_IMAGE_DEFAULTS.steps : Number(flags.steps),
+    cfg: flags.cfg === void 0 ? QWEN_IMAGE_DEFAULTS.cfg : Number(flags.cfg),
+    filenamePrefix: `vft/${id}`
+  });
+  const issues = validateWorkflow(workflow);
+  if (issues.length > 0) return fail(EXIT.gate, `工作流不合法：${issues.join("；")}`, { issues });
+  const client = createComfyClient({ baseUrl: typeof flags["comfy-url"] === "string" ? flags["comfy-url"] : void 0, auth: typeof flags["comfy-auth"] === "string" ? flags["comfy-auth"] : void 0 });
+  if (!await client.ping()) {
+    return fail(EXIT.confirm, `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`, { comfy: client.baseUrl });
+  }
+  const promptId = await client.submit(workflow);
+  const timeoutMs = flags.timeout === void 0 ? 9e5 : Number(flags.timeout) * 1e3;
+  const { images } = await client.wait(promptId, { timeoutMs });
+  if (images.length === 0) return fail(EXIT.error, "ComfyUI 完成但没有任何输出图片");
+  const buffer = await client.download(images[0]);
+  const themeDir = join3(paths.userThemesDir, id);
+  mkdirSync3(join3(themeDir, "assets"), { recursive: true });
+  const fileName = typeof flags.file === "string" ? flags.file : `${id}-${seed}.png`;
+  const target = join3(themeDir, "assets", fileName);
+  writeFileSync3(target, buffer);
+  const mode = typeof flags.mode === "string" ? flags.mode : "both";
+  const side = `assets/${fileName}`;
+  mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = {
+      kind: "image",
+      light: mode === "dark" ? raw.wallpaper?.light ?? null : { src: side },
+      dark: mode === "light" ? raw.wallpaper?.dark ?? null : { src: side }
+    };
+  });
+  const stats = recordWallpaperStats(themeDir, mode, buffer);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, promptId, file: side, seed, size, stats },
+    text: `已生成 ${side}（prompt ${promptId}，seed ${seed}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`
+  };
 }
 function cmdSidebarList(paths, { flags }) {
   const packs = Object.entries(SIDEBAR_PACKS).map(([id, pack]) => ({ id, ...pack }));
@@ -1481,7 +2361,16 @@ function cmdThemeCheck(paths, { positionals, flags }) {
     }
     try {
       const theme = normalizeOrThrow(found.raw);
-      const report = scoreTheme(theme);
+      let sampled = null;
+      const statsFile = join3(found.dir, STATS_FILE);
+      if (existsSync2(statsFile)) {
+        try {
+          const parsed = JSON.parse(readFileSync3(statsFile, "utf8"));
+          if (parsed?.light !== void 0 && parsed?.dark !== void 0) sampled = parsed;
+        } catch {
+        }
+      }
+      const report = scoreTheme(theme, { sampled });
       results.push({ id, ok: true, score: report.score, pass: report.pass, failures: report.failures, excluded: report.excluded });
     } catch (error) {
       results.push({ id, ok: false, error: error.message, pass: false, score: 0, issues: error.issues ?? [] });
@@ -1530,6 +2419,30 @@ async function run(argv, options = {}) {
   const ctx = { positionals: rest, flags, paths };
   if (group === void 0 || flags.help === true) return { exitCode: EXIT.ok, payload: { ok: true }, text: usage() };
   if (group === "reset") return cmdReset(paths);
+  const NEEDS_ID = /* @__PURE__ */ new Set([
+    "theme:show",
+    "theme:rename",
+    "theme:delete",
+    "theme:apply",
+    "theme:reset",
+    "theme:export",
+    "theme:import",
+    "wallpaper:list",
+    "wallpaper:add",
+    "wallpaper:set",
+    "wallpaper:gen",
+    "wallpaper:video",
+    "wallpaper:art",
+    "wallpaper:anim",
+    "sidebar:set",
+    "sidebar:tune",
+    "colors:suggest",
+    "brand:set",
+    "appearance:set"
+  ]);
+  if (NEEDS_ID.has(`${group}:${action}`) && typeof rest[0] !== "string") {
+    return fail(EXIT.error, `缺少主题 id：vft ${group} ${action} <id>`);
+  }
   try {
     if (group === "theme") {
       switch (action) {
@@ -1565,8 +2478,14 @@ async function run(argv, options = {}) {
           return cmdWallpaperAdd(paths, ctx);
         case "set":
           return cmdWallpaperSet(paths, ctx);
+        case "art":
+          return await cmdWallpaperArt(paths, ctx);
+        case "anim":
+          return await cmdWallpaperAnim(paths, ctx);
+        case "recipes":
+          return cmdWallpaperRecipes(ctx);
         case "gen":
-          return cmdWallpaperPending("gen");
+          return await cmdWallpaperGen(paths, ctx);
         case "video":
           return cmdWallpaperPending("video");
         default:

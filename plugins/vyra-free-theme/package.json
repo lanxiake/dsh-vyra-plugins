@@ -76,6 +76,7 @@
   "license": "MIT",
   "scripts": {
     "build": "node scripts/build-client.mjs",
+    "build:art": "node scripts/build-theme-art.mjs",
     "watch": "node scripts/build-client.mjs --watch",
     "test": "node --test tests/*.test.mjs",
     "verify:colors": "node scripts/check-colors.mjs",

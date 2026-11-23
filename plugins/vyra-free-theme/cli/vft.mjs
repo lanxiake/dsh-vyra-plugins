@@ -20,6 +20,11 @@ import { normalizeTheme, fieldsFromTheme, tableFromTheme } from "../src/shared/p
 import { SIDEBAR_PACKS, resolveSidebar, sidebarCss } from "../src/shared/personalization/sidebar-presets.js";
 import { rankPalettes, SCORE_THRESHOLD, scoreTheme } from "../src/shared/personalization/color-score.js";
 import { readSelection, writeSelection, isSelectableId, OFFICIAL_ID } from "../src/host/themes/selection.js";
+import { buildQwenImageWorkflow, validateWorkflow, WALLPAPER_SIZES, QWEN_IMAGE_DEFAULTS } from "../src/shared/comfy-workflow.js";
+import { createComfyClient } from "../src/host/comfy.js";
+import { imageStats, isPng } from "../src/shared/png-stats.js";
+import { ART_RECIPES, ANIMATED_RECIPES, renderArt } from "../src/shared/art-recipes.js";
+import { hasFfmpeg, renderArtVideo } from "../src/host/art-video.js";
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -386,6 +391,11 @@ function cmdWallpaperAdd(paths, { positionals, flags }) {
       if (mime === undefined) throw new Error(`${basename(absolute)}：只接受 webp/png/jpg/avif/gif`);
       const name = basename(absolute);
       copyFileSync(absolute, join(themeDir, "assets", name));
+      if (extname(name).toLowerCase() === ".png") {
+        try {
+          recordWallpaperStats(themeDir, mode, readFileSync(absolute));
+        } catch {}
+      }
       added.push({ src: `assets/${name}`, mime });
     }
     const first = added[0];
@@ -412,10 +422,203 @@ function cmdWallpaperSet(paths, { positionals, flags }) {
   });
 }
 
+function cmdWallpaperRecipes({ flags }) {
+  const recipes = Object.entries(ART_RECIPES).map(([id, recipe]) => ({ id, ...recipe }));
+  if (flags.json === true) return { exitCode: EXIT.ok, payload: { ok: true, recipes } };
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, recipes },
+    text: recipes.map((recipe) => `${recipe.id.padEnd(12)} ${recipe.label.zh}  ${recipe.description}`).join("\n"),
+  };
+}
+
+async function cmdWallpaperAnim(paths, { positionals, flags }) {
+  const id = positionals[0];
+  const recipe = typeof flags.recipe === "string" ? flags.recipe : null;
+  if (recipe === null || !ANIMATED_RECIPES.includes(recipe)) {
+    return fail(EXIT.error, `用法：vft wallpaper anim <id> --recipe <${ANIMATED_RECIPES.join("|")}> [--size portrait|desktop|square] [--frames 48] [--fps 24] [--side light|dark|both] [--seed N]`);
+  }
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+
+  const ffmpegPath = typeof flags.ffmpeg === "string" ? flags.ffmpeg : (process.env.FFMPEG_PATH ?? "ffmpeg");
+  if (!hasFfmpeg(ffmpegPath)) {
+    return fail(EXIT.confirm, `找不到 ffmpeg（试过 "${ffmpegPath}"）：动态壁纸需要它编码 mp4；用 --ffmpeg 指定，或改用 wallpaper art 生成静帧`, { missing: "ffmpeg" });
+  }
+
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "portrait"] ?? WALLPAPER_SIZES.portrait;
+  const seed = flags.seed === undefined ? 1 : Number(flags.seed);
+  const frames = flags.frames === undefined ? 48 : Number(flags.frames);
+  const fps = flags.fps === undefined ? 24 : Number(flags.fps);
+  const side = typeof flags.side === "string" ? flags.side : "both";
+  if (!["light", "dark", "both"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark / both");
+
+  const themeDir = join(paths.userThemesDir, id);
+  mkdirSync(join(themeDir, "assets"), { recursive: true });
+  const baseName = typeof flags.file === "string" ? flags.file.replace(/\.(mp4|webm)$/i, "") : `${recipe}-${seed}`;
+  const mp4 = join(themeDir, "assets", `${baseName}.mp4`);
+  const poster = join(themeDir, "assets", `${baseName}.png`);
+  const result = renderArtVideo({
+    recipe,
+    width: size.width,
+    height: size.height,
+    seed,
+    tone: flags.tone === "dark" ? "dark" : "light",
+    frames,
+    fps,
+    crf: flags.crf === undefined ? 20 : Number(flags.crf),
+    output: mp4,
+    posterPath: poster,
+    ffmpegPath,
+  });
+
+  const videoSide = { src: `assets/${baseName}.mp4`, poster: `assets/${baseName}.png` };
+  const applied = mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = {
+      kind: "video",
+      light: side === "dark" ? (raw.wallpaper?.light ?? null) : videoSide,
+      dark: side === "light" ? (raw.wallpaper?.dark ?? null) : videoSide,
+    };
+  });
+  if (applied.exitCode !== EXIT.ok) return applied;
+  const stats = recordWallpaperStats(themeDir, side, result.poster);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, recipe, file: videoSide.src, poster: videoSide.poster, bytes: result.bytes, frames: result.frames, fps: result.fps, side, stats },
+    text: `已生成动态壁纸 ${videoSide.src}（${result.frames} 帧 @${result.fps}fps，${Math.round(result.bytes / 1024)} KB）`,
+  };
+}
+
+async function cmdWallpaperArt(paths, { positionals, flags }) {
+  const id = positionals[0];
+  const recipe = typeof flags.recipe === "string" ? flags.recipe : null;
+  if (recipe === null || ART_RECIPES[recipe] === undefined) {
+    return fail(EXIT.error, `用法：vft wallpaper art <id> --recipe <${Object.keys(ART_RECIPES).join("|")}> [--size portrait|desktop|square] [--side light|dark|both] [--seed N]`);
+  }
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "portrait"] ?? WALLPAPER_SIZES.portrait;
+  const seed = flags.seed === undefined ? 1 : Number(flags.seed);
+  const side = typeof flags.side === "string" ? flags.side : "both";
+  if (!["light", "dark", "both"].includes(side)) return fail(EXIT.error, "--side 只能是 light / dark / both");
+
+  const buffer = renderArt(recipe, { width: size.width, height: size.height, seed });
+  const themeDir = join(paths.userThemesDir, id);
+  mkdirSync(join(themeDir, "assets"), { recursive: true });
+  const fileName = typeof flags.file === "string" ? flags.file : `${recipe}-${seed}.png`;
+  writeFileSync(join(themeDir, "assets", fileName), buffer);
+  const src = `assets/${fileName}`;
+  const applied = mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = {
+      kind: "image",
+      light: side === "dark" ? (raw.wallpaper?.light ?? null) : { src },
+      dark: side === "light" ? (raw.wallpaper?.dark ?? null) : { src },
+    };
+  });
+  if (applied.exitCode !== EXIT.ok) return applied;
+  const stats = recordWallpaperStats(themeDir, side, buffer);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, recipe, file: src, seed, size, side, stats },
+    text: `已用 ${recipe} 生成 ${src}（${size.width}×${size.height}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`,
+  };
+}
+
 function cmdWallpaperPending(command) {
   return fail(EXIT.confirm,
-    `vft wallpaper ${command} 需要本机 ComfyUI（P6 接线）：目前请用 ComfyUI 生成图片后执行 vft wallpaper add`,
-    { pending: "comfyui" });
+    `vft wallpaper ${command} 需要视频工作流（P6.1）：先用本机 ComfyUI 生成 mp4，再手改 theme.json 的 wallpaper 块（见技能文档）`,
+    { pending: "comfyui-video" });
+}
+
+const STATS_FILE = "wallpaper-stats.json";
+
+/**
+ * Record pixel evidence for one wallpaper side. The colour gate's interference
+ * dimension only runs when this exists, so it is written whenever a PNG lands.
+ */
+function recordWallpaperStats(themeDir, side, buffer) {
+  if (!isPng(buffer)) return null;
+  let stats;
+  try {
+    stats = imageStats(buffer);
+  } catch {
+    return null;
+  }
+  const file = join(themeDir, STATS_FILE);
+  let all = {};
+  if (existsSync(file)) {
+    try {
+      all = JSON.parse(readFileSync(file, "utf8"));
+    } catch {
+      all = {};
+    }
+  }
+  const record = { stdLuma: stats.stdLuma, edgeEnergy: stats.edgeEnergy, width: stats.width, height: stats.height };
+  if (side === "dark") all.dark = record;
+  else if (side === "both") { all.light = record; all.dark = record; }
+  else all.light = record;
+  writeJsonAtomic(file, all);
+  return record;
+}
+
+async function cmdWallpaperGen(paths, { positionals, flags }) {
+  const id = positionals[0];
+  if (typeof flags.prompt !== "string" || flags.prompt.trim().length === 0) {
+    return fail(EXIT.error, "用法：vft wallpaper gen <id> --prompt \"画面描述\" [--size portrait|desktop|square] [--seed N] [--file 名称.png] [--mode light|dark|both]");
+  }
+  const found = findTheme(paths, id);
+  if (found === null) return fail(EXIT.error, `找不到主题 "${id}"`);
+  if (found.kind !== "user") return fail(EXIT.confirm, `"${id}" 是${found.kind}主题，只读；先 theme create --from ${id} --id <新id>`);
+
+  const size = WALLPAPER_SIZES[typeof flags.size === "string" ? flags.size : "portrait"] ?? WALLPAPER_SIZES.portrait;
+  const seed = flags.seed === undefined ? Math.floor(Math.random() * 2 ** 31) : Number(flags.seed);
+  const workflow = buildQwenImageWorkflow({
+    prompt: flags.prompt,
+    negative: typeof flags.negative === "string" ? flags.negative : "",
+    width: size.width,
+    height: size.height,
+    seed,
+    steps: flags.steps === undefined ? QWEN_IMAGE_DEFAULTS.steps : Number(flags.steps),
+    cfg: flags.cfg === undefined ? QWEN_IMAGE_DEFAULTS.cfg : Number(flags.cfg),
+    filenamePrefix: `vft/${id}`,
+  });
+  const issues = validateWorkflow(workflow);
+  if (issues.length > 0) return fail(EXIT.gate, `工作流不合法：${issues.join("；")}`, { issues });
+
+  const client = createComfyClient({ baseUrl: typeof flags["comfy-url"] === "string" ? flags["comfy-url"] : undefined, auth: typeof flags["comfy-auth"] === "string" ? flags["comfy-auth"] : undefined });
+  if (!(await client.ping())) {
+    return fail(EXIT.confirm, `ComfyUI 不可达（${client.baseUrl}）。确认 ComfyUI 已启动，或用 --comfy-url / COMFYUI_URL 指定地址`, { comfy: client.baseUrl });
+  }
+
+  const promptId = await client.submit(workflow);
+  const timeoutMs = flags.timeout === undefined ? 900_000 : Number(flags.timeout) * 1000;
+  const { images } = await client.wait(promptId, { timeoutMs });
+  if (images.length === 0) return fail(EXIT.error, "ComfyUI 完成但没有任何输出图片");
+  const buffer = await client.download(images[0]);
+
+  const themeDir = join(paths.userThemesDir, id);
+  mkdirSync(join(themeDir, "assets"), { recursive: true });
+  const fileName = typeof flags.file === "string" ? flags.file : `${id}-${seed}.png`;
+  const target = join(themeDir, "assets", fileName);
+  writeFileSync(target, buffer);
+  const mode = typeof flags.mode === "string" ? flags.mode : "both";
+  const side = `assets/${fileName}`;
+  mutateUserTheme(paths, id, (raw) => {
+    raw.wallpaper = {
+      kind: "image",
+      light: mode === "dark" ? (raw.wallpaper?.light ?? null) : { src: side },
+      dark: mode === "light" ? (raw.wallpaper?.dark ?? null) : { src: side },
+    };
+  });
+  const stats = recordWallpaperStats(themeDir, mode, buffer);
+  return {
+    exitCode: EXIT.ok,
+    payload: { ok: true, id, promptId, file: side, seed, size, stats },
+    text: `已生成 ${side}（prompt ${promptId}，seed ${seed}）${stats === null ? "" : ` · stdLuma ${stats.stdLuma} edge ${stats.edgeEnergy}`}`,
+  };
 }
 
 function cmdSidebarList(paths, { flags }) {
@@ -551,7 +754,17 @@ function cmdThemeCheck(paths, { positionals, flags }) {
     }
     try {
       const theme = normalizeOrThrow(found.raw);
-      const report = scoreTheme(theme);
+      // Pixel evidence, when the theme has it: the interference dimension only
+      // joins the score with real wallpaper statistics on disk.
+      let sampled = null;
+      const statsFile = join(found.dir, STATS_FILE);
+      if (existsSync(statsFile)) {
+        try {
+          const parsed = JSON.parse(readFileSync(statsFile, "utf8"));
+          if (parsed?.light !== undefined && parsed?.dark !== undefined) sampled = parsed;
+        } catch {}
+      }
+      const report = scoreTheme(theme, { sampled });
       results.push({ id, ok: true, score: report.score, pass: report.pass, failures: report.failures, excluded: report.excluded });
     } catch (error) {
       results.push({ id, ok: false, error: error.message, pass: false, score: 0, issues: error.issues ?? [] });
@@ -607,6 +820,18 @@ export async function run(argv, options = {}) {
   if (group === undefined || flags.help === true) return { exitCode: EXIT.ok, payload: { ok: true }, text: usage() };
   if (group === "reset") return cmdReset(paths);
 
+  // Commands that address one theme must fail with a usage line, not with a
+  // path error from deep inside a directory join.
+  const NEEDS_ID = new Set([
+    "theme:show", "theme:rename", "theme:delete", "theme:apply", "theme:reset",
+    "theme:export", "theme:import", "wallpaper:list", "wallpaper:add", "wallpaper:set",
+    "wallpaper:gen", "wallpaper:video", "wallpaper:art", "wallpaper:anim", "sidebar:set", "sidebar:tune",
+    "colors:suggest", "brand:set", "appearance:set",
+  ]);
+  if (NEEDS_ID.has(`${group}:${action}`) && typeof rest[0] !== "string") {
+    return fail(EXIT.error, `缺少主题 id：vft ${group} ${action} <id>`);
+  }
+
   try {
     if (group === "theme") {
       switch (action) {
@@ -628,7 +853,10 @@ export async function run(argv, options = {}) {
         case "list": return cmdWallpaperList(paths, ctx);
         case "add": return cmdWallpaperAdd(paths, ctx);
         case "set": return cmdWallpaperSet(paths, ctx);
-        case "gen": return cmdWallpaperPending("gen");
+        case "art": return await cmdWallpaperArt(paths, ctx);
+        case "anim": return await cmdWallpaperAnim(paths, ctx);
+        case "recipes": return cmdWallpaperRecipes(ctx);
+        case "gen": return await cmdWallpaperGen(paths, ctx);
         case "video": return cmdWallpaperPending("video");
         default: return fail(EXIT.error, `未知子命令 wallpaper ${action ?? ""}`.trim());
       }

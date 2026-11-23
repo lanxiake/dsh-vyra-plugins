@@ -181,11 +181,18 @@ test("export then import round-trips a theme under a new id", async () => {
   assert.ok(existsSync(join(home, "vyra-free-theme", "themes", "copied", "theme.json")));
 });
 
-test("unknown commands and blocked generation report clearly", async () => {
+test("unknown commands, missing prompts and blocked video generation report clearly", async () => {
   const home = sandbox();
   const unknown = await vft(home, "theme", "explode");
   assert.equal(unknown.exitCode, 1);
-  const gen = await vft(home, "wallpaper", "gen", "x");
-  assert.equal(gen.exitCode, 3);
-  assert.equal(gen.payload.pending, "comfyui");
+  // gen exists now but needs a prompt and a theme
+  const noPrompt = await vft(home, "wallpaper", "gen", "x");
+  assert.equal(noPrompt.exitCode, 1);
+  assert.match(noPrompt.payload.error, /--prompt/);
+  const noId = await vft(home, "wallpaper", "gen", "--prompt", "x");
+  assert.equal(noId.exitCode, 1);
+  assert.match(noId.payload.error, /缺少主题 id/);
+  const video = await vft(home, "wallpaper", "video", "x");
+  assert.equal(video.exitCode, 3);
+  assert.equal(video.payload.pending, "comfyui-video");
 });

@@ -3,10 +3,19 @@
   "id": "ink-landscape",
   "version": "0.1.0",
   "author": "vyra",
-  "name": { "zh": "山水", "en": "Ink Landscape" },
+  "name": {
+    "zh": "山水",
+    "en": "Ink Landscape"
+  },
   "brand": {
-    "title": { "zh": "山水", "en": "Ink Landscape" },
-    "slogans": { "zh": "留白处 · 见天地", "en": "In the blank, the world appears" }
+    "title": {
+      "zh": "山水",
+      "en": "Ink Landscape"
+    },
+    "slogans": {
+      "zh": "留白处 · 见天地",
+      "en": "In the blank, the world appears"
+    }
   },
   "colors": {
     "light": {
@@ -37,7 +46,26 @@
   "shape": {
     "--dsw-alias-radius-lg": "10px"
   },
-  "translucency": { "web": 50, "desktop": 66 },
-  "sidebar": { "pack": "hairline" },
-  "coverage": { "shell": false, "scopes": ["sidebar"] }
+  "translucency": {
+    "web": 50,
+    "desktop": 66
+  },
+  "sidebar": {
+    "pack": "hairline"
+  },
+  "coverage": {
+    "shell": false,
+    "scopes": [
+      "sidebar"
+    ]
+  },
+  "wallpaper": {
+    "kind": "image",
+    "light": {
+      "src": "assets/ink-landscape-light.png"
+    },
+    "dark": {
+      "src": "assets/ink-landscape-dark.png"
+    }
+  }
 }

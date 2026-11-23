@@ -35,7 +35,11 @@ vft theme check [id…] [--json]                     # 校验 + 配色门禁（<
 vft wallpaper list <id> [--json]
 vft wallpaper add <id> <图片…> [--mode light|dark|both]
 vft wallpaper set <id> --src assets/x.webp [--mode …]
-vft wallpaper gen|video …                          # 需要本机 ComfyUI，当前退出码 3
+vft wallpaper recipes                              # 程序化图形库（无需 GPU）
+vft wallpaper art <id> --recipe starfield [--size portrait|desktop|square] [--side both] [--seed 1]
+vft wallpaper anim <id> --recipe fluid [--frames 48] [--fps 24] [--size …]   # 需 ffmpeg
+vft wallpaper gen <id> --prompt "…" [--size …] [--seed N]   # 需本机 ComfyUI
+vft wallpaper video <id> …                         # 需视频工作流（未接线）
 
 vft sidebar list                                   # 5 款包
 vft sidebar set <id> <inherit|frost|hairline|obsidian|neon>
@@ -63,13 +67,18 @@ vft theme check my-kiro                    # 必须 exit 0 才算完成
 vft theme apply my-kiro
 ```
 
-### ② 让 Agent 出一套壁纸（含动态）
-
-先按用户给的方向用本机 ComfyUI（`COMFYUI_URL`）出图 → `vft wallpaper add`；要动态壁纸就让 ComfyUI 出 3–5 秒可循环的 mp4，然后：
+### ② 用代码出壁纸（推荐先走这条：零算力、可复现）
 
 ```bash
-vft wallpaper add my-kiro ./loop.mp4 --mode both   # 事后按下面「视频壁纸」手改 kind
+vft wallpaper recipes                     # 看有哪些程序化图形
+vft wallpaper art  my-kiro --recipe ink-wash --size desktop --side both
+vft wallpaper anim my-kiro --recipe fluid --size desktop --frames 48 --fps 24   # 动态壁纸
 ```
+
+`art` 直接写 PNG（静帧，图片通道），`anim` 渲染 N 帧再用 ffmpeg 编成静音循环 mp4（视频通道，需要 ffmpeg）。
+内置主题里：`ink-landscape` 是代码生成的静帧，`aurora` 是代码生成的动态壁纸，`nebula` 是运行时 canvas 动画（`art.js`，不落文件）。
+
+### ③ 用 ComfyUI 出壁纸（需要本机 GPU）
 
 视频/代码壁纸的 `theme.json` 写法：
 

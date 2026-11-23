@@ -44,7 +44,17 @@ for (const [kind, dir] of [
       results.push({ kind, id, ok: false, issues: normalized.issues, score: 0, pass: false });
       continue;
     }
-    const report = scoreTheme(normalized.theme);
+    // Pixel evidence, when the theme ships wallpaper statistics: the
+    // interference dimension only joins the score with real measurements.
+    let sampled = null;
+    const statsFile = join(dir, id, "wallpaper-stats.json");
+    if (existsSync(statsFile)) {
+      try {
+        const parsed = JSON.parse(readFileSync(statsFile, "utf8"));
+        if (parsed?.light !== undefined && parsed?.dark !== undefined) sampled = parsed;
+      } catch {}
+    }
+    const report = scoreTheme(normalized.theme, { sampled });
     results.push({ kind, id, ok: true, score: report.score, pass: report.pass, report });
   }
 }

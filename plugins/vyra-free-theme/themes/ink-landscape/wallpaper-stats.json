@@ -1,0 +1,14 @@
+{
+  "light": {
+    "stdLuma": 0.2545,
+    "edgeEnergy": 0.0023,
+    "width": 2048,
+    "height": 1280
+  },
+  "dark": {
+    "stdLuma": 0.1718,
+    "edgeEnergy": 0.0019,
+    "width": 2048,
+    "height": 1280
+  }
+}
