@@ -1040,7 +1040,7 @@
         }
       } catch {
       }
-      return order[0];
+      return OFFICIAL_SKIN_ID;
     }
     function announce(id) {
       if (typeof window.dispatchEvent === "function" && typeof CustomEvent === "function") {

@@ -313,10 +313,12 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         return stored;
       }
     } catch {}
-    // Factory default (出厂皮肤): the first registered skin wins until the user
-    // explicitly chooses an appearance — openbmc since v1.0.6 (Studio rebrand),
-    // meirenzhi before that. Stored selections and ?skin= keep priority.
-    return order[0];
+    // Factory default (出厂): the official appearance, not "whichever theme
+    // happens to sort first". With file-backed themes the registration order is
+    // a directory listing, so defaulting to order[0] would silently pick an
+    // arbitrary theme (and, before this, POST it back as the user's choice).
+    // A stored selection or ?skin= still wins.
+    return OFFICIAL_SKIN_ID;
   }
 
   function announce(id) {
