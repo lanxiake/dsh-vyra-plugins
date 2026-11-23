@@ -60,8 +60,8 @@ profile 目录解析与 `vyra-plugin-market` 一致：`$DSH_HOME`（默认 `~/.d
 CLI 直接改 `package.json` 或 `cordis.patch.yml` 会绕过这三样：与运行中的进程抢写、无法激活、
 半截写入没有回滚。所以这个 CLI **只读是构造出来的**，不是约定：
 
-- 它只 `import` `node:` 内建模块，`node:fs` 里只取 `existsSync` / `readFileSync` / `readdirSync` /
-  `statSync`，连 `node:child_process` 都没有——没有写入函数可调，也无法转手让别的进程去写；
+- 它只 `import` `node:` 内建模块，`node:fs` 里只取 `existsSync` / `readFileSync` / `statSync`，
+  连 `node:child_process` 都没有——没有写入函数可调，也无法转手让别的进程去写；
 - 打一个**变更类动作名**当命令（如 `vyra-console plugin.remove`）会被拒绝，并打印该用的那一次
   `dsh_console` 调用。拒绝表由 `core.js` 的 `ACTIONS` 推导，新增变更动作会自动被拒。
 
@@ -74,6 +74,13 @@ CLI 直接改 `package.json` 或 `cordis.patch.yml` 会绕过这三样：与运�
 正在生效的模型路由、MCP 连接状态——它看不到，于是显式打印 `unknown` 加原因，而不是省略或猜。
 一个自信而错误的 `doctor` 比一个不完整的更糟：Agent 会照着它行动。运行状态请用 `dsh_console`
 的 `plugin.list` / `model.list` / `mcp.list` / `appearance.state`。
+
+模型的默认选择有两处可能：**主源**是 profile 自己的 `cordis.patch.yml` 里 `agent-default-model`
+条目的 `config.provider` / `config.model`（以及可选的 `config.reasoningEffort`），这是当前 DSH
+实际写入的地方；**次源**是 `$DSH_HOME/settings.yaml`。后者已经**不再生效**——`dsh-settings`
+启动时把它一次性导入各条目的 `config`，随后 `rename` 成 `settings.yaml.imported`，所以现在的
+安装上它根本不存在。两处都没有时，`unknown` 的 `reason` 会把**两处都点名**，以免读者把
+「我查的那一处是空的」误当成「这里没有配置」。
 
 ## 开发
 

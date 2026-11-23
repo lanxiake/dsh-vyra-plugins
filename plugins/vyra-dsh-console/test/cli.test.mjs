@@ -58,31 +58,35 @@ function runCli(home, args) {
 }
 
 /**
- * A fixture DSH home: a settings document, and one profile with a manifest and a
- * patch layer.
+ * A fixture DSH home: a profile with a manifest and a patch layer.
  *
- * The files are written to the shapes the real ones use — `settings.yaml` at the
- * HOME beside `profiles/<name>/`, `cordis.patch.yml` as a sequence of `- id:`
- * entries, `package.json` carrying `dsh.profile.bundles` and `dependencies` —
- * because the point is to test the CLI against the format it claims to read, not
- * against a convenient invention. Every one of those shapes was taken from a
- * real file on this machine.
+ * The files are written to the shapes the real ones use — `cordis.patch.yml` as a
+ * sequence of `- id:` entries whose `config:` sits at indent 2, `package.json`
+ * carrying `dsh.profile.bundles` and `dependencies` — because the point is to
+ * test the CLI against the format it claims to read, not against a convenient
+ * invention. Every one of those shapes was taken from a real file on this
+ * machine.
+ *
+ * `agent-default-model` is declared in the PATCH ENTRY, which is what a current
+ * DSH writes: the settings service imports a legacy `settings.yaml` into these
+ * entry configs and renames it away. `legacySettings` adds the old-style
+ * `settings.yaml` at the DSH home, for the fallback path only.
  */
-function makeHome() {
+function makeHome({ legacySettings = false } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'vyra-console-cli-'))
   const profile = join(home, 'profiles', 'desktop')
   mkdirSync(join(profile, 'node_modules', 'vyra-theme-styles'), { recursive: true })
   mkdirSync(join(profile, 'node_modules', 'dsh-plugin'), { recursive: true })
 
-  writeFileSync(join(home, 'settings.yaml'), [
-    '# fixture settings document',
-    'agent-default-model:',
-    '  provider: cli-claude',
-    '  model: default',
-    'ui-theme:',
-    '  preference: light',
-    '',
-  ].join('\n'))
+  if (legacySettings) {
+    writeFileSync(join(home, 'settings.yaml'), [
+      '# fixture LEGACY settings document',
+      'agent-default-model:',
+      '  provider: legacy-provider',
+      '  model: legacy-model',
+      '',
+    ].join('\n'))
+  }
 
   // A real installed package, so the version is read from node_modules rather
   // than falling back to the declared spec.
@@ -108,6 +112,13 @@ function makeHome() {
     '  name: "@deepseek-ai/dsh-client-ui-theme"',
     '  config:',
     '    preference: light',
+    // The live location of the default model, at the indents the real profile
+    // uses: `config:` at 2, its fields at 4.
+    '- id: agent-default-model',
+    '  name: "@deepseek-ai/dsh-agent-default-model"',
+    '  config:',
+    '    provider: cli-claude',
+    '    model: default',
     '- id: llm-pi-ai',
     '  name: "@deepseek-ai/dsh-llm-pi-ai"',
     '  config:',
@@ -249,6 +260,21 @@ test('the CLI imports no writer and no process spawner from node', async () => {
   for (const forbidden of ['writeFileSync', 'appendFileSync', 'mkdirSync', 'rmSync', 'unlinkSync', 'rmdirSync', 'createWriteStream', 'copyFileSync', 'renameSync', 'truncateSync', 'chmodSync', 'node:child_process', 'node:worker_threads']) {
     assert.equal(imports.some((line) => line.includes(forbidden)), false,
       `${forbidden} must not be imported: this CLI is read-only by construction`)
+  }
+
+  // The `node:fs` bindings are EXACTLY the read-only three, and the header names
+  // those three. Asserting the list rather than only the absence of writers is
+  // what keeps the prose from drifting: `readdirSync` was imported and never
+  // called while the header advertised it as load-bearing (review Minor 2).
+  const fsImport = imports.find((line) => /from 'node:fs'/.test(line))
+  assert.ok(fsImport, 'the CLI reads files')
+  const bindings = fsImport.slice(fsImport.indexOf('{') + 1, fsImport.indexOf('}'))
+    .split(',').map((name) => name.trim()).filter(Boolean).sort()
+  assert.deepEqual(bindings, ['existsSync', 'readFileSync', 'statSync'],
+    'the node:fs bindings must be exactly the read-only three the header documents')
+  // And the header really does name them, so the two cannot diverge silently.
+  for (const binding of bindings) {
+    assert.ok(source.includes(binding), `the header must name ${binding}`)
   }
 })
 
@@ -402,19 +428,91 @@ test('doctor reports the installed bundles with the version installed on disk', 
   }
 })
 
-test('doctor reads the model selection from the settings document at the DSH home', () => {
-  // The location matters and was got wrong once: `settings.yaml` sits at the DSH
-  // HOME beside `profiles/`, not inside the profile directory. A CLI that looked
-  // in the profile reported `unknown` for a configured selection.
+test('state reads the model selection from the profile patch entry, its primary source', () => {
+  // The fix for the review's Minor 1. A current DSH keeps the default selection
+  // in the profile's own `agent-default-model` entry — the settings service
+  // imports a legacy `settings.yaml` into these entry configs and renames it
+  // away, so `settings.yaml` does not exist on a current install. Reading only
+  // that file answered a permanent `unknown` while the value sat in a file this
+  // CLI was already parsing.
   const { home, profile } = makeHome()
   try {
-    const value = runCli(home, ['doctor', '--json']).json
+    const value = runCli(home, ['state', '--json']).json
     assert.equal(value.model.status, 'ok')
     assert.equal(value.model.selection.provider.value, 'cli-claude')
     assert.equal(value.model.selection.model.value, 'default')
-    assert.equal(value.model.selection.provider.path, join(home, 'settings.yaml'))
-    // And it is NOT the profile's own file.
-    assert.equal(existsSync(join(profile, 'settings.yaml')), false)
+    assert.equal(value.model.selection.provider.path, join(profile, 'cordis.patch.yml'))
+    assert.equal(value.model.selectionSource.kind, 'patch-entry')
+    assert.match(value.model.selectionSource.detail, /agent-default-model/)
+    // No legacy document exists at all, and that must NOT matter.
+    assert.equal(existsSync(join(home, 'settings.yaml')), false)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('a legacy settings.yaml is still read when the patch entry declares nothing', () => {
+  // The documented fallback. A profile not yet visited by the settings service
+  // may still hold the old document, so the secondary path must keep working.
+  const { home, profile } = makeHome({ legacySettings: true })
+  try {
+    // Strip the entry's config entirely, leaving only the legacy document.
+    writeFileSync(join(profile, 'cordis.patch.yml'), [
+      '- id: agent-default-model',
+      '  name: "@deepseek-ai/dsh-agent-default-model"',
+      '',
+    ].join('\n'))
+    const value = runCli(home, ['state', '--json']).json
+    assert.equal(value.model.status, 'ok', value.model.reason)
+    assert.equal(value.model.selection.provider.value, 'legacy-provider')
+    assert.equal(value.model.selection.model.value, 'legacy-model')
+    assert.equal(value.model.selectionSource.kind, 'legacy-settings-document')
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('the patch entry wins over a contradictory legacy document', () => {
+  // Ordering is the property, so it is asserted directly: with BOTH sources
+  // present and disagreeing, the authoritative one must win. A CLI that
+  // preferred the renamed-away file would report the stale value on exactly the
+  // installations that have both.
+  const { home } = makeHome({ legacySettings: true })
+  try {
+    const value = runCli(home, ['state', '--json']).json
+    assert.equal(value.model.selection.provider.value, 'cli-claude', 'the patch entry is authoritative')
+    assert.equal(value.model.selectionSource.kind, 'patch-entry')
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('reasoningEffort is reported from the patch entry when declared', () => {
+  // The shipped `@deepseek-ai/dsh-agent-default-model` declares
+  // `reasoningEffort: z.string().volatile()` and spreads it into the selection
+  // only when defined, so it is a real optional field — read when present.
+  const { home, profile } = makeHome()
+  try {
+    writeFileSync(join(profile, 'cordis.patch.yml'), [
+      '- id: agent-default-model',
+      '  name: "@deepseek-ai/dsh-agent-default-model"',
+      '  config:',
+      '    provider: cli-claude',
+      '    model: default',
+      '    reasoningEffort: high',
+      '',
+    ].join('\n'))
+    const value = runCli(home, ['state', '--json']).json
+    assert.equal(value.model.selection.reasoningEffort.value, 'high')
+    // And absent is normal, reported as null rather than as an invented default.
+    const without = makeHome()
+    try {
+      const plain = runCli(without.home, ['state', '--json']).json
+      assert.equal(plain.model.selection.reasoningEffort, null)
+      assert.equal(plain.model.status, 'ok')
+    } finally {
+      rmSync(without.home, { recursive: true, force: true })
+    }
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
@@ -504,7 +602,7 @@ test('doctor reports a plugin the patch layer disabled as disabled', () => {
     assert.equal(entry.status, 'disabled')
     // And the id is the entry's own id, never the literal field name `id`.
     assert.deepEqual(state.enablement.entries.map((e) => e.id),
-      ['ui-theme', 'llm-pi-ai', 'deepseek-v4.1-flash'])
+      ['ui-theme', 'agent-default-model', 'llm-pi-ai', 'deepseek-v4.1-flash'])
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
@@ -545,31 +643,71 @@ test('doctor reports the console surface and the forbidden boundary from core.js
   }
 })
 
-test('doctor does not invent a model selection it cannot read', () => {
-  // An honest `unknown` is the required answer here. With no settings document
-  // at all, reporting a model would be a fabrication.
-  const { home } = makeHome()
+test('doctor names BOTH sources when neither declares a selection', () => {
+  // The required `unknown`: an honest answer that also says where it looked, so
+  // a reader can tell it apart from "the one place I checked was empty".
+  const { home, profile } = makeHome()
   try {
-    rmSync(join(home, 'settings.yaml'))
+    writeFileSync(join(profile, 'cordis.patch.yml'), '- id: ui-theme\n  name: "@deepseek-ai/dsh-client-ui-theme"\n')
     const value = runCli(home, ['doctor', '--json']).json
     assert.equal(value.model.status, 'unknown')
     assert.equal(value.model.selection, null)
-    assert.match(value.model.reason, /no settings document/)
+    assert.match(value.model.reason, /neither source/)
+    assert.match(value.model.reason, /agent-default-model/)
+    assert.match(value.model.reason, /cordis\.patch\.yml/)
+    assert.match(value.model.reason, /settings\.yaml/)
+    // The patch entry is absent here, and the reason says exactly that.
+    assert.match(value.model.reason, /does not exist/)
     // It still reports the providers, which come from the profile's own patch.
-    assert.deepEqual(value.model.providers.map((p) => p.name), ['ydy-ds', 'local-ollama'])
+    assert.deepEqual(value.model.providers.map((p) => p.name), [])
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
 })
 
-test('doctor reports unknown when the settings document declares no selection', () => {
-  const { home } = makeHome()
+test('a patch entry with the right id but no usable config does not invent a model', () => {
+  // `config:` ABSENT and `config:` present-but-empty are different cases, and
+  // both must yield nothing. The absent case is the one that matters most: the
+  // entry body itself carries `name: "@deepseek-ai/dsh-agent-default-model"`, so
+  // a reader that fell back to the body when `config:` was missing could pick up
+  // that `name:` and report a plugin name as a model.
+  const { home, profile } = makeHome()
   try {
+    for (const block of [
+      // No `config:` at all.
+      ['- id: agent-default-model', '  name: "@deepseek-ai/dsh-agent-default-model"', ''],
+      // A `config:` that exists but holds nothing this reader understands.
+      ['- id: agent-default-model', '  name: "@deepseek-ai/dsh-agent-default-model"', '  config:', '    somethingElse: true', ''],
+      // An entry with no config and no name, the barest shape.
+      ['- id: agent-default-model', ''],
+      // A malformed entry carrying `provider:`/`model:` at the indent a `config:`
+      // block uses, but WITHOUT a `config:` line. Nothing in the patch format
+      // defines this, which is exactly why it is worth pinning: a reader that
+      // fell back to the entry body when `config:` was missing would report
+      // `sneak`/`sneaky` as the model on a file that declares no such thing.
+      ['- id: agent-default-model', '  name: "x"', '    provider: sneak', '    model: sneaky', ''],
+    ]) {
+      writeFileSync(join(profile, 'cordis.patch.yml'), block.join('\n'))
+      const value = runCli(home, ['doctor', '--json']).json
+      assert.equal(value.model.status, 'unknown', `must be unknown for:\n${block.join('\n')}`)
+      assert.equal(value.model.selection, null)
+      assert.match(value.model.reason, /has no usable config/)
+      // Never the plugin's own name, which is what a body fallback would yield.
+      assert.equal(/agent-default-model"(?!\s*entry)/.test(JSON.stringify(value.model.selection ?? '')), false)
+    }
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('a legacy document that declares no selection is reported, not treated as found', () => {
+  const { home, profile } = makeHome({ legacySettings: true })
+  try {
+    writeFileSync(join(profile, 'cordis.patch.yml'), '- id: ui-theme\n  name: "@deepseek-ai/dsh-client-ui-theme"\n')
     writeFileSync(join(home, 'settings.yaml'), 'ui-theme:\n  preference: light\n')
     const value = runCli(home, ['doctor', '--json']).json
     assert.equal(value.model.status, 'unknown')
-    assert.equal(value.model.selection, null)
-    assert.match(value.model.reason, /agent-default-model/)
+    assert.match(value.model.reason, /declares no top-level agent-default-model/)
   } finally {
     rmSync(home, { recursive: true, force: true })
   }

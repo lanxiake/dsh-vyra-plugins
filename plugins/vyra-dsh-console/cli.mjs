@@ -19,11 +19,13 @@
  * Read-only is an invariant here, not a convention, and it holds by construction:
  *
  *   - every import below is a `node:` builtin, and the only `node:fs` bindings
- *     are `existsSync`, `readFileSync`, `readdirSync` and `statSync` (plus the
- *     read-only `node:path`/`node:os` helpers). There is no `writeFileSync`,
- *     `mkdirSync`, `rmSync`, `unlinkSync` or `createWriteStream` to call, and no
+ *     are `existsSync`, `readFileSync` and `statSync` (plus the read-only
+ *     `node:path`/`node:os` helpers). There is no `writeFileSync`, `mkdirSync`,
+ *     `rmSync`, `unlinkSync` or `createWriteStream` to call, and no
  *     `node:child_process` at all — so there is no way to shell out to something
- *     that writes either;
+ *     that writes either. `readdirSync` was imported here at first and never
+ *     called; it is gone, because an unused import that this very paragraph
+ *     advertises as load-bearing is a claim the code does not support;
  *   - ADVISORY_OPERATIONS below carries every action id from `core.js`'s ACTIONS
  *     whose `mutating` or `destructive` flag is true. A verb typed at this CLI
  *     that matches one is REFUSED, so the whole `plugin.setEnabled`,
@@ -52,7 +54,7 @@
 // Read-only `node:fs`, and nothing else from it. The absence of a write binding
 // is the first half of the read-only proof spelled out in the header: with no
 // writer reachable from this module, no path through it can touch the profile.
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -181,7 +183,7 @@ class UsageError extends Error {}
 /**
  * An IO failure with a message worth reading.
  *
- * `includeStack` is false because `readFileSync`/`readdirSync` errors already
+ * `includeStack` is false because `readFileSync`/`statSync` errors already
  * carry a coded message ("ENOENT: no such file or directory, open '...'") that
  * matters more than the frames below it.
  */
@@ -382,27 +384,40 @@ function findTopLevelMapping(text, key) {
  * What this installation declares about the model, split into the two questions
  * that actually have different answers.
  *
- *   - `selection` — the default selection an Agent is created with, from the
- *     settings document at the DSH HOME (`$DSH_HOME/settings.yaml`, else
- *     `~/.dsh/settings.yaml`) — NOT from inside the profile directory. The two
- *     live side by side (`<home>/settings.yaml` and `<home>/profiles/<name>/`)
- *     and only the home one holds settings. Both facts were established from
- *     working code in this repository rather than guessed:
- *     `plugins/dsh-plugin-console/lib/server/domain/ai.js:105` reads
- *     `join(homedir(), '.dsh', 'settings.yaml')` and line 106 extracts
- *     `agent-default-model:` → `provider:` / `model:`, and
- *     `plugins/dsh-im/scripts/verify-interface-language.mjs:90-92` writes exactly
- *     `join(home, 'settings.yaml')` next to `join(home, 'profiles/web')`. This
- *     CLI's first version looked inside the profile directory and reported
- *     `unknown` on a profile that was in fact configured.
- *   - `providers` — the provider adapters declared in the profile's patch layer.
- *     An entry with a `providers:` map supplies them through that map; an entry
- *     whose body is a single `name:` supplies exactly one. This counts
- *     declarations, not availability: nothing here proves a provider answered.
+ *   - `selection` — the default selection an Agent is created with. The PRIMARY
+ *     source is the profile's own `agent-default-model` patch entry, whose
+ *     `config.provider` / `config.model` (and optional `config.reasoningEffort`)
+ *     is where a current DSH keeps this. The real desktop profile reads:
  *
- * `reasoningEffort` is deliberately not reported: no writer in this repository
- * declares one, so reading that field would be asserting a field name nobody has
- * confirmed exists — the failure mode this task's rules name first.
+ *       - id: agent-default-model
+ *         name: "@deepseek-ai/dsh-agent-default-model"
+ *         config:
+ *           provider: cli-claude
+ *           model: default
+ *
+ *     `settings.yaml` at the DSH home is kept as a SECONDARY, LEGACY fallback.
+ *     It is no longer a live source: the shipped settings service imports it once
+ *     into the profile's entry configs and then RENAMES it away, so on any
+ *     current installation it does not exist. From
+ *     `@deepseek-ai/dsh-settings/src/index.ts` (extracted from the installed
+ *     `app.asar`): `:201` documents "Entry ids of the removed `settings.yaml`
+ *     sections", and `:242-247` is `importLegacyDocument()` —
+ *     `join(profile.home, 'settings.yaml')`, `await rename(path, imported)`,
+ *     then `this.update(ns, values)` for each section, and `update` → `write` →
+ *     `configEditor.edit(entry, …)` lands it in the patch entry's `config`.
+ *     So the earlier version of this function, which read only `settings.yaml`,
+ *     answered a permanent `unknown` on every current install while the value sat
+ *     in a file it was already parsing. The header of this file used to justify
+ *     that with a third-party plugin's regex over `settings.yaml`; the shipped
+ *     service is the authority and contradicts it.
+ *   - `providers` — the provider adapters declared in the profile's patch layer.
+ *     Only the `providers:` map counts (see below). This counts declarations, not
+ *     availability: nothing here proves a provider answered.
+ *
+ * `reasoningEffort` IS read, as an optional third field: the shipped
+ * `@deepseek-ai/dsh-agent-default-model` declares `reasoningEffort: z.string().volatile()`
+ * and spreads it into the selection only when defined, so its presence in a
+ * `config` is meaningful and its absence is normal.
  *
  * `note` sets the honesty bar for the whole section: this is a declared
  * *default*, and the session actually answering may run another route entirely.
@@ -446,61 +461,121 @@ function readModelSelection(profileDir, patchFile) {
   // repeated into six literals where one would eventually be forgotten.
   const providerBlock = { providers, providersNote }
 
-  if (!file.present) {
-    return {
-      status: 'unknown',
-      reason: `no settings document at ${settingsFile}`,
-      settingsFile,
-      selection: null,
-      ...providerBlock,
-    }
-  }
-  if (file.unreadable) {
-    return {
-      status: 'unknown',
-      reason: `${settingsFile} is unreadable: ${file.error}`,
-      settingsFile,
-      selection: null,
-      ...providerBlock,
+  // ── PRIMARY: the profile's own `agent-default-model` patch entry ──────────
+  //
+  // The entry keys off `id`, and its `config:` block is at indent 2 with the
+  // fields at indent 4 — measured off the real desktop profile, not assumed.
+  // `config:` is required for a match: an entry with the right id and no config
+  // declares nothing, and reading `provider:`/`model:` from an entry body that
+  // has none would be inventing them.
+  const entry = patchRows.find((row) => row.key === 'agent-default-model')
+  const configBlock = entry === undefined ? undefined : findNestedMapping(entry.block, 'config', 2)
+  if (configBlock !== undefined) {
+    const provider = yamlValue(configBlock, 'provider', 4)
+    const model = yamlValue(configBlock, 'model', 4)
+    const effort = yamlValue(configBlock, 'reasoningEffort', 4)
+    if (provider !== undefined || model !== undefined || effort !== undefined) {
+      const from = { source: 'cordis.patch.yml', path: patchFile.path }
+      return {
+        status: 'ok',
+        selection: {
+          provider: provider === undefined ? null : { value: provider, ...from },
+          model: model === undefined ? null : { value: model, ...from },
+          reasoningEffort: effort === undefined ? null : { value: effort, ...from },
+        },
+        selectionSource: {
+          kind: 'patch-entry',
+          detail: `config of the "agent-default-model" entry in ${patchFile.path}`,
+        },
+        ...providerBlock,
+        note: `declared default only; the session answering now may run another route, which `
+          + `${TOOL_CALL}'s model.list reports`,
+      }
     }
   }
 
-  // The selection is the top-level `agent-default-model:` mapping. Its two fields
-  // are read at the indent the file uses for its own keys (two spaces), and each
-  // is reported with the file it came from so a value can always be checked.
-  const block = findTopLevelMapping(file.text, 'agent-default-model')
-  if (block === undefined) {
+  // ── SECONDARY, LEGACY: `settings.yaml` at the DSH home ────────────────────
+  //
+  // Reached only when the patch entry declared nothing. Kept because a profile
+  // that has not yet been visited by the settings service may still hold one, and
+  // because reporting "neither source has it" requires having looked at both.
+  const legacy = legacySelection(file, settingsFile)
+  if (legacy.found) {
+    const from = { source: 'settings.yaml (legacy)', path: settingsFile }
     return {
-      status: 'unknown',
-      reason: `the settings document at ${settingsFile} declares no top-level agent-default-model`,
-      settingsFile,
-      selection: null,
+      status: 'ok',
+      selection: {
+        provider: legacy.provider === undefined ? null : { value: legacy.provider, ...from },
+        model: legacy.model === undefined ? null : { value: legacy.model, ...from },
+        reasoningEffort: null,
+      },
+      selectionSource: {
+        kind: 'legacy-settings-document',
+        detail: `legacy ${settingsFile}; the settings service imports this into the profile's entry config `
+          + `and then renames it away, so the patch entry is the live source when it declares one`,
+      },
       ...providerBlock,
+      note: `declared default only; the session answering now may run another route, which `
+        + `${TOOL_CALL}'s model.list reports`,
     }
   }
+
+  // Neither source yields a value. Both are NAMED in the reason, so a reader can
+  // tell this apart from "the one place I looked was empty".
+  const reason = [
+    'neither source declares a default model:',
+    `the "agent-default-model" entry in ${patchFile.path} `
+      + (entry === undefined ? 'does not exist' : 'has no usable config'),
+    `and ${settingsFile} ` + legacy.detail,
+  ].join(' ')
+  return {
+    status: 'unknown',
+    reason,
+    settingsFile,
+    legacy,
+    selection: null,
+    ...providerBlock,
+  }
+}
+
+/**
+ * The `config:` mapping of a patch entry block, at a known indent.
+ *
+ * The block's own `config:` is the key; its fields are indented beneath it. The
+ * end is the block's end, since an entry block never contains a second top-level
+ * `config:`. Returns `undefined` when the entry has no `config:` at all, which is
+ * a different answer from a `config:` that is present and empty — the caller
+ * distinguishes them in its `reason`.
+ */
+function findNestedMapping(block, key, indent) {
+  const lines = block.split('\n')
+  const pattern = new RegExp(`^ {${indent}}${key}\\s*:\\s*$`)
+  const start = lines.findIndex((line) => pattern.test(line))
+  if (start === -1) return undefined
+  let end = start + 1
+  while (end < lines.length && (lines[end].trim() === '' || /^\s/.test(lines[end]))) end += 1
+  return lines.slice(start, end).join('\n')
+}
+
+/**
+ * What a legacy `settings.yaml` says, if anything — the secondary path.
+ *
+ * Never throws and never decides the result on its own: the caller has already
+ * consulted the authoritative patch entry, and this only supplies a value when
+ * that entry declared none. `detail` explains the outcome in the words the
+ * `reason` text uses, so an unreadable file and an absent one do not read alike.
+ */
+function legacySelection(file, settingsFile) {
+  if (!file.present) return { found: false, detail: 'does not exist (the settings service imports and renames it away)' }
+  if (file.unreadable) return { found: false, detail: `is unreadable: ${file.error}` }
+  const block = findTopLevelMapping(file.text, 'agent-default-model')
+  if (block === undefined) return { found: false, detail: 'declares no top-level agent-default-model' }
   const provider = yamlValue(block, 'provider', 2)
   const model = yamlValue(block, 'model', 2)
   if (provider === undefined && model === undefined) {
-    return {
-      status: 'unknown',
-      reason: `agent-default-model is present in ${settingsFile} but declares neither provider nor model`,
-      settingsFile,
-      selection: null,
-      ...providerBlock,
-    }
+    return { found: false, detail: 'declares agent-default-model but neither provider nor model' }
   }
-
-  return {
-    status: 'ok',
-    settingsFile,
-    selection: {
-      provider: provider === undefined ? null : { value: provider, source: 'settings.yaml', path: settingsFile },
-      model: model === undefined ? null : { value: model, source: 'settings.yaml', path: settingsFile },
-    },
-    ...providerBlock,
-    note: `declared default only; the session answering now may run another route, which `
-      + `${TOOL_CALL}'s model.list reports`,
-  }
+  return { found: true, detail: 'carries a legacy selection', provider, model, path: settingsFile }
 }
 
 /**
@@ -962,6 +1037,14 @@ function doctorLines(value) {
     const selection = value.model.selection
     lines.push(`  default provider ${pair(selection?.provider?.value, selection?.provider?.source)}`)
     lines.push(`  default model    ${pair(selection?.model?.value, selection?.model?.source)}`)
+    // Shown only when declared: the shipped schema makes it optional, so a
+    // missing one is normal and must not be dressed up as a documented default.
+    if (selection?.reasoningEffort != null) {
+      lines.push(`  reasoning effort ${pair(selection.reasoningEffort.value, selection.reasoningEffort.source)}`)
+    }
+    if (value.model.selectionSource !== undefined) {
+      lines.push(`  read from        ${value.model.selectionSource.detail}`)
+    }
     lines.push(`  note             ${value.model.note}`)
   }
   lines.push(`  providers        ${value.model.providers.length === 0 ? 'none' : value.model.providers.map((p) => p.name).join(', ')}`)
@@ -1009,6 +1092,12 @@ function stateLines(value) {
   } else {
     lines.push(`  default provider ${pair(value.model.selection?.provider?.value, value.model.selection?.provider?.source)}`)
     lines.push(`  default model    ${pair(value.model.selection?.model?.value, value.model.selection?.model?.source)}`)
+    if (value.model.selection?.reasoningEffort != null) {
+      lines.push(`  reasoning effort ${pair(value.model.selection.reasoningEffort.value, value.model.selection.reasoningEffort.source)}`)
+    }
+    if (value.model.selectionSource !== undefined) {
+      lines.push(`  read from        ${value.model.selectionSource.detail}`)
+    }
   }
   lines.push('', 'recorded enablement:')
   if (value.enablement.status !== 'ok') {
