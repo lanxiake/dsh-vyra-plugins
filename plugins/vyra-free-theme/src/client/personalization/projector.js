@@ -153,11 +153,17 @@ export function normalizeEffects(draft) {
       && (!Array.isArray(coverage.scopes) || coverage.scopes.some((scope) => typeof scope !== "string"))) return null;
   }
 
+  // Sidebar pack (spec §7): resolved by the skin's table, validated here so a
+  // malformed block can never reach the CSS compiler.
+  const sidebar = source.sidebar ?? null;
+  if (sidebar !== null && (!isPlainObject(sidebar) || typeof sidebar.pack !== "string")) return null;
+
   return deepFreeze({
     bodyAttribute: source.bodyAttribute,
     slogans,
     titleBrand,
     favicon,
+    sidebar,
     coverage: coverage === null ? null : { shell: coverage.shell, scopes: coverage.scopes ?? [] },
     backdrop: backdrop === null ? null : {
       imageLight: backdrop.imageLight ?? null,

@@ -1446,6 +1446,22 @@ function resolveTrustedHosts(ctx) {
 import { existsSync as existsSync2, readFileSync as readFileSync3, readdirSync as readdirSync2 } from "node:fs";
 import { join as join3 } from "node:path";
 
+// src/shared/personalization/sidebar-presets.js
+var SIDEBAR_PACKS = Object.freeze({
+  // Same tone as the rest of the theme: only radius/icon/states get touched.
+  inherit: { surface: "inherit", blur: 0, density: "cozy", radius: { card: 14, item: 8 } },
+  // Translucent panel floating over the wallpaper.
+  frost: { surface: "frost", blur: 14, density: "cozy", radius: { card: 16, item: 10 } },
+  // Paper-like: transparent fill, hairline separators.
+  hairline: { surface: "wallpaper", blur: 0, density: "compact", radius: { card: 0, item: 0 } },
+  // Deep solid card with a bright accent.
+  obsidian: { surface: "solid", blur: 0, density: "comfortable", radius: { card: 14, item: 10 } },
+  // Dark translucent with glowing edges.
+  neon: { surface: "frost", blur: 18, density: "cozy", radius: { card: 16, item: 12 } }
+});
+var SIDEBAR_SURFACES = ["inherit", "solid", "frost", "wallpaper", "custom"];
+var SIDEBAR_DENSITIES = ["compact", "cozy", "comfortable"];
+
 // src/shared/personalization/theme-model.js
 var THEME_SCHEMA_VERSION = 1;
 var TRANSLUCENT_TOKENS = [
@@ -1487,6 +1503,9 @@ function boundedText(value, max) {
 }
 function validLocalePair(value, max) {
   return isPlainObject(value) && Object.keys(value).length === 2 && boundedText(value.zh, max) && boundedText(value.en, max);
+}
+function validColorPair(value) {
+  return isPlainObject(value) && Object.keys(value).length === 2 && boundedText(value.light, TEXT_MAX) && boundedText(value.dark, TEXT_MAX);
 }
 function parsePercent(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100 ? Math.round(value) : null;
@@ -1678,8 +1697,82 @@ function normalizeTheme(raw) {
       }
     }
   }
-  if (raw.sidebar !== void 0 && raw.sidebar !== null && !isPlainObject(raw.sidebar)) {
-    fail("bad-sidebar", "sidebar", "sidebar 必须是对象（P3 校验其字段形状）");
+  let sidebar = null;
+  if (raw.sidebar !== void 0 && raw.sidebar !== null) {
+    if (!isPlainObject(raw.sidebar)) {
+      fail("bad-sidebar", "sidebar", "sidebar 必须是对象");
+    } else {
+      const known = ["pack", "surface", "blur", "radius", "density", "icon", "states", "divider", "background"];
+      for (const key of Object.keys(raw.sidebar)) {
+        if (!known.includes(key)) fail("unknown-key", `sidebar.${key}`, `未知字段 "${key}"`);
+      }
+      if (raw.sidebar.pack !== void 0 && SIDEBAR_PACKS[raw.sidebar.pack] === void 0) {
+        fail("bad-sidebar", "sidebar.pack", `pack 必须是 ${Object.keys(SIDEBAR_PACKS).join(" / ")}`);
+      }
+      if (raw.sidebar.surface !== void 0 && !SIDEBAR_SURFACES.includes(raw.sidebar.surface)) {
+        fail("bad-sidebar", "sidebar.surface", `surface 必须是 ${SIDEBAR_SURFACES.join(" / ")}`);
+      }
+      if (raw.sidebar.density !== void 0 && !SIDEBAR_DENSITIES.includes(raw.sidebar.density)) {
+        fail("bad-sidebar", "sidebar.density", `density 必须是 ${SIDEBAR_DENSITIES.join(" / ")}`);
+      }
+      if (raw.sidebar.blur !== void 0 && !(Number.isInteger(raw.sidebar.blur) && raw.sidebar.blur >= 0 && raw.sidebar.blur <= 24)) {
+        fail("bad-sidebar", "sidebar.blur", "blur 必须是 0–24 的整数");
+      }
+      if (raw.sidebar.radius !== void 0) {
+        if (!isPlainObject(raw.sidebar.radius)) fail("bad-sidebar", "sidebar.radius", "radius 必须是 { card, item }");
+        else {
+          for (const key of Object.keys(raw.sidebar.radius)) {
+            if (!["card", "item"].includes(key)) fail("unknown-key", `sidebar.radius.${key}`, `未知字段 "${key}"`);
+            const value = raw.sidebar.radius[key];
+            if (!(Number.isInteger(value) && value >= 0 && value <= 32)) {
+              fail("bad-sidebar", `sidebar.radius.${key}`, "必须是 0–32 的整数");
+            }
+          }
+        }
+      }
+      if (raw.sidebar.icon !== void 0) {
+        if (!validColorPair(raw.sidebar.icon)) fail("bad-sidebar", "sidebar.icon", "icon 必须是 { light, dark }");
+      }
+      if (raw.sidebar.states !== void 0) {
+        if (!isPlainObject(raw.sidebar.states)) fail("bad-sidebar", "sidebar.states", "states 必须是对象");
+        else {
+          for (const [state, values] of Object.entries(raw.sidebar.states)) {
+            if (!["hover", "active", "selected"].includes(state)) {
+              fail("unknown-key", `sidebar.states.${state}`, `未知状态 "${state}"`);
+              continue;
+            }
+            if (!isPlainObject(values)) {
+              fail("bad-sidebar", `sidebar.states.${state}`, "状态必须是对象");
+              continue;
+            }
+            for (const [field, value] of Object.entries(values)) {
+              if (!["bg", "fg", "darkBg", "darkFg", "indicator", "darkIndicator"].includes(field)) {
+                fail("unknown-key", `sidebar.states.${state}.${field}`, `未知字段 "${field}"`);
+              } else if (!boundedText(value, TEXT_MAX)) {
+                fail("bad-sidebar", `sidebar.states.${state}.${field}`, "必须是颜色字符串");
+              }
+            }
+          }
+        }
+      }
+      if (raw.sidebar.divider !== void 0 && raw.sidebar.divider !== null) {
+        const divider = raw.sidebar.divider;
+        if (!isPlainObject(divider) || !boundedText(divider.color, TEXT_MAX)) {
+          fail("bad-sidebar", "sidebar.divider", "divider 必须是 { color, style? }");
+        } else if (divider.style !== void 0 && !["solid", "dashed", "none"].includes(divider.style)) {
+          fail("bad-sidebar", "sidebar.divider.style", "style 必须是 solid / dashed / none");
+        }
+      }
+      if (raw.sidebar.background !== void 0 && raw.sidebar.background !== null) {
+        const background = raw.sidebar.background;
+        if (!isPlainObject(background) || !boundedText(background.light, TEXT_MAX) || background.dark !== void 0 && !boundedText(background.dark, TEXT_MAX)) {
+          fail("bad-sidebar", "sidebar.background", "background 必须是 { light, dark? }");
+        }
+      }
+      if (!issues.some((issue) => issue.path.startsWith("sidebar"))) {
+        sidebar = { ...raw.sidebar };
+      }
+    }
   }
   if (raw.decorations !== void 0 && raw.decorations !== null && !Array.isArray(raw.decorations)) {
     fail("bad-decorations", "decorations", "decorations 必须是数组");
@@ -1700,7 +1793,7 @@ function normalizeTheme(raw) {
       translucency,
       wallpaper,
       coverage,
-      sidebar: raw.sidebar ?? null,
+      sidebar,
       decorations: raw.decorations ?? null
     }
   };

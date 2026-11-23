@@ -1,5 +1,7 @@
 import { projectSkin } from "./personalization/projector.js";
 import { mountWallpaperLayers } from "./wallpaper-layer.js";
+import { installSidebarTagging } from "./sidebar-theme.js";
+import { sidebarCss } from "../shared/personalization/sidebar-presets.js";
 import { BUILTIN_REF_PATTERN, defaultWallpaperRef } from "../shared/personalization/catalog.js";
 
 const SKIN_STORAGE_KEY = "vyra-free-theme:active";
@@ -637,8 +639,13 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         const darkFill = fills === null ? null : parseRgbaChannels(fills.dark);
         // Coverage (spec §6.2): a theme that opts the shell in lets its own
         // translucent fills stand, so the fixed wallpaper paints behind the
-        // sidebar/top bar/right panel instead of the opaque shell colour.
-        const shellOpaque = effects.coverage?.shell !== true;
+        // sidebar instead of the opaque shell colour. `scopes` narrows it: when
+        // "sidebar" is not listed the sidebar keeps the opaque shell fill while
+        // the rest of the shell follows the theme.
+        const coverage = effects.coverage ?? null;
+        const sidebarCovered = coverage !== null && coverage.shell === true
+          && (coverage.scopes ?? []).includes("sidebar");
+        const shellOpaque = !sidebarCovered;
         const derivedFills = shellOpaque && lightFill !== null && darkFill !== null ? {
           light: `rgb(${lightFill.r}, ${lightFill.g}, ${lightFill.b})`,
           dark: `rgb(${darkFill.r}, ${darkFill.g}, ${darkFill.b})`,
@@ -689,6 +696,19 @@ export function createSkinRuntime({ profile = "web" } = {}) {
       if (backdrop !== null) {
         const tag = styleTag(`vyra-free-theme/${skin.id}.backdrop.css`, backdrop);
         stops.push(() => tag.remove());
+      }
+
+      // Sidebar pack (spec §7): rules keyed on tags the runtime itself puts on
+      // the sidebar's interactive elements, so upstream class hashing cannot
+      // break them. Mounted and disposed with the skin transaction.
+      if (effects.sidebar !== null && effects.sidebar !== undefined) {
+        const tag = styleTag(
+          `vyra-free-theme/${skin.id}.sidebar.css`,
+          sidebarCss(effects.sidebar, effects.bodyAttribute),
+        );
+        stops.push(() => tag.remove());
+        const tagging = installSidebarTagging();
+        if (tagging !== null) stops.push(tagging);
       }
 
       // Element-backed wallpaper (video / code art): mounted with the skin

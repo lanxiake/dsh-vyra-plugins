@@ -16,6 +16,7 @@
  *      APIs, so both halves and the test runner can use them.
  */
 import { GLOBAL_MAX_BYTES, GLOBAL_MAX_PIXELS, USER_IMAGE_MIMES } from "./catalog.js";
+import { resolveSidebar, SIDEBAR_DENSITIES, SIDEBAR_PACKS, SIDEBAR_SURFACES } from "./sidebar-presets.js";
 
 export const THEME_SCHEMA_VERSION = 1;
 
@@ -59,6 +60,14 @@ function validLocalePair(value, max) {
     && Object.keys(value).length === 2
     && boundedText(value.zh, max)
     && boundedText(value.en, max);
+}
+
+/** `{ light, dark }` colour pair (sidebar icon etc.) — same shape, other keys. */
+function validColorPair(value) {
+  return isPlainObject(value)
+    && Object.keys(value).length === 2
+    && boundedText(value.light, TEXT_MAX)
+    && boundedText(value.dark, TEXT_MAX);
 }
 
 function parsePercent(value) {
@@ -272,8 +281,84 @@ export function normalizeTheme(raw) {
     }
   }
 
-  if (raw.sidebar !== undefined && raw.sidebar !== null && !isPlainObject(raw.sidebar)) {
-    fail("bad-sidebar", "sidebar", "sidebar 必须是对象（P3 校验其字段形状）");
+  let sidebar = null;
+  if (raw.sidebar !== undefined && raw.sidebar !== null) {
+    if (!isPlainObject(raw.sidebar)) {
+      fail("bad-sidebar", "sidebar", "sidebar 必须是对象");
+    } else {
+      const known = ["pack", "surface", "blur", "radius", "density", "icon", "states", "divider", "background"];
+      for (const key of Object.keys(raw.sidebar)) {
+        if (!known.includes(key)) fail("unknown-key", `sidebar.${key}`, `未知字段 "${key}"`);
+      }
+      if (raw.sidebar.pack !== undefined && SIDEBAR_PACKS[raw.sidebar.pack] === undefined) {
+        fail("bad-sidebar", "sidebar.pack", `pack 必须是 ${Object.keys(SIDEBAR_PACKS).join(" / ")}`);
+      }
+      if (raw.sidebar.surface !== undefined && !SIDEBAR_SURFACES.includes(raw.sidebar.surface)) {
+        fail("bad-sidebar", "sidebar.surface", `surface 必须是 ${SIDEBAR_SURFACES.join(" / ")}`);
+      }
+      if (raw.sidebar.density !== undefined && !SIDEBAR_DENSITIES.includes(raw.sidebar.density)) {
+        fail("bad-sidebar", "sidebar.density", `density 必须是 ${SIDEBAR_DENSITIES.join(" / ")}`);
+      }
+      if (raw.sidebar.blur !== undefined
+        && !(Number.isInteger(raw.sidebar.blur) && raw.sidebar.blur >= 0 && raw.sidebar.blur <= 24)) {
+        fail("bad-sidebar", "sidebar.blur", "blur 必须是 0–24 的整数");
+      }
+      if (raw.sidebar.radius !== undefined) {
+        if (!isPlainObject(raw.sidebar.radius)) fail("bad-sidebar", "sidebar.radius", "radius 必须是 { card, item }");
+        else {
+          for (const key of Object.keys(raw.sidebar.radius)) {
+            if (!["card", "item"].includes(key)) fail("unknown-key", `sidebar.radius.${key}`, `未知字段 "${key}"`);
+            const value = raw.sidebar.radius[key];
+            if (!(Number.isInteger(value) && value >= 0 && value <= 32)) {
+              fail("bad-sidebar", `sidebar.radius.${key}`, "必须是 0–32 的整数");
+            }
+          }
+        }
+      }
+      if (raw.sidebar.icon !== undefined) {
+        if (!validColorPair(raw.sidebar.icon)) fail("bad-sidebar", "sidebar.icon", "icon 必须是 { light, dark }");
+      }
+      if (raw.sidebar.states !== undefined) {
+        if (!isPlainObject(raw.sidebar.states)) fail("bad-sidebar", "sidebar.states", "states 必须是对象");
+        else {
+          for (const [state, values] of Object.entries(raw.sidebar.states)) {
+            if (!["hover", "active", "selected"].includes(state)) {
+              fail("unknown-key", `sidebar.states.${state}`, `未知状态 "${state}"`);
+              continue;
+            }
+            if (!isPlainObject(values)) {
+              fail("bad-sidebar", `sidebar.states.${state}`, "状态必须是对象");
+              continue;
+            }
+            for (const [field, value] of Object.entries(values)) {
+              if (!["bg", "fg", "darkBg", "darkFg", "indicator", "darkIndicator"].includes(field)) {
+                fail("unknown-key", `sidebar.states.${state}.${field}`, `未知字段 "${field}"`);
+              } else if (!boundedText(value, TEXT_MAX)) {
+                fail("bad-sidebar", `sidebar.states.${state}.${field}`, "必须是颜色字符串");
+              }
+            }
+          }
+        }
+      }
+      if (raw.sidebar.divider !== undefined && raw.sidebar.divider !== null) {
+        const divider = raw.sidebar.divider;
+        if (!isPlainObject(divider) || !boundedText(divider.color, TEXT_MAX)) {
+          fail("bad-sidebar", "sidebar.divider", "divider 必须是 { color, style? }");
+        } else if (divider.style !== undefined && !["solid", "dashed", "none"].includes(divider.style)) {
+          fail("bad-sidebar", "sidebar.divider.style", "style 必须是 solid / dashed / none");
+        }
+      }
+      if (raw.sidebar.background !== undefined && raw.sidebar.background !== null) {
+        const background = raw.sidebar.background;
+        if (!isPlainObject(background) || !boundedText(background.light, TEXT_MAX)
+          || (background.dark !== undefined && !boundedText(background.dark, TEXT_MAX))) {
+          fail("bad-sidebar", "sidebar.background", "background 必须是 { light, dark? }");
+        }
+      }
+      if (!issues.some((issue) => issue.path.startsWith("sidebar"))) {
+        sidebar = { ...raw.sidebar };
+      }
+    }
   }
   if (raw.decorations !== undefined && raw.decorations !== null && !Array.isArray(raw.decorations)) {
     fail("bad-decorations", "decorations", "decorations 必须是数组");
@@ -296,7 +381,7 @@ export function normalizeTheme(raw) {
       translucency,
       wallpaper,
       coverage,
-      sidebar: raw.sidebar ?? null,
+      sidebar,
       decorations: raw.decorations ?? null,
     },
   };
@@ -485,6 +570,7 @@ export function tableFromTheme(theme, profile = "web") {
     desktopBlur: { rate: 55, dark: "boost" },
     wallpaper: { kind: "assets" },
     layers: wallpaperLayersFromTheme(theme),
+    sidebar: resolveSidebar(theme),
     coverage: theme.coverage,
     staticCss: "",
   };

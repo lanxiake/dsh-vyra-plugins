@@ -104,6 +104,9 @@ export function createProjection(table) {
           ? table.layers
           : null,
       },
+      // Sidebar pack resolved from the theme's own palette (spec §7). Compiled-in
+      // skins leave it undefined → no sidebar rules beyond the fill token.
+      sidebar: table.sidebar ?? null,
       // Shell coverage (spec §6.2): a file-backed theme may opt the chrome in.
       // Compiled-in themes leave it undefined → normalizeEffects emits null.
       coverage: table.coverage ?? null,

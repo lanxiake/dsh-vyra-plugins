@@ -39,5 +39,6 @@
   },
   "translucency": { "web": 45, "desktop": 66 },
   "wallpaper": { "kind": "code", "entry": "art.js" },
-  "coverage": { "shell": false, "scopes": ["sidebar"] }
+  "sidebar": { "pack": "frost" },
+  "coverage": { "shell": true, "scopes": ["sidebar"] }
 }
