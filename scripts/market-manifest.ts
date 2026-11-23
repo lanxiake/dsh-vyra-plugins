@@ -2691,6 +2691,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.1 restores the gridRef declaration and the MediaTab mediaSrc
+        // import that made the 0.2.0 panel blank, and adds a render smoke test.
+        '0.2.1': {
+          publishTimestamp: 1795408922,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3b9f6901860a9a14d6b58344d0b51a8c6a35f5f5',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
