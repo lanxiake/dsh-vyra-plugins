@@ -15,6 +15,7 @@
     "lib",
     "assets",
     "themes",
+    "presets",
     "locale",
     "cordis.patch.yml",
     "README.md",
@@ -71,10 +72,11 @@
     "build": "node scripts/build-client.mjs",
     "watch": "node scripts/build-client.mjs --watch",
     "test": "node --test tests/*.test.mjs",
+    "verify:colors": "node scripts/check-colors.mjs",
     "verify:hooks": "node scripts/verify-upstream-hooks.mjs",
     "verify:contrast": "node scripts/verify-contrast.mjs",
     "verify:bundle": "node scripts/verify-bundle-guard.mjs",
-    "check": "npm run build && node --check lib/client.js && node --check lib/index.js && npm test"
+    "check": "npm run build && node --check lib/client.js && node --check lib/index.js && npm test && npm run verify:colors"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.4",

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "id": "mono",
+  "version": "0.1.0",
+  "author": "vyra",
+  "name": { "zh": "极简黑白", "en": "Mono" },
+  "brand": {
+    "title": { "zh": "极简", "en": "Mono" },
+    "slogans": { "zh": "只有灰阶", "en": "Grey only" }
+  },
+  "colors": {
+    "light": {
+      "--dsw-alias-bg-base": "#F7F7F8",
+      "--dsw-alias-bg-layer-1": "#FCFCFD",
+      "--dsw-alias-bg-layer-2": "#EFEFF1",
+      "--dsw-alias-bg-layer-3": "#E5E5E8",
+      "--dsw-alias-bg-module-platform": "#F3F3F5",
+      "--dsw-specific-sidebar-fill": "#F1F1F3",
+      "--dsw-alias-brand-primary": "#1F1F22",
+      "--dsw-alias-label-primary": "#131316",
+      "--dsw-alias-label-secondary": "rgba(19, 19, 22, 0.72)",
+      "--dsw-alias-border-l1": "rgba(19, 19, 22, 0.12)"
+    },
+    "dark": {
+      "--dsw-alias-bg-base": "#0E0E10",
+      "--dsw-alias-bg-layer-1": "#151517",
+      "--dsw-alias-bg-layer-2": "#1C1C1F",
+      "--dsw-alias-bg-layer-3": "#242427",
+      "--dsw-alias-bg-module-platform": "#171719",
+      "--dsw-specific-sidebar-fill": "#131315",
+      "--dsw-alias-brand-primary": "#E8E8EC",
+      "--dsw-alias-label-primary": "#F2F2F4",
+      "--dsw-alias-label-secondary": "rgba(242, 242, 244, 0.72)",
+      "--dsw-alias-border-l1": "rgba(242, 242, 244, 0.14)"
+    }
+  },
+  "shape": {
+    "--dsw-alias-radius-lg": "8px"
+  },
+  "translucency": { "web": 55, "desktop": 66 },
+  "coverage": { "shell": false, "scopes": ["sidebar"] }
+}

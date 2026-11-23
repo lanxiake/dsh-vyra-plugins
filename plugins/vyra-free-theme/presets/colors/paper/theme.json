@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "paper",
+  "version": "0.1.0",
+  "author": "vyra",
+  "name": {
+    "zh": "纸张暖黄",
+    "en": "Warm Paper"
+  },
+  "brand": {
+    "title": {
+      "zh": "纸张暖黄",
+      "en": "Warm Paper"
+    },
+    "slogans": {
+      "zh": "纸面与墨色",
+      "en": "Paper grain and ink"
+    }
+  },
+  "colors": {
+    "light": {
+      "--dsw-alias-bg-base": "#F6F5F3",
+      "--dsw-alias-bg-layer-1": "#FCFBFB",
+      "--dsw-alias-bg-layer-2": "#F0EEEB",
+      "--dsw-alias-bg-layer-3": "#E7E4DF",
+      "--dsw-alias-bg-module-platform": "#F3F1EF",
+      "--dsw-specific-sidebar-fill": "#F2F0EE",
+      "--dsw-alias-brand-primary": "#849134",
+      "--dsw-alias-label-primary": "#27221B",
+      "--dsw-alias-label-secondary": "rgba(39, 34, 27, 0.72)"
+    },
+    "dark": {
+      "--dsw-alias-bg-base": "#13110E",
+      "--dsw-alias-bg-layer-1": "#1E1B17",
+      "--dsw-alias-bg-layer-2": "#2A2620",
+      "--dsw-alias-bg-layer-3": "#363128",
+      "--dsw-alias-bg-module-platform": "#231F1B",
+      "--dsw-specific-sidebar-fill": "#201D18",
+      "--dsw-alias-brand-primary": "#DAE1AC",
+      "--dsw-alias-label-primary": "#F2F0EE",
+      "--dsw-alias-label-secondary": "rgba(242, 240, 238, 0.72)"
+    }
+  },
+  "translucency": {
+    "web": 45,
+    "desktop": 66
+  },
+  "coverage": {
+    "shell": false,
+    "scopes": [
+      "sidebar"
+    ]
+  }
+}
