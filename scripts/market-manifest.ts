@@ -2576,8 +2576,8 @@ export const manifest: MarketManifest = {
         zh: '智能体团队',
       },
       description: {
-        en: 'Multi-agent team collaboration for DSH: captain, members, tasks with dependencies and messaging, driven by natural language, with a tree monitor in the web GUI.',
-        zh: '多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板。',
+        en: 'Multi-agent team collaboration for DSH: captain, members, tasks with dependencies and messaging, driven by natural language, with a tree monitor in the web GUI. Members can be composed from an Agent preset.',
+        zh: '多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板。成员可由 Agent 预设组装。',
       },
       author: 'NanmiCoder',
       homepage: 'https://github.com/NanmiCoder/dsh-agent-teams#readme',
@@ -2592,6 +2592,20 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '10e37aca2deeff162f3d8ef7ff914fa0834ce0a8',
+            path: 'plugins/dsh-agent-teams',
+          },
+        },
+        // 0.1.31-vyra.1 is this repository's snapshot of 0.1.30 plus one local
+        // extension: a team member may name an `agent_preset`, so a preset from
+        // the Agent manager (prompt, tools, skills) composes that member. The
+        // staged-plan Web editor offers a preset dropdown, and a cold resume
+        // restores the preset recorded in the member session.
+        '0.1.31-vyra.1': {
+          publishTimestamp: 1795408000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'd80f3287b4da422a8a96b25c0fe871fe10320d0e',
             path: 'plugins/dsh-agent-teams',
           },
         },
