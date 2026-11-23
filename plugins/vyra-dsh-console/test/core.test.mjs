@@ -1239,6 +1239,21 @@ test('buildConfigSchema declares the client timeout the channel is built with', 
   assert.equal(schema({ clientTimeoutMs: 250 }).clientTimeoutMs, 250, 'a supplied value wins')
 })
 
+test('buildConfigSchema declares the long-poll bound as its own key', async () => {
+  // Task 7's endpoint parks an idle GET for this long before answering `[]`. It
+  // is deliberately a SEPARATE key from `clientTimeoutMs` — one is how long an
+  // action waits for its answer, the other how long a poll is held open — so a
+  // schema that folded them together, or dropped this one, would silently tie
+  // the poll's cadence to the action-latency setting.
+  const { buildConfigSchema } = await import('../index.js')
+  const schema = await buildConfigSchema(async () => ({ default: schemaStub() }))
+  assert.equal(schema({}).longPollMs, 25000, 'the shipped default must survive validation')
+  assert.equal(schema({ longPollMs: 100 }).longPollMs, 100, 'a supplied value wins')
+  // The two remain independent: setting one must not move the other.
+  assert.equal(schema({ longPollMs: 100 }).clientTimeoutMs, 5000)
+  assert.equal(schema({ clientTimeoutMs: 100 }).longPollMs, 25000)
+})
+
 test('the schema builder reads no binding that is still in its temporal dead zone', async () => {
   // The defect this was written after, and why the obvious test is not enough.
   //
@@ -1322,7 +1337,7 @@ test('the schema builder reads no binding that is still in its temporal dead zon
     const out = execFileSync(process.execPath, [probePath], { encoding: 'utf8', stdio: 'pipe' })
     assert.equal(
       out.trim(),
-      '{"confirmDestructive":false,"clientTimeoutMs":5000}',
+      '{"confirmDestructive":false,"clientTimeoutMs":5000,"longPollMs":25000}',
       'a Host that ships schemastery must get a real schema, not a swallowed initialization failure',
     )
   } finally {
