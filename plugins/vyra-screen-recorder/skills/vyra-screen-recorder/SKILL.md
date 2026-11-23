@@ -12,6 +12,8 @@ description: Windows 录屏、截图与可录制源枚举（vyra-screen-recorder
 - PowerShell / cmd：`%USERPROFILE%\.dsh\vyra-screen-recorder\bin\vsr.cmd`
 
 如果 `DSH_HOME` 指向别处，把上面的 `~/.dsh` 换成对应目录。
+Git Bash 里如果 `vsr` 没有执行权限，用 `sh ~/.dsh/vyra-screen-recorder/bin/vsr ...`；
+PowerShell / cmd 用 `vsr.cmd`。
 
 ## 截图（不依赖 DSH 运行）
 
