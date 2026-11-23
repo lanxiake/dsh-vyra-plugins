@@ -634,10 +634,15 @@ export function createSkinRuntime({ profile = "web" } = {}) {
         const fills = effects.tokenOverrides?.["--dsw-specific-sidebar-fill"] ?? null;
         const lightFill = fills === null ? null : parseRgbaChannels(fills.light);
         const darkFill = fills === null ? null : parseRgbaChannels(fills.dark);
-        const opaqueFills = lightFill !== null && darkFill !== null ? {
+        // Coverage (spec §6.2): a theme that opts the shell in lets its own
+        // translucent fills stand, so the fixed wallpaper paints behind the
+        // sidebar/top bar/right panel instead of the opaque shell colour.
+        const shellOpaque = effects.coverage?.shell !== true;
+        const derivedFills = shellOpaque && lightFill !== null && darkFill !== null ? {
           light: `rgb(${lightFill.r}, ${lightFill.g}, ${lightFill.b})`,
           dark: `rgb(${darkFill.r}, ${darkFill.g}, ${darkFill.b})`,
         } : null;
+        const opaqueFills = derivedFills;
         const backdrop = effects.backdrop === null ? null : {
           imageLight: effects.backdrop.imageLight,
           imageDark: effects.backdrop.imageDark,

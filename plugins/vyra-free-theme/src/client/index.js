@@ -42,7 +42,9 @@ window.__ModuleLoader__.load({
       const assetResolver = (ref) => {
         if (ref.kind === "builtin") {
           const asset = skinById.get(ref.skinId)?.builtinAssets?.[ref.assetKey];
-          return asset ? { url: asset.url, mime: asset.mime } : null;
+          return asset
+            ? { url: asset.url, mime: asset.mime, darkUrl: asset.darkUrl, darkMime: asset.darkMime }
+            : null;
         }
         const meta = configClient.findLibraryEntry(ref.id);
         return meta

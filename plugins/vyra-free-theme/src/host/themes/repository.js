@@ -38,6 +38,7 @@ function readTheme(dir) {
  */
 export function createThemeRepository({ dirs, profile = "web" }) {
   let registered = [];
+  let themeDirs = new Map();
 
   function discover() {
     const themes = [];
@@ -94,9 +95,11 @@ export function createThemeRepository({ dirs, profile = "web" }) {
     for (const id of registered) unregisterExternalSkin(id);
     const { themes, problems } = discover();
     registered = [];
-    for (const { theme } of themes) {
+    themeDirs = new Map();
+    for (const { theme, dir } of themes) {
       registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets: {} });
       registered.push(theme.id);
+      themeDirs.set(theme.id, dir);
     }
     return {
       themes: themes.map(({ source, theme }) => ({ source, theme })),
@@ -104,5 +107,10 @@ export function createThemeRepository({ dirs, profile = "web" }) {
     };
   }
 
-  return { discover, sync, registeredIds: () => [...registered] };
+  /** Absolute directory of a discovered theme (used to serve its assets). */
+  function assetDirFor(id) {
+    return themeDirs.get(id) ?? null;
+  }
+
+  return { discover, sync, assetDirFor, registeredIds: () => [...registered] };
 }

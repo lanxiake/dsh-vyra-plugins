@@ -1,5 +1,5 @@
 // src/index.js
-import { readFileSync as readFileSync4 } from "node:fs";
+import { readFileSync as readFileSync5 } from "node:fs";
 import { dirname as dirname3, join as join5 } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -1224,7 +1224,7 @@ function createOfficialRejection(ctx) {
   };
 }
 function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes } = options;
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets } = options;
   const disposers = [];
   const fence = (request, response) => {
     if (rejection !== void 0 && rejection(request) !== void 0) {
@@ -1268,6 +1268,40 @@ function mountPersonalizationRoutes(host, options) {
         }
       });
       disposers.push(themesRoute);
+    }
+    if (typeof themeAssets === "function") {
+      const themeAssetRoute = host.webServer.register({
+        kind: "prefix",
+        path: "/vyra-free-theme/theme",
+        handler: async (request, response) => {
+          if (!fence(request, response)) return;
+          if (!method(request, response, "GET")) return;
+          const path = String(request.url ?? "").split("?")[0];
+          const match = /^\/vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
+          if (match === null) {
+            return sendJson(response, 400, { error: "invalid theme asset path", code: "INVALID_THEME_ASSET" });
+          }
+          const [, themeId, relativePath] = match;
+          let asset;
+          try {
+            asset = themeAssets(themeId, decodeURIComponent(relativePath));
+          } catch {
+            asset = null;
+          }
+          if (asset === null || asset === void 0) {
+            return sendJson(response, 404, { error: "theme asset not found", code: "THEME_ASSET_NOT_FOUND" });
+          }
+          response.writeHead(200, {
+            "content-type": asset.mime,
+            "content-length": asset.byteLength,
+            "cache-control": "private, max-age=300",
+            "x-content-type-options": "nosniff",
+            "cross-origin-resource-policy": "same-origin"
+          });
+          response.end(asset.buffer);
+        }
+      });
+      disposers.push(themeAssetRoute);
     }
     const recoveryRoute = host.webServer.register({
       kind: "exact",
@@ -1580,15 +1614,24 @@ function normalizeTheme(raw) {
     if (!isPlainObject(raw.wallpaper)) fail("bad-wallpaper", "wallpaper", "wallpaper 必须是对象");
     else if (!["image", "video", "animated", "code"].includes(raw.wallpaper.kind)) {
       fail("unsupported-wallpaper-kind", "wallpaper.kind", "kind 必须是 image / video / animated / code");
-    } else if (raw.wallpaper.kind !== "image") {
-      fail("unsupported-wallpaper-kind", "wallpaper.kind", `kind "${raw.wallpaper.kind}" 在 P1 尚未支持`);
+    } else if (raw.wallpaper.kind === "video" || raw.wallpaper.kind === "code") {
+      fail("unsupported-wallpaper-kind", "wallpaper.kind", `kind "${raw.wallpaper.kind}" 尚未支持`);
     } else {
-      wallpaper = { kind: "image", light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
+      wallpaper = { kind: raw.wallpaper.kind, light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
+      if (wallpaper.light === null && wallpaper.dark === null) {
+        fail("bad-wallpaper", "wallpaper", "至少需要 light 或 dark 一侧");
+      }
       for (const mode of ["light", "dark"]) {
         const side = wallpaper[mode];
         if (side === null) continue;
         if (!isPlainObject(side) || !boundedText(side.src, 256)) {
           fail("bad-wallpaper", `wallpaper.${mode}`, "每一侧必须是 { src, poster?, overlay?, blur? }");
+          continue;
+        }
+        const mime = mimeForAssetPath(side.src);
+        const allowed = raw.wallpaper.kind === "animated" ? ["image/gif", "image/webp"] : Object.values(THEME_ASSET_MIME).filter((value) => value.startsWith("image/"));
+        if (mime === null || !allowed.includes(mime)) {
+          fail("bad-wallpaper", `wallpaper.${mode}.src`, raw.wallpaper.kind === "animated" ? "动图壁纸必须是 .gif 或 .webp" : "静态壁纸必须是 .webp / .png / .jpg / .avif");
         }
       }
     }
@@ -1635,19 +1678,36 @@ function normalizeTheme(raw) {
     }
   };
 }
+var THEME_ASSET_MIME = Object.freeze({
+  ".webp": "image/webp",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".avif": "image/avif",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".js": "text/plain; charset=utf-8"
+});
+function mimeForAssetPath(path) {
+  if (typeof path !== "string") return null;
+  const match = /\.[a-z0-9]+$/i.exec(path);
+  return match === null ? null : THEME_ASSET_MIME[match[0].toLowerCase()] ?? null;
+}
 function wallpaperField(theme) {
+  const hasArt = theme.wallpaper !== null && theme.wallpaper.kind === "image";
   return {
     key: "wallpaper",
     type: "image",
     scope: "single",
     labelKey: "personalization.wallpaper",
-    default: null,
+    default: hasArt ? `builtin:${theme.id}:art` : null,
     allowedUserMime: USER_IMAGE_MIMES,
     maxBytes: GLOBAL_MAX_BYTES,
     maxWidth: 16384,
     maxHeight: 16384,
     maxPixels: GLOBAL_MAX_PIXELS,
-    builtinChoices: []
+    builtinChoices: hasArt ? ["art"] : []
   };
 }
 function fieldsFromTheme(theme, profile = "web") {
@@ -1693,6 +1753,7 @@ function readTheme(dir) {
 }
 function createThemeRepository({ dirs, profile = "web" }) {
   let registered = [];
+  let themeDirs = /* @__PURE__ */ new Map();
   function discover() {
     const themes = [];
     const problems = [];
@@ -1741,22 +1802,68 @@ function createThemeRepository({ dirs, profile = "web" }) {
     for (const id of registered) unregisterExternalSkin(id);
     const { themes, problems } = discover();
     registered = [];
-    for (const { theme } of themes) {
+    themeDirs = /* @__PURE__ */ new Map();
+    for (const { theme, dir } of themes) {
       registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets: {} });
       registered.push(theme.id);
+      themeDirs.set(theme.id, dir);
     }
     return {
       themes: themes.map(({ source, theme }) => ({ source, theme })),
       problems
     };
   }
-  return { discover, sync, registeredIds: () => [...registered] };
+  function assetDirFor(id) {
+    return themeDirs.get(id) ?? null;
+  }
+  return { discover, sync, assetDirFor, registeredIds: () => [...registered] };
+}
+
+// src/host/themes/assets.js
+import { readFileSync as readFileSync4, realpathSync, statSync as statSync2 } from "node:fs";
+import { extname, resolve, sep } from "node:path";
+var MAX_THEME_ASSET_BYTES = 64 * 1024 * 1024;
+function resolveThemeAsset(themeDir, relativePath) {
+  if (typeof relativePath !== "string" || relativePath.length === 0 || relativePath.length > 512) return null;
+  if (relativePath.includes("\0")) return null;
+  if (relativePath.startsWith("/") || relativePath.startsWith("\\") || /^[a-z]:/i.test(relativePath)) return null;
+  const segments = relativePath.replaceAll("\\", "/").split("/");
+  if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) return null;
+  const mime = mimeForAssetPath(relativePath);
+  if (mime === null) return null;
+  let root;
+  let target;
+  try {
+    root = realpathSync(themeDir);
+    target = realpathSync(resolve(root, ...segments));
+  } catch {
+    return null;
+  }
+  if (target !== root && !target.startsWith(root + sep)) return null;
+  let stat;
+  try {
+    stat = statSync2(target);
+  } catch {
+    return null;
+  }
+  if (!stat.isFile()) return null;
+  if (stat.size > MAX_THEME_ASSET_BYTES) return null;
+  return { path: target, mime, byteLength: stat.size, ext: extname(target).toLowerCase() };
+}
+function readThemeAsset(themeDir, relativePath) {
+  const resolved = resolveThemeAsset(themeDir, relativePath);
+  if (resolved === null) return null;
+  try {
+    return { ...resolved, buffer: readFileSync4(resolved.path) };
+  } catch {
+    return null;
+  }
 }
 
 // src/host/paths.js
 import { homedir } from "node:os";
-import { basename, dirname as dirname2, join as join4, resolve } from "node:path";
-import { cpSync, existsSync as existsSync3, mkdtempSync, readdirSync as readdirSync3, renameSync as renameSync3, rmSync, statSync as statSync2 } from "node:fs";
+import { basename, dirname as dirname2, join as join4, resolve as resolve2 } from "node:path";
+import { cpSync, existsSync as existsSync3, mkdtempSync, readdirSync as readdirSync3, renameSync as renameSync3, rmSync, statSync as statSync3 } from "node:fs";
 var DATA_DIRS = {
   web: "vyra-free-theme",
   desktop: "vyra-free-theme-desktop"
@@ -1772,15 +1879,15 @@ function expandHomePath(path) {
 }
 function dshHome() {
   const configured = process.env.DSH_HOME?.trim();
-  return resolve(expandHomePath(configured || join4(homedir(), ".dsh")));
+  return resolve2(expandHomePath(configured || join4(homedir(), ".dsh")));
 }
 function hostProfileFor(root, cwd = process.cwd()) {
-  const normalized = (path) => process.platform === "win32" ? resolve(path).toLowerCase() : resolve(path);
+  const normalized = (path) => process.platform === "win32" ? resolve2(path).toLowerCase() : resolve2(path);
   return normalized(cwd) === normalized(join4(expandHomePath(root), "profiles", "desktop")) ? "desktop" : "web";
 }
 function isDirectory(path) {
   try {
-    return statSync2(path).isDirectory();
+    return statSync3(path).isDirectory();
   } catch {
     return false;
   }
@@ -1805,13 +1912,13 @@ function adoptLegacyOnce(home, target, legacyNames) {
   } catch (error) {
     if (!existsSync3(target)) throw error;
   } finally {
-    if (dirname2(resolve(stage)) !== resolve(home)) throw new Error("unsafe migration staging path");
+    if (dirname2(resolve2(stage)) !== resolve2(home)) throw new Error("unsafe migration staging path");
     if (existsSync3(stage)) rmSync(stage, { recursive: true, force: true });
   }
   return target;
 }
 function dataDirForProfile(root, profile = "web") {
-  const home = resolve(expandHomePath(root));
+  const home = resolve2(expandHomePath(root));
   const key = Object.hasOwn(DATA_DIRS, profile) ? profile : "web";
   return adoptLegacyOnce(home, join4(home, DATA_DIRS[key]), LEGACY_DIRS[key]);
 }
@@ -1837,7 +1944,7 @@ function apply(ctx) {
       let serveBuiltinAsset;
       try {
         const assetsDir = join5(dirname3(fileURLToPath(import.meta.url)), "..", "assets");
-        const manifest = JSON.parse(readFileSync4(join5(assetsDir, "manifest.json"), "utf8"));
+        const manifest = JSON.parse(readFileSync5(join5(assetsDir, "manifest.json"), "utf8"));
         serveBuiltinAsset = createBuiltinAssetServer({ assetsDir, manifest }).serveBuiltinAsset;
       } catch {
       }
@@ -1846,7 +1953,11 @@ function apply(ctx) {
         trustedHosts: () => resolveTrustedHosts(ctx),
         rejection: createOfficialRejection(ctx),
         serveBuiltinAsset,
-        themes: () => themes.sync()
+        themes: () => themes.sync(),
+        themeAssets: (id, relativePath) => {
+          const dir = themes.assetDirFor(id);
+          return dir === null ? null : readThemeAsset(dir, relativePath);
+        }
       });
     }, "vyra-free-theme: personalization routes");
   });

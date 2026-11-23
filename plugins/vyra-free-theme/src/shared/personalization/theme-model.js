@@ -201,17 +201,30 @@ export function normalizeTheme(raw) {
     if (!isPlainObject(raw.wallpaper)) fail("bad-wallpaper", "wallpaper", "wallpaper 必须是对象");
     else if (!["image", "video", "animated", "code"].includes(raw.wallpaper.kind)) {
       fail("unsupported-wallpaper-kind", "wallpaper.kind", "kind 必须是 image / video / animated / code");
-    } else if (raw.wallpaper.kind !== "image") {
-      // P2 opens the remaining channels; until then a theme asking for them is
-      // rejected instead of silently rendering nothing.
-      fail("unsupported-wallpaper-kind", "wallpaper.kind", `kind "${raw.wallpaper.kind}" 在 P1 尚未支持`);
+    } else if (raw.wallpaper.kind === "video" || raw.wallpaper.kind === "code") {
+      // P2b opens the moving/code channels; until then a theme asking for them
+      // is rejected instead of silently rendering nothing.
+      fail("unsupported-wallpaper-kind", "wallpaper.kind", `kind "${raw.wallpaper.kind}" 尚未支持`);
     } else {
-      wallpaper = { kind: "image", light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
+      wallpaper = { kind: raw.wallpaper.kind, light: raw.wallpaper.light ?? null, dark: raw.wallpaper.dark ?? null };
+      if (wallpaper.light === null && wallpaper.dark === null) {
+        fail("bad-wallpaper", "wallpaper", "至少需要 light 或 dark 一侧");
+      }
       for (const mode of ["light", "dark"]) {
         const side = wallpaper[mode];
         if (side === null) continue;
         if (!isPlainObject(side) || !boundedText(side.src, 256)) {
           fail("bad-wallpaper", `wallpaper.${mode}`, "每一侧必须是 { src, poster?, overlay?, blur? }");
+          continue;
+        }
+        const mime = mimeForAssetPath(side.src);
+        const allowed = raw.wallpaper.kind === "animated"
+          ? ["image/gif", "image/webp"]
+          : Object.values(THEME_ASSET_MIME).filter((value) => value.startsWith("image/"));
+        if (mime === null || !allowed.includes(mime)) {
+          fail("bad-wallpaper", `wallpaper.${mode}.src`, raw.wallpaper.kind === "animated"
+            ? "动图壁纸必须是 .gif 或 .webp"
+            : "静态壁纸必须是 .webp / .png / .jpg / .avif");
         }
       }
     }
@@ -269,19 +282,73 @@ export function bodyAttributeFor(id) {
   return `vft${id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
 }
 
+/** Asset URL prefix: the Host serves `<base>/<themeId>/<path-inside-theme>`. */
+export const THEME_ASSET_BASE = "/vyra-free-theme/theme";
+
+/** Extensions a theme may ship, with the MIME the Host must answer with. */
+export const THEME_ASSET_MIME = Object.freeze({
+  ".webp": "image/webp",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".avif": "image/avif",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".js": "text/plain; charset=utf-8",
+});
+
+export function mimeForAssetPath(path) {
+  if (typeof path !== "string") return null;
+  const match = /\.[a-z0-9]+$/i.exec(path);
+  return match === null ? null : (THEME_ASSET_MIME[match[0].toLowerCase()] ?? null);
+}
+
+function themeAssetUrl(themeId, path) {
+  const encoded = String(path).split("/").map(encodeURIComponent).join("/");
+  return `${THEME_ASSET_BASE}/${themeId}/${encoded}`;
+}
+
+/**
+ * The `builtinAssets` map for a theme: one `art` entry whose light side is the
+ * served URL and whose dark side travels as `darkUrl` (the asset contract lets
+ * one wallpaper ref carry a pair, which is how a theme ships light/dark art
+ * without needing two image fields).
+ */
+export function builtinAssetsFromTheme(theme) {
+  const wallpaper = theme.wallpaper;
+  if (wallpaper === null || wallpaper.kind !== "image") return {};
+  const light = wallpaper.light;
+  const dark = wallpaper.dark;
+  if (light === null && dark === null) return {};
+  const primary = light ?? dark;
+  const mime = mimeForAssetPath(primary.src);
+  if (mime === null) return {};
+  const asset = { url: themeAssetUrl(theme.id, primary.src), mime };
+  if (dark !== null && dark !== primary) {
+    const darkMime = mimeForAssetPath(dark.src);
+    if (darkMime !== null) {
+      asset.darkUrl = themeAssetUrl(theme.id, dark.src);
+      asset.darkMime = darkMime;
+    }
+  }
+  return { art: asset };
+}
+
 function wallpaperField(theme) {
+  const hasArt = theme.wallpaper !== null && theme.wallpaper.kind === "image";
   return {
     key: "wallpaper",
     type: "image",
     scope: "single",
     labelKey: "personalization.wallpaper",
-    default: null,
+    default: hasArt ? `builtin:${theme.id}:art` : null,
     allowedUserMime: USER_IMAGE_MIMES,
     maxBytes: GLOBAL_MAX_BYTES,
     maxWidth: 16384,
     maxHeight: 16384,
     maxPixels: GLOBAL_MAX_PIXELS,
-    builtinChoices: [],
+    builtinChoices: hasArt ? ["art"] : [],
   };
 }
 
@@ -370,6 +437,7 @@ export function tableFromTheme(theme, profile = "web") {
     glassVar: "--vft-glass-blur",
     desktopBlur: { rate: 55, dark: "boost" },
     wallpaper: { kind: "assets" },
+    coverage: theme.coverage,
     staticCss: "",
   };
 }

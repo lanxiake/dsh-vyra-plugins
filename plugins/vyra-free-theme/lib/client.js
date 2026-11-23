@@ -368,11 +368,17 @@
         if (!isPlainObject(decoration) || typeof decoration.key !== "string" || decoration.key.length === 0 || typeof decoration.css !== "string") return null;
       }
     }
+    const coverage = source.coverage ?? null;
+    if (coverage !== null) {
+      if (!isPlainObject(coverage) || typeof coverage.shell !== "boolean") return null;
+      if (coverage.scopes !== void 0 && (!Array.isArray(coverage.scopes) || coverage.scopes.some((scope) => typeof scope !== "string"))) return null;
+    }
     return deepFreeze({
       bodyAttribute: source.bodyAttribute,
       slogans,
       titleBrand,
       favicon: favicon2,
+      coverage: coverage === null ? null : { shell: coverage.shell, scopes: coverage.scopes ?? [] },
       backdrop: backdrop === null ? null : {
         imageLight: backdrop.imageLight ?? null,
         imageDark: backdrop.imageDark ?? null,
@@ -808,10 +814,12 @@ ${darkSelector}{${dark.join(";")}}`;
           const fills = effects.tokenOverrides?.["--dsw-specific-sidebar-fill"] ?? null;
           const lightFill = fills === null ? null : parseRgbaChannels(fills.light);
           const darkFill = fills === null ? null : parseRgbaChannels(fills.dark);
-          const opaqueFills = lightFill !== null && darkFill !== null ? {
+          const shellOpaque = effects.coverage?.shell !== true;
+          const derivedFills = shellOpaque && lightFill !== null && darkFill !== null ? {
             light: `rgb(${lightFill.r}, ${lightFill.g}, ${lightFill.b})`,
             dark: `rgb(${darkFill.r}, ${darkFill.g}, ${darkFill.b})`
           } : null;
+          const opaqueFills = derivedFills;
           const backdrop2 = effects.backdrop === null ? null : {
             imageLight: effects.backdrop.imageLight,
             imageDark: effects.backdrop.imageDark
@@ -3013,19 +3021,60 @@ ${references.join("\n")}`,
   function bodyAttributeFor(id) {
     return `vft${id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
   }
+  var THEME_ASSET_BASE = "/vyra-free-theme/theme";
+  var THEME_ASSET_MIME = Object.freeze({
+    ".webp": "image/webp",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".avif": "image/avif",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".js": "text/plain; charset=utf-8"
+  });
+  function mimeForAssetPath(path) {
+    if (typeof path !== "string") return null;
+    const match = /\.[a-z0-9]+$/i.exec(path);
+    return match === null ? null : THEME_ASSET_MIME[match[0].toLowerCase()] ?? null;
+  }
+  function themeAssetUrl(themeId, path) {
+    const encoded = String(path).split("/").map(encodeURIComponent).join("/");
+    return `${THEME_ASSET_BASE}/${themeId}/${encoded}`;
+  }
+  function builtinAssetsFromTheme(theme) {
+    const wallpaper = theme.wallpaper;
+    if (wallpaper === null || wallpaper.kind !== "image") return {};
+    const light = wallpaper.light;
+    const dark = wallpaper.dark;
+    if (light === null && dark === null) return {};
+    const primary = light ?? dark;
+    const mime = mimeForAssetPath(primary.src);
+    if (mime === null) return {};
+    const asset = { url: themeAssetUrl(theme.id, primary.src), mime };
+    if (dark !== null && dark !== primary) {
+      const darkMime = mimeForAssetPath(dark.src);
+      if (darkMime !== null) {
+        asset.darkUrl = themeAssetUrl(theme.id, dark.src);
+        asset.darkMime = darkMime;
+      }
+    }
+    return { art: asset };
+  }
   function wallpaperField(theme) {
+    const hasArt = theme.wallpaper !== null && theme.wallpaper.kind === "image";
     return {
       key: "wallpaper",
       type: "image",
       scope: "single",
       labelKey: "personalization.wallpaper",
-      default: null,
+      default: hasArt ? `builtin:${theme.id}:art` : null,
       allowedUserMime: USER_IMAGE_MIMES,
       maxBytes: GLOBAL_MAX_BYTES,
       maxWidth: 16384,
       maxHeight: 16384,
       maxPixels: GLOBAL_MAX_PIXELS,
-      builtinChoices: []
+      builtinChoices: hasArt ? ["art"] : []
     };
   }
   function fieldsFromTheme(theme, profile = "web") {
@@ -3098,6 +3147,7 @@ ${references.join("\n")}`,
       glassVar: "--vft-glass-blur",
       desktopBlur: { rate: 55, dark: "boost" },
       wallpaper: { kind: "assets" },
+      coverage: theme.coverage,
       staticCss: ""
     };
   }
@@ -3143,8 +3193,9 @@ ${references.join("\n")}`,
           imageDark = custom ? `url("${url}")` : scrim.artLayer === "" ? wallpaper.placeholder?.dark ?? scrimDark : scrimDark;
         } else {
           const url = assets?.wallpaper?.url ?? null;
+          const darkUrl = assets?.wallpaper?.darkUrl ?? null;
           imageLight = url === null ? scrimLight : `url("${url}")`;
-          imageDark = url === null ? scrimDark : `url("${url}")`;
+          imageDark = darkUrl !== null ? `url("${darkUrl}")` : url === null ? scrimDark : `url("${url}")`;
         }
       }
       const blurPx = Math.round(blur.max * Math.max(0, (P - anchor) / (100 - anchor)) ** 2);
@@ -3156,6 +3207,9 @@ ${references.join("\n")}`,
         titleBrand: table.titleBrand,
         favicon: table.favicon,
         backdrop: { imageLight, imageDark, overlayLight, overlayDark, blur: blurPx, desktopBlur: desktopBlurPair },
+        // Shell coverage (spec §6.2): a file-backed theme may opt the chrome in.
+        // Compiled-in themes leave it undefined → normalizeEffects emits null.
+        coverage: table.coverage ?? null,
         tokenOverrides,
         cssVariables: blurPx > 0 ? { [glassVar]: { light: `${blurPx}px`, dark: `${blurPx}px` } } : null,
         staticCss: blurPx > 0 ? table.staticCss + "\n" + glassRule(table.bodyAttribute, glassVar) : table.staticCss,
@@ -3193,7 +3247,8 @@ ${references.join("\n")}`,
       }
       try {
         const { Mark, Name } = brandComponents(theme, jsx);
-        registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets: {} });
+        const builtinAssets = builtinAssetsFromTheme(theme);
+        registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets });
         runtime.register({
           id: theme.id,
           label: theme.name,
@@ -3201,7 +3256,7 @@ ${references.join("\n")}`,
           Mark,
           Name,
           project: createProjection(tableFromTheme(theme, profile)),
-          builtinAssets: {}
+          builtinAssets
         });
         installed.push(theme.id);
       } catch (error) {
@@ -4051,7 +4106,7 @@ ${references.join("\n")}`,
         const assetResolver = (ref) => {
           if (ref.kind === "builtin") {
             const asset = skinById.get(ref.skinId)?.builtinAssets?.[ref.assetKey];
-            return asset ? { url: asset.url, mime: asset.mime } : null;
+            return asset ? { url: asset.url, mime: asset.mime, darkUrl: asset.darkUrl, darkMime: asset.darkMime } : null;
           }
           const meta = configClient.findLibraryEntry(ref.id);
           return meta ? { url: configClient.assetUrl(meta), mime: meta.mime } : null;

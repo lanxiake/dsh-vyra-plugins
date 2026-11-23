@@ -77,8 +77,10 @@ export function createProjection(table) {
           : (scrim.artLayer === "" ? (wallpaper.placeholder?.dark ?? scrimDark) : scrimDark);
       } else {
         const url = assets?.wallpaper?.url ?? null;
+        const darkUrl = assets?.wallpaper?.darkUrl ?? null;
         imageLight = url === null ? scrimLight : `url("${url}")`;
-        imageDark = url === null ? scrimDark : `url("${url}")`;
+        imageDark = darkUrl !== null ? `url("${darkUrl}")`
+          : (url === null ? scrimDark : `url("${url}")`);
       }
     }
 
@@ -94,6 +96,9 @@ export function createProjection(table) {
       titleBrand: table.titleBrand,
       favicon: table.favicon,
       backdrop: { imageLight, imageDark, overlayLight, overlayDark, blur: blurPx, desktopBlur: desktopBlurPair },
+      // Shell coverage (spec §6.2): a file-backed theme may opt the chrome in.
+      // Compiled-in themes leave it undefined → normalizeEffects emits null.
+      coverage: table.coverage ?? null,
       tokenOverrides,
       cssVariables: blurPx > 0 ? { [glassVar]: { light: `${blurPx}px`, dark: `${blurPx}px` } } : null,
       staticCss: blurPx > 0 ? table.staticCss + "\n" + glassRule(table.bodyAttribute, glassVar) : table.staticCss,

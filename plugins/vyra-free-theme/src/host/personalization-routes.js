@@ -183,7 +183,7 @@ export function createOfficialRejection(ctx) {
 }
 
 export function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes } = options;
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets } = options;
   const disposers = [];
 
   const fence = (request, response) => {
@@ -242,6 +242,43 @@ export function mountPersonalizationRoutes(host, options) {
       },
     });
     disposers.push(themesRoute);
+  }
+
+  // --- theme assets: GET /<themeId>/<path-inside-theme> (prefix) ------------
+
+  if (typeof themeAssets === "function") {
+    const themeAssetRoute = host.webServer.register({
+      kind: "prefix",
+      path: "/vyra-free-theme/theme",
+      handler: async (request, response) => {
+        if (!fence(request, response)) return;
+        if (!method(request, response, "GET")) return;
+        const path = String(request.url ?? "").split("?")[0];
+        const match = /^\/vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
+        if (match === null) {
+          return sendJson(response, 400, { error: "invalid theme asset path", code: "INVALID_THEME_ASSET" });
+        }
+        const [, themeId, relativePath] = match;
+        let asset;
+        try {
+          asset = themeAssets(themeId, decodeURIComponent(relativePath));
+        } catch {
+          asset = null;
+        }
+        if (asset === null || asset === undefined) {
+          return sendJson(response, 404, { error: "theme asset not found", code: "THEME_ASSET_NOT_FOUND" });
+        }
+        response.writeHead(200, {
+          "content-type": asset.mime,
+          "content-length": asset.byteLength,
+          "cache-control": "private, max-age=300",
+          "x-content-type-options": "nosniff",
+          "cross-origin-resource-policy": "same-origin",
+        });
+        response.end(asset.buffer);
+      },
+    });
+    disposers.push(themeAssetRoute);
   }
 
   // --- recovery confirmation (branch A commit) ------------------------------

@@ -6,6 +6,7 @@ import { createOfficialRejection, mountPersonalizationRoutes } from "./host/pers
 import { createBuiltinAssetServer } from "./host/builtin-assets.js";
 import { resolveTrustedHosts } from "./host/trusted-hosts.js";
 import { createThemeRepository } from "./host/themes/repository.js";
+import { readThemeAsset } from "./host/themes/assets.js";
 import { dataDirForProfile, dshHome, hostProfileFor } from "./host/paths.js";
 
 export const name = "vyra-free-theme";
@@ -55,6 +56,10 @@ export function apply(ctx) {
         rejection: createOfficialRejection(ctx),
         serveBuiltinAsset,
         themes: () => themes.sync(),
+        themeAssets: (id, relativePath) => {
+          const dir = themes.assetDirFor(id);
+          return dir === null ? null : readThemeAsset(dir, relativePath);
+        },
       });
     }, "vyra-free-theme: personalization routes");
   });

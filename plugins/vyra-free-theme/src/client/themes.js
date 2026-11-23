@@ -8,7 +8,7 @@
  * nothing distinguishes a JSON theme from a built-in one: the switcher lists
  * it, the panel edits it, the runtime mounts it.
  */
-import { fieldsFromTheme, tableFromTheme } from "../shared/personalization/theme-model.js";
+import { builtinAssetsFromTheme, fieldsFromTheme, tableFromTheme } from "../shared/personalization/theme-model.js";
 import { registerExternalSkin } from "../shared/personalization/catalog.js";
 import { createProjection } from "./skins/translucency.js";
 
@@ -49,7 +49,8 @@ export async function installFileThemes({ runtime, jsx, profile, fetchImpl = fet
     }
     try {
       const { Mark, Name } = brandComponents(theme, jsx);
-      registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets: {} });
+      const builtinAssets = builtinAssetsFromTheme(theme);
+      registerExternalSkin({ id: theme.id, fields: fieldsFromTheme(theme, profile), builtinAssets });
       runtime.register({
         id: theme.id,
         label: theme.name,
@@ -57,7 +58,7 @@ export async function installFileThemes({ runtime, jsx, profile, fetchImpl = fet
         Mark,
         Name,
         project: createProjection(tableFromTheme(theme, profile)),
-        builtinAssets: {},
+        builtinAssets,
       });
       installed.push(theme.id);
     } catch (error) {

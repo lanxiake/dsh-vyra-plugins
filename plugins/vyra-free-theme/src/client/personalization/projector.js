@@ -117,11 +117,21 @@ export function normalizeEffects(draft) {
     }
   }
 
+  // Shell coverage (spec §6.2): which chrome regions let the wallpaper through.
+  // Absent means "the host decides", i.e. the historical opaque shell.
+  const coverage = source.coverage ?? null;
+  if (coverage !== null) {
+    if (!isPlainObject(coverage) || typeof coverage.shell !== "boolean") return null;
+    if (coverage.scopes !== undefined
+      && (!Array.isArray(coverage.scopes) || coverage.scopes.some((scope) => typeof scope !== "string"))) return null;
+  }
+
   return deepFreeze({
     bodyAttribute: source.bodyAttribute,
     slogans,
     titleBrand,
     favicon,
+    coverage: coverage === null ? null : { shell: coverage.shell, scopes: coverage.scopes ?? [] },
     backdrop: backdrop === null ? null : {
       imageLight: backdrop.imageLight ?? null,
       imageDark: backdrop.imageDark ?? null,
