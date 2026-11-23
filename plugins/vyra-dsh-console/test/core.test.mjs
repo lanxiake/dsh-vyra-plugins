@@ -1107,9 +1107,14 @@ test('every registered action has a wired handler', async () => {
 })
 
 test('every domain an action resolves to is wired, reported per domain', async () => {
-  // Complements the per-action guard above by keying on the domain rather than
-  // the action, so a domain with NO registered action at all (nothing to
-  // dispatch) still cannot claim coverage, and the failure names the domain.
+  // A per-domain-labelled companion to the per-action guard above. It fails
+  // whenever a registered action's domain is unwired, and — unlike the
+  // per-action message — it names the offending domain. Mutation-tested.
+  //
+  // It does NOT add coverage the per-action guard lacks: the iteration source is
+  // the ACTIONS registry, not the wired handler keys, so a domain with no
+  // registered action can never be iterated (and the action lookup below cannot
+  // come back empty for the same reason).
   //
   // Deliberately NOT asserted here: that `apply()` wires only these domains.
   // The handlers index.js passes to createConsole are a closed-over literal
