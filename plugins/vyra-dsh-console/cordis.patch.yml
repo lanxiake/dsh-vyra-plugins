@@ -1,0 +1,7 @@
+# The DSH console row, inserted at the host plane.
+#
+# The Host half registers the `dsh_console` tool; the Client half answers
+# theme/layout/locale requests, which exist only in the browser realm.
+- insert:
+    - id: vyra-dsh-console
+      name: 'vyra-dsh-console'

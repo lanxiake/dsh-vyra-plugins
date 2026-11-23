@@ -1,0 +1,44 @@
+{
+  "name": "vyra-dsh-console",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "让 Agent 操作 DSH 自身的控制台：模型、设置、插件、主题与布局，带明确的权限边界。",
+  "main": "index.js",
+  "bin": { "vyra-console": "./cli.mjs" },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cli": "./cli.mjs",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "core.js",
+    "channel.js",
+    "client.js",
+    "cli.mjs",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "assets/qq-group.png"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "console", "settings"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-dsh-console"
+  },
+  "scripts": { "test": "node --test test/core.test.mjs test/channel.test.mjs test/client.test.mjs" }
+}
