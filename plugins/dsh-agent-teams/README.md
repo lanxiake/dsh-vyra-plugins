@@ -24,6 +24,10 @@
   <a href="./cordis.patch.yml"><img src="https://img.shields.io/badge/DSH-Web%20%2B%20Headless-5B4CF0?style=flat-square" alt="DSH Web and Headless"></a>
 </p>
 
+## Local extension: members composed from an agent preset
+
+This repository's snapshot adds an optional `agent_preset` to `agent_teams_add_member`, `agent_teams_create`'s `plan.members[]`, and `agent_teams_edit_plan`. When set, the member is composed from that preset (for example a `code-reviewer` created by the Agent manager): the preset's prompt, tools and skills apply, the team protocol arrives in the member's first message, and `tool_policy` still layers on top; a cold restart restores the preset recorded in the member session. The staged-plan Web editor offers a preset dropdown per member. Requires `memberProvider: spawn`; the `fork` provider cannot mount an independent preset.
+
 ## One prompt. A working team.
 
 `dsh-agent-teams` turns the current DeepSeek Harness session into a captain that can assemble durable sub-agents, split a goal into dependency-aware tasks, and coordinate work through direct messages.

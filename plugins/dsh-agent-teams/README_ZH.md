@@ -24,6 +24,10 @@
   <a href="./cordis.patch.yml"><img src="https://img.shields.io/badge/DSH-Web%20%2B%20Headless-5B4CF0?style=flat-square" alt="DSH Web 与 Headless"></a>
 </p>
 
+## 本地扩展：成员使用 Agent 预设
+
+本仓库的这份快照在 `agent_teams_add_member`、`agent_teams_create` 的 `plan.members[]` 和 `agent_teams_edit_plan` 上增加了可选的 `agent_preset`。填写后，成员由该预设（例如 Agent 管理器创建的 `code-reviewer`）组装：预设的提示词、工具与技能生效，团队协议放在成员的首条消息里，`tool_policy` 仍叠加生效；冷重启后按成员会话记录的预设恢复。暂存计划的 Web 编辑器会在成员行提供预设下拉。要求 `memberProvider: spawn`；`fork` provider 不支持独立预设。
+
 ## 一句话，拉起一支真正协作的团队
 
 `dsh-agent-teams` 让当前 DeepSeek Harness 会话成为队长：创建可续聊的子 Agent、把目标拆成有依赖的任务，并通过直达消息协调成员工作。

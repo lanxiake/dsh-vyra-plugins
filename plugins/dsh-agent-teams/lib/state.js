@@ -687,6 +687,7 @@ function isTeamMember(value) {
         && isOptionalString(value['activeModel'])
         && isOptionalString(value['spawnError'])
         && (value['executionPrompt'] === undefined || typeof value['executionPrompt'] === 'string')
+        && isOptionalNonBlankString(value['agentPreset'])
         && (value['fallback'] === undefined || (isRecord(value['fallback']) && typeof value['fallback']['provider'] === 'string' && typeof value['fallback']['model'] === 'string'))
         && (value['fallbackActive'] === undefined || typeof value['fallbackActive'] === 'boolean')
         // A member without a policy keeps the legacy shape: both fields stay absent.

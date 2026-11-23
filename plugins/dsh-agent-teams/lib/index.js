@@ -350,6 +350,7 @@ export function apply(ctx, config) {
                                 ? { executionPrompt: payload['executionPrompt'] }
                                 : {},
                             ...typeof payload['tool_policy'] === 'string' ? { toolPolicy: payload['tool_policy'] } : {},
+                            ...typeof payload['agent_preset'] === 'string' ? { agentPreset: payload['agent_preset'] } : {},
                         };
                     }
                     else if (action === 'update_task') {
@@ -402,6 +403,40 @@ export function apply(ctx, config) {
                 }
             },
         }), 'agent-teams: plan route');
+        // Locally added: the staged plan editor needs the preset roster to offer
+        // a per-member agent preset. Read-only, and empty when the profile has no
+        // preset registry.
+        ctx.effect(() => webServer.register({
+            kind: 'exact',
+            path: '/plugins/dsh-agent-teams/presets',
+            handler: async (req, res) => {
+                if (req.method !== 'GET' && req.method !== 'HEAD') {
+                    res.writeHead(405, { allow: 'GET', 'cache-control': 'no-store' });
+                    res.end();
+                    return;
+                }
+                const presets = typeof ctx.get === 'function' ? ctx.get('agentPresets') : undefined;
+                if (presets === undefined) {
+                    writeJsonWithEtag(req, res, JSON.stringify({ presets: [] }));
+                    return;
+                }
+                try {
+                    const roster = await presets.list();
+                    writeJsonWithEtag(req, res, JSON.stringify({
+                        presets: roster.map((preset) => ({
+                            id: preset.id,
+                            name: preset.name ?? preset.id,
+                            description: preset.description ?? '',
+                            broken: preset.broken ?? null,
+                        })),
+                    }));
+                }
+                catch (error) {
+                    res.writeHead(500, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+                    res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'preset roster failed' }));
+                }
+            },
+        }), 'agent-teams: presets route');
         // Whale mascot artwork: serve the packaged V2 role/action images to the
         // activity panel. An explicit allowlist guards the route (no path
         // traversal); the images ship with the bundle (files: assets/).

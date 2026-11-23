@@ -557,11 +557,16 @@ export function installMemberSelectionRuntime(ctx, stateDir, onFailureSettled) {
             try {
                 const stopFilter = childCtx.tools.restrict(setup.toolFilter);
                 try {
-                    const stopPersona = childCtx.systemPrompt.section({
-                        name: 'deployment:persona-prefix',
-                        order: childCtx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'),
-                        text: setup.persona,
-                    });
+                    // A preset member stores an empty persona on purpose: registering
+                    // the same-named section with empty text would shadow the preset's
+                    // own persona, so it is left alone entirely.
+                    const stopPersona = setup.persona === ''
+                        ? () => undefined
+                        : childCtx.systemPrompt.section({
+                            name: 'deployment:persona-prefix',
+                            order: childCtx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'),
+                            text: setup.persona,
+                        });
                     disposeSetup = () => { stopPersona(); stopFilter(); };
                 }
                 catch (error) {
@@ -877,7 +882,17 @@ export async function spawnMember(ctx, config, selections, llmSelection, captain
     if (!usesManagedActivations(ctx.subagents) && !legacyCapabilities.toolFilter) {
         throw new Error(`agent-teams: provider "${config.provider}" cannot restrict captain-only tools for members`);
     }
+    // Locally added: a member may run an independent agent preset. The preset
+    // composes its prompt, tools and skills; the team protocol moves into the
+    // first message so the preset's own persona is not overwritten.
+    const presetId = typeof member.agentPreset === 'string' && member.agentPreset.trim() !== ''
+        ? member.agentPreset.trim()
+        : undefined;
+    if (presetId !== undefined && (!provider.capabilities.agentPreset || provider.inheritsParentContext)) {
+        throw new Error(`agent-teams: member "${member.name}" requests agent_preset "${presetId}", but provider "${config.provider}" cannot mount an independent preset (needs the agentPreset capability and must not inherit parent context; use memberProvider spawn)`);
+    }
     const label = `${MEMBER_LABEL_PREFIX}${team.id}:${member.name}`;
+    const personaText = memberPersona(team, member, stateDir, config.executionPrompt);
     // The legacy filter of a member without a configured tool policy: the
     // captain-only deny list plus the depth entries this host registers.
     const requestedFilter = resolvedFilter ?? memberToolFilter(config.maxDepth, restrictableToolNames(captain));
@@ -886,14 +901,18 @@ export async function spawnMember(ctx, config, selections, llmSelection, captain
     let acceptedFilter = requestedFilter;
     const start = await startMemberWithLenientFilter(toolFilter => {
         acceptedFilter = toolFilter;
-        const setup = { persona: memberPersona(team, member, stateDir, config.executionPrompt), toolFilter };
+        const setup = { persona: presetId === undefined ? personaText : '', toolFilter };
+        const opening = initialPrompt ?? memberWelcome(team, member.name);
+        const promptText = presetId === undefined ? opening : `${personaText}\n\n---\n\n${opening}`;
         return selections.withPending(captain.id, label, llmSelection, () => startMember(ctx.subagents, {
             provider: config.provider,
             label,
             request: {
-                prompt: [{ type: 'text', text: initialPrompt ?? memberWelcome(team, member.name) }],
+                prompt: [{ type: 'text', text: promptText }],
                 parent: captain,
-                persona: memberPersona(team, member, stateDir, config.executionPrompt),
+                // A preset composition supplies its own persona; an explicit
+                // `persona` here would shadow it.
+                ...presetId === undefined ? { persona: personaText } : { agentPreset: presetId },
                 // Depth deny entries name host tools; resolve them against the
                 // running host's registry so a renamed delegation tool cannot abort
                 // the spawn (see memberToolFilter). Depth is still enforced by the
@@ -916,7 +935,9 @@ export async function spawnMember(ctx, config, selections, llmSelection, captain
     }, requestedFilter, relaxableDeny);
     member.id = start.childId;
     if (usesManagedActivations(ctx.subagents)) {
-        member.runtimeSetup = { persona: memberPersona(team, member, stateDir, config.executionPrompt), toolFilter: acceptedFilter };
+        // An empty persona is deliberate for preset members: the setup section
+        // must not shadow the preset's own persona on a cold resume.
+        member.runtimeSetup = { persona: presetId === undefined ? personaText : '', toolFilter: acceptedFilter };
     }
     // Only a policy member carries a persisted filter snapshot; a member without
     // a policy keeps its public record shape. Legacy descriptors or runtimeSetup

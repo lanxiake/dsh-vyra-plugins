@@ -1311,6 +1311,20 @@ window.__ModuleLoader__.load({
 				]
 			});
 		}
+		/** Locally added: presets a staged member may be composed from. */
+		const AGENT_PRESETS_URL = "/plugins/dsh-agent-teams/presets";
+		function useAgentPresets(active) {
+			const [presets, setPresets] = (0, react.useState)([]);
+			(0, react.useEffect)(() => {
+				if (!active) return void 0;
+				let alive = true;
+				fetch(AGENT_PRESETS_URL, { cache: "no-store" }).then((response) => response.ok ? response.json() : { presets: [] }).then((body) => {
+					if (alive && Array.isArray(body?.presets)) setPresets(body.presets);
+				}).catch(() => void 0);
+				return () => { alive = false; };
+			}, [active]);
+			return presets;
+		}
 		function StagedMemberEditor({ team, member, modelDirectory, onPendingChange, t }) {
 			const bodyId = (0, react.useId)();
 			const [open, setOpen] = (0, react.useState)(false);
@@ -1319,12 +1333,15 @@ window.__ModuleLoader__.load({
 			const [model, setModel] = (0, react.useState)(member.model ?? "");
 			const [reasoningEffort, setReasoningEffort] = (0, react.useState)(member.reasoningEffort ?? "");
 			const [executionPrompt, setExecutionPrompt] = (0, react.useState)(member.executionPrompt ?? "");
+			const [agentPreset, setAgentPreset] = (0, react.useState)(member.agentPreset ?? "");
+			const presets = useAgentPresets(open);
 			const remoteSignature = JSON.stringify([
 				member.role,
 				member.provider ?? "",
 				member.model ?? "",
 				member.reasoningEffort ?? "",
-				member.executionPrompt ?? ""
+				member.executionPrompt ?? "",
+				member.agentPreset ?? ""
 			]);
 			const [savedSignature, setSavedSignature] = (0, react.useState)(remoteSignature);
 			const [busy, setBusy] = (0, react.useState)(false);
@@ -1335,7 +1352,8 @@ window.__ModuleLoader__.load({
 				provider,
 				model,
 				reasoningEffort,
-				executionPrompt
+				executionPrompt,
+				agentPreset
 			]) !== savedSignature;
 			(0, react.useEffect)(() => {
 				onPendingChange(`member:${member.name}`, dirty || busy);
@@ -1354,6 +1372,7 @@ window.__ModuleLoader__.load({
 				setModel(member.model ?? "");
 				setReasoningEffort(member.reasoningEffort ?? "");
 				setExecutionPrompt(member.executionPrompt ?? "");
+				setAgentPreset(member.agentPreset ?? "");
 				setSavedSignature(remoteSignature);
 			}, [
 				member.role,
@@ -1361,6 +1380,7 @@ window.__ModuleLoader__.load({
 				member.model,
 				member.reasoningEffort,
 				member.executionPrompt,
+				member.agentPreset,
 				remoteSignature
 			]);
 			const markEdited = () => {
@@ -1376,7 +1396,8 @@ window.__ModuleLoader__.load({
 					selection.provider,
 					selection.model,
 					selection.reasoningEffort,
-					executionPrompt
+					executionPrompt,
+					agentPreset
 				]);
 				setProvider(selection.provider);
 				setModel(selection.model);
@@ -1393,7 +1414,8 @@ window.__ModuleLoader__.load({
 						provider: selection.provider,
 						model: selection.model,
 						reasoningEffort: selection.reasoningEffort,
-						executionPrompt
+						executionPrompt,
+						agent_preset: agentPreset
 					});
 					setSavedSignature(nextSignature);
 					setFeedback({
@@ -1458,6 +1480,22 @@ window.__ModuleLoader__.load({
 									setRole(event.currentTarget.value);
 									markEdited();
 								}
+							})] }),
+							(0, react_jsx_runtime.jsxs)("label", { children: [t("plan.member.preset"), (0, react_jsx_runtime.jsx)("select", {
+								name: "agentPreset",
+								value: agentPreset,
+								onChange: (event) => {
+									setAgentPreset(event.currentTarget.value);
+									markEdited();
+								},
+								children: [(0, react_jsx_runtime.jsx)("option", {
+									value: "",
+									children: t("plan.member.presetInherit")
+								}, "inherit"), ...presets.map((preset) => (0, react_jsx_runtime.jsx)("option", {
+									value: preset.id,
+									disabled: preset.broken !== null,
+									children: preset.broken === null ? preset.name : preset.name + " — " + preset.broken
+								}, preset.id))]
 							})] }),
 							(0, react_jsx_runtime.jsx)(StagedModelPicker, {
 								directory: modelDirectory,
@@ -4223,6 +4261,8 @@ window.__ModuleLoader__.load({
 			"plan.model.partialFailure": "{count} 个 Provider 的模型目录加载失败",
 			"plan.model.retry": "重试",
 			"plan.member.prompt": "角色提示词",
+			"plan.member.preset": "成员预设",
+			"plan.member.presetInherit": "继承队长",
 			"plan.member.roleFallback": "未设置角色",
 			"plan.task.subject": "任务名称",
 			"plan.task.description": "任务说明",
@@ -4443,6 +4483,8 @@ window.__ModuleLoader__.load({
 			"plan.model.partialFailure": "{count} provider catalogs could not be loaded",
 			"plan.model.retry": "Retry",
 			"plan.member.prompt": "Role prompt",
+			"plan.member.preset": "Agent preset",
+			"plan.member.presetInherit": "Inherit captain",
 			"plan.member.roleFallback": "Role not set",
 			"plan.task.subject": "Task subject",
 			"plan.task.description": "Task description",
