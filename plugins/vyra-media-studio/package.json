@@ -1,8 +1,8 @@
 {
   "name": "vyra-media-studio",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
-  "description": "右侧栏文件管理：全类型扫描、网格缩放、列表详细度、文档预览与重命名/复制/删除等文件操作。",
+  "description": "右侧栏文件管理：文件树、网格缩放、多格式预览、批量勾选，以及文件/文件夹重命名、复制、删除等操作。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -58,7 +58,9 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
+    "highlight.js": "^11.12.0",
     "lucide-react": "^0.577.0",
+    "markdown-it": "^15.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "yet-another-react-lightbox": "^3.33.1"

@@ -7,6 +7,8 @@ import test from 'node:test'
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { renderToString } from 'react-dom/server'
+import { FileTree, buildTree, findTreeNode } from './src/client/tree.js'
+import { CodeView, CsvView, HtmlView, MarkdownView } from './src/client/preview.js'
 
 const noop = () => {}
 const styleElements = []
@@ -119,4 +121,65 @@ test('library and media tab render without undeclared references', () => {
   assert.match(html, /文件管理/u)
   const mediaHtml = renderToString(React.createElement(media, { sessionId: 's-1', useTabInfo, openLibrary() {} }))
   assert.match(mediaHtml, /clip.mp4/u)
+})
+
+test('tree and highlighted code render', () => {
+  const items = [
+    { id: 'docs/a.md', kind: 'document', title: 'a.md', name: 'a.md', fileName: 'a.md', folder: 'docs', relativePath: 'docs/a.md', source: 'local', ext: 'md', size: 10, mtimeMs: 1 },
+    { id: 'root.txt', kind: 'document', title: 'root.txt', name: 'root.txt', fileName: 'root.txt', folder: '', relativePath: 'root.txt', source: 'local', ext: 'txt', size: 5, mtimeMs: 1 },
+  ]
+  const tree = renderToString(React.createElement(FileTree, {
+    items,
+    folders: ['docs', 'empty'],
+    scope: '',
+    expanded: new Set(['docs']),
+    forceExpanded: new Set(),
+    detail: 'detailed',
+    meta: { 'docs/a.md': { size: 10, mtimeMs: 1 } },
+    sessionId: 's-1',
+    selected: new Set(['docs/a.md']),
+    showEmptyFolders: true,
+    onToggleFolder: noop,
+    onOpen: noop,
+    onToggleSelect: noop,
+    onMenu: noop,
+  }))
+  assert.match(tree, /docs/u)
+  assert.match(tree, /a.md/u)
+  assert.match(tree, /empty/u)
+  assert.match(tree, /data-selected/u)
+  const code = renderToString(React.createElement(CodeView, { text: 'const a = 1', ext: 'js' }))
+  assert.match(code, /hljs-keyword/u)
+  assert.match(code, /const/u)
+})
+
+test('markdown, csv and sandboxed html previews render', () => {
+  const markdown = renderToString(React.createElement(MarkdownView, {
+    text: '# Hi\n\n**bold**\n\n\`\`\`js\nconst a = 1\n\`\`\`',
+    sessionId: 's-1',
+    folder: 'docs',
+    ext: 'md',
+  }))
+  assert.match(markdown, /<h1>Hi<\/h1>/u)
+  assert.match(markdown, /<strong>bold<\/strong>/u)
+  assert.match(markdown, /hljs-keyword/u)
+  const csv = renderToString(React.createElement(CsvView, { text: 'name,size\na,1', ext: 'csv' }))
+  assert.match(csv, /<table/u)
+  assert.match(csv, /name<\/th>/u)
+  const html = renderToString(React.createElement(HtmlView, { text: '<h1>Hello</h1><script>alert(1)</script>' }))
+  assert.match(html, /sandbox=/u)
+  assert.match(html, /Content-Security-Policy/u)
+})
+
+test('tree model keeps empty folders and counts matching files', () => {
+  const items = [
+    { id: 'docs/a.md', title: 'a.md', folder: 'docs', relativePath: 'docs/a.md' },
+    { id: 'docs/sub/b.txt', title: 'b.txt', folder: 'docs/sub', relativePath: 'docs/sub/b.txt' },
+  ]
+  const root = buildTree(items, ['docs', 'docs/sub', 'empty'], true)
+  assert.equal(root.count, 2)
+  assert.ok(root.folders.has('empty'))
+  assert.equal(findTreeNode(root, 'docs/sub').count, 1)
+  const pruned = buildTree(items, ['docs', 'docs/sub', 'empty'], false)
+  assert.equal(pruned.folders.has('empty'), false)
 })

@@ -5,6 +5,7 @@ import {
   isTextExtension, mediaSrc, slideFor, typeLabel, waveBars,
 } from './helpers.js'
 import { Icon, kindIcon } from './icons.js'
+import { RichTextPreview } from './preview.js'
 
 const h = React.createElement
 const TEXT_CACHE = new Map()
@@ -190,15 +191,18 @@ function MoreButton({ item, onMenu }) {
   }, h(Icon, { name: 'more', size: 12 }))
 }
 
-export function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMenu }) {
+export function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onInline, onMenu, onToggleSelect }) {
   const canPlay = item.kind === 'video' || item.kind === 'audio'
   const detail = meta === undefined
     ? `${folderOf(item) || '根目录'} · ${typeLabel(item.kind)}`
     : `${folderOf(item) || '根目录'} · ${typeLabel(item.kind)} · ${formatBytes(meta.size)}`
   return h('article', {
-    className: 'vms-card', tabIndex: 0, 'data-playing': active ? '' : undefined,
+    className: 'vms-card', tabIndex: 0, 'data-playing': active ? '' : undefined, 'data-selected': selected ? '' : undefined,
     'aria-label': `${item.title}，${typeLabel(item.kind)}`,
-    onClick: () => onOpen(item),
+    onClick: event => {
+      if (event.ctrlKey || event.metaKey) { event.preventDefault(); onToggleSelect(item); return }
+      onOpen(item)
+    },
     onContextMenu: event => { event.preventDefault(); onMenu(item, event.clientX, event.clientY) },
     onKeyDown: event => {
       if (event.key !== 'Enter' && event.key !== ' ') return
@@ -209,6 +213,7 @@ export function GridCard({ item, index, sessionId, active, meta, onOpen, onInlin
   h('div', { className: 'vms-card-media' },
     h(MediaThumb, { item, sessionId, lazy: true }),
     h('span', { className: 'vms-card-index' }, String(index + 1).padStart(2, '0')),
+    selected && h('span', { className: 'vms-select-badge' }, h(Icon, { name: 'check', size: 11 })),
     h(KindBadge, { kind: item.kind }),
     h(DurationBadge, { item }),
     canPlay && !active && h('button', {
@@ -234,13 +239,16 @@ export function GridCard({ item, index, sessionId, active, meta, onOpen, onInlin
     active && h('span', { className: 'vms-playing-note' }, h('i', null), '正在播放')))
 }
 
-export function ListRow({ item, sessionId, detail = 'compact', meta, onOpen, onMenu }) {
+export function ListRow({ item, sessionId, detail = 'compact', meta, selected, onOpen, onMenu, onToggleSelect }) {
   const canPlay = item.kind === 'video' || item.kind === 'audio'
   const detailed = detail === 'detailed'
   const shortType = canPlay ? formatTime(item.duration) : (item.ext.toUpperCase() || typeLabel(item.kind))
   return h('div', {
-    className: 'vms-row', tabIndex: 0, 'data-kind': item.kind, 'data-detail': detailed ? 'detailed' : 'compact',
-    onClick: () => onOpen(item),
+    className: 'vms-row', tabIndex: 0, 'data-kind': item.kind, 'data-detail': detailed ? 'detailed' : 'compact', 'data-selected': selected ? '' : undefined,
+    onClick: event => {
+      if (event.ctrlKey || event.metaKey) { event.preventDefault(); onToggleSelect(item); return }
+      onOpen(item)
+    },
     onContextMenu: event => { event.preventDefault(); onMenu(item, event.clientX, event.clientY) },
     onKeyDown: event => { if (event.key === 'Enter') { event.preventDefault(); onOpen(item) } },
   },
@@ -349,6 +357,21 @@ export function CopyDialog({ item, folders, error, onClose, onSubmit }) {
         h('button', { type: 'submit', className: 'vms-primary-btn' }, '复制'))))
 }
 
+export function BatchCopyDialog({ count, folders, error, onClose, onSubmit }) {
+  const [folder, setFolder] = useState('')
+  return h(Dialog, { title: '批量复制到文件夹', onClose },
+    h('form', { className: 'vms-dialog-form', onSubmit: event => { event.preventDefault(); onSubmit(folder) } },
+      h('label', { className: 'vms-dialog-field' }, h('span', null, `复制选中的 ${count} 项到`),
+        h('select', { className: 'vms-input', value: folder, onChange: event => setFolder(event.target.value) },
+          h('option', { value: '' }, '工作区根目录'),
+          folders.map(value => h('option', { key: value, value }, value))),
+        h('small', { className: 'vms-dialog-hint' }, '重名时会自动生成“名称 (2).扩展名”；文件夹会递归复制。')),
+      error !== '' && h('p', { className: 'vms-form-error' }, error),
+      h('div', { className: 'vms-dialog-actions' },
+        h('button', { type: 'button', className: 'vms-ghost-btn', onClick: onClose }, '取消'),
+        h('button', { type: 'submit', className: 'vms-primary-btn' }, '复制'))))
+}
+
 export function ConfirmDialog({ title, message, confirmLabel, danger, onClose, onConfirm }) {
   return h(Dialog, { title, onClose },
     h('div', { className: 'vms-dialog-form' },
@@ -358,22 +381,9 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, onClose, o
         h('button', { type: 'button', className: `vms-primary-btn${danger ? ' is-danger' : ''}`, onClick: onConfirm }, confirmLabel))))
 }
 
-function TextDocument({ item, sessionId }) {
-  const key = `text:${sessionId}:${item.relativePath}`
-  const url = apiUrl('api/vyra-media/text', { sessionId, path: item.relativePath, maxBytes: 1024 * 1024 })
-  const state = useTextWindow(key, url, true)
-  if (state.failed) {
-    return h('div', { className: 'vms-preview-note' }, h(Icon, { name: 'alert', size: 17 }), '文本读取失败')
-  }
-  if (state.loading) return h('div', { className: 'vms-preview-note' }, '读取中…')
-  return h('div', { className: 'vms-text-view' },
-    state.truncated && h('div', { className: 'vms-preview-note' }, '文件较大，只显示前 1 MB。'),
-    h('pre', { className: 'vms-text-content' }, state.text || '（空文件）'))
-}
-
 export function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, onMenu, onOpenItem }) {
   const isPdf = item.ext === 'pdf'
-  const isText = item.kind === 'document' && isTextExtension(item.ext)
+  const isText = isTextExtension(item.ext)
   const src = mediaSrc(sessionId, item)
   const size = meta?.size ?? item.size
   return h('div', { className: 'vms-overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': item.title },
@@ -399,7 +409,7 @@ export function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, o
           h('button', { type: 'button', className: 'vms-icon-btn', title: '关闭预览', 'aria-label': '关闭预览', onClick: onClose }, h(Icon, { name: 'close', size: 15 })))),
       h('div', { className: `vms-sheet-stage${isPdf ? ' is-pdf' : isText ? ' is-text' : ''}` },
         isPdf && h('iframe', { className: 'vms-pdf-frame', src, title: item.title }),
-        isText && h(TextDocument, { item, sessionId }),
+        isText && h(RichTextPreview, { item, sessionId }),
         !isPdf && !isText && h('div', { className: 'vms-generic-preview' },
           h('span', { className: 'vms-generic-glyph' }, h(Icon, { name: kindIcon(item.kind, item.ext), size: 44 })),
           h('b', null, item.title),

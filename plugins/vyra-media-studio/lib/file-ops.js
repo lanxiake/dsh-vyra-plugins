@@ -1,24 +1,25 @@
 /**
  * File-manager operations behind the authenticated Fetch routes:
  * batched metadata, text snippets, rename, copy, delete-to-recycle-bin,
- * reveal-in-file-manager and open-with-system-app.
+ * reveal-in-file-manager, open-with-system-app and small batch actions.
  *
  * Paths arrive as workspace-relative names. Every operation resolves through
  * `ctx.fs` and proves containment first; mutations then use the Host process
- * filesystem so binary files (video, images, Office documents) can be renamed
- * and copied — the `ctx.fs` move API only handles UTF-8 text. Consequently
+ * filesystem so binary files and whole folders can be renamed, copied and
+ * deleted — the `ctx.fs` move API only handles UTF-8 text. Consequently
  * mutations are local-backend only, the same limitation the scan already has.
  */
 import { spawn } from 'node:child_process'
 import { constants } from 'node:fs'
-import { copyFile, mkdir, rename, rm, stat } from 'node:fs/promises'
+import { copyFile, cp, mkdir, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
+import { containsTarget, joinWorkspacePath, pathContains, targetPathOf } from './paths.js'
 import { extensionOf, isTextExtension, kindOf } from './media-types.js'
 import { invalidateScanCache } from './scan.js'
 
 const MAX_STAT_BATCH = 200
+const MAX_BATCH_ACTION = 200
 const MAX_TEXT_BYTES = 1024 * 1024
 const DEFAULT_STAT_CONCURRENCY = 32
 const ILLEGAL_NAME = /[\\/:*?"<>|\u0000-\u001f]/u
@@ -33,12 +34,20 @@ function fail(status, code, message) {
   return Object.assign(new Error(message), { status, code })
 }
 
+/** Case-insensitive path equality on Windows, exact elsewhere. */
+function samePath(left, right) {
+  return process.platform === 'win32'
+    ? left.toLowerCase() === right.toLowerCase()
+    : left === right
+}
+
 /**
- * Resolve a workspace-relative file path and prove it stays inside the root.
+ * Resolve a workspace-relative entry and prove it stays inside the root.
  * @param {object} fs - `ctx.fs`.
  * @param {string} workspaceRoot - Session workspace root.
  * @param {string} path - workspace-relative path.
  * @param {AbortSignal} [signal] - request cancellation.
+ * @param {{ target: object, path: string }} [root] - pre-resolved workspace root.
  * @returns {Promise<{ target: object, absolutePath: string, processPath: string, rootPath: string }>}
  */
 async function resolveInside(fs, workspaceRoot, path, signal, root) {
@@ -63,6 +72,13 @@ async function resolveInside(fs, workspaceRoot, path, signal, root) {
   }
 }
 
+/** Refuse to mutate the workspace root itself. */
+function assertMutable(resolved, verb) {
+  if (samePath(resolved.processPath, resolved.rootPath)) {
+    throw fail(403, 'forbidden', `cannot ${verb} the workspace root`)
+  }
+}
+
 /** The workspace-relative spelling of an absolute process path. */
 function relativeInside(rootPath, absolutePath) {
   const step = relative(rootPath, absolutePath).split('\\').join('/')
@@ -72,7 +88,7 @@ function relativeInside(rootPath, absolutePath) {
   return step
 }
 
-/** A user-supplied file name that Windows and POSIX can both store safely. */
+/** A user-supplied file or folder name that Windows and POSIX can both store. */
 function validFileName(name) {
   if (typeof name !== 'string') return undefined
   const trimmed = name.trim()
@@ -132,10 +148,9 @@ function launch(command, args, options = {}) {
 /** Stat one path, translating the usual errno codes. */
 async function statPath(absolutePath) {
   try {
-    const info = await stat(absolutePath)
-    return info
+    return await stat(absolutePath)
   } catch (error) {
-    if (error?.code === 'ENOENT') throw fail(404, 'not-found', 'the file no longer exists')
+    if (error?.code === 'ENOENT') throw fail(404, 'not-found', 'the entry no longer exists')
     if (error?.code === 'EACCES' || error?.code === 'EPERM') throw fail(403, 'permission-denied', 'permission denied')
     throw fail(500, 'io-error', error?.message ?? String(error))
   }
@@ -158,9 +173,9 @@ async function availableCopyPath(directory, name) {
 }
 
 /**
- * Batched file metadata for the visible page.
+ * Batched metadata for the visible page and the tree.
  * @param {object} args - request inputs.
- * @param {string[]} args.paths - workspace-relative paths.
+ * @param {string[]} args.paths - workspace-relative paths (files or folders).
  * @param {object} args.fs - `ctx.fs`.
  * @param {string} args.workspaceRoot - Session workspace root.
  * @param {AbortSignal} [args.signal] - cancellation.
@@ -181,10 +196,12 @@ export async function statFiles({ paths, fs, workspaceRoot, signal }) {
       try {
         const resolved = await resolveInside(fs, workspaceRoot, path, signal, root)
         const info = await statPath(resolved.processPath)
-        if (!info.isFile()) { results[current] = { path, error: 'not-regular-file' }; continue }
+        const type = info.isFile() ? 'file' : info.isDirectory() ? 'directory' : 'other'
+        if (type === 'other') { results[current] = { path, error: 'not-regular-file' }; continue }
         results[current] = {
           path,
-          size: info.size,
+          type,
+          ...(type === 'file' ? { size: info.size } : {}),
           mtimeMs: Math.floor(info.mtimeMs),
           absolutePath: resolved.target.displayPath,
         }
@@ -230,10 +247,10 @@ export async function readTextFile({ path, maxBytes = 256 * 1024, fs, workspaceR
 }
 
 /**
- * Rename one file inside its current directory.
+ * Rename one file or folder inside its current directory.
  * @param {object} args - request inputs.
  * @param {string} args.path - current workspace-relative path.
- * @param {string} args.name - new file name, without a directory.
+ * @param {string} args.name - new name, without a directory.
  * @param {object} args.fs - `ctx.fs`.
  * @param {string} args.workspaceRoot - Session workspace root.
  * @param {AbortSignal} [args.signal] - cancellation.
@@ -241,11 +258,12 @@ export async function readTextFile({ path, maxBytes = 256 * 1024, fs, workspaceR
  */
 export async function renameFile({ path, name, fs, workspaceRoot, signal }) {
   const cleanName = validFileName(name)
-  if (cleanName === undefined) throw fail(400, 'invalid-name', 'file name is empty or contains illegal characters')
+  if (cleanName === undefined) throw fail(400, 'invalid-name', 'name is empty or contains illegal characters')
 
   const resolved = await resolveInside(fs, workspaceRoot, path, signal)
   const info = await statPath(resolved.processPath)
-  if (!info.isFile()) throw fail(403, 'not-regular-file', 'only regular files can be renamed')
+  if (!info.isFile() && !info.isDirectory()) throw fail(403, 'not-regular-file', 'only files and folders can be renamed')
+  assertMutable(resolved, 'rename')
 
   const destinationPath = join(dirname(resolved.processPath), cleanName)
   const destinationTarget = await fs.resolve(destinationPath, { signal })
@@ -254,10 +272,8 @@ export async function renameFile({ path, name, fs, workspaceRoot, signal }) {
     throw fail(403, 'outside-workspace', 'the new name escapes the workspace')
   }
 
-  const samePath = process.platform === 'win32'
-    ? destinationPath.toLowerCase() === resolved.processPath.toLowerCase()
-    : destinationPath === resolved.processPath
-  if (samePath && basename(resolved.processPath) === cleanName) {
+  const same = samePath(destinationPath, resolved.processPath)
+  if (same && basename(resolved.processPath) === cleanName) {
     throw fail(409, 'same-name', 'the new name is unchanged')
   }
 
@@ -268,7 +284,7 @@ export async function renameFile({ path, name, fs, workspaceRoot, signal }) {
     if (error?.code === 'ENOENT') destinationExists = false
     else throw fail(500, 'io-error', error?.message ?? String(error))
   }
-  if (destinationExists && !samePath) throw fail(409, 'already-exists', `"${cleanName}" already exists here`)
+  if (destinationExists && !same) throw fail(409, 'already-exists', `"${cleanName}" already exists here`)
 
   try {
     await rename(resolved.processPath, destinationPath)
@@ -280,13 +296,14 @@ export async function renameFile({ path, name, fs, workspaceRoot, signal }) {
   invalidateScanCache()
   return {
     from: path,
+    type: info.isDirectory() ? 'directory' : 'file',
     relativePath: relativeInside(resolved.rootPath, destinationPath),
     absolutePath: destinationTarget.displayPath,
   }
 }
 
 /**
- * Copy one file into a workspace folder, auto-numbering on a name collision.
+ * Copy one file or folder into a workspace folder, auto-numbering on a collision.
  * @param {object} args - request inputs.
  * @param {string} args.path - source workspace-relative path.
  * @param {string} args.toFolder - destination folder, `''` for the workspace root.
@@ -301,7 +318,8 @@ export async function copyFileInto({ path, toFolder = '', fs, workspaceRoot, sig
 
   const source = await resolveInside(fs, workspaceRoot, path, signal)
   const sourceInfo = await statPath(source.processPath)
-  if (!sourceInfo.isFile()) throw fail(403, 'not-regular-file', 'only regular files can be copied')
+  if (!sourceInfo.isFile() && !sourceInfo.isDirectory()) throw fail(403, 'not-regular-file', 'only files and folders can be copied')
+  assertMutable(source, 'copy')
 
   const destinationDirectory = toFolder === ''
     ? (await fs.resolve(workspaceRoot, { signal })).displayPath
@@ -311,12 +329,20 @@ export async function copyFileInto({ path, toFolder = '', fs, workspaceRoot, sig
   if (!containsTarget(fs, rootTarget, directoryTarget)) {
     throw fail(403, 'outside-workspace', 'the destination folder is outside the workspace')
   }
-  const directoryInfo = await statPath(targetPathOf(fs, directoryTarget))
+  const directoryProcessPath = targetPathOf(fs, directoryTarget)
+  const directoryInfo = await statPath(directoryProcessPath)
   if (!directoryInfo.isDirectory()) throw fail(400, 'not-directory', 'the destination is not a directory')
+  if (sourceInfo.isDirectory() && pathContains(source.processPath, directoryProcessPath)) {
+    throw fail(400, 'copy-into-self', 'cannot copy a folder into itself or its own subtree')
+  }
 
-  const destination = await availableCopyPath(targetPathOf(fs, directoryTarget), basename(source.processPath))
+  const destination = await availableCopyPath(directoryProcessPath, basename(source.processPath))
   try {
-    await copyFile(source.processPath, destination, constants.COPYFILE_EXCL)
+    if (sourceInfo.isDirectory()) {
+      await cp(source.processPath, destination, { recursive: true, errorOnExist: true, force: false })
+    } else {
+      await copyFile(source.processPath, destination, constants.COPYFILE_EXCL)
+    }
   } catch (error) {
     if (error?.code === 'EEXIST') throw fail(409, 'already-exists', 'the copy target already exists')
     if (error?.code === 'EACCES' || error?.code === 'EPERM') throw fail(403, 'permission-denied', 'permission denied')
@@ -327,18 +353,23 @@ export async function copyFileInto({ path, toFolder = '', fs, workspaceRoot, sig
   const newTarget = await fs.resolve(destination, { signal })
   return {
     from: path,
+    type: sourceInfo.isDirectory() ? 'directory' : 'file',
     relativePath: relativeInside(source.rootPath, destination),
     absolutePath: newTarget.displayPath,
   }
 }
 
-/** Move a file to the platform recycle bin/trash. */
-async function moveToRecycleBin(absolutePath) {
+/** Move a file or folder to the platform recycle bin/trash. */
+async function moveToRecycleBin(absolutePath, isDirectory) {
   if (process.platform === 'win32') {
-    const script = 'Add-Type -AssemblyName Microsoft.VisualBasic; '
-      + '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($env:VYRA_DELETE_TARGET,'
-      + '[Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,'
-      + '[Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)'
+    const call = isDirectory
+      ? '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($env:VYRA_DELETE_TARGET,'
+        + '[Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,'
+        + '[Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)'
+      : '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($env:VYRA_DELETE_TARGET,'
+        + '[Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,'
+        + '[Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)'
+    const script = `Add-Type -AssemblyName Microsoft.VisualBasic; ${call}`
     await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script], {
       env: { ...process.env, VYRA_DELETE_TARGET: absolutePath },
     })
@@ -352,46 +383,48 @@ async function moveToRecycleBin(absolutePath) {
     try {
       await rename(absolutePath, target)
     } catch {
-      await copyFile(absolutePath, target)
-      await rm(absolutePath, { force: false })
+      await cp(absolutePath, target, { recursive: isDirectory })
+      await rm(absolutePath, { recursive: isDirectory, force: false })
     }
     return
   }
 
   try {
-    await run('gio', ['trash', '--', absolutePath], { timeoutMs: 10_000 })
+    await run('gio', ['trash', '--', absolutePath], { timeoutMs: 15_000 })
   } catch (error) {
     throw fail(501, 'recycle-unsupported', error?.message ?? 'no system trash tool is available')
   }
 }
 
 /**
- * Delete a regular file, preferring the system recycle bin.
+ * Delete a file or folder, preferring the system recycle bin.
  * @param {object} args - request inputs.
  * @param {string} args.path - workspace-relative path.
  * @param {boolean} [args.permanent] - delete without the recycle bin.
  * @param {object} args.fs - `ctx.fs`.
  * @param {string} args.workspaceRoot - Session workspace root.
  * @param {AbortSignal} [args.signal] - cancellation.
- * @returns {Promise<{ recycled: boolean }>} whether the file went to the bin.
+ * @returns {Promise<{ recycled: boolean, type: string }>} whether it went to the bin.
  */
 export async function deleteFile({ path, permanent = false, fs, workspaceRoot, signal }) {
   const resolved = await resolveInside(fs, workspaceRoot, path, signal)
   const info = await statPath(resolved.processPath)
-  if (!info.isFile()) throw fail(403, 'not-regular-file', 'only regular files can be deleted')
+  if (!info.isFile() && !info.isDirectory()) throw fail(403, 'not-regular-file', 'only files and folders can be deleted')
+  assertMutable(resolved, 'delete')
+  const isDirectory = info.isDirectory()
 
   if (permanent === true) {
     try {
-      await rm(resolved.processPath, { force: false })
+      await rm(resolved.processPath, { recursive: isDirectory, force: false })
     } catch (error) {
       throw fail(500, 'io-error', error?.message ?? String(error))
     }
     invalidateScanCache()
-    return { recycled: false }
+    return { recycled: false, type: isDirectory ? 'directory' : 'file' }
   }
 
   try {
-    await moveToRecycleBin(resolved.processPath)
+    await moveToRecycleBin(resolved.processPath, isDirectory)
   } catch (error) {
     const wrapped = fail(
       error?.status ?? 500,
@@ -402,11 +435,52 @@ export async function deleteFile({ path, permanent = false, fs, workspaceRoot, s
     throw wrapped
   }
   invalidateScanCache()
-  return { recycled: true }
+  return { recycled: true, type: isDirectory ? 'directory' : 'file' }
 }
 
 /**
- * Show a file in the OS file manager.
+ * Run a small batch of copies or deletes. Each path is validated independently
+ * so one failure does not stop the rest.
+ * @param {object} args - request inputs.
+ * @param {'copy'|'delete'} args.action - operation.
+ * @param {string[]} args.paths - workspace-relative paths.
+ * @param {string} [args.toFolder] - copy destination.
+ * @param {boolean} [args.permanent] - delete permanently.
+ * @param {object} args.fs - `ctx.fs`.
+ * @param {string} args.workspaceRoot - Session workspace root.
+ * @param {AbortSignal} [args.signal] - cancellation.
+ * @returns {Promise<Array<object>>} per-path results.
+ */
+export async function batchFiles({ action, paths, toFolder = '', permanent = false, fs, workspaceRoot, signal }) {
+  if (action !== 'copy' && action !== 'delete') throw fail(400, 'bad-request', 'action must be copy or delete')
+  if (!Array.isArray(paths) || paths.length === 0) throw fail(400, 'bad-request', 'paths must be a non-empty array')
+  if (paths.length > MAX_BATCH_ACTION) throw fail(400, 'bad-request', `at most ${MAX_BATCH_ACTION} paths per batch`)
+
+  const results = []
+  for (const path of paths) {
+    if (signal?.aborted) {
+      results.push({ path, ok: false, code: 'aborted', error: 'request aborted' })
+      continue
+    }
+    try {
+      const result = action === 'copy'
+        ? await copyFileInto({ path, toFolder, fs, workspaceRoot, signal })
+        : await deleteFile({ path, permanent, fs, workspaceRoot, signal })
+      results.push({ path, ok: true, ...result })
+    } catch (error) {
+      results.push({
+        path,
+        ok: false,
+        code: error?.code ?? 'failed',
+        error: error?.message ?? String(error),
+      })
+    }
+  }
+  return results
+}
+
+/**
+ * Show a file or folder in the OS file manager.
  * @param {object} args - request inputs.
  * @returns {Promise<void>}
  */
@@ -423,7 +497,7 @@ export async function revealFile({ path, fs, workspaceRoot, signal }) {
 }
 
 /**
- * Open a file with its system default application.
+ * Open a file or folder with its system default application.
  * @param {object} args - request inputs.
  * @returns {Promise<void>}
  */

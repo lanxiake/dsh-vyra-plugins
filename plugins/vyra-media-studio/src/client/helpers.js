@@ -15,6 +15,8 @@ export const TEXT_EXT = new Set([
   'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
   'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
   'ini', 'conf', 'env', 'gitignore', 'dockerfile', 'makefile',
+  'hcl', 'tf', 'proto', 'graphql', 'gql', 'cmake', 'gradle', 'properties',
+  'patch', 'diff', 'mdx', 'rst', 'adoc', 'srt', 'vtt', 'nfo',
 ])
 
 export const TYPE_LABEL = {
@@ -276,6 +278,7 @@ export function writeLinks(root, links) {
 const PREFS_KEY = 'vyra-media-studio.prefs.v1'
 const PREF_DEFAULTS = {
   view: 'grid',
+  listMode: 'tree',
   cardSize: CARD_DEFAULT,
   detail: 'compact',
   sort: 'name',
@@ -291,6 +294,7 @@ export function readPrefs() {
     const merged = { ...PREF_DEFAULTS, ...parsed }
     return {
       view: merged.view === 'list' ? 'list' : 'grid',
+      listMode: merged.listMode === 'flat' ? 'flat' : 'tree',
       cardSize: Number.isFinite(merged.cardSize)
         ? Math.min(CARD_MAX, Math.max(CARD_MIN, merged.cardSize))
         : CARD_DEFAULT,

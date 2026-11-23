@@ -64,7 +64,8 @@ export async function scanMedia(options) {
 
   const stream = fg.stream('**/*', {
     cwd: root,
-    onlyFiles: true,
+    onlyFiles: false,
+    markDirectories: true,
     dot: includeHidden,
     followSymbolicLinks: false,
     suppressErrors: true,
@@ -90,6 +91,17 @@ export async function scanMedia(options) {
       if (signal?.aborted || entries.length >= maxEntries) { stop(); break }
       const relativePath = relative(workspaceRoot, join(root, entryPath)).split('\\').join('/')
       if (relativePath === '' || relativePath.startsWith('..')) continue
+
+      if (entryPath.endsWith('/')) {
+        const folder = relativePath.replace(/\\/g, '/').replace(/\/+$/u, '')
+        if (folder === '') continue
+        for (let current = folder; current !== '';) {
+          folders.add(current)
+          const index = current.lastIndexOf('/')
+          current = index === -1 ? '' : current.slice(0, index)
+        }
+        continue
+      }
 
       const slash = relativePath.lastIndexOf('/')
       const folder = slash === -1 ? '' : relativePath.slice(0, slash)

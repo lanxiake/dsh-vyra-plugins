@@ -16,6 +16,13 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function __require() {
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -38,13 +45,1567 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/lib/core.js
+var require_core = __commonJS({
+  "node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/lib/core.js"(exports, module2) {
+    function deepFreeze(obj) {
+      if (obj instanceof Map) {
+        obj.clear = obj.delete = obj.set = function() {
+          throw new Error("map is read-only");
+        };
+      } else if (obj instanceof Set) {
+        obj.add = obj.clear = obj.delete = function() {
+          throw new Error("set is read-only");
+        };
+      }
+      Object.freeze(obj);
+      Object.getOwnPropertyNames(obj).forEach((name) => {
+        const prop = obj[name];
+        const type = typeof prop;
+        if ((type === "object" || type === "function") && !Object.isFrozen(prop)) {
+          deepFreeze(prop);
+        }
+      });
+      return obj;
+    }
+    var Response = class {
+      /**
+       * @param {CompiledMode} mode
+       */
+      constructor(mode) {
+        if (mode.data === void 0) mode.data = {};
+        this.data = mode.data;
+        this.isMatchIgnored = false;
+      }
+      ignoreMatch() {
+        this.isMatchIgnored = true;
+      }
+    };
+    function escapeHTML(value) {
+      return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+    }
+    function inherit$1(original, ...objects) {
+      const result = /* @__PURE__ */ Object.create(null);
+      for (const key in original) {
+        result[key] = original[key];
+      }
+      objects.forEach(function(obj) {
+        for (const key in obj) {
+          result[key] = obj[key];
+        }
+      });
+      return (
+        /** @type {T} */
+        result
+      );
+    }
+    var SPAN_CLOSE = "</span>";
+    var emitsWrappingTags = (node) => {
+      return !!node.scope;
+    };
+    var scopeToCSSClass = (name, { prefix }) => {
+      if (name.startsWith("language:")) {
+        return name.replace("language:", "language-");
+      }
+      if (name.includes(".")) {
+        const pieces = name.split(".");
+        return [
+          `${prefix}${pieces.shift()}`,
+          ...pieces.map((x, i) => `${x}${"_".repeat(i + 1)}`)
+        ].join(" ");
+      }
+      return `${prefix}${name}`;
+    };
+    var HTMLRenderer = class {
+      /**
+       * Creates a new HTMLRenderer
+       *
+       * @param {Tree} parseTree - the parse tree (must support `walk` API)
+       * @param {{classPrefix: string}} options
+       */
+      constructor(parseTree, options) {
+        this.buffer = "";
+        this.classPrefix = options.classPrefix;
+        parseTree.walk(this);
+      }
+      /**
+       * Adds texts to the output stream
+       *
+       * @param {string} text */
+      addText(text2) {
+        this.buffer += escapeHTML(text2);
+      }
+      /**
+       * Adds a node open to the output stream (if needed)
+       *
+       * @param {Node} node */
+      openNode(node) {
+        if (!emitsWrappingTags(node)) return;
+        const className = scopeToCSSClass(
+          node.scope,
+          { prefix: this.classPrefix }
+        );
+        this.span(className);
+      }
+      /**
+       * Adds a node close to the output stream (if needed)
+       *
+       * @param {Node} node */
+      closeNode(node) {
+        if (!emitsWrappingTags(node)) return;
+        this.buffer += SPAN_CLOSE;
+      }
+      /**
+       * returns the accumulated buffer
+      */
+      value() {
+        return this.buffer;
+      }
+      // helpers
+      /**
+       * Builds a span element
+       *
+       * @param {string} className */
+      span(className) {
+        this.buffer += `<span class="${className}">`;
+      }
+    };
+    var newNode = (opts = {}) => {
+      const result = { children: [] };
+      Object.assign(result, opts);
+      return result;
+    };
+    var TokenTree = class _TokenTree {
+      constructor() {
+        this.rootNode = newNode();
+        this.stack = [this.rootNode];
+      }
+      get top() {
+        return this.stack[this.stack.length - 1];
+      }
+      get root() {
+        return this.rootNode;
+      }
+      /** @param {Node} node */
+      add(node) {
+        this.top.children.push(node);
+      }
+      /** @param {string} scope */
+      openNode(scope) {
+        const node = newNode({ scope });
+        this.add(node);
+        this.stack.push(node);
+      }
+      closeNode() {
+        if (this.stack.length > 1) {
+          return this.stack.pop();
+        }
+        return void 0;
+      }
+      closeAllNodes() {
+        while (this.closeNode()) ;
+      }
+      toJSON() {
+        return JSON.stringify(this.rootNode, null, 4);
+      }
+      /**
+       * @typedef { import("./html_renderer").Renderer } Renderer
+       * @param {Renderer} builder
+       */
+      walk(builder) {
+        return this.constructor._walk(builder, this.rootNode);
+      }
+      /**
+       * @param {Renderer} builder
+       * @param {Node} node
+       */
+      static _walk(builder, node) {
+        if (typeof node === "string") {
+          builder.addText(node);
+        } else if (node.children) {
+          builder.openNode(node);
+          node.children.forEach((child) => this._walk(builder, child));
+          builder.closeNode(node);
+        }
+        return builder;
+      }
+      /**
+       * @param {Node} node
+       */
+      static _collapse(node) {
+        if (typeof node === "string") return;
+        if (!node.children) return;
+        if (node.children.every((el) => typeof el === "string")) {
+          node.children = [node.children.join("")];
+        } else {
+          node.children.forEach((child) => {
+            _TokenTree._collapse(child);
+          });
+        }
+      }
+    };
+    var TokenTreeEmitter = class extends TokenTree {
+      /**
+       * @param {*} options
+       */
+      constructor(options) {
+        super();
+        this.options = options;
+      }
+      /**
+       * @param {string} text
+       */
+      addText(text2) {
+        if (text2 === "") {
+          return;
+        }
+        this.add(text2);
+      }
+      /** @param {string} scope */
+      startScope(scope) {
+        this.openNode(scope);
+      }
+      endScope() {
+        this.closeNode();
+      }
+      /**
+       * @param {Emitter & {root: DataNode}} emitter
+       * @param {string} name
+       */
+      __addSublanguage(emitter, name) {
+        const node = emitter.root;
+        if (name) node.scope = `language:${name}`;
+        this.add(node);
+      }
+      toHTML() {
+        const renderer = new HTMLRenderer(this, this.options);
+        return renderer.value();
+      }
+      finalize() {
+        this.closeAllNodes();
+        return true;
+      }
+    };
+    function source2(re) {
+      if (!re) return null;
+      if (typeof re === "string") return re;
+      return re.source;
+    }
+    function lookahead2(re) {
+      return concat2("(?=", re, ")");
+    }
+    function anyNumberOfTimes(re) {
+      return concat2("(?:", re, ")*");
+    }
+    function optional(re) {
+      return concat2("(?:", re, ")?");
+    }
+    function concat2(...args) {
+      const joined = args.map((x) => source2(x)).join("");
+      return joined;
+    }
+    function stripOptionsFromArgs2(args) {
+      const opts = args[args.length - 1];
+      if (typeof opts === "object" && opts.constructor === Object) {
+        args.splice(args.length - 1, 1);
+        return opts;
+      } else {
+        return {};
+      }
+    }
+    function either2(...args) {
+      const opts = stripOptionsFromArgs2(args);
+      const joined = "(" + (opts.capture ? "" : "?:") + args.map((x) => source2(x)).join("|") + ")";
+      return joined;
+    }
+    function countMatchGroups(re) {
+      return new RegExp(re.toString() + "|").exec("").length - 1;
+    }
+    function startsWith(re, lexeme) {
+      const match = re && re.exec(lexeme);
+      return match && match.index === 0;
+    }
+    var BACKREF_RE = new RegExp(either2(
+      /\[(?:[^\\\]]|\\.)*\]/,
+      // a character class, inside which ( and \ lose their meaning
+      /\(\?<(?![=!])[^>]+>/,
+      // a named capture group `(?<name>` (not a lookbehind `(?<=` / `(?<!`)
+      /\(\?'[^']+'/,
+      // a named capture group `(?'name'`
+      /\(\??/,
+      // an opening parenthesis, capturing or non-capturing / lookahead
+      /\\([1-9][0-9]*)/,
+      // a backreference like `\1`
+      /\\./
+      // any other escape sequence
+    ));
+    function _rewriteBackreferences(regexps, { joinWith }) {
+      let numCaptures = 0;
+      return regexps.map((regex) => {
+        numCaptures += 1;
+        const offset = numCaptures;
+        let re = source2(regex);
+        let out = "";
+        while (re.length > 0) {
+          const match = BACKREF_RE.exec(re);
+          if (!match) {
+            out += re;
+            break;
+          }
+          out += re.substring(0, match.index);
+          re = re.substring(match.index + match[0].length);
+          if (match[0][0] === "\\" && match[1]) {
+            out += "\\" + String(Number(match[1]) + offset);
+          } else {
+            out += match[0];
+            if (match[0] === "(" || /^\(\?[<']/.test(match[0])) {
+              numCaptures++;
+            }
+          }
+        }
+        return out;
+      }).map((re) => `(${re})`).join(joinWith);
+    }
+    var MATCH_NOTHING_RE = /\b\B/;
+    var IDENT_RE3 = "[a-zA-Z]\\w*";
+    var UNDERSCORE_IDENT_RE = "[a-zA-Z_]\\w*";
+    var NUMBER_RE = "\\b\\d+(\\.\\d+)?";
+    var C_NUMBER_RE = "(-?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";
+    var BINARY_NUMBER_RE = "\\b(0b[01]+)";
+    var RE_STARTERS_RE = "!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|-|-=|/=|/|:|;|<<|<<=|<=|<|===|==|=|>>>=|>>=|>=|>>>|>>|>|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";
+    var SHEBANG = (opts = {}) => {
+      const beginShebang = /^#![ ]*\//;
+      if (opts.binary) {
+        opts.begin = concat2(
+          beginShebang,
+          /.*\b/,
+          opts.binary,
+          /\b.*/
+        );
+      }
+      return inherit$1({
+        scope: "meta",
+        begin: beginShebang,
+        end: /$/,
+        relevance: 0,
+        /** @type {ModeCallback} */
+        "on:begin": (m, resp) => {
+          if (m.index !== 0) resp.ignoreMatch();
+        }
+      }, opts);
+    };
+    var BACKSLASH_ESCAPE = {
+      begin: "\\\\[\\s\\S]",
+      relevance: 0
+    };
+    var APOS_STRING_MODE = {
+      scope: "string",
+      begin: "'",
+      end: "'",
+      illegal: "\\n",
+      contains: [BACKSLASH_ESCAPE]
+    };
+    var QUOTE_STRING_MODE = {
+      scope: "string",
+      begin: '"',
+      end: '"',
+      illegal: "\\n",
+      contains: [BACKSLASH_ESCAPE]
+    };
+    var PHRASAL_WORDS_MODE = {
+      begin: /\b(a|an|the|are|I'm|isn't|don't|doesn't|won't|but|just|should|pretty|simply|enough|gonna|going|wtf|so|such|will|you|your|they|like|more)\b/
+    };
+    var COMMENT = function(begin, end, modeOptions = {}) {
+      const mode = inherit$1(
+        {
+          scope: "comment",
+          begin,
+          end,
+          contains: []
+        },
+        modeOptions
+      );
+      mode.contains.push({
+        scope: "doctag",
+        // hack to avoid the space from being included. the space is necessary to
+        // match here to prevent the plain text rule below from gobbling up doctags
+        begin: "[ ]*(?=(TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):)",
+        end: /(TODO|FIXME|NOTE|BUG|OPTIMIZE|HACK|XXX):/,
+        excludeBegin: true,
+        relevance: 0
+      });
+      const ENGLISH_WORD = either2(
+        // list of common 1 and 2 letter words in English
+        "I",
+        "a",
+        "is",
+        "so",
+        "us",
+        "to",
+        "at",
+        "if",
+        "in",
+        "it",
+        "on",
+        // note: this is not an exhaustive list of contractions, just popular ones
+        /[A-Za-z]+['](d|ve|re|ll|t|s|n)/,
+        // contractions - can't we'd they're let's, etc
+        /[A-Za-z]+[-][a-z]+/,
+        // `no-way`, etc.
+        /[A-Za-z][a-z]{2,}/
+        // allow capitalized words at beginning of sentences
+      );
+      mode.contains.push(
+        {
+          // TODO: how to include ", (, ) without breaking grammars that use these for
+          // comment delimiters?
+          // begin: /[ ]+([()"]?([A-Za-z'-]{3,}|is|a|I|so|us|[tT][oO]|at|if|in|it|on)[.]?[()":]?([.][ ]|[ ]|\))){3}/
+          // ---
+          // this tries to find sequences of 3 english words in a row (without any
+          // "programming" type syntax) this gives us a strong signal that we've
+          // TRULY found a comment - vs perhaps scanning with the wrong language.
+          // It's possible to find something that LOOKS like the start of the
+          // comment - but then if there is no readable text - good chance it is a
+          // false match and not a comment.
+          //
+          // for a visual example please see:
+          // https://github.com/highlightjs/highlight.js/issues/2827
+          begin: concat2(
+            /[ ]+/,
+            // necessary to prevent us gobbling up doctags like /* @author Bob Mcgill */
+            "(",
+            ENGLISH_WORD,
+            /[.]?[:]?([.][ ]|[ ])/,
+            "){3}"
+          )
+          // look for 3 words in a row
+        }
+      );
+      return mode;
+    };
+    var C_LINE_COMMENT_MODE = COMMENT("//", "$");
+    var C_BLOCK_COMMENT_MODE = COMMENT("/\\*", "\\*/");
+    var HASH_COMMENT_MODE = COMMENT("#", "$");
+    var NUMBER_MODE = {
+      scope: "number",
+      begin: NUMBER_RE,
+      relevance: 0
+    };
+    var C_NUMBER_MODE = {
+      scope: "number",
+      begin: C_NUMBER_RE,
+      relevance: 0
+    };
+    var BINARY_NUMBER_MODE = {
+      scope: "number",
+      begin: BINARY_NUMBER_RE,
+      relevance: 0
+    };
+    var REGEXP_MODE = {
+      scope: "regexp",
+      begin: /\/(?=[^/\n]*\/)/,
+      end: /\/[gimuy]*/,
+      contains: [
+        BACKSLASH_ESCAPE,
+        {
+          begin: /\[/,
+          end: /\]/,
+          relevance: 0,
+          contains: [BACKSLASH_ESCAPE]
+        }
+      ]
+    };
+    var TITLE_MODE = {
+      scope: "title",
+      begin: IDENT_RE3,
+      relevance: 0
+    };
+    var UNDERSCORE_TITLE_MODE = {
+      scope: "title",
+      begin: UNDERSCORE_IDENT_RE,
+      relevance: 0
+    };
+    var METHOD_GUARD = {
+      // excludes method names from keyword processing
+      begin: "\\.\\s*" + UNDERSCORE_IDENT_RE,
+      relevance: 0
+    };
+    var END_SAME_AS_BEGIN = function(mode) {
+      return Object.assign(
+        mode,
+        {
+          /** @type {ModeCallback} */
+          "on:begin": (m, resp) => {
+            resp.data._beginMatch = m[1];
+          },
+          /** @type {ModeCallback} */
+          "on:end": (m, resp) => {
+            if (resp.data._beginMatch !== m[1]) resp.ignoreMatch();
+          }
+        }
+      );
+    };
+    var MODES4 = /* @__PURE__ */ Object.freeze({
+      __proto__: null,
+      APOS_STRING_MODE,
+      BACKSLASH_ESCAPE,
+      BINARY_NUMBER_MODE,
+      BINARY_NUMBER_RE,
+      COMMENT,
+      C_BLOCK_COMMENT_MODE,
+      C_LINE_COMMENT_MODE,
+      C_NUMBER_MODE,
+      C_NUMBER_RE,
+      END_SAME_AS_BEGIN,
+      HASH_COMMENT_MODE,
+      IDENT_RE: IDENT_RE3,
+      MATCH_NOTHING_RE,
+      METHOD_GUARD,
+      NUMBER_MODE,
+      NUMBER_RE,
+      PHRASAL_WORDS_MODE,
+      QUOTE_STRING_MODE,
+      REGEXP_MODE,
+      RE_STARTERS_RE,
+      SHEBANG,
+      TITLE_MODE,
+      UNDERSCORE_IDENT_RE,
+      UNDERSCORE_TITLE_MODE
+    });
+    function skipIfHasPrecedingDot(match, response) {
+      const before = match.input[match.index - 1];
+      if (before === ".") {
+        response.ignoreMatch();
+      }
+    }
+    function scopeClassName(mode, _parent) {
+      if (mode.className !== void 0) {
+        mode.scope = mode.className;
+        delete mode.className;
+      }
+    }
+    function beginKeywords(mode, parent) {
+      if (!parent) return;
+      if (!mode.beginKeywords) return;
+      mode.begin = "\\b(" + mode.beginKeywords.split(" ").join("|") + ")(?!\\.)(?=\\b|\\s)";
+      mode.__beforeBegin = skipIfHasPrecedingDot;
+      mode.keywords = mode.keywords || mode.beginKeywords;
+      delete mode.beginKeywords;
+      if (mode.relevance === void 0) mode.relevance = 0;
+    }
+    function compileIllegal(mode, _parent) {
+      if (!Array.isArray(mode.illegal)) return;
+      mode.illegal = either2(...mode.illegal);
+    }
+    function compileMatch(mode, _parent) {
+      if (!mode.match) return;
+      if (mode.begin || mode.end) throw new Error("begin & end are not supported with match");
+      mode.begin = mode.match;
+      delete mode.match;
+    }
+    function compileRelevance(mode, _parent) {
+      if (mode.relevance === void 0) mode.relevance = 1;
+    }
+    var beforeMatchExt = (mode, parent) => {
+      if (!mode.beforeMatch) return;
+      if (mode.starts) throw new Error("beforeMatch cannot be used with starts");
+      const originalMode = Object.assign({}, mode);
+      Object.keys(mode).forEach((key) => {
+        delete mode[key];
+      });
+      mode.keywords = originalMode.keywords;
+      mode.begin = concat2(originalMode.beforeMatch, lookahead2(originalMode.begin));
+      mode.starts = {
+        relevance: 0,
+        contains: [
+          Object.assign(originalMode, { endsParent: true })
+        ]
+      };
+      mode.relevance = 0;
+      delete originalMode.beforeMatch;
+    };
+    var COMMON_KEYWORDS = [
+      "of",
+      "and",
+      "for",
+      "in",
+      "not",
+      "or",
+      "if",
+      "then",
+      "parent",
+      // common variable name
+      "list",
+      // common variable name
+      "value"
+      // common variable name
+    ];
+    var DEFAULT_KEYWORD_SCOPE = "keyword";
+    function compileKeywords(rawKeywords, caseInsensitive, scopeName = DEFAULT_KEYWORD_SCOPE) {
+      const compiledKeywords = /* @__PURE__ */ Object.create(null);
+      if (typeof rawKeywords === "string") {
+        compileList(scopeName, rawKeywords.split(" "));
+      } else if (Array.isArray(rawKeywords)) {
+        compileList(scopeName, rawKeywords);
+      } else {
+        Object.keys(rawKeywords).forEach(function(scopeName2) {
+          Object.assign(
+            compiledKeywords,
+            compileKeywords(rawKeywords[scopeName2], caseInsensitive, scopeName2)
+          );
+        });
+      }
+      return compiledKeywords;
+      function compileList(scopeName2, keywordList) {
+        if (caseInsensitive) {
+          keywordList = keywordList.map((x) => x.toLowerCase());
+        }
+        keywordList.forEach(function(keyword) {
+          const pair = keyword.split("|");
+          compiledKeywords[pair[0]] = [scopeName2, scoreForKeyword(pair[0], pair[1])];
+        });
+      }
+    }
+    function scoreForKeyword(keyword, providedScore) {
+      if (providedScore) {
+        return Number(providedScore);
+      }
+      return commonKeyword(keyword) ? 0 : 1;
+    }
+    function commonKeyword(keyword) {
+      return COMMON_KEYWORDS.includes(keyword.toLowerCase());
+    }
+    var seenDeprecations = {};
+    var error2 = (message) => {
+      console.error(message);
+    };
+    var warn = (message, ...args) => {
+      console.log(`WARN: ${message}`, ...args);
+    };
+    var deprecated = (version3, message) => {
+      if (seenDeprecations[`${version3}/${message}`]) return;
+      console.log(`Deprecated as of ${version3}. ${message}`);
+      seenDeprecations[`${version3}/${message}`] = true;
+    };
+    var MultiClassError = new Error();
+    function remapScopeNames(mode, regexes, { key }) {
+      let offset = 0;
+      const scopeNames = mode[key];
+      const emit = {};
+      const positions = {};
+      for (let i = 1; i <= regexes.length; i++) {
+        positions[i + offset] = scopeNames[i];
+        emit[i + offset] = true;
+        offset += countMatchGroups(regexes[i - 1]);
+      }
+      mode[key] = positions;
+      mode[key]._emit = emit;
+      mode[key]._multi = true;
+    }
+    function beginMultiClass(mode) {
+      if (!Array.isArray(mode.begin)) return;
+      if (mode.skip || mode.excludeBegin || mode.returnBegin) {
+        error2("skip, excludeBegin, returnBegin not compatible with beginScope: {}");
+        throw MultiClassError;
+      }
+      if (typeof mode.beginScope !== "object" || mode.beginScope === null) {
+        error2("beginScope must be object");
+        throw MultiClassError;
+      }
+      remapScopeNames(mode, mode.begin, { key: "beginScope" });
+      mode.begin = _rewriteBackreferences(mode.begin, { joinWith: "" });
+    }
+    function endMultiClass(mode) {
+      if (!Array.isArray(mode.end)) return;
+      if (mode.skip || mode.excludeEnd || mode.returnEnd) {
+        error2("skip, excludeEnd, returnEnd not compatible with endScope: {}");
+        throw MultiClassError;
+      }
+      if (typeof mode.endScope !== "object" || mode.endScope === null) {
+        error2("endScope must be object");
+        throw MultiClassError;
+      }
+      remapScopeNames(mode, mode.end, { key: "endScope" });
+      mode.end = _rewriteBackreferences(mode.end, { joinWith: "" });
+    }
+    function scopeSugar(mode) {
+      if (mode.scope && typeof mode.scope === "object" && mode.scope !== null) {
+        mode.beginScope = mode.scope;
+        delete mode.scope;
+      }
+    }
+    function MultiClass(mode) {
+      scopeSugar(mode);
+      if (typeof mode.beginScope === "string") {
+        mode.beginScope = { _wrap: mode.beginScope };
+      }
+      if (typeof mode.endScope === "string") {
+        mode.endScope = { _wrap: mode.endScope };
+      }
+      beginMultiClass(mode);
+      endMultiClass(mode);
+    }
+    function compileLanguage(language) {
+      function langRe(value, global) {
+        return new RegExp(
+          source2(value),
+          "m" + (language.case_insensitive ? "i" : "") + (language.unicodeRegex ? "u" : "") + (global ? "g" : "")
+        );
+      }
+      class MultiRegex {
+        constructor() {
+          this.matchIndexes = {};
+          this.regexes = [];
+          this.matchAt = 1;
+          this.position = 0;
+        }
+        // @ts-ignore
+        addRule(re, opts) {
+          opts.position = this.position++;
+          this.matchIndexes[this.matchAt] = opts;
+          this.regexes.push([opts, re]);
+          this.matchAt += countMatchGroups(re) + 1;
+        }
+        compile() {
+          if (this.regexes.length === 0) {
+            this.exec = () => null;
+          }
+          const terminators = this.regexes.map((el) => el[1]);
+          this.matcherRe = langRe(_rewriteBackreferences(terminators, { joinWith: "|" }), true);
+          this.lastIndex = 0;
+        }
+        /** @param {string} s */
+        exec(s) {
+          this.matcherRe.lastIndex = this.lastIndex;
+          const match = this.matcherRe.exec(s);
+          if (!match) {
+            return null;
+          }
+          const i = match.findIndex((el, i2) => i2 > 0 && el !== void 0);
+          const matchData = this.matchIndexes[i];
+          match.splice(0, i);
+          return Object.assign(match, matchData);
+        }
+      }
+      class ResumableMultiRegex {
+        constructor() {
+          this.rules = [];
+          this.multiRegexes = [];
+          this.count = 0;
+          this.lastIndex = 0;
+          this.regexIndex = 0;
+        }
+        // @ts-ignore
+        getMatcher(index) {
+          if (this.multiRegexes[index]) return this.multiRegexes[index];
+          const matcher = new MultiRegex();
+          this.rules.slice(index).forEach(([re, opts]) => matcher.addRule(re, opts));
+          matcher.compile();
+          this.multiRegexes[index] = matcher;
+          return matcher;
+        }
+        resumingScanAtSamePosition() {
+          return this.regexIndex !== 0;
+        }
+        considerAll() {
+          this.regexIndex = 0;
+        }
+        // @ts-ignore
+        addRule(re, opts) {
+          this.rules.push([re, opts]);
+          if (opts.type === "begin") this.count++;
+        }
+        /** @param {string} s */
+        exec(s) {
+          const m = this.getMatcher(this.regexIndex);
+          m.lastIndex = this.lastIndex;
+          let result = m.exec(s);
+          if (this.resumingScanAtSamePosition()) {
+            if (result && result.index === this.lastIndex) ;
+            else {
+              const m2 = this.getMatcher(0);
+              m2.lastIndex = this.lastIndex + 1;
+              result = m2.exec(s);
+            }
+          }
+          if (result) {
+            this.regexIndex += result.position + 1;
+            if (this.regexIndex === this.count) {
+              this.considerAll();
+            }
+          }
+          return result;
+        }
+      }
+      function buildModeRegex(mode) {
+        const mm = new ResumableMultiRegex();
+        mode.contains.forEach((term) => mm.addRule(term.begin, { rule: term, type: "begin" }));
+        if (mode.terminatorEnd) {
+          mm.addRule(mode.terminatorEnd, { type: "end" });
+        }
+        if (mode.illegal) {
+          mm.addRule(mode.illegal, { type: "illegal" });
+        }
+        return mm;
+      }
+      function compileMode(mode, parent) {
+        const cmode = (
+          /** @type CompiledMode */
+          mode
+        );
+        if (mode.isCompiled) return cmode;
+        [
+          scopeClassName,
+          // do this early so compiler extensions generally don't have to worry about
+          // the distinction between match/begin
+          compileMatch,
+          MultiClass,
+          beforeMatchExt
+        ].forEach((ext) => ext(mode, parent));
+        language.compilerExtensions.forEach((ext) => ext(mode, parent));
+        mode.__beforeBegin = null;
+        [
+          beginKeywords,
+          // do this later so compiler extensions that come earlier have access to the
+          // raw array if they wanted to perhaps manipulate it, etc.
+          compileIllegal,
+          // default to 1 relevance if not specified
+          compileRelevance
+        ].forEach((ext) => ext(mode, parent));
+        mode.isCompiled = true;
+        let keywordPattern = null;
+        if (typeof mode.keywords === "object" && mode.keywords.$pattern) {
+          mode.keywords = Object.assign({}, mode.keywords);
+          keywordPattern = mode.keywords.$pattern;
+          delete mode.keywords.$pattern;
+        }
+        keywordPattern = keywordPattern || /\w+/;
+        if (mode.keywords) {
+          mode.keywords = compileKeywords(mode.keywords, language.case_insensitive);
+        }
+        cmode.keywordPatternRe = langRe(keywordPattern, true);
+        if (parent) {
+          if (!mode.begin) mode.begin = /\B|\b/;
+          cmode.beginRe = langRe(cmode.begin);
+          if (!mode.end && !mode.endsWithParent) mode.end = /\B|\b/;
+          if (mode.end) cmode.endRe = langRe(cmode.end);
+          cmode.terminatorEnd = source2(cmode.end) || "";
+          if (mode.endsWithParent && parent.terminatorEnd) {
+            cmode.terminatorEnd += (mode.end ? "|" : "") + parent.terminatorEnd;
+          }
+        }
+        if (mode.illegal) cmode.illegalRe = langRe(
+          /** @type {RegExp | string} */
+          mode.illegal
+        );
+        if (!mode.contains) mode.contains = [];
+        mode.contains = [].concat(...mode.contains.map(function(c2) {
+          return expandOrCloneMode(c2 === "self" ? mode : c2);
+        }));
+        mode.contains.forEach(function(c2) {
+          compileMode(
+            /** @type Mode */
+            c2,
+            cmode
+          );
+        });
+        if (mode.starts) {
+          compileMode(mode.starts, parent);
+        }
+        cmode.matcher = buildModeRegex(cmode);
+        return cmode;
+      }
+      if (!language.compilerExtensions) language.compilerExtensions = [];
+      if (language.contains && language.contains.includes("self")) {
+        throw new Error("ERR: contains `self` is not supported at the top-level of a language.  See documentation.");
+      }
+      language.classNameAliases = inherit$1(language.classNameAliases || {});
+      return compileMode(
+        /** @type Mode */
+        language
+      );
+    }
+    function dependencyOnParent(mode) {
+      if (!mode) return false;
+      return mode.endsWithParent || dependencyOnParent(mode.starts);
+    }
+    function expandOrCloneMode(mode) {
+      if (mode.variants && !mode.cachedVariants) {
+        mode.cachedVariants = mode.variants.map(function(variant) {
+          return inherit$1(mode, { variants: null }, variant);
+        });
+      }
+      if (mode.cachedVariants) {
+        return mode.cachedVariants;
+      }
+      if (dependencyOnParent(mode)) {
+        return inherit$1(mode, { starts: mode.starts ? inherit$1(mode.starts) : null });
+      }
+      if (Object.isFrozen(mode)) {
+        return inherit$1(mode);
+      }
+      return mode;
+    }
+    var version2 = "11.12.0";
+    var HTMLInjectionError = class extends Error {
+      constructor(reason, html) {
+        super(reason);
+        this.name = "HTMLInjectionError";
+        this.html = html;
+      }
+    };
+    var escape2 = escapeHTML;
+    var inherit = inherit$1;
+    var NO_MATCH = /* @__PURE__ */ Symbol("nomatch");
+    var MAX_KEYWORD_HITS = 7;
+    var HLJS = function(hljs) {
+      const languages = /* @__PURE__ */ Object.create(null);
+      const aliases = /* @__PURE__ */ Object.create(null);
+      const plugins = [];
+      let SAFE_MODE = true;
+      const LANGUAGE_NOT_FOUND = "Could not find the language '{}', did you forget to load/include a language module?";
+      const PLAINTEXT_LANGUAGE = { disableAutodetect: true, name: "Plain text", contains: [] };
+      let options = {
+        ignoreUnescapedHTML: false,
+        throwUnescapedHTML: false,
+        noHighlightRe: /^(no-?highlight)$/i,
+        languageDetectRe: /\blang(?:uage)?-([\w-]+)\b/i,
+        classPrefix: "hljs-",
+        cssSelector: "pre code",
+        languages: null,
+        // beta configuration options, subject to change, welcome to discuss
+        // https://github.com/highlightjs/highlight.js/issues/1086
+        __emitter: TokenTreeEmitter
+      };
+      function shouldNotHighlight(languageName) {
+        return options.noHighlightRe.test(languageName);
+      }
+      function blockLanguage(block2) {
+        let classes = block2.className + " ";
+        classes += block2.parentNode ? block2.parentNode.className : "";
+        const match = options.languageDetectRe.exec(classes);
+        if (match) {
+          const language = getLanguage(match[1]);
+          if (!language) {
+            warn(LANGUAGE_NOT_FOUND.replace("{}", match[1]));
+            warn("Falling back to no-highlight mode for this block.", block2);
+          }
+          return language ? match[1] : "no-highlight";
+        }
+        return classes.split(/\s+/).find((_class) => shouldNotHighlight(_class) || getLanguage(_class));
+      }
+      function highlight3(codeOrLanguageName, optionsOrCode, ignoreIllegals) {
+        let code2 = "";
+        let languageName = "";
+        if (typeof optionsOrCode === "object") {
+          code2 = codeOrLanguageName;
+          ignoreIllegals = optionsOrCode.ignoreIllegals;
+          languageName = optionsOrCode.language;
+        } else {
+          deprecated("10.7.0", "highlight(lang, code, ...args) has been deprecated.");
+          deprecated("10.7.0", "Please use highlight(code, options) instead.\nhttps://github.com/highlightjs/highlight.js/issues/2277");
+          languageName = codeOrLanguageName;
+          code2 = optionsOrCode;
+        }
+        if (ignoreIllegals === void 0) {
+          ignoreIllegals = true;
+        }
+        const context = {
+          code: code2,
+          language: languageName
+        };
+        fire("before:highlight", context);
+        const result = context.result ? context.result : _highlight(context.language, context.code, ignoreIllegals);
+        result.code = context.code;
+        fire("after:highlight", result);
+        return result;
+      }
+      function _highlight(languageName, codeToHighlight, ignoreIllegals, continuation) {
+        const keywordHits = /* @__PURE__ */ Object.create(null);
+        function keywordData(mode, matchText) {
+          return mode.keywords[matchText];
+        }
+        function processKeywords() {
+          if (!top.keywords) {
+            emitter.addText(modeBuffer);
+            return;
+          }
+          let lastIndex = 0;
+          top.keywordPatternRe.lastIndex = 0;
+          let match = top.keywordPatternRe.exec(modeBuffer);
+          let buf = "";
+          while (match) {
+            buf += modeBuffer.substring(lastIndex, match.index);
+            const word = language.case_insensitive ? match[0].toLowerCase() : match[0];
+            const data = keywordData(top, word);
+            if (data) {
+              const [kind, keywordRelevance] = data;
+              emitter.addText(buf);
+              buf = "";
+              keywordHits[word] = (keywordHits[word] || 0) + 1;
+              if (keywordHits[word] <= MAX_KEYWORD_HITS) relevance += keywordRelevance;
+              if (kind.startsWith("_")) {
+                buf += match[0];
+              } else {
+                const cssClass2 = language.classNameAliases[kind] || kind;
+                emitKeyword(match[0], cssClass2);
+              }
+            } else {
+              buf += match[0];
+            }
+            lastIndex = top.keywordPatternRe.lastIndex;
+            match = top.keywordPatternRe.exec(modeBuffer);
+          }
+          buf += modeBuffer.substring(lastIndex);
+          emitter.addText(buf);
+        }
+        function processSubLanguage() {
+          if (modeBuffer === "") return;
+          let result2 = null;
+          if (typeof top.subLanguage === "string") {
+            if (!languages[top.subLanguage]) {
+              emitter.addText(modeBuffer);
+              return;
+            }
+            result2 = _highlight(top.subLanguage, modeBuffer, true, continuations[top.subLanguage]);
+            continuations[top.subLanguage] = /** @type {CompiledMode} */
+            result2._top;
+          } else {
+            result2 = highlightAuto(modeBuffer, top.subLanguage.length ? top.subLanguage : null);
+          }
+          if (top.relevance > 0) {
+            relevance += result2.relevance;
+          }
+          emitter.__addSublanguage(result2._emitter, result2.language);
+        }
+        function processBuffer() {
+          if (top.subLanguage != null) {
+            processSubLanguage();
+          } else {
+            processKeywords();
+          }
+          modeBuffer = "";
+        }
+        function emitKeyword(keyword, scope) {
+          if (keyword === "") return;
+          emitter.startScope(scope);
+          emitter.addText(keyword);
+          emitter.endScope();
+        }
+        function emitMultiClass(scope, match) {
+          let i = 1;
+          const max = match.length - 1;
+          while (i <= max) {
+            if (!scope._emit[i]) {
+              i++;
+              continue;
+            }
+            const klass = language.classNameAliases[scope[i]] || scope[i];
+            const text2 = match[i];
+            if (klass) {
+              emitKeyword(text2, klass);
+            } else {
+              modeBuffer = text2;
+              processKeywords();
+              modeBuffer = "";
+            }
+            i++;
+          }
+        }
+        function startNewMode(mode, match) {
+          if (mode.scope && typeof mode.scope === "string") {
+            emitter.openNode(language.classNameAliases[mode.scope] || mode.scope);
+          }
+          if (mode.beginScope) {
+            if (mode.beginScope._wrap) {
+              emitKeyword(modeBuffer, language.classNameAliases[mode.beginScope._wrap] || mode.beginScope._wrap);
+              modeBuffer = "";
+            } else if (mode.beginScope._multi) {
+              emitMultiClass(mode.beginScope, match);
+              modeBuffer = "";
+            }
+          }
+          top = Object.create(mode, { parent: { value: top } });
+          return top;
+        }
+        function endOfMode(mode, match, matchPlusRemainder) {
+          let matched = startsWith(mode.endRe, matchPlusRemainder);
+          if (matched) {
+            if (mode["on:end"]) {
+              const resp = new Response(mode);
+              mode["on:end"](match, resp);
+              if (resp.isMatchIgnored) matched = false;
+            }
+            if (matched) {
+              while (mode.endsParent && mode.parent) {
+                mode = mode.parent;
+              }
+              return mode;
+            }
+          }
+          if (mode.endsWithParent) {
+            return endOfMode(mode.parent, match, matchPlusRemainder);
+          }
+        }
+        function doIgnore(lexeme) {
+          if (top.matcher.regexIndex === 0) {
+            modeBuffer += lexeme[0];
+            return 1;
+          } else {
+            resumeScanAtSamePosition = true;
+            return 0;
+          }
+        }
+        function doBeginMatch(match) {
+          const lexeme = match[0];
+          const newMode = match.rule;
+          const resp = new Response(newMode);
+          const beforeCallbacks = [newMode.__beforeBegin, newMode["on:begin"]];
+          for (const cb of beforeCallbacks) {
+            if (!cb) continue;
+            cb(match, resp);
+            if (resp.isMatchIgnored) return doIgnore(lexeme);
+          }
+          if (newMode.skip) {
+            modeBuffer += lexeme;
+          } else {
+            if (newMode.excludeBegin) {
+              modeBuffer += lexeme;
+            }
+            processBuffer();
+            if (!newMode.returnBegin && !newMode.excludeBegin) {
+              modeBuffer = lexeme;
+            }
+          }
+          startNewMode(newMode, match);
+          return newMode.returnBegin ? 0 : lexeme.length;
+        }
+        function doEndMatch(match) {
+          const lexeme = match[0];
+          const matchPlusRemainder = codeToHighlight.substring(match.index);
+          const endMode = endOfMode(top, match, matchPlusRemainder);
+          if (!endMode) {
+            return NO_MATCH;
+          }
+          const origin = top;
+          if (top.endScope && top.endScope._wrap) {
+            processBuffer();
+            emitKeyword(lexeme, top.endScope._wrap);
+          } else if (top.endScope && top.endScope._multi) {
+            processBuffer();
+            emitMultiClass(top.endScope, match);
+          } else if (origin.skip) {
+            modeBuffer += lexeme;
+          } else {
+            if (!(origin.returnEnd || origin.excludeEnd)) {
+              modeBuffer += lexeme;
+            }
+            processBuffer();
+            if (origin.excludeEnd) {
+              modeBuffer = lexeme;
+            }
+          }
+          do {
+            if (top.scope) {
+              emitter.closeNode();
+            }
+            if (!top.skip && !top.subLanguage) {
+              relevance += top.relevance;
+            }
+            top = top.parent;
+          } while (top !== endMode.parent);
+          if (endMode.starts) {
+            startNewMode(endMode.starts, match);
+          }
+          return origin.returnEnd ? 0 : lexeme.length;
+        }
+        function processContinuations() {
+          const list2 = [];
+          for (let current = top; current !== language; current = current.parent) {
+            if (current.scope) {
+              list2.unshift(current.scope);
+            }
+          }
+          list2.forEach((item) => emitter.openNode(item));
+        }
+        let lastMatch = {};
+        function processLexeme(textBeforeMatch, match) {
+          const lexeme = match && match[0];
+          modeBuffer += textBeforeMatch;
+          if (lexeme == null) {
+            processBuffer();
+            return 0;
+          }
+          if (lastMatch.type === "begin" && match.type === "end" && lastMatch.index === match.index && lexeme === "") {
+            modeBuffer += codeToHighlight.slice(match.index, match.index + 1);
+            if (!SAFE_MODE) {
+              const err = new Error(`0 width match regex (${languageName})`);
+              err.languageName = languageName;
+              err.badRule = lastMatch.rule;
+              throw err;
+            }
+            return 1;
+          }
+          lastMatch = match;
+          if (match.type === "begin") {
+            return doBeginMatch(match);
+          } else if (match.type === "illegal" && !ignoreIllegals) {
+            const err = new Error('Illegal lexeme "' + lexeme + '" for mode "' + (top.scope || "<unnamed>") + '"');
+            err.mode = top;
+            throw err;
+          } else if (match.type === "end") {
+            const processed = doEndMatch(match);
+            if (processed !== NO_MATCH) {
+              return processed;
+            }
+          }
+          if (match.type === "illegal" && lexeme === "") {
+            if (match.index === codeToHighlight.length) ;
+            else {
+              modeBuffer += "\n";
+            }
+            return 1;
+          }
+          if (iterations > 1e5 && iterations > match.index * 3) {
+            const err = new Error("potential infinite loop, way more iterations than matches");
+            throw err;
+          }
+          modeBuffer += lexeme;
+          return lexeme.length;
+        }
+        const language = getLanguage(languageName);
+        if (!language) {
+          error2(LANGUAGE_NOT_FOUND.replace("{}", languageName));
+          throw new Error('Unknown language: "' + languageName + '"');
+        }
+        const md = compileLanguage(language);
+        let result = "";
+        let top = continuation || md;
+        const continuations = {};
+        const emitter = new options.__emitter(options);
+        processContinuations();
+        let modeBuffer = "";
+        let relevance = 0;
+        let index = 0;
+        let iterations = 0;
+        let resumeScanAtSamePosition = false;
+        try {
+          if (!language.__emitTokens) {
+            top.matcher.considerAll();
+            for (; ; ) {
+              iterations++;
+              if (resumeScanAtSamePosition) {
+                resumeScanAtSamePosition = false;
+              } else {
+                top.matcher.considerAll();
+              }
+              top.matcher.lastIndex = index;
+              const match = top.matcher.exec(codeToHighlight);
+              if (!match) break;
+              const beforeMatch = codeToHighlight.substring(index, match.index);
+              const processedCount = processLexeme(beforeMatch, match);
+              index = match.index + processedCount;
+            }
+            processLexeme(codeToHighlight.substring(index));
+          } else {
+            language.__emitTokens(codeToHighlight, emitter);
+          }
+          emitter.finalize();
+          result = emitter.toHTML();
+          return {
+            language: languageName,
+            value: result,
+            relevance,
+            illegal: false,
+            _emitter: emitter,
+            _top: top
+          };
+        } catch (err) {
+          if (err.message && err.message.includes("Illegal")) {
+            return {
+              language: languageName,
+              value: escape2(codeToHighlight),
+              illegal: true,
+              relevance: 0,
+              _illegalBy: {
+                message: err.message,
+                index,
+                context: codeToHighlight.slice(index - 100, index + 100),
+                mode: err.mode,
+                resultSoFar: result
+              },
+              _emitter: emitter
+            };
+          } else if (SAFE_MODE) {
+            return {
+              language: languageName,
+              value: escape2(codeToHighlight),
+              illegal: false,
+              relevance: 0,
+              errorRaised: err,
+              _emitter: emitter,
+              _top: top
+            };
+          } else {
+            throw err;
+          }
+        }
+      }
+      function justTextHighlightResult(code2) {
+        const result = {
+          value: escape2(code2),
+          illegal: false,
+          relevance: 0,
+          _top: PLAINTEXT_LANGUAGE,
+          _emitter: new options.__emitter(options)
+        };
+        result._emitter.addText(code2);
+        return result;
+      }
+      function highlightAuto(code2, languageSubset) {
+        languageSubset = languageSubset || options.languages || Object.keys(languages);
+        const plaintext2 = justTextHighlightResult(code2);
+        const results = languageSubset.filter(getLanguage).filter(autoDetection).map(
+          (name) => _highlight(name, code2, false)
+        );
+        results.unshift(plaintext2);
+        const sorted = results.sort((a, b) => {
+          if (a.relevance !== b.relevance) return b.relevance - a.relevance;
+          if (a.language && b.language) {
+            if (getLanguage(a.language).supersetOf === b.language) {
+              return 1;
+            } else if (getLanguage(b.language).supersetOf === a.language) {
+              return -1;
+            }
+          }
+          return 0;
+        });
+        const [best, secondBest] = sorted;
+        const result = best;
+        result.secondBest = secondBest;
+        return result;
+      }
+      function updateClassName(element, currentLang, resultLang) {
+        const language = currentLang && aliases[currentLang] || resultLang;
+        element.classList.add("hljs");
+        element.classList.add(`language-${language}`);
+      }
+      function highlightElement(element) {
+        let node = null;
+        const language = blockLanguage(element);
+        if (shouldNotHighlight(language)) return;
+        fire(
+          "before:highlightElement",
+          { el: element, language }
+        );
+        if (element.dataset.highlighted) {
+          console.log("Element previously highlighted. To highlight again, first unset `dataset.highlighted`.", element);
+          return;
+        }
+        if (element.children.length > 0) {
+          if (!options.ignoreUnescapedHTML) {
+            console.warn("One of your code blocks includes unescaped HTML. This is a potentially serious security risk.");
+            console.warn("https://github.com/highlightjs/highlight.js/wiki/security");
+            console.warn("The element with unescaped HTML:");
+            console.warn(element);
+          }
+          if (options.throwUnescapedHTML) {
+            const err = new HTMLInjectionError(
+              "One of your code blocks includes unescaped HTML.",
+              element.innerHTML
+            );
+            throw err;
+          }
+        }
+        node = element;
+        const text2 = node.textContent;
+        const result = language ? highlight3(text2, { language, ignoreIllegals: true }) : highlightAuto(text2);
+        element.innerHTML = result.value;
+        element.dataset.highlighted = "yes";
+        updateClassName(element, language, result.language);
+        element.result = {
+          language: result.language,
+          // TODO: remove with version 11.0
+          re: result.relevance,
+          relevance: result.relevance
+        };
+        if (result.secondBest) {
+          element.secondBest = {
+            language: result.secondBest.language,
+            relevance: result.secondBest.relevance
+          };
+        }
+        fire("after:highlightElement", { el: element, result, text: text2 });
+      }
+      function configure(userOptions) {
+        options = inherit(options, userOptions);
+      }
+      const initHighlighting = () => {
+        highlightAll();
+        deprecated("10.6.0", "initHighlighting() deprecated.  Use highlightAll() now.");
+      };
+      function initHighlightingOnLoad() {
+        highlightAll();
+        deprecated("10.6.0", "initHighlightingOnLoad() deprecated.  Use highlightAll() now.");
+      }
+      let wantsHighlight = false;
+      function highlightAll() {
+        function boot() {
+          highlightAll();
+        }
+        if (document.readyState === "loading") {
+          if (!wantsHighlight) {
+            window.addEventListener("DOMContentLoaded", boot, false);
+          }
+          wantsHighlight = true;
+          return;
+        }
+        const blocks = document.querySelectorAll(options.cssSelector);
+        blocks.forEach(highlightElement);
+      }
+      function registerLanguage(languageName, languageDefinition) {
+        let lang = null;
+        try {
+          lang = languageDefinition(hljs);
+        } catch (error$1) {
+          error2("Language definition for '{}' could not be registered.".replace("{}", languageName));
+          if (!SAFE_MODE) {
+            throw error$1;
+          } else {
+            error2(error$1);
+          }
+          lang = PLAINTEXT_LANGUAGE;
+        }
+        if (!lang.name) lang.name = languageName;
+        languages[languageName] = lang;
+        lang.rawDefinition = languageDefinition.bind(null, hljs);
+        if (lang.aliases) {
+          registerAliases(lang.aliases, { languageName });
+        }
+      }
+      function unregisterLanguage(languageName) {
+        delete languages[languageName];
+        for (const alias of Object.keys(aliases)) {
+          if (aliases[alias] === languageName) {
+            delete aliases[alias];
+          }
+        }
+      }
+      function listLanguages() {
+        return Object.keys(languages);
+      }
+      function getLanguage(name) {
+        name = (name || "").toLowerCase();
+        return languages[name] || languages[aliases[name]];
+      }
+      function registerAliases(aliasList, { languageName }) {
+        if (typeof aliasList === "string") {
+          aliasList = [aliasList];
+        }
+        aliasList.forEach((alias) => {
+          aliases[alias.toLowerCase()] = languageName;
+        });
+      }
+      function autoDetection(name) {
+        const lang = getLanguage(name);
+        return lang && !lang.disableAutodetect;
+      }
+      function upgradePluginAPI(plugin2) {
+        if (plugin2["before:highlightBlock"] && !plugin2["before:highlightElement"]) {
+          plugin2["before:highlightElement"] = (data) => {
+            plugin2["before:highlightBlock"](
+              Object.assign({ block: data.el }, data)
+            );
+          };
+        }
+        if (plugin2["after:highlightBlock"] && !plugin2["after:highlightElement"]) {
+          plugin2["after:highlightElement"] = (data) => {
+            plugin2["after:highlightBlock"](
+              Object.assign({ block: data.el }, data)
+            );
+          };
+        }
+      }
+      function addPlugin(plugin2) {
+        upgradePluginAPI(plugin2);
+        plugins.push(plugin2);
+      }
+      function removePlugin(plugin2) {
+        const index = plugins.indexOf(plugin2);
+        if (index !== -1) {
+          plugins.splice(index, 1);
+        }
+      }
+      function fire(event, args) {
+        const cb = event;
+        plugins.forEach(function(plugin2) {
+          if (plugin2[cb]) {
+            plugin2[cb](args);
+          }
+        });
+      }
+      function deprecateHighlightBlock(el) {
+        deprecated("10.7.0", "highlightBlock will be removed entirely in v12.0");
+        deprecated("10.7.0", "Please use highlightElement now.");
+        return highlightElement(el);
+      }
+      Object.assign(hljs, {
+        highlight: highlight3,
+        highlightAuto,
+        highlightAll,
+        highlightElement,
+        // TODO: Remove with v12 API
+        highlightBlock: deprecateHighlightBlock,
+        configure,
+        initHighlighting,
+        initHighlightingOnLoad,
+        registerLanguage,
+        unregisterLanguage,
+        listLanguages,
+        getLanguage,
+        registerAliases,
+        autoDetection,
+        inherit,
+        addPlugin,
+        removePlugin
+      });
+      hljs.debugMode = function() {
+        SAFE_MODE = false;
+      };
+      hljs.safeMode = function() {
+        SAFE_MODE = true;
+      };
+      hljs.versionString = version2;
+      hljs.regex = {
+        concat: concat2,
+        lookahead: lookahead2,
+        either: either2,
+        optional,
+        anyNumberOfTimes
+      };
+      for (const key in MODES4) {
+        if (typeof MODES4[key] === "object") {
+          deepFreeze(MODES4[key]);
+        }
+      }
+      Object.assign(hljs, MODES4);
+      return hljs;
+    };
+    var highlight2 = HLJS({});
+    highlight2.newInstance = () => HLJS({});
+    module2.exports = highlight2;
+    highlight2.HighlightJS = highlight2;
+    highlight2.default = highlight2;
+  }
+});
+
 // src/client/entry.js
 var entry_exports = {};
 __export(entry_exports, {
   default: () => entry_default
 });
 module.exports = __toCommonJS(entry_exports);
-var import_react7 = __toESM(require("react"), 1);
+var import_react9 = __toESM(require("react"), 1);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
 var import_react2 = require("react");
@@ -1248,10 +2809,10 @@ var extra_default = `/* Native media, the media tab, and the lightbox host. */\r
 `;
 
 // src/client/styles.css
-var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-list-head {\r\n  display: grid; grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px;\r\n  gap: 9px; padding: 7px 8px 5px; font-size: 9px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r\n}\r\n.vms-list-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-list-head button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }\n.vms-list-head button:hover { color: var(--vms-ink2); }\n.vms-list-head button.is-active { color: var(--vms-ink); font-weight: 600; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n.vms-row[data-detail="detailed"] { grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster, .vms-row-thumb .vms-doc-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar,\r\n.vms-row-thumb .vms-doc-lines, .vms-row-thumb .vms-doc-snippet { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-thumb .vms-doc-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-kind[data-kind="document"] { color: #6f8fd8; }\r\n.vms-row-kind[data-kind="archive"] { color: #c99a5b; }\r\n.vms-row-kind[data-kind="code"] { color: #7fb99a; }\r\n.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 560px) {\r\n  .vms-row[data-detail="detailed"] { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-row[data-detail="detailed"] .vms-row-time,\r\n  .vms-row[data-detail="detailed"] .vms-row-size { display: none; }\r\n  .vms-list-head { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-list-head > :nth-child(3), .vms-list-head > :nth-child(5) { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n/* File-manager additions: zoom, folder navigation, document cards, menus, dialogs. */\r\n.vms-zoom { display: flex; align-items: center; gap: 2px; flex: none; padding: 2px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); }\r\n.vms-zoom .vms-icon-btn { width: 25px; height: 25px; }\r\n.vms-zoom-range { width: 66px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-detail-seg { gap: 2px; }\r\n.vms-seg-text { height: 24px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); font-size: 10px; }\r\n.vms-seg-text.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-folder-row { position: relative; display: flex; align-items: center; gap: 7px; margin-top: 9px; min-width: 0; }\r\n.vms-crumb { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; flex: 1; }\r\n.vms-crumb-seg { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 2px 5px; border-radius: 6px; color: var(--vms-ink3); font-size: 10.5px; }\r\n.vms-crumb-seg:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-crumb-seg.is-active { color: var(--vms-ink); font-weight: 550; }\r\n.vms-crumb-sep { color: var(--vms-ink4); flex: none; }\r\n.vms-folder-btn { flex: none; }\r\n.vms-folder-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-pop {\r\n  position: absolute; z-index: 31; top: calc(100% + 5px); right: 0; width: min(320px, calc(100% - 4px));\r\n  max-height: 300px; overflow: auto; padding: 5px; border: 0.5px solid var(--vms-line2);\r\n  border-radius: var(--vms-radius-md); background: var(--vms-layer);\r\n  box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-folder-item { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-folder-item:hover { background: var(--vms-layer2); }\r\n.vms-folder-item.is-active { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-check { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--vms-ink3); white-space: nowrap; }\r\n.vms-check input { accent-color: var(--vms-accent); margin: 0; }\r\n\r\n/* Designed thumbnails for documents, archives, code and unknown files. */\r\n.vms-doc-poster {\r\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\r\n  padding: 12px; overflow: hidden; color: #fff;\r\n  background: linear-gradient(140deg, color-mix(in srgb, var(--vms-cover-a, #203047) 82%, #0d1722), var(--vms-cover-b, #0d1722));\r\n}\r\n.vms-doc-poster::before { content: ""; position: absolute; inset: 9px; border-radius: 5px; background: rgba(255,255,255,.055); border: 0.5px solid rgba(255,255,255,.12); }\r\n.vms-doc-fold { position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; background: linear-gradient(225deg, rgba(255,255,255,.22) 50%, transparent 50%); border-top-right-radius: 4px; }\r\n.vms-doc-glyph { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: rgba(255,255,255,.11); }\r\n.vms-doc-glyph.is-large { width: 38px; height: 38px; border-radius: 10px; z-index: 1; }\r\n.vms-doc-ext { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.7); z-index: 1; }\r\n.vms-doc-ext.is-large { font-size: 10px; color: rgba(255,255,255,.86); }\r\n.vms-doc-lines { position: relative; z-index: 1; display: grid; gap: 3px; width: 54%; margin-top: 2px; }\r\n.vms-doc-lines i { height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }\r\n.vms-doc-lines i:nth-child(2) { width: 78%; }\r\n.vms-doc-lines i:nth-child(3) { width: 55%; }\r\n.vms-doc-poster[data-kind="document"] { background: linear-gradient(145deg, #223553, #0c141f); }\r\n.vms-doc-poster[data-kind="archive"] { background: linear-gradient(145deg, #3f2d16, #150e06); }\r\n.vms-doc-poster[data-kind="code"] { background: linear-gradient(145deg, #183a33, #071410); }\r\n.vms-doc-poster[data-kind="other"] { background: linear-gradient(145deg, #2b2f38, #0d1015); }\r\n.vms-doc-poster.is-text { display: block; padding: 10px 10px 22px; background: #f7f5ef; color: #2a2b2f; }\r\n.vms-doc-poster.is-text::before { inset: 7px 7px 19px; background: #fffdf8; border-color: rgba(30,30,30,.10); }\r\n.vms-doc-snippet {\r\n  position: relative; z-index: 1; margin: 2px 3px 0; padding: 2px 4px; height: calc(100% - 2px);\r\n  overflow: hidden; white-space: pre; font-family: var(--dsh-font-family-code, monospace);\r\n  font-size: 6.5px; line-height: 1.45; color: #4b4b52;\r\n}\r\n.vms-doc-snippet.is-empty { display: grid; place-items: center; text-align: center; color: #9a968c; font-family: inherit; font-size: 9px; }\r\n.vms-doc-poster.is-text .vms-doc-foot {\r\n  position: absolute; left: 9px; right: 9px; bottom: 5px; z-index: 2; display: flex; align-items: center; gap: 4px; color: #7a7468;\r\n}\r\n.vms-doc-poster.is-text .vms-doc-glyph { width: 16px; height: 16px; background: rgba(0,0,0,.06); border-radius: 4px; }\r\n.vms-doc-poster.is-text .vms-doc-ext { color: #7a7468; font-size: 7px; }\r\n.vms-row-thumb .vms-doc-poster.is-text { display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #e6e1d3, #f7f5ef); }\r\n.vms-row-thumb .vms-doc-poster.is-text::before { display: none; }\r\n\r\n/* Batch-metadata banner. */\r\n.vms-meta-banner {\r\n  position: sticky; bottom: 8px; z-index: 6; width: max-content; margin: 0 auto 10px;\r\n  display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;\r\n  background: var(--vms-ink); color: var(--vms-bg); font-size: 9.5px; box-shadow: 0 8px 24px rgba(0,0,0,.18);\r\n}\r\n.vms-meta-banner i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-bg); animation: vms-pulse 1.2s infinite; }\r\n\r\n/* File action menu. */\r\n.vms-menu {\r\n  position: fixed; z-index: 120; width: 196px; padding: 5px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 22px 60px rgba(0,0,0,.28);\r\n  animation: vms-panel-in 140ms var(--vms-ease);\r\n}\r\n.vms-menu-head { display: flex; align-items: center; gap: 6px; padding: 5px 7px 6px; border-bottom: 0.5px solid var(--vms-line); margin-bottom: 4px; color: var(--vms-ink3); }\r\n.vms-menu-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 550; color: var(--vms-ink2); }\r\n.vms-menu-item { display: flex; align-items: center; gap: 7px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-menu-item:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-menu-item.is-danger { color: var(--vms-danger); }\r\n.vms-menu-item.is-danger:hover { background: color-mix(in srgb, var(--vms-danger) 12%, transparent); }\r\n.vms-menu-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-menu-item.is-danger svg { color: inherit; }\r\n\r\n/* Dialogs. */\r\n.vms-dialog-layer { position: absolute; inset: 0; z-index: 60; display: flex; padding: 18px; }\r\n.vms-dialog-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.42); backdrop-filter: blur(6px); animation: vms-fade 160ms var(--vms-ease); }\r\n.vms-dialog {\r\n  position: relative; margin: auto; width: min(360px, 100%); padding: 12px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 28px 80px rgba(0,0,0,.34);\r\n  animation: vms-sheet-in 200ms var(--vms-ease);\r\n}\r\n.vms-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }\r\n.vms-dialog-head b { font-size: 12.5px; font-weight: 600; }\r\n.vms-dialog-form { display: grid; gap: 9px; }\r\n.vms-dialog-field { display: grid; gap: 5px; }\r\n.vms-dialog-field > span { font-size: 9.5px; color: var(--vms-ink4); }\r\n.vms-dialog-hint { font-size: 9px; color: var(--vms-ink4); line-height: 1.45; }\r\n.vms-dialog-text { margin: 0; font-size: 11px; line-height: 1.55; color: var(--vms-ink2); }\r\n.vms-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }\r\n.vms-primary-btn.is-danger { background: var(--vms-danger); color: #fff; }\r\n\r\n/* Document / PDF preview. */\r\n.vms-sheet-stage.is-pdf { background: #202124; }\r\n.vms-pdf-frame { width: 100%; height: 100%; border: 0; background: #fff; }\r\n.vms-sheet-stage.is-text { background: var(--vms-bg); }\r\n.vms-text-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\r\n.vms-text-content {\r\n  flex: 1; min-height: 0; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre;\r\n  font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6;\r\n  color: var(--vms-ink); background: var(--vms-bg); tab-size: 2;\r\n}\r\n.vms-preview-note { flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 9.5px; color: var(--vms-ink3); background: var(--vms-layer2); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-stage.is-text > .vms-preview-note:only-child { margin: auto; border: 0; background: transparent; }\r\n.vms-generic-preview { margin: auto; display: grid; justify-items: center; gap: 9px; padding: 32px; text-align: center; color: var(--vms-ink2); }\r\n.vms-generic-glyph { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink3); }\r\n.vms-generic-preview b { font-size: 14px; font-weight: 550; }\r\n.vms-generic-preview p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); }\r\n.vms-generic-preview small { font-size: 9.5px; color: var(--vms-ink4); }\r\n';
+var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-list-head {\r\n  display: grid; grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px;\r\n  gap: 9px; padding: 7px 8px 5px; font-size: 9px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r\n}\r\n.vms-list-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-list-head button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }\n.vms-list-head button:hover { color: var(--vms-ink2); }\n.vms-list-head button.is-active { color: var(--vms-ink); font-weight: 600; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n.vms-row[data-detail="detailed"] { grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster, .vms-row-thumb .vms-doc-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar,\r\n.vms-row-thumb .vms-doc-lines, .vms-row-thumb .vms-doc-snippet { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-thumb .vms-doc-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-kind[data-kind="document"] { color: #6f8fd8; }\r\n.vms-row-kind[data-kind="archive"] { color: #c99a5b; }\r\n.vms-row-kind[data-kind="code"] { color: #7fb99a; }\r\n.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 560px) {\r\n  .vms-row[data-detail="detailed"] { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-row[data-detail="detailed"] .vms-row-time,\r\n  .vms-row[data-detail="detailed"] .vms-row-size { display: none; }\r\n  .vms-list-head { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-list-head > :nth-child(3), .vms-list-head > :nth-child(5) { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n/* File-manager additions: zoom, folder navigation, document cards, menus, dialogs. */\r\n.vms-zoom { display: flex; align-items: center; gap: 2px; flex: none; padding: 2px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); }\r\n.vms-zoom .vms-icon-btn { width: 25px; height: 25px; }\r\n.vms-zoom-range { width: 66px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-detail-seg { gap: 2px; }\r\n.vms-seg-text { height: 24px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); font-size: 10px; }\r\n.vms-seg-text.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-folder-row { position: relative; display: flex; align-items: center; gap: 7px; margin-top: 9px; min-width: 0; }\r\n.vms-crumb { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; flex: 1; }\r\n.vms-crumb-seg { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 2px 5px; border-radius: 6px; color: var(--vms-ink3); font-size: 10.5px; }\r\n.vms-crumb-seg:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-crumb-seg.is-active { color: var(--vms-ink); font-weight: 550; }\r\n.vms-crumb-sep { color: var(--vms-ink4); flex: none; }\r\n.vms-folder-btn { flex: none; }\r\n.vms-folder-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-pop {\r\n  position: absolute; z-index: 31; top: calc(100% + 5px); right: 0; width: min(320px, calc(100% - 4px));\r\n  max-height: 300px; overflow: auto; padding: 5px; border: 0.5px solid var(--vms-line2);\r\n  border-radius: var(--vms-radius-md); background: var(--vms-layer);\r\n  box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-folder-item { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-folder-item:hover { background: var(--vms-layer2); }\r\n.vms-folder-item.is-active { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-check { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--vms-ink3); white-space: nowrap; }\r\n.vms-check input { accent-color: var(--vms-accent); margin: 0; }\r\n\r\n/* Designed thumbnails for documents, archives, code and unknown files. */\r\n.vms-doc-poster {\r\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\r\n  padding: 12px; overflow: hidden; color: #fff;\r\n  background: linear-gradient(140deg, color-mix(in srgb, var(--vms-cover-a, #203047) 82%, #0d1722), var(--vms-cover-b, #0d1722));\r\n}\r\n.vms-doc-poster::before { content: ""; position: absolute; inset: 9px; border-radius: 5px; background: rgba(255,255,255,.055); border: 0.5px solid rgba(255,255,255,.12); }\r\n.vms-doc-fold { position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; background: linear-gradient(225deg, rgba(255,255,255,.22) 50%, transparent 50%); border-top-right-radius: 4px; }\r\n.vms-doc-glyph { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: rgba(255,255,255,.11); }\r\n.vms-doc-glyph.is-large { width: 38px; height: 38px; border-radius: 10px; z-index: 1; }\r\n.vms-doc-ext { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.7); z-index: 1; }\r\n.vms-doc-ext.is-large { font-size: 10px; color: rgba(255,255,255,.86); }\r\n.vms-doc-lines { position: relative; z-index: 1; display: grid; gap: 3px; width: 54%; margin-top: 2px; }\r\n.vms-doc-lines i { height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }\r\n.vms-doc-lines i:nth-child(2) { width: 78%; }\r\n.vms-doc-lines i:nth-child(3) { width: 55%; }\r\n.vms-doc-poster[data-kind="document"] { background: linear-gradient(145deg, #223553, #0c141f); }\r\n.vms-doc-poster[data-kind="archive"] { background: linear-gradient(145deg, #3f2d16, #150e06); }\r\n.vms-doc-poster[data-kind="code"] { background: linear-gradient(145deg, #183a33, #071410); }\r\n.vms-doc-poster[data-kind="other"] { background: linear-gradient(145deg, #2b2f38, #0d1015); }\r\n.vms-doc-poster.is-text { display: block; padding: 10px 10px 22px; background: #f7f5ef; color: #2a2b2f; }\r\n.vms-doc-poster.is-text::before { inset: 7px 7px 19px; background: #fffdf8; border-color: rgba(30,30,30,.10); }\r\n.vms-doc-snippet {\r\n  position: relative; z-index: 1; margin: 2px 3px 0; padding: 2px 4px; height: calc(100% - 2px);\r\n  overflow: hidden; white-space: pre; font-family: var(--dsh-font-family-code, monospace);\r\n  font-size: 6.5px; line-height: 1.45; color: #4b4b52;\r\n}\r\n.vms-doc-snippet.is-empty { display: grid; place-items: center; text-align: center; color: #9a968c; font-family: inherit; font-size: 9px; }\r\n.vms-doc-poster.is-text .vms-doc-foot {\r\n  position: absolute; left: 9px; right: 9px; bottom: 5px; z-index: 2; display: flex; align-items: center; gap: 4px; color: #7a7468;\r\n}\r\n.vms-doc-poster.is-text .vms-doc-glyph { width: 16px; height: 16px; background: rgba(0,0,0,.06); border-radius: 4px; }\r\n.vms-doc-poster.is-text .vms-doc-ext { color: #7a7468; font-size: 7px; }\r\n.vms-row-thumb .vms-doc-poster.is-text { display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #e6e1d3, #f7f5ef); }\r\n.vms-row-thumb .vms-doc-poster.is-text::before { display: none; }\r\n\r\n/* Batch-metadata banner. */\r\n.vms-meta-banner {\r\n  position: sticky; bottom: 8px; z-index: 6; width: max-content; margin: 0 auto 10px;\r\n  display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;\r\n  background: var(--vms-ink); color: var(--vms-bg); font-size: 9.5px; box-shadow: 0 8px 24px rgba(0,0,0,.18);\r\n}\r\n.vms-meta-banner i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-bg); animation: vms-pulse 1.2s infinite; }\r\n\r\n/* File action menu. */\r\n.vms-menu {\r\n  position: fixed; z-index: 120; width: 196px; padding: 5px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 22px 60px rgba(0,0,0,.28);\r\n  animation: vms-panel-in 140ms var(--vms-ease);\r\n}\r\n.vms-menu-head { display: flex; align-items: center; gap: 6px; padding: 5px 7px 6px; border-bottom: 0.5px solid var(--vms-line); margin-bottom: 4px; color: var(--vms-ink3); }\r\n.vms-menu-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 550; color: var(--vms-ink2); }\r\n.vms-menu-item { display: flex; align-items: center; gap: 7px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-menu-item:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-menu-item.is-danger { color: var(--vms-danger); }\r\n.vms-menu-item.is-danger:hover { background: color-mix(in srgb, var(--vms-danger) 12%, transparent); }\r\n.vms-menu-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-menu-item.is-danger svg { color: inherit; }\r\n\r\n/* Dialogs. */\r\n.vms-dialog-layer { position: absolute; inset: 0; z-index: 60; display: flex; padding: 18px; }\r\n.vms-dialog-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.42); backdrop-filter: blur(6px); animation: vms-fade 160ms var(--vms-ease); }\r\n.vms-dialog {\r\n  position: relative; margin: auto; width: min(360px, 100%); padding: 12px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 28px 80px rgba(0,0,0,.34);\r\n  animation: vms-sheet-in 200ms var(--vms-ease);\r\n}\r\n.vms-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }\r\n.vms-dialog-head b { font-size: 12.5px; font-weight: 600; }\r\n.vms-dialog-form { display: grid; gap: 9px; }\r\n.vms-dialog-field { display: grid; gap: 5px; }\r\n.vms-dialog-field > span { font-size: 9.5px; color: var(--vms-ink4); }\r\n.vms-dialog-hint { font-size: 9px; color: var(--vms-ink4); line-height: 1.45; }\r\n.vms-dialog-text { margin: 0; font-size: 11px; line-height: 1.55; color: var(--vms-ink2); }\r\n.vms-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }\r\n.vms-primary-btn.is-danger { background: var(--vms-danger); color: #fff; }\r\n\r\n/* Document / PDF preview. */\r\n.vms-sheet-stage.is-pdf { background: #202124; }\r\n.vms-pdf-frame { width: 100%; height: 100%; border: 0; background: #fff; }\r\n.vms-sheet-stage.is-text { background: var(--vms-bg); }\r\n.vms-text-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\r\n.vms-text-content {\r\n  flex: 1; min-height: 0; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre;\r\n  font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6;\r\n  color: var(--vms-ink); background: var(--vms-bg); tab-size: 2;\r\n}\r\n.vms-preview-note { flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 9.5px; color: var(--vms-ink3); background: var(--vms-layer2); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-stage.is-text > .vms-preview-note:only-child { margin: auto; border: 0; background: transparent; }\r\n.vms-generic-preview { margin: auto; display: grid; justify-items: center; gap: 9px; padding: 32px; text-align: center; color: var(--vms-ink2); }\r\n.vms-generic-glyph { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink3); }\r\n.vms-generic-preview b { font-size: 14px; font-weight: 550; }\r\n.vms-generic-preview p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); }\r\n.vms-generic-preview small { font-size: 9.5px; color: var(--vms-ink4); }\r\n/* Selection, tree view, batch bar and rich previews. */\n.vms-card[data-selected] { border-color: color-mix(in srgb, var(--vms-accent) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 55%, transparent); }\n.vms-select-badge { position: absolute; z-index: 6; left: 7px; bottom: 7px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--vms-accent); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.28); }\n.vms-row[data-selected] { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); }\n\n.vms-selection-bar {\n  flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 16px;\n  border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2);\n  overflow-x: auto; scrollbar-width: none;\n}\n.vms-selection-bar::-webkit-scrollbar { display: none; }\n.vms-selection-bar b { font-size: 10.5px; font-weight: 600; margin-right: 2px; white-space: nowrap; }\n.vms-selection-bar .vms-ghost-btn { height: 26px; background: var(--vms-layer); }\n.vms-selection-bar .vms-ghost-btn.is-danger { color: var(--vms-danger); border-color: color-mix(in srgb, var(--vms-danger) 30%, transparent); }\n\n.vms-tree-wrap { padding: 6px 10px 16px; }\n.vms-tree-head {\n  display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 78px 72px 62px 28px;\n  gap: 8px; padding: 6px 8px 5px; font-size: 9px; color: var(--vms-ink4);\n  border-bottom: 0.5px solid var(--vms-line);\n}\n.vms-tree { display: flex; flex-direction: column; padding-top: 3px; }\n.vms-tree.is-empty { padding: 28px 12px; color: var(--vms-ink4); font-size: 10.5px; text-align: center; }\n.vms-tree-row {\n  display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 28px;\n  align-items: center; gap: 8px; min-height: 29px; padding: 3px 8px;\n  border-radius: 8px; border: 0.5px solid transparent; cursor: pointer; outline: 0;\n}\n.vms-tree-row[data-detail="detailed"] { grid-template-columns: 14px 18px minmax(0, 1fr) 78px 72px 62px 28px; }\n.vms-tree-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); }\n.vms-tree-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\n.vms-tree-row[data-selected] { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); }\n.vms-tree-row.is-folder .vms-tree-name { font-weight: 550; }\n.vms-tree-chevron { display: grid; place-items: center; color: var(--vms-ink4); }\n.vms-tree-chevron svg { transition: transform 150ms var(--vms-ease); }\n.vms-tree-chevron[data-expanded] svg { transform: rotate(90deg); }\n.vms-tree-folder-icon { display: grid; place-items: center; color: var(--vms-tape); }\n.vms-tree-file-icon { display: grid; place-items: center; color: var(--vms-ink3); }\n.vms-tree-file-icon[data-kind="image"] { color: var(--vms-accent); }\n.vms-tree-file-icon[data-kind="video"] { color: var(--vms-tape); }\n.vms-tree-file-icon[data-kind="audio"] { color: var(--vms-mint); }\n.vms-tree-file-icon[data-kind="document"] { color: #6f8fd8; }\n.vms-tree-file-icon[data-kind="archive"] { color: #c99a5b; }\n.vms-tree-file-icon[data-kind="code"] { color: #7fb99a; }\n.vms-tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }\n.vms-tree-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: var(--vms-ink4); }\n.vms-tree-more { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; opacity: 0; }\n.vms-tree-row:hover .vms-tree-more, .vms-tree-row:focus-within .vms-tree-more { opacity: 1; }\n.vms-tree-more:hover { background: var(--vms-layer3); color: var(--vms-ink); }\n@container (max-width: 560px) {\n  .vms-tree-head { grid-template-columns: 14px 18px minmax(0, 1fr) 72px 28px; }\n  .vms-tree-head > :nth-child(4), .vms-tree-head > :nth-child(6) { display: none; }\n  .vms-tree-row[data-detail="detailed"] { grid-template-columns: 14px 18px minmax(0, 1fr) 72px 28px; }\n  .vms-tree-row[data-detail="detailed"] > :nth-child(4),\n  .vms-tree-row[data-detail="detailed"] > :nth-child(6) { display: none; }\n}\n\n/* Rich previews. */\n.vms-rich-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-bg); }\n.vms-preview-modes { flex: none; display: flex; gap: 4px; padding: 6px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2); }\n.vms-preview-modes button { height: 24px; padding: 0 9px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: transparent; color: var(--vms-ink3); font-size: 9.5px; }\n.vms-preview-modes button.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }\n.vms-markdown {\n  flex: 1; min-height: 0; overflow: auto; padding: 16px 18px 30px; line-height: 1.7;\n  font-size: 11.5px; color: var(--vms-ink); background: var(--vms-bg);\n}\n.vms-markdown h1, .vms-markdown h2, .vms-markdown h3, .vms-markdown h4 { margin: 1.1em 0 .45em; line-height: 1.35; font-weight: 600; }\n.vms-markdown h1 { font-size: 1.55em; border-bottom: 0.5px solid var(--vms-line); padding-bottom: .3em; }\n.vms-markdown h2 { font-size: 1.3em; border-bottom: 0.5px solid var(--vms-line); padding-bottom: .25em; }\n.vms-markdown h3 { font-size: 1.12em; }\n.vms-markdown p, .vms-markdown ul, .vms-markdown ol, .vms-markdown blockquote, .vms-markdown pre, .vms-markdown table { margin: .65em 0; }\n.vms-markdown ul, .vms-markdown ol { padding-left: 1.5em; }\n.vms-markdown li { margin: .2em 0; }\n.vms-markdown a { color: var(--vms-accent); text-decoration: none; }\n.vms-markdown a:hover { text-decoration: underline; }\n.vms-markdown img { max-width: 100%; height: auto; border-radius: 8px; }\n.vms-markdown blockquote { padding: .3em .9em; border-left: 3px solid var(--vms-line2); color: var(--vms-ink3); background: var(--vms-layer2); border-radius: 0 6px 6px 0; }\n.vms-markdown code { font-family: var(--dsh-font-family-code, monospace); font-size: .92em; background: var(--vms-layer2); border-radius: 4px; padding: .12em .35em; }\n.vms-markdown pre { background: #0f1218; color: #d9dee7; border-radius: 9px; padding: 11px 13px; overflow: auto; font-size: 10px; line-height: 1.55; }\n.vms-markdown pre code { background: transparent; padding: 0; color: inherit; }\n.vms-markdown table { border-collapse: collapse; width: 100%; font-size: 10.5px; }\n.vms-markdown th, .vms-markdown td { border: 0.5px solid var(--vms-line); padding: 5px 8px; text-align: left; }\n.vms-markdown th { background: var(--vms-layer2); font-weight: 600; }\n.vms-markdown hr { border: 0; border-top: 0.5px solid var(--vms-line); margin: 1.2em 0; }\n\n.vms-code-view { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #0f1218; }\n.vms-code-head { flex: none; display: flex; justify-content: space-between; gap: 10px; padding: 6px 12px; border-bottom: 0.5px solid rgba(255,255,255,.09); color: rgba(255,255,255,.5); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; }\n.vms-code-content { flex: 1; min-height: 0; margin: 0; padding: 13px 16px 24px; overflow: auto; white-space: pre; tab-size: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6; color: #d6dbe5; background: transparent; }\n.vms-code-content code { font: inherit; }\n.hljs-comment, .hljs-quote { color: #7f8a9e; font-style: italic; }\n.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #c792ea; }\n.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta .hljs-string { color: #a5d6a7; }\n.hljs-number, .hljs-symbol, .hljs-bullet, .hljs-variable, .hljs-template-variable { color: #f2b880; }\n.hljs-title, .hljs-title.class_, .hljs-title.function_, .hljs-name, .hljs-selector-id, .hljs-selector-class { color: #82aaff; }\n.hljs-attr, .hljs-property, .hljs-params { color: #e5c07b; }\n.hljs-built_in, .hljs-type, .hljs-class .hljs-title { color: #7fdbca; }\n.hljs-meta, .hljs-doctag { color: #ffcb6b; }\n.hljs-deletion { color: #ff7b72; }\n.hljs-emphasis { font-style: italic; }\n.hljs-strong { font-weight: 700; }\n\n.vms-html-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: #fff; }\n.vms-table-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--vms-bg); }\n.vms-table { border-collapse: collapse; min-width: 100%; font-size: 10.5px; }\n.vms-table th, .vms-table td { border: 0.5px solid var(--vms-line); padding: 5px 9px; text-align: left; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }\n.vms-table th { position: sticky; top: 0; background: var(--vms-layer2); font-weight: 600; z-index: 1; }\n.vms-table tr:nth-child(even) td { background: color-mix(in srgb, var(--vms-layer2) 45%, transparent); }\n\n@container (max-width: 520px) {\n  .vms-selection-bar { padding: 6px 10px; }\n  .vms-selection-bar .vms-ghost-btn { font-size: 9.5px; padding: 0 7px; }\n}\n';
 
 // src/client/library.js
-var import_react6 = __toESM(require("react"), 1);
+var import_react8 = __toESM(require("react"), 1);
 
 // node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
 var React = __toESM(require("react"), 1);
@@ -1319,11 +2880,11 @@ function cssClass(name) {
 function cssVar(name) {
   return `--${cssPrefix$3}${name}`;
 }
-function composePrefix(base, prefix) {
-  return `${base}${prefix ? `_${prefix}` : ""}`;
+function composePrefix(base2, prefix) {
+  return `${base2}${prefix ? `_${prefix}` : ""}`;
 }
-function makeComposePrefix(base) {
-  return (prefix) => composePrefix(base, prefix);
+function makeComposePrefix(base2) {
+  return (prefix) => composePrefix(base2, prefix);
 }
 function translateLabel(labels, defaultLabel) {
   var _a;
@@ -1358,10 +2919,10 @@ function round(value, decimals = 0) {
 function isImageSlide(slide) {
   return slide.type === void 0 || slide.type === "image";
 }
-function isImageFitCover(image, imageFit) {
-  return image.imageFit === IMAGE_FIT_COVER || image.imageFit !== IMAGE_FIT_CONTAIN && imageFit === IMAGE_FIT_COVER;
+function isImageFitCover(image2, imageFit) {
+  return image2.imageFit === IMAGE_FIT_COVER || image2.imageFit !== IMAGE_FIT_CONTAIN && imageFit === IMAGE_FIT_COVER;
 }
-function parseInt(value) {
+function parseInt2(value) {
   return typeof value === "string" ? Number.parseInt(value, 10) : value;
 }
 function parseLengthPercentage(input) {
@@ -1369,7 +2930,7 @@ function parseLengthPercentage(input) {
     return { pixel: input };
   }
   if (typeof input === "string") {
-    const value = parseInt(input);
+    const value = parseInt2(input);
     return input.endsWith("%") ? { percent: value } : { pixel: value };
   }
   return { pixel: 0 };
@@ -1502,9 +3063,9 @@ function traverse(nodes, target, apply) {
   });
 }
 function withPlugins(root, plugins = [], augmentations = []) {
-  let config = root;
+  let config2 = root;
   const contains = (target) => {
-    const nodes = [...config];
+    const nodes = [...config2];
     while (nodes.length > 0) {
       const node = nodes.pop();
       if ((node === null || node === void 0 ? void 0 : node.module.name) === target)
@@ -1516,16 +3077,16 @@ function withPlugins(root, plugins = [], augmentations = []) {
   };
   const addParent = (target, module2) => {
     if (target === "") {
-      config = [createNode(module2, config)];
+      config2 = [createNode(module2, config2)];
       return;
     }
-    config = traverse(config, target, (node) => [createNode(module2, [node])]);
+    config2 = traverse(config2, target, (node) => [createNode(module2, [node])]);
   };
   const append = (target, module2) => {
-    config = traverse(config, target, (node) => [createNode(node.module, [createNode(module2, node.children)])]);
+    config2 = traverse(config2, target, (node) => [createNode(node.module, [createNode(module2, node.children)])]);
   };
   const addChild = (target, module2, precede) => {
-    config = traverse(config, target, (node) => {
+    config2 = traverse(config2, target, (node) => {
       var _a;
       return [
         createNode(node.module, [
@@ -1537,7 +3098,7 @@ function withPlugins(root, plugins = [], augmentations = []) {
     });
   };
   const addSibling = (target, module2, precede) => {
-    config = traverse(config, target, (node) => [
+    config2 = traverse(config2, target, (node) => [
       ...precede ? [createNode(module2)] : [],
       node,
       ...!precede ? [createNode(module2)] : []
@@ -1546,11 +3107,11 @@ function withPlugins(root, plugins = [], augmentations = []) {
   const addModule = (module2) => {
     append(MODULE_CONTROLLER, module2);
   };
-  const replace = (target, module2) => {
-    config = traverse(config, target, (node) => [createNode(module2, node.children)]);
+  const replace2 = (target, module2) => {
+    config2 = traverse(config2, target, (node) => [createNode(module2, node.children)]);
   };
   const remove = (target) => {
-    config = traverse(config, target, (node) => node.children);
+    config2 = traverse(config2, target, (node) => node.children);
   };
   const augment = (augmentation) => {
     augmentations.push(augmentation);
@@ -1563,13 +3124,13 @@ function withPlugins(root, plugins = [], augmentations = []) {
       addChild,
       addSibling,
       addModule,
-      replace,
+      replace: replace2,
       remove,
       augment
     });
   });
   return {
-    config,
+    config: config2,
     augmentation: (props) => augmentations.reduce((acc, augmentation) => augmentation(acc), props)
   };
 }
@@ -1808,7 +3369,7 @@ function currentTransformation(node) {
   const matrix = window.getComputedStyle(node).transform;
   const matcher = matrix.match(/matrix.*\((.+)\)/);
   if (matcher) {
-    const values = matcher[1].split(",").map(parseInt);
+    const values = matcher[1].split(",").map(parseInt2);
     if (values.length === 6) {
       x = values[4];
       y = values[5];
@@ -1984,7 +3545,7 @@ function useThrottle(callback, delay) {
 }
 var slidePrefix = makeComposePrefix("slide");
 var slideImagePrefix = makeComposePrefix("slide_image");
-function ImageSlide({ slide: image, offset, render, rect, rotation: rotationProp = 0, imageFit, imageProps, onClick, onLoad, onError, style }) {
+function ImageSlide({ slide: image2, offset, render, rect, rotation: rotationProp = 0, imageFit, imageProps, onClick, onLoad, onError, style }) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
   const [status, setStatus] = React.useState(SLIDE_STATUS_LOADING);
   const { publish } = useEvents();
@@ -2020,15 +3581,15 @@ function ImageSlide({ slide: image, offset, render, rect, rotation: rotationProp
     setStatus(SLIDE_STATUS_ERROR);
     onError === null || onError === void 0 ? void 0 : onError();
   });
-  const cover = isImageFitCover(image, imageFit);
+  const cover = isImageFitCover(image2, imageFit);
   const rotation = normalizeRotation(rotationProp);
   const rotated = rotation % 180 !== 0;
   const imageRect = rect && rotated ? { width: rect.height, height: rect.width } : rect;
   const widthLimit = rotated && imageRect ? `${imageRect.width}px` : "100%";
   const heightLimit = rotated && imageRect ? `${imageRect.height}px` : "100%";
   const nonInfinite = (value, fallback) => Number.isFinite(value) ? value : fallback;
-  const maxWidth = nonInfinite(Math.max(...((_b = (_a = image.srcSet) === null || _a === void 0 ? void 0 : _a.map((x) => x.width)) !== null && _b !== void 0 ? _b : []).concat(image.width ? [image.width] : []).filter(Boolean)), ((_c = imageRef.current) === null || _c === void 0 ? void 0 : _c.naturalWidth) || 0);
-  const maxHeight = nonInfinite(Math.max(...((_e = (_d = image.srcSet) === null || _d === void 0 ? void 0 : _d.map((x) => x.height)) !== null && _e !== void 0 ? _e : []).concat(image.height ? [image.height] : []).filter(Boolean)), ((_f = imageRef.current) === null || _f === void 0 ? void 0 : _f.naturalHeight) || 0);
+  const maxWidth = nonInfinite(Math.max(...((_b = (_a = image2.srcSet) === null || _a === void 0 ? void 0 : _a.map((x) => x.width)) !== null && _b !== void 0 ? _b : []).concat(image2.width ? [image2.width] : []).filter(Boolean)), ((_c = imageRef.current) === null || _c === void 0 ? void 0 : _c.naturalWidth) || 0);
+  const maxHeight = nonInfinite(Math.max(...((_e = (_d = image2.srcSet) === null || _d === void 0 ? void 0 : _d.map((x) => x.height)) !== null && _e !== void 0 ? _e : []).concat(image2.height ? [image2.height] : []).filter(Boolean)), ((_f = imageRef.current) === null || _f === void 0 ? void 0 : _f.naturalHeight) || 0);
   const defaultStyle = maxWidth && maxHeight ? {
     maxWidth: `min(${maxWidth}px, ${widthLimit})`,
     maxHeight: `min(${maxHeight}px, ${heightLimit})`
@@ -2038,17 +3599,17 @@ function ImageSlide({ slide: image, offset, render, rect, rotation: rotationProp
   };
   const fitScale = imageRect && maxWidth && maxHeight ? Math.min(imageRect.width / maxWidth, imageRect.height / maxHeight, 1) : 0;
   const rotatedSize = rotated && imageRect ? cover ? { width: imageRect.width, height: imageRect.height } : fitScale ? { width: maxWidth * fitScale, height: maxHeight * fitScale } : null : null;
-  const srcSet = (_g = image.srcSet) === null || _g === void 0 ? void 0 : _g.slice().sort((a, b) => a.width - b.width).map((item) => `${item.src} ${item.width}w`).join(", ");
+  const srcSet = (_g = image2.srcSet) === null || _g === void 0 ? void 0 : _g.slice().sort((a, b) => a.width - b.width).map((item) => `${item.src} ${item.width}w`).join(", ");
   const estimateActualWidth = () => {
     if (!imageRect)
       return void 0;
-    if (!image.width || !image.height)
+    if (!image2.width || !image2.height)
       return imageRect.width;
-    return (cover ? Math.max : Math.min)(imageRect.height / image.height * image.width, imageRect.width);
+    return (cover ? Math.max : Math.min)(imageRect.height / image2.height * image2.width, imageRect.width);
   };
   const actualWidth = estimateActualWidth();
   const sizes = srcSet && actualWidth !== void 0 && hasWindow() ? `${Math.round(actualWidth)}px` : void 0;
-  const { style: imagePropsStyle, className: imagePropsClassName, ...restImageProps } = (typeof imageProps === "function" ? imageProps(image) : imageProps) || {};
+  const { style: imagePropsStyle, className: imagePropsClassName, ...restImageProps } = (typeof imageProps === "function" ? imageProps(image2) : imageProps) || {};
   return React.createElement(
     React.Fragment,
     null,
@@ -2059,7 +3620,7 @@ function ImageSlide({ slide: image, offset, render, rect, rotation: rotationProp
       ...rotatedSize,
       ...style,
       ...imagePropsStyle
-    }, ...restImageProps, alt: (_h = image.alt) !== null && _h !== void 0 ? _h : "", sizes, srcSet, src: image.src }),
+    }, ...restImageProps, alt: (_h = image2.alt) !== null && _h !== void 0 ? _h : "", sizes, srcSet, src: image2.src }),
     status !== SLIDE_STATUS_COMPLETE && React.createElement(
       "div",
       { className: cssClass(slidePrefix(SLIDE_STATUS_PLACEHOLDER)) },
@@ -2712,7 +4273,7 @@ function padScrollbar(element, padding, rtl) {
   const property = rtl ? "padding-left" : "padding-right";
   const computedValue = rtl ? styles.paddingLeft : styles.paddingRight;
   const originalValue = element.style.getPropertyValue(property);
-  element.style.setProperty(property, `${(parseInt(computedValue) || 0) + padding}px`);
+  element.style.setProperty(property, `${(parseInt2(computedValue) || 0) + padding}px`);
   return () => {
     if (originalValue) {
       element.style.setProperty(property, originalValue);
@@ -2874,7 +4435,7 @@ function mergeAnimation(defaultAnimation, animation = {}) {
 }
 function Lightbox({ carousel, animation, render, toolbar, controller, noScroll: noScroll2, on, plugins, slides, index, ...restProps }) {
   const { animation: defaultAnimation, carousel: defaultCarousel, render: defaultRender, toolbar: defaultToolbar, controller: defaultController, noScroll: defaultNoScroll, on: defaultOn, slides: defaultSlides, index: defaultIndex, plugins: defaultPlugins, ...restDefaultProps } = LightboxDefaultProps;
-  const { config, augmentation } = withPlugins([
+  const { config: config2, augmentation } = withPlugins([
     createNode(PortalModule, [
       createNode(NoScrollModule, [
         createNode(ControllerModule, [
@@ -2903,14 +4464,14 @@ function Lightbox({ carousel, animation, render, toolbar, controller, noScroll: 
     { ...props },
     React.createElement(
       LightboxStateProvider,
-      { slides: slides || defaultSlides, index: parseInt(index || defaultIndex) },
+      { slides: slides || defaultSlides, index: parseInt2(index || defaultIndex) },
       React.createElement(
         TimeoutsProvider,
         null,
         React.createElement(
           EventsProvider,
           null,
-          React.createElement(A11yContextProvider, null, renderNode(createNode(RootModule, config), props))
+          React.createElement(A11yContextProvider, null, renderNode(createNode(RootModule, config2), props))
         )
       )
     )
@@ -3081,7 +4642,7 @@ var React4 = __toESM(require("react"), 1);
 function InlineContainer({ inline: { className, style, ...rest } = {}, styles, children }) {
   return React4.createElement(LightboxRoot, { className: clsx(cssClass("relative"), className), style: { [cssVar("controller_overscroll_behavior")]: "contain auto", ...styles.root, ...style }, ...rest }, children);
 }
-function Inline({ augment, replace, remove }) {
+function Inline({ augment, replace: replace2, remove }) {
   augment(({ toolbar: { buttons, ...restToolbar }, open, close, controller: { focus, aria, touchAction, ...restController }, className, ...restProps }) => ({
     open: true,
     close: () => {
@@ -3096,7 +4657,7 @@ function Inline({ augment, replace, remove }) {
     ...restProps
   }));
   remove(MODULE_NO_SCROLL);
-  replace(MODULE_PORTAL, createModule(PLUGIN_INLINE, InlineContainer));
+  replace2(MODULE_PORTAL, createModule(PLUGIN_INLINE, InlineContainer));
 }
 
 // node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/plugins/thumbnails/index.js
@@ -3517,7 +5078,7 @@ function Video2({ augment }) {
     render: {
       slide: ({ slide, offset, rect }) => {
         var _a;
-        return isVideoSlide(slide) ? React6.createElement(VideoSlide, { key: (_a = slide.sources) === null || _a === void 0 ? void 0 : _a.map((source) => source.src).join("|"), slide, offset }) : renderSlide === null || renderSlide === void 0 ? void 0 : renderSlide({ slide, offset, rect });
+        return isVideoSlide(slide) ? React6.createElement(VideoSlide, { key: (_a = slide.sources) === null || _a === void 0 ? void 0 : _a.map((source2) => source2.src).join("|"), slide, offset }) : renderSlide === null || renderSlide === void 0 ? void 0 : renderSlide({ slide, offset, rect });
       },
       ...restRender
     },
@@ -3943,16 +5504,16 @@ function isResponsiveImageSlide(slide) {
   var _a;
   return (((_a = slide.srcSet) === null || _a === void 0 ? void 0 : _a.length) || 0) > 0;
 }
-function reducer2({ current, preload }, { type, source }) {
+function reducer2({ current, preload }, { type, source: source2 }) {
   switch (type) {
     case "fetch":
       if (!current) {
-        return { current: source };
+        return { current: source2 };
       }
-      return { current, preload: source };
+      return { current, preload: source2 };
     case "done":
-      if (source === preload) {
-        return { current: source };
+      if (source2 === preload) {
+        return { current: source2 };
       }
       return { current, preload };
     default:
@@ -3962,13 +5523,13 @@ function reducer2({ current, preload }, { type, source }) {
 function ResponsiveImage(props) {
   var _a, _b;
   const [{ current, preload }, dispatch] = React7.useReducer(reducer2, {});
-  const { slide: image, rect, rotation = 0, imageFit, render, interactive, zoom = 1 } = props;
+  const { slide: image2, rect, rotation = 0, imageFit, render, interactive, zoom = 1 } = props;
   const rotated = rotation % 180 !== 0;
   const imageRect = rotated ? { width: rect.height, height: rect.width } : rect;
-  const srcSet = [...image.srcSet].sort((a, b) => a.width - b.width);
-  const width = (_a = image.width) !== null && _a !== void 0 ? _a : srcSet[srcSet.length - 1].width;
-  const height = (_b = image.height) !== null && _b !== void 0 ? _b : srcSet[srcSet.length - 1].height;
-  const cover = isImageFitCover(image, imageFit);
+  const srcSet = [...image2.srcSet].sort((a, b) => a.width - b.width);
+  const width = (_a = image2.width) !== null && _a !== void 0 ? _a : srcSet[srcSet.length - 1].width;
+  const height = (_b = image2.height) !== null && _b !== void 0 ? _b : srcSet[srcSet.length - 1].height;
+  const cover = isImageFitCover(image2, imageFit);
   const maxWidth = Math.max(...srcSet.map((x) => x.width));
   const targetWidth = Math.min((cover ? Math.max : Math.min)(imageRect.width, width * (imageRect.height / height)) * zoom, maxWidth);
   const pixelDensity = devicePixelRatio();
@@ -3990,12 +5551,12 @@ function ResponsiveImage(props) {
   return React7.createElement(
     React7.Fragment,
     null,
-    preload && preload !== current && React7.createElement(ImageSlide, { key: "preload", ...props, offset: void 0, slide: { ...image, src: preload, srcSet: void 0 }, style: { position: "absolute", visibility: "hidden", ...style }, onLoad: () => handlePreload(preload), render: {
+    preload && preload !== current && React7.createElement(ImageSlide, { key: "preload", ...props, offset: void 0, slide: { ...image2, src: preload, srcSet: void 0 }, style: { position: "absolute", visibility: "hidden", ...style }, onLoad: () => handlePreload(preload), render: {
       ...render,
       iconLoading: () => null,
       iconError: () => null
     } }),
-    current && React7.createElement(ImageSlide, { key: "current", ...props, slide: { ...image, src: current, srcSet: void 0 }, style })
+    current && React7.createElement(ImageSlide, { key: "current", ...props, slide: { ...image2, src: current, srcSet: void 0 }, style })
   );
 }
 function ZoomWrapper({ render, slide, offset, rect }) {
@@ -4086,7 +5647,7 @@ var Zoom = ({ augment, addModule }) => {
 };
 
 // src/client/components.js
-var import_react4 = __toESM(require("react"), 1);
+var import_react5 = __toESM(require("react"), 1);
 
 // src/client/helpers.js
 var LIBRARY_ID = "vyra-media-studio/library";
@@ -4152,7 +5713,23 @@ var TEXT_EXT = /* @__PURE__ */ new Set([
   "env",
   "gitignore",
   "dockerfile",
-  "makefile"
+  "makefile",
+  "hcl",
+  "tf",
+  "proto",
+  "graphql",
+  "gql",
+  "cmake",
+  "gradle",
+  "properties",
+  "patch",
+  "diff",
+  "mdx",
+  "rst",
+  "adoc",
+  "srt",
+  "vtt",
+  "nfo"
 ]);
 var TYPE_LABEL = {
   all: "\u5168\u90E8",
@@ -4204,9 +5781,9 @@ var MIME = {
 function extensionOf(value) {
   const clean = String(value ?? "").split(/[?#]/, 1)[0];
   const slash = Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\"));
-  const base = clean.slice(slash + 1);
-  const dot = base.lastIndexOf(".");
-  return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
+  const base2 = clean.slice(slash + 1);
+  const dot = base2.lastIndexOf(".");
+  return dot <= 0 ? "" : base2.slice(dot + 1).toLowerCase();
 }
 function kindOfExtension(extension) {
   const ext = String(extension ?? "").toLowerCase();
@@ -4302,8 +5879,8 @@ function parseFileAddress(address) {
 }
 function sessionFileAddress(sessionId, path) {
   const normalized = String(path).replaceAll("\\", "/").replace(/^(?:\.\/)+/, "");
-  const encode = (segment) => encodeURIComponent(segment).replace(/%3A/gi, ":");
-  return `dsh-resource://file/session/${encode(sessionId)}/${normalized.split("/").map(encode).join("/")}`;
+  const encode3 = (segment) => encodeURIComponent(segment).replace(/%3A/gi, ":");
+  return `dsh-resource://file/session/${encode3(sessionId)}/${normalized.split("/").map(encode3).join("/")}`;
 }
 function apiUrl(path, params) {
   const url = new URL(path, document.baseURI);
@@ -4333,12 +5910,12 @@ async function postJson(path, body, signal) {
     data = void 0;
   }
   if (!response.ok || data?.ok !== true) {
-    const code = data?.code ?? `http-${response.status}`;
-    const error = new Error(`${code}\uFF1A${data?.error ?? `HTTP ${response.status}`}`);
-    error.code = code;
-    error.canPermanent = data?.canPermanent === true;
-    error.status = response.status;
-    throw error;
+    const code2 = data?.code ?? `http-${response.status}`;
+    const error2 = new Error(`${code2}\uFF1A${data?.error ?? `HTTP ${response.status}`}`);
+    error2.code = code2;
+    error2.canPermanent = data?.canPermanent === true;
+    error2.status = response.status;
+    throw error2;
   }
   return data;
 }
@@ -4399,6 +5976,7 @@ function writeLinks(root, links) {
 var PREFS_KEY = "vyra-media-studio.prefs.v1";
 var PREF_DEFAULTS = {
   view: "grid",
+  listMode: "tree",
   cardSize: CARD_DEFAULT,
   detail: "compact",
   sort: "name",
@@ -4413,6 +5991,7 @@ function readPrefs() {
     const merged = { ...PREF_DEFAULTS, ...parsed };
     return {
       view: merged.view === "list" ? "list" : "grid",
+      listMode: merged.listMode === "flat" ? "flat" : "tree",
       cardSize: Number.isFinite(merged.cardSize) ? Math.min(CARD_MAX, Math.max(CARD_MIN, merged.cardSize)) : CARD_DEFAULT,
       detail: merged.detail === "detailed" ? "detailed" : "compact",
       sort: ["name", "time", "size", "type"].includes(merged.sort) ? merged.sort : "name",
@@ -4561,12 +6140,16722 @@ function kindIcon(kind, ext = "") {
   return kind;
 }
 
-// src/client/components.js
+// src/client/preview.js
+var import_react4 = __toESM(require("react"), 1);
+
+// node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/index.mjs
+var mdurl_exports = {};
+__export(mdurl_exports, {
+  decode: () => decode_default,
+  encode: () => encode_default,
+  format: () => format,
+  parse: () => parse_default
+});
+
+// node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/lib/decode.mjs
+var decodeCache = {};
+function getDecodeCache(exclude) {
+  let cache = decodeCache[exclude];
+  if (cache) {
+    return cache;
+  }
+  cache = decodeCache[exclude] = [];
+  for (let i = 0; i < 128; i++) {
+    const ch = String.fromCharCode(i);
+    cache.push(ch);
+  }
+  for (let i = 0; i < exclude.length; i++) {
+    const ch = exclude.charCodeAt(i);
+    cache[ch] = "%" + ("0" + ch.toString(16).toUpperCase()).slice(-2);
+  }
+  return cache;
+}
+function decode(string, exclude) {
+  if (typeof exclude !== "string") {
+    exclude = decode.defaultChars;
+  }
+  const cache = getDecodeCache(exclude);
+  return string.replace(/(%[a-f0-9]{2})+/gi, function(seq) {
+    let result = "";
+    for (let i = 0, l = seq.length; i < l; i += 3) {
+      const b1 = parseInt(seq.slice(i + 1, i + 3), 16);
+      if (b1 < 128) {
+        result += cache[b1];
+        continue;
+      }
+      if ((b1 & 224) === 192 && i + 3 < l) {
+        const b2 = parseInt(seq.slice(i + 4, i + 6), 16);
+        if ((b2 & 192) === 128) {
+          const chr = b1 << 6 & 1984 | b2 & 63;
+          if (chr < 128) {
+            result += "\uFFFD\uFFFD";
+          } else {
+            result += String.fromCharCode(chr);
+          }
+          i += 3;
+          continue;
+        }
+      }
+      if ((b1 & 240) === 224 && i + 6 < l) {
+        const b2 = parseInt(seq.slice(i + 4, i + 6), 16);
+        const b3 = parseInt(seq.slice(i + 7, i + 9), 16);
+        if ((b2 & 192) === 128 && (b3 & 192) === 128) {
+          const chr = b1 << 12 & 61440 | b2 << 6 & 4032 | b3 & 63;
+          if (chr < 2048 || chr >= 55296 && chr <= 57343) {
+            result += "\uFFFD\uFFFD\uFFFD";
+          } else {
+            result += String.fromCharCode(chr);
+          }
+          i += 6;
+          continue;
+        }
+      }
+      if ((b1 & 248) === 240 && i + 9 < l) {
+        const b2 = parseInt(seq.slice(i + 4, i + 6), 16);
+        const b3 = parseInt(seq.slice(i + 7, i + 9), 16);
+        const b4 = parseInt(seq.slice(i + 10, i + 12), 16);
+        if ((b2 & 192) === 128 && (b3 & 192) === 128 && (b4 & 192) === 128) {
+          let chr = b1 << 18 & 1835008 | b2 << 12 & 258048 | b3 << 6 & 4032 | b4 & 63;
+          if (chr < 65536 || chr > 1114111) {
+            result += "\uFFFD\uFFFD\uFFFD\uFFFD";
+          } else {
+            chr -= 65536;
+            result += String.fromCharCode(55296 + (chr >> 10), 56320 + (chr & 1023));
+          }
+          i += 9;
+          continue;
+        }
+      }
+      result += "\uFFFD";
+    }
+    return result;
+  });
+}
+decode.defaultChars = ";/?:@&=+$,#";
+decode.componentChars = "";
+var decode_default = decode;
+
+// node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/lib/encode.mjs
+var encodeCache = {};
+function getEncodeCache(exclude) {
+  let cache = encodeCache[exclude];
+  if (cache) {
+    return cache;
+  }
+  cache = encodeCache[exclude] = [];
+  for (let i = 0; i < 128; i++) {
+    const ch = String.fromCharCode(i);
+    if (/^[0-9a-z]$/i.test(ch)) {
+      cache.push(ch);
+    } else {
+      cache.push("%" + ("0" + i.toString(16).toUpperCase()).slice(-2));
+    }
+  }
+  for (let i = 0; i < exclude.length; i++) {
+    cache[exclude.charCodeAt(i)] = exclude[i];
+  }
+  return cache;
+}
+function encode(string, exclude, keepEscaped) {
+  if (typeof exclude !== "string") {
+    keepEscaped = exclude;
+    exclude = encode.defaultChars;
+  }
+  if (typeof keepEscaped === "undefined") {
+    keepEscaped = true;
+  }
+  const cache = getEncodeCache(exclude);
+  let result = "";
+  for (let i = 0, l = string.length; i < l; i++) {
+    const code2 = string.charCodeAt(i);
+    if (keepEscaped && code2 === 37 && i + 2 < l) {
+      if (/^[0-9a-f]{2}$/i.test(string.slice(i + 1, i + 3))) {
+        result += string.slice(i, i + 3);
+        i += 2;
+        continue;
+      }
+    }
+    if (code2 < 128) {
+      result += cache[code2];
+      continue;
+    }
+    if (code2 >= 55296 && code2 <= 57343) {
+      if (code2 >= 55296 && code2 <= 56319 && i + 1 < l) {
+        const nextCode = string.charCodeAt(i + 1);
+        if (nextCode >= 56320 && nextCode <= 57343) {
+          result += encodeURIComponent(string[i] + string[i + 1]);
+          i++;
+          continue;
+        }
+      }
+      result += "%EF%BF%BD";
+      continue;
+    }
+    result += encodeURIComponent(string[i]);
+  }
+  return result;
+}
+encode.defaultChars = ";/?:@&=+$,-_.!~*'()#";
+encode.componentChars = "-_.!~*'()";
+var encode_default = encode;
+
+// node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/lib/format.mjs
+function format(url) {
+  let result = "";
+  result += url.protocol || "";
+  result += url.slashes ? "//" : "";
+  result += url.auth ? url.auth + "@" : "";
+  if (url.hostname && url.hostname.indexOf(":") !== -1) {
+    result += "[" + url.hostname + "]";
+  } else {
+    result += url.hostname || "";
+  }
+  result += url.port ? ":" + url.port : "";
+  result += url.pathname || "";
+  result += url.search || "";
+  result += url.hash || "";
+  return result;
+}
+
+// node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/lib/parse.mjs
+function Url() {
+  this.protocol = null;
+  this.slashes = null;
+  this.auth = null;
+  this.port = null;
+  this.hostname = null;
+  this.hash = null;
+  this.search = null;
+  this.pathname = null;
+}
+var protocolPattern = /^([a-z0-9.+-]+:)/i;
+var portPattern = /:[0-9]*$/;
+var simplePathPattern = /^(\/\/?(?!\/)[^\?\s]*)(\?[^\s]*)?$/;
+var delims = ["<", ">", '"', "`", " ", "\r", "\n", "	"];
+var unwise = ["{", "}", "|", "\\", "^", "`"].concat(delims);
+var autoEscape = ["'"].concat(unwise);
+var nonHostChars = ["%", "/", "?", ";", "#"].concat(autoEscape);
+var hostEndingChars = ["/", "?", "#"];
+var hostnameMaxLen = 255;
+var hostnamePartPattern = /^[+a-z0-9A-Z_-]{0,63}$/;
+var hostnamePartStart = /^([+a-z0-9A-Z_-]{0,63})(.*)$/;
+var hostlessProtocol = {
+  javascript: true,
+  "javascript:": true
+};
+var slashedProtocol = {
+  http: true,
+  https: true,
+  ftp: true,
+  gopher: true,
+  file: true,
+  "http:": true,
+  "https:": true,
+  "ftp:": true,
+  "gopher:": true,
+  "file:": true
+};
+function urlParse(url, slashesDenoteHost) {
+  if (url && url instanceof Url) return url;
+  const u = new Url();
+  u.parse(url, slashesDenoteHost);
+  return u;
+}
+Url.prototype.parse = function(url, slashesDenoteHost) {
+  let lowerProto, hec, slashes;
+  let rest = url;
+  rest = rest.trim();
+  if (!slashesDenoteHost && url.split("#").length === 1) {
+    const simplePath = simplePathPattern.exec(rest);
+    if (simplePath) {
+      this.pathname = simplePath[1];
+      if (simplePath[2]) {
+        this.search = simplePath[2];
+      }
+      return this;
+    }
+  }
+  let proto = protocolPattern.exec(rest);
+  if (proto) {
+    proto = proto[0];
+    lowerProto = proto.toLowerCase();
+    this.protocol = proto;
+    rest = rest.substr(proto.length);
+  }
+  if (slashesDenoteHost || proto || rest.match(/^\/\/[^@\/]+@[^@\/]+/)) {
+    slashes = rest.substr(0, 2) === "//";
+    if (slashes && !(proto && hostlessProtocol[proto])) {
+      rest = rest.substr(2);
+      this.slashes = true;
+    }
+  }
+  if (!hostlessProtocol[proto] && (slashes || proto && !slashedProtocol[proto])) {
+    let hostEnd = -1;
+    for (let i = 0; i < hostEndingChars.length; i++) {
+      hec = rest.indexOf(hostEndingChars[i]);
+      if (hec !== -1 && (hostEnd === -1 || hec < hostEnd)) {
+        hostEnd = hec;
+      }
+    }
+    let auth, atSign;
+    if (hostEnd === -1) {
+      atSign = rest.lastIndexOf("@");
+    } else {
+      atSign = rest.lastIndexOf("@", hostEnd);
+    }
+    if (atSign !== -1) {
+      auth = rest.slice(0, atSign);
+      rest = rest.slice(atSign + 1);
+      this.auth = auth;
+    }
+    hostEnd = -1;
+    for (let i = 0; i < nonHostChars.length; i++) {
+      hec = rest.indexOf(nonHostChars[i]);
+      if (hec !== -1 && (hostEnd === -1 || hec < hostEnd)) {
+        hostEnd = hec;
+      }
+    }
+    if (hostEnd === -1) {
+      hostEnd = rest.length;
+    }
+    if (rest[hostEnd - 1] === ":") {
+      hostEnd--;
+    }
+    const host = rest.slice(0, hostEnd);
+    rest = rest.slice(hostEnd);
+    this.parseHost(host);
+    this.hostname = this.hostname || "";
+    const ipv6Hostname = this.hostname[0] === "[" && this.hostname[this.hostname.length - 1] === "]";
+    if (!ipv6Hostname) {
+      const hostparts = this.hostname.split(/\./);
+      for (let i = 0, l = hostparts.length; i < l; i++) {
+        const part = hostparts[i];
+        if (!part) {
+          continue;
+        }
+        if (!part.match(hostnamePartPattern)) {
+          let newpart = "";
+          for (let j = 0, k = part.length; j < k; j++) {
+            if (part.charCodeAt(j) > 127) {
+              newpart += "x";
+            } else {
+              newpart += part[j];
+            }
+          }
+          if (!newpart.match(hostnamePartPattern)) {
+            const validParts = hostparts.slice(0, i);
+            const notHost = hostparts.slice(i + 1);
+            const bit = part.match(hostnamePartStart);
+            if (bit) {
+              validParts.push(bit[1]);
+              notHost.unshift(bit[2]);
+            }
+            if (notHost.length) {
+              rest = notHost.join(".") + rest;
+            }
+            this.hostname = validParts.join(".");
+            break;
+          }
+        }
+      }
+    }
+    if (this.hostname.length > hostnameMaxLen) {
+      this.hostname = "";
+    }
+    if (ipv6Hostname) {
+      this.hostname = this.hostname.substr(1, this.hostname.length - 2);
+    }
+  }
+  const hash = rest.indexOf("#");
+  if (hash !== -1) {
+    this.hash = rest.substr(hash);
+    rest = rest.slice(0, hash);
+  }
+  const qm = rest.indexOf("?");
+  if (qm !== -1) {
+    this.search = rest.substr(qm);
+    rest = rest.slice(0, qm);
+  }
+  if (rest) {
+    this.pathname = rest;
+  }
+  if (slashedProtocol[lowerProto] && this.hostname && !this.pathname) {
+    this.pathname = "";
+  }
+  return this;
+};
+Url.prototype.parseHost = function(host) {
+  let port = portPattern.exec(host);
+  if (port) {
+    port = port[0];
+    if (port !== ":") {
+      this.port = port.substr(1);
+    }
+    host = host.substr(0, host.length - port.length);
+  }
+  if (host) {
+    this.hostname = host;
+  }
+};
+var parse_default = urlParse;
+
+// node_modules/.pnpm/uc.micro@3.0.0/node_modules/uc.micro/build/index.mjs
+var build_exports = {};
+__export(build_exports, {
+  Any: () => Any,
+  Cc: () => Cc,
+  Cf: () => Cf,
+  P: () => P,
+  S: () => S,
+  Z: () => Z
+});
+var Any = /[\0-\uD7FF\uE000-\uFFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
+var Cc = /[\0-\x1F\x7F-\x9F]/;
+var Cf = /[\xAD\u0600-\u0605\u061C\u06DD\u070F\u0890\u0891\u08E2\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\uFFF9-\uFFFB]|\uD804[\uDCBD\uDCCD]|\uD80D[\uDC30-\uDC3F]|\uD82F[\uDCA0-\uDCA3]|\uD834[\uDD73-\uDD7A]|\uDB40[\uDC01\uDC20-\uDC7F]/;
+var P = /[!-#%-\*,-\/:;\?@\[-\]_\{\}\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061D-\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u09FD\u0A76\u0AF0\u0C77\u0C84\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B4E\u1B4F\u1B5A-\u1B60\u1B7D-\u1B7F\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E4F\u2E52-\u2E5D\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD803[\uDD6E\uDEAD\uDED0\uDF55-\uDF59\uDF86-\uDF89]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC8\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9\uDFD4\uDFD5\uDFD7\uDFD8]|\uD805[\uDC4B-\uDC4F\uDC5A\uDC5B\uDC5D\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDE60-\uDE6C\uDEB9\uDF3C-\uDF3E]|\uD806[\uDC3B\uDD44-\uDD46\uDDE2\uDE3F-\uDE46\uDE9A-\uDE9C\uDE9E-\uDEA2\uDF00-\uDF09\uDFE1]|\uD807[\uDC41-\uDC45\uDC70\uDC71\uDEF7\uDEF8\uDF43-\uDF4F\uDFFF]|\uD809[\uDC70-\uDC74]|\uD80B[\uDFF1\uDFF2]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD81B[\uDD6D-\uDD6F\uDE97-\uDE9A\uDFE2]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]|\uD839\uDDFF|\uD83A[\uDD5E\uDD5F]/;
+var S = /[\$\+<->\^`\|~\xA2-\xA6\xA8\xA9\xAC\xAE-\xB1\xB4\xB8\xD7\xF7\u02C2-\u02C5\u02D2-\u02DF\u02E5-\u02EB\u02ED\u02EF-\u02FF\u0375\u0384\u0385\u03F6\u0482\u058D-\u058F\u0606-\u0608\u060B\u060E\u060F\u06DE\u06E9\u06FD\u06FE\u07F6\u07FE\u07FF\u0888\u09F2\u09F3\u09FA\u09FB\u0AF1\u0B70\u0BF3-\u0BFA\u0C7F\u0D4F\u0D79\u0E3F\u0F01-\u0F03\u0F13\u0F15-\u0F17\u0F1A-\u0F1F\u0F34\u0F36\u0F38\u0FBE-\u0FC5\u0FC7-\u0FCC\u0FCE\u0FCF\u0FD5-\u0FD8\u109E\u109F\u1390-\u1399\u166D\u17DB\u1940\u19DE-\u19FF\u1B61-\u1B6A\u1B74-\u1B7C\u1FBD\u1FBF-\u1FC1\u1FCD-\u1FCF\u1FDD-\u1FDF\u1FED-\u1FEF\u1FFD\u1FFE\u2044\u2052\u207A-\u207C\u208A-\u208C\u20A0-\u20C1\u2100\u2101\u2103-\u2106\u2108\u2109\u2114\u2116-\u2118\u211E-\u2123\u2125\u2127\u2129\u212E\u213A\u213B\u2140-\u2144\u214A-\u214D\u214F\u218A\u218B\u2190-\u2307\u230C-\u2328\u232B-\u2429\u2440-\u244A\u249C-\u24E9\u2500-\u2767\u2794-\u27C4\u27C7-\u27E5\u27F0-\u2982\u2999-\u29D7\u29DC-\u29FB\u29FE-\u2B73\u2B76-\u2BFF\u2CE5-\u2CEA\u2E50\u2E51\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFF\u3004\u3012\u3013\u3020\u3036\u3037\u303E\u303F\u309B\u309C\u3190\u3191\u3196-\u319F\u31C0-\u31E5\u31EF\u3200-\u321E\u322A-\u3247\u3250\u3260-\u327F\u328A-\u32B0\u32C0-\u33FF\u4DC0-\u4DFF\uA490-\uA4C6\uA700-\uA716\uA720\uA721\uA789\uA78A\uA828-\uA82B\uA836-\uA839\uAA77-\uAA79\uAB5B\uAB6A\uAB6B\uFB29\uFBB2-\uFBD2\uFD40-\uFD4F\uFD90\uFD91\uFDC8-\uFDCF\uFDFC-\uFDFF\uFE62\uFE64-\uFE66\uFE69\uFF04\uFF0B\uFF1C-\uFF1E\uFF3E\uFF40\uFF5C\uFF5E\uFFE0-\uFFE6\uFFE8-\uFFEE\uFFFC\uFFFD]|\uD800[\uDD37-\uDD3F\uDD79-\uDD89\uDD8C-\uDD8E\uDD90-\uDD9C\uDDA0\uDDD0-\uDDFC]|\uD802[\uDC77\uDC78\uDEC8]|\uD803[\uDD8E\uDD8F\uDED1-\uDED8]|\uD805\uDF3F|\uD807[\uDFD5-\uDFF1]|\uD81A[\uDF3C-\uDF3F\uDF45]|\uD82F\uDC9C|\uD833[\uDC00-\uDCEF\uDCFA-\uDCFC\uDD00-\uDEB3\uDEBA-\uDED0\uDEE0-\uDEF0\uDF50-\uDFC3]|\uD834[\uDC00-\uDCF5\uDD00-\uDD26\uDD29-\uDD64\uDD6A-\uDD6C\uDD83\uDD84\uDD8C-\uDDA9\uDDAE-\uDDEA\uDE00-\uDE41\uDE45\uDF00-\uDF56]|\uD835[\uDEC1\uDEDB\uDEFB\uDF15\uDF35\uDF4F\uDF6F\uDF89\uDFA9\uDFC3]|\uD836[\uDC00-\uDDFF\uDE37-\uDE3A\uDE6D-\uDE74\uDE76-\uDE83\uDE85\uDE86]|\uD838[\uDD4F\uDEFF]|\uD83B[\uDCAC\uDCB0\uDD2E\uDEF0\uDEF1]|\uD83C[\uDC00-\uDC2B\uDC30-\uDC93\uDCA0-\uDCAE\uDCB1-\uDCBF\uDCC1-\uDCCF\uDCD1-\uDCF5\uDD0D-\uDDAD\uDDE6-\uDE02\uDE10-\uDE3B\uDE40-\uDE48\uDE50\uDE51\uDE60-\uDE65\uDF00-\uDFFF]|\uD83D[\uDC00-\uDED8\uDEDC-\uDEEC\uDEF0-\uDEFC\uDF00-\uDFD9\uDFE0-\uDFEB\uDFF0]|\uD83E[\uDC00-\uDC0B\uDC10-\uDC47\uDC50-\uDC59\uDC60-\uDC87\uDC90-\uDCAD\uDCB0-\uDCBB\uDCC0\uDCC1\uDCD0-\uDCD8\uDD00-\uDE57\uDE60-\uDE6D\uDE70-\uDE7C\uDE80-\uDE8A\uDE8E-\uDEC6\uDEC8\uDECD-\uDEDC\uDEDF-\uDEEA\uDEEF-\uDEF8\uDF00-\uDF92\uDF94-\uDFEF\uDFFA]/;
+var Z = /[ \xA0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/;
+
+// node_modules/.pnpm/entities@8.1.0/node_modules/entities/dist/decode-codepoint.js
+var c1 = [
+  8364,
+  0,
+  8218,
+  402,
+  8222,
+  8230,
+  8224,
+  8225,
+  710,
+  8240,
+  352,
+  8249,
+  338,
+  0,
+  381,
+  0,
+  0,
+  8216,
+  8217,
+  8220,
+  8221,
+  8226,
+  8211,
+  8212,
+  732,
+  8482,
+  353,
+  8250,
+  339,
+  0,
+  382,
+  376
+];
+function isInvalidCodePoint(codePoint) {
+  return codePoint === 0 || codePoint >= 55296 && codePoint <= 57343 || codePoint > 1114111;
+}
+function replaceCodePoint(codePoint) {
+  if (isInvalidCodePoint(codePoint)) {
+    return 65533;
+  }
+  if (codePoint >= 128 && codePoint <= 159) {
+    return c1[codePoint - 128] || codePoint;
+  }
+  return codePoint;
+}
+function codePointToString(codePoint) {
+  return codePoint - 1 >>> 0 < 127 || codePoint - 160 >>> 0 < 55136 ? String.fromCharCode(codePoint) : String.fromCodePoint(replaceCodePoint(codePoint));
+}
+
+// node_modules/.pnpm/entities@8.1.0/node_modules/entities/dist/internal/decode-shared.js
+var BASE91_INVERSE = /* @__PURE__ */ (() => {
+  const table2 = new Uint8Array(127);
+  let code2 = 0;
+  for (let char = 33; char <= 126; char++) {
+    if (char !== 34 && char !== 36 && char !== 92) {
+      table2[char] = code2++;
+    }
+  }
+  return table2;
+})();
+function decodeTrieDict(input, resultLength, atomCount, dict1AtomCount, ngramCount, dictSize) {
+  const base2 = 91;
+  const inputLength = input.length;
+  const twoCharBias = dictSize * (base2 - 1);
+  let pos = 0;
+  const readSlotCode = () => {
+    const c12 = BASE91_INVERSE[input.charCodeAt(pos++)];
+    return c12 < dictSize ? c12 : c12 * base2 - twoCharBias + BASE91_INVERSE[input.charCodeAt(pos++)];
+  };
+  const dict2AtomCount = atomCount - dict1AtomCount;
+  const slotCount = atomCount + ngramCount;
+  const single = new Int32Array(slotCount);
+  single.fill(-1, dict1AtomCount, dictSize);
+  single.fill(-1, dictSize + dict2AtomCount, slotCount);
+  const start = new Int32Array(slotCount);
+  const length = new Int32Array(slotCount);
+  function decodeDelta(count, off) {
+    let previous = 0;
+    let slot = off;
+    const end = off + count;
+    while (slot < end) {
+      const code2 = BASE91_INVERSE[input.charCodeAt(pos++)];
+      if (code2 < 89) {
+        previous += code2;
+        single[slot++] = previous;
+      } else if (code2 === 89) {
+        let runLength = BASE91_INVERSE[input.charCodeAt(pos++)] + 2;
+        while (runLength--)
+          single[slot++] = ++previous;
+      } else {
+        const next = BASE91_INVERSE[input.charCodeAt(pos++)];
+        previous += 89 + // eslint-disable-next-line unicorn/prefer-minimal-ternary -- branches read a different number of side-effecting input bytes
+        (next < 90 ? next * base2 + BASE91_INVERSE[input.charCodeAt(pos++)] : BASE91_INVERSE[input.charCodeAt(pos++)] * 8281 + BASE91_INVERSE[input.charCodeAt(pos++)] * base2 + BASE91_INVERSE[input.charCodeAt(pos++)]);
+        single[slot++] = previous;
+      }
+    }
+  }
+  decodeDelta(dict1AtomCount, 0);
+  decodeDelta(dict2AtomCount, dictSize);
+  const references = new Int32Array(ngramCount * 2);
+  let poolSize = 0;
+  let ngramIndex = 0;
+  function readNgramReferences(count, startSlot) {
+    for (let index = 0; index < count; index++) {
+      const slot = startSlot + index;
+      const a = readSlotCode();
+      const b = readSlotCode();
+      references[ngramIndex * 2] = a;
+      references[ngramIndex * 2 + 1] = b;
+      ngramIndex += 1;
+      start[slot] = poolSize;
+      const entryLength = (single[a] < 0 ? length[a] : 1) + (single[b] < 0 ? length[b] : 1);
+      length[slot] = entryLength;
+      poolSize += entryLength;
+    }
+  }
+  readNgramReferences(ngramCount - dictSize + dict1AtomCount, dictSize + dict2AtomCount);
+  readNgramReferences(dictSize - dict1AtomCount, dict1AtomCount);
+  const pool = new Uint16Array(poolSize);
+  let write = 0;
+  for (let index = 0; index < ngramIndex; index++) {
+    for (let half = 0; half < 2; half++) {
+      const source2 = references[index * 2 + half];
+      const value = single[source2];
+      if (value < 0) {
+        let read = start[source2];
+        const readEnd = read + length[source2];
+        while (read < readEnd)
+          pool[write++] = pool[read++];
+      } else {
+        pool[write++] = value;
+      }
+    }
+  }
+  const out = new Uint16Array(resultLength);
+  let outIndex = 0;
+  while (pos < inputLength) {
+    let slot = BASE91_INVERSE[input.charCodeAt(pos++)];
+    if (slot >= dictSize) {
+      slot = slot * base2 - twoCharBias + BASE91_INVERSE[input.charCodeAt(pos++)];
+    }
+    const value = single[slot];
+    if (value < 0) {
+      let read = start[slot];
+      const readEnd = read + length[slot];
+      while (read < readEnd)
+        out[outIndex++] = pool[read++];
+    } else {
+      out[outIndex++] = value;
+    }
+  }
+  return out;
+}
+
+// node_modules/.pnpm/entities@8.1.0/node_modules/entities/dist/generated/decode-data-html.js
+var htmlDecodeTree = /* @__PURE__ */ decodeTrieDict("!}.&u%}'&}*'~!6*)%&,~!J~!J~%L~y<~!R,~~%Lu~~#GD~~#|)1#%}^%}2%+#.##%##%}&%##%'#%##&%#%#'%#&#%#&#'#%%#&#%##%#)%''%&%#%#'%#%%#%%}%%%#%#&(23#%%#&-%0%('1#(##%#'##+%'*.:1}#%#6-+(%'%%#%%%}#L'2351&('%}&/N'(0(/*-%(%%}#'+&T%7.2}#&%&#%#36/5##%&%%#&#%%#))2%%##%&&'0~!#*+&'%1~!%).'3q?&%'1~!.##%6(~!+%%%(Gw'rT~!E#<nA%#jZ~!H%(~!42##~!*31&~!G%U~#)5~#`3~!J~!Z~%]~%Y~%C~!q~!u~#kz~%#~!6'~!D~!U~!?~#T~!c%~!G#'~%7|~!G~!J~!G&~#pb~(Df}#%}*&}#%##%##%##&#-}&'#'&%#.++}%mI,#,@&(}*%}*'%&##&#%##%}&0}#.},U},%}+%}&%}#%##&}B%(}(%}+%)})%##%#&}&%##%&}<%}>%#%&}*%}(%}9%}/%})%}*%}*%}?&}&%}3%}&*#%})%#%#)}#&#-#+*%E%%'%'#%}#*V##&##I}#&&##%&%#&&Qf%%))w/0+&%#(#.%-''''++++7}>%4'',##1,#%#&%##&#'##&#*#9)%&%}#*}%,#+P(%A&%#'&##wSD',9E00#y#@}(+}&%&>~!#~!X}#*}(&&}(&}(,%}%&#+&}#&}I%#%}%)#(},'%#*}4%%#%}(''}#/##(##),%-##%%)#&}(.}&%#&}%%}*&#%},&&}&%}#%*'#%})%}D&}&%}-&}6&#&}-,%}#%})-(~+`~,=?~I9'9%~!,#%})%})%}@%}?%}(~!?~#<~#pP~#BG~#=1#%K+~#?#~%;)~#A~#mF1~#A'~'X%'~#lR~#N~'N~#r~#m#-~#i'?%#'%~#B%##%,%#~#_%#0%~#]732~,w~2+#:&#%&'0%&>%}#>##F+)#%&&#(+_}4&}-%}(&}@&}O7Fdf0@+/v4}&WU##&/0#&'('B#%}.%}'+#%}#%%&#&%#%##+#&#)#6#'#.},%}c%},%#%##%&#&%#&~#>'*-.%##%##%}#%%}%'~#)D1}#%*&~#_%%'(~#S2%'.}#~#=##*'*-%}&'%'##&&~'E%.#&~#M4}%%##&'%#~#O1##%&#'+~#<B%##%%'%+~#;#@%}#&%#&&%#(~#H1}'%'##&&~#?A}&'~#D#%32}'&&&&~#[}'(#%}'~#;C})&}%%#%~#=&%,3}%'(#%%~#^'#&&)#%'~#Y%-~#d-%'~#^%%&#&&&}#~#b~2t*&'~&(~&@~0%~e~3}%*''0})&}+~!9##-}#%-hD*)1fC#%/&/fB#40~!+#)*4~!+~!K'&:~!/*7~!.#~!H~!L':~%x&~!H#~!*~%1~!I#~!+A~#p'~!F~~#-#~,,(~.Z~!V~%;'B'mq-W~!N~%I%#&&#&}#%},%%}'%}+X#%}#&}(%}'%}<%}#%}%%'}'%}:~![)9@~%>~#UA%-%##&~!C%~!-.9:~!1~!-^2/:a~!y,D*J#-5)/4~%23,~#G~!L1~!0X3`~!2+~!!0-~&E~!W~!o,>Y&]~%cZx_&~#O*9#A#'#+I'%#)~!0B*-5A+-((F&*M#)(-7-5+'-3a5Vi~!Y~!?+[)%3),ERHm~!+:D,VG.+)?fB%%*(%)'(#&80%1'8`K8?`+'Z#&O&'H5#*9)A%%5&3))0%39+.*7#()&&*=4@**L)<'_&*+..;(#*+)./&0#3)%')-8(4ixD(&.}%,('aI:,)%,k2231T)I'#/-W7,/'Q#.'Y24+h')37</31&83##&0#),H(?'&?/1##%#&&#%''-%&&&#(&''&#.-'%#%%(,')*'&#&#'##%(%(#%('#&##%%%%('%#%#%%#%#&%##h>w+v<ayvyvcg.uuhKr}g/v|g>u9i[~>g5uI~=RvdwEg;v/g;uk!!TTSx]@RT!U!#!@VBRUU!'UTe-d0c`e&gSdicedFcrdTaqb.kYcAohdYd@a3e+d}dMdtd.aJ#bqcK`dle/e.e'dwdPdodddjbEb}ogd^ofdpduc6j?l%d{drdqc)d7bacOdQ%T#Y)X.sR[yH>6Vyv3[xwLu>vo'!*.[yBacahoj>6Rew3[xqdZa#!a&#^(X-[yG>6Vyu3[xvg3sEr|g.u/Ri9db0T#^(Xa)!-[y;>6Vylg4wKs{JwNZt3@3r=c4Z([xlg;wKt!cpq's@v7A'*a(a+!-a#[y<3Dt?3Dt'>6Vym3[xmg9rxsNJwLZt4~?r?db1T#`-!(Xa,!0[yS>6Vz%NuQs.g4wKtnJwNZtS@3r>c4Z([y%g;wKtrdga8!a(!#&T*Y-Xa#!a0<or[yc3Dtq>6Vz43[y3JwNZtf@3s!Ju}!%Dti:pm3c_%X#tjB5pkd6q!r]u?voC'*-a.a2!0a&a+[yI3DtI3Ds~3DtH>6Vyw3[xx;:s#~<5pKJwNZtE@3r~d`a)!a2T#a.(!+U.X1[yT3Dt`3Dtv>6Vz&3[y&g9rxwzcxstPu.<rAJwLZtT~?r@dZa%!a.&^*Za(/Reu[ya>6Vz23[y1g3sEr}wkg{NuQRg{ci(U#5@b`~,cg#U(2WnH5wugcRh7dX#T(Y,a'Ta!!a,[yZ<]mj>6Vz,3[y+Pv#5ReZKu+=,%!H}7ABwkaS?Rh:BcW(X#<]mrj:ubv/ARekdg%!(!a.*Ta(Y.X1!#sP>Rl*Dt6[y>>6Vyo3Wf*jOvuumvuRgRJuq*!:9<B@bX~3jVv&v@s@5Re[d/rQt{uAvo&a&a*)a2!,0Wf!3Dt0=Bs'>6Re}3[xy~<5s%JwJZt1~Gs)c;&!#2sJkNuXvzq7rxu,Re8dka4!a8(aEZ+a@Y.X1Xa)[yd=Bs(3DtP>6Vz53[y4cX#X&Re:avRe9~<5s&JwJZtQ~Gs*i^rzvdRg+Jv{%!2sbB@bX}kdga,!Za?&^*T1/!a'Dt+[y6>6Vyf3Wf%g/u;s4hGu6?Rh-JvZ,!c%#&RoX54Rivj7uyvf8RgTKvZB%*!2sGh<vu5Rgq<=C::9bb~#dZ#T&Ta6Y.X*Dt>[y93Wf)coZ(T,6VyifluvRgC@95@B@bX~/hFu34cC#T,k/unq8w8Q5RkUklwQuzunq8w8Q5Rk8d/rJu?v8w9)-&!a0a;a&aIWejg3sEr/h1s<DtDJvyZqY5aws3Jvy!&Wei~Hr1:au5@Bag>23E~5c:Z&bX};kKv?w&unuVu5Rjc;>bs)#~@:Rh.=ay<a]C;b`}Vd6s/t{uAvoaxa()!a,a7%-a#a2Dt,[yF2Wo[>6Vyt3[xuNuPRi&NuPwpi#RoWh?vf8Ri%Jv]!%Ri:KvxD!.'2WeAjZu`q9rxu,Re7woeAg-unLq(qA_/*2Wg_g3u5q^9:4E}/jTrxrzv=Wkkd~0UX#^^Xa-a1a5T&a=U1a'*aEa]!a*aPaA-adok[y54Rn>;:p3~Dp5g9rpsFNvZqjg3uJp4~<5p0Pw;5qlJwNZt*@3p1Pw:5p/Ou!5p2JvG'!6Vye=<qnJvh_[xhg3v,Rh3kOwOw-sDuev/Re^dha[a%!%!a+#Ta7)-5TaCaO!aka!a)sf[yb2>Rl!9ARiq5E}Qg=ucRkBE|oJrJ_@Wk~@Wk{JrJ_@Wk|@WkyJrJ_@Wk}@WkzJvO_[y2g-vMRmiKuYC!)&>Ri;>Ri<@3RkNc](X#@9Rk=g5vuRmhKvDB!+'=]meg3u4Rmgd)#Y'Vz3CARmfd`a+!%T'!+#Ta1Ta6TaM-sTDt9[yA9sYd'%Y#s[[xpj:ueunaXRgEjRq,v-vuqdd2'`#6Rev<32@5>:2<E}5xIo9a*X#Y(;5RePJvD_g>vyRgNj8w)v8<wggs:RgXiZt|vjx,hSq3ah!-(~@:Ro/Ou!5RhWj^v(pyw8unRhUdx-UY#^Ua.a3a70!)%UX1TaDa)'omRiRRhE[y:3Dsz=Br,>6Vyj3[xkg6ruwjcqsrPw;5r*Ku]D'Zt-@3r(~?r.i[vwv]dU1a--U#`a4(g/vsRhPOu!5RhLj:rmu9Wo!~@:wdh@g/vsRiTjXuvvNr}:RhBj^v(pyw8unRn]dz1UYa'a+^Y(!aETZalaRY.Ta?a4[yDJw1!#qLsW>6Vyrfzq-pLflpwRe|Js>%!Dt@3Dt&Jvy_[xs~HrnjMuwpsw'RecKu+D#'!t<~Grl~?rjg5u-x,gwp{ah!-(~@:Rg~Ou!5Rh'jXuvvNr}:Rh#cW#X/c;&!#2sLi[v7u7RgpJv)(!iLrxu,Re6j7v@s@5Se[e7d`aW!Za(a`T.a#!a3!&aDa-!9)Dt_=6s+3[x~~DR|h~DS6avhGun5RkZj3w)v-]mkKunB!&*]kb97R|i<ARk<c:Z(6Vy}Juh'!wziMRoS:F|vkLuauJv5vtvQRh1d='T+Y#VyO~DR|jcF#T'7R|g97R|kJv3'!ay<Rj,Jvh&!:ReXcsa6*a+#a#_aIRf9aLRf?c,Z&Rf5Rf7c.Z&Rf;Rf>cQ#%T'p-Rf8Rf=ct#%'(*!,p,Rf4p+Rf6Rf:Rf<d~'Ua%U*^UYa(!a,-!#a4YaTalaEX0a8a<Weo3Dt/3Dsx=Br93Wen~Dr;~<5p<JwNZt2@3p=Pw:5p;Ou!5r3c7&!#:p>3Ds}KvGB)_6Vyk2sM=<r7x'eovA(!hFu1ARf}cV#X&@r5j6rvwQa^Rf3c=Za'wkghJv__g;unRggA53B9=b^}%j6uduo5Jq;!(hIv%2Re`Ou4ARe_e%a#^^^Xa&!a*a2!&a6YaP!*ad!#a:aE/5Rn?[y@>6Vyp;:pE~DrY~<5pBJwNZt8@3pCh=rt3rWPw:5pAJup_[xoNuPpF9c!#'45pD5ARn)d8#X'X*3@rU72s]h>v<<sSjJpqvewOJq/(!hNw'5ReBk0s2u3w/w'5ReE5@Jq.!a+JQ!&WeU23d(#Y&RjG5]jBk!u7w&u0udARjEe#+^^^Ub#!a2/a`Z(agT1!a-a;|@TaG!aS[yV=Re~fow'RguNuPRe?bz#'>RoUWeL>:Cbb|?JwPZtVg6ruRmzJvD'!6Vz(g/vmRh~Jvy_[y(g9voRgyx*cy(#2>Ri2B9b]~9kIw9u7rluJu3Rg]dI#a%UY'@=p%CAx.gQZ&RhwwygtRm{x5g_Z'+ABqR9Woa=Bp&dV#^*Xa'!&@o{g4v]Rk;Jv{!%Rk[wkkiA5RkiwwfUB=x,fUuqC&*!>RfTg8v0RfV~ARfSd;rJsAuAv9wR'ae+/aO!a@aza/a#[yQ@Wg!2Wemg3sEr0JvB_g>uvReWg2v+Re=KupB_+[y!2AbY~-~Hr2AJwD!(h<~El>h<~El?Kun@+_:9b`}Kg-v/Ri3g;vtwyk_9]k_d=&T#*U.6qh@Ab`|K9:H|CJv[!&3Dtex'fDwC%!Rf[9WlMd[(^X,!a%Z06Vz!@WgBg=v~Rgvg,QRe@awd,#Y+jTv|Q~EfWj]uNr|~FRfXdy#Y&^Ua%!aO.!(a)Ua;=!a@aKap!a-,a!Ta]a[rSa]p?[y82sK=Bq~;:p:~<5p8Pw:5p7d'#Y'Wf(;RnRi[u4w&RgJJvG'!6Vyh=<r#ijuuv/sIKuYD'ZtG@3p9~Gr&d2#`(g<vtRgFj`u5w&rqpxRf2CJuY!+:wfnTOu!5Rg}jNs1ucv&RfwJvA!&3@q|BDcC#T,k/unq8w8Q5RkTklwQuzunq8w8Q5Rk9dga#!a'!a=#a0!:+Tb*b@aO.a4!aba8aFJv^}?!VyR~Dr<g;u%Rn.~<5p[x'e`wNZtR@3p]Pw:5pZhNvjBp.woe_g5u-r4JwF!%DtO3:ooc7&!#:p^3DtpLuGw(!+%)Dtk6Vz#2sd=<r8d'#Y([y#<x3gJt`w@!)%}MRiowzikRij=]ilxAf3,U(#B2Rf#g0v-Rm[ck{`U#]giKv3>)!&6Ri154s,KuGB_%@r68r:dJ|t`#X(9<E|u2@H|rx3gJu?w'!+'1Nu7Reg4=H~+9<wxgY95Rm]xLggZ-`(X}U2:Ri4h<uOawRmsJv__5@bb{jbV~3dka#a'a]!,#a+U=a>b6a3b%!/aKa/)!arwve^VyJ;:pR~DpTg3uJpS~<5pOPw;5qmPw:5pNOu!5pQJvG'!6Vyx=<qoJvA!{~Jup!%@qk7Rn/KvyD!}''[xz;>wkh'?Rh,x8gyt`w5D!&),(SgyccRgztJ@3pPB5p#d'(Y#<]mmifubw&RgoJvE&!82s^JvF&!8Rf,ADb]~;x=h'rNu]vK!,%'*0RnORh)4Rh*AqQg-vaRnNg;wHwkh'ba~4cE#Ta*x3gctyw@'!+%RnFRnD<4Rn@hFvK5RnCxWg[#`&a0Ua()`1Rm75Rg[c]%X#qi8Rg^NvdRj>BwzgZauwji7Rm6A4wgg]d1#&(*,.0a#Rm;Rm<Rm=Rm>Rm?Rm@RmARmBe%#^^^Xaea?aC/b+(,!a+a#!a/!>a&Ta<aKbD!2wphBRnk[yPw}hE|.=Br-3Dtm>6Vy~g6urRf.x,hPrNav!%'RnqRo%Ro#Nu;q[Pw;5r+JwNZtM@3r)d'#Y'Weh;xChL#`&RnmRnoKu}>%(!Rne~Bs-;2wjcussJv+'!aYSO}6@B<5?ba~8LrNvj!.%*ROwungw~ng~:9;Ri^>wtnig;wHRnixDh@|(UZ.x1h@|)!#:2<H|*xHn]#-UX'3Ro)z=iT}6ARns=Bwsn_wpnaRncw]aR(#UXa&Ua*a/=]iPd'#Y&Ro'WnXf{QRm2hNvj]nZd`'T~&1`{|`#9b]{}c:'!#Wl{>@=be}]?cl{{U#:5Abb}Jds#^YaF!a*b4a#a3aPa>&Tb!bH!*a_!Eau?/a&RjY<]gj>6Vz*;:pe~DrZg,QRj1JwNZtX@wihspcJvZ&!VyX9WmOJu|!|N2WmHJvh&!]ht~Bpbcn&T(!#RmQ<s7Nu;padH#X'`+WmJ@>RmKCARhnKup=!)&Wf+:RhqNuPpf9c!#'45pd5AwghpARn(Ls@w!%,)!RmP@Wfe<E|IJva!&WmNg8vsRmLd`*.`#Y'Xa!axRn*]hrA8Rhug5s@rXg8u!RmMd8#X'X*3@rV72smdI*#UY&RmICARho~GsgxVgd)Ta'U-Y&Xa!T#RnEWnA@Wffg1uDRi0hFvK5RnBxGnG&#`%owp)@wsf+bX}Ze-*1!a*^^^Ua|!#a.aq&Ya2!a>.a6!a:aO`aJDtL[y`@Wg#>6Vz12@wzoYRoZNuPRi!NuPRhzg=ucRi,@=b`{Yg=ucRi-ACJvB!&Sh[ebSh]ebi`wUuFRm4Jw2_[y0JvB!.<Ju(!&SoG}6Shd}6<Ju(!&SoH}6She}6Kur@._g5vHRieJvx!{L2G{Kx6gd'T#?Rh82Wi5cZ#X(g1w)Rm5dW-Y(Ta#!a)!#aYa=wnfE=su2>>bU{0j9udv:<svj8uQv-7RgHdE%#^'sq9sp=>Bb_{TJv`!&g/r|snj6v(us5d,#Y(56H}[978H}]Jw5!&g1rushJvB!+j;v{u5?zDhd}6}bj;v{u5?zDhe}6}ce*#`(^^^a[aea!=!a6a*aoXb1a.!aAbL!b>,b'aL!aV@Wf|2Wlg3[y/JwNZt^@3piPw:5pgJunZou3@rsJva&!Vy_g<v~Rm#JvG'!6Vz0=<r{Ju{%!:pj@WfsiXuJu3Rm:JvZ&!WfA~Bph@c4Z&Dtwax5rubx(#:awRk1@d,#Y&RfjRfid1#,Y(@Wfp2Wlrg5s@ryKu[@!,'=]ig9wlk?Rk>g5u-rqJvy'!@9RkQcH(T#=>Ri~@<wkj(Wj(KuZB*!&<7rw@9RkRcH(T#=>Ri}@<wkj)Wj)dg(Ta2Xa9X#`-!a*CARhg@@=I}d9x;c~#X%so=<sj>2@@=aybb}XjWv0Q~EfEj3vLv;<d,#Y(56H}`978H}_dgaPaFa'a/!#a3Y0a_a;a|!1(a7-[yE3[xt;:pJNvZrrg3uJrvJwNZt=@3pIh=rt3rxPw:5pGOu!5rpJvG'!6Vys=<rz@c4Z&Dt(ax5rtJvZ!&~BpH@wsfNg-vaRlNci*U#=<wei<F}a5@Jq.!a*JQ!%@qZ23d(#Y&RjH5]jCk!u7w&u0udARjFd/prq=tyvpaEa(a:.!a1aZ(@@=I}:9wpd%=<sX55w_h}@@=I{t=ay<aU@@=I}T=ay<2@@=I})?C9:9au@9Cb]}DP~=x-fAZ(2Wl1=ay<aU@@=I}>5@d##Y+jTv|vV~EfFj]uNpn~FRfGdgaK!Z2&!a8a-Tb({E!acTbM*!a(DtY[yYd'%Y#sl[y*hHvh>Re5x2c{Z}.j4uCvcawRiMd+#X+_x&d!},<5RkX;2Hzw@x,gavfB-!{CcF&T#Roe;RodwWbBg5urRgaKvHC*_6Vz+<4opieuew&Rmq@d]&Y)X,T#X0Rh}<BqP=4qS9:ReMg/ujReNJw0!/<Jui%!bd{kawwnemRelAxUa?a3#*.&UX(Ya+a/RhvRnQ<o}9Wmtd-#Y&RgSRmw9;Rmxay=Rmyg-vaRmuxEhSrNu,v-voC!%(aR.a(a7+1Ro1>Ro5CE{A9b]{@;5x#eO{:g;urRi+KrNA!%(Ro3>Ro79;Ri_Ku@>{;&!x%gX|{KunA_+g5QRj/g3u5Rj#g>uERj%wio/xRhS&!,!#^1U}wba{8>>@=be}qC@:D5ba{7Ku+A&!}x?ba}t>>@=be}se(aA^^^Uat!b0#{pa+awUazbGa#aLb9bgaWac'a5TbS=Br!d1#`%scp_Jvl!#rT>Re0JvX&!VyN=H{Fcm#U&:pY=ReaJv2&!]h0=]nUJvG'!6Vy|=<r%JrM_=]h2@Wlud'#)U'Wf'b]{i=]h/Jvh!&~BpWg=v]RnMx+ny#'Nu;pVwjnu=]nwxJnx,T#`&Reqwjnt=]nvieu9vrRjLLuYwP(#+!th@wih5pX~Gr'g5v/Rh4KunA'!-CARnP@wwiN:Rm_9x'cvw>!|l=<saKvAA!0&3@q}>w^e1bp#&Re2Re3BDx7gH#T|f5H|eKuZ>!%(:qNAH{]Jv6!+3B2B9=b^{X<5<B92:E{ZLvhwA(a;a%!igQuyRmad+#Y}m@3Rh5d8#X'X*:AqUAHzmaxwbh<aXRnVcF}RT#Nw&cj#U(BWnug/vsRntdka)(a3+.Zb7aYYan1!bVa@Xa}[y^@b[{G=H{+hFu73Rj&Pv#5ReQcK%T#sig1v{Rj'Ku+D#'!t]~Grm~?rkKuMB!01d5#`'Vy.ta3Dtu~Hroc8#'{^45s85AwZbP&!#Rn!wghxWn#KvEA!)&2RlA2RlBx:h|#(T,=]j09Wobz>x]z/@awRoTd+#Y(az]hFhCrm4d,#Y+jTv|Q~EfMj]uNr|~FRfOdCa!Xa9_X#@<plJvf!%b`{(9;Rgwc;.!#2x7cw#T|UDb]|T5Ju={(!=@E{&Jv)&!Ab`{'awJvf!~*>>@=be{#KuY>!+&4Ezyi[ugv&RjIdea+T)#UXa&T-T&a!Rh9auRmW=]kLg5vuRn+g3u4Rn-Ow6ARn,hHus5xNk?#UX(U~)/g8v0RkD~AwkkF?Ri.OuNBwkkA?Ri/d|a2`a*^UYa.!aBTZaTa'Xa;!(!2!-a#b2[yC>6Vyq3[xr2Wi?g1rusVh%s?DtF~<5rbJs;%!DtBfswKtCj[uvuSsEu3RgVx3o:u+wN'*Zt;@3rd~Grh~?rfg8w)Lq)qE&-a%!>bI|`jWv0vV~EfCjTv|vV~Ef@j]uNpn~FRfBcK#T']gWNu7x,k7q4ai(0!hHv8<RhmkMu9vrsBuev/RhlCJvB!,g<v{wchh~@:Rhji[vrv{wchi~@:RhkdS&a5UY#Ta!RgPwwiI5BwciI~@:Rh`x'iJvj'!5]iJPu8Bwch]~@:Rhach)U#h3rp]gLh@t|Ax,hTq3ah!-(~@:Ro0Ou!5RhXj^v(pyw8unRhVd|)`,^UYas!a?/a2Z'a^Ta{Tb7Ta(a#!a,Wf&9sZ3DtAadamov=Bqt3[xig8vsRm~>waiL2b`{QJv*_Ouv2qgj<v]v2BqfdR'X*X#Y-@3qr~Gqv~?p6hHv-]glPup5Lq+q?_%*b_{qF{n9b^{rOu4ARhpKvCD!+&~Bqp:5Dbb}nwoiKl&unuTuBv]v+ueunaXRf0=Jvh!0nKufu8v1w&w7q%w&uHrz:Rgnj5w,uxDJq/(!hNw'5ReCk0s2u3w/w'5ReFd>Za&!*UaA=<wkgsRnSJv^!%Refifw3vyRgOKu_B'!,<]gkiiu:w&Rh<=C@a^<B57@2F{[<B5@aW:=3away9A5aW=<B=C@a^<B57@2F{Ie-#`(^^^bCara.b8aza6!/bZ,!adTbnTbOb+aFaS!aAT9@Wf~2Wli3Dtl2@d,#Y&RfnRfmJwJZtN~GqyJva&!VyMg<v~Rm%iXuJu3Rm9Jv[_=]ih9wlkDRkCd1#`(@Wg>2Wls3cH#T(@<Rj*=>Ri|b~'#23s9h<~El.d'#Y&Dtxi^rzvdRl#d*#U%(o|B2s`hJwSaxRmDKv4B&!1:Rmdd5#`'Vx}to~Hq{x'f1v3(!BA5ba|bJv_&!Wfug1v]ReIdO+U/Y#&G}-8wze=Rh{g1v]ReHg/uQRf/by#)ibQwERl/cH#T(@<Rj+=>Ri{cNu+vlax-!(#a0qa9<Rii2;;bU{H;x<i=&X#Rk`<4wwi=C9H~8xAI(Y#<azRi@45wXI<B9;5bb~7dL(X#Xa(+!aL6Vy{g5QqOau:5au2@ay547EzbxOcU(UX-T#Ta#:Cbb|A?wjh/b_|SOw6ARgtihr}u7Rhy<d1#T)X1@@=I|~=ay<2@@=aybb}Sj3vLv;<d,#Y(56H}A978H}@dGpvs@uAu`vcw9*!aFa+ai%(b!aXa8.a?a[ozWey=sU2@G}Nch&U#Rf_WexKu+D#'!t:~Gr`~?r^j]uNr|~FRg*j^psurwJt|RmcKv)@&!)7Rkv~Br[@wxfO:Rl3co#U'6Rezj_q#vIuavjRltwzeyh@vr5JqD0!>aY?C9:9au@9Cb]}9cl#U*5;5<H||jbuus1ucv&Rfvg1v~d/pppzqFr^a--a~!aMat1(hFv;Wiz@@=Izoj5uuv-7Rix~Cw`fk2WlVcZ#X,k)u3vWs@u2]ktg;wEx'fBq(_2Wg/jTv|vV~EfoJv]!15x'hzqG!(P~EfU~CRl_j6v(us5x4i-#T(2WmZ?C2F|d>Kq<aj1!*jTqIsBv=Wl`~Cw`fi2WlWj`v0u*~>RlR=c>Z,k#u3vWs@u2]kr<c1Z+jTqIsBv=Wla~Cw`fm2WlXdmb3!a{(arZa`bkTa%TbQTa-a9+c'!aM!/[yL=Bqug.w'RifhFvyDRj.g>vgwyk^9]k^Jv3_@WfbAARkhJw2_[x|JvB_wkoIRoKwkoJRoLd'(Y#<]gm=<9<H|yd'%_X#skDtb3awwqkgNulRkgdB#^',9:p'hJwSaxRmEBwVb8@4=H|qLu+w50&!)@3qs~?pU>Awwn;;Rn=c:Z'ARn<=<qwKvC@!/&~BqqJv6!&]eVb^z^xRge'/a%+^`#Sge}6<4Rn3=]n0Pw2>Rn8Jw0!&>Rn:>Rn6cY#a7+!a&=<wkaNw~h3z_c5Z{=wjh#=]nLKv^D!&)Vyz=bW|swYb<WetcG#T(2wxa@qVx@gD#Y&b^|V5JwG&!5bb|pg/w&RgD@x=kHs=uAvn!a%%/'+RmSRh694Ro`g-vaRmRhHv-]mlxCcS#`&ba~.5cD#Ta)P~=d,#Y(56H{>978H{Dd_#{2^Y%_+qbbb{6g3sERhsbU{?dfa.,`a(Xa<!aiX#(55RiG54RiHcI#T'WiU3RiVNvdwtfcRlKNvdd,#Y&RlHRlExQgf.1*^T'X#Sgf}6Wn4=]hfPrk>Rn7Jw0!&>Rn5>Rn9Lunw?&a2!,5<oq@@wqfdRlJj5Q~=d,#Y(~ARfcOuN]fdDKw;ay(}i!547E}j?cI#T(@5bV}iCbV}hdv(^^Tb?a40,b##Tbo!a*bR!a<b|a/!aKai!aU[yK=]o^g:v>ReGJwPZtK<7Rh+h<~El,Pv#5ReR@awwxjCg,ulRjDJv6&!]j!z?aQeeg>w=Sh<eeJw;!&axEzOg,Qosc!#*:wkeJ]eJ>x'h-u(!%Ro.w~h.zPdNZ(X,Ya![x{;9ReY;wkgxRiF:x?ap#Y&RmUg<s2Rkod]+UY0TZ'!a&A9sw<=bczLNvuw{gqzNhJwSaxRmCKuLay!#&s_Rf-55b^{uJvZa!!c%#(55Ri654wmiu5RiuawLu,vp!+}^%b_}Y9;wkgxba}o>A9:=b^}zKuh=a''!3awRk3c*'!#aHRk6c+Z&Rk5Rk4Jv)&!awRjSawd9*`#0?C2@EzMj8u<uJ5RmbjQrquJu3x,k>uq@_+=ayb^|W~ARkEOuN]k@7dhzV^X/X&a-#zRzSb`zXcJzTT#2WkVKvDBzW!%FzY9;5bbzWjQrquJu3Jw3%!b`zU=ayb^zQd:#X(T-a!6Vyywxh}=b]{Jg=u1RiAdGp~qHtzv!w(wA+a+a;<!aJaYai'anasb(=azRmV:Cbb{MLq2vb!%')RjuRjrRjtRjqx3jnqCw3!%')Rk(Rk+Rk&Rk)Lq2vb!%')Rj{RjxRjzRjwLq2vb!%')RjsRjpRjfRjex3jcqCw3!%')Rk'Rk*RjkRjl9<CbbzfOu4ARhxLq2vb!%')RjyRjvRjhRjgx=joq*uKvb!%')+-Rk.Rk%Rj~Rk-Rk#Rj}x=jdq*uKvb!%')+-Rk,Rk!Rj|RjmRjjRjidAq&qKs@uAv8Aa.'*-a@a&0!aM@a5[y73Dsy3Ds|3Dt):wxgI2sHJwJZt.~Gqxwsf0ikrzt}Rl0Jvy_[xj~HqzKv_A|D!&WfP8axRoVcf,U#k(v]v+ueunaXRf1Ju}'!g8u#Ri=jQw!sCunLprq>!,')~<5qeGzq9F{W=c##%s5au:5aU3CBE|;d4#X(D!a&6Vygx(b;#(=]ed?C2F{N<capoq2r[a&!aPa9,'Pw;5s:@@=I|,55w_h|@@=IzcP~=x'fCqB_2Wl2>aU@@=I|1OuNBc1Z+jTqIsBv=Wlc~Cw`fl2WlZ~AcTa%!Z+jTqIsBv=Wlb~Cw`fh2WlYk+uNqJsBv=WlSg,u3dca3#UXaMYa)TaB-=cM|7T#<bI}l5@B932:aV2G{BOuNBJq:|M!5Ezt=<B=C@a^<B57@2F{v>cB{/T#=ay<bI{3Jv6!a.6BKq0ah&+!5E}HP~Ef{978BaU@@=Iza<7d#.Y#978BaU@@=IzH~AJq0!(@@=IzG978BaU@@=IzFe,aU*Y&^^^bvJb,b:bFad!a,c2Ta>aL.bo6!a#CbTa'T#Re{2Wlh2@G{yg6t~Ro_NvdRfticuRQRllJv3&!x&c|zs@Jw3!%RflwpfkRlpKuL;%(!Re<@G|C2GzdhIvuBwgjAg-u0RjAKQB%!(GzZ@G|5NuuRl7d='T+Y#Vy[g<v~Rm!==G|>JvA!)@wma=]m1ifuaw&RmnLs@vT'!|/+[y,g:v>ReTJw1!#qX=x!eC{bLu+wT&)ZtZauq_~Graci&U#F|89:r_Lupvq!.)&2RlG8RfaC=x!eF{_h?rpWlmd&'!#X|&]k::xJey#`'T|+<E|&2@H|%dE#(^,g;u.RiEg6vjRiC9xCkA{O|zY#g=ucRmXKs0@!&*@G|m@awRknJuh!,3d(}gY}eJvj!%Rm):Jw3!%Rm+Rm-Ls0w(&!a(a#@b[|6cZ#X'7RkxWgAOu4ARn'dH'U#Y*Vz-Wm'CARm}d]*#a%^a*T'aK!a<9bV{PC=p*Jw4!&SgxcbB5r]idw(wBRmF7xFkt#&`(Rm/Rm8E|!JuY_9:Rl5=wrgr2:bbxd@xXfB(a*#T+!.X0X1Ta/a'T&RlDRfL>RlyARl9b[z[>RfZ:RlL:RfRwlg/ARl;9;RlxKv,A/!%7s69<74=BA5ba{-8Bde#`a<XaKYa1,a'P~=wxfB2bZ}}?C972@@=I}r8@55B9;5bb}G978B2@@=aybb}3j3vLv;<Jw3&!>Rfk=ayb^}4~Ad1#`*@@=aybb{w2@>==<bbz]dx+UY#^UaF!a9!bB'Ya1.!ajXa#%olRhD[y=3Dt#Ov5BrHKuMB%!(Rf^Wep~HrJwkiQjKr|~FRg)Ku+D#'!t5~GrF~?rDdV)UY,Z/_7RkuG{<~BrBg,rlsO:235B@bX}|d?a1!#`(6Vyn5@d##Y+jTv|vV~EfIj]uNpn~FRfH7Lq2vb1!a9-978BaU@@=Iz9978BbU}#~AJq0!(@@=Iz8978BaU@@=Iz7~AJQ|}!978BbU}!JvkaK!AdUa21-U#`a+(g/vsRn~Ou!5RPj:rmu9WhOjXuvvNr}:RhAj^v(pyw8unRn[kPr}p|u7vwv]RiSBd;pppzq@qHQa?(b.!a.a`@.|xa(hFv;Wiyj5uuv-7Riw~Cw`fg2WlU978BbU|wOuNBJqG!(P~EfD~CRlQcZ#X,k)u3vWs@u2]ksg;wEx'f@q1_2Wg.j]uNpn~FRfqJv]!15x'h{qG!(@@=IzK~CRl^j6v(us5x4i,#T(2WmY?C2F{1>Kq<aj1!*jTqIsBv=Wld~Cw`fj2Wl[j`v0u*~>RlT=c>Z,k#u3vWs@u2]kq<c1Z+jTqIsBv=Wle~Cw`fn2Wl]dn1#c(a(b^a2!b/bAT(bj!aDa7bu,a_a{c0!2T0g:v>ReD2@G{42@G{5~DpM~<5rc=Bx6i>{RT#RnI@zCx]y]z:2Jv[!zr5Awyk]9]k]dD(Y+X#6Vz.g=wKtgwhaCwgmTWj2Lu,w%_+/[y-B;b^xeg3u3Rj-2@bX{*KrJ<!+'@Wg(g?QRlC@Jv`!%b[zIwsfII}8JQ_@w|kW|=Jv(%!AqcOuNBJvEzh!bYzjLs@wP#(0!oy@>RkdJwMZtc3Dtd@BcG#T'9bWxg2@2Fznd*#Y+;2x'c}w<zizixNgwa#Z'U+!/!a'!a+w~g~z6wcn{Rn}wcnzRn|5Rh%=]nJg5vuRmvNvdRlvcprJu}w*az*a#!%.a.'Bot9qT]kj@Wg'ay2Gzv@Jv`!%b[zEwsfHI}1;ck#Ux`<Cbbx_Lu+w!a&0*!wko*wwo,So,}6Juqxf!E}PigQuyRm`d3(`#8>Rn%:A5B;bZ~%KvhCa!a2!x>k7#Uxb@b{#xaRk7Jw0!)>wwhlShl}6>wwhmShm}6CJvB!.x'hhvj{!!5Bwkhhbaz}x'hivjz~!5Bwkhibaz|xEhTrNu,v-vpD!a%&/)a3a.,%Ro2t[CE{)@3re9b]{%wjo09:rgc:Z&Ro6=<riifuaw&RmoKrNA!%(Ro4>Ro89;Ri`dSaL'UYzxZb)7Rka3xRhT&!,!#^1U}vbaz{>>@=be}yC@:D5bazzKu+A&!}{?ba}y>>@=be}wxBh[t`u~vJvr!%a!a()a,a0a4RoC=]o;Ju(!%RoGRhdwjh`=]oAg>w#Ro?g5vuRo=NvdRl|Ku]C.!&;RoEJvB!%RoORoMBx'h[v+_?w~h`}~5?w~hd~!xKh]oiptu-utv.vp!#%&a30a@a'a+(a/aOp(o~p!RoDJu(!%RoHRhewjha=]oBNvdRl}g>w#Ro@g5vuRo>c[#X']o<CauRoRAd-#Y':RkpauRoQKu]C.!&;RoFJvB!%RoNRoPBx'h]v+_?w~ha}t5?w~he}ue!/UbhYacXaW^Tc&a;b:a-c/#b&aja1(!cL+!bKbt!bmcRc9aIc?8[yW3Dtt94Rg`Jv}!&SiRMzBhEebShEMNuPRe>x7gL#TzuwjirRipc<Z&>on;>z=h-MSh.Mwqczx'a7vj&!>Re4@=ResJt__NuPRi*NuPRi)j]uNr|~FRfzKrJ>_+@Wfy@Wf]2WocKrJ<!+'@Wg%g/QRl@@Jv`!&awRl<wsfFIzgLu(w*!.*&ShBMwvhIRhI9;RhNx1hK'!#Sn]Mx1hK~0!#:2<H~7cNu+w7D*'1ZtW>Rn1~?rOc:Z&Rn2=<rQ<7wjh&=BSnLMc]#X(6Vz)w[b=a!U#9wzgMc3#&(RgMRitRis<x,gKt`ax!&+SioM=BSilMc3#&(RgKRinRimKurB,!&SiQMzBhDebShDM6BJQ!(P~Efx978B2@@=I}WLrJw!!,a*&@G}O@9wkibRid@@x'fKwC!&SlDMSfLMjUv~Q~EfKKv3@a+!(hFv-]mpx/hYZ(C5RiWz<o/MwkhY?So/M@x,gbvfB*&!SgEM:SoeeehFu3:Rgbda(,^TZa)X/7Sg[eb:2RgI~BrMC@wgkc:wwkcRerx3h(uUvK!&*,SnOM4Sh*MArRg;wHRh(x=h;rJvPwI!a4',a'0@Wg&=BSh/Mg>w=Rh=g3w*wwgGRgGcW(X#;Sg}M2Gzk@Jv`!&awRl=wsfGIz`dKZ*T'Y-:RhR7RhQg5u-p`j6v(us5d,#Y+~Awkia?RicOuNBwkibba}Ld6p~tyu_vbAa'a+!a/'a3aEa8a!>Sh,ebJv{!&Sh@ebSaReb9;SgwebNuPRi(NvdRl)NuPRi'hHu^<Rm^Jvv_@Wl(g;u1Si/ebKu'B&!*Sh?eb@Wl'z@aPeb95Si.ebcpputyvjB)!,&a+0a%ShAMWeK@G}C@WfJ9;RhMwvhH9w{ia}ix,hJvRA1(!zAn[MRhHx1hJ~*!#hFv(BSn[MBJQ!(@@=I~'978B2@@=I}2db.Ua<'X}+T#a0XaG2G}E;wkg|wuh!Rh!x,hZu,@)!&So0MVy)C5RiXACJvB!&5RiY5RiZg8w)cG}*T#2@bU}=KsA>(!a.3wkhZba~(x,h^u(A!&(SoCMRhb5Bz=h[eb?w~hb~6x,h_u(A!&(SoDMRhc5Bz=h]eb?w~hc~6e)aA1T#T,^^^c-bMb&blcPaP(a/!0!bA=b5c@a(!bfbrc#2afwmhARnjwchORnp2Wlf3DtsNvdRl-2@wpa<]m0bx(#:awRk2@Jw3!%RfhwpfgRlnKQB%!(G{V@G|'NuuRl6d='T+Y#VyUg<v~Rl~==G|<Jv+'!aYShC}6@B<5?ba~8@Jw3'!g2QRljhLrpWlOd+#Y'g.w'rIg>w*wgj@g-u0Rj@Lu+wT&)ZtUauq]~GrGci&U#F|39:rELrNvj!.%*RhCwunfw~nf~:9;Ri]>wtnhg;wHRnhx3hDs@v~!/+'@Wfr@9RkSNu&Rlo=@<5GzoKs0@_+@Wl+@awRkmJuh!-3d(}pY#qWJvj!%Rm(:Jw3!%Rm,Rm*de&!1U-U#`)Re;@G|.@9Ri82@wjfvRlq=@<5GzpLvOvr!).&2RlF8Rf`C=x!eE{.Jw3_g2QRlkhLrpWlPde(!#U{s,UXa*Ta'[y'g:v>ReS;x0PZ&RnlRnn~HrKJw1}f!=x!eB|2w]aP(#Xa&a*Ta.Ua2a7=]iOd'#Y&Ro&WnWg;u.RiDg6vjRiBNvdRlzhNvj]nYJuW_2Wm3x)kFze{9d])!a.!,Y01!#&aC!a3RndC=ox~BrC@2b^{pg,rlse7x'ksuq!%Rm.E{xidw(wBRmGx9o+)X#wwo-So-}69:Rl4@xSf@a#XZ'X)X,Ta(/ARl8b[xc>RfY:RlI:RfQwlg.ARl:9;Rlwdn'#^XafaQa1X1TaHTa)@b[{zcZ#X'7RkwWg@Ou4ARn&x)kG#{,g7u/RkGdH'U#Y*Vz'Wm&CARm|bx#(A]gUbUzJj9Q~=d,#Y(56H}l978H{U7d,0#U*2>ABb_xZ978BbU{e~AJQ{g!978BbU{hxMh?ad{oUYZ.x1h?{l!#:2<H{mx3n[t{vl!,&a%3Ro(z=iS}6ARnr=Bwsn^wvn`Rnbd`*T}B0!#^X'BG{c9b]{a>>@=be}F?JvS!&BG{d7BG}(Bde#`a1X,Ya@!a'P~=wxf@2bZ}I56B2@@=aybb}08@55B9;5bb}<j3vLv;<Jw3&!>Rfg=ayb^}&OuNBKuLA!)a!P~=x#fD{f2@>==<bbzl?C972@@=Ix^d6rSu,v7w*C(0a)a6#B+a%!sQ[y?3Dt%3[xn~<5rLOu!5p@Ku+D#'!t7~GrP~?rNKvlaya7'!h+v-5qMg=t|cd,U#5AAaa5Abb{S@52B5@a[@52B5Gx[iXueu;d<#`a(!/549C;ag>23ExY5@Dah89b^~689Jv)!~2b[~1Lv'w(%*!a#bX|aPrmawRe]keu7uhv-q6rxu,q`xTo]/a5aU!bNaDXbi!b-!ao!b<bwA!#5@B932:aV2G|:d-)Y#hJrL>RhG<7@C5<H|_=Cau:5aj5@B932:bJ|ng>vIbs)#?C2F|9jPv0w.vISh-MKvUaz(.!9ABbb|[5;5<H|Eg>unwfh;9:4E|YjQsBt|vjx'hYq3!(?C2F|J:2<BaY?C2F|GOu!5x,g|p{ah!-(?C2F|c9:4E|OjXuvvNr}:Rh&i[w*t|cd+U#jJvsu)vsSn~Mkfrmu9p}u7vwv]So!McW#Xa!ax5@A5aY:5;5<H|>kJv~vYrquJu3x4ib#T)2@SmZM?C2F|Bj:rmu9@xPhI(a*a#U#`a3-5Abb|L~@:RhK9:4E|0@52B5G|#C::aY?C2F|-:2<BaY?C2F|.5Jvk!a)javYrquJu3x4ia#T)2@SmYM?C2F|HAxPhH(!a#U#`a*-5Abb|4~@:RhJ9:4E|R@52B5G|F:2<BaY?C2F|Sc^#Xa2j=Qq5CJvB!-g<v{z;hhM?C2F|Zi[vrv{z;hiM?C2F|XKsA>!a)-g<v{z;h[eb?C2F|]i[vrv{z;h]eb?C2F|^iZu.vix,hZq3ah!.(?C2F|QOu!5ShXM:2<BaY?C2F|P", 13494, 2713, 49, 25, 61);
+
+// node_modules/.pnpm/entities@8.1.0/node_modules/entities/dist/internal/bin-trie-flags.js
+var BinTrieFlags;
+(function(BinTrieFlags2) {
+  BinTrieFlags2[BinTrieFlags2["VALUE_LENGTH"] = 49152] = "VALUE_LENGTH";
+  BinTrieFlags2[BinTrieFlags2["FLAG13"] = 8192] = "FLAG13";
+  BinTrieFlags2[BinTrieFlags2["BRANCH_LENGTH"] = 8064] = "BRANCH_LENGTH";
+  BinTrieFlags2[BinTrieFlags2["JUMP_TABLE"] = 127] = "JUMP_TABLE";
+  BinTrieFlags2[BinTrieFlags2["VALUE_MASK"] = 8191] = "VALUE_MASK";
+})(BinTrieFlags || (BinTrieFlags = {}));
+
+// node_modules/.pnpm/entities@8.1.0/node_modules/entities/dist/decode.js
+var CharCodes;
+(function(CharCodes2) {
+  CharCodes2[CharCodes2["AMP"] = 38] = "AMP";
+  CharCodes2[CharCodes2["NUM"] = 35] = "NUM";
+  CharCodes2[CharCodes2["SEMI"] = 59] = "SEMI";
+  CharCodes2[CharCodes2["EQUALS"] = 61] = "EQUALS";
+  CharCodes2[CharCodes2["ZERO"] = 48] = "ZERO";
+  CharCodes2[CharCodes2["NINE"] = 57] = "NINE";
+  CharCodes2[CharCodes2["LOWER_A"] = 97] = "LOWER_A";
+  CharCodes2[CharCodes2["LOWER_X"] = 120] = "LOWER_X";
+})(CharCodes || (CharCodes = {}));
+var TO_LOWER_BIT = 32;
+var CONSUMED_SHIFT = 21;
+var CODE_POINT_MASK = 2097151;
+var CONSUMED_OVERFLOW = 2047;
+var longNumericConsumed = 0;
+function unpackConsumed(packed) {
+  const consumed = packed >>> CONSUMED_SHIFT;
+  return consumed === CONSUMED_OVERFLOW ? longNumericConsumed : consumed;
+}
+function isNumber(code2) {
+  return code2 - CharCodes.ZERO >>> 0 <= 9;
+}
+function isHexadecimalCharacter(code2) {
+  return (code2 | TO_LOWER_BIT) - CharCodes.LOWER_A >>> 0 <= 5;
+}
+function isAlpha(code2) {
+  return (code2 | TO_LOWER_BIT) - CharCodes.LOWER_A >>> 0 <= 25;
+}
+function isEntityInAttributeInvalidEnd(code2) {
+  return code2 === CharCodes.EQUALS || isAlpha(code2) || isNumber(code2);
+}
+var EntityDecoderState;
+(function(EntityDecoderState2) {
+  EntityDecoderState2[EntityDecoderState2["EntityStart"] = 0] = "EntityStart";
+  EntityDecoderState2[EntityDecoderState2["NumericStart"] = 1] = "NumericStart";
+  EntityDecoderState2[EntityDecoderState2["NumericDecimal"] = 2] = "NumericDecimal";
+  EntityDecoderState2[EntityDecoderState2["NumericHex"] = 3] = "NumericHex";
+  EntityDecoderState2[EntityDecoderState2["NamedEntity"] = 4] = "NamedEntity";
+})(EntityDecoderState || (EntityDecoderState = {}));
+var DecodingMode;
+(function(DecodingMode2) {
+  DecodingMode2[DecodingMode2["Legacy"] = 0] = "Legacy";
+  DecodingMode2[DecodingMode2["Strict"] = 1] = "Strict";
+  DecodingMode2[DecodingMode2["Attribute"] = 2] = "Attribute";
+})(DecodingMode || (DecodingMode = {}));
+function determineBranch(decodeTree, current, nodeIndex, char) {
+  const branchCount = (current & BinTrieFlags.BRANCH_LENGTH) >> 7;
+  const jumpOffset = current & BinTrieFlags.JUMP_TABLE;
+  if (jumpOffset) {
+    if (branchCount === 0) {
+      return char === jumpOffset ? nodeIndex : -1;
+    }
+    const slot = char - jumpOffset;
+    if (slot >>> 0 >= branchCount)
+      return -1;
+    const stored = decodeTree[nodeIndex + slot];
+    return stored === 0 ? -1 : nodeIndex + branchCount + stored - 1 & 65535;
+  }
+  if (branchCount === 0)
+    return -1;
+  const packedKeySlots = branchCount + 1 >> 1;
+  const branchEnd = nodeIndex + packedKeySlots + branchCount;
+  for (let index = 0; index < branchCount; index++) {
+    const packed = decodeTree[nodeIndex + (index >> 1)];
+    const key = packed >> ((index & 1) << 3) & 255;
+    if (key === char) {
+      const pointerIndex = nodeIndex + packedKeySlots + index;
+      return branchEnd + decodeTree[pointerIndex] & 65535;
+    }
+    if (key > char)
+      return -1;
+  }
+  return -1;
+}
+function readTrieValue(decodeTree, nodeIndex, valueLength) {
+  if (valueLength === 1) {
+    return String.fromCharCode(decodeTree[nodeIndex] & BinTrieFlags.VALUE_MASK);
+  }
+  if (valueLength === 2) {
+    return String.fromCharCode(decodeTree[nodeIndex + 1]);
+  }
+  return String.fromCharCode(decodeTree[nodeIndex + 1], decodeTree[nodeIndex + 2]);
+}
+function parseNumericEntity(input, numberStart, inputLength) {
+  let offset = numberStart + 1;
+  let cp = 0;
+  let digitStart = offset;
+  if (offset < inputLength && (input.charCodeAt(offset) | TO_LOWER_BIT) === CharCodes.LOWER_X) {
+    offset += 1;
+    digitStart = offset;
+    while (offset < inputLength) {
+      const char = input.charCodeAt(offset);
+      if (isNumber(char)) {
+        cp = cp * 16 + (char - CharCodes.ZERO);
+      } else if (isHexadecimalCharacter(char)) {
+        cp = cp * 16 + ((char | TO_LOWER_BIT) - CharCodes.LOWER_A + 10);
+      } else {
+        break;
+      }
+      offset += 1;
+    }
+  } else {
+    while (offset < inputLength) {
+      const digit = input.charCodeAt(offset) - CharCodes.ZERO;
+      if (digit >>> 0 > 9)
+        break;
+      cp = cp * 10 + digit;
+      offset += 1;
+    }
+  }
+  if (offset === digitStart)
+    return 0;
+  if (offset < inputLength && input.charCodeAt(offset) === CharCodes.SEMI) {
+    offset += 1;
+  }
+  if (cp > 1114111)
+    cp = 1114112;
+  let consumed = offset - numberStart;
+  if (consumed >= CONSUMED_OVERFLOW) {
+    longNumericConsumed = consumed;
+    consumed = CONSUMED_OVERFLOW;
+  }
+  return consumed << CONSUMED_SHIFT | cp;
+}
+function decodeWithTrie(input, isStrict, isAttribute) {
+  const decodeTree = htmlDecodeTree;
+  let offset = input.indexOf("&");
+  if (offset < 0)
+    return input;
+  const inputLength = input.length;
+  let chunkStart = 0;
+  let result = "";
+  const root = decodeTree[0];
+  const rootJumpOffset = root & BinTrieFlags.JUMP_TABLE;
+  const rootBranchCount = (root & BinTrieFlags.BRANCH_LENGTH) >> 7;
+  do {
+    const entityStart = offset + 1;
+    const firstChar = input.charCodeAt(entityStart);
+    let consumed;
+    let value;
+    if (firstChar === CharCodes.NUM) {
+      const packed = parseNumericEntity(input, entityStart, inputLength);
+      consumed = unpackConsumed(packed);
+      if (isStrict && consumed > 0 && input.charCodeAt(entityStart + consumed - 1) !== CharCodes.SEMI) {
+        consumed = 0;
+      }
+      value = consumed === 0 ? "" : codePointToString(packed & CODE_POINT_MASK);
+    } else if (isAlpha(firstChar)) {
+      consumed = 0;
+      value = "";
+      const rootSlotIndex = firstChar - rootJumpOffset;
+      let nodeIndex;
+      if (rootSlotIndex >>> 0 < rootBranchCount) {
+        const stored = decodeTree[1 + rootSlotIndex];
+        nodeIndex = stored === 0 ? -1 : rootBranchCount + stored & 65535;
+      } else {
+        nodeIndex = -1;
+      }
+      let bestNodeIndex = 0;
+      let bestValueLength = 0;
+      let current = nodeIndex < 0 ? 0 : decodeTree[nodeIndex];
+      let index = entityStart + 1;
+      trie: while (index < inputLength) {
+        while (
+          // Value-less, non-run node with a nonzero jump offset.
+          (current & (BinTrieFlags.VALUE_LENGTH | BinTrieFlags.FLAG13)) === 0 && (current & BinTrieFlags.JUMP_TABLE) !== 0
+        ) {
+          const jumpOffset = current & BinTrieFlags.JUMP_TABLE;
+          const branchCount = (current & BinTrieFlags.BRANCH_LENGTH) >> 7;
+          if (branchCount === 0) {
+            if (input.charCodeAt(index) !== jumpOffset)
+              break trie;
+            nodeIndex += 1;
+          } else {
+            const slot = input.charCodeAt(index) - jumpOffset;
+            if (slot >>> 0 >= branchCount)
+              break trie;
+            const stored = decodeTree[nodeIndex + 1 + slot];
+            if (stored === 0)
+              break trie;
+            nodeIndex = nodeIndex + branchCount + stored & 65535;
+          }
+          current = decodeTree[nodeIndex];
+          index += 1;
+          if (index >= inputLength)
+            break trie;
+        }
+        if ((current & (BinTrieFlags.VALUE_LENGTH | BinTrieFlags.FLAG13)) === BinTrieFlags.FLAG13) {
+          const runLength = (current & BinTrieFlags.BRANCH_LENGTH) >> 7;
+          if (input.charCodeAt(index) !== (current & BinTrieFlags.JUMP_TABLE)) {
+            break;
+          }
+          index += 1;
+          const remaining = runLength - 1;
+          let wordIndex = nodeIndex + 1;
+          let charIndexInPacked = 0;
+          for (; charIndexInPacked + 1 < remaining; charIndexInPacked += 2) {
+            const packed = decodeTree[wordIndex];
+            if (input.charCodeAt(index) !== (packed & 255))
+              break trie;
+            index += 1;
+            if (input.charCodeAt(index) !== (packed >> 8 & 255))
+              break trie;
+            index += 1;
+            wordIndex += 1;
+          }
+          if (charIndexInPacked < remaining) {
+            if (input.charCodeAt(index) !== (decodeTree[wordIndex] & 255))
+              break;
+            index += 1;
+          }
+          nodeIndex += 1 + (runLength >> 1);
+          current = decodeTree[nodeIndex];
+          continue;
+        }
+        const valueLength = current >>> 14;
+        const char = input.charCodeAt(index);
+        if (valueLength !== 0) {
+          if (char === CharCodes.SEMI) {
+            consumed = index - entityStart + 1;
+            value = valueLength === 1 ? String.fromCharCode(current & BinTrieFlags.VALUE_MASK) : readTrieValue(decodeTree, nodeIndex, valueLength);
+            break;
+          }
+          if (!isStrict && (current & BinTrieFlags.FLAG13) === 0) {
+            consumed = index - entityStart;
+            bestNodeIndex = nodeIndex;
+            bestValueLength = valueLength;
+          }
+          if (valueLength === 1)
+            break;
+        }
+        const next = determineBranch(decodeTree, current, nodeIndex + (valueLength || 1), char);
+        if (next < 0)
+          break;
+        nodeIndex = next;
+        current = decodeTree[nodeIndex];
+        index += 1;
+      }
+      if (value === "") {
+        const finalVL = current >>> 14;
+        if (finalVL !== 0 && !isStrict && (current & BinTrieFlags.FLAG13) === 0) {
+          consumed = index - entityStart;
+          bestNodeIndex = nodeIndex;
+          bestValueLength = finalVL;
+        }
+        if (consumed > 0) {
+          value = readTrieValue(decodeTree, bestNodeIndex, bestValueLength);
+        }
+      }
+    } else {
+      consumed = 0;
+      value = "";
+    }
+    if (consumed === 0 || isAttribute && firstChar !== CharCodes.NUM && input.charCodeAt(entityStart + consumed - 1) !== CharCodes.SEMI && entityStart + consumed < inputLength && isEntityInAttributeInvalidEnd(input.charCodeAt(entityStart + consumed))) {
+      offset = entityStart;
+    } else {
+      if (chunkStart < offset) {
+        result += input.slice(chunkStart, offset);
+      }
+      result += value;
+      offset = chunkStart = entityStart + consumed;
+    }
+    if (input.charCodeAt(offset) !== CharCodes.AMP) {
+      offset = input.indexOf("&", offset);
+    }
+  } while (offset >= 0);
+  return result + input.slice(chunkStart);
+}
+function decodeHTMLStrict(htmlString) {
+  return decodeWithTrie(htmlString, true, false);
+}
+
+// node_modules/.pnpm/entities@8.1.0/node_modules/entities/dist/index.js
+var EntityLevel;
+(function(EntityLevel2) {
+  EntityLevel2[EntityLevel2["XML"] = 0] = "XML";
+  EntityLevel2[EntityLevel2["HTML"] = 1] = "HTML";
+})(EntityLevel || (EntityLevel = {}));
+var EncodingMode;
+(function(EncodingMode2) {
+  EncodingMode2[EncodingMode2["UTF8"] = 0] = "UTF8";
+  EncodingMode2[EncodingMode2["ASCII"] = 1] = "ASCII";
+  EncodingMode2[EncodingMode2["Extensive"] = 2] = "Extensive";
+  EncodingMode2[EncodingMode2["Attribute"] = 3] = "Attribute";
+  EncodingMode2[EncodingMode2["Text"] = 4] = "Text";
+})(EncodingMode || (EncodingMode = {}));
+
+// node_modules/.pnpm/linkify-it@6.1.0/node_modules/linkify-it/build/index.mjs
+var REBuilder = class {
+  src_Any = Any.source;
+  src_Cc = Cc.source;
+  src_Z = Z.source;
+  src_P = P.source;
+  src_ZPCc = [
+    this.src_Z,
+    this.src_P,
+    this.src_Cc
+  ].join("|");
+  src_ZCc = [this.src_Z, this.src_Cc].join("|");
+  cache = {};
+  opts = {
+    maxLength: 1e4,
+    urlAuth: false,
+    schema_names: []
+  };
+  constructor(opts = {}) {
+    this.opts = {
+      ...this.opts,
+      ...opts
+    };
+  }
+  set(opts = {}) {
+    this.opts = {
+      ...this.opts,
+      ...opts
+    };
+    this.cache = {};
+    return this;
+  }
+  escapeRE(str) {
+    return str.replace(/[.?*+^$[\]\\(){}|-]/g, "\\$&");
+  }
+  nestedPairRE(open, close, depth = 4) {
+    const openRE = this.escapeRE(open);
+    const closeRE = this.escapeRE(close);
+    const atom = `(?:(?!${this.src_ZCc}|${openRE}|${closeRE}).)`;
+    let pair = `${openRE}${atom}{0,1000}${closeRE}`;
+    for (let level = 2; level <= depth; level++) pair = `${openRE}(?:${atom}|${pair}){0,1000}${closeRE}`;
+    return pair;
+  }
+  get_text_separators() {
+    return this.cache.text_separators ??= /[><\uff5c]/;
+  }
+  get_pseudo_letter() {
+    return this.cache.src_pseudo_letter ??= new RegExp(`(?:(?!${this.get_text_separators().source}|${this.src_ZPCc})${this.src_Any})`);
+  }
+  get_ipv4_addr() {
+    return this.cache.src_ip4 ??= /* @__PURE__ */ new RegExp("(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])[.]){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])");
+  }
+  get_ipv6_addr() {
+    const h16 = "[0-9A-Fa-f]{1,4}";
+    const ls32 = `(?:(?:${h16}:${h16})|${this.get_ipv4_addr().source})`;
+    return this.cache.src_ip6_addr ??= new RegExp(`(?:(?:${h16}:){6}${ls32}|::(?:${h16}:){5}${ls32}|(?:${h16})?::(?:${h16}:){4}${ls32}|(?:(?:${h16}:){0,1}${h16})?::(?:${h16}:){3}${ls32}|(?:(?:${h16}:){0,2}${h16})?::(?:${h16}:){2}${ls32}|(?:(?:${h16}:){0,3}${h16})?::${h16}:${ls32}|(?:(?:${h16}:){0,4}${h16})?::${ls32}|(?:(?:${h16}:){0,5}${h16})?::${h16}|(?:(?:${h16}:){0,6}${h16})?::)`);
+  }
+  get_ipv6_url_host() {
+    return this.cache.src_ip6_host ??= new RegExp(`\\[${this.get_ipv6_addr().source}\\]`);
+  }
+  get_ipv6_mail_host() {
+    return this.cache.src_ipv6_mail_host ??= new RegExp(`\\[IPv6:${this.get_ipv6_addr().source}\\]`);
+  }
+  get_auth() {
+    return this.cache.src_auth ??= new RegExp(`(?:(?:(?!${this.src_ZCc}|[@/\\[\\]()]).){1,50}@)?`);
+  }
+  get_port() {
+    return this.cache.src_port ??= /* @__PURE__ */ new RegExp("(?::(?:6(?:[0-4]\\d{3}|5(?:[0-4]\\d{2}|5(?:[0-2]\\d|3[0-5])))|[1-5]?\\d{1,4}))?");
+  }
+  get_host_terminator() {
+    return this.cache.src_host_terminator ??= new RegExp(`(?=$|${this.get_text_separators().source}|${this.src_ZPCc})(?!${this.opts["---"] ? "-(?!--)|" : "-|"}_|:\\d|\\.-|\\.(?!$|${this.src_ZPCc}))`);
+  }
+  get_path_terminator() {
+    return this.cache.src_path_terminator ??= new RegExp(`${this.src_ZPCc}|${this.get_text_separators().source}`);
+  }
+  get_path() {
+    return this.cache.src_path ??= new RegExp(`(?:[/?#](?:${this.nestedPairRE("[", "]")}|${this.nestedPairRE("(", ")")}|${this.nestedPairRE("{", "}")}|\\"(?:(?!${this.src_ZCc}|["]).){1,100}\\"|\\'(?:(?!${this.src_ZCc}|[']).){1,100}\\'|\\'(?=${this.get_pseudo_letter().source}|[-])|\\.{2,20}[:]?[a-zA-Z0-9%/&]|\\.(?!${this.src_ZCc}|[.]|$)|` + (this.opts["---"] ? "\\-(?!--(?:[^-]|$))(?:-{0,19})|" : "\\-{1,20}|") + `,(?!${this.src_ZCc}|$)|;(?!${this.src_ZCc}|$)|\\!{1,20}(?!${this.src_ZCc}|[!]|$)|\\?(?!${this.src_ZCc}|[?]|$)|` + this.get_path_extra().source + `[\\\\/:%@#&=_~*]|(?!${this.get_path_terminator().source}).){1,${this.opts.maxLength}}|\\/)?`);
+  }
+  get_mail_name() {
+    return this.cache.src_mail_name ??= /* @__PURE__ */ new RegExp("[-!#$%&'*+/=?^_`{|}~a-zA-Z0-9](?:[-!#$%&'*+/=?^_`{|}~a-zA-Z0-9]|[.](?=[-!#$%&'*+/=?^_`{|}~a-zA-Z0-9])){0,63}");
+  }
+  get_xn() {
+    return this.cache.src_xn ??= /* @__PURE__ */ new RegExp("xn--[a-z0-9\\-]{1,59}");
+  }
+  get_tld() {
+    if (this.cache.tld) return this.cache.tld;
+    const tlds_src = [...new Set(this.opts.tlds || [])].sort().reverse().join("|");
+    this.cache.tld = new RegExp(`${tlds_src || "$#none#$"}|${this.get_xn().source}`);
+    return this.cache.tld;
+  }
+  get_domain_root() {
+    return this.cache.src_domain_root ??= new RegExp("(?:" + this.get_xn().source + `|${this.get_pseudo_letter().source}{1,63})`);
+  }
+  get_domain() {
+    return this.cache.src_domain ??= new RegExp("(?:" + this.get_xn().source + `|(?:${this.get_pseudo_letter().source})|(?:${this.get_pseudo_letter().source}(?:-|${this.get_pseudo_letter().source}){0,61}${this.get_pseudo_letter().source}))`);
+  }
+  get_url_host_port() {
+    return this.cache.url_host_port ??= new RegExp("(?:" + this.get_ipv6_url_host().source + `|(?:(?:(?:${this.get_domain().source})\\.){0,10}${this.get_domain().source}))` + this.get_port().source + this.get_host_terminator().source);
+  }
+  get_fuzzy_url_host_port() {
+    return this.cache.fuzzy_url_host_port ??= new RegExp("(?:" + (this.opts.fuzzyIP ? this.get_ipv4_addr().source + "|" : "") + `(?:(?:(?:${this.get_domain().source})\\.){1,10}(?:${this.get_tld().source})))` + this.get_host_terminator().source);
+  }
+  get_mail_host() {
+    return this.cache.src_mail_host ??= new RegExp("(?:" + this.get_ipv6_mail_host().source + `|(?:(?:(?:${this.get_domain().source})\\.){0,4}${this.get_domain().source}))` + this.get_host_terminator().source);
+  }
+  get_fuzzy_mail_host() {
+    return this.cache.src_fuzzy_mail_host ??= new RegExp("(?:" + this.get_ipv6_mail_host().source + `|(?:(?:(?:${this.get_domain().source})[.]){1,4}${this.get_domain_root().source}))` + this.get_host_terminator().source);
+  }
+  get_path_extra() {
+    return this.cache.src_path_extra ??= /* @__PURE__ */ new RegExp("");
+  }
+  get_fuzzy_mail_host_search() {
+    return this.cache.mail_fuzzy_host_search ??= new RegExp(`@${this.get_fuzzy_mail_host().source}`, "ig");
+  }
+  get_fuzzy_link_search() {
+    return this.cache.link_fuzzy_search ??= new RegExp(`(^|(?![.:/\\-_@])(?:[$+<=>^\`|\uFF5C]|${this.src_ZPCc}))(?:(?![$+<=>^\`|\uFF5C])${this.get_fuzzy_url_host_port().source}${this.get_path().source})`, "ig");
+  }
+  get_http_validator() {
+    return this.cache.http_validator ??= new RegExp("\\/\\/" + (this.opts.urlAuth ? this.get_auth().source : "") + this.get_url_host_port().source + this.get_path().source, "iy");
+  }
+  get_relative_proto_validator() {
+    return this.cache.relative_proto_validator ??= new RegExp((this.opts.urlAuth ? this.get_auth().source : "") + `(?:localhost|${this.get_ipv6_url_host().source}|(?:(?:${this.get_domain().source})[.]){1,10}${this.get_domain_root().source})` + this.get_port().source + this.get_host_terminator().source + this.get_path().source, "iy");
+  }
+  get_mail_name_validator() {
+    return this.cache.mail_name_validator ??= new RegExp(`(?:^|${this.get_text_separators().source}|"|\\(|${this.src_ZCc})(${this.get_mail_name().source})$`);
+  }
+  get_mailto_validator() {
+    return this.cache.mailto_validator ??= new RegExp(`${this.get_mail_name().source}@${this.get_mail_host().source}`, "iy");
+  }
+  get_schema_names() {
+    return this.cache.schema_names ??= new RegExp((this.opts.schema_names || []).map((name) => this.escapeRE(name)).join("|"));
+  }
+  get_schema_search() {
+    return this.cache.schema_search ??= new RegExp(`(^|(?!_)(?:[><\uFF5C]|${this.src_ZPCc}))(${this.get_schema_names().source})`, "ig");
+  }
+  get_schema_at_start() {
+    return this.cache.schema_at_start ??= new RegExp(`^${this.get_schema_search().source}`, "i");
+  }
+};
+var web_schema = {
+  validate: (text2, pos, self) => {
+    const re = self.re.get_http_validator();
+    re.lastIndex = pos;
+    const m = re.exec(text2);
+    return m ? m[0].length : 0;
+  },
+  normalize: (match, self) => self.normalize(match)
+};
+var defaultSchemas = {
+  "http:": web_schema,
+  "https:": web_schema,
+  "ftp:": web_schema,
+  "//": {
+    validate: function(text2, pos, self) {
+      const re = self.re.get_relative_proto_validator();
+      re.lastIndex = pos;
+      const m = re.exec(text2);
+      if (m) {
+        if (pos >= 3 && text2[pos - 3] === ":") return 0;
+        if (pos >= 3 && text2[pos - 3] === "/") return 0;
+        return m[0].length;
+      }
+      return 0;
+    },
+    normalize: (match, self) => self.normalize(match)
+  },
+  "mailto:": {
+    validate: function(text2, pos, self) {
+      const re = self.re.get_mailto_validator();
+      re.lastIndex = pos;
+      const m = re.exec(text2);
+      return m ? m[0].length : 0;
+    },
+    normalize: (match, self) => self.normalize(match)
+  }
+};
+var tlds_2ch = "a:cdefgilmnoqrstuwxz|b:abdefghijmnorstvwyz|c:acdfghiklmnoruvwxyz|d:ejkmoz|e:cegrstu|f:ijkmor|g:abdefghilmnpqrstuwy|h:kmnrtu|i:delmnoqrst|j:emop|k:eghimnprwyz|l:abcikrstuvy|m:acdeghklmnopqrstuvwxyz|n:acefgilopruz|o:m|p:aefghklmnrstwy|q:a|r:eosuw|s:abcdeghijklmnortuvxyz|t:cdfghjklmnortvwz|u:agksyz|v:aceginu|w:fs|y:et|z:amw";
+var tlds_default = "biz|com|edu|gov|net|org|pro|web|xxx|aero|asia|coop|info|museum|name|shop|\u0440\u0444";
+function unpackTlds() {
+  const result = tlds_default.split("|");
+  tlds_2ch.split("|").forEach((item) => {
+    const sep = item.indexOf(":");
+    const prefix = item.slice(0, sep);
+    for (const suffix of item.slice(sep + 1)) result.push(prefix + suffix);
+  });
+  return result;
+}
+var defaultOptions = {
+  fuzzyLink: false,
+  fuzzyEmail: true,
+  fuzzyIP: false,
+  "---": false,
+  tlds: unpackTlds(),
+  urlAuth: false,
+  maxLength: 1e4
+};
+var Match = class {
+  /** Prefix (protocol) for matched string. Empty for fuzzy links. */
+  schema;
+  /** First position of matched string. */
+  index;
+  /** Next position after matched string. */
+  lastIndex;
+  /** Matched string. */
+  raw;
+  /** Normalized text of matched string. */
+  text;
+  /** Normalized URL of matched string. */
+  url;
+  constructor(text2, schema, index, lastIndex) {
+    const raw = text2.slice(index, lastIndex);
+    this.schema = schema.toLowerCase();
+    this.index = index;
+    this.lastIndex = lastIndex;
+    this.raw = raw;
+    this.text = raw;
+    this.url = raw;
+  }
+};
+var LinkifyIt = class {
+  __opts__;
+  __schemas__;
+  re;
+  /**
+  * Creates new linkifier instance.
+  *
+  * By default understands:
+  *
+  * - `http(s)://...` , `ftp://...`, `mailto:...` & `//...` links
+  * - "fuzzy" emails (foo@bar.com).
+  *
+  * See {@link LinkifyConstructorOptions} for available options.
+  *
+  * @param options Recognition options.
+  *
+  * @example
+  * ```javascript
+  * import { LinkifyIt } from 'linkify-it'
+  *
+  * const linkify = new LinkifyIt({ fuzzyLink: true })
+  *
+  * linkify
+  *   .tlds(require('tlds'))       // Reload with full TLD list
+  *   .tlds('onion', true)         // Add unofficial `.onion` domain
+  *   .add('ftp:', null)           // Disable `ftp:` protocol
+  *   .set({ fuzzyIP: true })      // Enable IPs in fuzzy links
+  *
+  * console.log(linkify.test('Site github.com!')) // true
+  * console.log(linkify.match('Site github.com!'))
+  * ```
+  */
+  constructor(options = {}) {
+    const { rebuilder, ...linkifyOptions } = options;
+    this.__opts__ = {
+      ...defaultOptions,
+      ...linkifyOptions
+    };
+    this.__schemas__ = { ...defaultSchemas };
+    this.re = rebuilder || new REBuilder();
+    this.re.set({
+      ...this.__opts__,
+      schema_names: Object.keys(this.__schemas__)
+    });
+  }
+  /**
+  * Add new rule definition.
+  *
+  * `schema` is a link prefix (usually, protocol name with `:` at the end,
+  * `skype:` for example). `linkify-it` makes sure that prefix is not
+  * preceded with alphanumeric char and symbols. Only whitespaces and
+  * punctuation allowed.
+  *
+  * `definition` is a rule to check tail after link prefix. To disable an
+  * existing rule, pass `null`.
+  *
+  * @param schema Rule name (fixed pattern prefix).
+  * @param definition Schema definition, or `null` to disable the rule.
+  *
+  * See [twitter mentions example](https://github.com/markdown-it/linkify-it/blob/master/examples/twitter.mjs).
+  */
+  add(schema, definition = null) {
+    if (!definition) delete this.__schemas__[schema];
+    else {
+      const def = {
+        normalize: (match, self) => self.normalize(match),
+        ...definition
+      };
+      this.__schemas__[schema] = def;
+    }
+    this.re.set({
+      ...this.__opts__,
+      schema_names: Object.keys(this.__schemas__)
+    });
+    return this;
+  }
+  /**
+  * Set recognition options for links without schema.
+  *
+  * @param options Recognition options.
+  */
+  set(options = {}) {
+    this.__opts__ = {
+      ...this.__opts__,
+      ...options
+    };
+    this.re.set({
+      ...this.__opts__,
+      schema_names: Object.keys(this.__schemas__)
+    });
+    return this;
+  }
+  /**
+  * Searches linkifiable pattern and returns `true` on success or `false` on fail.
+  *
+  * @param text Text to scan.
+  */
+  test(text2) {
+    if (!text2.length) return false;
+    let m, re;
+    re = this.re.get_schema_search();
+    re.lastIndex = 0;
+    while ((m = re.exec(text2)) !== null) if (this.testSchemaAt(text2, m[2], re.lastIndex)) return true;
+    if (this.__opts__.fuzzyLink && this.__schemas__["http:"]) {
+      re = this.re.get_fuzzy_link_search();
+      re.lastIndex = 0;
+      if (re.exec(text2) !== null) return true;
+    }
+    if (this.__opts__.fuzzyEmail && this.__schemas__["mailto:"]) {
+      if (text2.indexOf("@") >= 0) {
+        const mailHostRe = this.re.get_fuzzy_mail_host_search();
+        const mailNameRe = this.re.get_mail_name_validator();
+        mailHostRe.lastIndex = 0;
+        while ((m = mailHostRe.exec(text2)) !== null) {
+          const name = text2.slice(Math.max(0, m.index - 65), m.index);
+          if (mailNameRe.test(name)) return true;
+        }
+      }
+    }
+    return false;
+  }
+  /**
+  * Similar to {@link LinkifyIt.test} but checks only specific protocol tail exactly
+  * at given position. Returns length of found pattern (0 on fail).
+  *
+  * @param text Text to scan.
+  * @param schema Rule (schema) name.
+  * @param pos Text offset to check from.
+  */
+  testSchemaAt(text2, schema, pos) {
+    if (!this.__schemas__[schema.toLowerCase()]) return 0;
+    return this.__schemas__[schema.toLowerCase()].validate(text2.slice(0, pos + this.__opts__.maxLength), pos, this);
+  }
+  /**
+  * Returns array of found link descriptions or `null` on fail. We strongly
+  * recommend to use {@link LinkifyIt.test} first, for best speed.
+  *
+  * @param text Text to scan.
+  */
+  match(text2) {
+    const result = [];
+    const schemaRe = this.re.get_schema_search();
+    let fuzzyLinkRe;
+    let mailHostRe;
+    let mailNameRe;
+    let fuzzyLinkCandidate;
+    let fuzzyEmailCandidate;
+    let schemaPrefix;
+    let schemaDone = false;
+    let fuzzyLinkDone = false;
+    let fuzzyEmailDone = false;
+    let pos = 0;
+    if (!text2.length) return null;
+    schemaRe.lastIndex = 0;
+    if (this.__opts__.fuzzyLink && this.__schemas__["http:"]) {
+      fuzzyLinkRe = this.re.get_fuzzy_link_search();
+      fuzzyLinkRe.lastIndex = 0;
+    }
+    if (this.__opts__.fuzzyEmail && this.__schemas__["mailto:"]) {
+      mailHostRe = this.re.get_fuzzy_mail_host_search();
+      mailHostRe.lastIndex = 0;
+      mailNameRe = this.re.get_mail_name_validator();
+    }
+    for (; ; ) {
+      const scanFrom = Math.max(pos - 1, 0);
+      if (mailHostRe && mailNameRe && !fuzzyEmailDone && (!fuzzyEmailCandidate || fuzzyEmailCandidate.index < pos)) {
+        if (mailHostRe.lastIndex < scanFrom) mailHostRe.lastIndex = scanFrom;
+        for (; ; ) {
+          const m = mailHostRe.exec(text2);
+          if (!m) {
+            fuzzyEmailDone = true;
+            fuzzyEmailCandidate = void 0;
+            break;
+          }
+          const name = mailNameRe.exec(text2.slice(Math.max(0, m.index - 65), m.index));
+          if (!name) continue;
+          fuzzyEmailCandidate = {
+            schema: "mailto:",
+            index: m.index - name[1].length,
+            lastIndex: m.index + m[0].length
+          };
+          if (fuzzyEmailCandidate.index >= pos) break;
+          if (mailHostRe.lastIndex < scanFrom) mailHostRe.lastIndex = scanFrom;
+        }
+      }
+      if (fuzzyLinkRe && !fuzzyLinkDone && (!fuzzyLinkCandidate || fuzzyLinkCandidate.index < pos)) {
+        if (fuzzyLinkRe.lastIndex < scanFrom) fuzzyLinkRe.lastIndex = scanFrom;
+        for (; ; ) {
+          const m = fuzzyLinkRe.exec(text2);
+          if (!m) {
+            fuzzyLinkDone = true;
+            fuzzyLinkCandidate = void 0;
+            break;
+          }
+          fuzzyLinkCandidate = {
+            schema: "",
+            index: m.index + m[1].length,
+            lastIndex: m.index + m[0].length
+          };
+          if (fuzzyLinkCandidate.index >= pos) break;
+          if (fuzzyLinkRe.lastIndex < scanFrom) fuzzyLinkRe.lastIndex = scanFrom;
+        }
+      }
+      let fuzzyCandidate = fuzzyEmailCandidate;
+      if (!fuzzyCandidate || fuzzyLinkCandidate && (fuzzyLinkCandidate.index < fuzzyCandidate.index || fuzzyLinkCandidate.index === fuzzyCandidate.index && fuzzyLinkCandidate.lastIndex > fuzzyCandidate.lastIndex)) fuzzyCandidate = fuzzyLinkCandidate;
+      let schemaCandidate;
+      if (!schemaDone) for (; ; ) {
+        if (!schemaPrefix) {
+          if (schemaRe.lastIndex < scanFrom) schemaRe.lastIndex = scanFrom;
+          const m = schemaRe.exec(text2);
+          if (!m) {
+            schemaDone = true;
+            break;
+          }
+          schemaPrefix = {
+            schema: m[2],
+            index: m.index + m[1].length,
+            lastIndex: m.index + m[0].length
+          };
+        }
+        if (schemaPrefix.index < pos) {
+          schemaPrefix = void 0;
+          continue;
+        }
+        if (fuzzyCandidate && schemaPrefix.index > fuzzyCandidate.index) break;
+        const prefix = schemaPrefix;
+        schemaPrefix = void 0;
+        const len = this.testSchemaAt(text2, prefix.schema, prefix.lastIndex);
+        if (len) {
+          schemaCandidate = {
+            schema: prefix.schema,
+            index: prefix.index,
+            lastIndex: prefix.lastIndex + len
+          };
+          break;
+        }
+      }
+      let candidate = schemaCandidate;
+      if (!candidate || fuzzyEmailCandidate && (fuzzyEmailCandidate.index < candidate.index || fuzzyEmailCandidate.index === candidate.index && fuzzyEmailCandidate.lastIndex > candidate.lastIndex)) candidate = fuzzyEmailCandidate;
+      if (!candidate || fuzzyLinkCandidate && (fuzzyLinkCandidate.index < candidate.index || fuzzyLinkCandidate.index === candidate.index && fuzzyLinkCandidate.lastIndex > candidate.lastIndex)) candidate = fuzzyLinkCandidate;
+      if (!candidate) break;
+      if (candidate === fuzzyEmailCandidate) fuzzyEmailCandidate = void 0;
+      else if (candidate === fuzzyLinkCandidate) fuzzyLinkCandidate = void 0;
+      const match = new Match(text2, candidate.schema, candidate.index, candidate.lastIndex);
+      if (match.schema) this.__schemas__[match.schema].normalize(match, this);
+      else this.normalize(match);
+      result.push(match);
+      pos = candidate.lastIndex;
+    }
+    if (result.length) return result;
+    return null;
+  }
+  /**
+  * Returns fully-formed (not fuzzy) link if it starts at the beginning
+  * of the string, and null otherwise.
+  *
+  * @param text Text to scan.
+  */
+  matchAtStart(text2) {
+    if (!text2.length) return null;
+    const m = this.re.get_schema_at_start().exec(text2);
+    if (!m) return null;
+    const len = this.testSchemaAt(text2, m[2], m[0].length);
+    if (!len) return null;
+    const match = new Match(text2, m[2], m.index + m[1].length, m.index + m[0].length + len);
+    this.__schemas__[match.schema].normalize(match, this);
+    return match;
+  }
+  /**
+  * Load (or merge) new TLDs list. Those are used for fuzzy links (without
+  * prefix) to avoid false positives. By default this algorithm is used:
+  *
+  * - hostname with any 2-letter root zones are ok.
+  * - biz|com|edu|gov|net|org|pro|web|xxx|aero|asia|coop|info|museum|name|shop|рф
+  *   are ok.
+  * - encoded (`xn--...`) root zones are ok.
+  *
+  * If list is replaced, then exact match for 2-chars root zones will be checked.
+  *
+  * @param list List of TLDs.
+  * @param keepOld Merge with current list if `true` (`false` by default).
+  */
+  tlds(list2, keepOld = false) {
+    list2 = Array.isArray(list2) ? list2 : [list2];
+    if (!keepOld) this.__opts__.tlds = list2;
+    else this.__opts__.tlds = this.__opts__.tlds.concat(list2);
+    this.re.set({
+      ...this.__opts__,
+      schema_names: Object.keys(this.__schemas__)
+    });
+    return this;
+  }
+  /**
+  * Default normalizer (if schema does not define its own).
+  *
+  * @param match Match to normalize.
+  */
+  normalize(match) {
+    if (!match.schema) match.url = `http://${match.url}`;
+    if (match.schema === "mailto:" && !/^mailto:/i.test(match.url)) match.url = `mailto:${match.url}`;
+  }
+};
+
+// node_modules/.pnpm/punycode.js@2.3.1/node_modules/punycode.js/punycode.es6.js
+var maxInt = 2147483647;
+var base = 36;
+var tMin = 1;
+var tMax = 26;
+var skew = 38;
+var damp = 700;
+var initialBias = 72;
+var initialN = 128;
+var delimiter = "-";
+var regexPunycode = /^xn--/;
+var regexNonASCII = /[^\0-\x7F]/;
+var regexSeparators = /[\x2E\u3002\uFF0E\uFF61]/g;
+var errors = {
+  "overflow": "Overflow: input needs wider integers to process",
+  "not-basic": "Illegal input >= 0x80 (not a basic code point)",
+  "invalid-input": "Invalid input"
+};
+var baseMinusTMin = base - tMin;
+var floor = Math.floor;
+var stringFromCharCode = String.fromCharCode;
+function error(type) {
+  throw new RangeError(errors[type]);
+}
+function map(array, callback) {
+  const result = [];
+  let length = array.length;
+  while (length--) {
+    result[length] = callback(array[length]);
+  }
+  return result;
+}
+function mapDomain(domain, callback) {
+  const parts = domain.split("@");
+  let result = "";
+  if (parts.length > 1) {
+    result = parts[0] + "@";
+    domain = parts[1];
+  }
+  domain = domain.replace(regexSeparators, ".");
+  const labels = domain.split(".");
+  const encoded = map(labels, callback).join(".");
+  return result + encoded;
+}
+function ucs2decode(string) {
+  const output = [];
+  let counter = 0;
+  const length = string.length;
+  while (counter < length) {
+    const value = string.charCodeAt(counter++);
+    if (value >= 55296 && value <= 56319 && counter < length) {
+      const extra = string.charCodeAt(counter++);
+      if ((extra & 64512) == 56320) {
+        output.push(((value & 1023) << 10) + (extra & 1023) + 65536);
+      } else {
+        output.push(value);
+        counter--;
+      }
+    } else {
+      output.push(value);
+    }
+  }
+  return output;
+}
+var ucs2encode = (codePoints) => String.fromCodePoint(...codePoints);
+var basicToDigit = function(codePoint) {
+  if (codePoint >= 48 && codePoint < 58) {
+    return 26 + (codePoint - 48);
+  }
+  if (codePoint >= 65 && codePoint < 91) {
+    return codePoint - 65;
+  }
+  if (codePoint >= 97 && codePoint < 123) {
+    return codePoint - 97;
+  }
+  return base;
+};
+var digitToBasic = function(digit, flag) {
+  return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+};
+var adapt = function(delta, numPoints, firstTime) {
+  let k = 0;
+  delta = firstTime ? floor(delta / damp) : delta >> 1;
+  delta += floor(delta / numPoints);
+  for (; delta > baseMinusTMin * tMax >> 1; k += base) {
+    delta = floor(delta / baseMinusTMin);
+  }
+  return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+};
+var decode2 = function(input) {
+  const output = [];
+  const inputLength = input.length;
+  let i = 0;
+  let n = initialN;
+  let bias = initialBias;
+  let basic = input.lastIndexOf(delimiter);
+  if (basic < 0) {
+    basic = 0;
+  }
+  for (let j = 0; j < basic; ++j) {
+    if (input.charCodeAt(j) >= 128) {
+      error("not-basic");
+    }
+    output.push(input.charCodeAt(j));
+  }
+  for (let index = basic > 0 ? basic + 1 : 0; index < inputLength; ) {
+    const oldi = i;
+    for (let w = 1, k = base; ; k += base) {
+      if (index >= inputLength) {
+        error("invalid-input");
+      }
+      const digit = basicToDigit(input.charCodeAt(index++));
+      if (digit >= base) {
+        error("invalid-input");
+      }
+      if (digit > floor((maxInt - i) / w)) {
+        error("overflow");
+      }
+      i += digit * w;
+      const t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
+      if (digit < t) {
+        break;
+      }
+      const baseMinusT = base - t;
+      if (w > floor(maxInt / baseMinusT)) {
+        error("overflow");
+      }
+      w *= baseMinusT;
+    }
+    const out = output.length + 1;
+    bias = adapt(i - oldi, out, oldi == 0);
+    if (floor(i / out) > maxInt - n) {
+      error("overflow");
+    }
+    n += floor(i / out);
+    i %= out;
+    output.splice(i++, 0, n);
+  }
+  return String.fromCodePoint(...output);
+};
+var encode2 = function(input) {
+  const output = [];
+  input = ucs2decode(input);
+  const inputLength = input.length;
+  let n = initialN;
+  let delta = 0;
+  let bias = initialBias;
+  for (const currentValue of input) {
+    if (currentValue < 128) {
+      output.push(stringFromCharCode(currentValue));
+    }
+  }
+  const basicLength = output.length;
+  let handledCPCount = basicLength;
+  if (basicLength) {
+    output.push(delimiter);
+  }
+  while (handledCPCount < inputLength) {
+    let m = maxInt;
+    for (const currentValue of input) {
+      if (currentValue >= n && currentValue < m) {
+        m = currentValue;
+      }
+    }
+    const handledCPCountPlusOne = handledCPCount + 1;
+    if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+      error("overflow");
+    }
+    delta += (m - n) * handledCPCountPlusOne;
+    n = m;
+    for (const currentValue of input) {
+      if (currentValue < n && ++delta > maxInt) {
+        error("overflow");
+      }
+      if (currentValue === n) {
+        let q = delta;
+        for (let k = base; ; k += base) {
+          const t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
+          if (q < t) {
+            break;
+          }
+          const qMinusT = q - t;
+          const baseMinusT = base - t;
+          output.push(
+            stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
+          );
+          q = floor(qMinusT / baseMinusT);
+        }
+        output.push(stringFromCharCode(digitToBasic(q, 0)));
+        bias = adapt(delta, handledCPCountPlusOne, handledCPCount === basicLength);
+        delta = 0;
+        ++handledCPCount;
+      }
+    }
+    ++delta;
+    ++n;
+  }
+  return output.join("");
+};
+var toUnicode = function(input) {
+  return mapDomain(input, function(string) {
+    return regexPunycode.test(string) ? decode2(string.slice(4).toLowerCase()) : string;
+  });
+};
+var toASCII = function(input) {
+  return mapDomain(input, function(string) {
+    return regexNonASCII.test(string) ? "xn--" + encode2(string) : string;
+  });
+};
+var punycode = {
+  /**
+   * A string representing the current Punycode.js version number.
+   * @memberOf punycode
+   * @type String
+   */
+  "version": "2.3.1",
+  /**
+   * An object of methods to convert from JavaScript's internal character
+   * representation (UCS-2) to Unicode code points, and back.
+   * @see <https://mathiasbynens.be/notes/javascript-encoding>
+   * @memberOf punycode
+   * @type Object
+   */
+  "ucs2": {
+    "decode": ucs2decode,
+    "encode": ucs2encode
+  },
+  "decode": decode2,
+  "encode": encode2,
+  "toASCII": toASCII,
+  "toUnicode": toUnicode
+};
+var punycode_es6_default = punycode;
+
+// node_modules/.pnpm/markdown-it@15.0.3/node_modules/markdown-it/dist/markdown-it.mjs
+/*! markdown-it 15.0.3 https://github.com/markdown-it/markdown-it @license MIT */
+var __defProp2 = Object.defineProperty;
+var __exportAll = (all, no_symbols) => {
+  let target = {};
+  for (var name in all) __defProp2(target, name, {
+    get: all[name],
+    enumerable: true
+  });
+  if (!no_symbols) __defProp2(target, Symbol.toStringTag, { value: "Module" });
+  return target;
+};
+var utils_exports = /* @__PURE__ */ __exportAll({
+  arrayReplaceAt: () => arrayReplaceAt,
+  asciiTrim: () => asciiTrim,
+  callable: () => callable,
+  escapeHtml: () => escapeHtml,
+  escapeRE: () => escapeRE,
+  fromCodePoint: () => fromCodePoint,
+  isMdAsciiPunct: () => isMdAsciiPunct,
+  isPunctChar: () => isPunctChar,
+  isPunctCharCode: () => isPunctCharCode,
+  isSpace: () => isSpace,
+  isValidEntityCode: () => isValidEntityCode,
+  isWhiteSpace: () => isWhiteSpace,
+  lib: () => lib,
+  normalizeReference: () => normalizeReference,
+  unescapeAll: () => unescapeAll,
+  unescapeMd: () => unescapeMd
+});
+function callable(cls) {
+  const wrapper = function(...args) {
+    return Reflect.construct(cls, args, new.target && new.target !== wrapper ? new.target : cls);
+  };
+  Object.defineProperty(wrapper, "name", { value: cls.name });
+  Object.setPrototypeOf(wrapper, cls);
+  wrapper.prototype = cls.prototype;
+  return wrapper;
+}
+function arrayReplaceAt(src, pos, newElements) {
+  return [].concat(src.slice(0, pos), newElements, src.slice(pos + 1));
+}
+function isValidEntityCode(c2) {
+  if (c2 >= 55296 && c2 <= 57343) return false;
+  if (c2 >= 64976 && c2 <= 65007) return false;
+  if ((c2 & 65535) === 65535 || (c2 & 65535) === 65534) return false;
+  if (c2 >= 0 && c2 <= 8) return false;
+  if (c2 === 11) return false;
+  if (c2 >= 14 && c2 <= 31) return false;
+  if (c2 >= 127 && c2 <= 159) return false;
+  if (c2 > 1114111) return false;
+  return true;
+}
+function fromCodePoint(c2) {
+  if (c2 > 65535) {
+    c2 -= 65536;
+    const surrogate1 = 55296 + (c2 >> 10);
+    const surrogate2 = 56320 + (c2 & 1023);
+    return String.fromCharCode(surrogate1, surrogate2);
+  }
+  return String.fromCharCode(c2);
+}
+var UNESCAPE_MD_RE = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g;
+var UNESCAPE_ALL_RE = new RegExp(`${UNESCAPE_MD_RE.source}|${/&([a-z#][a-z0-9]{1,31});/gi.source}`, "gi");
+var DIGITAL_ENTITY_TEST_RE = /^#((?:x[a-f0-9]{1,8}|[0-9]{1,8}))$/i;
+function replaceEntityPattern(match, name) {
+  if (name.charCodeAt(0) === 35 && DIGITAL_ENTITY_TEST_RE.test(name)) {
+    const code2 = name[1].toLowerCase() === "x" ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
+    if (isValidEntityCode(code2)) return fromCodePoint(code2);
+    return match;
+  }
+  const decoded = decodeHTMLStrict(match);
+  if (decoded !== match) return decoded;
+  return match;
+}
+function unescapeMd(str) {
+  if (str.indexOf("\\") < 0) return str;
+  return str.replace(UNESCAPE_MD_RE, "$1");
+}
+function unescapeAll(str) {
+  if (str.indexOf("\\") < 0 && str.indexOf("&") < 0) return str;
+  return str.replace(UNESCAPE_ALL_RE, function(match, escaped, entity2) {
+    if (escaped) return escaped;
+    return replaceEntityPattern(match, entity2);
+  });
+}
+var HTML_ESCAPE_TEST_RE = /[&<>"]/;
+var HTML_ESCAPE_REPLACE_RE = /[&<>"]/g;
+var HTML_REPLACEMENTS = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;"
+};
+function replaceUnsafeChar(ch) {
+  return HTML_REPLACEMENTS[ch];
+}
+function escapeHtml(str) {
+  if (HTML_ESCAPE_TEST_RE.test(str)) return str.replace(HTML_ESCAPE_REPLACE_RE, replaceUnsafeChar);
+  return str;
+}
+var REGEXP_ESCAPE_RE = /[.?*+^$[\]\\(){}|-]/g;
+function escapeRE(str) {
+  return str.replace(REGEXP_ESCAPE_RE, "\\$&");
+}
+function isSpace(code2) {
+  switch (code2) {
+    case 9:
+    case 32:
+      return true;
+  }
+  return false;
+}
+function isWhiteSpace(code2) {
+  if (code2 >= 8192 && code2 <= 8202) return true;
+  switch (code2) {
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 32:
+    case 160:
+    case 5760:
+    case 8239:
+    case 8287:
+    case 12288:
+      return true;
+  }
+  return false;
+}
+function isPunctChar(ch) {
+  return P.test(ch) || S.test(ch);
+}
+function isPunctCharCode(code2) {
+  return isPunctChar(fromCodePoint(code2));
+}
+function isMdAsciiPunct(ch) {
+  switch (ch) {
+    case 33:
+    case 34:
+    case 35:
+    case 36:
+    case 37:
+    case 38:
+    case 39:
+    case 40:
+    case 41:
+    case 42:
+    case 43:
+    case 44:
+    case 45:
+    case 46:
+    case 47:
+    case 58:
+    case 59:
+    case 60:
+    case 61:
+    case 62:
+    case 63:
+    case 64:
+    case 91:
+    case 92:
+    case 93:
+    case 94:
+    case 95:
+    case 96:
+    case 123:
+    case 124:
+    case 125:
+    case 126:
+      return true;
+    default:
+      return false;
+  }
+}
+function normalizeReference(str) {
+  str = str.trim().replace(/\s+/g, " ");
+  return str.toLowerCase().toUpperCase();
+}
+function isAsciiTrimmable(c2) {
+  return c2 === 32 || c2 === 9 || c2 === 10 || c2 === 13;
+}
+function asciiTrim(str) {
+  let start = 0;
+  for (; start < str.length; start++) if (!isAsciiTrimmable(str.charCodeAt(start))) break;
+  let end = str.length - 1;
+  for (; end >= start; end--) if (!isAsciiTrimmable(str.charCodeAt(end))) break;
+  return str.slice(start, end + 1);
+}
+var lib = {
+  mdurl: mdurl_exports,
+  ucmicro: build_exports
+};
+function parseLinkLabel(state, start, disableNested) {
+  let level, found, marker, prevPos;
+  const max = state.posMax;
+  const oldPos = state.pos;
+  state.pos = start + 1;
+  level = 1;
+  while (state.pos < max) {
+    marker = state.src.charCodeAt(state.pos);
+    if (marker === 93) {
+      level--;
+      if (level === 0) {
+        found = true;
+        break;
+      }
+    }
+    prevPos = state.pos;
+    state.md.inline.skipToken(state);
+    if (marker === 91) {
+      if (prevPos === state.pos - 1) level++;
+      else if (disableNested) {
+        state.pos = oldPos;
+        return -1;
+      }
+    }
+  }
+  let labelEnd = -1;
+  if (found) labelEnd = state.pos;
+  state.pos = oldPos;
+  return labelEnd;
+}
+function parseLinkDestination(str, start, max) {
+  let code2;
+  let pos = start;
+  const result = {
+    ok: false,
+    pos: 0,
+    str: ""
+  };
+  if (str.charCodeAt(pos) === 60) {
+    pos++;
+    while (pos < max) {
+      code2 = str.charCodeAt(pos);
+      if (code2 === 10) return result;
+      if (code2 === 60) return result;
+      if (code2 === 62) {
+        result.pos = pos + 1;
+        result.str = unescapeAll(str.slice(start + 1, pos));
+        result.ok = true;
+        return result;
+      }
+      if (code2 === 92 && pos + 1 < max) {
+        pos += 2;
+        continue;
+      }
+      pos++;
+    }
+    return result;
+  }
+  let level = 0;
+  while (pos < max) {
+    code2 = str.charCodeAt(pos);
+    if (code2 === 32) break;
+    if (code2 < 32 || code2 === 127) break;
+    if (code2 === 92 && pos + 1 < max) {
+      if (str.charCodeAt(pos + 1) === 32) {
+        pos++;
+        continue;
+      }
+      pos += 2;
+      continue;
+    }
+    if (code2 === 40) {
+      level++;
+      if (level > 32) return result;
+    }
+    if (code2 === 41) {
+      if (level === 0) break;
+      level--;
+    }
+    pos++;
+  }
+  if (start === pos) return result;
+  if (level !== 0) return result;
+  result.str = unescapeAll(str.slice(start, pos));
+  result.pos = pos;
+  result.ok = true;
+  return result;
+}
+function parseLinkTitle(str, start, max, prev_state) {
+  let code2;
+  let pos = start;
+  const state = {
+    ok: false,
+    can_continue: false,
+    pos: 0,
+    str: "",
+    marker: 0
+  };
+  if (prev_state) {
+    state.str = prev_state.str;
+    state.marker = prev_state.marker;
+  } else {
+    if (pos >= max) return state;
+    let marker = str.charCodeAt(pos);
+    if (marker !== 34 && marker !== 39 && marker !== 40) return state;
+    start++;
+    pos++;
+    if (marker === 40) marker = 41;
+    state.marker = marker;
+  }
+  while (pos < max) {
+    code2 = str.charCodeAt(pos);
+    if (code2 === state.marker) {
+      state.pos = pos + 1;
+      state.str += unescapeAll(str.slice(start, pos));
+      state.ok = true;
+      return state;
+    } else if (code2 === 40 && state.marker === 41) return state;
+    else if (code2 === 92 && pos + 1 < max) pos++;
+    pos++;
+  }
+  state.can_continue = true;
+  state.str += unescapeAll(str.slice(start, pos));
+  return state;
+}
+var helpers_exports = /* @__PURE__ */ __exportAll({
+  parseLinkDestination: () => parseLinkDestination,
+  parseLinkLabel: () => parseLinkLabel,
+  parseLinkTitle: () => parseLinkTitle
+});
+function _typeof(o) {
+  "@babel/helpers - typeof";
+  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
+    return typeof o2;
+  } : function(o2) {
+    return o2 && "function" == typeof Symbol && o2.constructor === Symbol && o2 !== Symbol.prototype ? "symbol" : typeof o2;
+  }, _typeof(o);
+}
+function toPrimitive(t, r) {
+  if ("object" != _typeof(t) || !t) return t;
+  var e = t[Symbol.toPrimitive];
+  if (void 0 !== e) {
+    var i = e.call(t, r || "default");
+    if ("object" != _typeof(i)) return i;
+    throw new TypeError("@@toPrimitive must return a primitive value.");
+  }
+  return ("string" === r ? String : Number)(t);
+}
+function toPropertyKey(t) {
+  var i = toPrimitive(t, "string");
+  return "symbol" == _typeof(i) ? i : i + "";
+}
+function _defineProperty(e, r, t) {
+  return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }) : e[r] = t, e;
+}
+var Token = class {
+  constructor(type, tag, nesting) {
+    _defineProperty(
+      this,
+      /**
+      * Source map info. Format: `[ line_begin, line_end ]`
+      */
+      "map",
+      null
+    );
+    _defineProperty(
+      this,
+      /**
+      * nesting level, the same as `state.level`
+      */
+      "level",
+      0
+    );
+    _defineProperty(
+      this,
+      /**
+      * An array of child nodes (inline and img tokens)
+      */
+      "children",
+      null
+    );
+    _defineProperty(
+      this,
+      /**
+      * In a case of self-closing tag (code, html, fence, etc.),
+      * it has contents of this tag.
+      */
+      "content",
+      ""
+    );
+    _defineProperty(
+      this,
+      /**
+      * '*' or '_' for emphasis, fence string for fence, etc.
+      */
+      "markup",
+      ""
+    );
+    _defineProperty(
+      this,
+      /**
+      * Additional information:
+      *
+      * - Info string for "fence" tokens
+      * - The value "auto" for autolink "link_open" and "link_close" tokens
+      * - The string value of the item marker for ordered-list "list_item_open" tokens
+      */
+      "info",
+      ""
+    );
+    _defineProperty(
+      this,
+      /**
+      * True for block-level tokens, false for inline tokens.
+      * Used in renderer to calculate line breaks
+      */
+      "block",
+      false
+    );
+    _defineProperty(
+      this,
+      /**
+      * If it's true, ignore this element when rendering. Used for tight lists
+      * to hide paragraphs.
+      */
+      "hidden",
+      false
+    );
+    this.type = type;
+    this.tag = tag;
+    this.attrs = null;
+    this.nesting = nesting;
+    this.meta = null;
+  }
+  /**
+  * Search attribute index by name.
+  */
+  attrIndex(name) {
+    if (!this.attrs) return -1;
+    const attrs = this.attrs;
+    for (let i = 0, len = attrs.length; i < len; i++) if (attrs[i][0] === name) return i;
+    return -1;
+  }
+  /**
+  * Add `[ name, value ]` attribute to list. Init attrs if necessary
+  */
+  attrPush(attrData) {
+    if (this.attrs) this.attrs.push(attrData);
+    else this.attrs = [attrData];
+  }
+  /**
+  * Set `name` attribute to `value`. Override old value if exists.
+  */
+  attrSet(name, value) {
+    const idx = this.attrIndex(name);
+    const attrData = [name, value];
+    if (idx < 0) this.attrPush(attrData);
+    else this.attrs[idx] = attrData;
+  }
+  /**
+  * Get the value of attribute `name`, or null if it does not exist.
+  */
+  attrGet(name) {
+    const idx = this.attrIndex(name);
+    let value = null;
+    if (idx >= 0) value = this.attrs[idx][1];
+    return value;
+  }
+  /**
+  * Join value to existing attribute via space. Or create new attribute if not
+  * exists. Useful to operate with token classes.
+  */
+  attrJoin(name, value) {
+    const idx = this.attrIndex(name);
+    if (idx < 0) this.attrPush([name, value]);
+    else this.attrs[idx][1] = `${this.attrs[idx][1]} ${value}`;
+  }
+};
+var Ruler = class {
+  constructor() {
+    _defineProperty(
+      this,
+      /** @internal */
+      "__rules__",
+      []
+    );
+    _defineProperty(
+      this,
+      /** @internal */
+      "__cache__",
+      null
+    );
+  }
+  /** @internal */
+  __find__(name) {
+    for (let i = 0; i < this.__rules__.length; i++) if (this.__rules__[i].name === name) return i;
+    return -1;
+  }
+  /** @internal */
+  __compile__() {
+    const chains = /* @__PURE__ */ new Set();
+    this.__rules__.forEach((rule) => {
+      if (!rule.enabled) return;
+      rule.alt.forEach((altName) => {
+        if (altName) chains.add(altName);
+      });
+    });
+    this.__cache__ = /* @__PURE__ */ Object.create(null);
+    this.__cache__[""] = [];
+    this.__rules__.forEach((rule) => {
+      if (rule.enabled) this.__cache__[""].push(rule.fn);
+    });
+    chains.forEach((chain) => {
+      this.__cache__[chain] = [];
+      this.__rules__.forEach((rule) => {
+        if (rule.enabled && rule.alt.indexOf(chain) >= 0) this.__cache__[chain].push(rule.fn);
+      });
+    });
+  }
+  /**
+  * Replace rule by name with new function & options. Throws error if name not
+  * found.
+  *
+  * @example Replace existing typographer replacement rule with new one
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  * const md = new MarkdownIt()
+  *
+  * md.core.ruler.at('replacements', function replace(state) {
+  *   //...
+  * });
+  * ```
+  */
+  at(name, fn, options = {}) {
+    const index = this.__find__(name);
+    if (index === -1) throw new Error(`Parser rule not found: ${name}`);
+    this.__rules__[index].fn = fn;
+    this.__rules__[index].alt = options.alt || [];
+    this.__cache__ = null;
+  }
+  /**
+  * Add new rule to chain before one with given name. See also
+  * {@link Ruler.after}, {@link Ruler.push}.
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  * const md = new MarkdownIt()
+  *
+  * md.block.ruler.before('paragraph', 'my_rule', function replace(state) {
+  *   //...
+  * });
+  * ```
+  */
+  before(beforeName, ruleName, fn, options = {}) {
+    const index = this.__find__(beforeName);
+    if (index === -1) throw new Error(`Parser rule not found: ${beforeName}`);
+    this.__rules__.splice(index, 0, {
+      name: ruleName,
+      enabled: true,
+      fn,
+      alt: options.alt || []
+    });
+    this.__cache__ = null;
+  }
+  /**
+  * Add new rule to chain after one with given name. See also
+  * {@link Ruler.before}, {@link Ruler.push}.
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  * const md = new MarkdownIt()
+  *
+  * md.inline.ruler.after('text', 'my_rule', function replace(state) {
+  *   //...
+  * });
+  * ```
+  */
+  after(afterName, ruleName, fn, options = {}) {
+    const index = this.__find__(afterName);
+    if (index === -1) throw new Error(`Parser rule not found: ${afterName}`);
+    this.__rules__.splice(index + 1, 0, {
+      name: ruleName,
+      enabled: true,
+      fn,
+      alt: options.alt || []
+    });
+    this.__cache__ = null;
+  }
+  /**
+  * Push new rule to the end of chain. See also
+  * {@link Ruler.before}, {@link Ruler.after}.
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  * const md = new MarkdownIt()
+  *
+  * md.core.ruler.push('my_rule', function replace(state) {
+  *   //...
+  * });
+  * ```
+  */
+  push(ruleName, fn, options = {}) {
+    this.__rules__.push({
+      name: ruleName,
+      enabled: true,
+      fn,
+      alt: options.alt || []
+    });
+    this.__cache__ = null;
+  }
+  /**
+  * Enable rules with given names. If any rule name not found - throw Error.
+  * Errors can be disabled by second param.
+  *
+  * See also {@link Ruler.disable}, {@link Ruler.enableOnly}.
+  *
+  * Returns list of found rule names (if no exception happened).
+  */
+  enable(list2, ignoreInvalid = false) {
+    if (!Array.isArray(list2)) list2 = [list2];
+    const result = [];
+    list2.forEach((name) => {
+      const idx = this.__find__(name);
+      if (idx < 0) {
+        if (ignoreInvalid) return;
+        throw new Error(`Rules manager: invalid rule name ${name}`);
+      }
+      this.__rules__[idx].enabled = true;
+      result.push(name);
+    });
+    this.__cache__ = null;
+    return result;
+  }
+  /**
+  * Enable rules with given names, and disable everything else. If any rule name
+  * not found - throw Error. Errors can be disabled by second param.
+  *
+  * See also {@link Ruler.disable}, {@link Ruler.enable}.
+  */
+  enableOnly(list2, ignoreInvalid = false) {
+    if (!Array.isArray(list2)) list2 = [list2];
+    this.__rules__.forEach((rule) => {
+      rule.enabled = false;
+    });
+    this.enable(list2, ignoreInvalid);
+  }
+  /**
+  * Disable rules with given names. If any rule name not found - throw Error.
+  * Errors can be disabled by second param.
+  *
+  * See also {@link Ruler.enable}, {@link Ruler.enableOnly}.
+  *
+  * Returns list of found rule names (if no exception happened).
+  */
+  disable(list2, ignoreInvalid = false) {
+    if (!Array.isArray(list2)) list2 = [list2];
+    const result = [];
+    list2.forEach((name) => {
+      const idx = this.__find__(name);
+      if (idx < 0) {
+        if (ignoreInvalid) return;
+        throw new Error(`Rules manager: invalid rule name ${name}`);
+      }
+      this.__rules__[idx].enabled = false;
+      result.push(name);
+    });
+    this.__cache__ = null;
+    return result;
+  }
+  /**
+  * Return array of active functions (rules) for given chain name. It analyzes
+  * rules configuration, compiles caches if not exists and returns result.
+  *
+  * Default chain name is `''` (empty string). It can't be skipped. That's
+  * done intentionally, to keep signature monomorphic for high speed.
+  */
+  getRules(chainName) {
+    if (!this.__cache__) this.__compile__();
+    return this.__cache__[chainName] || [];
+  }
+};
+var default_rules = {};
+default_rules.code_inline = function(tokens, idx, options, env, slf) {
+  const token = tokens[idx];
+  return `<code${slf.renderAttrs(token)}>${escapeHtml(token.content)}</code>`;
+};
+default_rules.code_block = function(tokens, idx, options, env, slf) {
+  const token = tokens[idx];
+  return `<pre${slf.renderAttrs(token)}><code>${escapeHtml(tokens[idx].content)}</code></pre>
+`;
+};
+default_rules.fence = function(tokens, idx, options, env, slf) {
+  const token = tokens[idx];
+  const info = token.info ? unescapeAll(token.info).trim() : "";
+  let langName = "";
+  let langAttrs = "";
+  if (info) {
+    const arr = info.split(/(\s+)/g);
+    langName = arr[0];
+    langAttrs = arr.slice(2).join("");
+  }
+  let highlighted;
+  if (options.highlight) highlighted = options.highlight(token.content, langName, langAttrs) || escapeHtml(token.content);
+  else highlighted = escapeHtml(token.content);
+  if (highlighted.indexOf("<pre") === 0) return highlighted + "\n";
+  if (info) {
+    const i = token.attrIndex("class");
+    const tmpAttrs = token.attrs ? token.attrs.slice() : [];
+    if (i < 0) tmpAttrs.push(["class", `${options.langPrefix}${langName}`]);
+    else {
+      tmpAttrs[i] = [tmpAttrs[i][0], tmpAttrs[i][1]];
+      tmpAttrs[i][1] += ` ${options.langPrefix}${langName}`;
+    }
+    const tmpToken = { attrs: tmpAttrs };
+    return `<pre><code${slf.renderAttrs(tmpToken)}>${highlighted}</code></pre>
+`;
+  }
+  return `<pre><code${slf.renderAttrs(token)}>${highlighted}</code></pre>
+`;
+};
+default_rules.image = function(tokens, idx, options, env, slf) {
+  const token = tokens[idx];
+  token.attrs[token.attrIndex("alt")][1] = slf.renderInlineAsText(token.children, options, env);
+  return slf.renderToken(tokens, idx, options);
+};
+default_rules.hardbreak = function(tokens, idx, options) {
+  return options.xhtmlOut ? "<br />\n" : "<br>\n";
+};
+default_rules.softbreak = function(tokens, idx, options) {
+  return options.breaks ? options.xhtmlOut ? "<br />\n" : "<br>\n" : "\n";
+};
+default_rules.text = function(tokens, idx) {
+  return escapeHtml(tokens[idx].content);
+};
+default_rules.html_block = function(tokens, idx) {
+  return tokens[idx].content;
+};
+default_rules.html_inline = function(tokens, idx) {
+  return tokens[idx].content;
+};
+var Renderer = class {
+  constructor() {
+    _defineProperty(
+      this,
+      /**
+      * Contains render rules for tokens. Can be updated and extended.
+      *
+      * See [source code](https://github.com/markdown-it/markdown-it/blob/master/src/renderer.ts)
+      * for more details and examples.
+      *
+      * @example Custom render rules
+      * ```javascript
+      * import MarkdownIt from 'markdown-it'
+      * const md = new MarkdownIt()
+      *
+      * md.renderer.rules.strong_open  = function () { return '<b>'; };
+      * md.renderer.rules.strong_close = function () { return '</b>'; };
+      *
+      * const result = md.renderInline(...);
+      * ```
+      *
+      * @example Each rule is called as independent static function with fixed signature
+      * ```javascript
+      * function my_token_render(tokens, idx, options, env, renderer) {
+      *   // ...
+      *   return renderedHTML;
+      * }
+      * ```
+      */
+      "rules",
+      Object.assign({}, default_rules)
+    );
+  }
+  /**
+  * Render token attributes to string.
+  */
+  renderAttrs(token) {
+    let i, l, result;
+    if (!token.attrs) return "";
+    result = "";
+    for (i = 0, l = token.attrs.length; i < l; i++) result += ` ${escapeHtml(token.attrs[i][0])}="${escapeHtml(String(token.attrs[i][1]))}"`;
+    return result;
+  }
+  /**
+  * Default token renderer. Can be overriden by custom function
+  * in {@link Renderer.rules}.
+  */
+  renderToken(tokens, idx, options) {
+    const token = tokens[idx];
+    let result = "";
+    if (token.hidden) return "";
+    let prev = idx - 1;
+    while (prev >= 0 && tokens[prev].hidden && tokens[prev].nesting === 0) prev--;
+    if (token.block && token.nesting !== -1 && prev >= 0 && tokens[prev].hidden && tokens[prev].nesting === -1) result += "\n";
+    result += (token.nesting === -1 ? "</" : "<") + token.tag;
+    result += this.renderAttrs(token);
+    if (token.nesting === 0 && options.xhtmlOut) result += " /";
+    let needLf = false;
+    if (token.block) {
+      needLf = true;
+      if (token.nesting === 1) {
+        let next = idx + 1;
+        while (next < tokens.length && tokens[next].hidden && tokens[next].nesting === 0) next++;
+        if (next < tokens.length) {
+          const nextToken = tokens[next];
+          if (nextToken.type === "inline" || nextToken.hidden) needLf = false;
+          else if (nextToken.nesting === -1 && nextToken.tag === token.tag) needLf = false;
+        }
+      }
+    }
+    result += needLf ? ">\n" : ">";
+    return result;
+  }
+  /**
+  * The same as {@link Renderer.render}, but for single token of `inline` type.
+  */
+  renderInline(tokens, options, env) {
+    let result = "";
+    const rules = this.rules;
+    for (let i = 0, len = tokens.length; i < len; i++) {
+      const type = tokens[i].type;
+      if (typeof rules[type] !== "undefined") result += rules[type](tokens, i, options, env, this);
+      else result += this.renderToken(tokens, i, options);
+    }
+    return result;
+  }
+  /**
+  * Special kludge for image `alt` attributes to conform CommonMark spec.
+  * Don't try to use it! Spec requires to show `alt` content with stripped markup,
+  * instead of simple escaping.
+  */
+  renderInlineAsText(tokens, options, env) {
+    let result = "";
+    for (let i = 0, len = tokens.length; i < len; i++) switch (tokens[i].type) {
+      case "text":
+      case "code_inline":
+        result += tokens[i].content;
+        break;
+      case "image":
+        result += this.renderInlineAsText(tokens[i].children, options, env);
+        break;
+      case "html_inline":
+      case "html_block":
+        result += tokens[i].content;
+        break;
+      case "softbreak":
+      case "hardbreak":
+        result += "\n";
+    }
+    return result;
+  }
+  /**
+  * Takes token stream and generates HTML. Probably, you will never need to call
+  * this method directly.
+  */
+  render(tokens, options, env) {
+    let result = "";
+    const rules = this.rules;
+    for (let i = 0, len = tokens.length; i < len; i++) {
+      const type = tokens[i].type;
+      if (type === "inline") result += this.renderInline(tokens[i].children, options, env);
+      else if (typeof rules[type] !== "undefined") result += rules[type](tokens, i, options, env, this);
+      else result += this.renderToken(tokens, i, options);
+    }
+    return result;
+  }
+};
+var StateCore = class {
+  constructor(src, md, env) {
+    _defineProperty(this, "tokens", []);
+    _defineProperty(this, "inlineMode", false);
+    _defineProperty(this, "Token", Token);
+    this.src = src;
+    this.env = env;
+    this.md = md;
+  }
+};
+var UNNORMALIZED_NEWLINE_RE = /\r\n?/g;
+var NULL_RE = /\0/g;
+function normalize(state) {
+  let str;
+  str = state.src.replace(UNNORMALIZED_NEWLINE_RE, "\n");
+  str = str.replace(NULL_RE, "\uFFFD");
+  state.src = str;
+}
+function block(state) {
+  let token;
+  if (state.inlineMode) {
+    token = new state.Token("inline", "", 0);
+    token.content = state.src;
+    token.map = [0, 1];
+    token.children = [];
+    state.tokens.push(token);
+  } else state.md.block.parse(state.src, state.md, state.env, state.tokens);
+}
+function strip_references(state) {
+  const tokens = state.tokens;
+  let last = 0;
+  for (let curr = 0; curr < tokens.length; curr++) {
+    if (tokens[curr].type === "reference_definition") continue;
+    if (curr !== last) tokens[last] = tokens[curr];
+    last++;
+  }
+  if (tokens.length !== last) tokens.length = last;
+}
+function inline(state) {
+  const tokens = state.tokens;
+  for (let i = 0, l = tokens.length; i < l; i++) {
+    const tok = tokens[i];
+    if (tok.type === "inline") state.md.inline.parse(tok.content, state.md, state.env, tok.children);
+  }
+}
+function isLinkOpen$1(str) {
+  return /^<a[>\s]/i.test(str);
+}
+function isLinkClose$1(str) {
+  return /^<\/a\s*>/i.test(str);
+}
+function linkify$1(state) {
+  const blockTokens = state.tokens;
+  if (!state.md.options.linkify) return;
+  for (let j = 0, l = blockTokens.length; j < l; j++) {
+    if (blockTokens[j].type !== "inline" || !state.md.linkify.test(blockTokens[j].content)) continue;
+    const tokens = blockTokens[j].children;
+    const replacements = [];
+    let htmlLinkLevel = 0;
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      const currentToken = tokens[i];
+      if (currentToken.type === "link_close") {
+        i--;
+        while (tokens[i].level !== currentToken.level && tokens[i].type !== "link_open") i--;
+        continue;
+      }
+      if (currentToken.type === "html_inline") {
+        if (isLinkOpen$1(currentToken.content) && htmlLinkLevel > 0) htmlLinkLevel--;
+        if (isLinkClose$1(currentToken.content)) htmlLinkLevel++;
+      }
+      if (htmlLinkLevel > 0) continue;
+      if (currentToken.type === "text" && state.md.linkify.test(currentToken.content)) {
+        const text2 = currentToken.content;
+        let links = state.md.linkify.match(text2);
+        const nodes = [];
+        let level = currentToken.level;
+        let lastPos = 0;
+        if (links.length > 0 && links[0].index === 0 && i > 0 && tokens[i - 1].type === "text_special") links = links.slice(1);
+        for (let ln = 0; ln < links.length; ln++) {
+          const url = links[ln].url;
+          const fullUrl = state.md.normalizeLink(url);
+          if (!state.md.validateLink(fullUrl)) continue;
+          let urlText = links[ln].text;
+          if (!links[ln].schema) urlText = state.md.normalizeLinkText(`http://${urlText}`).replace(/^http:\/\//, "");
+          else if (links[ln].schema === "mailto:" && !/^mailto:/i.test(urlText)) urlText = state.md.normalizeLinkText(`mailto:${urlText}`).replace(/^mailto:/, "");
+          else urlText = state.md.normalizeLinkText(urlText);
+          const pos = links[ln].index;
+          if (pos > lastPos) {
+            const token = new state.Token("text", "", 0);
+            token.content = text2.slice(lastPos, pos);
+            token.level = level;
+            nodes.push(token);
+          }
+          const token_o = new state.Token("link_open", "a", 1);
+          token_o.attrs = [["href", fullUrl]];
+          token_o.level = level++;
+          token_o.markup = "linkify";
+          token_o.info = "auto";
+          nodes.push(token_o);
+          const token_t = new state.Token("text", "", 0);
+          token_t.content = urlText;
+          token_t.level = level;
+          nodes.push(token_t);
+          const token_c = new state.Token("link_close", "a", -1);
+          token_c.level = --level;
+          token_c.markup = "linkify";
+          token_c.info = "auto";
+          nodes.push(token_c);
+          lastPos = links[ln].lastIndex;
+        }
+        if (lastPos < text2.length) {
+          const token = new state.Token("text", "", 0);
+          token.content = text2.slice(lastPos);
+          token.level = level;
+          nodes.push(token);
+        }
+        replacements.push({
+          index: i,
+          nodes
+        });
+      }
+    }
+    if (replacements.length > 0) {
+      let newTokensLength = tokens.length;
+      for (const replacement of replacements) newTokensLength += replacement.nodes.length - 1;
+      const newTokens = new Array(newTokensLength);
+      let replacementIndex = 0;
+      let newTokenIndex = 0;
+      replacements.reverse();
+      for (let i = 0; i < tokens.length; i++) {
+        const replacement = replacements[replacementIndex];
+        if ((replacement === null || replacement === void 0 ? void 0 : replacement.index) === i) {
+          for (const node of replacement.nodes) newTokens[newTokenIndex++] = node;
+          replacementIndex++;
+        } else newTokens[newTokenIndex++] = tokens[i];
+      }
+      blockTokens[j].children = newTokens;
+    }
+  }
+}
+var RARE_RE = /\+-|\.\.|\?\?\?\?|!!!!|,,|--/;
+var SCOPED_ABBR_TEST_RE = /\((c|tm|r)\)/i;
+var SCOPED_ABBR_RE = /\((c|tm|r)\)/gi;
+var SCOPED_ABBR = {
+  c: "\xA9",
+  r: "\xAE",
+  tm: "\u2122"
+};
+function replaceFn(match, name) {
+  return SCOPED_ABBR[name.toLowerCase()];
+}
+function replace_scoped(inlineTokens) {
+  let inside_autolink = 0;
+  for (let i = inlineTokens.length - 1; i >= 0; i--) {
+    const token = inlineTokens[i];
+    if (token.type === "text" && !inside_autolink) token.content = token.content.replace(SCOPED_ABBR_RE, replaceFn);
+    if (token.type === "link_open" && token.info === "auto") inside_autolink--;
+    if (token.type === "link_close" && token.info === "auto") inside_autolink++;
+  }
+}
+function replace_rare(inlineTokens) {
+  let inside_autolink = 0;
+  for (let i = inlineTokens.length - 1; i >= 0; i--) {
+    const token = inlineTokens[i];
+    if (token.type === "text" && !inside_autolink) {
+      if (RARE_RE.test(token.content)) token.content = token.content.replace(/\+-/g, "\xB1").replace(/\.{2,}/g, "\u2026").replace(/([?!])…/g, "$1..").replace(/([?!]){4,}/g, "$1$1$1").replace(/,{2,}/g, ",").replace(/(^|[^-])---(?=[^-]|$)/gm, "$1\u2014").replace(/(^|\s)--(?=\s|$)/gm, "$1\u2013").replace(/(^|[^-\s])--(?=[^-\s]|$)/gm, "$1\u2013");
+    }
+    if (token.type === "link_open" && token.info === "auto") inside_autolink--;
+    if (token.type === "link_close" && token.info === "auto") inside_autolink++;
+  }
+}
+function replace(state) {
+  let blkIdx;
+  if (!state.md.options.typographer) return;
+  for (blkIdx = state.tokens.length - 1; blkIdx >= 0; blkIdx--) {
+    if (state.tokens[blkIdx].type !== "inline") continue;
+    if (SCOPED_ABBR_TEST_RE.test(state.tokens[blkIdx].content)) replace_scoped(state.tokens[blkIdx].children);
+    if (RARE_RE.test(state.tokens[blkIdx].content)) replace_rare(state.tokens[blkIdx].children);
+  }
+}
+var QUOTE_TEST_RE = /['"]/;
+var QUOTE_RE = /['"]/g;
+var APOSTROPHE = "\u2019";
+var MAX_OPENERS = 1e3;
+function truncateStack(stack, heads, length) {
+  while (stack.length > length) {
+    const item = stack.pop();
+    if (item.isSingleQuote) heads.single = item.prevSameQuoteIdx;
+    else heads.double = item.prevSameQuoteIdx;
+  }
+}
+function addReplacement(replacements, tokenIdx, pos, ch) {
+  if (!replacements[tokenIdx]) replacements[tokenIdx] = [];
+  replacements[tokenIdx].push({
+    pos,
+    ch
+  });
+}
+function applyReplacements(str, replacements) {
+  let result = "";
+  let lastPos = 0;
+  replacements.sort((a, b) => a.pos - b.pos);
+  for (let i = 0; i < replacements.length; i++) {
+    const replacement = replacements[i];
+    result += str.slice(lastPos, replacement.pos) + replacement.ch;
+    lastPos = replacement.pos + 1;
+  }
+  return result + str.slice(lastPos);
+}
+function process_inlines(tokens, state) {
+  let j;
+  const stack = [];
+  const heads = {
+    single: -1,
+    double: -1
+  };
+  const replacements = {};
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const thisLevel = tokens[i].level;
+    for (j = stack.length - 1; j >= 0; j--) if (stack[j].level <= thisLevel) break;
+    truncateStack(stack, heads, j + 1);
+    if (token.type !== "text") continue;
+    const text2 = token.content;
+    let pos = 0;
+    const max = text2.length;
+    OUTER: while (pos < max) {
+      QUOTE_RE.lastIndex = pos;
+      const t = QUOTE_RE.exec(text2);
+      if (!t) break;
+      let canOpen = true;
+      let canClose = true;
+      pos = t.index + 1;
+      const isSingle = t[0] === "'";
+      let lastChar = 32;
+      if (t.index - 1 >= 0) lastChar = text2.charCodeAt(t.index - 1);
+      else for (j = i - 1; j >= 0; j--) {
+        if (tokens[j].type === "softbreak" || tokens[j].type === "hardbreak") break;
+        if (!tokens[j].content) continue;
+        lastChar = tokens[j].content.charCodeAt(tokens[j].content.length - 1);
+        break;
+      }
+      let nextChar = 32;
+      if (pos < max) nextChar = text2.charCodeAt(pos);
+      else for (j = i + 1; j < tokens.length; j++) {
+        if (tokens[j].type === "softbreak" || tokens[j].type === "hardbreak") break;
+        if (!tokens[j].content) continue;
+        nextChar = tokens[j].content.charCodeAt(0);
+        break;
+      }
+      const isLastPunctChar = isMdAsciiPunct(lastChar) || isPunctCharCode(lastChar);
+      const isNextPunctChar = isMdAsciiPunct(nextChar) || isPunctCharCode(nextChar);
+      const isLastWhiteSpace = isWhiteSpace(lastChar);
+      const isNextWhiteSpace = isWhiteSpace(nextChar);
+      if (isNextWhiteSpace) canOpen = false;
+      else if (isNextPunctChar) {
+        if (!(isLastWhiteSpace || isLastPunctChar)) canOpen = false;
+      }
+      if (isLastWhiteSpace) canClose = false;
+      else if (isLastPunctChar) {
+        if (!(isNextWhiteSpace || isNextPunctChar)) canClose = false;
+      }
+      if (nextChar === 34 && t[0] === '"') {
+        if (lastChar >= 48 && lastChar <= 57) canClose = canOpen = false;
+      }
+      if (canOpen && canClose) {
+        canOpen = isLastPunctChar;
+        canClose = isNextPunctChar;
+      }
+      if (!canOpen && !canClose) {
+        if (isSingle) addReplacement(replacements, i, t.index, APOSTROPHE);
+        continue;
+      }
+      if (canClose) {
+        j = isSingle ? heads.single : heads.double;
+        if (j >= 0 && stack[j].level === thisLevel) {
+          const item = stack[j];
+          let openQuote;
+          let closeQuote;
+          if (isSingle) {
+            openQuote = state.md.options.quotes[2];
+            closeQuote = state.md.options.quotes[3];
+          } else {
+            openQuote = state.md.options.quotes[0];
+            closeQuote = state.md.options.quotes[1];
+          }
+          addReplacement(replacements, i, t.index, closeQuote);
+          addReplacement(replacements, item.tokenIdx, item.contentPos, openQuote);
+          truncateStack(stack, heads, j);
+          continue OUTER;
+        }
+      }
+      if (canOpen) {
+        if (stack.length >= MAX_OPENERS) return;
+        stack.push({
+          tokenIdx: i,
+          contentPos: t.index,
+          isSingleQuote: isSingle,
+          level: thisLevel,
+          prevSameQuoteIdx: isSingle ? heads.single : heads.double
+        });
+        if (isSingle) heads.single = stack.length - 1;
+        else heads.double = stack.length - 1;
+      } else if (canClose && isSingle) addReplacement(replacements, i, t.index, APOSTROPHE);
+    }
+  }
+  Object.keys(replacements).forEach(function(tokenIdx) {
+    const idx = Number(tokenIdx);
+    tokens[idx].content = applyReplacements(tokens[idx].content, replacements[tokenIdx]);
+  });
+}
+function smartquotes(state) {
+  if (!state.md.options.typographer) return;
+  for (let blkIdx = state.tokens.length - 1; blkIdx >= 0; blkIdx--) {
+    if (state.tokens[blkIdx].type !== "inline" || !QUOTE_TEST_RE.test(state.tokens[blkIdx].content)) continue;
+    process_inlines(state.tokens[blkIdx].children, state);
+  }
+}
+function join_alt(tokens) {
+  let curr, last;
+  const max = tokens.length;
+  for (curr = 0; curr < max; curr++) if (tokens[curr].type === "text_special") tokens[curr].type = "text";
+  for (curr = last = 0; curr < max; curr++) if (tokens[curr].type === "text" && curr + 1 < max && tokens[curr + 1].type === "text") tokens[curr + 1].content = tokens[curr].content + tokens[curr + 1].content;
+  else {
+    if (curr !== last) tokens[last] = tokens[curr];
+    last++;
+  }
+  if (curr !== last) tokens.length = last;
+}
+function text_join(state) {
+  let curr, last;
+  const blockTokens = state.tokens;
+  const l = blockTokens.length;
+  for (let j = 0; j < l; j++) {
+    if (blockTokens[j].type !== "inline") continue;
+    const tokens = blockTokens[j].children;
+    const max = tokens.length;
+    for (curr = 0; curr < max; curr++) {
+      if (tokens[curr].type === "text_special") tokens[curr].type = "text";
+      if (tokens[curr].children) join_alt(tokens[curr].children);
+    }
+    for (curr = last = 0; curr < max; curr++) if (tokens[curr].type === "text" && curr + 1 < max && tokens[curr + 1].type === "text") tokens[curr + 1].content = tokens[curr].content + tokens[curr + 1].content;
+    else {
+      if (curr !== last) tokens[last] = tokens[curr];
+      last++;
+    }
+    if (curr !== last) tokens.length = last;
+  }
+}
+var _rules$2 = [
+  ["normalize", normalize],
+  ["block", block],
+  ["strip_references", strip_references],
+  ["inline", inline],
+  ["linkify", linkify$1],
+  ["replacements", replace],
+  ["smartquotes", smartquotes],
+  ["text_join", text_join]
+];
+var ParserCore = class {
+  constructor() {
+    _defineProperty(
+      this,
+      /**
+      * {@link Ruler} instance. Keep configuration of core rules.
+      */
+      "ruler",
+      new Ruler()
+    );
+    _defineProperty(this, "State", StateCore);
+    for (let i = 0; i < _rules$2.length; i++) this.ruler.push(_rules$2[i][0], _rules$2[i][1]);
+  }
+  /**
+  * Executes core chain rules.
+  */
+  process(state) {
+    const rules = this.ruler.getRules("");
+    for (let i = 0, l = rules.length; i < l; i++) rules[i](state);
+  }
+};
+var StateBlock = class {
+  constructor(src, md, env, tokens) {
+    _defineProperty(this, "bMarks", []);
+    _defineProperty(this, "eMarks", []);
+    _defineProperty(this, "tShift", []);
+    _defineProperty(this, "sCount", []);
+    _defineProperty(this, "bsCount", []);
+    _defineProperty(this, "blkIndent", 0);
+    _defineProperty(this, "line", 0);
+    _defineProperty(this, "lineMax", 0);
+    _defineProperty(this, "tight", false);
+    _defineProperty(this, "listIndent", -1);
+    _defineProperty(this, "parentType", "root");
+    _defineProperty(this, "level", 0);
+    _defineProperty(this, "Token", Token);
+    this.src = src;
+    this.md = md;
+    this.env = env;
+    this.tokens = tokens;
+    const s = this.src;
+    for (let start = 0, pos = 0, indent = 0, offset = 0, len = s.length, indent_found = false; pos < len; pos++) {
+      const ch = s.charCodeAt(pos);
+      if (!indent_found) {
+        if (isSpace(ch)) {
+          indent++;
+          if (ch === 9) offset += 4 - offset % 4;
+          else offset++;
+          continue;
+        } else indent_found = true;
+      }
+      if (ch === 10 || pos === len - 1) {
+        if (ch !== 10) pos++;
+        this.bMarks.push(start);
+        this.eMarks.push(pos);
+        this.tShift.push(indent);
+        this.sCount.push(offset);
+        this.bsCount.push(0);
+        indent_found = false;
+        indent = 0;
+        offset = 0;
+        start = pos + 1;
+      }
+    }
+    this.bMarks.push(s.length);
+    this.eMarks.push(s.length);
+    this.tShift.push(0);
+    this.sCount.push(0);
+    this.bsCount.push(0);
+    this.lineMax = this.bMarks.length - 1;
+  }
+  push(type, tag, nesting) {
+    const token = new Token(type, tag, nesting);
+    token.block = true;
+    if (nesting < 0) this.level--;
+    token.level = this.level;
+    if (nesting > 0) this.level++;
+    this.tokens.push(token);
+    return token;
+  }
+  isEmpty(line) {
+    return this.bMarks[line] + this.tShift[line] >= this.eMarks[line];
+  }
+  skipEmptyLines(from) {
+    for (let max = this.lineMax; from < max; from++) if (this.bMarks[from] + this.tShift[from] < this.eMarks[from]) break;
+    return from;
+  }
+  skipSpaces(pos) {
+    for (let max = this.src.length; pos < max; pos++) if (!isSpace(this.src.charCodeAt(pos))) break;
+    return pos;
+  }
+  skipSpacesBack(pos, min) {
+    if (pos <= min) return pos;
+    while (pos > min) if (!isSpace(this.src.charCodeAt(--pos))) return pos + 1;
+    return pos;
+  }
+  skipChars(pos, code2) {
+    for (let max = this.src.length; pos < max; pos++) if (this.src.charCodeAt(pos) !== code2) break;
+    return pos;
+  }
+  skipCharsBack(pos, code2, min) {
+    if (pos <= min) return pos;
+    while (pos > min) if (code2 !== this.src.charCodeAt(--pos)) return pos + 1;
+    return pos;
+  }
+  getLines(begin, end, indent, keepLastLF) {
+    if (begin >= end) return "";
+    const queue = new Array(end - begin);
+    for (let i = 0, line = begin; line < end; line++, i++) {
+      let lineIndent = 0;
+      const lineStart = this.bMarks[line];
+      let first = lineStart;
+      let last;
+      if (line + 1 < end || keepLastLF) last = this.eMarks[line] + 1;
+      else last = this.eMarks[line];
+      while (first < last && lineIndent < indent) {
+        const ch = this.src.charCodeAt(first);
+        if (isSpace(ch)) {
+          if (ch === 9) lineIndent += 4 - (lineIndent + this.bsCount[line]) % 4;
+          else lineIndent++;
+        } else if (first - lineStart < this.tShift[line]) lineIndent++;
+        else break;
+        first++;
+      }
+      if (lineIndent > indent) queue[i] = new Array(lineIndent - indent + 1).join(" ") + this.src.slice(first, last);
+      else queue[i] = this.src.slice(first, last);
+    }
+    return queue.join("");
+  }
+};
+var MAX_AUTOCOMPLETED_CELLS = 65536;
+function getLine(state, line) {
+  const pos = state.bMarks[line] + state.tShift[line];
+  const max = state.eMarks[line];
+  return state.src.slice(pos, max);
+}
+function escapedSplit(str) {
+  const result = [];
+  const max = str.length;
+  let pos = 0;
+  let ch = str.charCodeAt(pos);
+  let isEscaped = false;
+  let lastPos = 0;
+  let current = "";
+  while (pos < max) {
+    if (ch === 124) {
+      if (!isEscaped) {
+        result.push(current + str.substring(lastPos, pos));
+        current = "";
+        lastPos = pos + 1;
+      } else {
+        current += str.substring(lastPos, pos - 1);
+        lastPos = pos;
+      }
+    }
+    isEscaped = ch === 92;
+    pos++;
+    ch = str.charCodeAt(pos);
+  }
+  result.push(current + str.substring(lastPos));
+  return result;
+}
+function table(state, startLine, endLine, silent) {
+  if (startLine + 2 > endLine) return false;
+  let nextLine = startLine + 1;
+  if (state.sCount[nextLine] < state.blkIndent) return false;
+  if (state.sCount[nextLine] - state.blkIndent >= 4) return false;
+  let pos = state.bMarks[nextLine] + state.tShift[nextLine];
+  if (pos >= state.eMarks[nextLine]) return false;
+  const firstCh = state.src.charCodeAt(pos++);
+  if (firstCh !== 124 && firstCh !== 45 && firstCh !== 58) return false;
+  if (pos >= state.eMarks[nextLine]) return false;
+  const secondCh = state.src.charCodeAt(pos++);
+  if (secondCh !== 124 && secondCh !== 45 && secondCh !== 58 && !isSpace(secondCh)) return false;
+  if (firstCh === 45 && isSpace(secondCh)) return false;
+  while (pos < state.eMarks[nextLine]) {
+    const ch = state.src.charCodeAt(pos);
+    if (ch !== 124 && ch !== 45 && ch !== 58 && !isSpace(ch)) return false;
+    pos++;
+  }
+  let lineText = getLine(state, startLine + 1);
+  let columns = lineText.split("|");
+  const aligns = [];
+  for (let i = 0; i < columns.length; i++) {
+    const t = columns[i].trim();
+    if (!t) {
+      if (i === 0 || i === columns.length - 1) continue;
+      else return false;
+    }
+    if (!/^:?-+:?$/.test(t)) return false;
+    if (t.charCodeAt(t.length - 1) === 58) aligns.push(t.charCodeAt(0) === 58 ? "center" : "right");
+    else if (t.charCodeAt(0) === 58) aligns.push("left");
+    else aligns.push("");
+  }
+  lineText = getLine(state, startLine).trim();
+  if (lineText.indexOf("|") === -1) return false;
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  columns = escapedSplit(lineText);
+  if (columns.length && columns[0] === "") columns.shift();
+  if (columns.length && columns[columns.length - 1] === "") columns.pop();
+  const columnCount = columns.length;
+  if (columnCount === 0 || columnCount !== aligns.length) return false;
+  if (silent) return true;
+  const oldParentType = state.parentType;
+  state.parentType = "table";
+  const terminatorRules = state.md.block.ruler.getRules("blockquote");
+  const token_to = state.push("table_open", "table", 1);
+  const tableLines = [startLine, 0];
+  token_to.map = tableLines;
+  const token_tho = state.push("thead_open", "thead", 1);
+  token_tho.map = [startLine, startLine + 1];
+  const token_htro = state.push("tr_open", "tr", 1);
+  token_htro.map = [startLine, startLine + 1];
+  for (let i = 0; i < columns.length; i++) {
+    const token_ho = state.push("th_open", "th", 1);
+    if (aligns[i]) token_ho.attrs = [["style", `text-align:${aligns[i]}`]];
+    const token_il = state.push("inline", "", 0);
+    token_il.content = columns[i].trim();
+    token_il.children = [];
+    state.push("th_close", "th", -1);
+  }
+  state.push("tr_close", "tr", -1);
+  state.push("thead_close", "thead", -1);
+  let tbodyLines;
+  let autocompletedCells = 0;
+  for (nextLine = startLine + 2; nextLine < endLine; nextLine++) {
+    if (state.sCount[nextLine] < state.blkIndent) break;
+    let terminate = false;
+    for (let i = 0, l = terminatorRules.length; i < l; i++) if (terminatorRules[i](state, nextLine, endLine, true)) {
+      terminate = true;
+      break;
+    }
+    if (terminate) break;
+    lineText = getLine(state, nextLine).trim();
+    if (!lineText) break;
+    if (state.sCount[nextLine] - state.blkIndent >= 4) break;
+    columns = escapedSplit(lineText);
+    if (columns.length && columns[0] === "") columns.shift();
+    if (columns.length && columns[columns.length - 1] === "") columns.pop();
+    autocompletedCells += columnCount - columns.length;
+    if (autocompletedCells > MAX_AUTOCOMPLETED_CELLS) break;
+    if (nextLine === startLine + 2) {
+      const token_tbo = state.push("tbody_open", "tbody", 1);
+      token_tbo.map = tbodyLines = [startLine + 2, 0];
+    }
+    const token_tro = state.push("tr_open", "tr", 1);
+    token_tro.map = [nextLine, nextLine + 1];
+    for (let i = 0; i < columnCount; i++) {
+      const token_tdo = state.push("td_open", "td", 1);
+      if (aligns[i]) token_tdo.attrs = [["style", `text-align:${aligns[i]}`]];
+      const token_il = state.push("inline", "", 0);
+      token_il.content = columns[i] ? columns[i].trim() : "";
+      token_il.children = [];
+      state.push("td_close", "td", -1);
+    }
+    state.push("tr_close", "tr", -1);
+  }
+  if (tbodyLines) {
+    state.push("tbody_close", "tbody", -1);
+    tbodyLines[1] = nextLine;
+  }
+  state.push("table_close", "table", -1);
+  tableLines[1] = nextLine;
+  state.parentType = oldParentType;
+  state.line = nextLine;
+  return true;
+}
+function code(state, startLine, endLine) {
+  if (state.sCount[startLine] - state.blkIndent < 4) return false;
+  let nextLine = startLine + 1;
+  let last = nextLine;
+  while (nextLine < endLine) {
+    if (state.isEmpty(nextLine)) {
+      nextLine++;
+      continue;
+    }
+    if (state.sCount[nextLine] - state.blkIndent >= 4) {
+      nextLine++;
+      last = nextLine;
+      continue;
+    }
+    break;
+  }
+  state.line = last;
+  const token = state.push("code_block", "code", 0);
+  token.content = state.getLines(startLine, last, 4 + state.blkIndent, false) + "\n";
+  token.map = [startLine, state.line];
+  return true;
+}
+function fence(state, startLine, endLine, silent) {
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  let max = state.eMarks[startLine];
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  if (pos + 3 > max) return false;
+  const marker = state.src.charCodeAt(pos);
+  if (marker !== 126 && marker !== 96) return false;
+  let mem = pos;
+  pos = state.skipChars(pos, marker);
+  let len = pos - mem;
+  if (len < 3) return false;
+  const markup = state.src.slice(mem, pos);
+  const params = state.src.slice(pos, max);
+  if (marker === 96) {
+    if (params.indexOf(String.fromCharCode(marker)) >= 0) return false;
+  }
+  if (silent) return true;
+  let nextLine = startLine;
+  let haveEndMarker = false;
+  for (; ; ) {
+    nextLine++;
+    if (nextLine >= endLine) break;
+    pos = mem = state.bMarks[nextLine] + state.tShift[nextLine];
+    max = state.eMarks[nextLine];
+    if (pos < max && state.sCount[nextLine] < state.blkIndent) break;
+    if (state.src.charCodeAt(pos) !== marker) continue;
+    if (state.sCount[nextLine] - state.blkIndent >= 4) continue;
+    pos = state.skipChars(pos, marker);
+    if (pos - mem < len) continue;
+    pos = state.skipSpaces(pos);
+    if (pos < max) continue;
+    haveEndMarker = true;
+    break;
+  }
+  len = state.sCount[startLine];
+  state.line = nextLine + (haveEndMarker ? 1 : 0);
+  const token = state.push("fence", "code", 0);
+  token.info = params;
+  token.content = state.getLines(startLine + 1, nextLine, len, true);
+  token.markup = markup;
+  token.map = [startLine, state.line];
+  return true;
+}
+function blockquote(state, startLine, endLine, silent) {
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  let max = state.eMarks[startLine];
+  const oldLineMax = state.lineMax;
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  if (state.src.charCodeAt(pos) !== 62) return false;
+  if (silent) return true;
+  const oldBMarks = [];
+  const oldBSCount = [];
+  const oldSCount = [];
+  const oldTShift = [];
+  const terminatorRules = state.md.block.ruler.getRules("blockquote");
+  const oldParentType = state.parentType;
+  state.parentType = "blockquote";
+  let lastLineEmpty = false;
+  let nextLine;
+  for (nextLine = startLine; nextLine < endLine; nextLine++) {
+    const isOutdented = state.sCount[nextLine] < state.blkIndent;
+    pos = state.bMarks[nextLine] + state.tShift[nextLine];
+    max = state.eMarks[nextLine];
+    if (pos >= max) break;
+    if (state.src.charCodeAt(pos++) === 62 && !isOutdented) {
+      let initial = state.sCount[nextLine] + 1;
+      let spaceAfterMarker;
+      let adjustTab;
+      if (state.src.charCodeAt(pos) === 32) {
+        pos++;
+        initial++;
+        adjustTab = false;
+        spaceAfterMarker = true;
+      } else if (state.src.charCodeAt(pos) === 9) {
+        spaceAfterMarker = true;
+        if ((state.bsCount[nextLine] + initial) % 4 === 3) {
+          pos++;
+          initial++;
+          adjustTab = false;
+        } else adjustTab = true;
+      } else spaceAfterMarker = false;
+      let offset = initial;
+      oldBMarks.push(state.bMarks[nextLine]);
+      state.bMarks[nextLine] = pos;
+      while (pos < max) {
+        const ch = state.src.charCodeAt(pos);
+        if (isSpace(ch)) {
+          if (ch === 9) offset += 4 - (offset + state.bsCount[nextLine] + (adjustTab ? 1 : 0)) % 4;
+          else offset++;
+        } else break;
+        pos++;
+      }
+      lastLineEmpty = pos >= max;
+      oldBSCount.push(state.bsCount[nextLine]);
+      state.bsCount[nextLine] = state.sCount[nextLine] + 1 + (spaceAfterMarker ? 1 : 0);
+      oldSCount.push(state.sCount[nextLine]);
+      state.sCount[nextLine] = offset - initial;
+      oldTShift.push(state.tShift[nextLine]);
+      state.tShift[nextLine] = pos - state.bMarks[nextLine];
+      continue;
+    }
+    if (lastLineEmpty) break;
+    let terminate = false;
+    for (let i = 0, l = terminatorRules.length; i < l; i++) if (terminatorRules[i](state, nextLine, endLine, true)) {
+      terminate = true;
+      break;
+    }
+    if (terminate) {
+      state.lineMax = nextLine;
+      if (state.blkIndent !== 0) {
+        oldBMarks.push(state.bMarks[nextLine]);
+        oldBSCount.push(state.bsCount[nextLine]);
+        oldTShift.push(state.tShift[nextLine]);
+        oldSCount.push(state.sCount[nextLine]);
+        state.sCount[nextLine] -= state.blkIndent;
+      }
+      break;
+    }
+    oldBMarks.push(state.bMarks[nextLine]);
+    oldBSCount.push(state.bsCount[nextLine]);
+    oldTShift.push(state.tShift[nextLine]);
+    oldSCount.push(state.sCount[nextLine]);
+    state.sCount[nextLine] = -1;
+  }
+  const oldIndent = state.blkIndent;
+  state.blkIndent = 0;
+  const token_o = state.push("blockquote_open", "blockquote", 1);
+  token_o.markup = ">";
+  const lines = [startLine, 0];
+  token_o.map = lines;
+  state.md.block.tokenize(state, startLine, nextLine);
+  const token_c = state.push("blockquote_close", "blockquote", -1);
+  token_c.markup = ">";
+  state.lineMax = oldLineMax;
+  state.parentType = oldParentType;
+  lines[1] = state.line;
+  for (let i = 0; i < oldTShift.length; i++) {
+    state.bMarks[i + startLine] = oldBMarks[i];
+    state.tShift[i + startLine] = oldTShift[i];
+    state.sCount[i + startLine] = oldSCount[i];
+    state.bsCount[i + startLine] = oldBSCount[i];
+  }
+  state.blkIndent = oldIndent;
+  return true;
+}
+function hr(state, startLine, endLine, silent) {
+  const max = state.eMarks[startLine];
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  const marker = state.src.charCodeAt(pos++);
+  if (marker !== 42 && marker !== 45 && marker !== 95) return false;
+  let cnt = 1;
+  while (pos < max) {
+    const ch = state.src.charCodeAt(pos++);
+    if (ch !== marker && !isSpace(ch)) return false;
+    if (ch === marker) cnt++;
+  }
+  if (cnt < 3) return false;
+  if (silent) return true;
+  state.line = startLine + 1;
+  const token = state.push("hr", "hr", 0);
+  token.map = [startLine, state.line];
+  token.markup = Array(cnt + 1).join(String.fromCharCode(marker));
+  return true;
+}
+function skipBulletListMarker(state, startLine) {
+  const max = state.eMarks[startLine];
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  const marker = state.src.charCodeAt(pos++);
+  if (marker !== 42 && marker !== 45 && marker !== 43) return -1;
+  if (pos < max) {
+    if (!isSpace(state.src.charCodeAt(pos))) return -1;
+  }
+  return pos;
+}
+function skipOrderedListMarker(state, startLine) {
+  const start = state.bMarks[startLine] + state.tShift[startLine];
+  const max = state.eMarks[startLine];
+  let pos = start;
+  if (pos + 1 >= max) return -1;
+  let ch = state.src.charCodeAt(pos++);
+  if (ch < 48 || ch > 57) return -1;
+  for (; ; ) {
+    if (pos >= max) return -1;
+    ch = state.src.charCodeAt(pos++);
+    if (ch >= 48 && ch <= 57) {
+      if (pos - start >= 10) return -1;
+      continue;
+    }
+    if (ch === 41 || ch === 46) break;
+    return -1;
+  }
+  if (pos < max) {
+    ch = state.src.charCodeAt(pos);
+    if (!isSpace(ch)) return -1;
+  }
+  return pos;
+}
+function markTightParagraphs(state, idx) {
+  const level = state.level + 2;
+  for (let i = idx + 2, l = state.tokens.length - 2; i < l; i++) if (state.tokens[i].level === level && state.tokens[i].type === "paragraph_open") {
+    state.tokens[i + 2].hidden = true;
+    state.tokens[i].hidden = true;
+    i += 2;
+  }
+}
+function list(state, startLine, endLine, silent) {
+  let max, pos, start, token;
+  let nextLine = startLine;
+  let tight = true;
+  if (state.sCount[nextLine] - state.blkIndent >= 4) return false;
+  if (state.listIndent >= 0 && state.sCount[nextLine] - state.listIndent >= 4 && state.sCount[nextLine] < state.blkIndent) return false;
+  let isTerminatingParagraph = false;
+  if (silent && state.parentType === "paragraph") {
+    if (state.sCount[nextLine] >= state.blkIndent) isTerminatingParagraph = true;
+  }
+  let isOrdered;
+  let markerValue;
+  let posAfterMarker;
+  if ((posAfterMarker = skipOrderedListMarker(state, nextLine)) >= 0) {
+    isOrdered = true;
+    start = state.bMarks[nextLine] + state.tShift[nextLine];
+    markerValue = Number(state.src.slice(start, posAfterMarker - 1));
+    if (isTerminatingParagraph && markerValue !== 1) return false;
+  } else if ((posAfterMarker = skipBulletListMarker(state, nextLine)) >= 0) isOrdered = false;
+  else return false;
+  if (isTerminatingParagraph) {
+    if (state.skipSpaces(posAfterMarker) >= state.eMarks[nextLine]) return false;
+  }
+  if (silent) return true;
+  const markerCharCode = state.src.charCodeAt(posAfterMarker - 1);
+  const listTokIdx = state.tokens.length;
+  if (isOrdered) {
+    token = state.push("ordered_list_open", "ol", 1);
+    if (markerValue !== 1) token.attrs = [["start", markerValue]];
+  } else token = state.push("bullet_list_open", "ul", 1);
+  const listLines = [nextLine, 0];
+  token.map = listLines;
+  token.markup = String.fromCharCode(markerCharCode);
+  let prevEmptyEnd = false;
+  const terminatorRules = state.md.block.ruler.getRules("list");
+  const oldParentType = state.parentType;
+  state.parentType = "list";
+  while (nextLine < endLine) {
+    pos = posAfterMarker;
+    max = state.eMarks[nextLine];
+    const initial = state.sCount[nextLine] + posAfterMarker - (state.bMarks[nextLine] + state.tShift[nextLine]);
+    let offset = initial;
+    while (pos < max) {
+      const ch = state.src.charCodeAt(pos);
+      if (ch === 9) offset += 4 - (offset + state.bsCount[nextLine]) % 4;
+      else if (ch === 32) offset++;
+      else break;
+      pos++;
+    }
+    const contentStart = pos;
+    let indentAfterMarker;
+    if (contentStart >= max) indentAfterMarker = 1;
+    else indentAfterMarker = offset - initial;
+    if (indentAfterMarker > 4) indentAfterMarker = 1;
+    const indent = initial + indentAfterMarker;
+    token = state.push("list_item_open", "li", 1);
+    token.markup = String.fromCharCode(markerCharCode);
+    const itemLines = [nextLine, 0];
+    token.map = itemLines;
+    if (isOrdered) token.info = state.src.slice(start, posAfterMarker - 1);
+    const oldTight = state.tight;
+    const oldTShift = state.tShift[nextLine];
+    const oldSCount = state.sCount[nextLine];
+    const oldListIndent = state.listIndent;
+    state.listIndent = state.blkIndent;
+    state.blkIndent = indent;
+    state.tight = true;
+    state.tShift[nextLine] = contentStart - state.bMarks[nextLine];
+    state.sCount[nextLine] = offset;
+    if (contentStart >= max && state.isEmpty(nextLine + 1)) state.line = Math.min(state.line + 2, endLine);
+    else state.md.block.tokenize(state, nextLine, endLine);
+    if (!state.tight || prevEmptyEnd) tight = false;
+    prevEmptyEnd = state.line - nextLine > 1 && state.isEmpty(state.line - 1);
+    state.blkIndent = state.listIndent;
+    state.listIndent = oldListIndent;
+    state.tShift[nextLine] = oldTShift;
+    state.sCount[nextLine] = oldSCount;
+    state.tight = oldTight;
+    token = state.push("list_item_close", "li", -1);
+    token.markup = String.fromCharCode(markerCharCode);
+    nextLine = state.line;
+    itemLines[1] = nextLine;
+    if (nextLine >= endLine) break;
+    if (state.sCount[nextLine] < state.blkIndent) break;
+    if (state.sCount[nextLine] - state.blkIndent >= 4) break;
+    let terminate = false;
+    for (let i = 0, l = terminatorRules.length; i < l; i++) if (terminatorRules[i](state, nextLine, endLine, true)) {
+      terminate = true;
+      break;
+    }
+    if (terminate) break;
+    if (isOrdered) {
+      posAfterMarker = skipOrderedListMarker(state, nextLine);
+      if (posAfterMarker < 0) break;
+      start = state.bMarks[nextLine] + state.tShift[nextLine];
+    } else {
+      posAfterMarker = skipBulletListMarker(state, nextLine);
+      if (posAfterMarker < 0) break;
+    }
+    if (markerCharCode !== state.src.charCodeAt(posAfterMarker - 1)) break;
+  }
+  if (isOrdered) token = state.push("ordered_list_close", "ol", -1);
+  else token = state.push("bullet_list_close", "ul", -1);
+  token.markup = String.fromCharCode(markerCharCode);
+  listLines[1] = nextLine;
+  state.line = nextLine;
+  state.parentType = oldParentType;
+  if (tight) markTightParagraphs(state, listTokIdx);
+  return true;
+}
+var MAX_LABEL_LENGTH = 999;
+function countCodePoints(str) {
+  let length = str.length;
+  for (let i = 0; i < str.length - 1; i++) {
+    const high = str.charCodeAt(i);
+    if (high < 55296 || high > 56319) continue;
+    const low = str.charCodeAt(i + 1);
+    if (low >= 56320 && low <= 57343) {
+      length--;
+      i++;
+    }
+  }
+  return length;
+}
+function lineEnd(state, line) {
+  return Math.min(state.eMarks[line] + 1, state.src.length);
+}
+function getNextLinePos(state, nextLine) {
+  const endLine = state.lineMax;
+  if (nextLine >= endLine || state.isEmpty(nextLine)) return -1;
+  let isContinuation = false;
+  if (state.sCount[nextLine] - state.blkIndent > 3) isContinuation = true;
+  if (state.sCount[nextLine] < 0) isContinuation = true;
+  if (!isContinuation) {
+    const terminatorRules = state.md.block.ruler.getRules("reference");
+    const oldParentType = state.parentType;
+    state.parentType = "reference";
+    let terminate = false;
+    for (let i = 0, l = terminatorRules.length; i < l; i++) if (terminatorRules[i](state, nextLine, endLine, true)) {
+      terminate = true;
+      break;
+    }
+    state.parentType = oldParentType;
+    if (terminate) return -1;
+  }
+  return state.bMarks[nextLine] + state.tShift[nextLine];
+}
+function reference(state, startLine, _endLine, silent) {
+  const src = state.src;
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  let nextLine = startLine + 1;
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  if (src.charCodeAt(pos) !== 91) return false;
+  let max = lineEnd(state, startLine);
+  let rawLabel = "";
+  let labelEnd = -1;
+  let segmentStart = ++pos;
+  while (pos < max) {
+    if (rawLabel.length + pos - segmentStart > MAX_LABEL_LENGTH * 2) return false;
+    let ch = src.charCodeAt(pos);
+    if (ch === 91) return false;
+    if (ch === 93) {
+      labelEnd = pos;
+      break;
+    }
+    if (ch === 92) ch = src.charCodeAt(++pos);
+    if (ch === 10 && pos < max) {
+      const nextPos = getNextLinePos(state, nextLine);
+      if (nextPos < 0) return false;
+      rawLabel += src.slice(segmentStart, max);
+      pos = segmentStart = nextPos;
+      max = lineEnd(state, nextLine++);
+      continue;
+    }
+    pos++;
+  }
+  if (labelEnd < 0 || src.charCodeAt(labelEnd + 1) !== 58) return false;
+  rawLabel += src.slice(segmentStart, labelEnd);
+  if (rawLabel.length > MAX_LABEL_LENGTH && countCodePoints(rawLabel) > MAX_LABEL_LENGTH) return false;
+  pos = labelEnd + 2;
+  while (pos < max) {
+    const ch = src.charCodeAt(pos);
+    if (ch === 10) {
+      const nextPos = getNextLinePos(state, nextLine);
+      if (nextPos < 0) break;
+      pos = nextPos;
+      max = lineEnd(state, nextLine++);
+    } else if (isSpace(ch)) pos++;
+    else break;
+  }
+  const destRes = state.md.helpers.parseLinkDestination(src, pos, max);
+  if (!destRes.ok) return false;
+  const href = state.md.normalizeLink(destRes.str);
+  if (!state.md.validateLink(href)) return false;
+  pos = destRes.pos;
+  const destEndPos = pos;
+  const destEndMax = max;
+  const destEndLineNo = nextLine;
+  while (pos < max) {
+    const ch = src.charCodeAt(pos);
+    if (ch === 10) {
+      const nextPos = getNextLinePos(state, nextLine);
+      if (nextPos < 0) break;
+      pos = nextPos;
+      max = lineEnd(state, nextLine++);
+    } else if (isSpace(ch)) pos++;
+    else break;
+  }
+  const titleStart = pos;
+  let titleRes = state.md.helpers.parseLinkTitle(src, pos, max);
+  while (titleRes.can_continue) {
+    const nextPos = getNextLinePos(state, nextLine);
+    if (nextPos < 0) break;
+    pos = nextPos;
+    max = lineEnd(state, nextLine++);
+    titleRes = state.md.helpers.parseLinkTitle(src, pos, max, titleRes);
+  }
+  let title;
+  if (titleStart !== destEndPos && titleRes.ok) {
+    title = titleRes.str;
+    pos = titleRes.pos;
+  } else {
+    title = "";
+    pos = destEndPos;
+    max = destEndMax;
+    nextLine = destEndLineNo;
+  }
+  while (pos < max) {
+    if (!isSpace(src.charCodeAt(pos))) break;
+    pos++;
+  }
+  if (pos < max && src.charCodeAt(pos) !== 10) {
+    if (title) {
+      title = "";
+      pos = destEndPos;
+      max = destEndMax;
+      nextLine = destEndLineNo;
+      while (pos < max) {
+        if (!isSpace(src.charCodeAt(pos))) break;
+        pos++;
+      }
+    }
+  }
+  if (pos < max && src.charCodeAt(pos) !== 10) return false;
+  const label = normalizeReference(rawLabel);
+  if (!label) return false;
+  if (silent) return true;
+  if (typeof state.env.references === "undefined") state.env.references = {};
+  if (typeof state.env.references[label] === "undefined") state.env.references[label] = {
+    title,
+    href
+  };
+  const token = state.push("reference_definition", "", 0);
+  token.map = [startLine, nextLine];
+  token.hidden = true;
+  const meta = /* @__PURE__ */ Object.create(null);
+  meta.label = label;
+  token.meta = meta;
+  state.line = nextLine;
+  return true;
+}
+var html_blocks_default = [
+  "address",
+  "article",
+  "aside",
+  "base",
+  "basefont",
+  "blockquote",
+  "body",
+  "caption",
+  "center",
+  "col",
+  "colgroup",
+  "dd",
+  "details",
+  "dialog",
+  "dir",
+  "div",
+  "dl",
+  "dt",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "frame",
+  "frameset",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "head",
+  "header",
+  "hr",
+  "html",
+  "iframe",
+  "legend",
+  "li",
+  "link",
+  "main",
+  "menu",
+  "menuitem",
+  "nav",
+  "noframes",
+  "ol",
+  "optgroup",
+  "option",
+  "p",
+  "param",
+  "search",
+  "section",
+  "summary",
+  "table",
+  "tbody",
+  "td",
+  "tfoot",
+  "th",
+  "thead",
+  "title",
+  "tr",
+  "track",
+  "ul"
+];
+var open_tag = `<[A-Za-z][A-Za-z0-9\\-]*(?:\\s+[a-zA-Z_:][a-zA-Z0-9:._-]*(?:\\s*=\\s*(?:[^"'=<>\`\\x00-\\x20]+|'[^']*'|"[^"]*"))?)*\\s*\\/?>`;
+var close_tag = "<\\/[A-Za-z][A-Za-z0-9\\-]*\\s*>";
+new RegExp(`^(?:${open_tag}|${close_tag}|<!---?>|<!--(?:[^-]|-[^-]|--[^>])*-->|<[?][\\s\\S]*?[?]>|<![A-Za-z][^>]*>|<!\\[CDATA\\[[\\s\\S]*?\\]\\]>)`);
+var HTML_OPEN_CLOSE_TAG_RE = new RegExp(`^(?:${open_tag}|${close_tag})`);
+var HTML_SEQUENCES = [
+  [
+    /^<(script|pre|style|textarea)(?=(\s|>|$))/i,
+    /<\/(script|pre|style|textarea)>/i,
+    true
+  ],
+  [
+    /^<!--/,
+    /-->/,
+    true
+  ],
+  [
+    /^<\?/,
+    /\?>/,
+    true
+  ],
+  [
+    /^<![A-Za-z]/,
+    />/,
+    true
+  ],
+  [
+    /^<!\[CDATA\[/,
+    /\]\]>/,
+    true
+  ],
+  [
+    new RegExp(`^</?(${html_blocks_default.join("|")})(?=(\\s|/?>|$))`, "i"),
+    /^$/,
+    true
+  ],
+  [
+    new RegExp(`${HTML_OPEN_CLOSE_TAG_RE.source}\\s*$`),
+    /^$/,
+    false
+  ]
+];
+function html_block(state, startLine, endLine, silent) {
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  let max = state.eMarks[startLine];
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  if (!state.md.options.html) return false;
+  if (state.src.charCodeAt(pos) !== 60) return false;
+  let lineText = state.src.slice(pos, max);
+  let i = 0;
+  for (; i < HTML_SEQUENCES.length; i++) if (HTML_SEQUENCES[i][0].test(lineText)) break;
+  if (i === HTML_SEQUENCES.length) return false;
+  if (silent) return HTML_SEQUENCES[i][2];
+  let nextLine = startLine + 1;
+  const endsOnBlankLine = HTML_SEQUENCES[i][1].test("");
+  if (!HTML_SEQUENCES[i][1].test(lineText)) for (; nextLine < endLine; nextLine++) {
+    if (state.sCount[nextLine] < state.blkIndent) {
+      if (endsOnBlankLine || !state.isEmpty(nextLine)) break;
+    }
+    pos = state.bMarks[nextLine] + state.tShift[nextLine];
+    max = state.eMarks[nextLine];
+    lineText = state.src.slice(pos, max);
+    if (HTML_SEQUENCES[i][1].test(lineText)) {
+      if (lineText.length !== 0) nextLine++;
+      break;
+    }
+  }
+  state.line = nextLine;
+  const token = state.push("html_block", "", 0);
+  token.map = [startLine, nextLine];
+  token.content = state.getLines(startLine, nextLine, state.blkIndent, true);
+  return true;
+}
+function heading(state, startLine, endLine, silent) {
+  let pos = state.bMarks[startLine] + state.tShift[startLine];
+  let max = state.eMarks[startLine];
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  let ch = state.src.charCodeAt(pos);
+  if (ch !== 35 || pos >= max) return false;
+  let level = 1;
+  ch = state.src.charCodeAt(++pos);
+  while (ch === 35 && pos < max && level <= 6) {
+    level++;
+    ch = state.src.charCodeAt(++pos);
+  }
+  if (level > 6 || pos < max && !isSpace(ch)) return false;
+  if (silent) return true;
+  max = state.skipSpacesBack(max, pos);
+  const tmp = state.skipCharsBack(max, 35, pos);
+  if (tmp > pos && isSpace(state.src.charCodeAt(tmp - 1))) max = tmp;
+  state.line = startLine + 1;
+  const token_o = state.push("heading_open", `h${level}`, 1);
+  token_o.markup = "########".slice(0, level);
+  token_o.map = [startLine, state.line];
+  const token_i = state.push("inline", "", 0);
+  token_i.content = asciiTrim(state.src.slice(pos, max));
+  token_i.map = [startLine, state.line];
+  token_i.children = [];
+  const token_c = state.push("heading_close", `h${level}`, -1);
+  token_c.markup = "########".slice(0, level);
+  return true;
+}
+function lheading(state, startLine, endLine) {
+  const terminatorRules = state.md.block.ruler.getRules("paragraph");
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  const oldParentType = state.parentType;
+  state.parentType = "paragraph";
+  let level = 0;
+  let marker;
+  let nextLine = startLine + 1;
+  for (; nextLine < endLine && !state.isEmpty(nextLine); nextLine++) {
+    if (state.sCount[nextLine] - state.blkIndent > 3) continue;
+    if (state.sCount[nextLine] >= state.blkIndent) {
+      let pos = state.bMarks[nextLine] + state.tShift[nextLine];
+      const max = state.eMarks[nextLine];
+      if (pos < max) {
+        marker = state.src.charCodeAt(pos);
+        if (marker === 45 || marker === 61) {
+          pos = state.skipChars(pos, marker);
+          pos = state.skipSpaces(pos);
+          if (pos >= max) {
+            level = marker === 61 ? 1 : 2;
+            break;
+          }
+        }
+      }
+    }
+    if (state.sCount[nextLine] < 0) continue;
+    let terminate = false;
+    for (let i = 0, l = terminatorRules.length; i < l; i++) if (terminatorRules[i](state, nextLine, endLine, true)) {
+      terminate = true;
+      break;
+    }
+    if (terminate) break;
+  }
+  if (!level) {
+    state.parentType = oldParentType;
+    return false;
+  }
+  const content = asciiTrim(state.getLines(startLine, nextLine, state.blkIndent, false));
+  state.line = nextLine + 1;
+  const token_o = state.push("heading_open", `h${level}`, 1);
+  token_o.markup = String.fromCharCode(marker);
+  token_o.map = [startLine, state.line];
+  const token_i = state.push("inline", "", 0);
+  token_i.content = content;
+  token_i.map = [startLine, state.line - 1];
+  token_i.children = [];
+  const token_c = state.push("heading_close", `h${level}`, -1);
+  token_c.markup = String.fromCharCode(marker);
+  state.parentType = oldParentType;
+  return true;
+}
+function paragraph(state, startLine, endLine) {
+  const terminatorRules = state.md.block.ruler.getRules("paragraph");
+  const oldParentType = state.parentType;
+  let nextLine = startLine + 1;
+  state.parentType = "paragraph";
+  for (; nextLine < endLine && !state.isEmpty(nextLine); nextLine++) {
+    if (state.sCount[nextLine] - state.blkIndent > 3) continue;
+    if (state.sCount[nextLine] < 0) continue;
+    let terminate = false;
+    for (let i = 0, l = terminatorRules.length; i < l; i++) if (terminatorRules[i](state, nextLine, endLine, true)) {
+      terminate = true;
+      break;
+    }
+    if (terminate) break;
+  }
+  const content = asciiTrim(state.getLines(startLine, nextLine, state.blkIndent, false));
+  state.line = nextLine;
+  const token_o = state.push("paragraph_open", "p", 1);
+  token_o.map = [startLine, state.line];
+  const token_i = state.push("inline", "", 0);
+  token_i.content = content;
+  token_i.map = [startLine, state.line];
+  token_i.children = [];
+  state.push("paragraph_close", "p", -1);
+  state.parentType = oldParentType;
+  return true;
+}
+var _rules$1 = [
+  [
+    "table",
+    table,
+    ["paragraph", "reference"]
+  ],
+  ["code", code],
+  [
+    "fence",
+    fence,
+    [
+      "paragraph",
+      "reference",
+      "blockquote",
+      "list"
+    ]
+  ],
+  [
+    "blockquote",
+    blockquote,
+    [
+      "paragraph",
+      "reference",
+      "blockquote",
+      "list"
+    ]
+  ],
+  [
+    "hr",
+    hr,
+    [
+      "paragraph",
+      "reference",
+      "blockquote",
+      "list"
+    ]
+  ],
+  [
+    "list",
+    list,
+    [
+      "paragraph",
+      "reference",
+      "blockquote"
+    ]
+  ],
+  ["reference", reference],
+  [
+    "html_block",
+    html_block,
+    [
+      "paragraph",
+      "reference",
+      "blockquote"
+    ]
+  ],
+  [
+    "heading",
+    heading,
+    [
+      "paragraph",
+      "reference",
+      "blockquote"
+    ]
+  ],
+  ["lheading", lheading],
+  ["paragraph", paragraph]
+];
+var ParserBlock = class {
+  constructor() {
+    _defineProperty(
+      this,
+      /**
+      * {@link Ruler} instance. Keep configuration of block rules.
+      */
+      "ruler",
+      new Ruler()
+    );
+    _defineProperty(this, "State", StateBlock);
+    for (let i = 0; i < _rules$1.length; i++) this.ruler.push(_rules$1[i][0], _rules$1[i][1], { alt: (_rules$1[i][2] || []).slice() });
+  }
+  tokenize(state, startLine, endLine) {
+    const rules = this.ruler.getRules("");
+    const len = rules.length;
+    const maxNesting = state.md.options.maxNesting;
+    let line = startLine;
+    let hasEmptyLines = false;
+    while (line < endLine) {
+      state.line = line = state.skipEmptyLines(line);
+      if (line >= endLine) break;
+      if (state.sCount[line] < state.blkIndent) break;
+      if (state.level >= maxNesting) {
+        state.line = endLine;
+        break;
+      }
+      const prevLine = state.line;
+      let ok = false;
+      for (let i = 0; i < len; i++) {
+        ok = rules[i](state, line, endLine, false);
+        if (ok) {
+          if (prevLine >= state.line) throw new Error("block rule didn't increment state.line");
+          break;
+        }
+      }
+      if (!ok) throw new Error("none of the block rules matched");
+      state.tight = !hasEmptyLines;
+      if (state.isEmpty(state.line - 1)) hasEmptyLines = true;
+      line = state.line;
+      if (line < endLine && state.isEmpty(line)) {
+        hasEmptyLines = true;
+        line++;
+        state.line = line;
+      }
+    }
+  }
+  /**
+  * Process input string and push block tokens into `outTokens`
+  */
+  parse(src, md, env, outTokens) {
+    if (!src) return;
+    const state = new this.State(src, md, env, outTokens);
+    this.tokenize(state, state.line, state.lineMax);
+  }
+};
+var StateInline = class {
+  constructor(src, md, env, outTokens) {
+    _defineProperty(this, "pos", 0);
+    _defineProperty(this, "level", 0);
+    _defineProperty(this, "pending", "");
+    _defineProperty(this, "pendingLevel", 0);
+    _defineProperty(this, "cache", {});
+    _defineProperty(this, "backticks", {});
+    _defineProperty(this, "backticksScanned", false);
+    _defineProperty(this, "skipHtmlSpecial", false);
+    _defineProperty(this, "linkLevel", 0);
+    _defineProperty(this, "delimiters", []);
+    _defineProperty(this, "_prev_delimiters", []);
+    _defineProperty(this, "Token", Token);
+    this.src = src;
+    this.env = env;
+    this.md = md;
+    this.tokens = outTokens;
+    this.tokens_meta = Array(outTokens.length);
+    this.posMax = this.src.length;
+  }
+  pushPending() {
+    const token = new Token("text", "", 0);
+    token.content = this.pending;
+    token.level = this.pendingLevel;
+    this.tokens.push(token);
+    this.pending = "";
+    return token;
+  }
+  push(type, tag, nesting) {
+    if (this.pending) this.pushPending();
+    const token = new Token(type, tag, nesting);
+    let token_meta = void 0;
+    if (nesting < 0) {
+      this.level--;
+      this.delimiters = this._prev_delimiters.pop();
+    }
+    token.level = this.level;
+    if (nesting > 0) {
+      this.level++;
+      this._prev_delimiters.push(this.delimiters);
+      this.delimiters = [];
+      token_meta = { delimiters: this.delimiters };
+    }
+    this.pendingLevel = this.level;
+    this.tokens.push(token);
+    this.tokens_meta.push(token_meta);
+    return token;
+  }
+  scanDelims(start, canSplitWord) {
+    const max = this.posMax;
+    const marker = this.src.charCodeAt(start);
+    let lastChar;
+    if (start === 0) lastChar = 32;
+    else if (start === 1) {
+      lastChar = this.src.charCodeAt(0);
+      if ((lastChar & 63488) === 55296) lastChar = 65533;
+    } else {
+      lastChar = this.src.charCodeAt(start - 1);
+      if ((lastChar & 64512) === 56320) {
+        const highSurr = this.src.charCodeAt(start - 2);
+        lastChar = (highSurr & 64512) === 55296 ? 65536 + (highSurr - 55296 << 10) + (lastChar - 56320) : 65533;
+      } else if ((lastChar & 64512) === 55296) lastChar = 65533;
+    }
+    let pos = start;
+    while (pos < max && this.src.charCodeAt(pos) === marker) pos++;
+    const count = pos - start;
+    let nextChar = pos < max ? this.src.charCodeAt(pos) : 32;
+    if ((nextChar & 64512) === 55296) {
+      const lowSurr = this.src.charCodeAt(pos + 1);
+      nextChar = (lowSurr & 64512) === 56320 ? 65536 + (nextChar - 55296 << 10) + (lowSurr - 56320) : 65533;
+    } else if ((nextChar & 64512) === 56320) nextChar = 65533;
+    const isLastPunctChar = isMdAsciiPunct(lastChar) || isPunctCharCode(lastChar);
+    const isNextPunctChar = isMdAsciiPunct(nextChar) || isPunctCharCode(nextChar);
+    const isLastWhiteSpace = isWhiteSpace(lastChar);
+    const isNextWhiteSpace = isWhiteSpace(nextChar);
+    const left_flanking = !isNextWhiteSpace && (!isNextPunctChar || isLastWhiteSpace || isLastPunctChar);
+    const right_flanking = !isLastWhiteSpace && (!isLastPunctChar || isNextWhiteSpace || isNextPunctChar);
+    return {
+      can_open: left_flanking && (canSplitWord || !right_flanking || isLastPunctChar),
+      can_close: right_flanking && (canSplitWord || !left_flanking || isNextPunctChar),
+      length: count
+    };
+  }
+};
+function isTerminatorChar(ch) {
+  switch (ch) {
+    case 10:
+    case 33:
+    case 35:
+    case 36:
+    case 37:
+    case 38:
+    case 42:
+    case 43:
+    case 45:
+    case 58:
+    case 60:
+    case 61:
+    case 62:
+    case 64:
+    case 91:
+    case 92:
+    case 93:
+    case 94:
+    case 95:
+    case 96:
+    case 123:
+    case 125:
+    case 126:
+      return true;
+    default:
+      return false;
+  }
+}
+function text(state, silent) {
+  let pos = state.pos;
+  while (pos < state.posMax && !isTerminatorChar(state.src.charCodeAt(pos))) pos++;
+  if (pos === state.pos) return false;
+  if (!silent) state.pending += state.src.slice(state.pos, pos);
+  state.pos = pos;
+  return true;
+}
+function isAsciiAlpha(code2) {
+  return code2 >= 65 && code2 <= 90 || code2 >= 97 && code2 <= 122;
+}
+function isSchemeChar(code2) {
+  return code2 >= 65 && code2 <= 90 || code2 >= 97 && code2 <= 122 || code2 >= 48 && code2 <= 57 || code2 === 43 || code2 === 45 || code2 === 46;
+}
+function linkify(state, silent) {
+  if (!state.md.options.linkify) return false;
+  if (state.linkLevel > 0) return false;
+  const pos = state.pos;
+  const max = state.posMax;
+  if (pos + 3 > max) return false;
+  if (state.src.charCodeAt(pos) !== 58) return false;
+  if (state.src.charCodeAt(pos + 1) !== 47) return false;
+  if (state.src.charCodeAt(pos + 2) !== 47) return false;
+  const protoMin = pos - Math.min(10, state.pending.length, pos);
+  let protoStart = pos;
+  while (protoStart > protoMin && isSchemeChar(state.src.charCodeAt(protoStart - 1))) protoStart--;
+  if (protoStart === pos || !isAsciiAlpha(state.src.charCodeAt(protoStart))) return false;
+  const protoLength = pos - protoStart;
+  const link2 = state.md.linkify.matchAtStart(state.src.slice(protoStart));
+  if (!link2) return false;
+  let url = link2.url;
+  if (url.length <= protoLength) return false;
+  let urlEnd = url.length;
+  while (urlEnd > 0 && url.charCodeAt(urlEnd - 1) === 42) urlEnd--;
+  if (urlEnd !== url.length) url = url.slice(0, urlEnd);
+  const fullUrl = state.md.normalizeLink(url);
+  if (!state.md.validateLink(fullUrl)) return false;
+  if (!silent) {
+    state.pending = state.pending.slice(0, -protoLength);
+    const token_o = state.push("link_open", "a", 1);
+    token_o.attrs = [["href", fullUrl]];
+    token_o.markup = "linkify";
+    token_o.info = "auto";
+    const token_t = state.push("text", "", 0);
+    token_t.content = state.md.normalizeLinkText(url);
+    const token_c = state.push("link_close", "a", -1);
+    token_c.markup = "linkify";
+    token_c.info = "auto";
+  }
+  state.pos += url.length - protoLength;
+  return true;
+}
+function newline(state, silent) {
+  let pos = state.pos;
+  if (state.src.charCodeAt(pos) !== 10) return false;
+  const pmax = state.pending.length - 1;
+  const max = state.posMax;
+  if (!silent) {
+    if (pmax >= 0 && state.pending.charCodeAt(pmax) === 32) {
+      if (pmax >= 1 && state.pending.charCodeAt(pmax - 1) === 32) {
+        let ws = pmax - 1;
+        while (ws >= 1 && state.pending.charCodeAt(ws - 1) === 32) ws--;
+        state.pending = state.pending.slice(0, ws);
+        state.push("hardbreak", "br", 0);
+      } else {
+        state.pending = state.pending.slice(0, -1);
+        state.push("softbreak", "br", 0);
+      }
+    } else state.push("softbreak", "br", 0);
+  }
+  pos++;
+  while (pos < max && isSpace(state.src.charCodeAt(pos))) pos++;
+  state.pos = pos;
+  return true;
+}
+var ESCAPED = [];
+for (let i = 0; i < 256; i++) ESCAPED.push(0);
+"\\!\"#$%&'()*+,./:;<=>?@[]^_`{|}~-".split("").forEach(function(ch) {
+  ESCAPED[ch.charCodeAt(0)] = 1;
+});
+function escape(state, silent) {
+  let pos = state.pos;
+  const max = state.posMax;
+  if (state.src.charCodeAt(pos) !== 92) return false;
+  pos++;
+  if (pos >= max) return false;
+  let ch1 = state.src.charCodeAt(pos);
+  if (ch1 === 10) {
+    if (!silent) state.push("hardbreak", "br", 0);
+    pos++;
+    while (pos < max) {
+      ch1 = state.src.charCodeAt(pos);
+      if (!isSpace(ch1)) break;
+      pos++;
+    }
+    state.pos = pos;
+    return true;
+  }
+  if (ch1 === 32) {
+    if (!silent) {
+      const token = state.push("text_special", "", 0);
+      token.content = "\\";
+      token.markup = "\\";
+      token.info = "escape";
+    }
+    state.pos = pos;
+    return true;
+  }
+  let escapedStr = state.src[pos];
+  if (ch1 >= 55296 && ch1 <= 56319 && pos + 1 < max) {
+    const ch2 = state.src.charCodeAt(pos + 1);
+    if (ch2 >= 56320 && ch2 <= 57343) {
+      escapedStr += state.src[pos + 1];
+      pos++;
+    }
+  }
+  const origStr = "\\" + escapedStr;
+  if (!silent) {
+    const token = state.push("text_special", "", 0);
+    if (ch1 < 256 && ESCAPED[ch1] !== 0) token.content = escapedStr;
+    else token.content = origStr;
+    token.markup = origStr;
+    token.info = "escape";
+  }
+  state.pos = pos + 1;
+  return true;
+}
+function buildLastRuns(src) {
+  const lastRuns = {};
+  let pos = 0;
+  while ((pos = src.indexOf("`", pos)) !== -1) {
+    const start = pos;
+    while (src.charCodeAt(++pos) === 96) ;
+    lastRuns[pos - start] = start;
+  }
+  return lastRuns;
+}
+function backtick(state, silent) {
+  var _state$backticks$open;
+  const start = state.pos;
+  if (state.src.charCodeAt(start) !== 96) return false;
+  const max = state.posMax;
+  let pos = start + 1;
+  while (pos < max && state.src.charCodeAt(pos) === 96) pos++;
+  const marker = state.src.slice(start, pos);
+  const openerLength = marker.length;
+  if (!state.backticksScanned) {
+    state.backticks = buildLastRuns(state.src);
+    state.backticksScanned = true;
+  }
+  if (((_state$backticks$open = state.backticks[openerLength]) !== null && _state$backticks$open !== void 0 ? _state$backticks$open : -1) >= pos) {
+    let matchEnd = pos;
+    let matchStart;
+    while ((matchStart = state.src.indexOf("`", matchEnd)) !== -1 && matchStart < max) {
+      matchEnd = matchStart + 1;
+      while (state.src.charCodeAt(matchEnd) === 96) matchEnd++;
+      if (matchEnd > max) break;
+      if (matchEnd - matchStart === openerLength) {
+        if (!silent) {
+          const token = state.push("code_inline", "code", 0);
+          token.markup = marker;
+          let content = state.src.slice(pos, matchStart).replace(/\n/g, " ");
+          if (content.startsWith(" ") && content.endsWith(" ") && /[^ ]/.test(content)) content = content.slice(1, -1);
+          token.content = content;
+        }
+        state.pos = matchEnd;
+        return true;
+      }
+    }
+  }
+  if (!silent) state.pending += marker;
+  state.pos = pos;
+  return true;
+}
+function strikethrough_tokenize(state, silent) {
+  const start = state.pos;
+  const marker = state.src.charCodeAt(start);
+  if (silent) return false;
+  if (marker !== 126) return false;
+  const scanned = state.scanDelims(state.pos, true);
+  let len = scanned.length;
+  const ch = String.fromCharCode(marker);
+  if (len < 2) return false;
+  let token;
+  if (len % 2) {
+    token = state.push("text", "", 0);
+    token.content = ch;
+    len--;
+  }
+  for (let i = 0; i < len; i += 2) {
+    token = state.push("text", "", 0);
+    token.content = ch + ch;
+    state.delimiters.push({
+      marker,
+      length: 0,
+      token: state.tokens.length - 1,
+      end: -1,
+      open: scanned.can_open,
+      close: scanned.can_close
+    });
+  }
+  state.pos += scanned.length;
+  return true;
+}
+function postProcess$1(state, delimiters) {
+  let token;
+  const loneMarkers = [];
+  const max = delimiters.length;
+  for (let i = 0; i < max; i++) {
+    const startDelim = delimiters[i];
+    if (startDelim.marker !== 126) continue;
+    if (startDelim.end === -1) continue;
+    const endDelim = delimiters[startDelim.end];
+    token = state.tokens[startDelim.token];
+    token.type = "s_open";
+    token.tag = "s";
+    token.nesting = 1;
+    token.markup = "~~";
+    token.content = "";
+    token = state.tokens[endDelim.token];
+    token.type = "s_close";
+    token.tag = "s";
+    token.nesting = -1;
+    token.markup = "~~";
+    token.content = "";
+    if (state.tokens[endDelim.token - 1].type === "text" && state.tokens[endDelim.token - 1].content === "~") loneMarkers.push(endDelim.token - 1);
+  }
+  while (loneMarkers.length) {
+    const i = loneMarkers.pop();
+    let j = i + 1;
+    while (j < state.tokens.length && state.tokens[j].type === "s_close") j++;
+    j--;
+    if (i !== j) {
+      token = state.tokens[j];
+      state.tokens[j] = state.tokens[i];
+      state.tokens[i] = token;
+    }
+  }
+}
+function strikethrough_postProcess(state) {
+  const tokens_meta = state.tokens_meta;
+  const max = state.tokens_meta.length;
+  postProcess$1(state, state.delimiters);
+  for (let curr = 0; curr < max; curr++) {
+    var _tokens_meta$curr;
+    const delimiters = (_tokens_meta$curr = tokens_meta[curr]) === null || _tokens_meta$curr === void 0 ? void 0 : _tokens_meta$curr.delimiters;
+    if (delimiters) postProcess$1(state, delimiters);
+  }
+}
+var strikethrough_default = {
+  tokenize: strikethrough_tokenize,
+  postProcess: strikethrough_postProcess
+};
+function emphasis_tokenize(state, silent) {
+  const start = state.pos;
+  const marker = state.src.charCodeAt(start);
+  if (silent) return false;
+  if (marker !== 95 && marker !== 42) return false;
+  const scanned = state.scanDelims(state.pos, marker === 42);
+  for (let i = 0; i < scanned.length; i++) {
+    const token = state.push("text", "", 0);
+    token.content = String.fromCharCode(marker);
+    state.delimiters.push({
+      marker,
+      length: scanned.length,
+      token: state.tokens.length - 1,
+      end: -1,
+      open: scanned.can_open,
+      close: scanned.can_close
+    });
+  }
+  state.pos += scanned.length;
+  return true;
+}
+function postProcess(state, delimiters) {
+  const max = delimiters.length;
+  for (let i = max - 1; i >= 0; i--) {
+    const startDelim = delimiters[i];
+    if (startDelim.marker !== 95 && startDelim.marker !== 42) continue;
+    if (startDelim.end === -1) continue;
+    const endDelim = delimiters[startDelim.end];
+    const isStrong = i > 0 && delimiters[i - 1].end === startDelim.end + 1 && delimiters[i - 1].marker === startDelim.marker && delimiters[i - 1].token === startDelim.token - 1 && delimiters[startDelim.end + 1].token === endDelim.token + 1;
+    const ch = String.fromCharCode(startDelim.marker);
+    const token_o = state.tokens[startDelim.token];
+    token_o.type = isStrong ? "strong_open" : "em_open";
+    token_o.tag = isStrong ? "strong" : "em";
+    token_o.nesting = 1;
+    token_o.markup = isStrong ? ch + ch : ch;
+    token_o.content = "";
+    const token_c = state.tokens[endDelim.token];
+    token_c.type = isStrong ? "strong_close" : "em_close";
+    token_c.tag = isStrong ? "strong" : "em";
+    token_c.nesting = -1;
+    token_c.markup = isStrong ? ch + ch : ch;
+    token_c.content = "";
+    if (isStrong) {
+      state.tokens[delimiters[i - 1].token].content = "";
+      state.tokens[delimiters[startDelim.end + 1].token].content = "";
+      i--;
+    }
+  }
+}
+function emphasis_post_process(state) {
+  const tokens_meta = state.tokens_meta;
+  const max = state.tokens_meta.length;
+  postProcess(state, state.delimiters);
+  for (let curr = 0; curr < max; curr++) {
+    var _tokens_meta$curr;
+    const delimiters = (_tokens_meta$curr = tokens_meta[curr]) === null || _tokens_meta$curr === void 0 ? void 0 : _tokens_meta$curr.delimiters;
+    if (delimiters) postProcess(state, delimiters);
+  }
+}
+var emphasis_default = {
+  tokenize: emphasis_tokenize,
+  postProcess: emphasis_post_process
+};
+function link(state, silent) {
+  let code2, label, res, ref;
+  let href = "";
+  let title = "";
+  let start = state.pos;
+  let parseReference = true;
+  if (state.src.charCodeAt(state.pos) !== 91) return false;
+  const oldPos = state.pos;
+  const max = state.posMax;
+  const labelStart = state.pos + 1;
+  const labelEnd = state.md.helpers.parseLinkLabel(state, state.pos, true);
+  if (labelEnd < 0) return false;
+  let pos = labelEnd + 1;
+  if (pos < max && state.src.charCodeAt(pos) === 40) {
+    parseReference = false;
+    pos++;
+    for (; pos < max; pos++) {
+      code2 = state.src.charCodeAt(pos);
+      if (!isSpace(code2) && code2 !== 10) break;
+    }
+    if (pos >= max) return false;
+    start = pos;
+    res = state.md.helpers.parseLinkDestination(state.src, pos, state.posMax);
+    if (res.ok) {
+      href = state.md.normalizeLink(res.str);
+      if (state.md.validateLink(href)) pos = res.pos;
+      else href = "";
+      start = pos;
+      for (; pos < max; pos++) {
+        code2 = state.src.charCodeAt(pos);
+        if (!isSpace(code2) && code2 !== 10) break;
+      }
+      res = state.md.helpers.parseLinkTitle(state.src, pos, state.posMax);
+      if (pos < max && start !== pos && res.ok) {
+        title = res.str;
+        pos = res.pos;
+        for (; pos < max; pos++) {
+          code2 = state.src.charCodeAt(pos);
+          if (!isSpace(code2) && code2 !== 10) break;
+        }
+      }
+    }
+    if (pos >= max || state.src.charCodeAt(pos) !== 41) parseReference = true;
+    pos++;
+  }
+  if (parseReference) {
+    if (typeof state.env.references === "undefined") return false;
+    if (pos < max && state.src.charCodeAt(pos) === 91) {
+      start = pos + 1;
+      pos = state.md.helpers.parseLinkLabel(state, pos);
+      if (pos >= 0) label = state.src.slice(start, pos++);
+      else pos = labelEnd + 1;
+    } else pos = labelEnd + 1;
+    if (!label) label = state.src.slice(labelStart, labelEnd);
+    label = normalizeReference(label);
+    ref = state.env.references[label];
+    if (!ref) {
+      state.pos = oldPos;
+      return false;
+    }
+    href = ref.href;
+    title = ref.title;
+  }
+  if (!silent) {
+    state.pos = labelStart;
+    state.posMax = labelEnd;
+    const token_o = state.push("link_open", "a", 1);
+    const attrs = [["href", href]];
+    token_o.attrs = attrs;
+    if (title) attrs.push(["title", title]);
+    if (label) {
+      const meta = /* @__PURE__ */ Object.create(null);
+      meta.label = label;
+      token_o.meta = meta;
+    }
+    state.linkLevel++;
+    state.md.inline.tokenize(state);
+    state.linkLevel--;
+    state.push("link_close", "a", -1);
+  }
+  state.pos = pos;
+  state.posMax = max;
+  return true;
+}
+function image(state, silent) {
+  let code2, content, label, pos, ref, res, title, start;
+  let href = "";
+  const oldPos = state.pos;
+  const max = state.posMax;
+  if (state.src.charCodeAt(state.pos) !== 33) return false;
+  if (state.src.charCodeAt(state.pos + 1) !== 91) return false;
+  const labelStart = state.pos + 2;
+  const labelEnd = state.md.helpers.parseLinkLabel(state, state.pos + 1, false);
+  if (labelEnd < 0) return false;
+  pos = labelEnd + 1;
+  if (pos < max && state.src.charCodeAt(pos) === 40) {
+    pos++;
+    for (; pos < max; pos++) {
+      code2 = state.src.charCodeAt(pos);
+      if (!isSpace(code2) && code2 !== 10) break;
+    }
+    if (pos >= max) return false;
+    start = pos;
+    res = state.md.helpers.parseLinkDestination(state.src, pos, state.posMax);
+    if (res.ok) {
+      href = state.md.normalizeLink(res.str);
+      if (state.md.validateLink(href)) pos = res.pos;
+      else href = "";
+    }
+    start = pos;
+    for (; pos < max; pos++) {
+      code2 = state.src.charCodeAt(pos);
+      if (!isSpace(code2) && code2 !== 10) break;
+    }
+    res = state.md.helpers.parseLinkTitle(state.src, pos, state.posMax);
+    if (pos < max && start !== pos && res.ok) {
+      title = res.str;
+      pos = res.pos;
+      for (; pos < max; pos++) {
+        code2 = state.src.charCodeAt(pos);
+        if (!isSpace(code2) && code2 !== 10) break;
+      }
+    } else title = "";
+    if (pos >= max || state.src.charCodeAt(pos) !== 41) {
+      state.pos = oldPos;
+      return false;
+    }
+    pos++;
+  } else {
+    if (typeof state.env.references === "undefined") return false;
+    if (pos < max && state.src.charCodeAt(pos) === 91) {
+      start = pos + 1;
+      pos = state.md.helpers.parseLinkLabel(state, pos);
+      if (pos >= 0) label = state.src.slice(start, pos++);
+      else pos = labelEnd + 1;
+    } else pos = labelEnd + 1;
+    if (!label) label = state.src.slice(labelStart, labelEnd);
+    label = normalizeReference(label);
+    ref = state.env.references[label];
+    if (!ref) {
+      state.pos = oldPos;
+      return false;
+    }
+    href = ref.href;
+    title = ref.title;
+  }
+  if (!silent) {
+    content = state.src.slice(labelStart, labelEnd);
+    const tokens = [];
+    state.md.inline.parse(content, state.md, state.env, tokens);
+    const token = state.push("image", "img", 0);
+    const attrs = [["src", href], ["alt", ""]];
+    token.attrs = attrs;
+    token.children = tokens;
+    token.content = content;
+    if (title) attrs.push(["title", title]);
+    if (label) {
+      const meta = /* @__PURE__ */ Object.create(null);
+      meta.label = label;
+      token.meta = meta;
+    }
+  }
+  state.pos = pos;
+  state.posMax = max;
+  return true;
+}
+var EMAIL_RE = /^([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
+var AUTOLINK_RE = /^([a-zA-Z][a-zA-Z0-9+.-]{1,31}):([^<>\x00-\x20]*)$/;
+function autolink(state, silent) {
+  let pos = state.pos;
+  if (state.src.charCodeAt(pos) !== 60) return false;
+  const start = state.pos;
+  const max = state.posMax;
+  for (; ; ) {
+    if (++pos >= max) return false;
+    const ch = state.src.charCodeAt(pos);
+    if (ch === 60) return false;
+    if (ch === 62) break;
+  }
+  const url = state.src.slice(start + 1, pos);
+  if (AUTOLINK_RE.test(url)) {
+    const fullUrl = state.md.normalizeLink(url);
+    if (!state.md.validateLink(fullUrl)) return false;
+    if (!silent) {
+      const token_o = state.push("link_open", "a", 1);
+      token_o.attrs = [["href", fullUrl]];
+      token_o.markup = "autolink";
+      token_o.info = "auto";
+      const token_t = state.push("text", "", 0);
+      token_t.content = state.md.normalizeLinkText(url);
+      const token_c = state.push("link_close", "a", -1);
+      token_c.markup = "autolink";
+      token_c.info = "auto";
+    }
+    state.pos += url.length + 2;
+    return true;
+  }
+  if (EMAIL_RE.test(url)) {
+    const fullUrl = state.md.normalizeLink(`mailto:${url}`);
+    if (!state.md.validateLink(fullUrl)) return false;
+    if (!silent) {
+      const token_o = state.push("link_open", "a", 1);
+      token_o.attrs = [["href", fullUrl]];
+      token_o.markup = "autolink";
+      token_o.info = "auto";
+      const token_t = state.push("text", "", 0);
+      token_t.content = state.md.normalizeLinkText(url);
+      const token_c = state.push("link_close", "a", -1);
+      token_c.markup = "autolink";
+      token_c.info = "auto";
+    }
+    state.pos += url.length + 2;
+    return true;
+  }
+  return false;
+}
+function isLinkOpen(str) {
+  return /^<a[>\s]/i.test(str);
+}
+function isLinkClose(str) {
+  return /^<\/a\s*>/i.test(str);
+}
+function isLetter(ch) {
+  const lc = ch | 32;
+  return lc >= 97 && lc <= 122;
+}
+function scanSpecial(state, pos) {
+  const src = state.src;
+  let start;
+  let terminator;
+  if (src.startsWith("<!--", pos)) {
+    if (src.startsWith(">", pos + 4)) return pos + 5;
+    if (src.startsWith("->", pos + 4)) return pos + 6;
+    start = pos + 4;
+    terminator = "-->";
+  } else if (src.startsWith("<![CDATA[", pos)) {
+    start = pos + 9;
+    terminator = "]]>";
+  } else if (src.charCodeAt(pos + 1) === 63) {
+    start = pos + 2;
+    terminator = "?>";
+  } else if (isLetter(src.charCodeAt(pos + 2))) {
+    start = pos + 3;
+    terminator = ">";
+  } else return -1;
+  if (state.skipHtmlSpecial) return -1;
+  const end = src.indexOf(terminator, start);
+  if (end < 0) {
+    state.skipHtmlSpecial = true;
+    return -1;
+  }
+  return end + terminator.length;
+}
+function html_inline(state, silent) {
+  if (!state.md.options.html) return false;
+  const max = state.posMax;
+  const pos = state.pos;
+  if (state.src.charCodeAt(pos) !== 60 || pos + 2 >= max) return false;
+  let end;
+  const ch = state.src.charCodeAt(pos + 1);
+  if (ch === 33 || ch === 63) end = scanSpecial(state, pos);
+  else if (ch === 47 || isLetter(ch)) {
+    const match = state.src.slice(pos).match(HTML_OPEN_CLOSE_TAG_RE);
+    end = match ? pos + match[0].length : -1;
+  } else return false;
+  if (end < 0) return false;
+  if (!silent) {
+    const token = state.push("html_inline", "", 0);
+    token.content = state.src.slice(pos, end);
+    if (isLinkOpen(token.content)) state.linkLevel++;
+    if (isLinkClose(token.content)) state.linkLevel--;
+  }
+  state.pos = end;
+  return true;
+}
+var DIGITAL_RE = /^&#((?:x[a-f0-9]{1,6}|[0-9]{1,7}));/i;
+var NAMED_RE = /^&([a-z][a-z0-9]{1,31});/i;
+function entity(state, silent) {
+  const pos = state.pos;
+  const max = state.posMax;
+  if (state.src.charCodeAt(pos) !== 38) return false;
+  if (pos + 1 >= max) return false;
+  if (state.src.charCodeAt(pos + 1) === 35) {
+    const match = state.src.slice(pos).match(DIGITAL_RE);
+    if (match) {
+      if (!silent) {
+        const code2 = match[1][0].toLowerCase() === "x" ? parseInt(match[1].slice(1), 16) : parseInt(match[1], 10);
+        const token = state.push("text_special", "", 0);
+        token.content = isValidEntityCode(code2) ? fromCodePoint(code2) : fromCodePoint(65533);
+        token.markup = match[0];
+        token.info = "entity";
+      }
+      state.pos += match[0].length;
+      return true;
+    }
+  } else {
+    const match = state.src.slice(pos).match(NAMED_RE);
+    if (match) {
+      const decoded = decodeHTMLStrict(match[0]);
+      if (decoded !== match[0]) {
+        if (!silent) {
+          const token = state.push("text_special", "", 0);
+          token.content = decoded;
+          token.markup = match[0];
+          token.info = "entity";
+        }
+        state.pos += match[0].length;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function processDelimiters(delimiters) {
+  const openersBottom = {};
+  const max = delimiters.length;
+  if (!max) return;
+  let headerIdx = 0;
+  let lastTokenIdx = -2;
+  const jumps = [];
+  for (let closerIdx = 0; closerIdx < max; closerIdx++) {
+    const closer = delimiters[closerIdx];
+    jumps.push(0);
+    if (delimiters[headerIdx].marker !== closer.marker || lastTokenIdx !== closer.token - 1) headerIdx = closerIdx;
+    lastTokenIdx = closer.token;
+    closer.length = closer.length || 0;
+    if (!closer.close) continue;
+    if (!openersBottom.hasOwnProperty(closer.marker)) openersBottom[closer.marker] = [
+      -1,
+      -1,
+      -1,
+      -1,
+      -1,
+      -1
+    ];
+    const minOpenerIdx = openersBottom[closer.marker][(closer.open ? 3 : 0) + closer.length % 3];
+    let openerIdx = headerIdx - jumps[headerIdx] - 1;
+    let newMinOpenerIdx = openerIdx;
+    for (; openerIdx > minOpenerIdx; openerIdx -= jumps[openerIdx] + 1) {
+      const opener = delimiters[openerIdx];
+      if (opener.marker !== closer.marker) continue;
+      if (opener.open && opener.end < 0) {
+        let isOddMatch = false;
+        if (opener.close || closer.open) {
+          if ((opener.length + closer.length) % 3 === 0) {
+            if (opener.length % 3 !== 0 || closer.length % 3 !== 0) isOddMatch = true;
+          }
+        }
+        if (!isOddMatch) {
+          const lastJump = openerIdx > 0 && !delimiters[openerIdx - 1].open ? jumps[openerIdx - 1] + 1 : 0;
+          jumps[closerIdx] = closerIdx - openerIdx + lastJump;
+          jumps[openerIdx] = lastJump;
+          closer.open = false;
+          opener.end = closerIdx;
+          opener.close = false;
+          newMinOpenerIdx = -1;
+          lastTokenIdx = -2;
+          break;
+        }
+      }
+    }
+    if (newMinOpenerIdx !== -1) openersBottom[closer.marker][(closer.open ? 3 : 0) + (closer.length || 0) % 3] = newMinOpenerIdx;
+  }
+}
+function link_pairs(state) {
+  const tokens_meta = state.tokens_meta;
+  const max = state.tokens_meta.length;
+  processDelimiters(state.delimiters);
+  for (let curr = 0; curr < max; curr++) {
+    var _tokens_meta$curr;
+    const delimiters = (_tokens_meta$curr = tokens_meta[curr]) === null || _tokens_meta$curr === void 0 ? void 0 : _tokens_meta$curr.delimiters;
+    if (delimiters) processDelimiters(delimiters);
+  }
+}
+function fragments_join(state) {
+  let curr, last;
+  let level = 0;
+  const tokens = state.tokens;
+  const max = state.tokens.length;
+  for (curr = last = 0; curr < max; curr++) {
+    if (tokens[curr].nesting < 0) level--;
+    tokens[curr].level = level;
+    if (tokens[curr].nesting > 0) level++;
+    if (tokens[curr].type === "text" && curr + 1 < max && tokens[curr + 1].type === "text") tokens[curr + 1].content = tokens[curr].content + tokens[curr + 1].content;
+    else {
+      if (curr !== last) tokens[last] = tokens[curr];
+      last++;
+    }
+  }
+  if (curr !== last) tokens.length = last;
+}
+var _rules = [
+  ["text", text],
+  ["linkify", linkify],
+  ["newline", newline],
+  ["escape", escape],
+  ["backticks", backtick],
+  ["strikethrough", strikethrough_default.tokenize],
+  ["emphasis", emphasis_default.tokenize],
+  ["link", link],
+  ["image", image],
+  ["autolink", autolink],
+  ["html_inline", html_inline],
+  ["entity", entity]
+];
+var _rules2 = [
+  ["balance_pairs", link_pairs],
+  ["strikethrough", strikethrough_default.postProcess],
+  ["emphasis", emphasis_default.postProcess],
+  ["fragments_join", fragments_join]
+];
+var ParserInline = class {
+  constructor() {
+    _defineProperty(
+      this,
+      /**
+      * {@link Ruler} instance. Keep configuration of inline rules.
+      */
+      "ruler",
+      new Ruler()
+    );
+    _defineProperty(
+      this,
+      /**
+      * {@link Ruler} instance. Second ruler used for post-processing
+      * (e.g. in emphasis-like rules).
+      */
+      "ruler2",
+      new Ruler()
+    );
+    _defineProperty(this, "State", StateInline);
+    for (let i = 0; i < _rules.length; i++) this.ruler.push(_rules[i][0], _rules[i][1]);
+    for (let i = 0; i < _rules2.length; i++) this.ruler2.push(_rules2[i][0], _rules2[i][1]);
+  }
+  skipToken(state) {
+    const pos = state.pos;
+    const rules = this.ruler.getRules("");
+    const len = rules.length;
+    const maxNesting = state.md.options.maxNesting;
+    const cache = state.cache;
+    if (typeof cache[pos] !== "undefined") {
+      state.pos = cache[pos];
+      return;
+    }
+    let ok = false;
+    if (state.level < maxNesting) for (let i = 0; i < len; i++) {
+      state.level++;
+      ok = rules[i](state, true);
+      state.level--;
+      if (ok) {
+        if (pos >= state.pos) throw new Error("inline rule didn't increment state.pos");
+        break;
+      }
+    }
+    else state.pos = state.posMax;
+    if (!ok) state.pos++;
+    cache[pos] = state.pos;
+  }
+  tokenize(state) {
+    const rules = this.ruler.getRules("");
+    const len = rules.length;
+    const end = state.posMax;
+    const maxNesting = state.md.options.maxNesting;
+    while (state.pos < end) {
+      const prevPos = state.pos;
+      let ok = false;
+      if (state.level < maxNesting) for (let i = 0; i < len; i++) {
+        ok = rules[i](state, false);
+        if (ok) {
+          if (prevPos >= state.pos) throw new Error("inline rule didn't increment state.pos");
+          break;
+        }
+      }
+      if (ok) {
+        if (state.pos >= end) break;
+        continue;
+      }
+      state.pending += state.src[state.pos++];
+    }
+    if (state.pending) state.pushPending();
+  }
+  /**
+  * Process input string and push inline tokens into `outTokens`
+  */
+  parse(str, md, env, outTokens) {
+    const state = new this.State(str, md, env, outTokens);
+    this.tokenize(state);
+    const rules = this.ruler2.getRules("");
+    const len = rules.length;
+    for (let i = 0; i < len; i++) rules[i](state);
+  }
+};
+var config = {
+  default: {
+    options: {
+      html: false,
+      xhtmlOut: false,
+      breaks: false,
+      langPrefix: "language-",
+      linkify: false,
+      typographer: false,
+      quotes: "\u201C\u201D\u2018\u2019",
+      highlight: null,
+      maxNesting: 100
+    },
+    components: {
+      core: {},
+      block: {},
+      inline: {}
+    }
+  },
+  zero: {
+    options: {
+      html: false,
+      xhtmlOut: false,
+      breaks: false,
+      langPrefix: "language-",
+      linkify: false,
+      typographer: false,
+      quotes: "\u201C\u201D\u2018\u2019",
+      highlight: null,
+      maxNesting: 20
+    },
+    components: {
+      core: { rules: [
+        "normalize",
+        "block",
+        "strip_references",
+        "inline",
+        "text_join"
+      ] },
+      block: { rules: ["paragraph"] },
+      inline: {
+        rules: ["text"],
+        rules2: ["balance_pairs", "fragments_join"]
+      }
+    }
+  },
+  commonmark: {
+    options: {
+      html: true,
+      xhtmlOut: true,
+      breaks: false,
+      langPrefix: "language-",
+      linkify: false,
+      typographer: false,
+      quotes: "\u201C\u201D\u2018\u2019",
+      highlight: null,
+      maxNesting: 20
+    },
+    components: {
+      core: { rules: [
+        "normalize",
+        "block",
+        "strip_references",
+        "inline",
+        "text_join"
+      ] },
+      block: { rules: [
+        "blockquote",
+        "code",
+        "fence",
+        "heading",
+        "hr",
+        "html_block",
+        "lheading",
+        "list",
+        "reference",
+        "paragraph"
+      ] },
+      inline: {
+        rules: [
+          "autolink",
+          "backticks",
+          "emphasis",
+          "entity",
+          "escape",
+          "html_inline",
+          "image",
+          "link",
+          "newline",
+          "text"
+        ],
+        rules2: [
+          "balance_pairs",
+          "emphasis",
+          "fragments_join"
+        ]
+      }
+    }
+  }
+};
+var BAD_PROTO_RE = /^(vbscript|javascript|file|data):/;
+var GOOD_DATA_RE = /^data:image\/(gif|png|jpeg|webp);/;
+var RECODE_HOSTNAME_FOR = [
+  "http:",
+  "https:",
+  "mailto:"
+];
+var MarkdownIt = class {
+  /**
+  * Link validation function. CommonMark allows too much in links. By default
+  * we disable `javascript:`, `vbscript:`, `file:` schemas, and almost all `data:...` schemas
+  * except some embedded image types.
+  *
+  * You can change this behaviour:
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  * const md = new MarkdownIt()
+  *
+  * // enable everything
+  * md.validateLink = function () { return true; }
+  * ```
+  */
+  validateLink(url) {
+    const str = url.trim().toLowerCase();
+    return BAD_PROTO_RE.test(str) ? GOOD_DATA_RE.test(str) : true;
+  }
+  /**
+  * Function used to encode link url to a machine-readable format,
+  * which includes url-encoding, punycode, etc.
+  */
+  normalizeLink(url) {
+    const parsed = parse_default(url, true);
+    if (parsed.hostname) {
+      if (!parsed.protocol || RECODE_HOSTNAME_FOR.indexOf(parsed.protocol) >= 0) try {
+        parsed.hostname = punycode_es6_default.toASCII(parsed.hostname);
+      } catch (er) {
+      }
+    }
+    if (parsed.auth) parsed.auth = encode_default(parsed.auth);
+    if (parsed.hostname) parsed.hostname = encode_default(parsed.hostname);
+    if (parsed.pathname) parsed.pathname = encode_default(parsed.pathname);
+    if (parsed.search) parsed.search = encode_default(parsed.search);
+    if (parsed.hash) parsed.hash = encode_default(parsed.hash);
+    return format(parsed);
+  }
+  /**
+  * Function used to decode link url to a human-readable format`
+  */
+  normalizeLinkText(url) {
+    const parsed = parse_default(url, true);
+    if (parsed.hostname) {
+      if (!parsed.protocol || RECODE_HOSTNAME_FOR.indexOf(parsed.protocol) >= 0) try {
+        parsed.hostname = punycode_es6_default.toUnicode(parsed.hostname);
+      } catch (er) {
+      }
+    }
+    return decode_default(format(parsed), decode_default.defaultChars + "%");
+  }
+  constructor(...args) {
+    _defineProperty(
+      this,
+      /**
+      * Instance of {@link ParserInline}. You may need it to add new rules when
+      * writing plugins. For simple rules control use {@link MarkdownIt.disable}
+      * and {@link MarkdownIt.enable}.
+      */
+      "inline",
+      new ParserInline()
+    );
+    _defineProperty(
+      this,
+      /**
+      * Instance of {@link ParserBlock}. You may need it to add new rules when
+      * writing plugins. For simple rules control use {@link MarkdownIt.disable}
+      * and {@link MarkdownIt.enable}.
+      */
+      "block",
+      new ParserBlock()
+    );
+    _defineProperty(
+      this,
+      /**
+      * Instance of {@link ParserCore} chain executor. You may need it to add new
+      * rules when writing plugins. For simple rules control use
+      * {@link MarkdownIt.disable} and {@link MarkdownIt.enable}.
+      */
+      "core",
+      new ParserCore()
+    );
+    _defineProperty(
+      this,
+      /**
+      * Instance of {@link Renderer}. Use it to modify output look. Or to add rendering
+      * rules for new token types, generated by plugins.
+      *
+      * See {@link Renderer} docs and
+      * [source code](https://github.com/markdown-it/markdown-it/blob/master/src/renderer.ts).
+      *
+      * @example
+      * ```javascript
+      * import MarkdownIt from 'markdown-it'
+      * const md = new MarkdownIt()
+      *
+      * function myToken(tokens, idx, options, env, self) {
+      *   //...
+      *   return result;
+      * };
+      *
+      * md.renderer.rules['my_token'] = myToken
+      * ```
+      */
+      "renderer",
+      new Renderer()
+    );
+    _defineProperty(
+      this,
+      /**
+      * [linkify-it](https://github.com/markdown-it/linkify-it) instance.
+      * Used by [linkify](https://github.com/markdown-it/markdown-it/blob/master/src/rules_core/linkify.ts)
+      * rule.
+      */
+      "linkify",
+      new LinkifyIt()
+    );
+    _defineProperty(
+      this,
+      /**
+      * Assorted utility functions, useful to write plugins. See details
+      * [here](https://github.com/markdown-it/markdown-it/blob/master/src/common/utils.ts).
+      */
+      "utils",
+      utils_exports
+    );
+    _defineProperty(
+      this,
+      /**
+      * Link components parser functions, useful to write plugins. See details
+      * [here](https://github.com/markdown-it/markdown-it/blob/master/src/helpers).
+      */
+      "helpers",
+      Object.assign({}, helpers_exports)
+    );
+    const [presetNameOrOptions, options] = args;
+    if (typeof presetNameOrOptions === "string") {
+      this.configure(presetNameOrOptions);
+      if (options) this.set(options);
+    } else {
+      this.configure("default");
+      this.set(presetNameOrOptions || {});
+    }
+  }
+  /**
+  * Set parser options (in the same format as in constructor). Probably, you
+  * will never need it, but you can change options after constructor call.
+  *
+  * __Note:__ To achieve the best possible performance, don't modify a
+  * `markdown-it` instance options on the fly. If you need multiple configurations
+  * it's best to create multiple instances and initialize each with separate
+  * config.
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  *
+  * const md = new MarkdownIt()
+  *   .set({ html: true, breaks: true })
+  *   .set({ typographer: true })
+  * ```
+  */
+  set(options) {
+    Object.assign(this.options, options);
+    return this;
+  }
+  /**
+  * Batch load of all options and compenent settings. This is internal method,
+  * and you probably will not need it. But if you will - see available presets
+  * and data structure [here](https://github.com/markdown-it/markdown-it/tree/master/src/presets)
+  *
+  * We strongly recommend to use presets instead of direct config loads. That
+  * will give better compatibility with next versions.
+  */
+  configure(presets) {
+    let p;
+    if (typeof presets === "string") {
+      const presetName = presets;
+      p = config[presetName];
+      if (!p) throw new Error(`Wrong 'markdown-it' preset "${presetName}", check name`);
+    } else p = presets;
+    if (!p) throw new Error("Wrong `markdown-it` preset, can't be empty");
+    if (p.options) this.options = { ...p.options };
+    const components = p.components;
+    if (components) {
+      var _components$inline;
+      [
+        "core",
+        "block",
+        "inline"
+      ].forEach((name) => {
+        var _components$name;
+        const rules = (_components$name = components[name]) === null || _components$name === void 0 ? void 0 : _components$name.rules;
+        if (rules) this[name].ruler.enableOnly(rules);
+      });
+      const rules2 = (_components$inline = components.inline) === null || _components$inline === void 0 ? void 0 : _components$inline.rules2;
+      if (rules2) this.inline.ruler2.enableOnly(rules2);
+    }
+    return this;
+  }
+  /**
+  * Enable list or rules. It will automatically find appropriate components,
+  * containing rules with given names. If rule not found, and `ignoreInvalid`
+  * not set - throws exception.
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  *
+  * const md = new MarkdownIt()
+  *   .enable(['sub', 'sup'])
+  *   .disable('smartquotes')
+  * ```
+  */
+  enable(list2, ignoreInvalid = false) {
+    let result = [];
+    if (!Array.isArray(list2)) list2 = [list2];
+    [
+      "core",
+      "block",
+      "inline"
+    ].forEach((chain) => {
+      result = result.concat(this[chain].ruler.enable(list2, true));
+    });
+    result = result.concat(this.inline.ruler2.enable(list2, true));
+    const missed = list2.filter((name) => result.indexOf(name) < 0);
+    if (missed.length && !ignoreInvalid) throw new Error(`MarkdownIt. Failed to enable unknown rule(s): ${missed}`);
+    return this;
+  }
+  /**
+  * The same as {@link MarkdownIt.enable}, but turn specified rules off.
+  */
+  disable(list2, ignoreInvalid = false) {
+    let result = [];
+    if (!Array.isArray(list2)) list2 = [list2];
+    [
+      "core",
+      "block",
+      "inline"
+    ].forEach((chain) => {
+      result = result.concat(this[chain].ruler.disable(list2, true));
+    });
+    result = result.concat(this.inline.ruler2.disable(list2, true));
+    const missed = list2.filter((name) => result.indexOf(name) < 0);
+    if (missed.length && !ignoreInvalid) throw new Error(`MarkdownIt. Failed to disable unknown rule(s): ${missed}`);
+    return this;
+  }
+  /**
+  * Load specified plugin with given params into current parser instance.
+  * It's just a sugar to call `plugin(md, params)` with curring.
+  *
+  * @example
+  * ```javascript
+  * import MarkdownIt from 'markdown-it'
+  * import iterator from 'markdown-it-for-inline'
+  *
+  * const md = new MarkdownIt()
+  *   .use(iterator, 'foo_replace', 'text', function (tokens, idx) {
+  *     tokens[idx].content = tokens[idx].content.replace(/foo/g, 'bar')
+  *   })
+  * ```
+  */
+  use(plugin2, ...params) {
+    plugin2.apply(plugin2, [this, ...params]);
+    return this;
+  }
+  /**
+  * Parse input string and return list of block tokens (special token type
+  * "inline" will contain list of inline tokens). You should not call this
+  * method directly, until you write custom renderer (for example, to produce
+  * AST).
+  *
+  * `env` is used to pass data between "distributed" rules and return additional
+  * metadata like reference info, needed for the renderer. It also can be used to
+  * inject data in specific cases. Usually, you will be ok to pass `{}`,
+  * and then pass updated object to renderer.
+  */
+  parse(src, env) {
+    if (typeof src !== "string") throw new Error("Input data should be a String");
+    const state = new this.core.State(src, this, env);
+    this.core.process(state);
+    return state.tokens;
+  }
+  /**
+  * Render markdown string into html. It does all magic for you :).
+  *
+  * `env` can be used to inject additional metadata (`{}` by default).
+  * But you will not need it with high probability. See also comment
+  * in {@link MarkdownIt.parse}.
+  */
+  render(src, env = {}) {
+    return this.renderer.render(this.parse(src, env), this.options, env);
+  }
+  /**
+  * The same as {@link MarkdownIt.parse} but skip all block rules. It returns
+  * the block tokens list with the single `inline` element, containing parsed
+  * inline tokens in `children` property. Also updates `env` object.
+  */
+  parseInline(src, env) {
+    const state = new this.core.State(src, this, env);
+    state.inlineMode = true;
+    this.core.process(state);
+    return state.tokens;
+  }
+  /**
+  * Similar to {@link MarkdownIt.render} but for single paragraph content.
+  * Result will NOT be wrapped into `<p>` tags.
+  */
+  renderInline(src, env = {}) {
+    return this.renderer.render(this.parseInline(src, env), this.options, env);
+  }
+};
+_defineProperty(MarkdownIt, "Token", Token);
+_defineProperty(MarkdownIt, "Ruler", Ruler);
+_defineProperty(MarkdownIt, "Renderer", Renderer);
+_defineProperty(MarkdownIt, "ParserCore", ParserCore);
+_defineProperty(MarkdownIt, "StateCore", StateCore);
+_defineProperty(MarkdownIt, "ParserBlock", ParserBlock);
+_defineProperty(MarkdownIt, "StateBlock", StateBlock);
+_defineProperty(MarkdownIt, "ParserInline", ParserInline);
+_defineProperty(MarkdownIt, "StateInline", StateInline);
+var MarkdownItCallable = callable(MarkdownIt);
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/core.js
+var import_core = __toESM(require_core(), 1);
+var core_default = import_core.default;
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/bash.js
+function bash(hljs) {
+  const regex = hljs.regex;
+  const VAR = {};
+  const BRACED_VAR = {
+    begin: /\$\{/,
+    end: /\}/,
+    contains: [
+      "self",
+      {
+        begin: /:-/,
+        contains: [VAR]
+      }
+      // default values
+    ]
+  };
+  Object.assign(VAR, {
+    className: "variable",
+    variants: [
+      { begin: regex.concat(
+        /\$[\w\d#@][\w\d_]*/,
+        // negative look-ahead tries to avoid matching patterns that are not
+        // Perl at all like $ident$, @ident@, etc.
+        `(?![\\w\\d])(?![$])`
+      ) },
+      BRACED_VAR
+    ]
+  });
+  const SUBST = {
+    className: "subst",
+    begin: /\$\(/,
+    end: /\)/,
+    contains: [hljs.BACKSLASH_ESCAPE]
+  };
+  const COMMENT = hljs.inherit(
+    hljs.COMMENT(),
+    {
+      match: [
+        /(^|\s)/,
+        /#.*$/
+      ],
+      scope: {
+        2: "comment"
+      }
+    }
+  );
+  const HERE_DOC = {
+    begin: /<<-?\s*(?=\w+)/,
+    starts: { contains: [
+      hljs.END_SAME_AS_BEGIN({
+        begin: /(\w+)/,
+        end: /(\w+)/,
+        className: "string"
+      })
+    ] }
+  };
+  const QUOTE_STRING = {
+    className: "string",
+    begin: /"/,
+    end: /"/,
+    contains: [
+      hljs.BACKSLASH_ESCAPE,
+      VAR,
+      SUBST
+    ]
+  };
+  SUBST.contains.push(QUOTE_STRING);
+  const ESCAPED_QUOTE = {
+    match: /\\"/
+  };
+  const APOS_STRING = {
+    className: "string",
+    begin: /'/,
+    end: /'/
+  };
+  const ESCAPED_APOS = {
+    match: /\\'/
+  };
+  const ARITHMETIC = {
+    begin: /\$?\(\(/,
+    end: /\)\)/,
+    contains: [
+      {
+        begin: /\d+#[0-9a-f]+/,
+        className: "number"
+      },
+      hljs.NUMBER_MODE,
+      VAR
+    ]
+  };
+  const SH_LIKE_SHELLS = [
+    "fish",
+    "bash",
+    "zsh",
+    "sh",
+    "csh",
+    "ksh",
+    "tcsh",
+    "dash",
+    "scsh"
+  ];
+  const KNOWN_SHEBANG = hljs.SHEBANG({
+    binary: `(${SH_LIKE_SHELLS.join("|")})`,
+    relevance: 10
+  });
+  const FUNCTION = {
+    className: "function",
+    begin: /\w[\w\d_]*\s*\(\s*\)\s*\{/,
+    returnBegin: true,
+    contains: [hljs.inherit(hljs.TITLE_MODE, { begin: /\w[\w\d_]*/ })],
+    relevance: 0
+  };
+  const KEYWORDS3 = [
+    "if",
+    "then",
+    "else",
+    "elif",
+    "fi",
+    "time",
+    "for",
+    "while",
+    "until",
+    "in",
+    "do",
+    "done",
+    "case",
+    "esac",
+    "coproc",
+    "function",
+    "select"
+  ];
+  const LITERALS3 = [
+    "true",
+    "false"
+  ];
+  const PATH_MODE = { match: /(\/[a-z._-]+)+/ };
+  const SHELL_BUILT_INS = [
+    "break",
+    "cd",
+    "continue",
+    "eval",
+    "exec",
+    "exit",
+    "export",
+    "getopts",
+    "hash",
+    "pwd",
+    "readonly",
+    "return",
+    "shift",
+    "test",
+    "times",
+    "trap",
+    "umask",
+    "unset"
+  ];
+  const BASH_BUILT_INS = [
+    "alias",
+    "bind",
+    "builtin",
+    "caller",
+    "command",
+    "declare",
+    "echo",
+    "enable",
+    "help",
+    "let",
+    "local",
+    "logout",
+    "mapfile",
+    "printf",
+    "read",
+    "readarray",
+    "source",
+    "sudo",
+    "type",
+    "typeset",
+    "ulimit",
+    "unalias"
+  ];
+  const ZSH_BUILT_INS = [
+    "autoload",
+    "bg",
+    "bindkey",
+    "bye",
+    "cap",
+    "chdir",
+    "clone",
+    "comparguments",
+    "compcall",
+    "compctl",
+    "compdescribe",
+    "compfiles",
+    "compgroups",
+    "compquote",
+    "comptags",
+    "comptry",
+    "compvalues",
+    "dirs",
+    "disable",
+    "disown",
+    "echotc",
+    "echoti",
+    "emulate",
+    "fc",
+    "fg",
+    "float",
+    "functions",
+    "getcap",
+    "getln",
+    "history",
+    "integer",
+    "jobs",
+    "kill",
+    "limit",
+    "log",
+    "noglob",
+    "popd",
+    "print",
+    "pushd",
+    "pushln",
+    "rehash",
+    "sched",
+    "setcap",
+    "setopt",
+    "stat",
+    "suspend",
+    "ttyctl",
+    "unfunction",
+    "unhash",
+    "unlimit",
+    "unsetopt",
+    "vared",
+    "wait",
+    "whence",
+    "where",
+    "which",
+    "zcompile",
+    "zformat",
+    "zftp",
+    "zle",
+    "zmodload",
+    "zparseopts",
+    "zprof",
+    "zpty",
+    "zregexparse",
+    "zsocket",
+    "zstyle",
+    "ztcp"
+  ];
+  const GNU_CORE_UTILS = [
+    "chcon",
+    "chgrp",
+    "chown",
+    "chmod",
+    "cp",
+    "dd",
+    "df",
+    "dir",
+    "dircolors",
+    "ln",
+    "ls",
+    "mkdir",
+    "mkfifo",
+    "mknod",
+    "mktemp",
+    "mv",
+    "realpath",
+    "rm",
+    "rmdir",
+    "shred",
+    "sync",
+    "touch",
+    "truncate",
+    "vdir",
+    "b2sum",
+    "base32",
+    "base64",
+    "cat",
+    "cksum",
+    "comm",
+    "csplit",
+    "cut",
+    "expand",
+    "fmt",
+    "fold",
+    "head",
+    "join",
+    "md5sum",
+    "nl",
+    "numfmt",
+    "od",
+    "paste",
+    "ptx",
+    "pr",
+    "sha1sum",
+    "sha224sum",
+    "sha256sum",
+    "sha384sum",
+    "sha512sum",
+    "shuf",
+    "sort",
+    "split",
+    "sum",
+    "tac",
+    "tail",
+    "tr",
+    "tsort",
+    "unexpand",
+    "uniq",
+    "wc",
+    "arch",
+    "basename",
+    "chroot",
+    "date",
+    "dirname",
+    "du",
+    "echo",
+    "env",
+    "expr",
+    "factor",
+    // "false", // keyword literal already
+    "groups",
+    "hostid",
+    "id",
+    "link",
+    "logname",
+    "nice",
+    "nohup",
+    "nproc",
+    "pathchk",
+    "pinky",
+    "printenv",
+    "printf",
+    "pwd",
+    "readlink",
+    "runcon",
+    "seq",
+    "sleep",
+    "stat",
+    "stdbuf",
+    "stty",
+    "tee",
+    "test",
+    "timeout",
+    // "true", // keyword literal already
+    "tty",
+    "uname",
+    "unlink",
+    "uptime",
+    "users",
+    "who",
+    "whoami",
+    "yes"
+  ];
+  return {
+    name: "Bash",
+    aliases: [
+      "sh",
+      "zsh"
+    ],
+    keywords: {
+      $pattern: /\b[a-z][a-z0-9._-]+\b/,
+      keyword: KEYWORDS3,
+      literal: LITERALS3,
+      built_in: [
+        ...SHELL_BUILT_INS,
+        ...BASH_BUILT_INS,
+        // Shell modifiers
+        "set",
+        "shopt",
+        ...ZSH_BUILT_INS,
+        ...GNU_CORE_UTILS
+      ]
+    },
+    contains: [
+      KNOWN_SHEBANG,
+      // to catch known shells and boost relevancy
+      hljs.SHEBANG(),
+      // to catch unknown shells but still highlight the shebang
+      FUNCTION,
+      ARITHMETIC,
+      COMMENT,
+      HERE_DOC,
+      PATH_MODE,
+      QUOTE_STRING,
+      ESCAPED_QUOTE,
+      APOS_STRING,
+      ESCAPED_APOS,
+      VAR
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/c.js
+function c(hljs) {
+  const regex = hljs.regex;
+  const C_LINE_COMMENT_MODE = hljs.COMMENT("//", "$", { contains: [{ begin: /\\\n/ }] });
+  const DECLTYPE_AUTO_RE = "decltype\\(auto\\)";
+  const NAMESPACE_RE = "[a-zA-Z_]\\w*::";
+  const TEMPLATE_ARGUMENT_RE = "<[^<>]+>";
+  const FUNCTION_TYPE_RE = "(" + DECLTYPE_AUTO_RE + "|" + regex.optional(NAMESPACE_RE) + "[a-zA-Z_]\\w*" + regex.optional(TEMPLATE_ARGUMENT_RE) + ")";
+  const ATOMIC_TYPES = regex.concat(/\batomic_/, regex.either(
+    "bool",
+    "char",
+    "schar",
+    "uchar",
+    "short",
+    "ushort",
+    "int",
+    "uint",
+    "long",
+    "ulong",
+    "llong",
+    "ullong",
+    "char16_t",
+    "char32_t",
+    "wchar_t",
+    "int_least8_t",
+    "uint_least8_t",
+    "int_least16_t",
+    "uint_least16_t",
+    "int_least32_t",
+    "uint_least32_t",
+    "int_least64_t",
+    "uint_least64_t",
+    "int_fast8_t",
+    "uint_fast8_t",
+    "int_fast16_t",
+    "uint_fast16_t",
+    "int_fast32_t",
+    "uint_fast32_t",
+    "int_fast64_t",
+    "uint_fast64_t",
+    "intptr_t",
+    "uintptr_t",
+    "size_t",
+    "ptrdiff_t",
+    "intmax_t",
+    "uintmax_t"
+  ), /\b/);
+  const TYPES3 = {
+    className: "type",
+    variants: [
+      { begin: "\\b[a-z\\d_]*_t\\b" },
+      { match: ATOMIC_TYPES }
+    ]
+  };
+  const CHARACTER_ESCAPES = "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4,8}|[0-7]{3}|\\S)";
+  const STRINGS = {
+    className: "string",
+    variants: [
+      {
+        begin: '(u8?|U|L)?"',
+        end: '"',
+        illegal: "\\n",
+        contains: [hljs.BACKSLASH_ESCAPE]
+      },
+      {
+        begin: "(u8?|U|L)?'(" + CHARACTER_ESCAPES + "|.)",
+        end: "'",
+        illegal: "."
+      },
+      // https://en.cppreference.com/w/cpp/language/string_literal
+      // a d-char-sequence never contains parentheses, backslashes or whitespace;
+      // quotes are excluded as well so the closing delimiter cannot swallow the
+      // quote that actually terminates the literal
+      hljs.END_SAME_AS_BEGIN({
+        begin: /(?:u8?|U|L)?R"([^()\\\s"]{0,16})\(/,
+        end: /\)([^()\\\s"]{0,16})"/
+      })
+    ]
+  };
+  const NUMBERS = {
+    className: "number",
+    variants: [
+      { match: /\b(0b[01']+)/ },
+      { match: /(-?)\b([\d']+(\.[\d']*)?|\.[\d']+)((ll|LL|l|L)(u|U)?|(u|U)(ll|LL|l|L)?|f|F|b|B)/ },
+      { match: /(-?)\b(0[xX][a-fA-F0-9]+(?:'[a-fA-F0-9]+)*(?:\.[a-fA-F0-9]*(?:'[a-fA-F0-9]*)*)?(?:[pP][-+]?[0-9]+)?(l|L)?(u|U)?)/ },
+      { match: /(-?)\b\d+(?:'\d+)*(?:\.\d*(?:'\d*)*)?(?:[eE][-+]?\d+)?/ }
+    ],
+    relevance: 0
+  };
+  const PREPROCESSOR_INCLUDE = {
+    scope: "meta",
+    begin: /#\s*include\b/,
+    end: /$/,
+    keywords: { keyword: "include" },
+    contains: [
+      {
+        // the `\` at the end of a line signaling continuation
+        begin: /\\\n/
+      },
+      STRINGS,
+      {
+        scope: "string",
+        begin: /<.*?>/
+      },
+      C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE
+    ]
+  };
+  const PREPROCESSOR = {
+    className: "meta",
+    begin: /#\s*[a-z]+\b/,
+    end: /$/,
+    keywords: { keyword: "if else elif endif define undef warning error line pragma _Pragma ifdef ifndef elifdef elifndef include" },
+    contains: [
+      {
+        begin: /\\\n/,
+        relevance: 0
+      },
+      hljs.inherit(STRINGS, { className: "string" }),
+      C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE
+    ]
+  };
+  const PREPROCESSORS = [
+    PREPROCESSOR_INCLUDE,
+    PREPROCESSOR
+  ];
+  const TITLE_MODE = {
+    className: "title",
+    begin: regex.optional(NAMESPACE_RE) + hljs.IDENT_RE,
+    relevance: 0
+  };
+  const FUNCTION_TITLE = regex.optional(NAMESPACE_RE) + hljs.IDENT_RE + "\\s*\\(";
+  const MAX_FUNCTION_TYPE_TOKENS = 12;
+  const C_KEYWORDS = [
+    "asm",
+    "auto",
+    "break",
+    "case",
+    "continue",
+    "default",
+    "do",
+    "else",
+    "enum",
+    "extern",
+    "for",
+    "fortran",
+    "goto",
+    "if",
+    "inline",
+    "register",
+    "restrict",
+    "return",
+    "sizeof",
+    "typeof",
+    "typeof_unqual",
+    "struct",
+    "switch",
+    "typedef",
+    "union",
+    "volatile",
+    "while",
+    "_Alignas",
+    "_Alignof",
+    "_Atomic",
+    "_Generic",
+    "_Noreturn",
+    "_Static_assert",
+    "_Thread_local",
+    // aliases
+    "alignas",
+    "alignof",
+    "noreturn",
+    "static_assert",
+    "thread_local",
+    // not a C keyword but is, for all intents and purposes, treated exactly like one.
+    "_Pragma"
+  ];
+  const C_TYPES = [
+    "float",
+    "double",
+    "signed",
+    "unsigned",
+    "int",
+    "short",
+    "long",
+    "char",
+    "void",
+    "_Bool",
+    "_BitInt",
+    "_Complex",
+    "_Imaginary",
+    "_Decimal32",
+    "_Decimal64",
+    "_Decimal96",
+    "_Decimal128",
+    "_Decimal64x",
+    "_Decimal128x",
+    "_Float16",
+    "_Float32",
+    "_Float64",
+    "_Float128",
+    "_Float32x",
+    "_Float64x",
+    "_Float128x",
+    // modifiers
+    "const",
+    "static",
+    "constexpr",
+    // aliases
+    "complex",
+    "bool",
+    "imaginary"
+  ];
+  const KEYWORDS3 = {
+    keyword: C_KEYWORDS,
+    type: C_TYPES,
+    literal: "true false NULL",
+    // TODO: apply hinting work similar to what was done in cpp.js
+    built_in: "std string wstring cin cout cerr clog stdin stdout stderr stringstream istringstream ostringstream auto_ptr deque list queue stack vector map set pair bitset multiset multimap unordered_set unordered_map unordered_multiset unordered_multimap priority_queue make_pair array shared_ptr abort terminate abs acos asin atan2 atan calloc ceil cosh cos exit exp fabs floor fmod fprintf fputs free frexp fscanf future isalnum isalpha iscntrl isdigit isgraph islower isprint ispunct isspace isupper isxdigit tolower toupper labs ldexp log10 log malloc realloc memchr memcmp memcpy memset modf pow printf putchar puts scanf sinh sin snprintf sprintf sqrt sscanf strcat strchr strcmp strcpy strcspn strlen strncat strncmp strncpy strpbrk strrchr strspn strstr tanh tan vfprintf vprintf vsprintf endl initializer_list unique_ptr"
+  };
+  const EXPRESSION_CONTAINS = [
+    ...PREPROCESSORS,
+    TYPES3,
+    C_LINE_COMMENT_MODE,
+    hljs.C_BLOCK_COMMENT_MODE,
+    NUMBERS,
+    STRINGS
+  ];
+  const EXPRESSION_CONTEXT = {
+    // This mode covers expression context where we can't expect a function
+    // definition and shouldn't highlight anything that looks like one:
+    // `return some()`, `else if()`, `(x*sum(1, 2))`
+    variants: [
+      {
+        begin: /=/,
+        end: /;/
+      },
+      {
+        begin: /\(/,
+        end: /\)/
+      },
+      {
+        beginKeywords: "new throw return else",
+        end: /;/
+      }
+    ],
+    keywords: KEYWORDS3,
+    contains: EXPRESSION_CONTAINS.concat([
+      {
+        begin: /\(/,
+        end: /\)/,
+        keywords: KEYWORDS3,
+        contains: EXPRESSION_CONTAINS.concat(["self"]),
+        relevance: 0
+      }
+    ]),
+    relevance: 0
+  };
+  const FUNCTION_DECLARATION = {
+    begin: "(" + FUNCTION_TYPE_RE + "[\\*&\\s]+){1," + MAX_FUNCTION_TYPE_TOKENS + "}" + FUNCTION_TITLE,
+    returnBegin: true,
+    end: /[{;=]/,
+    excludeEnd: true,
+    keywords: KEYWORDS3,
+    illegal: /[^\w\s\*&:<>.]/,
+    contains: [
+      {
+        // to prevent it from being confused as the function title
+        begin: DECLTYPE_AUTO_RE,
+        keywords: KEYWORDS3,
+        relevance: 0
+      },
+      {
+        begin: FUNCTION_TITLE,
+        returnBegin: true,
+        contains: [hljs.inherit(TITLE_MODE, { className: "title.function" })],
+        relevance: 0
+      },
+      // allow for multiple declarations, e.g.:
+      // extern void f(int), g(char);
+      {
+        relevance: 0,
+        match: /,/
+      },
+      {
+        className: "params",
+        begin: /\(/,
+        end: /\)/,
+        keywords: KEYWORDS3,
+        relevance: 0,
+        contains: [
+          C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE,
+          STRINGS,
+          NUMBERS,
+          TYPES3,
+          // Count matching parentheses.
+          {
+            begin: /\(/,
+            end: /\)/,
+            keywords: KEYWORDS3,
+            relevance: 0,
+            contains: [
+              "self",
+              C_LINE_COMMENT_MODE,
+              hljs.C_BLOCK_COMMENT_MODE,
+              STRINGS,
+              NUMBERS,
+              TYPES3
+            ]
+          }
+        ]
+      },
+      TYPES3,
+      C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      ...PREPROCESSORS
+    ]
+  };
+  return {
+    name: "C",
+    aliases: ["h"],
+    keywords: KEYWORDS3,
+    // Until differentiations are added between `c` and `cpp`, `c` will
+    // not be auto-detected to avoid auto-detect conflicts between C and C++
+    disableAutodetect: true,
+    illegal: "</",
+    contains: [].concat(
+      EXPRESSION_CONTEXT,
+      FUNCTION_DECLARATION,
+      EXPRESSION_CONTAINS,
+      [
+        ...PREPROCESSORS,
+        {
+          begin: hljs.IDENT_RE + "::",
+          keywords: KEYWORDS3
+        },
+        {
+          className: "class",
+          beginKeywords: "enum class struct union",
+          end: /[{;:<>=]/,
+          contains: [
+            { beginKeywords: "final class struct" },
+            hljs.TITLE_MODE
+          ]
+        }
+      ]
+    ),
+    exports: {
+      preprocessor: PREPROCESSOR,
+      strings: STRINGS,
+      keywords: KEYWORDS3
+    }
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/cpp.js
+function cpp(hljs) {
+  const regex = hljs.regex;
+  const C_LINE_COMMENT_MODE = hljs.COMMENT("//", "$", { contains: [{ begin: /\\\n/ }] });
+  const DECLTYPE_AUTO_RE = "decltype\\(auto\\)";
+  const NAMESPACE_RE = "[a-zA-Z_]\\w*::";
+  const TEMPLATE_ARGUMENT_RE = "<[^<>]+>";
+  const FUNCTION_TYPE_RE = "(?!struct)(" + DECLTYPE_AUTO_RE + "|" + regex.optional(NAMESPACE_RE) + "[a-zA-Z_]\\w*" + regex.optional(TEMPLATE_ARGUMENT_RE) + ")";
+  const CPP_PRIMITIVE_TYPES = {
+    className: "type",
+    begin: "\\b[a-z\\d_]*_t\\b"
+  };
+  const CHARACTER_ESCAPES = "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4,8}|[0-7]{3}|\\S)";
+  const STRINGS = {
+    className: "string",
+    variants: [
+      {
+        begin: '(u8?|U|L)?"',
+        end: '"',
+        illegal: "\\n",
+        contains: [hljs.BACKSLASH_ESCAPE]
+      },
+      {
+        begin: "(u8?|U|L)?'(" + CHARACTER_ESCAPES + "|.)",
+        end: "'",
+        illegal: "."
+      },
+      // https://en.cppreference.com/w/cpp/language/string_literal
+      // a d-char-sequence never contains parentheses, backslashes or whitespace;
+      // quotes are excluded as well so the closing delimiter cannot swallow the
+      // quote that actually terminates the literal
+      hljs.END_SAME_AS_BEGIN({
+        begin: /(?:u8?|U|L)?R"([^()\\\s"]{0,16})\(/,
+        end: /\)([^()\\\s"]{0,16})"/
+      })
+    ]
+  };
+  const NUMBERS = {
+    className: "number",
+    variants: [
+      // Floating-point literal.
+      {
+        begin: "[+-]?(?:(?:\\b[0-9](?:'?[0-9])*\\.(?:[0-9](?:'?[0-9])*)?|\\.[0-9](?:'?[0-9])*)(?:[Ee][+-]?[0-9](?:'?[0-9])*)?|\\b[0-9](?:'?[0-9])*[Ee][+-]?[0-9](?:'?[0-9])*|\\b0[Xx](?:[0-9A-Fa-f](?:'?[0-9A-Fa-f])*(?:\\.(?:[0-9A-Fa-f](?:'?[0-9A-Fa-f])*)?)?|\\.[0-9A-Fa-f](?:'?[0-9A-Fa-f])*)[Pp][+-]?[0-9](?:'?[0-9])*)(?:[Ff](?:16|32|64|128)?|(BF|bf)16|[Ll]|)"
+      },
+      // Integer literal.
+      {
+        begin: "[+-]?\\b(?:0[Bb][01](?:'?[01])*|0[Xx][0-9A-Fa-f](?:'?[0-9A-Fa-f])*|0(?:'?[0-7])*|[1-9](?:'?[0-9])*)(?:[Uu](?:LL?|ll?)|[Uu][Zz]?|(?:LL?|ll?)[Uu]?|[Zz][Uu]|)"
+        // Note: there are user-defined literal suffixes too, but perhaps having the custom suffix not part of the
+        // literal highlight actually makes it stand out more.
+      }
+    ],
+    relevance: 0
+  };
+  const PREPROCESSOR_INCLUDE = {
+    scope: "meta",
+    begin: /#\s*include\b/,
+    end: /$/,
+    keywords: { keyword: "include" },
+    contains: [
+      {
+        // the `\` at the end of a line signaling continuation
+        begin: /\\\n/
+      },
+      STRINGS,
+      {
+        scope: "string",
+        begin: /<.*?>/
+      },
+      C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE
+    ]
+  };
+  const PREPROCESSOR = {
+    className: "meta",
+    begin: /#\s*[a-z]+\b/,
+    end: /$/,
+    keywords: { keyword: "if else elif endif define undef warning error line pragma _Pragma ifdef ifndef include" },
+    contains: [
+      {
+        begin: /\\\n/,
+        relevance: 0
+      },
+      hljs.inherit(STRINGS, { className: "string" }),
+      C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE
+    ]
+  };
+  const PREPROCESSORS = [
+    PREPROCESSOR_INCLUDE,
+    PREPROCESSOR
+  ];
+  const TITLE_MODE = {
+    className: "title",
+    begin: regex.optional(NAMESPACE_RE) + hljs.IDENT_RE,
+    relevance: 0
+  };
+  const FUNCTION_TITLE = regex.optional(NAMESPACE_RE) + hljs.IDENT_RE + "\\s*\\(";
+  const MAX_FUNCTION_TYPE_TOKENS = 12;
+  const RESERVED_KEYWORDS = [
+    "alignas",
+    "alignof",
+    "and",
+    "and_eq",
+    "asm",
+    "atomic_cancel",
+    "atomic_commit",
+    "atomic_noexcept",
+    "auto",
+    "bitand",
+    "bitor",
+    "break",
+    "case",
+    "catch",
+    "class",
+    "co_await",
+    "co_return",
+    "co_yield",
+    "compl",
+    "concept",
+    "const_cast|10",
+    "consteval",
+    "constexpr",
+    "constinit",
+    "continue",
+    "decltype",
+    "default",
+    "delete",
+    "do",
+    "dynamic_cast|10",
+    "else",
+    "enum",
+    "explicit",
+    "export",
+    "extern",
+    "false",
+    "final",
+    "for",
+    "friend",
+    "goto",
+    "if",
+    "import",
+    "inline",
+    "module",
+    "mutable",
+    "namespace",
+    "new",
+    "noexcept",
+    "not",
+    "not_eq",
+    "nullptr",
+    "operator",
+    "or",
+    "or_eq",
+    "override",
+    "private",
+    "protected",
+    "public",
+    "reflexpr",
+    "register",
+    "reinterpret_cast|10",
+    "requires",
+    "return",
+    "sizeof",
+    "static_assert",
+    "static_cast|10",
+    "struct",
+    "switch",
+    "synchronized",
+    "template",
+    "this",
+    "thread_local",
+    "throw",
+    "transaction_safe",
+    "transaction_safe_dynamic",
+    "true",
+    "try",
+    "typedef",
+    "typeid",
+    "typename",
+    "union",
+    "using",
+    "virtual",
+    "volatile",
+    "while",
+    "xor",
+    "xor_eq"
+  ];
+  const RESERVED_TYPES = [
+    "bool",
+    "char",
+    "char16_t",
+    "char32_t",
+    "char8_t",
+    "double",
+    "float",
+    "int",
+    "long",
+    "short",
+    "void",
+    "wchar_t",
+    "unsigned",
+    "signed",
+    "const",
+    "static"
+  ];
+  const TYPE_HINTS = [
+    "any",
+    "auto_ptr",
+    "barrier",
+    "binary_semaphore",
+    "bitset",
+    "complex",
+    "condition_variable",
+    "condition_variable_any",
+    "counting_semaphore",
+    "deque",
+    "false_type",
+    "flat_map",
+    "flat_set",
+    "future",
+    "imaginary",
+    "initializer_list",
+    "istringstream",
+    "jthread",
+    "latch",
+    "lock_guard",
+    "multimap",
+    "multiset",
+    "mutex",
+    "optional",
+    "ostringstream",
+    "packaged_task",
+    "pair",
+    "promise",
+    "priority_queue",
+    "queue",
+    "recursive_mutex",
+    "recursive_timed_mutex",
+    "scoped_lock",
+    "set",
+    "shared_future",
+    "shared_lock",
+    "shared_mutex",
+    "shared_timed_mutex",
+    "shared_ptr",
+    "stack",
+    "string_view",
+    "stringstream",
+    "timed_mutex",
+    "thread",
+    "true_type",
+    "tuple",
+    "unique_lock",
+    "unique_ptr",
+    "unordered_map",
+    "unordered_multimap",
+    "unordered_multiset",
+    "unordered_set",
+    "variant",
+    "vector",
+    "weak_ptr",
+    "wstring",
+    "wstring_view"
+  ];
+  const FUNCTION_HINTS = [
+    "abort",
+    "abs",
+    "acos",
+    "apply",
+    "as_const",
+    "asin",
+    "atan",
+    "atan2",
+    "calloc",
+    "ceil",
+    "cerr",
+    "cin",
+    "clog",
+    "cos",
+    "cosh",
+    "cout",
+    "declval",
+    "endl",
+    "exchange",
+    "exit",
+    "exp",
+    "fabs",
+    "floor",
+    "fmod",
+    "forward",
+    "fprintf",
+    "fputs",
+    "free",
+    "frexp",
+    "fscanf",
+    "future",
+    "invoke",
+    "isalnum",
+    "isalpha",
+    "iscntrl",
+    "isdigit",
+    "isgraph",
+    "islower",
+    "isprint",
+    "ispunct",
+    "isspace",
+    "isupper",
+    "isxdigit",
+    "labs",
+    "launder",
+    "ldexp",
+    "log",
+    "log10",
+    "make_pair",
+    "make_shared",
+    "make_shared_for_overwrite",
+    "make_tuple",
+    "make_unique",
+    "malloc",
+    "memchr",
+    "memcmp",
+    "memcpy",
+    "memset",
+    "modf",
+    "move",
+    "pow",
+    "printf",
+    "putchar",
+    "puts",
+    "realloc",
+    "scanf",
+    "sin",
+    "sinh",
+    "snprintf",
+    "sprintf",
+    "sqrt",
+    "sscanf",
+    "std",
+    "stderr",
+    "stdin",
+    "stdout",
+    "strcat",
+    "strchr",
+    "strcmp",
+    "strcpy",
+    "strcspn",
+    "strlen",
+    "strncat",
+    "strncmp",
+    "strncpy",
+    "strpbrk",
+    "strrchr",
+    "strspn",
+    "strstr",
+    "swap",
+    "tan",
+    "tanh",
+    "terminate",
+    "to_underlying",
+    "tolower",
+    "toupper",
+    "vfprintf",
+    "visit",
+    "vprintf",
+    "vsprintf"
+  ];
+  const LITERALS3 = [
+    "NULL",
+    "false",
+    "nullopt",
+    "nullptr",
+    "true"
+  ];
+  const BUILT_IN = ["_Pragma"];
+  const CPP_KEYWORDS = {
+    type: RESERVED_TYPES,
+    keyword: RESERVED_KEYWORDS,
+    literal: LITERALS3,
+    built_in: BUILT_IN,
+    _type_hints: TYPE_HINTS
+  };
+  const FUNCTION_DISPATCH = {
+    className: "function.dispatch",
+    relevance: 0,
+    keywords: {
+      // Only for relevance, not highlighting.
+      _hint: FUNCTION_HINTS
+    },
+    begin: regex.concat(
+      /\b/,
+      `(?!${RESERVED_KEYWORDS.join("|")})`,
+      hljs.IDENT_RE,
+      regex.lookahead(/(<[^<>]+>|)\s*\(/)
+    )
+  };
+  const EXPRESSION_CONTAINS = [
+    FUNCTION_DISPATCH,
+    ...PREPROCESSORS,
+    CPP_PRIMITIVE_TYPES,
+    C_LINE_COMMENT_MODE,
+    hljs.C_BLOCK_COMMENT_MODE,
+    NUMBERS,
+    STRINGS
+  ];
+  const EXPRESSION_CONTEXT = {
+    // This mode covers expression context where we can't expect a function
+    // definition and shouldn't highlight anything that looks like one:
+    // `return some()`, `else if()`, `(x*sum(1, 2))`
+    variants: [
+      {
+        begin: /=/,
+        end: /;/
+      },
+      {
+        begin: /\(/,
+        end: /\)/
+      },
+      {
+        beginKeywords: "new throw return else",
+        end: /;/
+      }
+    ],
+    keywords: CPP_KEYWORDS,
+    contains: EXPRESSION_CONTAINS.concat([
+      {
+        begin: /\(/,
+        end: /\)/,
+        keywords: CPP_KEYWORDS,
+        contains: EXPRESSION_CONTAINS.concat(["self"]),
+        relevance: 0
+      }
+    ]),
+    relevance: 0
+  };
+  const FUNCTION_DECLARATION = {
+    className: "function",
+    begin: "(" + FUNCTION_TYPE_RE + "[\\*&\\s]+){1," + MAX_FUNCTION_TYPE_TOKENS + "}" + FUNCTION_TITLE,
+    returnBegin: true,
+    end: /[{;=]/,
+    excludeEnd: true,
+    keywords: CPP_KEYWORDS,
+    illegal: /[^\w\s\*&:<>.]/,
+    contains: [
+      {
+        // to prevent it from being confused as the function title
+        begin: DECLTYPE_AUTO_RE,
+        keywords: CPP_KEYWORDS,
+        relevance: 0
+      },
+      {
+        begin: FUNCTION_TITLE,
+        returnBegin: true,
+        contains: [TITLE_MODE],
+        relevance: 0
+      },
+      // needed because we do not have look-behind on the below rule
+      // to prevent it from grabbing the final : in a :: pair
+      {
+        begin: /::/,
+        relevance: 0
+      },
+      // initializers
+      {
+        begin: /:/,
+        endsWithParent: true,
+        contains: [
+          STRINGS,
+          NUMBERS
+        ]
+      },
+      // allow for multiple declarations, e.g.:
+      // extern void f(int), g(char);
+      {
+        relevance: 0,
+        match: /,/
+      },
+      {
+        className: "params",
+        begin: /\(/,
+        end: /\)/,
+        keywords: CPP_KEYWORDS,
+        relevance: 0,
+        contains: [
+          C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE,
+          STRINGS,
+          NUMBERS,
+          CPP_PRIMITIVE_TYPES,
+          // Count matching parentheses.
+          {
+            begin: /\(/,
+            end: /\)/,
+            keywords: CPP_KEYWORDS,
+            relevance: 0,
+            contains: [
+              "self",
+              C_LINE_COMMENT_MODE,
+              hljs.C_BLOCK_COMMENT_MODE,
+              STRINGS,
+              NUMBERS,
+              CPP_PRIMITIVE_TYPES
+            ]
+          }
+        ]
+      },
+      CPP_PRIMITIVE_TYPES,
+      C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      ...PREPROCESSORS
+    ]
+  };
+  return {
+    name: "C++",
+    aliases: [
+      "cc",
+      "c++",
+      "h++",
+      "hpp",
+      "hh",
+      "hxx",
+      "cxx"
+    ],
+    keywords: CPP_KEYWORDS,
+    illegal: "</",
+    classNameAliases: { "function.dispatch": "built_in" },
+    contains: [].concat(
+      EXPRESSION_CONTEXT,
+      FUNCTION_DECLARATION,
+      FUNCTION_DISPATCH,
+      EXPRESSION_CONTAINS,
+      [
+        ...PREPROCESSORS,
+        {
+          // containers: ie, `vector <int> rooms (9);`
+          begin: "\\b(deque|list|queue|priority_queue|pair|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array|tuple|optional|variant|function|flat_map|flat_set)\\s*<(?!<)",
+          end: ">",
+          keywords: CPP_KEYWORDS,
+          contains: [
+            "self",
+            CPP_PRIMITIVE_TYPES
+          ]
+        },
+        {
+          begin: hljs.IDENT_RE + "::",
+          keywords: CPP_KEYWORDS
+        },
+        {
+          match: [
+            // extra complexity to deal with `enum class` and `enum struct`
+            /\b(?:enum(?:\s+(?:class|struct))?|class|struct|union)/,
+            /\s+/,
+            /\w+/
+          ],
+          className: {
+            1: "keyword",
+            3: "title.class"
+          }
+        }
+      ]
+    )
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/csharp.js
+function csharp(hljs) {
+  const BUILT_IN_KEYWORDS = [
+    "bool",
+    "byte",
+    "char",
+    "decimal",
+    "delegate",
+    "double",
+    "dynamic",
+    "enum",
+    "float",
+    "int",
+    "long",
+    "nint",
+    "nuint",
+    "object",
+    "sbyte",
+    "short",
+    "string",
+    "ulong",
+    "uint",
+    "ushort"
+  ];
+  const FUNCTION_MODIFIERS = [
+    "public",
+    "private",
+    "protected",
+    "static",
+    "internal",
+    "protected",
+    "abstract",
+    "async",
+    "extern",
+    "override",
+    "unsafe",
+    "virtual",
+    "new",
+    "sealed",
+    "partial"
+  ];
+  const LITERAL_KEYWORDS = [
+    "default",
+    "false",
+    "null",
+    "true"
+  ];
+  const NORMAL_KEYWORDS = [
+    "abstract",
+    "as",
+    "base",
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "do",
+    "else",
+    "event",
+    "explicit",
+    "extern",
+    "finally",
+    "fixed",
+    "for",
+    "foreach",
+    "goto",
+    "if",
+    "implicit",
+    "in",
+    "interface",
+    "internal",
+    "is",
+    "lock",
+    "namespace",
+    "new",
+    "operator",
+    "out",
+    "override",
+    "params",
+    "private",
+    "protected",
+    "public",
+    "readonly",
+    "record",
+    "ref",
+    "return",
+    "scoped",
+    "sealed",
+    "sizeof",
+    "stackalloc",
+    "static",
+    "struct",
+    "switch",
+    "this",
+    "throw",
+    "try",
+    "typeof",
+    "unchecked",
+    "unsafe",
+    "using",
+    "virtual",
+    "void",
+    "volatile",
+    "while"
+  ];
+  const CONTEXTUAL_KEYWORDS = [
+    "add",
+    "alias",
+    "and",
+    "ascending",
+    "args",
+    "async",
+    "await",
+    "by",
+    "descending",
+    "dynamic",
+    "equals",
+    "file",
+    "from",
+    "get",
+    "global",
+    "group",
+    "init",
+    "into",
+    "join",
+    "let",
+    "nameof",
+    "not",
+    "notnull",
+    "on",
+    "or",
+    "orderby",
+    "partial",
+    "record",
+    "remove",
+    "required",
+    "scoped",
+    "select",
+    "set",
+    "unmanaged",
+    "value|0",
+    "var",
+    "when",
+    "where",
+    "with",
+    "yield"
+  ];
+  const KEYWORDS3 = {
+    keyword: NORMAL_KEYWORDS.concat(CONTEXTUAL_KEYWORDS),
+    built_in: BUILT_IN_KEYWORDS,
+    literal: LITERAL_KEYWORDS
+  };
+  const TITLE_MODE = hljs.inherit(hljs.TITLE_MODE, { begin: "[a-zA-Z](\\.?\\w)*" });
+  const DIGITS = "\\d(_*\\d)*";
+  const INTEGER_SUFFIX = "([uU][lL]?|[lL][uU]?)?";
+  const REAL_SUFFIX = "([fFdDmM]|[uU][lL]?|[lL][uU]?)?";
+  const NUMBERS = {
+    className: "number",
+    variants: [
+      { begin: "\\b0[bB]_*[01](_*[01])*" + INTEGER_SUFFIX },
+      { begin: "(-?)\\b0[xX]_*[a-fA-F0-9](_*[a-fA-F0-9])*" + INTEGER_SUFFIX },
+      { begin: "(-?)(\\b" + DIGITS + "(\\.(" + DIGITS + ")?)?|\\." + DIGITS + ")([eE][-+]?" + DIGITS + ")?" + REAL_SUFFIX }
+    ],
+    relevance: 0
+  };
+  const RAW_STRING = {
+    className: "string",
+    begin: /"""("*)(?!")(.|\n)*?"""\1/,
+    relevance: 1
+  };
+  const VERBATIM_STRING = {
+    className: "string",
+    begin: '@"',
+    end: '"',
+    contains: [{ begin: '""' }]
+  };
+  const VERBATIM_STRING_NO_LF = hljs.inherit(VERBATIM_STRING, { illegal: /\n/ });
+  const SUBST = {
+    className: "subst",
+    begin: /\{/,
+    end: /\}/,
+    keywords: KEYWORDS3
+  };
+  const SUBST_NO_LF = hljs.inherit(SUBST, { illegal: /\n/ });
+  const INTERPOLATED_STRING = {
+    className: "string",
+    begin: /\$"/,
+    end: '"',
+    illegal: /\n/,
+    contains: [
+      { begin: /\{\{/ },
+      { begin: /\}\}/ },
+      hljs.BACKSLASH_ESCAPE,
+      SUBST_NO_LF
+    ]
+  };
+  const INTERPOLATED_VERBATIM_STRING = {
+    className: "string",
+    begin: /\$@"/,
+    end: '"',
+    contains: [
+      { begin: /\{\{/ },
+      { begin: /\}\}/ },
+      { begin: '""' },
+      SUBST
+    ]
+  };
+  const INTERPOLATED_VERBATIM_STRING_NO_LF = hljs.inherit(INTERPOLATED_VERBATIM_STRING, {
+    illegal: /\n/,
+    contains: [
+      { begin: /\{\{/ },
+      { begin: /\}\}/ },
+      { begin: '""' },
+      SUBST_NO_LF
+    ]
+  });
+  SUBST.contains = [
+    INTERPOLATED_VERBATIM_STRING,
+    INTERPOLATED_STRING,
+    VERBATIM_STRING,
+    hljs.APOS_STRING_MODE,
+    hljs.QUOTE_STRING_MODE,
+    NUMBERS,
+    hljs.C_BLOCK_COMMENT_MODE
+  ];
+  SUBST_NO_LF.contains = [
+    INTERPOLATED_VERBATIM_STRING_NO_LF,
+    INTERPOLATED_STRING,
+    VERBATIM_STRING_NO_LF,
+    hljs.APOS_STRING_MODE,
+    hljs.QUOTE_STRING_MODE,
+    NUMBERS,
+    hljs.inherit(hljs.C_BLOCK_COMMENT_MODE, { illegal: /\n/ })
+  ];
+  const STRING = { variants: [
+    RAW_STRING,
+    INTERPOLATED_VERBATIM_STRING,
+    INTERPOLATED_STRING,
+    VERBATIM_STRING,
+    hljs.APOS_STRING_MODE,
+    hljs.QUOTE_STRING_MODE
+  ] };
+  const GENERIC_MODIFIER = {
+    begin: "<",
+    end: ">",
+    contains: [
+      { beginKeywords: "in out" },
+      TITLE_MODE
+    ]
+  };
+  const TYPE_IDENT_RE = hljs.IDENT_RE + "(<" + hljs.IDENT_RE + "(\\s*,\\s*" + hljs.IDENT_RE + ")*>)?(\\[\\])?";
+  const AT_IDENTIFIER = {
+    // prevents expressions like `@class` from incorrect flagging
+    // `class` as a keyword
+    begin: "@" + hljs.IDENT_RE,
+    relevance: 0
+  };
+  return {
+    name: "C#",
+    aliases: [
+      "cs",
+      "c#"
+    ],
+    keywords: KEYWORDS3,
+    illegal: /::/,
+    contains: [
+      hljs.COMMENT(
+        "///",
+        "$",
+        {
+          returnBegin: true,
+          contains: [
+            {
+              className: "doctag",
+              variants: [
+                {
+                  begin: "///",
+                  relevance: 0
+                },
+                { begin: "<!--|-->" },
+                {
+                  begin: "</?",
+                  end: ">"
+                }
+              ]
+            }
+          ]
+        }
+      ),
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      {
+        className: "meta",
+        begin: "#",
+        end: "$",
+        keywords: { keyword: "if else elif endif define undef warning error line region endregion pragma checksum" }
+      },
+      STRING,
+      NUMBERS,
+      {
+        beginKeywords: "class interface",
+        relevance: 0,
+        end: /[{;=]/,
+        illegal: /[^\s:,]/,
+        contains: [
+          { beginKeywords: "where class" },
+          TITLE_MODE,
+          GENERIC_MODIFIER,
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      },
+      {
+        beginKeywords: "namespace",
+        relevance: 0,
+        end: /[{;=]/,
+        illegal: /[^\s:]/,
+        contains: [
+          TITLE_MODE,
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      },
+      {
+        beginKeywords: "record",
+        relevance: 0,
+        end: /[{;=]/,
+        illegal: /[^\s:]/,
+        contains: [
+          TITLE_MODE,
+          GENERIC_MODIFIER,
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      },
+      {
+        // [Attributes("")]
+        className: "meta",
+        begin: "^\\s*\\[(?=[\\w])",
+        excludeBegin: true,
+        end: "\\]",
+        excludeEnd: true,
+        contains: [
+          {
+            className: "string",
+            begin: /"/,
+            end: /"/
+          }
+        ]
+      },
+      {
+        // Expression keywords prevent 'keyword Name(...)' from being
+        // recognized as a function definition
+        beginKeywords: "new return throw await else",
+        relevance: 0
+      },
+      {
+        className: "function",
+        begin: "(" + TYPE_IDENT_RE + "\\s+)+" + hljs.IDENT_RE + "\\s*(<[^=]+>\\s*)?\\(",
+        returnBegin: true,
+        end: /\s*[{;=]/,
+        excludeEnd: true,
+        keywords: KEYWORDS3,
+        contains: [
+          // prevents these from being highlighted `title`
+          {
+            beginKeywords: FUNCTION_MODIFIERS.join(" "),
+            relevance: 0
+          },
+          {
+            begin: hljs.IDENT_RE + "\\s*(<[^=]+>\\s*)?\\(",
+            returnBegin: true,
+            contains: [
+              hljs.TITLE_MODE,
+              GENERIC_MODIFIER
+            ],
+            relevance: 0
+          },
+          { match: /\(\)/ },
+          {
+            className: "params",
+            begin: /\(/,
+            end: /\)/,
+            excludeBegin: true,
+            excludeEnd: true,
+            keywords: KEYWORDS3,
+            relevance: 0,
+            contains: [
+              STRING,
+              NUMBERS,
+              hljs.C_BLOCK_COMMENT_MODE
+            ]
+          },
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      },
+      AT_IDENTIFIER
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/css.js
+var MODES = (hljs) => {
+  return {
+    IMPORTANT: {
+      scope: "meta",
+      begin: "!important"
+    },
+    BLOCK_COMMENT: hljs.C_BLOCK_COMMENT_MODE,
+    HEXCOLOR: {
+      scope: "number",
+      begin: /#(([0-9a-fA-F]{3,4})|(([0-9a-fA-F]{2}){3,4}))\b/
+    },
+    UNICODE_RANGE: {
+      scope: "number",
+      begin: /\b[Uu]\+[0-9A-Fa-f][0-9A-Fa-f?]{0,5}(-[0-9A-Fa-f][0-9A-Fa-f]{0,5})?/
+    },
+    FUNCTION_DISPATCH: {
+      className: "built_in",
+      begin: /[\w-]+(?=\()/
+    },
+    ATTRIBUTE_SELECTOR_MODE: {
+      scope: "selector-attr",
+      begin: /\[/,
+      end: /\]/,
+      illegal: "$",
+      contains: [
+        hljs.APOS_STRING_MODE,
+        hljs.QUOTE_STRING_MODE
+      ]
+    },
+    CSS_NUMBER_MODE: {
+      scope: "number",
+      begin: hljs.NUMBER_RE + "(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+      relevance: 0
+    },
+    CSS_VARIABLE: {
+      className: "attr",
+      begin: /--[A-Za-z_][A-Za-z0-9_-]*/
+    }
+  };
+};
+var HTML_TAGS = [
+  "a",
+  "abbr",
+  "address",
+  "article",
+  "aside",
+  "audio",
+  "b",
+  "blockquote",
+  "body",
+  "button",
+  "canvas",
+  "caption",
+  "cite",
+  "code",
+  "dd",
+  "del",
+  "details",
+  "dfn",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hgroup",
+  "html",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "label",
+  "legend",
+  "li",
+  "main",
+  "mark",
+  "menu",
+  "nav",
+  "object",
+  "ol",
+  "optgroup",
+  "option",
+  "p",
+  "picture",
+  "q",
+  "quote",
+  "samp",
+  "section",
+  "select",
+  "source",
+  "span",
+  "strong",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "time",
+  "tr",
+  "ul",
+  "var",
+  "video"
+];
+var SVG_TAGS = [
+  "defs",
+  "g",
+  "marker",
+  "mask",
+  "pattern",
+  "svg",
+  "switch",
+  "symbol",
+  "feBlend",
+  "feColorMatrix",
+  "feComponentTransfer",
+  "feComposite",
+  "feConvolveMatrix",
+  "feDiffuseLighting",
+  "feDisplacementMap",
+  "feFlood",
+  "feGaussianBlur",
+  "feImage",
+  "feMerge",
+  "feMorphology",
+  "feOffset",
+  "feSpecularLighting",
+  "feTile",
+  "feTurbulence",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "circle",
+  "ellipse",
+  "image",
+  "line",
+  "path",
+  "polygon",
+  "polyline",
+  "rect",
+  "text",
+  "use",
+  "textPath",
+  "tspan",
+  "foreignObject",
+  "clipPath"
+];
+var TAGS = [
+  ...HTML_TAGS,
+  ...SVG_TAGS
+];
+var MEDIA_FEATURES = [
+  "any-hover",
+  "any-pointer",
+  "aspect-ratio",
+  "color",
+  "color-gamut",
+  "color-index",
+  "device-aspect-ratio",
+  "device-height",
+  "device-width",
+  "display-mode",
+  "forced-colors",
+  "grid",
+  "height",
+  "hover",
+  "inverted-colors",
+  "monochrome",
+  "orientation",
+  "overflow-block",
+  "overflow-inline",
+  "pointer",
+  "prefers-color-scheme",
+  "prefers-contrast",
+  "prefers-reduced-motion",
+  "prefers-reduced-transparency",
+  "resolution",
+  "scan",
+  "scripting",
+  "update",
+  "width",
+  // TODO: find a better solution?
+  "min-width",
+  "max-width",
+  "min-height",
+  "max-height"
+].sort().reverse();
+var PSEUDO_CLASSES = [
+  "active",
+  "any-link",
+  "blank",
+  "checked",
+  "current",
+  "default",
+  "defined",
+  "dir",
+  // dir()
+  "disabled",
+  "drop",
+  "empty",
+  "enabled",
+  "first",
+  "first-child",
+  "first-of-type",
+  "fullscreen",
+  "future",
+  "focus",
+  "focus-visible",
+  "focus-within",
+  "has",
+  // has()
+  "host",
+  // host or host()
+  "host-context",
+  // host-context()
+  "hover",
+  "indeterminate",
+  "in-range",
+  "invalid",
+  "is",
+  // is()
+  "lang",
+  // lang()
+  "last-child",
+  "last-of-type",
+  "left",
+  "link",
+  "local-link",
+  "not",
+  // not()
+  "nth-child",
+  // nth-child()
+  "nth-col",
+  // nth-col()
+  "nth-last-child",
+  // nth-last-child()
+  "nth-last-col",
+  // nth-last-col()
+  "nth-last-of-type",
+  //nth-last-of-type()
+  "nth-of-type",
+  //nth-of-type()
+  "only-child",
+  "only-of-type",
+  "optional",
+  "out-of-range",
+  "past",
+  "placeholder-shown",
+  "read-only",
+  "read-write",
+  "required",
+  "right",
+  "root",
+  "scope",
+  "target",
+  "target-within",
+  "user-invalid",
+  "valid",
+  "visited",
+  "where"
+  // where()
+].sort().reverse();
+var PSEUDO_ELEMENTS = [
+  "after",
+  "backdrop",
+  "before",
+  "cue",
+  "cue-region",
+  "first-letter",
+  "first-line",
+  "grammar-error",
+  "marker",
+  "part",
+  "placeholder",
+  "selection",
+  "slotted",
+  "spelling-error"
+].sort().reverse();
+var ATTRIBUTES = [
+  "accent-color",
+  "align-content",
+  "align-items",
+  "align-self",
+  "alignment-baseline",
+  "all",
+  "anchor-name",
+  "animation",
+  "animation-composition",
+  "animation-delay",
+  "animation-direction",
+  "animation-duration",
+  "animation-fill-mode",
+  "animation-iteration-count",
+  "animation-name",
+  "animation-play-state",
+  "animation-range",
+  "animation-range-end",
+  "animation-range-start",
+  "animation-timeline",
+  "animation-timing-function",
+  "appearance",
+  "aspect-ratio",
+  "backdrop-filter",
+  "backface-visibility",
+  "background",
+  "background-attachment",
+  "background-blend-mode",
+  "background-clip",
+  "background-color",
+  "background-image",
+  "background-origin",
+  "background-position",
+  "background-position-x",
+  "background-position-y",
+  "background-repeat",
+  "background-size",
+  "baseline-shift",
+  "block-size",
+  "border",
+  "border-block",
+  "border-block-color",
+  "border-block-end",
+  "border-block-end-color",
+  "border-block-end-style",
+  "border-block-end-width",
+  "border-block-start",
+  "border-block-start-color",
+  "border-block-start-style",
+  "border-block-start-width",
+  "border-block-style",
+  "border-block-width",
+  "border-bottom",
+  "border-bottom-color",
+  "border-bottom-left-radius",
+  "border-bottom-right-radius",
+  "border-bottom-style",
+  "border-bottom-width",
+  "border-collapse",
+  "border-color",
+  "border-end-end-radius",
+  "border-end-start-radius",
+  "border-image",
+  "border-image-outset",
+  "border-image-repeat",
+  "border-image-slice",
+  "border-image-source",
+  "border-image-width",
+  "border-inline",
+  "border-inline-color",
+  "border-inline-end",
+  "border-inline-end-color",
+  "border-inline-end-style",
+  "border-inline-end-width",
+  "border-inline-start",
+  "border-inline-start-color",
+  "border-inline-start-style",
+  "border-inline-start-width",
+  "border-inline-style",
+  "border-inline-width",
+  "border-left",
+  "border-left-color",
+  "border-left-style",
+  "border-left-width",
+  "border-radius",
+  "border-right",
+  "border-right-color",
+  "border-right-style",
+  "border-right-width",
+  "border-spacing",
+  "border-start-end-radius",
+  "border-start-start-radius",
+  "border-style",
+  "border-top",
+  "border-top-color",
+  "border-top-left-radius",
+  "border-top-right-radius",
+  "border-top-style",
+  "border-top-width",
+  "border-width",
+  "bottom",
+  "box-align",
+  "box-decoration-break",
+  "box-direction",
+  "box-flex",
+  "box-flex-group",
+  "box-lines",
+  "box-ordinal-group",
+  "box-orient",
+  "box-pack",
+  "box-shadow",
+  "box-sizing",
+  "break-after",
+  "break-before",
+  "break-inside",
+  "caption-side",
+  "caret-color",
+  "clear",
+  "clip",
+  "clip-path",
+  "clip-rule",
+  "color",
+  "color-interpolation",
+  "color-interpolation-filters",
+  "color-profile",
+  "color-rendering",
+  "color-scheme",
+  "column-count",
+  "column-fill",
+  "column-gap",
+  "column-rule",
+  "column-rule-color",
+  "column-rule-style",
+  "column-rule-width",
+  "column-span",
+  "column-width",
+  "columns",
+  "contain",
+  "contain-intrinsic-block-size",
+  "contain-intrinsic-height",
+  "contain-intrinsic-inline-size",
+  "contain-intrinsic-size",
+  "contain-intrinsic-width",
+  "container",
+  "container-name",
+  "container-type",
+  "content",
+  "content-visibility",
+  "corner-bottom-left-shape",
+  "corner-bottom-right-shape",
+  "corner-shape",
+  "corner-top-left-shape",
+  "corner-top-right-shape",
+  "counter-increment",
+  "counter-reset",
+  "counter-set",
+  "cue",
+  "cue-after",
+  "cue-before",
+  "cursor",
+  "cx",
+  "cy",
+  "direction",
+  "display",
+  "dominant-baseline",
+  "empty-cells",
+  "enable-background",
+  "field-sizing",
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "filter",
+  "flex",
+  "flex-basis",
+  "flex-direction",
+  "flex-flow",
+  "flex-grow",
+  "flex-shrink",
+  "flex-wrap",
+  "float",
+  "flood-color",
+  "flood-opacity",
+  "flow",
+  "font",
+  "font-display",
+  "font-family",
+  "font-feature-settings",
+  "font-kerning",
+  "font-language-override",
+  "font-optical-sizing",
+  "font-palette",
+  "font-size",
+  "font-size-adjust",
+  "font-smooth",
+  "font-smoothing",
+  "font-stretch",
+  "font-style",
+  "font-synthesis",
+  "font-synthesis-position",
+  "font-synthesis-small-caps",
+  "font-synthesis-style",
+  "font-synthesis-weight",
+  "font-variant",
+  "font-variant-alternates",
+  "font-variant-caps",
+  "font-variant-east-asian",
+  "font-variant-emoji",
+  "font-variant-ligatures",
+  "font-variant-numeric",
+  "font-variant-position",
+  "font-variation-settings",
+  "font-weight",
+  "forced-color-adjust",
+  "gap",
+  "glyph-orientation-horizontal",
+  "glyph-orientation-vertical",
+  "grid",
+  "grid-area",
+  "grid-auto-columns",
+  "grid-auto-flow",
+  "grid-auto-rows",
+  "grid-column",
+  "grid-column-end",
+  "grid-column-start",
+  "grid-gap",
+  "grid-row",
+  "grid-row-end",
+  "grid-row-start",
+  "grid-template",
+  "grid-template-areas",
+  "grid-template-columns",
+  "grid-template-rows",
+  "hanging-punctuation",
+  "height",
+  "hyphenate-character",
+  "hyphenate-limit-chars",
+  "hyphens",
+  "icon",
+  "image-orientation",
+  "image-rendering",
+  "image-resolution",
+  "ime-mode",
+  "initial-letter",
+  "initial-letter-align",
+  "inline-size",
+  "inset",
+  "inset-area",
+  "inset-block",
+  "inset-block-end",
+  "inset-block-start",
+  "inset-inline",
+  "inset-inline-end",
+  "inset-inline-start",
+  "isolation",
+  "justify-content",
+  "justify-items",
+  "justify-self",
+  "kerning",
+  "left",
+  "letter-spacing",
+  "lighting-color",
+  "line-break",
+  "line-height",
+  "line-height-step",
+  "list-style",
+  "list-style-image",
+  "list-style-position",
+  "list-style-type",
+  "margin",
+  "margin-block",
+  "margin-block-end",
+  "margin-block-start",
+  "margin-bottom",
+  "margin-inline",
+  "margin-inline-end",
+  "margin-inline-start",
+  "margin-left",
+  "margin-right",
+  "margin-top",
+  "margin-trim",
+  "marker",
+  "marker-end",
+  "marker-mid",
+  "marker-start",
+  "marks",
+  "mask",
+  "mask-border",
+  "mask-border-mode",
+  "mask-border-outset",
+  "mask-border-repeat",
+  "mask-border-slice",
+  "mask-border-source",
+  "mask-border-width",
+  "mask-clip",
+  "mask-composite",
+  "mask-image",
+  "mask-mode",
+  "mask-origin",
+  "mask-position",
+  "mask-repeat",
+  "mask-size",
+  "mask-type",
+  "masonry-auto-flow",
+  "math-depth",
+  "math-shift",
+  "math-style",
+  "max-block-size",
+  "max-height",
+  "max-inline-size",
+  "max-width",
+  "min-block-size",
+  "min-height",
+  "min-inline-size",
+  "min-width",
+  "mix-blend-mode",
+  "nav-down",
+  "nav-index",
+  "nav-left",
+  "nav-right",
+  "nav-up",
+  "none",
+  "normal",
+  "object-fit",
+  "object-position",
+  "offset",
+  "offset-anchor",
+  "offset-distance",
+  "offset-path",
+  "offset-position",
+  "offset-rotate",
+  "opacity",
+  "order",
+  "orphans",
+  "outline",
+  "outline-color",
+  "outline-offset",
+  "outline-style",
+  "outline-width",
+  "overflow",
+  "overflow-anchor",
+  "overflow-block",
+  "overflow-clip-margin",
+  "overflow-inline",
+  "overflow-wrap",
+  "overflow-x",
+  "overflow-y",
+  "overlay",
+  "overscroll-behavior",
+  "overscroll-behavior-block",
+  "overscroll-behavior-inline",
+  "overscroll-behavior-x",
+  "overscroll-behavior-y",
+  "padding",
+  "padding-block",
+  "padding-block-end",
+  "padding-block-start",
+  "padding-bottom",
+  "padding-inline",
+  "padding-inline-end",
+  "padding-inline-start",
+  "padding-left",
+  "padding-right",
+  "padding-top",
+  "page",
+  "page-break-after",
+  "page-break-before",
+  "page-break-inside",
+  "paint-order",
+  "pause",
+  "pause-after",
+  "pause-before",
+  "perspective",
+  "perspective-origin",
+  "place-content",
+  "place-items",
+  "place-self",
+  "pointer-events",
+  "position",
+  "position-anchor",
+  "position-visibility",
+  "print-color-adjust",
+  "quotes",
+  "r",
+  "resize",
+  "rest",
+  "rest-after",
+  "rest-before",
+  "right",
+  "rotate",
+  "row-gap",
+  "ruby-align",
+  "ruby-position",
+  "scale",
+  "scroll-behavior",
+  "scroll-margin",
+  "scroll-margin-block",
+  "scroll-margin-block-end",
+  "scroll-margin-block-start",
+  "scroll-margin-bottom",
+  "scroll-margin-inline",
+  "scroll-margin-inline-end",
+  "scroll-margin-inline-start",
+  "scroll-margin-left",
+  "scroll-margin-right",
+  "scroll-margin-top",
+  "scroll-padding",
+  "scroll-padding-block",
+  "scroll-padding-block-end",
+  "scroll-padding-block-start",
+  "scroll-padding-bottom",
+  "scroll-padding-inline",
+  "scroll-padding-inline-end",
+  "scroll-padding-inline-start",
+  "scroll-padding-left",
+  "scroll-padding-right",
+  "scroll-padding-top",
+  "scroll-snap-align",
+  "scroll-snap-stop",
+  "scroll-snap-type",
+  "scroll-timeline",
+  "scroll-timeline-axis",
+  "scroll-timeline-name",
+  "scrollbar-color",
+  "scrollbar-gutter",
+  "scrollbar-width",
+  "shape-image-threshold",
+  "shape-margin",
+  "shape-outside",
+  "shape-rendering",
+  "speak",
+  "speak-as",
+  "src",
+  // @font-face
+  "stop-color",
+  "stop-opacity",
+  "stroke",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "stroke-opacity",
+  "stroke-width",
+  "tab-size",
+  "table-layout",
+  "text-align",
+  "text-align-all",
+  "text-align-last",
+  "text-anchor",
+  "text-combine-upright",
+  "text-decoration",
+  "text-decoration-color",
+  "text-decoration-line",
+  "text-decoration-skip",
+  "text-decoration-skip-ink",
+  "text-decoration-style",
+  "text-decoration-thickness",
+  "text-emphasis",
+  "text-emphasis-color",
+  "text-emphasis-position",
+  "text-emphasis-style",
+  "text-indent",
+  "text-justify",
+  "text-orientation",
+  "text-overflow",
+  "text-rendering",
+  "text-shadow",
+  "text-size-adjust",
+  "text-transform",
+  "text-underline-offset",
+  "text-underline-position",
+  "text-wrap",
+  "text-wrap-mode",
+  "text-wrap-style",
+  "timeline-scope",
+  "top",
+  "touch-action",
+  "transform",
+  "transform-box",
+  "transform-origin",
+  "transform-style",
+  "transition",
+  "transition-behavior",
+  "transition-delay",
+  "transition-duration",
+  "transition-property",
+  "transition-timing-function",
+  "translate",
+  "unicode-bidi",
+  "unicode-range",
+  "user-modify",
+  "user-select",
+  "vector-effect",
+  "vertical-align",
+  "view-timeline",
+  "view-timeline-axis",
+  "view-timeline-inset",
+  "view-timeline-name",
+  "view-transition-name",
+  "visibility",
+  "voice-balance",
+  "voice-duration",
+  "voice-family",
+  "voice-pitch",
+  "voice-range",
+  "voice-rate",
+  "voice-stress",
+  "voice-volume",
+  "white-space",
+  "white-space-collapse",
+  "widows",
+  "width",
+  "will-change",
+  "word-break",
+  "word-spacing",
+  "word-wrap",
+  "writing-mode",
+  "x",
+  "y",
+  "z-index",
+  "zoom"
+].sort().reverse();
+function css(hljs) {
+  const regex = hljs.regex;
+  const modes = MODES(hljs);
+  const VENDOR_PREFIX = { begin: /-(webkit|moz|ms|o)-(?=[a-z])/ };
+  const AT_MODIFIERS = "and or not only";
+  const AT_PROPERTY_RE = /@-?\w[\w]*(-\w+)*/;
+  const IDENT_RE3 = "[a-zA-Z-][a-zA-Z0-9_-]*";
+  const STRINGS = [
+    hljs.APOS_STRING_MODE,
+    hljs.QUOTE_STRING_MODE
+  ];
+  return {
+    name: "CSS",
+    case_insensitive: true,
+    illegal: /[=|'\$]/,
+    keywords: { keyframePosition: "from to" },
+    classNameAliases: {
+      // for visual continuity with `tag {}` and because we
+      // don't have a great class for this?
+      keyframePosition: "selector-tag"
+    },
+    contains: [
+      modes.BLOCK_COMMENT,
+      VENDOR_PREFIX,
+      // to recognize keyframe 40% etc which are outside the scope of our
+      // attribute value mode
+      modes.CSS_NUMBER_MODE,
+      {
+        className: "selector-id",
+        begin: /#[A-Za-z0-9_-]+/,
+        relevance: 0
+      },
+      {
+        className: "selector-class",
+        begin: "\\." + IDENT_RE3,
+        relevance: 0
+      },
+      modes.ATTRIBUTE_SELECTOR_MODE,
+      {
+        className: "selector-pseudo",
+        variants: [
+          { begin: ":(" + PSEUDO_CLASSES.join("|") + ")" },
+          { begin: ":(:)?(" + PSEUDO_ELEMENTS.join("|") + ")" }
+        ]
+      },
+      // we may actually need this (12/2020)
+      // { // pseudo-selector params
+      //   begin: /\(/,
+      //   end: /\)/,
+      //   contains: [ hljs.CSS_NUMBER_MODE ]
+      // },
+      modes.CSS_VARIABLE,
+      {
+        className: "attribute",
+        begin: "\\b(" + ATTRIBUTES.join("|") + ")\\b"
+      },
+      // attribute values
+      {
+        begin: /:/,
+        end: /[;}{]/,
+        contains: [
+          modes.BLOCK_COMMENT,
+          modes.HEXCOLOR,
+          modes.IMPORTANT,
+          modes.CSS_NUMBER_MODE,
+          modes.UNICODE_RANGE,
+          ...STRINGS,
+          // needed to highlight these as strings and to avoid issues with
+          // illegal characters that might be inside urls that would trigger the
+          // languages illegal stack
+          {
+            begin: /(url|data-uri)\(/,
+            end: /\)/,
+            relevance: 0,
+            // from keywords
+            keywords: { built_in: "url data-uri" },
+            contains: [
+              ...STRINGS,
+              {
+                className: "string",
+                // any character other than `)` as in `url()` will be the start
+                // of a string, which ends with `)` (from the parent mode)
+                begin: /[^)]/,
+                endsWithParent: true,
+                excludeEnd: true
+              }
+            ]
+          },
+          modes.FUNCTION_DISPATCH
+        ]
+      },
+      {
+        begin: regex.lookahead(/@/),
+        end: "[{;]",
+        relevance: 0,
+        illegal: /:/,
+        // break on Less variables @var: ...
+        contains: [
+          {
+            className: "keyword",
+            begin: AT_PROPERTY_RE
+          },
+          {
+            begin: /\s/,
+            endsWithParent: true,
+            excludeEnd: true,
+            relevance: 0,
+            keywords: {
+              $pattern: /[a-z-]+/,
+              keyword: AT_MODIFIERS,
+              attribute: MEDIA_FEATURES.join(" ")
+            },
+            contains: [
+              {
+                begin: /[a-z-]+(?=:)/,
+                className: "attribute"
+              },
+              ...STRINGS,
+              modes.CSS_NUMBER_MODE
+            ]
+          }
+        ]
+      },
+      {
+        className: "selector-tag",
+        begin: "\\b(" + TAGS.join("|") + ")\\b"
+      }
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/dockerfile.js
+function dockerfile(hljs) {
+  const KEYWORDS3 = [
+    "from",
+    "maintainer",
+    "expose",
+    "env",
+    "arg",
+    "user",
+    "onbuild",
+    "stopsignal"
+  ];
+  return {
+    name: "Dockerfile",
+    aliases: ["docker"],
+    case_insensitive: true,
+    keywords: KEYWORDS3,
+    contains: [
+      hljs.HASH_COMMENT_MODE,
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      hljs.NUMBER_MODE,
+      {
+        beginKeywords: "run cmd entrypoint volume add copy workdir label healthcheck shell",
+        starts: {
+          end: /[^\\]$/,
+          subLanguage: "bash"
+        }
+      }
+    ],
+    illegal: "</"
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/go.js
+function go(hljs) {
+  const LITERALS3 = [
+    "true",
+    "false",
+    "iota",
+    "nil"
+  ];
+  const BUILT_INS3 = [
+    "append",
+    "cap",
+    "close",
+    "complex",
+    "copy",
+    "imag",
+    "len",
+    "make",
+    "new",
+    "panic",
+    "print",
+    "println",
+    "real",
+    "recover",
+    "delete"
+  ];
+  const TYPES3 = [
+    "bool",
+    "byte",
+    "complex64",
+    "complex128",
+    "error",
+    "float32",
+    "float64",
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "string",
+    "uint8",
+    "uint16",
+    "uint32",
+    "uint64",
+    "int",
+    "uint",
+    "uintptr",
+    "rune"
+  ];
+  const KWS = [
+    "break",
+    "case",
+    "chan",
+    "const",
+    "continue",
+    "default",
+    "defer",
+    "else",
+    "fallthrough",
+    "for",
+    "func",
+    "go",
+    "goto",
+    "if",
+    "import",
+    "interface",
+    "map",
+    "package",
+    "range",
+    "return",
+    "select",
+    "struct",
+    "switch",
+    "type",
+    "var"
+  ];
+  const KEYWORDS3 = {
+    keyword: KWS,
+    type: TYPES3,
+    literal: LITERALS3,
+    built_in: BUILT_INS3
+  };
+  return {
+    name: "Go",
+    aliases: ["golang"],
+    keywords: KEYWORDS3,
+    illegal: "</",
+    contains: [
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      {
+        className: "string",
+        variants: [
+          hljs.QUOTE_STRING_MODE,
+          hljs.APOS_STRING_MODE,
+          {
+            begin: "`",
+            end: "`"
+          }
+        ]
+      },
+      {
+        className: "number",
+        variants: [
+          {
+            match: /-?\b0[xX]\.[a-fA-F0-9](_?[a-fA-F0-9])*[pP][+-]?\d(_?\d)*i?/,
+            // hex without a present digit before . (making a digit afterwards required)
+            relevance: 0
+          },
+          {
+            match: /-?\b0[xX](_?[a-fA-F0-9])+((\.([a-fA-F0-9](_?[a-fA-F0-9])*)?)?[pP][+-]?\d(_?\d)*)?i?/,
+            // hex with a present digit before . (making a digit afterwards optional)
+            relevance: 0
+          },
+          {
+            match: /-?\b0[oO](_?[0-7])*i?/,
+            // leading 0o octal
+            relevance: 0
+          },
+          {
+            match: /-?\b0[bB](_?[01])*i?/,
+            // leading 0b binary
+            relevance: 0
+          },
+          {
+            match: /-?\.\d(_?\d)*([eE][+-]?\d(_?\d)*)?i?/,
+            // decimal without a present digit before . (making a digit afterwards required)
+            relevance: 0
+          },
+          {
+            match: /-?\b\d(_?\d)*(\.(\d(_?\d)*)?)?([eE][+-]?\d(_?\d)*)?i?/,
+            // decimal with a present digit before . (making a digit afterwards optional)
+            relevance: 0
+          }
+        ]
+      },
+      {
+        begin: /:=/
+        // relevance booster
+      },
+      {
+        className: "function",
+        beginKeywords: "func",
+        end: "\\s*(\\{|$)",
+        excludeEnd: true,
+        contains: [
+          hljs.TITLE_MODE,
+          {
+            className: "params",
+            begin: /\(/,
+            end: /\)/,
+            endsParent: true,
+            keywords: KEYWORDS3,
+            illegal: /["']/
+          }
+        ]
+      }
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/ini.js
+function ini(hljs) {
+  const regex = hljs.regex;
+  const NUMBERS = {
+    className: "number",
+    relevance: 0,
+    variants: [
+      { begin: /([+-]+)?[\d]+_[\d_]+/ },
+      { begin: hljs.NUMBER_RE }
+    ]
+  };
+  const COMMENTS = hljs.COMMENT();
+  COMMENTS.variants = [
+    {
+      begin: /;/,
+      end: /$/
+    },
+    {
+      begin: /#/,
+      end: /$/
+    }
+  ];
+  const VARIABLES = {
+    className: "variable",
+    variants: [
+      { begin: /\$[\w\d"][\w\d_]*/ },
+      { begin: /\$\{(.*?)\}/ }
+    ]
+  };
+  const LITERALS3 = {
+    className: "literal",
+    begin: /\bon|off|true|false|yes|no\b/
+  };
+  const STRINGS = {
+    className: "string",
+    contains: [hljs.BACKSLASH_ESCAPE],
+    variants: [
+      {
+        begin: "'''",
+        end: "'''",
+        relevance: 10
+      },
+      {
+        begin: '"""',
+        end: '"""',
+        relevance: 10
+      },
+      {
+        begin: '"',
+        end: '"'
+      },
+      {
+        begin: "'",
+        end: "'"
+      }
+    ]
+  };
+  const ARRAY = {
+    begin: /\[/,
+    end: /\]/,
+    contains: [
+      COMMENTS,
+      LITERALS3,
+      VARIABLES,
+      STRINGS,
+      NUMBERS,
+      "self"
+    ],
+    relevance: 0
+  };
+  const BARE_KEY = /[A-Za-z0-9_-]+/;
+  const QUOTED_KEY_DOUBLE_QUOTE = /"(\\"|[^"])*"/;
+  const QUOTED_KEY_SINGLE_QUOTE = /'[^']*'/;
+  const ANY_KEY = regex.either(
+    BARE_KEY,
+    QUOTED_KEY_DOUBLE_QUOTE,
+    QUOTED_KEY_SINGLE_QUOTE
+  );
+  const DOTTED_KEY = regex.concat(
+    ANY_KEY,
+    "(\\s*\\.\\s*",
+    ANY_KEY,
+    ")*",
+    regex.lookahead(/\s*=\s*[^#\s]/)
+  );
+  return {
+    name: "TOML, also INI",
+    aliases: ["toml"],
+    case_insensitive: true,
+    illegal: /\S/,
+    contains: [
+      COMMENTS,
+      {
+        className: "section",
+        begin: /\[+/,
+        end: /\]+/
+      },
+      {
+        begin: DOTTED_KEY,
+        className: "attr",
+        starts: {
+          end: /$/,
+          contains: [
+            COMMENTS,
+            ARRAY,
+            LITERALS3,
+            VARIABLES,
+            STRINGS,
+            NUMBERS
+          ]
+        }
+      }
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/java.js
+var decimalDigits = "[0-9](_*[0-9])*";
+var frac = `\\.(${decimalDigits})`;
+var hexDigits = "[0-9a-fA-F](_*[0-9a-fA-F])*";
+var NUMERIC = {
+  className: "number",
+  variants: [
+    // DecimalFloatingPointLiteral
+    // including ExponentPart
+    { begin: `(\\b(${decimalDigits})((${frac})|\\.)?|(${frac}))[eE][+-]?(${decimalDigits})[fFdD]?\\b` },
+    // excluding ExponentPart
+    { begin: `\\b(${decimalDigits})((${frac})[fFdD]?\\b|\\.([fFdD]\\b)?)` },
+    { begin: `(${frac})[fFdD]?\\b` },
+    { begin: `\\b(${decimalDigits})[fFdD]\\b` },
+    // HexadecimalFloatingPointLiteral
+    { begin: `\\b0[xX]((${hexDigits})\\.?|(${hexDigits})?\\.(${hexDigits}))[pP][+-]?(${decimalDigits})[fFdD]?\\b` },
+    // DecimalIntegerLiteral
+    { begin: "\\b(0|[1-9](_*[0-9])*)[lL]?\\b" },
+    // HexIntegerLiteral
+    { begin: `\\b0[xX](${hexDigits})[lL]?\\b` },
+    // OctalIntegerLiteral
+    { begin: "\\b0(_*[0-7])*[lL]?\\b" },
+    // BinaryIntegerLiteral
+    { begin: "\\b0[bB][01](_*[01])*[lL]?\\b" }
+  ],
+  relevance: 0
+};
+function recurRegex(re, substitution, depth) {
+  if (depth === -1) return "";
+  return re.replace(substitution, (_) => {
+    return recurRegex(re, substitution, depth - 1);
+  });
+}
+function java(hljs) {
+  const regex = hljs.regex;
+  const JAVA_IDENT_RE = "[\xC0-\u02B8a-zA-Z_$][\xC0-\u02B8a-zA-Z_$0-9]*";
+  const ARRAY_BRACKETS_OPTIONAL_RE = "(?:(?:\\s*\\[\\s*])+)?";
+  const SIMPLE_TYPE_RE = JAVA_IDENT_RE + "<@@@>" + ARRAY_BRACKETS_OPTIONAL_RE;
+  const WILDCARD_TYPE_RE = "\\?(?:\\s+(?:extends|super)\\s+" + SIMPLE_TYPE_RE + ")?";
+  const TYPE_ARG_RE = "(?:" + WILDCARD_TYPE_RE + "|" + SIMPLE_TYPE_RE + ")";
+  const TYPE_ARGS_OPTIONAL_RE = recurRegex(
+    "(?:\\s*<\\s*" + TYPE_ARG_RE + "(?:\\s*,\\s*" + TYPE_ARG_RE + ")*\\s*>)?",
+    /<@@@>/g,
+    2
+  );
+  const MAIN_KEYWORDS = [
+    "synchronized",
+    "abstract",
+    "private",
+    "var",
+    "static",
+    "if",
+    "const ",
+    "for",
+    "while",
+    "strictfp",
+    "finally",
+    "protected",
+    "import",
+    "native",
+    "final",
+    "void",
+    "enum",
+    "else",
+    "break",
+    "transient",
+    "catch",
+    "instanceof",
+    "volatile",
+    "case",
+    "assert",
+    "package",
+    "default",
+    "public",
+    "try",
+    "switch",
+    "continue",
+    "throws",
+    "protected",
+    "public",
+    "private",
+    "module",
+    "requires",
+    "exports",
+    "do",
+    "sealed",
+    "yield",
+    "permits",
+    "goto",
+    "when"
+  ];
+  const BUILT_INS3 = [
+    "super",
+    "this"
+  ];
+  const LITERALS3 = [
+    "false",
+    "true",
+    "null"
+  ];
+  const TYPES3 = [
+    "char",
+    "boolean",
+    "long",
+    "float",
+    "int",
+    "byte",
+    "short",
+    "double"
+  ];
+  const KEYWORDS3 = {
+    keyword: MAIN_KEYWORDS,
+    literal: LITERALS3,
+    type: TYPES3,
+    built_in: BUILT_INS3
+  };
+  const ANNOTATION = {
+    className: "meta",
+    begin: "@" + JAVA_IDENT_RE,
+    contains: [
+      {
+        begin: /\(/,
+        end: /\)/,
+        contains: ["self"]
+        // allow nested () inside our annotation
+      }
+    ]
+  };
+  const PARAMS = {
+    className: "params",
+    begin: /\(/,
+    end: /\)/,
+    keywords: KEYWORDS3,
+    relevance: 0,
+    contains: [hljs.C_BLOCK_COMMENT_MODE],
+    endsParent: true
+  };
+  return {
+    name: "Java",
+    aliases: ["jsp"],
+    keywords: KEYWORDS3,
+    illegal: /<\/|#/,
+    contains: [
+      hljs.COMMENT(
+        "/\\*\\*",
+        "\\*/",
+        {
+          relevance: 0,
+          contains: [
+            {
+              // eat up @'s in emails to prevent them to be recognized as doctags
+              begin: /\w+@/,
+              relevance: 0
+            },
+            {
+              className: "doctag",
+              begin: "@[A-Za-z]+"
+            }
+          ]
+        }
+      ),
+      // relevance boost
+      {
+        begin: /import java\.[a-z]+\./,
+        keywords: "import",
+        relevance: 2
+      },
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      {
+        begin: /"""/,
+        end: /"""/,
+        className: "string",
+        contains: [hljs.BACKSLASH_ESCAPE]
+      },
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      {
+        match: [
+          /\b(?:class|interface|enum|extends|implements|new)/,
+          /\s+/,
+          JAVA_IDENT_RE
+        ],
+        className: {
+          1: "keyword",
+          3: "title.class"
+        }
+      },
+      {
+        // Exceptions for hyphenated keywords
+        match: /non-sealed/,
+        scope: "keyword"
+      },
+      {
+        // Expression keywords prevent keyword-led expressions from being
+        // recognized as variable or method declarations.
+        beginKeywords: "new throw return else yield assert",
+        relevance: 0
+      },
+      {
+        begin: [
+          JAVA_IDENT_RE,
+          regex.concat(TYPE_ARGS_OPTIONAL_RE, ARRAY_BRACKETS_OPTIONAL_RE, /\s+/),
+          JAVA_IDENT_RE,
+          ARRAY_BRACKETS_OPTIONAL_RE,
+          /\s*/,
+          /=(?!=)/
+        ],
+        className: {
+          1: "type",
+          3: "variable",
+          6: "operator"
+        }
+      },
+      {
+        begin: [
+          /record/,
+          /\s+/,
+          JAVA_IDENT_RE
+        ],
+        className: {
+          1: "keyword",
+          3: "title.class"
+        },
+        contains: [
+          PARAMS,
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      },
+      {
+        begin: [
+          JAVA_IDENT_RE,
+          regex.concat(TYPE_ARGS_OPTIONAL_RE, ARRAY_BRACKETS_OPTIONAL_RE, /\s+/),
+          JAVA_IDENT_RE,
+          /\s*(?=\()/
+        ],
+        className: {
+          1: "type",
+          3: "title.function"
+        },
+        keywords: KEYWORDS3,
+        contains: [
+          {
+            className: "params",
+            begin: /\(/,
+            end: /\)/,
+            keywords: KEYWORDS3,
+            relevance: 0,
+            contains: [
+              ANNOTATION,
+              hljs.APOS_STRING_MODE,
+              hljs.QUOTE_STRING_MODE,
+              NUMERIC,
+              hljs.C_BLOCK_COMMENT_MODE
+            ]
+          },
+          hljs.C_LINE_COMMENT_MODE,
+          hljs.C_BLOCK_COMMENT_MODE
+        ]
+      },
+      NUMERIC,
+      ANNOTATION
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/javascript.js
+var IDENT_RE = "[A-Za-z$_][0-9A-Za-z$_]*";
+var KEYWORDS = [
+  "as",
+  // for exports
+  "in",
+  "of",
+  "if",
+  "for",
+  "while",
+  "finally",
+  "var",
+  "new",
+  "function",
+  "do",
+  "return",
+  "void",
+  "else",
+  "break",
+  "catch",
+  "instanceof",
+  "with",
+  "throw",
+  "case",
+  "default",
+  "try",
+  "switch",
+  "continue",
+  "typeof",
+  "delete",
+  "let",
+  "yield",
+  "const",
+  "class",
+  // JS handles these with a special rule
+  // "get",
+  // "set",
+  "debugger",
+  "async",
+  "await",
+  "static",
+  "import",
+  "from",
+  "export",
+  "extends",
+  // It's reached stage 3, which is "recommended for implementation":
+  "using"
+];
+var LITERALS = [
+  "true",
+  "false",
+  "null",
+  "undefined",
+  "NaN",
+  "Infinity"
+];
+var TYPES = [
+  // Fundamental objects
+  "Object",
+  "Function",
+  "Boolean",
+  "Symbol",
+  // numbers and dates
+  "Math",
+  "Date",
+  "Number",
+  "BigInt",
+  // text
+  "String",
+  "RegExp",
+  // Indexed collections
+  "Array",
+  "Float32Array",
+  "Float64Array",
+  "Int8Array",
+  "Uint8Array",
+  "Uint8ClampedArray",
+  "Int16Array",
+  "Int32Array",
+  "Uint16Array",
+  "Uint32Array",
+  "BigInt64Array",
+  "BigUint64Array",
+  // Keyed collections
+  "Set",
+  "Map",
+  "WeakSet",
+  "WeakMap",
+  // Structured data
+  "ArrayBuffer",
+  "SharedArrayBuffer",
+  "Atomics",
+  "DataView",
+  "JSON",
+  // Control abstraction objects
+  "Promise",
+  "Generator",
+  "GeneratorFunction",
+  "AsyncFunction",
+  // Reflection
+  "Reflect",
+  "Proxy",
+  // Internationalization
+  "Intl",
+  // WebAssembly
+  "WebAssembly"
+];
+var ERROR_TYPES = [
+  "Error",
+  "EvalError",
+  "InternalError",
+  "RangeError",
+  "ReferenceError",
+  "SyntaxError",
+  "TypeError",
+  "URIError"
+];
+var BUILT_IN_GLOBALS = [
+  "setInterval",
+  "setTimeout",
+  "clearInterval",
+  "clearTimeout",
+  "require",
+  "exports",
+  "eval",
+  "isFinite",
+  "isNaN",
+  "parseFloat",
+  "parseInt",
+  "decodeURI",
+  "decodeURIComponent",
+  "encodeURI",
+  "encodeURIComponent",
+  "escape",
+  "unescape"
+];
+var BUILT_IN_VARIABLES = [
+  "arguments",
+  "this",
+  "super",
+  "console",
+  "window",
+  "document",
+  "localStorage",
+  "sessionStorage",
+  "module",
+  "self",
+  "global"
+  // Node.js
+];
+var BUILT_INS = [].concat(
+  BUILT_IN_GLOBALS,
+  TYPES,
+  ERROR_TYPES
+);
+function javascript(hljs) {
+  const regex = hljs.regex;
+  const hasClosingTag = (match, { after }) => {
+    const tag = "</" + match[0].slice(1);
+    const pos = match.input.indexOf(tag, after);
+    return pos !== -1;
+  };
+  const IDENT_RE$1 = IDENT_RE;
+  const FRAGMENT = {
+    begin: "<>",
+    end: "</>"
+  };
+  const XML_SELF_CLOSING = /<[A-Za-z0-9\\._:-]+\s*\/>/;
+  const XML_TAG = {
+    begin: /<[A-Za-z0-9\\._:-]+/,
+    end: /\/[A-Za-z0-9\\._:-]+>|\/>/,
+    /**
+     * @param {RegExpMatchArray} match
+     * @param {CallbackResponse} response
+     */
+    isTrulyOpeningTag: (match, response) => {
+      const afterMatchIndex = match[0].length + match.index;
+      const nextChar = match.input[afterMatchIndex];
+      if (
+        // HTML should not include another raw `<` inside a tag
+        // nested type?
+        // `<Array<Array<number>>`, etc.
+        nextChar === "<" || // the , gives away that this is not HTML
+        // `<T, A extends keyof T, V>`
+        nextChar === ","
+      ) {
+        response.ignoreMatch();
+        return;
+      }
+      if (nextChar === ">") {
+        if (!hasClosingTag(match, { after: afterMatchIndex })) {
+          response.ignoreMatch();
+        }
+      }
+      let m;
+      const afterMatch = match.input.substring(afterMatchIndex);
+      if (m = afterMatch.match(/^\s*=/)) {
+        response.ignoreMatch();
+        return;
+      }
+      if (m = afterMatch.match(/^\s+extends\s+/)) {
+        if (m.index === 0) {
+          response.ignoreMatch();
+          return;
+        }
+      }
+    }
+  };
+  const KEYWORDS$1 = {
+    $pattern: IDENT_RE,
+    keyword: KEYWORDS,
+    literal: LITERALS,
+    built_in: BUILT_INS,
+    "variable.language": BUILT_IN_VARIABLES
+  };
+  const decimalDigits3 = "[0-9](_?[0-9])*";
+  const frac3 = `\\.(${decimalDigits3})`;
+  const decimalInteger = `0|[1-9](_?[0-9])*|0[0-7]*[89][0-9]*`;
+  const NUMBER = {
+    className: "number",
+    variants: [
+      // DecimalLiteral
+      { begin: `(\\b(${decimalInteger})((${frac3})|\\.)?|(${frac3}))[eE][+-]?(${decimalDigits3})\\b` },
+      { begin: `\\b(${decimalInteger})\\b((${frac3})\\b|\\.)?|(${frac3})\\b` },
+      // DecimalBigIntegerLiteral
+      { begin: `\\b(0|[1-9](_?[0-9])*)n\\b` },
+      // NonDecimalIntegerLiteral
+      { begin: "\\b0[xX][0-9a-fA-F](_?[0-9a-fA-F])*n?\\b" },
+      { begin: "\\b0[bB][0-1](_?[0-1])*n?\\b" },
+      { begin: "\\b0[oO][0-7](_?[0-7])*n?\\b" },
+      // LegacyOctalIntegerLiteral (does not include underscore separators)
+      // https://tc39.es/ecma262/#sec-additional-syntax-numeric-literals
+      { begin: "\\b0[0-7]+n?\\b" }
+    ],
+    relevance: 0
+  };
+  const SUBST = {
+    className: "subst",
+    begin: "\\$\\{",
+    end: "\\}",
+    keywords: KEYWORDS$1,
+    contains: []
+    // defined later
+  };
+  const HTML_TEMPLATE = {
+    begin: ".?html`",
+    end: "",
+    starts: {
+      end: "`",
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: "xml"
+    }
+  };
+  const CSS_TEMPLATE = {
+    begin: ".?css`",
+    end: "",
+    starts: {
+      end: "`",
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: "css"
+    }
+  };
+  const GRAPHQL_TEMPLATE = {
+    begin: ".?gql`",
+    end: "",
+    starts: {
+      end: "`",
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: "graphql"
+    }
+  };
+  const TEMPLATE_STRING = {
+    className: "string",
+    begin: "`",
+    end: "`",
+    contains: [
+      hljs.BACKSLASH_ESCAPE,
+      SUBST
+    ]
+  };
+  const JSDOC_COMMENT = hljs.COMMENT(
+    /\/\*\*(?!\/)/,
+    "\\*/",
+    {
+      relevance: 0,
+      contains: [
+        {
+          begin: "(?=@[A-Za-z]+)",
+          relevance: 0,
+          contains: [
+            {
+              className: "doctag",
+              begin: "@[A-Za-z]+"
+            },
+            {
+              className: "type",
+              begin: "\\{",
+              end: "\\}",
+              excludeEnd: true,
+              excludeBegin: true,
+              relevance: 0
+            },
+            {
+              className: "variable",
+              begin: IDENT_RE$1 + "(?=\\s*(-)|$)",
+              endsParent: true,
+              relevance: 0
+            },
+            // eat spaces (not newlines) so we can find
+            // types or variables
+            {
+              begin: /(?=[^\n])\s/,
+              relevance: 0
+            }
+          ]
+        }
+      ]
+    }
+  );
+  const COMMENT = {
+    className: "comment",
+    variants: [
+      JSDOC_COMMENT,
+      hljs.C_BLOCK_COMMENT_MODE,
+      hljs.C_LINE_COMMENT_MODE
+    ]
+  };
+  const SUBST_INTERNALS = [
+    hljs.APOS_STRING_MODE,
+    hljs.QUOTE_STRING_MODE,
+    HTML_TEMPLATE,
+    CSS_TEMPLATE,
+    GRAPHQL_TEMPLATE,
+    TEMPLATE_STRING,
+    // Skip numbers when they are part of a variable name
+    { match: /\$\d+/ },
+    NUMBER
+    // This is intentional:
+    // See https://github.com/highlightjs/highlight.js/issues/3288
+    // hljs.REGEXP_MODE
+  ];
+  SUBST.contains = SUBST_INTERNALS.concat({
+    // we need to pair up {} inside our subst to prevent
+    // it from ending too early by matching another }
+    begin: /\{/,
+    end: /\}/,
+    keywords: KEYWORDS$1,
+    contains: [
+      "self"
+    ].concat(SUBST_INTERNALS)
+  });
+  const SUBST_AND_COMMENTS = [].concat(COMMENT, SUBST.contains);
+  const PARAMS_CONTAINS = SUBST_AND_COMMENTS.concat([
+    // eat recursive parens in sub expressions
+    {
+      begin: /(\s*)\(/,
+      end: /\)/,
+      keywords: KEYWORDS$1,
+      contains: ["self"].concat(SUBST_AND_COMMENTS)
+    }
+  ]);
+  const PARAMS = {
+    className: "params",
+    // convert this to negative lookbehind in v12
+    begin: /(\s*)\(/,
+    // to match the parms with
+    end: /\)/,
+    excludeBegin: true,
+    excludeEnd: true,
+    keywords: KEYWORDS$1,
+    contains: PARAMS_CONTAINS
+  };
+  const CLASS_OR_EXTENDS = {
+    variants: [
+      // class Car extends vehicle
+      {
+        match: [
+          /class/,
+          /\s+/,
+          IDENT_RE$1,
+          /\s+/,
+          /extends/,
+          /\s+/,
+          regex.concat(IDENT_RE$1, "(", regex.concat(/\./, IDENT_RE$1), ")*")
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class",
+          5: "keyword",
+          7: "title.class.inherited"
+        }
+      },
+      // class Car
+      {
+        match: [
+          /class/,
+          /\s+/,
+          IDENT_RE$1
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class"
+        }
+      }
+    ]
+  };
+  const CLASS_REFERENCE = {
+    relevance: 0,
+    match: regex.either(
+      // Hard coded exceptions
+      /\bJSON/,
+      // Float32Array, OutT
+      /\b[A-Z][a-z]+([A-Z][a-z]*|\d)*/,
+      // CSSFactory, CSSFactoryT
+      /\b[A-Z]{2,}([A-Z][a-z]+|\d)+([A-Z][a-z]*)*/,
+      // FPs, FPsT
+      /\b[A-Z]{2,}[a-z]+([A-Z][a-z]+|\d)*([A-Z][a-z]*)*/
+      // P
+      // single letters are not highlighted
+      // BLAH
+      // this will be flagged as a UPPER_CASE_CONSTANT instead
+    ),
+    className: "title.class",
+    keywords: {
+      _: [
+        // se we still get relevance credit for JS library classes
+        ...TYPES,
+        ...ERROR_TYPES
+      ]
+    }
+  };
+  const USE_STRICT = {
+    label: "use_strict",
+    className: "meta",
+    relevance: 10,
+    begin: /^\s*['"]use (strict|asm)['"]/
+  };
+  const FUNCTION_DEFINITION = {
+    variants: [
+      {
+        match: [
+          /function/,
+          /\s+/,
+          IDENT_RE$1,
+          /(?=\s*\()/
+        ]
+      },
+      // anonymous function
+      {
+        match: [
+          /function/,
+          /\s*(?=\()/
+        ]
+      }
+    ],
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    label: "func.def",
+    contains: [PARAMS],
+    illegal: /%/
+  };
+  const UPPER_CASE_CONSTANT = {
+    relevance: 0,
+    match: /\b[A-Z][A-Z_0-9]+\b/,
+    className: "variable.constant"
+  };
+  function noneOf(list2) {
+    return regex.concat("(?!", list2.join("|"), ")");
+  }
+  const FUNCTION_CALL = {
+    match: regex.concat(
+      /\b/,
+      noneOf([
+        ...BUILT_IN_GLOBALS,
+        "super",
+        "import",
+        "await"
+      ].map((x) => `${x}\\s*\\(`)),
+      IDENT_RE$1,
+      regex.lookahead(/\s*\(/)
+    ),
+    className: "title.function",
+    relevance: 0
+  };
+  const PROPERTY_ACCESS = {
+    begin: regex.concat(/\./, regex.lookahead(
+      regex.concat(IDENT_RE$1, /(?![0-9A-Za-z$_(])/)
+    )),
+    end: IDENT_RE$1,
+    excludeBegin: true,
+    keywords: "prototype",
+    className: "property",
+    relevance: 0
+  };
+  const GETTER_OR_SETTER = {
+    match: [
+      /get|set/,
+      /\s+/,
+      IDENT_RE$1,
+      /(?=\()/
+    ],
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    contains: [
+      {
+        // eat to avoid empty params
+        begin: /\(\)/
+      },
+      PARAMS
+    ]
+  };
+  const FUNC_LEAD_IN_RE = "(\\([^()]*(\\([^()]*(\\([^()]*\\)[^()]*)*\\)[^()]*)*\\)|" + hljs.UNDERSCORE_IDENT_RE + ")\\s*=>";
+  const FUNCTION_VARIABLE = {
+    match: [
+      /const|var|let/,
+      /\s+/,
+      IDENT_RE$1,
+      /\s*/,
+      /=\s*/,
+      /(async\s*)?/,
+      // async is optional
+      regex.lookahead(FUNC_LEAD_IN_RE)
+    ],
+    keywords: "async",
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    contains: [
+      PARAMS
+    ]
+  };
+  return {
+    name: "JavaScript",
+    aliases: ["js", "jsx", "mjs", "cjs"],
+    keywords: KEYWORDS$1,
+    // this will be extended by TypeScript
+    exports: { PARAMS_CONTAINS, CLASS_REFERENCE },
+    illegal: /#(?![$_A-Za-z])/,
+    contains: [
+      hljs.SHEBANG({
+        label: "shebang",
+        binary: "node",
+        relevance: 5
+      }),
+      USE_STRICT,
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      HTML_TEMPLATE,
+      CSS_TEMPLATE,
+      GRAPHQL_TEMPLATE,
+      TEMPLATE_STRING,
+      COMMENT,
+      // Skip numbers when they are part of a variable name
+      { match: /\$\d+/ },
+      NUMBER,
+      CLASS_REFERENCE,
+      {
+        scope: "attr",
+        match: IDENT_RE$1 + regex.lookahead(":"),
+        relevance: 0
+      },
+      FUNCTION_VARIABLE,
+      {
+        // "value" container
+        begin: "(" + hljs.RE_STARTERS_RE + "|\\b(case|return|throw)\\b)\\s*",
+        keywords: "return throw case",
+        relevance: 0,
+        contains: [
+          COMMENT,
+          hljs.REGEXP_MODE,
+          {
+            className: "function",
+            // we have to count the parens to make sure we actually have the
+            // correct bounding ( ) before the =>.  There could be any number of
+            // sub-expressions inside also surrounded by parens.
+            begin: FUNC_LEAD_IN_RE,
+            returnBegin: true,
+            end: "\\s*=>",
+            contains: [
+              {
+                className: "params",
+                variants: [
+                  {
+                    begin: hljs.UNDERSCORE_IDENT_RE,
+                    relevance: 0
+                  },
+                  {
+                    className: null,
+                    begin: /\(\s*\)/,
+                    skip: true
+                  },
+                  {
+                    begin: /(\s*)\(/,
+                    end: /\)/,
+                    excludeBegin: true,
+                    excludeEnd: true,
+                    keywords: KEYWORDS$1,
+                    contains: PARAMS_CONTAINS
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            // could be a comma delimited list of params to a function call
+            begin: /,/,
+            relevance: 0
+          },
+          {
+            match: /\s+/,
+            relevance: 0
+          },
+          {
+            // JSX
+            variants: [
+              { begin: FRAGMENT.begin, end: FRAGMENT.end },
+              { match: XML_SELF_CLOSING },
+              {
+                begin: XML_TAG.begin,
+                // we carefully check the opening tag to see if it truly
+                // is a tag and not a false positive
+                "on:begin": XML_TAG.isTrulyOpeningTag,
+                end: XML_TAG.end
+              }
+            ],
+            subLanguage: "xml",
+            contains: [
+              {
+                begin: XML_TAG.begin,
+                end: XML_TAG.end,
+                skip: true,
+                contains: ["self"]
+              }
+            ]
+          }
+        ]
+      },
+      FUNCTION_DEFINITION,
+      {
+        // prevent this from getting swallowed up by function
+        // since they appear "function like"
+        beginKeywords: "while if switch catch for"
+      },
+      {
+        // we have to count the parens to make sure we actually have the correct
+        // bounding ( ).  There could be any number of sub-expressions inside
+        // also surrounded by parens.
+        begin: "\\b(?!function)" + hljs.UNDERSCORE_IDENT_RE + "\\([^()]*(\\([^()]*(\\([^()]*\\)[^()]*)*\\)[^()]*)*\\)\\s*\\{",
+        // end parens
+        returnBegin: true,
+        label: "func.def",
+        contains: [
+          PARAMS,
+          hljs.inherit(hljs.TITLE_MODE, { begin: IDENT_RE$1, className: "title.function" })
+        ]
+      },
+      // catch ... so it won't trigger the property rule below
+      {
+        match: /\.\.\./,
+        relevance: 0
+      },
+      PROPERTY_ACCESS,
+      // hack: prevents detection of keywords in some circumstances
+      // .keyword()
+      // $keyword = x
+      {
+        match: "\\$" + IDENT_RE$1,
+        relevance: 0
+      },
+      {
+        match: [/\bconstructor(?=\s*\()/],
+        className: { 1: "title.function" },
+        contains: [PARAMS]
+      },
+      FUNCTION_CALL,
+      UPPER_CASE_CONSTANT,
+      CLASS_OR_EXTENDS,
+      GETTER_OR_SETTER,
+      {
+        match: /\$[(.]/
+        // relevance booster for a pattern common to JS libs: `$(something)` and `$.something`
+      }
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/json.js
+var EXTENDED_NUMBER_RE = "([-+]?)(\\b0[xX][a-fA-F0-9]+|(\\b\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)|NaN|[-+]?Infinity";
+var EXTENDED_NUMBER_MODE = {
+  scope: "number",
+  match: EXTENDED_NUMBER_RE,
+  relevance: 0
+};
+function json(hljs) {
+  const ATTRIBUTE = {
+    className: "attr",
+    begin: /(("(\\.|[^\\"\r\n])*")|('(\\.|[^\\'\r\n])*'))(?=\s*:)/,
+    relevance: 1.01
+  };
+  const PUNCTUATION = {
+    match: /[{}[\],:]/,
+    className: "punctuation",
+    relevance: 0
+  };
+  const LITERALS3 = [
+    "true",
+    "false",
+    "null"
+  ];
+  const LITERALS_MODE = {
+    scope: "literal",
+    beginKeywords: LITERALS3.join(" ")
+  };
+  return {
+    name: "JSON",
+    aliases: ["jsonc", "json5"],
+    keywords: {
+      literal: LITERALS3
+    },
+    contains: [
+      ATTRIBUTE,
+      PUNCTUATION,
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      LITERALS_MODE,
+      EXTENDED_NUMBER_MODE,
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE
+    ],
+    illegal: "\\S"
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/kotlin.js
+var decimalDigits2 = "[0-9](_*[0-9])*";
+var frac2 = `\\.(${decimalDigits2})`;
+var hexDigits2 = "[0-9a-fA-F](_*[0-9a-fA-F])*";
+var NUMERIC2 = {
+  className: "number",
+  variants: [
+    // DecimalFloatingPointLiteral
+    // including ExponentPart
+    { begin: `(\\b(${decimalDigits2})((${frac2})|\\.)?|(${frac2}))[eE][+-]?(${decimalDigits2})[fFdD]?\\b` },
+    // excluding ExponentPart
+    { begin: `\\b(${decimalDigits2})((${frac2})[fFdD]?\\b|\\.([fFdD]\\b)?)` },
+    { begin: `(${frac2})[fFdD]?\\b` },
+    { begin: `\\b(${decimalDigits2})[fFdD]\\b` },
+    // HexadecimalFloatingPointLiteral
+    { begin: `\\b0[xX]((${hexDigits2})\\.?|(${hexDigits2})?\\.(${hexDigits2}))[pP][+-]?(${decimalDigits2})[fFdD]?\\b` },
+    // DecimalIntegerLiteral
+    { begin: "\\b(0|[1-9](_*[0-9])*)[lL]?\\b" },
+    // HexIntegerLiteral
+    { begin: `\\b0[xX](${hexDigits2})[lL]?\\b` },
+    // OctalIntegerLiteral
+    { begin: "\\b0(_*[0-7])*[lL]?\\b" },
+    // BinaryIntegerLiteral
+    { begin: "\\b0[bB][01](_*[01])*[lL]?\\b" }
+  ],
+  relevance: 0
+};
+function kotlin(hljs) {
+  const KEYWORDS3 = {
+    keyword: "abstract as val var vararg get set class object open private protected public noinline crossinline dynamic final enum if else do while for when throw try catch finally import package is in fun override companion reified inline lateinit init interface annotation data sealed internal infix operator out by constructor super tailrec where const inner suspend typealias external expect actual",
+    built_in: "Byte Short Char Int Long Boolean Float Double Void Unit Nothing",
+    literal: "true false null"
+  };
+  const KEYWORDS_WITH_LABEL = {
+    className: "keyword",
+    begin: /\b(break|continue|return|this)\b/,
+    starts: { contains: [
+      {
+        className: "symbol",
+        begin: /@\w+/
+      }
+    ] }
+  };
+  const LABEL = {
+    className: "symbol",
+    begin: hljs.UNDERSCORE_IDENT_RE + "@"
+  };
+  const SUBST = {
+    className: "subst",
+    begin: /\$\{/,
+    end: /\}/,
+    contains: [hljs.C_NUMBER_MODE]
+  };
+  const VARIABLE = {
+    className: "variable",
+    begin: "\\$" + hljs.UNDERSCORE_IDENT_RE
+  };
+  const STRING = {
+    className: "string",
+    variants: [
+      {
+        begin: '"""',
+        end: '"""(?=[^"])',
+        contains: [
+          VARIABLE,
+          SUBST
+        ]
+      },
+      // Can't use built-in modes easily, as we want to use STRING in the meta
+      // context as 'meta-string' and there's no syntax to remove explicitly set
+      // classNames in built-in modes.
+      {
+        begin: "'",
+        end: "'",
+        illegal: /\n/,
+        contains: [hljs.BACKSLASH_ESCAPE]
+      },
+      {
+        begin: '"',
+        end: '"',
+        illegal: /\n/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          VARIABLE,
+          SUBST
+        ]
+      }
+    ]
+  };
+  SUBST.contains.push(STRING);
+  const ANNOTATION_USE_SITE = {
+    className: "meta",
+    begin: "@(?:file|property|field|get|set|receiver|param|setparam|delegate)\\s*:(?:\\s*" + hljs.UNDERSCORE_IDENT_RE + ")?"
+  };
+  const ANNOTATION = {
+    className: "meta",
+    begin: "@" + hljs.UNDERSCORE_IDENT_RE,
+    contains: [
+      {
+        begin: /\(/,
+        end: /\)/,
+        contains: [
+          hljs.inherit(STRING, { className: "string" }),
+          "self"
+        ]
+      }
+    ]
+  };
+  const KOTLIN_NUMBER_MODE = NUMERIC2;
+  const KOTLIN_NESTED_COMMENT = hljs.COMMENT(
+    "/\\*",
+    "\\*/",
+    { contains: [hljs.C_BLOCK_COMMENT_MODE] }
+  );
+  const KOTLIN_PAREN_TYPE = { variants: [
+    {
+      className: "type",
+      begin: hljs.UNDERSCORE_IDENT_RE
+    },
+    {
+      begin: /\(/,
+      end: /\)/,
+      contains: []
+      // defined later
+    }
+  ] };
+  const KOTLIN_PAREN_TYPE2 = KOTLIN_PAREN_TYPE;
+  KOTLIN_PAREN_TYPE2.variants[1].contains = [KOTLIN_PAREN_TYPE];
+  KOTLIN_PAREN_TYPE.variants[1].contains = [KOTLIN_PAREN_TYPE2];
+  return {
+    name: "Kotlin",
+    aliases: [
+      "kt",
+      "kts",
+      "ktm",
+      "ktx"
+    ],
+    keywords: KEYWORDS3,
+    contains: [
+      hljs.COMMENT(
+        "/\\*\\*",
+        "\\*/",
+        {
+          relevance: 0,
+          contains: [
+            {
+              className: "doctag",
+              begin: "@[A-Za-z]+"
+            }
+          ]
+        }
+      ),
+      hljs.C_LINE_COMMENT_MODE,
+      KOTLIN_NESTED_COMMENT,
+      KEYWORDS_WITH_LABEL,
+      LABEL,
+      ANNOTATION_USE_SITE,
+      ANNOTATION,
+      {
+        className: "function",
+        beginKeywords: "fun",
+        end: "[(]|$",
+        returnBegin: true,
+        excludeEnd: true,
+        keywords: KEYWORDS3,
+        relevance: 5,
+        contains: [
+          {
+            begin: hljs.UNDERSCORE_IDENT_RE + "\\s*\\(",
+            returnBegin: true,
+            relevance: 0,
+            contains: [hljs.UNDERSCORE_TITLE_MODE]
+          },
+          {
+            className: "type",
+            begin: /</,
+            end: />/,
+            keywords: "reified",
+            relevance: 0
+          },
+          {
+            className: "params",
+            begin: /\(/,
+            end: /\)/,
+            endsParent: true,
+            keywords: KEYWORDS3,
+            relevance: 0,
+            contains: [
+              {
+                begin: /:/,
+                end: /[=,\/]/,
+                endsWithParent: true,
+                contains: [
+                  KOTLIN_PAREN_TYPE,
+                  hljs.C_LINE_COMMENT_MODE,
+                  KOTLIN_NESTED_COMMENT
+                ],
+                relevance: 0
+              },
+              hljs.C_LINE_COMMENT_MODE,
+              KOTLIN_NESTED_COMMENT,
+              ANNOTATION_USE_SITE,
+              ANNOTATION,
+              STRING,
+              hljs.C_NUMBER_MODE
+            ]
+          },
+          KOTLIN_NESTED_COMMENT
+        ]
+      },
+      {
+        begin: [
+          /class|interface|trait/,
+          /\s+/,
+          hljs.UNDERSCORE_IDENT_RE
+        ],
+        beginScope: {
+          3: "title.class"
+        },
+        keywords: "class interface trait",
+        end: /[:\{(]|$/,
+        excludeEnd: true,
+        illegal: "extends implements",
+        contains: [
+          { beginKeywords: "public protected internal private constructor" },
+          hljs.UNDERSCORE_TITLE_MODE,
+          {
+            className: "type",
+            begin: /</,
+            end: />/,
+            excludeBegin: true,
+            excludeEnd: true,
+            relevance: 0
+          },
+          {
+            className: "type",
+            begin: /[,:]\s*/,
+            end: /[<\(,){\s]|$/,
+            excludeBegin: true,
+            returnEnd: true
+          },
+          ANNOTATION_USE_SITE,
+          ANNOTATION
+        ]
+      },
+      STRING,
+      {
+        className: "meta",
+        begin: "^#!/usr/bin/env",
+        end: "$",
+        illegal: "\n"
+      },
+      KOTLIN_NUMBER_MODE
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/less.js
+var MODES2 = (hljs) => {
+  return {
+    IMPORTANT: {
+      scope: "meta",
+      begin: "!important"
+    },
+    BLOCK_COMMENT: hljs.C_BLOCK_COMMENT_MODE,
+    HEXCOLOR: {
+      scope: "number",
+      begin: /#(([0-9a-fA-F]{3,4})|(([0-9a-fA-F]{2}){3,4}))\b/
+    },
+    UNICODE_RANGE: {
+      scope: "number",
+      begin: /\b[Uu]\+[0-9A-Fa-f][0-9A-Fa-f?]{0,5}(-[0-9A-Fa-f][0-9A-Fa-f]{0,5})?/
+    },
+    FUNCTION_DISPATCH: {
+      className: "built_in",
+      begin: /[\w-]+(?=\()/
+    },
+    ATTRIBUTE_SELECTOR_MODE: {
+      scope: "selector-attr",
+      begin: /\[/,
+      end: /\]/,
+      illegal: "$",
+      contains: [
+        hljs.APOS_STRING_MODE,
+        hljs.QUOTE_STRING_MODE
+      ]
+    },
+    CSS_NUMBER_MODE: {
+      scope: "number",
+      begin: hljs.NUMBER_RE + "(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+      relevance: 0
+    },
+    CSS_VARIABLE: {
+      className: "attr",
+      begin: /--[A-Za-z_][A-Za-z0-9_-]*/
+    }
+  };
+};
+var HTML_TAGS2 = [
+  "a",
+  "abbr",
+  "address",
+  "article",
+  "aside",
+  "audio",
+  "b",
+  "blockquote",
+  "body",
+  "button",
+  "canvas",
+  "caption",
+  "cite",
+  "code",
+  "dd",
+  "del",
+  "details",
+  "dfn",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hgroup",
+  "html",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "label",
+  "legend",
+  "li",
+  "main",
+  "mark",
+  "menu",
+  "nav",
+  "object",
+  "ol",
+  "optgroup",
+  "option",
+  "p",
+  "picture",
+  "q",
+  "quote",
+  "samp",
+  "section",
+  "select",
+  "source",
+  "span",
+  "strong",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "time",
+  "tr",
+  "ul",
+  "var",
+  "video"
+];
+var SVG_TAGS2 = [
+  "defs",
+  "g",
+  "marker",
+  "mask",
+  "pattern",
+  "svg",
+  "switch",
+  "symbol",
+  "feBlend",
+  "feColorMatrix",
+  "feComponentTransfer",
+  "feComposite",
+  "feConvolveMatrix",
+  "feDiffuseLighting",
+  "feDisplacementMap",
+  "feFlood",
+  "feGaussianBlur",
+  "feImage",
+  "feMerge",
+  "feMorphology",
+  "feOffset",
+  "feSpecularLighting",
+  "feTile",
+  "feTurbulence",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "circle",
+  "ellipse",
+  "image",
+  "line",
+  "path",
+  "polygon",
+  "polyline",
+  "rect",
+  "text",
+  "use",
+  "textPath",
+  "tspan",
+  "foreignObject",
+  "clipPath"
+];
+var TAGS2 = [
+  ...HTML_TAGS2,
+  ...SVG_TAGS2
+];
+var MEDIA_FEATURES2 = [
+  "any-hover",
+  "any-pointer",
+  "aspect-ratio",
+  "color",
+  "color-gamut",
+  "color-index",
+  "device-aspect-ratio",
+  "device-height",
+  "device-width",
+  "display-mode",
+  "forced-colors",
+  "grid",
+  "height",
+  "hover",
+  "inverted-colors",
+  "monochrome",
+  "orientation",
+  "overflow-block",
+  "overflow-inline",
+  "pointer",
+  "prefers-color-scheme",
+  "prefers-contrast",
+  "prefers-reduced-motion",
+  "prefers-reduced-transparency",
+  "resolution",
+  "scan",
+  "scripting",
+  "update",
+  "width",
+  // TODO: find a better solution?
+  "min-width",
+  "max-width",
+  "min-height",
+  "max-height"
+].sort().reverse();
+var PSEUDO_CLASSES2 = [
+  "active",
+  "any-link",
+  "blank",
+  "checked",
+  "current",
+  "default",
+  "defined",
+  "dir",
+  // dir()
+  "disabled",
+  "drop",
+  "empty",
+  "enabled",
+  "first",
+  "first-child",
+  "first-of-type",
+  "fullscreen",
+  "future",
+  "focus",
+  "focus-visible",
+  "focus-within",
+  "has",
+  // has()
+  "host",
+  // host or host()
+  "host-context",
+  // host-context()
+  "hover",
+  "indeterminate",
+  "in-range",
+  "invalid",
+  "is",
+  // is()
+  "lang",
+  // lang()
+  "last-child",
+  "last-of-type",
+  "left",
+  "link",
+  "local-link",
+  "not",
+  // not()
+  "nth-child",
+  // nth-child()
+  "nth-col",
+  // nth-col()
+  "nth-last-child",
+  // nth-last-child()
+  "nth-last-col",
+  // nth-last-col()
+  "nth-last-of-type",
+  //nth-last-of-type()
+  "nth-of-type",
+  //nth-of-type()
+  "only-child",
+  "only-of-type",
+  "optional",
+  "out-of-range",
+  "past",
+  "placeholder-shown",
+  "read-only",
+  "read-write",
+  "required",
+  "right",
+  "root",
+  "scope",
+  "target",
+  "target-within",
+  "user-invalid",
+  "valid",
+  "visited",
+  "where"
+  // where()
+].sort().reverse();
+var PSEUDO_ELEMENTS2 = [
+  "after",
+  "backdrop",
+  "before",
+  "cue",
+  "cue-region",
+  "first-letter",
+  "first-line",
+  "grammar-error",
+  "marker",
+  "part",
+  "placeholder",
+  "selection",
+  "slotted",
+  "spelling-error"
+].sort().reverse();
+var ATTRIBUTES2 = [
+  "accent-color",
+  "align-content",
+  "align-items",
+  "align-self",
+  "alignment-baseline",
+  "all",
+  "anchor-name",
+  "animation",
+  "animation-composition",
+  "animation-delay",
+  "animation-direction",
+  "animation-duration",
+  "animation-fill-mode",
+  "animation-iteration-count",
+  "animation-name",
+  "animation-play-state",
+  "animation-range",
+  "animation-range-end",
+  "animation-range-start",
+  "animation-timeline",
+  "animation-timing-function",
+  "appearance",
+  "aspect-ratio",
+  "backdrop-filter",
+  "backface-visibility",
+  "background",
+  "background-attachment",
+  "background-blend-mode",
+  "background-clip",
+  "background-color",
+  "background-image",
+  "background-origin",
+  "background-position",
+  "background-position-x",
+  "background-position-y",
+  "background-repeat",
+  "background-size",
+  "baseline-shift",
+  "block-size",
+  "border",
+  "border-block",
+  "border-block-color",
+  "border-block-end",
+  "border-block-end-color",
+  "border-block-end-style",
+  "border-block-end-width",
+  "border-block-start",
+  "border-block-start-color",
+  "border-block-start-style",
+  "border-block-start-width",
+  "border-block-style",
+  "border-block-width",
+  "border-bottom",
+  "border-bottom-color",
+  "border-bottom-left-radius",
+  "border-bottom-right-radius",
+  "border-bottom-style",
+  "border-bottom-width",
+  "border-collapse",
+  "border-color",
+  "border-end-end-radius",
+  "border-end-start-radius",
+  "border-image",
+  "border-image-outset",
+  "border-image-repeat",
+  "border-image-slice",
+  "border-image-source",
+  "border-image-width",
+  "border-inline",
+  "border-inline-color",
+  "border-inline-end",
+  "border-inline-end-color",
+  "border-inline-end-style",
+  "border-inline-end-width",
+  "border-inline-start",
+  "border-inline-start-color",
+  "border-inline-start-style",
+  "border-inline-start-width",
+  "border-inline-style",
+  "border-inline-width",
+  "border-left",
+  "border-left-color",
+  "border-left-style",
+  "border-left-width",
+  "border-radius",
+  "border-right",
+  "border-right-color",
+  "border-right-style",
+  "border-right-width",
+  "border-spacing",
+  "border-start-end-radius",
+  "border-start-start-radius",
+  "border-style",
+  "border-top",
+  "border-top-color",
+  "border-top-left-radius",
+  "border-top-right-radius",
+  "border-top-style",
+  "border-top-width",
+  "border-width",
+  "bottom",
+  "box-align",
+  "box-decoration-break",
+  "box-direction",
+  "box-flex",
+  "box-flex-group",
+  "box-lines",
+  "box-ordinal-group",
+  "box-orient",
+  "box-pack",
+  "box-shadow",
+  "box-sizing",
+  "break-after",
+  "break-before",
+  "break-inside",
+  "caption-side",
+  "caret-color",
+  "clear",
+  "clip",
+  "clip-path",
+  "clip-rule",
+  "color",
+  "color-interpolation",
+  "color-interpolation-filters",
+  "color-profile",
+  "color-rendering",
+  "color-scheme",
+  "column-count",
+  "column-fill",
+  "column-gap",
+  "column-rule",
+  "column-rule-color",
+  "column-rule-style",
+  "column-rule-width",
+  "column-span",
+  "column-width",
+  "columns",
+  "contain",
+  "contain-intrinsic-block-size",
+  "contain-intrinsic-height",
+  "contain-intrinsic-inline-size",
+  "contain-intrinsic-size",
+  "contain-intrinsic-width",
+  "container",
+  "container-name",
+  "container-type",
+  "content",
+  "content-visibility",
+  "corner-bottom-left-shape",
+  "corner-bottom-right-shape",
+  "corner-shape",
+  "corner-top-left-shape",
+  "corner-top-right-shape",
+  "counter-increment",
+  "counter-reset",
+  "counter-set",
+  "cue",
+  "cue-after",
+  "cue-before",
+  "cursor",
+  "cx",
+  "cy",
+  "direction",
+  "display",
+  "dominant-baseline",
+  "empty-cells",
+  "enable-background",
+  "field-sizing",
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "filter",
+  "flex",
+  "flex-basis",
+  "flex-direction",
+  "flex-flow",
+  "flex-grow",
+  "flex-shrink",
+  "flex-wrap",
+  "float",
+  "flood-color",
+  "flood-opacity",
+  "flow",
+  "font",
+  "font-display",
+  "font-family",
+  "font-feature-settings",
+  "font-kerning",
+  "font-language-override",
+  "font-optical-sizing",
+  "font-palette",
+  "font-size",
+  "font-size-adjust",
+  "font-smooth",
+  "font-smoothing",
+  "font-stretch",
+  "font-style",
+  "font-synthesis",
+  "font-synthesis-position",
+  "font-synthesis-small-caps",
+  "font-synthesis-style",
+  "font-synthesis-weight",
+  "font-variant",
+  "font-variant-alternates",
+  "font-variant-caps",
+  "font-variant-east-asian",
+  "font-variant-emoji",
+  "font-variant-ligatures",
+  "font-variant-numeric",
+  "font-variant-position",
+  "font-variation-settings",
+  "font-weight",
+  "forced-color-adjust",
+  "gap",
+  "glyph-orientation-horizontal",
+  "glyph-orientation-vertical",
+  "grid",
+  "grid-area",
+  "grid-auto-columns",
+  "grid-auto-flow",
+  "grid-auto-rows",
+  "grid-column",
+  "grid-column-end",
+  "grid-column-start",
+  "grid-gap",
+  "grid-row",
+  "grid-row-end",
+  "grid-row-start",
+  "grid-template",
+  "grid-template-areas",
+  "grid-template-columns",
+  "grid-template-rows",
+  "hanging-punctuation",
+  "height",
+  "hyphenate-character",
+  "hyphenate-limit-chars",
+  "hyphens",
+  "icon",
+  "image-orientation",
+  "image-rendering",
+  "image-resolution",
+  "ime-mode",
+  "initial-letter",
+  "initial-letter-align",
+  "inline-size",
+  "inset",
+  "inset-area",
+  "inset-block",
+  "inset-block-end",
+  "inset-block-start",
+  "inset-inline",
+  "inset-inline-end",
+  "inset-inline-start",
+  "isolation",
+  "justify-content",
+  "justify-items",
+  "justify-self",
+  "kerning",
+  "left",
+  "letter-spacing",
+  "lighting-color",
+  "line-break",
+  "line-height",
+  "line-height-step",
+  "list-style",
+  "list-style-image",
+  "list-style-position",
+  "list-style-type",
+  "margin",
+  "margin-block",
+  "margin-block-end",
+  "margin-block-start",
+  "margin-bottom",
+  "margin-inline",
+  "margin-inline-end",
+  "margin-inline-start",
+  "margin-left",
+  "margin-right",
+  "margin-top",
+  "margin-trim",
+  "marker",
+  "marker-end",
+  "marker-mid",
+  "marker-start",
+  "marks",
+  "mask",
+  "mask-border",
+  "mask-border-mode",
+  "mask-border-outset",
+  "mask-border-repeat",
+  "mask-border-slice",
+  "mask-border-source",
+  "mask-border-width",
+  "mask-clip",
+  "mask-composite",
+  "mask-image",
+  "mask-mode",
+  "mask-origin",
+  "mask-position",
+  "mask-repeat",
+  "mask-size",
+  "mask-type",
+  "masonry-auto-flow",
+  "math-depth",
+  "math-shift",
+  "math-style",
+  "max-block-size",
+  "max-height",
+  "max-inline-size",
+  "max-width",
+  "min-block-size",
+  "min-height",
+  "min-inline-size",
+  "min-width",
+  "mix-blend-mode",
+  "nav-down",
+  "nav-index",
+  "nav-left",
+  "nav-right",
+  "nav-up",
+  "none",
+  "normal",
+  "object-fit",
+  "object-position",
+  "offset",
+  "offset-anchor",
+  "offset-distance",
+  "offset-path",
+  "offset-position",
+  "offset-rotate",
+  "opacity",
+  "order",
+  "orphans",
+  "outline",
+  "outline-color",
+  "outline-offset",
+  "outline-style",
+  "outline-width",
+  "overflow",
+  "overflow-anchor",
+  "overflow-block",
+  "overflow-clip-margin",
+  "overflow-inline",
+  "overflow-wrap",
+  "overflow-x",
+  "overflow-y",
+  "overlay",
+  "overscroll-behavior",
+  "overscroll-behavior-block",
+  "overscroll-behavior-inline",
+  "overscroll-behavior-x",
+  "overscroll-behavior-y",
+  "padding",
+  "padding-block",
+  "padding-block-end",
+  "padding-block-start",
+  "padding-bottom",
+  "padding-inline",
+  "padding-inline-end",
+  "padding-inline-start",
+  "padding-left",
+  "padding-right",
+  "padding-top",
+  "page",
+  "page-break-after",
+  "page-break-before",
+  "page-break-inside",
+  "paint-order",
+  "pause",
+  "pause-after",
+  "pause-before",
+  "perspective",
+  "perspective-origin",
+  "place-content",
+  "place-items",
+  "place-self",
+  "pointer-events",
+  "position",
+  "position-anchor",
+  "position-visibility",
+  "print-color-adjust",
+  "quotes",
+  "r",
+  "resize",
+  "rest",
+  "rest-after",
+  "rest-before",
+  "right",
+  "rotate",
+  "row-gap",
+  "ruby-align",
+  "ruby-position",
+  "scale",
+  "scroll-behavior",
+  "scroll-margin",
+  "scroll-margin-block",
+  "scroll-margin-block-end",
+  "scroll-margin-block-start",
+  "scroll-margin-bottom",
+  "scroll-margin-inline",
+  "scroll-margin-inline-end",
+  "scroll-margin-inline-start",
+  "scroll-margin-left",
+  "scroll-margin-right",
+  "scroll-margin-top",
+  "scroll-padding",
+  "scroll-padding-block",
+  "scroll-padding-block-end",
+  "scroll-padding-block-start",
+  "scroll-padding-bottom",
+  "scroll-padding-inline",
+  "scroll-padding-inline-end",
+  "scroll-padding-inline-start",
+  "scroll-padding-left",
+  "scroll-padding-right",
+  "scroll-padding-top",
+  "scroll-snap-align",
+  "scroll-snap-stop",
+  "scroll-snap-type",
+  "scroll-timeline",
+  "scroll-timeline-axis",
+  "scroll-timeline-name",
+  "scrollbar-color",
+  "scrollbar-gutter",
+  "scrollbar-width",
+  "shape-image-threshold",
+  "shape-margin",
+  "shape-outside",
+  "shape-rendering",
+  "speak",
+  "speak-as",
+  "src",
+  // @font-face
+  "stop-color",
+  "stop-opacity",
+  "stroke",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "stroke-opacity",
+  "stroke-width",
+  "tab-size",
+  "table-layout",
+  "text-align",
+  "text-align-all",
+  "text-align-last",
+  "text-anchor",
+  "text-combine-upright",
+  "text-decoration",
+  "text-decoration-color",
+  "text-decoration-line",
+  "text-decoration-skip",
+  "text-decoration-skip-ink",
+  "text-decoration-style",
+  "text-decoration-thickness",
+  "text-emphasis",
+  "text-emphasis-color",
+  "text-emphasis-position",
+  "text-emphasis-style",
+  "text-indent",
+  "text-justify",
+  "text-orientation",
+  "text-overflow",
+  "text-rendering",
+  "text-shadow",
+  "text-size-adjust",
+  "text-transform",
+  "text-underline-offset",
+  "text-underline-position",
+  "text-wrap",
+  "text-wrap-mode",
+  "text-wrap-style",
+  "timeline-scope",
+  "top",
+  "touch-action",
+  "transform",
+  "transform-box",
+  "transform-origin",
+  "transform-style",
+  "transition",
+  "transition-behavior",
+  "transition-delay",
+  "transition-duration",
+  "transition-property",
+  "transition-timing-function",
+  "translate",
+  "unicode-bidi",
+  "unicode-range",
+  "user-modify",
+  "user-select",
+  "vector-effect",
+  "vertical-align",
+  "view-timeline",
+  "view-timeline-axis",
+  "view-timeline-inset",
+  "view-timeline-name",
+  "view-transition-name",
+  "visibility",
+  "voice-balance",
+  "voice-duration",
+  "voice-family",
+  "voice-pitch",
+  "voice-range",
+  "voice-rate",
+  "voice-stress",
+  "voice-volume",
+  "white-space",
+  "white-space-collapse",
+  "widows",
+  "width",
+  "will-change",
+  "word-break",
+  "word-spacing",
+  "word-wrap",
+  "writing-mode",
+  "x",
+  "y",
+  "z-index",
+  "zoom"
+].sort().reverse();
+var PSEUDO_SELECTORS = PSEUDO_CLASSES2.concat(PSEUDO_ELEMENTS2).sort().reverse();
+function less(hljs) {
+  const modes = MODES2(hljs);
+  const PSEUDO_SELECTORS$1 = PSEUDO_SELECTORS;
+  const AT_MODIFIERS = "and or not only";
+  const IDENT_RE3 = "[\\w-]+";
+  const INTERP_IDENT_RE = "(" + IDENT_RE3 + "|@\\{" + IDENT_RE3 + "\\})";
+  const RULES = [];
+  const VALUE_MODES = [];
+  const STRING_MODE = function(c2) {
+    return {
+      // Less strings are not multiline (also include '~' for more consistent coloring of "escaped" strings)
+      className: "string",
+      begin: "~?" + c2 + ".*?" + c2
+    };
+  };
+  const IDENT_MODE = function(name, begin, relevance) {
+    return {
+      className: name,
+      begin,
+      relevance
+    };
+  };
+  const AT_KEYWORDS = {
+    $pattern: /[a-z-]+/,
+    keyword: AT_MODIFIERS,
+    attribute: MEDIA_FEATURES2.join(" ")
+  };
+  const PARENS_MODE = {
+    // used only to properly balance nested parens inside mixin call, def. arg list
+    begin: "\\(",
+    end: "\\)",
+    contains: VALUE_MODES,
+    keywords: AT_KEYWORDS,
+    relevance: 0
+  };
+  VALUE_MODES.push(
+    hljs.C_LINE_COMMENT_MODE,
+    hljs.C_BLOCK_COMMENT_MODE,
+    STRING_MODE("'"),
+    STRING_MODE('"'),
+    modes.CSS_NUMBER_MODE,
+    // fixme: it does not include dot for numbers like .5em :(
+    {
+      begin: "(url|data-uri)\\(",
+      starts: {
+        className: "string",
+        end: "[\\)\\n]",
+        excludeEnd: true
+      }
+    },
+    modes.UNICODE_RANGE,
+    modes.HEXCOLOR,
+    PARENS_MODE,
+    IDENT_MODE("variable", "@@?" + IDENT_RE3, 10),
+    IDENT_MODE("variable", "@\\{" + IDENT_RE3 + "\\}"),
+    IDENT_MODE("built_in", "~?`[^`]*?`"),
+    // inline javascript (or whatever host language) *multiline* string
+    {
+      // @media features (it’s here to not duplicate things in AT_RULE_MODE with extra PARENS_MODE overriding):
+      className: "attribute",
+      begin: IDENT_RE3 + "\\s*:",
+      end: ":",
+      returnBegin: true,
+      excludeEnd: true
+    },
+    modes.IMPORTANT,
+    { beginKeywords: "and not" },
+    modes.FUNCTION_DISPATCH
+  );
+  const VALUE_WITH_RULESETS = VALUE_MODES.concat({
+    begin: /\{/,
+    end: /\}/,
+    contains: RULES
+  });
+  const MIXIN_GUARD_MODE = {
+    beginKeywords: "when",
+    endsWithParent: true,
+    contains: [{ beginKeywords: "and not" }].concat(VALUE_MODES)
+    // using this form to override VALUE’s 'function' match
+  };
+  const RULE_MODE = {
+    begin: INTERP_IDENT_RE + "\\s*:",
+    returnBegin: true,
+    end: /[;}]/,
+    relevance: 0,
+    contains: [
+      { begin: /-(webkit|moz|ms|o)-/ },
+      modes.CSS_VARIABLE,
+      {
+        className: "attribute",
+        begin: "\\b(" + ATTRIBUTES2.join("|") + ")\\b",
+        end: /(?=:)/,
+        starts: {
+          endsWithParent: true,
+          illegal: "[<=$]",
+          relevance: 0,
+          contains: VALUE_MODES
+        }
+      }
+    ]
+  };
+  const AT_RULE_MODE = {
+    className: "keyword",
+    begin: "@(import|media|charset|font-face|(-[a-z]+-)?keyframes|supports|document|namespace|page|viewport|host)\\b",
+    starts: {
+      end: "[;{}]",
+      keywords: AT_KEYWORDS,
+      returnEnd: true,
+      contains: VALUE_MODES,
+      relevance: 0
+    }
+  };
+  const VAR_RULE_MODE = {
+    className: "variable",
+    variants: [
+      // using more strict pattern for higher relevance to increase chances of Less detection.
+      // this is *the only* Less specific statement used in most of the sources, so...
+      // (we’ll still often loose to the css-parser unless there's '//' comment,
+      // simply because 1 variable just can't beat 99 properties :)
+      {
+        begin: "@" + IDENT_RE3 + "\\s*:",
+        relevance: 15
+      },
+      { begin: "@" + IDENT_RE3 }
+    ],
+    starts: {
+      end: "[;}]",
+      returnEnd: true,
+      contains: VALUE_WITH_RULESETS
+    }
+  };
+  const SELECTOR_MODE = {
+    // first parse unambiguous selectors (i.e. those not starting with tag)
+    // then fall into the scary lookahead-discriminator variant.
+    // this mode also handles mixin definitions and calls
+    variants: [
+      {
+        begin: "[\\.#:&\\[>]",
+        end: "[;{}]"
+        // mixin calls end with ';'
+      },
+      {
+        begin: INTERP_IDENT_RE,
+        end: /\{/
+      }
+    ],
+    returnBegin: true,
+    returnEnd: true,
+    illegal: `[<='$"]`,
+    relevance: 0,
+    contains: [
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      MIXIN_GUARD_MODE,
+      IDENT_MODE("keyword", "all\\b"),
+      IDENT_MODE("variable", "@\\{" + IDENT_RE3 + "\\}"),
+      // otherwise it’s identified as tag
+      {
+        begin: "\\b(" + TAGS2.join("|") + ")\\b",
+        className: "selector-tag"
+      },
+      modes.CSS_NUMBER_MODE,
+      IDENT_MODE("selector-tag", INTERP_IDENT_RE, 0),
+      IDENT_MODE("selector-id", "#" + INTERP_IDENT_RE),
+      IDENT_MODE("selector-class", "\\." + INTERP_IDENT_RE, 0),
+      IDENT_MODE("selector-tag", "&", 0),
+      modes.ATTRIBUTE_SELECTOR_MODE,
+      {
+        className: "selector-pseudo",
+        begin: ":(" + PSEUDO_CLASSES2.join("|") + ")"
+      },
+      {
+        className: "selector-pseudo",
+        begin: ":(:)?(" + PSEUDO_ELEMENTS2.join("|") + ")"
+      },
+      {
+        begin: /\(/,
+        end: /\)/,
+        relevance: 0,
+        contains: VALUE_WITH_RULESETS
+      },
+      // argument list of parametric mixins
+      { begin: "!important" },
+      // eat !important after mixin call or it will be colored as tag
+      modes.FUNCTION_DISPATCH
+    ]
+  };
+  const PSEUDO_SELECTOR_MODE = {
+    begin: IDENT_RE3 + `:(:)?(${PSEUDO_SELECTORS$1.join("|")})`,
+    returnBegin: true,
+    contains: [SELECTOR_MODE]
+  };
+  RULES.push(
+    hljs.C_LINE_COMMENT_MODE,
+    hljs.C_BLOCK_COMMENT_MODE,
+    AT_RULE_MODE,
+    VAR_RULE_MODE,
+    PSEUDO_SELECTOR_MODE,
+    RULE_MODE,
+    SELECTOR_MODE,
+    MIXIN_GUARD_MODE,
+    modes.FUNCTION_DISPATCH
+  );
+  return {
+    name: "Less",
+    case_insensitive: true,
+    illegal: `[=>'/<($"]`,
+    contains: RULES
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/lua.js
+function lua(hljs) {
+  const OPENING_LONG_BRACKET = "\\[=*\\[";
+  const CLOSING_LONG_BRACKET = "\\]=*\\]";
+  const LONG_BRACKETS = {
+    begin: OPENING_LONG_BRACKET,
+    end: CLOSING_LONG_BRACKET,
+    contains: ["self"]
+  };
+  const COMMENTS = [
+    hljs.COMMENT("--(?!" + OPENING_LONG_BRACKET + ")", "$"),
+    hljs.COMMENT(
+      "--" + OPENING_LONG_BRACKET,
+      CLOSING_LONG_BRACKET,
+      {
+        contains: [LONG_BRACKETS],
+        relevance: 10
+      }
+    )
+  ];
+  return {
+    name: "Lua",
+    aliases: ["pluto"],
+    keywords: {
+      $pattern: hljs.UNDERSCORE_IDENT_RE,
+      literal: "true false nil",
+      keyword: "and break do else elseif end for goto if in local global not or repeat return then until while",
+      built_in: (
+        // Metatags and globals:
+        "_G _ENV _VERSION __index __newindex __mode __call __metatable __tostring __len __gc __add __sub __mul __div __mod __pow __concat __unm __eq __lt __le assert collectgarbage dofile error getfenv getmetatable ipairs load loadfile loadstring module next pairs pcall print rawequal rawget rawset require select setfenv setmetatable tonumber tostring type unpack xpcall arg self coroutine resume yield status wrap create running debug getupvalue debug sethook getmetatable gethook setmetatable setlocal traceback setfenv getinfo setupvalue getlocal getregistry getfenv io lines write close flush open output type read stderr stdin input stdout popen tmpfile math log max acos huge ldexp pi cos tanh pow deg tan cosh sinh random randomseed frexp ceil floor rad abs sqrt modf asin min mod fmod log10 atan2 exp sin atan os exit setlocale date getenv difftime remove time clock tmpname rename execute package preload loadlib loaded loaders cpath config path seeall string sub upper len gfind rep find match char dump gmatch reverse byte format gsub lower table setn insert getn foreachi maxn foreach concat sort remove"
+      )
+    },
+    contains: COMMENTS.concat([
+      {
+        className: "function",
+        beginKeywords: "function",
+        end: "\\)",
+        contains: [
+          hljs.inherit(hljs.TITLE_MODE, { begin: "([_a-zA-Z]\\w*\\.)*([_a-zA-Z]\\w*:)?[_a-zA-Z]\\w*" }),
+          {
+            className: "params",
+            begin: "\\(",
+            endsWithParent: true,
+            contains: COMMENTS
+          }
+        ].concat(COMMENTS)
+      },
+      hljs.C_NUMBER_MODE,
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      {
+        className: "string",
+        begin: OPENING_LONG_BRACKET,
+        end: CLOSING_LONG_BRACKET,
+        contains: [LONG_BRACKETS],
+        relevance: 5
+      }
+    ])
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/markdown.js
+function markdown(hljs) {
+  const regex = hljs.regex;
+  const INLINE_HTML = {
+    begin: /<\/?[A-Za-z_]/,
+    end: ">",
+    subLanguage: "xml",
+    relevance: 0
+  };
+  const HORIZONTAL_RULE = { match: /^ {0,3}([-*_])[ \t]*(?:\1[ \t]*){2,}$/ };
+  const CODE = {
+    className: "code",
+    variants: [
+      // TODO: fix to allow these to work with sublanguage also
+      { begin: "(`{3,})[^`](.|\\n)*?\\1`*[ ]*" },
+      { begin: "(~{3,})[^~](.|\\n)*?\\1~*[ ]*" },
+      // needed to allow markdown as a sublanguage to work
+      {
+        begin: "```",
+        end: "```+[ ]*$"
+      },
+      {
+        begin: "~~~",
+        end: "~~~+[ ]*$"
+      },
+      { begin: "`.+?`" },
+      {
+        begin: "(?=^( {4}|\\t))",
+        // use contains to gobble up multiple lines to allow the block to be whatever size
+        // but only have a single open/close tag vs one per line
+        contains: [
+          {
+            begin: "^( {4}|\\t)",
+            end: "(\\n)$"
+          }
+        ],
+        relevance: 0
+      }
+    ]
+  };
+  const LIST = {
+    className: "bullet",
+    begin: "^[ 	]*([*+-]|(\\d+\\.))(?=\\s+)",
+    end: "\\s+",
+    excludeEnd: true
+  };
+  const LINK_REFERENCE = {
+    begin: /^\[[^\n]+\]:/,
+    returnBegin: true,
+    contains: [
+      {
+        className: "symbol",
+        begin: /\[/,
+        end: /\]/,
+        excludeBegin: true,
+        excludeEnd: true
+      },
+      {
+        className: "link",
+        begin: /:\s*/,
+        end: /$/,
+        excludeBegin: true
+      }
+    ]
+  };
+  const URL_SCHEME = /[A-Za-z][A-Za-z0-9+.-]*/;
+  const LINK = {
+    variants: [
+      // too much like nested array access in so many languages
+      // to have any real relevance
+      {
+        begin: /\[.+?\]\[.*?\]/,
+        relevance: 0
+      },
+      // popular internet URLs
+      {
+        begin: /\[.+?\]\(((data|javascript|mailto):|(?:http|ftp)s?:\/\/).*?\)/,
+        relevance: 2
+      },
+      {
+        begin: regex.concat(/\[.+?\]\(/, URL_SCHEME, /:\/\/.*?\)/),
+        relevance: 2
+      },
+      // relative urls
+      {
+        begin: /\[.+?\]\([./?&#].*?\)/,
+        relevance: 1
+      },
+      // whatever else, lower relevance (might not be a link at all)
+      {
+        begin: /\[.*?\]\(.*?\)/,
+        relevance: 0
+      }
+    ],
+    returnBegin: true,
+    contains: [
+      {
+        // empty strings for alt or link text
+        match: /\[(?=\])/
+      },
+      {
+        className: "string",
+        relevance: 0,
+        begin: "\\[",
+        end: "\\]",
+        excludeBegin: true,
+        returnEnd: true
+      },
+      {
+        className: "link",
+        relevance: 0,
+        begin: "\\]\\(",
+        end: "\\)",
+        excludeBegin: true,
+        excludeEnd: true
+      },
+      {
+        className: "symbol",
+        relevance: 0,
+        begin: "\\]\\[",
+        end: "\\]",
+        excludeBegin: true,
+        excludeEnd: true
+      }
+    ]
+  };
+  const BOLD = {
+    className: "strong",
+    contains: [],
+    // defined later
+    variants: [
+      {
+        begin: /_{2}(?!\s)/,
+        end: /_{2}/
+      },
+      {
+        begin: /\*{2}(?!\s)/,
+        end: /\*{2}/
+      }
+    ]
+  };
+  const ITALIC = {
+    className: "emphasis",
+    contains: [],
+    // defined later
+    variants: [
+      {
+        begin: /\*(?![*\s])/,
+        end: /\*/
+      },
+      {
+        begin: /_(?![_\s])/,
+        end: /_/,
+        relevance: 0
+      }
+    ]
+  };
+  const BOLD_WITHOUT_ITALIC = hljs.inherit(BOLD, { contains: [] });
+  const ITALIC_WITHOUT_BOLD = hljs.inherit(ITALIC, { contains: [] });
+  BOLD.contains.push(ITALIC_WITHOUT_BOLD);
+  ITALIC.contains.push(BOLD_WITHOUT_ITALIC);
+  let CONTAINABLE = [
+    INLINE_HTML,
+    LINK
+  ];
+  [
+    BOLD,
+    ITALIC,
+    BOLD_WITHOUT_ITALIC,
+    ITALIC_WITHOUT_BOLD
+  ].forEach((m) => {
+    m.contains = m.contains.concat(CONTAINABLE);
+  });
+  CONTAINABLE = CONTAINABLE.concat(BOLD, ITALIC);
+  const HEADER = {
+    className: "section",
+    variants: [
+      {
+        begin: "^#{1,6}",
+        end: "$",
+        contains: CONTAINABLE
+      },
+      {
+        begin: "(?=^.+?\\n[=-]{2,}$)",
+        contains: [
+          { begin: "^[=-]*$" },
+          {
+            begin: "^",
+            end: "\\n",
+            contains: CONTAINABLE
+          }
+        ]
+      }
+    ]
+  };
+  const BLOCKQUOTE = {
+    className: "quote",
+    begin: "^>\\s+",
+    contains: CONTAINABLE,
+    end: "$"
+  };
+  const ENTITY = {
+    //https://spec.commonmark.org/0.31.2/#entity-references
+    scope: "literal",
+    match: /&([a-zA-Z0-9]+|#[0-9]{1,7}|#[Xx][0-9a-fA-F]{1,6});/
+  };
+  return {
+    name: "Markdown",
+    aliases: [
+      "md",
+      "mkdown",
+      "mkd"
+    ],
+    contains: [
+      HEADER,
+      INLINE_HTML,
+      LIST,
+      // must come before BOLD/ITALIC so that a `***` or `___` thematic break
+      // isn't mistaken for the start of bold text
+      HORIZONTAL_RULE,
+      BOLD,
+      ITALIC,
+      BLOCKQUOTE,
+      CODE,
+      LINK,
+      LINK_REFERENCE,
+      ENTITY
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/php.js
+function php(hljs) {
+  const regex = hljs.regex;
+  const NOT_PERL_ETC = /(?![A-Za-z0-9])(?![$])/;
+  const IDENT_RE3 = regex.concat(
+    /[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*/,
+    NOT_PERL_ETC
+  );
+  const PASCAL_CASE_CLASS_NAME_RE = regex.concat(
+    /(\\?[A-Z][a-z0-9_\x7f-\xff]+|\\?[A-Z]+(?=[A-Z][a-z0-9_\x7f-\xff])){1,}/,
+    NOT_PERL_ETC
+  );
+  const UPCASE_NAME_RE = regex.concat(
+    /[A-Z]+/,
+    NOT_PERL_ETC
+  );
+  const VARIABLE = {
+    scope: "variable",
+    match: "\\$+" + IDENT_RE3
+  };
+  const PREPROCESSOR = {
+    scope: "meta",
+    variants: [
+      { begin: /<\?php/, relevance: 10 },
+      // boost for obvious PHP
+      { begin: /<\?=/ },
+      // less relevant per PSR-1 which says not to use short-tags
+      { begin: /<\?/, relevance: 0.1 },
+      { begin: /\?>/ }
+      // end php tag
+    ]
+  };
+  const SUBST = {
+    scope: "subst",
+    variants: [
+      { begin: /\$\w+/ },
+      {
+        begin: /\{\$/,
+        end: /\}/
+      }
+    ]
+  };
+  const SINGLE_QUOTED = hljs.inherit(hljs.APOS_STRING_MODE, { illegal: null });
+  const DOUBLE_QUOTED = hljs.inherit(hljs.QUOTE_STRING_MODE, {
+    illegal: null,
+    contains: hljs.QUOTE_STRING_MODE.contains.concat(SUBST)
+  });
+  const HEREDOC = {
+    begin: /<<<[ \t]*(?:(\w+)|"(\w+)")\n/,
+    end: /[ \t]*(\w+)\b/,
+    contains: hljs.QUOTE_STRING_MODE.contains.concat(SUBST),
+    "on:begin": (m, resp) => {
+      resp.data._beginMatch = m[1] || m[2];
+    },
+    "on:end": (m, resp) => {
+      if (resp.data._beginMatch !== m[1]) resp.ignoreMatch();
+    }
+  };
+  const NOWDOC = hljs.END_SAME_AS_BEGIN({
+    begin: /<<<[ \t]*'(\w+)'\n/,
+    end: /[ \t]*(\w+)\b/
+  });
+  const WHITESPACE = "[ 	\n]";
+  const STRING = {
+    scope: "string",
+    variants: [
+      DOUBLE_QUOTED,
+      SINGLE_QUOTED,
+      HEREDOC,
+      NOWDOC
+    ]
+  };
+  const NUMBER = {
+    scope: "number",
+    variants: [
+      { begin: `\\b0[bB][01]+(?:_[01]+)*\\b` },
+      // Binary w/ underscore support
+      { begin: `\\b0[oO][0-7]+(?:_[0-7]+)*\\b` },
+      // Octals w/ underscore support
+      { begin: `\\b0[xX][\\da-fA-F]+(?:_[\\da-fA-F]+)*\\b` },
+      // Hex w/ underscore support
+      // Decimals w/ underscore support, with optional fragments and scientific exponent (e) suffix.
+      { begin: `(?:\\b\\d+(?:_\\d+)*(\\.(?:\\d+(?:_\\d+)*))?|\\B\\.\\d+)(?:[eE][+-]?\\d+)?` }
+    ],
+    relevance: 0
+  };
+  const LITERALS3 = [
+    "false",
+    "null",
+    "true"
+  ];
+  const KWS = [
+    // Magic constants:
+    // <https://www.php.net/manual/en/language.constants.predefined.php>
+    "__CLASS__",
+    "__DIR__",
+    "__FILE__",
+    "__FUNCTION__",
+    "__COMPILER_HALT_OFFSET__",
+    "__LINE__",
+    "__METHOD__",
+    "__NAMESPACE__",
+    "__TRAIT__",
+    // Function that look like language construct or language construct that look like function:
+    // List of keywords that may not require parenthesis
+    "die",
+    "echo",
+    "exit",
+    "include",
+    "include_once",
+    "print",
+    "require",
+    "require_once",
+    // These are not language construct (function) but operate on the currently-executing function and can access the current symbol table
+    // 'compact extract func_get_arg func_get_args func_num_args get_called_class get_parent_class ' +
+    // Other keywords:
+    // <https://www.php.net/manual/en/reserved.php>
+    // <https://www.php.net/manual/en/language.types.type-juggling.php>
+    "array",
+    "abstract",
+    "and",
+    "as",
+    "binary",
+    "bool",
+    "boolean",
+    "break",
+    "callable",
+    "case",
+    "catch",
+    "class",
+    "clone",
+    "const",
+    "continue",
+    "declare",
+    "default",
+    "do",
+    "double",
+    "else",
+    "elseif",
+    "empty",
+    "enddeclare",
+    "endfor",
+    "endforeach",
+    "endif",
+    "endswitch",
+    "endwhile",
+    "enum",
+    "eval",
+    "extends",
+    "final",
+    "finally",
+    "float",
+    "for",
+    "foreach",
+    "from",
+    "global",
+    "goto",
+    "if",
+    "implements",
+    "instanceof",
+    "insteadof",
+    "int",
+    "integer",
+    "interface",
+    "isset",
+    "iterable",
+    "list",
+    "match|0",
+    "mixed",
+    "new",
+    "never",
+    "object",
+    "or",
+    "private",
+    "protected",
+    "public",
+    "readonly",
+    "real",
+    "return",
+    "string",
+    "switch",
+    "throw",
+    "trait",
+    "try",
+    "unset",
+    "use",
+    "var",
+    "void",
+    "while",
+    "xor",
+    "yield"
+  ];
+  const BUILT_INS3 = [
+    // Standard PHP library:
+    // <https://www.php.net/manual/en/book.spl.php>
+    "Error|0",
+    "AppendIterator",
+    "ArgumentCountError",
+    "ArithmeticError",
+    "ArrayIterator",
+    "ArrayObject",
+    "AssertionError",
+    "BadFunctionCallException",
+    "BadMethodCallException",
+    "CachingIterator",
+    "CallbackFilterIterator",
+    "CompileError",
+    "Countable",
+    "DirectoryIterator",
+    "DivisionByZeroError",
+    "DomainException",
+    "EmptyIterator",
+    "ErrorException",
+    "Exception",
+    "FilesystemIterator",
+    "FilterIterator",
+    "GlobIterator",
+    "InfiniteIterator",
+    "InvalidArgumentException",
+    "IteratorIterator",
+    "LengthException",
+    "LimitIterator",
+    "LogicException",
+    "MultipleIterator",
+    "NoRewindIterator",
+    "OutOfBoundsException",
+    "OutOfRangeException",
+    "OuterIterator",
+    "OverflowException",
+    "ParentIterator",
+    "ParseError",
+    "RangeException",
+    "RecursiveArrayIterator",
+    "RecursiveCachingIterator",
+    "RecursiveCallbackFilterIterator",
+    "RecursiveDirectoryIterator",
+    "RecursiveFilterIterator",
+    "RecursiveIterator",
+    "RecursiveIteratorIterator",
+    "RecursiveRegexIterator",
+    "RecursiveTreeIterator",
+    "RegexIterator",
+    "RuntimeException",
+    "SeekableIterator",
+    "SplDoublyLinkedList",
+    "SplFileInfo",
+    "SplFileObject",
+    "SplFixedArray",
+    "SplHeap",
+    "SplMaxHeap",
+    "SplMinHeap",
+    "SplObjectStorage",
+    "SplObserver",
+    "SplPriorityQueue",
+    "SplQueue",
+    "SplStack",
+    "SplSubject",
+    "SplTempFileObject",
+    "TypeError",
+    "UnderflowException",
+    "UnexpectedValueException",
+    "UnhandledMatchError",
+    // Reserved interfaces:
+    // <https://www.php.net/manual/en/reserved.interfaces.php>
+    "ArrayAccess",
+    "BackedEnum",
+    "Closure",
+    "Fiber",
+    "Generator",
+    "Iterator",
+    "IteratorAggregate",
+    "Serializable",
+    "Stringable",
+    "Throwable",
+    "Traversable",
+    "UnitEnum",
+    "WeakReference",
+    "WeakMap",
+    // Reserved classes:
+    // <https://www.php.net/manual/en/reserved.classes.php>
+    "Directory",
+    "__PHP_Incomplete_Class",
+    "parent",
+    "php_user_filter",
+    "self",
+    "static",
+    "stdClass"
+  ];
+  const dualCase = (items) => {
+    const result = [];
+    items.forEach((item) => {
+      result.push(item);
+      if (item.toLowerCase() === item) {
+        result.push(item.toUpperCase());
+      } else {
+        result.push(item.toLowerCase());
+      }
+    });
+    return result;
+  };
+  const KEYWORDS3 = {
+    keyword: KWS,
+    literal: dualCase(LITERALS3),
+    built_in: BUILT_INS3
+  };
+  const normalizeKeywords = (items) => {
+    return items.map((item) => {
+      return item.replace(/\|\d+$/, "");
+    });
+  };
+  const CONSTRUCTOR_CALL = { variants: [
+    {
+      match: [
+        /new/,
+        regex.concat(WHITESPACE, "+"),
+        // to prevent built ins from being confused as the class constructor call
+        regex.concat("(?!", normalizeKeywords(BUILT_INS3).join("\\b|"), "\\b)"),
+        PASCAL_CASE_CLASS_NAME_RE
+      ],
+      scope: {
+        1: "keyword",
+        4: "title.class"
+      }
+    }
+  ] };
+  const CONSTANT_REFERENCE = regex.concat(IDENT_RE3, "\\b(?!\\()");
+  const LEFT_AND_RIGHT_SIDE_OF_DOUBLE_COLON = { variants: [
+    {
+      match: [
+        regex.concat(
+          /::/,
+          regex.lookahead(/(?!class\b)/)
+        ),
+        CONSTANT_REFERENCE
+      ],
+      scope: { 2: "variable.constant" }
+    },
+    {
+      match: [
+        /::/,
+        /class/
+      ],
+      scope: { 2: "variable.language" }
+    },
+    {
+      match: [
+        PASCAL_CASE_CLASS_NAME_RE,
+        regex.concat(
+          /::/,
+          regex.lookahead(/(?!class\b)/)
+        ),
+        CONSTANT_REFERENCE
+      ],
+      scope: {
+        1: "title.class",
+        3: "variable.constant"
+      }
+    },
+    {
+      match: [
+        PASCAL_CASE_CLASS_NAME_RE,
+        regex.concat(
+          "::",
+          regex.lookahead(/(?!class\b)/)
+        )
+      ],
+      scope: { 1: "title.class" }
+    },
+    {
+      match: [
+        PASCAL_CASE_CLASS_NAME_RE,
+        /::/,
+        /class/
+      ],
+      scope: {
+        1: "title.class",
+        3: "variable.language"
+      }
+    }
+  ] };
+  const NAMED_ARGUMENT = {
+    scope: "attr",
+    match: regex.concat(IDENT_RE3, regex.lookahead(":"), regex.lookahead(/(?!::)/))
+  };
+  const PARAMS_MODE = {
+    relevance: 0,
+    begin: /\(/,
+    end: /\)/,
+    keywords: KEYWORDS3,
+    contains: [
+      NAMED_ARGUMENT,
+      VARIABLE,
+      LEFT_AND_RIGHT_SIDE_OF_DOUBLE_COLON,
+      hljs.C_BLOCK_COMMENT_MODE,
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.HASH_COMMENT_MODE,
+      STRING,
+      NUMBER,
+      CONSTRUCTOR_CALL
+    ]
+  };
+  const FUNCTION_INVOKE = {
+    relevance: 0,
+    match: [
+      /\b/,
+      // to prevent keywords from being confused as the function title
+      regex.concat("(?!fn\\b|function\\b|", normalizeKeywords(KWS).join("\\b|"), "|", normalizeKeywords(BUILT_INS3).join("\\b|"), "\\b)"),
+      IDENT_RE3,
+      regex.concat(WHITESPACE, "*"),
+      regex.lookahead(/(?=\()/)
+    ],
+    scope: { 3: "title.function.invoke" },
+    contains: [PARAMS_MODE]
+  };
+  PARAMS_MODE.contains.push(FUNCTION_INVOKE);
+  const ATTRIBUTE_CONTAINS = [
+    NAMED_ARGUMENT,
+    LEFT_AND_RIGHT_SIDE_OF_DOUBLE_COLON,
+    hljs.C_BLOCK_COMMENT_MODE,
+    hljs.C_LINE_COMMENT_MODE,
+    hljs.HASH_COMMENT_MODE,
+    STRING,
+    NUMBER,
+    CONSTRUCTOR_CALL
+  ];
+  const ATTRIBUTES4 = {
+    begin: regex.concat(
+      /#\[\s*\\?/,
+      regex.either(
+        PASCAL_CASE_CLASS_NAME_RE,
+        UPCASE_NAME_RE
+      )
+    ),
+    beginScope: "meta",
+    end: /]/,
+    endScope: "meta",
+    keywords: {
+      literal: LITERALS3,
+      keyword: [
+        "new",
+        "array"
+      ]
+    },
+    contains: [
+      {
+        begin: /\[/,
+        end: /]/,
+        keywords: {
+          literal: LITERALS3,
+          keyword: [
+            "new",
+            "array"
+          ]
+        },
+        contains: [
+          "self",
+          ...ATTRIBUTE_CONTAINS
+        ]
+      },
+      ...ATTRIBUTE_CONTAINS,
+      {
+        scope: "meta",
+        variants: [
+          { match: PASCAL_CASE_CLASS_NAME_RE },
+          { match: UPCASE_NAME_RE }
+        ]
+      }
+    ]
+  };
+  return {
+    case_insensitive: false,
+    keywords: KEYWORDS3,
+    contains: [
+      ATTRIBUTES4,
+      hljs.HASH_COMMENT_MODE,
+      hljs.COMMENT("//", "$"),
+      hljs.COMMENT(
+        "/\\*",
+        "\\*/",
+        { contains: [
+          {
+            scope: "doctag",
+            match: "@[A-Za-z]+"
+          }
+        ] }
+      ),
+      {
+        match: /__halt_compiler\(\);/,
+        keywords: "__halt_compiler",
+        starts: {
+          scope: "comment",
+          end: hljs.MATCH_NOTHING_RE,
+          contains: [
+            {
+              match: /\?>/,
+              scope: "meta",
+              endsParent: true
+            }
+          ]
+        }
+      },
+      PREPROCESSOR,
+      {
+        scope: "variable.language",
+        match: /\$this\b/
+      },
+      VARIABLE,
+      FUNCTION_INVOKE,
+      LEFT_AND_RIGHT_SIDE_OF_DOUBLE_COLON,
+      {
+        match: [
+          /const/,
+          /\s/,
+          IDENT_RE3
+        ],
+        scope: {
+          1: "keyword",
+          3: "variable.constant"
+        }
+      },
+      CONSTRUCTOR_CALL,
+      {
+        scope: "function",
+        relevance: 0,
+        beginKeywords: "fn function",
+        end: /[;{]/,
+        excludeEnd: true,
+        illegal: "[$%\\[]",
+        contains: [
+          { beginKeywords: "use" },
+          hljs.UNDERSCORE_TITLE_MODE,
+          {
+            begin: "=>",
+            // No markup, just a relevance booster
+            endsParent: true
+          },
+          {
+            scope: "params",
+            begin: "\\(",
+            end: "\\)",
+            excludeBegin: true,
+            excludeEnd: true,
+            keywords: KEYWORDS3,
+            contains: [
+              "self",
+              ATTRIBUTES4,
+              VARIABLE,
+              LEFT_AND_RIGHT_SIDE_OF_DOUBLE_COLON,
+              hljs.C_BLOCK_COMMENT_MODE,
+              hljs.C_LINE_COMMENT_MODE,
+              hljs.HASH_COMMENT_MODE,
+              STRING,
+              NUMBER
+            ]
+          }
+        ]
+      },
+      {
+        scope: "class",
+        variants: [
+          {
+            beginKeywords: "enum",
+            illegal: /[($"]/
+          },
+          {
+            beginKeywords: "class interface trait",
+            illegal: /[:($"]/
+          }
+        ],
+        relevance: 0,
+        end: /\{/,
+        excludeEnd: true,
+        contains: [
+          { beginKeywords: "extends implements" },
+          hljs.UNDERSCORE_TITLE_MODE
+        ]
+      },
+      // both use and namespace still use "old style" rules (vs multi-match)
+      // because the namespace name can include `\` and we still want each
+      // element to be treated as its own *individual* title
+      {
+        beginKeywords: "namespace",
+        relevance: 0,
+        end: ";",
+        illegal: /[.']/,
+        contains: [hljs.inherit(hljs.UNDERSCORE_TITLE_MODE, { scope: "title.class" })]
+      },
+      {
+        beginKeywords: "use",
+        relevance: 0,
+        end: ";",
+        contains: [
+          // TODO: title.function vs title.class
+          {
+            match: /\b(as|const|function)\b/,
+            scope: "keyword"
+          },
+          // TODO: could be title.class or title.function
+          hljs.UNDERSCORE_TITLE_MODE
+        ]
+      },
+      STRING,
+      NUMBER
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/plaintext.js
+function plaintext(hljs) {
+  return {
+    name: "Plain text",
+    aliases: [
+      "text",
+      "txt"
+    ],
+    disableAutodetect: true
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/python.js
+function python(hljs) {
+  const regex = hljs.regex;
+  const IDENT_RE3 = new RegExp("[\\p{XID_Start}_]\\p{XID_Continue}*", "u");
+  const RESERVED_WORDS = [
+    "and",
+    "as",
+    "assert",
+    "async",
+    "await",
+    "break",
+    "case",
+    "class",
+    "continue",
+    "def",
+    "del",
+    "elif",
+    "else",
+    "except",
+    "finally",
+    "for",
+    "from",
+    "global",
+    "if",
+    "import",
+    "in",
+    "is",
+    "lambda",
+    "lazy",
+    "match",
+    "nonlocal|10",
+    "not",
+    "or",
+    "pass",
+    "raise",
+    "return",
+    "try",
+    "while",
+    "with",
+    "yield"
+  ];
+  const BUILT_INS3 = [
+    "__import__",
+    "abs",
+    "aiter",
+    "all",
+    "anext",
+    "any",
+    "ascii",
+    "bin",
+    "bool",
+    "breakpoint",
+    "bytearray",
+    "bytes",
+    "callable",
+    "chr",
+    "classmethod",
+    "compile",
+    "complex",
+    "delattr",
+    "dict",
+    "dir",
+    "divmod",
+    "enumerate",
+    "eval",
+    "exec",
+    "filter",
+    "float",
+    "format",
+    "frozendict",
+    "frozenset",
+    "getattr",
+    "globals",
+    "hasattr",
+    "hash",
+    "help",
+    "hex",
+    "id",
+    "input",
+    "int",
+    "isinstance",
+    "issubclass",
+    "iter",
+    "len",
+    "list",
+    "locals",
+    "map",
+    "max",
+    "memoryview",
+    "min",
+    "next",
+    "object",
+    "oct",
+    "open",
+    "ord",
+    "pow",
+    "print",
+    "property",
+    "range",
+    "repr",
+    "reversed",
+    "round",
+    "sentinel",
+    "set",
+    "setattr",
+    "slice",
+    "sorted",
+    "staticmethod",
+    "str",
+    "sum",
+    "super",
+    "tuple",
+    "type",
+    "vars",
+    "zip"
+  ];
+  const LITERALS3 = [
+    "__debug__",
+    "Ellipsis",
+    "False",
+    "None",
+    "NotImplemented",
+    "True"
+  ];
+  const TYPES3 = [
+    "Any",
+    "Callable",
+    "Coroutine",
+    "Dict",
+    "List",
+    "Literal",
+    "Generic",
+    "Optional",
+    "Sequence",
+    "Set",
+    "Tuple",
+    "Type",
+    "Union"
+  ];
+  const KEYWORDS3 = {
+    $pattern: /[A-Za-z]\w+|__\w+__/,
+    keyword: RESERVED_WORDS,
+    built_in: BUILT_INS3,
+    literal: LITERALS3,
+    type: TYPES3
+  };
+  const PROMPT = {
+    className: "meta",
+    begin: /^(>>>|\.\.\.) /
+  };
+  const SUBST = {
+    className: "subst",
+    begin: /\{/,
+    end: /\}/,
+    keywords: KEYWORDS3,
+    illegal: /#/
+  };
+  const LITERAL_BRACKET = {
+    begin: /\{\{/,
+    relevance: 0
+  };
+  const STRING = {
+    className: "string",
+    contains: [hljs.BACKSLASH_ESCAPE],
+    variants: [
+      {
+        begin: /([uU]|[bB]|[rR]|[bB][rR]|[rR][bB])?'''/,
+        end: /'''/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          PROMPT
+        ],
+        relevance: 10
+      },
+      {
+        begin: /([uU]|[bB]|[rR]|[bB][rR]|[rR][bB])?"""/,
+        end: /"""/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          PROMPT
+        ],
+        relevance: 10
+      },
+      {
+        begin: /([fFtT][rR]|[rR][fFtT]|[fFtT])'''/,
+        end: /'''/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          PROMPT,
+          LITERAL_BRACKET,
+          SUBST
+        ]
+      },
+      {
+        begin: /([fFtT][rR]|[rR][fFtT]|[fFtT])"""/,
+        end: /"""/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          PROMPT,
+          LITERAL_BRACKET,
+          SUBST
+        ]
+      },
+      {
+        begin: /([uU]|[rR])'/,
+        end: /'/,
+        relevance: 10
+      },
+      {
+        begin: /([uU]|[rR])"/,
+        end: /"/,
+        relevance: 10
+      },
+      {
+        begin: /([bB]|[bB][rR]|[rR][bB])'/,
+        end: /'/
+      },
+      {
+        begin: /([bB]|[bB][rR]|[rR][bB])"/,
+        end: /"/
+      },
+      {
+        begin: /([fFtT][rR]|[rR][fFtT]|[fFtT])'/,
+        end: /'/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          LITERAL_BRACKET,
+          SUBST
+        ]
+      },
+      {
+        begin: /([fFtT][rR]|[rR][fFtT]|[fFtT])"/,
+        end: /"/,
+        contains: [
+          hljs.BACKSLASH_ESCAPE,
+          LITERAL_BRACKET,
+          SUBST
+        ]
+      },
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE
+    ]
+  };
+  const digitpart = "[0-9](_?[0-9])*";
+  const pointfloat = `(\\b(${digitpart}))?\\.(${digitpart})|\\b(${digitpart})\\.`;
+  const lookahead2 = `\\b|${RESERVED_WORDS.join("|")}`;
+  const NUMBER = {
+    className: "number",
+    relevance: 0,
+    variants: [
+      // exponentfloat, pointfloat
+      // https://docs.python.org/3.9/reference/lexical_analysis.html#floating-point-literals
+      // optionally imaginary
+      // https://docs.python.org/3.9/reference/lexical_analysis.html#imaginary-literals
+      // Note: no leading \b because floats can start with a decimal point
+      // and we don't want to mishandle e.g. `fn(.5)`,
+      // no trailing \b for pointfloat because it can end with a decimal point
+      // and we don't want to mishandle e.g. `0..hex()`; this should be safe
+      // because both MUST contain a decimal point and so cannot be confused with
+      // the interior part of an identifier
+      {
+        begin: `(\\b(${digitpart})|(${pointfloat}))[eE][+-]?(${digitpart})[jJ]?(?=${lookahead2})`
+      },
+      {
+        begin: `(${pointfloat})[jJ]?`
+      },
+      // decinteger, bininteger, octinteger, hexinteger
+      // https://docs.python.org/3.9/reference/lexical_analysis.html#integer-literals
+      // optionally "long" in Python 2
+      // https://docs.python.org/2.7/reference/lexical_analysis.html#integer-and-long-integer-literals
+      // decinteger is optionally imaginary
+      // https://docs.python.org/3.9/reference/lexical_analysis.html#imaginary-literals
+      {
+        begin: `\\b([1-9](_?[0-9])*|0+(_?0)*)[lLjJ]?(?=${lookahead2})`
+      },
+      {
+        begin: `\\b0[bB](_?[01])+[lL]?(?=${lookahead2})`
+      },
+      {
+        begin: `\\b0[oO](_?[0-7])+[lL]?(?=${lookahead2})`
+      },
+      {
+        begin: `\\b0[xX](_?[0-9a-fA-F])+[lL]?(?=${lookahead2})`
+      },
+      // imagnumber (digitpart-based)
+      // https://docs.python.org/3.9/reference/lexical_analysis.html#imaginary-literals
+      {
+        begin: `\\b(${digitpart})[jJ](?=${lookahead2})`
+      }
+    ]
+  };
+  const COMMENT_TYPE = {
+    className: "comment",
+    begin: regex.lookahead(/# type:/),
+    end: /$/,
+    keywords: KEYWORDS3,
+    contains: [
+      {
+        // prevent keywords from coloring `type`
+        begin: /# type:/
+      },
+      // comment within a datatype comment includes no keywords
+      {
+        begin: /#/,
+        end: /\b\B/,
+        endsWithParent: true
+      }
+    ]
+  };
+  const PARAMS = {
+    className: "params",
+    variants: [
+      // Exclude params in functions without params
+      {
+        className: "",
+        begin: /\(\s*\)/,
+        skip: true
+      },
+      {
+        begin: /\(/,
+        end: /\)/,
+        excludeBegin: true,
+        excludeEnd: true,
+        keywords: KEYWORDS3,
+        contains: [
+          "self",
+          PROMPT,
+          NUMBER,
+          STRING,
+          hljs.HASH_COMMENT_MODE
+        ]
+      }
+    ]
+  };
+  SUBST.contains = [
+    STRING,
+    NUMBER,
+    PROMPT
+  ];
+  return {
+    name: "Python",
+    aliases: [
+      "py",
+      "gyp",
+      "ipython"
+    ],
+    unicodeRegex: true,
+    keywords: KEYWORDS3,
+    illegal: /(<\/|\?)|=>/,
+    contains: [
+      PROMPT,
+      NUMBER,
+      {
+        // very common convention
+        scope: "variable.language",
+        match: /\bself\b/
+      },
+      {
+        // eat "if" prior to string so that it won't accidentally be
+        // labeled as an f-string
+        beginKeywords: "if",
+        relevance: 0
+      },
+      { match: /\bor\b/, scope: "keyword" },
+      STRING,
+      COMMENT_TYPE,
+      hljs.HASH_COMMENT_MODE,
+      {
+        match: [
+          /\bdef/,
+          /\s+/,
+          IDENT_RE3
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.function"
+        },
+        contains: [PARAMS]
+      },
+      {
+        variants: [
+          {
+            match: [
+              /\bclass/,
+              /\s+/,
+              IDENT_RE3,
+              /\s*/,
+              /\(\s*/,
+              IDENT_RE3,
+              /\s*\)/
+            ]
+          },
+          {
+            match: [
+              /\bclass/,
+              /\s+/,
+              IDENT_RE3
+            ]
+          }
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class",
+          6: "title.class.inherited"
+        }
+      },
+      {
+        className: "meta",
+        begin: /^[\t ]*@/,
+        end: /(?=#)|$/,
+        contains: [
+          NUMBER,
+          PARAMS,
+          STRING
+        ]
+      }
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/ruby.js
+function ruby(hljs) {
+  const regex = hljs.regex;
+  const RUBY_METHOD_RE = "([a-zA-Z_]\\w*[!?=]?|[-+~]@|<<|>>|=~|===?|<=>|[<>]=?|\\*\\*|[-/+%^&*~`|]|\\[\\]=?)";
+  const CLASS_NAME_RE = regex.either(
+    /\b([A-Z]+[a-z0-9]+)+/,
+    // ends in caps
+    /\b([A-Z]+[a-z0-9]+)+[A-Z]+/
+  );
+  const CLASS_NAME_WITH_NAMESPACE_RE = regex.concat(CLASS_NAME_RE, /(::\w+)*/);
+  const PSEUDO_KWS = [
+    "include",
+    "extend",
+    "prepend",
+    "public",
+    "private",
+    "protected",
+    "raise",
+    "throw"
+  ];
+  const RUBY_KEYWORDS = {
+    "variable.constant": [
+      "__FILE__",
+      "__LINE__",
+      "__ENCODING__"
+    ],
+    "variable.language": [
+      "self",
+      "super"
+    ],
+    keyword: [
+      "alias",
+      "and",
+      "begin",
+      "BEGIN",
+      "break",
+      "case",
+      "class",
+      "defined",
+      "do",
+      "else",
+      "elsif",
+      "end",
+      "END",
+      "ensure",
+      "for",
+      "if",
+      "in",
+      "module",
+      "next",
+      "not",
+      "or",
+      "redo",
+      "require",
+      "rescue",
+      "retry",
+      "return",
+      "then",
+      "undef",
+      "unless",
+      "until",
+      "when",
+      "while",
+      "yield",
+      ...PSEUDO_KWS
+    ],
+    built_in: [
+      "proc",
+      "lambda",
+      "attr_accessor",
+      "attr_reader",
+      "attr_writer",
+      "define_method",
+      "private_constant",
+      "module_function"
+    ],
+    literal: [
+      "true",
+      "false",
+      "nil"
+    ]
+  };
+  const YARDOCTAG = {
+    className: "doctag",
+    begin: "@[A-Za-z]+"
+  };
+  const IRB_OBJECT = {
+    begin: "#<",
+    end: ">"
+  };
+  const COMMENT_MODES = [
+    hljs.COMMENT(
+      "#",
+      "$",
+      { contains: [YARDOCTAG] }
+    ),
+    hljs.COMMENT(
+      "^=begin",
+      "^=end",
+      {
+        contains: [YARDOCTAG],
+        relevance: 10
+      }
+    ),
+    hljs.COMMENT("^__END__", hljs.MATCH_NOTHING_RE)
+  ];
+  const SUBST = {
+    className: "subst",
+    begin: /#\{/,
+    end: /\}/,
+    keywords: RUBY_KEYWORDS
+  };
+  const STRING = {
+    className: "string",
+    contains: [
+      hljs.BACKSLASH_ESCAPE,
+      SUBST
+    ],
+    variants: [
+      {
+        begin: /'/,
+        end: /'/
+      },
+      {
+        begin: /"/,
+        end: /"/
+      },
+      {
+        begin: /`/,
+        end: /`/
+      },
+      {
+        begin: /%[qQwWx]?\(/,
+        end: /\)/
+      },
+      {
+        begin: /%[qQwWx]?\[/,
+        end: /\]/
+      },
+      {
+        begin: /%[qQwWx]?\{/,
+        end: /\}/
+      },
+      {
+        begin: /%[qQwWx]?</,
+        end: />/
+      },
+      {
+        begin: /%[qQwWx]?\//,
+        end: /\//
+      },
+      {
+        begin: /%[qQwWx]?%/,
+        end: /%/
+      },
+      {
+        begin: /%[qQwWx]?-/,
+        end: /-/
+      },
+      {
+        begin: /%[qQwWx]?\|/,
+        end: /\|/
+      },
+      // in the following expressions, \B in the beginning suppresses recognition of ?-sequences
+      // where ? is the last character of a preceding identifier, as in: `func?4`
+      { begin: /\B\?(\\\d{1,3})/ },
+      { begin: /\B\?(\\x[A-Fa-f0-9]{1,2})/ },
+      { begin: /\B\?(\\u\{?[A-Fa-f0-9]{1,6}\}?)/ },
+      { begin: /\B\?(\\M-\\C-|\\M-\\c|\\c\\M-|\\M-|\\C-\\M-)[\x20-\x7e]/ },
+      { begin: /\B\?\\(c|C-)[\x20-\x7e]/ },
+      { begin: /\B\?\\?\S/ },
+      // heredocs
+      {
+        // this guard makes sure that we have an entire heredoc and not a false
+        // positive (auto-detect, etc.)
+        begin: regex.concat(
+          /<<[-~]?'?/,
+          regex.lookahead(/(\w+)(?=\W)[^\n]*\n(?:[^\n]*\n)*?\s*\1\b/)
+        ),
+        contains: [
+          hljs.END_SAME_AS_BEGIN({
+            begin: /(\w+)/,
+            end: /(\w+)/,
+            contains: [
+              hljs.BACKSLASH_ESCAPE,
+              SUBST
+            ]
+          })
+        ]
+      }
+    ]
+  };
+  const decimal = "[1-9](_?[0-9])*|0";
+  const digits = "[0-9](_?[0-9])*";
+  const NUMBER = {
+    className: "number",
+    relevance: 0,
+    variants: [
+      // decimal integer/float, optionally exponential or rational, optionally imaginary
+      { begin: `\\b(${decimal})(\\.(${digits}))?([eE][+-]?(${digits})|r)?i?\\b` },
+      // explicit decimal/binary/octal/hexadecimal integer,
+      // optionally rational and/or imaginary
+      { begin: "\\b0[dD][0-9](_?[0-9])*r?i?\\b" },
+      { begin: "\\b0[bB][0-1](_?[0-1])*r?i?\\b" },
+      { begin: "\\b0[oO][0-7](_?[0-7])*r?i?\\b" },
+      { begin: "\\b0[xX][0-9a-fA-F](_?[0-9a-fA-F])*r?i?\\b" },
+      // 0-prefixed implicit octal integer, optionally rational and/or imaginary
+      { begin: "\\b0(_?[0-7])+r?i?\\b" }
+    ]
+  };
+  const PARAMS = {
+    variants: [
+      {
+        match: /\(\)/
+      },
+      {
+        className: "params",
+        begin: /\(/,
+        end: /(?=\))/,
+        excludeBegin: true,
+        endsParent: true,
+        keywords: RUBY_KEYWORDS
+      }
+    ]
+  };
+  const INCLUDE_EXTEND = {
+    match: [
+      /(include|extend)\s+/,
+      CLASS_NAME_WITH_NAMESPACE_RE
+    ],
+    scope: {
+      2: "title.class"
+    },
+    keywords: RUBY_KEYWORDS
+  };
+  const CLASS_DEFINITION = {
+    variants: [
+      {
+        match: [
+          /class\s+/,
+          CLASS_NAME_WITH_NAMESPACE_RE,
+          /\s+<\s+/,
+          CLASS_NAME_WITH_NAMESPACE_RE
+        ]
+      },
+      {
+        match: [
+          /\b(class|module)\s+/,
+          CLASS_NAME_WITH_NAMESPACE_RE
+        ]
+      }
+    ],
+    scope: {
+      2: "title.class",
+      4: "title.class.inherited"
+    },
+    keywords: RUBY_KEYWORDS
+  };
+  const UPPER_CASE_CONSTANT = {
+    relevance: 0,
+    match: /\b[A-Z][A-Z_0-9]+\b/,
+    className: "variable.constant"
+  };
+  const METHOD_DEFINITION = {
+    match: [
+      /def/,
+      /\s+/,
+      RUBY_METHOD_RE
+    ],
+    scope: {
+      1: "keyword",
+      3: "title.function"
+    },
+    contains: [
+      PARAMS
+    ]
+  };
+  const OBJECT_CREATION = {
+    relevance: 0,
+    match: [
+      CLASS_NAME_WITH_NAMESPACE_RE,
+      /\.new[. (]/
+    ],
+    scope: {
+      1: "title.class"
+    }
+  };
+  const CLASS_REFERENCE = {
+    relevance: 0,
+    match: CLASS_NAME_RE,
+    scope: "title.class"
+  };
+  const RUBY_DEFAULT_CONTAINS = [
+    STRING,
+    CLASS_DEFINITION,
+    INCLUDE_EXTEND,
+    OBJECT_CREATION,
+    UPPER_CASE_CONSTANT,
+    CLASS_REFERENCE,
+    METHOD_DEFINITION,
+    {
+      // swallow the scope resolution operator so `::` is not read as a symbol
+      begin: "::"
+    },
+    {
+      className: "symbol",
+      begin: hljs.UNDERSCORE_IDENT_RE + "(!|\\?)?:",
+      relevance: 0
+    },
+    {
+      className: "symbol",
+      begin: ":(?!\\s)",
+      contains: [
+        STRING,
+        { begin: RUBY_METHOD_RE }
+      ],
+      relevance: 0
+    },
+    NUMBER,
+    {
+      // negative-look forward attempts to prevent false matches like:
+      // @ident@ or $ident$ that might indicate this is not ruby at all
+      className: "variable",
+      begin: `(\\$\\W)|((\\$|@@?)(\\w+))(?=[^@$?])(?![A-Za-z])(?![@$?'])`
+    },
+    {
+      className: "params",
+      begin: /\|(?!=)/,
+      end: /\|/,
+      excludeBegin: true,
+      excludeEnd: true,
+      relevance: 0,
+      // this could be a lot of things (in other languages) other than params
+      keywords: RUBY_KEYWORDS
+    },
+    {
+      // regexp container
+      begin: "(" + hljs.RE_STARTERS_RE + "|unless)\\s*",
+      keywords: "unless",
+      contains: [
+        {
+          className: "regexp",
+          contains: [
+            hljs.BACKSLASH_ESCAPE,
+            SUBST
+          ],
+          illegal: /\n/,
+          variants: [
+            {
+              begin: "/",
+              end: "/[a-z]*"
+            },
+            {
+              begin: /%r\{/,
+              end: /\}[a-z]*/
+            },
+            {
+              begin: "%r\\(",
+              end: "\\)[a-z]*"
+            },
+            {
+              begin: "%r!",
+              end: "![a-z]*"
+            },
+            {
+              begin: "%r\\[",
+              end: "\\][a-z]*"
+            }
+          ]
+        }
+      ].concat(IRB_OBJECT, COMMENT_MODES),
+      relevance: 0
+    }
+  ].concat(IRB_OBJECT, COMMENT_MODES);
+  SUBST.contains = RUBY_DEFAULT_CONTAINS;
+  PARAMS.contains = RUBY_DEFAULT_CONTAINS;
+  const SIMPLE_PROMPT = "[>?]>";
+  const DEFAULT_PROMPT = "[\\w#]+\\(\\w+\\):\\d+:\\d+[>*]";
+  const RVM_PROMPT = "(\\w+-)?\\d+\\.\\d+\\.\\d+(p\\d+)?[^\\d][^>]+>";
+  const IRB_DEFAULT = [
+    {
+      begin: /^\s*=>/,
+      starts: {
+        end: "$",
+        contains: RUBY_DEFAULT_CONTAINS
+      }
+    },
+    {
+      className: "meta.prompt",
+      begin: "^(" + SIMPLE_PROMPT + "|" + DEFAULT_PROMPT + "|" + RVM_PROMPT + ")(?=[ ])",
+      starts: {
+        end: "$",
+        keywords: RUBY_KEYWORDS,
+        contains: RUBY_DEFAULT_CONTAINS
+      }
+    }
+  ];
+  COMMENT_MODES.unshift(IRB_OBJECT);
+  return {
+    name: "Ruby",
+    aliases: [
+      "rb",
+      "gemspec",
+      "podspec",
+      "thor",
+      "irb"
+    ],
+    keywords: RUBY_KEYWORDS,
+    illegal: /\/\*/,
+    contains: [hljs.SHEBANG({ binary: "ruby" })].concat(IRB_DEFAULT).concat(COMMENT_MODES).concat(RUBY_DEFAULT_CONTAINS)
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/rust.js
+function rust(hljs) {
+  const regex = hljs.regex;
+  const RAW_IDENTIFIER = /(r#)?/;
+  const UNDERSCORE_IDENT_RE = regex.concat(RAW_IDENTIFIER, hljs.UNDERSCORE_IDENT_RE);
+  const IDENT_RE3 = regex.concat(RAW_IDENTIFIER, hljs.IDENT_RE);
+  const FUNCTION_INVOKE = {
+    scope: "title.function.invoke",
+    relevance: 0,
+    begin: regex.concat(
+      /\b/,
+      /(?!(?:let|for|while|if|else|match)\b)/,
+      IDENT_RE3,
+      regex.lookahead(/\s*\(/)
+    )
+  };
+  const NUMBER_SUFFIX = "([ui](8|16|32|64|128|size)|f(16|32|64|128))?";
+  const KEYWORDS3 = [
+    "abstract",
+    "as",
+    "async",
+    "await",
+    "become",
+    "box",
+    "break",
+    "const",
+    "continue",
+    "crate",
+    "do",
+    "dyn",
+    "else",
+    "enum",
+    "extern",
+    "false",
+    "final",
+    "fn",
+    "for",
+    "if",
+    "impl",
+    "in",
+    "let",
+    "loop",
+    "macro",
+    "match",
+    "mod",
+    "move",
+    "mut",
+    "override",
+    "priv",
+    "pub",
+    "raw",
+    "ref",
+    "return",
+    "self",
+    "Self",
+    "static",
+    "struct",
+    "super",
+    "trait",
+    "true",
+    "try",
+    "type",
+    "typeof",
+    "union",
+    "unsafe",
+    "unsized",
+    "use",
+    "virtual",
+    "where",
+    "while",
+    "yield"
+  ];
+  const LITERALS3 = [
+    "true",
+    "false",
+    "Some",
+    "None",
+    "Ok",
+    "Err"
+  ];
+  const BUILTINS = [
+    // functions
+    "drop ",
+    // traits
+    "Copy",
+    "Send",
+    "Sized",
+    "Sync",
+    "Drop",
+    "Fn",
+    "FnMut",
+    "FnOnce",
+    "ToOwned",
+    "Clone",
+    "Debug",
+    "PartialEq",
+    "PartialOrd",
+    "Eq",
+    "Ord",
+    "AsRef",
+    "AsMut",
+    "Into",
+    "From",
+    "Default",
+    "Iterator",
+    "Extend",
+    "IntoIterator",
+    "DoubleEndedIterator",
+    "ExactSizeIterator",
+    "SliceConcatExt",
+    "ToString",
+    // macros
+    "assert!",
+    "assert_eq!",
+    "bitflags!",
+    "bytes!",
+    "cfg!",
+    "col!",
+    "concat!",
+    "concat_idents!",
+    "debug_assert!",
+    "debug_assert_eq!",
+    "env!",
+    "eprintln!",
+    "panic!",
+    "file!",
+    "format!",
+    "format_args!",
+    "include_bytes!",
+    "include_str!",
+    "line!",
+    "local_data_key!",
+    "module_path!",
+    "option_env!",
+    "print!",
+    "println!",
+    "select!",
+    "stringify!",
+    "try!",
+    "unimplemented!",
+    "unreachable!",
+    "vec!",
+    "write!",
+    "writeln!",
+    "macro_rules!",
+    "assert_ne!",
+    "debug_assert_ne!"
+  ];
+  const TYPES3 = [
+    "i8",
+    "i16",
+    "i32",
+    "i64",
+    "i128",
+    "isize",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "u128",
+    "usize",
+    "f16",
+    "f32",
+    "f64",
+    "f128",
+    "str",
+    "char",
+    "bool",
+    "Box",
+    "Option",
+    "Result",
+    "String",
+    "Vec"
+  ];
+  return {
+    name: "Rust",
+    aliases: ["rs"],
+    keywords: {
+      $pattern: hljs.IDENT_RE + "!?",
+      type: TYPES3,
+      keyword: KEYWORDS3,
+      literal: LITERALS3,
+      built_in: BUILTINS
+    },
+    illegal: "</",
+    contains: [
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.COMMENT("/\\*", "\\*/", { contains: ["self"] }),
+      hljs.inherit(hljs.QUOTE_STRING_MODE, {
+        begin: /b?"/,
+        illegal: null
+      }),
+      {
+        scope: "symbol",
+        // negative lookahead to avoid matching `'`
+        begin: /'[a-zA-Z_][a-zA-Z0-9_]*(?!')/
+      },
+      {
+        scope: "string",
+        variants: [
+          { begin: /b?r(#*)"(.|\n)*?"\1(?!#)/ },
+          {
+            begin: /b?'/,
+            end: /'/,
+            contains: [
+              {
+                scope: "char.escape",
+                match: /\\('|"|\\|\w|x\w{2}|u\w{4}|U\w{8})/
+              }
+            ]
+          }
+        ]
+      },
+      {
+        scope: "number",
+        variants: [
+          { begin: "\\b0b([01_]+)" + NUMBER_SUFFIX },
+          { begin: "\\b0o([0-7_]+)" + NUMBER_SUFFIX },
+          { begin: "\\b0x([A-Fa-f0-9_]+)" + NUMBER_SUFFIX },
+          { begin: "\\b(\\d[\\d_]*(\\.[0-9_]+)?([eE][+-]?[0-9_]+)?)" + NUMBER_SUFFIX }
+        ],
+        relevance: 0
+      },
+      {
+        begin: [
+          /\bsafe/,
+          /\s+/,
+          /extern/
+        ],
+        scope: {
+          1: "keyword",
+          3: "keyword"
+        }
+      },
+      {
+        begin: [
+          /fn/,
+          /\s+/,
+          UNDERSCORE_IDENT_RE
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.function"
+        }
+      },
+      {
+        scope: "meta",
+        begin: "#!?\\[",
+        end: "\\]",
+        contains: [
+          {
+            scope: "string",
+            begin: /"/,
+            end: /"/,
+            contains: [
+              hljs.BACKSLASH_ESCAPE
+            ]
+          }
+        ]
+      },
+      {
+        begin: [
+          /let/,
+          /\s+/,
+          /(?:mut\s+)?/,
+          UNDERSCORE_IDENT_RE
+        ],
+        scope: {
+          1: "keyword",
+          3: "keyword",
+          4: "variable"
+        }
+      },
+      // must come before impl/for rule later
+      {
+        begin: [
+          /for/,
+          /\s+/,
+          UNDERSCORE_IDENT_RE,
+          /\s+/,
+          /in/
+        ],
+        scope: {
+          1: "keyword",
+          3: "variable",
+          5: "keyword"
+        }
+      },
+      {
+        begin: [
+          /type/,
+          /\s+/,
+          UNDERSCORE_IDENT_RE
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class"
+        }
+      },
+      {
+        begin: [
+          /(?:trait|enum|struct|union|impl|for)/,
+          /\s+/,
+          UNDERSCORE_IDENT_RE
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class"
+        }
+      },
+      {
+        begin: hljs.IDENT_RE + "::",
+        keywords: {
+          keyword: "Self",
+          built_in: BUILTINS,
+          type: TYPES3
+        }
+      },
+      {
+        scope: "punctuation",
+        begin: "->"
+      },
+      FUNCTION_INVOKE
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/scss.js
+var MODES3 = (hljs) => {
+  return {
+    IMPORTANT: {
+      scope: "meta",
+      begin: "!important"
+    },
+    BLOCK_COMMENT: hljs.C_BLOCK_COMMENT_MODE,
+    HEXCOLOR: {
+      scope: "number",
+      begin: /#(([0-9a-fA-F]{3,4})|(([0-9a-fA-F]{2}){3,4}))\b/
+    },
+    UNICODE_RANGE: {
+      scope: "number",
+      begin: /\b[Uu]\+[0-9A-Fa-f][0-9A-Fa-f?]{0,5}(-[0-9A-Fa-f][0-9A-Fa-f]{0,5})?/
+    },
+    FUNCTION_DISPATCH: {
+      className: "built_in",
+      begin: /[\w-]+(?=\()/
+    },
+    ATTRIBUTE_SELECTOR_MODE: {
+      scope: "selector-attr",
+      begin: /\[/,
+      end: /\]/,
+      illegal: "$",
+      contains: [
+        hljs.APOS_STRING_MODE,
+        hljs.QUOTE_STRING_MODE
+      ]
+    },
+    CSS_NUMBER_MODE: {
+      scope: "number",
+      begin: hljs.NUMBER_RE + "(%|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc|px|deg|grad|rad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?",
+      relevance: 0
+    },
+    CSS_VARIABLE: {
+      className: "attr",
+      begin: /--[A-Za-z_][A-Za-z0-9_-]*/
+    }
+  };
+};
+var HTML_TAGS3 = [
+  "a",
+  "abbr",
+  "address",
+  "article",
+  "aside",
+  "audio",
+  "b",
+  "blockquote",
+  "body",
+  "button",
+  "canvas",
+  "caption",
+  "cite",
+  "code",
+  "dd",
+  "del",
+  "details",
+  "dfn",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hgroup",
+  "html",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "label",
+  "legend",
+  "li",
+  "main",
+  "mark",
+  "menu",
+  "nav",
+  "object",
+  "ol",
+  "optgroup",
+  "option",
+  "p",
+  "picture",
+  "q",
+  "quote",
+  "samp",
+  "section",
+  "select",
+  "source",
+  "span",
+  "strong",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "time",
+  "tr",
+  "ul",
+  "var",
+  "video"
+];
+var SVG_TAGS3 = [
+  "defs",
+  "g",
+  "marker",
+  "mask",
+  "pattern",
+  "svg",
+  "switch",
+  "symbol",
+  "feBlend",
+  "feColorMatrix",
+  "feComponentTransfer",
+  "feComposite",
+  "feConvolveMatrix",
+  "feDiffuseLighting",
+  "feDisplacementMap",
+  "feFlood",
+  "feGaussianBlur",
+  "feImage",
+  "feMerge",
+  "feMorphology",
+  "feOffset",
+  "feSpecularLighting",
+  "feTile",
+  "feTurbulence",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "circle",
+  "ellipse",
+  "image",
+  "line",
+  "path",
+  "polygon",
+  "polyline",
+  "rect",
+  "text",
+  "use",
+  "textPath",
+  "tspan",
+  "foreignObject",
+  "clipPath"
+];
+var TAGS3 = [
+  ...HTML_TAGS3,
+  ...SVG_TAGS3
+];
+var MEDIA_FEATURES3 = [
+  "any-hover",
+  "any-pointer",
+  "aspect-ratio",
+  "color",
+  "color-gamut",
+  "color-index",
+  "device-aspect-ratio",
+  "device-height",
+  "device-width",
+  "display-mode",
+  "forced-colors",
+  "grid",
+  "height",
+  "hover",
+  "inverted-colors",
+  "monochrome",
+  "orientation",
+  "overflow-block",
+  "overflow-inline",
+  "pointer",
+  "prefers-color-scheme",
+  "prefers-contrast",
+  "prefers-reduced-motion",
+  "prefers-reduced-transparency",
+  "resolution",
+  "scan",
+  "scripting",
+  "update",
+  "width",
+  // TODO: find a better solution?
+  "min-width",
+  "max-width",
+  "min-height",
+  "max-height"
+].sort().reverse();
+var PSEUDO_CLASSES3 = [
+  "active",
+  "any-link",
+  "blank",
+  "checked",
+  "current",
+  "default",
+  "defined",
+  "dir",
+  // dir()
+  "disabled",
+  "drop",
+  "empty",
+  "enabled",
+  "first",
+  "first-child",
+  "first-of-type",
+  "fullscreen",
+  "future",
+  "focus",
+  "focus-visible",
+  "focus-within",
+  "has",
+  // has()
+  "host",
+  // host or host()
+  "host-context",
+  // host-context()
+  "hover",
+  "indeterminate",
+  "in-range",
+  "invalid",
+  "is",
+  // is()
+  "lang",
+  // lang()
+  "last-child",
+  "last-of-type",
+  "left",
+  "link",
+  "local-link",
+  "not",
+  // not()
+  "nth-child",
+  // nth-child()
+  "nth-col",
+  // nth-col()
+  "nth-last-child",
+  // nth-last-child()
+  "nth-last-col",
+  // nth-last-col()
+  "nth-last-of-type",
+  //nth-last-of-type()
+  "nth-of-type",
+  //nth-of-type()
+  "only-child",
+  "only-of-type",
+  "optional",
+  "out-of-range",
+  "past",
+  "placeholder-shown",
+  "read-only",
+  "read-write",
+  "required",
+  "right",
+  "root",
+  "scope",
+  "target",
+  "target-within",
+  "user-invalid",
+  "valid",
+  "visited",
+  "where"
+  // where()
+].sort().reverse();
+var PSEUDO_ELEMENTS3 = [
+  "after",
+  "backdrop",
+  "before",
+  "cue",
+  "cue-region",
+  "first-letter",
+  "first-line",
+  "grammar-error",
+  "marker",
+  "part",
+  "placeholder",
+  "selection",
+  "slotted",
+  "spelling-error"
+].sort().reverse();
+var ATTRIBUTES3 = [
+  "accent-color",
+  "align-content",
+  "align-items",
+  "align-self",
+  "alignment-baseline",
+  "all",
+  "anchor-name",
+  "animation",
+  "animation-composition",
+  "animation-delay",
+  "animation-direction",
+  "animation-duration",
+  "animation-fill-mode",
+  "animation-iteration-count",
+  "animation-name",
+  "animation-play-state",
+  "animation-range",
+  "animation-range-end",
+  "animation-range-start",
+  "animation-timeline",
+  "animation-timing-function",
+  "appearance",
+  "aspect-ratio",
+  "backdrop-filter",
+  "backface-visibility",
+  "background",
+  "background-attachment",
+  "background-blend-mode",
+  "background-clip",
+  "background-color",
+  "background-image",
+  "background-origin",
+  "background-position",
+  "background-position-x",
+  "background-position-y",
+  "background-repeat",
+  "background-size",
+  "baseline-shift",
+  "block-size",
+  "border",
+  "border-block",
+  "border-block-color",
+  "border-block-end",
+  "border-block-end-color",
+  "border-block-end-style",
+  "border-block-end-width",
+  "border-block-start",
+  "border-block-start-color",
+  "border-block-start-style",
+  "border-block-start-width",
+  "border-block-style",
+  "border-block-width",
+  "border-bottom",
+  "border-bottom-color",
+  "border-bottom-left-radius",
+  "border-bottom-right-radius",
+  "border-bottom-style",
+  "border-bottom-width",
+  "border-collapse",
+  "border-color",
+  "border-end-end-radius",
+  "border-end-start-radius",
+  "border-image",
+  "border-image-outset",
+  "border-image-repeat",
+  "border-image-slice",
+  "border-image-source",
+  "border-image-width",
+  "border-inline",
+  "border-inline-color",
+  "border-inline-end",
+  "border-inline-end-color",
+  "border-inline-end-style",
+  "border-inline-end-width",
+  "border-inline-start",
+  "border-inline-start-color",
+  "border-inline-start-style",
+  "border-inline-start-width",
+  "border-inline-style",
+  "border-inline-width",
+  "border-left",
+  "border-left-color",
+  "border-left-style",
+  "border-left-width",
+  "border-radius",
+  "border-right",
+  "border-right-color",
+  "border-right-style",
+  "border-right-width",
+  "border-spacing",
+  "border-start-end-radius",
+  "border-start-start-radius",
+  "border-style",
+  "border-top",
+  "border-top-color",
+  "border-top-left-radius",
+  "border-top-right-radius",
+  "border-top-style",
+  "border-top-width",
+  "border-width",
+  "bottom",
+  "box-align",
+  "box-decoration-break",
+  "box-direction",
+  "box-flex",
+  "box-flex-group",
+  "box-lines",
+  "box-ordinal-group",
+  "box-orient",
+  "box-pack",
+  "box-shadow",
+  "box-sizing",
+  "break-after",
+  "break-before",
+  "break-inside",
+  "caption-side",
+  "caret-color",
+  "clear",
+  "clip",
+  "clip-path",
+  "clip-rule",
+  "color",
+  "color-interpolation",
+  "color-interpolation-filters",
+  "color-profile",
+  "color-rendering",
+  "color-scheme",
+  "column-count",
+  "column-fill",
+  "column-gap",
+  "column-rule",
+  "column-rule-color",
+  "column-rule-style",
+  "column-rule-width",
+  "column-span",
+  "column-width",
+  "columns",
+  "contain",
+  "contain-intrinsic-block-size",
+  "contain-intrinsic-height",
+  "contain-intrinsic-inline-size",
+  "contain-intrinsic-size",
+  "contain-intrinsic-width",
+  "container",
+  "container-name",
+  "container-type",
+  "content",
+  "content-visibility",
+  "corner-bottom-left-shape",
+  "corner-bottom-right-shape",
+  "corner-shape",
+  "corner-top-left-shape",
+  "corner-top-right-shape",
+  "counter-increment",
+  "counter-reset",
+  "counter-set",
+  "cue",
+  "cue-after",
+  "cue-before",
+  "cursor",
+  "cx",
+  "cy",
+  "direction",
+  "display",
+  "dominant-baseline",
+  "empty-cells",
+  "enable-background",
+  "field-sizing",
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "filter",
+  "flex",
+  "flex-basis",
+  "flex-direction",
+  "flex-flow",
+  "flex-grow",
+  "flex-shrink",
+  "flex-wrap",
+  "float",
+  "flood-color",
+  "flood-opacity",
+  "flow",
+  "font",
+  "font-display",
+  "font-family",
+  "font-feature-settings",
+  "font-kerning",
+  "font-language-override",
+  "font-optical-sizing",
+  "font-palette",
+  "font-size",
+  "font-size-adjust",
+  "font-smooth",
+  "font-smoothing",
+  "font-stretch",
+  "font-style",
+  "font-synthesis",
+  "font-synthesis-position",
+  "font-synthesis-small-caps",
+  "font-synthesis-style",
+  "font-synthesis-weight",
+  "font-variant",
+  "font-variant-alternates",
+  "font-variant-caps",
+  "font-variant-east-asian",
+  "font-variant-emoji",
+  "font-variant-ligatures",
+  "font-variant-numeric",
+  "font-variant-position",
+  "font-variation-settings",
+  "font-weight",
+  "forced-color-adjust",
+  "gap",
+  "glyph-orientation-horizontal",
+  "glyph-orientation-vertical",
+  "grid",
+  "grid-area",
+  "grid-auto-columns",
+  "grid-auto-flow",
+  "grid-auto-rows",
+  "grid-column",
+  "grid-column-end",
+  "grid-column-start",
+  "grid-gap",
+  "grid-row",
+  "grid-row-end",
+  "grid-row-start",
+  "grid-template",
+  "grid-template-areas",
+  "grid-template-columns",
+  "grid-template-rows",
+  "hanging-punctuation",
+  "height",
+  "hyphenate-character",
+  "hyphenate-limit-chars",
+  "hyphens",
+  "icon",
+  "image-orientation",
+  "image-rendering",
+  "image-resolution",
+  "ime-mode",
+  "initial-letter",
+  "initial-letter-align",
+  "inline-size",
+  "inset",
+  "inset-area",
+  "inset-block",
+  "inset-block-end",
+  "inset-block-start",
+  "inset-inline",
+  "inset-inline-end",
+  "inset-inline-start",
+  "isolation",
+  "justify-content",
+  "justify-items",
+  "justify-self",
+  "kerning",
+  "left",
+  "letter-spacing",
+  "lighting-color",
+  "line-break",
+  "line-height",
+  "line-height-step",
+  "list-style",
+  "list-style-image",
+  "list-style-position",
+  "list-style-type",
+  "margin",
+  "margin-block",
+  "margin-block-end",
+  "margin-block-start",
+  "margin-bottom",
+  "margin-inline",
+  "margin-inline-end",
+  "margin-inline-start",
+  "margin-left",
+  "margin-right",
+  "margin-top",
+  "margin-trim",
+  "marker",
+  "marker-end",
+  "marker-mid",
+  "marker-start",
+  "marks",
+  "mask",
+  "mask-border",
+  "mask-border-mode",
+  "mask-border-outset",
+  "mask-border-repeat",
+  "mask-border-slice",
+  "mask-border-source",
+  "mask-border-width",
+  "mask-clip",
+  "mask-composite",
+  "mask-image",
+  "mask-mode",
+  "mask-origin",
+  "mask-position",
+  "mask-repeat",
+  "mask-size",
+  "mask-type",
+  "masonry-auto-flow",
+  "math-depth",
+  "math-shift",
+  "math-style",
+  "max-block-size",
+  "max-height",
+  "max-inline-size",
+  "max-width",
+  "min-block-size",
+  "min-height",
+  "min-inline-size",
+  "min-width",
+  "mix-blend-mode",
+  "nav-down",
+  "nav-index",
+  "nav-left",
+  "nav-right",
+  "nav-up",
+  "none",
+  "normal",
+  "object-fit",
+  "object-position",
+  "offset",
+  "offset-anchor",
+  "offset-distance",
+  "offset-path",
+  "offset-position",
+  "offset-rotate",
+  "opacity",
+  "order",
+  "orphans",
+  "outline",
+  "outline-color",
+  "outline-offset",
+  "outline-style",
+  "outline-width",
+  "overflow",
+  "overflow-anchor",
+  "overflow-block",
+  "overflow-clip-margin",
+  "overflow-inline",
+  "overflow-wrap",
+  "overflow-x",
+  "overflow-y",
+  "overlay",
+  "overscroll-behavior",
+  "overscroll-behavior-block",
+  "overscroll-behavior-inline",
+  "overscroll-behavior-x",
+  "overscroll-behavior-y",
+  "padding",
+  "padding-block",
+  "padding-block-end",
+  "padding-block-start",
+  "padding-bottom",
+  "padding-inline",
+  "padding-inline-end",
+  "padding-inline-start",
+  "padding-left",
+  "padding-right",
+  "padding-top",
+  "page",
+  "page-break-after",
+  "page-break-before",
+  "page-break-inside",
+  "paint-order",
+  "pause",
+  "pause-after",
+  "pause-before",
+  "perspective",
+  "perspective-origin",
+  "place-content",
+  "place-items",
+  "place-self",
+  "pointer-events",
+  "position",
+  "position-anchor",
+  "position-visibility",
+  "print-color-adjust",
+  "quotes",
+  "r",
+  "resize",
+  "rest",
+  "rest-after",
+  "rest-before",
+  "right",
+  "rotate",
+  "row-gap",
+  "ruby-align",
+  "ruby-position",
+  "scale",
+  "scroll-behavior",
+  "scroll-margin",
+  "scroll-margin-block",
+  "scroll-margin-block-end",
+  "scroll-margin-block-start",
+  "scroll-margin-bottom",
+  "scroll-margin-inline",
+  "scroll-margin-inline-end",
+  "scroll-margin-inline-start",
+  "scroll-margin-left",
+  "scroll-margin-right",
+  "scroll-margin-top",
+  "scroll-padding",
+  "scroll-padding-block",
+  "scroll-padding-block-end",
+  "scroll-padding-block-start",
+  "scroll-padding-bottom",
+  "scroll-padding-inline",
+  "scroll-padding-inline-end",
+  "scroll-padding-inline-start",
+  "scroll-padding-left",
+  "scroll-padding-right",
+  "scroll-padding-top",
+  "scroll-snap-align",
+  "scroll-snap-stop",
+  "scroll-snap-type",
+  "scroll-timeline",
+  "scroll-timeline-axis",
+  "scroll-timeline-name",
+  "scrollbar-color",
+  "scrollbar-gutter",
+  "scrollbar-width",
+  "shape-image-threshold",
+  "shape-margin",
+  "shape-outside",
+  "shape-rendering",
+  "speak",
+  "speak-as",
+  "src",
+  // @font-face
+  "stop-color",
+  "stop-opacity",
+  "stroke",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "stroke-opacity",
+  "stroke-width",
+  "tab-size",
+  "table-layout",
+  "text-align",
+  "text-align-all",
+  "text-align-last",
+  "text-anchor",
+  "text-combine-upright",
+  "text-decoration",
+  "text-decoration-color",
+  "text-decoration-line",
+  "text-decoration-skip",
+  "text-decoration-skip-ink",
+  "text-decoration-style",
+  "text-decoration-thickness",
+  "text-emphasis",
+  "text-emphasis-color",
+  "text-emphasis-position",
+  "text-emphasis-style",
+  "text-indent",
+  "text-justify",
+  "text-orientation",
+  "text-overflow",
+  "text-rendering",
+  "text-shadow",
+  "text-size-adjust",
+  "text-transform",
+  "text-underline-offset",
+  "text-underline-position",
+  "text-wrap",
+  "text-wrap-mode",
+  "text-wrap-style",
+  "timeline-scope",
+  "top",
+  "touch-action",
+  "transform",
+  "transform-box",
+  "transform-origin",
+  "transform-style",
+  "transition",
+  "transition-behavior",
+  "transition-delay",
+  "transition-duration",
+  "transition-property",
+  "transition-timing-function",
+  "translate",
+  "unicode-bidi",
+  "unicode-range",
+  "user-modify",
+  "user-select",
+  "vector-effect",
+  "vertical-align",
+  "view-timeline",
+  "view-timeline-axis",
+  "view-timeline-inset",
+  "view-timeline-name",
+  "view-transition-name",
+  "visibility",
+  "voice-balance",
+  "voice-duration",
+  "voice-family",
+  "voice-pitch",
+  "voice-range",
+  "voice-rate",
+  "voice-stress",
+  "voice-volume",
+  "white-space",
+  "white-space-collapse",
+  "widows",
+  "width",
+  "will-change",
+  "word-break",
+  "word-spacing",
+  "word-wrap",
+  "writing-mode",
+  "x",
+  "y",
+  "z-index",
+  "zoom"
+].sort().reverse();
+function scss(hljs) {
+  const modes = MODES3(hljs);
+  const PSEUDO_ELEMENTS$1 = PSEUDO_ELEMENTS3;
+  const PSEUDO_CLASSES$1 = PSEUDO_CLASSES3;
+  const AT_IDENTIFIER = "@[a-z-]+";
+  const AT_MODIFIERS = "and or not only";
+  const IDENT_RE3 = "[a-zA-Z-][a-zA-Z0-9_-]*";
+  const VARIABLE = {
+    className: "variable",
+    begin: "(\\$" + IDENT_RE3 + ")\\b",
+    relevance: 0
+  };
+  return {
+    name: "SCSS",
+    case_insensitive: true,
+    illegal: "[=/|']",
+    contains: [
+      hljs.C_LINE_COMMENT_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      // to recognize keyframe 40% etc which are outside the scope of our
+      // attribute value mode
+      modes.CSS_NUMBER_MODE,
+      {
+        className: "selector-id",
+        begin: "#[A-Za-z0-9_-]+",
+        relevance: 0
+      },
+      {
+        className: "selector-class",
+        begin: "\\.[A-Za-z0-9_-]+",
+        relevance: 0
+      },
+      modes.ATTRIBUTE_SELECTOR_MODE,
+      {
+        className: "selector-tag",
+        begin: "\\b(" + TAGS3.join("|") + ")\\b",
+        // was there, before, but why?
+        relevance: 0
+      },
+      {
+        className: "selector-pseudo",
+        begin: ":(" + PSEUDO_CLASSES$1.join("|") + ")"
+      },
+      {
+        className: "selector-pseudo",
+        begin: ":(:)?(" + PSEUDO_ELEMENTS$1.join("|") + ")"
+      },
+      VARIABLE,
+      {
+        // pseudo-selector params
+        begin: /\(/,
+        end: /\)/,
+        contains: [modes.CSS_NUMBER_MODE]
+      },
+      modes.CSS_VARIABLE,
+      {
+        className: "attribute",
+        begin: "\\b(" + ATTRIBUTES3.join("|") + ")\\b"
+      },
+      { begin: "\\b(whitespace|wait|w-resize|visible|vertical-text|vertical-ideographic|uppercase|upper-roman|upper-alpha|underline|transparent|top|thin|thick|text|text-top|text-bottom|tb-rl|table-header-group|table-footer-group|sw-resize|super|strict|static|square|solid|small-caps|separate|se-resize|scroll|s-resize|rtl|row-resize|ridge|right|repeat|repeat-y|repeat-x|relative|progress|pointer|overline|outside|outset|oblique|nowrap|not-allowed|normal|none|nw-resize|no-repeat|no-drop|newspaper|ne-resize|n-resize|move|middle|medium|ltr|lr-tb|lowercase|lower-roman|lower-alpha|loose|list-item|line|line-through|line-edge|lighter|left|keep-all|justify|italic|inter-word|inter-ideograph|inside|inset|inline|inline-block|inherit|inactive|ideograph-space|ideograph-parenthesis|ideograph-numeric|ideograph-alpha|horizontal|hidden|help|hand|groove|fixed|ellipsis|e-resize|double|dotted|distribute|distribute-space|distribute-letter|distribute-all-lines|disc|disabled|default|decimal|dashed|crosshair|collapse|col-resize|circle|char|center|capitalize|break-word|break-all|bottom|both|bolder|bold|block|bidi-override|below|baseline|auto|always|all-scroll|absolute|table|table-cell)\\b" },
+      {
+        begin: /:/,
+        end: /[;}{]/,
+        relevance: 0,
+        contains: [
+          modes.BLOCK_COMMENT,
+          VARIABLE,
+          modes.HEXCOLOR,
+          modes.CSS_NUMBER_MODE,
+          modes.UNICODE_RANGE,
+          hljs.QUOTE_STRING_MODE,
+          hljs.APOS_STRING_MODE,
+          modes.IMPORTANT,
+          modes.FUNCTION_DISPATCH
+        ]
+      },
+      // matching these here allows us to treat them more like regular CSS
+      // rules so everything between the {} gets regular rule highlighting,
+      // which is what we want for page and font-face
+      {
+        begin: "@(page|font-face)",
+        keywords: {
+          $pattern: AT_IDENTIFIER,
+          keyword: "@page @font-face"
+        }
+      },
+      {
+        begin: "@",
+        end: "[{;]",
+        returnBegin: true,
+        keywords: {
+          $pattern: /[a-z-]+/,
+          keyword: AT_MODIFIERS,
+          attribute: MEDIA_FEATURES3.join(" ")
+        },
+        contains: [
+          {
+            begin: AT_IDENTIFIER,
+            className: "keyword"
+          },
+          {
+            begin: /[a-z-]+(?=:)/,
+            className: "attribute"
+          },
+          VARIABLE,
+          hljs.QUOTE_STRING_MODE,
+          hljs.APOS_STRING_MODE,
+          modes.HEXCOLOR,
+          modes.CSS_NUMBER_MODE
+        ]
+      },
+      modes.FUNCTION_DISPATCH
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/sql.js
+function sql(hljs) {
+  const regex = hljs.regex;
+  const COMMENT_MODE = hljs.COMMENT("--", "$");
+  const STRING = {
+    scope: "string",
+    variants: [
+      {
+        begin: /'/,
+        end: /'/,
+        contains: [{ match: /''/ }]
+      }
+    ]
+  };
+  const QUOTED_IDENTIFIER = {
+    begin: /"/,
+    end: /"/,
+    contains: [{ match: /""/ }]
+  };
+  const LITERALS3 = [
+    "true",
+    "false",
+    // Not sure it's correct to call NULL literal, and clauses like IS [NOT] NULL look strange that way.
+    // "null",
+    "unknown"
+  ];
+  const MULTI_WORD_TYPES = [
+    "double precision",
+    "large object",
+    "with timezone",
+    "without timezone"
+  ];
+  const TYPES3 = [
+    "bigint",
+    "binary",
+    "blob",
+    "boolean",
+    "char",
+    "character",
+    "clob",
+    "date",
+    "dec",
+    "decfloat",
+    "decimal",
+    "float",
+    "int",
+    "integer",
+    "interval",
+    "nchar",
+    "nclob",
+    "national",
+    "numeric",
+    "real",
+    "row",
+    "smallint",
+    "time",
+    "timestamp",
+    "varchar",
+    "varying",
+    // modifier (character varying)
+    "varbinary"
+  ];
+  const NON_RESERVED_WORDS = [
+    "add",
+    "asc",
+    "collation",
+    "desc",
+    "final",
+    "first",
+    "last",
+    "view"
+  ];
+  const RESERVED_WORDS = [
+    "abs",
+    "acos",
+    "all",
+    "allocate",
+    "alter",
+    "and",
+    "any",
+    "are",
+    "array",
+    "array_agg",
+    "array_max_cardinality",
+    "as",
+    "asensitive",
+    "asin",
+    "asymmetric",
+    "at",
+    "atan",
+    "atomic",
+    "authorization",
+    "avg",
+    "begin",
+    "begin_frame",
+    "begin_partition",
+    "between",
+    "bigint",
+    "binary",
+    "blob",
+    "boolean",
+    "both",
+    "by",
+    "call",
+    "called",
+    "cardinality",
+    "cascaded",
+    "case",
+    "cast",
+    "ceil",
+    "ceiling",
+    "char",
+    "char_length",
+    "character",
+    "character_length",
+    "check",
+    "classifier",
+    "clob",
+    "close",
+    "coalesce",
+    "collate",
+    "collect",
+    "column",
+    "commit",
+    "condition",
+    "connect",
+    "constraint",
+    "contains",
+    "convert",
+    "copy",
+    "corr",
+    "corresponding",
+    "cos",
+    "cosh",
+    "count",
+    "covar_pop",
+    "covar_samp",
+    "create",
+    "cross",
+    "cube",
+    "cume_dist",
+    "current",
+    "current_catalog",
+    "current_date",
+    "current_default_transform_group",
+    "current_path",
+    "current_role",
+    "current_row",
+    "current_schema",
+    "current_time",
+    "current_timestamp",
+    "current_path",
+    "current_role",
+    "current_transform_group_for_type",
+    "current_user",
+    "cursor",
+    "cycle",
+    "date",
+    "day",
+    "deallocate",
+    "dec",
+    "decimal",
+    "decfloat",
+    "declare",
+    "default",
+    "define",
+    "delete",
+    "dense_rank",
+    "deref",
+    "describe",
+    "deterministic",
+    "disconnect",
+    "distinct",
+    "double",
+    "drop",
+    "dynamic",
+    "each",
+    "element",
+    "else",
+    "empty",
+    "end",
+    "end_frame",
+    "end_partition",
+    "end-exec",
+    "equals",
+    "escape",
+    "every",
+    "except",
+    "exec",
+    "execute",
+    "exists",
+    "exp",
+    "external",
+    "extract",
+    "false",
+    "fetch",
+    "filter",
+    "first_value",
+    "float",
+    "floor",
+    "for",
+    "foreign",
+    "frame_row",
+    "free",
+    "from",
+    "full",
+    "function",
+    "fusion",
+    "get",
+    "global",
+    "grant",
+    "group",
+    "grouping",
+    "groups",
+    "having",
+    "hold",
+    "hour",
+    "identity",
+    "in",
+    "indicator",
+    "initial",
+    "inner",
+    "inout",
+    "insensitive",
+    "insert",
+    "int",
+    "integer",
+    "intersect",
+    "intersection",
+    "interval",
+    "into",
+    "is",
+    "join",
+    "json_array",
+    "json_arrayagg",
+    "json_exists",
+    "json_object",
+    "json_objectagg",
+    "json_query",
+    "json_table",
+    "json_table_primitive",
+    "json_value",
+    "lag",
+    "language",
+    "large",
+    "last_value",
+    "lateral",
+    "lead",
+    "leading",
+    "left",
+    "like",
+    "like_regex",
+    "listagg",
+    "ln",
+    "local",
+    "localtime",
+    "localtimestamp",
+    "log",
+    "log10",
+    "lower",
+    "match",
+    "match_number",
+    "match_recognize",
+    "matches",
+    "max",
+    "member",
+    "merge",
+    "method",
+    "min",
+    "minute",
+    "mod",
+    "modifies",
+    "module",
+    "month",
+    "multiset",
+    "national",
+    "natural",
+    "nchar",
+    "nclob",
+    "new",
+    "no",
+    "none",
+    "normalize",
+    "not",
+    "nth_value",
+    "ntile",
+    "null",
+    "nullif",
+    "numeric",
+    "octet_length",
+    "occurrences_regex",
+    "of",
+    "offset",
+    "old",
+    "omit",
+    "on",
+    "one",
+    "only",
+    "open",
+    "or",
+    "order",
+    "out",
+    "outer",
+    "over",
+    "overlaps",
+    "overlay",
+    "parameter",
+    "partition",
+    "pattern",
+    "per",
+    "percent",
+    "percent_rank",
+    "percentile_cont",
+    "percentile_disc",
+    "period",
+    "portion",
+    "position",
+    "position_regex",
+    "power",
+    "precedes",
+    "precision",
+    "prepare",
+    "primary",
+    "procedure",
+    "ptf",
+    "range",
+    "rank",
+    "reads",
+    "real",
+    "recursive",
+    "ref",
+    "references",
+    "referencing",
+    "regr_avgx",
+    "regr_avgy",
+    "regr_count",
+    "regr_intercept",
+    "regr_r2",
+    "regr_slope",
+    "regr_sxx",
+    "regr_sxy",
+    "regr_syy",
+    "release",
+    "result",
+    "return",
+    "returns",
+    "revoke",
+    "right",
+    "rollback",
+    "rollup",
+    "row",
+    "row_number",
+    "rows",
+    "running",
+    "savepoint",
+    "scope",
+    "scroll",
+    "search",
+    "second",
+    "seek",
+    "select",
+    "sensitive",
+    "session_user",
+    "set",
+    "show",
+    "similar",
+    "sin",
+    "sinh",
+    "skip",
+    "smallint",
+    "some",
+    "specific",
+    "specifictype",
+    "sql",
+    "sqlexception",
+    "sqlstate",
+    "sqlwarning",
+    "sqrt",
+    "start",
+    "static",
+    "stddev_pop",
+    "stddev_samp",
+    "submultiset",
+    "subset",
+    "substring",
+    "substring_regex",
+    "succeeds",
+    "sum",
+    "symmetric",
+    "system",
+    "system_time",
+    "system_user",
+    "table",
+    "tablesample",
+    "tan",
+    "tanh",
+    "then",
+    "time",
+    "timestamp",
+    "timezone_hour",
+    "timezone_minute",
+    "to",
+    "trailing",
+    "translate",
+    "translate_regex",
+    "translation",
+    "treat",
+    "trigger",
+    "trim",
+    "trim_array",
+    "true",
+    "truncate",
+    "uescape",
+    "union",
+    "unique",
+    "unknown",
+    "unnest",
+    "update",
+    "upper",
+    "user",
+    "using",
+    "value",
+    "values",
+    "value_of",
+    "var_pop",
+    "var_samp",
+    "varbinary",
+    "varchar",
+    "varying",
+    "versioning",
+    "when",
+    "whenever",
+    "where",
+    "width_bucket",
+    "window",
+    "with",
+    "within",
+    "without",
+    "year"
+  ];
+  const RESERVED_FUNCTIONS = [
+    "abs",
+    "acos",
+    "array_agg",
+    "asin",
+    "atan",
+    "avg",
+    "cast",
+    "ceil",
+    "ceiling",
+    "coalesce",
+    "corr",
+    "cos",
+    "cosh",
+    "count",
+    "covar_pop",
+    "covar_samp",
+    "cume_dist",
+    "dense_rank",
+    "deref",
+    "element",
+    "exp",
+    "extract",
+    "first_value",
+    "floor",
+    "json_array",
+    "json_arrayagg",
+    "json_exists",
+    "json_object",
+    "json_objectagg",
+    "json_query",
+    "json_table",
+    "json_table_primitive",
+    "json_value",
+    "lag",
+    "last_value",
+    "lead",
+    "listagg",
+    "ln",
+    "log",
+    "log10",
+    "lower",
+    "max",
+    "min",
+    "mod",
+    "nth_value",
+    "ntile",
+    "nullif",
+    "percent_rank",
+    "percentile_cont",
+    "percentile_disc",
+    "position",
+    "position_regex",
+    "power",
+    "rank",
+    "regr_avgx",
+    "regr_avgy",
+    "regr_count",
+    "regr_intercept",
+    "regr_r2",
+    "regr_slope",
+    "regr_sxx",
+    "regr_sxy",
+    "regr_syy",
+    "row_number",
+    "sin",
+    "sinh",
+    "sqrt",
+    "stddev_pop",
+    "stddev_samp",
+    "substring",
+    "substring_regex",
+    "sum",
+    "tan",
+    "tanh",
+    "translate",
+    "translate_regex",
+    "treat",
+    "trim",
+    "trim_array",
+    "unnest",
+    "upper",
+    "value_of",
+    "var_pop",
+    "var_samp",
+    "width_bucket"
+  ];
+  const POSSIBLE_WITHOUT_PARENS = [
+    "current_catalog",
+    "current_date",
+    "current_default_transform_group",
+    "current_path",
+    "current_role",
+    "current_schema",
+    "current_transform_group_for_type",
+    "current_user",
+    "session_user",
+    "system_time",
+    "system_user",
+    "current_time",
+    "localtime",
+    "current_timestamp",
+    "localtimestamp"
+  ];
+  const COMBOS = [
+    "create table",
+    "insert into",
+    "primary key",
+    "foreign key",
+    "not null",
+    "alter table",
+    "add constraint",
+    "grouping sets",
+    "on overflow",
+    "character set",
+    "respect nulls",
+    "ignore nulls",
+    "nulls first",
+    "nulls last",
+    "depth first",
+    "breadth first"
+  ];
+  const FUNCTIONS = RESERVED_FUNCTIONS;
+  const KEYWORDS3 = [
+    ...RESERVED_WORDS,
+    ...NON_RESERVED_WORDS
+  ].filter((keyword) => {
+    return !RESERVED_FUNCTIONS.includes(keyword);
+  });
+  const VARIABLE = {
+    scope: "variable",
+    match: /@[a-z0-9][a-z0-9_]*/
+  };
+  const OPERATOR = {
+    scope: "operator",
+    match: /[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?/,
+    relevance: 0
+  };
+  const FUNCTION_CALL = {
+    match: regex.concat(/\b/, regex.either(...FUNCTIONS), /\s*\(/),
+    relevance: 0,
+    keywords: { built_in: FUNCTIONS }
+  };
+  function kws_to_regex(list2) {
+    return regex.concat(
+      /\b/,
+      regex.either(...list2.map((kw) => {
+        return kw.replace(/\s+/, "\\s+");
+      })),
+      /\b/
+    );
+  }
+  const MULTI_WORD_KEYWORDS = {
+    scope: "keyword",
+    match: kws_to_regex(COMBOS),
+    relevance: 0
+  };
+  function reduceRelevancy(list2, {
+    exceptions,
+    when
+  } = {}) {
+    const qualifyFn = when;
+    exceptions = exceptions || [];
+    return list2.map((item) => {
+      if (item.match(/\|\d+$/) || exceptions.includes(item)) {
+        return item;
+      } else if (qualifyFn(item)) {
+        return `${item}|0`;
+      } else {
+        return item;
+      }
+    });
+  }
+  return {
+    name: "SQL",
+    case_insensitive: true,
+    // does not include {} or HTML tags `</`
+    illegal: /[{}]|<\//,
+    keywords: {
+      $pattern: /\b[\w\.]+/,
+      keyword: reduceRelevancy(KEYWORDS3, { when: (x) => x.length < 3 }),
+      literal: LITERALS3,
+      type: TYPES3,
+      built_in: POSSIBLE_WITHOUT_PARENS
+    },
+    contains: [
+      {
+        scope: "type",
+        match: kws_to_regex(MULTI_WORD_TYPES)
+      },
+      MULTI_WORD_KEYWORDS,
+      FUNCTION_CALL,
+      VARIABLE,
+      STRING,
+      QUOTED_IDENTIFIER,
+      hljs.C_NUMBER_MODE,
+      hljs.C_BLOCK_COMMENT_MODE,
+      COMMENT_MODE,
+      OPERATOR
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/swift.js
+function source(re) {
+  if (!re) return null;
+  if (typeof re === "string") return re;
+  return re.source;
+}
+function lookahead(re) {
+  return concat("(?=", re, ")");
+}
+function concat(...args) {
+  const joined = args.map((x) => source(x)).join("");
+  return joined;
+}
+function stripOptionsFromArgs(args) {
+  const opts = args[args.length - 1];
+  if (typeof opts === "object" && opts.constructor === Object) {
+    args.splice(args.length - 1, 1);
+    return opts;
+  } else {
+    return {};
+  }
+}
+function either(...args) {
+  const opts = stripOptionsFromArgs(args);
+  const joined = "(" + (opts.capture ? "" : "?:") + args.map((x) => source(x)).join("|") + ")";
+  return joined;
+}
+new RegExp(either(
+  /\[(?:[^\\\]]|\\.)*\]/,
+  // a character class, inside which ( and \ lose their meaning
+  /\(\?<(?![=!])[^>]+>/,
+  // a named capture group `(?<name>` (not a lookbehind `(?<=` / `(?<!`)
+  /\(\?'[^']+'/,
+  // a named capture group `(?'name'`
+  /\(\??/,
+  // an opening parenthesis, capturing or non-capturing / lookahead
+  /\\([1-9][0-9]*)/,
+  // a backreference like `\1`
+  /\\./
+  // any other escape sequence
+));
+var keywordWrapper = (keyword) => concat(
+  /\b/,
+  keyword,
+  /\w$/.test(keyword) ? /\b/ : /\B/
+);
+var dotKeywords = [
+  "Protocol",
+  // contextual
+  "Type"
+  // contextual
+].map(keywordWrapper);
+var optionalDotKeywords = [
+  "init",
+  "self"
+].map(keywordWrapper);
+var keywordTypes = [
+  "Any",
+  "Self"
+];
+var keywords = [
+  // strings below will be fed into the regular `keywords` engine while regex
+  // will result in additional modes being created to scan for those keywords to
+  // avoid conflicts with other rules
+  "actor",
+  "any",
+  // contextual
+  "associatedtype",
+  "async",
+  "await",
+  /as\?/,
+  // operator
+  /as!/,
+  // operator
+  "as",
+  // operator
+  "borrowing",
+  // contextual
+  "break",
+  "case",
+  "catch",
+  "class",
+  "consume",
+  // contextual
+  "consuming",
+  // contextual
+  "continue",
+  "convenience",
+  // contextual
+  "copy",
+  // contextual
+  "default",
+  "defer",
+  "deinit",
+  "didSet",
+  // contextual
+  "distributed",
+  "do",
+  "dynamic",
+  // contextual
+  "each",
+  "else",
+  "enum",
+  "extension",
+  "fallthrough",
+  /fileprivate\(set\)/,
+  "fileprivate",
+  "final",
+  // contextual
+  "for",
+  "func",
+  "get",
+  // contextual
+  "guard",
+  "if",
+  "import",
+  "indirect",
+  // contextual
+  "infix",
+  // contextual
+  /init\?/,
+  /init!/,
+  "inout",
+  /internal\(set\)/,
+  "internal",
+  "in",
+  "is",
+  // operator
+  "isolated",
+  // contextual
+  "nonisolated",
+  // contextual
+  "lazy",
+  // contextual
+  "let",
+  "macro",
+  "mutating",
+  // contextual
+  "nonmutating",
+  // contextual
+  /open\(set\)/,
+  // contextual
+  "open",
+  // contextual
+  "operator",
+  "optional",
+  // contextual
+  "override",
+  // contextual
+  "package",
+  "postfix",
+  // contextual
+  "precedencegroup",
+  "prefix",
+  // contextual
+  /private\(set\)/,
+  "private",
+  "protocol",
+  /public\(set\)/,
+  "public",
+  "repeat",
+  "required",
+  // contextual
+  "rethrows",
+  "return",
+  "set",
+  // contextual
+  "some",
+  // contextual
+  "static",
+  "struct",
+  "subscript",
+  "super",
+  "switch",
+  "throws",
+  "throw",
+  /try\?/,
+  // operator
+  /try!/,
+  // operator
+  "try",
+  // operator
+  "typealias",
+  /unowned\(safe\)/,
+  // contextual
+  /unowned\(unsafe\)/,
+  // contextual
+  "unowned",
+  // contextual
+  "var",
+  "weak",
+  // contextual
+  "where",
+  "while",
+  "willSet"
+  // contextual
+];
+var literals = [
+  "false",
+  "nil",
+  "true"
+];
+var precedencegroupKeywords = [
+  "assignment",
+  "associativity",
+  "higherThan",
+  "left",
+  "lowerThan",
+  "none",
+  "right"
+];
+var numberSignKeywords = [
+  "#colorLiteral",
+  "#column",
+  "#dsohandle",
+  "#else",
+  "#elseif",
+  "#endif",
+  "#error",
+  "#file",
+  "#fileID",
+  "#fileLiteral",
+  "#filePath",
+  "#function",
+  "#if",
+  "#imageLiteral",
+  "#keyPath",
+  "#line",
+  "#selector",
+  "#sourceLocation",
+  "#warning"
+];
+var builtIns = [
+  "abs",
+  "all",
+  "any",
+  "assert",
+  "assertionFailure",
+  "debugPrint",
+  "dump",
+  "fatalError",
+  "getVaList",
+  "isKnownUniquelyReferenced",
+  "max",
+  "min",
+  "numericCast",
+  "pointwiseMax",
+  "pointwiseMin",
+  "precondition",
+  "preconditionFailure",
+  "print",
+  "readLine",
+  "repeatElement",
+  "sequence",
+  "stride",
+  "swap",
+  "swift_unboxFromSwiftValueWithType",
+  "transcode",
+  "type",
+  "unsafeBitCast",
+  "unsafeDowncast",
+  "withExtendedLifetime",
+  "withUnsafeMutablePointer",
+  "withUnsafePointer",
+  "withVaList",
+  "withoutActuallyEscaping",
+  "zip"
+];
+var operatorHead = either(
+  /[/=\-+!*%<>&|^~?]/,
+  /[\u00A1-\u00A7]/,
+  /[\u00A9\u00AB]/,
+  /[\u00AC\u00AE]/,
+  /[\u00B0\u00B1]/,
+  /[\u00B6\u00BB\u00BF\u00D7\u00F7]/,
+  /[\u2016-\u2017]/,
+  /[\u2020-\u2027]/,
+  /[\u2030-\u203E]/,
+  /[\u2041-\u2053]/,
+  /[\u2055-\u205E]/,
+  /[\u2190-\u23FF]/,
+  /[\u2500-\u2775]/,
+  /[\u2794-\u2BFF]/,
+  /[\u2E00-\u2E7F]/,
+  /[\u3001-\u3003]/,
+  /[\u3008-\u3020]/,
+  /[\u3030]/
+);
+var operatorCharacter = either(
+  operatorHead,
+  /[\u0300-\u036F]/,
+  /[\u1DC0-\u1DFF]/,
+  /[\u20D0-\u20FF]/,
+  /[\uFE00-\uFE0F]/,
+  /[\uFE20-\uFE2F]/
+  // TODO: The following characters are also allowed, but the regex isn't supported yet.
+  // /[\u{E0100}-\u{E01EF}]/u
+);
+var operator = concat(operatorHead, operatorCharacter, "*");
+var identifierHead = either(
+  /[a-zA-Z_]/,
+  /[\u00A8\u00AA\u00AD\u00AF\u00B2-\u00B5\u00B7-\u00BA]/,
+  /[\u00BC-\u00BE\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]/,
+  /[\u0100-\u02FF\u0370-\u167F\u1681-\u180D\u180F-\u1DBF]/,
+  /[\u1E00-\u1FFF]/,
+  /[\u200B-\u200D\u202A-\u202E\u203F-\u2040\u2054\u2060-\u206F]/,
+  /[\u2070-\u20CF\u2100-\u218F\u2460-\u24FF\u2776-\u2793]/,
+  /[\u2C00-\u2DFF\u2E80-\u2FFF]/,
+  /[\u3004-\u3007\u3021-\u302F\u3031-\u303F\u3040-\uD7FF]/,
+  /[\uF900-\uFD3D\uFD40-\uFDCF\uFDF0-\uFE1F\uFE30-\uFE44]/,
+  /[\uFE47-\uFEFE\uFF00-\uFFFD]/
+  // Should be /[\uFE47-\uFFFD]/, but we have to exclude FEFF.
+  // The following characters are also allowed, but the regexes aren't supported yet.
+  // /[\u{10000}-\u{1FFFD}\u{20000-\u{2FFFD}\u{30000}-\u{3FFFD}\u{40000}-\u{4FFFD}]/u,
+  // /[\u{50000}-\u{5FFFD}\u{60000-\u{6FFFD}\u{70000}-\u{7FFFD}\u{80000}-\u{8FFFD}]/u,
+  // /[\u{90000}-\u{9FFFD}\u{A0000-\u{AFFFD}\u{B0000}-\u{BFFFD}\u{C0000}-\u{CFFFD}]/u,
+  // /[\u{D0000}-\u{DFFFD}\u{E0000-\u{EFFFD}]/u
+);
+var identifierCharacter = either(
+  identifierHead,
+  /\d/,
+  /[\u0300-\u036F\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/
+);
+var identifier = concat(identifierHead, identifierCharacter, "*");
+var typeIdentifier = concat(/[A-Z]/, identifierCharacter, "*");
+var keywordAttributes = [
+  "attached",
+  "autoclosure",
+  concat(/convention\(/, either("swift", "block", "c"), /\)/),
+  "discardableResult",
+  "dynamicCallable",
+  "dynamicMemberLookup",
+  "escaping",
+  "freestanding",
+  "frozen",
+  "GKInspectable",
+  "IBAction",
+  "IBDesignable",
+  "IBInspectable",
+  "IBOutlet",
+  "IBSegueAction",
+  "inlinable",
+  "main",
+  "nonobjc",
+  "NSApplicationMain",
+  "NSCopying",
+  "NSManaged",
+  concat(/objc\(/, identifier, /\)/),
+  "objc",
+  "objcMembers",
+  "propertyWrapper",
+  "requires_stored_property_inits",
+  "resultBuilder",
+  "Sendable",
+  "testable",
+  "UIApplicationMain",
+  "unchecked",
+  "unknown",
+  "usableFromInline",
+  "warn_unqualified_access"
+];
+var availabilityKeywords = [
+  "iOS",
+  "iOSApplicationExtension",
+  "macOS",
+  "macOSApplicationExtension",
+  "macCatalyst",
+  "macCatalystApplicationExtension",
+  "watchOS",
+  "watchOSApplicationExtension",
+  "tvOS",
+  "tvOSApplicationExtension",
+  "swift"
+];
+function swift(hljs) {
+  const WHITESPACE = {
+    match: /\s+/,
+    relevance: 0
+  };
+  const BLOCK_COMMENT = hljs.COMMENT(
+    "/\\*",
+    "\\*/",
+    { contains: ["self"] }
+  );
+  const COMMENTS = [
+    hljs.C_LINE_COMMENT_MODE,
+    BLOCK_COMMENT
+  ];
+  const DOT_KEYWORD = {
+    match: [
+      /\./,
+      either(...dotKeywords, ...optionalDotKeywords)
+    ],
+    className: { 2: "keyword" }
+  };
+  const KEYWORD_GUARD = {
+    // Consume .keyword to prevent highlighting properties and methods as keywords.
+    match: concat(/\./, either(...keywords)),
+    relevance: 0
+  };
+  const PLAIN_KEYWORDS = keywords.filter((kw) => typeof kw === "string").concat(["_|0"]);
+  const REGEX_KEYWORDS = keywords.filter((kw) => typeof kw !== "string").concat(keywordTypes).map(keywordWrapper);
+  const KEYWORD = { variants: [
+    {
+      className: "keyword",
+      match: either(...REGEX_KEYWORDS, ...optionalDotKeywords)
+    }
+  ] };
+  const KEYWORDS3 = {
+    $pattern: either(
+      /\b\w+/,
+      // regular keywords
+      /#\w+/
+      // number keywords
+    ),
+    keyword: PLAIN_KEYWORDS.concat(numberSignKeywords),
+    literal: literals
+  };
+  const KEYWORD_MODES = [
+    DOT_KEYWORD,
+    KEYWORD_GUARD,
+    KEYWORD
+  ];
+  const BUILT_IN_GUARD = {
+    // Consume .built_in to prevent highlighting properties and methods.
+    match: concat(/\./, either(...builtIns)),
+    relevance: 0
+  };
+  const BUILT_IN = {
+    className: "built_in",
+    match: concat(/\b/, either(...builtIns), /(?=\()/)
+  };
+  const BUILT_INS3 = [
+    BUILT_IN_GUARD,
+    BUILT_IN
+  ];
+  const OPERATOR_GUARD = {
+    // Prevent -> from being highlighting as an operator.
+    match: /->/,
+    relevance: 0
+  };
+  const OPERATOR = {
+    className: "operator",
+    relevance: 0,
+    variants: [
+      { match: operator },
+      {
+        // dot-operator: only operators that start with a dot are allowed to use dots as
+        // characters (..., ...<, .*, etc). So there rule here is: a dot followed by one or more
+        // characters that may also include dots.
+        match: `\\.(\\.|${operatorCharacter})+`
+      }
+    ]
+  };
+  const OPERATORS = [
+    OPERATOR_GUARD,
+    OPERATOR
+  ];
+  const decimalDigits3 = "([0-9]_*)+";
+  const hexDigits3 = "([0-9a-fA-F]_*)+";
+  const NUMBER = {
+    className: "number",
+    relevance: 0,
+    variants: [
+      // decimal floating-point-literal (subsumes decimal-literal)
+      { match: `\\b(${decimalDigits3})(\\.(${decimalDigits3}))?([eE][+-]?(${decimalDigits3}))?\\b` },
+      // hexadecimal floating-point-literal (subsumes hexadecimal-literal)
+      { match: `\\b0x(${hexDigits3})(\\.(${hexDigits3}))?([pP][+-]?(${decimalDigits3}))?\\b` },
+      // octal-literal
+      { match: /\b0o([0-7]_*)+\b/ },
+      // binary-literal
+      { match: /\b0b([01]_*)+\b/ }
+    ]
+  };
+  const ESCAPED_CHARACTER = (rawDelimiter = "") => ({
+    className: "subst",
+    variants: [
+      { match: concat(/\\/, rawDelimiter, /[0\\tnr"']/) },
+      { match: concat(/\\/, rawDelimiter, /u\{[0-9a-fA-F]{1,8}\}/) }
+    ]
+  });
+  const ESCAPED_NEWLINE = (rawDelimiter = "") => ({
+    className: "subst",
+    match: concat(/\\/, rawDelimiter, /[\t ]*(?:[\r\n]|\r\n)/)
+  });
+  const INTERPOLATION = (rawDelimiter = "") => ({
+    className: "subst",
+    label: "interpol",
+    begin: concat(/\\/, rawDelimiter, /\(/),
+    end: /\)/
+  });
+  const MULTILINE_STRING = (rawDelimiter = "") => ({
+    begin: concat(rawDelimiter, /"""/),
+    end: concat(/"""/, rawDelimiter),
+    contains: [
+      ESCAPED_CHARACTER(rawDelimiter),
+      ESCAPED_NEWLINE(rawDelimiter),
+      INTERPOLATION(rawDelimiter)
+    ]
+  });
+  const SINGLE_LINE_STRING = (rawDelimiter = "") => ({
+    begin: concat(rawDelimiter, /"/),
+    end: concat(/"/, rawDelimiter),
+    contains: [
+      ESCAPED_CHARACTER(rawDelimiter),
+      INTERPOLATION(rawDelimiter)
+    ]
+  });
+  const STRING = {
+    className: "string",
+    variants: [
+      MULTILINE_STRING(),
+      MULTILINE_STRING("#"),
+      MULTILINE_STRING("##"),
+      MULTILINE_STRING("###"),
+      SINGLE_LINE_STRING(),
+      SINGLE_LINE_STRING("#"),
+      SINGLE_LINE_STRING("##"),
+      SINGLE_LINE_STRING("###")
+    ]
+  };
+  const REGEXP_CONTENTS = [
+    hljs.BACKSLASH_ESCAPE,
+    {
+      begin: /\[/,
+      end: /\]/,
+      relevance: 0,
+      contains: [hljs.BACKSLASH_ESCAPE]
+    }
+  ];
+  const BARE_REGEXP_LITERAL = {
+    begin: /\/[^\s](?=[^/\n]*\/)/,
+    end: /\//,
+    contains: REGEXP_CONTENTS
+  };
+  const EXTENDED_REGEXP_LITERAL = (rawDelimiter) => {
+    const begin = concat(rawDelimiter, /\//);
+    const end = concat(/\//, rawDelimiter);
+    return {
+      begin,
+      end,
+      contains: [
+        ...REGEXP_CONTENTS,
+        {
+          scope: "comment",
+          begin: `#(?!.*${end})`,
+          end: /$/
+        }
+      ]
+    };
+  };
+  const REGEXP = {
+    scope: "regexp",
+    variants: [
+      EXTENDED_REGEXP_LITERAL("###"),
+      EXTENDED_REGEXP_LITERAL("##"),
+      EXTENDED_REGEXP_LITERAL("#"),
+      BARE_REGEXP_LITERAL
+    ]
+  };
+  const QUOTED_IDENTIFIER = { match: concat(/`/, identifier, /`/) };
+  const IMPLICIT_PARAMETER = {
+    className: "variable",
+    match: /\$\d+/
+  };
+  const PROPERTY_WRAPPER_PROJECTION = {
+    className: "variable",
+    match: `\\$${identifierCharacter}+`
+  };
+  const IDENTIFIERS = [
+    QUOTED_IDENTIFIER,
+    IMPLICIT_PARAMETER,
+    PROPERTY_WRAPPER_PROJECTION
+  ];
+  const AVAILABLE_ATTRIBUTE = {
+    match: /(@|#(un)?)available/,
+    scope: "keyword",
+    starts: { contains: [
+      {
+        begin: /\(/,
+        end: /\)/,
+        keywords: availabilityKeywords,
+        contains: [
+          ...OPERATORS,
+          NUMBER,
+          STRING
+        ]
+      }
+    ] }
+  };
+  const KEYWORD_ATTRIBUTE = {
+    scope: "keyword",
+    match: concat(/@/, either(...keywordAttributes), lookahead(either(/\(/, /\s+/)))
+  };
+  const USER_DEFINED_ATTRIBUTE = {
+    scope: "meta",
+    match: concat(/@/, identifier)
+  };
+  const ATTRIBUTES4 = [
+    AVAILABLE_ATTRIBUTE,
+    KEYWORD_ATTRIBUTE,
+    USER_DEFINED_ATTRIBUTE
+  ];
+  const TYPE = {
+    match: lookahead(/\b[A-Z]/),
+    relevance: 0,
+    contains: [
+      {
+        // Common Apple frameworks, for relevance boost
+        className: "type",
+        match: concat(/(AV|CA|CF|CG|CI|CL|CM|CN|CT|MK|MP|MTK|MTL|NS|SCN|SK|UI|WK|XC)/, identifierCharacter, "+")
+      },
+      {
+        // Type identifier
+        className: "type",
+        match: typeIdentifier,
+        relevance: 0
+      },
+      {
+        // Optional type
+        match: /[?!]+/,
+        relevance: 0
+      },
+      {
+        // Variadic parameter
+        match: /\.\.\./,
+        relevance: 0
+      },
+      {
+        // Protocol composition
+        match: concat(/\s+&\s+/, lookahead(typeIdentifier)),
+        relevance: 0
+      }
+    ]
+  };
+  const GENERIC_ARGUMENTS = {
+    begin: /</,
+    end: />/,
+    keywords: KEYWORDS3,
+    contains: [
+      ...COMMENTS,
+      ...KEYWORD_MODES,
+      ...ATTRIBUTES4,
+      OPERATOR_GUARD,
+      TYPE
+    ]
+  };
+  TYPE.contains.push(GENERIC_ARGUMENTS);
+  const TUPLE_ELEMENT_NAME = {
+    match: concat(identifier, /\s*:/),
+    keywords: "_|0",
+    relevance: 0
+  };
+  const TUPLE = {
+    begin: /\(/,
+    end: /\)/,
+    relevance: 0,
+    keywords: KEYWORDS3,
+    contains: [
+      "self",
+      TUPLE_ELEMENT_NAME,
+      ...COMMENTS,
+      REGEXP,
+      ...KEYWORD_MODES,
+      ...BUILT_INS3,
+      ...OPERATORS,
+      NUMBER,
+      STRING,
+      ...IDENTIFIERS,
+      ...ATTRIBUTES4,
+      TYPE
+    ]
+  };
+  const GENERIC_PARAMETERS = {
+    begin: /</,
+    end: />/,
+    keywords: "repeat each",
+    contains: [
+      ...COMMENTS,
+      TYPE
+    ]
+  };
+  const FUNCTION_PARAMETER_NAME = {
+    begin: either(
+      lookahead(concat(identifier, /\s*:/)),
+      lookahead(concat(identifier, /\s+/, identifier, /\s*:/))
+    ),
+    end: /:/,
+    relevance: 0,
+    contains: [
+      {
+        className: "keyword",
+        match: /\b_\b/
+      },
+      {
+        className: "params",
+        match: identifier
+      }
+    ]
+  };
+  const FUNCTION_PARAMETERS = {
+    begin: /\(/,
+    end: /\)/,
+    keywords: KEYWORDS3,
+    contains: [
+      FUNCTION_PARAMETER_NAME,
+      ...COMMENTS,
+      ...KEYWORD_MODES,
+      ...OPERATORS,
+      NUMBER,
+      STRING,
+      ...ATTRIBUTES4,
+      TYPE,
+      TUPLE
+    ],
+    endsParent: true,
+    illegal: /["']/
+  };
+  const FUNCTION_OR_MACRO = {
+    match: [
+      /(func|macro)/,
+      /\s+/,
+      either(QUOTED_IDENTIFIER.match, identifier, operator)
+    ],
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    contains: [
+      GENERIC_PARAMETERS,
+      FUNCTION_PARAMETERS,
+      WHITESPACE
+    ],
+    illegal: [
+      /\[/,
+      /%/
+    ]
+  };
+  const INIT_SUBSCRIPT = {
+    match: [
+      /\b(?:subscript|init[?!]?)/,
+      /\s*(?=[<(])/
+    ],
+    className: { 1: "keyword" },
+    contains: [
+      GENERIC_PARAMETERS,
+      FUNCTION_PARAMETERS,
+      WHITESPACE
+    ],
+    illegal: /\[|%/
+  };
+  const OPERATOR_DECLARATION = {
+    match: [
+      /operator/,
+      /\s+/,
+      operator
+    ],
+    className: {
+      1: "keyword",
+      3: "title"
+    }
+  };
+  const PRECEDENCEGROUP = {
+    begin: [
+      /precedencegroup/,
+      /\s+/,
+      typeIdentifier
+    ],
+    className: {
+      1: "keyword",
+      3: "title"
+    },
+    contains: [TYPE],
+    keywords: [
+      ...precedencegroupKeywords,
+      ...literals
+    ],
+    end: /}/
+  };
+  const CLASS_FUNC_DECLARATION = {
+    match: [
+      /class\b/,
+      /\s+/,
+      /func\b/,
+      /\s+/,
+      /\b[A-Za-z_][A-Za-z0-9_]*\b/
+    ],
+    scope: {
+      1: "keyword",
+      3: "keyword",
+      5: "title.function"
+    }
+  };
+  const CLASS_VAR_DECLARATION = {
+    match: [
+      /class\b/,
+      /\s+/,
+      /var\b/
+    ],
+    scope: {
+      1: "keyword",
+      3: "keyword"
+    }
+  };
+  const TYPE_DECLARATION = {
+    begin: [
+      /(struct|protocol|class|extension|enum|actor)/,
+      /\s+/,
+      identifier,
+      /\s*/
+    ],
+    beginScope: {
+      1: "keyword",
+      3: "title.class"
+    },
+    keywords: KEYWORDS3,
+    contains: [
+      GENERIC_PARAMETERS,
+      ...KEYWORD_MODES,
+      {
+        begin: /:/,
+        end: /\{/,
+        keywords: KEYWORDS3,
+        contains: [
+          {
+            scope: "title.class.inherited",
+            match: typeIdentifier
+          },
+          ...KEYWORD_MODES
+        ],
+        relevance: 0
+      }
+    ]
+  };
+  for (const variant of STRING.variants) {
+    const interpolation = variant.contains.find((mode) => mode.label === "interpol");
+    interpolation.keywords = KEYWORDS3;
+    const submodes = [
+      ...KEYWORD_MODES,
+      ...BUILT_INS3,
+      ...OPERATORS,
+      NUMBER,
+      STRING,
+      ...IDENTIFIERS
+    ];
+    interpolation.contains = [
+      ...submodes,
+      {
+        begin: /\(/,
+        end: /\)/,
+        contains: [
+          "self",
+          ...submodes
+        ]
+      }
+    ];
+  }
+  return {
+    name: "Swift",
+    keywords: KEYWORDS3,
+    contains: [
+      ...COMMENTS,
+      FUNCTION_OR_MACRO,
+      INIT_SUBSCRIPT,
+      CLASS_FUNC_DECLARATION,
+      CLASS_VAR_DECLARATION,
+      TYPE_DECLARATION,
+      OPERATOR_DECLARATION,
+      PRECEDENCEGROUP,
+      {
+        beginKeywords: "import",
+        end: /$/,
+        contains: [...COMMENTS],
+        relevance: 0
+      },
+      REGEXP,
+      ...KEYWORD_MODES,
+      ...BUILT_INS3,
+      ...OPERATORS,
+      NUMBER,
+      STRING,
+      ...IDENTIFIERS,
+      ...ATTRIBUTES4,
+      TYPE,
+      TUPLE
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/typescript.js
+var IDENT_RE2 = "[A-Za-z$_][0-9A-Za-z$_]*";
+var KEYWORDS2 = [
+  "as",
+  // for exports
+  "in",
+  "of",
+  "if",
+  "for",
+  "while",
+  "finally",
+  "var",
+  "new",
+  "function",
+  "do",
+  "return",
+  "void",
+  "else",
+  "break",
+  "catch",
+  "instanceof",
+  "with",
+  "throw",
+  "case",
+  "default",
+  "try",
+  "switch",
+  "continue",
+  "typeof",
+  "delete",
+  "let",
+  "yield",
+  "const",
+  "class",
+  // JS handles these with a special rule
+  // "get",
+  // "set",
+  "debugger",
+  "async",
+  "await",
+  "static",
+  "import",
+  "from",
+  "export",
+  "extends",
+  // It's reached stage 3, which is "recommended for implementation":
+  "using"
+];
+var LITERALS2 = [
+  "true",
+  "false",
+  "null",
+  "undefined",
+  "NaN",
+  "Infinity"
+];
+var TYPES2 = [
+  // Fundamental objects
+  "Object",
+  "Function",
+  "Boolean",
+  "Symbol",
+  // numbers and dates
+  "Math",
+  "Date",
+  "Number",
+  "BigInt",
+  // text
+  "String",
+  "RegExp",
+  // Indexed collections
+  "Array",
+  "Float32Array",
+  "Float64Array",
+  "Int8Array",
+  "Uint8Array",
+  "Uint8ClampedArray",
+  "Int16Array",
+  "Int32Array",
+  "Uint16Array",
+  "Uint32Array",
+  "BigInt64Array",
+  "BigUint64Array",
+  // Keyed collections
+  "Set",
+  "Map",
+  "WeakSet",
+  "WeakMap",
+  // Structured data
+  "ArrayBuffer",
+  "SharedArrayBuffer",
+  "Atomics",
+  "DataView",
+  "JSON",
+  // Control abstraction objects
+  "Promise",
+  "Generator",
+  "GeneratorFunction",
+  "AsyncFunction",
+  // Reflection
+  "Reflect",
+  "Proxy",
+  // Internationalization
+  "Intl",
+  // WebAssembly
+  "WebAssembly"
+];
+var ERROR_TYPES2 = [
+  "Error",
+  "EvalError",
+  "InternalError",
+  "RangeError",
+  "ReferenceError",
+  "SyntaxError",
+  "TypeError",
+  "URIError"
+];
+var BUILT_IN_GLOBALS2 = [
+  "setInterval",
+  "setTimeout",
+  "clearInterval",
+  "clearTimeout",
+  "require",
+  "exports",
+  "eval",
+  "isFinite",
+  "isNaN",
+  "parseFloat",
+  "parseInt",
+  "decodeURI",
+  "decodeURIComponent",
+  "encodeURI",
+  "encodeURIComponent",
+  "escape",
+  "unescape"
+];
+var BUILT_IN_VARIABLES2 = [
+  "arguments",
+  "this",
+  "super",
+  "console",
+  "window",
+  "document",
+  "localStorage",
+  "sessionStorage",
+  "module",
+  "self",
+  "global"
+  // Node.js
+];
+var BUILT_INS2 = [].concat(
+  BUILT_IN_GLOBALS2,
+  TYPES2,
+  ERROR_TYPES2
+);
+function javascript2(hljs) {
+  const regex = hljs.regex;
+  const hasClosingTag = (match, { after }) => {
+    const tag = "</" + match[0].slice(1);
+    const pos = match.input.indexOf(tag, after);
+    return pos !== -1;
+  };
+  const IDENT_RE$1 = IDENT_RE2;
+  const FRAGMENT = {
+    begin: "<>",
+    end: "</>"
+  };
+  const XML_SELF_CLOSING = /<[A-Za-z0-9\\._:-]+\s*\/>/;
+  const XML_TAG = {
+    begin: /<[A-Za-z0-9\\._:-]+/,
+    end: /\/[A-Za-z0-9\\._:-]+>|\/>/,
+    /**
+     * @param {RegExpMatchArray} match
+     * @param {CallbackResponse} response
+     */
+    isTrulyOpeningTag: (match, response) => {
+      const afterMatchIndex = match[0].length + match.index;
+      const nextChar = match.input[afterMatchIndex];
+      if (
+        // HTML should not include another raw `<` inside a tag
+        // nested type?
+        // `<Array<Array<number>>`, etc.
+        nextChar === "<" || // the , gives away that this is not HTML
+        // `<T, A extends keyof T, V>`
+        nextChar === ","
+      ) {
+        response.ignoreMatch();
+        return;
+      }
+      if (nextChar === ">") {
+        if (!hasClosingTag(match, { after: afterMatchIndex })) {
+          response.ignoreMatch();
+        }
+      }
+      let m;
+      const afterMatch = match.input.substring(afterMatchIndex);
+      if (m = afterMatch.match(/^\s*=/)) {
+        response.ignoreMatch();
+        return;
+      }
+      if (m = afterMatch.match(/^\s+extends\s+/)) {
+        if (m.index === 0) {
+          response.ignoreMatch();
+          return;
+        }
+      }
+    }
+  };
+  const KEYWORDS$1 = {
+    $pattern: IDENT_RE2,
+    keyword: KEYWORDS2,
+    literal: LITERALS2,
+    built_in: BUILT_INS2,
+    "variable.language": BUILT_IN_VARIABLES2
+  };
+  const decimalDigits3 = "[0-9](_?[0-9])*";
+  const frac3 = `\\.(${decimalDigits3})`;
+  const decimalInteger = `0|[1-9](_?[0-9])*|0[0-7]*[89][0-9]*`;
+  const NUMBER = {
+    className: "number",
+    variants: [
+      // DecimalLiteral
+      { begin: `(\\b(${decimalInteger})((${frac3})|\\.)?|(${frac3}))[eE][+-]?(${decimalDigits3})\\b` },
+      { begin: `\\b(${decimalInteger})\\b((${frac3})\\b|\\.)?|(${frac3})\\b` },
+      // DecimalBigIntegerLiteral
+      { begin: `\\b(0|[1-9](_?[0-9])*)n\\b` },
+      // NonDecimalIntegerLiteral
+      { begin: "\\b0[xX][0-9a-fA-F](_?[0-9a-fA-F])*n?\\b" },
+      { begin: "\\b0[bB][0-1](_?[0-1])*n?\\b" },
+      { begin: "\\b0[oO][0-7](_?[0-7])*n?\\b" },
+      // LegacyOctalIntegerLiteral (does not include underscore separators)
+      // https://tc39.es/ecma262/#sec-additional-syntax-numeric-literals
+      { begin: "\\b0[0-7]+n?\\b" }
+    ],
+    relevance: 0
+  };
+  const SUBST = {
+    className: "subst",
+    begin: "\\$\\{",
+    end: "\\}",
+    keywords: KEYWORDS$1,
+    contains: []
+    // defined later
+  };
+  const HTML_TEMPLATE = {
+    begin: ".?html`",
+    end: "",
+    starts: {
+      end: "`",
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: "xml"
+    }
+  };
+  const CSS_TEMPLATE = {
+    begin: ".?css`",
+    end: "",
+    starts: {
+      end: "`",
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: "css"
+    }
+  };
+  const GRAPHQL_TEMPLATE = {
+    begin: ".?gql`",
+    end: "",
+    starts: {
+      end: "`",
+      returnEnd: false,
+      contains: [
+        hljs.BACKSLASH_ESCAPE,
+        SUBST
+      ],
+      subLanguage: "graphql"
+    }
+  };
+  const TEMPLATE_STRING = {
+    className: "string",
+    begin: "`",
+    end: "`",
+    contains: [
+      hljs.BACKSLASH_ESCAPE,
+      SUBST
+    ]
+  };
+  const JSDOC_COMMENT = hljs.COMMENT(
+    /\/\*\*(?!\/)/,
+    "\\*/",
+    {
+      relevance: 0,
+      contains: [
+        {
+          begin: "(?=@[A-Za-z]+)",
+          relevance: 0,
+          contains: [
+            {
+              className: "doctag",
+              begin: "@[A-Za-z]+"
+            },
+            {
+              className: "type",
+              begin: "\\{",
+              end: "\\}",
+              excludeEnd: true,
+              excludeBegin: true,
+              relevance: 0
+            },
+            {
+              className: "variable",
+              begin: IDENT_RE$1 + "(?=\\s*(-)|$)",
+              endsParent: true,
+              relevance: 0
+            },
+            // eat spaces (not newlines) so we can find
+            // types or variables
+            {
+              begin: /(?=[^\n])\s/,
+              relevance: 0
+            }
+          ]
+        }
+      ]
+    }
+  );
+  const COMMENT = {
+    className: "comment",
+    variants: [
+      JSDOC_COMMENT,
+      hljs.C_BLOCK_COMMENT_MODE,
+      hljs.C_LINE_COMMENT_MODE
+    ]
+  };
+  const SUBST_INTERNALS = [
+    hljs.APOS_STRING_MODE,
+    hljs.QUOTE_STRING_MODE,
+    HTML_TEMPLATE,
+    CSS_TEMPLATE,
+    GRAPHQL_TEMPLATE,
+    TEMPLATE_STRING,
+    // Skip numbers when they are part of a variable name
+    { match: /\$\d+/ },
+    NUMBER
+    // This is intentional:
+    // See https://github.com/highlightjs/highlight.js/issues/3288
+    // hljs.REGEXP_MODE
+  ];
+  SUBST.contains = SUBST_INTERNALS.concat({
+    // we need to pair up {} inside our subst to prevent
+    // it from ending too early by matching another }
+    begin: /\{/,
+    end: /\}/,
+    keywords: KEYWORDS$1,
+    contains: [
+      "self"
+    ].concat(SUBST_INTERNALS)
+  });
+  const SUBST_AND_COMMENTS = [].concat(COMMENT, SUBST.contains);
+  const PARAMS_CONTAINS = SUBST_AND_COMMENTS.concat([
+    // eat recursive parens in sub expressions
+    {
+      begin: /(\s*)\(/,
+      end: /\)/,
+      keywords: KEYWORDS$1,
+      contains: ["self"].concat(SUBST_AND_COMMENTS)
+    }
+  ]);
+  const PARAMS = {
+    className: "params",
+    // convert this to negative lookbehind in v12
+    begin: /(\s*)\(/,
+    // to match the parms with
+    end: /\)/,
+    excludeBegin: true,
+    excludeEnd: true,
+    keywords: KEYWORDS$1,
+    contains: PARAMS_CONTAINS
+  };
+  const CLASS_OR_EXTENDS = {
+    variants: [
+      // class Car extends vehicle
+      {
+        match: [
+          /class/,
+          /\s+/,
+          IDENT_RE$1,
+          /\s+/,
+          /extends/,
+          /\s+/,
+          regex.concat(IDENT_RE$1, "(", regex.concat(/\./, IDENT_RE$1), ")*")
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class",
+          5: "keyword",
+          7: "title.class.inherited"
+        }
+      },
+      // class Car
+      {
+        match: [
+          /class/,
+          /\s+/,
+          IDENT_RE$1
+        ],
+        scope: {
+          1: "keyword",
+          3: "title.class"
+        }
+      }
+    ]
+  };
+  const CLASS_REFERENCE = {
+    relevance: 0,
+    match: regex.either(
+      // Hard coded exceptions
+      /\bJSON/,
+      // Float32Array, OutT
+      /\b[A-Z][a-z]+([A-Z][a-z]*|\d)*/,
+      // CSSFactory, CSSFactoryT
+      /\b[A-Z]{2,}([A-Z][a-z]+|\d)+([A-Z][a-z]*)*/,
+      // FPs, FPsT
+      /\b[A-Z]{2,}[a-z]+([A-Z][a-z]+|\d)*([A-Z][a-z]*)*/
+      // P
+      // single letters are not highlighted
+      // BLAH
+      // this will be flagged as a UPPER_CASE_CONSTANT instead
+    ),
+    className: "title.class",
+    keywords: {
+      _: [
+        // se we still get relevance credit for JS library classes
+        ...TYPES2,
+        ...ERROR_TYPES2
+      ]
+    }
+  };
+  const USE_STRICT = {
+    label: "use_strict",
+    className: "meta",
+    relevance: 10,
+    begin: /^\s*['"]use (strict|asm)['"]/
+  };
+  const FUNCTION_DEFINITION = {
+    variants: [
+      {
+        match: [
+          /function/,
+          /\s+/,
+          IDENT_RE$1,
+          /(?=\s*\()/
+        ]
+      },
+      // anonymous function
+      {
+        match: [
+          /function/,
+          /\s*(?=\()/
+        ]
+      }
+    ],
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    label: "func.def",
+    contains: [PARAMS],
+    illegal: /%/
+  };
+  const UPPER_CASE_CONSTANT = {
+    relevance: 0,
+    match: /\b[A-Z][A-Z_0-9]+\b/,
+    className: "variable.constant"
+  };
+  function noneOf(list2) {
+    return regex.concat("(?!", list2.join("|"), ")");
+  }
+  const FUNCTION_CALL = {
+    match: regex.concat(
+      /\b/,
+      noneOf([
+        ...BUILT_IN_GLOBALS2,
+        "super",
+        "import",
+        "await"
+      ].map((x) => `${x}\\s*\\(`)),
+      IDENT_RE$1,
+      regex.lookahead(/\s*\(/)
+    ),
+    className: "title.function",
+    relevance: 0
+  };
+  const PROPERTY_ACCESS = {
+    begin: regex.concat(/\./, regex.lookahead(
+      regex.concat(IDENT_RE$1, /(?![0-9A-Za-z$_(])/)
+    )),
+    end: IDENT_RE$1,
+    excludeBegin: true,
+    keywords: "prototype",
+    className: "property",
+    relevance: 0
+  };
+  const GETTER_OR_SETTER = {
+    match: [
+      /get|set/,
+      /\s+/,
+      IDENT_RE$1,
+      /(?=\()/
+    ],
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    contains: [
+      {
+        // eat to avoid empty params
+        begin: /\(\)/
+      },
+      PARAMS
+    ]
+  };
+  const FUNC_LEAD_IN_RE = "(\\([^()]*(\\([^()]*(\\([^()]*\\)[^()]*)*\\)[^()]*)*\\)|" + hljs.UNDERSCORE_IDENT_RE + ")\\s*=>";
+  const FUNCTION_VARIABLE = {
+    match: [
+      /const|var|let/,
+      /\s+/,
+      IDENT_RE$1,
+      /\s*/,
+      /=\s*/,
+      /(async\s*)?/,
+      // async is optional
+      regex.lookahead(FUNC_LEAD_IN_RE)
+    ],
+    keywords: "async",
+    className: {
+      1: "keyword",
+      3: "title.function"
+    },
+    contains: [
+      PARAMS
+    ]
+  };
+  return {
+    name: "JavaScript",
+    aliases: ["js", "jsx", "mjs", "cjs"],
+    keywords: KEYWORDS$1,
+    // this will be extended by TypeScript
+    exports: { PARAMS_CONTAINS, CLASS_REFERENCE },
+    illegal: /#(?![$_A-Za-z])/,
+    contains: [
+      hljs.SHEBANG({
+        label: "shebang",
+        binary: "node",
+        relevance: 5
+      }),
+      USE_STRICT,
+      hljs.APOS_STRING_MODE,
+      hljs.QUOTE_STRING_MODE,
+      HTML_TEMPLATE,
+      CSS_TEMPLATE,
+      GRAPHQL_TEMPLATE,
+      TEMPLATE_STRING,
+      COMMENT,
+      // Skip numbers when they are part of a variable name
+      { match: /\$\d+/ },
+      NUMBER,
+      CLASS_REFERENCE,
+      {
+        scope: "attr",
+        match: IDENT_RE$1 + regex.lookahead(":"),
+        relevance: 0
+      },
+      FUNCTION_VARIABLE,
+      {
+        // "value" container
+        begin: "(" + hljs.RE_STARTERS_RE + "|\\b(case|return|throw)\\b)\\s*",
+        keywords: "return throw case",
+        relevance: 0,
+        contains: [
+          COMMENT,
+          hljs.REGEXP_MODE,
+          {
+            className: "function",
+            // we have to count the parens to make sure we actually have the
+            // correct bounding ( ) before the =>.  There could be any number of
+            // sub-expressions inside also surrounded by parens.
+            begin: FUNC_LEAD_IN_RE,
+            returnBegin: true,
+            end: "\\s*=>",
+            contains: [
+              {
+                className: "params",
+                variants: [
+                  {
+                    begin: hljs.UNDERSCORE_IDENT_RE,
+                    relevance: 0
+                  },
+                  {
+                    className: null,
+                    begin: /\(\s*\)/,
+                    skip: true
+                  },
+                  {
+                    begin: /(\s*)\(/,
+                    end: /\)/,
+                    excludeBegin: true,
+                    excludeEnd: true,
+                    keywords: KEYWORDS$1,
+                    contains: PARAMS_CONTAINS
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            // could be a comma delimited list of params to a function call
+            begin: /,/,
+            relevance: 0
+          },
+          {
+            match: /\s+/,
+            relevance: 0
+          },
+          {
+            // JSX
+            variants: [
+              { begin: FRAGMENT.begin, end: FRAGMENT.end },
+              { match: XML_SELF_CLOSING },
+              {
+                begin: XML_TAG.begin,
+                // we carefully check the opening tag to see if it truly
+                // is a tag and not a false positive
+                "on:begin": XML_TAG.isTrulyOpeningTag,
+                end: XML_TAG.end
+              }
+            ],
+            subLanguage: "xml",
+            contains: [
+              {
+                begin: XML_TAG.begin,
+                end: XML_TAG.end,
+                skip: true,
+                contains: ["self"]
+              }
+            ]
+          }
+        ]
+      },
+      FUNCTION_DEFINITION,
+      {
+        // prevent this from getting swallowed up by function
+        // since they appear "function like"
+        beginKeywords: "while if switch catch for"
+      },
+      {
+        // we have to count the parens to make sure we actually have the correct
+        // bounding ( ).  There could be any number of sub-expressions inside
+        // also surrounded by parens.
+        begin: "\\b(?!function)" + hljs.UNDERSCORE_IDENT_RE + "\\([^()]*(\\([^()]*(\\([^()]*\\)[^()]*)*\\)[^()]*)*\\)\\s*\\{",
+        // end parens
+        returnBegin: true,
+        label: "func.def",
+        contains: [
+          PARAMS,
+          hljs.inherit(hljs.TITLE_MODE, { begin: IDENT_RE$1, className: "title.function" })
+        ]
+      },
+      // catch ... so it won't trigger the property rule below
+      {
+        match: /\.\.\./,
+        relevance: 0
+      },
+      PROPERTY_ACCESS,
+      // hack: prevents detection of keywords in some circumstances
+      // .keyword()
+      // $keyword = x
+      {
+        match: "\\$" + IDENT_RE$1,
+        relevance: 0
+      },
+      {
+        match: [/\bconstructor(?=\s*\()/],
+        className: { 1: "title.function" },
+        contains: [PARAMS]
+      },
+      FUNCTION_CALL,
+      UPPER_CASE_CONSTANT,
+      CLASS_OR_EXTENDS,
+      GETTER_OR_SETTER,
+      {
+        match: /\$[(.]/
+        // relevance booster for a pattern common to JS libs: `$(something)` and `$.something`
+      }
+    ]
+  };
+}
+function typescript(hljs) {
+  const regex = hljs.regex;
+  const tsLanguage = javascript2(hljs);
+  const IDENT_RE$1 = IDENT_RE2;
+  const TYPES3 = [
+    "any",
+    "void",
+    "number",
+    "boolean",
+    "string",
+    "object",
+    "never",
+    "symbol",
+    "bigint",
+    "unknown"
+  ];
+  const NAMESPACE = {
+    begin: [
+      /namespace/,
+      /\s+/,
+      hljs.IDENT_RE
+    ],
+    beginScope: {
+      1: "keyword",
+      3: "title.class"
+    }
+  };
+  const INTERFACE = {
+    beginKeywords: "interface",
+    end: /\{/,
+    excludeEnd: true,
+    keywords: {
+      keyword: "interface extends",
+      built_in: TYPES3
+    },
+    contains: [tsLanguage.exports.CLASS_REFERENCE]
+  };
+  const USE_STRICT = {
+    className: "meta",
+    relevance: 10,
+    begin: /^\s*['"]use strict['"]/
+  };
+  const TS_SPECIFIC_KEYWORDS = [
+    "type",
+    // "namespace",
+    "interface",
+    "public",
+    "private",
+    "protected",
+    "implements",
+    "declare",
+    "abstract",
+    "readonly",
+    "enum",
+    "override",
+    "satisfies"
+  ];
+  const KEYWORDS$1 = {
+    $pattern: IDENT_RE2,
+    keyword: KEYWORDS2.concat(TS_SPECIFIC_KEYWORDS),
+    literal: LITERALS2,
+    built_in: BUILT_INS2.concat(TYPES3),
+    "variable.language": BUILT_IN_VARIABLES2
+  };
+  const DECORATOR = {
+    className: "meta",
+    begin: "@" + IDENT_RE$1
+  };
+  const swapMode = (mode, label, replacement) => {
+    const indx = mode.contains.findIndex((m) => m.label === label);
+    if (indx === -1) {
+      throw new Error("can not find mode to replace");
+    }
+    mode.contains.splice(indx, 1, replacement);
+  };
+  Object.assign(tsLanguage.keywords, KEYWORDS$1);
+  tsLanguage.exports.PARAMS_CONTAINS.push(DECORATOR);
+  const ATTRIBUTE_HIGHLIGHT = tsLanguage.contains.find((c2) => c2.scope === "attr");
+  const OPTIONAL_KEY_OR_ARGUMENT = Object.assign(
+    {},
+    ATTRIBUTE_HIGHLIGHT,
+    { match: regex.concat(IDENT_RE$1, regex.lookahead(/\s*\?:/)) }
+  );
+  tsLanguage.exports.PARAMS_CONTAINS.push([
+    tsLanguage.exports.CLASS_REFERENCE,
+    // class reference for highlighting the params types
+    ATTRIBUTE_HIGHLIGHT,
+    // highlight the params key
+    OPTIONAL_KEY_OR_ARGUMENT
+    // Added for optional property assignment highlighting
+  ]);
+  tsLanguage.contains = tsLanguage.contains.concat([
+    DECORATOR,
+    NAMESPACE,
+    INTERFACE,
+    OPTIONAL_KEY_OR_ARGUMENT
+    // Added for optional property assignment highlighting
+  ]);
+  swapMode(tsLanguage, "shebang", hljs.SHEBANG());
+  swapMode(tsLanguage, "use_strict", USE_STRICT);
+  const functionDeclaration = tsLanguage.contains.find((m) => m.label === "func.def");
+  functionDeclaration.relevance = 0;
+  Object.assign(tsLanguage, {
+    name: "TypeScript",
+    aliases: [
+      "ts",
+      "tsx",
+      "mts",
+      "cts"
+    ]
+  });
+  return tsLanguage;
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/xml.js
+function xml(hljs) {
+  const regex = hljs.regex;
+  const TAG_NAME_RE = regex.concat(/[\p{L}_]/u, regex.optional(/[\p{L}0-9_.-]*:/u), /[\p{L}0-9_.-]*/u);
+  const XML_IDENT_RE = /[\p{L}0-9._:-]+/u;
+  const XML_ENTITIES = {
+    className: "symbol",
+    begin: /&[a-z]+;|&#[0-9]+;|&#x[a-f0-9]+;/
+  };
+  const XML_META_KEYWORDS = {
+    begin: /\s/,
+    contains: [
+      {
+        className: "keyword",
+        begin: /#?[a-z_][a-z1-9_-]+/,
+        illegal: /\n/
+      }
+    ]
+  };
+  const XML_META_PAR_KEYWORDS = hljs.inherit(XML_META_KEYWORDS, {
+    begin: /\(/,
+    end: /\)/
+  });
+  const APOS_META_STRING_MODE = hljs.inherit(hljs.APOS_STRING_MODE, { className: "string" });
+  const QUOTE_META_STRING_MODE = hljs.inherit(hljs.QUOTE_STRING_MODE, { className: "string" });
+  const TAG_INTERNALS = {
+    endsWithParent: true,
+    illegal: /</,
+    relevance: 0,
+    contains: [
+      {
+        className: "attr",
+        begin: XML_IDENT_RE,
+        relevance: 0
+      },
+      {
+        begin: /=\s*/,
+        relevance: 0,
+        contains: [
+          {
+            className: "string",
+            endsParent: true,
+            variants: [
+              {
+                begin: /"/,
+                end: /"/,
+                contains: [XML_ENTITIES]
+              },
+              {
+                begin: /'/,
+                end: /'/,
+                contains: [XML_ENTITIES]
+              },
+              { begin: /[^\s"'=<>`]+/ }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+  return {
+    name: "HTML, XML",
+    aliases: [
+      "html",
+      "xhtml",
+      "rss",
+      "atom",
+      "xjb",
+      "xsd",
+      "xsl",
+      "plist",
+      "wsf",
+      "svg"
+    ],
+    case_insensitive: true,
+    unicodeRegex: true,
+    contains: [
+      {
+        className: "meta",
+        begin: /<![a-z]/,
+        end: />/,
+        relevance: 10,
+        contains: [
+          XML_META_KEYWORDS,
+          QUOTE_META_STRING_MODE,
+          APOS_META_STRING_MODE,
+          XML_META_PAR_KEYWORDS,
+          {
+            begin: /\[/,
+            end: /\]/,
+            contains: [
+              {
+                className: "meta",
+                begin: /<![a-z]/,
+                end: />/,
+                contains: [
+                  XML_META_KEYWORDS,
+                  XML_META_PAR_KEYWORDS,
+                  QUOTE_META_STRING_MODE,
+                  APOS_META_STRING_MODE
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      hljs.COMMENT(
+        /<!--/,
+        /-->/,
+        { relevance: 10 }
+      ),
+      {
+        begin: /<!\[CDATA\[/,
+        end: /\]\]>/,
+        relevance: 10
+      },
+      XML_ENTITIES,
+      // xml processing instructions
+      {
+        className: "meta",
+        end: /\?>/,
+        variants: [
+          {
+            begin: /<\?xml/,
+            relevance: 10,
+            contains: [
+              QUOTE_META_STRING_MODE
+            ]
+          },
+          {
+            begin: /<\?[a-z][a-z0-9]+/
+          }
+        ]
+      },
+      {
+        className: "tag",
+        /*
+        The lookahead pattern (?=...) ensures that 'begin' only matches
+        '<style' as a single word, followed by a whitespace or an
+        ending bracket.
+        */
+        begin: /<style(?=\s|>)/,
+        end: />/,
+        keywords: { name: "style" },
+        contains: [TAG_INTERNALS],
+        starts: {
+          end: /<\/style>/,
+          returnEnd: true,
+          subLanguage: "css"
+        }
+      },
+      {
+        className: "tag",
+        // See the comment in the <style tag about the lookahead pattern
+        begin: /<script(?=\s|>)/,
+        end: />/,
+        keywords: { name: "script" },
+        contains: [TAG_INTERNALS],
+        starts: {
+          end: /<\/script>/,
+          returnEnd: true,
+          subLanguage: "javascript"
+        }
+      },
+      // we need this for now for jSX
+      {
+        className: "tag",
+        begin: /<>|<\/>/
+      },
+      // open tag
+      {
+        className: "tag",
+        begin: regex.concat(
+          /</,
+          regex.lookahead(regex.concat(
+            TAG_NAME_RE,
+            // <tag/>
+            // <tag>
+            // <tag ...
+            regex.either(/\/>/, />/, /\s/)
+          ))
+        ),
+        end: /\/?>/,
+        contains: [
+          {
+            className: "name",
+            begin: TAG_NAME_RE,
+            relevance: 0,
+            starts: TAG_INTERNALS
+          }
+        ]
+      },
+      // close tag
+      {
+        className: "tag",
+        begin: regex.concat(
+          /<\//,
+          regex.lookahead(regex.concat(
+            TAG_NAME_RE,
+            />/
+          ))
+        ),
+        contains: [
+          {
+            className: "name",
+            begin: TAG_NAME_RE,
+            relevance: 0
+          },
+          {
+            begin: />/,
+            relevance: 0,
+            endsParent: true
+          }
+        ]
+      }
+    ]
+  };
+}
+
+// node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/es/languages/yaml.js
+function yaml(hljs) {
+  const LITERALS3 = "true false yes no null";
+  const URI_CHARACTERS = "[\\w#;/?:@&=+$,.~*'()[\\]]+";
+  const KEY = {
+    className: "attr",
+    variants: [
+      // added brackets support and special char support
+      { begin: /[\w*@][\w*@ :()\./-]*:(?=[ \t]|$)/ },
+      {
+        // double quoted keys - with brackets and special char support
+        begin: /"[\w*@][\w*@ :()\./-]*":(?=[ \t]|$)/
+      },
+      {
+        // single quoted keys - with brackets and special char support
+        begin: /'[\w*@][\w*@ :()\./-]*':(?=[ \t]|$)/
+      }
+    ]
+  };
+  const TEMPLATE_VARIABLES = {
+    className: "template-variable",
+    variants: [
+      {
+        // jinja templates Ansible
+        begin: /\{\{/,
+        end: /\}\}/
+      },
+      {
+        // Ruby i18n
+        begin: /%\{/,
+        end: /\}/
+      }
+    ]
+  };
+  const SINGLE_QUOTE_STRING = {
+    className: "string",
+    relevance: 0,
+    begin: /'/,
+    end: /'/,
+    contains: [
+      {
+        match: /''/,
+        scope: "char.escape",
+        relevance: 0
+      }
+    ]
+  };
+  const STRING = {
+    className: "string",
+    relevance: 0,
+    variants: [
+      {
+        begin: /"/,
+        end: /"/
+      },
+      { begin: /\S+/ }
+    ],
+    contains: [
+      hljs.BACKSLASH_ESCAPE,
+      TEMPLATE_VARIABLES
+    ]
+  };
+  const CONTAINER_STRING = hljs.inherit(STRING, { variants: [
+    {
+      begin: /'/,
+      end: /'/,
+      contains: [
+        {
+          begin: /''/,
+          relevance: 0
+        }
+      ]
+    },
+    {
+      begin: /"/,
+      end: /"/
+    },
+    { begin: /[^\s,{}[\]]+/ }
+  ] });
+  const DATE_RE = "[0-9]{4}(-[0-9][0-9]){0,2}";
+  const TIME_RE = "([Tt \\t][0-9][0-9]?(:[0-9][0-9]){2})?";
+  const FRACTION_RE = "(\\.[0-9]*)?";
+  const ZONE_RE = "([ \\t])*(Z|[-+][0-9][0-9]?(:[0-9][0-9])?)?";
+  const TIMESTAMP = {
+    className: "number",
+    begin: "\\b" + DATE_RE + TIME_RE + FRACTION_RE + ZONE_RE + "\\b"
+  };
+  const VALUE_CONTAINER = {
+    end: ",",
+    endsWithParent: true,
+    excludeEnd: true,
+    keywords: LITERALS3,
+    relevance: 0
+  };
+  const OBJECT = {
+    begin: /\{/,
+    end: /\}/,
+    contains: [VALUE_CONTAINER],
+    illegal: "\\n",
+    relevance: 0
+  };
+  const ARRAY = {
+    begin: "\\[",
+    end: "\\]",
+    contains: [VALUE_CONTAINER],
+    illegal: "\\n",
+    relevance: 0
+  };
+  const MODES4 = [
+    KEY,
+    {
+      className: "meta",
+      begin: "^---\\s*$",
+      relevance: 10
+    },
+    {
+      // multi line string
+      // Blocks start with a | or > followed by a newline
+      //
+      // Indentation of subsequent lines must be the same to
+      // be considered part of the block
+      className: "string",
+      begin: "[\\|>]([1-9]?[+-])?[ ]*\\n( +)[^ ][^\\n]*\\n(\\2[^\\n]+\\n?)*"
+    },
+    {
+      // Ruby/Rails erb
+      begin: "<%[%=-]?",
+      end: "[%-]?%>",
+      subLanguage: "ruby",
+      excludeBegin: true,
+      excludeEnd: true,
+      relevance: 0
+    },
+    {
+      // named tags
+      className: "type",
+      begin: "!\\w+!" + URI_CHARACTERS
+    },
+    // https://yaml.org/spec/1.2/spec.html#id2784064
+    {
+      // verbatim tags
+      className: "type",
+      begin: "!<" + URI_CHARACTERS + ">"
+    },
+    {
+      // primary tags
+      className: "type",
+      begin: "!" + URI_CHARACTERS
+    },
+    {
+      // secondary tags
+      className: "type",
+      begin: "!!" + URI_CHARACTERS
+    },
+    {
+      // fragment id &ref
+      className: "meta",
+      begin: "&" + hljs.UNDERSCORE_IDENT_RE + "$"
+    },
+    {
+      // fragment reference *ref
+      className: "meta",
+      begin: "\\*" + hljs.UNDERSCORE_IDENT_RE + "$"
+    },
+    {
+      // array listing
+      className: "bullet",
+      // TODO: remove |$ hack when we have proper look-ahead support
+      begin: "-(?=[ ]|$)",
+      relevance: 0
+    },
+    hljs.HASH_COMMENT_MODE,
+    {
+      beginKeywords: LITERALS3,
+      keywords: { literal: LITERALS3 }
+    },
+    TIMESTAMP,
+    // numbers are any valid C-style number that
+    // sit isolated from other words
+    {
+      className: "number",
+      begin: hljs.C_NUMBER_RE + "\\b",
+      relevance: 0
+    },
+    OBJECT,
+    ARRAY,
+    SINGLE_QUOTE_STRING,
+    STRING
+  ];
+  const VALUE_MODES = [...MODES4];
+  VALUE_MODES.pop();
+  VALUE_MODES.push(CONTAINER_STRING);
+  VALUE_CONTAINER.contains = VALUE_MODES;
+  return {
+    name: "YAML",
+    case_insensitive: true,
+    aliases: ["yml"],
+    contains: MODES4
+  };
+}
+
+// src/client/preview.js
 var h = import_react4.default.createElement;
 var TEXT_CACHE = /* @__PURE__ */ new Map();
-function useVisible(ref, lazy) {
-  const [visible, setVisible] = (0, import_react4.useState)(!lazy);
+var LANGUAGE_BY_EXT = {
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  jsx: "javascript",
+  ts: "typescript",
+  tsx: "typescript",
+  json: "json",
+  jsonc: "json",
+  py: "python",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  html: "xml",
+  htm: "xml",
+  xml: "xml",
+  svg: "xml",
+  css: "css",
+  scss: "scss",
+  less: "less",
+  md: "markdown",
+  markdown: "markdown",
+  mdx: "markdown",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "ini",
+  ini: "ini",
+  conf: "ini",
+  properties: "ini",
+  sql: "sql",
+  java: "java",
+  kt: "kotlin",
+  swift: "swift",
+  c: "c",
+  h: "c",
+  cc: "cpp",
+  cpp: "cpp",
+  hpp: "cpp",
+  cs: "csharp",
+  go: "go",
+  rs: "rust",
+  rb: "ruby",
+  php: "php",
+  lua: "lua",
+  dockerfile: "dockerfile",
+  makefile: "bash"
+};
+for (const [name, language] of Object.entries({
+  bash,
+  c,
+  cpp,
+  csharp,
+  css,
+  dockerfile,
+  go,
+  ini,
+  java,
+  javascript,
+  json,
+  kotlin,
+  less,
+  lua,
+  markdown,
+  php,
+  plaintext,
+  python,
+  ruby,
+  rust,
+  scss,
+  sql,
+  swift,
+  typescript,
+  xml,
+  yaml
+})) core_default.registerLanguage(name, language);
+function escapeHtml2(value) {
+  return String(value).replace(/[&<>"']/gu, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+function languageFor(ext) {
+  return LANGUAGE_BY_EXT[String(ext ?? "").toLowerCase()];
+}
+function highlight(code2, ext) {
+  const language = languageFor(ext);
+  if (language !== void 0 && core_default.getLanguage(language) !== void 0) {
+    try {
+      return { html: core_default.highlight(code2, { language, ignoreIllegals: true }).value, language };
+    } catch {
+    }
+  }
+  return { html: escapeHtml2(code2), language: "text" };
+}
+function normalizeRelative(folder, source2) {
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(source2) || source2.startsWith("//") || source2.startsWith("#")) return void 0;
+  const parts = [];
+  const combined = source2.startsWith("/") ? source2.slice(1) : `${folder}/${source2}`;
+  for (const segment of combined.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (parts.length === 0) return void 0;
+      parts.pop();
+      continue;
+    }
+    parts.push(segment);
+  }
+  return parts.length === 0 ? void 0 : parts.join("/");
+}
+function markdownRenderer(sessionId) {
+  const md = new MarkdownItCallable({
+    html: false,
+    linkify: true,
+    breaks: false,
+    highlight: (code2, lang) => {
+      const known = typeof lang === "string" && core_default.getLanguage(lang) !== void 0;
+      const html = known ? core_default.highlight(code2, { language: lang, ignoreIllegals: true }).value : escapeHtml2(code2);
+      return `<pre class="hljs"><code>${html}</code></pre>`;
+    }
+  });
+  const defaultImage = md.renderer.rules.image;
+  md.renderer.rules.image = (tokens, index, options, env, self) => {
+    const token = tokens[index];
+    const source2 = token.attrGet("src");
+    if (typeof source2 === "string") {
+      const relative = normalizeRelative(env.folder ?? "", source2);
+      if (relative !== void 0) {
+        token.attrSet("src", apiUrl("api/vyra-media/file", { sessionId, path: relative }));
+      }
+    }
+    return defaultImage === void 0 ? self.renderToken(tokens, index, options) : defaultImage(tokens, index, options, env, self);
+  };
+  const linkOpen = md.renderer.rules.link_open;
+  md.renderer.rules.link_open = (tokens, index, options, env, self) => {
+    const href = tokens[index].attrGet("href");
+    if (typeof href === "string" && /^https?:/iu.test(href)) {
+      tokens[index].attrSet("target", "_blank");
+      tokens[index].attrSet("rel", "noreferrer noopener");
+    }
+    return linkOpen === void 0 ? self.renderToken(tokens, index, options) : linkOpen(tokens, index, options, env, self);
+  };
+  return md;
+}
+function useText(key, url) {
+  const cached = TEXT_CACHE.get(key);
+  const [state, setState] = (0, import_react4.useState)(cached ?? { loading: true, text: "", truncated: false, failed: false });
   (0, import_react4.useEffect)(() => {
+    const hit = TEXT_CACHE.get(key);
+    if (hit !== void 0) {
+      setState(hit);
+      return void 0;
+    }
+    const controller = new AbortController();
+    setState({ loading: true, text: "", truncated: false, failed: false });
+    fetch(url, { signal: controller.signal, credentials: "same-origin" }).then(async (response) => {
+      let body;
+      try {
+        body = await response.json();
+      } catch {
+        body = void 0;
+      }
+      if (!response.ok || body?.ok !== true) throw new Error(body?.error ?? `HTTP ${response.status}`);
+      return body;
+    }).then((body) => {
+      const entry = {
+        loading: false,
+        text: body.text ?? "",
+        truncated: body.truncated === true,
+        size: body.size,
+        failed: false
+      };
+      TEXT_CACHE.set(key, entry);
+      setState(entry);
+    }).catch((error2) => {
+      if (error2?.name === "AbortError") return;
+      const entry = { loading: false, text: "", truncated: false, failed: true };
+      TEXT_CACHE.set(key, entry);
+      setState(entry);
+    });
+    return () => controller.abort();
+  }, [key, url]);
+  return state;
+}
+function ModeToggle({ mode, onChange, renderLabel = "\u9884\u89C8", sourceLabel = "\u6E90\u7801" }) {
+  return h(
+    "div",
+    { className: "vms-preview-modes" },
+    h("button", { type: "button", className: mode === "render" ? "is-active" : "", onClick: () => onChange("render") }, renderLabel),
+    h("button", { type: "button", className: mode === "source" ? "is-active" : "", onClick: () => onChange("source") }, sourceLabel)
+  );
+}
+function CodeView({ text: text2, ext }) {
+  const { html, language } = (0, import_react4.useMemo)(() => highlight(text2, ext), [text2, ext]);
+  return h(
+    "div",
+    { className: "vms-code-view" },
+    h("div", { className: "vms-code-head" }, h("span", null, language), h("span", null, `${text2.length.toLocaleString()} chars`)),
+    h("pre", { className: "vms-code-content hljs" }, h("code", { dangerouslySetInnerHTML: { __html: html } }))
+  );
+}
+function MarkdownView({ text: text2, sessionId, folder, ext }) {
+  const [mode, setMode] = (0, import_react4.useState)("render");
+  const md = (0, import_react4.useMemo)(() => markdownRenderer(sessionId), [sessionId]);
+  const html = (0, import_react4.useMemo)(() => md.render(text2, { folder }), [md, text2, folder]);
+  if (mode === "source") {
+    return h(
+      "div",
+      { className: "vms-rich-view" },
+      h(ModeToggle, { mode, onChange: setMode }),
+      h(CodeView, { text: text2, ext })
+    );
+  }
+  return h(
+    "div",
+    { className: "vms-rich-view" },
+    h(ModeToggle, { mode, onChange: setMode }),
+    h("div", { className: "vms-markdown", dangerouslySetInnerHTML: { __html: html } })
+  );
+}
+function HtmlView({ text: text2 }) {
+  const [mode, setMode] = (0, import_react4.useState)("render");
+  const document2 = (0, import_react4.useMemo)(() => {
+    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:;">`;
+    if (/<head[\s>]/iu.test(text2)) return text2.replace(/<head([^>]*)>/iu, `<head$1>${csp}`);
+    if (/<html[\s>]/iu.test(text2)) return text2.replace(/<html([^>]*)>/iu, `<html$1><head>${csp}</head>`);
+    return `<!doctype html><html><head>${csp}</head><body>${text2}</body></html>`;
+  }, [text2]);
+  if (mode === "source") {
+    return h(
+      "div",
+      { className: "vms-rich-view" },
+      h(ModeToggle, { mode, onChange: setMode }),
+      h(CodeView, { text: text2, ext: "html" })
+    );
+  }
+  return h(
+    "div",
+    { className: "vms-rich-view" },
+    h(ModeToggle, { mode, onChange: setMode }),
+    h("iframe", {
+      className: "vms-html-frame",
+      sandbox: "",
+      srcDoc: document2,
+      title: "HTML \u9884\u89C8",
+      referrerPolicy: "no-referrer"
+    })
+  );
+}
+function parseDelimited(text2, delimiter2, maxRows = 500, maxCols = 30) {
+  const rows = [[]];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text2.length; index += 1) {
+    const char = text2[index];
+    if (quoted) {
+      if (char === '"' && text2[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') quoted = false;
+      else cell += char;
+      continue;
+    }
+    if (char === '"') {
+      quoted = true;
+      continue;
+    }
+    if (char === delimiter2) {
+      rows[rows.length - 1].push(cell);
+      cell = "";
+      continue;
+    }
+    if (char === "\n") {
+      rows[rows.length - 1].push(cell);
+      cell = "";
+      if (rows.length >= maxRows) break;
+      rows.push([]);
+      continue;
+    }
+    if (char !== "\r") cell += char;
+  }
+  if (cell !== "" || rows[rows.length - 1].length > 0) rows[rows.length - 1].push(cell);
+  return rows.filter((row) => row.length > 0 && !(row.length === 1 && row[0] === "")).slice(0, maxRows).map((row) => row.slice(0, maxCols));
+}
+function CsvView({ text: text2, ext }) {
+  const [mode, setMode] = (0, import_react4.useState)("render");
+  const rows = (0, import_react4.useMemo)(() => parseDelimited(text2, ext === "tsv" ? "	" : ","), [text2, ext]);
+  if (mode === "source") {
+    return h(
+      "div",
+      { className: "vms-rich-view" },
+      h(ModeToggle, { mode, onChange: setMode }),
+      h(CodeView, { text: text2, ext })
+    );
+  }
+  const [head, ...body] = rows;
+  return h(
+    "div",
+    { className: "vms-rich-view" },
+    h(ModeToggle, { mode, onChange: setMode }),
+    h(
+      "div",
+      { className: "vms-table-wrap" },
+      h(
+        "table",
+        { className: "vms-table" },
+        head !== void 0 && h("thead", null, h("tr", null, head.map((cell, index) => h("th", { key: index }, cell)))),
+        h("tbody", null, body.map((row, rowIndex) => h(
+          "tr",
+          { key: rowIndex },
+          row.map((cell, index) => h("td", { key: index }, cell))
+        )))
+      )
+    )
+  );
+}
+function JsonView({ text: text2, ext }) {
+  const pretty = (0, import_react4.useMemo)(() => {
+    try {
+      return JSON.stringify(JSON.parse(text2), null, 2);
+    } catch {
+      return text2;
+    }
+  }, [text2]);
+  return h(CodeView, { text: pretty, ext: ext === "jsonc" ? "json" : ext });
+}
+function TextView({ text: text2, ext }) {
+  return h(CodeView, { text: text2, ext });
+}
+function RichTextPreview({ item, sessionId }) {
+  const key = `preview:${sessionId}:${item.relativePath}`;
+  const url = apiUrl("api/vyra-media/text", { sessionId, path: item.relativePath, maxBytes: 1024 * 1024 });
+  const state = useText(key, url);
+  const ext = extensionOf(item.relativePath);
+  if (state.failed) {
+    return h("div", { className: "vms-preview-note" }, h(Icon2, { name: "alert", size: 17 }), "\u6587\u672C\u8BFB\u53D6\u5931\u8D25");
+  }
+  if (state.loading) return h("div", { className: "vms-preview-note" }, "\u8BFB\u53D6\u4E2D\u2026");
+  const view = (() => {
+    if (["md", "markdown", "mdx"].includes(ext)) {
+      return h(MarkdownView, { text: state.text, sessionId, folder: folderOf(item), ext });
+    }
+    if (["html", "htm"].includes(ext)) return h(HtmlView, { text: state.text });
+    if (["csv", "tsv"].includes(ext)) return h(CsvView, { text: state.text, ext });
+    if (["json", "jsonc"].includes(ext)) return h(JsonView, { text: state.text, ext });
+    if (isTextExtension(ext)) return h(TextView, { text: state.text, ext });
+    return h(TextView, { text: state.text, ext });
+  })();
+  return h(
+    "div",
+    { className: "vms-text-view" },
+    state.truncated && h("div", { className: "vms-preview-note" }, "\u6587\u4EF6\u8F83\u5927\uFF0C\u53EA\u663E\u793A\u524D 1 MB\u3002"),
+    view
+  );
+}
+
+// src/client/components.js
+var h2 = import_react5.default.createElement;
+var TEXT_CACHE2 = /* @__PURE__ */ new Map();
+function useVisible(ref, lazy) {
+  const [visible, setVisible] = (0, import_react5.useState)(!lazy);
+  (0, import_react5.useEffect)(() => {
     if (!lazy) {
       setVisible(true);
       return void 0;
@@ -4589,10 +22878,10 @@ function useVisible(ref, lazy) {
   return [visible, setVisible];
 }
 function useTextWindow(key, url, enabled) {
-  const cached = enabled ? TEXT_CACHE.get(key) : void 0;
-  const [state, setState] = (0, import_react4.useState)(cached ?? { loading: enabled, text: "", failed: false });
-  (0, import_react4.useEffect)(() => {
-    const hit = TEXT_CACHE.get(key);
+  const cached = enabled ? TEXT_CACHE2.get(key) : void 0;
+  const [state, setState] = (0, import_react5.useState)(cached ?? { loading: enabled, text: "", failed: false });
+  (0, import_react5.useEffect)(() => {
+    const hit = TEXT_CACHE2.get(key);
     if (hit !== void 0) {
       setState(hit);
       return void 0;
@@ -4611,12 +22900,12 @@ function useTextWindow(key, url, enabled) {
       return body;
     }).then((body) => {
       const entry = { loading: false, text: body.text ?? "", truncated: body.truncated === true, failed: false };
-      TEXT_CACHE.set(key, entry);
+      TEXT_CACHE2.set(key, entry);
       setState(entry);
-    }).catch((error) => {
-      if (error?.name === "AbortError") return;
+    }).catch((error2) => {
+      if (error2?.name === "AbortError") return;
       const entry = { loading: false, text: "", truncated: false, failed: true };
-      TEXT_CACHE.set(key, entry);
+      TEXT_CACHE2.set(key, entry);
       setState(entry);
     });
     return () => controller.abort();
@@ -4624,41 +22913,41 @@ function useTextWindow(key, url, enabled) {
   return state;
 }
 function TextDocThumb({ item, sessionId }) {
-  const boxRef = (0, import_react4.useRef)(null);
+  const boxRef = (0, import_react5.useRef)(null);
   const [visible] = useVisible(boxRef, true);
   const key = `snippet:${sessionId}:${item.relativePath}`;
   const url = apiUrl("api/vyra-media/text", { sessionId, path: item.relativePath, maxBytes: 600 });
   const state = useTextWindow(key, url, visible);
   const lines = state.text ? state.text.split("\n").slice(0, 7).map((line) => line.slice(0, 90)) : [];
-  return h(
+  return h2(
     "div",
     { ref: boxRef, className: "vms-doc-poster is-text", style: coverOf(item, 0) },
-    lines.length > 0 ? h("div", { className: "vms-doc-snippet" }, lines.join("\n")) : h("div", { className: "vms-doc-snippet is-empty" }, state.loading ? "\u8BFB\u53D6\u4E2D\u2026" : "\u6587\u672C\u6587\u4EF6"),
-    h(
+    lines.length > 0 ? h2("div", { className: "vms-doc-snippet" }, lines.join("\n")) : h2("div", { className: "vms-doc-snippet is-empty" }, state.loading ? "\u8BFB\u53D6\u4E2D\u2026" : "\u6587\u672C\u6587\u4EF6"),
+    h2(
       "div",
       { className: "vms-doc-foot" },
-      h("span", { className: "vms-doc-glyph" }, h(Icon2, { name: "document", size: 13 })),
-      h("span", { className: "vms-doc-ext" }, item.ext.toUpperCase() || "TXT")
+      h2("span", { className: "vms-doc-glyph" }, h2(Icon2, { name: "document", size: 13 })),
+      h2("span", { className: "vms-doc-ext" }, item.ext.toUpperCase() || "TXT")
     )
   );
 }
 function DocPoster({ item }) {
   const icon = kindIcon(item.kind, item.ext);
-  return h(
+  return h2(
     "div",
     { className: "vms-doc-poster", "data-kind": item.kind, style: coverOf(item, 0) },
-    h("div", { className: "vms-doc-fold" }),
-    h("span", { className: "vms-doc-glyph is-large" }, h(Icon2, { name: icon, size: 24 })),
-    h("b", { className: "vms-doc-ext is-large" }, item.ext.toUpperCase() || "FILE"),
-    h("div", { className: "vms-doc-lines" }, h("i", null), h("i", null), h("i", null))
+    h2("div", { className: "vms-doc-fold" }),
+    h2("span", { className: "vms-doc-glyph is-large" }, h2(Icon2, { name: icon, size: 24 })),
+    h2("b", { className: "vms-doc-ext is-large" }, item.ext.toUpperCase() || "FILE"),
+    h2("div", { className: "vms-doc-lines" }, h2("i", null), h2("i", null), h2("i", null))
   );
 }
 function MediaThumb({ item, sessionId, lazy = true }) {
-  const boxRef = (0, import_react4.useRef)(null);
+  const boxRef = (0, import_react5.useRef)(null);
   const [visible] = useVisible(boxRef, lazy);
-  const [failed, setFailed] = (0, import_react4.useState)(false);
+  const [failed, setFailed] = (0, import_react5.useState)(false);
   if (item.kind === "image") {
-    return failed ? h(VideoFallback, { item, icon: "fileError" }) : h("img", {
+    return failed ? h2(VideoFallback, { item, icon: "fileError" }) : h2("img", {
       className: "vms-poster",
       src: mediaSrc(sessionId, item),
       alt: "",
@@ -4668,11 +22957,11 @@ function MediaThumb({ item, sessionId, lazy = true }) {
     });
   }
   if (item.kind === "video") {
-    if (failed) return h(VideoFallback, { item });
-    return h(
+    if (failed) return h2(VideoFallback, { item });
+    return h2(
       "div",
       { ref: boxRef, className: "vms-thumb-box" },
-      visible && h("video", {
+      visible && h2("video", {
         className: "vms-thumb-video",
         src: mediaSrc(sessionId, item),
         preload: "metadata",
@@ -4687,103 +22976,103 @@ function MediaThumb({ item, sessionId, lazy = true }) {
         },
         onError: () => setFailed(true)
       }),
-      !visible && h("div", { className: "vms-thumb-placeholder" }, h(Icon2, { name: "video", size: 18 }))
+      !visible && h2("div", { className: "vms-thumb-placeholder" }, h2(Icon2, { name: "video", size: 18 }))
     );
   }
-  if (item.kind === "audio") return h(AudioPoster, { item });
-  if (item.kind === "link") return h(LinkPoster, { item });
-  if (item.kind === "document" && isTextExtension(item.ext)) return h(TextDocThumb, { item, sessionId });
-  return h(DocPoster, { item });
+  if (item.kind === "audio") return h2(AudioPoster, { item });
+  if (item.kind === "link") return h2(LinkPoster, { item });
+  if (item.kind === "document" && isTextExtension(item.ext)) return h2(TextDocThumb, { item, sessionId });
+  return h2(DocPoster, { item });
 }
 function VideoFallback({ item, icon = "video" }) {
-  return h(
+  return h2(
     "div",
     { className: "vms-video-fallback" },
-    h(Icon2, { name: icon, size: 18 }),
-    h("span", null, item.kind === "link" ? domainOf(item) : (item.ext || item.kind).toUpperCase())
+    h2(Icon2, { name: icon, size: 18 }),
+    h2("span", null, item.kind === "link" ? domainOf(item) : (item.ext || item.kind).toUpperCase())
   );
 }
 function AudioPoster({ item }) {
   const bars = waveBars(item.id, 30, 20, 90);
-  return h(
+  return h2(
     "div",
     { className: "vms-audio-poster", style: coverOf(item, 0) },
-    h(
+    h2(
       "div",
       { className: "vms-poster-top" },
-      h("span", { className: "vms-poster-glyph" }, h(Icon2, { name: "audio", size: 14 })),
-      h("span", { className: "vms-poster-mono" }, item.ext.toUpperCase())
+      h2("span", { className: "vms-poster-glyph" }, h2(Icon2, { name: "audio", size: 14 })),
+      h2("span", { className: "vms-poster-mono" }, item.ext.toUpperCase())
     ),
-    h(
+    h2(
       "div",
       { className: "vms-poster-wave" },
-      bars.map((bar) => h("i", { key: bar.key, style: { height: `${bar.height}%` } }))
+      bars.map((bar) => h2("i", { key: bar.key, style: { height: `${bar.height}%` } }))
     ),
-    h("div", { className: "vms-poster-bottom" }, item.size ? formatBytes(item.size) : "\u97F3\u9891")
+    h2("div", { className: "vms-poster-bottom" }, item.size ? formatBytes(item.size) : "\u97F3\u9891")
   );
 }
 function LinkPoster({ item }) {
   const direct = item.kind === "video" || item.kind === "audio" || item.kind === "image";
-  return h(
+  return h2(
     "div",
     { className: `vms-link-poster${direct ? " is-direct" : ""}` },
-    h("div", { className: "vms-link-bar" }, h("i", null), h("i", null), h("i", null), h("span", null, domainOf(item))),
-    h(
+    h2("div", { className: "vms-link-bar" }, h2("i", null), h2("i", null), h2("i", null), h2("span", null, domainOf(item))),
+    h2(
       "div",
       { className: "vms-link-body" },
-      h("span", { className: "vms-link-glyph" }, h(Icon2, { name: item.kind === "link" ? "link" : item.kind, size: 16 })),
-      h("b", null, item.title),
-      h("span", { className: "vms-link-tag" }, direct ? "REMOTE MEDIA" : "WEB LINK")
+      h2("span", { className: "vms-link-glyph" }, h2(Icon2, { name: item.kind === "link" ? "link" : item.kind, size: 16 })),
+      h2("b", null, item.title),
+      h2("span", { className: "vms-link-tag" }, direct ? "REMOTE MEDIA" : "WEB LINK")
     )
   );
 }
 function KindBadge({ kind }) {
-  return h(
+  return h2(
     "span",
     { className: "vms-kind-badge", "data-kind": kind },
-    h("i", null),
+    h2("i", null),
     typeLabel(kind)
   );
 }
 function DurationBadge({ item }) {
   if ((item.kind === "video" || item.kind === "audio") && item.duration) {
-    return h("span", { className: "vms-duration" }, formatTime(item.duration));
+    return h2("span", { className: "vms-duration" }, formatTime(item.duration));
   }
   if (item.kind === "image") {
-    return h("span", { className: "vms-duration" }, item.width && item.height ? `${item.width}\xD7${item.height}` : item.ext.toUpperCase());
+    return h2("span", { className: "vms-duration" }, item.width && item.height ? `${item.width}\xD7${item.height}` : item.ext.toUpperCase());
   }
-  if (item.kind === "link") return h("span", { className: "vms-duration" }, "\u7F51\u9875");
-  return h("span", { className: "vms-duration" }, item.ext.toUpperCase() || "FILE");
+  if (item.kind === "link") return h2("span", { className: "vms-duration" }, "\u7F51\u9875");
+  return h2("span", { className: "vms-duration" }, item.ext.toUpperCase() || "FILE");
 }
 function InlineMedia({ item, sessionId, onExpand }) {
   const src = mediaSrc(sessionId, item);
   if (item.kind === "audio") {
-    return h(
+    return h2(
       "div",
       {
         className: "vms-inline-audio",
         style: coverOf(item, 0),
         onClick: (event) => event.stopPropagation()
       },
-      h(
+      h2(
         "div",
         { className: "vms-inline-audio-head" },
-        h("span", { className: "vms-inline-audio-glyph" }, h(Icon2, { name: "audio", size: 14 })),
-        h("b", null, item.title)
+        h2("span", { className: "vms-inline-audio-glyph" }, h2(Icon2, { name: "audio", size: 14 })),
+        h2("b", null, item.title)
       ),
-      h("audio", { className: "vms-inline-audio-native", src, controls: true, autoPlay: true, preload: "auto" }),
-      h("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h(Icon2, { name: "full", size: 12 }))
+      h2("audio", { className: "vms-inline-audio-native", src, controls: true, autoPlay: true, preload: "auto" }),
+      h2("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h2(Icon2, { name: "full", size: 12 }))
     );
   }
-  return h(
+  return h2(
     "div",
     { className: "vms-inline-video", onClick: (event) => event.stopPropagation() },
-    h("video", { src, controls: true, autoPlay: true, playsInline: true, preload: "auto" }),
-    h("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h(Icon2, { name: "full", size: 12 }))
+    h2("video", { src, controls: true, autoPlay: true, playsInline: true, preload: "auto" }),
+    h2("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h2(Icon2, { name: "full", size: 12 }))
   );
 }
 function MoreButton({ item, onMenu }) {
-  return h("button", {
+  return h2("button", {
     type: "button",
     className: "vms-mini-action",
     title: "\u66F4\u591A\u64CD\u4F5C",
@@ -4793,19 +23082,27 @@ function MoreButton({ item, onMenu }) {
       const rect = event.currentTarget.getBoundingClientRect();
       onMenu(item, rect.left - 170, rect.bottom + 4);
     }
-  }, h(Icon2, { name: "more", size: 12 }));
+  }, h2(Icon2, { name: "more", size: 12 }));
 }
-function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMenu }) {
+function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onInline, onMenu, onToggleSelect }) {
   const canPlay = item.kind === "video" || item.kind === "audio";
   const detail = meta === void 0 ? `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)}` : `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)} \xB7 ${formatBytes(meta.size)}`;
-  return h(
+  return h2(
     "article",
     {
       className: "vms-card",
       tabIndex: 0,
       "data-playing": active ? "" : void 0,
+      "data-selected": selected ? "" : void 0,
       "aria-label": `${item.title}\uFF0C${typeLabel(item.kind)}`,
-      onClick: () => onOpen(item),
+      onClick: (event) => {
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          onToggleSelect(item);
+          return;
+        }
+        onOpen(item);
+      },
       onContextMenu: (event) => {
         event.preventDefault();
         onMenu(item, event.clientX, event.clientY);
@@ -4816,14 +23113,15 @@ function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMe
         onOpen(item);
       }
     },
-    h(
+    h2(
       "div",
       { className: "vms-card-media" },
-      h(MediaThumb, { item, sessionId, lazy: true }),
-      h("span", { className: "vms-card-index" }, String(index + 1).padStart(2, "0")),
-      h(KindBadge, { kind: item.kind }),
-      h(DurationBadge, { item }),
-      canPlay && !active && h("button", {
+      h2(MediaThumb, { item, sessionId, lazy: true }),
+      h2("span", { className: "vms-card-index" }, String(index + 1).padStart(2, "0")),
+      selected && h2("span", { className: "vms-select-badge" }, h2(Icon2, { name: "check", size: 11 })),
+      h2(KindBadge, { kind: item.kind }),
+      h2(DurationBadge, { item }),
+      canPlay && !active && h2("button", {
         type: "button",
         className: "vms-play-btn",
         "aria-label": `\u64AD\u653E ${item.title}`,
@@ -4831,8 +23129,8 @@ function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMe
           event.stopPropagation();
           onInline(item);
         }
-      }, h(Icon2, { name: "play", size: 17 })),
-      !canPlay && item.kind !== "link" && h("button", {
+      }, h2(Icon2, { name: "play", size: 17 })),
+      !canPlay && item.kind !== "link" && h2("button", {
         type: "button",
         className: "vms-play-btn",
         "aria-label": `\u67E5\u770B ${item.title}`,
@@ -4840,8 +23138,8 @@ function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMe
           event.stopPropagation();
           onOpen(item);
         }
-      }, h(Icon2, { name: "full", size: 17 })),
-      item.kind === "link" && h("button", {
+      }, h2(Icon2, { name: "full", size: 17 })),
+      item.kind === "link" && h2("button", {
         type: "button",
         className: "vms-play-btn",
         "aria-label": "\u6253\u5F00\u94FE\u63A5",
@@ -4849,43 +23147,51 @@ function GridCard({ item, index, sessionId, active, meta, onOpen, onInline, onMe
           event.stopPropagation();
           onOpen(item);
         }
-      }, h(Icon2, { name: "external", size: 17 })),
-      h(
+      }, h2(Icon2, { name: "external", size: 17 })),
+      h2(
         "div",
         { className: "vms-card-actions" },
-        canPlay && h("button", { type: "button", className: "vms-mini-action", title: "\u539F\u5730\u64AD\u653E", "aria-label": "\u539F\u5730\u64AD\u653E", onClick: (event) => {
+        canPlay && h2("button", { type: "button", className: "vms-mini-action", title: "\u539F\u5730\u64AD\u653E", "aria-label": "\u539F\u5730\u64AD\u653E", onClick: (event) => {
           event.stopPropagation();
           onInline(item);
-        } }, h(Icon2, { name: "play", size: 12 })),
-        h("button", { type: "button", className: "vms-mini-action", title: "\u653E\u5927\u67E5\u770B", "aria-label": "\u653E\u5927\u67E5\u770B", onClick: (event) => {
+        } }, h2(Icon2, { name: "play", size: 12 })),
+        h2("button", { type: "button", className: "vms-mini-action", title: "\u653E\u5927\u67E5\u770B", "aria-label": "\u653E\u5927\u67E5\u770B", onClick: (event) => {
           event.stopPropagation();
           onOpen(item);
-        } }, h(Icon2, { name: item.kind === "link" ? "external" : "full", size: 12 })),
-        h(MoreButton, { item, onMenu })
+        } }, h2(Icon2, { name: item.kind === "link" ? "external" : "full", size: 12 })),
+        h2(MoreButton, { item, onMenu })
       ),
-      active && canPlay && h(InlineMedia, { item, sessionId, onExpand: () => onOpen(item) })
+      active && canPlay && h2(InlineMedia, { item, sessionId, onExpand: () => onOpen(item) })
     ),
-    h(
+    h2(
       "div",
       { className: "vms-card-info" },
-      h("h3", { title: item.title }, item.title),
-      h("p", null, detail),
-      active && h("span", { className: "vms-playing-note" }, h("i", null), "\u6B63\u5728\u64AD\u653E")
+      h2("h3", { title: item.title }, item.title),
+      h2("p", null, detail),
+      active && h2("span", { className: "vms-playing-note" }, h2("i", null), "\u6B63\u5728\u64AD\u653E")
     )
   );
 }
-function ListRow({ item, sessionId, detail = "compact", meta, onOpen, onMenu }) {
+function ListRow({ item, sessionId, detail = "compact", meta, selected, onOpen, onMenu, onToggleSelect }) {
   const canPlay = item.kind === "video" || item.kind === "audio";
   const detailed = detail === "detailed";
   const shortType = canPlay ? formatTime(item.duration) : item.ext.toUpperCase() || typeLabel(item.kind);
-  return h(
+  return h2(
     "div",
     {
       className: "vms-row",
       tabIndex: 0,
       "data-kind": item.kind,
       "data-detail": detailed ? "detailed" : "compact",
-      onClick: () => onOpen(item),
+      "data-selected": selected ? "" : void 0,
+      onClick: (event) => {
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          onToggleSelect(item);
+          return;
+        }
+        onOpen(item);
+      },
       onContextMenu: (event) => {
         event.preventDefault();
         onMenu(item, event.clientX, event.clientY);
@@ -4897,22 +23203,22 @@ function ListRow({ item, sessionId, detail = "compact", meta, onOpen, onMenu }) 
         }
       }
     },
-    h(
+    h2(
       "div",
       { className: "vms-row-thumb" },
-      h(MediaThumb, { item, sessionId, lazy: true }),
-      h("span", { className: "vms-row-duration" }, shortType)
+      h2(MediaThumb, { item, sessionId, lazy: true }),
+      h2("span", { className: "vms-row-duration" }, shortType)
     ),
-    h(
+    h2(
       "div",
       { className: "vms-row-main" },
-      h("b", null, item.title),
-      h("small", null, folderOf(item) || "\u6839\u76EE\u5F55")
+      h2("b", null, item.title),
+      h2("small", null, folderOf(item) || "\u6839\u76EE\u5F55")
     ),
-    detailed && h("div", { className: "vms-row-time" }, formatDate(meta?.mtimeMs)),
-    detailed && h("div", { className: "vms-row-kind", "data-kind": item.kind }, h("i", null), typeLabel(item.kind)),
-    detailed && h("div", { className: "vms-row-size" }, formatBytes(meta?.size)),
-    h("button", {
+    detailed && h2("div", { className: "vms-row-time" }, formatDate(meta?.mtimeMs)),
+    detailed && h2("div", { className: "vms-row-kind", "data-kind": item.kind }, h2("i", null), typeLabel(item.kind)),
+    detailed && h2("div", { className: "vms-row-size" }, formatBytes(meta?.size)),
+    h2("button", {
       type: "button",
       className: "vms-row-play",
       title: "\u66F4\u591A\u64CD\u4F5C",
@@ -4922,11 +23228,11 @@ function ListRow({ item, sessionId, detail = "compact", meta, onOpen, onMenu }) 
         const rect = event.currentTarget.getBoundingClientRect();
         onMenu(item, rect.left - 170, rect.bottom + 4);
       }
-    }, h(Icon2, { name: "more", size: 14 }))
+    }, h2(Icon2, { name: "more", size: 14 }))
   );
 }
 function FileMenu({ state, actions, onSelect, onClose }) {
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (state === null) return void 0;
     const onKey = (event) => {
       if (event.key === "Escape") onClose();
@@ -4948,7 +23254,7 @@ function FileMenu({ state, actions, onSelect, onClose }) {
   const height = actions.length * 32 + 12;
   const left = Math.max(8, Math.min(state.x, (typeof window === "undefined" ? 1200 : window.innerWidth) - width - 8));
   const top = Math.max(8, Math.min(state.y, (typeof window === "undefined" ? 800 : window.innerHeight) - height - 8));
-  return h(
+  return h2(
     "div",
     {
       className: "vms-menu",
@@ -4956,8 +23262,8 @@ function FileMenu({ state, actions, onSelect, onClose }) {
       style: { left: `${left}px`, top: `${top}px` },
       onPointerDown: (event) => event.stopPropagation()
     },
-    h("div", { className: "vms-menu-head" }, h(Icon2, { name: kindIcon(state.item.kind, state.item.ext), size: 13 }), h("b", null, state.item.title)),
-    actions.map((action) => h("button", {
+    h2("div", { className: "vms-menu-head" }, h2(Icon2, { name: kindIcon(state.item.kind, state.item.ext), size: 13 }), h2("b", null, state.item.title)),
+    actions.map((action) => h2("button", {
       key: action.key,
       type: "button",
       className: `vms-menu-item${action.danger ? " is-danger" : ""}`,
@@ -4966,11 +23272,11 @@ function FileMenu({ state, actions, onSelect, onClose }) {
         onClose();
         onSelect(action.key, state.item);
       }
-    }, h(Icon2, { name: action.icon, size: 13 }), h("span", null, action.label)))
+    }, h2(Icon2, { name: action.icon, size: 13 }), h2("span", null, action.label)))
   );
 }
 function Dialog({ title, children, onClose }) {
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     const onKey = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -4980,146 +23286,164 @@ function Dialog({ title, children, onClose }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return h(
+  return h2(
     "div",
     { className: "vms-dialog-layer", role: "dialog", "aria-modal": "true", "aria-label": title },
-    h("div", { className: "vms-dialog-backdrop", onClick: onClose }),
-    h(
+    h2("div", { className: "vms-dialog-backdrop", onClick: onClose }),
+    h2(
       "div",
       { className: "vms-dialog" },
-      h("div", { className: "vms-dialog-head" }, h("b", null, title), h("button", { type: "button", className: "vms-icon-btn", "aria-label": "\u5173\u95ED", onClick: onClose }, h(Icon2, { name: "close" }))),
+      h2("div", { className: "vms-dialog-head" }, h2("b", null, title), h2("button", { type: "button", className: "vms-icon-btn", "aria-label": "\u5173\u95ED", onClick: onClose }, h2(Icon2, { name: "close" }))),
       children
     )
   );
 }
-function RenameDialog({ item, error, onClose, onSubmit }) {
-  const [value, setValue] = (0, import_react4.useState)(item.name);
+function RenameDialog({ item, error: error2, onClose, onSubmit }) {
+  const [value, setValue] = (0, import_react5.useState)(item.name);
   const submit = (event) => {
     event.preventDefault();
     const next = value.trim();
     if (next === "") return;
     onSubmit(next);
   };
-  return h(
+  return h2(
     Dialog,
     { title: "\u91CD\u547D\u540D", onClose },
-    h(
+    h2(
       "form",
       { className: "vms-dialog-form", onSubmit: submit },
-      h(
+      h2(
         "label",
         { className: "vms-dialog-field" },
-        h("span", null, "\u65B0\u6587\u4EF6\u540D"),
-        h("input", { className: "vms-input", autoFocus: true, value, onChange: (event) => setValue(event.target.value) })
+        h2("span", null, "\u65B0\u6587\u4EF6\u540D"),
+        h2("input", { className: "vms-input", autoFocus: true, value, onChange: (event) => setValue(event.target.value) })
       ),
-      error !== "" && h("p", { className: "vms-form-error" }, error),
-      h(
+      error2 !== "" && h2("p", { className: "vms-form-error" }, error2),
+      h2(
         "div",
         { className: "vms-dialog-actions" },
-        h("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-        h("button", { type: "submit", className: "vms-primary-btn" }, "\u4FDD\u5B58")
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h2("button", { type: "submit", className: "vms-primary-btn" }, "\u4FDD\u5B58")
       )
     )
   );
 }
-function CopyDialog({ item, folders, error, onClose, onSubmit }) {
-  const [folder, setFolder] = (0, import_react4.useState)(item.folder ?? "");
-  return h(
+function CopyDialog({ item, folders, error: error2, onClose, onSubmit }) {
+  const [folder, setFolder] = (0, import_react5.useState)(item.folder ?? "");
+  return h2(
     Dialog,
     { title: "\u590D\u5236\u5230\u6587\u4EF6\u5939", onClose },
-    h(
+    h2(
       "form",
       { className: "vms-dialog-form", onSubmit: (event) => {
         event.preventDefault();
         onSubmit(folder);
       } },
-      h(
+      h2(
         "label",
         { className: "vms-dialog-field" },
-        h("span", null, `\u590D\u5236\u300C${item.name}\u300D\u5230`),
-        h(
+        h2("span", null, `\u590D\u5236\u300C${item.name}\u300D\u5230`),
+        h2(
           "select",
           { className: "vms-input", value: folder, onChange: (event) => setFolder(event.target.value) },
-          h("option", { value: "" }, "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"),
-          folders.map((value) => h("option", { key: value, value }, value))
+          h2("option", { value: "" }, "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"),
+          folders.map((value) => h2("option", { key: value, value }, value))
         ),
-        h("small", { className: "vms-dialog-hint" }, "\u91CD\u540D\u65F6\u4F1A\u81EA\u52A8\u751F\u6210\u201C\u6587\u4EF6\u540D (2).\u6269\u5C55\u540D\u201D\u3002")
+        h2("small", { className: "vms-dialog-hint" }, "\u91CD\u540D\u65F6\u4F1A\u81EA\u52A8\u751F\u6210\u201C\u6587\u4EF6\u540D (2).\u6269\u5C55\u540D\u201D\u3002")
       ),
-      error !== "" && h("p", { className: "vms-form-error" }, error),
-      h(
+      error2 !== "" && h2("p", { className: "vms-form-error" }, error2),
+      h2(
         "div",
         { className: "vms-dialog-actions" },
-        h("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-        h("button", { type: "submit", className: "vms-primary-btn" }, "\u590D\u5236")
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h2("button", { type: "submit", className: "vms-primary-btn" }, "\u590D\u5236")
+      )
+    )
+  );
+}
+function BatchCopyDialog({ count, folders, error: error2, onClose, onSubmit }) {
+  const [folder, setFolder] = (0, import_react5.useState)("");
+  return h2(
+    Dialog,
+    { title: "\u6279\u91CF\u590D\u5236\u5230\u6587\u4EF6\u5939", onClose },
+    h2(
+      "form",
+      { className: "vms-dialog-form", onSubmit: (event) => {
+        event.preventDefault();
+        onSubmit(folder);
+      } },
+      h2(
+        "label",
+        { className: "vms-dialog-field" },
+        h2("span", null, `\u590D\u5236\u9009\u4E2D\u7684 ${count} \u9879\u5230`),
+        h2(
+          "select",
+          { className: "vms-input", value: folder, onChange: (event) => setFolder(event.target.value) },
+          h2("option", { value: "" }, "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"),
+          folders.map((value) => h2("option", { key: value, value }, value))
+        ),
+        h2("small", { className: "vms-dialog-hint" }, "\u91CD\u540D\u65F6\u4F1A\u81EA\u52A8\u751F\u6210\u201C\u540D\u79F0 (2).\u6269\u5C55\u540D\u201D\uFF1B\u6587\u4EF6\u5939\u4F1A\u9012\u5F52\u590D\u5236\u3002")
+      ),
+      error2 !== "" && h2("p", { className: "vms-form-error" }, error2),
+      h2(
+        "div",
+        { className: "vms-dialog-actions" },
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h2("button", { type: "submit", className: "vms-primary-btn" }, "\u590D\u5236")
       )
     )
   );
 }
 function ConfirmDialog({ title, message, confirmLabel, danger, onClose, onConfirm }) {
-  return h(
+  return h2(
     Dialog,
     { title, onClose },
-    h(
+    h2(
       "div",
       { className: "vms-dialog-form" },
-      h("p", { className: "vms-dialog-text" }, message),
-      h(
+      h2("p", { className: "vms-dialog-text" }, message),
+      h2(
         "div",
         { className: "vms-dialog-actions" },
-        h("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-        h("button", { type: "button", className: `vms-primary-btn${danger ? " is-danger" : ""}`, onClick: onConfirm }, confirmLabel)
+        h2("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+        h2("button", { type: "button", className: `vms-primary-btn${danger ? " is-danger" : ""}`, onClick: onConfirm }, confirmLabel)
       )
     )
   );
 }
-function TextDocument({ item, sessionId }) {
-  const key = `text:${sessionId}:${item.relativePath}`;
-  const url = apiUrl("api/vyra-media/text", { sessionId, path: item.relativePath, maxBytes: 1024 * 1024 });
-  const state = useTextWindow(key, url, true);
-  if (state.failed) {
-    return h("div", { className: "vms-preview-note" }, h(Icon2, { name: "alert", size: 17 }), "\u6587\u672C\u8BFB\u53D6\u5931\u8D25");
-  }
-  if (state.loading) return h("div", { className: "vms-preview-note" }, "\u8BFB\u53D6\u4E2D\u2026");
-  return h(
-    "div",
-    { className: "vms-text-view" },
-    state.truncated && h("div", { className: "vms-preview-note" }, "\u6587\u4EF6\u8F83\u5927\uFF0C\u53EA\u663E\u793A\u524D 1 MB\u3002"),
-    h("pre", { className: "vms-text-content" }, state.text || "\uFF08\u7A7A\u6587\u4EF6\uFF09")
-  );
-}
 function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, onMenu, onOpenItem }) {
   const isPdf = item.ext === "pdf";
-  const isText = item.kind === "document" && isTextExtension(item.ext);
+  const isText = isTextExtension(item.ext);
   const src = mediaSrc(sessionId, item);
   const size = meta?.size ?? item.size;
-  return h(
+  return h2(
     "div",
     { className: "vms-overlay", role: "dialog", "aria-modal": "true", "aria-label": item.title },
-    h("div", { className: "vms-overlay-backdrop", onClick: onClose }),
-    h(
+    h2("div", { className: "vms-overlay-backdrop", onClick: onClose }),
+    h2(
       "div",
       { className: "vms-sheet" },
-      h(
+      h2(
         "header",
         { className: "vms-sheet-head" },
-        h(
+        h2(
           "div",
           { className: "vms-sheet-title" },
-          h("span", { className: "vms-kind-dot", "data-kind": item.kind }),
-          h("h2", null, item.title),
-          h(
+          h2("span", { className: "vms-kind-dot", "data-kind": item.kind }),
+          h2("h2", null, item.title),
+          h2(
             "span",
             { className: "vms-sheet-path" },
             `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)} \xB7 ${formatBytes(size)}`
           )
         ),
-        h(
+        h2(
           "div",
           { className: "vms-sheet-actions" },
-          h("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", item) }, h(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
-          h("button", { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(item) }, h(Icon2, { name: "external", size: 13 }), "\u5728\u6807\u7B7E\u9875\u6253\u5F00"),
-          h("a", { className: "vms-icon-btn", href: src, download: item.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h(Icon2, { name: "download", size: 15 })),
-          h("button", {
+          h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", item) }, h2(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
+          h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(item) }, h2(Icon2, { name: "external", size: 13 }), "\u5728\u6807\u7B7E\u9875\u6253\u5F00"),
+          h2("a", { className: "vms-icon-btn", href: src, download: item.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h2(Icon2, { name: "download", size: 15 })),
+          h2("button", {
             type: "button",
             className: "vms-icon-btn",
             title: "\u66F4\u591A\u64CD\u4F5C",
@@ -5128,33 +23452,33 @@ function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, onMenu, 
               const rect = event.currentTarget.getBoundingClientRect();
               onMenu(item, rect.left - 170, rect.bottom + 4);
             }
-          }, h(Icon2, { name: "more", size: 15 })),
-          h("button", { type: "button", className: "vms-icon-btn", title: "\u5173\u95ED\u9884\u89C8", "aria-label": "\u5173\u95ED\u9884\u89C8", onClick: onClose }, h(Icon2, { name: "close", size: 15 }))
+          }, h2(Icon2, { name: "more", size: 15 })),
+          h2("button", { type: "button", className: "vms-icon-btn", title: "\u5173\u95ED\u9884\u89C8", "aria-label": "\u5173\u95ED\u9884\u89C8", onClick: onClose }, h2(Icon2, { name: "close", size: 15 }))
         )
       ),
-      h(
+      h2(
         "div",
         { className: `vms-sheet-stage${isPdf ? " is-pdf" : isText ? " is-text" : ""}` },
-        isPdf && h("iframe", { className: "vms-pdf-frame", src, title: item.title }),
-        isText && h(TextDocument, { item, sessionId }),
-        !isPdf && !isText && h(
+        isPdf && h2("iframe", { className: "vms-pdf-frame", src, title: item.title }),
+        isText && h2(RichTextPreview, { item, sessionId }),
+        !isPdf && !isText && h2(
           "div",
           { className: "vms-generic-preview" },
-          h("span", { className: "vms-generic-glyph" }, h(Icon2, { name: kindIcon(item.kind, item.ext), size: 44 })),
-          h("b", null, item.title),
-          h("p", null, `${typeLabel(item.kind)} \xB7 ${formatBytes(size)}`),
-          h("small", null, "\u8FD9\u79CD\u6587\u4EF6\u6D4F\u89C8\u5668\u65E0\u6CD5\u76F4\u63A5\u9884\u89C8\uFF0C\u8BF7\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00\u3002"),
-          h("button", { type: "button", className: "vms-primary-btn", onClick: () => onAction("open", item) }, h(Icon2, { name: "app", size: 13 }), "\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00")
+          h2("span", { className: "vms-generic-glyph" }, h2(Icon2, { name: kindIcon(item.kind, item.ext), size: 44 })),
+          h2("b", null, item.title),
+          h2("p", null, `${typeLabel(item.kind)} \xB7 ${formatBytes(size)}`),
+          h2("small", null, "\u8FD9\u79CD\u6587\u4EF6\u6D4F\u89C8\u5668\u65E0\u6CD5\u76F4\u63A5\u9884\u89C8\uFF0C\u8BF7\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00\u3002"),
+          h2("button", { type: "button", className: "vms-primary-btn", onClick: () => onAction("open", item) }, h2(Icon2, { name: "app", size: 13 }), "\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00")
         )
       )
     )
   );
 }
 function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenItem, onOpenBrowser, onRemoveLink, onAction, onMenu, Lightbox: Lightbox2, plugins }) {
-  const [currentIndex, setCurrentIndex] = (0, import_react4.useState)(initialIndex);
+  const [currentIndex, setCurrentIndex] = (0, import_react5.useState)(initialIndex);
   const current = items[currentIndex] ?? items[0];
-  const slides = import_react4.default.useMemo(() => items.map((item, index) => slideFor(item, index, sessionId)), [items, sessionId]);
-  (0, import_react4.useEffect)(() => {
+  const slides = import_react5.default.useMemo(() => items.map((item, index) => slideFor(item, index, sessionId)), [items, sessionId]);
+  (0, import_react5.useEffect)(() => {
     const onKey = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -5167,36 +23491,36 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
   if (current === void 0) return null;
   const src = mediaSrc(sessionId, current);
   const size = meta?.[current.id]?.size ?? current.size;
-  return h(
+  return h2(
     "div",
     { className: "vms-overlay", role: "dialog", "aria-modal": "true", "aria-label": current.title },
-    h("div", { className: "vms-overlay-backdrop", onClick: onClose }),
-    h(
+    h2("div", { className: "vms-overlay-backdrop", onClick: onClose }),
+    h2(
       "div",
       { className: "vms-sheet" },
-      h(
+      h2(
         "header",
         { className: "vms-sheet-head" },
-        h(
+        h2(
           "div",
           { className: "vms-sheet-title" },
-          h("span", { className: "vms-kind-dot", "data-kind": current.kind }),
-          h("h2", null, current.title),
-          h("span", { className: "vms-sheet-path" }, `${folderOf(current) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(current.kind)} \xB7 ${formatBytes(size)}`)
+          h2("span", { className: "vms-kind-dot", "data-kind": current.kind }),
+          h2("h2", null, current.title),
+          h2("span", { className: "vms-sheet-path" }, `${folderOf(current) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(current.kind)} \xB7 ${formatBytes(size)}`)
         ),
-        h(
+        h2(
           "div",
           { className: "vms-sheet-actions" },
-          current.source === "url" && h("button", { type: "button", className: "vms-icon-btn", title: "\u79FB\u9664\u94FE\u63A5", "aria-label": "\u79FB\u9664\u94FE\u63A5", onClick: () => onRemoveLink(current) }, h(Icon2, { name: "trash", size: 15 })),
-          current.source !== "url" && h("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", current) }, h(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
-          h(
+          current.source === "url" && h2("button", { type: "button", className: "vms-icon-btn", title: "\u79FB\u9664\u94FE\u63A5", "aria-label": "\u79FB\u9664\u94FE\u63A5", onClick: () => onRemoveLink(current) }, h2(Icon2, { name: "trash", size: 15 })),
+          current.source !== "url" && h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", current) }, h2(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
+          h2(
             "button",
             { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(current) },
-            h(Icon2, { name: current.kind === "link" || current.source === "url" ? "external" : "full", size: 12 }),
-            h("span", null, current.kind === "link" ? "\u5728\u6D4F\u89C8\u5668\u6253\u5F00" : current.source === "url" ? "\u65B0\u7A97\u53E3\u64AD\u653E" : "\u5728\u6807\u7B7E\u9875\u6253\u5F00")
+            h2(Icon2, { name: current.kind === "link" || current.source === "url" ? "external" : "full", size: 12 }),
+            h2("span", null, current.kind === "link" ? "\u5728\u6D4F\u89C8\u5668\u6253\u5F00" : current.source === "url" ? "\u65B0\u7A97\u53E3\u64AD\u653E" : "\u5728\u6807\u7B7E\u9875\u6253\u5F00")
           ),
-          current.kind !== "link" && h("a", { className: "vms-icon-btn", href: src, download: current.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h(Icon2, { name: "download", size: 15 })),
-          h("button", {
+          current.kind !== "link" && h2("a", { className: "vms-icon-btn", href: src, download: current.fileName || void 0, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h2(Icon2, { name: "download", size: 15 })),
+          h2("button", {
             type: "button",
             className: "vms-icon-btn",
             title: "\u66F4\u591A\u64CD\u4F5C",
@@ -5205,14 +23529,14 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
               const rect = event.currentTarget.getBoundingClientRect();
               onMenu(current, rect.left - 170, rect.bottom + 4);
             }
-          }, h(Icon2, { name: "more", size: 15 })),
-          h("button", { type: "button", className: "vms-icon-btn", title: "\u5173\u95ED\u9884\u89C8", "aria-label": "\u5173\u95ED\u9884\u89C8", onClick: onClose }, h(Icon2, { name: "close", size: 15 }))
+          }, h2(Icon2, { name: "more", size: 15 })),
+          h2("button", { type: "button", className: "vms-icon-btn", title: "\u5173\u95ED\u9884\u89C8", "aria-label": "\u5173\u95ED\u9884\u89C8", onClick: onClose }, h2(Icon2, { name: "close", size: 15 }))
         )
       ),
-      h(
+      h2(
         "div",
         { className: "vms-lightbox-stage" },
-        h(Lightbox2, {
+        h2(Lightbox2, {
           open: true,
           index: initialIndex,
           close: () => {
@@ -5258,10 +23582,10 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
 }
 function NativeMedia({ item, sessionId, visible = true }) {
   const src = mediaSrc(sessionId, item);
-  const videoRef = (0, import_react4.useRef)(null);
-  const [failed, setFailed] = (0, import_react4.useState)(false);
-  const [failure, setFailure] = (0, import_react4.useState)(null);
-  (0, import_react4.useEffect)(() => {
+  const videoRef = (0, import_react5.useRef)(null);
+  const [failed, setFailed] = (0, import_react5.useState)(false);
+  const [failure, setFailure] = (0, import_react5.useState)(null);
+  (0, import_react5.useEffect)(() => {
     if (item.source === "url") {
       setFailure(null);
       return void 0;
@@ -5272,48 +23596,48 @@ function NativeMedia({ item, sessionId, visible = true }) {
         setFailure(null);
         return;
       }
-      const code = response.headers.get("x-vyra-media-error") ?? `http-${response.status}`;
-      return response.text().then((text) => setFailure(text ? `${code}\uFF1A${text}` : code));
+      const code2 = response.headers.get("x-vyra-media-error") ?? `http-${response.status}`;
+      return response.text().then((text2) => setFailure(text2 ? `${code2}\uFF1A${text2}` : code2));
     }).catch(() => {
     });
     return () => controller.abort();
   }, [src, item.source]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (item.kind === "video" && !visible && videoRef.current) videoRef.current.pause();
   }, [item.kind, visible]);
   if (failed) {
-    return h(
+    return h2(
       "div",
       { className: "vms-media-error" },
-      h(Icon2, { name: "alert", size: 18 }),
-      h("span", null, item.source === "url" ? "\u5728\u7EBF\u5A92\u4F53\u52A0\u8F7D\u5931\u8D25" : "\u5F53\u524D\u6D4F\u89C8\u5668\u65E0\u6CD5\u64AD\u653E\u6B64\u5A92\u4F53"),
-      failure !== null && h("code", { className: "vms-error-detail" }, failure),
-      h(
+      h2(Icon2, { name: "alert", size: 18 }),
+      h2("span", null, item.source === "url" ? "\u5728\u7EBF\u5A92\u4F53\u52A0\u8F7D\u5931\u8D25" : "\u5F53\u524D\u6D4F\u89C8\u5668\u65E0\u6CD5\u64AD\u653E\u6B64\u5A92\u4F53"),
+      failure !== null && h2("code", { className: "vms-error-detail" }, failure),
+      h2(
         "a",
         { href: src, download: item.fileName || void 0, className: "vms-error-download" },
-        h(Icon2, { name: "download", size: 13 }),
+        h2(Icon2, { name: "download", size: 13 }),
         "\u4E0B\u8F7D\u539F\u6587\u4EF6"
       )
     );
   }
   if (item.kind === "audio") {
-    return h(
+    return h2(
       "div",
       { className: "vms-native-audio", style: coverOf(item, 0) },
-      h("div", { className: "vms-native-audio-art" }, h(Icon2, { name: "audio", size: 46 })),
-      h(
+      h2("div", { className: "vms-native-audio-art" }, h2(Icon2, { name: "audio", size: 46 })),
+      h2(
         "div",
         { className: "vms-native-audio-title" },
-        h("b", null, item.title),
-        h("span", null, `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${item.ext.toUpperCase()}`)
+        h2("b", null, item.title),
+        h2("span", null, `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${item.ext.toUpperCase()}`)
       ),
-      h("audio", { src, controls: true, autoPlay: true, preload: "metadata", onError: () => setFailed(true) })
+      h2("audio", { src, controls: true, autoPlay: true, preload: "metadata", onError: () => setFailed(true) })
     );
   }
-  return h(
+  return h2(
     "div",
     { className: "vms-native-video" },
-    h("video", {
+    h2("video", {
       ref: videoRef,
       src,
       controls: true,
@@ -5326,52 +23650,52 @@ function NativeMedia({ item, sessionId, visible = true }) {
   );
 }
 function AudioSlide({ slide, offset }) {
-  const audioRef = (0, import_react4.useRef)(null);
-  (0, import_react4.useEffect)(() => {
+  const audioRef = (0, import_react5.useRef)(null);
+  (0, import_react5.useEffect)(() => {
     const audio = audioRef.current;
     if (audio === null) return;
     if (offset === 0) audio.play().catch(() => {
     });
     else audio.pause();
   }, [offset]);
-  return h(
+  return h2(
     "div",
     {
       className: "vms-audio-slide",
       style: { "--vms-cover-a": slide["--vms-cover-a"], "--vms-cover-b": slide["--vms-cover-b"] }
     },
-    h("div", { className: "vms-audio-slide-art" }, h(Icon2, { name: "audio", size: 48 })),
-    h(
+    h2("div", { className: "vms-audio-slide-art" }, h2(Icon2, { name: "audio", size: 48 })),
+    h2(
       "div",
       { className: "vms-audio-slide-wave" },
-      waveBars(slide.src, 46, 12, 100).map((bar) => h("i", { key: bar.key, style: { height: `${bar.height}%`, animationDelay: `${bar.delay}s` } }))
+      waveBars(slide.src, 46, 12, 100).map((bar) => h2("i", { key: bar.key, style: { height: `${bar.height}%`, animationDelay: `${bar.delay}s` } }))
     ),
-    h(
+    h2(
       "div",
       { className: "vms-audio-slide-title" },
-      h("b", null, slide.title),
-      h("span", null, `${slide.folder} \xB7 ${slide.ext} \xB7 ${formatBytes(slide.size)}`)
+      h2("b", null, slide.title),
+      h2("span", null, `${slide.folder} \xB7 ${slide.ext} \xB7 ${formatBytes(slide.size)}`)
     ),
-    h("audio", { ref: audioRef, src: slide.src, controls: true, preload: "metadata" })
+    h2("audio", { ref: audioRef, src: slide.src, controls: true, preload: "metadata" })
   );
 }
 function LinkSlide({ slide, onOpen }) {
-  const [copied, setCopied] = (0, import_react4.useState)(false);
-  return h(
+  const [copied, setCopied] = (0, import_react5.useState)(false);
+  return h2(
     "div",
     { className: "vms-link-slide" },
-    h("span", { className: "vms-link-slide-glyph" }, h(Icon2, { name: "link", size: 24 })),
-    h("b", null, slide.title),
-    h("code", null, slide.url),
-    h(
+    h2("span", { className: "vms-link-slide-glyph" }, h2(Icon2, { name: "link", size: 24 })),
+    h2("b", null, slide.title),
+    h2("code", null, slide.url),
+    h2(
       "div",
       { className: "vms-link-slide-actions" },
-      h("button", {
+      h2("button", {
         type: "button",
         className: "vms-primary-btn",
         onClick: () => onOpen ? onOpen(slide.url) : window.open(slide.url, "_blank", "noopener,noreferrer")
-      }, h(Icon2, { name: "external", size: 13 }), "\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00"),
-      h("button", {
+      }, h2(Icon2, { name: "external", size: 13 }), "\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00"),
+      h2("button", {
         type: "button",
         className: "vms-ghost-btn",
         onClick: async () => {
@@ -5382,14 +23706,14 @@ function LinkSlide({ slide, onOpen }) {
           } catch {
           }
         }
-      }, h(Icon2, { name: copied ? "check" : "copy", size: 13 }), copied ? "\u5DF2\u590D\u5236" : "\u590D\u5236\u94FE\u63A5")
+      }, h2(Icon2, { name: copied ? "check" : "copy", size: 13 }), copied ? "\u5DF2\u590D\u5236" : "\u590D\u5236\u94FE\u63A5")
     )
   );
 }
 function lightboxRenderSlide(onOpen) {
   return function renderSlide({ slide, offset }) {
-    if (slide.type === "vms-audio") return h(AudioSlide, { slide, offset });
-    if (slide.type === "vms-link") return h(LinkSlide, { slide, onOpen });
+    if (slide.type === "vms-audio") return h2(AudioSlide, { slide, offset });
+    if (slide.type === "vms-link") return h2(LinkSlide, { slide, onOpen });
     return void 0;
   };
 }
@@ -5397,7 +23721,7 @@ function renderLightboxThumbnail({ slide }) {
   if (slide.type === "video") {
     const src = slide.sources?.[0]?.src;
     if (!src) return void 0;
-    return h("video", {
+    return h2("video", {
       className: "vms-lightbox-thumb-video",
       src,
       muted: true,
@@ -5412,19 +23736,19 @@ function renderLightboxThumbnail({ slide }) {
     });
   }
   if (slide.type === "vms-audio") {
-    return h("span", {
+    return h2("span", {
       className: "vms-lightbox-thumb-icon",
       style: { "--vms-cover-a": slide["--vms-cover-a"], "--vms-cover-b": slide["--vms-cover-b"] }
-    }, h(Icon2, { name: "audio", size: 14 }));
+    }, h2(Icon2, { name: "audio", size: 14 }));
   }
   if (slide.type === "vms-link") {
-    return h("span", { className: "vms-lightbox-thumb-icon is-link" }, h(Icon2, { name: "link", size: 14 }));
+    return h2("span", { className: "vms-lightbox-thumb-icon is-link" }, h2(Icon2, { name: "link", size: 14 }));
   }
   return void 0;
 }
 
 // src/client/composer.js
-var import_react5 = require("react");
+var import_react6 = require("react");
 var composers = /* @__PURE__ */ new Map();
 function attachComposer(sessionId, actions) {
   composers = new Map(composers).set(sessionId, actions);
@@ -5433,33 +23757,291 @@ function attachComposer(sessionId, actions) {
     composers = new Map([...composers].filter(([id]) => id !== sessionId));
   };
 }
-function insertComposerText(sessionId, text) {
+function insertComposerText(sessionId, text2) {
   const composer = composers.get(sessionId);
   if (composer === void 0) throw new Error("\u5F53\u524D\u4F1A\u8BDD\u7684\u8F93\u5165\u6846\u6CA1\u6709\u6253\u5F00");
-  if (!composer.insertText(text, composer.captureInsertion())) throw new Error("\u8F93\u5165\u6846\u6682\u65F6\u4E0D\u63A5\u53D7\u8F93\u5165");
+  if (!composer.insertText(text2, composer.captureInsertion())) throw new Error("\u8F93\u5165\u6846\u6682\u65F6\u4E0D\u63A5\u53D7\u8F93\u5165");
   return true;
 }
 function ComposerBridge(props) {
   const { sessionId, inputActions } = props;
-  (0, import_react5.useEffect)(() => attachComposer(sessionId, inputActions), [sessionId, inputActions]);
+  (0, import_react6.useEffect)(() => attachComposer(sessionId, inputActions), [sessionId, inputActions]);
   return null;
 }
 
+// src/client/tree.js
+var import_react7 = __toESM(require("react"), 1);
+var h3 = import_react7.default.createElement;
+function buildTree(items, folders, showEmptyFolders) {
+  const root = { path: "", name: "", folders: /* @__PURE__ */ new Map(), files: [], count: 0 };
+  const ensure = (path) => {
+    if (path === "") return root;
+    const parts = path.split("/");
+    let node = root;
+    let current = "";
+    for (const part of parts) {
+      current = current === "" ? part : `${current}/${part}`;
+      let child = node.folders.get(part);
+      if (child === void 0) {
+        child = { path: current, name: part, folders: /* @__PURE__ */ new Map(), files: [], count: 0 };
+        node.folders.set(part, child);
+      }
+      node = child;
+    }
+    return node;
+  };
+  if (showEmptyFolders) {
+    for (const path of folders) ensure(path);
+  }
+  for (const item of items) ensure(folderOf(item)).files.push(item);
+  const count = (node) => {
+    node.files.sort((left, right) => COLLATOR.compare(left.title, right.title));
+    node.count = node.files.length;
+    for (const child of node.folders.values()) node.count += count(child);
+    return node.count;
+  };
+  count(root);
+  return root;
+}
+function findTreeNode(root, path) {
+  if (path === "") return root;
+  let node = root;
+  for (const part of path.split("/")) {
+    node = node.folders.get(part);
+    if (node === void 0) return void 0;
+  }
+  return node;
+}
+function folderItem(node) {
+  const slash = node.path.lastIndexOf("/");
+  return {
+    id: `folder:${node.path}`,
+    kind: "folder",
+    title: node.name,
+    name: node.name,
+    fileName: node.name,
+    folder: slash === -1 ? "" : node.path.slice(0, slash),
+    relativePath: node.path,
+    source: "local",
+    isFolder: true,
+    ext: "",
+    size: void 0,
+    mtimeMs: 0
+  };
+}
+function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, onToggleSelect, onMenu }) {
+  const detailed = detail === "detailed";
+  return h3(
+    "div",
+    {
+      className: "vms-tree-row is-file",
+      "data-depth": depth,
+      "data-detail": detailed ? "detailed" : "compact",
+      "data-selected": selected ? "" : void 0,
+      style: { paddingLeft: `${10 + depth * 16}px` },
+      tabIndex: 0,
+      onClick: (event) => {
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          onToggleSelect(item);
+          return;
+        }
+        onOpen(item);
+      },
+      onContextMenu: (event) => {
+        event.preventDefault();
+        onMenu(item, event.clientX, event.clientY);
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        onOpen(item);
+      }
+    },
+    h3("span", { className: "vms-tree-spacer" }),
+    h3("span", { className: "vms-tree-file-icon", "data-kind": item.kind }, h3(Icon2, { name: kindIcon(item.kind, item.ext), size: 14 })),
+    h3("span", { className: "vms-tree-name" }, item.title),
+    detailed && h3("span", { className: "vms-tree-meta" }, formatDate(meta?.mtimeMs)),
+    detailed && h3("span", { className: "vms-tree-meta" }, typeLabel(item.kind)),
+    detailed && h3("span", { className: "vms-tree-meta vms-mono" }, formatBytes(meta?.size)),
+    h3("button", {
+      type: "button",
+      className: "vms-tree-more",
+      title: "\u66F4\u591A\u64CD\u4F5C",
+      "aria-label": "\u66F4\u591A\u64CD\u4F5C",
+      onClick: (event) => {
+        event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        onMenu(item, rect.left - 170, rect.bottom + 4);
+      }
+    }, h3(Icon2, { name: "more", size: 13 }))
+  );
+}
+function TreeFolderRow({ node, depth, detail, expanded, onToggle, onMenu }) {
+  return h3(
+    "div",
+    {
+      className: "vms-tree-row is-folder",
+      "data-depth": depth,
+      "data-detail": detail === "detailed" ? "detailed" : "compact",
+      style: { paddingLeft: `${10 + depth * 16}px` },
+      tabIndex: 0,
+      onClick: () => onToggle(node.path),
+      onKeyDown: (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onToggle(node.path);
+        }
+      },
+      onContextMenu: (event) => {
+        event.preventDefault();
+        onMenu(folderItem(node), event.clientX, event.clientY);
+      }
+    },
+    h3("span", { className: "vms-tree-chevron", "data-expanded": expanded ? "" : void 0 }, h3(Icon2, { name: "chevronRight", size: 13 })),
+    h3("span", { className: "vms-tree-folder-icon" }, h3(Icon2, { name: expanded ? "folderOpen" : "folder", size: 14 })),
+    h3("span", { className: "vms-tree-name" }, node.name),
+    detail === "detailed" && h3("span", { className: "vms-tree-meta" }, ""),
+    detail === "detailed" && h3("span", { className: "vms-tree-meta" }, "\u6587\u4EF6\u5939"),
+    detail === "detailed" && h3("span", { className: "vms-tree-meta vms-mono" }, `${node.count}`),
+    h3("button", {
+      type: "button",
+      className: "vms-tree-more",
+      title: "\u66F4\u591A\u64CD\u4F5C",
+      "aria-label": "\u66F4\u591A\u64CD\u4F5C",
+      onClick: (event) => {
+        event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        onMenu(folderItem(node), rect.left - 170, rect.bottom + 4);
+      }
+    }, h3(Icon2, { name: "more", size: 13 }))
+  );
+}
+function renderChildren(node, depth, options) {
+  const rows = [];
+  const folders = [...node.folders.values()].sort((left, right) => COLLATOR.compare(left.name, right.name));
+  for (const child of folders) {
+    const open = options.effective.has(child.path);
+    rows.push(h3(TreeFolderRow, {
+      key: `d:${child.path}`,
+      node: child,
+      depth,
+      detail: options.detail,
+      expanded: open,
+      onToggle: options.onToggleFolder,
+      onMenu: options.onMenu
+    }));
+    if (open) rows.push(...renderChildren(child, depth + 1, options));
+  }
+  for (const file of node.files) {
+    rows.push(h3(TreeFileRow, {
+      key: file.id,
+      item: file,
+      depth,
+      detail: options.detail,
+      meta: options.meta?.[file.id],
+      sessionId: options.sessionId,
+      selected: options.selected.has(file.id),
+      onOpen: options.onOpen,
+      onToggleSelect: options.onToggleSelect,
+      onMenu: options.onMenu
+    }));
+  }
+  return rows;
+}
+function FileTree({
+  items,
+  folders,
+  scope,
+  expanded = /* @__PURE__ */ new Set(),
+  forceExpanded = /* @__PURE__ */ new Set(),
+  detail,
+  meta,
+  sessionId,
+  selected = /* @__PURE__ */ new Set(),
+  showEmptyFolders,
+  onToggleFolder,
+  onOpen,
+  onToggleSelect,
+  onMenu
+}) {
+  const tree = import_react7.default.useMemo(() => buildTree(items, folders, showEmptyFolders), [items, folders, showEmptyFolders]);
+  const scoped = import_react7.default.useMemo(() => findTreeNode(tree, scope), [tree, scope]);
+  const start = scoped ?? tree;
+  const effective = import_react7.default.useMemo(() => {
+    const set = new Set(expanded);
+    if (scope !== "") set.add(scope);
+    for (const path of forceExpanded) set.add(path);
+    return set;
+  }, [expanded, forceExpanded, scope]);
+  if (scope !== "" && scoped === void 0) {
+    return h3("div", { className: "vms-tree is-empty" }, "\u8FD9\u4E2A\u6587\u4EF6\u5939\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6");
+  }
+  const rows = renderChildren(start, 0, {
+    detail,
+    meta,
+    sessionId,
+    selected,
+    onOpen,
+    onToggleSelect,
+    onMenu,
+    effective,
+    onToggleFolder
+  });
+  if (rows.length === 0) {
+    return h3("div", { className: "vms-tree is-empty" }, "\u8FD9\u4E2A\u6587\u4EF6\u5939\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6");
+  }
+  return h3("div", { className: "vms-tree", role: "tree" }, rows);
+}
+
 // src/client/library.js
-var h2 = import_react6.default.createElement;
+var h4 = import_react8.default.createElement;
 var LIGHTBOX_PLUGINS = [Inline, Video2, Zoom, Thumbnails, Counter, Fullscreen];
 var INITIAL_PREFS = readPrefs();
 var MEDIA_KINDS = /* @__PURE__ */ new Set(["image", "video", "audio", "link"]);
+var TREE_STATE_KEY = "vyra-media-studio.tree.v1";
+function readExpandedFolders() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TREE_STATE_KEY) ?? "[]");
+    return new Set(Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : []);
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+}
+function writeExpandedFolders(folders) {
+  try {
+    localStorage.setItem(TREE_STATE_KEY, JSON.stringify([...folders]));
+  } catch {
+  }
+}
+function folderItem2(path) {
+  const slash = path.lastIndexOf("/");
+  const name = slash === -1 ? path : path.slice(slash + 1);
+  return {
+    id: `folder:${path}`,
+    kind: "folder",
+    title: name,
+    name,
+    fileName: name,
+    folder: slash === -1 ? "" : path.slice(0, slash),
+    relativePath: path,
+    source: "local",
+    isFolder: true,
+    ext: "",
+    size: void 0,
+    mtimeMs: 0
+  };
+}
 function chunks(values, size) {
   const output = [];
   for (let index = 0; index < values.length; index += size) output.push(values.slice(index, index + size));
   return output;
 }
 function AddLinkForm({ onSubmit, onClose }) {
-  const [url, setUrl] = (0, import_react6.useState)("");
-  const [title, setTitle] = (0, import_react6.useState)("");
-  const [error, setError] = (0, import_react6.useState)("");
-  return h2(
+  const [url, setUrl] = (0, import_react8.useState)("");
+  const [title, setTitle] = (0, import_react8.useState)("");
+  const [error2, setError] = (0, import_react8.useState)("");
+  return h4(
     "form",
     {
       className: "vms-add-link",
@@ -5473,25 +24055,25 @@ function AddLinkForm({ onSubmit, onClose }) {
         onSubmit(value, title);
       }
     },
-    h2("div", { className: "vms-add-head" }, h2("b", null, "\u6DFB\u52A0\u94FE\u63A5"), h2(IconButton3, { name: "close", label: "\u5173\u95ED", onClick: onClose })),
-    h2("input", { className: "vms-input", autoFocus: true, value: url, placeholder: "https://example.com/video.mp4", onChange: (event) => {
+    h4("div", { className: "vms-add-head" }, h4("b", null, "\u6DFB\u52A0\u94FE\u63A5"), h4(IconButton3, { name: "close", label: "\u5173\u95ED", onClick: onClose })),
+    h4("input", { className: "vms-input", autoFocus: true, value: url, placeholder: "https://example.com/video.mp4", onChange: (event) => {
       setUrl(event.target.value);
       setError("");
     } }),
-    h2("input", { className: "vms-input", value: title, placeholder: "\u6807\u9898\uFF08\u53EF\u9009\uFF09", onChange: (event) => setTitle(event.target.value) }),
-    h2("p", { className: "vms-hint" }, "mp4 / webm / mp3 / wav \u7B49\u76F4\u94FE\u4F1A\u76F4\u63A5\u64AD\u653E\uFF1B\u5176\u4ED6\u94FE\u63A5\u4FDD\u5B58\u4E3A\u7F51\u9875\u5361\u7247\u3002"),
-    error !== "" && h2("p", { className: "vms-form-error" }, error),
-    h2(
+    h4("input", { className: "vms-input", value: title, placeholder: "\u6807\u9898\uFF08\u53EF\u9009\uFF09", onChange: (event) => setTitle(event.target.value) }),
+    h4("p", { className: "vms-hint" }, "mp4 / webm / mp3 / wav \u7B49\u76F4\u94FE\u4F1A\u76F4\u63A5\u64AD\u653E\uFF1B\u5176\u4ED6\u94FE\u63A5\u4FDD\u5B58\u4E3A\u7F51\u9875\u5361\u7247\u3002"),
+    error2 !== "" && h4("p", { className: "vms-form-error" }, error2),
+    h4(
       "div",
       { className: "vms-add-actions" },
-      h2("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-      h2("button", { type: "submit", className: "vms-primary-btn" }, "\u6DFB\u52A0")
+      h4("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+      h4("button", { type: "submit", className: "vms-primary-btn" }, "\u6DFB\u52A0")
     )
   );
 }
 function libraryMenuActions(item) {
   const actions = menuActions(item);
-  if (item.source === "url" || item.kind === "link") return actions;
+  if (item.isFolder || item.source === "url" || item.kind === "link") return actions;
   const index = actions.findIndex((action) => action.key === "reveal");
   return [
     ...actions.slice(0, index),
@@ -5500,6 +24082,19 @@ function libraryMenuActions(item) {
   ];
 }
 function menuActions(item) {
+  if (item.isFolder) {
+    return [
+      { key: "toggleFolder", label: "\u5C55\u5F00 / \u6298\u53E0", icon: "folder" },
+      { key: "locate", label: "\u5B9A\u4F4D\u5230\u6587\u4EF6\u5939", icon: "folderOpen" },
+      { key: "insert", label: "\u5F15\u7528\u5230\u8F93\u5165\u6846", icon: "at" },
+      { key: "copyTo", label: "\u590D\u5236\u5230\u2026", icon: "copy" },
+      { key: "copyPath", label: "\u590D\u5236\u6587\u4EF6\u5939\u5730\u5740", icon: "clipboard" },
+      { key: "rename", label: "\u91CD\u547D\u540D\u6587\u4EF6\u5939", icon: "pencil" },
+      { key: "reveal", label: "\u6253\u5F00\u6240\u5728\u4F4D\u7F6E", icon: "reveal" },
+      { key: "open", label: "\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00", icon: "app" },
+      { key: "delete", label: "\u5220\u9664\u6587\u4EF6\u5939", icon: "trash", danger: true }
+    ];
+  }
   if (item.source === "url" || item.kind === "link") {
     return [
       { key: "preview", label: "\u9884\u89C8 / \u6253\u5F00", icon: "full" },
@@ -5522,47 +24117,54 @@ function menuActions(item) {
 function LibraryBody(props) {
   const { sessionId, useTabInfo, openBrowser } = props;
   const { tab } = useTabInfo();
-  const [reloadKey, setReloadKey] = (0, import_react6.useState)(0);
-  const forceRefresh = (0, import_react6.useRef)(false);
-  const [state, setState] = (0, import_react6.useState)({ items: [], root: "", loading: true, error: null, scan: null });
-  const [links, setLinks] = (0, import_react6.useState)([]);
-  const [view, setView] = (0, import_react6.useState)(INITIAL_PREFS.view);
-  const [cardSize, setCardSize] = (0, import_react6.useState)(INITIAL_PREFS.cardSize);
-  const [detail, setDetail] = (0, import_react6.useState)(INITIAL_PREFS.detail);
-  const [query, setQuery] = (0, import_react6.useState)("");
-  const [types, setTypes] = (0, import_react6.useState)([]);
-  const [folder, setFolder] = (0, import_react6.useState)("");
-  const [time, setTime] = (0, import_react6.useState)("all");
-  const [size, setSize] = (0, import_react6.useState)("all");
-  const [sort, setSort] = (0, import_react6.useState)(INITIAL_PREFS.sort);
-  const [dir, setDir] = (0, import_react6.useState)(INITIAL_PREFS.dir);
-  const [showHidden, setShowHidden] = (0, import_react6.useState)(INITIAL_PREFS.showHidden);
-  const [includeBuild, setIncludeBuild] = (0, import_react6.useState)(INITIAL_PREFS.includeBuild);
-  const [filterOpen, setFilterOpen] = (0, import_react6.useState)(false);
-  const [folderOpen, setFolderOpen] = (0, import_react6.useState)(false);
-  const [inlineId, setInlineId] = (0, import_react6.useState)(null);
-  const [overlayId, setOverlayId] = (0, import_react6.useState)(null);
-  const [addOpen, setAddOpen] = (0, import_react6.useState)(false);
-  const [limit, setLimit] = (0, import_react6.useState)(PAGE_SIZE);
-  const [notice, setNotice] = (0, import_react6.useState)("");
-  const [diagnostic, setDiagnostic] = (0, import_react6.useState)(null);
-  const [meta, setMeta] = (0, import_react6.useState)({});
-  const [metaLoading, setMetaLoading] = (0, import_react6.useState)(false);
-  const [menu, setMenu] = (0, import_react6.useState)(null);
-  const [renameDialog, setRenameDialog] = (0, import_react6.useState)(null);
-  const [copyDialog, setCopyDialog] = (0, import_react6.useState)(null);
-  const [deleteDialog, setDeleteDialog] = (0, import_react6.useState)(null);
-  const metaRef = (0, import_react6.useRef)({});
-  const pendingMeta = (0, import_react6.useRef)(/* @__PURE__ */ new Set());
-  const generation = (0, import_react6.useRef)(0);
-  const gridRef = (0, import_react6.useRef)(null);
-  (0, import_react6.useEffect)(
+  const [reloadKey, setReloadKey] = (0, import_react8.useState)(0);
+  const forceRefresh = (0, import_react8.useRef)(false);
+  const [state, setState] = (0, import_react8.useState)({ items: [], root: "", loading: true, error: null, scan: null });
+  const [links, setLinks] = (0, import_react8.useState)([]);
+  const [view, setView] = (0, import_react8.useState)(INITIAL_PREFS.view);
+  const [listMode, setListMode] = (0, import_react8.useState)(INITIAL_PREFS.listMode);
+  const [cardSize, setCardSize] = (0, import_react8.useState)(INITIAL_PREFS.cardSize);
+  const [detail, setDetail] = (0, import_react8.useState)(INITIAL_PREFS.detail);
+  const [query, setQuery] = (0, import_react8.useState)("");
+  const [types, setTypes] = (0, import_react8.useState)([]);
+  const [folder, setFolder] = (0, import_react8.useState)("");
+  const [time, setTime] = (0, import_react8.useState)("all");
+  const [size, setSize] = (0, import_react8.useState)("all");
+  const [sort, setSort] = (0, import_react8.useState)(INITIAL_PREFS.sort);
+  const [dir, setDir] = (0, import_react8.useState)(INITIAL_PREFS.dir);
+  const [showHidden, setShowHidden] = (0, import_react8.useState)(INITIAL_PREFS.showHidden);
+  const [includeBuild, setIncludeBuild] = (0, import_react8.useState)(INITIAL_PREFS.includeBuild);
+  const [filterOpen, setFilterOpen] = (0, import_react8.useState)(false);
+  const [folderOpen, setFolderOpen] = (0, import_react8.useState)(false);
+  const [inlineId, setInlineId] = (0, import_react8.useState)(null);
+  const [overlayId, setOverlayId] = (0, import_react8.useState)(null);
+  const [addOpen, setAddOpen] = (0, import_react8.useState)(false);
+  const [limit, setLimit] = (0, import_react8.useState)(PAGE_SIZE);
+  const [notice, setNotice] = (0, import_react8.useState)("");
+  const [expandedFolders, setExpandedFolders] = (0, import_react8.useState)(() => readExpandedFolders());
+  const [selected, setSelected] = (0, import_react8.useState)(() => /* @__PURE__ */ new Set());
+  const [batchCopyDialog, setBatchCopyDialog] = (0, import_react8.useState)(null);
+  const [batchDeleteDialog, setBatchDeleteDialog] = (0, import_react8.useState)(null);
+  const [diagnostic, setDiagnostic] = (0, import_react8.useState)(null);
+  const [meta, setMeta] = (0, import_react8.useState)({});
+  const [metaLoading, setMetaLoading] = (0, import_react8.useState)(false);
+  const [menu, setMenu] = (0, import_react8.useState)(null);
+  const [renameDialog, setRenameDialog] = (0, import_react8.useState)(null);
+  const [copyDialog, setCopyDialog] = (0, import_react8.useState)(null);
+  const [deleteDialog, setDeleteDialog] = (0, import_react8.useState)(null);
+  const metaRef = (0, import_react8.useRef)({});
+  const pendingMeta = (0, import_react8.useRef)(/* @__PURE__ */ new Set());
+  const generation = (0, import_react8.useRef)(0);
+  const gridRef = (0, import_react8.useRef)(null);
+  const expandedInitialized = (0, import_react8.useRef)(false);
+  (0, import_react8.useEffect)(
     () => {
-      writePrefs({ view, cardSize, detail, sort, dir, showHidden, includeBuild });
+      writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild });
     },
-    [view, cardSize, detail, sort, dir, showHidden, includeBuild]
+    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild]
   );
-  (0, import_react6.useEffect)(() => {
+  const treeMode = view === "list" && listMode === "tree";
+  (0, import_react8.useEffect)(() => {
     const controller = new AbortController();
     let alive = true;
     generation.current += 1;
@@ -5588,8 +24190,8 @@ function LibraryBody(props) {
       }
       if (!response.ok || body?.ok !== true) {
         const reason = body?.error ?? await response.text().catch(() => "") ?? "";
-        const code = body?.code ?? `http-${response.status}`;
-        throw new Error(`${code}\uFF1A${reason || `HTTP ${response.status}`}`);
+        const code2 = body?.code ?? `http-${response.status}`;
+        throw new Error(`${code2}\uFF1A${reason || `HTTP ${response.status}`}`);
       }
       return body;
     }).then((body) => {
@@ -5605,19 +24207,19 @@ function LibraryBody(props) {
         height: 0
       }));
       setState({ items: entries, root: body.root, loading: false, error: null, scan: body });
-    }).catch((error) => {
+    }).catch((error2) => {
       if (!alive || controller.signal.aborted) return;
-      setState((previous) => ({ ...previous, loading: false, error: error?.message || "\u626B\u63CF\u5931\u8D25" }));
+      setState((previous) => ({ ...previous, loading: false, error: error2?.message || "\u626B\u63CF\u5931\u8D25" }));
     });
     return () => {
       alive = false;
       controller.abort();
     };
   }, [sessionId, reloadKey, showHidden, includeBuild]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (state.root !== "") setLinks(readLinks(state.root));
   }, [state.root]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!state.error) {
       setDiagnostic(null);
       return void 0;
@@ -5627,12 +24229,12 @@ function LibraryBody(props) {
     });
     return () => controller.abort();
   }, [state.error, sessionId]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (notice === "") return void 0;
     const timer = setTimeout(() => setNotice(""), 2200);
     return () => clearTimeout(timer);
   }, [notice]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (view !== "grid") return void 0;
     const element = gridRef.current;
     if (element === null) return void 0;
@@ -5645,26 +24247,36 @@ function LibraryBody(props) {
     return () => element.removeEventListener("wheel", onWheel);
   }, [view]);
   const filterKey = JSON.stringify({ query, types, folder, time, size, sort, dir });
-  (0, import_react6.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     setInlineId(null);
     setLimit(PAGE_SIZE);
   }, [filterKey]);
-  const items = (0, import_react6.useMemo)(() => [...state.items, ...links], [state.items, links]);
-  const counts = (0, import_react6.useMemo)(() => {
+  const items = (0, import_react8.useMemo)(() => [...state.items, ...links], [state.items, links]);
+  const counts = (0, import_react8.useMemo)(() => {
     const next = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 };
     for (const item of items) next[item.kind] = (next[item.kind] ?? 0) + 1;
     return next;
   }, [items]);
-  const folders = (0, import_react6.useMemo)(() => state.scan?.folders ?? [], [state.scan]);
-  const metaFor = (0, import_react6.useCallback)((item) => {
+  const folders = (0, import_react8.useMemo)(() => state.scan?.folders ?? [], [state.scan]);
+  (0, import_react8.useEffect)(() => {
+    if (state.scan === null || expandedInitialized.current) return;
+    expandedInitialized.current = true;
+    if (expandedFolders.size > 0) return;
+    const top = (state.scan.folders ?? []).filter((path) => !path.includes("/"));
+    if (top.length === 0) return;
+    const next = new Set(top);
+    setExpandedFolders(next);
+    writeExpandedFolders(next);
+  }, [state.scan, expandedFolders]);
+  const metaFor = (0, import_react8.useCallback)((item) => {
     const values = meta[item.id];
     if (values !== void 0) return values;
     if (item.source === "url") return { size: item.size, mtimeMs: item.mtimeMs, absolutePath: void 0 };
     return void 0;
   }, [meta]);
-  const needAllMeta = time !== "all" || size !== "all" || sort === "time" || sort === "size";
-  const localPaths = (0, import_react6.useMemo)(() => state.items.map((item) => item.id), [state.items]);
-  const ensureMeta = (0, import_react6.useCallback)((paths) => {
+  const needAllMeta = time !== "all" || size !== "all" || sort === "time" || sort === "size" || treeMode && detail === "detailed";
+  const localPaths = (0, import_react8.useMemo)(() => state.items.map((item) => item.id), [state.items]);
+  const ensureMeta = (0, import_react8.useCallback)((paths) => {
     const currentGeneration = generation.current;
     const missing = [...new Set(paths)].filter((path) => metaRef.current[path] === void 0 && !pendingMeta.current.has(path));
     if (missing.length === 0) return;
@@ -5701,19 +24313,23 @@ function LibraryBody(props) {
       if (generation.current === currentGeneration) setMetaLoading(false);
     });
   }, [sessionId]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (needAllMeta && localPaths.length > 0) ensureMeta(localPaths);
   }, [needAllMeta, localPaths, ensureMeta]);
-  const filtered = (0, import_react6.useMemo)(() => {
+  const filtered = (0, import_react8.useMemo)(() => {
     const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
-    const floor = time === "today" ? today.getTime() : time === "7d" ? Date.now() - 7 * DAY : time === "30d" ? Date.now() - 30 * DAY : null;
+    const floor2 = time === "today" ? today.getTime() : time === "7d" ? Date.now() - 7 * DAY : time === "30d" ? Date.now() - 30 * DAY : null;
     return items.filter((item) => {
       if (types.length > 0 && !types.includes(item.kind)) return false;
-      if (folder !== "" && folderOf(item) !== folder) return false;
+      if (folder !== "") {
+        const exact = folderOf(item) === folder;
+        const nested = item.folder === folder || item.folder.startsWith(`${folder}/`);
+        if (treeMode ? !nested : !exact) return false;
+      }
       const info = metaFor(item);
-      if (floor !== null && info?.mtimeMs !== void 0 && info.mtimeMs < floor) return false;
+      if (floor2 !== null && info?.mtimeMs !== void 0 && info.mtimeMs < floor2) return false;
       if (size !== "all" && info?.size !== void 0) {
         if (size === "small" && !(info.size < 1e7)) return false;
         if (size === "medium" && !(info.size >= 1e7 && info.size <= 1e8)) return false;
@@ -5725,13 +24341,28 @@ function LibraryBody(props) {
       }
       return true;
     }).sort((left, right) => compareItems(left, right, sort, dir, meta));
-  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir]);
-  const shown = (0, import_react6.useMemo)(() => filtered.slice(0, limit), [filtered, limit]);
-  const visiblePaths = (0, import_react6.useMemo)(() => shown.filter((item) => item.source === "local").map((item) => item.id), [shown]);
-  (0, import_react6.useEffect)(() => {
+  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir, treeMode]);
+  const treeItems = (0, import_react8.useMemo)(() => filtered.map((item) => item.source === "url" ? { ...item, folder: "" } : item), [filtered]);
+  const filterActive = types.length > 0 || query.trim() !== "" || time !== "all" || size !== "all";
+  const showEmptyFolders = treeMode && !filterActive;
+  const forceExpanded = (0, import_react8.useMemo)(() => {
+    if (!treeMode || !filterActive) return /* @__PURE__ */ new Set();
+    const set = /* @__PURE__ */ new Set();
+    for (const item of filtered) {
+      for (let current = folderOf(item); current !== ""; ) {
+        set.add(current);
+        const index = current.lastIndexOf("/");
+        current = index === -1 ? "" : current.slice(0, index);
+      }
+    }
+    return set;
+  }, [treeMode, filterActive, filtered]);
+  const shown = (0, import_react8.useMemo)(() => filtered.slice(0, limit), [filtered, limit]);
+  const visiblePaths = (0, import_react8.useMemo)(() => shown.filter((item) => item.source === "local").map((item) => item.id), [shown]);
+  (0, import_react8.useEffect)(() => {
     if (!needAllMeta && visiblePaths.length > 0) ensureMeta(visiblePaths);
   }, [needAllMeta, visiblePaths, ensureMeta]);
-  const overlayItems = (0, import_react6.useMemo)(() => filtered.slice(0, Math.max(limit, PAGE_SIZE)), [filtered, limit]);
+  const overlayItems = (0, import_react8.useMemo)(() => filtered.slice(0, Math.max(limit, PAGE_SIZE)), [filtered, limit]);
   const overlayIdSafe = overlayId !== null && items.some((item) => item.id === overlayId) ? overlayId : null;
   const overlayItem = overlayIdSafe === null ? void 0 : filtered.find((item) => item.id === overlayIdSafe);
   const activeFilterCount = types.length + (folder ? 1 : 0) + (time !== "all" ? 1 : 0) + (size !== "all" ? 1 : 0);
@@ -5774,6 +24405,15 @@ function LibraryBody(props) {
     setOverlayId(null);
     setNotice("\u5DF2\u79FB\u9664\u94FE\u63A5");
   };
+  const toggleFolder = (path) => {
+    setExpandedFolders((previous) => {
+      const next = new Set(previous);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      writeExpandedFolders(next);
+      return next;
+    });
+  };
   const clearFilters = () => {
     setTypes([]);
     setFolder("");
@@ -5782,6 +24422,14 @@ function LibraryBody(props) {
     setQuery("");
     setSort("name");
     setDir("asc");
+  };
+  const toggleType = (kind, event) => {
+    const multi = event.ctrlKey || event.metaKey;
+    setTypes((previous) => {
+      if (multi) return previous.includes(kind) ? previous.filter((value) => value !== kind) : [...previous, kind];
+      if (previous.length === 1 && previous[0] === kind) return [];
+      return [kind];
+    });
   };
   const sortBy = (key) => {
     if (sort === key) setDir((value) => value === "asc" ? "desc" : "asc");
@@ -5794,15 +24442,94 @@ function LibraryBody(props) {
     try {
       insertComposerText(sessionId, mentionToken(item.relativePath));
       setNotice("\u5DF2\u5F15\u7528\u5230\u8F93\u5165\u6846");
-    } catch (error) {
-      setNotice(error?.message ?? "\u5F15\u7528\u5931\u8D25");
+    } catch (error2) {
+      setNotice(error2?.message ?? "\u5F15\u7528\u5931\u8D25");
+    }
+  };
+  const toggleSelect = (item) => {
+    if (item.source !== "local" || item.isFolder) return;
+    if (!selected.has(item.id) && selected.size >= 200) {
+      setNotice("\u4E00\u6B21\u6700\u591A\u6279\u91CF\u9009\u62E9 200 \u9879");
+      return;
+    }
+    setSelected((previous) => {
+      const next = new Set(previous);
+      if (next.has(item.id)) next.delete(item.id);
+      else next.add(item.id);
+      return next;
+    });
+  };
+  const selectedItems = (0, import_react8.useMemo)(
+    () => items.filter((item) => selected.has(item.id)),
+    [items, selected]
+  );
+  (0, import_react8.useEffect)(() => {
+    setSelected((previous) => {
+      const valid = new Set(items.map((item) => item.id));
+      const next = new Set([...previous].filter((id) => valid.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [items]);
+  const insertSelected = () => {
+    try {
+      insertComposerText(sessionId, selectedItems.map((item) => mentionToken(item.relativePath)).join(""));
+      setNotice(`\u5DF2\u5F15\u7528 ${selectedItems.length} \u9879\u5230\u8F93\u5165\u6846`);
+    } catch (error2) {
+      setNotice(error2?.message ?? "\u5F15\u7528\u5931\u8D25");
+    }
+  };
+  const copySelectedAddresses = async () => {
+    try {
+      const result = await postJson("api/vyra-media/stat", {
+        sessionId,
+        paths: selectedItems.map((item) => item.relativePath)
+      });
+      const addresses = (result.entries ?? []).filter((entry) => entry.absolutePath !== void 0).map((entry) => entry.absolutePath);
+      await navigator.clipboard.writeText(addresses.join("\n"));
+      setNotice(`\u5DF2\u590D\u5236 ${addresses.length} \u4E2A\u5730\u5740`);
+    } catch (error2) {
+      setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
+    }
+  };
+  const submitBatchCopy = async (toFolder) => {
+    try {
+      const result = await postJson("api/vyra-media/batch", {
+        sessionId,
+        action: "copy",
+        paths: selectedItems.map((item) => item.relativePath),
+        toFolder
+      });
+      const failed = (result.results ?? []).filter((entry) => entry.ok !== true);
+      setBatchCopyDialog(null);
+      setSelected(/* @__PURE__ */ new Set());
+      setNotice(`\u5DF2\u590D\u5236 ${(result.results?.length ?? 0) - failed.length} \u9879${failed.length > 0 ? `\uFF0C${failed.length} \u9879\u5931\u8D25` : ""}`);
+      refresh();
+    } catch (error2) {
+      setBatchCopyDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
+    }
+  };
+  const submitBatchDelete = async (permanent) => {
+    try {
+      const result = await postJson("api/vyra-media/batch", {
+        sessionId,
+        action: "delete",
+        paths: selectedItems.map((item) => item.relativePath),
+        permanent
+      });
+      const failed = (result.results ?? []).filter((entry) => entry.ok !== true);
+      setBatchDeleteDialog(null);
+      setSelected(/* @__PURE__ */ new Set());
+      setNotice(`\u5DF2\u5220\u9664 ${(result.results?.length ?? 0) - failed.length} \u9879${failed.length > 0 ? `\uFF0C${failed.length} \u9879\u5931\u8D25` : ""}`);
+      refresh();
+    } catch (error2) {
+      setBatchDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
     }
   };
   const absolutePathOf = async (item) => {
     const cached = metaRef.current[item.id]?.absolutePath;
     if (cached !== void 0) return cached;
-    const result = await postJson("api/vyra-media/stat", { sessionId, paths: [item.id] });
-    const entry = result.entries?.find((value) => value.path === item.id);
+    const result = await postJson("api/vyra-media/stat", { sessionId, paths: [item.relativePath] });
+    const entry = result.entries?.find((value) => value.path === item.relativePath);
     if (entry?.absolutePath === void 0) throw new Error("\u627E\u4E0D\u5230\u6587\u4EF6\u5730\u5740");
     const patch = { ...metaRef.current?.[item.id] ?? {}, ...entry };
     metaRef.current = { ...metaRef.current, [item.id]: patch };
@@ -5813,12 +24540,16 @@ function LibraryBody(props) {
     try {
       const absolute = await absolutePathOf(item);
       await navigator.clipboard.writeText(absolute);
-      setNotice("\u5DF2\u590D\u5236\u6587\u4EF6\u5730\u5740");
-    } catch (error) {
-      setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error?.message ?? error}`);
+      setNotice(item.isFolder ? "\u5DF2\u590D\u5236\u6587\u4EF6\u5939\u5730\u5740" : "\u5DF2\u590D\u5236\u6587\u4EF6\u5730\u5740");
+    } catch (error2) {
+      setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
     }
   };
   const runAction = async (key, item) => {
+    if (key === "toggleFolder") {
+      toggleFolder(item.relativePath);
+      return;
+    }
     if (key === "preview") {
       setOverlayId(item.id);
       return;
@@ -5864,8 +24595,8 @@ function LibraryBody(props) {
       try {
         await postJson(`api/vyra-media/${key}`, { sessionId, path: item.relativePath });
         setNotice(key === "reveal" ? "\u5DF2\u6253\u5F00\u6587\u4EF6\u6240\u5728\u4F4D\u7F6E" : "\u5DF2\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00");
-      } catch (error) {
-        setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error?.message ?? error}`);
+      } catch (error2) {
+        setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
       }
     }
   };
@@ -5873,13 +24604,16 @@ function LibraryBody(props) {
     const item = renameDialog?.item;
     if (item === void 0) return;
     try {
-      await postJson("api/vyra-media/rename", { sessionId, path: item.relativePath, name });
+      const result = await postJson("api/vyra-media/rename", { sessionId, path: item.relativePath, name });
       setRenameDialog(null);
       if (overlayIdSafe === item.id) setOverlayId(null);
-      setNotice("\u5DF2\u91CD\u547D\u540D");
+      if (item.isFolder && folder !== "" && (folder === item.relativePath || folder.startsWith(`${item.relativePath}/`))) {
+        setFolder(`${result.relativePath}${folder.slice(item.relativePath.length)}`);
+      }
+      setNotice(item.isFolder ? "\u5DF2\u91CD\u547D\u540D\u6587\u4EF6\u5939" : "\u5DF2\u91CD\u547D\u540D");
       refresh();
-    } catch (error) {
-      setRenameDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    } catch (error2) {
+      setRenameDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
     }
   };
   const submitCopy = async (toFolder) => {
@@ -5890,8 +24624,8 @@ function LibraryBody(props) {
       setCopyDialog(null);
       setNotice(`\u5DF2\u590D\u5236\u5230 ${result.relativePath}`);
       refresh();
-    } catch (error) {
-      setCopyDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    } catch (error2) {
+      setCopyDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
     }
   };
   const submitDelete = async (permanent) => {
@@ -5901,14 +24635,15 @@ function LibraryBody(props) {
       const result = await postJson("api/vyra-media/delete", { sessionId, path: item.relativePath, permanent });
       setDeleteDialog(null);
       if (overlayIdSafe === item.id) setOverlayId(null);
-      setNotice(result.recycled ? "\u5DF2\u79FB\u5230\u56DE\u6536\u7AD9" : "\u5DF2\u6C38\u4E45\u5220\u9664");
+      if (item.isFolder && folder !== "" && (folder === item.relativePath || folder.startsWith(`${item.relativePath}/`))) setFolder("");
+      setNotice(result.recycled ? item.isFolder ? "\u6587\u4EF6\u5939\u5DF2\u79FB\u5230\u56DE\u6536\u7AD9" : "\u5DF2\u79FB\u5230\u56DE\u6536\u7AD9" : item.isFolder ? "\u6587\u4EF6\u5939\u5DF2\u6C38\u4E45\u5220\u9664" : "\u5DF2\u6C38\u4E45\u5220\u9664");
       refresh();
-    } catch (error) {
-      if (permanent !== true && error?.canPermanent === true) {
-        setDeleteDialog((previous) => previous === null ? previous : { ...previous, step: 1, error: error?.message ?? String(error) });
+    } catch (error2) {
+      if (permanent !== true && error2?.canPermanent === true) {
+        setDeleteDialog((previous) => previous === null ? previous : { ...previous, step: 1, error: error2?.message ?? String(error2) });
         return;
       }
-      setDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+      setDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
     }
   };
   const chips = [];
@@ -5923,58 +24658,58 @@ function LibraryBody(props) {
     else if (key === "size") setSize("all");
   };
   const segments = folderSegments(folder);
-  const mediaOverlayItems = (0, import_react6.useMemo)(() => overlayItems.filter((item) => MEDIA_KINDS.has(item.kind)), [overlayItems]);
+  const mediaOverlayItems = (0, import_react8.useMemo)(() => overlayItems.filter((item) => MEDIA_KINDS.has(item.kind)), [overlayItems]);
   const mediaOverlayIndex = overlayItem === void 0 ? 0 : Math.max(0, mediaOverlayItems.findIndex((item) => item.id === overlayItem.id));
-  return h2(
+  return h4(
     "div",
     { className: "vms-root" },
-    h2(
+    h4(
       "header",
       { className: "vms-head" },
-      h2(
+      h4(
         "div",
         { className: "vms-title-row" },
-        h2(
+        h4(
           "div",
           { className: "vms-title" },
-          h2("h2", null, "\u6587\u4EF6\u7BA1\u7406"),
-          h2(
+          h4("h2", null, "\u6587\u4EF6\u7BA1\u7406"),
+          h4(
             "p",
             null,
-            h2("span", null, `${items.length} \u4E2A\u6587\u4EF6`),
-            h2("span", null, "\xB7"),
-            h2("span", null, `${folders.length} \u4E2A\u6587\u4EF6\u5939`),
-            h2("span", null, "\xB7"),
-            h2("span", { className: "vms-mono" }, sizeReady ? formatBytes(totalSize) : "\u2014")
+            h4("span", null, `${items.length} \u4E2A\u6587\u4EF6`),
+            h4("span", null, "\xB7"),
+            h4("span", null, `${folders.length} \u4E2A\u6587\u4EF6\u5939`),
+            h4("span", null, "\xB7"),
+            h4("span", { className: "vms-mono" }, sizeReady ? formatBytes(totalSize) : "\u2014")
           )
         ),
-        h2(
+        h4(
           "div",
           { className: "vms-actions" },
-          h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => setAddOpen((value) => !value) }, h2(Icon2, { name: "plus", size: 13 }), "\u94FE\u63A5"),
-          h2(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: refresh }),
-          h2(
+          h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setAddOpen((value) => !value) }, h4(Icon2, { name: "plus", size: 13 }), "\u94FE\u63A5"),
+          h4(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: refresh }),
+          h4(
             "div",
             { className: "vms-seg" },
-            h2("button", { type: "button", className: `vms-seg-btn${view === "grid" ? " is-active" : ""}`, "aria-pressed": view === "grid", title: "\u7F51\u683C\u89C6\u56FE", onClick: () => setView("grid") }, h2(Icon2, { name: "grid", size: 14 })),
-            h2("button", { type: "button", className: `vms-seg-btn${view === "list" ? " is-active" : ""}`, "aria-pressed": view === "list", title: "\u5217\u8868\u89C6\u56FE", onClick: () => setView("list") }, h2(Icon2, { name: "list", size: 14 }))
+            h4("button", { type: "button", className: `vms-seg-btn${view === "grid" ? " is-active" : ""}`, "aria-pressed": view === "grid", title: "\u7F51\u683C\u89C6\u56FE", onClick: () => setView("grid") }, h4(Icon2, { name: "grid", size: 14 })),
+            h4("button", { type: "button", className: `vms-seg-btn${view === "list" ? " is-active" : ""}`, "aria-pressed": view === "list", title: "\u5217\u8868\u89C6\u56FE", onClick: () => setView("list") }, h4(Icon2, { name: "list", size: 14 }))
           )
         )
       ),
-      h2(
+      h4(
         "div",
         { className: "vms-search-row" },
-        h2(
+        h4(
           "label",
           { className: "vms-search" },
-          h2(Icon2, { name: "search", size: 14 }),
-          h2("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
+          h4(Icon2, { name: "search", size: 14 }),
+          h4("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
         ),
-        view === "grid" && h2(
+        view === "grid" && h4(
           "div",
           { className: "vms-zoom" },
-          h2(IconButton3, { name: "zoomOut", label: "\u7F29\u5C0F\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.max(CARD_MIN, value - 16)) }),
-          h2("input", {
+          h4(IconButton3, { name: "zoomOut", label: "\u7F29\u5C0F\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.max(CARD_MIN, value - 16)) }),
+          h4("input", {
             type: "range",
             min: CARD_MIN,
             max: CARD_MAX,
@@ -5984,73 +24719,84 @@ function LibraryBody(props) {
             className: "vms-zoom-range",
             onChange: (event) => setCardSize(Number(event.target.value))
           }),
-          h2(IconButton3, { name: "zoomIn", label: "\u653E\u5927\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.min(CARD_MAX, value + 16)) })
+          h4(IconButton3, { name: "zoomIn", label: "\u653E\u5927\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.min(CARD_MAX, value + 16)) })
         ),
-        view === "list" && h2(
+        view === "list" && h4(
           "div",
           { className: "vms-seg vms-detail-seg" },
-          h2("button", { type: "button", className: `vms-seg-text${detail === "compact" ? " is-active" : ""}`, "aria-pressed": detail === "compact", onClick: () => setDetail("compact") }, "\u7B80\u6D01"),
-          h2("button", { type: "button", className: `vms-seg-text${detail === "detailed" ? " is-active" : ""}`, "aria-pressed": detail === "detailed", onClick: () => setDetail("detailed") }, "\u8BE6\u7EC6")
+          h4("button", { type: "button", className: `vms-seg-text${listMode === "tree" ? " is-active" : ""}`, "aria-pressed": listMode === "tree", onClick: () => setListMode("tree") }, "\u6811\u5F62"),
+          h4("button", { type: "button", className: `vms-seg-text${listMode === "flat" ? " is-active" : ""}`, "aria-pressed": listMode === "flat", onClick: () => setListMode("flat") }, "\u5E73\u94FA")
         ),
-        h2(
+        view === "list" && h4(
+          "div",
+          { className: "vms-seg vms-detail-seg" },
+          h4("button", { type: "button", className: `vms-seg-text${detail === "compact" ? " is-active" : ""}`, "aria-pressed": detail === "compact", onClick: () => setDetail("compact") }, "\u7B80\u6D01"),
+          h4("button", { type: "button", className: `vms-seg-text${detail === "detailed" ? " is-active" : ""}`, "aria-pressed": detail === "detailed", onClick: () => setDetail("detailed") }, "\u8BE6\u7EC6")
+        ),
+        h4(
           "button",
           { type: "button", className: `vms-filter-btn${filterOpen ? " is-open" : ""}`, "aria-expanded": filterOpen, onClick: () => setFilterOpen((value) => !value) },
-          h2(Icon2, { name: "filter", size: 14 }),
-          h2("span", null, "\u7B5B\u9009"),
-          activeFilterCount > 0 && h2("i", { className: "vms-filter-count" }, activeFilterCount)
+          h4(Icon2, { name: "filter", size: 14 }),
+          h4("span", null, "\u7B5B\u9009"),
+          activeFilterCount > 0 && h4("i", { className: "vms-filter-count" }, activeFilterCount)
         )
       ),
-      h2(
+      h4(
         "div",
         { className: "vms-type-row" },
-        h2(
+        h4(
           "button",
           { type: "button", className: `vms-type-chip${types.length === 0 ? " is-active" : ""}`, onClick: () => setTypes([]) },
-          h2(Icon2, { name: "grid", size: 12 }),
+          h4(Icon2, { name: "grid", size: 12 }),
           "\u5168\u90E8",
-          h2("b", null, items.length)
+          h4("b", null, items.length)
         ),
-        TYPE_CHIPS.map((kind) => h2("button", {
+        TYPE_CHIPS.map((kind) => h4("button", {
           key: kind,
           type: "button",
           "data-kind": kind,
           className: `vms-type-chip${types.includes(kind) ? " is-active" : ""}`,
-          onClick: () => setTypes((previous) => previous.includes(kind) ? previous.filter((entry) => entry !== kind) : [...previous, kind])
-        }, h2(Icon2, { name: kind === "other" ? "file" : kind, size: 12 }), TYPE_LABEL[kind], h2("b", null, counts[kind] ?? 0)))
+          title: "\u70B9\u51FB\u5355\u9009\uFF0CCtrl / Cmd \u70B9\u51FB\u591A\u9009",
+          onClick: (event) => toggleType(kind, event)
+        }, h4(Icon2, { name: kind === "other" ? "file" : kind, size: 12 }), TYPE_LABEL[kind], h4("b", null, counts[kind] ?? 0)))
       ),
-      h2(
+      h4(
         "div",
         { className: "vms-folder-row" },
-        h2(
+        h4(
           "div",
           { className: "vms-crumb" },
-          h2("button", { type: "button", className: `vms-crumb-seg${folder === "" ? " is-active" : ""}`, onClick: () => setFolder("") }, "\u5168\u90E8\u6587\u4EF6\u5939"),
-          segments.map((segment, index) => h2(
-            import_react6.default.Fragment,
+          h4("button", { type: "button", className: `vms-crumb-seg${folder === "" ? " is-active" : ""}`, onClick: () => setFolder("") }, "\u5168\u90E8\u6587\u4EF6\u5939"),
+          segments.map((segment, index) => h4(
+            import_react8.default.Fragment,
             { key: `${segment}:${index}` },
-            h2(Icon2, { name: "chevronRight", size: 11, className: "vms-crumb-sep" }),
-            h2("button", {
+            h4(Icon2, { name: "chevronRight", size: 11, className: "vms-crumb-sep" }),
+            h4("button", {
               type: "button",
               className: `vms-crumb-seg${index === segments.length - 1 ? " is-active" : ""}`,
-              onClick: () => setFolder(segments.slice(0, index + 1).join("/"))
+              onClick: () => setFolder(segments.slice(0, index + 1).join("/")),
+              onContextMenu: (event) => {
+                event.preventDefault();
+                setMenu({ item: folderItem2(segments.slice(0, index + 1).join("/")), x: event.clientX, y: event.clientY });
+              }
             }, segment)
           ))
         ),
-        h2(
+        h4(
           "button",
           { type: "button", className: `vms-ghost-btn vms-folder-btn${folderOpen ? " is-open" : ""}`, "aria-expanded": folderOpen, onClick: () => setFolderOpen((value) => !value) },
-          h2(Icon2, { name: "folder", size: 13 }),
+          h4(Icon2, { name: "folder", size: 13 }),
           "\u6587\u4EF6\u5939",
-          h2(Icon2, { name: "chevron", size: 11 })
+          h4(Icon2, { name: "chevron", size: 11 })
         ),
-        folderOpen && h2(
+        folderOpen && h4(
           "div",
           { className: "vms-folder-pop" },
-          h2("button", { type: "button", className: `vms-folder-item${folder === "" ? " is-active" : ""}`, onClick: () => {
+          h4("button", { type: "button", className: `vms-folder-item${folder === "" ? " is-active" : ""}`, onClick: () => {
             setFolder("");
             setFolderOpen(false);
           } }, "\u5168\u90E8\u6587\u4EF6\u5939"),
-          folders.map((value) => h2("button", {
+          folders.map((value) => h4("button", {
             key: value,
             type: "button",
             className: `vms-folder-item${folder === value ? " is-active" : ""}`,
@@ -6058,185 +24804,247 @@ function LibraryBody(props) {
             onClick: () => {
               setFolder(value);
               setFolderOpen(false);
+            },
+            onContextMenu: (event) => {
+              event.preventDefault();
+              setMenu({ item: folderItem2(value), x: event.clientX, y: event.clientY });
             }
-          }, h2(Icon2, { name: "folder", size: 11 }), value.split("/").pop()))
+          }, h4(Icon2, { name: "folder", size: 11 }), value.split("/").pop()))
         )
       ),
-      filterOpen && h2(
+      filterOpen && h4(
         "div",
         { className: "vms-filter-panel" },
-        h2(
+        h4(
           "label",
           { className: "vms-field" },
-          h2("span", null, "\u6587\u4EF6\u5939"),
-          h2(
+          h4("span", null, "\u6587\u4EF6\u5939"),
+          h4(
             "select",
             { value: folder, onChange: (event) => setFolder(event.target.value) },
-            h2("option", { value: "" }, "\u5168\u90E8\u6587\u4EF6\u5939"),
-            folders.map((value) => h2("option", { key: value, value }, value))
+            h4("option", { value: "" }, "\u5168\u90E8\u6587\u4EF6\u5939"),
+            folders.map((value) => h4("option", { key: value, value }, value))
           )
         ),
-        h2(
+        h4(
           "label",
           { className: "vms-field" },
-          h2("span", null, "\u65F6\u95F4"),
-          h2(
+          h4("span", null, "\u65F6\u95F4"),
+          h4(
             "select",
             { value: time, onChange: (event) => setTime(event.target.value) },
-            h2("option", { value: "all" }, "\u5168\u90E8\u65F6\u95F4"),
-            h2("option", { value: "today" }, "\u4ECA\u5929"),
-            h2("option", { value: "7d" }, "\u8FD1 7 \u5929"),
-            h2("option", { value: "30d" }, "\u8FD1 30 \u5929")
+            h4("option", { value: "all" }, "\u5168\u90E8\u65F6\u95F4"),
+            h4("option", { value: "today" }, "\u4ECA\u5929"),
+            h4("option", { value: "7d" }, "\u8FD1 7 \u5929"),
+            h4("option", { value: "30d" }, "\u8FD1 30 \u5929")
           )
         ),
-        h2(
+        h4(
           "label",
           { className: "vms-field" },
-          h2("span", null, "\u5927\u5C0F"),
-          h2(
+          h4("span", null, "\u5927\u5C0F"),
+          h4(
             "select",
             { value: size, onChange: (event) => setSize(event.target.value) },
-            h2("option", { value: "all" }, "\u5168\u90E8\u5927\u5C0F"),
-            h2("option", { value: "small" }, "\u5C0F\u4E8E 10 MB"),
-            h2("option", { value: "medium" }, "10\u2013100 MB"),
-            h2("option", { value: "large" }, "\u5927\u4E8E 100 MB")
+            h4("option", { value: "all" }, "\u5168\u90E8\u5927\u5C0F"),
+            h4("option", { value: "small" }, "\u5C0F\u4E8E 10 MB"),
+            h4("option", { value: "medium" }, "10\u2013100 MB"),
+            h4("option", { value: "large" }, "\u5927\u4E8E 100 MB")
           )
         ),
-        h2(
+        h4(
           "label",
           { className: "vms-field" },
-          h2("span", null, "\u6392\u5E8F"),
-          h2(
+          h4("span", null, "\u6392\u5E8F"),
+          h4(
             "select",
             { value: sort, onChange: (event) => setSort(event.target.value) },
-            h2("option", { value: "name" }, "\u6309\u540D\u79F0"),
-            h2("option", { value: "time" }, "\u6309\u65F6\u95F4"),
-            h2("option", { value: "size" }, "\u6309\u5927\u5C0F"),
-            h2("option", { value: "type" }, "\u6309\u7C7B\u578B")
+            h4("option", { value: "name" }, "\u6309\u540D\u79F0"),
+            h4("option", { value: "time" }, "\u6309\u65F6\u95F4"),
+            h4("option", { value: "size" }, "\u6309\u5927\u5C0F"),
+            h4("option", { value: "type" }, "\u6309\u7C7B\u578B")
           )
         ),
-        h2(
+        h4(
           "button",
           { type: "button", className: "vms-dir-btn", "data-dir": dir, onClick: () => setDir((value) => value === "asc" ? "desc" : "asc") },
-          h2("span", { className: "vms-mono" }, dir === "asc" ? "\u5347\u5E8F" : "\u964D\u5E8F"),
-          h2(Icon2, { name: "chevron", size: 12 })
+          h4("span", { className: "vms-mono" }, dir === "asc" ? "\u5347\u5E8F" : "\u964D\u5E8F"),
+          h4(Icon2, { name: "chevron", size: 12 })
         ),
-        h2("label", { className: "vms-check" }, h2("input", { type: "checkbox", checked: showHidden, onChange: (event) => setShowHidden(event.target.checked) }), "\u663E\u793A\u9690\u85CF\u6587\u4EF6"),
-        h2("label", { className: "vms-check" }, h2("input", { type: "checkbox", checked: includeBuild, onChange: (event) => setIncludeBuild(event.target.checked) }), "\u5305\u542B\u4F9D\u8D56/\u6784\u5EFA\u76EE\u5F55\uFF08\u6162\uFF09"),
-        h2("button", { type: "button", className: "vms-reset-btn", onClick: clearFilters }, "\u6E05\u9664\u5168\u90E8")
+        h4("label", { className: "vms-check" }, h4("input", { type: "checkbox", checked: showHidden, onChange: (event) => setShowHidden(event.target.checked) }), "\u663E\u793A\u9690\u85CF\u6587\u4EF6"),
+        h4("label", { className: "vms-check" }, h4("input", { type: "checkbox", checked: includeBuild, onChange: (event) => setIncludeBuild(event.target.checked) }), "\u5305\u542B\u4F9D\u8D56/\u6784\u5EFA\u76EE\u5F55\uFF08\u6162\uFF09"),
+        h4("button", { type: "button", className: "vms-reset-btn", onClick: clearFilters }, "\u6E05\u9664\u5168\u90E8")
       ),
-      chips.length > 0 && h2(
+      chips.length > 0 && h4(
         "div",
         { className: "vms-chips" },
-        chips.map((chip) => h2(
+        chips.map((chip) => h4(
           "span",
           { key: chip.key, className: "vms-chip" },
           chip.label,
-          h2("button", { type: "button", "aria-label": "\u79FB\u9664\u7B5B\u9009", onClick: () => removeChip(chip.key) }, "\xD7")
+          h4("button", { type: "button", "aria-label": "\u79FB\u9664\u7B5B\u9009", onClick: () => removeChip(chip.key) }, "\xD7")
         ))
       )
     ),
-    addOpen && h2(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
-    h2(
+    addOpen && h4(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
+    selected.size > 0 && h4(
+      "div",
+      { className: "vms-selection-bar" },
+      h4("b", null, `\u5DF2\u9009 ${selected.size} \u9879`),
+      h4("button", { type: "button", className: "vms-ghost-btn", onClick: insertSelected }, h4(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
+      h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setBatchCopyDialog({ error: "" }) }, h4(Icon2, { name: "copy", size: 12 }), "\u590D\u5236\u5230\u2026"),
+      h4("button", { type: "button", className: "vms-ghost-btn", onClick: copySelectedAddresses }, h4(Icon2, { name: "clipboard", size: 12 }), "\u590D\u5236\u5730\u5740"),
+      h4("button", { type: "button", className: "vms-ghost-btn is-danger", onClick: () => setBatchDeleteDialog({ error: "" }) }, h4(Icon2, { name: "trash", size: 12 }), "\u5220\u9664"),
+      h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setSelected(/* @__PURE__ */ new Set()) }, "\u53D6\u6D88\u9009\u62E9")
+    ),
+    h4(
       "div",
       { className: "vms-scroll" },
-      state.loading && state.items.length > 0 && h2("div", { className: "vms-scan-banner" }, h2("i", null), "\u6B63\u5728\u626B\u63CF\u5DE5\u4F5C\u533A\uFF0C\u8DF3\u8FC7\u6784\u5EFA\u76EE\u5F55\u2026"),
-      state.loading && state.items.length === 0 && h2(
+      state.loading && state.items.length > 0 && h4("div", { className: "vms-scan-banner" }, h4("i", null), "\u6B63\u5728\u626B\u63CF\u5DE5\u4F5C\u533A\uFF0C\u8DF3\u8FC7\u6784\u5EFA\u76EE\u5F55\u2026"),
+      state.loading && state.items.length === 0 && h4(
         "div",
         { className: "vms-skeleton-grid" },
-        Array.from({ length: 6 }, (_, index) => h2("div", { key: index, className: "vms-skeleton" }))
+        Array.from({ length: 6 }, (_, index) => h4("div", { key: index, className: "vms-skeleton" }))
       ),
-      !state.loading && state.error && h2(
+      !state.loading && state.error && h4(
         "div",
         { className: "vms-empty" },
-        h2("span", { className: "vms-empty-art" }, h2(Icon2, { name: "alert", size: 20 })),
-        h2("b", null, "\u6587\u4EF6\u5217\u8868\u52A0\u8F7D\u5931\u8D25"),
-        h2("p", null, state.error),
-        diagnostic !== null && h2("pre", { className: "vms-diagnostic" }, JSON.stringify(diagnostic, null, 2)),
-        h2("button", { type: "button", className: "vms-primary-btn", onClick: refresh }, "\u91CD\u8BD5")
+        h4("span", { className: "vms-empty-art" }, h4(Icon2, { name: "alert", size: 20 })),
+        h4("b", null, "\u6587\u4EF6\u5217\u8868\u52A0\u8F7D\u5931\u8D25"),
+        h4("p", null, state.error),
+        diagnostic !== null && h4("pre", { className: "vms-diagnostic" }, JSON.stringify(diagnostic, null, 2)),
+        h4("button", { type: "button", className: "vms-primary-btn", onClick: refresh }, "\u91CD\u8BD5")
       ),
-      !state.loading && !state.error && filtered.length === 0 && h2(
+      !state.loading && !state.error && filtered.length === 0 && !(treeMode && showEmptyFolders && folders.length > 0) && h4(
         "div",
         { className: "vms-empty" },
-        h2("span", { className: "vms-empty-art" }, h2(Icon2, { name: "search", size: 20 })),
-        h2("b", null, "\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6"),
-        h2("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
-        items.length > 0 && h2("button", { type: "button", className: "vms-primary-btn", onClick: clearFilters }, "\u6E05\u9664\u7B5B\u9009")
+        h4("span", { className: "vms-empty-art" }, h4(Icon2, { name: "search", size: 20 })),
+        h4("b", null, "\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6"),
+        h4("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
+        items.length > 0 && h4("button", { type: "button", className: "vms-primary-btn", onClick: clearFilters }, "\u6E05\u9664\u7B5B\u9009")
       ),
-      !state.error && filtered.length > 0 && (view === "grid" ? h2("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item, index) => h2(GridCard, {
+      !state.error && (filtered.length > 0 || treeMode && showEmptyFolders && folders.length > 0) && (view === "grid" ? h4("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item, index) => h4(GridCard, {
         key: item.id,
         item,
         index,
         sessionId,
         meta: metaFor(item),
+        selected: selected.has(item.id),
         active: inlineId === item.id,
         onOpen: (entry) => setOverlayId(entry.id),
         onInline: (entry) => setInlineId((current) => current === entry.id ? null : entry.id),
+        onToggleSelect: toggleSelect,
         onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
-      }))) : h2(
+      }))) : treeMode ? h4(
+        "div",
+        { className: "vms-tree-wrap" },
+        detail === "detailed" && h4(
+          "div",
+          { className: "vms-tree-head" },
+          h4("span", null, ""),
+          h4("span", null, ""),
+          h4("span", null, "\u540D\u79F0"),
+          h4("span", null, "\u4FEE\u6539\u65E5\u671F"),
+          h4("span", null, "\u7C7B\u578B"),
+          h4("span", null, "\u5927\u5C0F"),
+          h4("span", null, "")
+        ),
+        h4(FileTree, {
+          items: treeItems,
+          folders,
+          scope: folder,
+          expanded: expandedFolders,
+          forceExpanded,
+          detail,
+          meta,
+          sessionId,
+          selected,
+          showEmptyFolders,
+          onToggleFolder: toggleFolder,
+          onOpen: (entry) => setOverlayId(entry.id),
+          onToggleSelect: toggleSelect,
+          onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
+        })
+      ) : h4(
         "div",
         { className: "vms-rows" },
-        detail === "detailed" && h2(
+        detail === "detailed" && h4(
           "div",
           { className: "vms-list-head" },
-          h2("span", null, ""),
-          h2("button", { type: "button", className: sort === "name" ? "is-active" : "", onClick: () => sortBy("name") }, `\u540D\u79F0${sort === "name" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h2("button", { type: "button", className: sort === "time" ? "is-active" : "", onClick: () => sortBy("time") }, `\u4FEE\u6539\u65E5\u671F${sort === "time" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h2("button", { type: "button", className: sort === "type" ? "is-active" : "", onClick: () => sortBy("type") }, `\u7C7B\u578B${sort === "type" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h2("button", { type: "button", className: sort === "size" ? "is-active" : "", onClick: () => sortBy("size") }, `\u5927\u5C0F${sort === "size" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h2("span", null, "")
+          h4("span", null, ""),
+          h4("button", { type: "button", className: sort === "name" ? "is-active" : "", onClick: () => sortBy("name") }, `\u540D\u79F0${sort === "name" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h4("button", { type: "button", className: sort === "time" ? "is-active" : "", onClick: () => sortBy("time") }, `\u4FEE\u6539\u65E5\u671F${sort === "time" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h4("button", { type: "button", className: sort === "type" ? "is-active" : "", onClick: () => sortBy("type") }, `\u7C7B\u578B${sort === "type" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h4("button", { type: "button", className: sort === "size" ? "is-active" : "", onClick: () => sortBy("size") }, `\u5927\u5C0F${sort === "size" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h4("span", null, "")
         ),
-        shown.map((item) => h2(ListRow, {
+        shown.map((item) => h4(ListRow, {
           key: item.id,
           item,
           sessionId,
           detail,
           meta: metaFor(item),
+          selected: selected.has(item.id),
           onOpen: (entry) => setOverlayId(entry.id),
+          onToggleSelect: toggleSelect,
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
         }))
       )),
-      metaLoading && h2("div", { className: "vms-meta-banner" }, h2("i", null), "\u6B63\u5728\u8BFB\u53D6\u6587\u4EF6\u4FE1\u606F\u2026"),
-      filtered.length > limit && h2(
+      metaLoading && h4("div", { className: "vms-meta-banner" }, h4("i", null), "\u6B63\u5728\u8BFB\u53D6\u6587\u4EF6\u4FE1\u606F\u2026"),
+      !treeMode && filtered.length > limit && h4(
         "div",
         { className: "vms-more" },
-        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => setLimit((value) => value + PAGE_SIZE) }, `\u663E\u793A\u66F4\u591A\uFF08\u8FD8\u5269 ${filtered.length - limit}\uFF09`)
+        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setLimit((value) => value + PAGE_SIZE) }, `\u663E\u793A\u66F4\u591A\uFF08\u8FD8\u5269 ${filtered.length - limit}\uFF09`)
       )
     ),
-    h2(
+    h4(
       "footer",
       { className: "vms-status" },
-      h2("span", null, state.error ? "\u626B\u63CF\u5931\u8D25" : filtered.length === items.length ? `\u627E\u5230 ${items.length} \u4E2A\u6587\u4EF6 \xB7 \u626B\u63CF ${folders.length} \u4E2A\u6587\u4EF6\u5939${state.scan?.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u65AD" : ""}` : `\u7B5B\u9009\u51FA ${filtered.length} / ${items.length} \u4E2A\u6587\u4EF6`),
-      h2("span", { className: "vms-status-right" }, h2("i", null), "\u672C\u5730\u5DE5\u4F5C\u533A")
+      h4("span", null, state.error ? "\u626B\u63CF\u5931\u8D25" : filtered.length === items.length ? `\u627E\u5230 ${items.length} \u4E2A\u6587\u4EF6 \xB7 \u626B\u63CF ${folders.length} \u4E2A\u6587\u4EF6\u5939${state.scan?.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u65AD" : ""}` : `\u7B5B\u9009\u51FA ${filtered.length} / ${items.length} \u4E2A\u6587\u4EF6`),
+      h4("span", { className: "vms-status-right" }, h4("i", null), "\u672C\u5730\u5DE5\u4F5C\u533A")
     ),
-    menu !== null && h2(FileMenu, {
+    menu !== null && h4(FileMenu, {
       state: menu,
       actions: libraryMenuActions(menu.item),
       onSelect: runAction,
       onClose: () => setMenu(null)
     }),
-    renameDialog !== null && h2(RenameDialog, {
+    renameDialog !== null && h4(RenameDialog, {
       item: renameDialog.item,
       error: renameDialog.error,
       onClose: () => setRenameDialog(null),
       onSubmit: submitRename
     }),
-    copyDialog !== null && h2(CopyDialog, {
+    copyDialog !== null && h4(CopyDialog, {
       item: copyDialog.item,
       folders,
       error: copyDialog.error,
       onClose: () => setCopyDialog(null),
       onSubmit: submitCopy
     }),
-    deleteDialog !== null && h2(ConfirmDialog, {
+    deleteDialog !== null && h4(ConfirmDialog, {
       title: deleteDialog.step === 0 ? "\u79FB\u5230\u56DE\u6536\u7AD9" : "\u6C38\u4E45\u5220\u9664",
-      message: deleteDialog.step === 0 ? `\u786E\u5B9A\u628A\u300C${deleteDialog.item.name}\u300D\u79FB\u5230\u7CFB\u7EDF\u56DE\u6536\u7AD9\u5417\uFF1F${deleteDialog.error !== "" ? `\uFF08\u4E0A\u6B21\u5931\u8D25\uFF1A${deleteDialog.error}\uFF09` : ""}` : `\u79FB\u5230\u56DE\u6536\u7AD9\u5931\u8D25\uFF1A${deleteDialog.error}\u3002\u6C38\u4E45\u5220\u9664\u540E\u5C06\u65E0\u6CD5\u6062\u590D\uFF0C\u786E\u5B9A\u7EE7\u7EED\u5417\uFF1F`,
+      message: deleteDialog.step === 0 ? `\u786E\u5B9A\u628A${deleteDialog.item.isFolder ? "\u6587\u4EF6\u5939" : "\u6587\u4EF6"}\u300C${deleteDialog.item.name}\u300D\u79FB\u5230\u7CFB\u7EDF\u56DE\u6536\u7AD9\u5417\uFF1F${deleteDialog.item.isFolder ? "\u5176\u4E2D\u7684\u6240\u6709\u5185\u5BB9\u4E5F\u4F1A\u4E00\u8D77\u79FB\u52A8\u3002" : ""}${deleteDialog.error !== "" ? `\uFF08\u4E0A\u6B21\u5931\u8D25\uFF1A${deleteDialog.error}\uFF09` : ""}` : `\u79FB\u5230\u56DE\u6536\u7AD9\u5931\u8D25\uFF1A${deleteDialog.error}\u3002\u6C38\u4E45\u5220\u9664\u540E\u5C06\u65E0\u6CD5\u6062\u590D\uFF0C\u786E\u5B9A\u7EE7\u7EED\u5417\uFF1F`,
       confirmLabel: deleteDialog.step === 0 ? "\u79FB\u5230\u56DE\u6536\u7AD9" : "\u6C38\u4E45\u5220\u9664",
       danger: deleteDialog.step === 1,
       onClose: () => setDeleteDialog(null),
       onConfirm: () => submitDelete(deleteDialog.step === 1)
     }),
-    overlayItem !== void 0 && (MEDIA_KINDS.has(overlayItem.kind) ? h2(MediaOverlay, {
+    batchCopyDialog !== null && h4(BatchCopyDialog, {
+      count: selectedItems.length,
+      folders,
+      error: batchCopyDialog.error,
+      onClose: () => setBatchCopyDialog(null),
+      onSubmit: submitBatchCopy
+    }),
+    batchDeleteDialog !== null && h4(ConfirmDialog, {
+      title: "\u6279\u91CF\u5220\u9664",
+      message: `\u786E\u5B9A\u628A\u9009\u4E2D\u7684 ${selectedItems.length} \u9879\u79FB\u5230\u7CFB\u7EDF\u56DE\u6536\u7AD9\u5417\uFF1F${batchDeleteDialog.error !== "" ? `\uFF08\u4E0A\u6B21\u5931\u8D25\uFF1A${batchDeleteDialog.error}\uFF09` : ""}`,
+      confirmLabel: "\u79FB\u5230\u56DE\u6536\u7AD9",
+      onClose: () => setBatchDeleteDialog(null),
+      onConfirm: () => submitBatchDelete(false)
+    }),
+    overlayItem !== void 0 && (MEDIA_KINDS.has(overlayItem.kind) ? h4(MediaOverlay, {
       items: mediaOverlayItems.length > 0 ? mediaOverlayItems : [overlayItem],
       initialIndex: mediaOverlayIndex,
       sessionId,
@@ -6249,7 +25057,7 @@ function LibraryBody(props) {
       onRemoveLink: removeLink,
       onAction: runAction,
       onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
-    }) : h2(FilePreviewOverlay, {
+    }) : h4(FilePreviewOverlay, {
       item: overlayItem,
       meta: metaFor(overlayItem),
       sessionId,
@@ -6258,28 +25066,28 @@ function LibraryBody(props) {
       onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
       onOpenItem: handleOverlayTab
     })),
-    notice !== "" && h2("div", { className: "vms-toast" }, h2(Icon2, { name: "check", size: 13 }), notice)
+    notice !== "" && h4("div", { className: "vms-toast" }, h4(Icon2, { name: "check", size: 13 }), notice)
   );
 }
 function MediaTab(props) {
   const { sessionId, useTabInfo, openLibrary } = props;
   const { tab } = useTabInfo();
   const parsed = parseFileAddress(tab.contentId);
-  const [notice, setNotice] = (0, import_react6.useState)("");
-  const [menu, setMenu] = (0, import_react6.useState)(null);
-  const [renameDialog, setRenameDialog] = (0, import_react6.useState)(null);
-  const [deleteDialog, setDeleteDialog] = (0, import_react6.useState)(null);
-  (0, import_react6.useEffect)(() => {
+  const [notice, setNotice] = (0, import_react8.useState)("");
+  const [menu, setMenu] = (0, import_react8.useState)(null);
+  const [renameDialog, setRenameDialog] = (0, import_react8.useState)(null);
+  const [deleteDialog, setDeleteDialog] = (0, import_react8.useState)(null);
+  (0, import_react8.useEffect)(() => {
     if (notice === "") return void 0;
     const timer = setTimeout(() => setNotice(""), 2e3);
     return () => clearTimeout(timer);
   }, [notice]);
   const kind = tab.kind === "audio" ? "audio" : "video";
   if (parsed === void 0) {
-    return h2(
+    return h4(
       "div",
       { className: "vms-root vms-media-tab" },
-      h2("div", { className: "vms-empty" }, h2(Icon2, { name: "alert", size: 20 }), h2("b", null, "\u65E0\u6CD5\u8BC6\u522B\u8FD9\u4E2A\u5A92\u4F53\u5730\u5740"))
+      h4("div", { className: "vms-empty" }, h4(Icon2, { name: "alert", size: 20 }), h4("b", null, "\u65E0\u6CD5\u8BC6\u522B\u8FD9\u4E2A\u5A92\u4F53\u5730\u5740"))
     );
   }
   const name = decodeURIComponent(parsed.path.split("/").pop() ?? "\u5A92\u4F53");
@@ -6305,8 +25113,8 @@ function MediaTab(props) {
       try {
         insertComposerText(sessionId, mentionToken(parsed.path));
         setNotice("\u5DF2\u5F15\u7528\u5230\u8F93\u5165\u6846");
-      } catch (error) {
-        setNotice(error?.message ?? "\u5F15\u7528\u5931\u8D25");
+      } catch (error2) {
+        setNotice(error2?.message ?? "\u5F15\u7528\u5931\u8D25");
       }
       return;
     }
@@ -6317,16 +25125,16 @@ function MediaTab(props) {
         if (entry?.absolutePath === void 0) throw new Error("\u627E\u4E0D\u5230\u6587\u4EF6\u5730\u5740");
         await navigator.clipboard.writeText(entry.absolutePath);
         setNotice("\u5DF2\u590D\u5236\u6587\u4EF6\u5730\u5740");
-      } catch (error) {
-        setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error?.message ?? error}`);
+      } catch (error2) {
+        setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
       }
       return;
     }
     try {
       await postJson(`api/vyra-media/${key}`, { sessionId, path: parsed.path });
       setNotice(key === "reveal" ? "\u5DF2\u6253\u5F00\u6587\u4EF6\u6240\u5728\u4F4D\u7F6E" : "\u5DF2\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00");
-    } catch (error) {
-      setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error?.message ?? error}`);
+    } catch (error2) {
+      setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
     }
   };
   const submitTabRename = async (nextName) => {
@@ -6334,8 +25142,8 @@ function MediaTab(props) {
       await postJson("api/vyra-media/rename", { sessionId, path: parsed.path, name: nextName });
       setRenameDialog(null);
       setNotice("\u5DF2\u91CD\u547D\u540D\uFF0C\u91CD\u65B0\u6253\u5F00\u6807\u7B7E\u9875\u540E\u663E\u793A\u65B0\u540D\u79F0");
-    } catch (error) {
-      setRenameDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+    } catch (error2) {
+      setRenameDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
     }
   };
   const submitTabDelete = async (permanent) => {
@@ -6343,12 +25151,12 @@ function MediaTab(props) {
       const result = await postJson("api/vyra-media/delete", { sessionId, path: parsed.path, permanent });
       setDeleteDialog(null);
       setNotice(result.recycled ? "\u5DF2\u79FB\u5230\u56DE\u6536\u7AD9" : "\u5DF2\u6C38\u4E45\u5220\u9664");
-    } catch (error) {
-      if (permanent !== true && error?.canPermanent === true) {
-        setDeleteDialog((previous) => previous === null ? previous : { ...previous, step: 1, error: error?.message ?? String(error) });
+    } catch (error2) {
+      if (permanent !== true && error2?.canPermanent === true) {
+        setDeleteDialog((previous) => previous === null ? previous : { ...previous, step: 1, error: error2?.message ?? String(error2) });
         return;
       }
-      setDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error?.message ?? String(error) });
+      setDeleteDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
     }
   };
   const tabMenuAction = (key) => {
@@ -6366,35 +25174,35 @@ function MediaTab(props) {
     }
     return void 0;
   };
-  return h2(
+  return h4(
     "div",
     { className: "vms-root vms-media-tab" },
-    h2(
+    h4(
       "header",
       { className: "vms-media-tab-head" },
-      h2(
+      h4(
         "div",
         { className: "vms-media-tab-title" },
-        h2("span", { className: "vms-kind-dot", "data-kind": kind }),
-        h2("b", null, name),
-        h2("span", null, `${folder} \xB7 ${typeLabel(kind)}`)
+        h4("span", { className: "vms-kind-dot", "data-kind": kind }),
+        h4("b", null, name),
+        h4("span", null, `${folder} \xB7 ${typeLabel(kind)}`)
       ),
-      h2(
+      h4(
         "div",
         { className: "vms-media-tab-actions" },
-        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("insert") }, h2(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
-        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("reveal") }, h2(Icon2, { name: "reveal", size: 12 }), "\u6240\u5728\u4F4D\u7F6E"),
-        h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("copyPath") }, h2(Icon2, { name: "clipboard", size: 12 }), "\u5730\u5740"),
-        h2("button", { type: "button", className: "vms-ghost-btn", onClick: openLibrary }, h2(Icon2, { name: "grid", size: 12 }), "\u6587\u4EF6\u7BA1\u7406"),
-        h2("a", { className: "vms-icon-btn", href: mediaSrc(sessionId, item), download: name, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h2(Icon2, { name: "download", size: 15 }))
+        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("insert") }, h4(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
+        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("reveal") }, h4(Icon2, { name: "reveal", size: 12 }), "\u6240\u5728\u4F4D\u7F6E"),
+        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("copyPath") }, h4(Icon2, { name: "clipboard", size: 12 }), "\u5730\u5740"),
+        h4("button", { type: "button", className: "vms-ghost-btn", onClick: openLibrary }, h4(Icon2, { name: "grid", size: 12 }), "\u6587\u4EF6\u7BA1\u7406"),
+        h4("a", { className: "vms-icon-btn", href: mediaSrc(sessionId, item), download: name, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h4(Icon2, { name: "download", size: 15 }))
       )
     ),
-    h2(
+    h4(
       "div",
       { className: "vms-media-tab-body" },
-      h2(NativeMedia, { item, sessionId, visible: tab.visible })
+      h4(NativeMedia, { item, sessionId, visible: tab.visible })
     ),
-    notice !== "" && h2("div", { className: "vms-toast" }, h2(Icon2, { name: "check", size: 13 }), notice)
+    notice !== "" && h4("div", { className: "vms-toast" }, h4(Icon2, { name: "check", size: 13 }), notice)
   );
 }
 

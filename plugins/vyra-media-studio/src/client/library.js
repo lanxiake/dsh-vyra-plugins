@@ -8,11 +8,12 @@ import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails'
 import Video from 'yet-another-react-lightbox/plugins/video'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import {
-  ConfirmDialog, CopyDialog, FileMenu, FilePreviewOverlay, GridCard, ListRow, MediaOverlay,
-  NativeMedia, RenameDialog,
+  BatchCopyDialog, ConfirmDialog, CopyDialog, FileMenu, FilePreviewOverlay, GridCard, ListRow,
+  MediaOverlay, NativeMedia, RenameDialog,
 } from './components.js'
 import { insertComposerText } from './composer.js'
 import { Icon, IconButton } from './icons.js'
+import { FileTree } from './tree.js'
 import {
   CARD_MAX, CARD_MIN, DAY, PAGE_SIZE, TYPE_CHIPS, TYPE_LABEL, apiUrl, compareItems,
   detectLinkKind, folderOf, folderSegments, formatBytes, makeLinkItem, mediaSrc, mentionToken,
@@ -24,6 +25,40 @@ const h = React.createElement
 const LIGHTBOX_PLUGINS = [Inline, Video, Zoom, Thumbnails, Counter, Fullscreen]
 const INITIAL_PREFS = readPrefs()
 const MEDIA_KINDS = new Set(['image', 'video', 'audio', 'link'])
+const TREE_STATE_KEY = 'vyra-media-studio.tree.v1'
+
+function readExpandedFolders() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TREE_STATE_KEY) ?? '[]')
+    return new Set(Array.isArray(parsed) ? parsed.filter(value => typeof value === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function writeExpandedFolders(folders) {
+  try { localStorage.setItem(TREE_STATE_KEY, JSON.stringify([...folders])) } catch { /* storage may be unavailable */ }
+}
+
+/** Synthetic item for a folder row's context menu. */
+function folderItem(path) {
+  const slash = path.lastIndexOf('/')
+  const name = slash === -1 ? path : path.slice(slash + 1)
+  return {
+    id: `folder:${path}`,
+    kind: 'folder',
+    title: name,
+    name,
+    fileName: name,
+    folder: slash === -1 ? '' : path.slice(0, slash),
+    relativePath: path,
+    source: 'local',
+    isFolder: true,
+    ext: '',
+    size: undefined,
+    mtimeMs: 0,
+  }
+}
 
 function chunks(values, size) {
   const output = []
@@ -57,7 +92,7 @@ export function AddLinkForm({ onSubmit, onClose }) {
 /** Library-only menu: adds an in-panel folder jump. */
 function libraryMenuActions(item) {
   const actions = menuActions(item)
-  if (item.source === 'url' || item.kind === 'link') return actions
+  if (item.isFolder || item.source === 'url' || item.kind === 'link') return actions
   const index = actions.findIndex(action => action.key === 'reveal')
   return [
     ...actions.slice(0, index),
@@ -68,6 +103,19 @@ function libraryMenuActions(item) {
 
 /** Menu entries for a library item. */
 function menuActions(item) {
+  if (item.isFolder) {
+    return [
+      { key: 'toggleFolder', label: '展开 / 折叠', icon: 'folder' },
+      { key: 'locate', label: '定位到文件夹', icon: 'folderOpen' },
+      { key: 'insert', label: '引用到输入框', icon: 'at' },
+      { key: 'copyTo', label: '复制到…', icon: 'copy' },
+      { key: 'copyPath', label: '复制文件夹地址', icon: 'clipboard' },
+      { key: 'rename', label: '重命名文件夹', icon: 'pencil' },
+      { key: 'reveal', label: '打开所在位置', icon: 'reveal' },
+      { key: 'open', label: '用系统应用打开', icon: 'app' },
+      { key: 'delete', label: '删除文件夹', icon: 'trash', danger: true },
+    ]
+  }
   if (item.source === 'url' || item.kind === 'link') {
     return [
       { key: 'preview', label: '预览 / 打开', icon: 'full' },
@@ -96,6 +144,7 @@ export function LibraryBody(props) {
   const [state, setState] = useState({ items: [], root: '', loading: true, error: null, scan: null })
   const [links, setLinks] = useState([])
   const [view, setView] = useState(INITIAL_PREFS.view)
+  const [listMode, setListMode] = useState(INITIAL_PREFS.listMode)
   const [cardSize, setCardSize] = useState(INITIAL_PREFS.cardSize)
   const [detail, setDetail] = useState(INITIAL_PREFS.detail)
   const [query, setQuery] = useState('')
@@ -114,6 +163,10 @@ export function LibraryBody(props) {
   const [addOpen, setAddOpen] = useState(false)
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [notice, setNotice] = useState('')
+  const [expandedFolders, setExpandedFolders] = useState(() => readExpandedFolders())
+  const [selected, setSelected] = useState(() => new Set())
+  const [batchCopyDialog, setBatchCopyDialog] = useState(null)
+  const [batchDeleteDialog, setBatchDeleteDialog] = useState(null)
   const [diagnostic, setDiagnostic] = useState(null)
   const [meta, setMeta] = useState({})
   const [metaLoading, setMetaLoading] = useState(false)
@@ -125,9 +178,12 @@ export function LibraryBody(props) {
   const pendingMeta = useRef(new Set())
   const generation = useRef(0)
   const gridRef = useRef(null)
+  const expandedInitialized = useRef(false)
 
-  useEffect(() => { writePrefs({ view, cardSize, detail, sort, dir, showHidden, includeBuild }) },
-    [view, cardSize, detail, sort, dir, showHidden, includeBuild])
+  useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild }) },
+    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild])
+
+  const treeMode = view === 'list' && listMode === 'tree'
 
   useEffect(() => {
     const controller = new AbortController()
@@ -230,6 +286,17 @@ export function LibraryBody(props) {
 
   const folders = useMemo(() => state.scan?.folders ?? [], [state.scan])
 
+  useEffect(() => {
+    if (state.scan === null || expandedInitialized.current) return
+    expandedInitialized.current = true
+    if (expandedFolders.size > 0) return
+    const top = (state.scan.folders ?? []).filter(path => !path.includes('/'))
+    if (top.length === 0) return
+    const next = new Set(top)
+    setExpandedFolders(next)
+    writeExpandedFolders(next)
+  }, [state.scan, expandedFolders])
+
   const metaFor = useCallback(item => {
     const values = meta[item.id]
     if (values !== undefined) return values
@@ -237,7 +304,7 @@ export function LibraryBody(props) {
     return undefined
   }, [meta])
 
-  const needAllMeta = time !== 'all' || size !== 'all' || sort === 'time' || sort === 'size'
+  const needAllMeta = time !== 'all' || size !== 'all' || sort === 'time' || sort === 'size' || (treeMode && detail === 'detailed')
   const localPaths = useMemo(() => state.items.map(item => item.id), [state.items])
 
   const ensureMeta = useCallback(paths => {
@@ -293,7 +360,11 @@ export function LibraryBody(props) {
     const floor = time === 'today' ? today.getTime() : time === '7d' ? Date.now() - 7 * DAY : time === '30d' ? Date.now() - 30 * DAY : null
     return items.filter(item => {
       if (types.length > 0 && !types.includes(item.kind)) return false
-      if (folder !== '' && folderOf(item) !== folder) return false
+      if (folder !== '') {
+        const exact = folderOf(item) === folder
+        const nested = item.folder === folder || item.folder.startsWith(`${folder}/`)
+        if (treeMode ? !nested : !exact) return false
+      }
       const info = metaFor(item)
       // Metadata arrives in batches. While a batch is in flight, keep the
       // item visible instead of flickering an empty result set; the filter
@@ -310,7 +381,23 @@ export function LibraryBody(props) {
       }
       return true
     }).sort((left, right) => compareItems(left, right, sort, dir, meta))
-  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir])
+  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir, treeMode])
+
+  const treeItems = useMemo(() => filtered.map(item => item.source === 'url' ? { ...item, folder: '' } : item), [filtered])
+  const filterActive = types.length > 0 || query.trim() !== '' || time !== 'all' || size !== 'all'
+  const showEmptyFolders = treeMode && !filterActive
+  const forceExpanded = useMemo(() => {
+    if (!treeMode || !filterActive) return new Set()
+    const set = new Set()
+    for (const item of filtered) {
+      for (let current = folderOf(item); current !== '';) {
+        set.add(current)
+        const index = current.lastIndexOf('/')
+        current = index === -1 ? '' : current.slice(0, index)
+      }
+    }
+    return set
+  }, [treeMode, filterActive, filtered])
 
   const shown = useMemo(() => filtered.slice(0, limit), [filtered, limit])
   const visiblePaths = useMemo(() => shown.filter(item => item.source === 'local').map(item => item.id), [shown])
@@ -368,8 +455,27 @@ export function LibraryBody(props) {
     setNotice('已移除链接')
   }
 
+  const toggleFolder = path => {
+    setExpandedFolders(previous => {
+      const next = new Set(previous)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      writeExpandedFolders(next)
+      return next
+    })
+  }
+
   const clearFilters = () => {
     setTypes([]); setFolder(''); setTime('all'); setSize('all'); setQuery(''); setSort('name'); setDir('asc')
+  }
+
+  const toggleType = (kind, event) => {
+    const multi = event.ctrlKey || event.metaKey
+    setTypes(previous => {
+      if (multi) return previous.includes(kind) ? previous.filter(value => value !== kind) : [...previous, kind]
+      if (previous.length === 1 && previous[0] === kind) return []
+      return [kind]
+    })
   }
 
   const sortBy = key => {
@@ -386,11 +492,96 @@ export function LibraryBody(props) {
     }
   }
 
+  const toggleSelect = item => {
+    if (item.source !== 'local' || item.isFolder) return
+    if (!selected.has(item.id) && selected.size >= 200) { setNotice('一次最多批量选择 200 项'); return }
+    setSelected(previous => {
+      const next = new Set(previous)
+      if (next.has(item.id)) next.delete(item.id)
+      else next.add(item.id)
+      return next
+    })
+  }
+
+  const selectedItems = useMemo(
+    () => items.filter(item => selected.has(item.id)),
+    [items, selected],
+  )
+
+  useEffect(() => {
+    setSelected(previous => {
+      const valid = new Set(items.map(item => item.id))
+      const next = new Set([...previous].filter(id => valid.has(id)))
+      return next.size === previous.size ? previous : next
+    })
+  }, [items])
+
+  const insertSelected = () => {
+    try {
+      insertComposerText(sessionId, selectedItems.map(item => mentionToken(item.relativePath)).join(''))
+      setNotice(`已引用 ${selectedItems.length} 项到输入框`)
+    } catch (error) {
+      setNotice(error?.message ?? '引用失败')
+    }
+  }
+
+  const copySelectedAddresses = async () => {
+    try {
+      const result = await postJson('api/vyra-media/stat', {
+        sessionId,
+        paths: selectedItems.map(item => item.relativePath),
+      })
+      const addresses = (result.entries ?? [])
+        .filter(entry => entry.absolutePath !== undefined)
+        .map(entry => entry.absolutePath)
+      await navigator.clipboard.writeText(addresses.join('\n'))
+      setNotice(`已复制 ${addresses.length} 个地址`)
+    } catch (error) {
+      setNotice(`复制失败：${error?.message ?? error}`)
+    }
+  }
+
+  const submitBatchCopy = async toFolder => {
+    try {
+      const result = await postJson('api/vyra-media/batch', {
+        sessionId,
+        action: 'copy',
+        paths: selectedItems.map(item => item.relativePath),
+        toFolder,
+      })
+      const failed = (result.results ?? []).filter(entry => entry.ok !== true)
+      setBatchCopyDialog(null)
+      setSelected(new Set())
+      setNotice(`已复制 ${(result.results?.length ?? 0) - failed.length} 项${failed.length > 0 ? `，${failed.length} 项失败` : ''}`)
+      refresh()
+    } catch (error) {
+      setBatchCopyDialog(previous => previous === null ? previous : { ...previous, error: error?.message ?? String(error) })
+    }
+  }
+
+  const submitBatchDelete = async permanent => {
+    try {
+      const result = await postJson('api/vyra-media/batch', {
+        sessionId,
+        action: 'delete',
+        paths: selectedItems.map(item => item.relativePath),
+        permanent,
+      })
+      const failed = (result.results ?? []).filter(entry => entry.ok !== true)
+      setBatchDeleteDialog(null)
+      setSelected(new Set())
+      setNotice(`已删除 ${(result.results?.length ?? 0) - failed.length} 项${failed.length > 0 ? `，${failed.length} 项失败` : ''}`)
+      refresh()
+    } catch (error) {
+      setBatchDeleteDialog(previous => previous === null ? previous : { ...previous, error: error?.message ?? String(error) })
+    }
+  }
+
   const absolutePathOf = async item => {
     const cached = metaRef.current[item.id]?.absolutePath
     if (cached !== undefined) return cached
-    const result = await postJson('api/vyra-media/stat', { sessionId, paths: [item.id] })
-    const entry = result.entries?.find(value => value.path === item.id)
+    const result = await postJson('api/vyra-media/stat', { sessionId, paths: [item.relativePath] })
+    const entry = result.entries?.find(value => value.path === item.relativePath)
     if (entry?.absolutePath === undefined) throw new Error('找不到文件地址')
     const patch = { ...(metaRef.current?.[item.id] ?? {}), ...entry }
     metaRef.current = { ...metaRef.current, [item.id]: patch }
@@ -402,13 +593,14 @@ export function LibraryBody(props) {
     try {
       const absolute = await absolutePathOf(item)
       await navigator.clipboard.writeText(absolute)
-      setNotice('已复制文件地址')
+      setNotice(item.isFolder ? '已复制文件夹地址' : '已复制文件地址')
     } catch (error) {
       setNotice(`复制失败：${error?.message ?? error}`)
     }
   }
 
   const runAction = async (key, item) => {
+    if (key === 'toggleFolder') { toggleFolder(item.relativePath); return }
     if (key === 'preview') { setOverlayId(item.id); return }
     if (key === 'insert') { insertReference(item); return }
     if (key === 'copyPath') { await copyAddress(item); return }
@@ -435,10 +627,13 @@ export function LibraryBody(props) {
     const item = renameDialog?.item
     if (item === undefined) return
     try {
-      await postJson('api/vyra-media/rename', { sessionId, path: item.relativePath, name })
+      const result = await postJson('api/vyra-media/rename', { sessionId, path: item.relativePath, name })
       setRenameDialog(null)
       if (overlayIdSafe === item.id) setOverlayId(null)
-      setNotice('已重命名')
+      if (item.isFolder && folder !== '' && (folder === item.relativePath || folder.startsWith(`${item.relativePath}/`))) {
+        setFolder(`${result.relativePath}${folder.slice(item.relativePath.length)}`)
+      }
+      setNotice(item.isFolder ? '已重命名文件夹' : '已重命名')
       refresh()
     } catch (error) {
       setRenameDialog(previous => previous === null ? previous : { ...previous, error: error?.message ?? String(error) })
@@ -465,7 +660,8 @@ export function LibraryBody(props) {
       const result = await postJson('api/vyra-media/delete', { sessionId, path: item.relativePath, permanent })
       setDeleteDialog(null)
       if (overlayIdSafe === item.id) setOverlayId(null)
-      setNotice(result.recycled ? '已移到回收站' : '已永久删除')
+      if (item.isFolder && folder !== '' && (folder === item.relativePath || folder.startsWith(`${item.relativePath}/`))) setFolder('')
+      setNotice(result.recycled ? (item.isFolder ? '文件夹已移到回收站' : '已移到回收站') : (item.isFolder ? '文件夹已永久删除' : '已永久删除'))
       refresh()
     } catch (error) {
       if (permanent !== true && error?.canPermanent === true) {
@@ -521,6 +717,9 @@ export function LibraryBody(props) {
           }),
           h(IconButton, { name: 'zoomIn', label: '放大缩略图', onClick: () => setCardSize(value => Math.min(CARD_MAX, value + 16)) })),
         view === 'list' && h('div', { className: 'vms-seg vms-detail-seg' },
+          h('button', { type: 'button', className: `vms-seg-text${listMode === 'tree' ? ' is-active' : ''}`, 'aria-pressed': listMode === 'tree', onClick: () => setListMode('tree') }, '树形'),
+          h('button', { type: 'button', className: `vms-seg-text${listMode === 'flat' ? ' is-active' : ''}`, 'aria-pressed': listMode === 'flat', onClick: () => setListMode('flat') }, '平铺')),
+        view === 'list' && h('div', { className: 'vms-seg vms-detail-seg' },
           h('button', { type: 'button', className: `vms-seg-text${detail === 'compact' ? ' is-active' : ''}`, 'aria-pressed': detail === 'compact', onClick: () => setDetail('compact') }, '简洁'),
           h('button', { type: 'button', className: `vms-seg-text${detail === 'detailed' ? ' is-active' : ''}`, 'aria-pressed': detail === 'detailed', onClick: () => setDetail('detailed') }, '详细')),
         h('button', { type: 'button', className: `vms-filter-btn${filterOpen ? ' is-open' : ''}`, 'aria-expanded': filterOpen, onClick: () => setFilterOpen(value => !value) },
@@ -532,7 +731,8 @@ export function LibraryBody(props) {
         TYPE_CHIPS.map(kind => h('button', {
           key: kind, type: 'button', 'data-kind': kind,
           className: `vms-type-chip${types.includes(kind) ? ' is-active' : ''}`,
-          onClick: () => setTypes(previous => previous.includes(kind) ? previous.filter(entry => entry !== kind) : [...previous, kind]),
+          title: '点击单选，Ctrl / Cmd 点击多选',
+          onClick: event => toggleType(kind, event),
         }, h(Icon, { name: kind === 'other' ? 'file' : kind, size: 12 }), TYPE_LABEL[kind], h('b', null, counts[kind] ?? 0)))),
       h('div', { className: 'vms-folder-row' },
         h('div', { className: 'vms-crumb' },
@@ -543,6 +743,7 @@ export function LibraryBody(props) {
               type: 'button',
               className: `vms-crumb-seg${index === segments.length - 1 ? ' is-active' : ''}`,
               onClick: () => setFolder(segments.slice(0, index + 1).join('/')),
+              onContextMenu: event => { event.preventDefault(); setMenu({ item: folderItem(segments.slice(0, index + 1).join('/')), x: event.clientX, y: event.clientY }) },
             }, segment)))),
         h('button', { type: 'button', className: `vms-ghost-btn vms-folder-btn${folderOpen ? ' is-open' : ''}`, 'aria-expanded': folderOpen, onClick: () => setFolderOpen(value => !value) },
           h(Icon, { name: 'folder', size: 13 }), '文件夹', h(Icon, { name: 'chevron', size: 11 })),
@@ -553,6 +754,7 @@ export function LibraryBody(props) {
             className: `vms-folder-item${folder === value ? ' is-active' : ''}`,
             style: { paddingLeft: `${10 + (value.split('/').length - 1) * 14}px` },
             onClick: () => { setFolder(value); setFolderOpen(false) },
+            onContextMenu: event => { event.preventDefault(); setMenu({ item: folderItem(value), x: event.clientX, y: event.clientY }) },
           }, h(Icon, { name: 'folder', size: 11 }), value.split('/').pop())))),
       filterOpen && h('div', { className: 'vms-filter-panel' },
         h('label', { className: 'vms-field' }, h('span', null, '文件夹'),
@@ -580,6 +782,14 @@ export function LibraryBody(props) {
         chips.map(chip => h('span', { key: chip.key, className: 'vms-chip' }, chip.label,
           h('button', { type: 'button', 'aria-label': '移除筛选', onClick: () => removeChip(chip.key) }, '×'))))),
     addOpen && h(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
+    selected.size > 0 && h('div', { className: 'vms-selection-bar' },
+      h('b', null, `已选 ${selected.size} 项`),
+      h('button', { type: 'button', className: 'vms-ghost-btn', onClick: insertSelected }, h(Icon, { name: 'at', size: 12 }), '引用'),
+      h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setBatchCopyDialog({ error: '' }) }, h(Icon, { name: 'copy', size: 12 }), '复制到…'),
+      h('button', { type: 'button', className: 'vms-ghost-btn', onClick: copySelectedAddresses }, h(Icon, { name: 'clipboard', size: 12 }), '复制地址'),
+      h('button', { type: 'button', className: 'vms-ghost-btn is-danger', onClick: () => setBatchDeleteDialog({ error: '' }) }, h(Icon, { name: 'trash', size: 12 }), '删除'),
+      h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setSelected(new Set()) }, '取消选择')),
+
     h('div', { className: 'vms-scroll' },
       state.loading && state.items.length > 0 && h('div', { className: 'vms-scan-banner' }, h('i', null), '正在扫描工作区，跳过构建目录…'),
       state.loading && state.items.length === 0 && h('div', { className: 'vms-skeleton-grid' },
@@ -590,35 +800,60 @@ export function LibraryBody(props) {
         h('p', null, state.error),
         diagnostic !== null && h('pre', { className: 'vms-diagnostic' }, JSON.stringify(diagnostic, null, 2)),
         h('button', { type: 'button', className: 'vms-primary-btn', onClick: refresh }, '重试')),
-      !state.loading && !state.error && filtered.length === 0 && h('div', { className: 'vms-empty' },
+      !state.loading && !state.error && filtered.length === 0 && !(treeMode && showEmptyFolders && folders.length > 0) && h('div', { className: 'vms-empty' },
         h('span', { className: 'vms-empty-art' }, h(Icon, { name: 'search', size: 20 })),
         h('b', null, '没有匹配的文件'),
         h('p', null, items.length === 0 ? '这个工作区还没有文件。' : '试试减少筛选条件，或换一个文件夹。'),
         items.length > 0 && h('button', { type: 'button', className: 'vms-primary-btn', onClick: clearFilters }, '清除筛选')),
-      !state.error && filtered.length > 0 && (view === 'grid'
+      !state.error && (filtered.length > 0 || (treeMode && showEmptyFolders && folders.length > 0)) && (view === 'grid'
         ? h('div', { ref: gridRef, className: 'vms-grid', style: { '--vms-card-min': `${cardSize}px` } }, shown.map((item, index) => h(GridCard, {
           key: item.id, item, index, sessionId,
           meta: metaFor(item),
+          selected: selected.has(item.id),
           active: inlineId === item.id,
           onOpen: entry => setOverlayId(entry.id),
           onInline: entry => setInlineId(current => current === entry.id ? null : entry.id),
+          onToggleSelect: toggleSelect,
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
         })))
-        : h('div', { className: 'vms-rows' },
-          detail === 'detailed' && h('div', { className: 'vms-list-head' },
-            h('span', null, ''),
-            h('button', { type: 'button', className: sort === 'name' ? 'is-active' : '', onClick: () => sortBy('name') }, `名称${sort === 'name' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
-            h('button', { type: 'button', className: sort === 'time' ? 'is-active' : '', onClick: () => sortBy('time') }, `修改日期${sort === 'time' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
-            h('button', { type: 'button', className: sort === 'type' ? 'is-active' : '', onClick: () => sortBy('type') }, `类型${sort === 'type' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
-            h('button', { type: 'button', className: sort === 'size' ? 'is-active' : '', onClick: () => sortBy('size') }, `大小${sort === 'size' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
-            h('span', null, '')),
-          shown.map(item => h(ListRow, {
-            key: item.id, item, sessionId, detail, meta: metaFor(item),
-            onOpen: entry => setOverlayId(entry.id),
-            onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
-          })))),
+        : treeMode
+          ? h('div', { className: 'vms-tree-wrap' },
+            detail === 'detailed' && h('div', { className: 'vms-tree-head' },
+              h('span', null, ''), h('span', null, ''), h('span', null, '名称'),
+              h('span', null, '修改日期'), h('span', null, '类型'), h('span', null, '大小'), h('span', null, '')),
+            h(FileTree, {
+              items: treeItems,
+              folders,
+              scope: folder,
+              expanded: expandedFolders,
+              forceExpanded,
+              detail,
+              meta,
+              sessionId,
+              selected,
+              showEmptyFolders,
+              onToggleFolder: toggleFolder,
+              onOpen: entry => setOverlayId(entry.id),
+              onToggleSelect: toggleSelect,
+              onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
+            }))
+          : h('div', { className: 'vms-rows' },
+            detail === 'detailed' && h('div', { className: 'vms-list-head' },
+              h('span', null, ''),
+              h('button', { type: 'button', className: sort === 'name' ? 'is-active' : '', onClick: () => sortBy('name') }, `名称${sort === 'name' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
+              h('button', { type: 'button', className: sort === 'time' ? 'is-active' : '', onClick: () => sortBy('time') }, `修改日期${sort === 'time' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
+              h('button', { type: 'button', className: sort === 'type' ? 'is-active' : '', onClick: () => sortBy('type') }, `类型${sort === 'type' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
+              h('button', { type: 'button', className: sort === 'size' ? 'is-active' : '', onClick: () => sortBy('size') }, `大小${sort === 'size' ? (dir === 'asc' ? ' ↑' : ' ↓') : ''}`),
+              h('span', null, '')),
+            shown.map(item => h(ListRow, {
+              key: item.id, item, sessionId, detail, meta: metaFor(item),
+              selected: selected.has(item.id),
+              onOpen: entry => setOverlayId(entry.id),
+              onToggleSelect: toggleSelect,
+              onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
+            })))),
       metaLoading && h('div', { className: 'vms-meta-banner' }, h('i', null), '正在读取文件信息…'),
-      filtered.length > limit && h('div', { className: 'vms-more' },
+      !treeMode && filtered.length > limit && h('div', { className: 'vms-more' },
         h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setLimit(value => value + PAGE_SIZE) }, `显示更多（还剩 ${filtered.length - limit}）`))),
     h('footer', { className: 'vms-status' },
       h('span', null, state.error
@@ -649,12 +884,26 @@ export function LibraryBody(props) {
     deleteDialog !== null && h(ConfirmDialog, {
       title: deleteDialog.step === 0 ? '移到回收站' : '永久删除',
       message: deleteDialog.step === 0
-        ? `确定把「${deleteDialog.item.name}」移到系统回收站吗？${deleteDialog.error !== '' ? `（上次失败：${deleteDialog.error}）` : ''}`
+        ? `确定把${deleteDialog.item.isFolder ? '文件夹' : '文件'}「${deleteDialog.item.name}」移到系统回收站吗？${deleteDialog.item.isFolder ? '其中的所有内容也会一起移动。' : ''}${deleteDialog.error !== '' ? `（上次失败：${deleteDialog.error}）` : ''}`
         : `移到回收站失败：${deleteDialog.error}。永久删除后将无法恢复，确定继续吗？`,
       confirmLabel: deleteDialog.step === 0 ? '移到回收站' : '永久删除',
       danger: deleteDialog.step === 1,
       onClose: () => setDeleteDialog(null),
       onConfirm: () => submitDelete(deleteDialog.step === 1),
+    }),
+    batchCopyDialog !== null && h(BatchCopyDialog, {
+      count: selectedItems.length,
+      folders,
+      error: batchCopyDialog.error,
+      onClose: () => setBatchCopyDialog(null),
+      onSubmit: submitBatchCopy,
+    }),
+    batchDeleteDialog !== null && h(ConfirmDialog, {
+      title: '批量删除',
+      message: `确定把选中的 ${selectedItems.length} 项移到系统回收站吗？${batchDeleteDialog.error !== '' ? `（上次失败：${batchDeleteDialog.error}）` : ''}`,
+      confirmLabel: '移到回收站',
+      onClose: () => setBatchDeleteDialog(null),
+      onConfirm: () => submitBatchDelete(false),
     }),
     overlayItem !== undefined && (MEDIA_KINDS.has(overlayItem.kind)
       ? h(MediaOverlay, {

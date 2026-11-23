@@ -23,6 +23,7 @@ const AUDIO = [
 const DOCUMENT = [
   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'markdown',
   'rtf', 'csv', 'tsv', 'odt', 'ods', 'odp', 'epub', 'log', 'tex', 'pages',
+  'mdx', 'rst', 'adoc', 'srt', 'vtt', 'nfo',
   'numbers', 'key',
 ]
 const ARCHIVE = [
@@ -34,6 +35,8 @@ const CODE = [
   'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
   'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
   'ini', 'conf', 'env', 'gitignore', 'dockerfile', 'makefile',
+  'hcl', 'tf', 'proto', 'graphql', 'gql', 'cmake', 'gradle', 'properties',
+  'patch', 'diff',
 ]
 
 /** Extension → kind. Built once so the scan, routes and verdicts never disagree. */

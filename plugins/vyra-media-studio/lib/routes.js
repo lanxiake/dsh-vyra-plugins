@@ -10,7 +10,7 @@ import { SCAN_DEFAULTS, invalidateScanCache, scanMediaCached } from './scan.js'
 import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
 import {
-  copyFileInto, deleteFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
+  batchFiles, copyFileInto, deleteFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
 } from './file-ops.js'
 
 const LIST_PATH = '/api/vyra-media/list'
@@ -23,6 +23,7 @@ const COPY_PATH = '/api/vyra-media/copy'
 const DELETE_PATH = '/api/vyra-media/delete'
 const REVEAL_PATH = '/api/vyra-media/reveal'
 const OPEN_PATH = '/api/vyra-media/open'
+const BATCH_PATH = '/api/vyra-media/batch'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -426,6 +427,24 @@ async function handleOpen(request, ctx) {
  * @param {object} ctx - Host context.
  * @returns {Promise<Response>} a UTF-8 text window.
  */
+/**
+ * POST /api/vyra-media/batch
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} per-path copy/delete results.
+ */
+async function handleBatch(request, ctx) {
+  return handleAction(request, ctx, async ({ body, fs, workspaceRoot, signal }) => ({
+    results: await batchFiles({
+      action: body?.action,
+      paths: body?.paths,
+      toFolder: body?.toFolder ?? '',
+      permanent: body?.permanent === true,
+      fs, workspaceRoot, signal,
+    }),
+  }))
+}
+
 async function handleText(request, ctx) {
   const url = new URL(request.url)
   const sessionId = url.searchParams.get('sessionId')
@@ -503,6 +522,7 @@ export function registerMediaRoutes(ctx, connection) {
       [DELETE_PATH, handleDelete],
       [REVEAL_PATH, handleReveal],
       [OPEN_PATH, handleOpen],
+      [BATCH_PATH, handleBatch],
     ].map(([path, handler]) => connection.fetch.register({
       path,
       methods: ['POST'],
@@ -516,7 +536,7 @@ export function registerMediaRoutes(ctx, connection) {
 
 export {
   LIST_PATH, FILE_PATH, DIAGNOSE_PATH, STAT_PATH, TEXT_PATH, RENAME_PATH, COPY_PATH,
-  DELETE_PATH, REVEAL_PATH, OPEN_PATH,
+  DELETE_PATH, REVEAL_PATH, OPEN_PATH, BATCH_PATH,
   handleDiagnose, handleFile, handleList, handleStat, handleText, handleRename,
-  handleCopy, handleDelete, handleReveal, handleOpen,
+  handleCopy, handleDelete, handleReveal, handleOpen, handleBatch,
 }

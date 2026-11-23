@@ -5,12 +5,16 @@ DSH 右侧栏的文件管理插件，同时保留音视频预览能力。当前�
 ## 能做什么
 
 - 在右侧栏浏览当前工作区内的全部文件：图片、视频、音频、文档、压缩包、代码与其他类型
-- ✅ 网格 / 列表两种视图；网格支持全局缩略图缩放（滑杆 + Ctrl 滚轮）
+- ✅ 网格 / 列表两种视图；列表支持树形（默认）与平铺；网格支持全局缩略图缩放（滑杆 + Ctrl 滚轮）
 - ✅ 列表支持“简洁 / 详细”两档：简洁显示文件名、后缀与路径，详细再加修改日期、类型与大小
+- ✅ 类型筛选默认单选，`Ctrl / Cmd + 点击`可多选
+- ✅ `Ctrl / Cmd + 点击`文件批量勾选，支持批量引用、复制、删除和复制地址
+- ✅ 文件夹同样支持右键操作：展开/折叠、定位、引用、复制、重命名、打开所在位置、系统打开、删除
 - ✅ 面包屑与文件夹弹层定位；显示隐藏文件、包含依赖/构建目录
 - ✅ 网格、列表与预览中都可右键或点“更多”：引用到输入框、复制到文件夹、复制文件地址、重命名、打开所在位置、用系统应用打开、删除
 - ✅ 文本类文档用真实内容缩略图；PDF/Office/压缩包/代码使用按类型配色的图标缩略图
-- ✅ PDF 在面板内预览；文本/代码/Markdown 面板内文本预览；Office 等交给系统应用
+- ✅ 富预览：Markdown 渲染、代码语法高亮、JSON 格式化、CSV/TSV 表格、HTML 沙箱渲染（可切源码）、纯文本
+- ✅ PDF 在面板内预览；Office/压缩包等交给系统应用
 - ✅ 视频/音频卡片内原地播放；点击卡片打开面板内灯箱；切换 tab 时音频继续播放
 - ✅ 本地大文件通过支持 Range 的 Host 路由流式读取，可拖动进度
 - 普通网页链接交给 Browser tab，直接媒体 URL 在本插件内播放
@@ -34,6 +38,8 @@ DSH 右侧栏的文件管理插件，同时保留音视频预览能力。当前�
 | [`fast-glob`](https://github.com/mrmlnc/fast-glob) | 工作区文件扫描（MIT） |
 | [`mime-types`](https://github.com/jshttp/mime-types) | 响应媒体类型（MIT） |
 | [`range-parser`](https://github.com/jshttp/range-parser) | HTTP Range 解析（MIT） |
+| [`markdown-it`](https://github.com/markdown-it/markdown-it) | Markdown 渲染（MIT） |
+| [`highlight.js`](https://github.com/highlightjs/highlight.js) | 代码语法高亮（BSD-3-Clause） |
 
 播放控制使用浏览器原生 `<video>` / `<audio controls>`，不另写一套播放器。完整许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -74,6 +80,8 @@ pnpm test
 - “复制”落地为**复制到工作区内的目标文件夹**（浏览器无法把文件写入系统剪贴板）；“复制文件地址”单独复制绝对路径。
 - 删除默认走系统回收站：Windows PowerShell 回收站、macOS `~/.Trash`、Linux `gio trash`；失败时才提示永久删除。
 - “引用到输入框”通过 `conversation.input.left` 的 composer bridge 插入 `@相对路径 ` 提及。
+- 文件夹操作同样使用 Host 进程文件系统：复制为递归复制，删除走系统回收站；禁止操作工作区根目录。
+- HTML 预览在 `sandbox` iframe 中运行并禁用脚本，外部资源不保证加载；完整效果请用系统应用/浏览器打开。
 
 ## 文档与原型
 
@@ -83,7 +91,7 @@ pnpm test
 
 ## 当前边界
 
-不包含服务端缩略图生成、PDF 首页渲染、Office 内容解析、拖拽上传、多选批量操作、远程 SSH 文件写入。
+不包含服务端缩略图生成、PDF 首页渲染、Office 内容解析、拖拽上传、远程 SSH 文件写入。
 
 ## 交流群
 

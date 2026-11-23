@@ -7,7 +7,7 @@ import { extensionOf, isTextExtension, kindOf, mimeOf } from './lib/media-types.
 import { entityTagOf, parseRange } from './lib/range.js'
 import { scanMedia } from './lib/scan.js'
 import { serveMediaFile } from './lib/serve.js'
-import { copyFileInto, deleteFile, readTextFile, renameFile, statFiles } from './lib/file-ops.js'
+import { batchFiles, copyFileInto, deleteFile, readTextFile, renameFile, statFiles } from './lib/file-ops.js'
 import { handleList, registerMediaRoutes } from './lib/routes.js'
 
 test('file vocabulary', () => {
@@ -190,6 +190,7 @@ test('scanMedia walks every file type, skips build and hidden directories, and h
   try {
     await mkdir(join(root, '作品', '开箱'), { recursive: true })
     await mkdir(join(root, '素材'), { recursive: true })
+    await mkdir(join(root, '空文件夹'), { recursive: true })
     await mkdir(join(root, 'node_modules'), { recursive: true })
     await mkdir(join(root, '.hidden'), { recursive: true })
     await mkdir(join(root, '.git', 'objects'), { recursive: true })
@@ -218,6 +219,7 @@ test('scanMedia walks every file type, skips build and hidden directories, and h
     assert.ok(result.entries.every(entry => entry.size === undefined && entry.mtimeMs === undefined))
     assert.ok(result.folders.includes('作品/开箱'))
     assert.ok(result.folders.includes('素材'))
+    assert.ok(result.folders.includes('空文件夹'))
 
     const hidden = await scanMedia({ root, workspaceRoot: root, includeHidden: true })
     assert.equal(hidden.entries.length, 6)
@@ -271,6 +273,50 @@ test('file operations rename, copy, stat, read text and delete', async () => {
       error => error.code === 'outside-workspace')
     const outside = await statFiles({ paths: ['../outside.txt'], fs, workspaceRoot: root })
     assert.equal(outside[0].error, 'outside-workspace')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('folders can be statted, renamed, copied and batch-deleted', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-dirs-'))
+  const fs = realFs(root)
+  try {
+    await mkdir(join(root, 'alpha', 'nested'), { recursive: true })
+    await mkdir(join(root, 'target'), { recursive: true })
+    await writeFile(join(root, 'alpha', 'nested', 'a.txt'), 'hello')
+
+    const stats = await statFiles({ paths: ['alpha', 'target'], fs, workspaceRoot: root })
+    assert.equal(stats[0].type, 'directory')
+    assert.equal(stats[1].type, 'directory')
+
+    const renamed = await renameFile({ path: 'alpha', name: 'beta', fs, workspaceRoot: root })
+    assert.equal(renamed.type, 'directory')
+    assert.equal(renamed.relativePath, 'beta')
+
+    const copied = await copyFileInto({ path: 'beta', toFolder: 'target', fs, workspaceRoot: root })
+    assert.equal(copied.type, 'directory')
+    assert.equal(copied.relativePath, 'target/beta')
+    assert.equal(await readFile(join(root, 'target', 'beta', 'nested', 'a.txt'), 'utf8'), 'hello')
+
+    await assert.rejects(copyFileInto({ path: 'target', toFolder: 'target/beta', fs, workspaceRoot: root }),
+      error => error.code === 'copy-into-self')
+
+    const batch = await batchFiles({
+      action: 'copy', paths: ['beta/nested/a.txt'], toFolder: 'target', fs, workspaceRoot: root,
+    })
+    assert.equal(batch[0].ok, true)
+    assert.equal(await readFile(join(root, 'target', 'a.txt'), 'utf8'), 'hello')
+
+    const removed = await batchFiles({
+      action: 'delete', paths: ['target/beta/nested/a.txt', 'missing.txt'], permanent: true, fs, workspaceRoot: root,
+    })
+    assert.equal(removed[0].ok, true)
+    assert.equal(removed[1].ok, false)
+
+    const deleted = await deleteFile({ path: 'target/beta', permanent: true, fs, workspaceRoot: root })
+    assert.equal(deleted.type, 'directory')
+    await assert.rejects(stat(join(root, 'target', 'beta')), error => error.code === 'ENOENT')
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -362,6 +408,7 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
       ['/api/vyra-media/delete', ['POST']],
       ['/api/vyra-media/reveal', ['POST']],
       ['/api/vyra-media/open', ['POST']],
+      ['/api/vyra-media/batch', ['POST']],
     ])
 
     const list = await routes[0].fetch(new Request('http://host/api/vyra-media/list?sessionId=s'))
