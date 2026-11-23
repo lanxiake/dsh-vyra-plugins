@@ -737,6 +737,140 @@ test("the sidebar order does not collide with the Agent manager's 5", () => {
   assert.notEqual(entry.order, 5, 'vyra-agent-manager registers order 5')
 })
 
+// ---------------------------------------------------------------------------
+// The panel's appearance controls reach the LIVE services.
+//
+// This is the behavioural half of "one operation, two callers", and the reason
+// the earlier source-text assertion was not enough. The panel used to build its
+// services bag from `globalThis.__vcServices`, which nothing in the repo ever
+// assigned — so every appearance control reached `applyOp` with `{}` and came
+// back "the theme service is unavailable", while the text of the file still
+// contained the string `applyOp`.
+// ---------------------------------------------------------------------------
+
+/** Mount the bundle against a context, and hand back the module. */
+function mountBundle({ services, slots } = {}) {
+  let mod
+  const win = {
+    __ModuleLoader__: {
+      load: ({ factory }) => {
+        mod = factory((specifier) => {
+          if (specifier === 'react') return reactStub
+          if (specifier === './panel.js') return loadPanelFactory()
+          throw new Error(`unexpected require(${specifier})`)
+        })
+      },
+    },
+  }
+  new Function('window', 'document', source)(win, undefined)
+  globalThis.fetch = async () => new Promise(() => {})
+  const ctx = {
+    theme: services?.theme,
+    layout: services?.layout,
+    locale: { register() {}, bind: () => (k) => k, ...(services?.locale || {}) },
+    effect: () => () => {},
+    slots: slots || { inject: (_n, cb) => { cb() }, register: () => () => {} },
+  }
+  mod.apply(ctx)
+  return { mod, ctx }
+}
+
+test('the services the panel receives read the context at call time, not at build time', () => {
+  // The whole of Critical 1. The bundle must hand the panel an ACCESSOR, and
+  // that accessor must read `ctx` on every call — the same discipline the drain
+  // loop follows. A captured bag, or a global nothing assigns, fails one of the
+  // three assertions below.
+  const { services } = spyServices()
+  const { mod, ctx } = mountBundle({ services })
+
+  const accessor = mod.__internal.panelServices()
+  assert.equal(typeof accessor, 'function',
+    'the panel must receive a services ACCESSOR, not a bag — a bag cannot see a remount')
+
+  const first = accessor()
+  assert.equal(first.theme, services.theme, 'and it must read the mounted theme service')
+  assert.equal(first.layout, services.layout)
+  assert.equal(first.locale, ctx.locale, 'including the locale service the bundle bound itself')
+
+  // Remount: the accessor must pick the new service up, because it reads `ctx`
+  // per call. This is the property a captured object cannot have.
+  const replacement = { getTheme: () => ({ active: { id: 'light' } }), setTheme() {} }
+  ctx.theme = replacement
+  assert.equal(accessor().theme, replacement, 'a remounted service must be picked up')
+})
+
+test('a click on an appearance control mutates the live service through applyOp', () => {
+  // The end the user actually sees. `applyOp` is driven with the accessor's own
+  // output against a spy service, so a bag that came back empty — the exact
+  // failure this closes — leaves `calls` empty and fails here.
+  const { services, calls } = spyServices()
+  const { mod, ctx } = mountBundle({ services })
+  const accessor = mod.__internal.panelServices()
+
+  const theme = mod.__internal.applyOp(accessor(), 'appearance.setTheme', { id: 'dark' })
+  assert.equal(theme.status, 'ok', 'the theme control must not report "the theme service is unavailable"')
+  assert.deepEqual(calls, [['setTheme', 'dark']], 'and the real mutation must have happened')
+
+  const sidebar = mod.__internal.applyOp(accessor(), 'appearance.toggleSidebar', {})
+  assert.equal(sidebar.status, 'ok')
+  assert.deepEqual(calls[1], ['toggleSidebar'])
+
+  // And after a remount, the SAME accessor reaches the new service rather than
+  // the dead one — which is why the panel is given an accessor at all.
+  const fresh = spyServices()
+  ctx.theme = fresh.services.theme
+  ctx.layout = fresh.services.layout
+  const after = mod.__internal.applyOp(accessor(), 'appearance.setTheme', { id: 'light' })
+  assert.equal(after.status, 'ok')
+  assert.deepEqual(fresh.calls, [['setTheme', 'light']], 'the remounted service is the one written to')
+  assert.deepEqual(calls, [['setTheme', 'dark'], ['toggleSidebar']], 'the dead service is not used again')
+})
+
+test('every appearance control applies against the services the bundle passes', () => {
+  // Swept across the whole row, so no single control can be wired to a different
+  // bag than its siblings.
+  const { mod } = mountBundle({ services: spyServices().services })
+  const accessor = mod.__internal.panelServices()
+  for (const [op, args] of [
+    ['appearance.state', {}],
+    ['appearance.setTheme', { id: 'dark' }],
+    ['appearance.setFontSize', { role: 'text', px: 15 }],
+    ['appearance.toggleSidebar', {}],
+    ['appearance.openRightbar', {}],
+    ['appearance.closeRightbar', {}],
+    ['appearance.setLocale', { id: 'en' }],
+  ]) {
+    const result = mod.__internal.applyOp(accessor(), op, args)
+    assert.equal(result.status, 'ok', `${op} must apply against the live services`)
+  }
+})
+
+test('the panel module never reads a services global', () => {
+  // The specific mistake, named: a `globalThis.__vcX` lookup is invisible to
+  // every assertion above when the value happens to be present, and fatal when
+  // it is not — which is how this shipped.
+  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  assert.doesNotMatch(text, /globalThis\.__vc/u, 'the panel must take its services from the bundle')
+  assert.doesNotMatch(text, /__vcServices/u, 'and must not name the global that was never assigned')
+})
+
+test('the theme control is driven by the live state, not by a seeded draft', () => {
+  // A seeded `draft.theme: 'system'` would show "follow system" as the current
+  // theme until `appearance.state` came back, whichever theme was actually in
+  // force — and a controlled `select` reading the draft would keep showing the
+  // user's last click even after a refresh reported something else.
+  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  assert.match(text, /value: themeValue/u, 'the select must read a derived value')
+  assert.match(text, /draft\.theme \|\| state\?\.theme/u, 'which prefers the live state')
+  // The seed itself: no draft field may start as a claim about the environment.
+  // Anchored on the `useState` call so a mention in a comment cannot satisfy or
+  // trip it.
+  const seed = /useState\(\{([^}]*)\}\)/u.exec(text)
+  assert.ok(seed, 'the draft must be a single useState initializer')
+  assert.doesNotMatch(seed[1], /theme:\s*'[^']+'/u, 'the draft must not seed a theme')
+  assert.match(seed[1], /theme:\s*''/u, 'it starts empty instead')
+})
+
 test('the sidebar label is translated, not a literal', () => {
   // The entry label is the one string the shell reads before the panel renders.
   // A literal here is invisible to the locale service, so the sidebar would stay

@@ -515,6 +515,16 @@ window.__ModuleLoader__.load({
      */
     let t = (key) => key
     let localeApi = null
+    /**
+     * The accessor the panel was built with: `() => ({ theme, layout, locale })`,
+     * reading the context on every call.
+     *
+     * Held here so `__internal` can expose it. The property that matters — that
+     * it reads the context AT CALL TIME rather than capturing a bag — cannot be
+     * observed any other way, because reaching a panel's click handler needs a
+     * renderer this suite deliberately does not have.
+     */
+    let panelServices = () => ({})
 
     /**
      * Ask the Host to run one console action — the same call the Agent tool makes.
@@ -553,9 +563,17 @@ window.__ModuleLoader__.load({
      * loader's own resolver. Doing it lazily matters: the factory above runs at
      * startup in EVERY realm, and evaluating the panel there would pull a
      * DOM-touching module into a load that has nothing to render yet.
+     *
+     * @param services - an ACCESSOR, not a bag. It is called on every appearance
+     *   request, because Cordis can dispose and remount one of these services
+     *   while the panel is open — the identical reason the drain loop reads
+     *   `ctx.theme` at dispatch time rather than capturing it at install time.
+     *   A bag captured here would keep writing into a dead service after a theme
+     *   reload, which is precisely the failure this plugin's bridge docstring
+     *   records.
      */
     let panelModule
-    function loadPanel() {
+    function loadPanel(services) {
       if (panelModule === undefined) {
         const React = require('react')
         const factory = require('./panel.js')
@@ -564,8 +582,10 @@ window.__ModuleLoader__.load({
           h: React.createElement,
           // The SAME `applyOp` the bridge dispatches drained requests into. The
           // panel's appearance controls are therefore not a parallel path: they
-          // are the identical function, called with the identical services.
+          // are the identical function.
           applyOp,
+          // ...and these are the same three services, read the same way.
+          services,
           call,
           t: () => t,
           localeApi: () => localeApi,
@@ -598,8 +618,27 @@ window.__ModuleLoader__.load({
       localeApi = ctx.locale
       t = ctx.locale.bind(NS)
 
+      // The bag the panel's appearance controls hand to `applyOp`, built fresh
+      // on every request. `ctx.theme` and friends are read HERE, at call time —
+      // never captured into an object when the panel is built. A service can be
+      // disposed and remounted while the panel is open, and a captured bag would
+      // then keep writing into the dead one: every appearance control failing
+      // after a theme reload, which is the exact failure the drain loop's own
+      // comment records for its services.
+      //
+      // This accessor is why the panel does not need the global it used to read
+      // (`globalThis.__vcServices`, which nothing ever assigned — so every
+      // appearance control reached `applyOp` with an empty bag and reported
+      // "the theme service is unavailable").
+      const services = () => ({ theme: ctx.theme, layout: ctx.layout, locale: ctx.locale })
+      // Kept where the tests (and a future caller) can reach it, because the
+      // property that matters — "reads the context per call" — is only
+      // observable by calling it, and the panel's own click handlers need a
+      // renderer to reach.
+      panelServices = services
+
       slots.inject('sidebar.panellist', () => {
-        const panel = loadPanel()
+        const panel = loadPanel(services)
         return slots.register({
           name: 'sidebar.panellist',
           id: PANEL_ID,
@@ -611,7 +650,7 @@ window.__ModuleLoader__.load({
       })
 
       slots.inject('main', () => {
-        const panel = loadPanel()
+        const panel = loadPanel(services)
         return slots.register({ name: 'main', key: PANEL_ID }, (props) => {
           // The element is built here rather than inside the panel module, so
           // the module never needs the `h` binding itself. `props` is passed
@@ -624,7 +663,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      __internal: { applyOp, OPS, loadPanel },
+      __internal: { applyOp, OPS, loadPanel, panelServices: () => panelServices },
       inject: SERVICES,
       apply(ctx) {
         // The drain loop: the Host queues appearance requests, this half is the

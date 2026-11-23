@@ -260,8 +260,33 @@ function send(res, status, payload) {
 }
 
 /**
+ * The two body shapes one `POST` can carry, told apart by their own fields.
+ *
+ * The endpoint serves both halves of this plugin, and they post different
+ * things:
+ *
+ *   - the CLIENT half answers a drained appearance request with
+ *     `{ id, ok, value | error }` — the channel's reply contract;
+ *   - the PANEL dispatches a console action with `{ action, args }` — the same
+ *     shape `dsh_console` takes, so a click and a tool call reach the identical
+ *     `dispatch`.
+ *
+ * Discriminating on `id` rather than on `action` is deliberate: an entry id is
+ * what the channel keys its pending map by, and `{ id }` alone is a malformed
+ * reply the channel must still be allowed to refuse. A body carrying NEITHER
+ * is neither shape, and is reported as a bad request rather than guessed at.
+ */
+function bodyShape(body) {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return 'invalid'
+  if (Object.hasOwn(body, 'id')) return 'reply'
+  if (Object.hasOwn(body, 'action')) return 'action'
+  return 'invalid'
+}
+
+/**
  * Build the endpoint that carries queued requests to the browser and answers
- * back — the one transport between the two halves of this plugin.
+ * back — the one transport between the two halves of this plugin, and the one
+ * route the panel uses to reach every Host action.
  *
  * The queue is a plain array the channel's listener pushes onto, and the waiters
  * are the parked `GET`s' resolvers. Both live in this closure rather than on the
@@ -270,8 +295,12 @@ function send(res, status, payload) {
  *
  * @param channel the Host half of the Host↔Client channel.
  * @param longPollMs how long an idle `GET` parks before answering `[]`.
+ * @param console_ the console, so a panel-shaped `POST` dispatches through the
+ *   SAME `dispatch` the `dsh_console` tool calls. Optional: a composition with
+ *   no console still serves the bridge, and a panel-shaped body is then reported
+ *   as unserviceable rather than crashing the route.
  */
-function createEndpoint(channel, longPollMs = LONG_POLL_MS) {
+function createEndpoint(channel, longPollMs = LONG_POLL_MS, console_ = null) {
   /** Requests drained from the channel and not yet handed to a `GET`. */
   const queue = []
   /**
@@ -350,12 +379,15 @@ function createEndpoint(channel, longPollMs = LONG_POLL_MS) {
   }
 
   /**
-   * The route handler: `GET` hands requests out, `POST` takes an answer in.
+   * The route handler: `GET` hands requests out, `POST` takes either an answer
+   * in or an action to dispatch.
    *
    * `op` is deliberately relayed untouched. It is untrusted input from the
    * browser, and `applyOp` refuses a non-string op precisely so that a coerced
    * value cannot reach a handler — a route that "helpfully" stringified it
-   * would silently disarm that guard.
+   * would silently disarm that guard. The same discipline applies to `action`
+   * below: it goes to `dispatch` exactly as it arrived, because `dispatch` is
+   * what decides whether an action exists and whether it is forbidden.
    */
   return async function handler(req, res) {
     try {
@@ -363,8 +395,34 @@ function createEndpoint(channel, longPollMs = LONG_POLL_MS) {
         send(res, 200, await drain())
         return
       }
-      const reply = await readJson(req)
-      send(res, 200, { ok: channel.respond(reply) === true })
+      const body = await readJson(req)
+      switch (bodyShape(body)) {
+        case 'reply':
+          // The channel's own reply contract, unchanged since Task 7: the
+          // boolean says whether a live request was settled, and `false` is a
+          // legitimate answer for a reply that arrived after its timeout.
+          send(res, 200, { ok: channel.respond(body) === true })
+          return
+        case 'action': {
+          if (console_ === null) {
+            send(res, 200, failure('this composition has no console to dispatch against'))
+            return
+          }
+          // `action` is relayed untouched, exactly as `op` is above. `dispatch`
+          // checks `FORBIDDEN` before anything else, so a refused action comes
+          // back as DATA — `{ status: 'forbidden', reason, alternative }` — which
+          // is what the panel renders. It never throws for a bad input; it
+          // answers with a status for every one.
+          const result = await console_.dispatch(body.action, body.args ?? {})
+          send(res, 200, result === null || typeof result !== 'object' ? failure('the console returned no result') : result)
+          return
+        }
+        default:
+          // Neither shape. Reported rather than guessed at: picking one would
+          // mean a malformed reply settles nothing AND reports success, or an
+          // action with a typo'd key silently dispatches an empty action.
+          send(res, 200, failure('a POST body must carry either an id (a channel reply) or an action'))
+      }
     } catch (err) {
       send(res, 200, failure(String(err?.message || err)))
     }
@@ -449,7 +507,7 @@ export function apply(ctx, config) {
       () => owner.webServer.register({
         kind: 'exact',
         path: RPC_PATH,
-        handler: createEndpoint(channel, longPollMsFrom(config)),
+        handler: createEndpoint(channel, longPollMsFrom(config), console_),
       }),
       'vyra-dsh-console: appearance endpoint',
     )

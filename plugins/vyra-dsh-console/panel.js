@@ -10,7 +10,7 @@
 // same two channels the agent tool uses — `applyOp` for the Client realm and
 // `/api/vyra-console/rpc` for the Host — so there is exactly one implementation
 // of each and no second catalogue of action names to drift.
-export function createPanel({ React, h, applyOp, call, t, localeApi }) {
+export function createPanel({ React, h, applyOp, services, call, t, localeApi }) {
   const { useState, useEffect, useMemo, useCallback, useRef } = React
 
   // --- tokens only -----------------------------------------------------------
@@ -111,6 +111,17 @@ export function createPanel({ React, h, applyOp, call, t, localeApi }) {
   // --- pure derivations. These are what the tests drive: no DOM, no React. ---
 
   /**
+   * What the theme select shows before anything has told it better.
+   *
+   * It is deliberately NOT the value the panel assumes is active: it is the
+   * option a user would land on with no preference stored, and it is shown only
+   * while `appearance.state` is still in flight. A `select` needs SOME value,
+   * and an unset one would render the control blank rather than usefully
+   * incomplete.
+   */
+  const DEFAULT_THEME = 'system'
+
+  /**
    * Every appearance control the panel can offer, as data.
    *
    * `op` and `args` are exactly what `applyOp` takes, so a control cannot drift
@@ -125,8 +136,7 @@ export function createPanel({ React, h, applyOp, call, t, localeApi }) {
       options: ['system', 'light', 'dark'],
       value: (state) => state?.theme?.preference ?? null,
       args: (v) => ({ id: v }),
-    },
-    {
+    },    {
       id: 'locale',
       kind: 'locale',
       op: 'appearance.setLocale',
@@ -285,7 +295,11 @@ export function createPanel({ React, h, applyOp, call, t, localeApi }) {
     const [modelError, setModelError] = useState('')
     const [mcps, setMcps] = useState(null)
     const [mcpError, setMcpError] = useState('')
-    const [draft, setDraft] = useState({ provider: '', model: '', name: '', theme: 'system', locale: '' })
+    // The draft holds only what a control has NOT yet read back from the live
+    // services. It starts empty on purpose: a seeded `theme: 'system'` would be
+    // shown as the current theme before `appearance.state` returned, whichever
+    // theme was actually in force — a value the panel had no basis for.
+    const [draft, setDraft] = useState({ provider: '', model: '', name: '', theme: '', locale: '' })
     const { busy, setBusy, toast, notify } = useCall()
 
     // Every read goes through the Host, which forwards it to this half — so the
@@ -373,20 +387,25 @@ export function createPanel({ React, h, applyOp, call, t, localeApi }) {
      * through the very code the click is already standing in. Same function,
      * same services, same contract — which is what "one operation, two callers"
      * requires, and the reason the panel can never disagree with the tool.
+     *
+     * The services come from the injected ACCESSOR, called here on every
+     * request, exactly as the bridge reads `ctx.theme` at dispatch time. An
+     * object captured when the panel was built would keep writing into a service
+     * that a reload has since replaced.
      */
     const runAppearance = useCallback((op, args, label) => {
       setBusy(op)
-      const services = {
-        theme: globalThis.__vcServices?.theme,
-        layout: globalThis.__vcServices?.layout,
-        locale: globalThis.__vcServices?.locale,
-      }
-      const outcome = applyOp(services, op, args || {})
+      // A panel built without the accessor — a test double, or a future caller
+      // that forgot it — must report a refusal rather than throw out of a click
+      // handler. `applyOp` already answers that way for a missing service, so
+      // an empty bag is the honest input rather than a special case here.
+      const bag = typeof services === 'function' ? services() : {}
+      const outcome = applyOp(bag, op, args || {})
       if (outcome.status === 'ok') notify(t('toast.done', { action: label || op }), 'ok')
       else notify(t('toast.failed', { action: label || op, reason: String(outcome.reason || '') }), 'error')
       setBusy(null)
       void loadState()
-    }, [notify, loadState])
+    }, [services, notify, loadState])
 
     const catalogueView = catalogue || { actions: [], forbidden: [] }
     const grouped = useMemo(() => groupByDomain(catalogueView.actions), [catalogueView.actions])
@@ -490,13 +509,19 @@ export function createPanel({ React, h, applyOp, call, t, localeApi }) {
   }
 
   function Appearance({ t, state, stateError, busy, runAppearance, draft, setDraft }) {
+    // The select reads the LIVE state, not the draft. The draft exists only to
+    // reflect a choice the moment it is made — before `appearance.state` has
+    // come back — and it starts EMPTY, so the control shows what the theme
+    // service actually reports rather than a seed that would claim `system`
+    // whichever theme is in force.
+    const themeValue = draft.theme || state?.theme?.preference || state?.theme?.id || DEFAULT_THEME
     return h('div', null,
       stateError ? h('div', { className: 'vc-banner warn' }, Icon(I.warn, 16), h('div', { className: 'vc-grow' }, stateError)) : null,
       h('div', { className: 'vc-card' },
         h('div', { className: 'vc-field' },
           h('span', { className: 'vc-label' }, t('appearance.theme')),
           h('select', {
-            className: 'vc-select', value: draft.theme, disabled: busy !== null,
+            className: 'vc-select', value: themeValue, disabled: busy !== null,
             onChange: (e) => {
               const id = e.target.value
               setDraft((d) => ({ ...d, theme: id }))

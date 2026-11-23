@@ -1,7 +1,16 @@
 // The manifest's inline icons, checked against the files they are generated
-// from. `sync-manifest-icons.mjs` is a generator, and a generator that damages
-// its own output is silent: the manifest still parses, every other suite still
-// passes, and the market card shows a broken image.
+// from. `sync-manifest-icons.mjs` is a generator, and a generator that writes
+// the wrong thing is silent: the manifest still parses, every other suite still
+// passes, and the market card shows a broken image or a card that changes on
+// every build.
+//
+// What was actually wrong, measured rather than assumed: running the generator
+// twice did not converge (each run moved one blank line into the file), and it
+// hardcoded `\n` into a CRLF manifest. Its removal pattern ALSO carried a latent
+// ambiguity — a matcher for one icon constant could start at an earlier
+// constant's comment — which no revision in this repository's history ever
+// triggered. The tests below pin the two live symptoms and the property that
+// makes the latent one unreachable.
 //
 //   node --test scripts/test/manifest-icons.test.mjs
 import { strict as assert } from 'node:assert'
@@ -165,23 +174,23 @@ test('the generator leaves the manifest\'s line endings alone', () => {
   })
 })
 
-test('a generator run over a damaged manifest restores every icon', () => {
-  // The other direction: the generator is the repair tool for a manifest a bad
-  // merge or an interrupted run left short, so it must put back what is missing
-  // rather than only preserving what is already correct.
+test('a generator run over a short manifest restores every icon', () => {
+  // The generator is also the repair tool for a manifest that lost a constant —
+  // to a bad merge, or to a run interrupted mid-write — so it must put back what
+  // is missing rather than only preserving what is already correct. This is a
+  // fixture, not a description of the committed file, which carries all of them.
   //
-  // Landing back on the pre-damage bytes is NOT asserted: the generator owns
-  // the whole icon block, so a manifest it has never normalised (one edited by
-  // hand, or written by an older version) legitimately comes out in the
-  // generator's own shape. What must hold is that nothing is missing and the
-  // result is stable.
+  // Landing back on the pre-edit bytes is NOT asserted: the generator owns the
+  // whole icon block, so a manifest it has never normalised legitimately comes
+  // out in the generator's own shape. What must hold is that nothing is missing
+  // and the result is a fixed point.
   withGenerator(() => {
     const lines = readFileSync(manifest, 'utf8').split('\n')
     const at = lines.findIndex((l) => l.startsWith('const DSH_CONSOLE_ICON ='))
     assert.notEqual(at, -1, 'the fixture constant must exist')
-    const damaged = lines.filter((_, i) => i !== at && i !== at + 1 && i !== at - 2).join('\n')
-    assert.equal(damaged.includes('const DSH_CONSOLE_ICON ='), false, 'the fixture must actually be damaged')
-    writeFileSync(manifest, damaged)
+    const short = lines.filter((_, i) => i !== at && i !== at + 1 && i !== at - 2).join('\n')
+    assert.equal(short.includes('const DSH_CONSOLE_ICON ='), false, 'the fixture must actually be short')
+    writeFileSync(manifest, short)
 
     execFileSync(process.execPath, [generator], { stdio: 'ignore' })
     const repaired = readFileSync(manifest, 'utf8')

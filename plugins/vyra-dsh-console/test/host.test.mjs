@@ -113,7 +113,7 @@ function fakeRes() {
  * remember to pass one and none can sit out the shipped 25s by omission. A test
  * that needs a different bound passes its own `config.longPollMs`.
  */
-function mount({ late = false, config = {} } = {}) {
+function mount({ late = false, config = {}, services = {} } = {}) {
   const routes = []
   const pending = []
   const webServer = {
@@ -123,7 +123,10 @@ function mount({ late = false, config = {} } = {}) {
     },
   }
   const ctx = {
-    get: () => undefined,
+    // A Host service the console's domains reach for through `requireService`.
+    // Empty by default, which is the "this profile has none" case the plugin
+    // has to keep working in.
+    get: (key) => services[key],
     logger: { info() {}, warn() {} },
     tools: { register() {} },
     effect: (fn) => fn(),
@@ -577,10 +580,14 @@ test('POST treats a body with no ok flag as a refusal, never as an assumed succe
 })
 
 test('POST accepts an empty body without throwing', async () => {
+  // An empty body parses to `{}` — neither a channel reply nor a console
+  // action. It is refused with a message rather than crashing the route, and
+  // rather than being silently treated as one of the two shapes.
   const { handler } = handlerFor()
   const res = await post(handler, '')
   assert.equal(res.statusCode, 200)
-  assert.deepEqual(res.json, { ok: false })
+  assert.equal(res.json.ok, false)
+  assert.equal(typeof res.json.error, 'string')
 })
 
 test('POST reports a malformed body as an error rather than throwing out of the route', async () => {
@@ -664,10 +671,11 @@ test('an unparseable body is refused with a message, and no envelope has a hole'
   // Two different refusals, and both are `ok: false`:
   //   - a body that is not JSON throws out of `readJson`, so the route answers
   //     with a message explaining what was wrong;
-  //   - a body that IS valid JSON but is not a reply object (`[]`, `null`, `3`)
-  //     simply settles nothing, so `respond()` returns false and there is no
-  //     message to give — inventing one would claim a parse failure that did not
-  //     happen.
+  //   - a body that IS valid JSON but is NEITHER shape — no `id` for the
+  //     channel, no `action` for the console — is refused with a message too.
+  //     It cannot be dispatched, and picking a shape for it would mean a
+  //     malformed reply either settles nothing while reporting success or
+  //     dispatches an empty action.
   //
   // Asserted with an own-key walk, never a JSON round trip: `JSON.stringify`
   // drops an undefined value silently, so a parse/stringify comparison passes on
@@ -685,8 +693,8 @@ test('an unparseable body is refused with a message, and no envelope has a hole'
     const res = await post(handler, body)
     assert.equal(res.json.ok, false, `${JSON.stringify(body)} must not be accepted as a reply`)
     assert.equal(scanForUndefined(res.json), 'none', `${JSON.stringify(body)} produced a hole`)
-    // No id was supplied, so nothing settles and no message is invented.
-    assert.equal(Object.hasOwn(res.json, 'error'), false, 'a parseable non-reply has nothing to explain')
+    assert.equal(typeof res.json.error, 'string',
+      `${JSON.stringify(body)} is neither shape and must say so rather than being guessed at`)
   }
 })
 
@@ -803,4 +811,177 @@ test('a non-string op queued on the channel survives the round trip unstringifie
   await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(typeof seen.op, 'object', 'the object op must reach the queue as an object')
   assert.equal(seen.op.toString(), 'appearance.toggleSidebar')
+})
+
+// ---------------------------------------------------------------------------
+// Task 10: the same route, serving the panel's action dispatch.
+//
+// The panel posts `{ action, args }` to this endpoint, and the tool reaches the
+// SAME `dispatch` through the tool pipeline. These drive the real handler with
+// the real console and real domains — no text-pattern assertion can tell whether
+// an action actually dispatches, which is exactly how the endpoint shipped
+// handling only the channel's reply shape.
+// ---------------------------------------------------------------------------
+
+/** A `pluginManager` stub, so `plugin.list` has something real to report. */
+function pluginManagerStub() {
+  return {
+    listPlugins: async () => [
+      { entryId: 'core', moduleName: '@deepseek-ai/dsh-core', enabled: true, fiberPhase: 'active' },
+      { entryId: 'extra', moduleName: 'some-plugin', enabled: false },
+    ],
+    listBundles: async () => [
+      { name: 'some-plugin', version: '1.0.0', enabled: true, installed: true, removable: true },
+    ],
+  }
+}
+
+test('a panel-shaped POST dispatches the action and returns its result', async () => {
+  // The defect this closes: the route answered `{ ok: channel.respond(reply) }`
+  // for EVERY body, so a panel action read `String(reply.id)` as "undefined",
+  // settled nothing, and came back `{ ok: false }` — with HTTP 200 and no
+  // exception, so every control showed "Failed" and nothing said why.
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const res = await post(handler, { action: 'console.actions', args: {} })
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.json.status, 'ok', 'the action must actually dispatch')
+  assert.ok(Array.isArray(res.json.actions), 'and its result must come back as data')
+  assert.ok(res.json.actions.some((a) => a.name === 'plugin.list'))
+})
+
+test('a panel-shaped POST reaches a real domain through the console', async () => {
+  // `console.actions` is served by a domain that reads only the frozen tables,
+  // so it would pass even if the dispatch were wired to nothing. `plugin.list`
+  // goes through `requireService` and a real async service call, which is what
+  // proves the console behind the route is the live one.
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const res = await post(handler, { action: 'plugin.list', args: {} })
+  assert.equal(res.json.status, 'ok')
+  assert.deepEqual(res.json.plugins.map((p) => p.entryId), ['core', 'extra'])
+  assert.deepEqual(res.json.bundles.map((b) => b.name), ['some-plugin'])
+})
+
+test('the args travel with the action, unflattened', async () => {
+  // A route that forwarded the whole body as `args` would make `{ action, args }`
+  // arrive as `{ action, args: { action, args } }`; one that dropped them would
+  // make every action argument-less. Driven with an action whose result depends
+  // on what it was passed.
+  const seen = []
+  const { handler } = handlerFor({
+    services: { agentDefaultModel: {
+      currentSelection: () => ({ provider: 'deepseek', model: 'deepseek-chat' }),
+      saveSelection: async (next) => seen.push(next),
+    } },
+  })
+  const res = await post(handler, { action: 'model.select', args: { provider: 'deepseek', model: 'deepseek-reasoner' } })
+  assert.equal(res.json.status, 'ok')
+  assert.deepEqual(seen, [{ provider: 'deepseek', model: 'deepseek-reasoner' }], 'the args must arrive as the domain expects')
+})
+
+test('an action posted with no args gets an empty object, not undefined', async () => {
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const res = await post(handler, { action: 'plugin.list' })
+  assert.equal(res.json.status, 'ok', 'a missing args key is the ordinary case for a no-argument action')
+})
+
+test('a forbidden action posted panel-style comes back forbidden, with its alternative', async () => {
+  // The boundary has to survive the new HTTP path. The panel renders exactly this
+  // envelope, so if the route swallowed it or turned it into an error, the user
+  // would see a generic failure instead of the reason and who should act.
+  const { handler } = handlerFor()
+  for (const name of ['sandbox.setMode', 'permission.setPreset', 'approval.answer', 'credentials.set']) {
+    const res = await post(handler, { action: name, args: {} })
+    assert.equal(res.json.status, 'forbidden', `${name} must be refused over HTTP`)
+    assert.equal(typeof res.json.reason, 'string')
+    assert.equal(typeof res.json.alternative, 'string', `${name} must carry the user-facing alternative`)
+    assert.equal(scanForUndefined(res.json), 'none', `${name} produced a hole`)
+  }
+})
+
+test('an unknown action posted panel-style is reported, not silently accepted', async () => {
+  const { handler } = handlerFor()
+  const res = await post(handler, { action: 'nope.notReal', args: {} })
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.json.status, 'error')
+  assert.match(res.json.reason, /unknown action/u)
+})
+
+test('a non-string action is refused rather than coerced into dispatching', async () => {
+  // The same discipline the `op` path already has: `dispatch` is what decides
+  // whether an action exists, so the route must hand it the raw value. A route
+  // that stringified would let an object naming a real action dispatch it.
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const res = await post(handler, { action: { toString: () => 'plugin.list' }, args: {} })
+  assert.equal(res.json.status, 'error')
+  assert.match(res.json.reason, /unknown action/u)
+  assert.equal(Object.hasOwn(res.json, 'plugins'), false, 'nothing may have been dispatched')
+})
+
+test('the channel reply shape still settles a live request through the same route', async () => {
+  // The other shape, unchanged: a reply must still reach `respond`, or the whole
+  // appearance bridge dies the moment the action branch was added.
+  const { ctx, handler } = handlerFor()
+  const pending = ctx.__consoleChannel.request('appearance.setTheme', { id: 'dark' })
+  const drained = await get(handler)
+  const row = drained.json.requests[0]
+  assert.equal(row.op, 'appearance.setTheme')
+
+  const reply = await post(handler, { id: row.id, ok: true, value: 'dark' })
+  assert.deepEqual(reply.json, { ok: true }, 'a settled reply reports true')
+  assert.equal((await pending).status, 'ok')
+  assert.equal(ctx.__consoleChannel.pendingCount(), 0)
+})
+
+test('a reply for an unknown id is reported false and stays a valid answer', async () => {
+  // `false` is the honest answer for a reply that arrived after its timeout, so
+  // the shape branch must not have turned it into an error envelope.
+  const { handler } = handlerFor()
+  const res = await post(handler, { id: 'no-such-request', ok: true })
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(res.json, { ok: false })
+})
+
+test('an action-shaped body does not disturb a parked poll', async () => {
+  // The two shapes share one route, so an action POST must not be mistaken for a
+  // reply to a parked GET and settle it with a meaningless value.
+  const { ctx, handler } = handlerFor({ config: { longPollMs: 40 }, services: { pluginManager: pluginManagerStub() } })
+  const parked = ctx.__consoleChannel.request('appearance.setTheme', { id: 'dark' })
+  const drained = await get(handler)
+  const row = drained.json.requests[0]
+
+  await post(handler, { action: 'plugin.list', args: {} })
+  assert.equal(ctx.__consoleChannel.pendingCount(), 1, 'the action POST must not settle the appearance request')
+
+  await post(handler, { id: row.id, ok: true })
+  assert.equal((await parked).status, 'ok', 'and the real reply still lands')
+})
+
+test('the action envelope has no undefined-valued key, checked before serialization', async () => {
+  // The same lossless-JSON rule every other envelope in this plugin follows, on
+  // the new branch. `dispatch` builds these, so the walk is on the object the
+  // route serialized rather than on the text.
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const captured = await captureSerialized(async () => {
+    await post(handler, { action: 'console.actions', args: {} })
+    await post(handler, { action: 'plugin.list', args: {} })
+    await post(handler, { action: 'plugin.setEnabled', args: { enabled: 'not-a-boolean' } })
+    await post(handler, { action: 'sandbox.setMode', args: {} })
+    await post(handler, { action: 'nope.notReal', args: {} })
+  })
+  assert.ok(captured.length >= 5, `every action response must be serialized (got ${captured.length})`)
+  for (const payload of captured) {
+    assert.equal(scanForUndefined(payload), 'none', `a hole: ${JSON.stringify(payload)}`)
+  }
+  // And the walk is checking populated envelopes, not a vacuous list of them.
+  assert.ok(captured.some((p) => p?.status === 'ok'), 'an ok envelope was among them')
+  assert.ok(captured.some((p) => p?.status === 'forbidden'), 'and a forbidden one')
+})
+
+test('the action branch does not change the response headers', async () => {
+  // The panel reads `cache-control` to decide nothing; the browser does. A
+  // cached action response would make the panel show a stale result.
+  const { handler } = handlerFor({ services: { pluginManager: pluginManagerStub() } })
+  const res = await post(handler, { action: 'plugin.list', args: {} })
+  assert.equal(res.headers['content-type'], 'application/json; charset=utf-8')
+  assert.equal(res.headers['cache-control'], 'no-store')
 })

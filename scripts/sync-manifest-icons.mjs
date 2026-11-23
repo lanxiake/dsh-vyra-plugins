@@ -58,15 +58,17 @@ const EOL = source.includes('\r\n') ? '\r\n' : '\n'
 // insert before the marker only, so a second run left the first copy in place
 // and the manifest stopped compiling on a duplicate declaration.
 //
-// The removal is done as ONE span rather than one constant at a time, and that
-// is the fix for the defect this script actually had. Matching each constant
-// separately let a matcher for `SMART_COMPACTION_ICON` begin at
-// `vyra-agent-manager`'s comment and run through agent-manager's encoded body
-// to its own declaration; with `g`, that leftmost match wins over the intended
-// one eight kilobytes later, so six of the ten constants resolved to the SAME
-// span and each deleted the whole intervening block. Measured: one run moved the
-// `LocalizedText` marker from 12903 to 5885, matched `DSH_CONSOLE_ICON` zero
-// times, and every run after that chewed further.
+// The removal is done as ONE span rather than one constant at a time, which
+// removes an ambiguity rather than repairing observed damage. The old pattern
+// was `…/\*\* Inline icon for \`[^\`]+\`… const X = … '[^']*'…`: both the plugin
+// name and the body could cross newlines, so a matcher for one constant could
+// legally begin at an EARLIER constant's comment, run through that constant's
+// encoded body, and end at its own declaration — eight kilobytes later. With
+// `g`, the leftmost such match wins. Nothing in this repository's history
+// exercised it (198 revisions checked: the committed manifest was intact at
+// every one, and no two constants ever resolved to the same span), so this was
+// a LATENT hazard, not a live corruption: reachable from any manifest whose icon
+// block was spaced one declaration differently, and silent when it fired.
 //
 // Taking the span from the first owned comment to the marker makes the
 // ambiguity impossible: there is exactly one match, it is exactly the region
