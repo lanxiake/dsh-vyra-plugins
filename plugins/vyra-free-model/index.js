@@ -1071,13 +1071,24 @@ export function apply(ctx, _config) {
         let accounts = []
         try {
           const listed = await callChannel('account.list', { provider: meta.id })
-          accounts = Array.isArray(listed?.accounts) ? listed.accounts.map(account => ({
-            id: String(account?.id ?? ''),
-            nickname: typeof account?.nickname === 'string' ? account.nickname : '',
-            enabled: account?.enabled !== false,
-            expiresAt: Number(account?.expiresAt) || 0,
-            refreshable: account?.refreshable === true,
-          })) : []
+          accounts = Array.isArray(listed?.accounts) ? listed.accounts.map(account => {
+            const id = String(account?.id ?? '')
+            const nickname = typeof account?.nickname === 'string' ? account.nickname : ''
+            const expiresAt = Number(account?.expiresAt) || 0
+            const refreshable = account?.refreshable === true
+            // The pack writes a placeholder row the moment a sign-in starts and
+            // fills it in (nickname / expiry / refresh) when the browser side
+            // finishes. Nothing has landed while all three still say "empty".
+            const pending = nickname === id && expiresAt <= 0 && !refreshable
+            return {
+              id,
+              nickname,
+              enabled: account?.enabled !== false,
+              expiresAt,
+              refreshable,
+              pending,
+            }
+          }) : []
         } catch { /* one provider's list failing must not blank the others */ }
         rows.push({
           id: meta.id,

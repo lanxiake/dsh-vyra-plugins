@@ -234,3 +234,28 @@ test('the model list states where the models come from', () => {
   assert.ok(html.includes('kilo.ai'))
   assert.ok(html.includes('对话框顶部的选择器'))
 })
+
+test('a sign-in placeholder is not shown as a signed-in account', () => {
+  const providers = [{
+    id: 'trae', label: 'TRAE', claimable: true,
+    accounts: [
+      { id: 'trae-ab12', nickname: 'trae-ab12', pending: true },
+      { id: 'trae-cd34', nickname: '138****0000', pending: false },
+    ],
+  }]
+  const html = renderToString(h(AccountsBlock, { providers, status: {}, defaultOpen: true }))
+  assert.ok(html.includes('138****0000'))
+  assert.equal(html.includes('trae-ab12'), false)
+  assert.ok(html.includes('1 个已登录'))
+})
+
+test('a failure to sign in is reported, not left waiting', () => {
+  const providers = [{ id: 'minimax', label: 'MiniMax', claimable: true, accounts: [] }]
+  const html = renderToString(h(AccountsBlock, {
+    providers,
+    status: { minimax: { message: '登录失败：账号未注册，或授权没有完成。' } },
+    defaultOpen: true,
+  }))
+  assert.ok(html.includes('登录失败'))
+  assert.ok(html.includes('账号未注册'))
+})

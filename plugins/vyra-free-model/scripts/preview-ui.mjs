@@ -120,12 +120,7 @@ const body = process.env.PREVIEW_MODAL === '1' ? render(h(LoginModal, { dialog: 
   h(EndpointsBlock, {
     endpoints: [{ id: 'e1', name: '豆包（火山方舟）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', hasKey: true, models: [{ id: 'doubao-x' }], modelsAt: 0 }],
     onSummary: () => {}, collapsed: true, defaultOpen: expanded,
-  }),
-  h(ForwardBlock, { enabled: true, port: 8899, hasKey: true, key: 'sk-x', model: '', onToggle: () => {}, collapsed: true, defaultOpen: expanded }),
-  h(Card, { title: h(BlockTitle, {}, '给别的工具用（可选）'), hint: '把本地地址写进下面两个工具的配置。写入前会整份备份，随时可还原；你原来的配置不会被动。', collapsible: true, defaultOpen: expanded, summary: '未配置' },
-    h('div', { className: 'vfm_tools' },
-      h(ToolCard, { tool: 'codex', name: 'Codex', status: { configured: true, command: 'codex-vyra' }, onWrite: () => {}, onRestore: () => {} }),
-      h(ToolCard, { tool: 'claude', name: 'Claude Code', status: { configured: false }, onWrite: () => {}, onRestore: () => {} })))
+  })
 ))
 
 const html = `<!doctype html>

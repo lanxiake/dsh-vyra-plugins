@@ -22,7 +22,7 @@ window.__ModuleLoader__.load({
     const module = { exports: {} }
     const exports = module.exports
     const React = require('react')
-    const { createElement: h, Fragment, useState, useEffect, useMemo, useCallback } = React
+    const { createElement: h, Fragment, useState, useEffect, useMemo, useCallback, useRef } = React
 
     const NS = 'settings.vyraFreeModel'
     const inject = ['slots', 'locale']
@@ -709,17 +709,6 @@ window.__ModuleLoader__.load({
      * Both are named the way their own users name them; the launch command each
      * one produces is what keeps the user's existing default untouched.
      */
-    const TOOL_LABELS = Object.freeze([
-      Object.freeze({ id: 'codex', name: 'Codex' }),
-      Object.freeze({ id: 'claude', name: 'Claude Code' }),
-    ])
-
-    /** One line for the folded tool card: how many of the two are written. */
-    function collapsedToolsSummary(status) {
-      const rows = Object.values(status ?? {})
-      const done = rows.filter(row => row !== null && typeof row === 'object' && row.configured === true).length
-      return done > 0 ? `${done}/${TOOL_LABELS.length}` : t('tools.idle')
-    }
 
     // ── the model block ──────────────────────────────────────────────────────
 
@@ -930,7 +919,9 @@ window.__ModuleLoader__.load({
      */
     function providerRow(provider, entry, handlers, credits) {
       const status = entry !== null && typeof entry === 'object' ? entry : {}
-      const accounts = Array.isArray(status.accounts) ? status.accounts : []
+      // A placeholder row appears the instant sign-in starts; showing it would
+      // read as "already signed in" before the browser side has finished.
+      const accounts = Array.isArray(status.accounts) ? status.accounts.filter(account => account?.pending !== true) : []
       const pending = status.state === 'pending'
       const error = typeof status.message === 'string' ? status.message : ''
       const claimable = provider.claimable === true
@@ -1006,7 +997,8 @@ window.__ModuleLoader__.load({
       const handlers = { onLogin, onClaim, onToggle, onRemove, onShowLogin }
       const primary = roster.filter(entry => entry.more !== true)
       const extra = roster.filter(entry => entry.more === true)
-      const signedIn = roster.reduce((sum, entry) => sum + (Array.isArray(entry.accounts) ? entry.accounts.length : 0), 0)
+      const signedIn = roster.reduce((sum, entry) => sum
+        + (Array.isArray(entry.accounts) ? entry.accounts.filter(account => account?.pending !== true).length : 0), 0)
 
       if (ownedElsewhere === true) {
         return h(Card, {
@@ -1369,6 +1361,8 @@ window.__ModuleLoader__.load({
      */
     function SettingsPage() {
       const [summary, setSummary] = useState(undefined)
+      const alive = useRef(true)
+      useEffect(() => () => { alive.current = false }, [])
       const [error, setError] = useState('')
       const [selected, setSelected] = useState('')
       const [busy, setBusy] = useState(false)
@@ -1377,9 +1371,6 @@ window.__ModuleLoader__.load({
       const [creditsLoading, setCreditsLoading] = useState(false)
       /** The sign-in dialog: { label, url } or undefined. */
       const [loginDialog, setLoginDialog] = useState(undefined)
-      const [forwardKey, setForwardKey] = useState('')
-      /** Per-tool configuration status, keyed by tool id. */
-      const [configureStatus, setConfigureStatus] = useState({})
 
       const load = useCallback(async () => {
         try {
@@ -1395,19 +1386,6 @@ window.__ModuleLoader__.load({
         api('/summary')
           .then(payload => { if (alive) setSummary(payload) })
           .catch(cause => { if (alive) setError(String(cause?.message ?? cause)) })
-        // Read alongside the summary so the tool cards paint configured on the
-        // first frame rather than after a second round trip.
-        api('/configure/status')
-          .then(payload => {
-            if (!alive) return
-            const next = {}
-            for (const row of payload?.tools ?? []) {
-              if (typeof row?.tool !== 'string') continue
-              next[row.tool] = { ...row, command: row.tool === 'claude' ? 'claude-vyra' : 'codex-vyra' }
-            }
-            setConfigureStatus(next)
-          })
-          .catch(() => {})
         return () => { alive = false }
       }, [])
 
@@ -1441,50 +1419,91 @@ window.__ModuleLoader__.load({
       // Balances are a second, slower read; paint the page first, then fill them.
       useEffect(() => { void loadCredits() }, [loadCredits])
 
+      /** Stop a sign-in with a readable reason, and close its dialog. */
+      const failLogin = useCallback((providerId, message) => {
+        if (!alive.current) return
+        setLoginDialog(undefined)
+        setAccountStatus(current => ({ ...current, [providerId]: { message } }))
+      }, [])
+
+      /** Mark a sign-in as landed, then reload the account and balance lists. */
+      const succeedLogin = useCallback(async () => {
+        if (!alive.current) return
+        setLoginDialog(undefined)
+        await load()
+        await loadCredits()
+      }, [load, loadCredits])
+
       /**
-       * Ask again until this account appears, then stop.
+       * Ask again until this account lands, then stop.
        *
-       * The two lanes answer different questions: `account.list` is the
-       * authoritative answer for the channel pack, while the Tencent accounts
-       * live in this plugin's own store and arrive with the summary.
+       * The channel pack writes a placeholder account the instant a sign-in
+       * starts and fills it in (nickname / expiry / refresh flag) when the
+       * browser side finishes. Counting rows therefore proves nothing — the
+       * placeholder is already there. This watches the specific account id the
+       * pack returned, and treats a placeholder that disappears as a failed
+       * sign-in (the pack removes it when authorization is refused).
        */
-      const pollAccounts = useCallback(async provider => {
+      const pollAccounts = useCallback(async (provider, accountId) => {
         const providerId = typeof provider === 'string' ? provider : provider.id
         const isBuddy = typeof provider === 'object' && provider.kind === 'buddy'
         const before = (summary?.accounts?.providers ?? [])
-          .find(row => row.id === providerId)?.accounts?.length ?? 0
+          .find(row => row.id === providerId)?.accounts?.filter(account => account?.pending !== true).length ?? 0
         const deadline = Date.now() + LOGIN_TIMEOUT_MS
-        while (Date.now() < deadline) {
+        let missingSince = 0
+
+        while (Date.now() < deadline && alive.current) {
           await new Promise(resolve => setTimeout(resolve, 2000))
+          if (!alive.current) return
           try {
             if (isBuddy) {
               const payload = await api('/summary')
-              const rows = payload?.accounts?.providers ?? []
-              const mine = rows.find(row => row.id === providerId)
-              if (Array.isArray(mine?.accounts) && mine.accounts.length > before) {
+              const mine = (payload?.accounts?.providers ?? []).find(row => row.id === providerId)
+              const count = Array.isArray(mine?.accounts) ? mine.accounts.filter(account => account?.pending !== true).length : 0
+              if (count > before) {
                 setSummary(payload)
-                setLoginDialog(undefined)
-                await loadCredits()
+                await succeedLogin()
                 return
               }
-            } else {
-              const payload = await api('/channel', {
-                method: 'POST',
-                body: { method: 'account.list', payload: { provider: providerId } },
-                timeoutMs: 15000,
-              })
-              const accounts = payload?.value?.accounts ?? []
-              if (accounts.length > before) {
-                setLoginDialog(undefined)
-                await load()
-                await loadCredits()
+              continue
+            }
+
+            const payload = await api('/channel', {
+              method: 'POST',
+              body: { method: 'account.list', payload: { provider: providerId } },
+              timeoutMs: 15000,
+            })
+            const accounts = payload?.value?.accounts ?? []
+
+            if (typeof accountId !== 'string' || accountId === '') {
+              if (accounts.length > before) { await succeedLogin(); return }
+              continue
+            }
+
+            const mine = accounts.find(account => account?.id === accountId)
+            if (mine === undefined) {
+              // Placeholders are created synchronously; a missing one after a
+              // short grace period means the pack dropped it (auth refused).
+              if (missingSince === 0) missingSince = Date.now()
+              if (Date.now() - missingSince > 20_000) {
+                failLogin(providerId, '登录失败：账号未注册，或授权没有完成。')
                 return
               }
+              continue
+            }
+            missingSince = 0
+
+            const nickname = typeof mine.nickname === 'string' ? mine.nickname : ''
+            const expiresAt = Number(mine.expiresAt) || 0
+            const refreshable = mine.refreshable === true
+            if ((nickname !== '' && nickname !== accountId) || expiresAt > 0 || refreshable) {
+              await succeedLogin()
+              return
             }
           } catch { /* keep trying until the deadline */ }
         }
-        setAccountStatus(current => ({ ...current, [providerId]: { message: '登录超时，请重试。' } }))
-      }, [load, loadCredits, summary])
+        if (alive.current) failLogin(providerId, '登录超时，请重试。')
+      }, [failLogin, load, loadCredits, succeedLogin, summary])
 
       /**
        * Sign one account in.
@@ -1510,14 +1529,18 @@ window.__ModuleLoader__.load({
               timeoutMs: 30000,
             })
           const url = payload?.value?.loginUrl ?? payload?.value?.url
+          const accountId = typeof payload?.value?.accountId === 'string' ? payload.value.accountId : undefined
           if (typeof url === 'string' && url !== '') {
             setAccountStatus(current => ({ ...current, [providerId]: { state: 'pending', loginUrl: url } }))
             setLoginDialog({ label: provider.label ?? providerId, url })
             try { window.open(url, '_blank', 'noopener,noreferrer') } catch { /* the dialog has the link */ }
           }
-          await pollAccounts(provider)
+          await pollAccounts(provider, accountId)
         } catch (cause) {
-          setAccountStatus(current => ({ ...current, [providerId]: { message: String(cause?.message ?? cause) } }))
+          if (alive.current) {
+            setAccountStatus(current => ({ ...current, [providerId]: { message: String(cause?.message ?? cause) } }))
+            setLoginDialog(undefined)
+          }
         }
       }, [pollAccounts])
 
@@ -1599,94 +1622,12 @@ window.__ModuleLoader__.load({
         } catch { /* keep the current reading */ }
       }, [])
 
-      /**
-       * Turn the local port on or off.
-       *
-       * The key is fetched only after the port is on: before that there is
-       * nothing to paste, and the route answers 409. A failure leaves the switch
-       * off rather than showing a half-enabled block.
-       */
-      const toggleForward = useCallback(async enabled => {
-        try {
-          const payload = await api('/forward', { method: 'POST', body: { enabled } })
-          const next = payload?.forward ?? {}
-          setSummary(current => (current === undefined ? current : { ...current, forward: next }))
-          if (next.enabled === true) {
-            try {
-              const withKey = await api('/forward/key', { method: 'POST' })
-              setForwardKey(typeof withKey?.key === 'string' ? withKey.key : '')
-            } catch {
-              setForwardKey('')
-            }
-          } else {
-            setForwardKey('')
-          }
-        } catch {
-          setForwardKey('')
-        }
-      }, [])
-
       /** The master switch: takes the model group out of the picker. */
       const toggleEnabled = useCallback(async enabled => {
         try {
           const payload = await api('/enabled', { method: 'POST', body: { enabled: !enabled } })
           setSummary(current => (current === undefined ? current : { ...current, enabled: payload?.enabled === true }))
         } catch { /* the page keeps its current reading */ }
-      }, [])
-
-      /** Read what each tool's configuration currently says. */
-      const loadConfigureStatus = useCallback(async () => {
-        try {
-          const payload = await api('/configure/status')
-          const next = {}
-          for (const row of payload?.tools ?? []) {
-            if (typeof row?.tool !== 'string') continue
-            next[row.tool] = { ...row, command: row.tool === 'claude' ? 'claude-vyra' : 'codex-vyra' }
-          }
-          setConfigureStatus(next)
-        } catch { /* leaving the cards as they were beats a page of errors */ }
-      }, [])
-
-      /**
-       * Write the port into one tool.
-       *
-       * The card shows "writing" while the request is in flight and keeps the
-       * failure message afterwards, so a refusal is visible rather than a
-       * button that silently does nothing.
-       */
-      const writeTool = useCallback(async tool => {
-        setConfigureStatus(current => ({ ...current, [tool]: { ...(current[tool] ?? {}), busy: true, error: undefined } }))
-        try {
-          const payload = await api('/configure', { method: 'POST', body: { tool }, timeoutMs: 30000 })
-          setConfigureStatus(current => ({
-            ...current,
-            [tool]: {
-              configured: true,
-              busy: false,
-              port: payload?.port,
-              command: payload?.command ?? (tool === 'claude' ? 'claude-vyra' : 'codex-vyra'),
-            },
-          }))
-        } catch (cause) {
-          setConfigureStatus(current => ({
-            ...current,
-            [tool]: { ...(current[tool] ?? {}), configured: false, busy: false, error: String(cause?.message ?? cause) },
-          }))
-        }
-      }, [])
-
-      /** Put one tool's file back the way its backup holds it. */
-      const restoreTool = useCallback(async tool => {
-        setConfigureStatus(current => ({ ...current, [tool]: { ...(current[tool] ?? {}), busy: true, error: undefined } }))
-        try {
-          await api('/configure/restore', { method: 'POST', body: { tool }, timeoutMs: 30000 })
-          setConfigureStatus(current => ({ ...current, [tool]: { configured: false, busy: false } }))
-        } catch (cause) {
-          setConfigureStatus(current => ({
-            ...current,
-            [tool]: { ...(current[tool] ?? {}), busy: false, error: String(cause?.message ?? cause) },
-          }))
-        }
       }, [])
 
       if (error !== '' && summary === undefined) {
@@ -1755,36 +1696,6 @@ window.__ModuleLoader__.load({
           collapsed: true,
           defaultOpen: false,
         }),
-        h(ForwardBlock, {
-          enabled: summary?.forward?.enabled === true,
-          port: summary?.forward?.port ?? 0,
-          hasKey: summary?.forward?.hasKey === true,
-          key: forwardKey,
-          model: selected,
-          onToggle: enabled => void toggleForward(enabled),
-          collapsed: true,
-          defaultOpen: false,
-        }),
-        h(Card, {
-          title: h(BlockTitle, {}, t('tools.title')),
-          hint: t('tools.hint'),
-          collapsible: true,
-          defaultOpen: false,
-          summary: collapsedToolsSummary(configureStatus),
-        },
-        // Writing needs a live port to point at, so the block says so instead of
-        // offering a button that can only fail.
-        summary?.forward?.enabled !== true
-          ? h('p', { className: 'vfm_note' }, t('tools.needPort'))
-          : h('div', { className: 'vfm_tools' },
-            ...TOOL_LABELS.map(entry => h(ToolCard, {
-              key: entry.id,
-              tool: entry.id,
-              name: entry.name,
-              status: configureStatus[entry.id],
-              onWrite: id => void writeTool(id),
-              onRestore: id => void restoreTool(id),
-            })))),
         h(LoginModal, {
           dialog: loginDialog,
           onClose: () => setLoginDialog(undefined),

@@ -112,3 +112,9 @@ test('with the switch off the refusal is reported as before', async () => {
   assert.equal(chunks[0].type, 'finish')
   assert.equal(chunks[0].reason.kind, 'error')
 })
+
+test('the adapter declares image pricing so compaction can call it', () => {
+  const lane = adapter()
+  assert.equal(typeof lane.imageRequestPricing, 'function')
+  assert.equal(lane.imageRequestPricing('vyra-free', 'kilo-auto/free'), undefined)
+})

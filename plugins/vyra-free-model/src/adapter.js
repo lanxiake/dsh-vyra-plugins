@@ -338,6 +338,19 @@ export class KiloAdapter {
     }
   }
 
+  /**
+   * Declare no provider-side image pricing.
+   *
+   * The kernel calls this method directly on the registered adapter (it is not
+   * optional-chained), so an adapter that simply omits it makes context
+   * compaction fail with "imageRequestPricing is not a function". Returning
+   * `undefined` is the documented "declare none" answer; the token meter then
+   * uses its own neutral estimate.
+   */
+  imageRequestPricing(_provider, _model) {
+    return undefined
+  }
+
   /** Bound the image projection so one photo cannot blow the request size. */
   imageRequestTarget(_provider, _model, image) {
     const maxPixels = 640000
