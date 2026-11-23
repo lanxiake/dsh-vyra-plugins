@@ -58,6 +58,18 @@ const TOOL_USAGE_ICON =
  * up plugin code.
  */
 
+/**
+ * Inline icon for `vyra-studymate`.
+ *
+ * Hand-held, and declared OUTSIDE the generated icon block below on purpose:
+ * `sync-manifest-icons.mjs` derives each constant from the plugin's own
+ * `icon.svg`, and this plugin ships none, so the generator cannot own it. It was
+ * dropped from the manifest along with two others and the manifest stopped
+ * compiling; this carries the payload the manifest held before the drop.
+ */
+const STUDYMATE_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiM0ZjQ2ZTUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMzIgMjB2MjYiLz48cGF0aCBkPSJNMzIgMjBjLTQtMy05LTQtMTQtNHYyNmM1IDAgMTAgMSAxNCA0IDQtMyA5LTQgMTQtNFYxNmMtNSAwLTEwIDEtMTQgNHoiLz48L2c+PHBhdGggZD0iTTI2LjUgMjkuNWwxMCA1LTEwIDV6IiBmaWxsPSIjZmZmIi8+PC9zdmc+'
+
 /** Inline icon for `vyra-agent-manager`. */
 const AGENT_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM0RjQ2RTU7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzdDM0FFRDtzdG9wLW9wYWNpdHk6MSIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjEyIiBmaWxsPSJ1cmwoI2dyYWQpIi8+CiAgPGcgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOTUiPgogICAgPGNpcmNsZSBjeD0iMjIiIGN5PSIyNCIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iNDIiIGN5PSIyNCIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iMzIiIGN5PSI0NCIgcj0iNiIvPgogICAgPHBhdGggZD0iTTIyIDMwIEwzMiAzOCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICAgIDxwYXRoIGQ9Ik00MiAzMCBMMzIgMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgb3BhY2l0eT0iMC42Ii8+CiAgPC9nPgo8L3N2Zz4NCg=='
@@ -88,6 +100,12 @@ const MEDIA_STUDIO_ICON =
 /** Inline icon for `vyra-dsh-console`. */
 const DSH_CONSOLE_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkRTSCBDb25zb2xlIj4KICA8dGl0bGU+RFNIIENvbnNvbGU8L3RpdGxlPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjMGYzZDVjIi8+CiAgPHJlY3QgeD0iOSIgeT0iMTMiIHdpZHRoPSI0NiIgaGVpZ2h0PSIzOCIgcng9IjciIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2VhZjZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPHBhdGggZD0iTTkgMjRoNDYiIHN0cm9rZT0iI2VhZjZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxOC41IiByPSIyIiBmaWxsPSIjN2ZkMWZmIi8+CiAgPGNpcmNsZSBjeD0iMjMiIGN5PSIxOC41IiByPSIyIiBmaWxsPSIjN2ZkMWZmIiBvcGFjaXR5PSIwLjY1Ii8+CiAgPHBhdGggZD0iTTE2IDMxLjVoMTFNMTYgMzhoMTFNMTYgNDQuNWgxMSIgc3Ryb2tlPSIjN2ZkMWZmIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjkiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzOSA0MCkiPgogICAgPGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjkuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZkMjdmIiBzdHJva2Utd2lkdGg9IjIuOCIvPgogICAgPGcgc3Ryb2tlPSIjZmZkMjdmIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgICAgPHBhdGggZD0iTTAgLTE0LjV2LTMuNSIvPgogICAgICA8cGF0aCBkPSJNMCAxNC41djMuNSIvPgogICAgICA8cGF0aCBkPSJNLTE0LjUgMGgtMy41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0xNC41IDBoMy41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0tMTAuMyAtMTAuM2wtMi41IC0yLjUiLz4KICAgICAgPHBhdGggZD0iTTEwLjMgMTAuM2wyLjUgMi41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0xMC4zIC0xMC4zbDIuNSAtMi41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0tMTAuMyAxMC4zbC0yLjUgMi41Ii8+CiAgICA8L2c+CiAgICA8Y2lyY2xlIGN4PSIwIiBjeT0iMCIgcj0iMi42IiBmaWxsPSIjZmZkMjdmIi8+CiAgPC9nPgo8L3N2Zz4K'
+/** Inline icon for `vyra-wechat-local`. */
+const WECHAT_LOCAL_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwN2MxNjAiLz48cGF0aCBkPSJNMTggMjBoMjhhNCA0IDAgMCAxIDQgNHYxNGE0IDQgMCAwIDEtNCA0SDMybC05IDd2LTdoLTVhNCA0IDAgMCAxLTQtNFYyNGE0IDQgMCAwIDEgNC00eiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjI1IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjM5IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjwvc3ZnPg=='
+/** Inline icon for `vyra-xianyu-delivery`. */
+const XIANYU_DELIVERY_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjlkNmUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTMgMjRsMTktMTAgMTkgMTB2MTlhNSA1IDAgMCAxLTUgNUgxOGE1IDUgMCAwIDEtNS01eiIvPjxwYXRoIGQ9Ik0yNCAzNGgxNk0yNCA0MmgxMCIvPjwvZz48L3N2Zz4K'
 
 /** The validated index's localized-text union. */
 export type LocalizedText = string | LocaleMap
@@ -2798,6 +2816,39 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'content',
         keywords: ['files', 'file-manager', 'media', 'document', 'video', 'audio', 'gallery'],
+      },
+    },
+    {
+      name: 'vyra-dsh-console',
+      title: {
+        en: 'DSH Console',
+        zh: 'DSH 控制台',
+      },
+      description: {
+        en: 'A console for the harness itself: read and switch models, read and write settings, enable or disable plugins and MCP servers, and change the theme and layout — from an agent tool or from a sidebar panel, both dispatching through one action registry. Its point is its boundary as much as its reach: sandbox mode, permission presets, approval answers and credential writes are refused for every caller, with the reason and who should do it instead shown rather than hidden.',
+        zh: '面向 harness 自身的控制台：查看与切换模型、读写设置、启停插件与 MCP、调整主题与布局，Agent 工具与侧栏面板共用同一张动作注册表。这个插件同样在意「不能做什么」：沙箱模式、权限预设、审批应答与凭据写入对任何调用方都永久拒绝，并把拒绝原因与该由谁来做摊开显示。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-dsh-console',
+      },
+      icon: DSH_CONSOLE_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795472400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
+      },
+      metadata: {
+        category: 'agent-runtime',
+        keywords: ['console', 'harness', 'settings', 'models', 'plugins', 'panel'],
       },
     },
   ],

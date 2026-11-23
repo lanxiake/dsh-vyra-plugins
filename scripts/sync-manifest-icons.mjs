@@ -34,6 +34,13 @@ const ICONS = {
   'vyra-plugin-market': 'PLUGIN_MARKET_ICON',
   'vyra-media-studio': 'MEDIA_STUDIO_ICON',
   'vyra-dsh-console': 'DSH_CONSOLE_ICON',
+  // These two were dropped from this map while the icon block was rewritten, and
+  // the manifest kept referencing their constants: it no longer compiled, so the
+  // index could not be rebuilt at all. Both plugins ship an `icon.svg`, and the
+  // payload the manifest carried before the drop is byte-identical to what this
+  // generator reads back off it, so listing them here restores them exactly.
+  'vyra-wechat-local': 'WECHAT_LOCAL_ICON',
+  'vyra-xianyu-delivery': 'XIANYU_DELIVERY_ICON',
 }
 
 const lines = []

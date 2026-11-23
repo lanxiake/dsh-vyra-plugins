@@ -2635,7 +2635,7 @@
         "en": "A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and text in the panel, and rename, copy, delete, reveal or insert files into the composer.",
         "zh": "右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与文本，并支持重命名、复制、删除、打开所在位置及引用到输入框。"
       },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSI0IiB5PSI3IiB3aWR0aD0iNDAiIGhlaWdodD0iMzQiIHJ4PSIxMCIgZmlsbD0iIzEwMTcyMiIvPgogIDxyZWN0IHg9IjkiIHk9IjEyIiB3aWR0aD0iMTIiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjN0FBQUZGIiBmaWxsLW9wYWNpdHk9Ii45Ii8+CiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPgogIDxyZWN0IHg9IjkiIHk9IjI1IiB3aWR0aD0iOSIgaGVpZ2h0PSIxMSIgcng9IjMiIGZpbGw9IiM2RkQ2QjUiIGZpbGwtb3BhY2l0eT0iLjkiLz4KICA8cGF0aCBkPSJNMjQuNSAzMC41IDM0IDI1LjJsLTkuNSA1LjN6IiBmaWxsPSIjRjRGNUY3Ii8+CiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4KPC9zdmc+Cg==",
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4NCiAgPHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMTAiIGZpbGw9IiMxMDE3MjIiLz4NCiAgPHJlY3QgeD0iOSIgeT0iMTIiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiM3QUFBRkYiIGZpbGwtb3BhY2l0eT0iLjkiLz4NCiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPg0KICA8cmVjdCB4PSI5IiB5PSIyNSIgd2lkdGg9IjkiIGhlaWdodD0iMTEiIHJ4PSIzIiBmaWxsPSIjNkZENkI1IiBmaWxsLW9wYWNpdHk9Ii45Ii8+DQogIDxwYXRoIGQ9Ik0yNC41IDMwLjUgMzQgMjUuMmwtOS41IDUuM3oiIGZpbGw9IiNGNEY1RjciLz4NCiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4NCjwvc3ZnPg0K",
       "author": "lanxiake",
       "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
@@ -2724,6 +2724,47 @@
           "video",
           "audio",
           "gallery"
+        ]
+      }
+    },
+    {
+      "name": "vyra-dsh-console",
+      "title": {
+        "en": "DSH Console",
+        "zh": "DSH 控制台"
+      },
+      "description": {
+        "en": "A console for the harness itself: read and switch models, read and write settings, enable or disable plugins and MCP servers, and change the theme and layout — from an agent tool or from a sidebar panel, both dispatching through one action registry. Its point is its boundary as much as its reach: sandbox mode, permission presets, approval answers and credential writes are refused for every caller, with the reason and who should do it instead shown rather than hidden.",
+        "zh": "面向 harness 自身的控制台：查看与切换模型、读写设置、启停插件与 MCP、调整主题与布局，Agent 工具与侧栏面板共用同一张动作注册表。这个插件同样在意「不能做什么」：沙箱模式、权限预设、审批应答与凭据写入对任何调用方都永久拒绝，并把拒绝原因与该由谁来做摊开显示。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkRTSCBDb25zb2xlIj4KICA8dGl0bGU+RFNIIENvbnNvbGU8L3RpdGxlPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjMGYzZDVjIi8+CiAgPHJlY3QgeD0iOSIgeT0iMTMiIHdpZHRoPSI0NiIgaGVpZ2h0PSIzOCIgcng9IjciIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2VhZjZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPHBhdGggZD0iTTkgMjRoNDYiIHN0cm9rZT0iI2VhZjZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxOC41IiByPSIyIiBmaWxsPSIjN2ZkMWZmIi8+CiAgPGNpcmNsZSBjeD0iMjMiIGN5PSIxOC41IiByPSIyIiBmaWxsPSIjN2ZkMWZmIiBvcGFjaXR5PSIwLjY1Ii8+CiAgPHBhdGggZD0iTTE2IDMxLjVoMTFNMTYgMzhoMTFNMTYgNDQuNWgxMSIgc3Ryb2tlPSIjN2ZkMWZmIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjkiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzOSA0MCkiPgogICAgPGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjkuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZkMjdmIiBzdHJva2Utd2lkdGg9IjIuOCIvPgogICAgPGcgc3Ryb2tlPSIjZmZkMjdmIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgICAgPHBhdGggZD0iTTAgLTE0LjV2LTMuNSIvPgogICAgICA8cGF0aCBkPSJNMCAxNC41djMuNSIvPgogICAgICA8cGF0aCBkPSJNLTE0LjUgMGgtMy41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0xNC41IDBoMy41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0tMTAuMyAtMTAuM2wtMi41IC0yLjUiLz4KICAgICAgPHBhdGggZD0iTTEwLjMgMTAuM2wyLjUgMi41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0xMC4zIC0xMC4zbDIuNSAtMi41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0tMTAuMyAxMC4zbC0yLjUgMi41Ii8+CiAgICA8L2c+CiAgICA8Y2lyY2xlIGN4PSIwIiBjeT0iMCIgcj0iMi42IiBmaWxsPSIjZmZkMjdmIi8+CiAgPC9nPgo8L3N2Zz4K",
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
+      "repository": {
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/vyra-dsh-console"
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1795472400,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "0000000000000000000000000000000000000000",
+            "path": "plugins/vyra-dsh-console"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "agent-runtime",
+        "keywords": [
+          "console",
+          "harness",
+          "settings",
+          "models",
+          "plugins",
+          "panel"
         ]
       }
     }
