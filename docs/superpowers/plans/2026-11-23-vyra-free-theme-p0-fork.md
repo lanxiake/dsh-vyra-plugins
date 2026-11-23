@@ -422,3 +422,27 @@ profile 不在本仓库，改完在 `plugins/vyra-free-theme/NOTICE.md` 记录"�
 4. 旧目录 `dsh-skins*` 未被修改
 
 后续阶段（P1–P7）见 spec §17，每阶段开工前另写计划。
+
+---
+
+## 执行记录（2026-11-23）
+
+| Task | 状态 | 证据 |
+| --- | --- | --- |
+| T1 包骨架 | 完成 | `2e572ab`；`tests/package-identity.test.mjs` 3/3 |
+| T2 机械改名 | 完成 | `8856f01`；36 个文件重写，`tests/no-legacy-identity.test.mjs` 通过（唯一豁免 `src/host/paths.js`） |
+| T3 路径模块与迁移 | 完成 | `099f31b`；`tests/paths.test.mjs` 7/7（含两个旧桌面目录回退、Web 一次性复制、不覆盖新目录） |
+| T4 构建与静态校验 | 完成 | `2bd3b67`；`lib/client.js` 348330 B / `lib/index.js` 53900 B，`node --check` 通过，注册 id 1 处、路由前缀 1 处、`dsh-skins` 仅 2 处（迁移名单） |
+| T5 profile 冒烟 | **部分**：已安装并禁用旧两插件，**待重启验证** | profile 依赖 `vyra-free-theme@file:…` 已就位；`cordis.patch.yml` 追加 `skins` / `dsh-theme-styles` 的 `disabled: true`（备份 `cordis.patch.yml.bak-vft-p0`） |
+
+### 与计划的偏差
+
+1. 改名用一次性 Node 脚本 `.tmp/rename-identity.mjs`（跨平台），未用 sed/grep——Windows 下无 `sed`/`xargs`。
+2. `npm install` 必须带 `--legacy-peer-deps`（`@deepseek-ai/dsh-*` 的 peer 范围在公共 registry 上 `ETARGET`）；锁文件入插件 `.gitignore`。
+3. Web profile 也做一次性旧目录复制（原计划留给 P7）。理由：与 Desktop 走同一条 `adoptLegacyOnce`，少一条分支；旧目录仍只读。
+4. `lib/index.js` 里保留 2 处 `dsh-skins` 是有意的——`LEGACY_DIRS` 迁移名单，静态校验清单已同步修正。
+5. 插件行 id 从 `skins` 改为 `free-theme`。
+
+### 待用户动作
+
+重启 DSH Desktop 后确认：侧栏底部为「皮肤切换」且可切三套皮肤；设置 → 通用 不再出现「主题风格」；控制台 `window.__VFT__.list()` 返回 3 项。
