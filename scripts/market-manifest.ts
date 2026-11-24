@@ -3002,6 +3002,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.3.3 makes timeline entries drag sources.
+        '0.3.3': {
+          publishTimestamp: 1795506808,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '1b1a3eab7b552e44ba7b27f65c09a4ee6b40ec5d',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
