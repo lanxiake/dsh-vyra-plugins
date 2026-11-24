@@ -25,6 +25,123 @@ import { DOMAINS, ORCHESTRATOR } from './domains.mjs'
 const DOMAIN_CAPABILITIES = ['files', 'shell', 'jobs', 'web', 'skills', 'todo', 'present']
 
 /**
+ * The Loader rows each capability stands for.
+ *
+ * Copied from `vyra-agent-manager`'s `capabilityDefs` (core.js:25) so a preset
+ * built here mounts exactly the same plugins as one made in the Agent manager.
+ * A preset whose `plugins` array is empty mounts nothing: the agent then has no
+ * read, no shell, no skill loader — only tools the host exposes globally — which
+ * is why it cannot inspect a repository at all.
+ */
+const CAPABILITY_ROWS = {
+  files: [
+    { id: 'tool-fs', name: '@deepseek-ai/dsh-tool-fs', config: { applyPatch: false } },
+    { id: 'tool-fs-search', name: '@deepseek-ai/dsh-tool-fs-search', config: { sampleOverCapGlobResults: false } },
+  ],
+  shell: [{ id: 'tool-pwsh', name: '@deepseek-ai/dsh-tool-pwsh' }],
+  jobs: [{ id: 'tool-jobs', name: '@deepseek-ai/dsh-tool-jobs' }],
+  web: [{ id: 'tool-web', name: '@deepseek-ai/dsh-tool-web', config: { fetch: true, searchTimeoutMs: 60000 } }],
+  skills: [
+    { id: 'skill-filesystem', name: '@deepseek-ai/dsh-skill-filesystem' },
+    { id: 'tool-skill', name: '@deepseek-ai/dsh-tool-skill' },
+  ],
+  todo: [{ id: 'tool-todo', name: '@deepseek-ai/dsh-tool-todo', config: { allowParallelInProgress: true } }],
+  'ask-user': [{ id: 'tool-ask-user', name: '@deepseek-ai/dsh-tool-ask-user' }],
+  present: [{ id: 'present', name: '@deepseek-ai/dsh-tool-present' }],
+  goal: [
+    { id: 'command-goal', name: '@deepseek-ai/dsh-command-goal' },
+    { id: 'tool-goal', name: '@deepseek-ai/dsh-tool-goal' },
+  ],
+  schedule: [{ id: 'tool-schedule', name: '@deepseek-ai/dsh-tool-schedule' }],
+}
+
+/** Rows every preset needs, in the order the Agent manager writes them. */
+const BASELINE_ROWS = [
+  { id: 'agent-instructions', name: '@deepseek-ai/dsh-agent-instructions', config: { maxBytes: 65536 } },
+  { id: 'time-context', name: '@deepseek-ai/dsh-time-context' },
+  {
+    id: 'compaction',
+    name: 'cordis:group',
+    group: true,
+    isolate: { compaction: true, toolResultPruner: true },
+    config: [
+      { id: 'compaction-basic', name: '@deepseek-ai/dsh-compaction-basic' },
+      { id: 'command-compact', name: '@deepseek-ai/dsh-command-compact' },
+      {
+        id: 'tool-result-pruner',
+        name: '@deepseek-ai/dsh-compaction-tool-result-pruner',
+        config: { thresholdChars: 8192, headChars: 4096, tailChars: 1024 },
+      },
+    ],
+  },
+]
+
+/**
+ * The delegation group, with `allowedAgentPresets` bound to `team`.
+ *
+ * This binding is the delegation whitelist: it is what `subagent`'s
+ * `agent_preset` parameter will accept.
+ */
+function delegationRow(team) {
+  return {
+    id: 'delegation',
+    name: 'cordis:group',
+    group: true,
+    isolate: { workflowEngine: true },
+    config: [
+      { id: 'tool-subagent-control', name: '@deepseek-ai/dsh-tool-subagent-control' },
+      {
+        id: 'tool-subagent',
+        name: '@deepseek-ai/dsh-tool-subagent',
+        config: {
+          provider: 'spawn',
+          toolName: 'subagent',
+          modelSelection: true,
+          modelDiscovery: true,
+          ...(team.length > 0 ? { allowedAgentPresets: [...team] } : {}),
+        },
+      },
+      {
+        id: 'tool-subagent-fork',
+        name: '@deepseek-ai/dsh-tool-subagent',
+        config: { provider: 'fork', toolName: 'subagent_fork' },
+      },
+      { id: 'workflow-ptc', name: '@deepseek-ai/dsh-workflow-ptc', config: { provider: 'spawn' } },
+      { id: 'tool-workflow', name: '@deepseek-ai/dsh-tool-workflow' },
+    ],
+  }
+}
+
+/**
+ * Assemble a preset's plugin rows: baseline, the persona prompt, then one block
+ * per capability. Unknown capability ids are skipped rather than throwing, so a
+ * typo costs a tool, not the whole agent.
+ *
+ * @param {string} systemPrompt
+ * @param {string[]} capabilities
+ * @param {string[]} team
+ */
+export function buildRows(systemPrompt, capabilities, team) {
+  const rows = [
+    { id: 'persona', name: '@deepseek-ai/dsh-persona', config: { prefix: systemPrompt } },
+    ...BASELINE_ROWS,
+  ]
+
+  for (const capability of capabilities) {
+    if (capability === 'delegation') {
+      // Only a coordinator gets this, and only with someone to delegate to.
+      if (team.length > 0) rows.push(delegationRow(team))
+      continue
+    }
+    const block = CAPABILITY_ROWS[capability]
+    if (block === undefined) continue
+    rows.push(...structuredClone(block))
+  }
+
+  return rows
+}
+
+/**
  * One domain agent.
  *
  * Note `skills`: the design-system pool is deliberately absent. 152 ids in a
@@ -32,7 +149,6 @@ const DOMAIN_CAPABILITIES = ['files', 'shell', 'jobs', 'web', 'skills', 'todo', 
  * domain index instead.
  *
  * @param {import('./domains.mjs').DomainSpec} domain
- * @returns {{ id: string, name: string, description: string, summary: string, usage: string, systemPrompt: string, capabilities: string[], skills: string[], team: string[] }}
  */
 export function domainAgentSpec(domain) {
   const lines = [
@@ -65,16 +181,19 @@ export function domainAgentSpec(domain) {
     )
   }
 
+  const systemPrompt = lines.join('\n')
+
   return {
     id: domain.id,
     name: domain.name,
     description: domain.description,
     summary: domain.summary,
     usage: domain.usage,
-    systemPrompt: lines.join('\n'),
+    systemPrompt,
     capabilities: [...DOMAIN_CAPABILITIES],
     skills: [...domain.skills],
     team: [],
+    rows: buildRows(systemPrompt, DOMAIN_CAPABILITIES, []),
   }
 }
 
@@ -85,7 +204,6 @@ export function domainAgentSpec(domain) {
  * what the director can reach.
  *
  * @param {readonly string[]} enabledIds
- * @returns {{ id: string, name: string, description: string, summary: string, usage: string, systemPrompt: string, capabilities: string[], skills: string[], team: string[] }}
  */
 export function orchestratorSpec(enabledIds) {
   const members = DOMAINS.filter((domain) => enabledIds.includes(domain.id))
@@ -124,6 +242,7 @@ export function orchestratorSpec(enabledIds) {
   ].join('\n')
 
   const nameList = members.length === 0 ? '无' : members.map((domain) => domain.name).join('、')
+  const team = members.map((domain) => domain.id)
 
   return {
     id: ORCHESTRATOR.id,
@@ -135,7 +254,8 @@ export function orchestratorSpec(enabledIds) {
     systemPrompt,
     capabilities: [...ORCHESTRATOR.capabilities],
     skills: [...ORCHESTRATOR.skills],
-    team: members.map((domain) => domain.id),
+    team,
+    rows: buildRows(systemPrompt, ORCHESTRATOR.capabilities, team),
   }
 }
 
@@ -159,18 +279,21 @@ function iconSvg(name, id) {
  * `cordis.patch.yml` is JSON because JSON is valid YAML and the Loader parses
  * an entry list either way — that is what the Agent manager does too.
  *
- * @param {{ id: string, name: string, description: string, summary: string, usage: string }} spec
+ * @param {ReturnType<typeof domainAgentSpec>} spec
  * @returns {Record<string, string>}
  */
 export function agentDirFiles(spec) {
   const meta = `${JSON.stringify({ meta: { title: spec.name, description: spec.description } }, null, 2)}\n`
+  // `spec.rows` carries the real plugin list; falling back to an empty array
+  // would produce an agent with no tools at all.
+  const rows = Array.isArray(spec.rows) ? spec.rows : []
   const patch = [
     {
       insert: [
         {
           id: `preset-${spec.id}`,
           name: '@deepseek-ai/dsh-agent-preset',
-          config: { id: spec.id, name: spec.name, description: spec.description, order: 100, plugins: [] },
+          config: { id: spec.id, name: spec.name, description: spec.description, order: 100, plugins: rows },
         },
       ],
     },

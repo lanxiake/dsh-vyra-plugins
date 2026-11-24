@@ -538,5 +538,69 @@ check('mount failure is recorded', diag.readMountRecord(noServerHome)?.ok, false
 rmSync(routesHome, { recursive: true, force: true })
 rmSync(noServerHome, { recursive: true, force: true })
 
+// ===== Task 12: presets mount real plugins =====
+console.log('\n--- Task 12: preset plugin rows ---')
+
+// A preset whose `plugins` array is empty mounts nothing: the agent loses read,
+// shell, skill loading and tools, and can only reach host-global ones. That was
+// the shipped state, and it is why a director with a read-only task ended up
+// unable to open the repository.
+const motionAgentSpec = agMod.domainAgentSpec(domains.getDomain('od-motion'))
+check('domain spec carries rows', Array.isArray(motionAgentSpec.rows), true)
+check('domain rows are not empty', motionAgentSpec.rows.length > 5, true)
+
+const motionFiles = agMod.agentDirFiles(motionAgentSpec)
+const motionPatch = JSON.parse(motionFiles['cordis.patch.yml'])
+const motionPlugins = motionPatch[0].insert[0].config.plugins
+check('patch plugins is not empty', motionPlugins.length > 5, true)
+
+// Every row a preset needs to do work: read files, run commands, load skills.
+const ids = new Set()
+const collect = (rows) => {
+  for (const row of rows) {
+    ids.add(row.id)
+    if (row.group && Array.isArray(row.config)) collect(row.config)
+  }
+}
+collect(motionPlugins)
+check('has file tools', ids.has('tool-fs'), true)
+check('has shell tool', ids.has('tool-pwsh'), true)
+check('has skill loader', ids.has('tool-skill'), true)
+check('has todo', ids.has('tool-todo'), true)
+check('has persona', ids.has('persona'), true)
+// A domain agent must not be able to delegate; only the director may.
+check('domain agent has no subagent tool', ids.has('tool-subagent'), false)
+
+const directorSpec2 = agMod.orchestratorSpec(['od-motion'])
+const directorFiles = agMod.agentDirFiles(directorSpec2)
+const directorPlugins = JSON.parse(directorFiles['cordis.patch.yml'])[0].insert[0].config.plugins
+const directorIds = new Set()
+const collectDirector = (rows) => {
+  for (const row of rows) {
+    directorIds.add(row.id)
+    if (row.group && Array.isArray(row.config)) collectDirector(row.config)
+  }
+}
+collectDirector(directorPlugins)
+check('director has the subagent tool', directorIds.has('tool-subagent'), true)
+
+// The delegation whitelist travels with the row.
+const subagentRow = directorPlugins
+  .find((row) => row.group && row.id === 'delegation')
+  .config.find((row) => row.id === 'tool-subagent')
+check('director binds allowedAgentPresets', subagentRow.config.allowedAgentPresets, ['od-motion'])
+
+const emptyDirectorSpec = agMod.orchestratorSpec([])
+const emptyIds = new Set()
+const collectEmpty = (rows) => {
+  for (const row of rows) {
+    emptyIds.add(row.id)
+    if (row.group && Array.isArray(row.config)) collectEmpty(row.config)
+  }
+}
+collectEmpty(agMod.agentDirFiles(emptyDirectorSpec)["cordis.patch.yml"].length === 0 ? [] : JSON.parse(agMod.agentDirFiles(emptyDirectorSpec)["cordis.patch.yml"])[0].insert[0].config.plugins)
+// With nobody to delegate to, the delegation group is omitted entirely.
+check('director without members omits delegation', emptyIds.has('delegation'), false)
+check('director without members still has file tools', emptyIds.has('tool-fs'), true)
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)
