@@ -2798,6 +2798,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.4 adds the produced-files timeline, long-press drag to move or
+        // reference, a move route, explorer labels and a faster search.
+        '0.2.4': {
+          publishTimestamp: 1795486966,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a27ca6702bd6d35686b8a9de0f52aecddf8a3c0a',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
