@@ -2863,6 +2863,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.6 fixes the invisible timeline and restores native drag.
+        '0.2.6': {
+          publishTimestamp: 1795495455,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b758addf67d3602061bae014df6d60600017f23f',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
