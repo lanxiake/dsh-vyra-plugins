@@ -2899,6 +2899,28 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-dsh-console',
           },
         },
+        // 0.1.0 stays pinned where it was published — repinning a version users
+        // have already resolved would change an install source under them, and
+        // the header forbids repinning to pick up code. Everything here changed
+        // after that pin, so 0.1.1 is a new version:
+        // `settings.set` could write the `permission` namespace and so reach the
+        // sandbox and approval settings `FORBIDDEN` refuses — the boundary was
+        // bypassable and answered `ok`. The panel built its service bag from a
+        // global nothing ever assigned, so every appearance control failed, and
+        // the endpoint could not dispatch an action at all. `FORBIDDEN` and
+        // `ACTIONS` resolved inherited prototype names (`toString` came back
+        // `forbidden` with no reason). The CLI's `services` command omitted the
+        // appearance domain. Also reads the default model from its live source,
+        // not the `settings.yaml` DSH removed.
+        '0.1.1': {
+          publishTimestamp: 1795503600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '1ef44a9eb048c4d4aa6175aad430fb3d953d47fd',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
