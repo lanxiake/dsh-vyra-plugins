@@ -2901,6 +2901,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.7 reads the session log from every Host surface so the timeline fills.
+        '0.2.7': {
+          publishTimestamp: 1795499697,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '35323514409471c07237c2b81f4198a1e6a4e796',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
