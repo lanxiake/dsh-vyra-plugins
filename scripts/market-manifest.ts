@@ -2455,6 +2455,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-screen-recorder',
           },
         },
+        // 0.4.3 removes the hide-DSH toggle, dims everything outside the
+        // selection, and scrolls the settings page back to the top so the
+        // cards above "Files" are not scrolled out of view.
+        '0.4.3': {
+          publishTimestamp: 1796371200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '443fe99b1dfd5903d21d7924d513c0da1b1df5f5',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
       },
       metadata: {
         category: 'media',

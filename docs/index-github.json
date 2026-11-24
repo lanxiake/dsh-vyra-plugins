@@ -2157,6 +2157,16 @@
       },
       "versions": [
         {
+          "version": "0.4.3",
+          "publishTimestamp": 1796371200,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "443fe99b1dfd5903d21d7924d513c0da1b1df5f5",
+            "path": "plugins/vyra-screen-recorder"
+          }
+        },
+        {
           "version": "0.4.2",
           "publishTimestamp": 1796284800,
           "source": {
