@@ -109,29 +109,24 @@ export async function apply(ctx, config = {}) {
 
   logger?.info?.(`open-design: ${String(report.enabled.length)} / ${String(DOMAINS.length)} 个领域已启用`)
 
-  // The settings panel talks to these routes. A profile without a web server
-  // keeps the CLI and loses only the panel.
-  const webServer = typeof ctx?.get === 'function' ? ctx.get('webServer') : undefined
-  if (webServer === undefined) {
-    logger?.info?.('open-design: 未检测到 webServer，设置面板不可用（仍可用 odx）')
-  } else {
-    try {
-      const disposers = mountRoutes(webServer, { dshHome: home })
-      if (typeof ctx?.effect === 'function') {
-        ctx.effect(() => () => {
-          for (const dispose of disposers) {
-            try {
-              dispose()
-            } catch {
-              // A route already gone must not break unload.
-            }
-          }
-        })
+  // The settings panel talks to these routes.
+  //
+  // `ctx.inject([...])` is what makes the service reachable: in Cordis a
+  // service that was not declared as a dependency is not visible to `ctx.get()`,
+  // so probing with `ctx.get('webServer')` silently yields undefined and the
+  // routes never mount. The callback runs only when the service exists, which is
+  // the correct degradation for a profile without a web server.
+  if (typeof ctx?.inject === 'function') {
+    ctx.inject(['webServer'], (hostContext) => {
+      try {
+        mountRoutes(hostContext.webServer, { dshHome: home })
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        logger?.warn?.(`open-design: 注册设置路由失败：${detail}`)
       }
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
-      logger?.warn?.(`open-design: 注册设置路由失败：${detail}`)
-    }
+    })
+  } else {
+    logger?.info?.('open-design: 宿主不支持 ctx.inject，设置面板不可用（仍可用 odx）')
   }
 
   return { installed: report.skillsWritten.length, error: null, report }
