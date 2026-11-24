@@ -2992,6 +2992,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.3.2 fixes mouse drag, widens text preview and filters type counts.
+        '0.3.2': {
+          publishTimestamp: 1795506292,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0c863d9613980f7f84c2212ad52b28424a6c34f1',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
