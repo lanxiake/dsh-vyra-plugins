@@ -458,7 +458,7 @@ window.__ModuleLoader__.load({
      * commit exists, which costs one extra commit; there is no shorter path,
      * because a commit cannot name itself.
      */
-    const VEYRA_COMMIT = '0000000000000000000000000000000000000000'
+    const VEYRA_COMMIT = '6edab2fdfee4938c0ca08763b66ddec0329ce2c0'
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
       `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index.json`,
