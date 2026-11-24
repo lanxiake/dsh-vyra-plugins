@@ -77,7 +77,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
       onClick: open,
       ...handlers,
     },
-    h('span', { className: 'vms-tl-tile-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 16 })),
+    h('span', { className: 'vms-tl-tile-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 20 })),
     h('span', { className: 'vms-tl-tile-name' }, name),
     h('span', { className: 'vms-tl-tile-meta' },
       h('span', { className: 'vms-tl-tag' }, kind === 'other' ? ext || '文件' : KIND_LABEL[kind]),
@@ -93,7 +93,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
     onClick: open,
     ...handlers,
   },
-  h('span', { className: 'vms-tl-row-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 13 })),
+  h('span', { className: 'vms-tl-row-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 16 })),
   h('span', { className: 'vms-tl-row-name' }, name),
   h('span', { className: 'vms-tl-tag' }, kind === 'other' ? (ext || '文件') : KIND_LABEL[kind]),
   h('span', { className: `vms-tl-diff${file.added > 0 ? ' is-added' : ''}${file.deleted > 0 ? ' is-deleted' : ''}` },
@@ -127,13 +127,13 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
       h('span', { className: 'vms-tl-clock' }, clockOf(node.time)),
       h('span', { className: 'vms-tl-prompt', title: node.prompt }, node.prompt || '（无提示词）'),
       h('span', { className: 'vms-tl-count' }, files.length === 0 ? '无产出' : `${files.length} 个文件`),
-      h('span', { className: 'vms-tl-chevron' }, h(Icon, { name: 'chevronRight', size: 12 }))),
+      h('span', { className: 'vms-tl-chevron' }, h(Icon, { name: 'chevronRight', size: 15 }))),
       open && files.length > 0 && (layout === 'grid'
         ? h('div', { className: 'vms-tl-tiles' },
           files.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu })))
         : groups.map(([dir, entries]) => h('div', { key: dir || '.', className: 'vms-tl-group' },
           h('div', { className: 'vms-tl-dir' },
-            h(Icon, { name: 'folder', size: 11 }),
+            h(Icon, { name: 'folder', size: 14 }),
             dir === '' ? '工作区根目录' : dir),
           h('div', { className: 'vms-tl-rows' },
             entries.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu }))))))))
@@ -214,7 +214,7 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', on
             return next
           }),
         },
-        h('span', { className: 'vms-tl-section-chevron' }, h(Icon, { name: 'chevronRight', size: 11 })),
+        h('span', { className: 'vms-tl-section-chevron' }, h(Icon, { name: 'chevronRight', size: 14 })),
         h('span', null, group.section.label),
         h('span', { className: 'vms-tl-section-count' }, `${group.nodes.length} 轮`)),
         open && h('div', { className: 'vms-tl-axis' },

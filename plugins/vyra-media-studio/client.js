@@ -2887,11 +2887,11 @@ var styles_default2 = `.vms-root {\r
 .vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r
 .vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r
 .vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r
-.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r
+.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--vms-ink3); }\r
 .vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r
 .vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r
 .vms-icon-btn {\r
-  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r
+  width: 34px; height: 34px; border: 0; border-radius: var(--vms-radius-control);\r
   display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r
 }\r
 .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r
@@ -2899,9 +2899,9 @@ var styles_default2 = `.vms-root {\r
 .vms-icon-btn:disabled { opacity: .45; cursor: default; }\r
 .vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r
 .vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r
-  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;\r
   border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r
-  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r
+  background: transparent; color: var(--vms-ink2); height: 34px; padding: 0 11px; font-size: 12px; white-space: nowrap;\r
 }\r
 .vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r
 .vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r
@@ -2912,12 +2912,12 @@ var styles_default2 = `.vms-root {\r
 \r
 .vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r
 .vms-search {\r
-  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r
+  flex: 1; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px;\r
   border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r
   transition: border-color 150ms, box-shadow 150ms;\r
 }\r
 .vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r
-.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r
+.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 13px; }\r
 .vms-search input::placeholder { color: var(--vms-ink4); }\r
 .vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r
 .vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r
@@ -2926,11 +2926,11 @@ var styles_default2 = `.vms-root {\r
 .vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r
 .vms-type-row::-webkit-scrollbar { display: none; }\r
 .vms-type-chip {\r
-  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px;\r
   border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r
   background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r
 }\r
-.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r
+.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; color: var(--vms-ink4); }\r
 .vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r
 .vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r
 .vms-type-chip.is-active b { color: inherit; opacity: .62; }\r
@@ -3009,8 +3009,8 @@ var styles_default2 = `.vms-root {\r
 .vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r
 .vms-mini-action:hover { background: rgba(8,10,14,.82); }\r
 .vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r
-.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
-.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
+.vms-card-info h3 { margin: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
+.vms-card-info p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
 .vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r
 .vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r
 \r
@@ -3057,18 +3057,18 @@ var styles_default2 = `.vms-root {\r
 \r
 .vms-rows { padding: 6px 10px 14px; }\r
 .vms-list-head {\r
-  display: grid; grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px;\r
-  gap: 9px; padding: 7px 8px 5px; font-size: 9px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r
+  display: grid; grid-template-columns: 62px minmax(0, 1fr) 86px 80px 68px 32px;\r
+  gap: 10px; padding: 8px 10px 6px; font-size: 10.5px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r
 }\r
 .vms-list-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
 .vms-list-head button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }\r
 .vms-list-head button:hover { color: var(--vms-ink2); }\r
 .vms-list-head button.is-active { color: var(--vms-ink); font-weight: 600; }\r
-.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r
-.vms-row[data-detail="detailed"] { grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px; }\r
+.vms-row { display: grid; grid-template-columns: 62px minmax(0, 1fr) 32px; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r
+.vms-row[data-detail="detailed"] { grid-template-columns: 62px minmax(0, 1fr) 86px 80px 68px 32px; }\r
 @media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r
 .vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r
-.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r
+.vms-row-thumb { position: relative; width: 62px; height: 40px; border-radius: 8px; overflow: hidden; background: #0d1016; }\r
 .vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r
 .vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster, .vms-row-thumb .vms-doc-poster { padding: 4px; }\r
 .vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r
@@ -3078,9 +3078,9 @@ var styles_default2 = `.vms-root {\r
 .vms-row-thumb .vms-doc-poster { align-items: center; justify-content: center; }\r
 .vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r
 .vms-row-main { min-width: 0; display: grid; gap: 2px; }\r
-.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
-.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
-.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r
+.vms-row-main b { font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
+.vms-row-main small { font-size: 11px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
+.vms-row-kind { font-size: 11px; display: flex; align-items: center; gap: 5px; color: var(--vms-ink3); }\r
 .vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r
 .vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r
 .vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r
@@ -3089,8 +3089,8 @@ var styles_default2 = `.vms-root {\r
 .vms-row-kind[data-kind="document"] { color: #6f8fd8; }\r
 .vms-row-kind[data-kind="archive"] { color: #c99a5b; }\r
 .vms-row-kind[data-kind="code"] { color: #7fb99a; }\r
-.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
-.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r
+.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r
+.vms-row-play { width: 30px; height: 30px; border: 0; border-radius: 8px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r
 .vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r
 @container (max-width: 560px) {\r
   .vms-row[data-detail="detailed"] { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r
@@ -3108,7 +3108,7 @@ var styles_default2 = `.vms-root {\r
 .vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r
 .vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px; }\r
 .vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r
-.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r
+.vms-status { flex: none; height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 11px; color: var(--vms-ink4); background: var(--vms-layer); }\r
 .vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r
 .vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r
 .vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r
@@ -3218,7 +3218,7 @@ var styles_default2 = `.vms-root {\r
 \r
 .vms-folder-row { position: relative; display: flex; align-items: center; gap: 7px; margin-top: 9px; min-width: 0; }\r
 .vms-crumb { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; flex: 1; }\r
-.vms-crumb-seg { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 2px 5px; border-radius: 6px; color: var(--vms-ink3); font-size: 10.5px; }\r
+.vms-crumb-seg { min-width: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 3px 6px; border-radius: 6px; color: var(--vms-ink3); font-size: 12px; }\r
 .vms-crumb-seg:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r
 .vms-crumb-seg.is-active { color: var(--vms-ink); font-weight: 550; }\r
 .vms-crumb-sep { color: var(--vms-ink4); flex: none; }\r
@@ -3449,7 +3449,7 @@ var styles_default2 = `.vms-root {\r
 /* Session-only filter. */\r
 .vms-session-row { display: flex; align-items: center; gap: 6px; margin-top: 9px; }\r
 .vms-session-btn {\r
-  display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px;\r
   border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r
   background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r
 }\r
@@ -3476,20 +3476,20 @@ var styles_default2 = `.vms-root {\r
 .vms-tl-section-head {\r
   position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 6px; width: 100%;\r
   padding: 5px 8px; border: 0; border-radius: 7px; cursor: pointer; text-align: left;\r
-  font-size: 9.5px; font-weight: 600; color: var(--vms-ink3);\r
+  font-size: 11px; font-weight: 600; color: var(--vms-ink3);\r
   background: color-mix(in srgb, var(--vms-layer) 92%, transparent); backdrop-filter: blur(8px);\r
 }\r
 .vms-tl-section-head:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r
 .vms-tl-section-chevron { display: grid; place-items: center; color: var(--vms-ink4); transition: transform 150ms var(--vms-ease); }\r
 .vms-tl-section-head[aria-expanded="true"] .vms-tl-section-chevron { transform: rotate(90deg); }\r
-.vms-tl-section-count { margin-left: auto; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); font-weight: 400; }\r
+.vms-tl-section-count { margin-left: auto; font-family: var(--dsh-font-family-code, monospace); font-size: 10px; color: var(--vms-ink4); font-weight: 400; }\r
 \r
 /* Axis: the vertical rail every turn hangs off. */\r
 .vms-tl-axis { position: relative; display: grid; gap: 8px; padding-left: 16px; }\r
 .vms-tl-axis::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 1px; background: var(--vms-line2); }\r
 \r
 .vms-tl-node {\r
-  position: relative; display: grid; gap: 6px; padding: 7px 9px;\r
+  position: relative; display: grid; gap: 7px; padding: 9px 11px;\r
   border: 0.5px solid var(--vms-line); border-radius: 10px; background: var(--vms-layer);\r
   transition: border-color 140ms, box-shadow 140ms;\r
 }\r
@@ -3506,48 +3506,48 @@ var styles_default2 = `.vms-root {\r
   padding: 1px 0; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left;\r
 }\r
 .vms-tl-head:hover { color: var(--vms-ink); }\r
-.vms-tl-clock { flex: none; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r
-.vms-tl-prompt { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vms-ink); }\r
-.vms-tl-count { flex: none; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r
+.vms-tl-clock { flex: none; font-family: var(--dsh-font-family-code, monospace); font-size: 11px; color: var(--vms-ink4); }\r
+.vms-tl-prompt { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--vms-ink); }\r
+.vms-tl-count { flex: none; font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; color: var(--vms-ink4); }\r
 .vms-tl-chevron { flex: none; display: grid; place-items: center; color: var(--vms-ink4); transition: transform 150ms var(--vms-ease); }\r
 .vms-tl-head[aria-expanded="true"] .vms-tl-chevron { transform: rotate(90deg); }\r
 .vms-tl-node.is-collapsed .vms-tl-dot { background: var(--vms-ink4); box-shadow: none; }\r
 \r
 /* Colour-coded type tag, shared by rows and tiles. */\r
 .vms-tl-tag {\r
-  flex: none; padding: 0 5px; border-radius: 4px; font-size: 8.5px; line-height: 15px;\r
+  flex: none; padding: 0 6px; border-radius: 4px; font-size: 10px; line-height: 18px;\r
   background: var(--vms-layer2); color: var(--vms-ink3); border: 0.5px solid var(--vms-line);\r
 }\r
-.vms-tl-diff { flex: none; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; }\r
+.vms-tl-diff { flex: none; font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; color: var(--vms-ink4); white-space: nowrap; }\r
 .vms-tl-diff.is-added { color: var(--vms-mint); }\r
 .vms-tl-diff.is-deleted { color: var(--vms-danger); }\r
 \r
 /* List layout */\r
 .vms-tl-group { display: grid; gap: 1px; }\r
-.vms-tl-dir { display: flex; align-items: center; gap: 4px; padding: 3px 2px 1px; font-size: 9px; color: var(--vms-ink4); }\r
+.vms-tl-dir { display: flex; align-items: center; gap: 5px; padding: 5px 2px 3px; font-size: 10.5px; color: var(--vms-ink4); }\r
 .vms-tl-rows { display: grid; gap: 1px; }\r
 .vms-tl-row {\r
-  display: flex; align-items: center; gap: 7px; width: 100%; min-height: 26px; padding: 2px 7px;\r
-  border: 0; border-left: 2px solid transparent; border-radius: 6px; background: transparent;\r
-  color: var(--vms-ink2); font-size: 10.5px; text-align: left;\r
+  display: flex; align-items: center; gap: 9px; width: 100%; min-height: 32px; padding: 3px 8px;\r
+  border: 0; border-left: 2px solid transparent; border-radius: 7px; background: transparent;\r
+  color: var(--vms-ink2); font-size: 12px; text-align: left;\r
 }\r
 .vms-tl-row:hover:not(.is-missing) { background: var(--vms-layer2); border-left-color: var(--vms-accent); color: var(--vms-ink); }\r
 .vms-tl-row.is-missing { opacity: .55; cursor: default; }\r
-.vms-tl-row-icon { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; }\r
+.vms-tl-row-icon { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; }\r
 .vms-tl-row-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\r
 \r
 /* Grid layout: tiles sized by the panel's zoom slider. */\r
-.vms-tl-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(112px, var(--vms-card-min, 158px)), 1fr)); gap: 6px; }\r
+.vms-tl-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(132px, var(--vms-card-min, 158px)), 1fr)); gap: 8px; }\r
 .vms-tl-tile {\r
-  display: grid; gap: 3px; padding: 8px; min-width: 0;\r
-  border: 0.5px solid var(--vms-line); border-radius: 9px; background: var(--vms-layer2);\r
+  display: grid; gap: 5px; padding: 10px; min-width: 0;\r
+  border: 0.5px solid var(--vms-line); border-radius: 10px; background: var(--vms-layer2);\r
   color: var(--vms-ink2); text-align: left;\r
   transition: border-color 140ms, transform 140ms var(--vms-ease), background 140ms;\r
 }\r
 .vms-tl-tile:hover:not(.is-missing) { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-layer); transform: translateY(-1px); }\r
 .vms-tl-tile.is-missing { opacity: .55; cursor: default; }\r
-.vms-tl-tile-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: var(--vms-layer3); }\r
-.vms-tl-tile-name { font-size: 10px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }\r
+.vms-tl-tile-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--vms-layer3); }\r
+.vms-tl-tile-name { font-size: 11.5px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }\r
 .vms-tl-tile-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }\r
 \r
 /* Per-kind colour, applied to the icon chip and the tag border. */\r
@@ -3576,31 +3576,46 @@ var styles_default2 = `.vms-root {\r
 .vms-tl-probe code { font-family: var(--dsh-font-family-code, monospace); color: var(--vms-ink3); }\r
 \r
 .vms-tl-error { display: block; max-width: 320px; margin: 2px 0 4px; padding: 5px 8px; border-radius: 6px; background: color-mix(in srgb, var(--vms-danger) 10%, transparent); color: var(--vms-danger); font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; text-align: left; overflow-wrap: anywhere; }\r
+\r
+/* File rows: a colour per type, a compact chip, and zebra striping for reading. */\r
+.vms-row-main b { display: flex; align-items: center; gap: 6px; }\r
+.vms-row-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\r
+.vms-row-icon { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--vms-layer2); color: var(--vms-ink3); }\r
+.vms-row-main small { display: flex; align-items: center; gap: 5px; }\r
+.vms-row-chip { flex: none; padding: 0 5px; border-radius: 4px; font-size: 10px; line-height: 17px; background: var(--vms-layer2); color: var(--vms-ink3); border: 0.5px solid var(--vms-line); }\r
+.vms-row-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\r
+.vms-row[data-kind="image"] .vms-row-icon { background: color-mix(in srgb, #4176e6 16%, transparent); color: #4176e6; }\r
+.vms-row[data-kind="video"] .vms-row-icon { background: color-mix(in srgb, #c28a2e 18%, transparent); color: #a8752a; }\r
+.vms-row[data-kind="audio"] .vms-row-icon { background: color-mix(in srgb, #2f9c7f 16%, transparent); color: #2f9c7f; }\r
+.vms-row[data-kind="document"] .vms-row-icon { background: color-mix(in srgb, #6f8fd8 16%, transparent); color: #5b7bc4; }\r
+.vms-row[data-kind="archive"] .vms-row-icon { background: color-mix(in srgb, #c99a5b 18%, transparent); color: #b0834a; }\r
+.vms-row[data-kind="code"] .vms-row-icon { background: color-mix(in srgb, #7fb99a 18%, transparent); color: #5f9c7d; }\r
+.vms-row[data-kind="link"] .vms-row-icon { background: color-mix(in srgb, #8b7ad8 16%, transparent); color: #8b7ad8; }\r
+.vms-row[data-kind="image"] .vms-row-chip { color: #4176e6; border-color: color-mix(in srgb, #4176e6 28%, transparent); }\r
+.vms-row[data-kind="video"] .vms-row-chip { color: #a8752a; border-color: color-mix(in srgb, #c28a2e 30%, transparent); }\r
+.vms-row[data-kind="audio"] .vms-row-chip { color: #2f9c7f; border-color: color-mix(in srgb, #2f9c7f 28%, transparent); }\r
+.vms-row[data-kind="document"] .vms-row-chip { color: #5b7bc4; border-color: color-mix(in srgb, #6f8fd8 28%, transparent); }\r
+.vms-row[data-kind="archive"] .vms-row-chip { color: #b0834a; border-color: color-mix(in srgb, #c99a5b 30%, transparent); }\r
+.vms-row[data-kind="code"] .vms-row-chip { color: #5f9c7d; border-color: color-mix(in srgb, #7fb99a 30%, transparent); }\r
+.vms-row[data-kind="link"] .vms-row-chip { color: #8b7ad8; border-color: color-mix(in srgb, #8b7ad8 28%, transparent); }\r
+.vms-rows .vms-row:nth-child(even) { background: color-mix(in srgb, var(--vms-layer2) 55%, transparent); }\r
+.vms-rows .vms-row:nth-child(even):hover { background: var(--vms-layer2); }\r
+.vms-row[data-selected] { border-left: 2px solid var(--vms-accent); }\r
 
-/* File rows: a colour per type, a compact chip, and zebra striping for reading. */
-.vms-row-main b { display: flex; align-items: center; gap: 6px; }
-.vms-row-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vms-row-icon { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: var(--vms-layer2); color: var(--vms-ink3); }
-.vms-row-main small { display: flex; align-items: center; gap: 5px; }
-.vms-row-chip { flex: none; padding: 0 4px; border-radius: 4px; font-size: 8.5px; line-height: 14px; background: var(--vms-layer2); color: var(--vms-ink3); border: 0.5px solid var(--vms-line); }
-.vms-row-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vms-row[data-kind="image"] .vms-row-icon { background: color-mix(in srgb, #4176e6 16%, transparent); color: #4176e6; }
-.vms-row[data-kind="video"] .vms-row-icon { background: color-mix(in srgb, #c28a2e 18%, transparent); color: #a8752a; }
-.vms-row[data-kind="audio"] .vms-row-icon { background: color-mix(in srgb, #2f9c7f 16%, transparent); color: #2f9c7f; }
-.vms-row[data-kind="document"] .vms-row-icon { background: color-mix(in srgb, #6f8fd8 16%, transparent); color: #5b7bc4; }
-.vms-row[data-kind="archive"] .vms-row-icon { background: color-mix(in srgb, #c99a5b 18%, transparent); color: #b0834a; }
-.vms-row[data-kind="code"] .vms-row-icon { background: color-mix(in srgb, #7fb99a 18%, transparent); color: #5f9c7d; }
-.vms-row[data-kind="link"] .vms-row-icon { background: color-mix(in srgb, #8b7ad8 16%, transparent); color: #8b7ad8; }
-.vms-row[data-kind="image"] .vms-row-chip { color: #4176e6; border-color: color-mix(in srgb, #4176e6 28%, transparent); }
-.vms-row[data-kind="video"] .vms-row-chip { color: #a8752a; border-color: color-mix(in srgb, #c28a2e 30%, transparent); }
-.vms-row[data-kind="audio"] .vms-row-chip { color: #2f9c7f; border-color: color-mix(in srgb, #2f9c7f 28%, transparent); }
-.vms-row[data-kind="document"] .vms-row-chip { color: #5b7bc4; border-color: color-mix(in srgb, #6f8fd8 28%, transparent); }
-.vms-row[data-kind="archive"] .vms-row-chip { color: #b0834a; border-color: color-mix(in srgb, #c99a5b 30%, transparent); }
-.vms-row[data-kind="code"] .vms-row-chip { color: #5f9c7d; border-color: color-mix(in srgb, #7fb99a 30%, transparent); }
-.vms-row[data-kind="link"] .vms-row-chip { color: #8b7ad8; border-color: color-mix(in srgb, #8b7ad8 28%, transparent); }
-.vms-rows .vms-row:nth-child(even) { background: color-mix(in srgb, var(--vms-layer2) 55%, transparent); }
-.vms-rows .vms-row:nth-child(even):hover { background: var(--vms-layer2); }
-.vms-row[data-selected] { border-left: 2px solid var(--vms-accent); }
+/* Toggle button shared by view, layout, detail and timeline controls.
+   It had no rule before, so these buttons rendered with browser defaults. */
+.vms-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  height: 34px; padding: 0 11px; white-space: nowrap;
+  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);
+  background: transparent; color: var(--vms-ink2); font-size: 12px;
+}
+.vms-toggle-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }
+.vms-toggle-btn.is-active {
+  background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent);
+  color: var(--vms-accent);
+}
+.vms-toggle-btn svg { flex: none; }
 `;
 
 // src/client/library.js
@@ -24919,7 +24934,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
         onClick: open,
         ...handlers
       },
-      h4("span", { className: "vms-tl-tile-icon" }, h4(Icon2, { name: kindIcon(kind, ext), size: 16 })),
+      h4("span", { className: "vms-tl-tile-icon" }, h4(Icon2, { name: kindIcon(kind, ext), size: 20 })),
       h4("span", { className: "vms-tl-tile-name" }, name),
       h4(
         "span",
@@ -24940,7 +24955,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
       onClick: open,
       ...handlers
     },
-    h4("span", { className: "vms-tl-row-icon" }, h4(Icon2, { name: kindIcon(kind, ext), size: 13 })),
+    h4("span", { className: "vms-tl-row-icon" }, h4(Icon2, { name: kindIcon(kind, ext), size: 16 })),
     h4("span", { className: "vms-tl-row-name" }, name),
     h4("span", { className: "vms-tl-tag" }, kind === "other" ? ext || "\u6587\u4EF6" : KIND_LABEL[kind]),
     h4(
@@ -24982,7 +24997,7 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
         h4("span", { className: "vms-tl-clock" }, clockOf(node.time)),
         h4("span", { className: "vms-tl-prompt", title: node.prompt }, node.prompt || "\uFF08\u65E0\u63D0\u793A\u8BCD\uFF09"),
         h4("span", { className: "vms-tl-count" }, files.length === 0 ? "\u65E0\u4EA7\u51FA" : `${files.length} \u4E2A\u6587\u4EF6`),
-        h4("span", { className: "vms-tl-chevron" }, h4(Icon2, { name: "chevronRight", size: 12 }))
+        h4("span", { className: "vms-tl-chevron" }, h4(Icon2, { name: "chevronRight", size: 15 }))
       ),
       open && files.length > 0 && (layout === "grid" ? h4(
         "div",
@@ -24994,7 +25009,7 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
         h4(
           "div",
           { className: "vms-tl-dir" },
-          h4(Icon2, { name: "folder", size: 11 }),
+          h4(Icon2, { name: "folder", size: 14 }),
           dir === "" ? "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55" : dir
         ),
         h4(
@@ -25088,7 +25103,7 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, o
               return next;
             })
           },
-          h4("span", { className: "vms-tl-section-chevron" }, h4(Icon2, { name: "chevronRight", size: 11 })),
+          h4("span", { className: "vms-tl-section-chevron" }, h4(Icon2, { name: "chevronRight", size: 14 })),
           h4("span", null, group.section.label),
           h4("span", { className: "vms-tl-section-count" }, `${group.nodes.length} \u8F6E`)
         ),
@@ -25420,9 +25435,9 @@ function LibraryBody(props) {
     },
     [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly]
   );
-  const timelineMode = view === "timeline";
-  const timelineLayout = listMode === "timelineGrid" ? "grid" : "list";
-  const treeMode = view === "list" && listMode === "tree";
+  const timelineMode = sessionOnly;
+  const timelineLayout = view === "grid" ? "grid" : "list";
+  const treeMode = !timelineMode && view === "list" && listMode === "tree";
   (0, import_react10.useEffect)(() => {
     const controller = new AbortController();
     let alive = true;
@@ -26053,11 +26068,11 @@ function LibraryBody(props) {
             {
               type: "button",
               className: "vms-toggle-btn",
-              title: "\u7F51\u683C \u2192 \u5217\u8868 \u2192 \u65F6\u95F4\u7EBF",
-              onClick: () => setView((value) => value === "grid" ? "list" : value === "list" ? "timeline" : "grid")
+              title: view === "grid" ? "\u5F53\u524D\u7F51\u683C\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u5217\u8868" : "\u5F53\u524D\u5217\u8868\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u7F51\u683C",
+              onClick: () => setView((value) => value === "grid" ? "list" : "grid")
             },
-            h6(Icon2, { name: view === "grid" ? "grid" : view === "list" ? "list" : "clock", size: 13 }),
-            view === "grid" ? "\u7F51\u683C" : view === "list" ? "\u5217\u8868" : "\u65F6\u95F4\u7EBF"
+            h6(Icon2, { name: view === "grid" ? "grid" : "list", size: 16 }),
+            view === "grid" ? "\u7F51\u683C" : "\u5217\u8868"
           )
         )
       ),
@@ -26070,7 +26085,7 @@ function LibraryBody(props) {
           h6(Icon2, { name: "search", size: 14 }),
           h6("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
         ),
-        (view === "grid" || timelineMode && timelineLayout === "grid") && h6(
+        view === "grid" && h6(
           "div",
           { className: "vms-zoom" },
           h6(IconButton3, { name: "zoomOut", label: "\u7F29\u5C0F\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.max(CARD_MIN, value - 16)) }),
@@ -26086,19 +26101,13 @@ function LibraryBody(props) {
           }),
           h6(IconButton3, { name: "zoomIn", label: "\u653E\u5927\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.min(CARD_MAX, value + 16)) })
         ),
-        timelineMode && h6("button", {
-          type: "button",
-          className: "vms-toggle-btn",
-          title: timelineLayout === "grid" ? "\u5F53\u524D\u7F29\u7565\u56FE\u7F51\u683C\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u6E05\u5355" : "\u5F53\u524D\u6E05\u5355\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u7F29\u7565\u56FE\u7F51\u683C",
-          onClick: () => setListMode((value) => value === "timelineGrid" ? "timelineList" : "timelineGrid")
-        }, h6(Icon2, { name: timelineLayout === "grid" ? "grid" : "list", size: 13 }), timelineLayout === "grid" ? "\u7F51\u683C" : "\u6E05\u5355"),
-        view === "list" && h6("button", {
+        !timelineMode && view === "list" && h6("button", {
           type: "button",
           className: "vms-toggle-btn",
           title: listMode === "tree" ? "\u5F53\u524D\u6811\u5F62\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u5E73\u94FA" : "\u5F53\u524D\u5E73\u94FA\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u6811\u5F62",
           onClick: () => setListMode((value) => value === "tree" ? "flat" : "tree")
         }, h6(Icon2, { name: listMode === "tree" ? "folderOpen" : "list", size: 13 }), listMode === "tree" ? "\u6811\u5F62" : "\u5E73\u94FA"),
-        view === "list" && h6("button", {
+        !timelineMode && view === "list" && h6("button", {
           type: "button",
           className: "vms-toggle-btn",
           title: detail === "compact" ? "\u5F53\u524D\u7B80\u6D01\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u8BE6\u7EC6" : "\u5F53\u524D\u8BE6\u7EC6\uFF0C\u70B9\u51FB\u5207\u6362\u4E3A\u7B80\u6D01",
@@ -26300,7 +26309,20 @@ function LibraryBody(props) {
         h6("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
         items.length > 0 && h6("button", { type: "button", className: "vms-primary-btn", onClick: clearFilters }, "\u6E05\u9664\u7B5B\u9009")
       ),
-      !state.error && (filtered.length > 0 || timelineMode || treeMode && showEmptyFolders && folders.length > 0) && (view === "grid" ? h6("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item) => h6(GridCard, {
+      !state.error && timelineMode && h6(
+        "div",
+        { className: "vms-timeline-wrap", style: { "--vms-card-min": `${cardSize}px` } },
+        h6(SessionTimeline, {
+          nodes: turns,
+          items,
+          layout: timelineLayout,
+          diagnostics: timelineDiagnostics,
+          onOpen: (entry) => setOverlayId(entry.id),
+          onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
+          onFallback: () => setSessionOnly(false)
+        })
+      ),
+      !state.error && !timelineMode && (filtered.length > 0 || treeMode && showEmptyFolders && folders.length > 0) && (view === "grid" ? h6("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item) => h6(GridCard, {
         key: item.id,
         item,
         sessionId,
@@ -26313,19 +26335,7 @@ function LibraryBody(props) {
         dragBind: dragDrop.bind,
         suppressClick: dragDrop.suppressNextClick,
         onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
-      }))) : timelineMode ? h6(
-        "div",
-        { className: "vms-timeline-wrap", style: { "--vms-card-min": `${cardSize}px` } },
-        h6(SessionTimeline, {
-          nodes: turns,
-          items,
-          layout: timelineLayout,
-          diagnostics: timelineDiagnostics,
-          onOpen: (entry) => setOverlayId(entry.id),
-          onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
-          onFallback: () => setListMode("tree")
-        })
-      ) : treeMode ? h6(
+      }))) : treeMode ? h6(
         "div",
         { className: "vms-tree-wrap" },
         detail === "detailed" && h6(

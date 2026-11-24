@@ -189,9 +189,11 @@ export function LibraryBody(props) {
   useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly }) },
     [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly])
 
-  const timelineMode = view === 'timeline'
-  const timelineLayout = listMode === 'timelineGrid' ? 'grid' : 'list'
-  const treeMode = view === 'list' && listMode === 'tree'
+  // The timeline is how the current-session filter renders, not a separate
+  // view: `view` picks the tile grid or the row list in both modes.
+  const timelineMode = sessionOnly
+  const timelineLayout = view === 'grid' ? 'grid' : 'list'
+  const treeMode = !timelineMode && view === 'list' && listMode === 'tree'
 
   useEffect(() => {
     const controller = new AbortController()
@@ -813,15 +815,15 @@ export function LibraryBody(props) {
           h(IconButton, { name: 'refresh', label: '重新扫描', onClick: refresh }),
           h('button', {
             type: 'button', className: 'vms-toggle-btn',
-            title: '网格 → 列表 → 时间线',
-            onClick: () => setView(value => value === 'grid' ? 'list' : value === 'list' ? 'timeline' : 'grid'),
-          }, h(Icon, { name: view === 'grid' ? 'grid' : view === 'list' ? 'list' : 'clock', size: 13 }),
-          view === 'grid' ? '网格' : view === 'list' ? '列表' : '时间线'))),
+            title: view === 'grid' ? '当前网格，点击切换为列表' : '当前列表，点击切换为网格',
+            onClick: () => setView(value => value === 'grid' ? 'list' : 'grid'),
+          }, h(Icon, { name: view === 'grid' ? 'grid' : 'list', size: 16 }),
+          view === 'grid' ? '网格' : '列表'))),
       h('div', { className: 'vms-search-row' },
         h('label', { className: 'vms-search' },
           h(Icon, { name: 'search', size: 14 }),
           h('input', { value: query, placeholder: '搜索名称、路径、类型或链接…', onChange: event => setQuery(event.target.value) })),
-        (view === 'grid' || (timelineMode && timelineLayout === 'grid')) && h('div', { className: 'vms-zoom' },
+        view === 'grid' && h('div', { className: 'vms-zoom' },
           h(IconButton, { name: 'zoomOut', label: '缩小缩略图', onClick: () => setCardSize(value => Math.max(CARD_MIN, value - 16)) }),
           h('input', {
             type: 'range', min: CARD_MIN, max: CARD_MAX, step: 4, value: cardSize,
@@ -829,17 +831,12 @@ export function LibraryBody(props) {
             onChange: event => setCardSize(Number(event.target.value)),
           }),
           h(IconButton, { name: 'zoomIn', label: '放大缩略图', onClick: () => setCardSize(value => Math.min(CARD_MAX, value + 16)) })),
-        timelineMode && h('button', {
-          type: 'button', className: 'vms-toggle-btn',
-          title: timelineLayout === 'grid' ? '当前缩略图网格，点击切换为清单' : '当前清单，点击切换为缩略图网格',
-          onClick: () => setListMode(value => value === 'timelineGrid' ? 'timelineList' : 'timelineGrid'),
-        }, h(Icon, { name: timelineLayout === 'grid' ? 'grid' : 'list', size: 13 }), timelineLayout === 'grid' ? '网格' : '清单'),
-        view === 'list' && h('button', {
+        !timelineMode && view === 'list' && h('button', {
           type: 'button', className: 'vms-toggle-btn',
           title: listMode === 'tree' ? '当前树形，点击切换为平铺' : '当前平铺，点击切换为树形',
           onClick: () => setListMode(value => value === 'tree' ? 'flat' : 'tree'),
         }, h(Icon, { name: listMode === 'tree' ? 'folderOpen' : 'list', size: 13 }), listMode === 'tree' ? '树形' : '平铺'),
-        view === 'list' && h('button', {
+        !timelineMode && view === 'list' && h('button', {
           type: 'button', className: 'vms-toggle-btn',
           title: detail === 'compact' ? '当前简洁，点击切换为详细' : '当前详细，点击切换为简洁',
           onClick: () => setDetail(value => value === 'compact' ? 'detailed' : 'compact'),
@@ -935,7 +932,17 @@ export function LibraryBody(props) {
         h('b', null, '没有匹配的文件'),
         h('p', null, items.length === 0 ? '这个工作区还没有文件。' : '试试减少筛选条件，或换一个文件夹。'),
         items.length > 0 && h('button', { type: 'button', className: 'vms-primary-btn', onClick: clearFilters }, '清除筛选')),
-      !state.error && (filtered.length > 0 || timelineMode || (treeMode && showEmptyFolders && folders.length > 0)) && (view === 'grid'
+      !state.error && timelineMode && h('div', { className: 'vms-timeline-wrap', style: { '--vms-card-min': `${cardSize}px` } },
+        h(SessionTimeline, {
+          nodes: turns,
+          items,
+          layout: timelineLayout,
+          diagnostics: timelineDiagnostics,
+          onOpen: entry => setOverlayId(entry.id),
+          onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
+          onFallback: () => setSessionOnly(false),
+        })),
+      !state.error && !timelineMode && (filtered.length > 0 || (treeMode && showEmptyFolders && folders.length > 0)) && (view === 'grid'
         ? h('div', { ref: gridRef, className: 'vms-grid', style: { '--vms-card-min': `${cardSize}px` } }, shown.map(item => h(GridCard, {
           key: item.id, item, sessionId,
           meta: metaFor(item),
@@ -948,18 +955,7 @@ export function LibraryBody(props) {
           suppressClick: dragDrop.suppressNextClick,
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
         })))
-        : timelineMode
-          ? h('div', { className: 'vms-timeline-wrap', style: { '--vms-card-min': `${cardSize}px` } },
-            h(SessionTimeline, {
-              nodes: turns,
-              items,
-              layout: timelineLayout,
-              diagnostics: timelineDiagnostics,
-              onOpen: entry => setOverlayId(entry.id),
-              onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
-              onFallback: () => setListMode('tree'),
-            }))
-          : treeMode
+        : treeMode
           ? h('div', { className: 'vms-tree-wrap' },
             detail === 'detailed' && h('div', { className: 'vms-tree-head' },
               h('span', null, ''), h('span', null, ''), h('span', null, '名称'),
