@@ -458,7 +458,7 @@ window.__ModuleLoader__.load({
      * commit exists, which costs one extra commit; there is no shorter path,
      * because a commit cannot name itself.
      */
-    const VEYRA_COMMIT = '7507b48b8b636c12b4a058dfa0e0a35b84f1afc8'
+    const VEYRA_COMMIT = '0000000000000000000000000000000000000000'
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
       `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index.json`,
@@ -1529,7 +1529,7 @@ a.vfm_btn{text-decoration:none}
         defaultOpen,
         summary: collapsed ? (list.length > 0 ? t('endpoints.models', { n: list.reduce((sum, row) => sum + (row.models?.length ?? 0), 0) }) : t('endpoints.empty')) : undefined,
         hint: t('endpoints.hint'),
-        action: h(Btn, { kind: 'primary', onClick: () => openDraft() }, t('endpoints.add')),
+        action: h(Btn, { kind: 'quiet', onClick: () => openDraft() }, t('endpoints.add')),
       },
       error !== '' ? h('p', { className: 'vfm_error' }, t('endpoints.failed', { message: truncate(error, 200) })) : null,
       note !== '' ? h('p', { className: 'vfm_note' }, note) : null,
@@ -1812,7 +1812,7 @@ a.vfm_btn{text-decoration:none}
       h('div', { className: 'vfm_workbench' },
         h('div', { className: 'vfm_workbenchrow' },
           h(Btn, {
-            kind: 'primary',
+            kind: 'quiet',
             disabled: phase === 'installing',
             onClick: () => void install(),
           }, label),

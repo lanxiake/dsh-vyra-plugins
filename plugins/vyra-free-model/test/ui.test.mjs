@@ -340,6 +340,33 @@ test('jsDelivr 源按 commit 固定，不用 @master 那种 12 小时缓存', ()
   assert.equal(all.every(url => !url.includes('@' + '0'.repeat(40))), true, 'a placeholder may not ship')
 })
 
+// ── one button language ────────────────────────────────────────────────────
+
+test('「添加接口」和「一键安装插件市场」与「刷新积分 / 添加账号」是同一种按钮', () => {
+  // Measured in a browser: a primary button paints a blue fill with dark text
+  // and reads nothing like the quiet actions beside it, which is why these two
+  // looked like the styling had been lost. The reference actions are quiet.
+  const source = readFileSync(clientPath, 'utf8')
+  const endpointsAction = /action: h\(Btn, \{ kind: '([a-z]+)', onClick: \(\) => openDraft\(\) \}/.exec(source)?.[1]
+  assert.equal(endpointsAction, 'quiet', '添加接口 must use the quiet kind')
+
+  // The install card's only Btn is the install/update action.
+  const workbench = source.slice(source.indexOf('function WorkbenchCard'), source.indexOf('function LoginModal'))
+  const kinds = [...workbench.matchAll(/kind: '([a-z]+)'/g)].map(match => match[1])
+  assert.deepEqual(kinds, ['quiet'], '一键安装插件市场 must use the quiet kind')
+})
+
+test('两个按钮的尺寸与参考按钮一致（同 padding / 字级 / 圆角）', () => {
+  const base = /\.vfm_btn\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(base.includes('padding:5px 12px'))
+  assert.ok(base.includes('font-size:12.5px'))
+  assert.ok(base.includes('border-radius:8px'))
+  // The quiet kind must not restyle size, only colour — otherwise the two would
+  // still not line up beside 「刷新积分」.
+  const quiet = /\.vfm_btn\[data-kind="quiet"\]\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.equal(/padding|font-size|height|border-radius/.test(quiet), false, 'quiet only changes colour')
+})
+
 test('ensureMarketSource 只在没有 Veyra 源时追加，且不改动其他源', async () => {
   const calls = []
   const remote = {
