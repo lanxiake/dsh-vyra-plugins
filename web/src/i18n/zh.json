@@ -1,0 +1,62 @@
+{
+  "notFound": "页面不存在。",
+  "nav": {
+    "browse": "插件目录",
+    "docs": "使用说明",
+    "github": "GitHub"
+  },
+  "home": {
+    "title": "DeepSeek Harness 插件目录",
+    "subtitle": "多源聚合、跨源去重。一处查看插件、安装方式与版本。",
+    "statTotal": "收录插件",
+    "statInstallable": "可一键安装",
+    "statSources": "数据源",
+    "browse": "浏览目录",
+    "featured": "Vyra 出品",
+    "sources": "数据来源"
+  },
+  "browse": {
+    "title": "插件目录",
+    "search": "搜索名称、描述或标签",
+    "all": "全部",
+    "empty": "没有匹配的插件",
+    "sortStars": "按 Star",
+    "sortUpdated": "按更新时间",
+    "sortName": "按名称",
+    "top": "推荐",
+    "count": "个插件"
+  },
+  "detail": {
+    "install": "安装",
+    "copy": "复制命令",
+    "copied": "已复制",
+    "version": "版本",
+    "updated": "更新于",
+    "category": "分类",
+    "sources": "来源",
+    "homepage": "主页",
+    "repo": "仓库",
+    "notFound": "没有找到这个插件。",
+    "noInstall": "该插件没有可直接执行的安装命令，请查看仓库说明。",
+    "back": "返回目录"
+  },
+  "docs": {
+    "title": "使用说明",
+    "intro": "本站是多源聚合的 DeepSeek Harness 插件目录。数据在构建时从各索引源拉取、去重后生成，页面本身是静态的。",
+    "installTitle": "安装插件",
+    "installBody": "在 DSH 客户端里打开「设置 → 插件」，搜索插件名即可安装；也可以直接用命令行：",
+    "indexTitle": "添加索引源",
+    "indexBody": "在「设置 → 插件 → 索引源」里加入下面任意一个地址。国内选 GitCode 源，海外选 GitHub 源。",
+    "indexDomestic": "国内（GitCode）",
+    "indexOverseas": "海外（GitHub）",
+    "sourceTitle": "数据来源",
+    "sourceBody": "本站聚合以下索引源，去重规则以包名 + 仓库所有者为键，同名 fork 不会被合并。"
+  },
+  "badge": {
+    "manual": "手动安装"
+  },
+  "common": {
+    "loading": "加载中…",
+    "error": "数据加载失败。请先运行 npm run build:site-data 生成 site.json。"
+  }
+}

@@ -19,7 +19,12 @@
     "media:video": "node --experimental-strip-types plugins/vyra-studymate/scripts/media-video.mjs",
     "typecheck": "tsc --noEmit",
     "check:installable": "node scripts/check-installable.mjs",
-    "contact": "node scripts/add-contact-block.mjs"
+    "contact": "node scripts/add-contact-block.mjs",
+    "build:site-data": "node scripts/build-site-data.mjs --only=own",
+    "build:site-data:all": "node scripts/build-site-data.mjs --cache=.cache/sources",
+    "setup:site": "npm --prefix web install",
+    "dev:site": "npm --prefix web run dev",
+    "build:site": "node scripts/build-site-data.mjs --only=own && npm --prefix web run build"
   },
   "devDependencies": {
     "tsx": "^4.23.13",

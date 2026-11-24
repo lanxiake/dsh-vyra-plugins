@@ -1,0 +1,62 @@
+{
+  "notFound": "Page not found.",
+  "nav": {
+    "browse": "Plugins",
+    "docs": "Docs",
+    "github": "GitHub"
+  },
+  "home": {
+    "title": "DeepSeek Harness Plugin Directory",
+    "subtitle": "Aggregated from multiple indexes and deduplicated. Browse plugins, install commands and versions in one place.",
+    "statTotal": "Plugins",
+    "statInstallable": "One-click installable",
+    "statSources": "Sources",
+    "browse": "Browse plugins",
+    "featured": "By Vyra",
+    "sources": "Data sources"
+  },
+  "browse": {
+    "title": "Plugins",
+    "search": "Search name, description or tag",
+    "all": "All",
+    "empty": "No matching plugins",
+    "sortStars": "By stars",
+    "sortUpdated": "By updated",
+    "sortName": "By name",
+    "top": "Top picks",
+    "count": "plugins"
+  },
+  "detail": {
+    "install": "Install",
+    "copy": "Copy command",
+    "copied": "Copied",
+    "version": "Version",
+    "updated": "Updated",
+    "category": "Category",
+    "sources": "Sources",
+    "homepage": "Homepage",
+    "repo": "Repository",
+    "notFound": "Plugin not found.",
+    "noInstall": "No runnable install command for this plugin. Check the repository README.",
+    "back": "Back to plugins"
+  },
+  "docs": {
+    "title": "Docs",
+    "intro": "This site is a multi-source directory for DeepSeek Harness plugins. The catalog is fetched, deduplicated and generated at build time; the pages themselves are static.",
+    "installTitle": "Installing a plugin",
+    "installBody": "Open Settings → Plugins in the DSH client and search for the package name, or run:",
+    "indexTitle": "Adding an index source",
+    "indexBody": "Add either URL under Settings → Plugins → Index sources. Use the GitCode source in mainland China and the GitHub source elsewhere.",
+    "indexDomestic": "Mainland (GitCode)",
+    "indexOverseas": "Overseas (GitHub)",
+    "sourceTitle": "Data sources",
+    "sourceBody": "This site aggregates the following indexes. Deduplication is keyed by package name plus repository owner, so forks with the same package name are never merged."
+  },
+  "badge": {
+    "manual": "Manual install"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Failed to load the catalog. Run npm run build:site-data to generate site.json."
+  }
+}

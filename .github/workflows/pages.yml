@@ -1,0 +1,81 @@
+name: pages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'web/**'
+      - 'scripts/**'
+      - 'docs/index.json'
+      - 'docs/index-github.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 各索引源的原始响应缓存：跨构建复用，避免每次全量拉取
+      - uses: actions/cache@v4
+        with:
+          path: .cache/sources
+          key: site-sources-${{ hashFiles('scripts/build-site-data.mjs') }}
+          restore-keys: site-sources-
+
+      - name: Build catalog
+        run: node scripts/build-site-data.mjs --cache=.cache/sources
+
+      - name: Install web deps
+        working-directory: web
+        run: npm install --no-audit --no-fund
+
+      - name: Build site
+        working-directory: web
+        env:
+          # GitHub Pages 项目站固定挂在仓库名路径下；
+          # 换自定义域名后删掉这一行（默认就是根路径 /）。
+          SITE_BASE: /dsh-vyra-plugins/
+        run: npm run build
+
+      # 保持现有索引 URL 不变
+      - name: Keep index URLs
+        run: |
+          cp docs/index.json web/dist/index.json
+          cp docs/index-github.json web/dist/index-github.json
+
+      # GitHub Pages 没有 SPA 回退，复制一份 404.html
+      - name: SPA fallback
+        run: cp web/dist/index.html web/dist/404.html
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

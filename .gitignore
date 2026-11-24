@@ -14,3 +14,12 @@ plugins/vyra-free-model/.preview.png
 plugins/vyra-free-model/.preview-expanded.html
 plugins/vyra-free-model/.preview-shot.png
 plugins/vyra-free-model/.preview-expanded.png
+
+# site build artifacts
+web/dist/
+web/node_modules/
+web/public/site/
+.cache/sources/
+
+# IDE
+.idea/
