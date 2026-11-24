@@ -483,6 +483,60 @@ export class DingtalkRuntime {
     return { sent: true };
   }
 
+  /**
+   * Send one file or image to a saved DingTalk target without a Session.
+   * The API uploads the media first, then sends the matching robot message.
+   * @param target - normalized delivery target (`route.userId` or `route.openConversationId`).
+   * @param file - `{ fileName, bytes, asImage? }`.
+   * @param options.signal - caller cancellation.
+   */
+  async sendProactiveFile(target, file, { signal, asImage = false } = {}) {
+    const userId = typeof target?.route?.userId === 'string'
+      ? target.route.userId.trim() : '';
+    const openConversationId = typeof target?.route?.openConversationId === 'string'
+      ? target.route.openConversationId.trim() : '';
+    if ((target?.kind === 'user' && (!userId || openConversationId))
+      || (target?.kind === 'group' && (!openConversationId || userId))
+      || (target?.kind !== 'user' && target?.kind !== 'group')) {
+      const error = new TypeError('Invalid DingTalk proactive delivery target');
+      error.code = 'invalid-target';
+      throw error;
+    }
+    if (!this.#status.ready || !this.#abortController) {
+      const error = new Error('DingTalk runtime is not connected');
+      error.code = 'bot-not-connected';
+      throw error;
+    }
+    const method = asImage ? 'sendImage' : 'sendFile';
+    if (typeof this.#api[method] !== 'function') {
+      throw Object.assign(new Error('capability-unavailable'), { code: 'capability-unavailable' });
+    }
+    signal?.throwIfAborted();
+    try {
+      await this.#api[method]({
+        clientId: this.#config.clientId,
+        clientSecret: this.#clientSecret,
+        target: {
+          type: target.kind,
+          robotCode: this.#config.clientId,
+          ...(target.kind === 'user' ? { userId } : { openConversationId }),
+        },
+        file,
+        signal: signal ?? this.#abortController.signal,
+      });
+    } catch (cause) {
+      if (signal?.aborted) throw cause;
+      const code = cause?.code;
+      const error = new Error(cause?.message ?? 'DingTalk proactive file delivery failed', { cause });
+      error.code = code === 'send-rejected' || code === 'artifact-too-large'
+        || code === 'artifact-provider-rejected'
+        ? 'target-rejected'
+        : 'delivery-failed';
+      throw error;
+    }
+    return { sent: true };
+  }
+
   #pendingSenders() {
     return typeof this.#state.pendingSenders === 'function'
       ? this.#state.pendingSenders()

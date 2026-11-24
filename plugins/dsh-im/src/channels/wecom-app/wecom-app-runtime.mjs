@@ -35,6 +35,15 @@ export function createWecomAppRuntimeStatus() {
 // channel there is no outbound WebSocket: the runtime registers a callback
 // route on the shared WecomAppCallbackServer and replies either passively
 // (stream) or through the cgi-bin message/send API.
+/** Map a WeCom app provider failure onto the public delivery error codes. */
+function wecomAppProactiveFileError(cause, stage) {
+  const error = new Error(cause?.message ?? `Enterprise WeChat app ${stage} failed`, { cause });
+  error.code = ['target-rejected', 'delivery-failed', 'bad-request'].includes(cause?.code)
+    ? (cause.code === 'bad-request' ? 'target-rejected' : cause.code)
+    : 'delivery-failed';
+  return error;
+}
+
 export class WecomAppRuntime {
   #config;
   #secrets;
@@ -220,6 +229,58 @@ export class WecomAppRuntime {
     for (const chunk of chunks) {
       if (!chunk) continue;
       await this.#api.sendText({ userId: chatId, content: chunk, signal });
+    }
+    return { sent: true };
+  }
+
+  /**
+   * Send one file or image to a saved WeCom app target without a Session.
+   * Two API calls: upload to obtain a media id, then a native media message.
+   * @param target - normalized delivery target (`kind: 'user'`, `route.chatId`).
+   * @param file - `{ fileName, bytes, asImage? }`.
+   * @param options.signal - caller cancellation.
+   */
+  async sendProactiveFile(target, file, { signal, asImage = false } = {}) {
+    const chatId = typeof target?.route?.chatId === 'string' ? target.route.chatId.trim() : '';
+    if (target?.kind !== 'user' || !chatId) {
+      const error = new TypeError('Invalid Enterprise WeChat app proactive delivery target');
+      error.code = 'invalid-target';
+      throw error;
+    }
+    if (!this.#started || !this.#api) {
+      const error = new WecomAppError('bot-not-connected', 'Enterprise WeChat app runtime is not connected');
+      error.code = 'bot-not-connected';
+      throw error;
+    }
+    if (typeof this.#api.uploadMedia !== 'function' || typeof this.#api.sendMedia !== 'function') {
+      throw Object.assign(new Error('capability-unavailable'), { code: 'capability-unavailable' });
+    }
+    const mediaType = asImage ? 'image' : 'file';
+    signal?.throwIfAborted();
+    let uploaded;
+    try {
+      uploaded = await this.#api.uploadMedia({
+        type: mediaType,
+        bytes: file.bytes,
+        filename: file.fileName,
+        signal,
+      });
+    } catch (cause) {
+      if (signal?.aborted) throw cause;
+      throw wecomAppProactiveFileError(cause, 'upload');
+    }
+    signal?.throwIfAborted();
+    const mediaId = typeof uploaded?.media_id === 'string' ? uploaded.media_id.trim() : '';
+    if (!mediaId) {
+      throw Object.assign(new Error('Enterprise WeChat app upload returned no media id'), {
+        code: 'target-rejected',
+      });
+    }
+    try {
+      await this.#api.sendMedia({ userId: chatId, mediaType, mediaId, signal });
+    } catch (cause) {
+      if (signal?.aborted) throw cause;
+      throw wecomAppProactiveFileError(cause, 'send');
     }
     return { sent: true };
   }

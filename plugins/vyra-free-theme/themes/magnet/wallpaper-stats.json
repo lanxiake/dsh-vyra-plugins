@@ -1,0 +1,16 @@
+{
+  "recipe": "magnet-field",
+  "seed": 5,
+  "light": {
+    "stdLuma": 0.0511,
+    "edgeEnergy": 0.0053,
+    "width": 2048,
+    "height": 1280
+  },
+  "dark": {
+    "stdLuma": 0.0448,
+    "edgeEnergy": 0.0055,
+    "width": 2048,
+    "height": 1280
+  }
+}

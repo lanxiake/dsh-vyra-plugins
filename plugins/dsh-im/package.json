@@ -1,6 +1,6 @@
 {
-  "name": "@xmanrui/dsh-im",
-  "version": "5.10.0",
+  "name": "@lanxiake/dsh-im",
+  "version": "5.13.0",
   "icon": "./assets/logo-plugin-message-link-gradient.webp",
   "description": "把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix接入DSH。 Connect Telegram, WhatsApp, Slack, Discord, Matrix, WeChat, Feishu, WeCom, DingTalk, and QQ to DSH.",
   "keywords": [
@@ -25,22 +25,31 @@
     "matrix",
     "ai-office"
   ],
-  "author": "xmanrui (https://github.com/xmanrui)",
+  "author": "lanxiake (https://github.com/lanxiake)",
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xmanrui/dsh-im.git"
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/dsh-im"
   },
-  "homepage": "https://github.com/xmanrui/dsh-im#readme",
+  "homepage": "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/dsh-im#readme",
   "bugs": {
-    "url": "https://github.com/xmanrui/dsh-im/issues"
+    "url": "https://github.com/lanxiake/dsh-vyra-plugins/issues"
   },
   "publishConfig": {
     "access": "public"
   },
   "bin": {
     "dsh-im": "bin/dsh-im.mjs"
+  },
+  "scripts": {
+    "build": "node plugin-src/host/build.mjs",
+    "verify:agent-tools": "node scripts/verify-agent-tools.mjs",
+    "verify:cli": "node scripts/verify-cli.mjs",
+    "verify:service-file": "node scripts/verify-service-file.mjs",
+    "verify:idempotency": "node scripts/verify-idempotency.mjs",
+    "verify": "node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs"
   },
   "main": "./lib/index.js",
   "exports": {
@@ -53,10 +62,15 @@
     "assets",
     "bin",
     "cordis.patch.yml",
+    "skills",
     "lib",
     "locale/*.json",
     "plugin-src",
     "scripts/telegram-menu-scopes.mjs",
+    "scripts/verify-agent-tools.mjs",
+    "scripts/verify-cli.mjs",
+    "scripts/verify-service-file.mjs",
+    "scripts/verify-idempotency.mjs",
     "scripts/verify-interface-language.mjs",
     "scripts/verify-injected-context.mjs",
     "scripts/verify-lan-management.mjs",
@@ -114,6 +128,14 @@
     "qrcode": "1.5.4",
     "undici": "7.30.1"
   },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-skill-filesystem": "^0.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-skill-filesystem": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
     "@larksuiteoapi/node-sdk": "1.73.0",
@@ -133,5 +155,11 @@
   "optionalDependencies": {
     "@tencent-qqmail/agently-cli": "^1.0.18",
     "sharp": "0.35.5"
-  }
+  },
+  "contributors": [
+    {
+      "name": "xmanrui",
+      "url": "https://github.com/xmanrui"
+    }
+  ]
 }

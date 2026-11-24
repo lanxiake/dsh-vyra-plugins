@@ -86,6 +86,13 @@ const SSH_TERMINAL_ICON =
 const SYSTEM_SELECTION_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KICA8cGF0aCBkPSJNNCAzaDRNNCAzdjRNMjAgM2gtNE0yMCAzdjRNNCAyMWg0TTQgMjF2LTRNMjAgMjFoLTRNMjAgMjF2LTQiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05IDEyaDdNMTMgOWwzIDMtMyAzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=='
 /** Inline icon for `vyra-theme-styles`. */
+/**
+ * Icon for 自由主题: a framed wall with one bright field behind it — the plugin
+ * replaces the client's appearance, walls included.
+ */
+const FREE_THEME_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHZpZXdCb3g9IjAgMCAzNiAzNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ImRzaC1za2lucyI+DQogIDwhLS0gZHNoLXNraW5zIOearuiCpO+8muS4ieW8oOaJh+W9ouiJsuWNoe+8iOe0qy/pnZIv6JOd77yJ57uV5bqV6YOo5p6i6L20IMKxMzDCsCDlsZXlvIAgPSDlpJrlpZflk4HniYznmq7ogqTng63liIfmjaIgLS0+DQogIDxyZWN0IHg9IjExLjUiIHk9IjkuNSIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3LjUiIHJ4PSIzLjIiIGZpbGw9InVybCgjdikiIHRyYW5zZm9ybT0icm90YXRlKC0zMCAxOCAyOSkiLz4NCiAgPHJlY3QgeD0iMTEuNSIgeT0iOS41IiB3aWR0aD0iMTMiIGhlaWdodD0iMTcuNSIgcng9IjMuMiIgZmlsbD0idXJsKCN0KSIvPg0KICA8cmVjdCB4PSIxMS41IiB5PSI5LjUiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNy41IiByeD0iMy4yIiBmaWxsPSJ1cmwoI2IpIiB0cmFuc2Zvcm09InJvdGF0ZSgzMCAxOCAyOSkiLz4NCiAgPGRlZnM+DQogICAgPGxpbmVhckdyYWRpZW50IGlkPSJiIiB4MT0iMTEuNSIgeTE9IjkuNSIgeDI9IjI0LjUiIHkyPSIyNyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPg0KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzY5QjlGRiIvPg0KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzI0REUyIi8+DQogICAgPC9saW5lYXJHcmFkaWVudD4NCiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InQiIHgxPSIxMS41IiB5MT0iOS41IiB4Mj0iMjQuNSIgeTI9IjI3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+DQogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNDVFN0E0Ii8+DQogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwNTkwOUQiLz4NCiAgICA8L2xpbmVhckdyYWRpZW50Pg0KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idiIgeDE9IjExLjUiIHkxPSI5LjUiIHgyPSIyNC41IiB5Mj0iMjciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4NCiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiNCMThDRkYiLz4NCiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzZDNERFMiIvPg0KICAgIDwvbGluZWFyR3JhZGllbnQ+DQogIDwvZGVmcz4NCjwvc3ZnPg0K'
+
 const THEME_STYLES_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTEyIDNhOSA5IDAgMCAxIDAgMThjLTEuNCAwLTIuMi0uOS0yLjItMiAwLS42LjItMSAuNi0xLjQuNC0uNC42LS44LjYtMS4zIDAtMS0uOC0xLjgtMS44LTEuOEg3LjZBNC42IDQuNiAwIDAgMSAzIDkuOUMzIDYuMSA3IDMgMTIgM1oiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICA8Y2lyY2xlIGN4PSIxNS44IiBjeT0iOS40IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgo8L3N2Zz4K'
 /** Inline icon for `vyra-agent-cli-manager`. */
@@ -845,6 +852,35 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'browser',
         keywords: ['selection', 'translate', 'clipboard', 'windows'],
+      },
+    },
+    {
+      name: 'vyra-free-theme',
+      title: {
+        en: 'Free Theme',
+        zh: '自由主题',
+      },
+      description: {
+        en: 'Replaces the client appearance with a whole theme: colours, shape, sidebar treatment and a wallpaper that can be an image, a looping video or code. Ships several finished themes, and a CLI plus skill so an agent can build, check and switch them. The wallpaper can cover the left menu or stay in the conversation area.',
+        zh: '把客户端外观整体换掉：配色、圆角、左侧菜单样式，以及一张可以是图片、无缝循环视频或代码的壁纸。自带几套成品主题，并提供 CLI 与技能，让 Agent 能自己建主题、检配色、切换。壁纸可以选择覆盖左侧菜单，或只留在对话区。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-free-theme',
+      },
+      icon: FREE_THEME_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795449013,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0b99710f38803c1700e036f5fb6093eb6da7491b',
+            path: 'plugins/vyra-free-theme',
+          },
+        },
       },
     },
     {
@@ -2257,8 +2293,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 免费模型',
       },
       description: {
-        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, a sign-in dialog with the link when a browser blocks the popup, multiple accounts with balances on one page (CodeBuddy / WorkBuddy included), any OpenAI-compatible endpoint you already have a key for, and automatic retry on another model when the router fails.',
-        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、登录弹窗（浏览器被拦截时可复制链接）、多账号与积分管理（含 CodeBuddy / WorkBuddy）、任何已有 Key 的 OpenAI 兼容接口，以及自动选择失败时换模型重试。',
+        en: 'Free models with no sign-up and no API key: pick one and chat. Real availability checks, a sign-in dialog with the link when a browser blocks the popup, multiple accounts with balances on one page (CodeBuddy / WorkBuddy included), any OpenAI-compatible endpoint you already have a key for, and automatic retry on another model when the router fails. One click installs the Vyra plugin market and adds its index source, and the plugin ships a DSH onboarding skill that helps the agent recommend and install a plugin set for your needs.',
+        zh: '装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。真实可用性检测、登录弹窗（浏览器被拦截时可复制链接）、多账号与积分管理（含 CodeBuddy / WorkBuddy）、任何已有 Key 的 OpenAI 兼容接口，以及自动选择失败时换模型重试。设置页可一键安装 Vyra 插件市场并添加索引源；插件还会初始化一个 DSH 使用指南技能，帮 Agent 按你的需求推荐并安装插件组合。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2337,6 +2373,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.5.0 adds the one-click plugin-market install (with the Veyra index
+        // source), the vyra-dsh-guide onboarding skill, and DSH usage tips.
+        '0.5.0': {
+          publishTimestamp: 1795910400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f69c668810065a2de558a4fc9450bd6b8c9fb4f7',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
@@ -2350,8 +2397,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 录屏截图',
       },
       description: {
-        en: 'Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM to a configurable library; manage files, format and shortcuts from a settings page; hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.',
-        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM 到可配置的存储目录；设置页管理文件、格式、快捷键和隐藏 DSH 截图；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。',
+        en: 'Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM; configure separate video and screenshot folders, format and shortcuts in the settings page; screenshots stay fast with no loading overlay and can hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.',
+        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM；设置页可分别配置视频与截图的存储目录、格式和快捷键；截图走常驻服务、不显示加载提示，单张几十毫秒，也可以隐藏 DSH 截取其他应用；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2381,6 +2428,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-screen-recorder',
           },
         },
+        // 0.3.0 keeps a resident capture process (screenshots in tens of ms,
+        // no loading UI captured) and splits video/screenshot storage folders.
+        '0.3.0': {
+          publishTimestamp: 1796083200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '9a5a7c54d330abe302975d12b839a4ee15e01665',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
       },
       metadata: {
         category: 'media',
@@ -2388,34 +2446,34 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: '@xmanrui/dsh-im',
+      name: '@lanxiake/dsh-im',
       title: {
         en: 'Instant Messaging Bridge',
         zh: '即时通讯桥接',
       },
       description: {
-        en: 'Connect WeChat, Feishu, WeCom, DingTalk, QQ, Telegram, WhatsApp, Slack, Discord and Matrix to DSH.',
-        zh: '把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH。',
+        en: 'Connect WeChat, Feishu, WeCom, DingTalk, QQ, Telegram, WhatsApp, Slack, Discord and Matrix to DSH, with Agent tools for proactive messages and files.',
+        zh: '把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH；Agent 可直接主动发送文字和文件。',
       },
-      author: 'xmanrui',
-      homepage: 'https://github.com/xmanrui/dsh-im#readme',
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/dsh-im#readme',
       repository: {
-        url: 'https://github.com/xmanrui/dsh-im',
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
       },
       versions: {
-        '5.10.0': {
-          publishTimestamp: 1794967200,
+        '5.13.0': {
+          publishTimestamp: 1795446358,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
+            commit: '036c3dbc58eef1304f4a0e36741c436fdf7ba3d7',
             path: 'plugins/dsh-im',
           },
         },
       },
       metadata: {
         category: 'integration',
-        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord'],
+        keywords: ['im', 'wechat', 'feishu', 'telegram', 'slack', 'discord', 'agent', 'skill', 'lanxiake'],
       },
     },
     {

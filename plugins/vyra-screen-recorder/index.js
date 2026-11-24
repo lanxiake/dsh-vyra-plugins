@@ -7,7 +7,8 @@
  * getDisplayMedia / chromeMediaSource 都拿不到流（实测 NotAllowedError，
  * 旧路径甚至会让渲染进程崩溃）。所以抓屏放在宿主进程：
  *
- *   截图：lib/shot.ps1     → GDI 抓一块屏幕 → JPEG
+ *   截图：lib/shot-server.ps1 → 常驻抓屏服务，GDI 抓一块屏幕 → JPEG
+ *         （lib/shot.ps1 是冷启动回退路径）
  *   录屏：lib/frames.ps1   → 按帧率抓 JPEG 帧 + frames.jsonl 时间戳
  *   声音：lib/audio.ps1    → WASAPI 回环录默认播放设备 → WAV
  *
@@ -88,6 +89,8 @@ function dshHome() {
 
 const DEFAULT_SETTINGS = {
   dir: '',
+  videoDir: '',
+  shotDir: '',
   format: 'mp4',
   fps: 8,
   quality: 65,
@@ -107,13 +110,17 @@ function normalizeShortcut(value, fallback) {
   return typeof value === 'string' && /^([A-Za-z0-9+_-]{1,40})$/.test(value.trim()) ? value.trim() : fallback
 }
 
+function absoluteDir(value) {
+  return typeof value === 'string' && value.trim() && path.isAbsolute(value.trim()) ? value.trim() : ''
+}
+
 function normalizeSettings(raw) {
   const value = raw && typeof raw === 'object' ? raw : {}
-  const dir = typeof value.dir === 'string' && value.dir.trim() && path.isAbsolute(value.dir.trim())
-    ? value.dir.trim()
-    : ''
+  const dir = absoluteDir(value.dir)
   return {
     dir,
+    videoDir: absoluteDir(value.videoDir),
+    shotDir: absoluteDir(value.shotDir),
     format: value.format === 'webm' ? 'webm' : 'mp4',
     fps: clamp(value.fps, 4, 12, DEFAULT_SETTINGS.fps),
     quality: clamp(value.quality, 40, 90, DEFAULT_SETTINGS.quality),
@@ -159,11 +166,15 @@ function libraryRoot(settings) {
 }
 
 function recordingsDir(settings) {
-  return process.env.VSR_RECORDINGS_DIR || path.join(libraryRoot(settings), 'recordings')
+  if (process.env.VSR_RECORDINGS_DIR) return process.env.VSR_RECORDINGS_DIR
+  if (settings && settings.videoDir) return settings.videoDir
+  return path.join(libraryRoot(settings), 'recordings')
 }
 
 function screenshotsDir(settings) {
-  return process.env.VSR_SCREENSHOTS_DIR || path.join(libraryRoot(settings), 'screenshots')
+  if (process.env.VSR_SCREENSHOTS_DIR) return process.env.VSR_SCREENSHOTS_DIR
+  if (settings && settings.shotDir) return settings.shotDir
+  return path.join(libraryRoot(settings), 'screenshots')
 }
 
 async function ensureLibrary(settings) {
@@ -245,6 +256,136 @@ function waitReady(child, label, timeoutMs) {
     })
     child.once('error', error => finish(error))
   })
+}
+
+// ------------------------------------------------------- 常驻截图服务
+// 一次 PowerShell 冷启动 + 加载 C# 要 2 秒以上；截图必须接近原生速度，
+// 所以把类型和进程都留住。请求串行排队，崩溃或超时后自动重启/回退。
+
+let shotServer = null
+let shotServerRetryAt = 0
+
+function stopShotServer() {
+  const server = shotServer
+  shotServer = null
+  if (server === null) return
+  server.stopping = true
+  try { server.child.stdin.write('quit\n') } catch { /* ignore */ }
+  try { server.child.kill() } catch { /* ignore */ }
+  for (const pending of server.pending.splice(0)) pending.finish('截图服务已停止')
+}
+
+function startShotServer() {
+  if (shotServer !== null) return shotServer
+  if (process.platform !== 'win32') return null
+  const file = path.join(LIB, 'shot-server.ps1')
+  if (!existsSync(file)) return null
+  if (Date.now() < shotServerRetryAt) return null
+
+  const child = spawn(POWERSHELL, [
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+    '-File', file,
+  ], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
+  const server = {
+    child,
+    pending: [],
+    buffer: '',
+    ready: false,
+    stopping: false,
+    readyReject: null,
+    readyPromise: null,
+  }
+  server.readyPromise = new Promise((resolve, reject) => {
+    server.readyResolve = resolve
+    server.readyReject = reject
+  })
+  // 预热失败不该把 rejection 抛成未处理异常；真正请求时会看到 readyPromise 失败。
+  server.readyPromise.catch(() => {})
+  child.stdin.setDefaultEncoding('utf8')
+  child.stdout.setEncoding('utf8')
+  child.stderr.setEncoding('utf8')
+  child.stderr.on('data', chunk => {
+    const text = String(chunk).trim()
+    if (text) log('shot-server stderr：' + text.slice(0, 300))
+  })
+  child.stdout.on('data', chunk => {
+    server.buffer += chunk
+    let index = server.buffer.indexOf('\n')
+    while (index >= 0) {
+      const line = server.buffer.slice(0, index).trim()
+      server.buffer = server.buffer.slice(index + 1)
+      if (line === 'READY') {
+        server.ready = true
+        server.readyResolve()
+      } else if (line) {
+        const pending = server.pending.shift()
+        if (pending !== undefined) pending.finish(line)
+      }
+      index = server.buffer.indexOf('\n')
+    }
+  })
+  child.once('exit', code => {
+    if (shotServer === server) shotServer = null
+    const error = new Error('截图服务退出（' + code + '）')
+    if (!server.ready) {
+      if (!server.stopping) shotServerRetryAt = Date.now() + 60000
+      server.readyReject(error)
+    }
+    for (const pending of server.pending.splice(0)) pending.finish(error.message)
+  })
+  child.once('error', () => {
+    if (shotServer === server) shotServer = null
+    if (!server.stopping) shotServerRetryAt = Date.now() + 60000
+    server.readyReject(new Error('截图服务启动失败'))
+    for (const pending of server.pending.splice(0)) pending.finish('截图服务启动失败')
+  })
+
+  shotServer = server
+  return server
+}
+
+/** 发一条截图请求，返回 OK/ERR 行。 */
+function sendShotRequest(server, request) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const index = server.pending.indexOf(entry)
+      if (index >= 0) server.pending.splice(index, 1)
+      stopShotServer()
+      reject(new Error('截图超时'))
+    }, 8000)
+    const entry = {
+      finish(line) {
+        clearTimeout(timer)
+        if (line.startsWith('OK')) resolve(line)
+        else reject(new Error(line.replace(/^ERR\s*/, '') || '截图失败'))
+      },
+    }
+    server.pending.push(entry)
+    try {
+      server.child.stdin.write(JSON.stringify(request) + '\n')
+    } catch (error) {
+      clearTimeout(timer)
+      const index = server.pending.indexOf(entry)
+      if (index >= 0) server.pending.splice(index, 1)
+      stopShotServer()
+      reject(error)
+    }
+  })
+}
+
+/**
+ * 用常驻服务抓图；返回 OK 行，服务不可用时返回 null 让调用方回退一次性脚本。
+ */
+async function captureShotFast(request) {
+  const server = startShotServer()
+  if (server === null) return null
+  try {
+    await server.readyPromise
+    return await sendShotRequest(server, request)
+  } catch (error) {
+    log('常驻截图失败，改用一次性脚本：', (error && error.message) || error)
+    return null
+  }
 }
 
 function waitExit(child, timeoutMs) {
@@ -633,22 +774,34 @@ async function handleShot(req, res) {
   const dir = await mkdtemp(path.join(tmpdir(), SESSION_PREFIX + 'shot-'))
   const file = path.join(dir, 'shot.jpg')
   try {
-    const args = ['-Out', file, '-Quality', '88']
-    if (region) args.push('-Region', region)
-    if (hideDsh) args.push('-HideDsh', '-DshPid', String(process.ppid))
-    const child = runPowerShell('shot.ps1', args)
-    let stderr = ''
     let stdout = ''
-    child.stderr.setEncoding('utf8')
-    child.stderr.on('data', chunk => { stderr += chunk })
-    child.stdout.setEncoding('utf8')
-    child.stdout.on('data', chunk => { stdout += chunk })
-    const exited = await new Promise(resolve => {
-      const timer = setTimeout(() => { try { child.kill() } catch { /* ignore */ } resolve(false) }, 20000)
-      child.once('exit', code => { clearTimeout(timer); resolve(code === 0) })
-      child.once('error', () => { clearTimeout(timer); resolve(false) })
+    // 快路径：常驻服务里类型已加载，只剩抓图 + 编码。
+    const fast = await captureShotFast({
+      out: file,
+      quality: 88,
+      region,
+      hideDsh,
+      dshPid: hideDsh ? process.ppid : 0,
     })
-    if (!exited) throw new Error('截图超时' + (stderr ? '：' + stderr.slice(0, 200) : ''))
+    if (fast !== null) {
+      stdout = fast
+    } else {
+      const args = ['-Out', file, '-Quality', '88']
+      if (region) args.push('-Region', region)
+      if (hideDsh) args.push('-HideDsh', '-DshPid', String(process.ppid))
+      const child = runPowerShell('shot.ps1', args)
+      let stderr = ''
+      child.stderr.setEncoding('utf8')
+      child.stderr.on('data', chunk => { stderr += chunk })
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', chunk => { stdout += chunk })
+      const exited = await new Promise(resolve => {
+        const timer = setTimeout(() => { try { child.kill() } catch { /* ignore */ } resolve(false) }, 20000)
+        child.once('exit', code => { clearTimeout(timer); resolve(code === 0) })
+        child.once('error', () => { clearTimeout(timer); resolve(false) })
+      })
+      if (!exited) throw new Error('截图超时' + (stderr ? '：' + stderr.slice(0, 200) : ''))
+    }
     const buffer = await readFile(file)
     if (buffer.length === 0) throw new Error('截图是空的')
     const hiddenMatch = /hidden=(\d+)/.exec(stdout)
@@ -1035,6 +1188,11 @@ function resolveWebServer(scope) {
 export function apply(ctx) {
   cleanupOldSessions().catch(() => {})
   void installAgentAssets().catch(error => log('安装技能/CLI 失败：', (error && error.message) || error))
+  // 预热常驻截图服务：PowerShell 冷启动和 C# 加载都放后台，第一次截图就快。
+  try { startShotServer() } catch (error) { log('截图服务预热失败：', (error && error.message) || error) }
+  try {
+    ctx.effect(() => () => stopShotServer(), 'vyra-screen-recorder: shot server')
+  } catch { /* ignore */ }
   try {
     const agentTimer = setInterval(() => { void agentTick() }, 500)
     ctx.effect(() => () => {
@@ -1077,4 +1235,8 @@ export function apply(ctx) {
   }
 }
 
-export const __test = { safeName, normalizeSource, clamp, readFrames, countFrames }
+export const __test = {
+  safeName, normalizeSource, clamp, readFrames, countFrames,
+  normalizeSettings, recordingsDir, screenshotsDir,
+  captureShotFast, startShotServer, stopShotServer,
+}

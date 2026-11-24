@@ -782,6 +782,91 @@ export class FeishuRuntime {
     return { sent: true, receipt: { version: 1, messageId, conversationId } };
   }
 
+  /**
+   * Send one file or image to a saved target without opening a Session.
+   *
+   * Mirrors `sendProactiveText`: the same receive-id resolution and abort
+   * signal, then the same upload-then-message pair the in-chat artifact path
+   * uses. Bytes are already materialized by the delivery service.
+   * @param target - normalized delivery target.
+   * @param file - `{ fileName, bytes, asImage? }`.
+   * @param options.signal - caller cancellation.
+   */
+  async sendProactiveFile(target, file, { signal, asImage = false } = {}) {
+    if (!this.#status.ready || !this.#client) {
+      const error = new Error('飞书机器人尚未连接');
+      error.code = 'bot-not-connected';
+      throw error;
+    }
+    const receiveIdType = target?.kind === 'user' ? 'open_id'
+      : target?.kind === 'group' ? 'chat_id' : null;
+    const receiveId = target?.kind === 'user'
+      ? nonEmptyString(target?.route?.openId)
+      : target?.kind === 'group'
+        ? nonEmptyString(target?.route?.chatId)
+        : null;
+    if (!receiveIdType || !receiveId) {
+      const error = new TypeError('Invalid Feishu proactive delivery target');
+      error.code = 'invalid-target';
+      throw error;
+    }
+    const fileName = nonEmptyString(file?.fileName);
+    const bytes = file?.bytes;
+    if (!fileName || !Buffer.isBuffer(bytes) || bytes.length === 0) {
+      const error = new TypeError('A non-empty file is required');
+      error.code = 'bad-request';
+      throw error;
+    }
+    if (bytes.length > 30 * 1024 * 1024) {
+      const error = new TypeError('File exceeds the 30 MB Feishu limit');
+      error.code = 'bad-request';
+      throw error;
+    }
+    signal?.throwIfAborted();
+    const activeSignal = signal
+      ? AbortSignal.any([signal, this.#abortController.signal])
+      : this.#abortController.signal;
+    const uploaded = await waitForFeishuOperation(() => (
+      asImage
+        ? this.#client.im.v1.image.create({
+          data: { image_type: 'message', image: bytes },
+        })
+        : this.#client.im.v1.file.create({
+          data: { file_type: 'stream', file_name: fileName, file: bytes },
+        })
+    ), {
+      signal: activeSignal,
+      timeoutMs: this.#requestTimeoutMs,
+      stage: `proactive ${asImage ? 'image' : 'file'} upload (${this.#requestTimeoutMs}ms)`,
+    });
+    const resourceKey = asImage
+      ? uploaded?.image_key ?? uploaded?.data?.image_key
+      : uploaded?.file_key ?? uploaded?.data?.file_key;
+    if (typeof resourceKey !== 'string' || !resourceKey) {
+      const error = new Error('Feishu upload returned no resource key');
+      error.code = 'target-rejected';
+      throw error;
+    }
+    const response = await waitForFeishuOperation(() => this.#client.im.v1.message.create({
+      params: { receive_id_type: receiveIdType },
+      data: {
+        receive_id: receiveId,
+        msg_type: asImage ? 'image' : 'file',
+        content: JSON.stringify(asImage ? { image_key: resourceKey } : { file_key: resourceKey }),
+      },
+    }), {
+      signal: activeSignal,
+      timeoutMs: this.#requestTimeoutMs,
+      stage: `proactive ${asImage ? 'image' : 'file'} send (${this.#requestTimeoutMs}ms)`,
+    });
+    if (response?.code && response.code !== 0) {
+      const error = new Error(`Feishu proactive file delivery failed: ${response.msg || response.code}`);
+      error.code = 'target-rejected';
+      throw error;
+    }
+    return { sent: true };
+  }
+
   async historyChecked(identity, route, query, { signal } = {}) {
     const client = this.#client;
     if (!client || this.#consumerMode !== 'external-consumer')

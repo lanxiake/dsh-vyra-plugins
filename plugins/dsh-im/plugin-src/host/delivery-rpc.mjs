@@ -55,6 +55,10 @@ function validTargetId(value) {
   return typeof value === 'string' && /^[A-Za-z0-9._:@-]{1,128}$/.test(value);
 }
 
+function validIdempotencyKey(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(value);
+}
+
 function validConversationKey(value) {
   return typeof value === 'string' && Boolean(value) && value.length <= 1_024
     && value.trim() === value && !/[\u0000-\u001f\u007f]/u.test(value);
@@ -80,10 +84,13 @@ function validPayload(endpoint, payload) {
   if (!ENDPOINTS.has(endpoint) || !isRecord(payload)) return false;
   if (endpoint === DELIVERY_ENDPOINTS.listDsBotSessions) return exactKeys(payload, []);
   if (endpoint === DELIVERY_ENDPOINTS.send) {
-    return (exactKeys(payload, ['botId', 'targetId', 'text'])
-        || (exactKeys(payload, ['botId', 'targetId', 'text', 'format'])
-          && ['plain', 'markdown'].includes(payload.format)))
+    const keys = ['botId', 'targetId', 'text'];
+    if (payload.format !== undefined) keys.push('format');
+    if (payload.idempotencyKey !== undefined) keys.push('idempotencyKey');
+    return exactKeys(payload, keys)
       && validBotId(payload.botId) && validTargetId(payload.targetId)
+      && (payload.format === undefined || ['plain', 'markdown'].includes(payload.format))
+      && (payload.idempotencyKey === undefined || validIdempotencyKey(payload.idempotencyKey))
       && typeof payload.text === 'string' && Boolean(payload.text.trim());
   }
   if (endpoint === DELIVERY_ENDPOINTS.listTargets
@@ -165,6 +172,7 @@ export function createDeliveryRpcHandler(service) {
         value = await service.send(payload.botId, payload.targetId, payload.text, {
           signal,
           ...(payload.format === undefined ? {} : { format: payload.format }),
+          ...(payload.idempotencyKey === undefined ? {} : { idempotencyKey: payload.idempotencyKey }),
         });
       } else if (endpoint === DELIVERY_ENDPOINTS.listTargets) {
         value = await service.listTargets(payload.botId);

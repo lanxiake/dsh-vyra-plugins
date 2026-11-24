@@ -91,10 +91,12 @@ test('client.js 注册录屏/截图工具条和浮层', () => {
     'shell.overlay',
     'settings.section',
     'settings.section.icon',
+    'plugins.bundle.config',
   ])
   assert.equal(registered[0].id, 'vyra-screen-recorder.tools')
   assert.equal(registered[1].id, 'vyra-screen-recorder.overlay')
   assert.equal(registered[2].id, 'vyra-screen-recorder')
+  assert.equal(registered[4].key, 'vyra-screen-recorder')
   assert.equal(typeof module.__test.attachFile, 'function')
   for (const dispose of disposers) {
     try { dispose() } catch { /* ignore */ }

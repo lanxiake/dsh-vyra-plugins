@@ -1,0 +1,10 @@
+{
+  "recipe": "liquid-blob",
+  "seed": 11,
+  "dark": {
+    "stdLuma": 0.0476,
+    "edgeEnergy": 0.0044,
+    "width": 1280,
+    "height": 720
+  }
+}

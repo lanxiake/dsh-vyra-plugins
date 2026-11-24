@@ -178,7 +178,7 @@ try {
   const packages = {
     '@deepseek-ai/dsh-base': resolve(harnessRoot, 'packages/bundle/base'),
     '@deepseek-ai/dsh-web-app': resolve(harnessRoot, 'packages/bundle/web-app'),
-    '@xmanrui/dsh-im': pluginRoot,
+    '@lanxiake/dsh-im': pluginRoot,
   };
   for (const [name, path] of Object.entries(packages)) {
     const target = join(profile, 'node_modules', name);

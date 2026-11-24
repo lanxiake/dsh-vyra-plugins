@@ -154,6 +154,20 @@ window.__ModuleLoader__.load({
         'forward.copy': '复制',
         'forward.copied': '已复制',
 
+        'workbench.title': '还想要更多',
+        'workbench.hint': '装好插件市场，就能搜索、批量安装、启停更多插件，把 DSH 扩成自己的工作台。',
+        'workbench.install': '一键安装插件市场',
+        'workbench.installing': '正在安装…',
+        'workbench.installed': '插件市场已安装',
+        'workbench.installedHint': '重启 DSH 后，在左侧栏或「设置 → 插件」里打开。',
+        'workbench.added': '已加入 Veyra 插件源。',
+        'workbench.failed': '安装失败：{message}',
+        'workbench.unsupported': '当前 DSH 版本不支持一键安装，请到「设置 → 插件」手动安装。',
+        'workbench.tipsTitle': '怎么开始',
+        'workbench.tip1': '直接说你要做什么，比如「把这份文档整理成一页 PPT」。',
+        'workbench.tip2': '不知道从哪开始，就问 Agent：「根据我的需求推荐一组插件」。',
+        'workbench.tip3': '插件装完一般要重启 DSH；「设置 → 插件」里可以启停和更新。',
+
         'degrade.laneDown': '暂时连不上，请检查网络',
         'degrade.laneThrottled': '免费额度暂时用完，稍后再试或登录一个账号',
         'degrade.accountsFailed': '账号功能暂时不可用',
@@ -294,6 +308,20 @@ window.__ModuleLoader__.load({
         'forward.copy': 'Copy',
         'forward.copied': 'Copied',
 
+        'workbench.title': 'Want more?',
+        'workbench.hint': 'Install the plugin market to search, batch-install and toggle plugins — turn DSH into your own workbench.',
+        'workbench.install': 'One-click install plugin market',
+        'workbench.installing': 'Installing…',
+        'workbench.installed': 'Plugin market installed',
+        'workbench.installedHint': 'Restart DSH, then open it from the sidebar or Settings → Plugins.',
+        'workbench.added': 'Veyra index source added.',
+        'workbench.failed': 'Install failed: {message}',
+        'workbench.unsupported': 'This DSH version cannot install it in one click; use Settings → Plugins.',
+        'workbench.tipsTitle': 'How to start',
+        'workbench.tip1': 'Say what you want to do, e.g. “turn this document into a one-page deck”.',
+        'workbench.tip2': 'Not sure where to start? Ask the agent: “recommend a plugin set for my needs”.',
+        'workbench.tip3': 'Restart DSH after installing plugins; Settings → Plugins can toggle and update them.',
+
         'degrade.laneDown': 'Cannot reach it right now; check the network.',
         'degrade.laneThrottled': 'The free quota is used up for now. Try later, or sign in.',
         'degrade.accountsFailed': 'Accounts are unavailable right now.',
@@ -362,6 +390,104 @@ window.__ModuleLoader__.load({
         return payload
       } finally {
         clearTimeout(timer)
+      }
+    }
+
+    // ── plugin market ────────────────────────────────────────────────────────
+    // One click installs our market plugin and adds the Veyra index source.
+    // The Host's own remote namespaces do the work; when they are missing the
+    // card explains that instead of offering a dead button.
+
+    const VEYRA_MARKET = 'vyra-plugin-market'
+    const VEYRA_DOMESTIC = [
+      'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
+    ]
+    const VEYRA_OVERSEAS = [
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json',
+      'https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json',
+    ]
+    const VEYRA_SOURCES = [...VEYRA_DOMESTIC, ...VEYRA_OVERSEAS]
+    // Only when neither index is reachable: a published market version that
+    // cannot drift, because no index was read to find it.
+    const MARKET_FALLBACK_SPEC = 'git+https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git#59f7357925115f39b8996423f3779f2365010739&path:/plugins/vyra-plugin-market'
+
+    /** The Host context, captured in apply(); the card reads `remote` from it. */
+    let hostContext = null
+
+    /** The Host's remote namespace, as of right now. */
+    function hostRemote() {
+      try {
+        if (hostContext === null) return null
+        return hostContext.reflect?.get?.('remote', false)
+          ?? hostContext.get?.('remote')
+          ?? hostContext.remote
+          ?? null
+      } catch {
+        return null
+      }
+    }
+
+    /**
+     * One market version's install spec, in the shape `pluginManager` takes.
+     * @param {object} entry - an index entry.
+     * @returns {string|null} the spec, or null when the version carries none.
+     */
+    function marketInstallSpec(entry) {
+      const version = Array.isArray(entry?.versions) ? entry.versions[0] : null
+      if (version === null) return null
+      if (typeof version?.install?.spec === 'string') return version.install.spec
+      const source = version?.source
+      if (source?.type === 'git' && typeof source.url === 'string' && typeof source.commit === 'string') {
+        const url = source.url.replace(/^git\+/i, '')
+        return 'git+' + url + '#' + source.commit + (source.path ? '&path:/' + source.path : '')
+      }
+      if (typeof entry?.name === 'string' && typeof version?.version === 'string') return entry.name + '@' + version.version
+      return null
+    }
+
+    /** Read the Veyra index (domestic first) and resolve our market's spec. */
+    async function resolveMarket() {
+      for (const url of [...VEYRA_DOMESTIC, ...VEYRA_OVERSEAS]) {
+        try {
+          const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+          if (!response.ok) continue
+          const document = await response.json()
+          const entries = Array.isArray(document?.plugins) ? document.plugins : []
+          const entry = entries.find(item => item?.name === VEYRA_MARKET)
+          const spec = marketInstallSpec(entry)
+          if (spec !== null) return { spec, url }
+        } catch { /* try the next source */ }
+      }
+      return { spec: MARKET_FALLBACK_SPEC, url: VEYRA_DOMESTIC[0] }
+    }
+
+    /** Make sure one Veyra index source is configured. Failure is not fatal. */
+    async function ensureMarketSource(remote, preferred) {
+      try {
+        if (typeof remote?.pluginMarket?.listIndexes !== 'function') return false
+        const current = await remote.pluginMarket.listIndexes()
+        const urls = current?.ok && Array.isArray(current.value)
+          ? current.value.map(item => item?.url).filter(url => typeof url === 'string' && url !== '')
+          : []
+        if (VEYRA_SOURCES.some(url => urls.includes(url))) return false
+        if (typeof remote.pluginMarket.setIndexes !== 'function') return false
+        await remote.pluginMarket.setIndexes([preferred, ...urls])
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    /** Whether the market bundle is already installed; null when not knowable. */
+    async function marketInstalled(remote) {
+      try {
+        if (typeof remote?.pluginManager?.listBundles !== 'function') return null
+        const answer = await remote.pluginManager.listBundles()
+        if (!answer?.ok || !Array.isArray(answer.value)) return null
+        return answer.value.some(bundle => bundle?.name === VEYRA_MARKET)
+      } catch {
+        return null
       }
     }
 
@@ -579,6 +705,13 @@ window.__ModuleLoader__.load({
 .vfm_modalTitle{margin:0;font-size:14px;font-weight:600}
 .vfm_modalurl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
 .vfm_modalacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ── more plugins and DSH tips ──────────────────────────────────────────── */
+.vfm_workbench{display:flex;flex-direction:column;gap:8px}
+.vfm_workbenchrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.vfm_workbenchfail{color:#c0392b}
+.vfm_tips{display:flex;flex-direction:column;gap:4px;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:12px}
+.vfm_tips ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
 `
 
     // ── primitives ───────────────────────────────────────────────────────────
@@ -1323,6 +1456,88 @@ window.__ModuleLoader__.load({
      * all need the URL itself. The link is selectable, copyable, and one more
      * click can open it.
      */
+    /**
+     * The "want more" card: one click installs vyra-plugin-market and adds the
+     * Veyra index source, then leaves three sentences about how to use DSH.
+     */
+    function WorkbenchCard() {
+      const [phase, setPhase] = useState('idle') // idle | installing | done | error
+      const [installed, setInstalled] = useState(false)
+      const [message, setMessage] = useState('')
+      const alive = useRef(true)
+      useEffect(() => () => { alive.current = false }, [])
+
+      useEffect(() => {
+        let cancelled = false
+        void (async () => {
+          const present = await marketInstalled(hostRemote())
+          if (!cancelled && present === true) setInstalled(true)
+        })()
+        return () => { cancelled = true }
+      }, [])
+
+      const install = useCallback(async () => {
+        if (phase === 'installing') return
+        setPhase('installing')
+        setMessage('')
+        try {
+          const remote = hostRemote()
+          if (typeof remote?.pluginManager?.installBundle !== 'function') {
+            throw new Error(t('workbench.unsupported'))
+          }
+          if (await marketInstalled(remote) === true) {
+            const sourceAdded = await ensureMarketSource(remote, VEYRA_DOMESTIC[0])
+            if (!alive.current) return
+            setInstalled(true)
+            setPhase('done')
+            setMessage(sourceAdded ? t('workbench.added') : t('workbench.installedHint'))
+            return
+          }
+          const resolved = await resolveMarket()
+          const sourceAdded = await ensureMarketSource(remote, resolved.url)
+          const answer = await remote.pluginManager.installBundle(resolved.spec, { enabled: true, saveExact: true })
+          if (!answer?.ok) throw new Error(answer?.error?.message || 'install failed')
+          if (!alive.current) return
+          setInstalled(true)
+          setPhase('done')
+          setMessage(sourceAdded ? t('workbench.added') : t('workbench.installedHint'))
+        } catch (error) {
+          if (!alive.current) return
+          setPhase('error')
+          setMessage(String(error?.message ?? error))
+        }
+      }, [phase])
+
+      const failure = message === t('workbench.unsupported')
+        ? message
+        : t('workbench.failed', { message })
+
+      return h(Card, {
+        title: t('workbench.title'),
+        hint: t('workbench.hint'),
+      },
+      h('div', { className: 'vfm_workbench' },
+        h('div', { className: 'vfm_workbenchrow' },
+          h(Btn, {
+            kind: 'primary',
+            disabled: phase === 'installing',
+            onClick: () => void install(),
+          }, phase === 'installing'
+            ? t('workbench.installing')
+            : installed ? t('workbench.installed') : t('workbench.install')),
+          installed && phase !== 'error'
+            ? h('span', { className: 'vfm_note' }, t('workbench.installedHint'))
+            : null),
+        phase === 'error' ? h('p', { className: 'vfm_note vfm_workbenchfail' }, failure) : null,
+        phase === 'done' && message !== '' ? h('p', { className: 'vfm_note' }, message) : null,
+        h('div', { className: 'vfm_tips' },
+          h('strong', null, t('workbench.tipsTitle')),
+          h('ul', null,
+            h('li', null, t('workbench.tip1')),
+            h('li', null, t('workbench.tip2')),
+            h('li', null, t('workbench.tip3'))))))
+    }
+
     function LoginModal({ dialog, onClose, onCopy, onOpen }) {
       const [copied, setCopied] = useState(false)
       if (dialog === null || dialog === undefined) return null
@@ -1720,6 +1935,7 @@ window.__ModuleLoader__.load({
           collapsed: true,
           defaultOpen: false,
         }),
+        h(WorkbenchCard),
         h(LoginModal, {
           dialog: loginDialog,
           onClose: () => setLoginDialog(undefined),
@@ -1740,6 +1956,9 @@ window.__ModuleLoader__.load({
     }
 
     function apply(ctx) {
+      // Kept for the install card: `remote` lives on the Host context, and the
+      // card only reads it when clicked, so a Host without it still loads.
+      hostContext = ctx
       // The stylesheet has to be mounted, not merely defined: a page whose CSS
       // never reaches document.head renders as bare stacked HTML, which is what
       // shipped once and looked broken rather than plain.
@@ -1773,7 +1992,9 @@ window.__ModuleLoader__.load({
     exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
       EndpointsBlock, LoginModal, creditLine, probeLabel, vendorOf, shortName,
       cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API,
-      Card, BlockTitle, Btn, StatusDot, ToolCard, truncate }
+      Card, BlockTitle, Btn, StatusDot, ToolCard, truncate,
+      WorkbenchCard, marketInstallSpec, marketInstalled, ensureMarketSource,
+      VEYRA_MARKET, VEYRA_DOMESTIC, MARKET_FALLBACK_SPEC }
     return module.exports
   },
 })

@@ -3423,8 +3423,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       systemAudio: L('系统声音', 'System audio'),
       microphone: L('麦克风', 'Microphone'),
       hint: L('8 fps · 最长 10 分钟 · 窗口录制会录到遮挡物', '8 fps · up to 10 minutes · window capture includes occluders'),
-      loading: L('正在获取屏幕…', 'Preparing…'),
-      retry: L('重试', 'Retry'),
       close: L('关闭', 'Close'),
       preparing: L('正在准备录制…', 'Preparing recording…'),
       recording: L('录制中', 'Recording'),
@@ -3448,6 +3446,8 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
     const DEFAULT_SETTINGS = {
       dir: '',
+      videoDir: '',
+      shotDir: '',
       format: 'mp4',
       fps: 8,
       quality: 65,
@@ -3577,6 +3577,9 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     let finishing = false
     let agentRun = null
     let agentPollTimer = null
+    // 截图/选源都必须先抓屏、后出界面：抓屏期间屏幕上不能出现任何本插件 UI，
+    // 否则 GDI 会把加载提示、弹窗一起拍进图里，也拖慢到不像原生截图。
+    let captureBusy = false
 
     function stopTimers() {
       if (timerHandle !== null) { clearInterval(timerHandle); timerHandle = null }
@@ -3596,18 +3599,44 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       }, 2000)
     }
 
-    async function openPicker() {
-      if (state.phase !== 'idle') return
-      setState({ phase: 'picking', picker: { loading: true, error: '' }, toast: null })
+    /** 抓一张屏幕底图；抓之前先藏起本插件的浮层，抓完再恢复。 */
+    async function fetchShot(query) {
+      document.documentElement.classList.add('vsr-capturing')
       try {
-        const sources = await apiJson('/sources')
+        // 等两帧，确保 visibility:hidden 已经真正画到屏幕上；窗口被挂起时用超时兜底。
+        await new Promise(resolve => {
+          let done = false
+          const finish = () => { if (!done) { done = true; resolve() } }
+          if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => requestAnimationFrame(finish))
+          }
+          setTimeout(finish, 80)
+        })
         let response
-        try { response = await fetch(PREFIX + '/shot', { cache: 'no-store' }) } catch { throw new Error(S.noRoute) }
+        try { response = await fetch(PREFIX + '/shot' + (query || ''), { cache: 'no-store' }) } catch { throw new Error(S.noRoute) }
         if (!response.ok) throw new Error('HTTP ' + response.status)
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
+        return {
+          blob: await response.blob(),
+          hidden: response.headers.get('x-vsr-hidden') === '1',
+        }
+      } finally {
+        document.documentElement.classList.remove('vsr-capturing')
+      }
+    }
+
+    async function openPicker() {
+      if (state.phase !== 'idle' || captureBusy) return
+      captureBusy = true
+      setState({ toast: null })
+      try {
+        const [sources, shot] = await Promise.all([
+          apiJson('/sources'),
+          fetchShot('?ts=' + Date.now()),
+        ])
+        const url = URL.createObjectURL(shot.blob)
         const image = await loadImage(url)
         setState({
+          phase: 'picking',
           picker: {
             loading: false,
             error: '',
@@ -3618,7 +3647,9 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           },
         })
       } catch (error) {
-        setState({ picker: { loading: false, error: friendly(error) } })
+        toast(L('无法打开录制源：', 'Cannot open recording sources: ') + friendly(error), { kind: 'error' })
+      } finally {
+        captureBusy = false
       }
     }
 
@@ -3836,33 +3867,29 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     }
 
     async function takeScreenshot() {
-      if (state.phase !== 'idle') return
+      if (state.phase !== 'idle' || captureBusy) return
       const settings = state.settings || DEFAULT_SETTINGS
       const hideDsh = settings.hideDshOnShot === true
-      setState({ phase: 'starting', progress: { stage: L('正在截图…', 'Capturing…'), ratio: 0.2 }, toast: null })
+      captureBusy = true
+      // 截图期间不渲染任何浮层/进度卡：抓到的必须是按快捷键那一刻的屏幕。
+      setState({ toast: null })
       try {
-        let response
-        const query = (hideDsh ? '?hideDsh=1&ts=' : '?ts=') + Date.now()
-        try { response = await fetch(PREFIX + '/shot' + query, { cache: 'no-store' }) } catch { throw new Error(S.noRoute) }
-        if (!response.ok) throw new Error('HTTP ' + response.status)
-        const hidden = response.headers.get('x-vsr-hidden') === '1'
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
+        const shot = await fetchShot('?ts=' + Date.now() + (hideDsh ? '&hideDsh=1' : ''))
+        const url = URL.createObjectURL(shot.blob)
         const image = await loadImage(url)
         setState({
-          phase: 'idle',
-          progress: null,
           shot: {
             mode: 'shot', url, imageW: image.naturalWidth, imageH: image.naturalHeight,
-            virtual: null, options: null, hiddenDsh: hidden,
+            virtual: null, options: null, hiddenDsh: shot.hidden,
           },
         })
-        if (hideDsh && !hidden) {
+        if (hideDsh && !shot.hidden) {
           toast(L('没有找到可隐藏的 DSH 窗口，这张图里仍有 DSH 界面', 'No DSH window to hide; the screenshot still contains it'), { kind: 'error' })
         }
       } catch (error) {
-        setState({ phase: 'idle', progress: null })
         toast(L('截图失败：', 'Screenshot failed: ') + friendly(error), { kind: 'error' })
+      } finally {
+        captureBusy = false
       }
     }
 
@@ -4317,7 +4344,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         }
       }
 
-      async function pickDir() {
+      async function pickDir(fieldName) {
         const picker = window.__DSH_DIRECTORY_PICKER__
         if (!picker || typeof picker.pick !== 'function') {
           toast(L('当前环境不支持文件夹选择，请手动输入路径', 'Folder picker unavailable; type the path'), { kind: 'error' })
@@ -4325,13 +4352,21 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         }
         try {
           const dir = await picker.pick()
-          if (dir) setDraft(current => ({ ...current, dir }))
+          if (dir) setDraft(current => ({ ...current, [fieldName]: dir }))
         } catch { /* 用户取消 */ }
       }
 
-      function openRoot() {
-        if (paths && paths.root) void reveal(paths.root)
+      function openPath(target) {
+        if (target) void reveal(target)
         else toast(L('先保存设置，宿主才能确定目录', 'Save settings first'), { kind: 'error' })
+      }
+
+      /** 文件卡片的「打开文件夹」跟随当前筛选：全部 → 根目录，录屏/截图 → 各自目录。 */
+      function openLibraryFolder() {
+        const target = filter === 'video' ? paths && paths.recordings
+          : filter === 'image' ? paths && paths.screenshots
+            : paths && (paths.root || paths.recordings)
+        openPath(target || null)
       }
 
       async function removeFile(file) {
@@ -4423,27 +4458,39 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         error ? h('div', { className: 'vsr-error' }, error) : null,
         h('section', { className: 'vsr-card' },
           h('h3', null, L('存储位置', 'Storage')),
-          h('div', { className: 'vsr-storage-row' },
-            h('input', {
-              className: 'vsr-input vsr-grow',
-              value: draft.dir,
-              placeholder: paths ? paths.root : L('默认：我的视频 / Vyra Screen Recorder', 'Default: Videos / Vyra Screen Recorder'),
-              onChange: event => setDraft({ ...draft, dir: event.target.value }),
-            }),
-            h('button', { type: 'button', className: 'vsr-btn-outline', onClick: pickDir }, L('选择…', 'Choose…')),
-            h('button', { type: 'button', className: 'vsr-btn-outline', onClick: openRoot }, L('打开', 'Open')),
-            h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => setDraft({ ...draft, dir: '' }) }, L('默认', 'Default'))),
-          h('div', { className: 'vsr-muted vsr-path' }, L('实际保存目录：', 'Actual folder: ') + ((paths && paths.root) || '—') + L('（录屏 recordings / 截图 screenshots）', ' (recordings / screenshots)'))),
+          field(L('视频保存到', 'Save videos to'),
+            h('div', { className: 'vsr-storage-row' },
+              h('input', {
+                className: 'vsr-input vsr-grow',
+                value: draft.videoDir,
+                placeholder: paths ? paths.recordings : L('默认：视频 / Vyra Screen Recorder / recordings', 'Default: Videos / Vyra Screen Recorder / recordings'),
+                onChange: event => setDraft({ ...draft, videoDir: event.target.value }),
+              }),
+              h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => { void pickDir('videoDir') } }, L('选择…', 'Choose…')),
+              h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => openPath(paths && paths.recordings) }, L('打开', 'Open')),
+              h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => setDraft({ ...draft, videoDir: '' }) }, L('默认', 'Default')))),
+          field(L('截图保存到', 'Save screenshots to'),
+            h('div', { className: 'vsr-storage-row' },
+              h('input', {
+                className: 'vsr-input vsr-grow',
+                value: draft.shotDir,
+                placeholder: paths ? paths.screenshots : L('默认：视频 / Vyra Screen Recorder / screenshots', 'Default: Videos / Vyra Screen Recorder / screenshots'),
+                onChange: event => setDraft({ ...draft, shotDir: event.target.value }),
+              }),
+              h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => { void pickDir('shotDir') } }, L('选择…', 'Choose…')),
+              h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => openPath(paths && paths.screenshots) }, L('打开', 'Open')),
+              h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => setDraft({ ...draft, shotDir: '' }) }, L('默认', 'Default')))),
+          h('div', { className: 'vsr-muted vsr-path' }, L('留空使用默认位置；目录不存在时会自动创建。', 'Leave empty for the default; folders are created automatically.'))),
         h('section', { className: 'vsr-card' },
           h('h3', null, L('录制', 'Recording')),
           h('div', { className: 'vsr-grid' },
-            field(L('格式', 'Format'), h('select', {
+            field(L('保存格式', 'Save format'), h('select', {
               className: 'vsr-select',
               value: draft.format,
               onChange: event => setDraft({ ...draft, format: event.target.value }),
             },
-            h('option', { value: 'mp4' }, 'MP4（H.264 / AAC）'),
-            h('option', { value: 'webm' }, 'WebM（VP9 / Opus）'))),
+            h('option', { value: 'mp4' }, L('MP4（H.264 / AAC）', 'MP4 (H.264 / AAC)')),
+            h('option', { value: 'webm' }, 'WebM（VP9 / Opus）')), L('停止后自动存成 MP4；环境不支持时回退 WebM。', 'Saved as MP4 after recording; falls back to WebM if unsupported.')),
             field(L('帧率', 'Frame rate'), h('select', {
               className: 'vsr-select', value: String(draft.fps),
               onChange: event => setDraft({ ...draft, fps: Number(event.target.value) }),
@@ -4500,7 +4547,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
               h('button', { type: 'button', className: 'vsr-filter' + (filter === 'video' ? ' vsr-filter-on' : ''), onClick: () => setFilter('video') }, L('录屏', 'Videos')),
               h('button', { type: 'button', className: 'vsr-filter' + (filter === 'image' ? ' vsr-filter-on' : ''), onClick: () => setFilter('image') }, L('截图', 'Images')),
               h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void refreshLibrary() } }, L('刷新', 'Refresh')),
-              h('button', { type: 'button', className: 'vsr-settings-link', onClick: openRoot }, L('打开文件夹', 'Open folder')))),
+              h('button', { type: 'button', className: 'vsr-settings-link', onClick: openLibraryFolder }, L('打开文件夹', 'Open folder')))),
           converting !== null ? h('div', { className: 'vsr-convert' },
             h('div', { className: 'vsr-muted' }, L('正在转 MP4：', 'Converting to MP4: ') + converting + '（会实时播放原音频）'),
             h('div', { className: 'vsr-bar' }, h('div', { className: 'vsr-bar-fill', style: { width: Math.round(convertProgress * 100) + '%' } }))) : null,
@@ -4618,19 +4665,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         }
       }, [image, windowsOpen])
 
-      if (picker.loading) {
-        return h('div', { className: 'vsr-overlay' }, h('div', { className: 'vsr-modal vsr-modal-loading' },
-          h('div', { className: 'vsr-spinner' }), h('div', { className: 'vsr-muted' }, S.loading)))
-      }
-      if (picker.error) {
-        return h('div', { className: 'vsr-overlay' }, h('div', { className: 'vsr-modal vsr-modal-narrow' },
-          h('div', { className: 'vsr-modal-head' }, h('strong', null, S.pickerTitle), h('button', { type: 'button', className: 'vsr-x', onClick: closePicker, 'aria-label': S.close }, '×')),
-          h('div', { className: 'vsr-error' }, picker.error),
-          h('div', { className: 'vsr-modal-foot' },
-            h('button', { type: 'button', className: 'vsr-link', onClick: () => { closePicker(); void openPicker() } }, S.retry),
-            h('button', { type: 'button', className: 'vsr-link', onClick: closePicker }, S.close))))
-      }
-
       const virtual = picker.sources.virtual
       const options = { includeSystemAudio: systemAudio, includeMic: microphone }
       const row = (key, choice, name, detail, thumbnailRect) => {
@@ -4738,18 +4772,16 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       async function toggleHideDsh() {
         const next = !hiddenDsh
         try {
-          const query = '?ts=' + Date.now() + (next ? '&hideDsh=1' : '')
-          const response = await fetch(PREFIX + '/shot' + query, { cache: 'no-store' })
-          if (!response.ok) throw new Error('HTTP ' + response.status)
-          const hidden = response.headers.get('x-vsr-hidden') === '1'
-          if (next && !hidden) {
+          // 抓新底图时整个截图浮层必须先隐藏，否则拍到的就是这层标注界面。
+          const shot = await fetchShot('?ts=' + Date.now() + (next ? '&hideDsh=1' : ''))
+          if (next && !shot.hidden) {
             toast(L('没有找到可隐藏的 DSH 窗口', 'No DSH window to hide'), { kind: 'error' })
             return
           }
-          const url = URL.createObjectURL(await response.blob())
+          const url = URL.createObjectURL(shot.blob)
           generatedUrls.current.push(url)
           setImageUrl(url)
-          setHiddenDsh(hidden)
+          setHiddenDsh(shot.hidden)
           setSel(null); selRef.current = null
           setStrokes([]); draftRef.current = null; setDraft(null)
           setPhase('select')
@@ -5108,7 +5140,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const children = []
       if (snapshot.phase === 'recording' && snapshot.recording) children.push(h(RecordingPill, { key: 'rec', recording: snapshot.recording }))
       if (snapshot.agentRecording) children.push(h(AgentPill, { key: 'agent', agent: snapshot.agentRecording }))
-      if (snapshot.phase === 'starting') children.push(h(ProgressCard, { key: 'start', stage: S.preparing, ratio: 0.2 }))
+      // starting 阶段不出任何浮层：启动抓帧和截图都不能把本插件的提示拍进画面。
       if (snapshot.phase === 'encoding' && snapshot.progress) children.push(h(ProgressCard, { key: 'enc', stage: snapshot.progress.stage, ratio: snapshot.progress.ratio }))
       if (snapshot.picker) children.push(h(Picker, { key: 'picker', picker: snapshot.picker }))
       if (snapshot.shot) children.push(h(ScreenshotOverlay, { key: 'shot', shot: snapshot.shot }))
@@ -5128,9 +5160,13 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 .vsr-rec-pill-floating { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 2147483001; height: 32px; padding: 0 12px; gap: 8px; background: rgba(20,20,22,.88); color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.35); backdrop-filter: blur(8px); }
 .vsr-dot { width: 8px; height: 8px; border-radius: 50%; background: #e5484d; box-shadow: 0 0 0 0 rgba(229,72,77,.6); animation: vsr-pulse 1.4s infinite; }
 @keyframes vsr-pulse { 0% { box-shadow: 0 0 0 0 rgba(229,72,77,.6); } 70% { box-shadow: 0 0 0 7px rgba(229,72,77,0); } 100% { box-shadow: 0 0 0 0 rgba(229,72,77,0); } }
+/* 抓屏的那一帧，本插件的浮层/提示一律不可见，避免被拍进图里。
+   工具条按钮是 DSH 常驻界面的一部分，保留——用户截的就是当前界面。 */
+html.vsr-capturing .vsr-overlay,
+html.vsr-capturing .vsr-progress,
+html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-overlay { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
 .vsr-modal { width: 420px; max-width: calc(100vw - 32px); max-height: 82vh; display: flex; flex-direction: column; background: var(--dsh-color-bg-elevated, #fff); color: var(--dsh-color-text-primary, #1f2329); border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.38); overflow: hidden; }
-.vsr-modal-loading { width: auto; min-width: 180px; padding: 22px 26px; align-items: center; gap: 12px; }
 .vsr-modal-narrow { width: 360px; }
 .vsr-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; font-size: 14px; }
 .vsr-x { border: 0; background: transparent; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; opacity: .55; padding: 0 3px; }
@@ -5155,8 +5191,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 .vsr-link { border: 0; background: transparent; color: var(--dsh-color-accent, #1677ff); cursor: pointer; font: inherit; padding: 0; }
 .vsr-link-light { color: #8fc2ff; }
 .vsr-error { padding: 10px 16px 16px; color: #e5484d; font-size: 13px; line-height: 1.5; }
-.vsr-spinner { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(127,127,127,.25); border-top-color: var(--dsh-color-accent, #1677ff); animation: vsr-spin .8s linear infinite; }
-@keyframes vsr-spin { to { transform: rotate(360deg); } }
 .vsr-muted { color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 13px; }
 .vsr-overlay-shot { background: rgba(0,0,0,.62); }
 .vsr-shot-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -5264,6 +5298,14 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           id: 'vyra-screen-recorder',
           order: 37,
         }, SettingsIcon)), 'vyra-screen-recorder: settings icon')
+        // 官方插件管理页也给每个 bundle 一个配置插槽；老宿主没有这个插槽时静默跳过。
+        try {
+          ctx.effect(() => ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+            name: 'plugins.bundle.config',
+            key: 'vyra-screen-recorder',
+            order: 37,
+          }, SettingsPage)), 'vyra-screen-recorder: plugin page settings')
+        } catch { /* 老宿主没有插件页配置槽 */ }
         const onShortcut = event => {
           if (event.repeat) return
           const target = event.target

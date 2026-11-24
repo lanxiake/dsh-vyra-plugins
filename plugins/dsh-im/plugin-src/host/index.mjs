@@ -14,6 +14,8 @@ import { apply as applyIMessage } from './channels/imessage/index.mjs';
 import { apply as applyEmail } from './channels/email/index.mjs';
 import { apply as applyMatrix } from './channels/matrix/index.mjs';
 import { installOutboundArtifactTool } from '../../src/channels/shared/semantic/artifact.mjs';
+import { installDeliveryTools } from '../../src/channels/shared/delivery-tools.mjs';
+import { installDeliverySkill } from './skills.mjs';
 import { installHostLanguage } from './host-language.mjs';
 import { installHostLanguageRpc } from './host-language-rpc.mjs';
 import { installDeliveryRpc } from './delivery-rpc.mjs';
@@ -153,6 +155,9 @@ export function createImHostPlugin(internals = {}) {
           send: (botId, targetId, text, options) => (
             deliveryService.send(botId, targetId, text, options)
           ),
+          sendFile: (botId, targetId, file, options) => (
+            deliveryService.sendFile(botId, targetId, file, options)
+          ),
           listTargets: async (botId) => (await deliveryService.listTargets(botId)).targets,
           createTarget: (botId, target) => deliveryService.createTarget(botId, target),
           listBots: () => deliveryService.listBots(),
@@ -167,13 +172,13 @@ export function createImHostPlugin(internals = {}) {
           activate,
         );
         ctx.inject(['webServer'], (httpCtx) => {
-          startDeliveryHttp(httpCtx, deliveryService);
+          startDeliveryHttp(httpCtx, deliveryService, { dshHome: config.dshHome });
         });
         return;
       }
       await activate(ctx);
       if (ctx?.webServer?.register && typeof ctx?.effect === 'function') {
-        startDeliveryHttp(ctx, deliveryService);
+        startDeliveryHttp(ctx, deliveryService, { dshHome: config.dshHome });
       }
     },
   });
@@ -200,14 +205,26 @@ export function createImHostPlugin(internals = {}) {
       ctx.inject(['tools', 'systemPrompt'], (artifactCtx) => {
         installOutboundArtifactTool(artifactCtx);
         installGroupHistoryTools(artifactCtx);
+        installDeliveryTools(artifactCtx, deliveryService);
       });
     } else {
       installOutboundArtifactTool(ctx);
       installGroupHistoryTools(ctx);
+      installDeliveryTools(ctx, deliveryService);
     }
     const logger = typeof ctx?.logger === 'function'
       ? ctx.logger(name)
       : (ctx?.logger ?? console);
+    const mountSkill = (skillCtx) => {
+      installDeliverySkill(skillCtx).catch((error) => {
+        logger.warn?.('[dsh-im] failed to mount the delivery skill; the tools still work', error);
+      });
+    };
+    if (typeof ctx?.inject === 'function') {
+      ctx.inject(['skills'], mountSkill);
+    } else if (ctx?.skills) {
+      mountSkill(ctx);
+    }
     try {
       startInjectedContext(ctx, { logger });
     } catch (error) {

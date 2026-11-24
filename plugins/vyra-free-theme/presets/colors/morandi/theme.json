@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "morandi",
+  "version": "0.1.0",
+  "author": "vyra",
+  "name": {
+    "zh": "莫兰迪灰蓝",
+    "en": "Morandi Blue"
+  },
+  "brand": {
+    "title": {
+      "zh": "莫兰迪灰蓝",
+      "en": "Morandi Blue"
+    },
+    "slogans": {
+      "zh": "低饱和灰蓝",
+      "en": "Muted blue-grey"
+    }
+  },
+  "colors": {
+    "light": {
+      "--dsw-alias-bg-base": "#F4F6F6",
+      "--dsw-alias-bg-layer-1": "#FBFBFB",
+      "--dsw-alias-bg-layer-2": "#EBEEEF",
+      "--dsw-alias-bg-layer-3": "#E0E5E6",
+      "--dsw-alias-bg-module-platform": "#F0F2F2",
+      "--dsw-specific-sidebar-fill": "#EEF1F1",
+      "--dsw-alias-brand-primary": "#2D4076",
+      "--dsw-alias-label-primary": "#1B2527",
+      "--dsw-alias-label-secondary": "rgba(27, 37, 39, 0.72)"
+    },
+    "dark": {
+      "--dsw-alias-bg-base": "#0F1213",
+      "--dsw-alias-bg-layer-1": "#181C1D",
+      "--dsw-alias-bg-layer-2": "#212729",
+      "--dsw-alias-bg-layer-3": "#2A3335",
+      "--dsw-alias-bg-module-platform": "#1C2022",
+      "--dsw-specific-sidebar-fill": "#191E1F",
+      "--dsw-alias-brand-primary": "#AEBBE0",
+      "--dsw-alias-label-primary": "#EEF1F2",
+      "--dsw-alias-label-secondary": "rgba(238, 241, 242, 0.72)"
+    }
+  },
+  "translucency": {
+    "web": 45,
+    "desktop": 66
+  },
+  "coverage": {
+    "shell": false,
+    "scopes": [
+      "sidebar"
+    ]
+  }
+}

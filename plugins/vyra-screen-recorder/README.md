@@ -3,8 +3,8 @@
 给 DSH 输入框工具条加两个按钮：**录屏** 和 **截图**。
 
 - **录屏**：点开「选择要录制的内容」——整个桌面、某台显示器、某个窗口，或者拖框自定义区域；可以同时录**系统声音**和**麦克风**。停止后自动编成 **MP4（H.264 / AAC，默认）** 或 WebM 视频，挂进输入框附件，并保存到专门的文件夹。
-- **截图**：抓整屏 → 拖框选区域 → 用画笔 / 矩形 / 箭头 / 文字标注 →「用这张」进附件；可以**隐藏 DSH 界面**再截，拍到被它挡住的其他应用。
-- **设置页**：存储位置、MP4/WebM、帧率、快捷键、隐藏 DSH、文件管理都在「设置 → 录屏截图」里。
+- **截图**：抓整屏 → 拖框选区域 → 用画笔 / 矩形 / 箭头 / 文字标注 →「用这张」进附件；可以**隐藏 DSH 界面**再截，拍到被它挡住的其他应用。抓屏走常驻服务，**不出加载提示**，抓图本身几十毫秒级，接近系统截图。
+- **设置页**：视频/截图存储位置、MP4/WebM、帧率、快捷键、隐藏 DSH、文件管理都在「设置 → 录屏截图」里；新版本 DSH 也可以在「设置 → 插件 → vyra-screen-recorder」里打开同一页。
 - **快捷键**：默认 `Ctrl+Alt+S` 截图、`Ctrl+Alt+R` 录屏/停止（DSH 窗口内生效，可改）。
 - **Agent 也能用**：插件初始化时会把技能和 `vsr` CLI 装进 `~/.dsh`，Agent 可以直接录屏、截图、枚举屏幕/窗口、列出文件。
 - **不需要 Python、ffmpeg、Pillow、虚拟声卡**：抓屏、系统声音、编码全部用 Windows 自带能力和浏览器 WebCodecs 完成。
@@ -40,11 +40,12 @@ dsh plugin --profile desktop add vyra-screen-recorder
 ### 截图
 
 1. 点工具条左侧的 **截图** 按钮（或按设置的截图快捷键）。
-2. 整屏图铺开：拖框选区；单击不拖选整屏。
-3. 松手后直接进入标注：画笔 / 矩形 / 箭头 / 文字，7 种颜色、三档粗细，撤销 / 清空 / 重选。
-4. 点「用这张」，裁切并合成标注，JPEG 自动挂进输入框。
+2. 抓屏期间**不显示任何加载提示**：截图浮层等图抓到之后才出现，拍到的就是你按下快捷键那一刻的屏幕。
+3. 整屏图铺开：拖框选区；单击不拖选整屏。
+4. 松手后直接进入标注：画笔 / 矩形 / 箭头 / 文字，7 种颜色、三档粗细，撤销 / 清空 / 重选。
+5. 点「用这张」，裁切并合成标注，JPEG 自动挂进输入框。
 
-浮层右上角的「隐藏 DSH 界面」会先藏起 DSH、抓一张、再恢复，用来截取后面的窗口或其他应用；设置页可以把它设为默认。
+浮层右上角的「隐藏 DSH 界面」会先藏起 DSH 和截图浮层、抓一张、再恢复，用来截取后面的窗口或其他应用；设置页可以把它设为默认。
 
 `Esc` 取消，`Ctrl+Z` 撤销上一笔。
 
@@ -52,8 +53,8 @@ dsh plugin --profile desktop add vyra-screen-recorder
 
 打开 **设置 → 录屏截图**：
 
-- **存储位置**：默认 `我的视频/Vyra Screen Recorder`，点「选择…」改到任意目录；「打开」直接打开文件夹。内部按 `recordings/` 和 `screenshots/` 分开。
-- **录制**：默认格式（MP4 / WebM）、帧率、JPEG 质量、长边上限、最长时长、默认是否录系统声音/麦克风。
+- **存储位置**：视频和截图可以分别指定目录，留空则用默认的 `我的视频/Vyra Screen Recorder/recordings` 和 `.../screenshots`；「选择…」改到任意目录，「打开」直接打开文件夹。
+- **录制**：保存格式（MP4 / WebM，默认 MP4；环境不支持 H.264/AAC 时自动回退 WebM）、帧率、JPEG 质量、长边上限、最长时长、默认是否录系统声音/麦克风。
 - **快捷键**：截图、录屏/停止；点输入框后直接按组合键。
 - **截图**：默认隐藏 DSH 界面。
 - **文件**：列出录屏与截图，支持打开、打开文件夹、删除；WebM 录屏可以一键「转 MP4」。
@@ -99,10 +100,11 @@ vsr record --duration 8 --out ./demo.mp4 --source region:100,100,800,600 --no-au
 
 ### 产物
 
-- 默认存储位置：`我的视频/Vyra Screen Recorder`（`~/Videos/Vyra Screen Recorder`），设置页可改。
-- 视频：`<存储位置>/recordings/录屏-YYYYMMDD-HHmmss.mp4`（或 `.webm`）
-- 截图：`<存储位置>/screenshots/截图-YYYYMMDD-HHmmss.jpg`
+- 默认存储位置：`我的视频/Vyra Screen Recorder`（`~/Videos/Vyra Screen Recorder`），设置页可分别指定视频和截图目录。
+- 视频：`<视频目录>/录屏-YYYYMMDD-HHmmss.mp4`（或 `.webm`）
+- 截图：`<截图目录>/截图-YYYYMMDD-HHmmss.jpg`
 - 临时 JPEG 帧和 WAV 在编码完成/取消后立即删除；`%TEMP%` 下超过 24 小时的残留会在下次启动时清理。
+- 宿主侧常驻一个截图 PowerShell 进程（约几十 MB），插件启动时预热，截图和插件停用时自动结束。
 
 `DSH_HOME` 默认是 `~/.dsh`；可用环境变量 `VSR_LIBRARY_DIR` 覆盖存储根目录。
 
@@ -113,7 +115,7 @@ vsr record --duration 8 --out ./demo.mp4 --source region:100,100,800,600 --no-au
 | 条件 | 说明 |
 | --- | --- |
 | Windows 10 / 11 | 抓屏用 GDI，系统声音用 WASAPI 回环 |
-| DSH 桌面版 0.2.2-rc.3+ | 用官方 `conversation.input.left` / `settings.section` 槽位 |
+| DSH 桌面版 0.2.2-rc.3+ | 用官方 `conversation.input.left` / `settings.section` 槽位；新版插件管理页额外挂 `plugins.bundle.config` |
 | Chromium / Electron 支持 WebCodecs | 当前 Electron 44 内置 VP9/Opus 和 H.264/AAC 编码 |
 
 **不需要**安装任何额外软件。

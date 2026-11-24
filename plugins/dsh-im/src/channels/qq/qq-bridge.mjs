@@ -408,7 +408,7 @@ export async function sendQqImage(
   }
 }
 
-async function sendQqFile(
+export async function sendQqFile(
   bot,
   target,
   file,

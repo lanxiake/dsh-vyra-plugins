@@ -1,8 +1,9 @@
 window.__ModuleLoader__.load({
-  id: "@xmanrui/dsh-im",
+  id: "@lanxiake/dsh-im",
   factory: (require) => {
     var module = { exports: {} };
     var exports = module.exports;
+"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -34,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/semver/internal/debug.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/debug.js"(exports, module2) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -44,9 +45,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/constants.js"(exports, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -76,9 +77,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/re.js"(exports, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -164,9 +165,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/parse-options.js"(exports, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -183,9 +184,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/internal/identifiers.js"(exports, module2) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -208,9 +209,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/classes/semver.js"(exports, module2) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -500,9 +501,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/parse.js"(exports, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -522,9 +523,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/valid.js"(exports, module2) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -535,9 +536,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/compare.js"(exports, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -545,9 +546,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports, module2) {
+  "node_modules/.pnpm/semver@7.8.5/node_modules/semver/functions/rcompare.js"(exports, module2) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -611,8 +612,8 @@ var React49 = __toESM(require("react"), 1);
 
 // package.json
 var package_default = {
-  name: "@xmanrui/dsh-im",
-  version: "5.10.0",
+  name: "@lanxiake/dsh-im",
+  version: "5.13.0",
   icon: "./assets/logo-plugin-message-link-gradient.webp",
   description: "\u628A\u5FAE\u4FE1\u3001\u98DE\u4E66\u3001\u4F01\u5FAE\u3001\u9489\u9489\u3001QQ\u3001Telegram\u3001WhatsApp\u3001Slack\u3001Discord\u3001Matrix\u63A5\u5165DSH\u3002 Connect Telegram, WhatsApp, Slack, Discord, Matrix, WeChat, Feishu, WeCom, DingTalk, and QQ to DSH.",
   keywords: [
@@ -637,22 +638,31 @@ var package_default = {
     "matrix",
     "ai-office"
   ],
-  author: "xmanrui (https://github.com/xmanrui)",
+  author: "lanxiake (https://github.com/lanxiake)",
   license: "MIT",
   type: "module",
   repository: {
     type: "git",
-    url: "git+https://github.com/xmanrui/dsh-im.git"
+    url: "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    directory: "plugins/dsh-im"
   },
-  homepage: "https://github.com/xmanrui/dsh-im#readme",
+  homepage: "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/dsh-im#readme",
   bugs: {
-    url: "https://github.com/xmanrui/dsh-im/issues"
+    url: "https://github.com/lanxiake/dsh-vyra-plugins/issues"
   },
   publishConfig: {
     access: "public"
   },
   bin: {
     "dsh-im": "bin/dsh-im.mjs"
+  },
+  scripts: {
+    build: "node plugin-src/host/build.mjs",
+    "verify:agent-tools": "node scripts/verify-agent-tools.mjs",
+    "verify:cli": "node scripts/verify-cli.mjs",
+    "verify:service-file": "node scripts/verify-service-file.mjs",
+    "verify:idempotency": "node scripts/verify-idempotency.mjs",
+    verify: "node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs"
   },
   main: "./lib/index.js",
   exports: {
@@ -665,10 +675,15 @@ var package_default = {
     "assets",
     "bin",
     "cordis.patch.yml",
+    "skills",
     "lib",
     "locale/*.json",
     "plugin-src",
     "scripts/telegram-menu-scopes.mjs",
+    "scripts/verify-agent-tools.mjs",
+    "scripts/verify-cli.mjs",
+    "scripts/verify-service-file.mjs",
+    "scripts/verify-idempotency.mjs",
     "scripts/verify-interface-language.mjs",
     "scripts/verify-injected-context.mjs",
     "scripts/verify-lan-management.mjs",
@@ -711,11 +726,6 @@ var package_default = {
       ]
     }
   },
-  scripts: {
-    build: "node plugin-src/client/build.mjs && node plugin-src/host/build.mjs",
-    test: "node --test test/*.test.mjs test/channels/*/*.test.mjs",
-    check: "npm run build && npm test && node scripts/verify-package.mjs"
-  },
   engines: {
     node: ">=22.19"
   },
@@ -730,6 +740,14 @@ var package_default = {
     nodemailer: "^10.1.4",
     qrcode: "1.5.4",
     undici: "7.30.1"
+  },
+  peerDependencies: {
+    "@deepseek-ai/dsh-skill-filesystem": "^0.2.1"
+  },
+  peerDependenciesMeta: {
+    "@deepseek-ai/dsh-skill-filesystem": {
+      optional: true
+    }
   },
   devDependencies: {
     "@deepseek-ai/cordis": "4.0.1",
@@ -750,7 +768,13 @@ var package_default = {
   optionalDependencies: {
     "@tencent-qqmail/agently-cli": "^1.0.18",
     sharp: "0.35.5"
-  }
+  },
+  contributors: [
+    {
+      name: "xmanrui",
+      url: "https://github.com/xmanrui"
+    }
+  ]
 };
 
 // plugin-src/client/channel-logos.js
@@ -7503,7 +7527,7 @@ function installDingtalkStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = DINGTALK_STYLE_ID;
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -9257,7 +9281,7 @@ function installDiscordStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = DISCORD_STYLE_ID;
   style.textContent = CSS2;
   document.head.appendChild(style);
@@ -11846,7 +11870,7 @@ function installFeishuStyles() {
     };
   }
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = FEISHU_STYLE_ID;
   style.textContent = CSS3;
   document.head.appendChild(style);
@@ -12020,7 +12044,7 @@ function installQqStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = QQ_STYLE_ID;
   style.textContent = CSS4;
   document.head.appendChild(style);
@@ -13135,7 +13159,7 @@ function installSlackStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = SLACK_STYLE_ID;
   style.textContent = CSS6;
   document.head.appendChild(style);
@@ -13526,7 +13550,7 @@ function installTelegramStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = TELEGRAM_STYLE_ID;
   style.textContent = CSS7;
   document.head.appendChild(style);
@@ -13706,7 +13730,7 @@ function installWecomStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = WECOM_STYLE_ID;
   style.textContent = CSS8;
   document.head.appendChild(style);
@@ -14560,7 +14584,7 @@ function installWecomAppStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = WECOM_APP_STYLE_ID;
   style.textContent = CSS9;
   document.head.appendChild(style);
@@ -16464,7 +16488,7 @@ function installWeixinStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = WEIXIN_STYLE_ID;
   style.textContent = CSS10;
   document.head.appendChild(style);
@@ -16619,7 +16643,7 @@ function installWhatsappStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = WHATSAPP_STYLE_ID;
   style.textContent = CSS11;
   document.head.appendChild(style);
@@ -17376,7 +17400,7 @@ function installIMessageStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = IMESSAGE_STYLE_ID;
   style.textContent = CSS12;
   document.head.appendChild(style);
@@ -17501,7 +17525,7 @@ function installEmailStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = EMAIL_STYLE_ID;
   style.textContent = CSS13;
   document.head.appendChild(style);
@@ -18279,7 +18303,7 @@ function installMatrixStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = MATRIX_STYLE_ID;
   style.textContent = CSS14;
   document.head.appendChild(style);
@@ -21689,8 +21713,8 @@ function TelegramGroupTriggersSettings({ account, rpcCall }) {
 // plugin-src/client/delivery-settings.js
 var DELIVERY_RPC_CHANNEL = "/dsh-im-delivery";
 var DELIVERY_DOCS_URL = Object.freeze({
-  zh: "https://github.com/xmanrui/dsh-im/blob/main/PROACTIVE_DELIVERY.md",
-  en: "https://github.com/xmanrui/dsh-im/blob/main/PROACTIVE_DELIVERY.en.md"
+  zh: "https://github.com/lanxiake/dsh-vyra-plugins/blob/master/plugins/dsh-im/PROACTIVE_DELIVERY.md",
+  en: "https://github.com/lanxiake/dsh-vyra-plugins/blob/master/plugins/dsh-im/PROACTIVE_DELIVERY.en.md"
 });
 var DELIVERY_ENDPOINTS = Object.freeze({
   list: "target.list",
@@ -24696,7 +24720,7 @@ function installImStyles() {
   if (existing) return () => {
   };
   const style = document.createElement("style");
-  style.dataset.plugin = "@xmanrui/dsh-im";
+  style.dataset.plugin = "@lanxiake/dsh-im";
   style.dataset.pluginCss = IM_STYLE_ID;
   style.textContent = CSS15;
   document.head.appendChild(style);
@@ -25136,7 +25160,7 @@ function manualUpdateCommand(snapshot) {
     snapshot.job?.state !== "completed" && !snapshot.job?.recoverable ? snapshot.job?.targetVersion : null
   ].filter(validVersion);
   const version = targets.length ? [...targets, snapshot.runningVersion, snapshot.installedVersion].filter(validVersion).sort(import_rcompare.default)[0] : "latest";
-  return `dsh plugin --profile ${profileArgument} add -w @xmanrui/dsh-im@${version}`;
+  return `dsh plugin --profile ${profileArgument} add -w @lanxiake/dsh-im@${version}`;
 }
 function ManualUpdateCommand({ command, disabled, sourceInstall, desktop }) {
   const [copyState, setCopyState] = React46.useState("idle");
@@ -25217,7 +25241,7 @@ function ManualUpdateCommand({ command, disabled, sourceInstall, desktop }) {
           h2("path", { d: "M5 13H3.5A1.5 1.5 0 0 1 2 11.5v-8A1.5 1.5 0 0 1 3.5 2h8A1.5 1.5 0 0 1 13 3.5V5" })
         )))
       ),
-      command.endsWith("@xmanrui/dsh-im@latest") ? h2(
+      command.endsWith("@lanxiake/dsh-im@latest") ? h2(
         "p",
         { className: "dim-updateManualHint" },
         "\u5C1A\u672A\u786E\u8BA4\u76EE\u6807\u7248\u672C\uFF0C\u6B64\u547D\u4EE4\u5B89\u88C5\u6267\u884C\u65F6 npm \u7684 latest \u7248\u672C\u3002"
@@ -25998,7 +26022,7 @@ function IMSettingsTab({
               "a",
               {
                 className: "dim-githubLink",
-                href: "https://github.com/xmanrui/dsh-im",
+                href: "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/dsh-im",
                 target: "_blank",
                 rel: "noopener noreferrer",
                 "aria-label": "dsh-im GitHub",

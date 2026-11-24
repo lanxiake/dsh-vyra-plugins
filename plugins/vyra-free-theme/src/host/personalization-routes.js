@@ -1,0 +1,430 @@
+/**
+ * Personalization HTTP routes (design §4). Handlers do trust fencing, HTTP
+ * codec and error mapping ONLY — every state change goes through the
+ * PersonalizationStore's serialized queue.
+ *
+ * DSH WebServer supports exact/prefix registrations only; dynamic segments
+ * are parsed inside the handler and every suffix is validated against a
+ * strict pattern before it is ever used to locate a file (paths are rebuilt
+ * from trusted library metadata, never from raw request bytes).
+ */
+
+import { codedError, publicError } from "./errors.js";
+import { ASSET_ID_PATTERN, GLOBAL_MAX_BYTES } from "../shared/personalization/catalog.js";
+
+function parseAuthority(authority) {
+  try {
+    return new URL(`http://${authority}`);
+  } catch {
+    return undefined;
+  }
+}
+
+function canonicalAuthority(entry, parsed) {
+  const port = parsed.port !== "" ? parsed.port : new URL(`https://${entry}`).port;
+  return port === "" ? parsed.hostname : `${parsed.hostname}:${port}`;
+}
+
+function isLoopbackHostname(hostname) {
+  if (hostname === "localhost" || hostname === "[::1]") return true;
+  const parts = hostname.split(".");
+  return parts.length === 4
+    && parts[0] === "127"
+    && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+}
+
+function isTrustedAuthority(hostUrl, trustedHosts) {
+  return trustedHosts.some((entry) => {
+    const parsed = parseAuthority(entry);
+    if (parsed === undefined) return false;
+    return canonicalAuthority(entry, parsed) === parsed.hostname
+      ? parsed.hostname === hostUrl.hostname
+      : parsed.host === hostUrl.host;
+  });
+}
+
+/** Mirror DSH's browser-trust fence for privileged local Host routes. */
+function isTrustedRequest(request, trustedHosts = []) {
+  const host = header(request.headers, "host");
+  if (host === undefined) return false;
+  const hostUrl = parseAuthority(host);
+  if (hostUrl === undefined) return false;
+  const socketAddress = request.socket?.remoteAddress
+    ?? request.info?.remoteAddress;
+  if (isLoopbackHostname(hostUrl.hostname)) {
+    // A loopback Host claim must come from a loopback TCP peer: the Host
+    // header is client-controlled and trivially spoofed when the server
+    // listens on a non-loopback interface. (When no socket info exists —
+    // unit-test harnesses — the header check stands as before.)
+    if (typeof socketAddress === "string") {
+      const loopbackPeer = socketAddress === "127.0.0.1" || socketAddress === "::1"
+        || socketAddress === "::ffff:127.0.0.1";
+      if (!loopbackPeer) return false;
+    }
+  } else if (!isTrustedAuthority(hostUrl, trustedHosts)) {
+    return false;
+  }
+  if (header(request.headers, "sec-fetch-site") === "cross-site") return false;
+  const origin = header(request.headers, "origin");
+  if (origin === undefined) return true;
+  try {
+    return new URL(origin).host === hostUrl.host;
+  } catch {
+    return false;
+  }
+}
+
+const CODE_STATUS = {
+  INVALID_CONFIG: 400,
+  INVALID_ASSET_ID: 400,
+  FILENAME_INVALID: 400,
+  ASSET_NOT_FOUND: 404,
+  UNKNOWN_SKIN: 404,
+  UNSUPPORTED_IMAGE: 415,
+  ANIMATION_UNSUPPORTED: 415,
+  UPLOAD_TOO_LARGE: 413,
+  DISK_FULL: 507,
+  STORE_READONLY: 409,
+  REVISION_CONFLICT: 409,
+  STORE_RECOVERY_REQUIRED: 409,
+  STORE_NOT_RECOVERING: 409,
+};
+
+function sendJson(response, status, value, extraHeaders = {}) {
+  response.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    ...extraHeaders,
+  });
+  response.end(JSON.stringify(value));
+}
+
+function sendError(response, error) {
+  const status = CODE_STATUS[error?.code] ?? 500;
+  sendJson(response, status, publicError(error));
+}
+
+function header(headers, name) {
+  const value = headers?.[name];
+  return typeof value === "string" ? value : Array.isArray(value) ? value[0] : undefined;
+}
+
+function method(request, response, expected) {
+  if (request.method === expected) return true;
+  response.writeHead(405, { allow: expected });
+  response.end();
+  return false;
+}
+
+async function readJsonBody(request, limit = 128 * 1024) {
+  const type = String(request.headers["content-type"] ?? "").toLowerCase();
+  if (!type.startsWith("application/json")) throw codedError("INVALID_CONFIG", "content-type must be application/json");
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > limit) throw codedError("INVALID_CONFIG", "request body too large");
+    chunks.push(buffer);
+  }
+  if (size === 0) return {};
+  let value;
+  try {
+    value = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw codedError("INVALID_CONFIG", "请求体不是合法 JSON");
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw codedError("INVALID_CONFIG", "invalid request body");
+  }
+  return value;
+}
+
+async function readRawBody(request, limit, overflowCode = "UPLOAD_TOO_LARGE") {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > limit) throw codedError(overflowCode, "request body too large");
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks);
+}
+
+/** Decode the display-name header: exactly one decode, bounded, sanitized. */
+function decodeDisplayName(request) {
+  const raw = header(request.headers, "x-filename");
+  if (raw === undefined || raw === "") return "wallpaper";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    throw codedError("FILENAME_INVALID", "x-filename 不是合法的 encodeURIComponent 输出");
+  }
+}
+
+/** 官方信任检查的守卫式委派（dsh-m 0.9.0 同款）：connection 在位 → 官方判定；缺席 → undefined（回落 isTrustedRequest）；抛错 → fail-closed 403。 */
+export function createOfficialRejection(ctx) {
+  return (request) => {
+    let connection, reject;
+    try {
+      connection = ctx?.get?.("connection");
+      reject = connection?.requestRejection;
+    } catch {
+      return undefined; // 服务缺席（cordis Local 对未注入名的 get 会抛）→ 回落 isTrustedRequest 栅栏
+    }
+    if (typeof reject !== "function") return undefined;
+    try {
+      return reject.call(connection, { headers: request.headers }) ?? undefined;
+    } catch {
+      return 403; // 围栏本身故障 → fail-closed
+    }
+  };
+}
+
+export function mountPersonalizationRoutes(host, options) {
+  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets, selection } = options;
+  const disposers = [];
+
+  const fence = (request, response) => {
+    // 官方信任检查守卫式委派（dsh-m 0.9.0 同款）：connection 在位 → 官方判定优先
+    // （缺席 → undefined 回落下方 isTrustedRequest 栅栏；抛错 → fail-closed 403）。
+    if (rejection !== undefined && rejection(request) !== undefined) {
+      sendJson(response, 403, { error: "trusted DSH Web request required" });
+      return false;
+    }
+    if (isTrustedRequest(request, typeof trustedHosts === "function" ? trustedHosts() : trustedHosts)) return true;
+    sendJson(response, 403, { error: "trusted DSH Web request required" });
+    return false;
+  };
+
+  // Registration is itself transactional: a mid-mount throw disposes every
+  // route registered so far instead of leaking partial mounts.
+  try {
+
+  // --- config: GET snapshot / PATCH field operations ------------------------
+
+  const configRoute = host.webServer.register({
+    kind: "exact",
+    path: "/vyra-free-theme/config",
+    handler: async (request, response) => {
+      if (!fence(request, response)) return;
+      if (request.method === "GET") return sendJson(response, 200, store.snapshot());
+      if (!method(request, response, "PATCH")) return;
+      try {
+        const body = await readJsonBody(request);
+        const result = await store.applyOperations(body);
+        return sendJson(response, 200, result);
+      } catch (error) {
+        return sendError(response, error);
+      }
+    },
+  });
+  disposers.push(configRoute);
+
+  // --- themes: GET the file-backed theme catalog (exact) ---------------------
+  //
+  // The client builds one skin per theme from this payload, so it must be
+  // served before any personalization write that targets a theme id.
+
+  if (typeof themes === "function") {
+    const themesRoute = host.webServer.register({
+      kind: "exact",
+      path: "/vyra-free-theme/themes",
+      handler: async (request, response) => {
+        if (!fence(request, response)) return;
+        if (!method(request, response, "GET")) return;
+        try {
+          return sendJson(response, 200, themes());
+        } catch (error) {
+          return sendError(response, error);
+        }
+      },
+    });
+    disposers.push(themesRoute);
+  }
+
+  // --- theme assets: GET /<themeId>/<path-inside-theme> (prefix) ------------
+
+  if (typeof themeAssets === "function") {
+    const themeAssetRoute = host.webServer.register({
+      kind: "prefix",
+      path: "/vyra-free-theme/theme",
+      handler: async (request, response) => {
+        if (!fence(request, response)) return;
+        if (!method(request, response, "GET")) return;
+        const path = String(request.url ?? "").split("?")[0];
+        const match = /^\/vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
+        if (match === null) {
+          return sendJson(response, 400, { error: "invalid theme asset path", code: "INVALID_THEME_ASSET" });
+        }
+        const [, themeId, relativePath] = match;
+        let asset;
+        try {
+          asset = themeAssets(themeId, decodeURIComponent(relativePath));
+        } catch {
+          asset = null;
+        }
+        if (asset === null || asset === undefined) {
+          return sendJson(response, 404, { error: "theme asset not found", code: "THEME_ASSET_NOT_FOUND" });
+        }
+        response.writeHead(200, {
+          "content-type": asset.mime,
+          "content-length": asset.byteLength,
+          "cache-control": "private, max-age=300",
+          "x-content-type-options": "nosniff",
+          "cross-origin-resource-policy": "same-origin",
+        });
+        response.end(asset.buffer);
+      },
+    });
+    disposers.push(themeAssetRoute);
+  }
+
+  // --- selection: GET / POST (exact) -----------------------------------------
+  //
+  // Host-owned active theme (spec §11). The client treats this as authoritative
+  // and writes back on every user switch, which is what makes `vft theme apply`
+  // work: an agent writes the same file the panel writes.
+
+  if (typeof selection === "function") {
+    const selectionRoute = host.webServer.register({
+      kind: "exact",
+      path: "/vyra-free-theme/selection",
+      handler: async (request, response) => {
+        if (!fence(request, response)) return;
+        if (method(request, response, "GET")) {
+          const record = selection().read();
+          return sendJson(response, 200, { skinId: record?.skinId ?? null, updatedAt: record?.updatedAt ?? null });
+        }
+        if (!method(request, response, "POST")) return;
+        let body;
+        try {
+          body = await readJsonBody(request, 4 * 1024);
+        } catch {
+          return sendJson(response, 400, { error: "invalid body", code: "INVALID_BODY" });
+        }
+        const skinId = body?.skinId;
+        if (typeof skinId !== "string" || !/^(official|[a-z][a-z0-9-]{1,39})$/.test(skinId)) {
+          return sendJson(response, 400, { error: "invalid skin id", code: "INVALID_SKIN_ID" });
+        }
+        try {
+          return sendJson(response, 200, selection().write(skinId));
+        } catch (error) {
+          return sendError(response, error);
+        }
+      },
+    });
+    disposers.push(selectionRoute);
+  }
+
+  // --- recovery confirmation (branch A commit) ------------------------------
+
+  const recoveryRoute = host.webServer.register({
+    kind: "exact",
+    path: "/vyra-free-theme/recovery",
+    handler: async (request, response) => {
+      if (!fence(request, response)) return;
+      if (!method(request, response, "POST")) return;
+      try {
+        return sendJson(response, 200, await store.confirmRecovery());
+      } catch (error) {
+        return sendError(response, error);
+      }
+    },
+  });
+  disposers.push(recoveryRoute);
+
+  // --- library: GET list / POST upload (exact) -------------------------------
+
+  const libraryRoute = host.webServer.register({
+    kind: "exact",
+    path: "/vyra-free-theme/library",
+    handler: async (request, response) => {
+      if (!fence(request, response)) return;
+      if (request.method === "GET") return sendJson(response, 200, store.snapshot());
+      if (!method(request, response, "POST")) return;
+      try {
+        const declaredLength = Number(header(request.headers, "content-length") ?? "0");
+        if (declaredLength > GLOBAL_MAX_BYTES) throw codedError("UPLOAD_TOO_LARGE", "图片超过 20MB 上限");
+        const buffer = await readRawBody(request, GLOBAL_MAX_BYTES + 1024);
+        const displayName = decodeDisplayName(request);
+        const declaredMime = header(request.headers, "content-type");
+        const result = await store.uploadAsset(buffer, { displayName, declaredMime });
+        return sendJson(response, 201, result);
+      } catch (error) {
+        return sendError(response, error);
+      }
+    },
+  });
+  disposers.push(libraryRoute);
+
+  // --- library: DELETE /{id} (prefix; suffix strictly validated) -------------
+
+  const libraryDeleteRoute = host.webServer.register({
+    kind: "prefix",
+    path: "/vyra-free-theme/library",
+    handler: async (request, response) => {
+      if (!fence(request, response)) return;
+      if (!method(request, response, "DELETE")) return;
+      const path = String(request.url ?? "").split("?")[0];
+      const match = /\/vyra-free-theme\/library\/([^/]+)$/.exec(path);
+      const suffix = match?.[1] ?? "";
+      if (!ASSET_ID_PATTERN.test(suffix)) {
+        return sendJson(response, 400, { error: "invalid asset id", code: "INVALID_ASSET_ID" });
+      }
+      try {
+        return sendJson(response, 200, await store.deleteAsset(suffix));
+      } catch (error) {
+        return sendError(response, error);
+      }
+    },
+  });
+  disposers.push(libraryDeleteRoute);
+
+  // --- assets: GET /{file} (prefix; path rebuilt from trusted metadata) ------
+
+  const assetsRoute = host.webServer.register({
+    kind: "prefix",
+    path: assetsBasePath,
+    handler: async (request, response) => {
+      if (!fence(request, response)) return;
+      if (!method(request, response, "GET")) return;
+      try {
+        // One seam, two adapters (ADR-0023): user gallery blobs from the
+        // store, builtin artwork from the package assets — same prefix, same
+        // headers, same trusted-metadata path discipline.
+        const requestUrl = String(request.url ?? "");
+        const blob = store.serveAsset(requestUrl)
+          ?? serveBuiltinAsset?.(requestUrl)
+          ?? null;
+        if (blob === null) {
+          return sendJson(response, 404, { error: "asset not found", code: "ASSET_NOT_FOUND" });
+        }
+        response.writeHead(200, {
+          "content-type": blob.meta.mime,
+          "content-length": blob.meta.byteLength,
+          "cache-control": "private, max-age=31536000, immutable",
+          etag: `"${blob.meta.sha256}"`,
+          "x-content-type-options": "nosniff",
+          "cross-origin-resource-policy": "same-origin",
+        });
+        response.end(blob.buffer);
+      } catch (error) {
+        return sendError(response, error);
+      }
+    },
+  });
+  disposers.push(assetsRoute);
+
+  } catch (error) {
+    for (let index = disposers.length - 1; index >= 0; index -= 1) {
+      try { disposers[index](); } catch {}
+    }
+    throw error;
+  }
+
+  return () => {
+    for (const dispose of disposers) dispose();
+  };
+}

@@ -719,6 +719,22 @@ export class MultiBotDshFeishuController {
     });
   }
 
+  async sendProactiveFile(botId, target, file, options = {}) {
+    this.#assertOpen();
+    return this.#withBotTransition(botId, async () => {
+      this.#assertOpen();
+      this.#requireBot(botId);
+      const runtime = this.#runtimes.get(botId);
+      if (!isConnected(connectionStatus(runtime))
+        || typeof runtime.sendProactiveFile !== 'function') {
+        const error = new Error('飞书机器人尚未连接');
+        error.code = 'bot-not-connected';
+        throw error;
+      }
+      return runtime.sendProactiveFile(target, file, options);
+    });
+  }
+
   async presentSessionSyncApproval(botId, target, interaction, options = {}) {
     this.#assertOpen();
     return this.#withBotTransition(botId, async () => {

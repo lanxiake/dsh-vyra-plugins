@@ -15,7 +15,34 @@ All nine built-in channels support proactive delivery: Weixin, Feishu, DingTalk,
 5. Review or enter the **Target ID**, target type, and native platform ID.
 6. Select **Test**. After the target receives `DSH-IM 主动投递测试成功。`, select **Save target**.
 7. Select **Copy call parameters** on the saved target and store the resulting `{ botId, targetId }` in the calling application.
-8. Send messages through HTTP POST, same-Host `ctx.dshIm.send()`, or the Connection RPC `message.send` endpoint.
+8. Send messages through the Agent tools, the `dsh-im` CLI, HTTP POST, same-Host `ctx.dshIm.send()`, or the Connection RPC `message.send` endpoint.
+
+## Agent tools (recommended)
+
+The plugin registers three tools in every Session, so a model needs neither the HTTP port nor the source code:
+
+| Tool | Purpose |
+| --- | --- |
+| `dsh_im_delivery_targets` | List bots (no arguments) or one bot's targets (`botId`). Never returns platform routes. |
+| `dsh_im_send_message` | Send text: `{ botId, targetId, text, format? }`. |
+| `dsh_im_send_file` | Send a local file or image: `{ botId, targetId, path, asImage? }`. Feishu, Weixin, WeCom, DingTalk and QQ. |
+
+The package also mounts the `dsh-im-delivery` skill (`skills/dsh-im-delivery/SKILL.md`), which documents target setup, channel differences and error recovery. It ships with the plugin and is not copied into `~/.dsh/skills`.
+
+Rules: use the tools only when the user or a scheduled task asks for a push; never to answer the current conversation; one target per call; `{ sent: true }` means accepted, not delivered or read; do not retry a timeout or `delivery-failed`.
+
+## `dsh-im` CLI
+
+```bash
+dsh-im send --bot <botId> --target <targetId> --text "Build finished"
+echo "Build finished" | dsh-im send --bot <botId> --target <targetId> --stdin
+dsh-im send --bot <botId> --target <targetId> --file ./report.pdf
+dsh-im bots
+dsh-im targets --bot <botId>
+dsh-im endpoint
+```
+
+Address resolution: `--url` > `DSH_IM_URL` > `<dshHome>/integrations/dsh-im/delivery-http.json` > `http://127.0.0.1:3080`. The Host writes the endpoint file when it registers the routes.
 
 ## Configure a delivery target
 
@@ -161,11 +188,31 @@ A successful request returns:
 { "sent": true }
 ```
 
-The body accepts the required `botId`, `targetId`, and `text` fields, plus optional `format` (`plain` or `markdown`, default `plain`), with a maximum total JSON size of 1 MiB. Do not add a native platform route, `sessionId`, `chatRef`, temporary webhook, or `idempotencyKey`.
+The body accepts the required `botId`, `targetId`, and `text` fields, plus optional `format` (`plain` or `markdown`, default `plain`) and `idempotencyKey` (1-128 letters, digits, `.` `_` `:` `-`), with a maximum total JSON size of 1 MiB. Do not add a native platform route, `sessionId`, `chatRef`, or temporary webhook.
 
 The fixed endpoint is `POST /api/dsh-im/delivery/messages`. It reuses the current DSH Host WebServer and does not open another port. Port `3080` is the default for the Web profile; use the address printed by the running Host when it differs.
 
 The HTTP endpoint currently has no authentication and does not provide CORS. Use it only on the local machine or a trusted network; never expose it directly to the public internet.
+
+### Send a file or image
+
+```bash
+curl -X POST http://127.0.0.1:3080/api/dsh-im/delivery/files \
+  -H 'Content-Type: application/json' \
+  -d '{"botId":"bot_xxx","targetId":"release-alerts","path":"/abs/report.pdf"}'
+```
+
+The body accepts `botId`, `targetId`, `path`, optional boolean `asImage`, and optional `idempotencyKey`; the Host reads the path. The limit is 30 MB. When `asImage` is omitted, the extension decides (png/jpg/jpeg/gif/webp/bmp). Success returns `{ "sent": true, "fileName", "size", "asImage" }`. Proactive files are supported on Feishu, Weixin, WeCom (bot and app), DingTalk and QQ; other channels answer `capability-unavailable` (HTTP 501).
+
+### Discover bots and targets
+
+```bash
+curl -X POST http://127.0.0.1:3080/api/dsh-im/delivery/query \
+  -H 'Content-Type: application/json' \
+  -d '{"op":"bots"}'
+```
+
+`{ "op": "targets", "botId": "..." }` returns `{ botId, channel, targets }` with `targetId`, optional `name`, and `kind`. Platform routes are never returned.
 
 ## Send from a plugin in the same Host
 
@@ -288,7 +335,7 @@ const result = await callDelivery(connection, 'message.send', {
 // result: { sent: true }
 ```
 
-`message.send` accepts `{ botId, targetId, text, format? }`; `format` must be `plain` or `markdown`. Do not add a native route, `sessionId`, `chatRef`, temporary webhook, or `idempotencyKey`.
+`message.send` accepts `{ botId, targetId, text, format?, idempotencyKey? }`; `format` must be `plain` or `markdown`. Do not add a native route, `sessionId`, `chatRef`, temporary webhook, or `idempotencyKey`.
 
 ### Example: deliver a daily report
 
@@ -345,6 +392,7 @@ An HTTP failure returns `{ "error": { "code", "message", "details" } }`. Same-Ho
 | `bot-not-connected` | 503 | The bot is offline; let the caller decide whether to retry after reconnection |
 | `target-rejected` | 422 | The platform explicitly rejected the target or the bot lacks permission; check platform permissions and the target ID |
 | `delivery-failed` | 502 | A network, platform, or other safely redacted delivery failure; check bot state and Host logs |
+| `capability-unavailable` | 501 | This channel has no proactive file capability; Feishu, Weixin, WeCom, DingTalk and QQ support it | Send text, or use `dsh_im_return_file` inside the IM conversation |
 | `session-sync-unavailable` | — | The target is not a confirmed current-Host DM, has no current Session, or uses a remote Harness; create it from a known DM and establish a Session first |
 | `cancelled` | 408 | The call was cancelled; stop or start a new call as required by the application |
 
@@ -352,11 +400,13 @@ The HTTP protocol layer may also return `method-not-allowed` (405), `unsupported
 
 ## Delivery semantics and limits
 
-- Proactive delivery currently accepts nonempty text only. This API does not send images, files, cards, or rich content.
+- Text delivery accepts nonempty text only; it does not send cards or rich content.
+- Proactive files are supported on Feishu, Weixin, WeCom (bot and app), DingTalk and QQ (`POST /api/dsh-im/delivery/files`, `dsh_im_send_file`, `dsh-im send --file`), up to 30 MB. Other channels answer `capability-unavailable`.
 - The maximum HTTP JSON request body is 1 MiB.
 - `{ sent: true }` means the platform accepted the send request or its SDK returned success. It does not guarantee final delivery or a read receipt.
-- DSH-IM stores no proactive-delivery history, generates no `deliveryHandle` or `idempotencyKey`, and performs no automatic retry.
-- Retrying after a caller timeout can create duplicate messages. When business idempotency matters, the caller must store its own event ID and processing result.
+- DSH-IM stores no proactive-delivery history and performs no automatic retry.
+- With `idempotencyKey`, the Host suppresses duplicates in-process for 24h per `botId + targetId + key` and answers `{ sent: true, duplicate: true }`; a failed attempt releases its key. The window does not survive a Host restart.
+- Retrying after a caller timeout can create duplicate messages; reuse the same `idempotencyKey`. Across Host restarts or for long-lived idempotency, the caller still stores its own event ID and processing result.
 - Normal delivery uses only a saved `botId + targetId`. Keep the native route in target configuration instead of sending it with every message.
 - One call sends to one target. Notify multiple targets with separate calls and handle each result separately.
 - Targets remain editable while a bot is offline, but testing and delivery require a connected bot.

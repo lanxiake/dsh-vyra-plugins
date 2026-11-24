@@ -21,7 +21,8 @@ const externalRuntimePackages = [
   'sharp',
   'undici',
 ];
-const external = externalRuntimePackages.flatMap((name) => [name, `${name}/*`]);
+const external = [...externalRuntimePackages, '@deepseek-ai/dsh-skill-filesystem']
+  .flatMap((name) => [name, `${name}/*`]);
 
 await mkdir(dirname(outputPath), { recursive: true });
 await build({

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Repo-local launcher for the vyra-free-theme CLI (the plugin installs its own
+# copy into ~/.dsh/vyra-free-theme/bin/ at runtime).
+exec node "$(dirname "$0")/../cli/vft.mjs" "$@"

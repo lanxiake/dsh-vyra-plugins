@@ -70,22 +70,22 @@
 ---
 
 > [!IMPORTANT]
-> **Install using the full package name: `@xmanrui/dsh-im`**
+> **Install using the full package name: `@lanxiake/dsh-im`**
 >
 > To avoid name confusion, copy the full package name below when searching the plugin marketplace, entering it in the plugin installer, or installing from the command line.
 >
 > ```text
-> @xmanrui/dsh-im
+> @lanxiake/dsh-im
 > ```
 >
 > Choose one command: use **Desktop**'s built-in terminal or the terminal used to start the current Harness for **Web**.
 >
 > ```sh
-> dsh plugin --profile desktop add -w @xmanrui/dsh-im
+> dsh plugin --profile desktop add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 > ```
 >
 > ```sh
-> dsh plugin --profile web add -w @xmanrui/dsh-im
+> dsh plugin --profile web add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 > ```
 >
 > Restart Desktop or `dsh web`, refresh the browser for Web, then open **Settings → IM Bot**.
@@ -170,12 +170,12 @@ After the model calls the file-return tool, the plugin hands the specified file 
 
 ## Installation
 
-Install the published stable release of **`@xmanrui/dsh-im`** from npm (recommended). Choose the command for the application you use:
+Install **`@lanxiake/dsh-im`** from the **DSH plugin market** (search for “Instant Messaging Bridge”). You can also install it straight from the Git source:
 
 **DSH Desktop**: run in the current Desktop application's built-in terminal:
 
 ```sh
-dsh plugin --profile desktop add -w @xmanrui/dsh-im
+dsh plugin --profile desktop add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 ```
 
 Restart DSH Desktop after installation.
@@ -183,7 +183,7 @@ Restart DSH Desktop after installation.
 **DSH Web**: run in the terminal environment used to start the current Harness:
 
 ```sh
-dsh plugin --profile web add -w @xmanrui/dsh-im
+dsh plugin --profile web add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
 ```
 
 Restart `dsh web` and refresh the browser after installation.
@@ -192,15 +192,17 @@ After restarting, open **Settings → IM Bot**. The top-level IM Bot entry uses 
 
 Local `dsh web` and DSH Desktop reuse the current Host's internal services by default: the Typert Gateway invokes the Session and Workspace controllers. No Harness address or loopback HTTP connection is required. Desktop's compatibility, extended-window, and advanced modes do not require browser access or LAN access to be enabled. An explicit channel `harnessBaseUrl` is retained only for legacy remote HTTP/WebSocket Harness endpoints; failed internal calls never silently switch to another Host.
 
-To try the latest code before it is published to npm, use the GitHub-source installer instead:
+`@lanxiake/dsh-im` is a fork of `@xmanrui/dsh-im` under a new package name; the two **cannot be enabled together**:
 
-```sh
-npx -y github:xmanrui/dsh-im install
-```
+1. Remove the old package from the market or with `dsh plugin --profile <profile> remove @xmanrui/dsh-im`.
+2. Install `@lanxiake/dsh-im`.
+3. Restart the Host. Bots, credentials, workspaces, Agent Presets, Session bindings and delivery targets live under `~/.dsh/integrations/dsh-*` and survive the rename.
 
-A GitHub-source installation fetches and builds a Git dependency directly. With pnpm 10 or newer, the profile may first need an `allowBuilds` entry in `pnpm-workspace.yaml`. Most users should prefer the stable npm release.
+A Git-source installation fetches and builds a Git dependency directly. With pnpm 10 or newer, the profile may first need an `allowBuilds` entry in `pnpm-workspace.yaml`.
 
 After installation, follow the built-in instructions on each channel page to scan a QR code or enter credentials. Secrets and Tokens are sent only to the local Harness Host and stored through its protected credential provider; status responses and bot lists never return them.
+
+On load, the plugin mounts the `dsh-im-delivery` skill and registers `dsh_im_delivery_targets`, `dsh_im_send_message`, and `dsh_im_send_file` in every Session, plus a `dsh-im send|bots|targets|endpoint` CLI. An Agent needs neither the source nor the port. See [PROACTIVE_DELIVERY.en.md](PROACTIVE_DELIVERY.en.md#agent-tools-recommended).
 
 If this machine must use a forward proxy to reach Feishu, set `HTTPS_PROXY` to a full HTTP proxy URL before starting `dsh web` (for example, `http://proxy:8080`; lowercase `https_proxy` is also supported, with `HTTP_PROXY` accepted as a fallback), then restart the Host after changing it. Feishu registration and credential verification reuse the SDK's proxy-aware HTTP client, while the message WebSocket explicitly uses that proxy; the WebSocket path does not currently read `ALL_PROXY` or `NO_PROXY`.
 
