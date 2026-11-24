@@ -2952,6 +2952,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.8 reads the session log through non-throwing service probes.
+        '0.2.8': {
+          publishTimestamp: 1795503460,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3f45a21221865571dda3958fb19fe803b4df6f70',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
