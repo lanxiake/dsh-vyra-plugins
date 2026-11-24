@@ -1315,6 +1315,18 @@ window.__ModuleLoader__.load({
         }
       }, [loading])
 
+      // 卡片的内联兜底样式：样式表没生效时也能看出这是一块块的设置区。
+      const cardStyle = {
+        border: '1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.12))',
+        borderRadius: '12px',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        background: 'var(--dsw-alias-bg-layer-1, #fff)',
+      }
+      const card = (...children) => h('section', { className: 'vsr-card', style: cardStyle }, ...children)
+
       const field = (label, control, note) => h('label', { className: 'vsr-field' },
         h('span', { className: 'vsr-field-label' }, label),
         control,
@@ -1325,7 +1337,12 @@ window.__ModuleLoader__.load({
       // 看不到任何设置卡片——截图目录、快捷键全都改不了。现在设置卡片始终
       // 用 draft 的当前值渲染，加载只是把占位换成真实值。
       const files = library.filter(file => filter === 'all' || file.kind === filter)
-      return h('div', { className: 'vsr-settings', ref: topRef },
+      return h('div', {
+        className: 'vsr-settings',
+        ref: topRef,
+        // 内联兜底：样式表没生效时也能纵向排开，而不是塌成一行。
+        style: { display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '900px', padding: '4px 2px 32px' },
+      },
         h('div', { className: 'vsr-settings-head' },
           h('div', null,
             h('h2', null, L('录屏与截图', 'Screen recorder')),
@@ -1334,7 +1351,7 @@ window.__ModuleLoader__.load({
               : L('存储位置、录制格式、快捷键和文件都在这里管理。', 'Manage storage, format, shortcuts and files.'))),
           h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void load() } }, L('刷新', 'Refresh'))),
         error ? h('div', { className: 'vsr-error' }, error) : null,
-        h('section', { className: 'vsr-card' },
+        card(
           h('h3', null, L('存储位置', 'Storage')),
           field(L('视频保存到', 'Save videos to'),
             h('div', { className: 'vsr-storage-row' },
@@ -1359,7 +1376,7 @@ window.__ModuleLoader__.load({
               h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => openPath(paths && paths.screenshots) }, L('打开', 'Open')),
               h('button', { type: 'button', className: 'vsr-btn-outline', onClick: () => setDraft({ ...draft, shotDir: '' }) }, L('默认', 'Default')))),
           h('div', { className: 'vsr-muted vsr-path' }, L('留空使用默认位置；目录不存在时会自动创建。', 'Leave empty for the default; folders are created automatically.'))),
-        h('section', { className: 'vsr-card' },
+        card(
           h('h3', null, L('录制', 'Recording')),
           h('div', { className: 'vsr-grid' },
             field(L('保存格式', 'Save format'), h('select', {
@@ -1394,7 +1411,7 @@ window.__ModuleLoader__.load({
               type: 'checkbox', checked: draft.includeMic,
               onChange: event => setDraft({ ...draft, includeMic: event.target.checked }),
             }), L('默认录麦克风', 'Microphone by default')))),
-        h('section', { className: 'vsr-card' },
+        card(
           h('h3', null, L('快捷键', 'Shortcuts')),
           h('div', { className: 'vsr-grid' },
             field(L('截图', 'Screenshot'), h(ShortcutInput, {
@@ -1422,7 +1439,7 @@ window.__ModuleLoader__.load({
               onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, save: value } }),
             }))),
           h('div', { className: 'vsr-muted' }, L('在 DSH 窗口内生效；点输入框后直接按组合键。工具条按钮上悬停会显示对应快捷键。', 'Active while DSH is focused; hover a toolbar button to see its shortcut.'))),
-        h('section', { className: 'vsr-card' },
+        card(
           h('h3', null, L('文字识别', 'Text recognition')),
           h('div', { className: 'vsr-grid' },
             field(L('识别引擎', 'Engine'), h('select', {
@@ -1442,12 +1459,12 @@ window.__ModuleLoader__.load({
           h('div', { className: 'vsr-muted' },
             ocrInfo.winrt
               ? L('系统 OCR 可用：', 'Windows OCR available: ') + ocrInfo.languages.join(', ') + L('。截图后点「文」取字。', '. Click the text button to read it.')
-              : L('系统 OCR 不可用：请在「设置 → 时间和语言 → 语言和区域」里安装语言包。', 'Windows OCR unavailable: install a language pack under Settings → Time & language.')))),
+              : L('系统 OCR 不可用：请在「设置 → 时间和语言 → 语言和区域」里安装语言包。', 'Windows OCR unavailable: install a language pack under Settings → Time & language.'))),
         h('div', { className: 'vsr-settings-actions' },
           h('button', { type: 'button', className: 'vsr-btn-primary', disabled: saving, onClick: () => { void save() } },
             saving ? L('保存中…', 'Saving…') : L('保存设置', 'Save settings')),
           h('span', { className: 'vsr-muted' }, L('修改后点保存。', 'Save to apply.'))),
-        h('section', { className: 'vsr-card' },
+        card(
           h('div', { className: 'vsr-library-head' },
             h('h3', null, L('文件', 'Files')),
             h('div', { className: 'vsr-library-actions' },
@@ -1469,7 +1486,7 @@ window.__ModuleLoader__.load({
               file.kind === 'video' && file.name.toLowerCase().endsWith('.webm')
                 ? h('button', { type: 'button', className: 'vsr-settings-link', disabled: converting !== null, onClick: () => { void convert(file) } }, L('转 MP4', 'To MP4'))
                 : null,
-              h('button', { type: 'button', className: 'vsr-settings-link vsr-danger', onClick: () => { void removeFile(file) } }, L('删除', 'Delete')))))))
+              h('button', { type: 'button', className: 'vsr-settings-link vsr-danger', onClick: () => { void removeFile(file) } }, L('删除', 'Delete'))))))))
     }
 
     // ---------------------------------------------------------------- icons
@@ -2344,8 +2361,8 @@ window.__ModuleLoader__.load({
     // ------------------------------------------------------------------ css
     const CSS = `
 .vsr-toolbar { display: inline-flex; align-items: center; gap: 2px; }
-.vsr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; min-width: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--dsh-color-text-secondary, #6b7280); cursor: pointer; font: inherit; }
-.vsr-btn:hover:not(:disabled) { background: var(--dsh-color-fill-quaternary, rgba(0,0,0,.06)); color: var(--dsh-color-text-primary, #111827); }
+.vsr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; min-width: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary, #6b7280); cursor: pointer; font: inherit; }
+.vsr-btn:hover:not(:disabled) { background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.06)); color: var(--dsw-alias-label-primary, #111827); }
 .vsr-btn:disabled { opacity: .45; cursor: default; }
 .vsr-btn-rec { color: #e5484d; }
 /* 悬停提示：默认 display:none，只有悬停时才出现。
@@ -2374,32 +2391,32 @@ html.vsr-capturing .vsr-overlay,
 html.vsr-capturing .vsr-progress,
 html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-overlay { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
-.vsr-modal { width: 420px; max-width: calc(100vw - 32px); max-height: 82vh; display: flex; flex-direction: column; background: var(--dsh-color-bg-elevated, #fff); color: var(--dsh-color-text-primary, #1f2329); border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.38); overflow: hidden; }
+.vsr-modal { width: 420px; max-width: calc(100vw - 32px); max-height: 82vh; display: flex; flex-direction: column; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-primary, #1f2329); border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.38); overflow: hidden; }
 .vsr-modal-narrow { width: 360px; }
 .vsr-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; font-size: 14px; }
 .vsr-x { border: 0; background: transparent; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; opacity: .55; padding: 0 3px; }
 .vsr-x:hover { opacity: 1; }
 .vsr-scroll { overflow: auto; padding: 0 10px 8px; }
-.vsr-section { display: block; width: 100%; padding: 10px 6px 6px; font-size: 11px; letter-spacing: .04em; color: var(--dsh-color-text-tertiary, #8a8f98); text-align: left; background: transparent; border: 0; }
+.vsr-section { display: block; width: 100%; padding: 10px 6px 6px; font-size: 11px; letter-spacing: .04em; color: var(--dsw-alias-label-secondary, #8a8f98); text-align: left; background: transparent; border: 0; }
 .vsr-section-toggle { cursor: pointer; }
 .vsr-chevron { display: inline-block; width: 12px; font-size: 10px; }
 .vsr-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
-.vsr-row:hover { background: var(--dsh-color-fill-quaternary, rgba(0,0,0,.05)); }
-.vsr-row-last { border-color: var(--dsh-color-accent, #1677ff); background: color-mix(in srgb, var(--dsh-color-accent, #1677ff) 8%, transparent); }
+.vsr-row:hover { background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
+.vsr-row-last { border-color: var(--dsw-alias-brand-primary, #1677ff); background: color-mix(in srgb, var(--dsw-alias-brand-primary, #1677ff) 8%, transparent); }
 .vsr-row-custom { margin-top: 4px; }
 .vsr-thumb { width: 72px; height: 44px; border-radius: 6px; background: #111; flex: none; }
-.vsr-custom-icon { display: flex; align-items: center; justify-content: center; width: 72px; height: 44px; flex: none; border-radius: 6px; border: 1px dashed var(--dsh-color-border, rgba(0,0,0,.25)); font-size: 20px; color: var(--dsh-color-text-tertiary, #8a8f98); }
+.vsr-custom-icon { display: flex; align-items: center; justify-content: center; width: 72px; height: 44px; flex: none; border-radius: 6px; border: 1px dashed var(--dsw-alias-border-l1, rgba(0,0,0,.25)); font-size: 20px; color: var(--dsw-alias-label-secondary, #8a8f98); }
 .vsr-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .vsr-row-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
-.vsr-row-detail { font-size: 11px; color: var(--dsh-color-text-tertiary, #8a8f98); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
-.vsr-modal-foot { display: flex; align-items: center; gap: 14px; padding: 10px 16px 12px; border-top: 1px solid var(--dsh-color-border, rgba(0,0,0,.08)); font-size: 12px; flex-wrap: wrap; }
+.vsr-row-detail { font-size: 11px; color: var(--dsw-alias-label-secondary, #8a8f98); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+.vsr-modal-foot { display: flex; align-items: center; gap: 14px; padding: 10px 16px 12px; border-top: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.08)); font-size: 12px; flex-wrap: wrap; }
 .vsr-picker-foot { gap: 12px; }
 .vsr-check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.vsr-hint { margin-left: auto; color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 11px; }
-.vsr-link { border: 0; background: transparent; color: var(--dsh-color-accent, #1677ff); cursor: pointer; font: inherit; padding: 0; }
+.vsr-hint { margin-left: auto; color: var(--dsw-alias-label-secondary, #8a8f98); font-size: 11px; }
+.vsr-link { border: 0; background: transparent; color: var(--dsw-alias-brand-primary, #1677ff); cursor: pointer; font: inherit; padding: 0; }
 .vsr-link-light { color: #8fc2ff; }
 .vsr-error { padding: 10px 16px 16px; color: #e5484d; font-size: 13px; line-height: 1.5; }
-.vsr-muted { color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 13px; }
+.vsr-muted { color: var(--dsw-alias-label-secondary, #8a8f98); font-size: 13px; }
 .vsr-overlay-shot { background: rgba(0,0,0,.62); }
 .vsr-shot-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .vsr-shot-wrap { position: relative; cursor: crosshair; box-shadow: 0 20px 70px rgba(0,0,0,.45); border-radius: 2px; overflow: hidden; }
@@ -2466,39 +2483,39 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-toast-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vsr-toast-x { border: 0; background: transparent; color: #fff; opacity: .55; cursor: pointer; font-size: 16px; line-height: 1; }
 .vsr-toast-x:hover { opacity: 1; }
-.vsr-settings { max-width: 900px; padding: 4px 2px 32px; display: flex; flex-direction: column; gap: 14px; color: var(--dsh-color-text-primary, #1f2329); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+.vsr-settings { max-width: 900px; padding: 4px 2px 32px; display: flex; flex-direction: column; gap: 14px; color: var(--dsw-alias-label-primary, #1f2329); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
 .vsr-settings-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .vsr-settings-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
-.vsr-card { border: 1px solid var(--dsh-color-border, rgba(0,0,0,.09)); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--dsh-color-bg-elevated, #fff); }
+.vsr-card { border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.09)); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--dsw-alias-bg-layer-1, #fff); }
 .vsr-card h3 { margin: 0; font-size: 13px; font-weight: 600; }
 .vsr-storage-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .vsr-grow { flex: 1; min-width: 220px; }
-.vsr-input, .vsr-select { height: 32px; padding: 0 10px; border: 1px solid var(--dsh-color-border, rgba(0,0,0,.16)); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 13px; }
+.vsr-input, .vsr-select { height: 32px; padding: 0 10px; border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.16)); border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 13px; }
 .vsr-input[type="number"] { width: 90px; }
 .vsr-shortcut-input { width: 170px; cursor: pointer; }
-.vsr-btn-outline { border: 1px solid var(--dsh-color-border, rgba(0,0,0,.16)); background: transparent; color: inherit; border-radius: 8px; height: 32px; padding: 0 12px; cursor: pointer; font: inherit; font-size: 12px; }
-.vsr-btn-outline:hover { background: var(--dsh-color-fill-quaternary, rgba(0,0,0,.05)); }
+.vsr-btn-outline { border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.16)); background: transparent; color: inherit; border-radius: 8px; height: 32px; padding: 0 12px; cursor: pointer; font: inherit; font-size: 12px; }
+.vsr-btn-outline:hover { background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.05)); }
 .vsr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 14px; }
 .vsr-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
-.vsr-field-label { color: var(--dsh-color-text-secondary, #6b7280); }
-.vsr-field-note { color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 11px; }
+.vsr-field-label { color: var(--dsw-alias-label-secondary, #6b7280); }
+.vsr-field-note { color: var(--dsw-alias-label-secondary, #8a8f98); font-size: 11px; }
 .vsr-checks { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; }
 .vsr-path { word-break: break-all; }
 .vsr-settings-actions { display: flex; align-items: center; gap: 12px; }
-.vsr-settings-link { border: 0; background: transparent; color: var(--dsh-color-accent, #1677ff); cursor: pointer; font: inherit; font-size: 12px; padding: 0; }
+.vsr-settings-link { border: 0; background: transparent; color: var(--dsw-alias-brand-primary, #1677ff); cursor: pointer; font: inherit; font-size: 12px; padding: 0; }
 .vsr-settings-link:disabled { opacity: .45; cursor: default; }
 .vsr-danger { color: #e5484d; }
 .vsr-library-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .vsr-library-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.vsr-filter { border: 1px solid var(--dsh-color-border, rgba(0,0,0,.16)); background: transparent; color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; }
-.vsr-filter-on { border-color: var(--dsh-color-accent, #1677ff); color: var(--dsh-color-accent, #1677ff); background: rgba(22,119,255,.1); }
+.vsr-filter { border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.16)); background: transparent; color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.vsr-filter-on { border-color: var(--dsw-alias-brand-primary, #1677ff); color: var(--dsw-alias-brand-primary, #1677ff); background: rgba(22,119,255,.1); }
 .vsr-file-list { display: flex; flex-direction: column; gap: 2px; max-height: 340px; overflow: auto; }
-.vsr-file-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--dsh-color-border, rgba(0,0,0,.07)); font-size: 12px; }
+.vsr-file-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.07)); font-size: 12px; }
 .vsr-file-kind { flex: none; min-width: 36px; padding: 2px 6px; border-radius: 5px; background: rgba(22,119,255,.12); color: #1677ff; text-align: center; font-size: 11px; }
 .vsr-file-kind-image { background: rgba(46,164,79,.14); color: #2ea44f; }
 .vsr-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vsr-file-meta { flex: none; color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 11px; }
-.vsr-empty { color: var(--dsh-color-text-tertiary, #8a8f98); font-size: 12px; padding: 12px 0; }
+.vsr-file-meta { flex: none; color: var(--dsw-alias-label-secondary, #8a8f98); font-size: 11px; }
+.vsr-empty { color: var(--dsw-alias-label-secondary, #8a8f98); font-size: 12px; padding: 12px 0; }
 .vsr-convert { display: flex; flex-direction: column; gap: 6px; }
 @media (prefers-color-scheme: dark) {
   .vsr-modal { background: #1f2329; color: #e8e9eb; }
