@@ -251,5 +251,52 @@ check('broken skills root reports an error', typeof s5.error, 'string')
 
 for (const dir of [homeS, homeL, homeBroken]) rmSync(dir, { recursive: true, force: true })
 
+// ===== Task 6: CLI =====
+console.log('\n--- Task 6: CLI ---')
+const cliMod = await load('cli.mjs')
+const cliHome = mkdtempSync(join(tmpdir(), 'od-cli-'))
+const run = (args) => cliMod.run(args, { dshHome: cliHome, root: pluginRoot, installAgents: false })
+
+const listOut = run(['domains', 'list'])
+check('list exits 0', listOut.exitCode, 0)
+check('list shows all nine domains', domains.DOMAINS.filter((d) => listOut.stdout.includes(d.id)).length, 9)
+check('list marks enabled state', /✅/.test(listOut.stdout), true)
+
+check('enable unknown id exits 1', run(['domains', 'enable', 'od-nope']).exitCode, 1)
+check('enable unknown id names the culprit', run(['domains', 'enable', 'od-nope']).stderr.includes('od-nope'), true)
+check('enable with no ids exits 1', run(['domains', 'enable']).exitCode, 1)
+
+check('enable video exits 0', run(['domains', 'enable', 'od-video']).exitCode, 0)
+check('video now enabled', cfgMod.readConfig(cliHome).enabled.includes('od-video'), true)
+check('video skill dir created', existsSync(join(cliHome, 'skills', 'od-video', 'SKILL.md')), true)
+
+check('disable video exits 0', run(['domains', 'disable', 'od-video']).exitCode, 0)
+check('video now disabled', cfgMod.readConfig(cliHome).enabled.includes('od-video'), false)
+check('video skill dir removed', existsSync(join(cliHome, 'skills', 'od-video')), false)
+
+check('enable-all exits 0', run(['domains', 'enable-all']).exitCode, 0)
+check('enable-all enables nine', cfgMod.readConfig(cliHome).enabled.length, 9)
+check('all nine skill dirs exist after enable-all',
+  domains.DOMAIN_IDS.filter((id) => !existsSync(join(cliHome, 'skills', id, 'SKILL.md'))), [])
+
+check('disable-all exits 0', run(['domains', 'disable-all']).exitCode, 0)
+check('disable-all enables none', cfgMod.readConfig(cliHome).enabled.length, 0)
+check('disable-all leaves no skill dirs',
+  domains.DOMAIN_IDS.filter((id) => existsSync(join(cliHome, 'skills', id))), [])
+
+check('agents list exits 0', run(['agents', 'list']).exitCode, 0)
+check('agents list names the director', run(['agents', 'list']).stdout.includes('od-director'), true)
+check('unknown command exits 1', run(['frobnicate']).exitCode, 1)
+check('no command prints usage', /odx/.test(run([]).stdout), true)
+
+const jsonOut = run(['domains', 'list', '--json'])
+check('json output parses', Array.isArray(JSON.parse(jsonOut.stdout)), true)
+check('json has nine rows', JSON.parse(jsonOut.stdout).length, 9)
+check('json rows carry enabled', typeof JSON.parse(jsonOut.stdout)[0].enabled, 'boolean')
+
+check('sync exits 0', run(['sync']).exitCode, 0)
+
+rmSync(cliHome, { recursive: true, force: true })
+
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)

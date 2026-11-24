@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+// Thin stdio wrapper around cli.mjs, kept separate so the module stays testable.
+import { run } from '../cli.mjs'
+
+const { exitCode, stdout, stderr } = run(process.argv.slice(2))
+if (stdout) process.stdout.write(stdout)
+if (stderr) process.stderr.write(stderr)
+process.exitCode = exitCode
