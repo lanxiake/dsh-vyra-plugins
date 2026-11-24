@@ -452,7 +452,7 @@ window.__ModuleLoader__.load({
      * with the market manifest on every release, so a client one release behind
      * still reads a consistent index — never a mix of old code and new versions.
      */
-    const VEYRA_COMMIT = '0000000000000000000000000000000000000000'
+    const VEYRA_COMMIT = '70b3dc6c183223ee43167563027f6c63bcb9fe8e'
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
       `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index.json`,

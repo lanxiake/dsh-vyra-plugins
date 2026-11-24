@@ -2313,6 +2313,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.6.2 stops the twelve-hour blind spot after a release: the jsDelivr
+        // index entries are pinned to a commit (served immutable) instead of the
+        // @master branch, whose s-maxage handed readers the previous release.
+        '0.6.2': {
+          publishTimestamp: 1795491062,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '70b3dc6c183223ee43167563027f6c63bcb9fe8e',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
