@@ -179,13 +179,25 @@ node plugins/vyra-plugin-market/cli.mjs uninstall <package-name> --json # 输出
 
 ## 安装
 
-在客户端「设置 → 插件 → 索引源」加入：
+**从 npm 安装（推荐）**——包已发布到 npm，不依赖本仓库的 git 提交：
+
+```sh
+dsh plugin --profile <profile> add vyra-plugin-market
+```
+
+或让 Agent 用宿主的 `plugin_manager` 安装（`install_bundle`，`target` 传 `vyra-plugin-market`）。也可以直接 `npm i vyra-plugin-market` 装 `vyra-market` 这个 CLI。
+
+> 首次发布后版本会有一段 **Validating**（npm 自动审核）时间，期间 `npm install` 可能取不到新版本 —— 在 npmjs.com 包页的「Version History」看到状态是 **Published** 才表示可装。
+
+**从市场索引安装**——在客户端「设置 → 插件 → 索引源」加入：
 
 ```
 https://lanxiake.github.io/dsh-vyra-plugins/index.json
 ```
 
 然后搜索「插件市场」安装。
+
+> 「市场 → 已安装」里的**原地更新只对 git 安装的插件生效**（宿主按同一仓库目录的另一个提交标注 `update`）。npm 安装的版本更新时，先卸载再安装，或用上面的 `dsh plugin add` 覆盖安装。
 
 ## 为什么没有宿主端
 

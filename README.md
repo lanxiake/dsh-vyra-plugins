@@ -31,6 +31,12 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 
 想只用某一个插件也可以，每个插件都是独立的 npm 包，按包名从 Git 安装即可（安装源见各条目的 `version.source`）。
 
+**插件市场本身也发布在 npm**，不走索引源也能装：
+
+```sh
+dsh plugin --profile <profile> add vyra-plugin-market
+```
+
 ## 已发布的插件
 
 | 插件 | 名称 | 介绍 |
@@ -41,7 +47,7 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 | `vyra-skill-mcp-manager` | 技能与 MCP 管理 | 在一个面板里浏览、搜索、安装技能与 MCP 服务器，不必为每一件都手改 profile 配置行 |
 | `vyra-ssh-terminal` | SSH 终端 | 把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密 |
 | `vyra-system-selection` | 系统级划词 | 在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。**仅 Windows** |
-| `vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份 |
+| `vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份。**已发布 npm**：[`vyra-plugin-market`](https://www.npmjs.com/package/vyra-plugin-market) |
 | `vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
 | `vyra-studymate` | StudyMate 学习 | 学习技能与课程引擎：定计划、讲知识、做项目。每门课还能派生音频课、旁白视频和动手工作坊，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。基于 [Cattofu 的 StudyMate](https://github.com/Miaotofu01/Study-Mate)（MIT）
 
@@ -56,7 +62,6 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 | `@xmanrui/dsh-im` | 即时通讯桥接 | 把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH | [xmanrui](https://github.com/xmanrui/dsh-im) |
 | `@yuehancn/dsh-tool-ocr` | 图像文字识别 | 从图片和 PDF 里取文字：数字版 PDF 直接读文字层，扫描件走 OCR | [yuehancn](https://github.com/yuehancn/dsh-tool-ocr) |
 | `@anht3889/dsh-superpowers` | Superpowers 技能集 | obra Superpowers 技能集，附带会话引导 | [anht3889](https://github.com/anht3889/dsh-superpowers) |
-| `dsh-plugin` | 社区插件市场 | 社区插件市场，收录 23000+ 社区插件、6000+ 可一键安装的 npm 包，每日更新 | [dshplugin](https://github.com/dshplugin/dsh-plugin-hub) |
 | `@xiaoso/dsh-workflow-lite` | 轻量工作流 | 一个工作流就是一份 JSON（React Flow 原生），内联提示词，编译成模型自己执行的分派计划 | [xiaoso456](https://github.com/xiaoso456/dsh-workflow-lite) |
 | `dsh-expert-orchestrator` | 专家编排 | 多智能体任务编排：分诊、PM 规划、专家委派、依赖 DAG 任务板、消息总线与经验池 | [mario841859784](https://github.com/mario841859784/dsh-expert-orchestrator) |
 | `@nanmicoder/dsh-agent-teams` | 智能体团队 | 多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板 | [NanmiCoder](https://github.com/NanmiCoder/dsh-agent-teams) |
@@ -113,6 +118,27 @@ pnpm run print:skills
 `verify-index.ts` 直接从同级 `dsh-Veyra` checkout 加载已构建的
 `@deepseek-ai/dsh-plugin-market-index`，所以不需要安装任何依赖，校验用的就是 fork 当前的解析规则。
 checkout 不在同级时用 `DSH_SOURCE=/path/to/dsh-Veyra` 覆盖。
+
+### 发布插件市场到 npm
+
+`vyra-plugin-market` 同时以 npm 包发布，npm 是它的第一条安装通道。发布前先自检并核对包里装的是哪些文件：
+
+```sh
+pnpm run test:market                       # 纯逻辑自检 + 桩渲染
+cd plugins/vyra-plugin-market
+npm pack --dry-run                         # 确认 11 个文件：index.js / client.js / cli.mjs / locale / icon.svg / cordis.patch.yml / README / LICENSE / assets
+npm publish                                # 需要已 npm login，且当前账号是包的所有者
+npm view vyra-plugin-market version        # 回读 registry 确认版本已入库（npm 入库是异步的，可能要等几分钟）
+```
+
+**npm 入库是异步的，`npm publish` 返回 `+ pkg@x.y.z` 不代表已经可安装。** 实测要等约 1 分钟以上 registry 才可见；用 `npm install vyra-plugin-market` 真的装一次，比对 `node_modules/.bin/` 和入口 `import`，才算验完。
+
+**首次发布会进暂存审核**：npm CLI 11.15+ 用 `npm publish` 发一个尚不存在的包名时，会先建立一个 `0.0.0-stage` 占位版，随后提交的版本进入 **Validating** 状态，审核通过前 `npm install` 装不到。看 npmjs.com 的包页「Version History」确认状态转为 Published 后再对外宣布。想显式走这条路，用 `npm stage publish`，之后 `npm stage list` / `npm stage approve <stage-id>` 管理（批准需要 2FA）。
+
+**`bin` 的路径不要带 `./` 前缀**：写成 `"./cli.mjs"` 时 npm 11 会在打包时把整个 `bin` 字段静默移除（`npm publish` 只给一行 `warn`），发布出来就没有 `vyra-market` 命令。写成 `"cli.mjs"` 才保留。`npm pack --dry-run` 的输出里搜一下 `bin[` 就能提前发现。
+
+`package.json` 的 `files` 是白名单：改了包内文件名或新增目录，记得同步改它，否则 `npm pack` 产出的包里缺文件，装上去会加载失败。
+版本号改 `package.json` 的 `version`；`package.json` 的 `repository.directory` 指向本仓库的 `plugins/vyra-plugin-market`，详情页与 `npm view` 都按它定位源码。
 
 ## 加一个插件
 

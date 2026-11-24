@@ -2079,6 +2079,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.7.2: the version published to npm. Its only difference from 0.7.1
+        // is the `bin` spelling (`cli.mjs`, no `./`) — npm 11 dropped the
+        // field when it carried a `./` prefix, so the `vyra-market` command
+        // never materialized. Same 11 packaged files, verified by a real
+        // `npm install` from the registry.
+        '0.7.2': {
+          publishTimestamp: 1795501546,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
@@ -2622,37 +2636,6 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'integration',
         keywords: ['plugin-manager', 'market', 'upgrade', 'rollback', 'gating'],
-      },
-    },
-    {
-      name: 'dsh-plugin',
-      title: {
-        en: 'Community Plugin Market',
-        zh: '社区插件市场',
-      },
-      description: {
-        en: 'A community plugin marketplace for DeepSeek Harness, built to the official plugin spec: browse, search and install 6000+ hand-verified npm plugins out of 23000+ indexed, without leaving the app.',
-        zh: '遵循官方规范的社区插件市场：收录 23000+ 社区插件、其中 6000+ 已发布 npm 包可一键安装，每日更新。',
-      },
-      author: 'DSH Plugin Hub contributors',
-      homepage: 'https://dsh-plugin.org',
-      repository: {
-        url: 'https://github.com/dshplugin/dsh-plugin-hub',
-      },
-      versions: {
-        '2.3.9': {
-          publishTimestamp: 1795337000,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '677cc3aba9a7f07fcf0b81571be36abe77cbffa1',
-            path: 'plugins/dsh-plugin',
-          },
-        },
-      },
-      metadata: {
-        category: 'integration',
-        keywords: ['marketplace', 'market', 'plugins', 'npm'],
       },
     },
     {
