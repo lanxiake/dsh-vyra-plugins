@@ -1,6 +1,6 @@
 {
   "name": "vyra-dsh-console",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "让 Agent 操作 DSH 自身的控制台：模型、设置、插件、主题与布局，带明确的权限边界。",
   "main": "index.js",
