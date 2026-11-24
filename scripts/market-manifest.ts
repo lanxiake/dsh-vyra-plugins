@@ -2962,6 +2962,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.9 stops reading undeclared services by property (Cordis throws).
+        '0.2.9': {
+          publishTimestamp: 1795503978,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4423d781c9d7248e61f30fa13b6c6a1d7bfbc6f5',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
