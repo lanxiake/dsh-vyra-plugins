@@ -610,9 +610,12 @@ window.__ModuleLoader__.load({
    a second one left the cards 20px off-centre inside their own container. */
 .vfm_page{display:flex;flex-direction:column;gap:20px;padding:2px 0 28px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.55}
 
-/* the page head: title left, master switch right, on one baseline */
-.vfm_head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
-.vfm_headtext{display:flex;flex-direction:column;gap:6px;min-width:0}
+/* the page head: title left, community links and master switch right, on one
+   baseline. The auto left margin on the actions is what pins them to the right
+   edge; wrapping keeps them usable when the column is narrow. */
+.vfm_head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.vfm_headtext{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 260px}
+.vfm_headacts{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .vfm_title{margin:0;font-size:17px;font-weight:600;letter-spacing:-0.01em}
 .vfm_sub{margin:0;color:var(--dsw-alias-label-secondary);font-size:12.5px;max-width:56ch}
 
@@ -832,28 +835,22 @@ window.__ModuleLoader__.load({
 .vfm_tips{display:flex;flex-direction:column;gap:4px;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .vfm_tips ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
 
-/* ── community: QQ group and GitHub ───────────────────────────────────── */
-/* The same pill shape Agent CM uses, built from theme pairs only: outline from
-   border-l2, label from label-secondary, and the interactive-bg-hover token for
-   the hover fill — a token the shell already pairs with the label colour, so the
-   text stays readable on both themes and under a custom theme. */
-.vfm_about{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-.vfm_pill{position:relative;display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:28px;
-  padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:14px;background:transparent;
-  color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:18px;text-decoration:none;
-  white-space:nowrap;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
-.vfm_pill:hover,.vfm_pill[aria-expanded="true"]{color:var(--dsw-alias-label-primary);
-  background:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-layer-2))}
-.vfm_pill:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
-.vfm_pillvalue{color:var(--dsw-alias-label-primary);font-weight:500}
-.vfm_pillicon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none}
-.vfm_pillicon svg{display:block;width:14px;height:14px}
+/* ── community: QQ group and GitHub, in the title row ──────────────────── */
+/* Not a card and not a pill: these are the same quiet controls the page uses
+   for 「刷新积分」/「添加账号」, so they inherit .vfm_btn above and only need the
+   icon slot and the popover. That keeps one hover language on the whole page. */
+.vfm_about{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* The button base is written for <button>; reset the bits a <a> carries. */
+a.vfm_btn{text-decoration:none}
+.vfm_icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;flex:none}
+.vfm_icon svg{display:block;width:13px;height:13px}
 .vfm_anchor{position:relative;display:inline-flex}
-/* The number stays visible next to the pills, so it can be typed by hand when
-   the QR is not handy; it is a value, so it gets the mono face. */
-.vfm_qqno{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
-  color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums}
-.vfm_qr{position:absolute;top:calc(100% + 8px);left:0;z-index:20;width:240px;padding:16px;border-radius:14px;
+/* Open, the trigger keeps the hover look so it still reads as the popover's
+   owner — the quiet rules above do not have an expanded state. */
+.vfm_anchor .vfm_btn[aria-expanded="true"]{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+/* Anchored to the right edge: this popover hangs off a control that itself sits
+   at the right edge of the title row, and left-anchoring pushed it off-screen. */
+.vfm_qr{position:absolute;top:calc(100% + 8px);right:0;z-index:20;width:240px;padding:16px;border-radius:14px;
   border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 70%,transparent);
   background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1));
   box-shadow:0 18px 48px color-mix(in srgb,#000 28%,transparent);
@@ -921,14 +918,20 @@ window.__ModuleLoader__.load({
      * Three kinds only. `primary` is for the one action a block wants the user
      * to take; everything else is neutral or quiet, so a page of cards never
      * competes for attention.
+     *
+     * `rest` carries anything the caller needs on the element itself — an
+     * `aria-expanded` for a popover trigger, an `aria-label` on an icon button.
+     * Without it this component silently dropped those attributes, and a
+     * disclosure button told assistive tech nothing about being closed.
      */
-    function Btn({ kind = 'ghost', disabled, onClick, children, title }) {
+    function Btn({ kind = 'ghost', disabled, onClick, children, title, ...rest }) {
       return h('button', {
         type: 'button',
         className: 'vfm_btn',
         'data-kind': kind,
         disabled: disabled === true,
         title,
+        ...rest,
         onClick: event => { if (disabled !== true) onClick?.(event) },
       }, children)
     }
@@ -1628,10 +1631,17 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The community card: a QQ group that opens a QR popover, and the GitHub
-     * repository. Both are links out, so nothing here touches the Host.
+     * The community links, pinned to the right of the page title.
+     *
+     * They are the same control the rest of the page uses (see Btn): the QQ
+     * entry is a quiet button, and the GitHub entry is a quiet-styled link. A
+     * pill of their own read as a different design language from 「刷新积分」and
+     * 「添加账号」that sit a few lines below, which is exactly what this fixes.
+     *
+     * Both are links out, so nothing here touches the Host. The QR image is
+     * served by this plugin's own `/assets` route.
      */
-    function CommunityCard() {
+    function CommunityLinks() {
       const [open, setOpen] = useState(false)
       const [copied, setCopied] = useState(false)
 
@@ -1651,34 +1661,32 @@ window.__ModuleLoader__.load({
         } catch { /* the number is selectable */ }
       }, [])
 
-      return h(Card, { title: t('community.title'), hint: t('community.hint') },
-        h('div', { className: 'vfm_about' },
-          h('span', { className: 'vfm_anchor' },
-            h('button', {
-              type: 'button',
-              className: 'vfm_pill',
-              'aria-expanded': open ? 'true' : 'false',
-              onClick: () => setOpen(!open),
-            },
-            h('span', { className: 'vfm_pillicon' }, h(QQGlyph)),
-            h('span', {}, t('community.qq'))),
-            open
-              ? h('div', { className: 'vfm_qr', role: 'dialog', 'aria-label': t('community.qq') },
-                h('p', {}, t('community.qqDesc')),
-                h('img', { src: QQ_QR_SRC, alt: t('community.qqAlt'), width: 180, loading: 'lazy' }),
-                h('p', {}, t('community.qqTip')),
-                h('div', { className: 'vfm_qracts' },
-                  h(Btn, { kind: 'ghost', onClick: copyGroup }, copied ? t('community.copied') : t('community.copy'))))
-              : null),
-          h('a', {
-            className: 'vfm_pill',
-            href: REPO_URL,
-            target: '_blank',
-            rel: 'noreferrer noopener',
+      return h('div', { className: 'vfm_about' },
+        h('span', { className: 'vfm_anchor' },
+          h(Btn, {
+            kind: 'quiet',
+            title: t('community.qqDesc'),
+            onClick: () => setOpen(!open),
           },
-          h('span', { className: 'vfm_pillicon' }, h(GitHubGlyph)),
-          h('span', {}, t('community.github'))),
-          h('span', { className: 'vfm_meta' }, t('community.groupNo'), h('code', { className: 'vfm_qqno' }, QQ_GROUP))))
+          h('span', { className: 'vfm_icon' }, h(QQGlyph)),
+          h('span', {}, t('community.qq'))),
+          open
+            ? h('div', { className: 'vfm_qr', role: 'dialog', 'aria-label': t('community.qq') },
+              h('p', {}, t('community.qqDesc')),
+              h('img', { src: QQ_QR_SRC, alt: t('community.qqAlt'), width: 180, loading: 'lazy' }),
+              h('p', {}, t('community.qqTip')),
+              h('div', { className: 'vfm_qracts' },
+                h(Btn, { kind: 'ghost', onClick: copyGroup }, copied ? t('community.copied') : t('community.copy'))))
+            : null),
+        h('a', {
+          className: 'vfm_btn',
+          'data-kind': 'quiet',
+          href: REPO_URL,
+          target: '_blank',
+          rel: 'noreferrer noopener',
+        },
+        h('span', { className: 'vfm_icon' }, h(GitHubGlyph)),
+        h('span', {}, t('community.github'))))
     }
 
     /**
@@ -2148,14 +2156,20 @@ window.__ModuleLoader__.load({
       }
 
       return h('div', { className: 'vfm_page' },
+        // The title row: the heading on the left, the community links pinned to
+        // its right edge. They live here rather than in a card at the bottom
+        // because they are page furniture — reachable without scrolling past
+        // every settings block first.
         h('header', { className: 'vfm_head' },
           h('div', { className: 'vfm_headtext' },
             h('h2', { className: 'vfm_title' }, t('title')),
             h('p', { className: 'vfm_sub' }, t('subtitle'))),
-          h(Btn, {
-            kind: 'quiet',
-            onClick: () => void toggleEnabled(summary.enabled !== false),
-          }, summary.enabled === false ? t('master.enable') : t('master.disable'))),
+          h('div', { className: 'vfm_headacts' },
+            h(CommunityLinks),
+            h(Btn, {
+              kind: 'quiet',
+              onClick: () => void toggleEnabled(summary.enabled !== false),
+            }, summary.enabled === false ? t('master.enable') : t('master.disable')))),
         summary.enabled === false ? h('p', { className: 'vfm_note' }, t('master.offHint')) : null,
         h(DegradedBanner, {
           state: summary?.lane?.ok === false && (summary?.lane?.models ?? []).length === 0
@@ -2202,7 +2216,6 @@ window.__ModuleLoader__.load({
           defaultOpen: false,
         }),
         h(WorkbenchCard),
-        h(CommunityCard),
         h(LoginModal, {
           dialog: loginDialog,
           onClose: () => setLoginDialog(undefined),
@@ -2264,7 +2277,7 @@ window.__ModuleLoader__.load({
       cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API,
       Card, BlockTitle, Btn, StatusDot, ToolCard, truncate,
       WorkbenchCard, marketInstallSpec, marketInstalled, marketEntry, updateMarket, ensureMarketSource,
-      CommunityCard, REPO_URL, QQ_GROUP, QQ_QR_SRC,
+      CommunityLinks, REPO_URL, QQ_GROUP, QQ_QR_SRC,
       VEYRA_MARKET, VEYRA_DOMESTIC, MARKET_FALLBACK_SPEC, inject }
     return module.exports
   },

@@ -77,7 +77,7 @@ context.globalThis = context
 vm.createContext(context)
 vm.runInContext(source, context, { filename: 'client.js' })
 
-const { h, ModelBlock, AccountsBlock, ForwardBlock, EndpointsBlock, LoginModal, Card, BlockTitle, ToolCard, WorkbenchCard, CommunityCard, CSS } = registered.__test
+const { h, ModelBlock, AccountsBlock, ForwardBlock, EndpointsBlock, LoginModal, Card, BlockTitle, ToolCard, WorkbenchCard, CommunityLinks, CSS } = registered.__test
 
 const models = [
   { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false, probe: null },
@@ -91,7 +91,10 @@ const body = process.env.PREVIEW_MODAL === '1' ? render(h(LoginModal, { dialog: 
   h('header', { className: 'vfm_head' },
     h('div', { className: 'vfm_headtext' },
       h('h2', { className: 'vfm_title' }, '免费模型'),
-      h('p', { className: 'vfm_sub' }, '装上就能用。选个模型，需要更多额度时登录一次国内账号。'))),
+      h('p', { className: 'vfm_sub' }, '装上就能用。选个模型，需要更多额度时登录一次国内账号。')),
+    h('div', { className: 'vfm_headacts' },
+      h(CommunityLinks),
+      h('button', { type: 'button', className: 'vfm_btn', 'data-kind': 'quiet' }, '先关掉'))),
   h(ModelBlock, {
     models, extraModels: [{ id: 'buddy:buddy/hy4flash', name: 'CodeBuddy（腾讯） · Hy4 flash', contextWindow: 1000000, vision: true, source: 'buddy' }],
     auto: { id: 'baidu/ernie-5.5-flash-preview:free', name: 'Baidu: ERNIE-5.5-Flash-Preview (free)', contextWindow: 1024000, vision: false },
@@ -121,8 +124,7 @@ const body = process.env.PREVIEW_MODAL === '1' ? render(h(LoginModal, { dialog: 
     endpoints: [{ id: 'e1', name: '豆包（火山方舟）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', hasKey: true, models: [{ id: 'doubao-x' }], modelsAt: 0 }],
     onSummary: () => {}, collapsed: true, defaultOpen: expanded,
   }),
-  h(WorkbenchCard),
-  h(CommunityCard)
+  h(WorkbenchCard)
 ))
 
 const html = `<!doctype html>

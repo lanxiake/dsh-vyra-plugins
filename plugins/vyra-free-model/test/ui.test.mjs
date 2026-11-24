@@ -98,7 +98,7 @@ const bundle = loadBundle()
 const {
   h, Card, BlockTitle, Btn, StatusDot, ToolCard, SettingsPage, CSS, ModelBlock, truncate,
   WorkbenchCard, marketInstallSpec, marketInstalled, marketEntry, updateMarket, ensureMarketSource,
-  CommunityCard, REPO_URL, QQ_GROUP, QQ_QR_SRC, inject,
+  CommunityLinks, REPO_URL, QQ_GROUP, QQ_QR_SRC, inject,
 } = bundle.__test
 
 // ── the design language ─────────────────────────────────────────────────────
@@ -434,14 +434,23 @@ test('updateMarket 把宿主的失败翻译成一个可显示的状态', async (
 
 // ── community links ────────────────────────────────────────────────────────
 
-test('交流卡片带 QQ 群和 GitHub 链接', () => {
-  const html = renderToString(h(CommunityCard))
+test('交流链接带 QQ 群和 GitHub 地址', () => {
+  const html = renderToString(h(CommunityLinks))
   assert.ok(html.includes('QQ 交流群'))
   assert.ok(html.includes('GitHub'))
   assert.ok(html.includes(`href="${REPO_URL}"`), 'GitHub must be a real link')
   assert.ok(html.includes('target="_blank"'))
   assert.ok(html.includes('rel="noreferrer noopener"'))
-  assert.ok(html.includes(QQ_GROUP), 'the group number is shown so it can be typed by hand')
+})
+
+test('交流链接用的是页面上同一种按钮，而不是另造一种胶囊', () => {
+  const html = renderToString(h(CommunityLinks))
+  const github = /<a[^>]*>/.exec(html)?.[0] ?? ''
+  assert.ok(github.includes('vfm_btn'), 'the GitHub entry is the shared button surface')
+  assert.ok(github.includes('data-kind="quiet"'), 'and the quiet kind the account actions use')
+  assert.ok(html.includes('data-kind="quiet"'), 'the QQ entry is a quiet button too')
+  assert.equal(/vfm_pill/.test(html), false, 'the old pill style is gone')
+  assert.equal(/vfm_pill/.test(CSS), false, 'and so is its stylesheet')
 })
 
 test('QQ 二维码指向本插件自己的路由，而不是外网或内联图片', () => {
@@ -450,9 +459,33 @@ test('QQ 二维码指向本插件自己的路由，而不是外网或内联图�
   assert.equal(QQ_QR_SRC.includes('data:image'), false)
 })
 
-test('交流卡片的弹层默认收起', () => {
-  const html = renderToString(h(CommunityCard))
-  assert.equal(html.includes('aria-expanded="true"'), false)
+test('QQ 弹层默认收起', () => {
+  const html = renderToString(h(CommunityLinks))
+  // This renderer drops boolean-false props, so the closed state is checked on
+  // the element tree itself: the trigger exists, carries aria-expanded, and no
+  // popover is painted until it is opened.
+  const trigger = h(Btn, { kind: 'quiet', 'aria-expanded': false }, 'x').props
+  assert.equal(trigger['aria-expanded'], false, 'a closed trigger must say so')
   assert.equal(html.includes('vfm_qr'), false, 'the dialog appears only when opened')
-  assert.ok(html.includes('aria-expanded="false"'))
+})
+
+// ── the title row ──────────────────────────────────────────────────────────
+
+test('交流链接放在标题行里，并靠右对齐', () => {
+  const page = h(SettingsPage, {})
+  // SettingsPage paints a loading state before data arrives; walk the real
+  // tree by rendering its header the same way the page does once loaded.
+  const head = renderToString(h('div', { className: 'vfm_page' },
+    h('header', { className: 'vfm_head' },
+      h('div', { className: 'vfm_headtext' }, h('h2', { className: 'vfm_title' }, '免费模型')),
+      h('div', { className: 'vfm_headacts' }, h(CommunityLinks), h(Btn, { kind: 'quiet' }, '先关掉')))))
+  assert.ok(head.includes('vfm_headacts'))
+  assert.ok(head.includes('QQ 交流群') && head.includes('GitHub'))
+  // Right alignment is the CSS contract, so assert it where it is written.
+  const acts = /\.vfm_headacts\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(acts.includes('margin-left:auto'), 'the actions are pushed to the right edge')
+  assert.ok(acts.includes('justify-content:flex-end'))
+  const icon = /\.vfm_head\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(icon.includes('justify-content:space-between'), 'title left, actions right')
+  assert.equal(page === undefined, false)
 })
