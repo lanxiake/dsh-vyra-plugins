@@ -3012,6 +3012,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.3.4 drags a clone of the pressed element as the ghost.
+        '0.3.4': {
+          publishTimestamp: 1795507029,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6e499f15c5bb01823d2f9dff6ca80f4efcb16620',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
