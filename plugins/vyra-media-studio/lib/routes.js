@@ -10,7 +10,7 @@ import { SCAN_DEFAULTS, invalidateScanCache, scanMediaCached } from './scan.js'
 import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
 import {
-  batchFiles, copyFileInto, deleteFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
+  batchFiles, copyFileInto, deleteFile, moveFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
 } from './file-ops.js'
 
 const LIST_PATH = '/api/vyra-media/list'
@@ -24,6 +24,8 @@ const DELETE_PATH = '/api/vyra-media/delete'
 const REVEAL_PATH = '/api/vyra-media/reveal'
 const OPEN_PATH = '/api/vyra-media/open'
 const BATCH_PATH = '/api/vyra-media/batch'
+const MOVE_PATH = '/api/vyra-media/move'
+const SESSION_CHANGES_PATH = '/api/vyra-media/session-changes'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -459,6 +461,17 @@ async function handleOpen(request, ctx) {
  * @param {object} ctx - Host context.
  * @returns {Promise<Response>} per-path copy/delete results.
  */
+/**
+ * POST /api/vyra-media/move
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} the moved entry.
+ */
+async function handleMove(request, ctx) {
+  return handleAction(request, ctx, ({ body, fs, workspaceRoot, signal }) =>
+    moveFile({ path: body?.path, toFolder: body?.toFolder ?? '', fs, workspaceRoot, signal }))
+}
+
 async function handleBatch(request, ctx) {
   return handleAction(request, ctx, async ({ body, fs, workspaceRoot, signal }) => ({
     results: await batchFiles({
@@ -469,6 +482,64 @@ async function handleBatch(request, ctx) {
       fs, workspaceRoot, signal,
     }),
   }))
+}
+
+/**
+ * Read one Session's `workspace/changes` events and the summaries the Host
+ * still holds, so the panel can list per-turn produced files.
+ * @param {object} ctx - Host context.
+ * @param {string} sessionId - Session identity.
+ * @returns {Array<object>} per-turn produced files, newest last.
+ */
+function sessionChangesOf(ctx, sessionId) {
+  const service = ctx.workspaceChanges
+  const session = ctx.get?.('sessions')?.get?.(sessionId)
+  if (session === undefined || typeof session.snapshotEvents !== 'function') return []
+  const turns = []
+  for (const event of session.snapshotEvents()) {
+    if (event?.type !== 'workspace/changes') continue
+    const summary = typeof service?.summary === 'function' ? service.summary(sessionId, event.seq) : undefined
+    turns.push({
+      seq: event.seq,
+      time: typeof event.time === 'number' ? event.time : undefined,
+      turn: summary?.turn ?? event.data?.turn,
+      files: Array.isArray(summary?.files)
+        ? summary.files.map(file => ({
+          path: typeof file.path === 'string' ? file.path : '',
+          display: typeof file.display === 'string' ? file.display : (file.path ?? ''),
+          added: file.added ?? 0,
+          deleted: file.deleted ?? 0,
+          binary: file.binary === true,
+          oversized: file.oversized === true,
+        }))
+        : undefined,
+      available: summary !== undefined,
+    })
+  }
+  return turns
+}
+
+/**
+ * GET /api/vyra-media/session-changes
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} per-turn produced files.
+ */
+async function handleSessionChanges(request, ctx) {
+  const url = new URL(request.url)
+  const sessionId = url.searchParams.get('sessionId')
+  if (sessionId === null || sessionId === '') {
+    return json({ ok: false, code: 'bad-request', error: 'missing sessionId' }, 400)
+  }
+  try {
+    return json({ ok: true, sessionId, turns: sessionChangesOf(ctx, sessionId) })
+  } catch (error) {
+    return json({
+      ok: false,
+      code: 'changes-failed',
+      error: error?.message ?? String(error),
+    }, 500)
+  }
 }
 
 async function handleText(request, ctx) {
@@ -536,6 +607,12 @@ export function registerMediaRoutes(ctx, connection) {
       fetch: request => handleDiagnose(request, ctx),
     }),
     connection.fetch.register({
+      path: SESSION_CHANGES_PATH,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: request => handleSessionChanges(request, ctx),
+    }),
+    connection.fetch.register({
       path: TEXT_PATH,
       methods: ['GET'],
       requestBody: 'buffered',
@@ -549,6 +626,7 @@ export function registerMediaRoutes(ctx, connection) {
       [REVEAL_PATH, handleReveal],
       [OPEN_PATH, handleOpen],
       [BATCH_PATH, handleBatch],
+      [MOVE_PATH, handleMove],
     ].map(([path, handler]) => connection.fetch.register({
       path,
       methods: ['POST'],
@@ -562,7 +640,7 @@ export function registerMediaRoutes(ctx, connection) {
 
 export {
   LIST_PATH, FILE_PATH, DIAGNOSE_PATH, STAT_PATH, TEXT_PATH, RENAME_PATH, COPY_PATH,
-  DELETE_PATH, REVEAL_PATH, OPEN_PATH, BATCH_PATH,
+  DELETE_PATH, REVEAL_PATH, OPEN_PATH, BATCH_PATH, MOVE_PATH, SESSION_CHANGES_PATH,
   handleDiagnose, handleFile, handleList, handleStat, handleText, handleRename,
-  handleCopy, handleDelete, handleReveal, handleOpen, handleBatch,
+  handleCopy, handleDelete, handleReveal, handleOpen, handleBatch, handleMove, handleSessionChanges,
 }

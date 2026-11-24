@@ -67,13 +67,14 @@ function folderItem(node) {
   }
 }
 
-function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, onToggleSelect, onMenu }) {
+function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, onToggleSelect, onMenu, dragBind, suppressClick }) {
   const detailed = detail === 'detailed'
   return h('div', {
     className: 'vms-tree-row is-file', 'data-depth': depth, 'data-detail': detailed ? 'detailed' : 'compact', 'data-selected': selected ? '' : undefined,
     style: { paddingLeft: `${10 + depth * 16}px` },
     tabIndex: 0,
     onClick: event => {
+      if (suppressClick !== undefined && suppressClick()) return
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault()
         onToggleSelect(item)
@@ -90,6 +91,7 @@ function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, o
       event.preventDefault()
       onOpen(item)
     },
+    ...(dragBind === undefined ? {} : dragBind(item)),
   },
   h('span', { className: 'vms-tree-spacer' }),
   h('span', { className: 'vms-tree-file-icon', 'data-kind': item.kind }, h(Icon, { name: kindIcon(item.kind, item.ext), size: 14 })),
@@ -107,11 +109,13 @@ function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, o
   }, h(Icon, { name: 'more', size: 13 })))
 }
 
-function TreeFolderRow({ node, depth, detail, expanded, onToggle, onMenu }) {
+function TreeFolderRow({ node, depth, detail, expanded, onToggle, onMenu, dragBind, suppressClick }) {
   return h('div', {
     className: 'vms-tree-row is-folder', 'data-depth': depth, 'data-detail': detail === 'detailed' ? 'detailed' : 'compact',
+    'data-vms-drop-folder': node.path,
     style: { paddingLeft: `${10 + depth * 16}px` }, tabIndex: 0,
-    onClick: () => onToggle(node.path),
+    ...(dragBind === undefined ? {} : dragBind(folderItem(node))),
+    onClick: () => { if (suppressClick !== undefined && suppressClick()) return; onToggle(node.path) },
     onKeyDown: event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggle(node.path) } },
     onContextMenu: event => {
       event.preventDefault()
@@ -147,6 +151,8 @@ function renderChildren(node, depth, options) {
       expanded: open,
       onToggle: options.onToggleFolder,
       onMenu: options.onMenu,
+      dragBind: options.dragBind,
+      suppressClick: options.suppressClick,
     }))
     if (open) rows.push(...renderChildren(child, depth + 1, options))
   }
@@ -162,6 +168,8 @@ function renderChildren(node, depth, options) {
       onOpen: options.onOpen,
       onToggleSelect: options.onToggleSelect,
       onMenu: options.onMenu,
+      dragBind: options.dragBind,
+      suppressClick: options.suppressClick,
     }))
   }
   return rows
@@ -172,8 +180,8 @@ function renderChildren(node, depth, options) {
  * @param {object} props - tree inputs.
  */
 export function FileTree({
-  items, folders, scope, expanded = new Set(), forceExpanded = new Set(), detail, meta, sessionId,
-  selected = new Set(), showEmptyFolders, onToggleFolder, onOpen, onToggleSelect, onMenu,
+  items, folders, scope, expanded = new Set(), forceExpanded = new Set(), collapsed = new Set(), detail, meta, sessionId,
+  selected = new Set(), showEmptyFolders, onToggleFolder, onOpen, onToggleSelect, onMenu, dragBind, suppressClick,
 }) {
   const tree = React.useMemo(() => buildTree(items, folders, showEmptyFolders), [items, folders, showEmptyFolders])
   const scoped = React.useMemo(() => findTreeNode(tree, scope), [tree, scope])
@@ -182,14 +190,17 @@ export function FileTree({
     const set = new Set(expanded)
     if (scope !== '') set.add(scope)
     for (const path of forceExpanded) set.add(path)
+    // An explicit collapse wins over the filter's automatic expansion, so the
+    // chevron still works while a filter is active.
+    for (const path of collapsed) set.delete(path)
     return set
-  }, [expanded, forceExpanded, scope])
+  }, [expanded, forceExpanded, collapsed, scope])
   if (scope !== '' && scoped === undefined) {
     return h('div', { className: 'vms-tree is-empty' }, '这个文件夹没有匹配的文件')
   }
   const rows = renderChildren(start, 0, {
     detail, meta, sessionId, selected, onOpen, onToggleSelect, onMenu,
-    effective, onToggleFolder,
+    effective, onToggleFolder, dragBind, suppressClick,
   })
   if (rows.length === 0) {
     return h('div', { className: 'vms-tree is-empty' }, '这个文件夹没有匹配的文件')

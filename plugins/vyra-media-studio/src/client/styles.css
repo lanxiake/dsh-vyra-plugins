@@ -615,3 +615,51 @@
 .vms-session-btn:hover:not(:disabled) { background: var(--vms-layer2); color: var(--vms-ink2); }
 .vms-session-btn.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }
 .vms-session-btn:disabled { opacity: .45; cursor: default; }
+
+/* Drag ghost, timeline and the compact header. */
+.vms-drag-ghost {
+  position: fixed; z-index: 200; display: inline-flex; align-items: center; gap: 6px;
+  max-width: 260px; padding: 5px 9px; border-radius: 8px; pointer-events: none;
+  background: var(--vms-ink); color: var(--vms-bg); font-size: 10px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.28);
+}
+.vms-drag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vms-drag-target { color: color-mix(in srgb, var(--vms-bg) 72%, transparent); white-space: nowrap; }
+.vms-tree-row[draggable="false"] { user-select: none; -webkit-user-select: none; }
+
+.vms-timeline-wrap { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 24px; }
+.vms-timeline { display: grid; gap: 14px; }
+.vms-tl-section { display: grid; gap: 6px; }
+.vms-tl-section-head {
+  position: sticky; top: 0; z-index: 2; padding: 4px 2px 5px; font-size: 9.5px; font-weight: 600;
+  color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+.vms-tl-turn { display: grid; gap: 4px; padding: 8px 9px; border: 0.5px solid var(--vms-line); border-radius: 10px; background: var(--vms-layer); }
+.vms-tl-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.vms-tl-head b { font-size: 10.5px; font-weight: 600; }
+.vms-tl-time, .vms-tl-count { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }
+.vms-tl-group { display: grid; gap: 1px; }
+.vms-tl-dir { display: flex; align-items: center; gap: 4px; padding: 3px 2px 1px; font-size: 9px; color: var(--vms-ink4); }
+.vms-tl-file {
+  display: flex; align-items: center; gap: 6px; width: 100%; height: 25px; padding: 0 6px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left;
+}
+.vms-tl-file:hover:not(.is-missing) { background: var(--vms-layer2); color: var(--vms-ink); }
+.vms-tl-file.is-missing { opacity: .5; cursor: default; }
+.vms-tl-file svg { flex: none; color: var(--vms-ink4); }
+.vms-tl-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vms-tl-stat { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; }
+.vms-tl-missing { font-size: 9px; color: var(--vms-danger); white-space: nowrap; }
+.vms-tl-empty { display: grid; justify-items: center; gap: 7px; padding: 46px 20px; text-align: center; color: var(--vms-ink3); }
+.vms-tl-empty b { font-size: 12px; }
+.vms-tl-empty p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); max-width: 300px; }
+
+/* Compact header: the search row owns the view controls. */
+.vms-head { padding: 11px 14px 8px; }
+.vms-title h2 { font-size: 17px; }
+.vms-title p { margin-top: 2px; }
+.vms-search-row { margin-top: 8px; }
+.vms-type-row { margin-top: 7px; }
+.vms-folder-row { margin-top: 6px; }
+.vms-folder-btn { width: 28px; padding: 0; }

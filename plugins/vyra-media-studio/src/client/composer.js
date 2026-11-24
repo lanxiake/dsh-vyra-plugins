@@ -2,9 +2,10 @@
  * Bridge to the conversation composer. The Library is mounted in the right
  * Sidebar, while the composer lives inside the conversation pane, so a tiny
  * component registered into `conversation.input.left` captures the current
- * session's `inputActions` for the panel to insert `@path` mentions.
+ * session's `inputActions` for the panel to insert `@path` mentions, and
+ * renders an invisible anchor the panel uses to find the composer's drop area.
  */
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 
 let composers = new Map()
 
@@ -34,9 +35,23 @@ export function insertComposerText(sessionId, text) {
   return true
 }
 
+/**
+ * The composer's actions, or undefined when this session has no composer.
+ * @param {string} sessionId - Session identity.
+ * @returns {object | undefined} the actions.
+ */
+export function composerActions(sessionId) {
+  return composers.get(sessionId)
+}
+
 /** The invisible bridge component; the slot supplies sessionId/inputActions. */
 export function ComposerBridge(props) {
   const { sessionId, inputActions } = props
   useEffect(() => attachComposer(sessionId, inputActions), [sessionId, inputActions])
-  return null
+  // The anchor lets the panel measure the composer card for drop targeting.
+  return React.createElement('span', {
+    'data-vms-dropzone': sessionId,
+    'aria-hidden': true,
+    style: { display: 'block', width: 0, height: 0 },
+  })
 }

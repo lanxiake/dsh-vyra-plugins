@@ -451,8 +451,96 @@ export async function deleteFile({ path, permanent = false, fs, workspaceRoot, s
  * @param {AbortSignal} [args.signal] - cancellation.
  * @returns {Promise<Array<object>>} per-path results.
  */
+/**
+ * Move one file or folder into a workspace folder. Same-volume moves use a
+ * rename; a cross-volume move copies then removes the source.
+ * @param {object} args - request inputs.
+ * @param {string} args.path - source workspace-relative path.
+ * @param {string} args.toFolder - destination folder, `''` for the workspace root.
+ * @param {object} args.fs - `ctx.fs`.
+ * @param {string} args.workspaceRoot - Session workspace root.
+ * @param {AbortSignal} [args.signal] - cancellation.
+ * @returns {Promise<object>} the moved entry.
+ */
+export async function moveFile({ path, toFolder = '', fs, workspaceRoot, signal }) {
+  if (typeof toFolder !== 'string' || toFolder.includes('\0')) throw fail(400, 'bad-request', 'invalid destination folder')
+  if (isAbsolute(toFolder) || /^[A-Za-z]:[/\\]/u.test(toFolder)) {
+    throw fail(400, 'bad-request', 'the destination must be workspace-relative')
+  }
+
+  const source = await resolveInside(fs, workspaceRoot, path, signal)
+  const sourceInfo = await statPath(source.processPath)
+  if (!sourceInfo.isFile() && !sourceInfo.isDirectory()) {
+    throw fail(403, 'not-regular-file', 'only files and folders can be moved')
+  }
+  assertMutable(source, 'move')
+
+  const destinationDirectory = toFolder === ''
+    ? (await fs.resolve(workspaceRoot, { signal })).displayPath
+    : joinWorkspacePath(workspaceRoot, toFolder)
+  const directoryTarget = await fs.resolve(destinationDirectory, { signal })
+  const rootTarget = await fs.resolve(workspaceRoot, { signal })
+  if (!containsTarget(fs, rootTarget, directoryTarget)) {
+    throw fail(403, 'outside-workspace', 'the destination folder is outside the workspace')
+  }
+  const directoryProcessPath = targetPathOf(fs, directoryTarget)
+  const directoryInfo = await statPath(directoryProcessPath)
+  if (!directoryInfo.isDirectory()) throw fail(400, 'not-directory', 'the destination is not a directory')
+
+  const destination = join(directoryProcessPath, basename(source.processPath))
+  if (samePath(destination, source.processPath)) return {
+    path,
+    relativePath: path,
+    absolutePath: source.target.displayPath,
+    type: sourceInfo.isDirectory() ? 'directory' : 'file',
+    unchanged: true,
+  }
+  // Moving a folder into itself or its own subtree would detach it.
+  if (sourceInfo.isDirectory() && (pathContains(source.processPath, directoryProcessPath)
+    || samePath(directoryProcessPath, source.processPath))) {
+    throw fail(400, 'move-into-self', 'cannot move a folder into itself or its own subtree')
+  }
+
+  let exists = true
+  try {
+    await stat(destination)
+  } catch (error) {
+    if (error?.code === 'ENOENT') exists = false
+    else throw fail(500, 'io-error', error?.message ?? String(error))
+  }
+  if (exists) throw fail(409, 'already-exists', `"${basename(destination)}" already exists in the destination`)
+
+  try {
+    await rename(source.processPath, destination)
+  } catch (error) {
+    if (error?.code === 'EXDEV') {
+      try {
+        await cp(source.processPath, destination, { recursive: sourceInfo.isDirectory() })
+        await rm(source.processPath, { recursive: sourceInfo.isDirectory(), force: false })
+      } catch (inner) {
+        await rm(destination, { recursive: sourceInfo.isDirectory(), force: true }).catch(() => {})
+        if (inner?.code === 'EACCES' || inner?.code === 'EPERM') throw fail(403, 'permission-denied', 'permission denied')
+        throw fail(500, 'io-error', inner?.message ?? String(inner))
+      }
+    } else if (error?.code === 'EACCES' || error?.code === 'EPERM') {
+      throw fail(403, 'permission-denied', 'permission denied')
+    } else {
+      throw fail(500, 'io-error', error?.message ?? String(error))
+    }
+  }
+
+  invalidateScanCache()
+  const newTarget = await fs.resolve(destination, { signal })
+  return {
+    from: path,
+    relativePath: relativeInside(source.rootPath, destination),
+    absolutePath: newTarget.displayPath,
+    type: sourceInfo.isDirectory() ? 'directory' : 'file',
+  }
+}
+
 export async function batchFiles({ action, paths, toFolder = '', permanent = false, fs, workspaceRoot, signal }) {
-  if (action !== 'copy' && action !== 'delete') throw fail(400, 'bad-request', 'action must be copy or delete')
+  if (action !== 'copy' && action !== 'delete' && action !== 'move') throw fail(400, 'bad-request', 'action must be copy, delete or move')
   if (!Array.isArray(paths) || paths.length === 0) throw fail(400, 'bad-request', 'paths must be a non-empty array')
   if (paths.length > MAX_BATCH_ACTION) throw fail(400, 'bad-request', `at most ${MAX_BATCH_ACTION} paths per batch`)
 
@@ -465,7 +553,9 @@ export async function batchFiles({ action, paths, toFolder = '', permanent = fal
     try {
       const result = action === 'copy'
         ? await copyFileInto({ path, toFolder, fs, workspaceRoot, signal })
-        : await deleteFile({ path, permanent, fs, workspaceRoot, signal })
+        : action === 'move'
+          ? await moveFile({ path, toFolder, fs, workspaceRoot, signal })
+          : await deleteFile({ path, permanent, fs, workspaceRoot, signal })
       results.push({ path, ok: true, ...result })
     } catch (error) {
       results.push({

@@ -191,7 +191,7 @@ function MoreButton({ item, onMenu }) {
   }, h(Icon, { name: 'more', size: 12 }))
 }
 
-export function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onInline, onMenu, onToggleSelect }) {
+export function GridCard({ item, sessionId, active, meta, selected, onOpen, onInline, onMenu, onToggleSelect, dragBind, suppressClick }) {
   const canPlay = item.kind === 'video' || item.kind === 'audio'
   const detail = meta === undefined
     ? `${folderOf(item) || '根目录'} · ${typeLabel(item.kind)}`
@@ -200,9 +200,11 @@ export function GridCard({ item, index, sessionId, active, meta, selected, onOpe
     className: 'vms-card', tabIndex: 0, 'data-playing': active ? '' : undefined, 'data-selected': selected ? '' : undefined,
     'aria-label': `${item.title}，${typeLabel(item.kind)}`,
     onClick: event => {
+      if (suppressClick !== undefined && suppressClick()) return
       if (event.ctrlKey || event.metaKey) { event.preventDefault(); onToggleSelect(item); return }
       onOpen(item)
     },
+    ...(dragBind === undefined ? {} : dragBind(item)),
     onContextMenu: event => { event.preventDefault(); onMenu(item, event.clientX, event.clientY) },
     onKeyDown: event => {
       if (event.key !== 'Enter' && event.key !== ' ') return
@@ -212,7 +214,6 @@ export function GridCard({ item, index, sessionId, active, meta, selected, onOpe
   },
   h('div', { className: 'vms-card-media' },
     h(MediaThumb, { item, sessionId, lazy: true }),
-    h('span', { className: 'vms-card-index' }, String(index + 1).padStart(2, '0')),
     selected && h('span', { className: 'vms-select-badge' }, h(Icon, { name: 'check', size: 11 })),
     h(KindBadge, { kind: item.kind }),
     h(DurationBadge, { item }),
@@ -239,16 +240,18 @@ export function GridCard({ item, index, sessionId, active, meta, selected, onOpe
     active && h('span', { className: 'vms-playing-note' }, h('i', null), '正在播放')))
 }
 
-export function ListRow({ item, sessionId, detail = 'compact', meta, selected, onOpen, onMenu, onToggleSelect }) {
+export function ListRow({ item, sessionId, detail = 'compact', meta, selected, onOpen, onMenu, onToggleSelect, dragBind, suppressClick }) {
   const canPlay = item.kind === 'video' || item.kind === 'audio'
   const detailed = detail === 'detailed'
   const shortType = canPlay ? formatTime(item.duration) : (item.ext.toUpperCase() || typeLabel(item.kind))
   return h('div', {
     className: 'vms-row', tabIndex: 0, 'data-kind': item.kind, 'data-detail': detailed ? 'detailed' : 'compact', 'data-selected': selected ? '' : undefined,
     onClick: event => {
+      if (suppressClick !== undefined && suppressClick()) return
       if (event.ctrlKey || event.metaKey) { event.preventDefault(); onToggleSelect(item); return }
       onOpen(item)
     },
+    ...(dragBind === undefined ? {} : dragBind(item)),
     onContextMenu: event => { event.preventDefault(); onMenu(item, event.clientX, event.clientY) },
     onKeyDown: event => { if (event.key === 'Enter') { event.preventDefault(); onOpen(item) } },
   },
@@ -342,19 +345,20 @@ export function RenameDialog({ item, error, onClose, onSubmit }) {
         h('button', { type: 'submit', className: 'vms-primary-btn' }, '保存'))))
 }
 
-export function CopyDialog({ item, folders, error, onClose, onSubmit }) {
+export function CopyDialog({ item, folders, error, action = 'copy', onClose, onSubmit }) {
   const [folder, setFolder] = useState(item.folder ?? '')
-  return h(Dialog, { title: '复制到文件夹', onClose },
+  const moving = action === 'move'
+  return h(Dialog, { title: moving ? '移动到文件夹' : '复制到文件夹', onClose },
     h('form', { className: 'vms-dialog-form', onSubmit: event => { event.preventDefault(); onSubmit(folder) } },
-      h('label', { className: 'vms-dialog-field' }, h('span', null, `复制「${item.name}」到`),
+      h('label', { className: 'vms-dialog-field' }, h('span', null, `${moving ? '移动' : '复制'}「${item.name}」到`),
         h('select', { className: 'vms-input', value: folder, onChange: event => setFolder(event.target.value) },
           h('option', { value: '' }, '工作区根目录'),
           folders.map(value => h('option', { key: value, value }, value))),
-        h('small', { className: 'vms-dialog-hint' }, '重名时会自动生成“文件名 (2).扩展名”。')),
+        h('small', { className: 'vms-dialog-hint' }, moving ? '目标已有同名项时会拒绝移动。' : '重名时会自动生成“文件名 (2).扩展名”。')),
       error !== '' && h('p', { className: 'vms-form-error' }, error),
       h('div', { className: 'vms-dialog-actions' },
         h('button', { type: 'button', className: 'vms-ghost-btn', onClick: onClose }, '取消'),
-        h('button', { type: 'submit', className: 'vms-primary-btn' }, '复制'))))
+        h('button', { type: 'submit', className: 'vms-primary-btn' }, moving ? '移动' : '复制'))))
 }
 
 export function BatchCopyDialog({ count, folders, error, onClose, onSubmit }) {

@@ -7,8 +7,8 @@ import { extensionOf, isTextExtension, kindOf, mimeOf } from './lib/media-types.
 import { entityTagOf, parseRange } from './lib/range.js'
 import { scanMedia } from './lib/scan.js'
 import { serveMediaFile } from './lib/serve.js'
-import { batchFiles, copyFileInto, deleteFile, readTextFile, renameFile, statFiles } from './lib/file-ops.js'
-import { handleList, registerMediaRoutes } from './lib/routes.js'
+import { batchFiles, copyFileInto, deleteFile, moveFile, readTextFile, renameFile, statFiles } from './lib/file-ops.js'
+import { handleList, handleSessionChanges, registerMediaRoutes } from './lib/routes.js'
 
 test('file vocabulary', () => {
   assert.equal(extensionOf('a/b/c.MP4?x=1'), 'mp4')
@@ -322,6 +322,68 @@ test('folders can be statted, renamed, copied and batch-deleted', async () => {
   }
 })
 
+test('moves files and folders between workspace directories', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-move-'))
+  const fs = realFs(root)
+  try {
+    await mkdir(join(root, 'from', 'deep'), { recursive: true })
+    await mkdir(join(root, 'to'), { recursive: true })
+    await writeFile(join(root, 'from', 'a.txt'), 'hello')
+    await writeFile(join(root, 'from', 'deep', 'b.txt'), 'deep')
+
+    const movedFile = await moveFile({ path: 'from/a.txt', toFolder: 'to', fs, workspaceRoot: root })
+    assert.equal(movedFile.relativePath, 'to/a.txt')
+    assert.equal(await readFile(join(root, 'to', 'a.txt'), 'utf8'), 'hello')
+    await assert.rejects(stat(join(root, 'from', 'a.txt')), error => error.code === 'ENOENT')
+
+    const movedFolder = await moveFile({ path: 'from/deep', toFolder: 'to', fs, workspaceRoot: root })
+    assert.equal(movedFolder.type, 'directory')
+    assert.equal(movedFolder.relativePath, 'to/deep')
+    assert.equal(await readFile(join(root, 'to', 'deep', 'b.txt'), 'utf8'), 'deep')
+
+    await assert.rejects(moveFile({ path: 'to', toFolder: 'to' , fs, workspaceRoot: root }),
+      error => error.code === 'move-into-self')
+
+    await writeFile(join(root, 'to', 'a.txt'), 'again')
+    await assert.rejects(moveFile({ path: 'from/c.txt', toFolder: 'to', fs, workspaceRoot: root }),
+      error => error.code === 'not-found' || error.code === 'failed')
+
+    const batch = await batchFiles({
+      action: 'move', paths: ['to/a.txt'], toFolder: '', fs, workspaceRoot: root,
+    })
+    assert.equal(batch[0].ok, true)
+    assert.equal(await readFile(join(root, 'a.txt'), 'utf8'), 'again')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('session-changes lists turns from workspace/changes events', async () => {
+  const events = [
+    { type: 'workspace/changes', seq: 3, time: 1_700_000_000_000, data: { turn: 1 } },
+    { type: 'user/message', seq: 4, time: 1_700_000_100_000 },
+  ]
+  const ctx = {
+    get: name => name === 'sessions' ? { get: id => id === 's' ? { snapshotEvents: () => events } : undefined } : undefined,
+    workspaceChanges: {
+      summary: (sessionId, seq) => seq === 3
+        ? { turn: 1, files: [{ path: 'out/a.txt', display: 'out/a.txt', added: 3, deleted: 1 }] }
+        : undefined,
+    },
+  }
+  const response = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes?sessionId=s'), ctx)
+  assert.equal(response.status, 200)
+  const body = await response.json()
+  assert.equal(body.ok, true)
+  assert.equal(body.turns.length, 1)
+  assert.equal(body.turns[0].turn, 1)
+  assert.equal(body.turns[0].files[0].path, 'out/a.txt')
+  assert.equal(body.turns[0].available, true)
+
+  const missing = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes'), ctx)
+  assert.equal(missing.status, 400)
+})
+
 test('handleList resolves a session root, scopes folders and returns metadata', async () => {
   const root = await mkdtemp(join(tmpdir(), 'vms-list-'))
   try {
@@ -403,6 +465,7 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
       ['/api/vyra-media/list', ['GET']],
       ['/api/vyra-media/file', ['GET', 'HEAD']],
       ['/api/vyra-media/diagnose', ['GET']],
+      ['/api/vyra-media/session-changes', ['GET']],
       ['/api/vyra-media/text', ['GET']],
       ['/api/vyra-media/stat', ['POST']],
       ['/api/vyra-media/rename', ['POST']],
@@ -411,6 +474,7 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
       ['/api/vyra-media/reveal', ['POST']],
       ['/api/vyra-media/open', ['POST']],
       ['/api/vyra-media/batch', ['POST']],
+      ['/api/vyra-media/move', ['POST']],
     ])
 
     const list = await routes[0].fetch(new Request('http://host/api/vyra-media/list?sessionId=s'))
@@ -422,12 +486,12 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
     assert.equal(bytes.status, 206)
     assert.equal(await bytes.text(), 'ell')
 
-    const text = await routes[3].fetch(new Request('http://host/api/vyra-media/text?sessionId=s&path=notes.md'))
+    const text = await routes[4].fetch(new Request('http://host/api/vyra-media/text?sessionId=s&path=notes.md'))
     const textBody = await text.json()
     assert.equal(textBody.ok, true)
     assert.equal(textBody.text, '# hello')
 
-    const statRoute = await routes[4].fetch(new Request('http://host/api/vyra-media/stat', {
+    const statRoute = await routes[5].fetch(new Request('http://host/api/vyra-media/stat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: 's', paths: ['clip.mp4'] }),

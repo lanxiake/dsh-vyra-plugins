@@ -1605,7 +1605,7 @@ __export(entry_exports, {
   default: () => entry_default
 });
 module.exports = __toCommonJS(entry_exports);
-var import_react9 = __toESM(require("react"), 1);
+var import_react11 = __toESM(require("react"), 1);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/createLucideIcon.js
 var import_react2 = require("react");
@@ -2822,10 +2822,10 @@ var extra_default = `/* Native media, the media tab, and the lightbox host. */\r
 `;
 
 // src/client/styles.css
-var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-list-head {\r\n  display: grid; grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px;\r\n  gap: 9px; padding: 7px 8px 5px; font-size: 9px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r\n}\r\n.vms-list-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-list-head button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }\n.vms-list-head button:hover { color: var(--vms-ink2); }\n.vms-list-head button.is-active { color: var(--vms-ink); font-weight: 600; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n.vms-row[data-detail="detailed"] { grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster, .vms-row-thumb .vms-doc-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar,\r\n.vms-row-thumb .vms-doc-lines, .vms-row-thumb .vms-doc-snippet { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-thumb .vms-doc-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-kind[data-kind="document"] { color: #6f8fd8; }\r\n.vms-row-kind[data-kind="archive"] { color: #c99a5b; }\r\n.vms-row-kind[data-kind="code"] { color: #7fb99a; }\r\n.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 560px) {\r\n  .vms-row[data-detail="detailed"] { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-row[data-detail="detailed"] .vms-row-time,\r\n  .vms-row[data-detail="detailed"] .vms-row-size { display: none; }\r\n  .vms-list-head { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-list-head > :nth-child(3), .vms-list-head > :nth-child(5) { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n/* File-manager additions: zoom, folder navigation, document cards, menus, dialogs. */\r\n.vms-zoom { display: flex; align-items: center; gap: 2px; flex: none; padding: 2px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); }\r\n.vms-zoom .vms-icon-btn { width: 25px; height: 25px; }\r\n.vms-zoom-range { width: 66px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-detail-seg { gap: 2px; }\r\n.vms-seg-text { height: 24px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); font-size: 10px; }\r\n.vms-seg-text.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-folder-row { position: relative; display: flex; align-items: center; gap: 7px; margin-top: 9px; min-width: 0; }\r\n.vms-crumb { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; flex: 1; }\r\n.vms-crumb-seg { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 2px 5px; border-radius: 6px; color: var(--vms-ink3); font-size: 10.5px; }\r\n.vms-crumb-seg:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-crumb-seg.is-active { color: var(--vms-ink); font-weight: 550; }\r\n.vms-crumb-sep { color: var(--vms-ink4); flex: none; }\r\n.vms-folder-btn { flex: none; }\r\n.vms-folder-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-pop {\r\n  position: absolute; z-index: 31; top: calc(100% + 5px); right: 0; width: min(320px, calc(100% - 4px));\r\n  max-height: 300px; overflow: auto; padding: 5px; border: 0.5px solid var(--vms-line2);\r\n  border-radius: var(--vms-radius-md); background: var(--vms-layer);\r\n  box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-folder-item { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-folder-item:hover { background: var(--vms-layer2); }\r\n.vms-folder-item.is-active { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-check { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--vms-ink3); white-space: nowrap; }\r\n.vms-check input { accent-color: var(--vms-accent); margin: 0; }\r\n\r\n/* Designed thumbnails for documents, archives, code and unknown files. */\r\n.vms-doc-poster {\r\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\r\n  padding: 12px; overflow: hidden; color: #fff;\r\n  background: linear-gradient(140deg, color-mix(in srgb, var(--vms-cover-a, #203047) 82%, #0d1722), var(--vms-cover-b, #0d1722));\r\n}\r\n.vms-doc-poster::before { content: ""; position: absolute; inset: 9px; border-radius: 5px; background: rgba(255,255,255,.055); border: 0.5px solid rgba(255,255,255,.12); }\r\n.vms-doc-fold { position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; background: linear-gradient(225deg, rgba(255,255,255,.22) 50%, transparent 50%); border-top-right-radius: 4px; }\r\n.vms-doc-glyph { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: rgba(255,255,255,.11); }\r\n.vms-doc-glyph.is-large { width: 38px; height: 38px; border-radius: 10px; z-index: 1; }\r\n.vms-doc-ext { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.7); z-index: 1; }\r\n.vms-doc-ext.is-large { font-size: 10px; color: rgba(255,255,255,.86); }\r\n.vms-doc-lines { position: relative; z-index: 1; display: grid; gap: 3px; width: 54%; margin-top: 2px; }\r\n.vms-doc-lines i { height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }\r\n.vms-doc-lines i:nth-child(2) { width: 78%; }\r\n.vms-doc-lines i:nth-child(3) { width: 55%; }\r\n.vms-doc-poster[data-kind="document"] { background: linear-gradient(145deg, #223553, #0c141f); }\r\n.vms-doc-poster[data-kind="archive"] { background: linear-gradient(145deg, #3f2d16, #150e06); }\r\n.vms-doc-poster[data-kind="code"] { background: linear-gradient(145deg, #183a33, #071410); }\r\n.vms-doc-poster[data-kind="other"] { background: linear-gradient(145deg, #2b2f38, #0d1015); }\r\n.vms-doc-poster.is-text { display: block; padding: 10px 10px 22px; background: #f7f5ef; color: #2a2b2f; }\r\n.vms-doc-poster.is-text::before { inset: 7px 7px 19px; background: #fffdf8; border-color: rgba(30,30,30,.10); }\r\n.vms-doc-snippet {\r\n  position: relative; z-index: 1; margin: 2px 3px 0; padding: 2px 4px; height: calc(100% - 2px);\r\n  overflow: hidden; white-space: pre; font-family: var(--dsh-font-family-code, monospace);\r\n  font-size: 6.5px; line-height: 1.45; color: #4b4b52;\r\n}\r\n.vms-doc-snippet.is-empty { display: grid; place-items: center; text-align: center; color: #9a968c; font-family: inherit; font-size: 9px; }\r\n.vms-doc-poster.is-text .vms-doc-foot {\r\n  position: absolute; left: 9px; right: 9px; bottom: 5px; z-index: 2; display: flex; align-items: center; gap: 4px; color: #7a7468;\r\n}\r\n.vms-doc-poster.is-text .vms-doc-glyph { width: 16px; height: 16px; background: rgba(0,0,0,.06); border-radius: 4px; }\r\n.vms-doc-poster.is-text .vms-doc-ext { color: #7a7468; font-size: 7px; }\r\n.vms-row-thumb .vms-doc-poster.is-text { display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #e6e1d3, #f7f5ef); }\r\n.vms-row-thumb .vms-doc-poster.is-text::before { display: none; }\r\n\r\n/* Batch-metadata banner. */\r\n.vms-meta-banner {\r\n  position: sticky; bottom: 8px; z-index: 6; width: max-content; margin: 0 auto 10px;\r\n  display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;\r\n  background: var(--vms-ink); color: var(--vms-bg); font-size: 9.5px; box-shadow: 0 8px 24px rgba(0,0,0,.18);\r\n}\r\n.vms-meta-banner i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-bg); animation: vms-pulse 1.2s infinite; }\r\n\r\n/* File action menu. */\r\n.vms-menu {\r\n  position: fixed; z-index: 120; width: 196px; padding: 5px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 22px 60px rgba(0,0,0,.28);\r\n  animation: vms-panel-in 140ms var(--vms-ease);\r\n}\r\n.vms-menu-head { display: flex; align-items: center; gap: 6px; padding: 5px 7px 6px; border-bottom: 0.5px solid var(--vms-line); margin-bottom: 4px; color: var(--vms-ink3); }\r\n.vms-menu-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 550; color: var(--vms-ink2); }\r\n.vms-menu-item { display: flex; align-items: center; gap: 7px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-menu-item:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-menu-item.is-danger { color: var(--vms-danger); }\r\n.vms-menu-item.is-danger:hover { background: color-mix(in srgb, var(--vms-danger) 12%, transparent); }\r\n.vms-menu-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-menu-item.is-danger svg { color: inherit; }\r\n\r\n/* Dialogs. */\r\n.vms-dialog-layer { position: absolute; inset: 0; z-index: 60; display: flex; padding: 18px; }\r\n.vms-dialog-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.42); backdrop-filter: blur(6px); animation: vms-fade 160ms var(--vms-ease); }\r\n.vms-dialog {\r\n  position: relative; margin: auto; width: min(360px, 100%); padding: 12px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 28px 80px rgba(0,0,0,.34);\r\n  animation: vms-sheet-in 200ms var(--vms-ease);\r\n}\r\n.vms-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }\r\n.vms-dialog-head b { font-size: 12.5px; font-weight: 600; }\r\n.vms-dialog-form { display: grid; gap: 9px; }\r\n.vms-dialog-field { display: grid; gap: 5px; }\r\n.vms-dialog-field > span { font-size: 9.5px; color: var(--vms-ink4); }\r\n.vms-dialog-hint { font-size: 9px; color: var(--vms-ink4); line-height: 1.45; }\r\n.vms-dialog-text { margin: 0; font-size: 11px; line-height: 1.55; color: var(--vms-ink2); }\r\n.vms-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }\r\n.vms-primary-btn.is-danger { background: var(--vms-danger); color: #fff; }\r\n\r\n/* Document / PDF preview. */\r\n.vms-sheet-stage.is-pdf { background: #202124; }\r\n.vms-pdf-frame { width: 100%; height: 100%; border: 0; background: #fff; }\r\n.vms-sheet-stage.is-text { background: var(--vms-bg); }\r\n.vms-text-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\r\n.vms-text-content {\r\n  flex: 1; min-height: 0; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre;\r\n  font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6;\r\n  color: var(--vms-ink); background: var(--vms-bg); tab-size: 2;\r\n}\r\n.vms-preview-note { flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 9.5px; color: var(--vms-ink3); background: var(--vms-layer2); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-stage.is-text > .vms-preview-note:only-child { margin: auto; border: 0; background: transparent; }\r\n.vms-generic-preview { margin: auto; display: grid; justify-items: center; gap: 9px; padding: 32px; text-align: center; color: var(--vms-ink2); }\r\n.vms-generic-glyph { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink3); }\r\n.vms-generic-preview b { font-size: 14px; font-weight: 550; }\r\n.vms-generic-preview p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); }\r\n.vms-generic-preview small { font-size: 9.5px; color: var(--vms-ink4); }\r\n/* Selection, tree view, batch bar and rich previews. */\n.vms-card[data-selected] { border-color: color-mix(in srgb, var(--vms-accent) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 55%, transparent); }\n.vms-select-badge { position: absolute; z-index: 6; left: 7px; bottom: 7px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--vms-accent); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.28); }\n.vms-row[data-selected] { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); }\n\n.vms-selection-bar {\n  flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 16px;\n  border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2);\n  overflow-x: auto; scrollbar-width: none;\n}\n.vms-selection-bar::-webkit-scrollbar { display: none; }\n.vms-selection-bar b { font-size: 10.5px; font-weight: 600; margin-right: 2px; white-space: nowrap; }\n.vms-selection-bar .vms-ghost-btn { height: 26px; background: var(--vms-layer); }\n.vms-selection-bar .vms-ghost-btn.is-danger { color: var(--vms-danger); border-color: color-mix(in srgb, var(--vms-danger) 30%, transparent); }\n\n.vms-tree-wrap { padding: 6px 10px 16px; }\n.vms-tree-head {\n  display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 78px 72px 62px 28px;\n  gap: 8px; padding: 6px 8px 5px; font-size: 9px; color: var(--vms-ink4);\n  border-bottom: 0.5px solid var(--vms-line);\n}\n.vms-tree { display: flex; flex-direction: column; padding-top: 3px; }\n.vms-tree.is-empty { padding: 28px 12px; color: var(--vms-ink4); font-size: 10.5px; text-align: center; }\n.vms-tree-row {\n  display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 28px;\n  align-items: center; gap: 8px; min-height: 29px; padding: 3px 8px;\n  border-radius: 8px; border: 0.5px solid transparent; cursor: pointer; outline: 0;\n}\n.vms-tree-row[data-detail="detailed"] { grid-template-columns: 14px 18px minmax(0, 1fr) 78px 72px 62px 28px; }\n.vms-tree-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); }\n.vms-tree-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\n.vms-tree-row[data-selected] { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); }\n.vms-tree-row.is-folder .vms-tree-name { font-weight: 550; }\n.vms-tree-chevron { display: grid; place-items: center; color: var(--vms-ink4); }\n.vms-tree-chevron svg { transition: transform 150ms var(--vms-ease); }\n.vms-tree-chevron[data-expanded] svg { transform: rotate(90deg); }\n.vms-tree-folder-icon { display: grid; place-items: center; color: var(--vms-tape); }\n.vms-tree-file-icon { display: grid; place-items: center; color: var(--vms-ink3); }\n.vms-tree-file-icon[data-kind="image"] { color: var(--vms-accent); }\n.vms-tree-file-icon[data-kind="video"] { color: var(--vms-tape); }\n.vms-tree-file-icon[data-kind="audio"] { color: var(--vms-mint); }\n.vms-tree-file-icon[data-kind="document"] { color: #6f8fd8; }\n.vms-tree-file-icon[data-kind="archive"] { color: #c99a5b; }\n.vms-tree-file-icon[data-kind="code"] { color: #7fb99a; }\n.vms-tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }\n.vms-tree-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: var(--vms-ink4); }\n.vms-tree-more { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; opacity: 0; }\n.vms-tree-row:hover .vms-tree-more, .vms-tree-row:focus-within .vms-tree-more { opacity: 1; }\n.vms-tree-more:hover { background: var(--vms-layer3); color: var(--vms-ink); }\n@container (max-width: 560px) {\n  .vms-tree-head { grid-template-columns: 14px 18px minmax(0, 1fr) 72px 28px; }\n  .vms-tree-head > :nth-child(4), .vms-tree-head > :nth-child(6) { display: none; }\n  .vms-tree-row[data-detail="detailed"] { grid-template-columns: 14px 18px minmax(0, 1fr) 72px 28px; }\n  .vms-tree-row[data-detail="detailed"] > :nth-child(4),\n  .vms-tree-row[data-detail="detailed"] > :nth-child(6) { display: none; }\n}\n\n/* Rich previews. */\n.vms-rich-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-bg); }\n.vms-preview-modes { flex: none; display: flex; gap: 4px; padding: 6px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2); }\n.vms-preview-modes button { height: 24px; padding: 0 9px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: transparent; color: var(--vms-ink3); font-size: 9.5px; }\n.vms-preview-modes button.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }\n.vms-markdown {\n  flex: 1; min-height: 0; overflow: auto; padding: 16px 18px 30px; line-height: 1.7;\n  font-size: 11.5px; color: var(--vms-ink); background: var(--vms-bg);\n}\n.vms-markdown h1, .vms-markdown h2, .vms-markdown h3, .vms-markdown h4 { margin: 1.1em 0 .45em; line-height: 1.35; font-weight: 600; }\n.vms-markdown h1 { font-size: 1.55em; border-bottom: 0.5px solid var(--vms-line); padding-bottom: .3em; }\n.vms-markdown h2 { font-size: 1.3em; border-bottom: 0.5px solid var(--vms-line); padding-bottom: .25em; }\n.vms-markdown h3 { font-size: 1.12em; }\n.vms-markdown p, .vms-markdown ul, .vms-markdown ol, .vms-markdown blockquote, .vms-markdown pre, .vms-markdown table { margin: .65em 0; }\n.vms-markdown ul, .vms-markdown ol { padding-left: 1.5em; }\n.vms-markdown li { margin: .2em 0; }\n.vms-markdown a { color: var(--vms-accent); text-decoration: none; }\n.vms-markdown a:hover { text-decoration: underline; }\n.vms-markdown img { max-width: 100%; height: auto; border-radius: 8px; }\n.vms-markdown blockquote { padding: .3em .9em; border-left: 3px solid var(--vms-line2); color: var(--vms-ink3); background: var(--vms-layer2); border-radius: 0 6px 6px 0; }\n.vms-markdown code { font-family: var(--dsh-font-family-code, monospace); font-size: .92em; background: var(--vms-layer2); border-radius: 4px; padding: .12em .35em; }\n.vms-markdown pre { background: #0f1218; color: #d9dee7; border-radius: 9px; padding: 11px 13px; overflow: auto; font-size: 10px; line-height: 1.55; }\n.vms-markdown pre code { background: transparent; padding: 0; color: inherit; }\n.vms-markdown table { border-collapse: collapse; width: 100%; font-size: 10.5px; }\n.vms-markdown th, .vms-markdown td { border: 0.5px solid var(--vms-line); padding: 5px 8px; text-align: left; }\n.vms-markdown th { background: var(--vms-layer2); font-weight: 600; }\n.vms-markdown hr { border: 0; border-top: 0.5px solid var(--vms-line); margin: 1.2em 0; }\n\n.vms-code-view { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #0f1218; }\n.vms-code-head { flex: none; display: flex; justify-content: space-between; gap: 10px; padding: 6px 12px; border-bottom: 0.5px solid rgba(255,255,255,.09); color: rgba(255,255,255,.5); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; }\n.vms-code-content { flex: 1; min-height: 0; margin: 0; padding: 13px 16px 24px; overflow: auto; white-space: pre; tab-size: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6; color: #d6dbe5; background: transparent; }\n.vms-code-content code { font: inherit; }\n.hljs-comment, .hljs-quote { color: #7f8a9e; font-style: italic; }\n.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #c792ea; }\n.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta .hljs-string { color: #a5d6a7; }\n.hljs-number, .hljs-symbol, .hljs-bullet, .hljs-variable, .hljs-template-variable { color: #f2b880; }\n.hljs-title, .hljs-title.class_, .hljs-title.function_, .hljs-name, .hljs-selector-id, .hljs-selector-class { color: #82aaff; }\n.hljs-attr, .hljs-property, .hljs-params { color: #e5c07b; }\n.hljs-built_in, .hljs-type, .hljs-class .hljs-title { color: #7fdbca; }\n.hljs-meta, .hljs-doctag { color: #ffcb6b; }\n.hljs-deletion { color: #ff7b72; }\n.hljs-emphasis { font-style: italic; }\n.hljs-strong { font-weight: 700; }\n\n.vms-html-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: #fff; }\n.vms-table-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--vms-bg); }\n.vms-table { border-collapse: collapse; min-width: 100%; font-size: 10.5px; }\n.vms-table th, .vms-table td { border: 0.5px solid var(--vms-line); padding: 5px 9px; text-align: left; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }\n.vms-table th { position: sticky; top: 0; background: var(--vms-layer2); font-weight: 600; z-index: 1; }\n.vms-table tr:nth-child(even) td { background: color-mix(in srgb, var(--vms-layer2) 45%, transparent); }\n\n@container (max-width: 520px) {\n  .vms-selection-bar { padding: 6px 10px; }\n  .vms-selection-bar .vms-ghost-btn { font-size: 9.5px; padding: 0 7px; }\n}\n\n/* Session-only filter. */\n.vms-session-row { display: flex; align-items: center; gap: 6px; margin-top: 9px; }\n.vms-session-btn {\n  display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\n}\n.vms-session-btn:hover:not(:disabled) { background: var(--vms-layer2); color: var(--vms-ink2); }\n.vms-session-btn.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }\n.vms-session-btn:disabled { opacity: .45; cursor: default; }\n';
+var styles_default2 = '.vms-root {\r\n  position: relative;\r\n  display: flex;\r\n  flex-direction: column;\r\n  height: 100%;\r\n  min-height: 0;\r\n  min-width: 0;\r\n  container-type: inline-size;\r\n  background: var(--dsw-alias-bg-base, #fff);\r\n  color: var(--dsw-alias-label-primary, #0f1115);\r\n  font-family: var(--dsh-font-family-text, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);\r\n  font-size: 13px;\r\n  line-height: 1.45;\r\n  --vms-bg: var(--dsw-alias-bg-base, #fff);\r\n  --vms-layer: var(--dsw-alias-bg-layer-1, #fff);\r\n  --vms-layer2: var(--dsw-alias-bg-layer-2, #f1f3f6);\r\n  --vms-layer3: var(--dsw-alias-bg-layer-3, #e7ebf0);\r\n  --vms-ink: var(--dsw-alias-label-primary, #0f1115);\r\n  --vms-ink2: var(--dsw-alias-label-secondary, #454b53);\r\n  --vms-ink3: var(--dsw-alias-label-tertiary, #747b84);\r\n  --vms-ink4: var(--dsw-alias-label-caption, #9ca3ad);\r\n  --vms-line: var(--dsw-alias-border-l2, rgba(15, 17, 21, 0.12));\r\n  --vms-line2: var(--dsw-alias-border-l3, rgba(15, 17, 21, 0.16));\r\n  --vms-accent: var(--dsw-alias-link, #4176e6);\r\n  --vms-accent-soft: color-mix(in srgb, var(--vms-accent) 12%, transparent);\r\n  --vms-tape: #c28a2e;\r\n  --vms-tape-soft: rgba(194, 138, 46, 0.14);\r\n  --vms-mint: #2f9c7f;\r\n  --vms-mint-soft: rgba(47, 156, 127, 0.14);\r\n  --vms-violet: #8b7ad8;\r\n  --vms-danger: #c24747;\r\n  --vms-radius-card: var(--dsw-radius-lg, 16px);\r\n  --vms-radius-control: var(--dsw-radius-sm, 8px);\r\n  --vms-radius-md: var(--dsw-radius-md, 12px);\r\n  --vms-radius-panel: var(--dsw-radius-xl, 20px);\r\n  --vms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);\r\n}\r\n.vms-root *, .vms-root *::before, .vms-root *::after { box-sizing: border-box; }\r\n.vms-root button, .vms-root input, .vms-root select { font: inherit; color: inherit; }\r\n.vms-root button { cursor: pointer; }\r\n.vms-root button:focus-visible, .vms-root input:focus-visible, .vms-root select:focus-visible, .vms-root a:focus-visible {\r\n  outline: 2px solid var(--vms-accent); outline-offset: 1px;\r\n}\r\n.vms-mono { font-family: var(--dsh-font-family-code, "Cascadia Mono", "SF Mono", Consolas, monospace); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }\r\n\r\n.vms-head { flex: none; padding: 13px 16px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer); position: relative; z-index: 5; }\r\n.vms-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\r\n.vms-title h2 { margin: 0; font-size: 19px; font-weight: 550; letter-spacing: -0.015em; }\r\n.vms-title p { margin: 4px 0 0; display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--vms-ink3); }\r\n.vms-title p span:nth-child(even) { color: var(--vms-ink4); }\r\n.vms-actions { display: flex; align-items: center; gap: 5px; flex: none; }\r\n.vms-icon-btn {\r\n  width: 30px; height: 30px; border: 0; border-radius: var(--vms-radius-control);\r\n  display: inline-grid; place-items: center; background: transparent; color: var(--vms-ink3); flex: none; text-decoration: none;\r\n}\r\n.vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-icon-btn[aria-pressed="true"] { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-icon-btn:disabled { opacity: .45; cursor: default; }\r\n.vms-icon-btn.is-strong { background: var(--vms-ink); color: var(--vms-bg); width: 34px; height: 34px; }\r\n.vms-ghost-btn, .vms-primary-btn, .vms-seg-btn, .vms-filter-btn, .vms-dir-btn, .vms-reset-btn {\r\n  display: inline-flex; align-items: center; justify-content: center; gap: 5px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink2); height: 29px; padding: 0 9px; font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-ghost-btn:hover, .vms-filter-btn:hover, .vms-dir-btn:hover, .vms-reset-btn:hover { background: var(--vms-layer2); }\r\n.vms-primary-btn { background: var(--vms-accent); border-color: transparent; color: var(--vms-bg); }\r\n.vms-primary-btn:hover { filter: brightness(1.06); }\r\n.vms-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--vms-layer2); border: 0.5px solid var(--vms-line); }\r\n.vms-seg-btn { width: 28px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; }\r\n.vms-seg-btn.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-search-row { display: flex; gap: 7px; margin-top: 11px; }\r\n.vms-search {\r\n  flex: 1; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px;\r\n  border-radius: 10px; border: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink4);\r\n  transition: border-color 150ms, box-shadow 150ms;\r\n}\r\n.vms-search:focus-within { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--vms-ink); font-size: 11.5px; }\r\n.vms-search input::placeholder { color: var(--vms-ink4); }\r\n.vms-search input::-webkit-search-cancel-button { -webkit-appearance: none; }\r\n.vms-filter-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-filter-count { font-style: normal; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--vms-accent); color: var(--vms-bg); font-size: 9px; display: inline-grid; place-items: center; font-family: var(--dsh-font-family-code, monospace); }\r\n\r\n.vms-type-row { display: flex; gap: 5px; margin-top: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }\r\n.vms-type-row::-webkit-scrollbar { display: none; }\r\n.vms-type-chip {\r\n  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\r\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\r\n}\r\n.vms-type-chip b { font-weight: 600; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\r\n.vms-type-chip:hover { background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-type-chip.is-active { background: var(--vms-ink); border-color: var(--vms-ink); color: var(--vms-bg); }\r\n.vms-type-chip.is-active b { color: inherit; opacity: .62; }\r\n.vms-type-chip[data-kind="video"].is-active { background: var(--vms-tape); border-color: var(--vms-tape); color: #1a1208; }\r\n.vms-type-chip[data-kind="audio"].is-active { background: var(--vms-mint); border-color: var(--vms-mint); color: #071b15; }\r\n.vms-type-chip[data-kind="link"].is-active { background: var(--vms-accent); border-color: var(--vms-accent); color: var(--vms-bg); }\r\n\r\n.vms-filter-panel {\r\n  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto auto; gap: 7px; align-items: end;\r\n  margin-top: 9px; padding: 9px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer2); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-field { display: grid; gap: 3px; min-width: 0; }\r\n.vms-field span { font-size: 9px; color: var(--vms-ink4); padding-left: 2px; }\r\n.vms-field select {\r\n  width: 100%; height: 29px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\r\n  background: var(--vms-layer); color: var(--vms-ink2); font-size: 10.5px; padding: 0 22px 0 7px;\r\n  appearance: none; outline: 0;\r\n  background-image: linear-gradient(45deg, transparent 50%, var(--vms-ink4) 50%), linear-gradient(135deg, var(--vms-ink4) 50%, transparent 50%);\r\n  background-position: calc(100% - 11px) 12px, calc(100% - 7px) 12px;\r\n  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;\r\n}\r\n.vms-dir-btn svg { transition: transform 160ms; }\r\n.vms-dir-btn[data-dir="asc"] svg { transform: rotate(180deg); }\r\n.vms-reset-btn { border: 0; color: var(--vms-ink3); }\r\n.vms-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }\r\n.vms-chip {\r\n  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 5px 0 8px;\r\n  border-radius: 999px; background: var(--vms-accent-soft); color: var(--vms-accent);\r\n  border: 0.5px solid color-mix(in srgb, var(--vms-accent) 28%, transparent); font-size: 9.5px;\r\n}\r\n.vms-chip button { width: 14px; height: 14px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; font-size: 12px; line-height: 1; padding: 0; }\r\n.vms-chip button:hover { background: rgba(0,0,0,.10); }\r\n\r\n.vms-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--vms-line2) transparent; position: relative; }\r\n.vms-scan-banner { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 7px; padding: 7px 16px; font-size: 10px; color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-scan-banner i { width: 6px; height: 6px; border-radius: 50%; background: var(--vms-accent); animation: vms-pulse 1.2s infinite; }\r\n\r\n.vms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px 18px; }\r\n.vms-card {\r\n  min-width: 0; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-card); overflow: hidden;\r\n  background: var(--vms-layer); outline: 0;\r\n  transition: border-color 160ms, transform 160ms var(--vms-ease), box-shadow 160ms;\r\n  animation: vms-card-in 260ms var(--vms-ease) both;\r\n}\r\n@container (max-width: 430px) {\r\n  .vms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px; }\r\n  .vms-card-info { padding: 8px; }\r\n  .vms-card-info h3 { font-size: 10.5px; }\r\n  .vms-card-info p { font-size: 9px; }\r\n}\r\n@media (hover: hover) {\r\n  .vms-card:hover { border-color: var(--vms-line2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.10); }\r\n  .vms-card:hover .vms-card-actions { opacity: 1; transform: none; }\r\n  .vms-card:hover .vms-play-btn { opacity: 1; }\r\n  .vms-card:hover .vms-poster, .vms-card:hover .vms-thumb-video { transform: scale(1.035); }\r\n}\r\n.vms-card:focus-visible { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-card[data-playing] { border-color: color-mix(in srgb, var(--vms-accent) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 45%, transparent); }\r\n.vms-card-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0d1016; }\r\n.vms-poster, .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 420ms var(--vms-ease); }\r\n.vms-thumb-box { position: absolute; inset: 0; }\r\n.vms-thumb-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.6); background: linear-gradient(145deg, #17202b, #0a0f15); }\r\n.vms-video-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: rgba(255,255,255,.68); background: linear-gradient(145deg, #17202b, #0a0f15); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; letter-spacing: .06em; }\r\n.vms-card-index { position: absolute; top: 7px; left: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.84); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge { position: absolute; top: 7px; right: 7px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.56); border: 0.5px solid rgba(255,255,255,.16); border-radius: 5px; padding: 2px 5px; backdrop-filter: blur(6px); }\r\n.vms-kind-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-kind-badge[data-kind="video"] { color: #f0c37c; }\r\n.vms-kind-badge[data-kind="audio"] { color: #92e6c9; }\r\n.vms-kind-badge[data-kind="image"] { color: #b8d2ff; }\r\n.vms-kind-badge[data-kind="link"] { color: #c7b8ff; }\r\n.vms-duration { position: absolute; right: 7px; bottom: 7px; z-index: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; color: rgba(255,255,255,.9); background: rgba(8,10,14,.64); border-radius: 4px; padding: 2px 4px; backdrop-filter: blur(6px); }\r\n.vms-play-btn { position: absolute; left: 50%; top: 50%; z-index: 4; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0.5px solid rgba(255,255,255,.26); border-radius: 50%; display: grid; place-items: center; background: rgba(8,10,14,.52); color: #fff; backdrop-filter: blur(10px); opacity: 0; transition: transform 160ms var(--vms-ease), background 160ms, opacity 160ms; }\r\n.vms-play-btn:hover { transform: scale(1.07); background: var(--vms-accent); }\r\n.vms-card-actions { position: absolute; z-index: 4; right: 7px; bottom: 7px; display: flex; gap: 4px; opacity: 0; transform: translateY(3px); transition: opacity 160ms, transform 160ms; }\r\n.vms-card-actions .vms-mini-action { width: 25px; height: 25px; border: 0.5px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(8,10,14,.64); color: #fff; display: grid; place-items: center; backdrop-filter: blur(8px); padding: 0; }\r\n.vms-mini-action:hover { background: rgba(8,10,14,.82); }\r\n.vms-card-info { padding: 9px 10px 10px; display: grid; gap: 3px; }\r\n.vms-card-info h3 { margin: 0; font-size: 11.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-card-info p { margin: 0; font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-playing-note { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--vms-accent); }\r\n.vms-playing-note i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-accent); }\r\n\r\n.vms-audio-poster { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-poster-top { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-poster-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); }\r\n.vms-poster-mono { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.66); }\r\n.vms-poster-wave { display: flex; align-items: center; gap: 2px; height: 38%; opacity: .72; }\r\n.vms-poster-wave i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.76); }\r\n.vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r\n.vms-link-poster { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px; color: #fff; background: linear-gradient(145deg, #1a1826, #0e0d16); }\r\n.vms-link-poster.is-direct { background: linear-gradient(145deg, #0f241d, #081310); }\r\n.vms-link-bar { display: flex; align-items: center; gap: 4px; height: 14px; }\r\n.vms-link-bar i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.26); }\r\n.vms-link-bar span { margin-left: 4px; font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-link-body { flex: 1; display: grid; place-content: center; justify-items: start; gap: 5px; min-width: 0; }\r\n.vms-link-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(199,184,255,.14); color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-glyph { background: rgba(111,214,181,.14); color: #6fd6b5; }\r\n.vms-link-body b { font-size: 11px; font-weight: 550; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }\r\n.vms-link-tag { font-family: var(--dsh-font-family-code, monospace); font-size: 7.5px; letter-spacing: .08em; color: #c7b8ff; }\r\n.vms-link-poster.is-direct .vms-link-tag { color: #6fd6b5; }\r\n\r\n.vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r\n.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r\n.vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r\n.vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r\n.vms-inline-bar input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-inline-bar .vms-mono { font-size: 8px; opacity: .85; }\r\n.vms-inline-audio { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 11px; color: #fff; background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); }\r\n.vms-inline-audio audio { display: none; }\r\n.vms-ia-top { display: flex; align-items: center; gap: 7px; min-width: 0; }\r\n.vms-ia-glyph { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: rgba(255,255,255,.13); flex: none; }\r\n.vms-ia-top b { font-size: 10.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-ia-bars { display: flex; align-items: center; gap: 2px; height: 26px; opacity: .82; }\r\n.vms-ia-bars i { flex: 1; border-radius: 1px; background: rgba(255,255,255,.72); }\r\n.vms-inline-audio[data-playing] .vms-ia-bars i { animation: vms-wave 1s ease-in-out infinite alternate; }\r\n.vms-ia-controls { display: flex; align-items: center; gap: 5px; }\r\n.vms-ia-controls button { width: 21px; height: 21px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r\n.vms-ia-controls button:hover { background: rgba(255,255,255,.14); }\r\n.vms-ia-controls input { flex: 1; min-width: 0; height: 3px; accent-color: #fff; }\r\n.vms-ia-controls .vms-mono { font-size: 8px; opacity: .82; }\r\n.vms-inline-error { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(8,10,14,.88); color: rgba(255,255,255,.8); font-size: 9.5px; }\r\n\r\n.vms-rows { padding: 6px 10px 14px; }\r\n.vms-list-head {\r\n  display: grid; grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px;\r\n  gap: 9px; padding: 7px 8px 5px; font-size: 9px; color: var(--vms-ink4); border-bottom: 0.5px solid var(--vms-line);\r\n}\r\n.vms-list-head span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vms-list-head button { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }\n.vms-list-head button:hover { color: var(--vms-ink2); }\n.vms-list-head button.is-active { color: var(--vms-ink); font-weight: 600; }\r\n.vms-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 28px; align-items: center; gap: 9px; padding: 8px; border-radius: 10px; border: 0.5px solid transparent; cursor: pointer; }\r\n.vms-row[data-detail="detailed"] { grid-template-columns: 54px minmax(0, 1fr) 78px 72px 62px 28px; }\r\n@media (hover: hover) { .vms-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); } }\r\n.vms-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\r\n.vms-row-thumb { position: relative; width: 54px; height: 34px; border-radius: 7px; overflow: hidden; background: #0d1016; }\r\n.vms-row-thumb .vms-poster, .vms-row-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-row-thumb .vms-audio-poster, .vms-row-thumb .vms-link-poster, .vms-row-thumb .vms-doc-poster { padding: 4px; }\r\n.vms-row-thumb .vms-poster-top, .vms-row-thumb .vms-poster-wave, .vms-row-thumb .vms-poster-bottom,\r\n.vms-row-thumb .vms-link-body, .vms-row-thumb .vms-link-bar,\r\n.vms-row-thumb .vms-doc-lines, .vms-row-thumb .vms-doc-snippet { display: none; }\r\n.vms-row-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n.vms-row-thumb .vms-doc-poster { align-items: center; justify-content: center; }\r\n.vms-row-duration { position: absolute; right: 2px; bottom: 2px; font-family: var(--dsh-font-family-code, monospace); font-size: 7px; color: #fff; background: rgba(5,7,10,.7); border-radius: 3px; padding: 1px 3px; }\r\n.vms-row-main { min-width: 0; display: grid; gap: 2px; }\r\n.vms-row-main b { font-size: 11.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-main small { font-size: 9.5px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-kind { font-size: 9.5px; display: flex; align-items: center; gap: 4px; color: var(--vms-ink3); }\r\n.vms-row-kind i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }\r\n.vms-row-kind[data-kind="video"] { color: var(--vms-tape); }\r\n.vms-row-kind[data-kind="audio"] { color: var(--vms-mint); }\r\n.vms-row-kind[data-kind="image"] { color: var(--vms-accent); }\r\n.vms-row-kind[data-kind="link"] { color: var(--vms-violet); }\r\n.vms-row-kind[data-kind="document"] { color: #6f8fd8; }\r\n.vms-row-kind[data-kind="archive"] { color: #c99a5b; }\r\n.vms-row-kind[data-kind="code"] { color: #7fb99a; }\r\n.vms-row-size, .vms-row-time { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-row-play { width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink2); }\r\n.vms-row-play:hover { background: var(--vms-accent); color: #fff; }\r\n@container (max-width: 560px) {\r\n  .vms-row[data-detail="detailed"] { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-row[data-detail="detailed"] .vms-row-time,\r\n  .vms-row[data-detail="detailed"] .vms-row-size { display: none; }\r\n  .vms-list-head { grid-template-columns: 48px minmax(0, 1fr) 72px 28px; }\r\n  .vms-list-head > :nth-child(3), .vms-list-head > :nth-child(5) { display: none; }\r\n  .vms-row-thumb { width: 48px; height: 30px; }\r\n}\r\n\r\n.vms-more { display: flex; justify-content: center; padding: 0 16px 18px; }\r\n.vms-empty { display: grid; justify-items: center; gap: 6px; padding: 52px 20px; text-align: center; }\r\n.vms-empty-art { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink4); margin-bottom: 4px; }\r\n.vms-empty b { font-size: 12.5px; font-weight: 600; }\r\n.vms-empty p { margin: 0 0 8px; font-size: 10.5px; color: var(--vms-ink4); max-width: 320px; }\r\n.vms-skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--vms-card-min, 158px), 1fr)); gap: 12px; padding: 14px 16px; }\r\n.vms-skeleton { aspect-ratio: 0.92; border-radius: var(--vms-radius-card); background: linear-gradient(110deg, var(--vms-layer2) 8%, var(--vms-layer3) 18%, var(--vms-layer2) 33%); background-size: 200% 100%; animation: vms-shimmer 1.3s linear infinite; }\r\n.vms-status { flex: none; height: 31px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; border-top: 0.5px solid var(--vms-line); font-size: 9.5px; color: var(--vms-ink4); background: var(--vms-layer); }\r\n.vms-status-right { display: flex; align-items: center; gap: 5px; white-space: nowrap; }\r\n.vms-status-right i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-mint); }\r\n.vms-toast { position: absolute; right: 16px; bottom: 42px; z-index: 70; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 10px; background: var(--vms-ink); color: var(--vms-bg); font-size: 10.5px; box-shadow: 0 18px 48px rgba(0,0,0,.24); animation: vms-toast-in 200ms var(--vms-ease); }\r\n\r\n.vms-add-link { position: absolute; top: 92px; right: 14px; z-index: 30; width: min(310px, calc(100% - 28px)); display: grid; gap: 8px; padding: 12px; border-radius: var(--vms-radius-md); background: var(--vms-layer); border: 0.5px solid var(--vms-line2); box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease); }\r\n.vms-add-head { display: flex; align-items: center; justify-content: space-between; }\r\n.vms-add-head b { font-size: 12px; font-weight: 600; }\r\n.vms-input { width: 100%; height: 31px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); padding: 0 8px; font-size: 10.5px; color: var(--vms-ink); outline: 0; }\r\n.vms-input:focus { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); box-shadow: 0 0 0 3px var(--vms-accent-soft); background: var(--vms-layer); }\r\n.vms-hint { margin: 0; font-size: 9px; color: var(--vms-ink4); line-height: 1.5; }\r\n.vms-form-error { margin: 0; font-size: 9.5px; color: var(--vms-danger); }\r\n.vms-add-actions { display: flex; justify-content: flex-end; gap: 6px; }\r\n\r\n/* overlay */\r\n.vms-overlay { position: absolute; inset: 0; z-index: 40; display: flex; padding: 8px; }\r\n.vms-overlay-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.46); backdrop-filter: blur(7px); animation: vms-fade 180ms var(--vms-ease); }\r\n.vms-sheet { position: relative; margin: auto; width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-layer); border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-panel); box-shadow: 0 28px 80px rgba(0,0,0,.38); animation: vms-sheet-in 220ms var(--vms-ease); }\r\n.vms-sheet-head { flex: none; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 9px 0 13px; border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-title { min-width: 0; display: flex; align-items: center; gap: 7px; }\r\n.vms-kind-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vms-tape); box-shadow: 0 0 0 3px var(--vms-tape-soft); flex: none; }\r\n.vms-kind-dot[data-kind="audio"] { background: var(--vms-mint); box-shadow: 0 0 0 3px var(--vms-mint-soft); }\r\n.vms-kind-dot[data-kind="image"] { background: var(--vms-accent); box-shadow: 0 0 0 3px var(--vms-accent-soft); }\r\n.vms-kind-dot[data-kind="link"] { background: var(--vms-violet); box-shadow: 0 0 0 3px rgba(139,122,216,.16); }\r\n.vms-sheet-title h2 { margin: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-path { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-sheet-actions { display: flex; align-items: center; gap: 4px; flex: none; }\r\n.vms-sheet-stage { flex: 1; min-height: 0; position: relative; display: flex; background: #08090c; overflow: hidden; }\r\n.vms-sheet-foot { flex: none; border-top: 0.5px solid var(--vms-line); padding: 7px 9px 8px; background: var(--vms-layer); }\r\n.vms-sheet-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 3px 6px; }\r\n.vms-sheet-meta .vms-mono { font-size: 9px; color: var(--vms-ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\r\n.vms-meta-note { color: var(--vms-ink4); font-size: 8.5px !important; }\r\n.vms-filmstrip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }\r\n.vms-filmstrip::-webkit-scrollbar { display: none; }\r\n.vms-film-thumb { position: relative; flex: none; width: 58px; height: 34px; border-radius: 6px; overflow: hidden; border: 1.5px solid transparent; background: #0d1016; padding: 0; opacity: .62; transition: opacity 150ms, border-color 150ms; }\r\n.vms-film-thumb:hover { opacity: .9; }\r\n.vms-film-thumb.is-active { opacity: 1; border-color: var(--vms-accent); }\r\n.vms-film-thumb .vms-poster, .vms-film-thumb .vms-thumb-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }\r\n.vms-film-thumb .vms-audio-poster, .vms-film-thumb .vms-link-poster { padding: 4px; }\r\n.vms-film-thumb .vms-poster-top, .vms-film-thumb .vms-poster-wave, .vms-film-thumb .vms-poster-bottom,\r\n.vms-film-thumb .vms-link-body, .vms-film-thumb .vms-link-bar { display: none; }\r\n.vms-film-thumb .vms-audio-poster { align-items: center; justify-content: center; }\r\n\r\n.vms-player { flex: 1; min-height: 0; display: flex; flex-direction: column; }\r\n.vms-player-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; display: flex; background: #08090c; }\r\n.vms-video-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }\r\n.vms-video-stage video { width: 100%; height: 100%; object-fit: contain; background: #08090c; }\r\n.vms-stage-backdrop { position: absolute; inset: -26px; background-size: cover; background-position: center; filter: blur(34px) brightness(.36) saturate(.9); opacity: .82; transform: scale(1.05); pointer-events: none; }\r\n.vms-audio-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 24px; background: radial-gradient(80% 80% at 50% 35%, color-mix(in srgb, var(--vms-cover-b, #244) 35%, #08090c), #08090c 72%); }\r\n.vms-audio-stage audio { display: none; }\r\n.vms-audio-art { width: 142px; height: 142px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(145deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722)); box-shadow: 0 22px 60px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.14); color: rgba(255,255,255,.86); }\r\n.vms-audio-waves { display: flex; align-items: center; gap: 3px; height: 44px; width: min(82%, 420px); }\r\n.vms-audio-waves i { flex: 1; border-radius: 2px; background: rgba(255,255,255,.55); }\r\n.vms-audio-waves.is-playing i { animation: vms-wave 1.05s ease-in-out infinite alternate; }\r\n.vms-audio-title { text-align: center; color: #fff; }\r\n.vms-audio-title b { display: block; font-size: 14px; font-weight: 550; }\r\n.vms-audio-title span { display: block; margin-top: 3px; font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; color: rgba(255,255,255,.5); }\r\n.vms-player-error { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: rgba(255,255,255,.86); background: rgba(8,10,14,.9); font-size: 11px; }\r\n.vms-error-download { display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-size: 10px; }\r\n.vms-controls { flex: none; height: 48px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border-top: 0.5px solid var(--vms-line); background: var(--vms-layer); overflow: hidden; }\r\n.vms-controls .vms-icon-btn { width: 28px; height: 28px; color: var(--vms-ink3); }\r\n.vms-controls .vms-icon-btn:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-time { font-size: 9px; color: var(--vms-ink3); min-width: 34px; text-align: center; }\r\n.vms-seek { flex: 1; min-width: 40px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-volume { width: 50px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-speed { width: 54px; height: 24px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: var(--vms-layer2); color: var(--vms-ink2); font-size: 9px; padding: 0 2px 0 5px; outline: 0; }\r\n.vms-sep { width: 1px; height: 17px; background: var(--vms-line); margin: 0 2px; flex: none; }\r\n@container (max-width: 460px) {\r\n  .vms-volume, .vms-speed, .vms-controls .vms-sep { display: none; }\r\n  .vms-controls { gap: 3px; }\r\n}\r\n\r\n.vms-image-viewer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }\r\n.vms-image-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; z-index: 1; }\r\n.vms-image-wrap:active { cursor: grabbing; }\r\n.vms-image-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transform-origin: center; }\r\n.vms-image-tools { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 4px; }\r\n.vms-image-tools .vms-icon-btn { background: rgba(10,12,16,.58); color: #fff; border: 0.5px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }\r\n.vms-image-tools .vms-icon-btn:hover { background: rgba(10,12,16,.82); }\r\n.vms-text-tool { width: 30px; height: 30px; border: 0.5px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(10,12,16,.58); color: #fff; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; backdrop-filter: blur(8px); }\r\n.vms-stage-hint { position: absolute; left: 13px; bottom: 11px; z-index: 3; font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: rgba(255,255,255,.55); pointer-events: none; }\r\n.vms-link-viewer { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 26px; text-align: center; background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%); color: #fff; }\r\n.vms-link-viewer-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: rgba(199,184,255,.12); color: #c7b8ff; border: 0.5px solid rgba(199,184,255,.28); }\r\n.vms-link-viewer b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }\r\n.vms-link-viewer code { max-width: min(520px, 90%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 9px; border-radius: 8px; background: rgba(255,255,255,.07); color: rgba(255,255,255,.62); font-family: var(--dsh-font-family-code, monospace); font-size: 10px; }\r\n.vms-link-actions { display: flex; gap: 7px; margin-top: 3px; }\r\n.vms-link-actions .vms-primary-btn, .vms-link-actions .vms-ghost-btn { height: 31px; padding: 0 11px; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; }\r\n.vms-link-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }\r\n\r\n@keyframes vms-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-sheet-in { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-fade { from { opacity: 0; } to { opacity: 1; } }\r\n@keyframes vms-panel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }\r\n@keyframes vms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }\r\n@keyframes vms-wave { from { transform: scaleY(.55); } to { transform: scaleY(1.08); } }\r\n@keyframes vms-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }\r\n@media (prefers-reduced-motion: reduce) {\r\n  .vms-root *, .vms-root *::before, .vms-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }\r\n}\r\n/* File-manager additions: zoom, folder navigation, document cards, menus, dialogs. */\r\n.vms-zoom { display: flex; align-items: center; gap: 2px; flex: none; padding: 2px; border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control); background: var(--vms-layer2); }\r\n.vms-zoom .vms-icon-btn { width: 25px; height: 25px; }\r\n.vms-zoom-range { width: 66px; height: 3px; accent-color: var(--vms-accent); }\r\n.vms-detail-seg { gap: 2px; }\r\n.vms-seg-text { height: 24px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink4); font-size: 10px; }\r\n.vms-seg-text.is-active { background: var(--vms-layer3); color: var(--vms-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }\r\n\r\n.vms-folder-row { position: relative; display: flex; align-items: center; gap: 7px; margin-top: 9px; min-width: 0; }\r\n.vms-crumb { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; flex: 1; }\r\n.vms-crumb-seg { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; padding: 2px 5px; border-radius: 6px; color: var(--vms-ink3); font-size: 10.5px; }\r\n.vms-crumb-seg:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-crumb-seg.is-active { color: var(--vms-ink); font-weight: 550; }\r\n.vms-crumb-sep { color: var(--vms-ink4); flex: none; }\r\n.vms-folder-btn { flex: none; }\r\n.vms-folder-btn.is-open { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-pop {\r\n  position: absolute; z-index: 31; top: calc(100% + 5px); right: 0; width: min(320px, calc(100% - 4px));\r\n  max-height: 300px; overflow: auto; padding: 5px; border: 0.5px solid var(--vms-line2);\r\n  border-radius: var(--vms-radius-md); background: var(--vms-layer);\r\n  box-shadow: 0 20px 56px rgba(0,0,0,.22); animation: vms-panel-in 160ms var(--vms-ease);\r\n}\r\n.vms-folder-item { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-folder-item:hover { background: var(--vms-layer2); }\r\n.vms-folder-item.is-active { background: var(--vms-accent-soft); color: var(--vms-accent); }\r\n.vms-folder-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-check { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--vms-ink3); white-space: nowrap; }\r\n.vms-check input { accent-color: var(--vms-accent); margin: 0; }\r\n\r\n/* Designed thumbnails for documents, archives, code and unknown files. */\r\n.vms-doc-poster {\r\n  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;\r\n  padding: 12px; overflow: hidden; color: #fff;\r\n  background: linear-gradient(140deg, color-mix(in srgb, var(--vms-cover-a, #203047) 82%, #0d1722), var(--vms-cover-b, #0d1722));\r\n}\r\n.vms-doc-poster::before { content: ""; position: absolute; inset: 9px; border-radius: 5px; background: rgba(255,255,255,.055); border: 0.5px solid rgba(255,255,255,.12); }\r\n.vms-doc-fold { position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; background: linear-gradient(225deg, rgba(255,255,255,.22) 50%, transparent 50%); border-top-right-radius: 4px; }\r\n.vms-doc-glyph { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: rgba(255,255,255,.11); }\r\n.vms-doc-glyph.is-large { width: 38px; height: 38px; border-radius: 10px; z-index: 1; }\r\n.vms-doc-ext { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.7); z-index: 1; }\r\n.vms-doc-ext.is-large { font-size: 10px; color: rgba(255,255,255,.86); }\r\n.vms-doc-lines { position: relative; z-index: 1; display: grid; gap: 3px; width: 54%; margin-top: 2px; }\r\n.vms-doc-lines i { height: 2px; border-radius: 1px; background: rgba(255,255,255,.18); }\r\n.vms-doc-lines i:nth-child(2) { width: 78%; }\r\n.vms-doc-lines i:nth-child(3) { width: 55%; }\r\n.vms-doc-poster[data-kind="document"] { background: linear-gradient(145deg, #223553, #0c141f); }\r\n.vms-doc-poster[data-kind="archive"] { background: linear-gradient(145deg, #3f2d16, #150e06); }\r\n.vms-doc-poster[data-kind="code"] { background: linear-gradient(145deg, #183a33, #071410); }\r\n.vms-doc-poster[data-kind="other"] { background: linear-gradient(145deg, #2b2f38, #0d1015); }\r\n.vms-doc-poster.is-text { display: block; padding: 10px 10px 22px; background: #f7f5ef; color: #2a2b2f; }\r\n.vms-doc-poster.is-text::before { inset: 7px 7px 19px; background: #fffdf8; border-color: rgba(30,30,30,.10); }\r\n.vms-doc-snippet {\r\n  position: relative; z-index: 1; margin: 2px 3px 0; padding: 2px 4px; height: calc(100% - 2px);\r\n  overflow: hidden; white-space: pre; font-family: var(--dsh-font-family-code, monospace);\r\n  font-size: 6.5px; line-height: 1.45; color: #4b4b52;\r\n}\r\n.vms-doc-snippet.is-empty { display: grid; place-items: center; text-align: center; color: #9a968c; font-family: inherit; font-size: 9px; }\r\n.vms-doc-poster.is-text .vms-doc-foot {\r\n  position: absolute; left: 9px; right: 9px; bottom: 5px; z-index: 2; display: flex; align-items: center; gap: 4px; color: #7a7468;\r\n}\r\n.vms-doc-poster.is-text .vms-doc-glyph { width: 16px; height: 16px; background: rgba(0,0,0,.06); border-radius: 4px; }\r\n.vms-doc-poster.is-text .vms-doc-ext { color: #7a7468; font-size: 7px; }\r\n.vms-row-thumb .vms-doc-poster.is-text { display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #e6e1d3, #f7f5ef); }\r\n.vms-row-thumb .vms-doc-poster.is-text::before { display: none; }\r\n\r\n/* Batch-metadata banner. */\r\n.vms-meta-banner {\r\n  position: sticky; bottom: 8px; z-index: 6; width: max-content; margin: 0 auto 10px;\r\n  display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;\r\n  background: var(--vms-ink); color: var(--vms-bg); font-size: 9.5px; box-shadow: 0 8px 24px rgba(0,0,0,.18);\r\n}\r\n.vms-meta-banner i { width: 5px; height: 5px; border-radius: 50%; background: var(--vms-bg); animation: vms-pulse 1.2s infinite; }\r\n\r\n/* File action menu. */\r\n.vms-menu {\r\n  position: fixed; z-index: 120; width: 196px; padding: 5px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 22px 60px rgba(0,0,0,.28);\r\n  animation: vms-panel-in 140ms var(--vms-ease);\r\n}\r\n.vms-menu-head { display: flex; align-items: center; gap: 6px; padding: 5px 7px 6px; border-bottom: 0.5px solid var(--vms-line); margin-bottom: 4px; color: var(--vms-ink3); }\r\n.vms-menu-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 550; color: var(--vms-ink2); }\r\n.vms-menu-item { display: flex; align-items: center; gap: 7px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left; }\r\n.vms-menu-item:hover { background: var(--vms-layer2); color: var(--vms-ink); }\r\n.vms-menu-item.is-danger { color: var(--vms-danger); }\r\n.vms-menu-item.is-danger:hover { background: color-mix(in srgb, var(--vms-danger) 12%, transparent); }\r\n.vms-menu-item svg { flex: none; color: var(--vms-ink4); }\r\n.vms-menu-item.is-danger svg { color: inherit; }\r\n\r\n/* Dialogs. */\r\n.vms-dialog-layer { position: absolute; inset: 0; z-index: 60; display: flex; padding: 18px; }\r\n.vms-dialog-backdrop { position: absolute; inset: 0; background: rgba(8,10,14,.42); backdrop-filter: blur(6px); animation: vms-fade 160ms var(--vms-ease); }\r\n.vms-dialog {\r\n  position: relative; margin: auto; width: min(360px, 100%); padding: 12px;\r\n  border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);\r\n  background: var(--vms-layer); box-shadow: 0 28px 80px rgba(0,0,0,.34);\r\n  animation: vms-sheet-in 200ms var(--vms-ease);\r\n}\r\n.vms-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }\r\n.vms-dialog-head b { font-size: 12.5px; font-weight: 600; }\r\n.vms-dialog-form { display: grid; gap: 9px; }\r\n.vms-dialog-field { display: grid; gap: 5px; }\r\n.vms-dialog-field > span { font-size: 9.5px; color: var(--vms-ink4); }\r\n.vms-dialog-hint { font-size: 9px; color: var(--vms-ink4); line-height: 1.45; }\r\n.vms-dialog-text { margin: 0; font-size: 11px; line-height: 1.55; color: var(--vms-ink2); }\r\n.vms-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }\r\n.vms-primary-btn.is-danger { background: var(--vms-danger); color: #fff; }\r\n\r\n/* Document / PDF preview. */\r\n.vms-sheet-stage.is-pdf { background: #202124; }\r\n.vms-pdf-frame { width: 100%; height: 100%; border: 0; background: #fff; }\r\n.vms-sheet-stage.is-text { background: var(--vms-bg); }\r\n.vms-text-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }\r\n.vms-text-content {\r\n  flex: 1; min-height: 0; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre;\r\n  font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6;\r\n  color: var(--vms-ink); background: var(--vms-bg); tab-size: 2;\r\n}\r\n.vms-preview-note { flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 9.5px; color: var(--vms-ink3); background: var(--vms-layer2); border-bottom: 0.5px solid var(--vms-line); }\r\n.vms-sheet-stage.is-text > .vms-preview-note:only-child { margin: auto; border: 0; background: transparent; }\r\n.vms-generic-preview { margin: auto; display: grid; justify-items: center; gap: 9px; padding: 32px; text-align: center; color: var(--vms-ink2); }\r\n.vms-generic-glyph { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; background: var(--vms-layer2); color: var(--vms-ink3); }\r\n.vms-generic-preview b { font-size: 14px; font-weight: 550; }\r\n.vms-generic-preview p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); }\r\n.vms-generic-preview small { font-size: 9.5px; color: var(--vms-ink4); }\r\n/* Selection, tree view, batch bar and rich previews. */\n.vms-card[data-selected] { border-color: color-mix(in srgb, var(--vms-accent) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vms-accent) 55%, transparent); }\n.vms-select-badge { position: absolute; z-index: 6; left: 7px; bottom: 7px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--vms-accent); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.28); }\n.vms-row[data-selected] { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); }\n\n.vms-selection-bar {\n  flex: none; display: flex; align-items: center; gap: 6px; padding: 7px 16px;\n  border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2);\n  overflow-x: auto; scrollbar-width: none;\n}\n.vms-selection-bar::-webkit-scrollbar { display: none; }\n.vms-selection-bar b { font-size: 10.5px; font-weight: 600; margin-right: 2px; white-space: nowrap; }\n.vms-selection-bar .vms-ghost-btn { height: 26px; background: var(--vms-layer); }\n.vms-selection-bar .vms-ghost-btn.is-danger { color: var(--vms-danger); border-color: color-mix(in srgb, var(--vms-danger) 30%, transparent); }\n\n.vms-tree-wrap { padding: 6px 10px 16px; }\n.vms-tree-head {\n  display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 78px 72px 62px 28px;\n  gap: 8px; padding: 6px 8px 5px; font-size: 9px; color: var(--vms-ink4);\n  border-bottom: 0.5px solid var(--vms-line);\n}\n.vms-tree { display: flex; flex-direction: column; padding-top: 3px; }\n.vms-tree.is-empty { padding: 28px 12px; color: var(--vms-ink4); font-size: 10.5px; text-align: center; }\n.vms-tree-row {\n  display: grid; grid-template-columns: 14px 18px minmax(0, 1fr) 28px;\n  align-items: center; gap: 8px; min-height: 29px; padding: 3px 8px;\n  border-radius: 8px; border: 0.5px solid transparent; cursor: pointer; outline: 0;\n}\n.vms-tree-row[data-detail="detailed"] { grid-template-columns: 14px 18px minmax(0, 1fr) 78px 72px 62px 28px; }\n.vms-tree-row:hover { background: var(--vms-layer2); border-color: var(--vms-line); }\n.vms-tree-row:focus-visible { outline: 2px solid var(--vms-accent); outline-offset: -1px; }\n.vms-tree-row[data-selected] { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); }\n.vms-tree-row.is-folder .vms-tree-name { font-weight: 550; }\n.vms-tree-chevron { display: grid; place-items: center; color: var(--vms-ink4); }\n.vms-tree-chevron svg { transition: transform 150ms var(--vms-ease); }\n.vms-tree-chevron[data-expanded] svg { transform: rotate(90deg); }\n.vms-tree-folder-icon { display: grid; place-items: center; color: var(--vms-tape); }\n.vms-tree-file-icon { display: grid; place-items: center; color: var(--vms-ink3); }\n.vms-tree-file-icon[data-kind="image"] { color: var(--vms-accent); }\n.vms-tree-file-icon[data-kind="video"] { color: var(--vms-tape); }\n.vms-tree-file-icon[data-kind="audio"] { color: var(--vms-mint); }\n.vms-tree-file-icon[data-kind="document"] { color: #6f8fd8; }\n.vms-tree-file-icon[data-kind="archive"] { color: #c99a5b; }\n.vms-tree-file-icon[data-kind="code"] { color: #7fb99a; }\n.vms-tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }\n.vms-tree-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: var(--vms-ink4); }\n.vms-tree-more { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: var(--vms-ink4); display: grid; place-items: center; opacity: 0; }\n.vms-tree-row:hover .vms-tree-more, .vms-tree-row:focus-within .vms-tree-more { opacity: 1; }\n.vms-tree-more:hover { background: var(--vms-layer3); color: var(--vms-ink); }\n@container (max-width: 560px) {\n  .vms-tree-head { grid-template-columns: 14px 18px minmax(0, 1fr) 72px 28px; }\n  .vms-tree-head > :nth-child(4), .vms-tree-head > :nth-child(6) { display: none; }\n  .vms-tree-row[data-detail="detailed"] { grid-template-columns: 14px 18px minmax(0, 1fr) 72px 28px; }\n  .vms-tree-row[data-detail="detailed"] > :nth-child(4),\n  .vms-tree-row[data-detail="detailed"] > :nth-child(6) { display: none; }\n}\n\n/* Rich previews. */\n.vms-rich-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--vms-bg); }\n.vms-preview-modes { flex: none; display: flex; gap: 4px; padding: 6px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2); }\n.vms-preview-modes button { height: 24px; padding: 0 9px; border: 0.5px solid var(--vms-line); border-radius: 7px; background: transparent; color: var(--vms-ink3); font-size: 9.5px; }\n.vms-preview-modes button.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }\n.vms-markdown {\n  flex: 1; min-height: 0; overflow: auto; padding: 16px 18px 30px; line-height: 1.7;\n  font-size: 11.5px; color: var(--vms-ink); background: var(--vms-bg);\n}\n.vms-markdown h1, .vms-markdown h2, .vms-markdown h3, .vms-markdown h4 { margin: 1.1em 0 .45em; line-height: 1.35; font-weight: 600; }\n.vms-markdown h1 { font-size: 1.55em; border-bottom: 0.5px solid var(--vms-line); padding-bottom: .3em; }\n.vms-markdown h2 { font-size: 1.3em; border-bottom: 0.5px solid var(--vms-line); padding-bottom: .25em; }\n.vms-markdown h3 { font-size: 1.12em; }\n.vms-markdown p, .vms-markdown ul, .vms-markdown ol, .vms-markdown blockquote, .vms-markdown pre, .vms-markdown table { margin: .65em 0; }\n.vms-markdown ul, .vms-markdown ol { padding-left: 1.5em; }\n.vms-markdown li { margin: .2em 0; }\n.vms-markdown a { color: var(--vms-accent); text-decoration: none; }\n.vms-markdown a:hover { text-decoration: underline; }\n.vms-markdown img { max-width: 100%; height: auto; border-radius: 8px; }\n.vms-markdown blockquote { padding: .3em .9em; border-left: 3px solid var(--vms-line2); color: var(--vms-ink3); background: var(--vms-layer2); border-radius: 0 6px 6px 0; }\n.vms-markdown code { font-family: var(--dsh-font-family-code, monospace); font-size: .92em; background: var(--vms-layer2); border-radius: 4px; padding: .12em .35em; }\n.vms-markdown pre { background: #0f1218; color: #d9dee7; border-radius: 9px; padding: 11px 13px; overflow: auto; font-size: 10px; line-height: 1.55; }\n.vms-markdown pre code { background: transparent; padding: 0; color: inherit; }\n.vms-markdown table { border-collapse: collapse; width: 100%; font-size: 10.5px; }\n.vms-markdown th, .vms-markdown td { border: 0.5px solid var(--vms-line); padding: 5px 8px; text-align: left; }\n.vms-markdown th { background: var(--vms-layer2); font-weight: 600; }\n.vms-markdown hr { border: 0; border-top: 0.5px solid var(--vms-line); margin: 1.2em 0; }\n\n.vms-code-view { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #0f1218; }\n.vms-code-head { flex: none; display: flex; justify-content: space-between; gap: 10px; padding: 6px 12px; border-bottom: 0.5px solid rgba(255,255,255,.09); color: rgba(255,255,255,.5); font-family: var(--dsh-font-family-code, monospace); font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; }\n.vms-code-content { flex: 1; min-height: 0; margin: 0; padding: 13px 16px 24px; overflow: auto; white-space: pre; tab-size: 2; font-family: var(--dsh-font-family-code, monospace); font-size: 10.5px; line-height: 1.6; color: #d6dbe5; background: transparent; }\n.vms-code-content code { font: inherit; }\n.hljs-comment, .hljs-quote { color: #7f8a9e; font-style: italic; }\n.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #c792ea; }\n.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta .hljs-string { color: #a5d6a7; }\n.hljs-number, .hljs-symbol, .hljs-bullet, .hljs-variable, .hljs-template-variable { color: #f2b880; }\n.hljs-title, .hljs-title.class_, .hljs-title.function_, .hljs-name, .hljs-selector-id, .hljs-selector-class { color: #82aaff; }\n.hljs-attr, .hljs-property, .hljs-params { color: #e5c07b; }\n.hljs-built_in, .hljs-type, .hljs-class .hljs-title { color: #7fdbca; }\n.hljs-meta, .hljs-doctag { color: #ffcb6b; }\n.hljs-deletion { color: #ff7b72; }\n.hljs-emphasis { font-style: italic; }\n.hljs-strong { font-weight: 700; }\n\n.vms-html-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: #fff; }\n.vms-table-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--vms-bg); }\n.vms-table { border-collapse: collapse; min-width: 100%; font-size: 10.5px; }\n.vms-table th, .vms-table td { border: 0.5px solid var(--vms-line); padding: 5px 9px; text-align: left; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }\n.vms-table th { position: sticky; top: 0; background: var(--vms-layer2); font-weight: 600; z-index: 1; }\n.vms-table tr:nth-child(even) td { background: color-mix(in srgb, var(--vms-layer2) 45%, transparent); }\n\n@container (max-width: 520px) {\n  .vms-selection-bar { padding: 6px 10px; }\n  .vms-selection-bar .vms-ghost-btn { font-size: 9.5px; padding: 0 7px; }\n}\n\n/* Session-only filter. */\n.vms-session-row { display: flex; align-items: center; gap: 6px; margin-top: 9px; }\n.vms-session-btn {\n  display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 9px;\n  border: 0.5px solid var(--vms-line); border-radius: var(--vms-radius-control);\n  background: transparent; color: var(--vms-ink3); font-size: 10.5px; white-space: nowrap;\n}\n.vms-session-btn:hover:not(:disabled) { background: var(--vms-layer2); color: var(--vms-ink2); }\n.vms-session-btn.is-active { background: var(--vms-accent-soft); border-color: color-mix(in srgb, var(--vms-accent) 40%, transparent); color: var(--vms-accent); }\n.vms-session-btn:disabled { opacity: .45; cursor: default; }\n\n/* Drag ghost, timeline and the compact header. */\n.vms-drag-ghost {\n  position: fixed; z-index: 200; display: inline-flex; align-items: center; gap: 6px;\n  max-width: 260px; padding: 5px 9px; border-radius: 8px; pointer-events: none;\n  background: var(--vms-ink); color: var(--vms-bg); font-size: 10px;\n  box-shadow: 0 12px 30px rgba(0,0,0,.28);\n}\n.vms-drag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.vms-drag-target { color: color-mix(in srgb, var(--vms-bg) 72%, transparent); white-space: nowrap; }\n.vms-tree-row[draggable="false"] { user-select: none; -webkit-user-select: none; }\n\n.vms-timeline-wrap { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 24px; }\n.vms-timeline { display: grid; gap: 14px; }\n.vms-tl-section { display: grid; gap: 6px; }\n.vms-tl-section-head {\n  position: sticky; top: 0; z-index: 2; padding: 4px 2px 5px; font-size: 9.5px; font-weight: 600;\n  color: var(--vms-ink3); background: color-mix(in srgb, var(--vms-layer) 92%, transparent);\n  backdrop-filter: blur(8px);\n}\n.vms-tl-turn { display: grid; gap: 4px; padding: 8px 9px; border: 0.5px solid var(--vms-line); border-radius: 10px; background: var(--vms-layer); }\n.vms-tl-head { display: flex; align-items: center; gap: 7px; min-width: 0; }\n.vms-tl-head b { font-size: 10.5px; font-weight: 600; }\n.vms-tl-time, .vms-tl-count { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }\n.vms-tl-group { display: grid; gap: 1px; }\n.vms-tl-dir { display: flex; align-items: center; gap: 4px; padding: 3px 2px 1px; font-size: 9px; color: var(--vms-ink4); }\n.vms-tl-file {\n  display: flex; align-items: center; gap: 6px; width: 100%; height: 25px; padding: 0 6px;\n  border: 0; border-radius: 6px; background: transparent; color: var(--vms-ink2); font-size: 10.5px; text-align: left;\n}\n.vms-tl-file:hover:not(.is-missing) { background: var(--vms-layer2); color: var(--vms-ink); }\n.vms-tl-file.is-missing { opacity: .5; cursor: default; }\n.vms-tl-file svg { flex: none; color: var(--vms-ink4); }\n.vms-tl-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.vms-tl-stat { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); white-space: nowrap; }\n.vms-tl-missing { font-size: 9px; color: var(--vms-danger); white-space: nowrap; }\n.vms-tl-empty { display: grid; justify-items: center; gap: 7px; padding: 46px 20px; text-align: center; color: var(--vms-ink3); }\n.vms-tl-empty b { font-size: 12px; }\n.vms-tl-empty p { margin: 0; font-size: 10.5px; color: var(--vms-ink4); max-width: 300px; }\n\n/* Compact header: the search row owns the view controls. */\n.vms-head { padding: 11px 14px 8px; }\n.vms-title h2 { font-size: 17px; }\n.vms-title p { margin-top: 2px; }\n.vms-search-row { margin-top: 8px; }\n.vms-type-row { margin-top: 7px; }\n.vms-folder-row { margin-top: 6px; }\n.vms-folder-btn { width: 28px; padding: 0; }\n';
 
 // src/client/library.js
-var import_react8 = __toESM(require("react"), 1);
+var import_react10 = __toESM(require("react"), 1);
 
 // node_modules/.pnpm/yet-another-react-lightbox@_7709b726fbc39da4b5999b327b472e42/node_modules/yet-another-react-lightbox/dist/index.js
 var React = __toESM(require("react"), 1);
@@ -23100,7 +23100,7 @@ function MoreButton({ item, onMenu }) {
     }
   }, h2(Icon2, { name: "more", size: 12 }));
 }
-function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onInline, onMenu, onToggleSelect }) {
+function GridCard({ item, sessionId, active, meta, selected, onOpen, onInline, onMenu, onToggleSelect, dragBind, suppressClick }) {
   const canPlay = item.kind === "video" || item.kind === "audio";
   const detail = meta === void 0 ? `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)}` : `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${typeLabel(item.kind)} \xB7 ${formatBytes(meta.size)}`;
   return h2(
@@ -23112,6 +23112,7 @@ function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onIn
       "data-selected": selected ? "" : void 0,
       "aria-label": `${item.title}\uFF0C${typeLabel(item.kind)}`,
       onClick: (event) => {
+        if (suppressClick !== void 0 && suppressClick()) return;
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           onToggleSelect(item);
@@ -23119,6 +23120,7 @@ function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onIn
         }
         onOpen(item);
       },
+      ...dragBind === void 0 ? {} : dragBind(item),
       onContextMenu: (event) => {
         event.preventDefault();
         onMenu(item, event.clientX, event.clientY);
@@ -23133,7 +23135,6 @@ function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onIn
       "div",
       { className: "vms-card-media" },
       h2(MediaThumb, { item, sessionId, lazy: true }),
-      h2("span", { className: "vms-card-index" }, String(index + 1).padStart(2, "0")),
       selected && h2("span", { className: "vms-select-badge" }, h2(Icon2, { name: "check", size: 11 })),
       h2(KindBadge, { kind: item.kind }),
       h2(DurationBadge, { item }),
@@ -23188,7 +23189,7 @@ function GridCard({ item, index, sessionId, active, meta, selected, onOpen, onIn
     )
   );
 }
-function ListRow({ item, sessionId, detail = "compact", meta, selected, onOpen, onMenu, onToggleSelect }) {
+function ListRow({ item, sessionId, detail = "compact", meta, selected, onOpen, onMenu, onToggleSelect, dragBind, suppressClick }) {
   const canPlay = item.kind === "video" || item.kind === "audio";
   const detailed = detail === "detailed";
   const shortType = canPlay ? formatTime(item.duration) : item.ext.toUpperCase() || typeLabel(item.kind);
@@ -23201,6 +23202,7 @@ function ListRow({ item, sessionId, detail = "compact", meta, selected, onOpen, 
       "data-detail": detailed ? "detailed" : "compact",
       "data-selected": selected ? "" : void 0,
       onClick: (event) => {
+        if (suppressClick !== void 0 && suppressClick()) return;
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           onToggleSelect(item);
@@ -23208,6 +23210,7 @@ function ListRow({ item, sessionId, detail = "compact", meta, selected, onOpen, 
         }
         onOpen(item);
       },
+      ...dragBind === void 0 ? {} : dragBind(item),
       onContextMenu: (event) => {
         event.preventDefault();
         onMenu(item, event.clientX, event.clientY);
@@ -23344,11 +23347,12 @@ function RenameDialog({ item, error: error2, onClose, onSubmit }) {
     )
   );
 }
-function CopyDialog({ item, folders, error: error2, onClose, onSubmit }) {
+function CopyDialog({ item, folders, error: error2, action = "copy", onClose, onSubmit }) {
   const [folder, setFolder] = (0, import_react5.useState)(item.folder ?? "");
+  const moving = action === "move";
   return h2(
     Dialog,
-    { title: "\u590D\u5236\u5230\u6587\u4EF6\u5939", onClose },
+    { title: moving ? "\u79FB\u52A8\u5230\u6587\u4EF6\u5939" : "\u590D\u5236\u5230\u6587\u4EF6\u5939", onClose },
     h2(
       "form",
       { className: "vms-dialog-form", onSubmit: (event) => {
@@ -23358,21 +23362,21 @@ function CopyDialog({ item, folders, error: error2, onClose, onSubmit }) {
       h2(
         "label",
         { className: "vms-dialog-field" },
-        h2("span", null, `\u590D\u5236\u300C${item.name}\u300D\u5230`),
+        h2("span", null, `${moving ? "\u79FB\u52A8" : "\u590D\u5236"}\u300C${item.name}\u300D\u5230`),
         h2(
           "select",
           { className: "vms-input", value: folder, onChange: (event) => setFolder(event.target.value) },
           h2("option", { value: "" }, "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"),
           folders.map((value) => h2("option", { key: value, value }, value))
         ),
-        h2("small", { className: "vms-dialog-hint" }, "\u91CD\u540D\u65F6\u4F1A\u81EA\u52A8\u751F\u6210\u201C\u6587\u4EF6\u540D (2).\u6269\u5C55\u540D\u201D\u3002")
+        h2("small", { className: "vms-dialog-hint" }, moving ? "\u76EE\u6807\u5DF2\u6709\u540C\u540D\u9879\u65F6\u4F1A\u62D2\u7EDD\u79FB\u52A8\u3002" : "\u91CD\u540D\u65F6\u4F1A\u81EA\u52A8\u751F\u6210\u201C\u6587\u4EF6\u540D (2).\u6269\u5C55\u540D\u201D\u3002")
       ),
       error2 !== "" && h2("p", { className: "vms-form-error" }, error2),
       h2(
         "div",
         { className: "vms-dialog-actions" },
         h2("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-        h2("button", { type: "submit", className: "vms-primary-btn" }, "\u590D\u5236")
+        h2("button", { type: "submit", className: "vms-primary-btn" }, moving ? "\u79FB\u52A8" : "\u590D\u5236")
       )
     )
   );
@@ -23764,7 +23768,7 @@ function renderLightboxThumbnail({ slide }) {
 }
 
 // src/client/composer.js
-var import_react6 = require("react");
+var import_react6 = __toESM(require("react"), 1);
 var composers = /* @__PURE__ */ new Map();
 function attachComposer(sessionId, actions) {
   composers = new Map(composers).set(sessionId, actions);
@@ -23782,7 +23786,11 @@ function insertComposerText(sessionId, text2) {
 function ComposerBridge(props) {
   const { sessionId, inputActions } = props;
   (0, import_react6.useEffect)(() => attachComposer(sessionId, inputActions), [sessionId, inputActions]);
-  return null;
+  return import_react6.default.createElement("span", {
+    "data-vms-dropzone": sessionId,
+    "aria-hidden": true,
+    style: { display: "block", width: 0, height: 0 }
+  });
 }
 
 // src/client/tree.js
@@ -23845,7 +23853,7 @@ function folderItem(node) {
     mtimeMs: 0
   };
 }
-function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, onToggleSelect, onMenu }) {
+function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, onToggleSelect, onMenu, dragBind, suppressClick }) {
   const detailed = detail === "detailed";
   return h3(
     "div",
@@ -23857,6 +23865,7 @@ function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, o
       style: { paddingLeft: `${10 + depth * 16}px` },
       tabIndex: 0,
       onClick: (event) => {
+        if (suppressClick !== void 0 && suppressClick()) return;
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           onToggleSelect(item);
@@ -23872,7 +23881,8 @@ function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, o
         if (event.key !== "Enter") return;
         event.preventDefault();
         onOpen(item);
-      }
+      },
+      ...dragBind === void 0 ? {} : dragBind(item)
     },
     h3("span", { className: "vms-tree-spacer" }),
     h3("span", { className: "vms-tree-file-icon", "data-kind": item.kind }, h3(Icon2, { name: kindIcon(item.kind, item.ext), size: 14 })),
@@ -23893,16 +23903,21 @@ function TreeFileRow({ item, depth, detail, meta, sessionId, selected, onOpen, o
     }, h3(Icon2, { name: "more", size: 13 }))
   );
 }
-function TreeFolderRow({ node, depth, detail, expanded, onToggle, onMenu }) {
+function TreeFolderRow({ node, depth, detail, expanded, onToggle, onMenu, dragBind, suppressClick }) {
   return h3(
     "div",
     {
       className: "vms-tree-row is-folder",
       "data-depth": depth,
       "data-detail": detail === "detailed" ? "detailed" : "compact",
+      "data-vms-drop-folder": node.path,
       style: { paddingLeft: `${10 + depth * 16}px` },
       tabIndex: 0,
-      onClick: () => onToggle(node.path),
+      ...dragBind === void 0 ? {} : dragBind(folderItem(node)),
+      onClick: () => {
+        if (suppressClick !== void 0 && suppressClick()) return;
+        onToggle(node.path);
+      },
       onKeyDown: (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -23945,7 +23960,9 @@ function renderChildren(node, depth, options) {
       detail: options.detail,
       expanded: open,
       onToggle: options.onToggleFolder,
-      onMenu: options.onMenu
+      onMenu: options.onMenu,
+      dragBind: options.dragBind,
+      suppressClick: options.suppressClick
     }));
     if (open) rows.push(...renderChildren(child, depth + 1, options));
   }
@@ -23960,7 +23977,9 @@ function renderChildren(node, depth, options) {
       selected: options.selected.has(file.id),
       onOpen: options.onOpen,
       onToggleSelect: options.onToggleSelect,
-      onMenu: options.onMenu
+      onMenu: options.onMenu,
+      dragBind: options.dragBind,
+      suppressClick: options.suppressClick
     }));
   }
   return rows;
@@ -23971,6 +23990,7 @@ function FileTree({
   scope,
   expanded = /* @__PURE__ */ new Set(),
   forceExpanded = /* @__PURE__ */ new Set(),
+  collapsed = /* @__PURE__ */ new Set(),
   detail,
   meta,
   sessionId,
@@ -23979,7 +23999,9 @@ function FileTree({
   onToggleFolder,
   onOpen,
   onToggleSelect,
-  onMenu
+  onMenu,
+  dragBind,
+  suppressClick
 }) {
   const tree = import_react7.default.useMemo(() => buildTree(items, folders, showEmptyFolders), [items, folders, showEmptyFolders]);
   const scoped = import_react7.default.useMemo(() => findTreeNode(tree, scope), [tree, scope]);
@@ -23988,8 +24010,9 @@ function FileTree({
     const set = new Set(expanded);
     if (scope !== "") set.add(scope);
     for (const path of forceExpanded) set.add(path);
+    for (const path of collapsed) set.delete(path);
     return set;
-  }, [expanded, forceExpanded, scope]);
+  }, [expanded, forceExpanded, collapsed, scope]);
   if (scope !== "" && scoped === void 0) {
     return h3("div", { className: "vms-tree is-empty" }, "\u8FD9\u4E2A\u6587\u4EF6\u5939\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6");
   }
@@ -24002,7 +24025,9 @@ function FileTree({
     onToggleSelect,
     onMenu,
     effective,
-    onToggleFolder
+    onToggleFolder,
+    dragBind,
+    suppressClick
   });
   if (rows.length === 0) {
     return h3("div", { className: "vms-tree is-empty" }, "\u8FD9\u4E2A\u6587\u4EF6\u5939\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6");
@@ -24010,8 +24035,294 @@ function FileTree({
   return h3("div", { className: "vms-tree", role: "tree" }, rows);
 }
 
-// src/client/library.js
+// src/client/timeline.js
+var import_react8 = __toESM(require("react"), 1);
+
+// src/client/sections.js
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+function pad(value) {
+  return String(value).padStart(2, "0");
+}
+function sectionOf(timestamp, now = /* @__PURE__ */ new Date()) {
+  const todayStart = startOfDay(now);
+  const yesterdayStart = startOfDay(new Date(todayStart - 24 * 60 * 60 * 1e3));
+  const target = startOfDay(new Date(timestamp));
+  if (target >= todayStart) return { key: `day:${todayStart}`, label: "\u4ECA\u5929" };
+  if (target === yesterdayStart) return { key: `day:${yesterdayStart}`, label: "\u6628\u5929" };
+  const date = new Date(timestamp);
+  return { key: `day:${target}`, label: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` };
+}
+
+// src/client/timeline.js
 var h4 = import_react8.default.createElement;
+function fileKindOf(name) {
+  const dot = name.lastIndexOf(".");
+  const ext = dot <= 0 ? "" : name.slice(dot + 1).toLowerCase();
+  if (["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "ico", "svg", "tif", "tiff"].includes(ext)) return ["image", ext];
+  if (["mp4", "m4v", "mov", "webm", "ogv", "mkv", "avi", "wmv", "flv"].includes(ext)) return ["video", ext];
+  if (["mp3", "wav", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif"].includes(ext)) return ["audio", ext];
+  if (["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md", "markdown", "csv", "tsv", "log", "rtf"].includes(ext)) return ["document", ext];
+  if (["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz", "iso"].includes(ext)) return ["archive", ext];
+  if (ext !== "") return ["code", ext];
+  return ["other", ext];
+}
+function dirOf(path) {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? "" : path.slice(0, slash);
+}
+function TurnBlock({ turn, items, lookup, onOpen, onMenu }) {
+  const byDirectory = (0, import_react8.useMemo)(() => {
+    const groups = /* @__PURE__ */ new Map();
+    for (const file of items) {
+      const dir = dirOf(file.display ?? file.path);
+      const list2 = groups.get(dir);
+      if (list2 === void 0) groups.set(dir, [file]);
+      else list2.push(file);
+    }
+    return [...groups.entries()].sort((left, right) => COLLATOR.compare(left[0], right[0]));
+  }, [items]);
+  return h4(
+    "section",
+    { className: "vms-tl-turn" },
+    h4(
+      "header",
+      { className: "vms-tl-head" },
+      h4("b", null, turn.turn === void 0 ? "\u672C\u8F6E\u4EA7\u51FA" : `\u7B2C ${turn.turn} \u8F6E`),
+      turn.time !== void 0 && h4("span", { className: "vms-tl-time" }, formatTime(new Date(turn.time).getTime() / 1e3)),
+      h4("span", { className: "vms-tl-count" }, `${items.length} \u4E2A\u6587\u4EF6`)
+    ),
+    byDirectory.map(([dir, files]) => h4(
+      "div",
+      { key: dir || ".", className: "vms-tl-group" },
+      h4("div", { className: "vms-tl-dir" }, h4(Icon2, { name: "folder", size: 11 }), dir === "" ? "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55" : dir),
+      files.map((file) => {
+        const name = (file.display ?? file.path).split("/").pop() ?? file.path;
+        const [kind, ext] = fileKindOf(name);
+        const target = lookup.get(file.path) ?? lookup.get(file.display);
+        return h4(
+          "button",
+          {
+            key: `${file.path}:${file.display}`,
+            type: "button",
+            className: `vms-tl-file${target === void 0 ? " is-missing" : ""}`,
+            title: file.display ?? file.path,
+            onClick: target === void 0 ? void 0 : () => onOpen(target),
+            onContextMenu: (event) => {
+              event.preventDefault();
+              if (target === void 0) return;
+              onMenu(target, event.clientX, event.clientY);
+            }
+          },
+          h4(Icon2, { name: kindIcon(kind, ext), size: 13 }),
+          h4("span", { className: "vms-tl-name" }, name),
+          file.binary === true ? h4("span", { className: "vms-tl-stat" }, "\u4E8C\u8FDB\u5236") : h4(
+            "span",
+            { className: "vms-tl-stat" },
+            file.added > 0 ? `+${file.added}` : "",
+            file.deleted > 0 ? ` \u2212${file.deleted}` : "",
+            file.added === 0 && file.deleted === 0 ? "\u5DF2\u4FEE\u6539" : ""
+          ),
+          target === void 0 && h4("span", { className: "vms-tl-missing" }, "\u5DF2\u4E0D\u5B58\u5728")
+        );
+      })
+    ))
+  );
+}
+function SessionTimeline({ turns, items, onOpen, onMenu, onFallback }) {
+  const lookup = (0, import_react8.useMemo)(() => {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const item of items) {
+      if (item.source !== "local") continue;
+      map2.set(item.relativePath, item);
+      map2.set(item.id, item);
+      map2.set(item.title, item);
+    }
+    return map2;
+  }, [items]);
+  const ordered = (0, import_react8.useMemo)(() => {
+    const usable = turns.filter((turn) => Array.isArray(turn.files) && turn.files.length > 0 && typeof turn.time === "number").sort((left, right) => right.time - left.time);
+    const sections = [];
+    for (const turn of usable) {
+      const section = sectionOf(turn.time);
+      const last = sections[sections.length - 1];
+      if (last !== void 0 && last.section.key === section.key) last.turns.push(turn);
+      else sections.push({ section, turns: [turn] });
+    }
+    return sections;
+  }, [turns]);
+  if (ordered.length === 0) {
+    return h4(
+      "div",
+      { className: "vms-tl-empty" },
+      h4(Icon2, { name: "clock", size: 20 }),
+      h4("b", null, "\u8FD8\u6CA1\u6709\u53EF\u663E\u793A\u7684\u4EA7\u51FA\u53F0\u8D26"),
+      h4("p", null, "\u8FD9\u4E2A\u4F1A\u8BDD\u7684 Host \u6CA1\u6709\u8BB0\u5F55\u5230\u6BCF\u8F6E\u6539\u52A8\u7684\u6587\u4EF6\u6458\u8981\u3002"),
+      onFallback !== void 0 && h4("button", { type: "button", className: "vms-ghost-btn", onClick: onFallback }, "\u6539\u4E3A\u6309\u4FEE\u6539\u65F6\u95F4\u67E5\u770B")
+    );
+  }
+  return h4(
+    "div",
+    { className: "vms-timeline" },
+    ordered.map((group) => h4(
+      "div",
+      { key: group.section.key, className: "vms-tl-section" },
+      h4("div", { className: "vms-tl-section-head" }, group.section.label),
+      group.turns.map((turn) => h4(TurnBlock, {
+        key: turn.seq,
+        turn,
+        items: turn.files,
+        lookup,
+        onOpen,
+        onMenu
+      }))
+    ))
+  );
+}
+
+// src/client/drag.js
+var import_react9 = __toESM(require("react"), 1);
+var h5 = import_react9.default.createElement;
+var LONG_PRESS_MS = 250;
+var MOVE_TOLERANCE = 6;
+function composerDropRect() {
+  if (typeof document === "undefined") return void 0;
+  const marker = document.querySelector("[data-vms-dropzone]");
+  if (marker === null) return void 0;
+  let element = marker;
+  let rect = element.getBoundingClientRect();
+  while (element.parentElement !== null && (rect.width < 240 || rect.height < 64)) {
+    element = element.parentElement;
+    rect = element.getBoundingClientRect();
+    if (rect.width > 1400 || rect.height > 700) break;
+  }
+  return rect.width > 0 && rect.height > 0 ? rect : void 0;
+}
+function useDragDrop({ onMove, onReference }) {
+  const [dragging, setDragging] = (0, import_react9.useState)(null);
+  const [ghostAt, setGhostAt] = (0, import_react9.useState)({ x: 0, y: 0 });
+  const [overFolder, setOverFolder] = (0, import_react9.useState)("");
+  const state = (0, import_react9.useRef)({
+    timer: 0,
+    item: null,
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    active: false,
+    suppressClick: false
+  });
+  const finish = (0, import_react9.useCallback)((clientX, clientY) => {
+    const current = state.current;
+    current.active = false;
+    setDragging(null);
+    setOverFolder("");
+    const item = current.item;
+    current.item = null;
+    if (item === null) return;
+    if (typeof document === "undefined") return;
+    const element = document.elementFromPoint(clientX, clientY);
+    const folderTarget = element?.closest?.("[data-vms-drop-folder]");
+    if (folderTarget !== null && folderTarget !== void 0) {
+      const toFolder = folderTarget.getAttribute("data-vms-drop-folder") ?? "";
+      const currentFolder = item.isFolder ? item.folder ?? "" : item.folder ?? "";
+      if (toFolder !== currentFolder) onMove(item, toFolder);
+      return;
+    }
+    const rect = composerDropRect();
+    if (rect !== void 0 && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+      onReference(item);
+    }
+  }, [onMove, onReference]);
+  (0, import_react9.useEffect)(() => {
+    if (dragging === null) return void 0;
+    const onMovePointer = (event) => {
+      setGhostAt({ x: event.clientX, y: event.clientY });
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      const folderTarget = element?.closest?.("[data-vms-drop-folder]");
+      setOverFolder(folderTarget === null || folderTarget === void 0 ? "" : folderTarget.getAttribute("data-vms-drop-folder") ?? "");
+    };
+    const onUp = (event) => {
+      window.removeEventListener("pointermove", onMovePointer);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      finish(event.clientX, event.clientY);
+    };
+    const onKey = (event) => {
+      if (event.key !== "Escape") return;
+      window.removeEventListener("pointermove", onMovePointer);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      state.current.active = false;
+      state.current.item = null;
+      setDragging(null);
+      setOverFolder("");
+    };
+    window.addEventListener("pointermove", onMovePointer);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointermove", onMovePointer);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [dragging, finish]);
+  const bind = (0, import_react9.useCallback)((item) => ({
+    onPointerDown: (event) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const current = state.current;
+      if (current.active) return;
+      current.item = item;
+      current.pointerId = event.pointerId;
+      current.startX = event.clientX;
+      current.startY = event.clientY;
+      current.suppressClick = false;
+      const start = () => {
+        current.timer = 0;
+        current.active = true;
+        current.suppressClick = true;
+        setDragging(item);
+        setGhostAt({ x: current.startX, y: current.startY });
+      };
+      current.timer = window.setTimeout(start, LONG_PRESS_MS);
+      const cancel = () => {
+        if (current.timer !== 0) window.clearTimeout(current.timer);
+        current.timer = 0;
+        window.removeEventListener("pointerup", cancel);
+        window.removeEventListener("pointercancel", cancel);
+        window.removeEventListener("pointermove", onEarlyMove);
+      };
+      const onEarlyMove = (event2) => {
+        if (current.active) return;
+        if (Math.abs(event2.clientX - current.startX) > MOVE_TOLERANCE || Math.abs(event2.clientY - current.startY) > MOVE_TOLERANCE) cancel();
+      };
+      window.addEventListener("pointerup", cancel);
+      window.addEventListener("pointercancel", cancel);
+      window.addEventListener("pointermove", onEarlyMove);
+    },
+    onDragStart: (event) => event.preventDefault()
+  }), []);
+  const suppressNextClick = (0, import_react9.useCallback)(() => {
+    if (!state.current.suppressClick) return false;
+    state.current.suppressClick = false;
+    return true;
+  }, []);
+  const ghost = dragging === null ? null : h5(
+    "div",
+    {
+      className: "vms-drag-ghost",
+      style: { left: `${ghostAt.x + 12}px`, top: `${ghostAt.y + 12}px` }
+    },
+    h5("span", { className: "vms-drag-name" }, dragging.title ?? dragging.name ?? ""),
+    overFolder !== "" && h5("span", { className: "vms-drag-target" }, `\u79FB\u52A8\u5230 ${overFolder}`)
+  );
+  return { bind, ghost, dragging, suppressNextClick };
+}
+
+// src/client/library.js
+var h6 = import_react10.default.createElement;
 var LIGHTBOX_PLUGINS = [Inline, Video2, Zoom, Thumbnails, Counter, Fullscreen];
 var INITIAL_PREFS = readPrefs();
 var MEDIA_KINDS = /* @__PURE__ */ new Set(["image", "video", "audio", "link"]);
@@ -24054,10 +24365,10 @@ function chunks(values, size) {
   return output;
 }
 function AddLinkForm({ onSubmit, onClose }) {
-  const [url, setUrl] = (0, import_react8.useState)("");
-  const [title, setTitle] = (0, import_react8.useState)("");
-  const [error2, setError] = (0, import_react8.useState)("");
-  return h4(
+  const [url, setUrl] = (0, import_react10.useState)("");
+  const [title, setTitle] = (0, import_react10.useState)("");
+  const [error2, setError] = (0, import_react10.useState)("");
+  return h6(
     "form",
     {
       className: "vms-add-link",
@@ -24071,19 +24382,19 @@ function AddLinkForm({ onSubmit, onClose }) {
         onSubmit(value, title);
       }
     },
-    h4("div", { className: "vms-add-head" }, h4("b", null, "\u6DFB\u52A0\u94FE\u63A5"), h4(IconButton3, { name: "close", label: "\u5173\u95ED", onClick: onClose })),
-    h4("input", { className: "vms-input", autoFocus: true, value: url, placeholder: "https://example.com/video.mp4", onChange: (event) => {
+    h6("div", { className: "vms-add-head" }, h6("b", null, "\u6DFB\u52A0\u94FE\u63A5"), h6(IconButton3, { name: "close", label: "\u5173\u95ED", onClick: onClose })),
+    h6("input", { className: "vms-input", autoFocus: true, value: url, placeholder: "https://example.com/video.mp4", onChange: (event) => {
       setUrl(event.target.value);
       setError("");
     } }),
-    h4("input", { className: "vms-input", value: title, placeholder: "\u6807\u9898\uFF08\u53EF\u9009\uFF09", onChange: (event) => setTitle(event.target.value) }),
-    h4("p", { className: "vms-hint" }, "mp4 / webm / mp3 / wav \u7B49\u76F4\u94FE\u4F1A\u76F4\u63A5\u64AD\u653E\uFF1B\u5176\u4ED6\u94FE\u63A5\u4FDD\u5B58\u4E3A\u7F51\u9875\u5361\u7247\u3002"),
-    error2 !== "" && h4("p", { className: "vms-form-error" }, error2),
-    h4(
+    h6("input", { className: "vms-input", value: title, placeholder: "\u6807\u9898\uFF08\u53EF\u9009\uFF09", onChange: (event) => setTitle(event.target.value) }),
+    h6("p", { className: "vms-hint" }, "mp4 / webm / mp3 / wav \u7B49\u76F4\u94FE\u4F1A\u76F4\u63A5\u64AD\u653E\uFF1B\u5176\u4ED6\u94FE\u63A5\u4FDD\u5B58\u4E3A\u7F51\u9875\u5361\u7247\u3002"),
+    error2 !== "" && h6("p", { className: "vms-form-error" }, error2),
+    h6(
       "div",
       { className: "vms-add-actions" },
-      h4("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-      h4("button", { type: "submit", className: "vms-primary-btn" }, "\u6DFB\u52A0")
+      h6("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
+      h6("button", { type: "submit", className: "vms-primary-btn" }, "\u6DFB\u52A0")
     )
   );
 }
@@ -24103,10 +24414,11 @@ function menuActions(item) {
       { key: "toggleFolder", label: "\u5C55\u5F00 / \u6298\u53E0", icon: "folder" },
       { key: "locate", label: "\u5B9A\u4F4D\u5230\u6587\u4EF6\u5939", icon: "folderOpen" },
       { key: "insert", label: "\u5F15\u7528\u5230\u8F93\u5165\u6846", icon: "at" },
+      { key: "moveTo", label: "\u79FB\u5230\u6587\u4EF6\u5939\u2026", icon: "folderOpen" },
       { key: "copyTo", label: "\u590D\u5236\u5230\u2026", icon: "copy" },
       { key: "copyPath", label: "\u590D\u5236\u6587\u4EF6\u5939\u5730\u5740", icon: "clipboard" },
       { key: "rename", label: "\u91CD\u547D\u540D\u6587\u4EF6\u5939", icon: "pencil" },
-      { key: "reveal", label: "\u6253\u5F00\u6240\u5728\u4F4D\u7F6E", icon: "reveal" },
+      { key: "reveal", label: "\u5728\u8D44\u6E90\u7BA1\u7406\u5668\u4E2D\u663E\u793A", icon: "reveal" },
       { key: "open", label: "\u7528\u7CFB\u7EDF\u5E94\u7528\u6253\u5F00", icon: "app" },
       { key: "delete", label: "\u5220\u9664\u6587\u4EF6\u5939", icon: "trash", danger: true }
     ];
@@ -24122,6 +24434,7 @@ function menuActions(item) {
   return [
     { key: "preview", label: "\u9884\u89C8 / \u64AD\u653E", icon: "full" },
     { key: "insert", label: "\u5F15\u7528\u5230\u8F93\u5165\u6846", icon: "at" },
+    { key: "moveTo", label: "\u79FB\u5230\u6587\u4EF6\u5939\u2026", icon: "folderOpen" },
     { key: "copyTo", label: "\u590D\u5236\u5230\u2026", icon: "copy" },
     { key: "copyPath", label: "\u590D\u5236\u6587\u4EF6\u5730\u5740", icon: "clipboard" },
     { key: "rename", label: "\u91CD\u547D\u540D", icon: "pencil" },
@@ -24133,55 +24446,67 @@ function menuActions(item) {
 function LibraryBody(props) {
   const { sessionId, useTabInfo, openBrowser } = props;
   const { tab } = useTabInfo();
-  const [reloadKey, setReloadKey] = (0, import_react8.useState)(0);
-  const forceRefresh = (0, import_react8.useRef)(false);
-  const [state, setState] = (0, import_react8.useState)({ items: [], root: "", loading: true, error: null, scan: null });
-  const [links, setLinks] = (0, import_react8.useState)([]);
-  const [view, setView] = (0, import_react8.useState)(INITIAL_PREFS.view);
-  const [listMode, setListMode] = (0, import_react8.useState)(INITIAL_PREFS.listMode);
-  const [cardSize, setCardSize] = (0, import_react8.useState)(INITIAL_PREFS.cardSize);
-  const [detail, setDetail] = (0, import_react8.useState)(INITIAL_PREFS.detail);
-  const [query, setQuery] = (0, import_react8.useState)("");
-  const [types, setTypes] = (0, import_react8.useState)([]);
-  const [folder, setFolder] = (0, import_react8.useState)("");
-  const [time, setTime] = (0, import_react8.useState)("all");
-  const [size, setSize] = (0, import_react8.useState)("all");
-  const [sort, setSort] = (0, import_react8.useState)(INITIAL_PREFS.sort);
-  const [dir, setDir] = (0, import_react8.useState)(INITIAL_PREFS.dir);
-  const [showHidden, setShowHidden] = (0, import_react8.useState)(INITIAL_PREFS.showHidden);
-  const [includeBuild, setIncludeBuild] = (0, import_react8.useState)(INITIAL_PREFS.includeBuild);
-  const [sessionOnly, setSessionOnly] = (0, import_react8.useState)(INITIAL_PREFS.sessionOnly);
-  const [filterOpen, setFilterOpen] = (0, import_react8.useState)(false);
-  const [folderOpen, setFolderOpen] = (0, import_react8.useState)(false);
-  const [inlineId, setInlineId] = (0, import_react8.useState)(null);
-  const [overlayId, setOverlayId] = (0, import_react8.useState)(null);
-  const [addOpen, setAddOpen] = (0, import_react8.useState)(false);
-  const [limit, setLimit] = (0, import_react8.useState)(PAGE_SIZE);
-  const [notice, setNotice] = (0, import_react8.useState)("");
-  const [expandedFolders, setExpandedFolders] = (0, import_react8.useState)(() => readExpandedFolders());
-  const [selected, setSelected] = (0, import_react8.useState)(() => /* @__PURE__ */ new Set());
-  const [batchCopyDialog, setBatchCopyDialog] = (0, import_react8.useState)(null);
-  const [batchDeleteDialog, setBatchDeleteDialog] = (0, import_react8.useState)(null);
-  const [diagnostic, setDiagnostic] = (0, import_react8.useState)(null);
-  const [meta, setMeta] = (0, import_react8.useState)({});
-  const [metaLoading, setMetaLoading] = (0, import_react8.useState)(false);
-  const [menu, setMenu] = (0, import_react8.useState)(null);
-  const [renameDialog, setRenameDialog] = (0, import_react8.useState)(null);
-  const [copyDialog, setCopyDialog] = (0, import_react8.useState)(null);
-  const [deleteDialog, setDeleteDialog] = (0, import_react8.useState)(null);
-  const metaRef = (0, import_react8.useRef)({});
-  const pendingMeta = (0, import_react8.useRef)(/* @__PURE__ */ new Set());
-  const generation = (0, import_react8.useRef)(0);
-  const gridRef = (0, import_react8.useRef)(null);
-  const expandedInitialized = (0, import_react8.useRef)(false);
-  (0, import_react8.useEffect)(
+  const [reloadKey, setReloadKey] = (0, import_react10.useState)(0);
+  const forceRefresh = (0, import_react10.useRef)(false);
+  const [state, setState] = (0, import_react10.useState)({ items: [], root: "", loading: true, error: null, scan: null });
+  const [links, setLinks] = (0, import_react10.useState)([]);
+  const [view, setView] = (0, import_react10.useState)(INITIAL_PREFS.view);
+  const [listMode, setListMode] = (0, import_react10.useState)(INITIAL_PREFS.listMode);
+  const [cardSize, setCardSize] = (0, import_react10.useState)(INITIAL_PREFS.cardSize);
+  const [detail, setDetail] = (0, import_react10.useState)(INITIAL_PREFS.detail);
+  const [query, setQuery] = (0, import_react10.useState)("");
+  const [types, setTypes] = (0, import_react10.useState)([]);
+  const [folder, setFolder] = (0, import_react10.useState)("");
+  const [time, setTime] = (0, import_react10.useState)("all");
+  const [size, setSize] = (0, import_react10.useState)("all");
+  const [sort, setSort] = (0, import_react10.useState)(INITIAL_PREFS.sort);
+  const [dir, setDir] = (0, import_react10.useState)(INITIAL_PREFS.dir);
+  const [showHidden, setShowHidden] = (0, import_react10.useState)(INITIAL_PREFS.showHidden);
+  const [includeBuild, setIncludeBuild] = (0, import_react10.useState)(INITIAL_PREFS.includeBuild);
+  const [sessionOnly, setSessionOnly] = (0, import_react10.useState)(INITIAL_PREFS.sessionOnly);
+  const [filterOpen, setFilterOpen] = (0, import_react10.useState)(false);
+  const [debouncedQuery, setDebouncedQuery] = (0, import_react10.useState)("");
+  (0, import_react10.useEffect)(() => {
+    if (query === "") {
+      setDebouncedQuery("");
+      return void 0;
+    }
+    const timer = setTimeout(() => setDebouncedQuery(query), 150);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const [folderOpen, setFolderOpen] = (0, import_react10.useState)(false);
+  const [inlineId, setInlineId] = (0, import_react10.useState)(null);
+  const [overlayId, setOverlayId] = (0, import_react10.useState)(null);
+  const [addOpen, setAddOpen] = (0, import_react10.useState)(false);
+  const [limit, setLimit] = (0, import_react10.useState)(PAGE_SIZE);
+  const [notice, setNotice] = (0, import_react10.useState)("");
+  const [expandedFolders, setExpandedFolders] = (0, import_react10.useState)(() => readExpandedFolders());
+  const [collapsedFolders, setCollapsedFolders] = (0, import_react10.useState)(() => /* @__PURE__ */ new Set());
+  const [selected, setSelected] = (0, import_react10.useState)(() => /* @__PURE__ */ new Set());
+  const [batchCopyDialog, setBatchCopyDialog] = (0, import_react10.useState)(null);
+  const [batchDeleteDialog, setBatchDeleteDialog] = (0, import_react10.useState)(null);
+  const [diagnostic, setDiagnostic] = (0, import_react10.useState)(null);
+  const [meta, setMeta] = (0, import_react10.useState)({});
+  const [turns, setTurns] = (0, import_react10.useState)([]);
+  const [metaLoading, setMetaLoading] = (0, import_react10.useState)(false);
+  const [menu, setMenu] = (0, import_react10.useState)(null);
+  const [renameDialog, setRenameDialog] = (0, import_react10.useState)(null);
+  const [copyDialog, setCopyDialog] = (0, import_react10.useState)(null);
+  const [deleteDialog, setDeleteDialog] = (0, import_react10.useState)(null);
+  const metaRef = (0, import_react10.useRef)({});
+  const pendingMeta = (0, import_react10.useRef)(/* @__PURE__ */ new Set());
+  const generation = (0, import_react10.useRef)(0);
+  const gridRef = (0, import_react10.useRef)(null);
+  const expandedInitialized = (0, import_react10.useRef)(false);
+  (0, import_react10.useEffect)(
     () => {
       writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly });
     },
     [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly]
   );
   const treeMode = view === "list" && listMode === "tree";
-  (0, import_react8.useEffect)(() => {
+  const timelineMode = view === "list" && listMode === "timeline";
+  (0, import_react10.useEffect)(() => {
     const controller = new AbortController();
     let alive = true;
     generation.current += 1;
@@ -24233,10 +24558,21 @@ function LibraryBody(props) {
       controller.abort();
     };
   }, [sessionId, reloadKey, showHidden, includeBuild]);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (state.root !== "") setLinks(readLinks(state.root));
   }, [state.root]);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
+    const controller = new AbortController();
+    fetch(apiUrl("api/vyra-media/session-changes", { sessionId }), {
+      signal: controller.signal,
+      credentials: "same-origin"
+    }).then((response) => response.json()).then((body) => {
+      if (body?.ok === true) setTurns(Array.isArray(body.turns) ? body.turns : []);
+    }).catch(() => {
+    });
+    return () => controller.abort();
+  }, [sessionId, reloadKey]);
+  (0, import_react10.useEffect)(() => {
     if (!state.error) {
       setDiagnostic(null);
       return void 0;
@@ -24246,15 +24582,15 @@ function LibraryBody(props) {
     });
     return () => controller.abort();
   }, [state.error, sessionId]);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (sessionOnly && state.scan !== null && typeof state.scan.sessionCreatedAt !== "number") setSessionOnly(false);
   }, [sessionOnly, state.scan]);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (notice === "") return void 0;
     const timer = setTimeout(() => setNotice(""), 2200);
     return () => clearTimeout(timer);
   }, [notice]);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (view !== "grid") return void 0;
     const element = gridRef.current;
     if (element === null) return void 0;
@@ -24267,18 +24603,19 @@ function LibraryBody(props) {
     return () => element.removeEventListener("wheel", onWheel);
   }, [view]);
   const filterKey = JSON.stringify({ query, types, folder, time, size, sort, dir, sessionOnly });
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     setInlineId(null);
     setLimit(PAGE_SIZE);
+    setCollapsedFolders(/* @__PURE__ */ new Set());
   }, [filterKey]);
-  const items = (0, import_react8.useMemo)(() => [...state.items, ...links], [state.items, links]);
-  const counts = (0, import_react8.useMemo)(() => {
+  const items = (0, import_react10.useMemo)(() => [...state.items, ...links], [state.items, links]);
+  const counts = (0, import_react10.useMemo)(() => {
     const next = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 };
     for (const item of items) next[item.kind] = (next[item.kind] ?? 0) + 1;
     return next;
   }, [items]);
-  const folders = (0, import_react8.useMemo)(() => state.scan?.folders ?? [], [state.scan]);
-  (0, import_react8.useEffect)(() => {
+  const folders = (0, import_react10.useMemo)(() => state.scan?.folders ?? [], [state.scan]);
+  (0, import_react10.useEffect)(() => {
     if (state.scan === null || expandedInitialized.current) return;
     expandedInitialized.current = true;
     if (expandedFolders.size > 0) return;
@@ -24288,15 +24625,15 @@ function LibraryBody(props) {
     setExpandedFolders(next);
     writeExpandedFolders(next);
   }, [state.scan, expandedFolders]);
-  const metaFor = (0, import_react8.useCallback)((item) => {
+  const metaFor = (0, import_react10.useCallback)((item) => {
     const values = meta[item.id];
     if (values !== void 0) return values;
     if (item.source === "url") return { size: item.size, mtimeMs: item.mtimeMs, absolutePath: void 0 };
     return void 0;
   }, [meta]);
   const needAllMeta = sessionOnly || time !== "all" || size !== "all" || sort === "time" || sort === "size" || treeMode && detail === "detailed";
-  const localPaths = (0, import_react8.useMemo)(() => state.items.map((item) => item.id), [state.items]);
-  const ensureMeta = (0, import_react8.useCallback)((paths) => {
+  const localPaths = (0, import_react10.useMemo)(() => state.items.map((item) => item.id), [state.items]);
+  const ensureMeta = (0, import_react10.useCallback)((paths) => {
     const currentGeneration = generation.current;
     const missing = [...new Set(paths)].filter((path) => metaRef.current[path] === void 0 && !pendingMeta.current.has(path));
     if (missing.length === 0) return;
@@ -24333,18 +24670,27 @@ function LibraryBody(props) {
       if (generation.current === currentGeneration) setMetaLoading(false);
     });
   }, [sessionId]);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (needAllMeta && localPaths.length > 0) ensureMeta(localPaths);
   }, [needAllMeta, localPaths, ensureMeta]);
-  const filtered = (0, import_react8.useMemo)(() => {
-    const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const searchIndex = (0, import_react10.useMemo)(() => {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const item of items) {
+      map2.set(item.id, `${item.title} ${item.fileName} ${folderOf(item)} ${item.ext} ${typeLabel(item.kind)} ${item.url ?? ""}`.toLowerCase());
+    }
+    return map2;
+  }, [items]);
+  const trimmedQuery = debouncedQuery.trim();
+  const filtered = (0, import_react10.useMemo)(() => {
+    const tokens = trimmedQuery.toLowerCase().split(/\s+/).filter(Boolean);
     const today = /* @__PURE__ */ new Date();
     today.setHours(0, 0, 0, 0);
     const floor2 = time === "today" ? today.getTime() : time === "7d" ? Date.now() - 7 * DAY : time === "30d" ? Date.now() - 30 * DAY : null;
+    const typeSet = types.length > 0 ? new Set(types) : void 0;
     return items.filter((item) => {
-      if (types.length > 0 && !types.includes(item.kind)) return false;
+      if (typeSet !== void 0 && !typeSet.has(item.kind)) return false;
       if (folder !== "") {
-        const exact = folderOf(item) === folder;
+        const exact = item.folder === folder;
         const nested = item.folder === folder || item.folder.startsWith(`${folder}/`);
         if (treeMode ? !nested : !exact) return false;
       }
@@ -24361,16 +24707,16 @@ function LibraryBody(props) {
         if (size === "large" && !(info.size > 1e8)) return false;
       }
       if (tokens.length > 0) {
-        const haystack = `${item.title} ${item.fileName} ${folderOf(item)} ${item.ext} ${typeLabel(item.kind)} ${item.url ?? ""}`.toLowerCase();
+        const haystack = searchIndex.get(item.id) ?? "";
         if (!tokens.every((token) => haystack.includes(token))) return false;
       }
       return true;
     }).sort((left, right) => compareItems(left, right, sort, dir, meta));
-  }, [items, meta, metaFor, query, types, folder, time, size, sort, dir, treeMode, sessionOnly, state.scan]);
-  const treeItems = (0, import_react8.useMemo)(() => filtered.map((item) => item.source === "url" ? { ...item, folder: "" } : item), [filtered]);
-  const filterActive = sessionOnly || types.length > 0 || query.trim() !== "" || time !== "all" || size !== "all";
+  }, [items, searchIndex, meta, metaFor, trimmedQuery, types, folder, time, size, sort, dir, treeMode, sessionOnly, state.scan]);
+  const treeItems = (0, import_react10.useMemo)(() => filtered.map((item) => item.source === "url" ? { ...item, folder: "" } : item), [filtered]);
+  const filterActive = sessionOnly || types.length > 0 || trimmedQuery !== "" || time !== "all" || size !== "all";
   const showEmptyFolders = treeMode && !filterActive;
-  const forceExpanded = (0, import_react8.useMemo)(() => {
+  const forceExpanded = (0, import_react10.useMemo)(() => {
     if (!treeMode || !filterActive) return /* @__PURE__ */ new Set();
     const set = /* @__PURE__ */ new Set();
     for (const item of filtered) {
@@ -24382,12 +24728,12 @@ function LibraryBody(props) {
     }
     return set;
   }, [treeMode, filterActive, filtered]);
-  const shown = (0, import_react8.useMemo)(() => filtered.slice(0, limit), [filtered, limit]);
-  const visiblePaths = (0, import_react8.useMemo)(() => shown.filter((item) => item.source === "local").map((item) => item.id), [shown]);
-  (0, import_react8.useEffect)(() => {
+  const shown = (0, import_react10.useMemo)(() => filtered.slice(0, limit), [filtered, limit]);
+  const visiblePaths = (0, import_react10.useMemo)(() => shown.filter((item) => item.source === "local").map((item) => item.id), [shown]);
+  (0, import_react10.useEffect)(() => {
     if (!needAllMeta && visiblePaths.length > 0) ensureMeta(visiblePaths);
   }, [needAllMeta, visiblePaths, ensureMeta]);
-  const overlayItems = (0, import_react8.useMemo)(() => filtered.slice(0, Math.max(limit, PAGE_SIZE)), [filtered, limit]);
+  const overlayItems = (0, import_react10.useMemo)(() => filtered.slice(0, Math.max(limit, PAGE_SIZE)), [filtered, limit]);
   const overlayIdSafe = overlayId !== null && items.some((item) => item.id === overlayId) ? overlayId : null;
   const overlayItem = overlayIdSafe === null ? void 0 : filtered.find((item) => item.id === overlayIdSafe);
   const activeFilterCount = types.length + (folder ? 1 : 0) + (time !== "all" ? 1 : 0) + (size !== "all" ? 1 : 0);
@@ -24431,10 +24777,32 @@ function LibraryBody(props) {
     setNotice("\u5DF2\u79FB\u9664\u94FE\u63A5");
   };
   const toggleFolder = (path) => {
-    setExpandedFolders((previous) => {
+    const forced = forceExpanded.has(path);
+    setCollapsedFolders((previous) => {
       const next = new Set(previous);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
+      if (forced) {
+        if (next.has(path)) next.delete(path);
+        else next.add(path);
+        return next;
+      }
+      next.delete(path);
+      return next;
+    });
+    if (!forced) {
+      setExpandedFolders((previous) => {
+        const next = new Set(previous);
+        if (next.has(path)) next.delete(path);
+        else next.add(path);
+        writeExpandedFolders(next);
+        return next;
+      });
+      return;
+    }
+    const willCollapse = !collapsedFolders.has(path);
+    setExpandedFolders((previous) => {
+      if (willCollapse) return previous;
+      const next = new Set(previous);
+      next.add(path);
       writeExpandedFolders(next);
       return next;
     });
@@ -24481,6 +24849,23 @@ function LibraryBody(props) {
       setNotice(error2?.message ?? "\u5F15\u7528\u5931\u8D25");
     }
   };
+  const dragDrop = useDragDrop({
+    onMove: async (item, toFolder) => {
+      try {
+        const result = await postJson("api/vyra-media/move", {
+          sessionId,
+          path: item.relativePath,
+          toFolder
+        });
+        setNotice(`\u5DF2\u79FB\u52A8\u5230 ${result.relativePath || "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"}`);
+        if (overlayIdSafe === item.id) setOverlayId(null);
+        refresh();
+      } catch (error2) {
+        setNotice(`\u79FB\u52A8\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
+      }
+    },
+    onReference: (item) => insertReference(item)
+  });
   const toggleSelect = (item) => {
     if (item.source !== "local" || item.isFolder) return;
     if (!selected.has(item.id) && selected.size >= 200) {
@@ -24494,11 +24879,11 @@ function LibraryBody(props) {
       return next;
     });
   };
-  const selectedItems = (0, import_react8.useMemo)(
+  const selectedItems = (0, import_react10.useMemo)(
     () => items.filter((item) => selected.has(item.id)),
     [items, selected]
   );
-  (0, import_react8.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     setSelected((previous) => {
       const valid = new Set(items.map((item) => item.id));
       const next = new Set([...previous].filter((id) => valid.has(id)));
@@ -24607,7 +24992,11 @@ function LibraryBody(props) {
       return;
     }
     if (key === "copyTo") {
-      setCopyDialog({ item, error: "" });
+      setCopyDialog({ item, error: "", action: "copy" });
+      return;
+    }
+    if (key === "moveTo") {
+      setCopyDialog({ item, error: "", action: "move" });
       return;
     }
     if (key === "rename") {
@@ -24655,9 +25044,10 @@ function LibraryBody(props) {
     const item = copyDialog?.item;
     if (item === void 0) return;
     try {
-      const result = await postJson("api/vyra-media/copy", { sessionId, path: item.relativePath, toFolder });
+      const action = copyDialog?.action === "move" ? "move" : "copy";
+      const result = await postJson(`api/vyra-media/${action}`, { sessionId, path: item.relativePath, toFolder });
       setCopyDialog(null);
-      setNotice(`\u5DF2\u590D\u5236\u5230 ${result.relativePath}`);
+      setNotice(`${action === "move" ? "\u5DF2\u79FB\u52A8\u5230" : "\u5DF2\u590D\u5236\u5230"} ${result.relativePath || "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"}`);
       refresh();
     } catch (error2) {
       setCopyDialog((previous) => previous === null ? previous : { ...previous, error: error2?.message ?? String(error2) });
@@ -24696,58 +25086,58 @@ function LibraryBody(props) {
   };
   const waitingForMeta = metaLoading && (sessionOnly || time !== "all" || size !== "all");
   const segments = folderSegments(folder);
-  const mediaOverlayItems = (0, import_react8.useMemo)(() => overlayItems.filter((item) => MEDIA_KINDS.has(item.kind)), [overlayItems]);
+  const mediaOverlayItems = (0, import_react10.useMemo)(() => overlayItems.filter((item) => MEDIA_KINDS.has(item.kind)), [overlayItems]);
   const mediaOverlayIndex = overlayItem === void 0 ? 0 : Math.max(0, mediaOverlayItems.findIndex((item) => item.id === overlayItem.id));
-  return h4(
+  return h6(
     "div",
     { className: "vms-root" },
-    h4(
+    h6(
       "header",
       { className: "vms-head" },
-      h4(
+      h6(
         "div",
         { className: "vms-title-row" },
-        h4(
+        h6(
           "div",
           { className: "vms-title" },
-          h4("h2", null, "\u6587\u4EF6\u7BA1\u7406"),
-          h4(
+          h6("h2", null, "\u6587\u4EF6\u7BA1\u7406"),
+          h6(
             "p",
             null,
-            h4("span", null, `${items.length} \u4E2A\u6587\u4EF6`),
-            h4("span", null, "\xB7"),
-            h4("span", null, `${folders.length} \u4E2A\u6587\u4EF6\u5939`),
-            h4("span", null, "\xB7"),
-            h4("span", { className: "vms-mono" }, sizeReady ? formatBytes(totalSize) : "\u2014")
+            h6("span", null, `${items.length} \u4E2A\u6587\u4EF6`),
+            h6("span", null, "\xB7"),
+            h6("span", null, `${folders.length} \u4E2A\u6587\u4EF6\u5939`),
+            h6("span", null, "\xB7"),
+            h6("span", { className: "vms-mono" }, sizeReady ? formatBytes(totalSize) : "\u2014")
           )
         ),
-        h4(
+        h6(
           "div",
           { className: "vms-actions" },
-          h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setAddOpen((value) => !value) }, h4(Icon2, { name: "plus", size: 13 }), "\u94FE\u63A5"),
-          h4(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: refresh }),
-          h4(
+          h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setAddOpen((value) => !value) }, h6(Icon2, { name: "plus", size: 13 }), "\u94FE\u63A5"),
+          h6(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: refresh }),
+          h6(
             "div",
             { className: "vms-seg" },
-            h4("button", { type: "button", className: `vms-seg-btn${view === "grid" ? " is-active" : ""}`, "aria-pressed": view === "grid", title: "\u7F51\u683C\u89C6\u56FE", onClick: () => setView("grid") }, h4(Icon2, { name: "grid", size: 14 })),
-            h4("button", { type: "button", className: `vms-seg-btn${view === "list" ? " is-active" : ""}`, "aria-pressed": view === "list", title: "\u5217\u8868\u89C6\u56FE", onClick: () => setView("list") }, h4(Icon2, { name: "list", size: 14 }))
+            h6("button", { type: "button", className: `vms-seg-btn${view === "grid" ? " is-active" : ""}`, "aria-pressed": view === "grid", title: "\u7F51\u683C\u89C6\u56FE", onClick: () => setView("grid") }, h6(Icon2, { name: "grid", size: 14 })),
+            h6("button", { type: "button", className: `vms-seg-btn${view === "list" ? " is-active" : ""}`, "aria-pressed": view === "list", title: "\u5217\u8868\u89C6\u56FE", onClick: () => setView("list") }, h6(Icon2, { name: "list", size: 14 }))
           )
         )
       ),
-      h4(
+      h6(
         "div",
         { className: "vms-search-row" },
-        h4(
+        h6(
           "label",
           { className: "vms-search" },
-          h4(Icon2, { name: "search", size: 14 }),
-          h4("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
+          h6(Icon2, { name: "search", size: 14 }),
+          h6("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
         ),
-        view === "grid" && h4(
+        view === "grid" && h6(
           "div",
           { className: "vms-zoom" },
-          h4(IconButton3, { name: "zoomOut", label: "\u7F29\u5C0F\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.max(CARD_MIN, value - 16)) }),
-          h4("input", {
+          h6(IconButton3, { name: "zoomOut", label: "\u7F29\u5C0F\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.max(CARD_MIN, value - 16)) }),
+          h6("input", {
             type: "range",
             min: CARD_MIN,
             max: CARD_MAX,
@@ -24757,71 +25147,53 @@ function LibraryBody(props) {
             className: "vms-zoom-range",
             onChange: (event) => setCardSize(Number(event.target.value))
           }),
-          h4(IconButton3, { name: "zoomIn", label: "\u653E\u5927\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.min(CARD_MAX, value + 16)) })
+          h6(IconButton3, { name: "zoomIn", label: "\u653E\u5927\u7F29\u7565\u56FE", onClick: () => setCardSize((value) => Math.min(CARD_MAX, value + 16)) })
         ),
-        view === "list" && h4(
+        view === "list" && h6(
           "div",
           { className: "vms-seg vms-detail-seg" },
-          h4("button", { type: "button", className: `vms-seg-text${listMode === "tree" ? " is-active" : ""}`, "aria-pressed": listMode === "tree", onClick: () => setListMode("tree") }, "\u6811\u5F62"),
-          h4("button", { type: "button", className: `vms-seg-text${listMode === "flat" ? " is-active" : ""}`, "aria-pressed": listMode === "flat", onClick: () => setListMode("flat") }, "\u5E73\u94FA")
+          h6("button", { type: "button", className: `vms-seg-text${listMode === "tree" ? " is-active" : ""}`, "aria-pressed": listMode === "tree", onClick: () => setListMode("tree") }, "\u6811\u5F62"),
+          h6("button", { type: "button", className: `vms-seg-text${listMode === "flat" ? " is-active" : ""}`, "aria-pressed": listMode === "flat", onClick: () => setListMode("flat") }, "\u5E73\u94FA"),
+          h6("button", { type: "button", className: `vms-seg-text${listMode === "timeline" ? " is-active" : ""}`, "aria-pressed": listMode === "timeline", onClick: () => setListMode("timeline") }, "\u65F6\u95F4\u7EBF")
         ),
-        view === "list" && h4(
+        view === "list" && h6(
           "div",
           { className: "vms-seg vms-detail-seg" },
-          h4("button", { type: "button", className: `vms-seg-text${detail === "compact" ? " is-active" : ""}`, "aria-pressed": detail === "compact", onClick: () => setDetail("compact") }, "\u7B80\u6D01"),
-          h4("button", { type: "button", className: `vms-seg-text${detail === "detailed" ? " is-active" : ""}`, "aria-pressed": detail === "detailed", onClick: () => setDetail("detailed") }, "\u8BE6\u7EC6")
+          h6("button", { type: "button", className: `vms-seg-text${detail === "compact" ? " is-active" : ""}`, "aria-pressed": detail === "compact", onClick: () => setDetail("compact") }, "\u7B80\u6D01"),
+          h6("button", { type: "button", className: `vms-seg-text${detail === "detailed" ? " is-active" : ""}`, "aria-pressed": detail === "detailed", onClick: () => setDetail("detailed") }, "\u8BE6\u7EC6")
         ),
-        h4(
+        h6(
           "button",
           { type: "button", className: `vms-filter-btn${filterOpen ? " is-open" : ""}`, "aria-expanded": filterOpen, onClick: () => setFilterOpen((value) => !value) },
-          h4(Icon2, { name: "filter", size: 14 }),
-          h4("span", null, "\u7B5B\u9009"),
-          activeFilterCount > 0 && h4("i", { className: "vms-filter-count" }, activeFilterCount)
+          h6(Icon2, { name: "filter", size: 14 }),
+          h6("span", null, "\u7B5B\u9009"),
+          activeFilterCount > 0 && h6("i", { className: "vms-filter-count" }, activeFilterCount)
         )
       ),
-      h4(
+      h6(
         "div",
         { className: "vms-type-row" },
-        h4(
-          "button",
-          { type: "button", className: `vms-type-chip${types.length === 0 ? " is-active" : ""}`, onClick: () => setTypes([]) },
-          h4(Icon2, { name: "grid", size: 12 }),
-          "\u5168\u90E8",
-          h4("b", null, items.length)
-        ),
-        TYPE_CHIPS.map((kind) => h4("button", {
+        TYPE_CHIPS.map((kind) => h6("button", {
           key: kind,
           type: "button",
           "data-kind": kind,
           className: `vms-type-chip${types.includes(kind) ? " is-active" : ""}`,
           title: "\u70B9\u51FB\u5355\u9009\uFF0CCtrl / Cmd \u70B9\u51FB\u591A\u9009",
           onClick: (event) => toggleType(kind, event)
-        }, h4(Icon2, { name: kind === "other" ? "file" : kind, size: 12 }), TYPE_LABEL[kind], h4("b", null, counts[kind] ?? 0)))
+        }, h6(Icon2, { name: kind === "other" ? "file" : kind, size: 12 }), TYPE_LABEL[kind], h6("b", null, counts[kind] ?? 0)))
       ),
-      h4(
-        "div",
-        { className: "vms-session-row" },
-        h4("button", {
-          type: "button",
-          className: `vms-session-btn${sessionOnly ? " is-active" : ""}`,
-          "aria-pressed": sessionOnly,
-          title: typeof state.scan?.sessionCreatedAt === "number" ? "\u53EA\u663E\u793A\u672C\u4F1A\u8BDD\u5F00\u59CB\u540E\u521B\u5EFA\u6216\u4FEE\u6539\u7684\u6587\u4EF6" : "\u5F53\u524D\u4F1A\u8BDD\u6CA1\u6709\u53EF\u7528\u7684\u521B\u5EFA\u65F6\u95F4",
-          disabled: typeof state.scan?.sessionCreatedAt !== "number",
-          onClick: toggleSessionOnly
-        }, h4(Icon2, { name: "clock", size: 12 }), "\u53EA\u770B\u672C\u4F1A\u8BDD\u6587\u4EF6")
-      ),
-      h4(
+      h6(
         "div",
         { className: "vms-folder-row" },
-        h4(
+        h6(
           "div",
           { className: "vms-crumb" },
-          h4("button", { type: "button", className: `vms-crumb-seg${folder === "" ? " is-active" : ""}`, onClick: () => setFolder("") }, "\u5168\u90E8\u6587\u4EF6\u5939"),
-          segments.map((segment, index) => h4(
-            import_react8.default.Fragment,
+          h6("button", { type: "button", className: `vms-crumb-seg${folder === "" ? " is-active" : ""}`, onClick: () => setFolder("") }, "\u5168\u90E8\u6587\u4EF6\u5939"),
+          segments.map((segment, index) => h6(
+            import_react10.default.Fragment,
             { key: `${segment}:${index}` },
-            h4(Icon2, { name: "chevronRight", size: 11, className: "vms-crumb-sep" }),
-            h4("button", {
+            h6(Icon2, { name: "chevronRight", size: 11, className: "vms-crumb-sep" }),
+            h6("button", {
               type: "button",
               className: `vms-crumb-seg${index === segments.length - 1 ? " is-active" : ""}`,
               onClick: () => setFolder(segments.slice(0, index + 1).join("/")),
@@ -24832,21 +25204,21 @@ function LibraryBody(props) {
             }, segment)
           ))
         ),
-        h4(
+        h6(
           "button",
           { type: "button", className: `vms-ghost-btn vms-folder-btn${folderOpen ? " is-open" : ""}`, "aria-expanded": folderOpen, onClick: () => setFolderOpen((value) => !value) },
-          h4(Icon2, { name: "folder", size: 13 }),
+          h6(Icon2, { name: "folder", size: 13 }),
           "\u6587\u4EF6\u5939",
-          h4(Icon2, { name: "chevron", size: 11 })
+          h6(Icon2, { name: "chevron", size: 11 })
         ),
-        folderOpen && h4(
+        folderOpen && h6(
           "div",
           { className: "vms-folder-pop" },
-          h4("button", { type: "button", className: `vms-folder-item${folder === "" ? " is-active" : ""}`, onClick: () => {
+          h6("button", { type: "button", className: `vms-folder-item${folder === "" ? " is-active" : ""}`, onClick: () => {
             setFolder("");
             setFolderOpen(false);
           } }, "\u5168\u90E8\u6587\u4EF6\u5939"),
-          folders.map((value) => h4("button", {
+          folders.map((value) => h6("button", {
             key: value,
             type: "button",
             className: `vms-folder-item${folder === value ? " is-active" : ""}`,
@@ -24859,124 +25231,134 @@ function LibraryBody(props) {
               event.preventDefault();
               setMenu({ item: folderItem2(value), x: event.clientX, y: event.clientY });
             }
-          }, h4(Icon2, { name: "folder", size: 11 }), value.split("/").pop()))
+          }, h6(Icon2, { name: "folder", size: 11 }), value.split("/").pop()))
         )
       ),
-      filterOpen && h4(
+      filterOpen && h6(
         "div",
         { className: "vms-filter-panel" },
-        h4(
+        h6(
           "label",
           { className: "vms-field" },
-          h4("span", null, "\u6587\u4EF6\u5939"),
-          h4(
+          h6("span", null, "\u6587\u4EF6\u5939"),
+          h6(
             "select",
             { value: folder, onChange: (event) => setFolder(event.target.value) },
-            h4("option", { value: "" }, "\u5168\u90E8\u6587\u4EF6\u5939"),
-            folders.map((value) => h4("option", { key: value, value }, value))
+            h6("option", { value: "" }, "\u5168\u90E8\u6587\u4EF6\u5939"),
+            folders.map((value) => h6("option", { key: value, value }, value))
           )
         ),
-        h4(
+        h6(
           "label",
           { className: "vms-field" },
-          h4("span", null, "\u65F6\u95F4"),
-          h4(
+          h6("span", null, "\u65F6\u95F4"),
+          h6(
             "select",
             { value: time, onChange: (event) => setTime(event.target.value) },
-            h4("option", { value: "all" }, "\u5168\u90E8\u65F6\u95F4"),
-            h4("option", { value: "today" }, "\u4ECA\u5929"),
-            h4("option", { value: "7d" }, "\u8FD1 7 \u5929"),
-            h4("option", { value: "30d" }, "\u8FD1 30 \u5929")
+            h6("option", { value: "all" }, "\u5168\u90E8\u65F6\u95F4"),
+            h6("option", { value: "today" }, "\u4ECA\u5929"),
+            h6("option", { value: "7d" }, "\u8FD1 7 \u5929"),
+            h6("option", { value: "30d" }, "\u8FD1 30 \u5929")
           )
         ),
-        h4(
+        h6(
           "label",
           { className: "vms-field" },
-          h4("span", null, "\u5927\u5C0F"),
-          h4(
+          h6("span", null, "\u5927\u5C0F"),
+          h6(
             "select",
             { value: size, onChange: (event) => setSize(event.target.value) },
-            h4("option", { value: "all" }, "\u5168\u90E8\u5927\u5C0F"),
-            h4("option", { value: "small" }, "\u5C0F\u4E8E 10 MB"),
-            h4("option", { value: "medium" }, "10\u2013100 MB"),
-            h4("option", { value: "large" }, "\u5927\u4E8E 100 MB")
+            h6("option", { value: "all" }, "\u5168\u90E8\u5927\u5C0F"),
+            h6("option", { value: "small" }, "\u5C0F\u4E8E 10 MB"),
+            h6("option", { value: "medium" }, "10\u2013100 MB"),
+            h6("option", { value: "large" }, "\u5927\u4E8E 100 MB")
           )
         ),
-        h4(
+        h6(
           "label",
           { className: "vms-field" },
-          h4("span", null, "\u6392\u5E8F"),
-          h4(
+          h6("span", null, "\u6392\u5E8F"),
+          h6(
             "select",
             { value: sort, onChange: (event) => setSort(event.target.value) },
-            h4("option", { value: "name" }, "\u6309\u540D\u79F0"),
-            h4("option", { value: "time" }, "\u6309\u65F6\u95F4"),
-            h4("option", { value: "size" }, "\u6309\u5927\u5C0F"),
-            h4("option", { value: "type" }, "\u6309\u7C7B\u578B")
+            h6("option", { value: "name" }, "\u6309\u540D\u79F0"),
+            h6("option", { value: "time" }, "\u6309\u65F6\u95F4"),
+            h6("option", { value: "size" }, "\u6309\u5927\u5C0F"),
+            h6("option", { value: "type" }, "\u6309\u7C7B\u578B")
           )
         ),
-        h4(
+        h6(
+          "label",
+          { className: "vms-check" },
+          h6("input", {
+            type: "checkbox",
+            checked: sessionOnly,
+            disabled: typeof state.scan?.sessionCreatedAt !== "number",
+            onChange: toggleSessionOnly
+          }),
+          "\u53EA\u770B\u672C\u4F1A\u8BDD\u6587\u4EF6"
+        ),
+        h6(
           "button",
           { type: "button", className: "vms-dir-btn", "data-dir": dir, onClick: () => setDir((value) => value === "asc" ? "desc" : "asc") },
-          h4("span", { className: "vms-mono" }, dir === "asc" ? "\u5347\u5E8F" : "\u964D\u5E8F"),
-          h4(Icon2, { name: "chevron", size: 12 })
+          h6("span", { className: "vms-mono" }, dir === "asc" ? "\u5347\u5E8F" : "\u964D\u5E8F"),
+          h6(Icon2, { name: "chevron", size: 12 })
         ),
-        h4("label", { className: "vms-check" }, h4("input", { type: "checkbox", checked: showHidden, onChange: (event) => setShowHidden(event.target.checked) }), "\u663E\u793A\u9690\u85CF\u6587\u4EF6"),
-        h4("label", { className: "vms-check" }, h4("input", { type: "checkbox", checked: includeBuild, onChange: (event) => setIncludeBuild(event.target.checked) }), "\u5305\u542B\u4F9D\u8D56/\u6784\u5EFA\u76EE\u5F55\uFF08\u6162\uFF09"),
-        h4("button", { type: "button", className: "vms-reset-btn", onClick: clearFilters }, "\u6E05\u9664\u5168\u90E8")
+        h6("label", { className: "vms-check" }, h6("input", { type: "checkbox", checked: showHidden, onChange: (event) => setShowHidden(event.target.checked) }), "\u663E\u793A\u9690\u85CF\u6587\u4EF6"),
+        h6("label", { className: "vms-check" }, h6("input", { type: "checkbox", checked: includeBuild, onChange: (event) => setIncludeBuild(event.target.checked) }), "\u5305\u542B\u4F9D\u8D56/\u6784\u5EFA\u76EE\u5F55\uFF08\u6162\uFF09"),
+        h6("button", { type: "button", className: "vms-reset-btn", onClick: clearFilters }, "\u6E05\u9664\u5168\u90E8")
       ),
-      chips.length > 0 && h4(
+      chips.length > 0 && h6(
         "div",
         { className: "vms-chips" },
-        chips.map((chip) => h4(
+        chips.map((chip) => h6(
           "span",
           { key: chip.key, className: "vms-chip" },
           chip.label,
-          h4("button", { type: "button", "aria-label": "\u79FB\u9664\u7B5B\u9009", onClick: () => removeChip(chip.key) }, "\xD7")
+          h6("button", { type: "button", "aria-label": "\u79FB\u9664\u7B5B\u9009", onClick: () => removeChip(chip.key) }, "\xD7")
         ))
       )
     ),
-    addOpen && h4(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
-    selected.size > 0 && h4(
+    addOpen && h6(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
+    selected.size > 0 && h6(
       "div",
       { className: "vms-selection-bar" },
-      h4("b", null, `\u5DF2\u9009 ${selected.size} \u9879`),
-      h4("button", { type: "button", className: "vms-ghost-btn", onClick: insertSelected }, h4(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
-      h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setBatchCopyDialog({ error: "" }) }, h4(Icon2, { name: "copy", size: 12 }), "\u590D\u5236\u5230\u2026"),
-      h4("button", { type: "button", className: "vms-ghost-btn", onClick: copySelectedAddresses }, h4(Icon2, { name: "clipboard", size: 12 }), "\u590D\u5236\u5730\u5740"),
-      h4("button", { type: "button", className: "vms-ghost-btn is-danger", onClick: () => setBatchDeleteDialog({ error: "" }) }, h4(Icon2, { name: "trash", size: 12 }), "\u5220\u9664"),
-      h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setSelected(/* @__PURE__ */ new Set()) }, "\u53D6\u6D88\u9009\u62E9")
+      h6("b", null, `\u5DF2\u9009 ${selected.size} \u9879`),
+      h6("button", { type: "button", className: "vms-ghost-btn", onClick: insertSelected }, h6(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
+      h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setBatchCopyDialog({ error: "" }) }, h6(Icon2, { name: "copy", size: 12 }), "\u590D\u5236\u5230\u2026"),
+      h6("button", { type: "button", className: "vms-ghost-btn", onClick: copySelectedAddresses }, h6(Icon2, { name: "clipboard", size: 12 }), "\u590D\u5236\u5730\u5740"),
+      h6("button", { type: "button", className: "vms-ghost-btn is-danger", onClick: () => setBatchDeleteDialog({ error: "" }) }, h6(Icon2, { name: "trash", size: 12 }), "\u5220\u9664"),
+      h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setSelected(/* @__PURE__ */ new Set()) }, "\u53D6\u6D88\u9009\u62E9")
     ),
-    h4(
+    h6(
       "div",
       { className: "vms-scroll" },
-      state.loading && state.items.length > 0 && h4("div", { className: "vms-scan-banner" }, h4("i", null), "\u6B63\u5728\u626B\u63CF\u5DE5\u4F5C\u533A\uFF0C\u8DF3\u8FC7\u6784\u5EFA\u76EE\u5F55\u2026"),
-      state.loading && state.items.length === 0 && h4(
+      state.loading && state.items.length > 0 && h6("div", { className: "vms-scan-banner" }, h6("i", null), "\u6B63\u5728\u626B\u63CF\u5DE5\u4F5C\u533A\uFF0C\u8DF3\u8FC7\u6784\u5EFA\u76EE\u5F55\u2026"),
+      state.loading && state.items.length === 0 && h6(
         "div",
         { className: "vms-skeleton-grid" },
-        Array.from({ length: 6 }, (_, index) => h4("div", { key: index, className: "vms-skeleton" }))
+        Array.from({ length: 6 }, (_, index) => h6("div", { key: index, className: "vms-skeleton" }))
       ),
-      !state.loading && state.error && h4(
+      !state.loading && state.error && h6(
         "div",
         { className: "vms-empty" },
-        h4("span", { className: "vms-empty-art" }, h4(Icon2, { name: "alert", size: 20 })),
-        h4("b", null, "\u6587\u4EF6\u5217\u8868\u52A0\u8F7D\u5931\u8D25"),
-        h4("p", null, state.error),
-        diagnostic !== null && h4("pre", { className: "vms-diagnostic" }, JSON.stringify(diagnostic, null, 2)),
-        h4("button", { type: "button", className: "vms-primary-btn", onClick: refresh }, "\u91CD\u8BD5")
+        h6("span", { className: "vms-empty-art" }, h6(Icon2, { name: "alert", size: 20 })),
+        h6("b", null, "\u6587\u4EF6\u5217\u8868\u52A0\u8F7D\u5931\u8D25"),
+        h6("p", null, state.error),
+        diagnostic !== null && h6("pre", { className: "vms-diagnostic" }, JSON.stringify(diagnostic, null, 2)),
+        h6("button", { type: "button", className: "vms-primary-btn", onClick: refresh }, "\u91CD\u8BD5")
       ),
-      !state.loading && !state.error && filtered.length === 0 && !waitingForMeta && !(treeMode && showEmptyFolders && folders.length > 0) && h4(
+      !state.loading && !state.error && filtered.length === 0 && !waitingForMeta && !(treeMode && showEmptyFolders && folders.length > 0) && h6(
         "div",
         { className: "vms-empty" },
-        h4("span", { className: "vms-empty-art" }, h4(Icon2, { name: "search", size: 20 })),
-        h4("b", null, "\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6"),
-        h4("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
-        items.length > 0 && h4("button", { type: "button", className: "vms-primary-btn", onClick: clearFilters }, "\u6E05\u9664\u7B5B\u9009")
+        h6("span", { className: "vms-empty-art" }, h6(Icon2, { name: "search", size: 20 })),
+        h6("b", null, "\u6CA1\u6709\u5339\u914D\u7684\u6587\u4EF6"),
+        h6("p", null, items.length === 0 ? "\u8FD9\u4E2A\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709\u6587\u4EF6\u3002" : "\u8BD5\u8BD5\u51CF\u5C11\u7B5B\u9009\u6761\u4EF6\uFF0C\u6216\u6362\u4E00\u4E2A\u6587\u4EF6\u5939\u3002"),
+        items.length > 0 && h6("button", { type: "button", className: "vms-primary-btn", onClick: clearFilters }, "\u6E05\u9664\u7B5B\u9009")
       ),
-      !state.error && (filtered.length > 0 || treeMode && showEmptyFolders && folders.length > 0) && (view === "grid" ? h4("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item, index) => h4(GridCard, {
+      !state.error && (filtered.length > 0 || treeMode && showEmptyFolders && folders.length > 0) && (view === "grid" ? h6("div", { ref: gridRef, className: "vms-grid", style: { "--vms-card-min": `${cardSize}px` } }, shown.map((item) => h6(GridCard, {
         key: item.id,
         item,
-        index,
         sessionId,
         meta: metaFor(item),
         selected: selected.has(item.id),
@@ -24984,27 +25366,40 @@ function LibraryBody(props) {
         onOpen: (entry) => setOverlayId(entry.id),
         onInline: (entry) => setInlineId((current) => current === entry.id ? null : entry.id),
         onToggleSelect: toggleSelect,
+        dragBind: dragDrop.bind,
+        suppressClick: dragDrop.suppressNextClick,
         onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
-      }))) : treeMode ? h4(
+      }))) : timelineMode ? h6(
+        "div",
+        { className: "vms-timeline-wrap" },
+        h6(SessionTimeline, {
+          turns,
+          items,
+          onOpen: (entry) => setOverlayId(entry.id),
+          onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
+          onFallback: () => setListMode("tree")
+        })
+      ) : treeMode ? h6(
         "div",
         { className: "vms-tree-wrap" },
-        detail === "detailed" && h4(
+        detail === "detailed" && h6(
           "div",
           { className: "vms-tree-head" },
-          h4("span", null, ""),
-          h4("span", null, ""),
-          h4("span", null, "\u540D\u79F0"),
-          h4("span", null, "\u4FEE\u6539\u65E5\u671F"),
-          h4("span", null, "\u7C7B\u578B"),
-          h4("span", null, "\u5927\u5C0F"),
-          h4("span", null, "")
+          h6("span", null, ""),
+          h6("span", null, ""),
+          h6("span", null, "\u540D\u79F0"),
+          h6("span", null, "\u4FEE\u6539\u65E5\u671F"),
+          h6("span", null, "\u7C7B\u578B"),
+          h6("span", null, "\u5927\u5C0F"),
+          h6("span", null, "")
         ),
-        h4(FileTree, {
+        h6(FileTree, {
           items: treeItems,
           folders,
           scope: folder,
           expanded: expandedFolders,
           forceExpanded,
+          collapsed: collapsedFolders,
           detail,
           meta,
           sessionId,
@@ -25013,22 +25408,24 @@ function LibraryBody(props) {
           onToggleFolder: toggleFolder,
           onOpen: (entry) => setOverlayId(entry.id),
           onToggleSelect: toggleSelect,
+          dragBind: dragDrop.bind,
+          suppressClick: dragDrop.suppressNextClick,
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
         })
-      ) : h4(
+      ) : h6(
         "div",
         { className: "vms-rows" },
-        detail === "detailed" && h4(
+        detail === "detailed" && h6(
           "div",
           { className: "vms-list-head" },
-          h4("span", null, ""),
-          h4("button", { type: "button", className: sort === "name" ? "is-active" : "", onClick: () => sortBy("name") }, `\u540D\u79F0${sort === "name" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h4("button", { type: "button", className: sort === "time" ? "is-active" : "", onClick: () => sortBy("time") }, `\u4FEE\u6539\u65E5\u671F${sort === "time" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h4("button", { type: "button", className: sort === "type" ? "is-active" : "", onClick: () => sortBy("type") }, `\u7C7B\u578B${sort === "type" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h4("button", { type: "button", className: sort === "size" ? "is-active" : "", onClick: () => sortBy("size") }, `\u5927\u5C0F${sort === "size" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
-          h4("span", null, "")
+          h6("span", null, ""),
+          h6("button", { type: "button", className: sort === "name" ? "is-active" : "", onClick: () => sortBy("name") }, `\u540D\u79F0${sort === "name" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h6("button", { type: "button", className: sort === "time" ? "is-active" : "", onClick: () => sortBy("time") }, `\u4FEE\u6539\u65E5\u671F${sort === "time" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h6("button", { type: "button", className: sort === "type" ? "is-active" : "", onClick: () => sortBy("type") }, `\u7C7B\u578B${sort === "type" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h6("button", { type: "button", className: sort === "size" ? "is-active" : "", onClick: () => sortBy("size") }, `\u5927\u5C0F${sort === "size" ? dir === "asc" ? " \u2191" : " \u2193" : ""}`),
+          h6("span", null, "")
         ),
-        shown.map((item) => h4(ListRow, {
+        shown.map((item) => h6(ListRow, {
           key: item.id,
           item,
           sessionId,
@@ -25037,42 +25434,45 @@ function LibraryBody(props) {
           selected: selected.has(item.id),
           onOpen: (entry) => setOverlayId(entry.id),
           onToggleSelect: toggleSelect,
+          dragBind: dragDrop.bind,
+          suppressClick: dragDrop.suppressNextClick,
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
         }))
       )),
-      metaLoading && h4("div", { className: "vms-meta-banner" }, h4("i", null), "\u6B63\u5728\u8BFB\u53D6\u6587\u4EF6\u4FE1\u606F\u2026"),
-      !treeMode && filtered.length > limit && h4(
+      metaLoading && h6("div", { className: "vms-meta-banner" }, h6("i", null), "\u6B63\u5728\u8BFB\u53D6\u6587\u4EF6\u4FE1\u606F\u2026"),
+      !treeMode && !timelineMode && filtered.length > limit && h6(
         "div",
         { className: "vms-more" },
-        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => setLimit((value) => value + PAGE_SIZE) }, `\u663E\u793A\u66F4\u591A\uFF08\u8FD8\u5269 ${filtered.length - limit}\uFF09`)
+        h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setLimit((value) => value + PAGE_SIZE) }, `\u663E\u793A\u66F4\u591A\uFF08\u8FD8\u5269 ${filtered.length - limit}\uFF09`)
       )
     ),
-    h4(
+    h6(
       "footer",
       { className: "vms-status" },
-      h4("span", null, state.error ? "\u626B\u63CF\u5931\u8D25" : filtered.length === items.length ? `${sessionOnly ? "\u672C\u4F1A\u8BDD " : ""}\u627E\u5230 ${items.length} \u4E2A\u6587\u4EF6 \xB7 \u626B\u63CF ${folders.length} \u4E2A\u6587\u4EF6\u5939${state.scan?.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u65AD" : ""}` : `\u7B5B\u9009\u51FA ${filtered.length} / ${items.length} \u4E2A\u6587\u4EF6`),
-      h4("span", { className: "vms-status-right" }, h4("i", null), "\u672C\u5730\u5DE5\u4F5C\u533A")
+      h6("span", null, state.error ? "\u626B\u63CF\u5931\u8D25" : filtered.length === items.length ? `${sessionOnly ? "\u672C\u4F1A\u8BDD " : ""}\u627E\u5230 ${items.length} \u4E2A\u6587\u4EF6 \xB7 \u626B\u63CF ${folders.length} \u4E2A\u6587\u4EF6\u5939${state.scan?.truncated ? " \xB7 \u7ED3\u679C\u5DF2\u622A\u65AD" : ""}` : `\u7B5B\u9009\u51FA ${filtered.length} / ${items.length} \u4E2A\u6587\u4EF6`),
+      h6("span", { className: "vms-status-right" }, h6("i", null), "\u672C\u5730\u5DE5\u4F5C\u533A")
     ),
-    menu !== null && h4(FileMenu, {
+    menu !== null && h6(FileMenu, {
       state: menu,
       actions: libraryMenuActions(menu.item),
       onSelect: runAction,
       onClose: () => setMenu(null)
     }),
-    renameDialog !== null && h4(RenameDialog, {
+    renameDialog !== null && h6(RenameDialog, {
       item: renameDialog.item,
       error: renameDialog.error,
       onClose: () => setRenameDialog(null),
       onSubmit: submitRename
     }),
-    copyDialog !== null && h4(CopyDialog, {
+    copyDialog !== null && h6(CopyDialog, {
       item: copyDialog.item,
+      action: copyDialog.action ?? "copy",
       folders,
       error: copyDialog.error,
       onClose: () => setCopyDialog(null),
       onSubmit: submitCopy
     }),
-    deleteDialog !== null && h4(ConfirmDialog, {
+    deleteDialog !== null && h6(ConfirmDialog, {
       title: deleteDialog.step === 0 ? "\u79FB\u5230\u56DE\u6536\u7AD9" : "\u6C38\u4E45\u5220\u9664",
       message: deleteDialog.step === 0 ? `\u786E\u5B9A\u628A${deleteDialog.item.isFolder ? "\u6587\u4EF6\u5939" : "\u6587\u4EF6"}\u300C${deleteDialog.item.name}\u300D\u79FB\u5230\u7CFB\u7EDF\u56DE\u6536\u7AD9\u5417\uFF1F${deleteDialog.item.isFolder ? "\u5176\u4E2D\u7684\u6240\u6709\u5185\u5BB9\u4E5F\u4F1A\u4E00\u8D77\u79FB\u52A8\u3002" : ""}${deleteDialog.error !== "" ? `\uFF08\u4E0A\u6B21\u5931\u8D25\uFF1A${deleteDialog.error}\uFF09` : ""}` : `\u79FB\u5230\u56DE\u6536\u7AD9\u5931\u8D25\uFF1A${deleteDialog.error}\u3002\u6C38\u4E45\u5220\u9664\u540E\u5C06\u65E0\u6CD5\u6062\u590D\uFF0C\u786E\u5B9A\u7EE7\u7EED\u5417\uFF1F`,
       confirmLabel: deleteDialog.step === 0 ? "\u79FB\u5230\u56DE\u6536\u7AD9" : "\u6C38\u4E45\u5220\u9664",
@@ -25080,21 +25480,21 @@ function LibraryBody(props) {
       onClose: () => setDeleteDialog(null),
       onConfirm: () => submitDelete(deleteDialog.step === 1)
     }),
-    batchCopyDialog !== null && h4(BatchCopyDialog, {
+    batchCopyDialog !== null && h6(BatchCopyDialog, {
       count: selectedItems.length,
       folders,
       error: batchCopyDialog.error,
       onClose: () => setBatchCopyDialog(null),
       onSubmit: submitBatchCopy
     }),
-    batchDeleteDialog !== null && h4(ConfirmDialog, {
+    batchDeleteDialog !== null && h6(ConfirmDialog, {
       title: "\u6279\u91CF\u5220\u9664",
       message: `\u786E\u5B9A\u628A\u9009\u4E2D\u7684 ${selectedItems.length} \u9879\u79FB\u5230\u7CFB\u7EDF\u56DE\u6536\u7AD9\u5417\uFF1F${batchDeleteDialog.error !== "" ? `\uFF08\u4E0A\u6B21\u5931\u8D25\uFF1A${batchDeleteDialog.error}\uFF09` : ""}`,
       confirmLabel: "\u79FB\u5230\u56DE\u6536\u7AD9",
       onClose: () => setBatchDeleteDialog(null),
       onConfirm: () => submitBatchDelete(false)
     }),
-    overlayItem !== void 0 && (MEDIA_KINDS.has(overlayItem.kind) ? h4(MediaOverlay, {
+    overlayItem !== void 0 && (MEDIA_KINDS.has(overlayItem.kind) ? h6(MediaOverlay, {
       items: mediaOverlayItems.length > 0 ? mediaOverlayItems : [overlayItem],
       initialIndex: mediaOverlayIndex,
       sessionId,
@@ -25107,7 +25507,7 @@ function LibraryBody(props) {
       onRemoveLink: removeLink,
       onAction: runAction,
       onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
-    }) : h4(FilePreviewOverlay, {
+    }) : h6(FilePreviewOverlay, {
       item: overlayItem,
       meta: metaFor(overlayItem),
       sessionId,
@@ -25116,28 +25516,29 @@ function LibraryBody(props) {
       onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
       onOpenItem: handleOverlayTab
     })),
-    notice !== "" && h4("div", { className: "vms-toast" }, h4(Icon2, { name: "check", size: 13 }), notice)
+    dragDrop.ghost,
+    notice !== "" && h6("div", { className: "vms-toast" }, h6(Icon2, { name: "check", size: 13 }), notice)
   );
 }
 function MediaTab(props) {
   const { sessionId, useTabInfo, openLibrary } = props;
   const { tab } = useTabInfo();
   const parsed = parseFileAddress(tab.contentId);
-  const [notice, setNotice] = (0, import_react8.useState)("");
-  const [menu, setMenu] = (0, import_react8.useState)(null);
-  const [renameDialog, setRenameDialog] = (0, import_react8.useState)(null);
-  const [deleteDialog, setDeleteDialog] = (0, import_react8.useState)(null);
-  (0, import_react8.useEffect)(() => {
+  const [notice, setNotice] = (0, import_react10.useState)("");
+  const [menu, setMenu] = (0, import_react10.useState)(null);
+  const [renameDialog, setRenameDialog] = (0, import_react10.useState)(null);
+  const [deleteDialog, setDeleteDialog] = (0, import_react10.useState)(null);
+  (0, import_react10.useEffect)(() => {
     if (notice === "") return void 0;
     const timer = setTimeout(() => setNotice(""), 2e3);
     return () => clearTimeout(timer);
   }, [notice]);
   const kind = tab.kind === "audio" ? "audio" : "video";
   if (parsed === void 0) {
-    return h4(
+    return h6(
       "div",
       { className: "vms-root vms-media-tab" },
-      h4("div", { className: "vms-empty" }, h4(Icon2, { name: "alert", size: 20 }), h4("b", null, "\u65E0\u6CD5\u8BC6\u522B\u8FD9\u4E2A\u5A92\u4F53\u5730\u5740"))
+      h6("div", { className: "vms-empty" }, h6(Icon2, { name: "alert", size: 20 }), h6("b", null, "\u65E0\u6CD5\u8BC6\u522B\u8FD9\u4E2A\u5A92\u4F53\u5730\u5740"))
     );
   }
   const name = decodeURIComponent(parsed.path.split("/").pop() ?? "\u5A92\u4F53");
@@ -25224,35 +25625,35 @@ function MediaTab(props) {
     }
     return void 0;
   };
-  return h4(
+  return h6(
     "div",
     { className: "vms-root vms-media-tab" },
-    h4(
+    h6(
       "header",
       { className: "vms-media-tab-head" },
-      h4(
+      h6(
         "div",
         { className: "vms-media-tab-title" },
-        h4("span", { className: "vms-kind-dot", "data-kind": kind }),
-        h4("b", null, name),
-        h4("span", null, `${folder} \xB7 ${typeLabel(kind)}`)
+        h6("span", { className: "vms-kind-dot", "data-kind": kind }),
+        h6("b", null, name),
+        h6("span", null, `${folder} \xB7 ${typeLabel(kind)}`)
       ),
-      h4(
+      h6(
         "div",
         { className: "vms-media-tab-actions" },
-        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("insert") }, h4(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
-        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("reveal") }, h4(Icon2, { name: "reveal", size: 12 }), "\u6240\u5728\u4F4D\u7F6E"),
-        h4("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("copyPath") }, h4(Icon2, { name: "clipboard", size: 12 }), "\u5730\u5740"),
-        h4("button", { type: "button", className: "vms-ghost-btn", onClick: openLibrary }, h4(Icon2, { name: "grid", size: 12 }), "\u6587\u4EF6\u7BA1\u7406"),
-        h4("a", { className: "vms-icon-btn", href: mediaSrc(sessionId, item), download: name, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h4(Icon2, { name: "download", size: 15 }))
+        h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("insert") }, h6(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
+        h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("reveal") }, h6(Icon2, { name: "reveal", size: 12 }), "\u6240\u5728\u4F4D\u7F6E"),
+        h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => act("copyPath") }, h6(Icon2, { name: "clipboard", size: 12 }), "\u5730\u5740"),
+        h6("button", { type: "button", className: "vms-ghost-btn", onClick: openLibrary }, h6(Icon2, { name: "grid", size: 12 }), "\u6587\u4EF6\u7BA1\u7406"),
+        h6("a", { className: "vms-icon-btn", href: mediaSrc(sessionId, item), download: name, title: "\u4E0B\u8F7D\u539F\u6587\u4EF6", "aria-label": "\u4E0B\u8F7D\u539F\u6587\u4EF6" }, h6(Icon2, { name: "download", size: 15 }))
       )
     ),
-    h4(
+    h6(
       "div",
       { className: "vms-media-tab-body" },
-      h4(NativeMedia, { item, sessionId, visible: tab.visible })
+      h6(NativeMedia, { item, sessionId, visible: tab.visible })
     ),
-    notice !== "" && h4("div", { className: "vms-toast" }, h4(Icon2, { name: "check", size: 13 }), notice)
+    notice !== "" && h6("div", { className: "vms-toast" }, h6(Icon2, { name: "check", size: 13 }), notice)
   );
 }
 
