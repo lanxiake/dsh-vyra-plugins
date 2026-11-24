@@ -165,12 +165,19 @@ export async function buildTimeline({ ctx, sessionId, workspaceRoot, fs, events:
   const recent = prompts.slice(-MAX_NODES)
 
   // Turn summaries the Host still holds, keyed by the announcing event's seq.
+  // `workspaceChanges` is not declared in this plugin's `inject`, so a property
+  // read throws on Cordis ("cannot get property ... without inject"); the
+  // non-throwing two-argument get returns undefined instead.
   const changes = new Map()
+  let workspaceChanges
+  try {
+    workspaceChanges = typeof ctx?.get === 'function' ? ctx.get('workspaceChanges', false) : undefined
+  } catch { workspaceChanges = undefined }
   for (const event of events) {
     if (event?.type !== 'workspace/changes') continue
     const turn = event.data?.turn
-    const summary = typeof ctx.workspaceChanges?.summary === 'function'
-      ? ctx.workspaceChanges.summary(sessionId, event.seq)
+    const summary = typeof workspaceChanges?.summary === 'function'
+      ? workspaceChanges.summary(sessionId, event.seq)
       : undefined
     if (typeof turn === 'number' && summary !== undefined) changes.set(turn, { summary, seq: event.seq })
   }
