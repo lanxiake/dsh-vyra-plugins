@@ -2312,6 +2312,24 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.6.0 fixes the light-theme button colours (primary buttons now use the
+        // shell's paired fill/label tokens, so neither the base nor the hover
+        // state can wash the label out), makes one click work at all — the card
+        // never declared `remote` in its inject, which threw
+        // "cannot get property \"remote.pluginManager\" without inject" — and
+        // turns that button into an update once the market is installed, instead
+        // of silently doing nothing. It also adds a community card (QQ group
+        // with a locally served QR, and the GitHub repository) and installs the
+        // onboarding skill with LF endings on Windows checkouts.
+        '0.6.0': {
+          publishTimestamp: 1795487478,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '2359177aa67eacc59001881df991950bb08b1585',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
