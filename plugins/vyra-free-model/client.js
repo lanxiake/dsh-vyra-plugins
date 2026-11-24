@@ -446,13 +446,19 @@ window.__ModuleLoader__.load({
      * bytes can never be stale because that commit can never move.
      *
      * The cost is that this list is frozen in a shipped bundle. That is
-     * deliberate: it pins readers to a known-good index, and the one-click
-     * button still resolves our market's newest spec out of whatever the index
-     * says at that commit. `scripts/release.mjs` rewrites these SHAs together
-     * with the market manifest on every release, so a client one release behind
-     * still reads a consistent index — never a mix of old code and new versions.
+     * deliberate: it pins readers to a known-good index. `VEYRA_COMMIT` is the
+     * **publish** commit — the one that carries both the index documents and
+     * the manifest entries for this version — not the plugin-only commit
+     * before it, whose index still lists the previous release. Pinning the
+     * plugin commit is how 0.6.2 first shipped pointing at a 0.6.1 index; do
+     * that again and "0.6.2 is available" announces itself to nobody.
+     *
+     * `scripts/verify-release.mjs` fails the build when the pinned commit does
+     * not list the version in this package. Rewrite it after the publish
+     * commit exists, which costs one extra commit; there is no shorter path,
+     * because a commit cannot name itself.
      */
-    const VEYRA_COMMIT = '70b3dc6c183223ee43167563027f6c63bcb9fe8e'
+    const VEYRA_COMMIT = '7507b48b8b636c12b4a058dfa0e0a35b84f1afc8'
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
       `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index.json`,
