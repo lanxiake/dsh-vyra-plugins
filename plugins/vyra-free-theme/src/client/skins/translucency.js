@@ -90,10 +90,37 @@ export function createProjection(table) {
       ? { light: boosted, dark: blurPx }
       : { light: boosted, dark: boosted };
 
+    /*
+     * The brand name follows the same override channel as the slogan: the
+     * theme supplies the default, the user's saved value wins. Falling back
+     * rather than replacing means an unset or blanked field keeps the theme's
+     * own name instead of leaving the window untitled.
+     *
+     * The projector is deliberately fail-closed: a non-string titleBrand
+     * invalidates the WHOLE projection and drops the skin back to the built-in
+     * one. So this must always produce a string — a stray number or array in a
+     * stored profile would otherwise take the entire theme down, not just the
+     * brand label.
+     */
+    const brandFallback = typeof table.titleBrand === "string" ? table.titleBrand : "";
+    const brandOverride = values.brandTitle;
+    let brandResolved;
+    if (typeof brandOverride === "string") {
+      brandResolved = brandOverride || brandFallback;
+    } else if (typeof brandOverride === "object" && brandOverride !== null && !Array.isArray(brandOverride)) {
+      const zh = typeof brandOverride.zh === "string" ? brandOverride.zh : "";
+      const en = typeof brandOverride.en === "string" ? brandOverride.en : "";
+      brandResolved = zh || en || brandFallback;
+    } else {
+      brandResolved = brandFallback;
+    }
+    /* Last guard: the contract above is "always a string". */
+    if (typeof brandResolved !== "string") brandResolved = brandFallback;
+
     return {
       bodyAttribute: table.bodyAttribute,
       slogans: values.slogan,
-      titleBrand: table.titleBrand,
+      titleBrand: brandResolved,
       favicon: table.favicon,
       backdrop: {
         imageLight, imageDark, overlayLight, overlayDark, blur: blurPx, desktopBlur: desktopBlurPair,

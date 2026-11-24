@@ -31,7 +31,9 @@ test("a registered external skin is a first-class catalog entry", () => {
   registerExternalSkin({ id: "nebula", fields: externalFields(), builtinAssets: {} });
   try {
     const schema = getSkinSchema("nebula");
-    assert.deepEqual(schema.fields.map((field) => field.key), ["wallpaper", "slogan", "panelOpacity"]);
+    /* wallpaper, brandTitle, slogan, panelOpacity — brandTitle was added so the
+       panel can rename the brand. */
+    assert.deepEqual(schema.fields.map((field) => field.key), ["wallpaper", "brandTitle", "slogan", "panelOpacity"]);
     assert.equal(getField("nebula", "panelOpacity").default, 40);
     assert.equal(listAssetFields("nebula").length, 1);
     assert.deepEqual(listExternalSkinIds(), ["nebula"]);
@@ -74,8 +76,10 @@ test("mergeValues falls back to the theme defaults and reports bad overrides", (
 });
 
 test("an external id cannot shadow a compiled-in skin", () => {
+  /* meirenzhi is the only compiled-in skin left after openbmc and
+     uefi-harness were retired; the shadowing guard itself is unchanged. */
   assert.throws(
-    () => registerExternalSkin({ id: "openbmc", fields: externalFields() }),
+    () => registerExternalSkin({ id: "meirenzhi", fields: externalFields() }),
     /collides with a compiled-in skin/,
   );
 });

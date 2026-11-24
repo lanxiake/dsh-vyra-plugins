@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MORNING · Vyra 主题原型</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+  >
+  <link rel="stylesheet" href="morning.css">
+  <link rel="stylesheet" href="boot-morning.css">
+</head>
+<body class="morning">
+  <div class="morning-app">
+    <!-- ============================================================== -->
+    <!-- Sidebar                                                        -->
+    <!-- ============================================================== -->
+    <aside class="morning-sidebar">
+      <div class="morning-brand">
+        <svg class="morning-brand__sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.2" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.55">
+            <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6"/>
+            <path d="M5.6 5.6 7.4 7.4M16.6 16.6l1.8 1.8M18.4 5.6 16.6 7.4M7.4 16.6 5.6 18.4"/>
+          </g>
+        </svg>
+        <span class="morning-brand__word">Morning</span>
+      </div>
+
+      <!-- A greeting, not a dashboard. No counts anywhere. -->
+      <div class="morning-greeting">
+        <strong>早上好</strong>
+        外面天亮了，这里不着急。
+      </div>
+
+      <div class="morning-scroll" data-session-list>
+        <div class="morning-group">
+          <div class="morning-group__title">进行中</div>
+          <button type="button" class="morning-item is-active" data-title="先把今天开个头">
+            <span class="morning-item__dot"></span>
+            <span class="morning-item__label">先把今天开个头</span>
+          </button>
+          <button type="button" class="morning-item" data-title="那个接口的问题">
+            <span class="morning-item__dot"></span>
+            <span class="morning-item__label">那个接口的问题</span>
+          </button>
+        </div>
+
+        <div class="morning-group">
+          <div class="morning-group__title">稍后</div>
+          <button type="button" class="morning-item" data-title="不着急的想法">
+            <span class="morning-item__dot"></span>
+            <span class="morning-item__label">不着急的想法</span>
+          </button>
+          <button type="button" class="morning-item" data-title="有空再看的">
+            <span class="morning-item__dot"></span>
+            <span class="morning-item__label">有空再看的</span>
+          </button>
+          <button type="button" class="morning-item" data-title="上周的笔记">
+            <span class="morning-item__dot"></span>
+            <span class="morning-item__label">上周的笔记</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="morning-foot">
+        <button type="button" class="morning-new" data-new-session>
+          <svg class="morning-new__glyph" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span class="morning-new__text">开一个新会话</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============================================================== -->
+    <!-- Main                                                           -->
+    <!-- ============================================================== -->
+    <main class="morning-main">
+      <header class="morning-topbar">
+        <h1 class="morning-topbar__title" data-thread-title>先把今天开个头</h1>
+        <button type="button" class="morning-iconbtn" data-rail-toggle title="收起侧栏" aria-label="收起侧栏">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="2" y="3.2" width="12" height="9.6" rx="2.4" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M6.2 3.2v9.6" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="morning-thread" data-thread>
+        <article class="morning-msg">
+          <div class="morning-msg__who">Vyra</div>
+          <div class="morning-msg__body">
+            <p>早上好。要不要先说说今天想做的事，我陪你理一遍？</p>
+            <p>不用一次说完，想到哪算哪。</p>
+          </div>
+        </article>
+
+        <article class="morning-msg morning-msg--user">
+          <div class="morning-msg__who">你</div>
+          <div class="morning-msg__body">有点没睡醒，脑子有点糊。</div>
+        </article>
+
+        <article class="morning-msg">
+          <div class="morning-msg__who">Vyra</div>
+          <div class="morning-msg__body">
+            <p>那就别硬想。先挑一件最小的：把昨天做到一半的那件事补上句话就行。</p>
+            <p>剩下的事等你喝口水回来再说。</p>
+            <div class="morning-tool" data-state="done" style="margin-top:14px">
+              <span class="morning-tool__name">read · 昨天的工作记录</span>
+              <span class="morning-tool__state">found</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="morning-composer">
+        <div class="morning-composer__inner">
+          <div class="morning-composer__field">
+            <textarea data-composer rows="1" placeholder="想到什么就说什么…" aria-label="消息"></textarea>
+            <button type="button" class="morning-send" data-send title="发送" aria-label="发送">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M8 12.6V3.6M4.2 7.2 8 3.4l3.8 3.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="morning-composer__meta">今天不用完美，开始就行。</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="morning-demo">
+    <span>MORNING</span>
+    <span aria-hidden="true">·</span>
+    <button type="button" id="replay-boot">重播开场</button>
+    <span aria-hidden="true">·</span>
+    <a href="../noir/index.html">查看 NOIR →</a>
+  </div>
+
+  <script type="module">
+    import { normalizeBoot, shouldPlayBoot } from "../noir/boot-model.js";
+    import { playBoot } from "../noir/boot.js";
+
+    /*
+     * The morning sequence.
+     *
+     * Copy decisions, stated so they are reviewable:
+     *   1. "天亮了" — establishes that time has passed and the world is still
+     *      running. It is the most comforting factual statement available.
+     *   2. "不用一下子做完" — permission, not encouragement. A tired person
+     *      needs to be released from a standard, not reminded of one.
+     *   3. "先喝口水" — a concrete, tiny, pleasant action. Ending on a task
+     *      would undo both previous beats.
+     *
+     * No numbers. No "还有 3 个任务". No exclamation marks.
+     */
+    const THEME_BOOT = {
+      kind: "story",
+      theme: "light",
+      fadeMs: 620,
+      skipLabel: { zh: "直接开始", en: "Start now" },
+      beats: [
+        {
+          kicker: { zh: "清晨", en: "Morning" },
+          title: { zh: "天亮了。今天也来了。", en: "The light is back. So is today." },
+          holdMs: 1700,
+        },
+        {
+          kicker: { zh: "不急", en: "No rush" },
+          title: { zh: "不用一下子做完所有事。", en: "You don't have to do it all at once." },
+          holdMs: 1900,
+        },
+        {
+          kicker: { zh: "先这样", en: "To begin" },
+          title: { zh: "先喝口水，再回来。", en: "Drink some water. Then come back." },
+          holdMs: 1300,
+        },
+      ],
+    };
+
+    const result = normalizeBoot(THEME_BOOT);
+    if (!result.ok) console.error("[morning] boot rejected:", result.issues);
+
+    const translate = (value) =>
+      typeof value === "string" ? value : (value?.zh ?? value?.en ?? "");
+
+    const params = new URLSearchParams(location.search);
+    const forced = params.get("boot");
+    const seenKey = "morning:boot-seen";
+    const seen = localStorage.getItem(seenKey) === "1" && forced !== "1";
+
+    let handle = null;
+
+    function start() {
+      if (!result.ok) return;
+      const verdict = shouldPlayBoot({ boot: result.boot, seen, deepLink: forced === "0" });
+      if (!verdict.play) return;
+      document.querySelectorAll(".morning-msg").forEach((el) => el.classList.remove("is-in"));
+      handle = playBoot(result.boot, {
+        translate,
+        /* The MORNING stylesheet owns the presentation: sunrise instead of
+           a dark fade, its own beat layout. */
+        prefix: "morning-boot",
+        mark: "Morning",
+        onFinish: () => {
+          localStorage.setItem(seenKey, "1");
+          document.querySelectorAll(".morning-msg").forEach((el) => el.classList.add("is-in"));
+        },
+      });
+    }
+
+    start();
+
+    document.getElementById("replay-boot")?.addEventListener("click", () => {
+      handle?.dispose();
+      document.querySelectorAll(".morning-msg").forEach((el) => el.classList.remove("is-in"));
+      if (result.ok) {
+        handle = playBoot(result.boot, {
+          translate,
+          prefix: "morning-boot",
+          mark: "Morning",
+          onFinish: () => document.querySelectorAll(".morning-msg").forEach((el) => el.classList.add("is-in")),
+        });
+      }
+    });
+  </script>
+  <script src="morning.js"></script>
+</body>
+</html>

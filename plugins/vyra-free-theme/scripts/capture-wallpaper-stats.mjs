@@ -7,8 +7,7 @@
 //   desktop hero_band/composer_area 同 y 带映到 x0.175–1.0。
 // 数据源（写死，本脚本自证）：
 //   meirenzhi      assets/meirenzhi/b_meirenzhi_<id>.webp（ADR-0023 外置，6 张）
-//   uefi-harness   assets/uefi-harness/b_uefi-harness_art.webp（1 张）
-//   openbmc-harness src/client/skins/openbmc-harness/background-art.js #BACKGROUND_ART（内联 data URL）
+// uefi-harness 与 openbmc-harness 已随内置主题退役，不再是数据源。
 // 确定性：同机同浏览器重跑输出逐字节一致（fixtures/wallpaper-luminance.json 提交入库；
 //   判据自证：`--check` 对已提交文件重算比对——改任一数值或壁纸字节 → 红（报 sha/数值失配）→ 还原 → 绿）。
 // 用法：node scripts/capture-wallpaper-stats.mjs            # 重算并写 fixture
@@ -49,16 +48,10 @@ async function enumerateWallpapers() {
     const buf = readFileSync(join(mrzDir, f));
     list.push({ key: `meirenzhi:${id}`, source: `assets/meirenzhi/${f}`, bytes: buf });
   }
-  const uefiPath = join(ROOT, "assets", "uefi-harness", "b_uefi-harness_art.webp");
-  if (!existsSync(uefiPath)) throw new Error("fixture source missing: uefi-harness art");
-  list.push({ key: "uefi-harness:art", source: "assets/uefi-harness/b_uefi-harness_art.webp", bytes: readFileSync(uefiPath) });
-  // openbmc：内联 data URL 经模块 import 取真值（拼接串正则易漏段）
-  const { BACKGROUND_ART } = await import(join(ROOT, "src", "client", "skins", "openbmc-harness", "background-art.js"));
-  if (typeof BACKGROUND_ART !== "string" || !BACKGROUND_ART.startsWith("data:image/webp;base64,")) {
-    throw new Error("openbmc BACKGROUND_ART is not an inline webp data URL — script assumption broken, stop");
-  }
-  const b64 = BACKGROUND_ART.slice("data:image/webp;base64,".length);
-  list.push({ key: "openbmc-harness:art", source: "src/client/skins/openbmc-harness/background-art.js#BACKGROUND_ART", bytes: Buffer.from(b64, "base64") });
+  /* uefi-harness and openbmc-harness were retired with the bundled themes, so
+     there is nothing else to enumerate. A fixture that still pins their sha
+     is rebuilt by verify-contrast, which reports the drift rather than
+     silently comparing against a stale hash. */
   list.sort((a, b) => (a.key < b.key ? -1 : 1));
   return list;
 }

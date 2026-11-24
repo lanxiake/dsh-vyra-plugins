@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="instrument">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEXUS · 主题原型</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="hub.css">
+</head>
+<body class="nx hub">
+  <header class="hub__bar">
+    <div class="hub__brand">
+      <svg class="hub__mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2 22 12 12 22 2 12Z" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+      </svg>
+      <span>NEXUS</span>
+    </div>
+
+    <nav class="hub__seg" role="group" aria-label="主题">
+      <button type="button" data-theme-btn="instrument" aria-pressed="true">Instrument</button>
+      <button type="button" data-theme-btn="hologram" aria-pressed="false">Hologram</button>
+      <button type="button" data-theme-btn="terminal" aria-pressed="false">Terminal</button>
+    </nav>
+
+    <div class="hub__actions">
+      <a class="hub__open" id="open-btn" href="demo.html?theme=instrument">打开原型 ↗</a>
+    </div>
+  </header>
+
+  <main class="hub__main">
+    <section class="hub__intro">
+      <h1 id="theme-name">Instrument</h1>
+      <p id="theme-desc"></p>
+      <dl class="hub__facts" id="theme-facts"></dl>
+    </section>
+
+    <section class="hub__stage">
+      <div class="hub__frame">
+        <iframe id="preview" src="demo.html?theme=instrument" title="主题预览"></iframe>
+      </div>
+    </section>
+
+    <section class="hub__cards">
+      <article class="hub__card" data-card="instrument">
+        <h2>Instrument</h2>
+        <p>航天器 HUD。磷绿读数、全大写标签、直角几何、纯色填充。</p>
+        <ul>
+          <li>焦点：读数与灯位</li>
+          <li>动效：精准、短促、线性</li>
+          <li>光标：准星 / 捕获框</li>
+        </ul>
+      </article>
+      <article class="hub__card" data-card="hologram">
+        <h2>Hologram</h2>
+        <p>全息投影。黑曜石玻璃板、青色大气、日冕金作为唯一高光。</p>
+        <ul>
+          <li>焦点：投影与玻璃边缘</li>
+          <li>动效：缓、有余韵、发光</li>
+          <li>光标：柔光透镜</li>
+        </ul>
+      </article>
+      <article class="hub__card" data-card="terminal">
+        <h2>Terminal</h2>
+        <p>进程监视器。磷光琥珀、等宽全局、方角、无缓动。</p>
+        <ul>
+          <li>焦点：提示符与流</li>
+          <li>动效：阶跃、瞬时</li>
+          <li>光标：墨块插入符</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const THEMES = {
+      instrument: {
+        name: "Instrument",
+        desc: "航天器仪表盘。主题把界面理解为一台正在运行的仪器——每一个状态都是一盏灯，每一段标签都是仪表铭牌。",
+        facts: [
+          ["契约", "OpenDesign hud + mission-control"],
+          ["主色", "#00FF41 磷绿"],
+          ["圆角", "2–4px"],
+          ["动效", "阶跃 / 1100ms 轨道"],
+        ],
+      },
+      hologram: {
+        name: "Hologram",
+        desc: "全息投影。黑曜石玻璃板上浮在虚空中，青色是交互通道，日冕金只留给屏幕上最重要的那一下。",
+        facts: [
+          ["契约", "OpenDesign totality-festival"],
+          ["主色", "#BDF4FF 青 / #FFD700 金"],
+          ["圆角", "4–12px"],
+          ["动效", "缓出 / 14s 投影扫描"],
+        ],
+      },
+      terminal: {
+        name: "Terminal",
+        desc: "进程监视器。界面就是 shell 本身：提示符代替按钮，流代替段落，琥珀磷光代替一切装饰。",
+        facts: [
+          ["契约", "OpenDesign mono + voltagent"],
+          ["主色", "#FFB454 琥珀"],
+          ["圆角", "0px 全方角"],
+          ["动效", "无缓动 / 阶跃闪烁"],
+        ],
+      },
+    };
+
+    const html = document.documentElement;
+    const nameEl = document.getElementById("theme-name");
+    const descEl = document.getElementById("theme-desc");
+    const factsEl = document.getElementById("theme-facts");
+    const preview = document.getElementById("preview");
+    const openBtn = document.getElementById("open-btn");
+
+    function apply(theme) {
+      const data = THEMES[theme];
+      if (!data) return;
+      html.dataset.theme = theme;
+      nameEl.textContent = data.name;
+      descEl.textContent = data.desc;
+      factsEl.innerHTML = data.facts
+        .map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`)
+        .join("");
+      preview.src = `demo.html?theme=${theme}`;
+      openBtn.href = `demo.html?theme=${theme}`;
+      for (const btn of document.querySelectorAll("[data-theme-btn]")) {
+        btn.setAttribute("aria-pressed", btn.dataset.themeBtn === theme ? "true" : "false");
+      }
+      for (const card of document.querySelectorAll("[data-card]")) {
+        card.classList.toggle("is-current", card.dataset.card === theme);
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-theme-btn]");
+      if (btn) apply(btn.dataset.themeBtn);
+      const card = event.target.closest("[data-card]");
+      if (card) apply(card.dataset.card);
+    });
+
+    /* Deep link: ?theme=hologram */
+    const initial = new URLSearchParams(location.search).get("theme");
+    apply(THEMES[initial] ? initial : "instrument");
+  </script>
+</body>
+</html>

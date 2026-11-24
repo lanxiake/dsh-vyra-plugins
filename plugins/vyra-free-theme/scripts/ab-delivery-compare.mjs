@@ -46,7 +46,9 @@ if (oldDir === null) {
   process.exit(1);
 }
 
-const SKINS = ["openbmc", "uefi-harness", "meirenzhi"];
+/* meirenzhi is the only compiled-in skin left: openbmc and uefi-harness were
+   retired with the bundled themes, so there is nothing else to compare. */
+const SKINS = ["meirenzhi"];
 const MODES = ["light", "dark"];
 
 // ---- host page (same template for both trees; skin/mode via query) --------
@@ -269,7 +271,9 @@ try {
         // Negative control: wallpaper absent on routed skins → deterministic δ≠0
         // + offline fail-open proof (ADR-0023 Decision 6 / R10 per-skin surface).
         const pixel = pixelDelta(oldCell.screenshot, newCell.screenshot);
-        const routed = skinId !== "openbmc";
+        /* Every remaining skin routes its wallpaper through the host asset route;
+     the old `openbmc` factory skin was the sole inline case and is gone. */
+        const routed = true;
         const deltaNonZero = routed ? pixel.differing > 0 : pixel.differing === 0;
         let failOpenOk = true;
         if (routed) {

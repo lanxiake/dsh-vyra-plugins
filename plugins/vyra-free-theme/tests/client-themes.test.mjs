@@ -51,7 +51,8 @@ test("a served theme becomes a registered skin that projects effects", async () 
     assert.deepEqual(installed, ["nebula"]);
     assert.deepEqual(problems, []);
     assert.ok(listExternalSkinIds().includes("nebula"));
-    assert.equal(getSkinSchema("nebula").fields.length, 3);
+    /* wallpaper, brandTitle, slogan, panelOpacity */
+    assert.equal(getSkinSchema("nebula").fields.length, 4);
 
     const skin = fake.skins.get("nebula");
     const effects = normalizeEffects(skin.project(
@@ -88,12 +89,12 @@ test("one bad theme does not stop the others and is reported", async () => {
   try {
     const { installed, problems } = await installFileThemes({
       runtime: fake, jsx, profile: "web",
-      // "openbmc" collides with a compiled-in skin, so registration throws
-      fetchImpl: catalog([entry("openbmc"), entry("nebula")]),
+      // "meirenzhi" collides with a compiled-in skin, so registration throws
+      fetchImpl: catalog([entry("meirenzhi"), entry("nebula")]),
     });
     assert.deepEqual(installed, ["nebula"]);
     assert.equal(problems.length, 1);
-    assert.equal(problems[0].id, "openbmc");
+    assert.equal(problems[0].id, "meirenzhi");
     assert.equal(problems[0].issues[0].code, "register-failed");
   } finally {
     unregisterExternalSkin("nebula");

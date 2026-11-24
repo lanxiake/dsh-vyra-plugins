@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOIR · Vyra 主题原型</title>
+
+  <!-- Space Grotesk carries the display voice: geometric, tightly tracked. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+  >
+  <link rel="stylesheet" href="noir.css">
+  <link rel="stylesheet" href="boot.css">
+  <style>
+    /* If the font CDN is unreachable the page must not shift: the fallbacks
+       in --noir-font-* are already metric-close sans faces. */
+    body.noir { background: var(--noir-bg); }
+  </style>
+</head>
+<body class="noir">
+  <!-- The pointer light. Behind everything, never intercepts a click. -->
+  <div class="noir-aura" data-aura aria-hidden="true"></div>
+
+  <div class="noir-app">
+    <!-- ============================================================== -->
+    <!-- Sidebar: a ruled index                                          -->
+    <!-- ============================================================== -->
+    <aside class="noir-sidebar">
+      <div class="noir-brand">
+        <svg class="noir-brand__glyph" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 1 15 8 8 15 1 8Z" stroke="currentColor" stroke-width="1"/>
+          <path d="M8 5.4 10.6 8 8 10.6 5.4 8Z" fill="currentColor"/>
+        </svg>
+        <span class="noir-brand__word">Vyra</span>
+      </div>
+
+      <div class="noir-sidebar__scroll" data-session-list>
+        <div class="noir-group">
+          <div class="noir-group__title">今日</div>
+          <button type="button" class="noir-item is-active" data-title="定调：暗场与铜色" aria-current="page">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">定调：暗场与铜色</span>
+            <span class="noir-item__meta">12:41</span>
+          </button>
+          <button type="button" class="noir-item" data-title="把悬停收回到 120ms">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">把悬停收回到 120ms</span>
+            <span class="noir-item__meta">11:08</span>
+          </button>
+          <button type="button" class="noir-item" data-title="侧栏的竖线应该多长">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">侧栏的竖线应该多长</span>
+            <span class="noir-item__meta">10:22</span>
+          </button>
+        </div>
+
+        <div class="noir-group">
+          <div class="noir-group__title">本周</div>
+          <button type="button" class="noir-item" data-title="投影内核的可测试边界">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">投影内核的可测试边界</span>
+            <span class="noir-item__meta">tue</span>
+          </button>
+          <button type="button" class="noir-item" data-title="壁纸的层级与亮度">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">壁纸的层级与亮度</span>
+            <span class="noir-item__meta">mon</span>
+          </button>
+          <button type="button" class="noir-item" data-title="配色评分的阈值">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">配色评分的阈值</span>
+            <span class="noir-item__meta">sun</span>
+          </button>
+        </div>
+
+        <div class="noir-group">
+          <div class="noir-group__title">更早</div>
+          <button type="button" class="noir-item" data-title="vft CLI 的输出约定">
+            <span class="noir-item__pip"></span>
+            <span class="noir-item__label">vft CLI 的输出约定</span>
+            <span class="noir-item__meta">nov</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="noir-sidebar__foot">
+        <button type="button" class="noir-new" data-new-session>
+          <svg class="noir-new__glyph" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span class="noir-new__text">新建会话</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============================================================== -->
+    <!-- Main                                                            -->
+    <!-- ============================================================== -->
+    <main class="noir-main">
+      <header class="noir-topbar">
+        <h1 class="noir-topbar__title" data-thread-title>定调：暗场与铜色</h1>
+        <div class="noir-topbar__actions">
+          <button type="button" class="noir-iconbtn" data-rail-toggle title="收起侧栏" aria-label="收起侧栏">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="2" y="3.2" width="12" height="9.6" rx="1" stroke="currentColor" stroke-width="1.1"/>
+              <path d="M6.2 3.2v9.6" stroke="currentColor" stroke-width="1.1"/>
+            </svg>
+          </button>
+          <button type="button" class="noir-iconbtn" data-replay title="重放回复" aria-label="重放回复">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M3 2.6V5.4h2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="noir-thread" data-thread>
+        <article class="noir-msg noir-msg--user">
+          <div class="noir-msg__who">你</div>
+          <div class="noir-msg__body">参考那种做了很多年的工作室官网：黑场、大字、留白，但别影响我一天几百次的对话。</div>
+        </article>
+
+        <article class="noir-msg">
+          <div class="noir-msg__who">Agent</div>
+          <div class="noir-msg__body">
+            <p>这类页面的质感来自三件事：几乎全黑的底、一个暖色强调、字距收得很紧的大标题。前两件可以直接用，第三件要换对象——对话界面的主角是正文，不是标题。</p>
+            <p>所以标题只在新会话时出现一次。此后整页的视觉重量交给一个 720px 的文本栏，和一条会呼吸的铜色光标。</p>
+            <div class="noir-tool" data-state="done" style="margin-top:14px">
+              <span class="noir-tool__name">write · prototypes/noir/noir.css</span>
+              <span class="noir-tool__state">done</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="noir-msg noir-msg--user">
+          <div class="noir-msg__who">你</div>
+          <div class="noir-msg__body">动效呢？我不想每次划过列表都看到一段表演。</div>
+        </article>
+
+        <article class="noir-msg">
+          <div class="noir-msg__who">Agent</div>
+          <div class="noir-msg__body">
+            <p>列表行只动两个东西：颜色，和前导那条竖线从 0 长到 18px。都在 120ms 内结束，没有位移。</p>
+            <p>真正的表演放在三处：消息第一次进入视口时从下方 10px 落位、思考时那圈 2.4 秒的呼吸光、以及正文逐字出现时的光标。它们都只发生一次。</p>
+            <div class="noir-tool" data-state="done" style="margin-top:14px">
+              <span class="noir-tool__name">run · node --test tests/theme.test.mjs</span>
+              <span class="noir-tool__state">done</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="noir-msg noir-msg--user">
+          <div class="noir-msg__who">你</div>
+          <div class="noir-msg__body">留白呢？官网那种大留白搬过来会太空吗？</div>
+        </article>
+
+        <article class="noir-msg">
+          <div class="noir-msg__who">Agent</div>
+          <div class="noir-msg__body">
+            <p>会。官网的留白是"一屏一个观点"，对话是"一屏十个来回"。所以留白从"段与段之间 200px"缩到"消息之间 34px"，只保留边距上的呼吸。</p>
+            <p>把省下的空间还给了行高：1.68，比常规 1.5 更松，长段落连续阅读时眼睛不容易串行。</p>
+          </div>
+        </article>
+
+        <article class="noir-msg noir-msg--user">
+          <div class="noir-msg__who">你</div>
+          <div class="noir-msg__body">输入区为什么是一条线，而不是框？</div>
+        </article>
+
+        <article class="noir-msg">
+          <div class="noir-msg__who">Agent</div>
+          <div class="noir-msg__body">
+            <p>因为框会切断文本栏的连续性。一条下划线让它看起来像"纸上的最后一行"，而不是嵌在页面里的一个控件。</p>
+            <p>聚焦时线变成铜色并向下渗出一点光——这是整个界面里唯一一处发光，用来告诉你"可以开始打字了"。</p>
+            <div class="noir-tool" data-state="done" style="margin-top:14px">
+              <span class="noir-tool__name">read · prototypes/noir/noir.css</span>
+              <span class="noir-tool__state">done</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="noir-composer">
+        <div class="noir-composer__inner">
+          <div class="noir-composer__field">
+            <textarea data-composer rows="1" placeholder="说点什么…" aria-label="消息"></textarea>
+            <button type="button" class="noir-send" data-send title="发送" aria-label="发送">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M2.5 8h10M8.6 3.6 13 8l-4.4 4.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="noir-composer__meta">
+            <span><span data-count>000</span> chars</span>
+            <span class="noir-composer__spacer"></span>
+            <span>enter 发送 · shift+enter 换行</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="noir-demo">
+    <span>NOIR</span>
+    <span aria-hidden="true">·</span>
+    <button type="button" id="replay-boot" style="font:inherit;letter-spacing:inherit;color:inherit;text-transform:inherit;background:none;border:0;padding:0;cursor:pointer">重播开场</button>
+    <span aria-hidden="true">·</span>
+    <a href="../nexus/index.html">换回 NEXUS 三套 →</a>
+  </div>
+
+  <script type="module">
+    import { normalizeBoot, shouldPlayBoot } from "./boot-model.js";
+    import { playBoot } from "./boot.js";
+
+    /*
+     * The theme's boot declaration. A theme ships this inside theme.json as
+     * a top-level `boot` block; here it is inline so the prototype stays one
+     * file to open.
+     *
+     * Story beats rather than media: this is the case-study grammar applied
+     * to the one moment an app can afford it. Three beats, ~4s total.
+     */
+    const THEME_BOOT = {
+      kind: "story",
+      theme: "dark",
+      fadeMs: 420,
+      skipLabel: { zh: "跳过", en: "Skip" },
+      beats: [
+        {
+          kicker: { zh: "自由主题", en: "Free Theme" },
+          title: { zh: "为安静的工作而设计", en: "Designed for quiet work" },
+          holdMs: 1500,
+        },
+        {
+          kicker: { zh: "暗场 · 铜色 · 呼吸", en: "Dark field · Copper · Breath" },
+          title: { zh: "一条会呼吸的光标", en: "One breathing caret" },
+          holdMs: 1700,
+        },
+        {
+          kicker: { zh: "就绪", en: "Ready" },
+          title: { zh: "开始", en: "Begin" },
+          holdMs: 900,
+        },
+      ],
+    };
+
+    const result = normalizeBoot(THEME_BOOT);
+    if (!result.ok) {
+      console.error("[noir] boot rejected:", result.issues);
+    }
+
+    const translate = (value) =>
+      typeof value === "string" ? value : (value?.zh ?? value?.en ?? "");
+
+    /*
+     * Launch policy. `?boot=1` forces it (useful while designing); otherwise
+     * it plays once per browser, matching `shouldPlayBoot`'s contract.
+     */
+    const params = new URLSearchParams(location.search);
+    const forced = params.get("boot");
+    const seenKey = "noir:boot-seen";
+    const seen = localStorage.getItem(seenKey) === "1" && forced !== "1";
+
+    let handle = null;
+
+    function start() {
+      if (!result.ok) return;
+      const verdict = shouldPlayBoot({ boot: result.boot, seen, deepLink: forced === "0" });
+      if (!verdict.play) return;
+      /* Hold the app's entrance until the splash is gone, so the two do not
+         animate over each other. */
+      document.querySelectorAll(".noir-msg").forEach((el) => el.classList.remove("is-in"));
+      handle = playBoot(result.boot, {
+        translate,
+        onFinish: () => {
+          localStorage.setItem(seenKey, "1");
+          document.querySelectorAll(".noir-msg").forEach((el) => el.classList.add("is-in"));
+        },
+      });
+    }
+
+    start();
+
+    document.getElementById("replay-boot")?.addEventListener("click", () => {
+      handle?.dispose();
+      document.querySelectorAll(".noir-msg").forEach((el) => el.classList.remove("is-in"));
+      if (result.ok) {
+        handle = playBoot(result.boot, {
+          translate,
+          onFinish: () => document.querySelectorAll(".noir-msg").forEach((el) => el.classList.add("is-in")),
+        });
+      }
+    });
+  </script>
+  <script src="noir.js"></script>
+</body>
+</html>

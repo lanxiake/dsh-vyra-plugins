@@ -43,19 +43,16 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(ROOT, "scripts", "fixtures", "wallpaper-luminance.json");
 
 // ---- ② 背景侧：SPEC 现值（Task 3 载体）----
+// openbmc / uefi-harness 已随内置主题退役，只剩 meirenzhi 一个编译皮肤。
 import { SPEC as SPEC_MRZ } from "../src/client/skins/meirenzhi/index.js";
-import { SPEC as SPEC_OBMC } from "../src/client/skins/openbmc-harness/index.js";
-import { SPEC as SPEC_UEFI } from "../src/client/skins/uefi-harness/index.js";
 const SPECS = {
   meirenzhi: SPEC_MRZ,
-  "openbmc-harness": SPEC_OBMC,
-  "uefi-harness": SPEC_UEFI,
 };
 
-// ---- 出厂 P（手抄，catalog.js:83 官方口径；live 已核）----
+// ---- 出厂 P（手抄，catalog.js 官方口径；live 已核）----
 const FACTORY_P = {
-  web: { meirenzhi: 35, "openbmc-harness": 55, "uefi-harness": 55 },
-  desktop: { meirenzhi: 66, "openbmc-harness": 66, "uefi-harness": 66 },
+  web: { meirenzhi: 35 },
+  desktop: { meirenzhi: 66 },
 };
 
 // ---- 分区中心 y（梯度插值）----
@@ -171,7 +168,7 @@ async function main() {
   if (shaFail.length) { console.error("STRUCTURE FAIL: fixture sha drift（壁纸字节已变，重跑 capture-wallpaper-stats.mjs）"); for (const s of shaFail) console.error("  " + s); process.exit(2); }
 
   const rows = [];
-  for (const skin of ["meirenzhi", "openbmc-harness", "uefi-harness"]) {
+  for (const skin of ["meirenzhi"]) {
     const spec = SPECS[skin];
     if (!spec || !spec.riding || !spec.anchor) { console.error(`STRUCTURE FAIL: SPEC incomplete for ${skin}`); process.exit(2); }
     const wallKeys = Object.keys(fixture.wallpapers).filter((k) => k.startsWith(skin + ":"));

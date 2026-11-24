@@ -1,0 +1,235 @@
+/*
+ * NOIR boot sequence — the narrative page, moved to where it belongs.
+ *
+ * A case-study page earns its 100vw hero because a visitor chose to arrive.
+ * An app cannot spend that on the console, which is used constantly. But it
+ * CAN spend it once, on launch, while the user is already waiting for the
+ * client to come up. So the studio-site grammar lives here:
+ *
+ *   - one line of display type per beat, huge, tightly tracked
+ *   - a tiny kicked label above it, wide-tracked uppercase
+ *   - a hairline that draws itself under the line
+ *   - 2-3 beats, then a fade to the app
+ *
+ * It is skippable from frame 0 and never plays twice.
+ */
+
+.noir-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--noir-bg, #08090b);
+  /* The same warm wash the app carries, so the transition is a reveal of the
+     interface under the same light — not a cut to a different room. */
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 42%, rgba(200, 164, 92, 0.09), transparent 68%);
+  opacity: 1;
+  transition: opacity var(--noir-boot-fade, 420ms) cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.noir-boot.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The stage holds the beats; they stack so cross-fades do not reflow. */
+.noir-boot__stage {
+  position: relative;
+  width: min(92vw, 1080px);
+  min-height: 34vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* ---- one beat ------------------------------------------------------- */
+.noir-boot__beat {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  opacity: 0;
+  /* Travel is small: 12px. A hero that flies in reads as a template; one
+     that settles reads as a title. */
+  transform: translateY(12px);
+  transition:
+    opacity 520ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 520ms cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: opacity, transform;
+}
+
+.noir-boot__beat.is-live {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Kicked label — the "coordinates" register from the studio sites. */
+.noir-boot__kicker {
+  font-family: var(--noir-font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--noir-copper, #c8a45c);
+  /* The kicker is the beat's accent moment: one per beat, never more. */
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 380ms cubic-bezier(0.23, 1, 0.32, 1) 80ms,
+    transform 380ms cubic-bezier(0.23, 1, 0.32, 1) 80ms;
+}
+
+.noir-boot__beat.is-live .noir-boot__kicker {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Display line: huge, tight, warm off-white. */
+.noir-boot__title {
+  font-family: var(--noir-font-display, sans-serif);
+  font-size: clamp(30px, 4.6vw, 62px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.028em;
+  color: var(--noir-fg, #e8e4dc);
+  max-width: 20ch;
+  margin: 0;
+}
+
+/* The rule draws itself left-to-right under the line. 1px, copper, 64px. */
+.noir-boot__rule {
+  width: 64px;
+  height: 1px;
+  background: var(--noir-copper, #c8a45c);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 620ms cubic-bezier(0.23, 1, 0.32, 1) 160ms;
+}
+
+.noir-boot__beat.is-live .noir-boot__rule {
+  transform: scaleX(1);
+}
+
+/* ---- chrome --------------------------------------------------------- */
+/* A wordmark that stays through every beat, so the sequence has a host. */
+.noir-boot__mark {
+  position: absolute;
+  left: 50%;
+  top: 12vh;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--noir-font-display, sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--noir-fg-mute, #9c9890);
+}
+
+.noir-boot__mark svg {
+  width: 14px;
+  height: 14px;
+  color: var(--noir-copper, #c8a45c);
+}
+
+/* Progress: a hairline across the bottom that fills over the whole run. */
+.noir-boot__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(232, 228, 220, 0.06);
+}
+
+.noir-boot__progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--noir-copper, #c8a45c);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Skip: always visible, never a button you have to hunt for. */
+.noir-boot__skip {
+  position: absolute;
+  right: 28px;
+  bottom: 26px;
+  padding: 6px 12px;
+  font-family: var(--noir-font-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--noir-fg-dim, #5d5b56);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: color 130ms cubic-bezier(0.23, 1, 0.32, 1), border-color 130ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .noir-boot__skip:hover {
+    color: var(--noir-fg, #e8e4dc);
+    border-color: rgba(232, 228, 220, 0.14);
+  }
+}
+
+/* ---- reduced motion: one held frame, no travel, no cross-fade -------- */
+@media (prefers-reduced-motion: reduce) {
+  .noir-boot,
+  .noir-boot__beat,
+  .noir-boot__kicker,
+  .noir-boot__rule {
+    transition: none !important;
+  }
+  .noir-boot__beat {
+    transform: none;
+  }
+}
+
+/* ---- media kinds (image / video / animated / code) ------------------ */
+/*
+ * When the theme supplies media instead of story beats, the same frame is
+ * used but the stage becomes the media plane and the wordmark/skip stay. The
+ * media is always `object-fit: cover` and always behind the chrome.
+ */
+.noir-boot__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.noir-boot__media img,
+.noir-boot__media video,
+.noir-boot__media iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}
+
+/* A scrim so a bright frame cannot fight the wordmark and the skip label. */
+.noir-boot__media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 45%, transparent 30%, rgba(8, 9, 11, 0.66) 100%),
+    linear-gradient(to bottom, rgba(8, 9, 11, 0.55), transparent 28%, transparent 72%, rgba(8, 9, 11, 0.72));
+}
+
+.noir-boot__mark,
+.noir-boot__skip,
+.noir-boot__progress {
+  z-index: 2;
+}

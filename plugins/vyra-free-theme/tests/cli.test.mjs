@@ -43,9 +43,12 @@ test("list reports bundled themes and presets, with no selection yet", async () 
   assert.equal(exitCode, 0);
   assert.equal(payload.active, null);
   const ids = payload.themes.map((theme) => `${theme.kind}:${theme.id}`);
-  assert.ok(ids.includes("builtin:nebula"));
-  assert.ok(ids.includes("builtin:ink-landscape"));
+  /* The five bundled themes were retired, so `builtin:*` entries are gone by
+     design. The presets are what remains, and they must still list cleanly. */
+  assert.equal(ids.filter((id) => id.startsWith("builtin:")).length, 0,
+    "no bundled themes should remain after retirement");
   assert.ok(ids.includes("preset:mono"));
+  assert.ok(ids.length >= 6, "the colour presets must still enumerate");
   for (const theme of payload.themes) {
     assert.equal(theme.error, undefined, JSON.stringify(theme));
     assert.equal(theme.pass, true, `${theme.id} should pass the colour gate`);
@@ -66,9 +69,11 @@ test("create copies a preset into the user directory and validates it", async ()
   assert.equal(again.exitCode, 3, "creating over an existing id must need confirmation");
 });
 
-test("built-in themes are read-only for mutations", async () => {
+test("read-only sources are still protected from mutation", async () => {
   const home = sandbox();
-  const result = await vft(home, "sidebar", "set", "nebula", "obsidian");
+  /* There are no bundled themes to mutate any more, so the guard is exercised
+     through the presets, which carry the same read-only contract. */
+  const result = await vft(home, "sidebar", "set", "mono", "obsidian");
   assert.equal(result.exitCode, 3);
   assert.match(result.payload.error, /只读/);
 });
@@ -196,7 +201,9 @@ test("unknown commands, missing prompts and blocked video generation report clea
   const video = await vft(home, "wallpaper", "video", "x");
   assert.equal(video.exitCode, 1);
   assert.match(video.payload.error, /找不到主题/);
-  const noImage = await vft(home, "theme", "create", "--from", "nebula", "--id", "vid");
+  /* `mono` seeds a theme with no wallpaper image, which is all this step
+     needs; the bundled themes it used to copy from are gone. */
+  const noImage = await vft(home, "theme", "create", "--from", "mono", "--id", "vid");
   assert.equal(noImage.exitCode, 0, JSON.stringify(noImage.payload));
   const videoNoImage = await vft(home, "wallpaper", "video", "vid");
   assert.equal(videoNoImage.exitCode, 1);

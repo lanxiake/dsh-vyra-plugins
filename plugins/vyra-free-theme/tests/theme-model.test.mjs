@@ -102,7 +102,9 @@ test("fields mirror the compiled-in field catalog", () => {
     brand: { slogans: { zh: "于无声处", en: "Where silence speaks" } },
   }));
   const web = fieldsFromTheme(theme, "web");
-  assert.deepEqual(web.map((field) => field.key), ["wallpaper", "slogan", "panelOpacity"]);
+  /* brandTitle was added so the panel can rename the brand; it sits between
+     the wallpaper and the slogan, matching the panel's visual order. */
+  assert.deepEqual(web.map((field) => field.key), ["wallpaper", "brandTitle", "slogan", "panelOpacity"]);
   assert.deepEqual(web.find((f) => f.key === "slogan").default, { zh: "于无声处", en: "Where silence speaks" });
   assert.equal(web.find((f) => f.key === "panelOpacity").default, 40);
   assert.equal(fieldsFromTheme(theme, "desktop").find((f) => f.key === "panelOpacity").default, 70);

@@ -26,7 +26,7 @@
  *   --out <dir>    explicit output override; full captures default to
  *                  docs/assets, while --gate defaults to the versioned,
  *                  gitignored .artifacts/release-gates/v<package version>
- *   --skin <id>    default openbmc (output names follow the skin id)
+ *   --skin <id>    default meirenzhi (output names follow the skin id)
  *   --gate         run the semi-automated release-gate assertions and exit
  */
 import { chromium } from "playwright-core";
@@ -43,7 +43,7 @@ const option = (name, fallback) => {
 };
 
 const baseUrl = option("--url", "http://127.0.0.1:3080");
-const skin = option("--skin", "openbmc");
+const skin = option("--skin", "meirenzhi");
 const probe = flag("--probe");
 const gate = flag("--gate");
 const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
@@ -306,8 +306,7 @@ if (gate) {
   // catalog default (complete map — every --skin target is covered).
   const FACTORY_SLOGANS_ZH = {
     meirenzhi: "风起凡尘 · 红颜问道",
-    openbmc: "察于未萌 · 治于未乱",
-    "uefi-harness": "启于固件 · 行于万象",
+    /* openbmc and uefi-harness were retired; their slogans went with them. */
   };
   const openPanel = async () => {
     await openSwitcher(gpage);

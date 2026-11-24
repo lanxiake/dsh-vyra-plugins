@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeTheme } from "../src/shared/personalization/theme-model.js";
@@ -10,6 +10,11 @@ const PRESETS_DIR = fileURLToPath(new URL("../presets/colors/", import.meta.url)
 const THEMES_DIR = fileURLToPath(new URL("../themes/", import.meta.url));
 
 function ids(dir) {
+  /* `themes/` no longer exists: all five bundled themes were retired, and git
+     drops a directory once its last file goes. Returning an empty list keeps
+     this gate working for any theme added later instead of failing on the
+     absence of the folder. */
+  if (!existsSync(dir)) return [];
   return readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);

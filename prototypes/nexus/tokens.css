@@ -1,0 +1,252 @@
+/*
+ * NEXUS interaction tokens — the shared skeleton for all three skins.
+ *
+ * Every skin overrides the *values* here, never the *semantics*, so a
+ * comparison between Instrument / Hologram / Terminal is a fair one: the same
+ * hover fires at the same moment in all three, only the paint differs.
+ *
+ * Frequency gate (from the `animate` skill's build sequence; the reference is
+ * Emil Kowalski's guidance, cross-checked with Rauno's "Frequency & Novelty"):
+ *
+ *   100+/day  (hover, press, row switch)  -> near-imperceptible or nothing
+ *   tens/day  (panels, ripples)           -> standard, < 300ms
+ *   rare      (agent states, new session) -> the delight budget lives here
+ *
+ * Curves are taken from the reference table, never hand-rolled:
+ *   --nx-e-out      cubic-bezier(0.23, 1, 0.32, 1)   strong UI ease-out
+ *   --nx-e-inout    cubic-bezier(0.77, 0, 0.175, 1)  on-screen movement
+ *   --nx-e-press    cubic-bezier(0.32, 0.72, 0, 1)   iOS-like press/drawer
+ *
+ * `ease-in` is deliberately absent: it starts slow and delays the exact frame
+ * the user is watching, which reads as lag in every interaction below.
+ */
+
+:root {
+  /* ---- motion durations ---------------------------------------------- */
+  --nx-t-instant: 100ms; /* press feedback — must land inside 100-160ms */
+  --nx-t-fast: 130ms;    /* hover / colour — near-imperceptible tier */
+  --nx-t-mid: 180ms;     /* panels, ripples — standard tier */
+  --nx-t-slow: 260ms;    /* page-level transitions — still under 300ms */
+
+  /* ---- easing -------------------------------------------------------- */
+  --nx-e-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --nx-e-inout: cubic-bezier(0.77, 0, 0.175, 1);
+  --nx-e-press: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Constant motion only: the thinking orbit, a scan line mid-sweep. */
+  --nx-e-linear: linear;
+
+  /* ---- geometry ------------------------------------------------------ */
+  --nx-r-sm: 3px;
+  --nx-r-md: 6px;
+  --nx-r-lg: 10px;
+  --nx-bracket: 7px;   /* arm length of the corner bracket */
+  --nx-bracket-w: 1px; /* stroke width of the bracket */
+
+  /* ---- layer --------------------------------------------------------- */
+  --nx-z-bg: 0;
+  --nx-z-grid: 1;
+  --nx-z-content: 10;
+  --nx-z-overlay: 100;
+
+  /* Decorative amplitude. `balanced` = 1; a skin may raise it, and the user
+     can turn it down. Multiplied into every scale/travel value below. */
+  --nx-int: 1;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reduced motion: gentler, not zero. Colour and border transitions stay   */
+/* (they carry state); travel and scale collapse (they carry nothing the   */
+/* user cannot get from the colour). WCAG 2.3.3 AAA, technique C39.       */
+/* ---------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --nx-t-instant: 1ms;
+    --nx-t-fast: 1ms;
+    --nx-t-mid: 1ms;
+    --nx-t-slow: 1ms;
+    --nx-int: 0;
+  }
+
+  .nx-pulse,
+  .nx-scanline {
+    display: none !important;
+  }
+
+  /* The orbit is the one looping animation with no colour-only equivalent:
+     keep a static ring so "thinking" is still legible, drop the rotation. */
+  .nx-orbit::before,
+  .nx-orbit::after,
+  .nx-orbit__core {
+    animation: none !important;
+    opacity: 0.85;
+  }
+}
+
+/* ====================================================================== */
+/* Reset / base                                                            */
+/* ====================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body.nx {
+  font-family: var(--nx-font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--nx-fg);
+  background: var(--nx-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* ====================================================================== */
+/* Cursor set — CSS cursors only. A JS-followed cursor costs a frame of    */
+/* latency, which reads as "sticky" in exactly the high-frequency actions  */
+/* these skins care about most. Each skin swaps these three SVGs.          */
+/* ====================================================================== */
+body.nx {
+  cursor: var(--nx-cursor-default);
+}
+
+.nx-clickable,
+button,
+a,
+[role="button"] {
+  cursor: var(--nx-cursor-pointer);
+}
+
+textarea,
+input {
+  cursor: var(--nx-cursor-text);
+}
+
+/* ====================================================================== */
+/* Corner brackets — the one piece of always-on decoration.               */
+/* Drawn on the element's own overlay so they cannot shift layout, and    */
+/* two strokes is all they cost to paint.                                  */
+/* ====================================================================== */
+.nx-bracket-host {
+  position: relative;
+}
+
+.nx-bracket-host::before,
+.nx-bracket-host::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--nx-t-fast) var(--nx-e-out);
+}
+
+/* top-left arm */
+.nx-bracket-host::before {
+  border-top: var(--nx-bracket-w) solid var(--nx-accent);
+  border-left: var(--nx-bracket-w) solid var(--nx-accent);
+  clip-path: polygon(
+    0 0,
+    var(--nx-bracket) 0,
+    var(--nx-bracket) var(--nx-bracket-w),
+    var(--nx-bracket-w) var(--nx-bracket-w),
+    var(--nx-bracket-w) var(--nx-bracket),
+    0 var(--nx-bracket)
+  );
+}
+
+/* bottom-right arm — asymmetric on purpose: a HUD bracket, not a box */
+.nx-bracket-host::after {
+  border-bottom: var(--nx-bracket-w) solid var(--nx-accent);
+  border-right: var(--nx-bracket-w) solid var(--nx-accent);
+  clip-path: polygon(
+    100% 100%,
+    calc(100% - var(--nx-bracket)) 100%,
+    calc(100% - var(--nx-bracket)) calc(100% - var(--nx-bracket-w)),
+    calc(100% - var(--nx-bracket-w)) calc(100% - var(--nx-bracket-w)),
+    calc(100% - var(--nx-bracket-w)) calc(100% - var(--nx-bracket)),
+    100% calc(100% - var(--nx-bracket))
+  );
+}
+
+/* Hover motion is gated: a touch device fires :hover on tap and would leave
+   brackets stuck on. Focus and the active class are not gated, because they
+   are the state, not an effect. */
+@media (hover: hover) and (pointer: fine) {
+  .nx-bracket-host:hover::before,
+  .nx-bracket-host:hover::after {
+    opacity: 1;
+  }
+}
+
+.nx-bracket-host.is-active::before,
+.nx-bracket-host.is-active::after,
+.nx-bracket-host:focus-visible::before,
+.nx-bracket-host:focus-visible::after {
+  opacity: 1;
+}
+
+/* ====================================================================== */
+/* Press feedback — starts on pointerdown, not pointerup. 100ms down,     */
+/* iOS-like curve back on release. Shared by every skin.                  */
+/* ====================================================================== */
+.nx-press {
+  transition: transform var(--nx-t-instant) var(--nx-e-press);
+  will-change: transform;
+}
+
+.nx-press.is-pressed {
+  transform: scale(calc(1 - 0.03 * var(--nx-int)));
+}
+
+/* ====================================================================== */
+/* Pulse ring — one-shot, spawned at the pointer's coordinates.           */
+/* Fixed-position and removed on animationend, so no layout is touched.   */
+/* ====================================================================== */
+.nx-pulse {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--nx-accent);
+  pointer-events: none;
+  z-index: var(--nx-z-overlay);
+  animation: nx-pulse-out var(--nx-t-slow) var(--nx-e-out) forwards;
+}
+
+@keyframes nx-pulse-out {
+  from {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(calc(4.5 * var(--nx-int)));
+  }
+}
+
+/* ====================================================================== */
+/* Focus ring — visible for keyboard users on every skin.                 */
+/* ====================================================================== */
+.nx :focus-visible {
+  outline: 1px solid var(--nx-accent);
+  outline-offset: 2px;
+}

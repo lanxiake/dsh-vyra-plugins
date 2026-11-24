@@ -39,7 +39,8 @@ test("discovers valid themes and registers them in the shared catalog", () => {
     assert.equal(result.themes[0].source, "builtin");
     assert.deepEqual(result.problems, []);
     assert.ok(listExternalSkinIds().includes("nebula"));
-    assert.equal(getSkinSchema("nebula").fields.length, 3);
+    /* wallpaper, brandTitle, slogan, panelOpacity */
+    assert.equal(getSkinSchema("nebula").fields.length, 4);
   } finally {
     unregisterExternalSkin("nebula");
     rmSync(builtin, { recursive: true, force: true });

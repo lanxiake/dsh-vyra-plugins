@@ -1,0 +1,270 @@
+/*
+ * MORNING boot — "the light comes in".
+ *
+ * The sequence is not a title card. It is a sunrise: a warm band of light
+ * rises from the bottom of the screen, the type appears inside it, and then
+ * the light recedes to become the wash the app itself sits in. The app is
+ * underneath the whole time, so the transition reads as "the room got
+ * brighter" rather than "a page went away".
+ *
+ * Three beats, ~4.6s, skippable from frame 0.
+ *
+ * Copy rules, which matter more here than in any other skin:
+ *   - no numbers, no counts, no "3 items due"
+ *   - no motivational slogans ("你行的！" is a demand)
+ *   - one idea per beat, phrased as permission rather than instruction
+ *   - the last beat offers the smallest possible next step
+ */
+
+.morning-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  /* Starts on the app's own paper, so there is never a white flash. */
+  background: #fbf8f2;
+  transition: opacity var(--morning-boot-fade, 520ms) cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.morning-boot.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- the rising light ------------------------------------------------ */
+/*
+ * A wide elliptical glow that starts below the fold and rises to the middle
+ * while warming. Driven by a CSS animation on transform+opacity only, so it
+ * runs off the main thread and cannot jank against the app's own paint.
+ *
+ * Rendered as the overlay's own pseudo-element rather than an injected node,
+ * so the shared runtime stays skin-agnostic.
+ */
+.morning-boot::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -62vh;
+  width: 190vmax;
+  height: 150vmax;
+  margin-left: -95vmax;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 214, 150, 0.95) 0%,
+    rgba(247, 186, 118, 0.62) 22%,
+    rgba(242, 199, 160, 0.28) 42%,
+    transparent 66%
+  );
+  filter: blur(6px);
+  animation: morning-dawn-rise 3600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* A soft horizon line where the light meets the dark of the room. */
+.morning-boot::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(232, 163, 61, 0.30) 22%,
+    rgba(232, 163, 61, 0.42) 50%,
+    rgba(232, 163, 61, 0.30) 78%,
+    transparent
+  );
+  opacity: 0;
+  animation: morning-horizon 2800ms cubic-bezier(0.22, 1, 0.36, 1) 600ms forwards;
+}
+
+@keyframes morning-horizon {
+  from {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes morning-dawn-rise {
+  from {
+    transform: translateY(0) scale(0.86);
+    opacity: 0;
+  }
+  32% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-34vh) scale(1.04);
+    opacity: 1;
+  }
+}
+
+/* ---- the type -------------------------------------------------------- */
+.morning-boot__stage {
+  position: relative;
+  z-index: 2;
+  width: min(90vw, 900px);
+  min-height: 30vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.morning-boot__beat {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  opacity: 0;
+  /* Rises with the light: 14px, slower than the dark skins' 12px, because
+     a tired eye tracks slow movement more comfortably. */
+  transform: translateY(14px);
+  transition:
+    opacity 760ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 760ms cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: opacity, transform;
+}
+
+.morning-boot__beat.is-live {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.morning-boot__kicker {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #b8862f;
+  opacity: 0;
+  transition: opacity 520ms cubic-bezier(0.23, 1, 0.32, 1) 120ms;
+}
+
+.morning-boot__beat.is-live .morning-boot__kicker {
+  opacity: 1;
+}
+
+/*
+ * Display line. Larger and lighter than the dark skins: a heavy weight on a
+ * light field at 8am is pressure. 400 weight at 62px reads as a greeting.
+ */
+.morning-boot__title {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--morning-font-display, "Space Grotesk", sans-serif);
+  font-size: clamp(28px, 4.2vw, 56px);
+  font-weight: 400;
+  line-height: 1.22;
+  letter-spacing: -0.022em;
+  color: #2e2a26;
+  /* A very slight warm shadow lifts the type off the glow without a halo. */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* A small sun glyph above the first beat, drawn rather than declared. */
+.morning-boot__sun {
+  width: 26px;
+  height: 26px;
+  color: #e8a33d;
+  opacity: 0;
+  transform: scale(0.8) translateY(6px);
+  transition:
+    opacity 700ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 900ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.morning-boot__beat.is-live .morning-boot__sun {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* ---- chrome ---------------------------------------------------------- */
+.morning-boot__skip {
+  position: absolute;
+  right: 26px;
+  bottom: 24px;
+  z-index: 3;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #9a9188;
+  border: 1px solid transparent;
+  transition:
+    color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .morning-boot__skip:hover {
+    color: #2e2a26;
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(46, 42, 38, 0.10);
+  }
+}
+
+/* ---- reduced motion: no rise, no travel, one held frame per beat ----- */
+@media (prefers-reduced-motion: reduce) {
+  .morning-boot,
+  .morning-boot__beat,
+  .morning-boot__kicker,
+  .morning-boot__sun {
+    transition: none !important;
+  }
+  .morning-boot__beat {
+    transform: none;
+  }
+  .morning-boot::before {
+    animation: none;
+    opacity: 1;
+    transform: translateY(-24vh) scale(1);
+  }
+  .morning-boot::after {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- media kinds: an image/video sitting inside the same dawn -------- */
+.morning-boot__media {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.morning-boot__media img,
+.morning-boot__media video,
+.morning-boot__media iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}
+
+/* A warm scrim keeps the copy legible over any photograph of a morning,
+   and keeps the skin's palette even when the photo's is different. */
+.morning-boot__media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 65% 55% at 50% 55%, rgba(251, 248, 242, 0.88) 0%, rgba(251, 248, 242, 0.55) 46%, rgba(251, 248, 242, 0.18) 78%);
+}

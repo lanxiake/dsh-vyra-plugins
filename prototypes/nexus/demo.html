@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="instrument">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEXUS · 原型</title>
+
+  <!-- One skin is selected per load; the three files are mutually exclusive
+       so no two sets of tokens are ever live at once. -->
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" id="skin" href="skin-instrument.css">
+
+  <script>
+    /* Applied before first paint so the frame never flashes the default skin. */
+    (function () {
+      const theme = new URLSearchParams(location.search).get("theme") || "instrument";
+      const allowed = ["instrument", "hologram", "terminal"];
+      const resolved = allowed.includes(theme) ? theme : "instrument";
+      document.documentElement.dataset.theme = resolved;
+      document.getElementById("skin").href = "skin-" + resolved + ".css";
+    })();
+  </script>
+</head>
+<body class="nx">
+  <div class="nx-app">
+    <!-- ============================================================ -->
+    <!-- Sidebar                                                       -->
+    <!-- ============================================================ -->
+    <aside class="nx-sidebar">
+      <div class="nx-sidebar__brand">
+        <svg class="nx-sidebar__mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2 22 12 12 22 2 12Z" stroke="currentColor" stroke-width="1.3"/>
+          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+        </svg>
+        <span class="nx-sidebar__title">NEXUS</span>
+      </div>
+
+      <div class="nx-sidebar__scroll" data-session-list>
+        <div class="nx-group">
+          <div class="nx-group__label">今天</div>
+          <button type="button" class="nx-item is-active" data-title="主题交互体系设计" aria-current="page">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">主题交互体系设计</span>
+            <span class="nx-item__meta">12:04</span>
+          </button>
+          <button type="button" class="nx-item" data-title="修复流式输出的光标抖动">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">修复流式输出的光标抖动</span>
+            <span class="nx-item__meta">11:20</span>
+          </button>
+          <button type="button" class="nx-item" data-title="审查 vyra-free-theme 的投影内核">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">审查 vyra-free-theme 的投影内核</span>
+            <span class="nx-item__meta">10:41</span>
+          </button>
+        </div>
+
+        <div class="nx-group">
+          <div class="nx-group__label">昨天</div>
+          <button type="button" class="nx-item" data-title="插件市场的索引源同步">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">插件市场的索引源同步</span>
+            <span class="nx-item__meta">18:02</span>
+          </button>
+          <button type="button" class="nx-item" data-title="为 sidebar 增加分组折叠">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">为 sidebar 增加分组折叠</span>
+            <span class="nx-item__meta">16:55</span>
+          </button>
+          <button type="button" class="nx-item" data-title="比对三套配色的对比度">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">比对三套配色的对比度</span>
+            <span class="nx-item__meta">15:30</span>
+          </button>
+        </div>
+
+        <div class="nx-group">
+          <div class="nx-group__label">更早</div>
+          <button type="button" class="nx-item" data-title="vft CLI 的 --json 输出约定">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">vft CLI 的 --json 输出约定</span>
+            <span class="nx-item__meta">周一</span>
+          </button>
+          <button type="button" class="nx-item" data-title="壁纸生成器的图层顺序">
+            <span class="nx-item__dot"></span>
+            <span class="nx-item__label">壁纸生成器的图层顺序</span>
+            <span class="nx-item__meta">周日</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="nx-sidebar__footer">
+        <button type="button" class="nx-new nx-press nx-bracket-host" data-new-session>
+          <svg class="nx-new__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <span class="nx-new__label">新建会话</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============================================================ -->
+    <!-- Main                                                          -->
+    <!-- ============================================================ -->
+    <main class="nx-main">
+      <div class="nx-main__bar">
+        <span class="nx-main__title" data-thread-title>主题交互体系设计</span>
+        <div class="nx-main__tools">
+          <button type="button" class="nx-iconbtn nx-press" data-rail-toggle title="切换侧栏宽度" aria-label="切换侧栏宽度">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M6 3v10" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+          </button>
+          <button type="button" class="nx-iconbtn nx-press" data-replay title="回放一次回复" aria-label="回放一次回复">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3 8a5 5 0 1 0 1.6-3.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M3 2v3h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="nx-thread" data-thread>
+        <article class="nx-msg nx-msg--user">
+          <div class="nx-msg__who">你</div>
+          <div class="nx-msg__body">把侧栏、对话和按钮统一成一套仪器语言，动效只在等待时出现。</div>
+        </article>
+
+        <article class="nx-msg nx-bracket-host is-active">
+          <div class="nx-msg__who">AGENT</div>
+          <div class="nx-msg__body">
+            <p>已经落成三条约束：状态用灯位表达、层级用对齐表达、动效只服务等待。高频操作保持瞬时，低频时刻承担整个界面的「酷」。</p>
+            <div class="nx-tool" data-state="done" style="margin-top:10px">
+              <span class="nx-tool__node"></span>
+              <span class="nx-tool__name">write_file · prototypes/nexus/tokens.css</span>
+              <span class="nx-tool__lamp"></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="nx-msg nx-msg--user">
+          <div class="nx-msg__who">你</div>
+          <div class="nx-msg__body">悬停和点击呢？我不想每次划过列表都看到一段动画。</div>
+        </article>
+
+        <article class="nx-msg">
+          <div class="nx-msg__who">AGENT</div>
+          <div class="nx-msg__body">
+            <p>列表行只改底色与前景色，130ms 收束，不做位移也不做缩放——这两样在每天几百次的操作里会被读成卡顿。确认感改由按下时的 3% 收缩和一次脉冲环承担。</p>
+            <div class="nx-tool" data-state="done" style="margin-top:10px">
+              <span class="nx-tool__node"></span>
+              <span class="nx-tool__name">read_file · sidebar-theme.js</span>
+              <span class="nx-tool__lamp"></span>
+            </div>
+            <div class="nx-tool" data-state="running" style="margin-top:6px">
+              <span class="nx-tool__node"></span>
+              <span class="nx-tool__name">run · node --test tests/sidebar.test.mjs</span>
+              <span class="nx-tool__lamp"></span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="nx-composer">
+        <div class="nx-composer__box nx-bracket-host">
+          <textarea data-composer rows="1" placeholder="描述你想调整的交互…" aria-label="消息"></textarea>
+          <button type="button" class="nx-iconbtn nx-press" data-send title="发送" aria-label="发送">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2 8h11M9 3.5 13.5 8 9 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="nx-ruler" data-ruler aria-hidden="true"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- Demo chrome: motion intensity is the safety valve from the      -->
+  <!-- design — one number, multiplied into every amplitude.           -->
+  <!-- ============================================================== -->
+  <div class="nx-demo">
+    <span>强度</span>
+    <div class="nx-demo__seg" role="group" aria-label="动效强度">
+      <button type="button" data-nx-intensity="subtle" aria-pressed="false">微弱</button>
+      <button type="button" data-nx-intensity="balanced" aria-pressed="true">均衡</button>
+      <button type="button" data-nx-intensity="vivid" aria-pressed="false">强烈</button>
+    </div>
+    <span class="nx-demo__sep"></span>
+    <a href="index.html">← 换主题</a>
+  </div>
+
+  <script src="runtime.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

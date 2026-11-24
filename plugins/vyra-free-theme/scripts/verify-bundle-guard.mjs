@@ -12,16 +12,15 @@
  *   1. lib/client.js ≤ 351,737 (= 331,257 measured at the 1.5.22 externalized
  *      build + 20,480 accidental-growth slack; ratchet down with future
  *      shrinkage, never up for asset reasons — assets belong in assets/).
- *   2. No single line may exceed 150,000 bytes (the inline openbmc art line
- *      is ~139,458; a mega-string regression trips this before the ceiling).
+ *   2. No single line may exceed 150,000 bytes (a mega-string regression
+ *      trips this before the ceiling; the old inline openbmc art line was
+ *      ~139,458, which is where the number comes from).
  *   3. assets/manifest.json drift checks: unique entries, files exist and
  *      match their declared bytes, per-file sha256 recomputed over the actual
  *      bytes (content-level — same-length tampering is detectable), single
  *      file ≤ 640,000, meirenzhi total ≤ 2,300,000 (plan-B guardrails,
- *      values inherited verbatim from build-meirenzhi-wallpapers.mjs), the
- *      uefi art pinned to the literal golden below (three-way: recomputed vs
- *      manifest vs this literal), and no factory-skin (openbmc) entries —
- *      the factory skin's default art stays inline (ADR-0023 Decision 2).
+ *      values inherited verbatim from build-meirenzhi-wallpapers.mjs), and no
+ *      entries for a retired skin (openbmc / uefi-harness).
  */
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
@@ -34,10 +33,8 @@ const MAX_CLIENT_BYTES = 351_737;
 const MAX_LINE_BYTES = 150_000;
 const MAX_SINGLE_WEBP_BYTES = 640_000;
 const MAX_MEIRENZHI_TOTAL_BYTES = 2_300_000;
-// Golden pin for the one hand-migrated asset (Task 4 of the ADR-0023 plan):
-// lives HERE, in guard source — a manifest-vs-manifest comparison would be
-// tautological.
-const UEFI_ART_SHA256 = "5b4509ce32e5f7b90a1e8456ed1f8aee257c1b629d23b05b6d8d3129b97ce006";
+/* The uefi-harness golden pin was removed with that skin. No hand-migrated
+   asset remains outside the manifest's own byte/sha checks. */
 
 const problems = [];
 
@@ -69,8 +66,10 @@ for (const entry of manifest.entries ?? []) {
     continue;
   }
   seen.add(id);
-  if (entry.skinId === "openbmc") {
-    problems.push(`manifest: factory-skin entry ${id} must stay inline (ADR-0023 Decision 2)`);
+  /* openbmc and uefi-harness were retired with the bundled themes; a manifest
+     that still lists them is stale and must be rebuilt, not silently kept. */
+  if (entry.skinId === "openbmc" || entry.skinId === "uefi-harness") {
+    problems.push(`manifest: ${id} belongs to a retired skin (openbmc / uefi-harness were removed)`);
   }
   let buffer;
   try {
@@ -92,16 +91,13 @@ for (const entry of manifest.entries ?? []) {
   if (entry.skinId === "meirenzhi") {
     totals.set(entry.skinId, (totals.get(entry.skinId) ?? 0) + entry.bytes);
   }
-  if (id === "uefi-harness:art" && sha256 !== UEFI_ART_SHA256) {
-    problems.push(`manifest: uefi art sha256 ${sha256} !== golden pin ${UEFI_ART_SHA256}`);
-  }
 }
+
+/* The former golden pin for uefi-harness:art is gone with that skin; the
+   manifest's own per-entry byte and sha checks still cover every asset. */
 const mrzTotal = totals.get("meirenzhi") ?? 0;
 if (mrzTotal > MAX_MEIRENZHI_TOTAL_BYTES) {
   problems.push(`manifest: meirenzhi total ${mrzTotal} exceeds the ${MAX_MEIRENZHI_TOTAL_BYTES}-byte guard`);
-}
-if (!seen.has("uefi-harness:art")) {
-  problems.push("manifest: uefi-harness:art entry missing (golden pin has nothing to guard)");
 }
 
 // Asset-rev gate (2026-11-01 Beat 1, folded back onto the ADR-0023 guard
@@ -134,9 +130,8 @@ const walkAssets = (dir) => {
     const full = join(dir, dirent.name);
     if (dirent.isDirectory()) walkAssets(full);
     else if (BUILTIN_FILE_PATTERN.test(dirent.name)) {
-      const factory = dirent.name.startsWith("b_openbmc_");
       if (!registeredFiles.has(dirent.name)) {
-        problems.push(`assets: ${dirent.name} is not registered in ${MANIFEST}${factory ? " (factory-skin art must stay inline, ADR-0023 Decision 2)" : ""}`);
+        problems.push(`assets: ${dirent.name} is not registered in ${MANIFEST}`);
       }
     }
   }
@@ -149,5 +144,5 @@ if (problems.length > 0) {
 }
 console.log(
   `✓ bundle guard OK: lib/client.js ${clientBytes} ≤ ${MAX_CLIENT_BYTES} (longest line ${longest}); `
-  + `manifest ${seen.size} entries, meirenzhi Σ ${mrzTotal} ≤ ${MAX_MEIRENZHI_TOTAL_BYTES}, uefi pin verified, assets tree fully registered`,
+  + `manifest ${seen.size} entries, meirenzhi Σ ${mrzTotal} ≤ ${MAX_MEIRENZHI_TOTAL_BYTES}, assets tree fully registered`,
 );

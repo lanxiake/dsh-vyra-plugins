@@ -1,0 +1,223 @@
+/*
+ * INSTRUMENT — a glass cockpit for an agent.
+ *
+ * Visual contract: OpenDesign `hud` (phosphor green on near-black, all-caps
+ * data overlays, angular geometry, flat fills, no gradients) crossed with
+ * `mission-control` for the panel rhythm and the four-state status language.
+ *
+ * What this skin spends its budget on: the *readout*. Every label reads as a
+ * instrument telltale rather than prose, every state is a lamp, and the only
+ * looping motion in the whole skin is the thinking orbit — because that is
+ * the one state the user actually stares at.
+ *
+ * Deliberately absent, per the contract's anti-patterns: gradients, a light
+ * mode, corner radii above 4px on data surfaces, and any animation on an
+ * element that does not signal operational state.
+ */
+
+body.nx {
+  /* ---- surfaces ---------------------------------------------------- */
+  --nx-bg: #0a0a0a;
+  --nx-surface-raised: #111316;
+  --nx-surface-hover: #16191d;
+  --nx-surface-active: #1c2126;
+  --nx-line: #1e2328;
+
+  /* ---- data palette ------------------------------------------------ */
+  --nx-accent: #00ff41;      /* active readouts */
+  --nx-accent-dim: #7fff00;  /* standby values */
+  --nx-accent-mute: #5a9a5a; /* grid, ticks, reference arcs only */
+  --nx-warn: #ffb800;
+  --nx-ok: #26de81;
+  --nx-alert: #ff3b3b;
+
+  /* ---- text -------------------------------------------------------- */
+  --nx-fg: #e8f5ec;
+  --nx-fg-mute: #8fbf9f;
+  --nx-fg-dim: #5a9a5a;
+
+  /* ---- type -------------------------------------------------------- */
+  --nx-font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --nx-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- shape ------------------------------------------------------- */
+  --nx-r-sm: 2px;
+  --nx-r-md: 3px;
+  --nx-r-lg: 4px;
+
+  /* ---- cursors ----------------------------------------------------- */
+  /* Crosshair reticle: two open arms around a 1px gap. The hotspot is the
+     centre pixel, so the aim point is unambiguous at speed. */
+  --nx-cursor-default: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'><g stroke='%2300ff41' stroke-width='1.25' fill='none'><path d='M10 1v6M10 13v6M1 10h6M13 10h6'/><circle cx='10' cy='10' r='1' fill='%2300ff41' stroke='none'/></g><path d='M10 1v6M1 10h6' stroke='rgba(0,0,0,0.55)' stroke-width='1.25' transform='translate(0.6,0.6)' opacity='0.6' fill='none'/></svg>") 10 10, crosshair;
+
+  /* Pointer: three capture brackets around the target plus a centre dot. */
+  --nx-cursor-pointer: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'><g stroke='%2300ff41' stroke-width='1.4' fill='none'><path d='M4 7V4h3M13 4h3v3M16 13v3h-3M7 16H4v-3'/></g><circle cx='10' cy='10' r='1.4' fill='%2300ff41'/><circle cx='10' cy='10' r='4' stroke='%2300ff41' stroke-width='0.5' opacity='0.45' fill='none'/></svg>") 10 10, pointer;
+
+  /* Text: an I-beam with measurement ticks on both ends. */
+  --nx-cursor-text: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='20' viewBox='0 0 16 20'><g stroke='%2300ff41' stroke-width='1.2' fill='none'><path d='M8 3v14M5 3h6M5 17h6'/></g></svg>") 8 10, text;
+}
+
+/* ------------------------------------------------------------------ */
+/* The grid: a 32px reference lattice. Drawn once, painted once.      */
+/* ------------------------------------------------------------------ */
+body.nx::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--nx-z-grid);
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--nx-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--nx-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.4;
+  /* Vignette so the lattice reads as a field, not wallpaper. */
+  mask-image: radial-gradient(ellipse 120% 100% at 50% 0%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 120% 100% at 50% 0%, #000 30%, transparent 78%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Instrument chrome: every sidebar region gets a ruled edge.        */
+/* ------------------------------------------------------------------ */
+body.nx .nx-sidebar {
+  background: color-mix(in srgb, var(--nx-bg) 82%, transparent);
+  border-right: 1px solid var(--nx-line);
+  backdrop-filter: blur(2px);
+}
+
+body.nx .nx-sidebar__title {
+  font-family: var(--nx-font-mono);
+  color: var(--nx-accent);
+  letter-spacing: 0.18em;
+}
+
+body.nx .nx-sidebar__mark {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--nx-accent) 55%, transparent));
+}
+
+/* Group headings read as instrument cluster labels. */
+body.nx .nx-group__label {
+  font-family: var(--nx-font-mono);
+  color: var(--nx-fg-dim);
+  letter-spacing: 0.2em;
+  border-bottom: 1px solid var(--nx-line);
+  padding-bottom: 5px;
+}
+
+body.nx .nx-item {
+  border-radius: 2px;
+  /* A left rail that lights up when the row is live — position is the
+     carrier, colour only reinforces it (the contract forbids colour-only). */
+  box-shadow: inset 1px 0 0 0 transparent;
+}
+
+body.nx .nx-item.is-active {
+  box-shadow: inset 2px 0 0 0 var(--nx-accent);
+}
+
+body.nx .nx-item.is-active .nx-item__dot {
+  box-shadow: 0 0 7px var(--nx-accent);
+}
+
+body.nx .nx-item__meta {
+  font-family: var(--nx-font-mono);
+  color: var(--nx-fg-dim);
+}
+
+body.nx .nx-new {
+  font-family: var(--nx-font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Top bar + composer: hairline rules, mono metadata.                */
+/* ------------------------------------------------------------------ */
+body.nx .nx-main__bar {
+  background: color-mix(in srgb, var(--nx-bg) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+body.nx .nx-main__title {
+  font-family: var(--nx-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--nx-accent);
+}
+
+body.nx .nx-main__title::before {
+  content: "▸ ";
+  color: var(--nx-accent-mute);
+}
+
+body.nx .nx-composer__box {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--nx-surface-raised) 88%, transparent);
+}
+
+body.nx .nx-composer__box:focus-within {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nx-accent) 35%, transparent),
+    0 0 18px -6px color-mix(in srgb, var(--nx-accent) 60%, transparent);
+}
+
+/* ------------------------------------------------------------------ */
+/* Messages                                                          */
+/* ------------------------------------------------------------------ */
+body.nx .nx-msg__who {
+  font-family: var(--nx-font-mono);
+  color: var(--nx-fg-dim);
+}
+
+body.nx .nx-msg--user .nx-msg__body {
+  background: color-mix(in srgb, var(--nx-surface-active) 75%, transparent);
+  border-radius: 3px;
+  border-left: 2px solid var(--nx-accent-mute);
+}
+
+body.nx .nx-tool {
+  border-radius: 2px;
+  font-family: var(--nx-font-mono);
+}
+
+body.nx .nx-tool__lamp {
+  border-radius: 1px;
+}
+
+/* Status lamp for the streaming caret: a filled block, not a bar. */
+body.nx .nx-caret {
+  width: 7px;
+  height: 0.95em;
+  background: var(--nx-accent);
+  opacity: 0.9;
+  animation: nx-block-blink 1.06s steps(2, jump-none) infinite;
+}
+
+@keyframes nx-block-blink {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+/* The orbit, tuned to the HUD's 900/640 beat. */
+body.nx .nx-orbit::before {
+  animation-duration: 1100ms;
+}
+
+body.nx .nx-orbit::after {
+  animation-duration: 760ms;
+}
+
+/* Ruler ticks: taller, tighter, closer to a real scale. */
+body.nx .nx-ruler__tick.is-on {
+  background: var(--nx-accent);
+}
+
+/* Demo chrome gets the same mono treatment. */
+body.nx .nx-demo {
+  border-radius: 2px;
+  font-family: var(--nx-font-mono);
+  letter-spacing: 0.04em;
+}

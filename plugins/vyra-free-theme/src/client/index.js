@@ -5,8 +5,6 @@ import { createConfigClient } from "./personalization/config-client.js";
 import { installFileThemes } from "./themes.js";
 import { adoptHostSelection, publishSelection } from "./selection-sync.js";
 import { createMeirenzhiSkin } from "./skins/meirenzhi/index.js";
-import { createOpenBmcHarness } from "./skins/openbmc-harness/index.js";
-import { createUefiHarness } from "./skins/uefi-harness/index.js";
 
 window.__ModuleLoader__.load({
   // MUST equal the package.json `name` (and the roster row `name` in
@@ -26,9 +24,9 @@ window.__ModuleLoader__.load({
     const runtime = createSkinRuntime({ profile });
     const skinById = new Map();
     // Registration order IS the factory-default order: the first skin wins for
-    // users with no stored choice (v1.0.6 起 openbmc 领头；v1.4.0 起
-    // openbmc → uefi-harness → meirenzhi，tgcf 皮肤移除).
-    for (const factory of [createOpenBmcHarness, createUefiHarness, createMeirenzhiSkin]) {
+    // users with no stored choice. meirenzhi is the only compiled-in skin left
+    // (openbmc / uefi-harness were retired together with the bundled themes).
+    for (const factory of [createMeirenzhiSkin]) {
       const skin = factory(jsxRuntime); // 工厂自带 builtinAssets（ADR-0014/B15，合成补底已删）
       skinById.set(skin.id, skin);
       runtime.register(skin);

@@ -43,7 +43,7 @@
 //
 // Usage:
 //   node scripts/repro-stale-grid-paint.mjs [--url http://127.0.0.1:3080]
-//        [--viewport 800x800] [--skin-id openbmc-harness] [--collapse-expand]
+//        [--viewport 800x800] [--skin-id <id>] [--collapse-expand]
 //        [--no-fingerprint] [--fingerprint-only] [--gate]
 
 import fs from "node:fs";
@@ -71,7 +71,7 @@ const viewport = (() => {
   }
   return { width: w, height: h };
 })();
-const skinId = argOf("--skin-id") ?? "openbmc-harness";
+const skinId = argOf("--skin-id") ?? "meirenzhi";
 const collapseExpand = has("--collapse-expand");
 const fingerprintOnly = has("--fingerprint-only");
 const noFingerprint = has("--no-fingerprint");
@@ -82,9 +82,8 @@ const SKIN_STORAGE_KEY = "vyra-free-theme:active"; // runtime.js persistence key
 // card lookup falls back to known label text (current UI language either way).
 const LABEL_FALLBACK = {
   official: /DeepSeek Harness/i,
-  "openbmc-harness": /OpenBMC Studio/i,
+  /* openbmc-harness and uefi-harness were retired; only meirenzhi remains. */
   meirenzhi: /凡人修仙传|Mortal's Journey|美人志/i,
-  "uefi-harness": /UEFI Studio/i,
 };
 
 // PNG decode + lum + edgeActivity come from ./lib/paint-metrics.mjs (shared,

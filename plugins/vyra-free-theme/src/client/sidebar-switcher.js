@@ -201,12 +201,13 @@ const SHELL_CSS = [
   // both states, same visual language as the selected skin card.
   '.vyra-free-theme-pz-gear[aria-expanded="true"]{opacity:1;border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-module-platform)}',
   '.vyra-free-theme-pz-gear svg{width:16px;height:16px}',
-  // Deep dark surfaces: meirenzhi/openbmc/uefi tint the bg-overlay token
-  // with their own families, but in the OFFICIAL skin no token override exists
-  // and the pop inherited the host's washed mid-gray (#61666b). Scope a
-  // deep charcoal to the no-skin state (ruling #16); skinned modes keep
-  // their token-driven overlay.
-  'body[data-ds-dark-theme]:not([data-dsh-meirenzhi-skin]):not([data-dsh-openbmc-skin]):not([data-dsh-uefi-harness]) .vyra-free-theme-pop{background:rgba(41,42,44,0.97)}',
+  // Deep dark surfaces: meirenzhi tints the bg-overlay token with its own
+  // family, but in the OFFICIAL skin no token override exists and the pop
+  // inherited the host's washed mid-gray (#61666b). Scope a deep charcoal to
+  // the no-skin state (ruling #16); the skinned mode keeps its token-driven
+  // overlay. openbmc / uefi-harness were retired, so only meirenzhi is
+  // excluded now.
+  'body[data-ds-dark-theme]:not([data-dsh-meirenzhi-skin]) .vyra-free-theme-pop{background:rgba(41,42,44,0.97)}',
   // -- combined shell (Q44/Q46): list column + docked panel column ----------
   '.vyra-free-theme-pop.vyra-free-theme-wide{flex-direction:row;align-items:stretch;width:min(1105px,calc(100vw - 24px))}',
   // List column: exactly 360px wherever the 390px narrow shell fits (the

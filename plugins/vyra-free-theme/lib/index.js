@@ -202,58 +202,8 @@ var SKINS = {
   // at the anchor is pinned by tests/translucency-contract.test.mjs. Legacy
   // wallpaper semantics (scrim never applies to user images, placeholder
   // branch) live in the translucency projection kernel's wallpaper branches.
-  // openbmc（出厂皮肤，v1.0.6 起注册顺序第一位，见 client/index.js）
-  openbmc: {
-    builtinAssets: { art: { mime: "image/webp", labelKey: "personalization.openbmc.art" } },
-    fields: [
-      { ...WALLPAPER_FIELD, default: "builtin:openbmc:art", builtinChoices: ["art"] },
-      {
-        key: "slogan",
-        type: "text",
-        scope: "locale",
-        labelKey: "personalization.slogan",
-        maxLength: 40,
-        default: { zh: "察于未萌 · 治于未乱", en: "Govern before the storm" }
-      },
-      {
-        key: "panelOpacity",
-        type: "range",
-        scope: "single",
-        labelKey: "personalization.panelTranslucency",
-        min: 0,
-        max: 100,
-        step: 1,
-        unit: "%",
-        default: 55
-      }
-    ]
-  },
-  "uefi-harness": {
-    builtinAssets: { art: { mime: "image/webp", labelKey: "personalization.uefi.art" } },
-    fields: [
-      { ...WALLPAPER_FIELD, default: "builtin:uefi-harness:art", builtinChoices: ["art"] },
-      {
-        key: "slogan",
-        type: "text",
-        scope: "locale",
-        labelKey: "personalization.slogan",
-        maxLength: 40,
-        default: { zh: "启于固件 · 行于万象", en: "Boot before everything" }
-      },
-      {
-        key: "panelOpacity",
-        type: "range",
-        scope: "single",
-        labelKey: "personalization.panelTranslucency",
-        min: 0,
-        max: 100,
-        step: 1,
-        unit: "%",
-        default: 55
-      }
-    ]
-  },
-  // 美人志（v1.0.6 前的出厂皮肤，现注册顺序第三位）：6 张内置精选，出厂默认 yuntai
+  // openbmc 与 uefi-harness 随内置主题一并退役；meirenzhi 是现存的唯一编译皮肤。
+  // 美人志（v1.0.6 前的出厂皮肤）：6 张内置精选，出厂默认 yuntai
   // （001合照）领头并对齐已移除 tgcf 皮肤的「出厂默认领先」惯例；panelOpacity 锚定
   // 其二次曲线（projector 数学见 skins/meirenzhi/index.js）。
   meirenzhi: {
@@ -1871,6 +1821,23 @@ function fieldsFromTheme(theme, profile = "web") {
   const opacity = profile === "desktop" ? theme.translucency.desktop : theme.translucency.web;
   return [
     wallpaperField(theme),
+    /*
+     * Brand name. The theme declares a default; the panel lets the user
+     * replace it. Scope `locale` because the host writes both a zh and an en
+     * document title, and one language's brand should not leak into the
+     * other's tab.
+     *
+     * `default` is what the theme itself ships, so clearing the input falls
+     * back to the theme's own name rather than to an empty window title.
+     */
+    {
+      key: "brandTitle",
+      type: "text",
+      scope: "locale",
+      labelKey: "personalization.brandTitle",
+      maxLength: NAME_MAX,
+      default: theme.brand.title ?? theme.name
+    },
     {
       key: "slogan",
       type: "text",

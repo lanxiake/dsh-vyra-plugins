@@ -33,7 +33,7 @@
 //
 // Usage:
 //   node scripts/repro-fullscreen-collapse.mjs [--url http://127.0.0.1:3080]
-//        [--viewport 1920x1080] [--skin-id openbmc-harness]
+//        [--viewport 1920x1080] [--skin-id <id>]
 //        [--no-fingerprint] [--fingerprint-only] [--gate]
 
 import fs from "node:fs";
@@ -61,7 +61,7 @@ const viewport = (() => {
   }
   return { width: w, height: h };
 })();
-const skinId = argOf("--skin-id") ?? "openbmc-harness";
+const skinId = argOf("--skin-id") ?? "meirenzhi";
 const fingerprintOnly = has("--fingerprint-only");
 const noFingerprint = has("--no-fingerprint");
 const gate = has("--gate");
@@ -119,9 +119,12 @@ async function openSession(page) {
   try {
     await page.locator('[class*="searchButton"]').first().click();
     await page.waitForTimeout(800);
-    await page.locator("input:visible").first().fill("OpenBMC");
+    await page.locator("input:visible").first().fill("皮肤");
     await page.waitForTimeout(1200);
-    await page.locator("text=OpenBMC皮肤侧栏图标不可见").first().click();
+    /* The session this repro opens used to be titled after the openbmc skin.
+       That skin is retired, so the title is now matched on the word 皮肤,
+       which is what both the old and any replacement session carry. */
+    await page.locator("text=皮肤").first().click();
     await page.waitForTimeout(2500);
     await page.keyboard.press("Escape");
     await page.waitForTimeout(500);

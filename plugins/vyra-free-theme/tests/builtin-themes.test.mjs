@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeTheme, wallpaperLayersFromTheme, THEME_ASSET_MIME } from "../src/shared/personalization/theme-model.js";
@@ -9,6 +9,10 @@ import { CODE_ART_LIMITS } from "../src/client/wallpaper-art.js";
 const THEMES_DIR = fileURLToPath(new URL("../themes/", import.meta.url));
 
 function themeDirs() {
+  /* All five bundled themes were retired, and git drops `themes/` once its
+     last file goes. An absent directory means "no bundled themes", not an
+     error — the loops below then simply have nothing to check. */
+  if (!existsSync(THEMES_DIR)) return [];
   return readdirSync(THEMES_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
@@ -32,7 +36,11 @@ function assertAsset(themeId, relPath, expectedMimePrefix) {
 
 test("every bundled theme is valid, correctly named and ships the assets it references", () => {
   const ids = themeDirs();
-  assert.ok(ids.length >= 2, "expected at least two bundled themes");
+  /* The five bundled themes (aurora / ink-landscape / liquid / magnet /
+     nebula) were retired on request, leaving themes/ empty. The loop still
+     runs so that a theme added later is held to the same contract; only the
+     "at least two" floor is gone, because it was asserting the retired set. */
+  assert.ok(Array.isArray(ids), "themes/ must be readable");
   for (const dir of ids) {
     const theme = readTheme(dir);
     assert.equal(theme.id, dir, `${dir}: directory name must equal theme.id`);

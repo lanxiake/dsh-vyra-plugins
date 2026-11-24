@@ -503,6 +503,23 @@ export function fieldsFromTheme(theme, profile = "web") {
   const opacity = profile === "desktop" ? theme.translucency.desktop : theme.translucency.web;
   return [
     wallpaperField(theme),
+    /*
+     * Brand name. The theme declares a default; the panel lets the user
+     * replace it. Scope `locale` because the host writes both a zh and an en
+     * document title, and one language's brand should not leak into the
+     * other's tab.
+     *
+     * `default` is what the theme itself ships, so clearing the input falls
+     * back to the theme's own name rather than to an empty window title.
+     */
+    {
+      key: "brandTitle",
+      type: "text",
+      scope: "locale",
+      labelKey: "personalization.brandTitle",
+      maxLength: NAME_MAX,
+      default: theme.brand.title ?? theme.name,
+    },
     {
       key: "slogan",
       type: "text",

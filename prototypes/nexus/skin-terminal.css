@@ -1,0 +1,288 @@
+/*
+ * TERMINAL — the agent as a process you can watch.
+ *
+ * Visual contract: OpenDesign `mono` (monospace-driven, high-contrast,
+ * compact density, hacker-chic) with the void-black canvas and single warm
+ * accent of `voltagent`. Chosen over the obvious green-on-black so the three
+ * skins stay distinguishable at a glance: this one is PHOSPHOR AMBER.
+ *
+ * The organising idea: nothing eases. A terminal reports, it does not
+ * perform. Motion here is either instant or a hard step — which is also why
+ * this skin is the cheapest of the three to paint.
+ *
+ * Square corners only, no blur, no glow beyond a single 1px phosphor bleed.
+ */
+
+body.nx {
+  /* ---- canvas ------------------------------------------------------ */
+  --nx-bg: #08090b;
+  --nx-surface-raised: #0e1114;
+  --nx-surface-hover: #15181c;
+  --nx-surface-active: #1b1f24;
+  --nx-line: #23282e;
+
+  /* ---- phosphor ---------------------------------------------------- */
+  --nx-accent: #ffb454;      /* amber: primary readout + cursor */
+  --nx-accent-dim: #c98f3d;
+  --nx-accent-mute: #6b5a44;
+  --nx-warn: #ffb454;
+  --nx-ok: #9ece6a;
+  --nx-alert: #f7768e;
+
+  /* ---- text -------------------------------------------------------- */
+  --nx-fg: #d6dee5;
+  --nx-fg-mute: #94a3ad;
+  --nx-fg-dim: #5a656e;
+
+  /* ---- type: everything is mono ------------------------------------ */
+  --nx-font-ui: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --nx-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- shape: square ----------------------------------------------- */
+  --nx-r-sm: 0;
+  --nx-r-md: 0;
+  --nx-r-lg: 0;
+  --nx-bracket: 6px;
+  --nx-bracket-w: 1px;
+
+  /* ---- ink block caret --------------------------------------------- */
+  --nx-cursor-default: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='20' viewBox='0 0 18 20'><path d='M2 2h6v16H2z' fill='rgba(255,180,84,0.16)' stroke='%23ffb454' stroke-width='1'/><path d='M11 3h5M11 6h3' stroke='%23ffb454' stroke-width='1' opacity='0.55'/></svg>") 2 4, default;
+
+  --nx-cursor-pointer: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='20' viewBox='0 0 18 20'><path d='M3 3h5v14H3z' fill='%23ffb454' stroke='%23ffb454' stroke-width='1'/><path d='M11 5h5M11 9h5M11 13h3' stroke='%23ffb454' stroke-width='1.4' stroke-linecap='square'/></svg>") 3 4, pointer;
+
+  --nx-cursor-text: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='20' viewBox='0 0 14 20'><rect x='6' y='2' width='1.6' height='16' fill='%23ffb454'/><path d='M3 2h8M3 18h8' stroke='%23ffb454' stroke-width='1.2'/></svg>") 7 10, text;
+}
+
+/* ------------------------------------------------------------------ */
+/* Canvas: a faint CRT grain, no grid — the terminal is the grid.    */
+/* A 1px scanline pair, painted once on a fixed layer.               */
+/* ------------------------------------------------------------------ */
+body.nx::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--nx-z-grid);
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 180, 84, 0.016) 0 1px,
+    transparent 1px 3px
+  );
+  opacity: 0.85;
+}
+
+/* ------------------------------------------------------------------ */
+/* Chrome                                                            */
+/* ------------------------------------------------------------------ */
+body.nx .nx-sidebar {
+  background: var(--nx-bg);
+  border-right: 1px solid var(--nx-line);
+}
+
+body.nx .nx-sidebar__title {
+  color: var(--nx-accent);
+  letter-spacing: 0.16em;
+  /* A prompt glyph instead of a logo: the brand is the shell itself. */
+}
+
+body.nx .nx-sidebar__mark {
+  color: var(--nx-accent);
+}
+
+/* Group heading as a shell comment. */
+body.nx .nx-group__label {
+  color: var(--nx-fg-dim);
+  letter-spacing: 0.14em;
+}
+
+body.nx .nx-group__label::before {
+  content: "# ";
+  color: var(--nx-accent-mute);
+}
+
+/* Rows are shell entries: a prompt sign appears on the active one. */
+body.nx .nx-item {
+  /* Step, not fade: the terminal does not ease. */
+  transition: none;
+}
+
+body.nx .nx-item.is-active {
+  background: var(--nx-surface-active);
+  color: var(--nx-fg);
+}
+
+body.nx .nx-item.is-active .nx-item__label::before {
+  content: "> ";
+  color: var(--nx-accent);
+}
+
+body.nx .nx-item.is-active .nx-item__dot {
+  background: var(--nx-accent);
+  box-shadow: none;
+  border-radius: 0;
+}
+
+body.nx .nx-item__dot {
+  border-radius: 0;
+  opacity: 0.3;
+}
+
+body.nx .nx-item__meta {
+  color: var(--nx-fg-dim);
+}
+
+body.nx .nx-new {
+  letter-spacing: 0.1em;
+  border: 1px solid var(--nx-line);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.nx .nx-new:hover {
+    border-color: var(--nx-accent);
+    color: var(--nx-accent);
+    background: var(--nx-surface-hover);
+  }
+}
+
+body.nx .nx-main__bar {
+  background: var(--nx-bg);
+  border-bottom: 1px solid var(--nx-line);
+}
+
+body.nx .nx-main__title {
+  color: var(--nx-accent);
+  letter-spacing: 0.02em;
+}
+
+body.nx .nx-main__title::before {
+  content: "$ ";
+  color: var(--nx-accent-mute);
+}
+
+/* ------------------------------------------------------------------ */
+/* Composer: a prompt line with a hard cursor.                       */
+/* ------------------------------------------------------------------ */
+body.nx .nx-composer__box {
+  background: var(--nx-bg);
+  border: 0;
+  border-top: 1px solid var(--nx-line);
+  padding-left: 4px;
+}
+
+body.nx .nx-composer__box:focus-within {
+  border-top-color: var(--nx-accent);
+  box-shadow: none;
+}
+
+body.nx .nx-composer textarea {
+  font-family: var(--nx-font-mono);
+  letter-spacing: 0.01em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Messages                                                          */
+/* ------------------------------------------------------------------ */
+body.nx .nx-msg--user .nx-msg__body {
+  background: transparent;
+  border: 0;
+  border-left: 2px solid var(--nx-accent-mute);
+  border-radius: 0;
+  padding: 2px 0 2px 12px;
+  color: var(--nx-fg-mute);
+}
+
+body.nx .nx-msg--user .nx-msg__body::before {
+  content: "user $ ";
+  color: var(--nx-accent-mute);
+}
+
+body.nx .nx-msg__who::before {
+  content: "[";
+}
+
+body.nx .nx-msg__who::after {
+  content: "]";
+}
+
+body.nx .nx-tool {
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--nx-line);
+  padding-left: 10px;
+}
+
+body.nx .nx-tool__node {
+  border-radius: 0;
+}
+
+body.nx .nx-tool__lamp {
+  border-radius: 0;
+}
+
+body.nx .nx-tool[data-state="done"] .nx-tool__lamp {
+  background: var(--nx-ok);
+  box-shadow: none;
+}
+
+/* Caret: a solid ink block, stepped — the classic terminal cursor. */
+body.nx .nx-caret {
+  width: 8px;
+  height: 0.92em;
+  background: var(--nx-accent);
+  box-shadow: none;
+  animation: nx-step-blink 1s steps(1, end) infinite;
+}
+
+@keyframes nx-step-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* The orbit, made mechanical: a single rotating bracket, not a gradient
+   sweep. Cheaper to paint and truer to the skin. */
+body.nx .nx-orbit::before {
+  border: 0;
+  border-top: 1px solid var(--nx-accent);
+  border-right: 1px solid var(--nx-accent);
+  border-radius: 0;
+  animation: nx-orbit-step 1.2s steps(8, end) infinite;
+  opacity: 1;
+}
+
+body.nx .nx-orbit::after {
+  display: none;
+}
+
+body.nx .nx-orbit__core {
+  border-radius: 0;
+  background: var(--nx-accent);
+  animation: nx-step-blink 1.2s steps(1, end) infinite;
+}
+
+@keyframes nx-orbit-step {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+body.nx .nx-ruler__tick {
+  border-radius: 0;
+}
+
+body.nx .nx-ruler__tick.is-on {
+  background: var(--nx-accent);
+}
+
+body.nx .nx-demo {
+  border-radius: 0;
+  background: var(--nx-bg);
+}
+
+/* Square scrollbars, matching the shell. */
+body.nx .nx-thread::-webkit-scrollbar-thumb,
+body.nx .nx-sidebar__scroll::-webkit-scrollbar-thumb {
+  border-radius: 0;
+  background: var(--nx-line);
+}

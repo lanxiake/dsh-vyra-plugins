@@ -1,7 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import {
   composite,
   contrastRatio,
@@ -15,9 +13,44 @@ import {
 } from "../src/shared/personalization/color-score.js";
 import { normalizeTheme } from "../src/shared/personalization/theme-model.js";
 
-const NEBULA = normalizeTheme(JSON.parse(readFileSync(
-  fileURLToPath(new URL("../themes/nebula/theme.json", import.meta.url)), "utf8",
-))).theme;
+/*
+ * A representative palette, inlined. This fixture used to be read from
+ * `themes/nebula/theme.json`; the five bundled themes were retired, so the
+ * colour-scoring algorithm is now exercised against a local sample instead of
+ * a shipped theme. The values are unchanged, so every assertion below still
+ * pins the same behaviour it did before.
+ */
+const NEBULA = normalizeTheme({
+  schema: 1,
+  id: "nebula",
+  name: { zh: "星云", en: "Nebula" },
+  colors: {
+    light: {
+      "--dsw-alias-bg-base": "#F4F2FF",
+      "--dsw-alias-bg-layer-1": "#FBF9FF",
+      "--dsw-alias-bg-layer-2": "#EEEAFB",
+      "--dsw-alias-bg-layer-3": "#E4DEF6",
+      "--dsw-alias-bg-module-platform": "#EFEBFC",
+      "--dsw-specific-sidebar-fill": "#F0ECFD",
+      "--dsw-alias-brand-primary": "#6D4AFF",
+      "--dsw-alias-label-primary": "#211B33",
+      "--dsw-alias-label-secondary": "rgba(33, 27, 51, 0.72)",
+      "--dsw-alias-border-l1": "rgba(109, 74, 255, 0.16)",
+    },
+    dark: {
+      "--dsw-alias-bg-base": "#0E0B1A",
+      "--dsw-alias-bg-layer-1": "#171226",
+      "--dsw-alias-bg-layer-2": "#221A38",
+      "--dsw-alias-bg-layer-3": "#2C2246",
+      "--dsw-alias-bg-module-platform": "#1B1530",
+      "--dsw-specific-sidebar-fill": "#14102A",
+      "--dsw-alias-brand-primary": "#A78BFF",
+      "--dsw-alias-label-primary": "#F3EEFF",
+      "--dsw-alias-label-secondary": "rgba(243, 238, 255, 0.72)",
+      "--dsw-alias-border-l1": "rgba(167, 139, 255, 0.18)",
+    },
+  },
+}).theme;
 
 test("colour parsing covers the forms a theme may use", () => {
   assert.deepEqual(parseColor("#fff"), { r: 255, g: 255, b: 255, a: 1 });

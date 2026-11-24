@@ -22,10 +22,14 @@ import process from "node:process";
 
 const BUILTIN_FILE_PATTERN = /^b_([a-z0-9][a-z0-9-]*)_([a-z0-9][a-z0-9-]*)\.webp$/;
 
-// ADR-0023 Decision 2: factory skins' default visual assets stay INLINE in
-// the client bundle. A b_ file for one of these skins means the rule was
+// ADR-0023 Decision 2: a factory skin's default visual asset stays INLINE in
+// the client bundle. A b_ file carrying one of these ids means the rule was
 // violated — fail closed instead of silently double-shipping.
-const FACTORY_SKIN_IDS = new Set(["openbmc"]);
+//
+// openbmc held this slot until it was retired; meirenzhi ships its art as
+// regular b_ files, so the set is intentionally empty now. The guard stays
+// because a future factory skin must register here to be protected.
+const FACTORY_SKIN_IDS = new Set();
 
 export function buildManifestEntries(assetsDir) {
   const entries = [];
