@@ -132,5 +132,57 @@ check('empty enabled is preserved, not healed', cfgMod.readConfig(homeE).enabled
 
 for (const dir of [homeA, homeB, homeC, homeD, homeE]) rmSync(dir, { recursive: true, force: true })
 
+// ===== Task 4: agent specs =====
+console.log('\n--- Task 4: agent specs ---')
+const agMod = await load('agents.mjs')
+
+const motionSpec = agMod.domainAgentSpec(domains.getDomain('od-motion'))
+check('domain agent id matches domain', motionSpec.id, 'od-motion')
+check('domain agent name is Chinese', /[\u4e00-\u9fa5]/.test(motionSpec.name), true)
+check(
+  'domain agent skills match domain',
+  [...motionSpec.skills].sort(),
+  [...domains.getDomain('od-motion').skills].sort(),
+)
+check('domain agent has no delegation', motionSpec.capabilities.includes('delegation'), false)
+check('domain agent has no team', motionSpec.team, [])
+check('domain agent includes the skills capability', motionSpec.capabilities.includes('skills'), true)
+check('domain agent summary states what it cannot do', /不能做/.test(motionSpec.summary), true)
+check('summary within tool limit', motionSpec.summary.length <= 600, true)
+check('usage within tool limit', motionSpec.usage.length <= 1200, true)
+check('system prompt points at the domain index skill', motionSpec.systemPrompt.includes('od-motion'), true)
+
+const visualSpec = agMod.domainAgentSpec(domains.getDomain('od-visual-design'))
+check('visual agent omits the 152 design systems from skills', visualSpec.skills.includes('open-design-apple'), false)
+check('visual agent points at the index for design systems', /设计系统/.test(visualSpec.systemPrompt), true)
+
+const director = agMod.orchestratorSpec(['od-motion', 'od-writing'])
+check('director id', director.id, 'od-director')
+check('director has delegation', director.capabilities.includes('delegation'), true)
+check('director team is the enabled set', [...director.team].sort(), ['od-motion', 'od-writing'])
+check('director never lists itself', director.team.includes('od-director'), false)
+check('director summary within tool limit', director.summary.length <= 600, true)
+check('director usage within tool limit', director.usage.length <= 1200, true)
+
+const emptyDirector = agMod.orchestratorSpec([])
+check('director with nothing enabled has an empty team', emptyDirector.team, [])
+check('director with nothing enabled still explains the state', /没有启用/.test(emptyDirector.systemPrompt), true)
+
+// Directory layout must match what agent_manager writes (core.js:404).
+const files = agMod.agentDirFiles(motionSpec)
+for (const required of ['agent.json', 'package.json', 'cordis.patch.yml', 'locale/en.json', 'locale/zh.json', 'icon.svg', 'README.md']) {
+  check(`agent dir has ${required}`, Object.keys(files).includes(required), true)
+}
+check('agent.json round-trips', JSON.parse(files['agent.json']).id, 'od-motion')
+const pkg = JSON.parse(files['package.json'])
+check('bundle name is @local/agent-preset-<id>', pkg.name, '@local/agent-preset-od-motion')
+check('package is private', pkg.private, true)
+check('package declares the patch', pkg.dsh.bundle.patch, './cordis.patch.yml')
+const patch = JSON.parse(files['cordis.patch.yml']) // JSON is valid YAML
+check('patch inserts one row', patch.length, 1)
+check('patch row is an agent-preset', patch[0].insert[0].name, '@deepseek-ai/dsh-agent-preset')
+check('patch row carries the spec id', patch[0].insert[0].config.id, 'od-motion')
+check('icon is svg', /^<svg/.test(files['icon.svg']), true)
+
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)
