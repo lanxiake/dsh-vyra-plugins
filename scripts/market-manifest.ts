@@ -3051,6 +3051,15 @@ export const manifest: MarketManifest = {
       },
       icon: OPEN_DESIGN_ICON,
       versions: {
+        '0.2.3': {
+          publishTimestamp: 1795596300,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '24dbce2da474794afaaad9c7dcb56b118f3d725c',
+            path: 'plugins/open-design',
+          },
+        },
         '0.2.2': {
           publishTimestamp: 1795592400,
           source: {
