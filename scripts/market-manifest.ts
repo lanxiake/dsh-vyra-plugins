@@ -2822,6 +2822,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.2.5 makes the timeline a conversation axis, adds an in-panel drop
+        // panel for long-press drag, and collapses view toggles.
+        '0.2.5': {
+          publishTimestamp: 1795492049,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'bf32204900ea98c8b09f491628f69c5abdaa6a43',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
