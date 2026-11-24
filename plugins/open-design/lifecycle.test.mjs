@@ -298,5 +298,66 @@ check('sync exits 0', run(['sync']).exitCode, 0)
 
 rmSync(cliHome, { recursive: true, force: true })
 
+
+// ===== Task 7: host wiring =====
+console.log('\n--- Task 7: host wiring ---')
+const m = await load('index.js')
+
+// Without a pluginManager the plugin must still lay down skills, and say so.
+const applyHome = mkdtempSync(join(tmpdir(), 'od-apply-'))
+const applyLogs = []
+const applyReport = await m.apply(
+  { logger: () => ({ info: (s) => applyLogs.push(s), warn: (s) => applyLogs.push(s) }), get: () => undefined, on() {} },
+  { dshHome: applyHome },
+)
+check('apply without pluginManager succeeds', applyReport.error, null)
+check('apply created skill dirs', existsSync(join(applyHome, 'skills', 'od-visual-design', 'SKILL.md')), true)
+check('apply created agent dirs', existsSync(join(applyHome, 'agent-manager', 'presets', 'od-director', 'agent.json')), true)
+check('apply warns that presets are unregistered', applyLogs.some((l) => l.includes('pluginManager')), true)
+
+// With a pluginManager, every generated agent is registered.
+const installed = []
+const applyHome2 = mkdtempSync(join(tmpdir(), 'od-apply2-'))
+await m.apply(
+  {
+    logger: () => ({ info() {}, warn() {} }),
+    get: (service) =>
+      service === 'pluginManager'
+        ? { installBundle: async (dir, opts) => { installed.push({ dir, opts }); return { application: 'applied' } } }
+        : undefined,
+    on() {},
+  },
+  { dshHome: applyHome2 },
+)
+check('apply registers five bundles', installed.length, 5)
+check('registration targets the director too', installed.some((i) => i.dir.includes('od-director')), true)
+check('registration enables the bundle', installed.every((i) => i.opts.enabled === true), true)
+
+// enabled: false mounts nothing.
+const applyHome3 = mkdtempSync(join(tmpdir(), 'od-apply3-'))
+const off = await m.apply(
+  { logger: () => ({ info() {}, warn() {} }), get: () => undefined, on() {} },
+  { dshHome: applyHome3, enabled: false },
+)
+check('enabled:false installs nothing', off.installed, 0)
+check('enabled:false writes no skill dirs', existsSync(join(applyHome3, 'skills')), false)
+
+// A failing registry never breaks the mount.
+const applyHome4 = mkdtempSync(join(tmpdir(), 'od-apply4-'))
+const flakyLogs = []
+const flaky = await m.apply(
+  {
+    logger: () => ({ info() {}, warn: (s) => flakyLogs.push(s) }),
+    get: (service) =>
+      service === 'pluginManager' ? { installBundle: async () => { throw new Error('boom') } } : undefined,
+    on() {},
+  },
+  { dshHome: applyHome4 },
+)
+check('a throwing registry does not fail apply', flaky.error, null)
+check('a throwing registry is logged', flakyLogs.some((l) => l.includes('boom')), true)
+
+for (const dir of [applyHome, applyHome2, applyHome3, applyHome4]) rmSync(dir, { recursive: true, force: true })
+
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)

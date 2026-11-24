@@ -1,0 +1,21 @@
+# The open-design row, inserted at the host plane so one mount serves every
+# agent and every agent preset: the skills it indexes are read through the
+# shared `skills` provider, not per-agent.
+#
+# Every field is optional; the defaults are restated here so the installed row
+# documents its own policy. Delete a key to fall back to the code default.
+#
+# Which domains are ON is *not* configured here: it lives in
+# `$DSH_HOME/open-design/domains.json`, written by `odx domains enable/disable`.
+# Keeping it out of this file means toggling a domain does not require editing
+# or restarting the profile.
+- insert:
+    - id: open-design
+      name: 'open-design'
+      config:
+        # Write the enabled domains to `$DSH_HOME/skills/od-*/` on mount.
+        # Set false to mount the plugin without touching the skills root.
+        enabled: true
+        # Generate the nine domain agent presets plus `od-director`, and register
+        # them with the host's plugin manager. Set false to sync skills only.
+        installAgents: true
