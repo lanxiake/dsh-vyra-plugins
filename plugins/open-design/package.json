@@ -1,6 +1,6 @@
 {
   "name": "open-design",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "OpenDesign 技能库（按业务领域分包）：九个领域共 85 个工艺技能 + 152 套设计系统契约，按需开启对应领域的技能与 Agent。",
   "main": "index.js",
