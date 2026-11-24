@@ -6479,6 +6479,8 @@ var TEXT_EXT = /* @__PURE__ */ new Set([
   "ts",
   "tsx",
   "jsx",
+  "mts",
+  "cts",
   "json",
   "jsonc",
   "yaml",
@@ -6599,8 +6601,19 @@ function kindOfExtension(extension) {
   if (AUDIO_EXT.has(ext)) return "audio";
   return void 0;
 }
+var TEXT_MIME_FALLBACK = /* @__PURE__ */ new Set([
+  "application/json",
+  "application/javascript",
+  "application/node",
+  "application/xml",
+  "application/x-httpd-php",
+  "application/x-sh"
+]);
 function isTextExtension(extension) {
-  return TEXT_EXT.has(String(extension ?? "").toLowerCase());
+  const ext = String(extension ?? "").toLowerCase();
+  if (TEXT_EXT.has(ext)) return true;
+  const mime = mimeOfExtension(ext);
+  return mime.startsWith("text/") || mime.endsWith("+xml") || TEXT_MIME_FALLBACK.has(mime);
 }
 function mimeOfExtension(extension) {
   return MIME[String(extension).toLowerCase()] ?? "application/octet-stream";
@@ -23316,6 +23329,8 @@ var LANGUAGE_BY_EXT = {
   jsx: "javascript",
   ts: "typescript",
   tsx: "typescript",
+  mts: "typescript",
+  cts: "typescript",
   json: "json",
   jsonc: "json",
   py: "python",
@@ -25135,7 +25150,7 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, o
 var import_react9 = __toESM(require("react"), 1);
 var h5 = import_react9.default.createElement;
 var LONG_PRESS_MS = 250;
-var MOVE_TOLERANCE = 6;
+var MOUSE_THRESHOLD = 4;
 function composerDropRect() {
   if (typeof document === "undefined") return void 0;
   const marker = document.querySelector("[data-vms-dropzone]");
@@ -25164,7 +25179,7 @@ function useDragDrop({ onMove, onReference }) {
   const [dragging, setDragging] = (0, import_react9.useState)(null);
   const [point, setPoint] = (0, import_react9.useState)({ x: 0, y: 0 });
   const [dropKey, setDropKey] = (0, import_react9.useState)("");
-  const state = (0, import_react9.useRef)({ timer: 0, item: null, startX: 0, startY: 0, active: false, suppress: false });
+  const state = (0, import_react9.useRef)({ timer: 0, item: null, startX: 0, startY: 0, active: false, suppress: false, touch: false });
   const finish = (0, import_react9.useCallback)((target) => {
     const current = state.current;
     const item = current.item;
@@ -25174,8 +25189,7 @@ function useDragDrop({ onMove, onReference }) {
     setDropKey("");
     if (item === null || target === void 0) return;
     if (target.kind === "composer") onReference(item);
-    else if (target.folder !== (item.folder ?? "")) onMove(item, target.folder);
-    else if (target.folder !== void 0) onMove(item, target.folder);
+    else onMove(item, target.folder);
   }, [onMove, onReference]);
   (0, import_react9.useEffect)(() => {
     if (dragging === null) return void 0;
@@ -25212,6 +25226,13 @@ function useDragDrop({ onMove, onReference }) {
       current.startX = event.clientX;
       current.startY = event.clientY;
       current.suppress = false;
+      current.touch = event.pointerType === "touch" || event.pointerType === "pen";
+      const begin = () => {
+        current.timer = 0;
+        current.active = true;
+        setDragging(item);
+        setPoint({ x: current.startX, y: current.startY });
+      };
       const cleanup2 = () => {
         if (current.timer !== 0) window.clearTimeout(current.timer);
         current.timer = 0;
@@ -25222,18 +25243,20 @@ function useDragDrop({ onMove, onReference }) {
       const cancel = () => cleanup2();
       const earlyMove = (event2) => {
         if (current.active) return;
-        if (Math.abs(event2.clientX - current.startX) > MOVE_TOLERANCE || Math.abs(event2.clientY - current.startY) > MOVE_TOLERANCE) cleanup2();
+        const moved = Math.abs(event2.clientX - current.startX) > MOUSE_THRESHOLD || Math.abs(event2.clientY - current.startY) > MOUSE_THRESHOLD;
+        if (!current.touch) {
+          if (moved) {
+            cleanup2();
+            begin();
+          }
+          return;
+        }
+        if (moved) cleanup2();
       };
       window.addEventListener("pointerup", cancel);
       window.addEventListener("pointercancel", cancel);
       window.addEventListener("pointermove", earlyMove);
-      current.timer = window.setTimeout(() => {
-        current.timer = 0;
-        current.active = true;
-        current.suppress = true;
-        setDragging(item);
-        setPoint({ x: current.startX, y: current.startY });
-      }, LONG_PRESS_MS);
+      if (current.touch) current.timer = window.setTimeout(begin, LONG_PRESS_MS);
     },
     onDragStart: (event) => event.preventDefault()
   }), []);
@@ -25242,13 +25265,16 @@ function useDragDrop({ onMove, onReference }) {
     state.current.suppress = false;
     return true;
   }, []);
+  (0, import_react9.useEffect)(() => {
+    if (dragging !== null) state.current.suppress = true;
+  }, [dragging]);
   const ghost = dragging === null ? null : h5(
     "div",
     {
       className: `vms-drag-ghost${dropKey === "composer" ? " is-composer" : ""}`,
       style: { left: `${point.x + 12}px`, top: `${point.y + 12}px` }
     },
-    h5(Icon2, { name: dropKey === "composer" ? "at" : "move", size: 12 }),
+    h5(Icon2, { name: dropKey === "composer" ? "at" : "move", size: 14 }),
     h5("span", { className: "vms-drag-name" }, dragging.title ?? dragging.name ?? ""),
     dropKey.startsWith("folder:") && h5(
       "span",
@@ -25557,10 +25583,19 @@ function LibraryBody(props) {
   }, [filterKey]);
   const items = (0, import_react10.useMemo)(() => [...state.items, ...links], [state.items, links]);
   const counts = (0, import_react10.useMemo)(() => {
-    const next = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 };
-    for (const item of items) next[item.kind] = (next[item.kind] ?? 0) + 1;
-    return next;
-  }, [items]);
+    const result = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 };
+    const startedAt = state.scan?.sessionCreatedAt;
+    for (const item of items) {
+      if (sessionOnly) {
+        if (item.source === "url") continue;
+        const info = meta[item.id];
+        if (typeof startedAt !== "number") continue;
+        if (info?.mtimeMs === void 0 || info.mtimeMs < startedAt) continue;
+      }
+      result[item.kind] = (result[item.kind] ?? 0) + 1;
+    }
+    return result;
+  }, [items, meta, sessionOnly, state.scan]);
   const folders = (0, import_react10.useMemo)(() => state.scan?.folders ?? [], [state.scan]);
   (0, import_react10.useEffect)(() => {
     if (state.scan === null || expandedInitialized.current) return;

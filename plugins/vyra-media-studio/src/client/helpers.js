@@ -10,7 +10,7 @@ export const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'op
 export const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'bmp', 'ico', 'svg', 'tif', 'tiff'])
 export const TEXT_EXT = new Set([
   'txt', 'md', 'markdown', 'log', 'csv', 'tsv', 'rtf', 'tex',
-  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'jsonc', 'yaml', 'yml',
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'mts', 'cts', 'json', 'jsonc', 'yaml', 'yml',
   'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
   'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
   'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
@@ -66,8 +66,18 @@ export function kindOfExtension(extension) {
   return undefined
 }
 
+const TEXT_MIME_FALLBACK = new Set([
+  'application/json', 'application/javascript', 'application/node',
+  'application/xml', 'application/x-httpd-php', 'application/x-sh',
+])
+
 export function isTextExtension(extension) {
-  return TEXT_EXT.has(String(extension ?? '').toLowerCase())
+  const ext = String(extension ?? '').toLowerCase()
+  if (TEXT_EXT.has(ext)) return true
+  // Script and config formats may report a non-text MIME (cjs is
+  // application/node), so the client keeps the same fallback as the Host.
+  const mime = mimeOfExtension(ext)
+  return mime.startsWith('text/') || mime.endsWith('+xml') || TEXT_MIME_FALLBACK.has(mime)
 }
 
 export function mimeOfExtension(extension) {

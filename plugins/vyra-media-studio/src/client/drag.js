@@ -1,17 +1,17 @@
 /**
- * Native-style pointer drag for files and folders.
+ * Pointer drag for files and folders, matching the OS file manager.
  *
- * A press held for {@link LONG_PRESS_MS} starts a drag that follows the pointer
- * with a small ghost. Drop targets are the real ones on screen — folder rows,
- * breadcrumb segments, folder popup entries and the composer card — so the
- * interaction matches the OS file manager instead of opening any dialog.
+ * Mouse behaves like Explorer: press and move starts a drag immediately.
+ * Touch has no hover, so it waits {@link LONG_PRESS_MS} to tell a drag from a
+ * scroll. Drop targets are the real ones on screen — folder rows, breadcrumb
+ * segments, folder popup entries and the composer card.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Icon } from './icons.js'
 
 const h = React.createElement
 const LONG_PRESS_MS = 250
-const MOVE_TOLERANCE = 6
+const MOUSE_THRESHOLD = 4
 
 /** The composer card, located through the bridge anchor the plugin registers. */
 function composerDropRect() {
@@ -52,9 +52,9 @@ export function useDragDrop({ onMove, onReference }) {
   const [dragging, setDragging] = useState(null)
   const [point, setPoint] = useState({ x: 0, y: 0 })
   const [dropKey, setDropKey] = useState('')
-  const state = useRef({ timer: 0, item: null, startX: 0, startY: 0, active: false, suppress: false })
+  const state = useRef({ timer: 0, item: null, startX: 0, startY: 0, active: false, suppress: false, touch: false })
 
-  const finish = useCallback((target) => {
+  const finish = useCallback(target => {
     const current = state.current
     const item = current.item
     current.active = false
@@ -63,12 +63,13 @@ export function useDragDrop({ onMove, onReference }) {
     setDropKey('')
     if (item === null || target === undefined) return
     if (target.kind === 'composer') onReference(item)
-    else if (target.folder !== (item.folder ?? '')) onMove(item, target.folder)
-    else if (target.folder !== undefined) onMove(item, target.folder)
+    else onMove(item, target.folder)
   }, [onMove, onReference])
 
   useEffect(() => {
     if (dragging === null) return undefined
+    // `pointermove` fires only while the button stays down; the window listener
+    // is what lets the ghost follow across the panel and the composer.
     const onMovePointer = event => {
       setPoint({ x: event.clientX, y: event.clientY })
       const target = targetAt(event.clientX, event.clientY)
@@ -103,6 +104,16 @@ export function useDragDrop({ onMove, onReference }) {
       current.startX = event.clientX
       current.startY = event.clientY
       current.suppress = false
+      // A pen or touch has no hover, so it needs the long-press delay; a mouse
+      // starts dragging as soon as it moves.
+      current.touch = event.pointerType === 'touch' || event.pointerType === 'pen'
+
+      const begin = () => {
+        current.timer = 0
+        current.active = true
+        setDragging(item)
+        setPoint({ x: current.startX, y: current.startY })
+      }
       const cleanup = () => {
         if (current.timer !== 0) window.clearTimeout(current.timer)
         current.timer = 0
@@ -113,19 +124,21 @@ export function useDragDrop({ onMove, onReference }) {
       const cancel = () => cleanup()
       const earlyMove = event2 => {
         if (current.active) return
-        if (Math.abs(event2.clientX - current.startX) > MOVE_TOLERANCE
-          || Math.abs(event2.clientY - current.startY) > MOVE_TOLERANCE) cleanup()
+        const moved = Math.abs(event2.clientX - current.startX) > MOUSE_THRESHOLD
+          || Math.abs(event2.clientY - current.startY) > MOUSE_THRESHOLD
+        if (!current.touch) {
+          // Mouse: moving past the threshold begins the drag rather than
+          // cancelling it. This was the bug that made dragging do nothing.
+          if (moved) { cleanup(); begin() }
+          return
+        }
+        // Touch: a scroll gesture cancels the pending long press.
+        if (moved) cleanup()
       }
       window.addEventListener('pointerup', cancel)
       window.addEventListener('pointercancel', cancel)
       window.addEventListener('pointermove', earlyMove)
-      current.timer = window.setTimeout(() => {
-        current.timer = 0
-        current.active = true
-        current.suppress = true
-        setDragging(item)
-        setPoint({ x: current.startX, y: current.startY })
-      }, LONG_PRESS_MS)
+      if (current.touch) current.timer = window.setTimeout(begin, LONG_PRESS_MS)
     },
     onDragStart: event => event.preventDefault(),
   }), [])
@@ -136,11 +149,16 @@ export function useDragDrop({ onMove, onReference }) {
     return true
   }, [])
 
+  // A drag that actually started must not also fire the row's click.
+  useEffect(() => {
+    if (dragging !== null) state.current.suppress = true
+  }, [dragging])
+
   const ghost = dragging === null ? null : h('div', {
     className: `vms-drag-ghost${dropKey === 'composer' ? ' is-composer' : ''}`,
     style: { left: `${point.x + 12}px`, top: `${point.y + 12}px` },
   },
-  h(Icon, { name: dropKey === 'composer' ? 'at' : 'move', size: 12 }),
+  h(Icon, { name: dropKey === 'composer' ? 'at' : 'move', size: 14 }),
   h('span', { className: 'vms-drag-name' }, dragging.title ?? dragging.name ?? ''),
   dropKey.startsWith('folder:') && h('span', { className: 'vms-drag-target' },
     `移到 ${dropKey.slice(7) || '工作区根目录'}`),

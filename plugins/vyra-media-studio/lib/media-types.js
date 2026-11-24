@@ -30,7 +30,7 @@ const ARCHIVE = [
   'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'iso',
 ]
 const CODE = [
-  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'jsonc', 'yaml', 'yml',
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'mts', 'cts', 'json', 'jsonc', 'yaml', 'yml',
   'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
   'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
   'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
@@ -55,7 +55,7 @@ export const KNOWN_EXTENSIONS = new Set(FILE_KINDS.keys())
 /** Extensions whose bytes are safe to show as UTF-8 text in the panel. */
 export const TEXT_EXTENSIONS = new Set([
   'txt', 'md', 'markdown', 'log', 'csv', 'tsv', 'rtf', 'tex',
-  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'json', 'jsonc', 'yaml', 'yml',
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'mts', 'cts', 'json', 'jsonc', 'yaml', 'yml',
   'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
   'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
   'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
@@ -87,7 +87,14 @@ export function kindOf(extension) {
  * @returns {boolean} whether the extension can be previewed as text.
  */
 export function isTextExtension(extension) {
-  return TEXT_EXTENSIONS.has(String(extension).toLowerCase())
+  const ext = String(extension).toLowerCase()
+  if (TEXT_EXTENSIONS.has(ext)) return true
+  // Some script and config formats report a non-text MIME (`.cjs` is
+  // `application/node`), so accept the structured-data and script types too.
+  const mime = mimeOf(ext)
+  return mime.startsWith('text/') || mime.endsWith('+xml') || mime === 'application/json'
+    || mime === 'application/javascript' || mime === 'application/node'
+    || mime === 'application/x-httpd-php'
 }
 
 /**

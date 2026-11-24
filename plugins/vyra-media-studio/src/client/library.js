@@ -318,11 +318,24 @@ export function LibraryBody(props) {
 
   const items = useMemo(() => [...state.items, ...links], [state.items, links])
 
+  // Counts follow every filter that hides files, so "只看本会话" also narrows
+  // the type chips. The session window is the one filter applied here; the type
+  // and folder filters themselves are excluded (a selected type still shows its
+  // full count so the chip can be turned off again).
   const counts = useMemo(() => {
-    const next = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 }
-    for (const item of items) next[item.kind] = (next[item.kind] ?? 0) + 1
-    return next
-  }, [items])
+    const result = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 }
+    const startedAt = state.scan?.sessionCreatedAt
+    for (const item of items) {
+      if (sessionOnly) {
+        if (item.source === 'url') continue
+        const info = meta[item.id]
+        if (typeof startedAt !== 'number') continue
+        if (info?.mtimeMs === undefined || info.mtimeMs < startedAt) continue
+      }
+      result[item.kind] = (result[item.kind] ?? 0) + 1
+    }
+    return result
+  }, [items, meta, sessionOnly, state.scan])
 
   const folders = useMemo(() => state.scan?.folders ?? [], [state.scan])
 

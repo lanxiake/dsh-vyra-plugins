@@ -35,7 +35,7 @@ const h = React.createElement
 const TEXT_CACHE = new Map()
 const LANGUAGE_BY_EXT = {
   js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
-  ts: 'typescript', tsx: 'typescript',
+  ts: 'typescript', tsx: 'typescript', mts: 'typescript', cts: 'typescript',
   json: 'json', jsonc: 'json',
   py: 'python', sh: 'bash', bash: 'bash', zsh: 'bash',
   html: 'xml', htm: 'xml', xml: 'xml', svg: 'xml',
