@@ -99,6 +99,7 @@ const {
   h, Card, BlockTitle, Btn, StatusDot, ToolCard, SettingsPage, CSS, ModelBlock, truncate,
   WorkbenchCard, marketInstallSpec, marketInstalled, marketEntry, updateMarket, ensureMarketSource,
   CommunityLinks, REPO_URL, QQ_GROUP, QQ_QR_SRC, inject,
+  VEYRA_DOMESTIC, VEYRA_OVERSEAS, VEYRA_COMMIT,
 } = bundle.__test
 
 // ── the design language ─────────────────────────────────────────────────────
@@ -320,6 +321,23 @@ test('marketInstalled 读宿主 bundle 列表', async () => {
   assert.equal(await marketInstalled({ pluginManager: { async listBundles() { return { ok: true, value: [] } } } }), false)
   assert.equal(await marketInstalled({}), null)
   assert.equal(await marketInstalled({ pluginManager: { async listBundles() { throw new Error('no') } } }), null)
+})
+
+// ── index sources ──────────────────────────────────────────────────────────
+
+test('jsDelivr 源按 commit 固定，不用 @master 那种 12 小时缓存', () => {
+  const all = [...VEYRA_DOMESTIC, ...VEYRA_OVERSEAS]
+  const jsdelivr = all.filter(url => url.includes('jsdelivr'))
+  assert.ok(jsdelivr.length > 0, 'jsDelivr is still one of the sources')
+  for (const url of jsdelivr) {
+    assert.equal(/@master\//.test(url), false, `${url} is a movable branch ref and can serve a stale index`)
+    assert.match(url, /@[0-9a-f]{40}\//, `${url} must pin a commit`)
+  }
+  // raw.githubusercontent is the live copy and keeps the branch ref.
+  const raw = all.filter(url => url.includes('raw.githubusercontent'))
+  assert.ok(raw.length > 0)
+  assert.equal(VEYRA_COMMIT.length, 40)
+  assert.equal(all.every(url => !url.includes('@' + '0'.repeat(40))), true, 'a placeholder may not ship')
 })
 
 test('ensureMarketSource 只在没有 Veyra 源时追加，且不改动其他源', async () => {

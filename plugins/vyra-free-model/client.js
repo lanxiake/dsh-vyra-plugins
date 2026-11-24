@@ -436,12 +436,29 @@ window.__ModuleLoader__.load({
     // card explains that instead of offering a dead button.
 
     const VEYRA_MARKET = 'vyra-plugin-market'
+    /**
+     * The Veyra index, addressed **by commit**, never by branch.
+     *
+     * jsDelivr keys a branch ref (`@master`) to a mutable cache entry with
+     * `s-maxage=43200` — twelve hours during which every reader, including this
+     * one, is served the previous release. A full commit ref is served
+     * `immutable` instead: the first request is a miss, and from then on the
+     * bytes can never be stale because that commit can never move.
+     *
+     * The cost is that this list is frozen in a shipped bundle. That is
+     * deliberate: it pins readers to a known-good index, and the one-click
+     * button still resolves our market's newest spec out of whatever the index
+     * says at that commit. `scripts/release.mjs` rewrites these SHAs together
+     * with the market manifest on every release, so a client one release behind
+     * still reads a consistent index — never a mix of old code and new versions.
+     */
+    const VEYRA_COMMIT = '0000000000000000000000000000000000000000'
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
-      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
+      `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index.json`,
     ]
     const VEYRA_OVERSEAS = [
-      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json',
+      `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index-github.json`,
       'https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json',
     ]
     const VEYRA_SOURCES = [...VEYRA_DOMESTIC, ...VEYRA_OVERSEAS]
@@ -2278,7 +2295,7 @@ a.vfm_btn{text-decoration:none}
       Card, BlockTitle, Btn, StatusDot, ToolCard, truncate,
       WorkbenchCard, marketInstallSpec, marketInstalled, marketEntry, updateMarket, ensureMarketSource,
       CommunityLinks, REPO_URL, QQ_GROUP, QQ_QR_SRC,
-      VEYRA_MARKET, VEYRA_DOMESTIC, MARKET_FALLBACK_SPEC, inject }
+      VEYRA_MARKET, VEYRA_DOMESTIC, VEYRA_OVERSEAS, VEYRA_COMMIT, MARKET_FALLBACK_SPEC, inject }
     return module.exports
   },
 })
