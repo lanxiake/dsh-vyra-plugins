@@ -25,7 +25,12 @@ window.__ModuleLoader__.load({
     const { createElement: h, Fragment, useState, useEffect, useMemo, useCallback, useRef } = React
 
     const NS = 'settings.vyraFreeModel'
-    const inject = ['slots', 'locale']
+    // `remote` is a Cordis service, not a property of the Host context: reading
+    // `ctx.remote` without injecting it throws `cannot get property "remote"
+    // without inject`, which is exactly what the install card shipped with.
+    // The two namespaces the card drives are injected too, so they are ready
+    // the moment it renders instead of failing on a cold page.
+    const inject = ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager']
 
     /**
      * Every string the page shows.
@@ -155,18 +160,34 @@ window.__ModuleLoader__.load({
         'forward.copied': '已复制',
 
         'workbench.title': '还想要更多',
-        'workbench.hint': '装好插件市场，就能搜索、批量安装、启停更多插件，把 DSH 扩成自己的工作台。',
+        'workbench.hint': '装好插件市场，就能搜索、批量安装、启停更多插件，把 DSH 扩成自己的工作台。已经装过的话，这个按钮会把它更新到最新版。',
         'workbench.install': '一键安装插件市场',
-        'workbench.installing': '正在安装…',
+        'workbench.update': '更新插件市场',
+        'workbench.installing': '正在处理…',
         'workbench.installed': '插件市场已安装',
         'workbench.installedHint': '重启 DSH 后，在左侧栏或「设置 → 插件」里打开。',
         'workbench.added': '已加入 Veyra 插件源。',
+        'workbench.upToDate': '插件市场已是最新版本。',
+        'workbench.updated': '插件市场已更新：v{from} → v{to}，重启 DSH 后生效。',
         'workbench.failed': '安装失败：{message}',
         'workbench.unsupported': '当前 DSH 版本不支持一键安装，请到「设置 → 插件」手动安装。',
         'workbench.tipsTitle': '怎么开始',
         'workbench.tip1': '直接说你要做什么，比如「把这份文档整理成一页 PPT」。',
         'workbench.tip2': '不知道从哪开始，就问 Agent：「根据我的需求推荐一组插件」。',
         'workbench.tip3': '插件装完一般要重启 DSH；「设置 → 插件」里可以启停和更新。',
+        'workbench.tip4': '这里装的市场和「设置 → 插件」里的是同一个，用哪个入口都行。',
+
+        'community.title': '交流与反馈',
+        'community.hint': '用着有问题、想加功能，或者想看看别人怎么用。',
+        'community.qq': 'QQ 交流群',
+        'community.qqDesc': '扫一扫加入 QQ 交流群（群号 1121362543），获取最新资讯和技术支持。',
+        'community.qqTip': '使用 QQ 扫一扫',
+        'community.qqAlt': 'QQ 交流群二维码',
+        'community.groupNo': '群号',
+        'community.copy': '复制群号',
+        'community.copied': '已复制',
+        'community.github': 'GitHub',
+        'community.version': '版本',
 
         'degrade.laneDown': '暂时连不上，请检查网络',
         'degrade.laneThrottled': '免费额度暂时用完，稍后再试或登录一个账号',
@@ -309,18 +330,34 @@ window.__ModuleLoader__.load({
         'forward.copied': 'Copied',
 
         'workbench.title': 'Want more?',
-        'workbench.hint': 'Install the plugin market to search, batch-install and toggle plugins — turn DSH into your own workbench.',
+        'workbench.hint': 'Install the plugin market to search, batch-install and toggle plugins — turn DSH into your own workbench. If it is already installed, this button updates it.',
         'workbench.install': 'One-click install plugin market',
-        'workbench.installing': 'Installing…',
+        'workbench.update': 'Update plugin market',
+        'workbench.installing': 'Working…',
         'workbench.installed': 'Plugin market installed',
         'workbench.installedHint': 'Restart DSH, then open it from the sidebar or Settings → Plugins.',
         'workbench.added': 'Veyra index source added.',
+        'workbench.upToDate': 'The plugin market is up to date.',
+        'workbench.updated': 'Plugin market updated: v{from} → v{to}. Restart DSH to apply it.',
         'workbench.failed': 'Install failed: {message}',
         'workbench.unsupported': 'This DSH version cannot install it in one click; use Settings → Plugins.',
         'workbench.tipsTitle': 'How to start',
         'workbench.tip1': 'Say what you want to do, e.g. “turn this document into a one-page deck”.',
         'workbench.tip2': 'Not sure where to start? Ask the agent: “recommend a plugin set for my needs”.',
         'workbench.tip3': 'Restart DSH after installing plugins; Settings → Plugins can toggle and update them.',
+        'workbench.tip4': 'The market installed here is the same one under Settings → Plugins; either door works.',
+
+        'community.title': 'Community',
+        'community.hint': 'Something broken, a feature you want, or a look at how others use it.',
+        'community.qq': 'QQ group',
+        'community.qqDesc': 'Scan to join the QQ group (1121362543) for news and support.',
+        'community.qqTip': 'Scan with QQ',
+        'community.qqAlt': 'QQ group QR code',
+        'community.groupNo': 'Group',
+        'community.copy': 'Copy group number',
+        'community.copied': 'Copied',
+        'community.github': 'GitHub',
+        'community.version': 'Version',
 
         'degrade.laneDown': 'Cannot reach it right now; check the network.',
         'degrade.laneThrottled': 'The free quota is used up for now. Try later, or sign in.',
@@ -479,6 +516,24 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * The market bundle's own row in the Host's bundle list, when it is there.
+     *
+     * Returns the row rather than a boolean because two of its fields are what
+     * decide what the button does next: `version` (what is on disk now) and
+     * `update` (`'git'` or `'registry'`, absent when this copy cannot move).
+     */
+    async function marketEntry(remote) {
+      try {
+        if (typeof remote?.pluginManager?.listBundles !== 'function') return null
+        const answer = await remote.pluginManager.listBundles()
+        if (!answer?.ok || !Array.isArray(answer.value)) return null
+        return answer.value.find(bundle => bundle?.name === VEYRA_MARKET) ?? null
+      } catch {
+        return null
+      }
+    }
+
     /** Whether the market bundle is already installed; null when not knowable. */
     async function marketInstalled(remote) {
       try {
@@ -488,6 +543,52 @@ window.__ModuleLoader__.load({
         return answer.value.some(bundle => bundle?.name === VEYRA_MARKET)
       } catch {
         return null
+      }
+    }
+
+    /**
+     * Move an installed market to the version the index now lists.
+     *
+     * `updateBundle` only accepts a version the profile can actually take: a
+     * registry dependency updated by version, a Git copy updated by a spec that
+     * pins another commit of the same repository directory. Everything the
+     * index offers that is neither — a reinstall at the same version, a copy the
+     * Host marks un-updatable — is reported as skipped, never attempted: a
+     * failure there would read as "update failed" for a market that is fine.
+     *
+     * @param {object} remote - the Host namespaces.
+     * @param {object|null} entry - the installed bundle row.
+     * @param {{spec: string, url: string}|null} resolved - the index's own spec.
+     * @returns {Promise<{state: 'updated'|'current'|'skipped'|'failed', from?: string, to?: string, message?: string}>}
+     */
+    async function updateMarket(remote, entry, resolved) {
+      const updatable = entry?.update === 'git' || entry?.update === 'registry'
+      if (!updatable || typeof remote?.pluginManager?.updateBundle !== 'function') {
+        return { state: 'skipped' }
+      }
+      const from = typeof entry?.version === 'string' ? entry.version : ''
+      const spec = typeof resolved?.spec === 'string' ? resolved.spec : ''
+      // A registry dependency updates by its own manifest version; only a Git
+      // copy takes the index's spec, and only the commit differs between them.
+      const target = entry.update === 'registry' ? from : ''
+      if (entry.update === 'git') {
+        if (spec === '' || (typeof entry?.source === 'string' && entry.source === spec)) return { state: 'current', from }
+        try {
+          const answer = await remote.pluginManager.updateBundle(VEYRA_MARKET, from, { spec })
+          if (answer?.ok === false) throw new Error(answer?.error?.message || answer?.error?.code || 'update refused')
+          const to = typeof answer?.value?.to === 'string' ? answer.value.to : ''
+          return { state: to !== '' && to !== from ? 'updated' : 'current', from, to }
+        } catch (error) {
+          return { state: 'failed', from, message: String(error?.message ?? error) }
+        }
+      }
+      try {
+        const answer = await remote.pluginManager.updateBundle(VEYRA_MARKET, target)
+        if (answer?.ok === false) throw new Error(answer?.error?.message || answer?.error?.code || 'update refused')
+        const to = typeof answer?.value?.to === 'string' ? answer.value.to : ''
+        return { state: to !== '' && to !== from ? 'updated' : 'current', from, to }
+      } catch (error) {
+        return { state: 'failed', from, message: String(error?.message ?? error) }
       }
     }
 
@@ -554,12 +655,19 @@ window.__ModuleLoader__.load({
   background:var(--dsw-alias-bg-layer-2);font-size:11px;line-height:1.5}
 
 /* ── buttons ──────────────────────────────────────────────────────────── */
+/* Every surface here is a theme variable pair — a background token AND the
+   label token that sits on it — so a light/dark switch (or a custom theme such
+   as 自由主题) recolours both together.
+   The old hover set a background that could be *lighter* than the base while
+   the label stayed on label-primary: on the light theme a filled button turned
+   pale under the pointer and its text washed out. Hover now keeps the surface's
+   own contrast and only lifts the tone. */
 .vfm_btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;cursor:pointer;
   border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 72%,transparent);
   background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);
   font:inherit;font-size:12.5px;line-height:1.5;white-space:nowrap;
   transition:background-color .15s ease,border-color .15s ease,transform .1s ease}
-.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1);border-color:var(--dsw-alias-border-l2)}
+.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-3);border-color:var(--dsw-alias-border-l2)}
 .vfm_btn:active:not(:disabled){transform:translateY(1px)}
 .vfm_btn:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
 .vfm_btn:disabled{opacity:.5;cursor:default}
@@ -567,8 +675,17 @@ window.__ModuleLoader__.load({
    action fell back to the solid base and the page lost its action hierarchy. */
 .vfm_btn[data-kind="ghost"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
 .vfm_btn[data-kind="ghost"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
-.vfm_btn[data-kind="primary"]{border-color:transparent;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-weight:500}
-.vfm_btn[data-kind="primary"]:hover:not(:disabled){filter:brightness(1.08)}
+/* Primary: the shell's own button tokens. The fill token is dark in the light
+   theme and light in the dark one, and the brand-text token is the colour meant
+   to sit on it — so the label never disappears into the fill on either theme.
+   A brightness filter on hover was the second half of the same bug: it lightened a
+   light fill until the text on it lost its contrast. */
+.vfm_btn[data-kind="primary"]{border-color:transparent;
+  background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary));
+  color:var(--dsw-alias-brand-text,var(--dsw-alias-bg-base));font-weight:500}
+.vfm_btn[data-kind="primary"]:hover:not(:disabled){
+  background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary));
+  color:var(--dsw-alias-brand-text,var(--dsw-alias-bg-base))}
 .vfm_btn[data-kind="quiet"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
 .vfm_btn[data-kind="quiet"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 
@@ -709,9 +826,43 @@ window.__ModuleLoader__.load({
 /* ── more plugins and DSH tips ──────────────────────────────────────────── */
 .vfm_workbench{display:flex;flex-direction:column;gap:8px}
 .vfm_workbenchrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.vfm_workbenchfail{color:#c0392b}
+/* A failure is text on the card's own surface, so it uses the theme's error
+   colour rather than a hard-coded red (which was unreadable on dark themes). */
+.vfm_workbenchfail{color:var(--dsw-alias-state-error-primary)}
 .vfm_tips{display:flex;flex-direction:column;gap:4px;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:12px}
 .vfm_tips ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
+
+/* ── community: QQ group and GitHub ───────────────────────────────────── */
+/* The same pill shape Agent CM uses, built from theme pairs only: outline from
+   border-l2, label from label-secondary, and the interactive-bg-hover token for
+   the hover fill — a token the shell already pairs with the label colour, so the
+   text stays readable on both themes and under a custom theme. */
+.vfm_about{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.vfm_pill{position:relative;display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:28px;
+  padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:14px;background:transparent;
+  color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:18px;text-decoration:none;
+  white-space:nowrap;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.vfm_pill:hover,.vfm_pill[aria-expanded="true"]{color:var(--dsw-alias-label-primary);
+  background:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-layer-2))}
+.vfm_pill:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
+.vfm_pillvalue{color:var(--dsw-alias-label-primary);font-weight:500}
+.vfm_pillicon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex:none}
+.vfm_pillicon svg{display:block;width:14px;height:14px}
+.vfm_anchor{position:relative;display:inline-flex}
+/* The number stays visible next to the pills, so it can be typed by hand when
+   the QR is not handy; it is a value, so it gets the mono face. */
+.vfm_qqno{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  color:var(--dsw-alias-label-primary);font-variant-numeric:tabular-nums}
+.vfm_qr{position:absolute;top:calc(100% + 8px);left:0;z-index:20;width:240px;padding:16px;border-radius:14px;
+  border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 70%,transparent);
+  background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1));
+  box-shadow:0 18px 48px color-mix(in srgb,#000 28%,transparent);
+  color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;text-align:center}
+.vfm_qr p{margin:0}
+.vfm_qr img{display:block;margin:12px auto 8px;padding:8px;border-radius:10px;
+  background:var(--dsw-alias-bg-base);border:1px solid color-mix(in srgb,var(--dsw-alias-border-l1) 80%,transparent)}
+.vfm_qracts{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vfm_qracts .vfm_btn{padding:2px 8px;font-size:11px}
 `
 
     // ── primitives ───────────────────────────────────────────────────────────
@@ -1448,6 +1599,88 @@ window.__ModuleLoader__.load({
 
     // ── the page ─────────────────────────────────────────────────────────────
 
+    /** Where the project and its community live. */
+    const REPO_URL = 'https://github.com/lanxiake/dsh-vyra-plugins'
+    const QQ_GROUP = '1121362543'
+    /**
+     * The QR image is served by the Host half from this package's `assets/`
+     * directory (route `/assets/*`), not inlined here: a 15 KB base64 payload
+     * would be parsed on every page load and would not update with the picture.
+     */
+    const QQ_QR_SRC = `${API}/assets/qq-group.png`
+
+    /** The GitHub mark, 16×16, drawn from `currentColor` so it follows the theme. */
+    function GitHubGlyph() {
+      return h('svg', { viewBox: '0 0 16 16', width: 14, height: 14, 'aria-hidden': 'true', focusable: 'false' },
+        h('path', {
+          fill: 'currentColor',
+          d: 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A7.995 7.995 0 0 0 16 8c0-4.42-3.58-8-8-8z',
+        }))
+    }
+
+    /** The QQ penguin, simplified: a solid mark that reads at 14px. */
+    function QQGlyph() {
+      return h('svg', { viewBox: '0 0 16 16', width: 14, height: 14, 'aria-hidden': 'true', focusable: 'false' },
+        h('path', {
+          fill: 'currentColor',
+          d: 'M8 1.2c1.6 0 2.6 1.2 2.6 2.7 0 .4.1.7.3 1 .7.9 1.4 2.2 1.6 3.4.2 1.1-.1 1.8-.5 1.8-.3 0-.5-.4-.7-.9-.3.9-1.4 1.5-2.6 1.6h-.5c-1.2-.1-2.3-.7-2.6-1.6-.2.5-.4.9-.7.9-.4 0-.7-.7-.5-1.8.2-1.2.9-2.5 1.6-3.4.2-.3.3-.6.3-1 0-1.5 1-2.7 2.6-2.7zM6.3 12.1c-.4.5-.3 1.1.1 1.3.4.2 1 0 1.5-.3.2.1.4.2.6.2s.4-.1.6-.2c.5.3 1.1.5 1.5.3.4-.2.5-.8.1-1.3-.5-.7-1.3-1.1-2.2-1.1s-1.7.4-2.2 1.1z',
+        }))
+    }
+
+    /**
+     * The community card: a QQ group that opens a QR popover, and the GitHub
+     * repository. Both are links out, so nothing here touches the Host.
+     */
+    function CommunityCard() {
+      const [open, setOpen] = useState(false)
+      const [copied, setCopied] = useState(false)
+
+      // Escape closes the popover, the way every other overlay on this page does.
+      useEffect(() => {
+        if (!open) return undefined
+        const onKey = event => { if (event.key === 'Escape') setOpen(false) }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+      }, [open])
+
+      const copyGroup = useCallback(() => {
+        try {
+          void navigator.clipboard?.writeText(QQ_GROUP)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1600)
+        } catch { /* the number is selectable */ }
+      }, [])
+
+      return h(Card, { title: t('community.title'), hint: t('community.hint') },
+        h('div', { className: 'vfm_about' },
+          h('span', { className: 'vfm_anchor' },
+            h('button', {
+              type: 'button',
+              className: 'vfm_pill',
+              'aria-expanded': open ? 'true' : 'false',
+              onClick: () => setOpen(!open),
+            },
+            h('span', { className: 'vfm_pillicon' }, h(QQGlyph)),
+            h('span', {}, t('community.qq'))),
+            open
+              ? h('div', { className: 'vfm_qr', role: 'dialog', 'aria-label': t('community.qq') },
+                h('p', {}, t('community.qqDesc')),
+                h('img', { src: QQ_QR_SRC, alt: t('community.qqAlt'), width: 180, loading: 'lazy' }),
+                h('p', {}, t('community.qqTip')),
+                h('div', { className: 'vfm_qracts' },
+                  h(Btn, { kind: 'ghost', onClick: copyGroup }, copied ? t('community.copied') : t('community.copy'))))
+              : null),
+          h('a', {
+            className: 'vfm_pill',
+            href: REPO_URL,
+            target: '_blank',
+            rel: 'noreferrer noopener',
+          },
+          h('span', { className: 'vfm_pillicon' }, h(GitHubGlyph)),
+          h('span', {}, t('community.github'))),
+          h('span', { className: 'vfm_meta' }, t('community.groupNo'), h('code', { className: 'vfm_qqno' }, QQ_GROUP))))
+    }
+
     /**
      * The sign-in dialog.
      *
@@ -1458,11 +1691,14 @@ window.__ModuleLoader__.load({
      */
     /**
      * The "want more" card: one click installs vyra-plugin-market and adds the
-     * Veyra index source, then leaves three sentences about how to use DSH.
+     * Veyra index source; on a machine that already has the market it brings
+     * that copy up to the version the index lists, so the button is never a
+     * dead end after the first use.
      */
     function WorkbenchCard() {
       const [phase, setPhase] = useState('idle') // idle | installing | done | error
       const [installed, setInstalled] = useState(false)
+      const [version, setVersion] = useState('')
       const [message, setMessage] = useState('')
       const alive = useRef(true)
       useEffect(() => () => { alive.current = false }, [])
@@ -1470,8 +1706,10 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         let cancelled = false
         void (async () => {
-          const present = await marketInstalled(hostRemote())
-          if (!cancelled && present === true) setInstalled(true)
+          const entry = await marketEntry(hostRemote())
+          if (cancelled || entry === null) return
+          setInstalled(true)
+          if (typeof entry.version === 'string') setVersion(entry.version)
         })()
         return () => { cancelled = true }
       }, [])
@@ -1485,18 +1723,36 @@ window.__ModuleLoader__.load({
           if (typeof remote?.pluginManager?.installBundle !== 'function') {
             throw new Error(t('workbench.unsupported'))
           }
-          if (await marketInstalled(remote) === true) {
-            const sourceAdded = await ensureMarketSource(remote, VEYRA_DOMESTIC[0])
+
+          // Already installed: keep the source configured, then ask the Host
+          // whether this copy can move to what the index now offers.
+          const existing = await marketEntry(remote)
+          if (existing !== null) {
+            const resolved = await resolveMarket()
+            const sourceAdded = await ensureMarketSource(remote, resolved.url)
+            if (typeof existing.version === 'string') setVersion(existing.version)
+            const outcome = await updateMarket(remote, existing, resolved)
             if (!alive.current) return
             setInstalled(true)
+            if (outcome.state === 'failed') {
+              setPhase('error')
+              setMessage(outcome.message ?? '')
+              return
+            }
             setPhase('done')
-            setMessage(sourceAdded ? t('workbench.added') : t('workbench.installedHint'))
+            if (typeof outcome.to === 'string' && outcome.to !== '') setVersion(outcome.to)
+            if (outcome.state === 'updated') {
+              setMessage(t('workbench.updated', { from: outcome.from ?? '', to: outcome.to ?? '' }))
+            } else {
+              setMessage(sourceAdded ? t('workbench.added') : t('workbench.upToDate'))
+            }
             return
           }
+
           const resolved = await resolveMarket()
           const sourceAdded = await ensureMarketSource(remote, resolved.url)
           const answer = await remote.pluginManager.installBundle(resolved.spec, { enabled: true, saveExact: true })
-          if (!answer?.ok) throw new Error(answer?.error?.message || 'install failed')
+          if (answer?.ok === false) throw new Error(answer?.error?.message || 'install failed')
           if (!alive.current) return
           setInstalled(true)
           setPhase('done')
@@ -1512,6 +1768,12 @@ window.__ModuleLoader__.load({
         ? message
         : t('workbench.failed', { message })
 
+      // Once it is installed the button says what it will do now: bring the
+      // market up to date, which is a different promise from "install".
+      const label = phase === 'installing'
+        ? t('workbench.installing')
+        : installed ? t('workbench.update') : t('workbench.install')
+
       return h(Card, {
         title: t('workbench.title'),
         hint: t('workbench.hint'),
@@ -1522,12 +1784,15 @@ window.__ModuleLoader__.load({
             kind: 'primary',
             disabled: phase === 'installing',
             onClick: () => void install(),
-          }, phase === 'installing'
-            ? t('workbench.installing')
-            : installed ? t('workbench.installed') : t('workbench.install')),
-          installed && phase !== 'error'
-            ? h('span', { className: 'vfm_note' }, t('workbench.installedHint'))
+          }, label),
+          installed
+            ? h('span', { className: 'vfm_meta' },
+              h(StatusDot, { state: phase === 'error' ? 'failed' : 'done', label: t('workbench.installed') }),
+              version === '' ? null : h('span', { className: 'vfm_tag' }, 'v' + version.replace(/^v/i, '')))
             : null),
+        installed && phase !== 'error'
+          ? h('p', { className: 'vfm_note' }, t('workbench.installedHint'))
+          : null,
         phase === 'error' ? h('p', { className: 'vfm_note vfm_workbenchfail' }, failure) : null,
         phase === 'done' && message !== '' ? h('p', { className: 'vfm_note' }, message) : null,
         h('div', { className: 'vfm_tips' },
@@ -1535,7 +1800,8 @@ window.__ModuleLoader__.load({
           h('ul', null,
             h('li', null, t('workbench.tip1')),
             h('li', null, t('workbench.tip2')),
-            h('li', null, t('workbench.tip3'))))))
+            h('li', null, t('workbench.tip3')),
+            h('li', null, t('workbench.tip4'))))))
     }
 
     function LoginModal({ dialog, onClose, onCopy, onOpen }) {
@@ -1936,6 +2202,7 @@ window.__ModuleLoader__.load({
           defaultOpen: false,
         }),
         h(WorkbenchCard),
+        h(CommunityCard),
         h(LoginModal, {
           dialog: loginDialog,
           onClose: () => setLoginDialog(undefined),
@@ -1959,6 +2226,9 @@ window.__ModuleLoader__.load({
       // Kept for the install card: `remote` lives on the Host context, and the
       // card only reads it when clicked, so a Host without it still loads.
       hostContext = ctx
+      // With `remote` injected above, `ctx.remote` is a real service here rather
+      // than a property read that throws, so the install card is usable on the
+      // first click.
       // The stylesheet has to be mounted, not merely defined: a page whose CSS
       // never reaches document.head renders as bare stacked HTML, which is what
       // shipped once and looked broken rather than plain.
@@ -1993,8 +2263,9 @@ window.__ModuleLoader__.load({
       EndpointsBlock, LoginModal, creditLine, probeLabel, vendorOf, shortName,
       cursorSnippet, claudeCodeSnippet, degradedMessage, DegradedBanner, PROVIDERS, SettingsPage, DICT, CSS, API,
       Card, BlockTitle, Btn, StatusDot, ToolCard, truncate,
-      WorkbenchCard, marketInstallSpec, marketInstalled, ensureMarketSource,
-      VEYRA_MARKET, VEYRA_DOMESTIC, MARKET_FALLBACK_SPEC }
+      WorkbenchCard, marketInstallSpec, marketInstalled, marketEntry, updateMarket, ensureMarketSource,
+      CommunityCard, REPO_URL, QQ_GROUP, QQ_QR_SRC,
+      VEYRA_MARKET, VEYRA_DOMESTIC, MARKET_FALLBACK_SPEC, inject }
     return module.exports
   },
 })

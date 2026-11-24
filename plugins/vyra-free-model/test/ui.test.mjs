@@ -97,7 +97,8 @@ function loadBundle() {
 const bundle = loadBundle()
 const {
   h, Card, BlockTitle, Btn, StatusDot, ToolCard, SettingsPage, CSS, ModelBlock, truncate,
-  WorkbenchCard, marketInstallSpec, marketInstalled, ensureMarketSource,
+  WorkbenchCard, marketInstallSpec, marketInstalled, marketEntry, updateMarket, ensureMarketSource,
+  CommunityCard, REPO_URL, QQ_GROUP, QQ_QR_SRC, inject,
 } = bundle.__test
 
 // ── the design language ─────────────────────────────────────────────────────
@@ -116,17 +117,40 @@ test('cards use the layered gradient and soft radius the reference uses', () => 
 })
 
 test('every theme variable used is one the shell publishes', () => {
-  const used = new Set((CSS.match(/var\((--dsw-[a-z0-9-]+)\)/g) ?? []).map(v => v.slice(4, -1)))
+  const used = new Set((CSS.match(/var\((--dsw-[a-z0-9-]+)/g) ?? []).map(v => v.slice(4)))
   const valid = new Set([
     '--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2',
-    '--dsw-alias-bg-overlay', '--dsw-alias-border-l1', '--dsw-alias-border-l2',
-    '--dsw-alias-brand-primary', '--dsw-alias-label-primary', '--dsw-alias-label-secondary',
+    '--dsw-alias-bg-layer-3', '--dsw-alias-bg-overlay', '--dsw-alias-border-l1', '--dsw-alias-border-l2',
+    '--dsw-alias-brand-primary', '--dsw-alias-brand-text',
+    '--dsw-alias-button-primary-fill', '--dsw-alias-button-primary-hover',
+    '--dsw-alias-interactive-bg-hover', '--dsw-alias-interactive-bg-active',
+    '--dsw-alias-label-primary', '--dsw-alias-label-secondary',
     '--dsw-alias-state-error-primary', '--dsw-alias-state-idle-primary',
     '--dsw-alias-state-success-primary', '--dsw-alias-state-warn-primary',
     '--dsw-specific-sidebar-fill',
   ])
   const unknown = [...used].filter(name => !valid.has(name))
   assert.deepEqual(unknown, [], `unknown tokens would silently fall back to nothing: ${unknown.join(', ')}`)
+})
+
+test('主题切换时按钮配色成对变化，悬停不会把浅色主题的字冲掉', () => {
+  // The bug: on the light theme the filled button turned pale under the pointer
+  // while its label stayed dark-on-light, and the text disappeared.
+  const primary = /\.vfm_btn\[data-kind="primary"\]\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(primary.includes('--dsw-alias-button-primary-fill'), 'the fill must be the shell’s button token')
+  assert.ok(primary.includes('--dsw-alias-brand-text'), 'the label must be the colour meant to sit on that fill')
+  const hover = /\.vfm_btn\[data-kind="primary"\]:hover[^{]*\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(hover.includes('--dsw-alias-button-primary-hover'), 'hover switches to the paired hover token')
+  assert.ok(hover.includes('--dsw-alias-brand-text'), 'hover keeps the paired label colour')
+  assert.equal(/brightness\(/.test(CSS), false, 'a filter would lighten the fill without touching the label')
+  // The neutral button lifts one layer rather than dropping to the flatter one.
+  const baseHover = /\.vfm_btn:hover:not\(:disabled\)\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(baseHover.includes('--dsw-alias-bg-layer-3'), 'hover must lift the surface, not flatten it')
+})
+
+test('样式里没有写死的颜色，全部跟着主题走', () => {
+  const literals = [...CSS.matchAll(/(?:^|[;{\s])(?:color|background)\s*:\s*(#[0-9a-fA-F]{3,8})\b/g)].map(m => m[1])
+  assert.deepEqual(literals, [], `hard-coded colours ignore the theme: ${literals.join(', ')}`)
 })
 
 test('hover and focus states exist for interactive rows', () => {
@@ -318,4 +342,117 @@ test('ensureMarketSource 只在没有 Veyra 源时追加，且不改动其他源
     },
   }
   assert.equal(await ensureMarketSource(already, 'https://ghproxy.net/veyra.json'), false)
+})
+
+// ── the install card must be able to reach the Host ─────────────────────────
+
+test('远程服务写进了 inject，否则读 ctx.remote 会直接抛错', () => {
+  // The shipped error was `cannot get property "remote.pluginManager" without
+  // inject`: `remote` is a Cordis service, so it has to be declared before
+  // apply() may read it.
+  for (const name of ['remote', 'remote.pluginMarket', 'remote.pluginManager']) {
+    assert.ok(inject.includes(name), `${name} must be injected`)
+  }
+  assert.ok(inject.includes('slots') && inject.includes('locale'), 'the original services stay declared')
+})
+
+test('marketEntry 找到市场那一行，并带上它的版本与更新方式', async () => {
+  const remote = {
+    pluginManager: {
+      async listBundles() {
+        return {
+          ok: true,
+          value: [
+            { name: 'other', version: '1.0.0' },
+            { name: 'vyra-plugin-market', version: '0.2.12', update: 'git', source: 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market' },
+          ],
+        }
+      },
+    },
+  }
+  const entry = await marketEntry(remote)
+  assert.equal(entry.version, '0.2.12')
+  assert.equal(entry.update, 'git')
+  assert.equal(await marketEntry({ pluginManager: { async listBundles() { return { ok: true, value: [] } } } }), null)
+  assert.equal(await marketEntry(null), null)
+})
+
+test('updateMarket 对 git 版本调用 updateBundle 并带上索引里的 spec', async () => {
+  const calls = []
+  const remote = {
+    pluginManager: {
+      async updateBundle(name, version, options) {
+        calls.push([name, version, options])
+        return { ok: true, value: { from: version, to: '0.2.13' } }
+      },
+    },
+  }
+  const outcome = await updateMarket(
+    remote,
+    { name: 'vyra-plugin-market', version: '0.2.12', update: 'git', source: 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market' },
+    { spec: 'git+https://gitcode.com/x#bbb&path:/plugins/vyra-plugin-market', url: 'https://example/index.json' },
+  )
+  assert.equal(outcome.state, 'updated')
+  assert.equal(outcome.to, '0.2.13')
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0][0], 'vyra-plugin-market')
+  assert.equal(calls[0][1], '0.2.12')
+  assert.equal(calls[0][2].spec, 'git+https://gitcode.com/x#bbb&path:/plugins/vyra-plugin-market')
+})
+
+test('updateMarket 已经是同一个 spec 时不发请求', async () => {
+  let called = false
+  const same = 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market'
+  const remote = { pluginManager: { async updateBundle() { called = true; return { ok: true, value: {} } } } }
+  const outcome = await updateMarket(remote, { name: 'vyra-plugin-market', version: '0.2.12', update: 'git', source: same }, { spec: same })
+  assert.equal(outcome.state, 'current')
+  assert.equal(called, false)
+})
+
+test('updateMarket 对不可更新的副本不报错，只报告跳过', async () => {
+  let called = false
+  const remote = { pluginManager: { async updateBundle() { called = true; return { ok: true, value: {} } } } }
+  const outcome = await updateMarket(remote, { name: 'vyra-plugin-market', version: '0.2.12' }, { spec: 'x@1' })
+  assert.equal(outcome.state, 'skipped')
+  assert.equal(called, false)
+})
+
+test('updateMarket 把宿主的失败翻译成一个可显示的状态', async () => {
+  const remote = {
+    pluginManager: {
+      async updateBundle() { return { ok: false, error: { code: 'operation-error', message: 'pnpm said no' } } },
+    },
+  }
+  const outcome = await updateMarket(
+    remote,
+    { name: 'vyra-plugin-market', version: '0.1.0', update: 'registry' },
+    { spec: 'vyra-plugin-market@1.0.0' },
+  )
+  assert.equal(outcome.state, 'failed')
+  assert.equal(outcome.message, 'pnpm said no')
+})
+
+// ── community links ────────────────────────────────────────────────────────
+
+test('交流卡片带 QQ 群和 GitHub 链接', () => {
+  const html = renderToString(h(CommunityCard))
+  assert.ok(html.includes('QQ 交流群'))
+  assert.ok(html.includes('GitHub'))
+  assert.ok(html.includes(`href="${REPO_URL}"`), 'GitHub must be a real link')
+  assert.ok(html.includes('target="_blank"'))
+  assert.ok(html.includes('rel="noreferrer noopener"'))
+  assert.ok(html.includes(QQ_GROUP), 'the group number is shown so it can be typed by hand')
+})
+
+test('QQ 二维码指向本插件自己的路由，而不是外网或内联图片', () => {
+  assert.ok(QQ_QR_SRC.startsWith('/api/vyra-free-model/assets/'))
+  assert.ok(QQ_QR_SRC.endsWith('.png'))
+  assert.equal(QQ_QR_SRC.includes('data:image'), false)
+})
+
+test('交流卡片的弹层默认收起', () => {
+  const html = renderToString(h(CommunityCard))
+  assert.equal(html.includes('aria-expanded="true"'), false)
+  assert.equal(html.includes('vfm_qr'), false, 'the dialog appears only when opened')
+  assert.ok(html.includes('aria-expanded="false"'))
 })

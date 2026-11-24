@@ -77,7 +77,7 @@ context.globalThis = context
 vm.createContext(context)
 vm.runInContext(source, context, { filename: 'client.js' })
 
-const { h, ModelBlock, AccountsBlock, ForwardBlock, EndpointsBlock, LoginModal, Card, BlockTitle, ToolCard, WorkbenchCard, CSS } = registered.__test
+const { h, ModelBlock, AccountsBlock, ForwardBlock, EndpointsBlock, LoginModal, Card, BlockTitle, ToolCard, WorkbenchCard, CommunityCard, CSS } = registered.__test
 
 const models = [
   { id: 'kilo-auto/free', name: '自动选择（推荐）', contextWindow: 256000, vision: false, probe: null },
@@ -121,7 +121,8 @@ const body = process.env.PREVIEW_MODAL === '1' ? render(h(LoginModal, { dialog: 
     endpoints: [{ id: 'e1', name: '豆包（火山方舟）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', hasKey: true, models: [{ id: 'doubao-x' }], modelsAt: 0 }],
     onSummary: () => {}, collapsed: true, defaultOpen: expanded,
   }),
-  h(WorkbenchCard)
+  h(WorkbenchCard),
+  h(CommunityCard)
 ))
 
 const html = `<!doctype html>

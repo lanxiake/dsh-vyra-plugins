@@ -46,6 +46,43 @@ import {
 /** The prefix every route this plugin serves lives under. */
 export const API_PATH = '/api/vyra-free-model'
 
+/**
+ * The QR code the settings page shows for the community group.
+ *
+ * Served from this package rather than inlined as a data URI in the browser
+ * half: the PNG is 15 KB already, base64 would inflate it by a third inside a
+ * bundle that is parsed on every page load, and an external image host would
+ * make a settings page depend on the network.
+ */
+const ASSETS_DIR = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), 'assets')
+
+/**
+ * Resolve a name inside `assets/`, or null when it is not a plain file name.
+ *
+ * The route serves exactly two images today; a traversal-y path is refused
+ * rather than normalised, because nothing the page sends should ever be able
+ * to name a file outside this one directory.
+ */
+function assetFile(name) {
+  if (typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.(png|svg|jpg|jpeg|webp)$/i.test(name)) return null
+  const file = path.join(ASSETS_DIR, name)
+  try {
+    if (!fs.statSync(file).isFile()) return null
+    return file
+  } catch {
+    return null
+  }
+}
+
+/** The content type for the image extensions `assetFile` accepts. */
+function imageType(file) {
+  const ext = path.extname(file).toLowerCase()
+  if (ext === '.svg') return 'image/svg+xml'
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg'
+  if (ext === '.webp') return 'image/webp'
+  return 'image/png'
+}
+
 /** Where the channel pack publishes its own RPC route, and its endpoint name. */
 const CHANNEL_PACK_PATH = '/api/channel-pack'
 const CHANNEL_ENDPOINT = 'channel-pack'
@@ -135,13 +172,18 @@ export const GUIDE_SKILL = 'vyra-dsh-guide'
  * The file is only written when its text changed. Rewriting it on every boot
  * would bump its mtime and make the harness reload a skill that did not move.
  *
+ * Line endings are normalised on the way out. The source ships with LF, but a
+ * Windows checkout with `core.autocrlf` hands this module CRLF, so a write
+ * would put CRLF into `~/.dsh/skills`. The comparison is made on the normalised
+ * text too, or every boot would look changed and rewrite the file again.
+ *
  * @param {{ warn?: (message: string) => void }} logger - the plugin's logger.
  * @returns {{ ok: boolean, file?: string, changed?: boolean, reason?: string }}
  */
 export function installGuideSkill(logger) {
   let text
   try {
-    text = fs.readFileSync(path.join(import.meta.dirname, 'skills', GUIDE_SKILL, 'SKILL.md'), 'utf8')
+    text = normaliseNewlines(fs.readFileSync(path.join(import.meta.dirname, 'skills', GUIDE_SKILL, 'SKILL.md'), 'utf8'))
   } catch (error) {
     const reason = String(error?.message ?? error)
     logger?.warn?.(`vyra-free-model: 使用指南技能缺失（${reason}）`)
@@ -152,7 +194,7 @@ export function installGuideSkill(logger) {
   try {
     fs.mkdirSync(dir, { recursive: true })
     let current = null
-    try { current = fs.readFileSync(file, 'utf8') } catch { /* first install */ }
+    try { current = normaliseNewlines(fs.readFileSync(file, 'utf8')) } catch { /* first install */ }
     const changed = current !== text
     if (changed) fs.writeFileSync(file, text)
     return { ok: true, file, changed }
@@ -161,6 +203,11 @@ export function installGuideSkill(logger) {
     logger?.warn?.(`vyra-free-model: 无法安装使用指南技能（${reason}）`)
     return { ok: false, reason }
   }
+}
+
+/** CRLF (and a stray BOM) out, LF in: what a skill file should look like. */
+function normaliseNewlines(text) {
+  return String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
 }
 
 export function apply(ctx, _config) {
@@ -1494,6 +1541,25 @@ export function createApiRoutes(deps) {
     // that can create accounts and mint a port key. Refuse it outright rather
     // than trying to recover the peer address.
     if (isProxied(req)) return send(403, { error: 'forbidden' })
+
+    // The community QR code is an ordinary local image the page loads with
+    // `<img>`. It lives here rather than inline in the bundle (15 KB of base64
+    // parsed on every page load) and is answered ahead of the JSON routes so the
+    // asset helper can own its own headers.
+    if (routePath.startsWith('/assets/') && method === 'GET') {
+      const file = assetFile(routePath.slice('/assets/'.length))
+      if (file === null) {
+        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+        return res.end('not-found')
+      }
+      const body = fs.readFileSync(file)
+      res.writeHead(200, {
+        'content-type': imageType(file),
+        'content-length': String(body.length),
+        'cache-control': 'public, max-age=86400',
+      })
+      return res.end(body)
+    }
 
     try {
       if (routePath === '/summary' && method === 'GET') {

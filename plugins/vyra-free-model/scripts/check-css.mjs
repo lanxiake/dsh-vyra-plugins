@@ -19,7 +19,7 @@ const css = source.slice(open, close)
 const opens = (css.match(/\{/g) ?? []).length
 const closes = (css.match(/\}/g) ?? []).length
 const classes = new Set((css.match(/\.vfm_[a-z]+/g) ?? []))
-const vars = new Set((css.match(/var\(--dsw-[a-z0-9-]+\)/g) ?? []).map(v => v.slice(4, -1)))
+const vars = new Set((css.match(/var\(--dsw-[a-z0-9-]+/g) ?? []).map(v => v.slice(4)))
 
 console.log(`css bytes     : ${css.length}`)
 console.log(`rules         : ${closes}`)
@@ -31,8 +31,12 @@ console.log(`theme vars    : ${vars.size}`)
 // falls back to nothing and the page looks unstyled again.
 const VALID = new Set([
   '--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2',
-  '--dsw-alias-bg-overlay', '--dsw-alias-border-l1', '--dsw-alias-border-l2',
-  '--dsw-alias-brand-primary', '--dsw-alias-label-primary', '--dsw-alias-label-secondary',
+  '--dsw-alias-bg-layer-3', '--dsw-alias-bg-overlay',
+  '--dsw-alias-border-l1', '--dsw-alias-border-l2',
+  '--dsw-alias-brand-primary', '--dsw-alias-brand-text',
+  '--dsw-alias-button-primary-fill', '--dsw-alias-button-primary-hover',
+  '--dsw-alias-interactive-bg-hover', '--dsw-alias-interactive-bg-active',
+  '--dsw-alias-label-primary', '--dsw-alias-label-secondary',
   '--dsw-alias-state-error-primary', '--dsw-alias-state-idle-primary',
   '--dsw-alias-state-success-primary', '--dsw-alias-state-warn-primary',
   '--dsw-specific-sidebar-fill',
@@ -44,3 +48,12 @@ if (unknown.length > 0) {
 }
 console.log('tokens        : all published')
 if (opens !== closes) process.exit(1)
+
+// A background token and the label drawn on it must come from the same theme
+// pair; a hard-coded colour is what made the light theme unreadable in the past.
+const literals = [...css.matchAll(/(?:color|background)\s*:\s*(#[0-9a-fA-F]{3,8})\b/g)].map(m => m[1])
+if (literals.length > 0) {
+  console.log(`HARD-CODED COLOURS: ${literals.join(', ')}`)
+  process.exit(1)
+}
+console.log('colours       : all from theme tokens')
