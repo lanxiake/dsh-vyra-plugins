@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LUMII · Vyra 主题原型</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  >
+  <link rel="stylesheet" href="lumii.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="boot-lumii.css">
+</head>
+<body class="lumii">
+  <div class="lm-app">
+    <!-- ============================================================== -->
+    <!-- Sidebar                                                        -->
+    <!-- ============================================================== -->
+    <aside class="lm-sidebar">
+      <div class="lm-brand">
+        <svg class="lm-brand__mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="5" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5">
+            <path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6"/>
+            <path d="M5.4 5.4 7.2 7.2M16.8 16.8l1.8 1.8M18.6 5.4 16.8 7.2M7.2 16.8 5.4 18.6"/>
+          </g>
+        </svg>
+        <span class="lm-brand__word">Lumii</span>
+      </div>
+
+      <div class="lm-greeting">
+        <strong>早上好，开干。</strong>
+        <span>今天也不用一次做完，先拿下第一件事。</span>
+      </div>
+
+      <div class="lm-scroll" data-session-list>
+        <div class="lm-group">
+          <div class="lm-group__title">进行中</div>
+          <button type="button" class="lm-item is-active" data-title="今天的第一件事">
+            <span class="lm-item__dot"></span>
+            <span class="lm-item__label">今天的第一件事</span>
+            <span class="lm-item__meta">09:12</span>
+          </button>
+          <button type="button" class="lm-item" data-title="那个卡住的接口">
+            <span class="lm-item__dot"></span>
+            <span class="lm-item__label">那个卡住的接口</span>
+            <span class="lm-item__meta">昨天</span>
+          </button>
+        </div>
+
+        <div class="lm-group">
+          <div class="lm-group__title">接下来</div>
+          <button type="button" class="lm-item" data-title="周报的骨架">
+            <span class="lm-item__dot"></span>
+            <span class="lm-item__label">周报的骨架</span>
+            <span class="lm-item__meta">周三</span>
+          </button>
+          <button type="button" class="lm-item" data-title="想试试的新方案">
+            <span class="lm-item__dot"></span>
+            <span class="lm-item__label">想试试的新方案</span>
+            <span class="lm-item__meta">周二</span>
+          </button>
+          <button type="button" class="lm-item" data-title="零散的灵感">
+            <span class="lm-item__dot"></span>
+            <span class="lm-item__label">零散的灵感</span>
+            <span class="lm-item__meta">周一</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="lm-foot">
+        <button type="button" class="lm-new" data-new-session>
+          <svg class="lm-new__glyph" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 3.4v9.2M3.4 8h9.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          </svg>
+          <span class="lm-new__text">开一个新的</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============================================================== -->
+    <!-- Main                                                           -->
+    <!-- ============================================================== -->
+    <main class="lm-main">
+      <header class="lm-topbar">
+        <h1 class="lm-topbar__title" data-thread-title>今天的第一件事</h1>
+        <span class="lm-chip" data-tone="ok" style="margin-right:2px">
+          <span class="lm-chip__dot"></span>
+          <span class="lm-chip__name">main</span>
+        </span>
+        <button type="button" class="lm-iconbtn" data-rail-toggle title="收起侧栏" aria-label="收起侧栏">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="1.8" y="3" width="12.4" height="10" rx="2.6" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M6.2 3v10" stroke="currentColor" stroke-width="1.3"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="lm-thread" data-thread>
+        <article class="lm-msg lm-msg--agent" style="--lm-i:0">
+          <div class="lm-msg__who">Lumii</div>
+          <div class="lm-msg__body">
+            <p>早。昨天你把那个接口的问题理到一半就下班了，我记着。</p>
+            <p>要不要从那儿接着往下走？</p>
+          </div>
+        </article>
+
+        <article class="lm-msg lm-msg--user" style="--lm-i:1">
+          <div class="lm-msg__who">你</div>
+          <div class="lm-msg__body">先别管那个，今天状态还行，想先把手头最硬的骨头啃了。</div>
+        </article>
+
+        <article class="lm-msg lm-msg--agent" style="--lm-i:2">
+          <div class="lm-msg__who">Lumii</div>
+          <div class="lm-msg__body">
+            <p>好，那就上硬的。我看了下你昨天标注的卡点，真正堵住的只有两处，其余都能并行推。</p>
+            <p>第一处是 <code class="lm-code">src/auth/session.ts:88</code>，第二处是重试的边界。</p>
+
+            <!-- A rendered tool result: header + state lamp + clamped payload -->
+            <div class="lm-toolcard" data-state="done">
+              <div class="lm-toolcard__head">
+                <span class="lm-lamp" data-state="done"></span>
+                <span class="lm-toolcard__name">read · src/auth/session.ts</span>
+                <span class="lm-toolcard__dur">0.4s</span>
+              </div>
+              <div class="lm-toolcard__clip">
+                <pre class="lm-toolcard__body" data-short="  if (!session.expiresAt || session.expiresAt &lt; Date.now()) {
+    // 过期但未清理：这里直接返回 401，没有走重签" data-full="  if (!session.expiresAt || session.expiresAt &lt; Date.now()) {
+    // 过期但未清理：这里直接返回 401，没有走重签
+    return reject(new AuthError('expired'));
+  }">  if (!session.expiresAt || session.expiresAt &lt; Date.now()) {
+    // 过期但未清理：这里直接返回 401，没有走重签</pre>
+              </div>
+              <button type="button" class="lm-toolcard__more" data-expand>展开</button>
+            </div>
+
+            <!-- A card with the pointer-tracking spotlight, hover to see it -->
+            <div class="lm-card lm-card--interactive" style="margin-top:14px;padding:14px 16px">
+              <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">
+                <span class="lm-chip" data-tone="ok">
+                  <span class="lm-chip__dot"></span>
+                  <span class="lm-chip__name">建议</span>
+                </span>
+                <span style="font-size:11.5px;color:var(--lm-fg-4)">过期处理</span>
+              </div>
+              <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--lm-fg-2)">
+                过期后先尝试静默重签一次，失败再回登录页 —— 用户不会因为一次 exp 边界被踢出去。
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="lm-composer">
+        <div class="lm-composer__inner">
+          <!-- Quoting a message drops this strip in, not a full copy -->
+          <div class="lm-quote">
+            <span class="lm-quote__text">过期后先尝试静默重签一次，失败再回登录页</span>
+            <button type="button" class="lm-quote__close" data-quote-close aria-label="移除引用">
+              <svg viewBox="0 0 16 16" fill="none" width="12" height="12" aria-hidden="true">
+                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="lm-composer__field">
+            <textarea data-composer rows="1" placeholder="接着干…" aria-label="消息"></textarea>
+            <button type="button" class="lm-send" data-send title="发送" aria-label="发送">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M8 12.8V3.4M4 7.2 8 3.2l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="lm-composer__meta">灵感不用等，直接说。</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="lm-demo">
+    <span>LUMII</span>
+    <span aria-hidden="true">·</span>
+    <button type="button" id="replay-boot">重播开场</button>
+    <span aria-hidden="true">·</span>
+    <a href="../morning/index.html">对比 MORNING →</a>
+  </div>
+
+  <script type="module">
+    import { normalizeBoot, shouldPlayBoot } from "../noir/boot-model.js";
+    import { playBoot } from "../noir/boot.js";
+
+    /*
+     * The opening. Three beats, ~5.5s, and deliberately NOT the MORNING copy.
+     *
+     * MORNING said: the light is back, you don't have to do it all, drink water.
+     * That is comfort. This brief asks for the opposite — a tired worker who
+     * needs to be *started*, not soothed:
+     *
+     *   1. name the moment               — the film's establishing shot
+     *   2. refuse the fantasy of waiting — the real obstacle is "when I feel ready"
+     *   3. hand over a tiny trigger      — so small it is silly to refuse
+     *
+     * No exclamation marks, no "加油": telling a tired person what to feel is
+     * the thing that makes them tired.
+     */
+    const THEME_BOOT = {
+      kind: "story",
+      theme: "light",
+      fadeMs: 700,
+      skipLabel: { zh: "直接开工", en: "Start now" },
+      beats: [
+        {
+          kicker: { zh: "开机 · 第 1 天", en: "Boot · Day 1" },
+          title: { zh: "天亮了，今天开场。", en: "The light is up. So is the day." },
+          holdMs: 1700,
+        },
+        {
+          kicker: { zh: "不用等", en: "Don't wait" },
+          title: { zh: "别等状态好，状态是干出来的。", en: "Don't wait to feel ready. Feeling follows doing." },
+          holdMs: 2100,
+        },
+        {
+          kicker: { zh: "就现在", en: "Right now" },
+          title: { zh: "先干五分钟。", en: "Give it five minutes." },
+          holdMs: 1500,
+        },
+      ],
+    };
+
+    const result = normalizeBoot(THEME_BOOT);
+    if (!result.ok) console.error("[lumii] boot rejected:", result.issues);
+
+    const translate = (v) => (typeof v === "string" ? v : (v?.zh ?? v?.en ?? ""));
+
+    /*
+     * The scenic layer, built here rather than in the shared runtime: seven
+     * planes far-to-near, each at its own rate. Depth, not motion, is what
+     * makes this read as a place.
+     */
+    function decorate({ doc, cls }) {
+      const layer = doc.createElement("div");
+      layer.className = cls("scenery");
+      layer.setAttribute("aria-hidden", "true");
+      layer.style.cssText = "position:absolute;inset:0;overflow:hidden;pointer-events:none;";
+
+      const add = (name, extra) => {
+        const el = doc.createElement("div");
+        el.className = cls(name) + (extra ? " " + cls(extra) : "");
+        layer.appendChild(el);
+        return el;
+      };
+
+      add("sky");
+      add("rays");
+      add("sun");
+      add("bloom");
+      add("cloud", "cloud--a");
+      add("cloud", "cloud--b");
+      add("cloud", "cloud--c");
+      add("ridge");
+      add("ridge", "ridge--near");
+      for (const n of [1, 2, 3]) add("bird", `bird--${n}`);
+
+      return layer;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const forced = params.get("boot");
+    const seenKey = "lumii:boot-seen";
+    const seen = localStorage.getItem(seenKey) === "1" && forced !== "1";
+
+    let handle = null;
+
+    function runBoot(saveSeen) {
+      if (!result.ok) return;
+      document.querySelectorAll(".lm-msg").forEach((el) => el.classList.remove("is-in"));
+      handle = playBoot(result.boot, {
+        translate,
+        prefix: "lm-boot",
+        mark: "Lumii",
+        decorate,
+        onFinish: () => {
+          if (saveSeen) localStorage.setItem(seenKey, "1");
+          document.querySelectorAll(".lm-msg").forEach((el) => el.classList.add("is-in"));
+        },
+      });
+    }
+
+    if (result.ok) {
+      const verdict = shouldPlayBoot({ boot: result.boot, seen, deepLink: forced === "0" });
+      if (verdict.play) runBoot(true);
+    }
+
+    document.getElementById("replay-boot")?.addEventListener("click", () => {
+      handle?.dispose();
+      runBoot(false);
+    });
+
+    /* Expand toggles for a static tool card. The payload's short and full forms
+       both live in markup (data-short / data-full) because CSS-only clamping
+       cannot cut a fractional line-height between lines — see components.css. */
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-expand]");
+      if (!btn) return;
+      const card = btn.closest(".lm-toolcard");
+      const pre = card.querySelector(".lm-toolcard__body");
+      const expanded = card.dataset.expanded === "true";
+      card.dataset.expanded = expanded ? "false" : "true";
+      if (pre?.dataset.full) pre.textContent = expanded ? pre.dataset.short : pre.dataset.full;
+      btn.textContent = expanded ? "展开" : "收起";
+    });
+  </script>
+  <script src="lumii.js"></script>
+</body>
+</html>

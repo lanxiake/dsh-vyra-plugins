@@ -1,0 +1,730 @@
+/*
+ * LUMII — palette and shell.
+ *
+ * Every token value is lifted verbatim from Lumii's own [data-theme="eye-care"]
+ * layer, extracted from the shipped app.asar. The paper is the same #f5f1e8,
+ * the amber the same #b8863b, the glass the same 24px blur on
+ * rgba(255,253,247,.84). A person switching between the two clients should not
+ * see two different warm skins.
+ *
+ * components.css builds on these tokens; this file owns the shell.
+ */
+
+:root {
+  /* ---- paper ------------------------------------------------------- */
+  --lm-bg-primary: #f5f1e8;
+  --lm-bg-secondary: #fffdf7;
+  --lm-bg-tertiary: #ece5d6;
+  --lm-bg-elevated: #fffdf7;
+  --lm-surface-2: #faf6ec;
+  --lm-surface-3: #ece5d6;
+  --lm-bg-overlay: rgba(93, 78, 55, 0.06);
+
+  /* ---- amber ------------------------------------------------------- */
+  --lm-accent-300: #e2bd7c;
+  --lm-accent-400: #d19d4a;
+  --lm-accent-500: #b8863b;
+  --lm-accent-600: #9c6f2c;
+  --lm-accent-700: #7f5820;
+  --lm-accent-rgb: 184, 134, 59;
+
+  /* ---- ink --------------------------------------------------------- */
+  --lm-fg-1: #2f2a22;
+  --lm-fg-2: #5c5346;
+  --lm-fg-3: #7a715f;
+  --lm-fg-4: #a2977f;
+
+  /* ---- support ----------------------------------------------------- */
+  --lm-success: #4f7a3a;
+  --lm-warning: #b8863b;
+  --lm-error: #b5473b;
+
+  /* ---- structure --------------------------------------------------- */
+  --lm-border: rgba(93, 78, 55, 0.14);
+  --lm-border-light: rgba(93, 78, 55, 0.07);
+  --lm-border-hairline: rgba(93, 78, 55, 0.045);
+
+  /* ---- glass ------------------------------------------------------- */
+  --lm-glass-bg: rgba(255, 253, 247, 0.84);
+  --lm-glass-stroke: rgba(93, 78, 55, 0.10);
+  --lm-glass-blur: 24px;
+
+  /* ---- the Lumii mesh and sheen ------------------------------------ */
+  --lm-mesh:
+    radial-gradient(ellipse 72% 48% at 10% -8%, rgba(184, 134, 59, 0.13), transparent),
+    radial-gradient(ellipse 48% 38% at 90% 6%, rgba(160, 106, 44, 0.10), transparent),
+    radial-gradient(ellipse 55% 32% at 48% 110%, rgba(122, 139, 79, 0.08), transparent);
+  --lm-shine: linear-gradient(145deg, rgba(184, 134, 59, 0.08), transparent 48%);
+
+  /* ---- type -------------------------------------------------------- */
+  --lm-font-sans: "Inter Variable", "Inter", "Segoe UI Variable Text", "Segoe UI",
+    "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --lm-font-display: "Inter Variable", "Inter", "Segoe UI Variable Display", system-ui, sans-serif;
+  --lm-font-mono: "JetBrains Mono", "Fira Code", Consolas, Monaco, monospace;
+
+  /* ---- shape ------------------------------------------------------- */
+  --lm-radius-sm: 4px;
+  --lm-radius-md: 6px;
+  --lm-radius-lg: 8px;
+  --lm-radius-xl: 12px;
+  --lm-radius-2xl: 16px;
+  --lm-radius-3xl: 24px;
+  --lm-radius-full: 9999px;
+
+  /* ---- elevation: shadows carry the accent, never neutral grey ----- */
+  --lm-shadow-sm: 0 1px 2px rgba(87, 71, 45, 0.05);
+  --lm-shadow-md: 0 4px 10px rgba(87, 71, 45, 0.07), 0 1px 3px rgba(87, 71, 45, 0.05);
+  --lm-shadow-lg: 0 10px 28px rgba(87, 71, 45, 0.10), 0 4px 8px rgba(87, 71, 45, 0.06);
+  --lm-shadow-glow: 0 0 0 1px rgba(184, 134, 59, 0.24), 0 10px 40px rgba(160, 106, 44, 0.16);
+  --lm-shadow-inner: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+
+  /* ---- motion (Lumii's own scale) ---------------------------------- */
+  --lm-dur-fast: 120ms;
+  --lm-dur-normal: 220ms;
+  --lm-dur-slow: 360ms;
+  --lm-dur-slower: 560ms;
+  --lm-dur-breathe: 3400ms;
+  --lm-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --lm-ease-decel: cubic-bezier(0, 0, 0.2, 1);
+  --lm-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --lm-dur-fast: 1ms;
+    --lm-dur-normal: 1ms;
+    --lm-dur-slow: 1ms;
+    --lm-dur-slower: 1ms;
+  }
+}
+
+/* ====================================================================== */
+/* Base                                                                    */
+/* ====================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body.lumii {
+  font-family: var(--lm-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lm-fg-1);
+  background: var(--lm-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.lumii :focus-visible {
+  outline: 2px solid var(--lm-accent-500);
+  outline-offset: 2px;
+  border-radius: var(--lm-radius-sm);
+}
+
+/* The mesh, slowly breathing so the page never looks like a screenshot. */
+body.lumii::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--lm-mesh);
+  animation: lm-mesh-drift var(--lm-dur-breathe) ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes lm-mesh-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(1.2%, -0.8%, 0) scale(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.lumii::before {
+    animation: none;
+  }
+}
+
+/* ====================================================================== */
+/* Shell                                                                   */
+/* ====================================================================== */
+.lm-app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 272px 1fr;
+  height: 100vh;
+}
+
+.lm-app[data-rail="true"] {
+  grid-template-columns: 68px 1fr;
+}
+
+.lm-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 18px 12px 64px;
+  background: var(--lm-glass-bg);
+  border-right: 1px solid var(--lm-glass-stroke);
+  backdrop-filter: blur(var(--lm-glass-blur)) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--lm-glass-blur)) saturate(1.1);
+  box-shadow: var(--lm-shadow-inner);
+}
+
+.lm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 0 10px;
+  height: 28px;
+  flex: none;
+}
+
+.lm-brand__mark {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--lm-accent-500);
+}
+
+.lm-brand__word {
+  font-family: var(--lm-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lm-fg-1);
+}
+
+.lm-app[data-rail="true"] .lm-brand__word {
+  display: none;
+}
+
+.lm-greeting {
+  flex: none;
+  padding: 22px 10px 18px;
+}
+
+.lm-greeting strong {
+  display: block;
+  font-family: var(--lm-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--lm-fg-1);
+  margin-bottom: 4px;
+}
+
+.lm-greeting span {
+  font-size: 12.5px;
+  color: var(--lm-fg-3);
+}
+
+.lm-app[data-rail="true"] .lm-greeting {
+  display: none;
+}
+
+.lm-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 8px;
+}
+
+.lm-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lm-group__title {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lm-fg-4);
+  padding: 0 10px 7px;
+}
+
+.lm-app[data-rail="true"] .lm-group__title {
+  display: none;
+}
+
+.lm-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 38px;
+  padding: 0 11px;
+  border-radius: var(--lm-radius-lg);
+  text-align: left;
+  color: var(--lm-fg-2);
+  transition:
+    background-color var(--lm-dur-fast) var(--lm-ease-standard),
+    box-shadow var(--lm-dur-fast) var(--lm-ease-standard),
+    color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-item:hover {
+    background: var(--lm-bg-secondary);
+    box-shadow: var(--lm-shadow-sm);
+    color: var(--lm-fg-1);
+  }
+}
+
+.lm-item.is-active {
+  background: var(--lm-bg-secondary);
+  color: var(--lm-fg-1);
+  box-shadow: var(--lm-shadow-md);
+}
+
+.lm-item__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--lm-fg-4);
+  opacity: 0.45;
+  transition: all var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+.lm-item.is-active .lm-item__dot {
+  background: var(--lm-accent-500);
+  opacity: 1;
+  box-shadow: 0 0 0 3px rgba(var(--lm-accent-rgb), 0.16);
+}
+
+.lm-item__label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lm-item__meta {
+  flex: none;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lm-fg-4);
+}
+
+.lm-app[data-rail="true"] .lm-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.lm-app[data-rail="true"] .lm-item__label,
+.lm-app[data-rail="true"] .lm-item__meta {
+  display: none;
+}
+
+.lm-foot {
+  flex: none;
+  padding-top: 10px;
+}
+
+.lm-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 38px;
+  border-radius: var(--lm-radius-lg);
+  font-size: 13px;
+  font-weight: 500;
+  color: #fffdf7;
+  background: linear-gradient(145deg, var(--lm-accent-400), var(--lm-accent-600));
+  box-shadow: var(--lm-shadow-md), var(--lm-shadow-inner);
+  transition:
+    transform var(--lm-dur-fast) var(--lm-ease-spring),
+    box-shadow var(--lm-dur-normal) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-new:hover {
+    box-shadow: var(--lm-shadow-glow), var(--lm-shadow-inner);
+  }
+}
+
+.lm-new:active {
+  transform: scale(0.975);
+}
+
+.lm-new__glyph {
+  width: 14px;
+  height: 14px;
+}
+
+.lm-app[data-rail="true"] .lm-new__text {
+  display: none;
+}
+
+/* ====================================================================== */
+/* Main                                                                    */
+/* ====================================================================== */
+.lm-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.lm-topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+  padding: 0 30px;
+  background: rgba(255, 253, 247, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--lm-border-hairline);
+}
+
+.lm-topbar__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--lm-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lm-iconbtn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--lm-radius-md);
+  color: var(--lm-fg-3);
+  transition:
+    background-color var(--lm-dur-fast) var(--lm-ease-standard),
+    color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-iconbtn:hover {
+    background: var(--lm-bg-tertiary);
+    color: var(--lm-fg-1);
+  }
+}
+
+.lm-iconbtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lm-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 30px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  align-items: stretch;
+  scroll-behavior: smooth;
+}
+
+.lm-thread > * {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.lm-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.lm-msg.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-msg {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lm-msg__who {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--lm-fg-4);
+}
+
+.lm-msg__body {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--lm-fg-1);
+}
+
+.lm-msg__body p {
+  margin: 0 0 11px;
+}
+
+.lm-msg__body p:last-child {
+  margin-bottom: 0;
+}
+
+.lm-msg--user {
+  align-items: flex-end;
+}
+
+.lm-msg--user .lm-msg__body {
+  max-width: 84%;
+  padding: 11px 15px;
+  border-radius: var(--lm-radius-xl);
+  background: var(--lm-bg-secondary);
+  border: 1px solid var(--lm-border-light);
+  box-shadow: var(--lm-shadow-sm), var(--lm-shadow-inner);
+  color: var(--lm-fg-2);
+  font-size: 14px;
+}
+
+/* ---- thinking ------------------------------------------------------ */
+.lm-thinking {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--lm-fg-3);
+  font-size: 13px;
+}
+
+.lm-sun {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--lm-accent-500);
+}
+
+.lm-sun::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--lm-accent-rgb), 0.4), transparent 70%);
+  animation: lm-breathe var(--lm-dur-breathe) ease-in-out infinite;
+}
+
+@keyframes lm-breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-sun::after {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
+.lm-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.02em;
+  margin-left: 2px;
+  vertical-align: -0.16em;
+  border-radius: 1px;
+  background: var(--lm-accent-500);
+  animation: lm-caret 1.1s steps(2, jump-none) infinite;
+}
+
+@keyframes lm-caret {
+  50% {
+    opacity: 0.12;
+  }
+}
+
+/* ====================================================================== */
+/* Composer                                                                */
+/* ====================================================================== */
+.lm-composer {
+  flex: none;
+  padding: 10px 30px 24px;
+}
+
+.lm-composer__inner {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.lm-composer__field {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 11px 11px 11px 16px;
+  border-radius: var(--lm-radius-2xl);
+  background: var(--lm-bg-secondary);
+  border: 1px solid var(--lm-border-light);
+  box-shadow: var(--lm-shadow-md), var(--lm-shadow-inner);
+  transition:
+    box-shadow var(--lm-dur-normal) var(--lm-ease-standard),
+    border-color var(--lm-dur-normal) var(--lm-ease-standard);
+}
+
+.lm-composer__field:focus-within {
+  border-color: rgba(var(--lm-accent-rgb), 0.42);
+  box-shadow: var(--lm-shadow-glow), var(--lm-shadow-inner);
+}
+
+.lm-composer textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--lm-fg-1);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  max-height: 170px;
+}
+
+.lm-composer textarea::placeholder {
+  color: var(--lm-fg-4);
+}
+
+.lm-send {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--lm-radius-full);
+  color: #fffdf7;
+  background: linear-gradient(145deg, var(--lm-accent-400), var(--lm-accent-600));
+  box-shadow: var(--lm-shadow-sm);
+  transition:
+    transform var(--lm-dur-fast) var(--lm-ease-spring),
+    box-shadow var(--lm-dur-normal) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-send:hover {
+    box-shadow: var(--lm-shadow-glow);
+  }
+}
+
+.lm-send:active {
+  transform: scale(0.94);
+}
+
+.lm-send svg {
+  width: 15px;
+  height: 15px;
+}
+
+.lm-composer__meta {
+  margin-top: 9px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--lm-fg-4);
+}
+
+/* ====================================================================== */
+/* Demo chrome                                                             */
+/* ====================================================================== */
+.lm-demo {
+  position: fixed;
+  left: 22px;
+  bottom: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: var(--lm-radius-full);
+  background: var(--lm-glass-bg);
+  border: 1px solid var(--lm-glass-stroke);
+  backdrop-filter: blur(var(--lm-glass-blur));
+  -webkit-backdrop-filter: blur(var(--lm-glass-blur));
+  box-shadow: var(--lm-shadow-sm);
+  font-size: 10.5px;
+  color: var(--lm-fg-3);
+}
+
+.lm-demo a,
+.lm-demo button {
+  font: inherit;
+  color: var(--lm-fg-2);
+  text-decoration: none;
+  transition: color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-demo a:hover,
+  .lm-demo button:hover {
+    color: var(--lm-accent-600);
+  }
+}
+
+/* ---- scrollbars ---------------------------------------------------- */
+.lm-thread::-webkit-scrollbar,
+.lm-scroll::-webkit-scrollbar {
+  width: 9px;
+}
+
+.lm-thread::-webkit-scrollbar-thumb,
+.lm-scroll::-webkit-scrollbar-thumb {
+  background: rgba(93, 78, 55, 0.16);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 99px;
+}
+
+.lm-thread::-webkit-scrollbar-track,
+.lm-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

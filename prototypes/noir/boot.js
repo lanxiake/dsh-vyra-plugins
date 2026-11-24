@@ -40,7 +40,13 @@ const SLEEP = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export function playBoot(
   boot,
-  { translate = (key) => key, onFinish = () => {}, prefix = "noir-boot", mark: markText = "Vyra" } = {},
+  {
+    translate = (key) => key,
+    onFinish = () => {},
+    prefix = "noir-boot",
+    mark: markText = "Vyra",
+    decorate = null,
+  } = {},
 ) {
   const reduced = reducedMotion();
   const doc = document;
@@ -144,6 +150,22 @@ export function playBoot(
 
   /* ---- story beats --------------------------------------------------- */
   if (boot.kind === "story") {
+    /*
+     * A skin may supply its own scenic layer — LUMII's sunrise, for instance,
+     * is seven parallax planes that no generic runtime could guess. The hook is
+     * a `decorate` callback rather than a list of class names, so the runtime
+     * stays skin-agnostic and each skin owns its own composition.
+     */
+    if (typeof decorate === "function") {
+      try {
+        const scenery = decorate({ doc, cls, mode: reduced ? "reduced" : "full" });
+        if (scenery) overlay.appendChild(scenery);
+      } catch (error) {
+        /* A broken decoration must not take the splash down with it. */
+        console.warn("[boot] decorate failed:", error);
+      }
+    }
+
     const stage = doc.createElement("div");
     stage.className = cls("stage");
     const steps = storyTimeline(boot, { reducedMotion: reduced });
@@ -168,13 +190,29 @@ export function playBoot(
       return el;
     });
 
+    /* The stage must be in the document before its transition is measured —
+       getComputedStyle on a detached node reports "0s". This is also the
+       append that puts it on screen; there is no second one. */
     overlay.appendChild(stage);
 
     /* Walk the compiled timeline. Each beat is brought live, held, then dropped
        before the next one starts — so two beats are never on screen at the same
-       opacity. The gap is a cross-fade at the boundary: the outgoing beat is
-       dropped, we wait out its transition, and only then does the next rise. */
-    const FADE_MS = reduced ? 0 : 520;
+       opacity.
+
+       Both the fade-out and the rise are listed in transition-duration, so the
+       longest value is what the outgoing beat actually needs. */
+    function longestTransitionMs(el) {
+      if (!el) return 0;
+      const raw = getComputedStyle(el).transitionDuration || "0s";
+      return raw
+        .split(",")
+        .map((part) => parseFloat(part) * (part.trim().endsWith("ms") ? 1 : 1000))
+        .filter((n) => Number.isFinite(n))
+        .reduce((max, n) => Math.max(max, n), 0);
+    }
+
+    const measured = longestTransitionMs(nodes[0]);
+    const FADE_MS = reduced ? 0 : Math.max(measured, 600);
 
     void (async () => {
       for (const step of steps) {
