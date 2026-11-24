@@ -121,7 +121,7 @@ test('every theme variable used is one the shell publishes', () => {
   const used = new Set((CSS.match(/var\((--dsw-[a-z0-9-]+)/g) ?? []).map(v => v.slice(4)))
   const valid = new Set([
     '--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2',
-    '--dsw-alias-bg-layer-3', '--dsw-alias-bg-overlay', '--dsw-alias-border-l1', '--dsw-alias-border-l2',
+    '--dsw-alias-bg-overlay', '--dsw-alias-border-l1', '--dsw-alias-border-l2',
     '--dsw-alias-brand-primary', '--dsw-alias-brand-text',
     '--dsw-alias-button-primary-fill', '--dsw-alias-button-primary-hover',
     '--dsw-alias-interactive-bg-hover', '--dsw-alias-interactive-bg-active',
@@ -146,7 +146,7 @@ test('主题切换时按钮配色成对变化，悬停不会把浅色主题的�
   assert.equal(/brightness\(/.test(CSS), false, 'a filter would lighten the fill without touching the label')
   // The neutral button lifts one layer rather than dropping to the flatter one.
   const baseHover = /\.vfm_btn:hover:not\(:disabled\)\{[^}]*\}/.exec(CSS)?.[0] ?? ''
-  assert.ok(baseHover.includes('--dsw-alias-bg-layer-3'), 'hover must lift the surface, not flatten it')
+  assert.ok(/linear-gradient/.test(baseHover), 'hover lifts the surface rather than flattening it')
 })
 
 test('样式里没有写死的颜色，全部跟着主题走', () => {
@@ -365,6 +365,36 @@ test('两个按钮的尺寸与参考按钮一致（同 padding / 字级 / 圆角
   // still not line up beside 「刷新积分」.
   const quiet = /\.vfm_btn\[data-kind="quiet"\]\{[^}]*\}/.exec(CSS)?.[0] ?? ''
   assert.equal(/padding|font-size|height|border-radius/.test(quiet), false, 'quiet only changes colour')
+})
+
+test('只用主题真实发布的表面 token，不用不存在的 bg-layer-3', () => {
+  // The shell publishes base / layer-1 / layer-2 / overlay — no layer-3. An
+  // unknown custom property does not fall back to a sensible default: the whole
+  // `background` declaration becomes invalid and the button silently drops to
+  // transparent, which is how a "surfaced button" shipped invisible.
+  // A comment may name the token while explaining why it is not used; only a
+  // real var() reference is a bug.
+  assert.equal(/var\(--dsw-alias-bg-layer-3/.test(CSS), false, 'layer-3 is not published by the theme')
+  const published = ['--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2', '--dsw-alias-bg-overlay']
+  const used = [...new Set((CSS.match(/var\((--dsw-alias-bg-[a-z0-9-]+)/g) ?? []).map(v => v.slice(4)))]
+  for (const name of used) {
+    assert.ok(published.includes(name), `${name} is not a published surface token`)
+  }
+})
+
+test('按钮必须有可见的表面，不能只是纯文字', () => {
+  // 「添加接口」and 「一键安装插件市场」were reported as looking unstyled: a
+  // fully transparent button reads as a label. Every kind now paints a surface
+  // or a fill, and hover never drops back to transparent.
+  for (const kind of ['quiet', 'ghost']) {
+    const rule = new RegExp(`\\.vfm_btn\\[data-kind="${kind}"\\]\\{[^}]*\\}`).exec(CSS)?.[0] ?? ''
+    assert.ok(rule.length > 0, `${kind} has a rule`)
+    assert.equal(/background:transparent/.test(rule), false, `${kind} must not be transparent`)
+    assert.ok(/background:var\(--dsw-alias-bg-layer-2\)/.test(rule), `${kind} paints a raised layer`)
+    assert.ok(rule.includes('border-color'), `${kind} keeps a hairline border`)
+  }
+  const base = /\.vfm_btn\{[^}]*\}/.exec(CSS)?.[0] ?? ''
+  assert.ok(/background:var\(--dsw-alias-bg-layer-2\)/.test(base), 'the base button is surfaced too')
 })
 
 test('ensureMarketSource 只在没有 Veyra 源时追加，且不改动其他源', async () => {

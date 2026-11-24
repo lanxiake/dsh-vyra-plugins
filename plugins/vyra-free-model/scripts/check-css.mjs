@@ -31,7 +31,7 @@ console.log(`theme vars    : ${vars.size}`)
 // falls back to nothing and the page looks unstyled again.
 const VALID = new Set([
   '--dsw-alias-bg-base', '--dsw-alias-bg-layer-1', '--dsw-alias-bg-layer-2',
-  '--dsw-alias-bg-layer-3', '--dsw-alias-bg-overlay',
+  '--dsw-alias-bg-overlay',
   '--dsw-alias-border-l1', '--dsw-alias-border-l2',
   '--dsw-alias-brand-primary', '--dsw-alias-brand-text',
   '--dsw-alias-button-primary-fill', '--dsw-alias-button-primary-hover',

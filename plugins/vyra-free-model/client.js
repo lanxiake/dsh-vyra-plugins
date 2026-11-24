@@ -458,7 +458,7 @@ window.__ModuleLoader__.load({
      * commit exists, which costs one extra commit; there is no shorter path,
      * because a commit cannot name itself.
      */
-    const VEYRA_COMMIT = '6edab2fdfee4938c0ca08763b66ddec0329ce2c0'
+    const VEYRA_COMMIT = '0000000000000000000000000000000000000000'
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
       `https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@${VEYRA_COMMIT}/docs/index.json`,
@@ -688,19 +688,38 @@ window.__ModuleLoader__.load({
    the label stayed on label-primary: on the light theme a filled button turned
    pale under the pointer and its text washed out. Hover now keeps the surface's
    own contrast and only lifts the tone. */
+/* ghost and quiet are the page's everyday actions. A fully transparent button
+   reads as a plain label — that is exactly how 「添加接口」and 「一键安装插件
+   市场」were reported as unstyled. Both now paint the raised layer with a
+   hairline border, and hover adds a translucent lift over that same layer, so
+   the two states differ without hard-coding a colour that a custom theme would
+   have to override.
+
+   No --dsw-alias-bg-layer-3 here: the shell's theme does not publish it (only
+   base / layer-1 / layer-2 / overlay), and an unknown token makes the whole
+   declaration invalid — the button silently falls back to transparent. */
 .vfm_btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;cursor:pointer;
   border:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 72%,transparent);
   background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);
   font:inherit;font-size:12.5px;line-height:1.5;white-space:nowrap;
   transition:background-color .15s ease,border-color .15s ease,transform .1s ease}
-.vfm_btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-3);border-color:var(--dsw-alias-border-l2)}
+.vfm_btn:hover:not(:disabled){
+  background:linear-gradient(color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent),color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)),var(--dsw-alias-bg-layer-2);
+  border-color:var(--dsw-alias-border-l2)}
 .vfm_btn:active:not(:disabled){transform:translateY(1px)}
 .vfm_btn:focus-visible{outline:2px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 78%,transparent);outline-offset:2px}
 .vfm_btn:disabled{opacity:.5;cursor:default}
-/* ghost is Btn's default kind, so it needs a real rule: without one every plain
-   action fell back to the solid base and the page lost its action hierarchy. */
-.vfm_btn[data-kind="ghost"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
-.vfm_btn[data-kind="ghost"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+/* ghost and quiet are the page's everyday actions. They used to be fully
+   transparent, which made them read as plain text: 「添加接口」and 「一键安装插件
+   市场」looked like unstyled labels rather than controls. They now carry a real
+   surface — the same raised layer as the card interior plus a hairline border —
+   one step lighter than the card they sit on, so they read as buttons without
+   competing with primary. Hover lifts one further layer, never below the base. */
+.vfm_btn[data-kind="ghost"]{border-color:color-mix(in srgb,var(--dsw-alias-border-l2) 55%,transparent);
+  background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}
+.vfm_btn[data-kind="ghost"]:hover:not(:disabled){
+  background:linear-gradient(color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent),color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)),var(--dsw-alias-bg-layer-2);
+  border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary)}
 /* Primary: the shell's own button tokens. The fill token is dark in the light
    theme and light in the dark one, and the brand-text token is the colour meant
    to sit on it — so the label never disappears into the fill on either theme.
@@ -712,8 +731,14 @@ window.__ModuleLoader__.load({
 .vfm_btn[data-kind="primary"]:hover:not(:disabled){
   background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary));
   color:var(--dsw-alias-brand-text,var(--dsw-alias-bg-base))}
-.vfm_btn[data-kind="quiet"]{border-color:transparent;background:transparent;color:var(--dsw-alias-label-secondary)}
-.vfm_btn[data-kind="quiet"]:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+/* quiet is the reference every other action is measured against (「刷新积分」,
+   「添加账号」), so it carries the same surface as ghost: a bordered chip on the
+   raised layer, not bare text. */
+.vfm_btn[data-kind="quiet"]{border-color:color-mix(in srgb,var(--dsw-alias-border-l2) 55%,transparent);
+  background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}
+.vfm_btn[data-kind="quiet"]:hover:not(:disabled){
+  background:linear-gradient(color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent),color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)),var(--dsw-alias-bg-layer-2);
+  border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-primary)}
 
 /* ── account cards ────────────────────────────────────────────────────── */
 /* Inner surfaces must read as raised: at the parent's own tone they measured
