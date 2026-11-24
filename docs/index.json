@@ -1625,7 +1625,7 @@
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "0000000000000000000000000000000000000000",
+            "commit": "2c9cabdebac01c49a78ed10e757d1bf3a7fcfb91",
             "path": "plugins/vyra-plugin-market"
           }
         },
