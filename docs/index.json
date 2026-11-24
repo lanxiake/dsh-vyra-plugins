@@ -2872,6 +2872,16 @@
       },
       "versions": [
         {
+          "version": "0.2.2",
+          "publishTimestamp": 1795592400,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "c497770c4f68b147c3a8443c6d8220608c6fbb10",
+            "path": "plugins/open-design"
+          }
+        },
+        {
           "version": "0.2.1",
           "publishTimestamp": 1795588800,
           "source": {
