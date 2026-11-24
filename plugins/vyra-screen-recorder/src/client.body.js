@@ -40,6 +40,9 @@ window.__ModuleLoader__.load({
       windows: L('窗口', 'Windows'),
       custom: L('自定义区域…', 'Custom region…'),
       customHint: L('拖框选择要录制的区域', 'Drag to choose a region'),
+      customHintShot: L('拖框选择要截图的区域', 'Drag to choose a region to capture'),
+      shotPickerTitle: L('选择要截图的内容', 'Choose what to capture'),
+      shotPickerHint: L('选好后在截图上拖框；单击选整块', 'Pick one, then drag on the capture; click for the whole area'),
       primary: L('主屏', 'Primary'),
       systemAudio: L('系统声音', 'System audio'),
       microphone: L('麦克风', 'Microphone'),
@@ -292,6 +295,11 @@ window.__ModuleLoader__.load({
       return out
     }
 
+    /** "Ctrl+Alt+S" 这种纯文本形式，给原生 title 用。 */
+    function formatCombo(combo) {
+      return shortcutParts(combo).join('+')
+    }
+
     /** 提示条上的按键帽：一个键一个方框，而不是 "Ctrl+Alt+S" 一串文字。 */
     function ShortcutKeys(props) {
       const parts = shortcutParts(props.combo)
@@ -367,7 +375,13 @@ window.__ModuleLoader__.load({
       }
     }
 
-    async function openPicker() {
+    /**
+     * 打开源选择框。
+     *
+     * @param {'record'|'shot'} mode - record 选完直接开录；shot 选完进截图浮层，
+     *   让用户再拖框（「像录制屏幕一样先决定内容」）。
+     */
+    async function openPicker(mode) {
       if (state.phase !== 'idle' || captureBusy) return
       captureBusy = true
       setState({ toast: null })
@@ -381,6 +395,7 @@ window.__ModuleLoader__.load({
         setState({
           phase: 'picking',
           picker: {
+            mode: mode === 'shot' ? 'shot' : 'record',
             loading: false,
             error: '',
             sources,
@@ -609,31 +624,16 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * 截图入口。
+     *
+     * 和录屏一样先让用户选「要截哪块」——整个桌面 / 显示器 / 窗口 / 自定义区域，
+     * 选完才进截图浮层拖框。这样和录屏的操作记忆一致，也不会一按快捷键
+     * 就把整屏弹出来（用户往往只想截一个窗口）。
+     */
     async function takeScreenshot() {
       if (state.phase !== 'idle' || captureBusy) return
-      const settings = state.settings || DEFAULT_SETTINGS
-      const hideDsh = settings.hideDshOnShot === true
-      captureBusy = true
-      // 截图期间不渲染任何浮层/进度卡：抓到的必须是按快捷键那一刻的屏幕。
-      setState({ toast: null })
-      try {
-        const shot = await fetchShot('?ts=' + Date.now() + (hideDsh ? '&hideDsh=1' : ''))
-        const url = URL.createObjectURL(shot.blob)
-        const image = await loadImage(url)
-        setState({
-          shot: {
-            mode: 'shot', url, imageW: image.naturalWidth, imageH: image.naturalHeight,
-            virtual: null, options: null, hiddenDsh: shot.hidden,
-          },
-        })
-        if (hideDsh && !shot.hidden) {
-          toast(L('没有找到可隐藏的 DSH 窗口，这张图里仍有 DSH 界面', 'No DSH window to hide; the screenshot still contains it'), { kind: 'error' })
-        }
-      } catch (error) {
-        toast(L('截图失败：', 'Screenshot failed: ') + friendly(error), { kind: 'error' })
-      } finally {
-        captureBusy = false
-      }
+      await openPicker('shot')
     }
 
     function openRegionShot(picker, options) {
@@ -649,6 +649,47 @@ window.__ModuleLoader__.load({
           imageH: picker.shotH,
           virtual: picker.sources.virtual,
           options,
+        },
+      })
+    }
+
+    /**
+     * 截图：按选中的源进入截图浮层。
+     *
+     * 底图仍是整张虚拟桌面（抓一次就够），但把「可选范围」收窄到用户选的
+     * 显示器 / 窗口 / 自定义区域：浮层只显示这一块，拖框也只能在这一块里。
+     * 这样和录屏的操作一致——先决定内容，再圈细节。
+     *
+     * @param {object} picker - 源选择框状态（含底图 URL 与虚拟桌面矩形）。
+     * @param {{type: string, x?: number, y?: number, w?: number, h?: number}} choice - 用户选的源。
+     * @param {object} thumbnailRect - 该源在虚拟桌面上的矩形。
+     * @param {object} options - 保留字段（截图不用音频设置）。
+     */
+    function openShotOverlay(picker, choice, thumbnailRect, options) {
+      if (!picker || !picker.shotUrl) return
+      const virtual = picker.sources.virtual
+      const bounds = (choice && choice.type !== 'desktop' && thumbnailRect)
+        ? { x: thumbnailRect.x, y: thumbnailRect.y, w: thumbnailRect.w, h: thumbnailRect.h }
+        : { x: virtual.x, y: virtual.y, w: virtual.w, h: virtual.h }
+      setState({
+        phase: 'idle',
+        picker: null,
+        toast: null,
+        shot: {
+          mode: 'shot',
+          url: picker.shotUrl,
+          imageW: picker.shotW,
+          imageH: picker.shotH,
+          virtual,
+          // 底图里这块裁剪区（虚拟桌面坐标系）。
+          crop: bounds,
+          sourceLabel: choice && choice.type === 'window'
+            ? (choice.title || L('窗口', 'Window'))
+            : choice && choice.type === 'monitor'
+              ? (choice.name || L('显示器', 'Display'))
+              : L('整个桌面', 'Entire desktop'),
+          hiddenDsh: false,
+          options: options || null,
         },
       })
     }
@@ -996,6 +1037,32 @@ window.__ModuleLoader__.load({
     function matchesShortcut(event, combo) {
       if (!combo) return false
       return comboFromEvent(event) === combo
+    }
+
+    /**
+     * 焦点是否在「会吃掉普通按键」的文本输入区。
+     *
+     * 只有多行输入框、文本域和可编辑区真的需要独占字母键；单行 input、
+     * select 不拦——用户的截图快捷键带修饰键，不会和打字冲突。
+     */
+    function isTypingTarget(target) {
+      if (!target || typeof target.closest !== 'function') return false
+      if (target.closest('textarea,[contenteditable="true"],[contenteditable=""]')) return true
+      const input = target.closest('input')
+      if (!input) return false
+      const type = String(input.type || 'text').toLowerCase()
+      // 这些类型收字母，其余（checkbox/radio/button/range/color/date…）不收。
+      return ['text', 'search', 'url', 'tel', 'email', 'password', 'number'].includes(type)
+    }
+
+    /**
+     * 事件本身是不是一个带修饰键的快捷键组合。
+     *
+     * 带 Ctrl/Alt/Meta 的组合键在输入框里同样是命令，不该被当成打字；
+     * 只有裸字母（不带修饰键）才让给输入区。
+     */
+    function isShortcutCombo(event) {
+      return Boolean(event && (event.ctrlKey || event.altKey || event.metaKey))
     }
 
     function ShortcutInput(props) {
@@ -1382,12 +1449,15 @@ window.__ModuleLoader__.load({
       const agentLabel = L('Agent 正在录屏', 'Agent is recording')
       const recordLabel = snapshot.agentRecording ? agentLabel : (isRecording ? S.stopTip : S.recordTip)
       const recordShortcut = snapshot.agentRecording ? '' : shortcuts.record
+      // 可见文字（"录屏"）和悬停提示分开：屏幕阅读器和原生 title 都读可见文字。
       return h('div', { className: 'vsr-toolbar' },
         h('div', { className: 'vsr-btn-wrap' },
           h('button', {
             type: 'button',
             className: 'vsr-btn' + (isRecording ? ' vsr-btn-rec' : ''),
             disabled: busy,
+            // 原生 title 一直保留：自绘提示被样式挡住时，用户仍能看到系统提示。
+            title: recordLabel + (recordShortcut ? ' (' + formatCombo(recordShortcut) + ')' : ''),
             'aria-label': recordLabel,
             onMouseDown: event => event.preventDefault(),
             onClick: () => { if (isRecording) void stopRecording(); else void openPicker() },
@@ -1400,6 +1470,7 @@ window.__ModuleLoader__.load({
             type: 'button',
             className: 'vsr-btn',
             disabled: busy || isRecording,
+            title: S.shotTip + ' (' + formatCombo(shortcuts.screenshot) + ')',
             'aria-label': S.shotTip,
             onMouseDown: event => event.preventDefault(),
             onClick: () => { void takeScreenshot() },
@@ -1466,6 +1537,16 @@ window.__ModuleLoader__.load({
 
       const virtual = picker.sources.virtual
       const options = { includeSystemAudio: systemAudio, includeMic: microphone }
+      // 截图模式：选中的源决定截图浮层里能框多大范围。选完不直接开录，
+      // 而是带着这个源的虚拟坐标进浮层，让用户继续拖框。
+      const isShot = picker.mode === 'shot'
+      const chooseSource = (choice, thumbnailRect) => {
+        if (isShot) {
+          openShotOverlay(picker, choice, thumbnailRect, options)
+          return
+        }
+        void startRecording(choice, options)
+      }
       const row = (key, choice, name, detail, thumbnailRect) => {
         const selected = key === lastKey
         return h('button', {
@@ -1473,7 +1554,7 @@ window.__ModuleLoader__.load({
           ref: selected ? lastRef : null,
           type: 'button',
           className: 'vsr-row' + (selected ? ' vsr-row-last' : ''),
-          onClick: () => { void startRecording(choice, options) },
+          onClick: () => chooseSource(choice, thumbnailRect),
         },
         h(Thumb, { image, virtual, rect: thumbnailRect }),
         h('span', { className: 'vsr-row-text' },
@@ -1485,7 +1566,7 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'vsr-overlay', onMouseDown: event => { if (event.target === event.currentTarget) closePicker() } },
         h('div', { className: 'vsr-modal' },
           h('div', { className: 'vsr-modal-head' },
-            h('strong', null, S.pickerTitle),
+            h('strong', null, isShot ? S.shotPickerTitle : S.pickerTitle),
             h('button', { type: 'button', className: 'vsr-x', onClick: closePicker, 'aria-label': S.close }, '×')),
           h('div', { className: 'vsr-scroll' },
             row('desktop', desktopChoice, S.desktop, virtual.w + ' × ' + virtual.h, { x: virtual.x, y: virtual.y, w: virtual.w, h: virtual.h }),
@@ -1516,11 +1597,15 @@ window.__ModuleLoader__.load({
             h('span', { className: 'vsr-custom-icon' }, '⌗'),
             h('span', { className: 'vsr-row-text' },
               h('span', { className: 'vsr-row-name' }, S.custom),
-              h('span', { className: 'vsr-row-detail' }, S.customHint)))),
+              h('span', { className: 'vsr-row-detail' }, isShot ? S.customHintShot : S.customHint)))),
           h('div', { className: 'vsr-modal-foot vsr-picker-foot' },
-            h('label', { className: 'vsr-check' }, h('input', { type: 'checkbox', checked: systemAudio, onChange: event => setSystemAudio(event.target.checked) }), S.systemAudio),
-            h('label', { className: 'vsr-check' }, h('input', { type: 'checkbox', checked: microphone, onChange: event => setMicrophone(event.target.checked) }), S.microphone),
-            h('span', { className: 'vsr-hint' }, defaults.fps + ' fps · ' + Math.round(defaults.maxSeconds / 60) + L(' 分钟 · 窗口录制会录到遮挡物', ' min · window capture includes occluders')))))
+            // 截图不需要音频开关，隐藏它们，只留提示。
+            isShot
+              ? h('span', { className: 'vsr-hint vsr-hint-wide' }, S.shotPickerHint)
+              : h(React.Fragment, null,
+                h('label', { className: 'vsr-check' }, h('input', { type: 'checkbox', checked: systemAudio, onChange: event => setSystemAudio(event.target.checked) }), S.systemAudio),
+                h('label', { className: 'vsr-check' }, h('input', { type: 'checkbox', checked: microphone, onChange: event => setMicrophone(event.target.checked) }), S.microphone),
+                h('span', { className: 'vsr-hint' }, defaults.fps + ' fps · ' + Math.round(defaults.maxSeconds / 60) + L(' 分钟 · 窗口录制会录到遮挡物', ' min · window capture includes occluders'))))))
     }
 
     // ------------------------------------------------------------ screenshot
@@ -1553,15 +1638,42 @@ window.__ModuleLoader__.load({
       const draftRef = useRef(null)
       const imageW = shot.imageW
       const imageH = shot.imageH
+      // 选源后截图：只在所选源的矩形里拖框。crop 是底图上的裁剪区
+      // （虚拟桌面坐标），换算成显示坐标后作为拖框的边界与初始全局选区。
+      const crop = useMemo(() => {
+        const box = shot.crop
+        if (!box || !shot.virtual) return null
+        const kx = imageW / shot.virtual.w
+        const ky = imageH / shot.virtual.h
+        return {
+          x: (box.x - shot.virtual.x) * kx,
+          y: (box.y - shot.virtual.y) * ky,
+          w: Math.max(1, box.w * kx),
+          h: Math.max(1, box.h * ky),
+        }
+      }, [shot.crop, shot.virtual, imageW, imageH])
 
       const disp = useMemo(() => {
         const maxW = Math.max(200, window.innerWidth * 0.92)
         const maxH = Math.max(160, window.innerHeight * 0.76)
-        const scale = Math.min(maxW / imageW, maxH / imageH, 1)
+        // 有裁剪区时按裁剪区缩放，浮层只展示所选源那一块。
+        const boxW = crop ? crop.w : imageW
+        const boxH = crop ? crop.h : imageH
+        const scale = Math.min(maxW / boxW, maxH / boxH, 1)
         return { w: Math.max(1, Math.round(imageW * scale)), h: Math.max(1, Math.round(imageH * scale)) }
-      }, [imageW, imageH, viewport])
+      }, [imageW, imageH, viewport, crop])
+      // 浮层显示区（相对裁剪区左上角的偏移），没有 crop 时就是整张图。
+      const viewBox = crop
+        ? { x: crop.x * (disp.w / imageW), y: crop.y * (disp.h / imageH), w: crop.w * (disp.w / imageW), h: crop.h * (disp.h / imageH) }
+        : { x: 0, y: 0, w: disp.w, h: disp.h }
       const toOrig = point => ({ x: point.x * imageW / disp.w, y: point.y * imageH / disp.h })
       const toDisp = point => ({ x: point.x * disp.w / imageW, y: point.y * disp.h / imageH })
+
+      /** 把拖框点限制在 viewBox 内（选源截图时只在那一块里选）。 */
+      const clampToView = point => ({
+        x: Math.min(viewBox.x + viewBox.w, Math.max(viewBox.x, point.x)),
+        y: Math.min(viewBox.y + viewBox.h, Math.max(viewBox.y, point.y)),
+      })
 
       useEffect(() => {
         const onResize = () => setViewport(value => value + 1)
@@ -1702,6 +1814,9 @@ window.__ModuleLoader__.load({
         if (event.button !== 0 || textInput) return
         const point = localPoint(event)
         if (phase === 'select') {
+          // 选源截图时，落点必须在所选源的范围里，否则忽略这一下。
+          if (crop && (point.x < viewBox.x || point.y < viewBox.y
+            || point.x > viewBox.x + viewBox.w || point.y > viewBox.y + viewBox.h)) return
           dragRef.current = { start: point }
           const next = { x: point.x, y: point.y, w: 0, h: 0 }
           selRef.current = next
@@ -1723,7 +1838,7 @@ window.__ModuleLoader__.load({
       function onMove(event) {
         const drag = dragRef.current
         if (!drag) return
-        const point = localPoint(event)
+        const point = clampToView(localPoint(event))
         if (phase === 'select') {
           const x = Math.min(drag.start.x, point.x)
           const y = Math.min(drag.start.y, point.y)
@@ -1748,7 +1863,8 @@ window.__ModuleLoader__.load({
         if (phase === 'select') {
           const current = selRef.current
           if (!current || current.w < 8 || current.h < 8) {
-            const full = { x: 0, y: 0, w: disp.w, h: disp.h }
+            // 单击（没拖出框）：选中所选源的全部范围，而不是整个屏幕。
+            const full = { x: viewBox.x, y: viewBox.y, w: viewBox.w, h: viewBox.h }
             selRef.current = full
             setSel(full)
           }
@@ -2063,6 +2179,8 @@ window.__ModuleLoader__.load({
                 h('button', { type: 'button', className: 'vsr-tool', 'aria-label': S.clear, onClick: () => setStrokes([]) }, '🗑'),
                 h(Tip, { label: S.clear }))),
             // 取字与复制：和 QQ / 微信截图一样的一排操作，不带「用这张」那么大的视觉权重。
+            // 浮层里的提示只写按钮名称，不标快捷键——这一排按钮太密，
+            // 键帽一放上去就把提示撑宽、盖住相邻按钮。
             h('div', { className: 'vsr-toolgroup' },
               h('div', { className: 'vsr-tip-host' },
                 h('button', {
@@ -2071,7 +2189,7 @@ window.__ModuleLoader__.load({
                   'aria-label': S.extractText,
                   onClick: () => { void extractText() },
                 }, '文'),
-                h(Tip, { label: S.extractText, shortcut: shortcuts.text })),
+                h(Tip, { label: S.extractText })),
               h('div', { className: 'vsr-tip-host' },
                 h('button', {
                   type: 'button',
@@ -2080,7 +2198,7 @@ window.__ModuleLoader__.load({
                   disabled: Boolean(copying),
                   onClick: () => { void copyImage('image') },
                 }, '⧉'),
-                h(Tip, { label: S.copyImage, shortcut: shortcuts.copyImage })),
+                h(Tip, { label: S.copyImage })),
               h('div', { className: 'vsr-tip-host' },
                 h('button', {
                   type: 'button',
@@ -2089,14 +2207,14 @@ window.__ModuleLoader__.load({
                   disabled: Boolean(copying),
                   onClick: () => { void copyImage('files') },
                 }, '⤓'),
-                h(Tip, { label: S.copyFile, shortcut: shortcuts.clipboard }))),
+                h(Tip, { label: S.copyFile }))),
             h('div', { className: 'vsr-toolgroup' },
               h('div', { className: 'vsr-tip-host' },
                 h('button', { type: 'button', className: 'vsr-btn-text', onClick: closeShot }, S.cancel),
                 h(Tip, { label: S.cancel })),
               h('div', { className: 'vsr-tip-host' },
                 h('button', { type: 'button', className: 'vsr-btn-primary', onClick: confirmCurrent }, S.useShot),
-                h(Tip, { label: S.useShot, shortcut: shortcuts.save })))) : null,
+                h(Tip, { label: S.useShot })))) : null,
           phase === 'select' && isRegion ? h('div', { className: 'vsr-toolbar-floating' },
             h('div', { className: 'vsr-toolgroup' },
               h('button', { type: 'button', className: 'vsr-btn-text', onClick: closeShot }, S.cancel),
@@ -2207,12 +2325,13 @@ window.__ModuleLoader__.load({
 .vsr-btn:hover:not(:disabled) { background: var(--dsh-color-fill-quaternary, rgba(0,0,0,.06)); color: var(--dsh-color-text-primary, #111827); }
 .vsr-btn:disabled { opacity: .45; cursor: default; }
 .vsr-btn-rec { color: #e5484d; }
-/* 悬停提示：按钮外面套一层定位容器，提示绝对定位在按钮上方居中。
-   用 pointer-events:none 保证提示本身不会抢走 hover/点击。 */
+/* 悬停提示：默认 display:none，只有悬停时才出现。
+   用 display 而不是 opacity——opacity:0 的元素仍占布局、仍可能吃指针事件，
+   而且在某些渲染路径下会被截图/合成器当成可见元素。 */
 .vsr-btn-wrap { position: relative; display: inline-flex; }
-.vsr-tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 2147483200; pointer-events: none; opacity: 0; transition: opacity .12s ease .28s; }
+.vsr-tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 2147483200; pointer-events: none; display: none; }
 .vsr-btn-wrap:hover .vsr-tip,
-.vsr-btn-wrap:focus-within .vsr-tip { opacity: 1; }
+.vsr-btn-wrap:focus-within .vsr-tip { display: inline-flex; }
 .vsr-tip-end { left: auto; right: 0; transform: none; }
 .vsr-tip-body { display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 7px; background: rgba(28,28,31,.96); color: #f2f2f4; font: 500 12px/1.3 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.3); white-space: nowrap; }
 .vsr-tip-label { white-space: nowrap; }
@@ -2268,7 +2387,9 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-shot-hide:hover { background: rgba(255,255,255,.16); }
 .vsr-shot-hide-on { border-color: #4aa3ff; background: rgba(22,119,255,.35); }
 .vsr-text-input { position: absolute; z-index: 2; min-width: 80px; padding: 2px 4px; border: 1px dashed #fff; background: rgba(0,0,0,.35); color: #fff; font: 600 16px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; outline: none; }
-.vsr-toolbar-floating { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: rgba(24,24,27,.94); color: #fff; box-shadow: 0 16px 48px rgba(0,0,0,.45); backdrop-filter: blur(10px); }
+.vsr-toolbar-floating { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: rgba(24,24,27,.94); color: #fff; box-shadow: 0 16px 48px rgba(0,0,0,.45); backdrop-filter: blur(10px); z-index: 2147483200; }
+/* 工具条永远压在文字面板之上：面板再怎么长，也不能盖住按钮的点击区。
+   面板自己从 bottom 之上开始长，并限制高度。 */
 .vsr-toolgroup { display: flex; align-items: center; gap: 3px; }
 .vsr-tool { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: #e7e7ea; cursor: pointer; font-size: 14px; }
 .vsr-tool:hover { background: rgba(255,255,255,.12); }
@@ -2284,6 +2405,9 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 /* 浮层工具条上的悬停提示：和工具条一样是深色底，所以提示反色成浅色。 */
 .vsr-tip-host { position: relative; display: inline-flex; }
 .vsr-tip-host .vsr-tip { bottom: calc(100% + 10px); }
+/* 浮层里的提示同样只在悬停时出现。 */
+.vsr-tip-host:hover .vsr-tip,
+.vsr-tip-host:focus-within .vsr-tip { display: inline-flex; }
 .vsr-tip-host .vsr-tip-body { background: #f6f6f8; color: #1c1c1f; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
 .vsr-tip-host .vsr-tip-hint { color: #6b7280; }
 .vsr-tip-host .vsr-kbd { border-color: rgba(0,0,0,.18); background: rgba(0,0,0,.06); color: #1c1c1f; }
@@ -2291,7 +2415,11 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-tool-on { background: rgba(22,119,255,.85); color: #fff; }
 .vsr-tool:disabled { opacity: .45; cursor: default; }
 /* 取字结果面板：贴在工具条上方，深色、可选中文字。 */
-.vsr-text-panel { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 2147483100; display: flex; flex-direction: column; width: min(560px, calc(100vw - 32px)); max-height: 38vh; border-radius: 12px; background: rgba(24,24,27,.96); color: #f2f2f4; box-shadow: 0 18px 52px rgba(0,0,0,.5); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; overflow: hidden; }
+/* 取字结果面板：贴在工具条上方，深色、可选中文字。
+   bottom 留出工具条高度（24px 下边距 + 约 44px 工具条 + 12px 间隙），
+   max-height 用视口高度减去这段，保证再长也不会压住工具条。 */
+.vsr-text-panel { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 2147483100; display: flex; flex-direction: column; width: min(560px, calc(100vw - 32px)); max-height: min(38vh, calc(100vh - 200px)); border-radius: 12px; background: rgba(24,24,27,.96); color: #f2f2f4; box-shadow: 0 18px 52px rgba(0,0,0,.5); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; overflow: hidden; pointer-events: auto; }
+/* 面板本身可点，但不应把它和工具条之间的空隙也变成点击面。 */
 .vsr-panel-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 12px; }
 .vsr-panel-meta { color: #9a9aa3; font-size: 11px; }
 .vsr-panel-copy { margin-left: auto; border: 0; border-radius: 6px; background: #1677ff; color: #fff; font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer; }
@@ -2304,7 +2432,7 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-panel-error { color: #ff9a9e; flex-wrap: wrap; }
 .vsr-panel-link { border: 0; background: transparent; color: #8fc2ff; font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
 .vsr-panel-foot { padding: 6px 12px 8px; border-top: 1px solid rgba(255,255,255,.08); color: #8e8e97; font-size: 11px; }
-.vsr-panel-reopen { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 2147483100; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(24,24,27,.94); color: #f2f2f4; font: inherit; font-size: 12px; padding: 5px 12px; cursor: pointer; }
+.vsr-panel-reopen { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 2147483100; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(24,24,27,.94); color: #f2f2f4; font: inherit; font-size: 12px; padding: 5px 12px; cursor: pointer; }
 .vsr-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); border-top-color: #4aa3ff; animation: vsr-spin .8s linear infinite; }
 @keyframes vsr-spin { to { transform: rotate(360deg); } }
 .vsr-progress { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 2147483001; width: 300px; padding: 18px 20px; border-radius: 14px; background: rgba(24,24,27,.94); color: #fff; box-shadow: 0 24px 80px rgba(0,0,0,.45); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
@@ -2400,9 +2528,12 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
         } catch { /* 老宿主没有插件页配置槽 */ }
         const onShortcut = event => {
           if (event.repeat) return
-          const target = event.target
-          if (target && typeof target.closest === 'function' && target.closest('input,textarea,select,[contenteditable="true"]')) return
           if (state.picker || state.shot) return
+          // 只有「真的在往输入场地写文字」时才让位给浏览器：
+          // 多行输入框 / 文本域 / 可编辑区。单行的搜索框、下拉框不拦，
+          // 否则用户打完字再按截图快捷键会毫无反应（录屏有按钮入口，
+          // 截图没有，表现就是「截图快捷键坏了」）。
+          if (isTypingTarget(event.target) && !isShortcutCombo(event)) return
           const settings = state.settings || DEFAULT_SETTINGS
           if (matchesShortcut(event, settings.shortcuts.screenshot)) {
             if (state.phase !== 'idle') return

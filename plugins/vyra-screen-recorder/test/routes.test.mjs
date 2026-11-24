@@ -113,7 +113,18 @@ test('GET /ocr/status 报告系统 OCR 与语言', { skip: !windows, timeout }, 
   }
 })
 
-test('POST /clipboard 图片与文字都能写进剪贴板', { skip: !windows, timeout }, async () => {
+test('POST /clipboard 图片与文字都能写进剪贴板', { skip: !windows, timeout }, async (t) => {
+  // 剪贴板是系统级独占资源：别的程序（浏览器、远程桌面）卡住它时，
+  // 连 Set-Clipboard 都会失败。那不是插件的问题，跳过而不是假失败。
+  const { execFileSync } = await import('node:child_process')
+  try {
+    execFileSync('powershell.exe', [
+      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', 'Set-Clipboard -Value "vsr-env-probe"',
+    ], { encoding: 'utf8', windowsHide: true, timeout: 15000, stdio: 'ignore' })
+  } catch {
+    t.skip('系统剪贴板当前被其他程序独占（Set-Clipboard 都失败），跳过')
+    return
+  }
   const dir = await mkdtemp(path.join(tmpdir(), 'vsr-clip-route-'))
   const saved = process.env.DSH_HOME
   process.env.DSH_HOME = dir
@@ -128,7 +139,6 @@ test('POST /clipboard 图片与文字都能写进剪贴板', { skip: !windows, t
     assert.ok(stored.startsWith(clipboardDir()), stored)
 
     // 剪贴板里确实有图：另起一个进程读回来，确认不是只有本进程可见。
-    const { execFileSync } = await import('node:child_process')
     const hasImage = execFileSync('powershell.exe', [
       '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
       'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::ContainsImage()',
