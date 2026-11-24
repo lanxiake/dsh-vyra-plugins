@@ -1998,6 +1998,16 @@
       },
       "versions": [
         {
+          "version": "0.6.4",
+          "publishTimestamp": 1795496197,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "b3b94ac82117833a1df72e049c396493719ee812",
+            "path": "plugins/vyra-free-model"
+          }
+        },
+        {
           "version": "0.6.3",
           "publishTimestamp": 1795495140,
           "source": {

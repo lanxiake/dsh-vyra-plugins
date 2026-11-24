@@ -2330,6 +2330,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.6.4 gives ghost and quiet buttons a real surface. Making the two
+        // actions quiet was not enough: quiet was transparent as well, so they
+        // still read as plain labels. An earlier attempt at this used
+        // --dsw-alias-bg-layer-3, which the theme does not publish, so the whole
+        // background declaration was invalid and nothing changed on screen.
+        '0.6.4': {
+          publishTimestamp: 1795496197,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'b3b94ac82117833a1df72e049c396493719ee812',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
