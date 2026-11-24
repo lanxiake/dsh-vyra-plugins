@@ -2441,6 +2441,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-screen-recorder',
           },
         },
+        // 0.4.2 makes the screenshot shortcut capture the whole screen without
+        // asking for a source, makes text extraction manual, keeps the text
+        // panel off the canvas, stops attaching captures to the composer
+        // (screenshots are copied to the clipboard), and keeps the settings
+        // cards rendered even when the file list cannot be read.
+        '0.4.2': {
+          publishTimestamp: 1796284800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'cccdd56fdec0ecde9d90c992f3bc4cecdb1a0936',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
       },
       metadata: {
         category: 'media',
