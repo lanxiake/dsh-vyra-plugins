@@ -1,8 +1,0 @@
-# The theme-style row, inserted at the host plane.
-#
-# No config: the two palettes live in client.js next to the tokens they set, and
-# the Host half has nothing to do. The row exists so the plugin is a real bundle
-# the profile can enable and the client half gets loaded.
-- insert:
-    - id: dsh-theme-styles
-      name: 'vyra-theme-styles'

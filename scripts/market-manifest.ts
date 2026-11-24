@@ -85,9 +85,6 @@ const SYSTEM_SELECTION_ICON =
 /** Inline icon for `vyra-free-theme`. */
 const FREE_THEME_ICON =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHZpZXdCb3g9IjAgMCAzNiAzNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ImRzaC1za2lucyI+DQogIDwhLS0gZHNoLXNraW5zIOearuiCpO+8muS4ieW8oOaJh+W9ouiJsuWNoe+8iOe0qy/pnZIv6JOd77yJ57uV5bqV6YOo5p6i6L20IMKxMzDCsCDlsZXlvIAgPSDlpJrlpZflk4HniYznmq7ogqTng63liIfmjaIgLS0+DQogIDxyZWN0IHg9IjExLjUiIHk9IjkuNSIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3LjUiIHJ4PSIzLjIiIGZpbGw9InVybCgjdikiIHRyYW5zZm9ybT0icm90YXRlKC0zMCAxOCAyOSkiLz4NCiAgPHJlY3QgeD0iMTEuNSIgeT0iOS41IiB3aWR0aD0iMTMiIGhlaWdodD0iMTcuNSIgcng9IjMuMiIgZmlsbD0idXJsKCN0KSIvPg0KICA8cmVjdCB4PSIxMS41IiB5PSI5LjUiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNy41IiByeD0iMy4yIiBmaWxsPSJ1cmwoI2IpIiB0cmFuc2Zvcm09InJvdGF0ZSgzMCAxOCAyOSkiLz4NCiAgPGRlZnM+DQogICAgPGxpbmVhckdyYWRpZW50IGlkPSJiIiB4MT0iMTEuNSIgeTE9IjkuNSIgeDI9IjI0LjUiIHkyPSIyNyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPg0KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzY5QjlGRiIvPg0KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzI0REUyIi8+DQogICAgPC9saW5lYXJHcmFkaWVudD4NCiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InQiIHgxPSIxMS41IiB5MT0iOS41IiB4Mj0iMjQuNSIgeTI9IjI3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+DQogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNDVFN0E0Ii8+DQogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwNTkwOUQiLz4NCiAgICA8L2xpbmVhckdyYWRpZW50Pg0KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idiIgeDE9IjExLjUiIHkxPSI5LjUiIHgyPSIyNC41IiB5Mj0iMjciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4NCiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiNCMThDRkYiLz4NCiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzZDNERFMiIvPg0KICAgIDwvbGluZWFyR3JhZGllbnQ+DQogIDwvZGVmcz4NCjwvc3ZnPg0K'
-/** Inline icon for `vyra-theme-styles`. */
-const THEME_STYLES_ICON =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+DQogIDxwYXRoIGQ9Ik0xMiAzYTkgOSAwIDAgMSAwIDE4Yy0xLjQgMC0yLjItLjktMi4yLTIgMC0uNi4yLTEgLjYtMS40LjQtLjQuNi0uOC42LTEuMyAwLTEtLjgtMS44LTEuOC0xLjhINy42QTQuNiA0LjYgMCAwIDEgMyA5LjlDMyA2LjEgNyAzIDEyIDNaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4NCiAgPGNpcmNsZSBjeD0iOCIgY3k9IjkiIHI9IjEuMyIgZmlsbD0iY3VycmVudENvbG9yIi8+DQogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4NCiAgPGNpcmNsZSBjeD0iMTUuOCIgY3k9IjkuNCIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4NCjwvc3ZnPg0K'
 /** Inline icon for `vyra-agent-cli-manager`. */
 const AGENT_CLI_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4NCiAgPHRpdGxlPkFnZW50IENMSSBNYW5hZ2VyPC90aXRsZT4NCiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz4NCiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+DQogICAgPHJlY3QgeD0iMTQiIHk9IjE2IiB3aWR0aD0iMzYiIGhlaWdodD0iMzIiIHJ4PSI1IiBvcGFjaXR5PSIwLjg1Ii8+DQogICAgPHBhdGggZD0iTTIyIDI3bDUgNS01IDUiLz4NCiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4NCiAgPC9nPg0KPC9zdmc+DQo='
@@ -877,39 +874,6 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-theme',
           },
         },
-      },
-    },
-    {
-      name: 'vyra-theme-styles',
-      title: {
-        en: 'Theme Styles',
-        zh: '主题风格',
-      },
-      description: {
-        en: 'Swap the whole client colour scheme for a third-party theme: a warm organic palette, or macOS frosted glass. Recolours the existing components through their own tokens, so nothing is left half-switched.',
-        zh: '把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」。',
-      },
-      author: 'lanxiake',
-      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
-      repository: {
-        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
-        directory: 'plugins/vyra-theme-styles',
-      },
-      icon: THEME_STYLES_ICON,
-      versions: {
-        '0.1.0': {
-          publishTimestamp: 1794963600,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'ec3d3abfd7878410695de90798bcfe9a738a436e',
-            path: 'plugins/vyra-theme-styles',
-          },
-        },
-      },
-      metadata: {
-        category: 'browser',
-        keywords: ['theme', 'style', 'ui'],
       },
     },
     {
@@ -2151,38 +2115,6 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'integration',
         keywords: ['sync', 'backup', 'git', 'webdav', 'snapshot'],
-      },
-    },
-    {
-      name: '@iasiv5/dsh-skins',
-      title: {
-        en: 'DSH Skins',
-        zh: '主题皮肤',
-      },
-      description: {
-        en: 'Hot-switch sidebar skins, wallpapers and transparency, and return to the official look with one click.',
-        zh: '侧栏多皮肤热切换、壁纸与通透度个性化，一键回到官方界面。',
-      },
-      author: 'iasiv5',
-      homepage: 'https://github.com/iasiv5/dsh-skins#readme',
-      repository: {
-        url: 'https://github.com/iasiv5/dsh-skins',
-      },
-      icon: 'https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-skins/icon.svg',
-      versions: {
-        '1.5.34': {
-          publishTimestamp: 1795341110,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'eb9ad61da2defb708b29d97093999876ff24187f',
-            path: 'plugins/dsh-skins',
-          },
-        },
-      },
-      metadata: {
-        category: 'appearance',
-        keywords: ['skin', 'theme', 'wallpaper', 'sidebar', 'personalization'],
       },
     },
     {

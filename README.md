@@ -41,7 +41,6 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 | `vyra-skill-mcp-manager` | 技能与 MCP 管理 | 在一个面板里浏览、搜索、安装技能与 MCP 服务器，不必为每一件都手改 profile 配置行 |
 | `vyra-ssh-terminal` | SSH 终端 | 把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密 |
 | `vyra-system-selection` | 系统级划词 | 在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。**仅 Windows** |
-| `vyra-theme-styles` | 主题风格 | 把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」 |
 | `vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份 |
 | `vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
 | `vyra-studymate` | StudyMate 学习 | 学习技能与课程引擎：定计划、讲知识、做项目。每门课还能派生音频课、旁白视频和动手工作坊，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。基于 [Cattofu 的 StudyMate](https://github.com/Miaotofu01/Study-Mate)（MIT）

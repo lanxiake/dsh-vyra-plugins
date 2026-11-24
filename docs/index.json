@@ -685,44 +685,6 @@
       ]
     },
     {
-      "name": "vyra-theme-styles",
-      "title": {
-        "en": "Theme Styles",
-        "zh": "主题风格"
-      },
-      "description": {
-        "en": "Swap the whole client colour scheme for a third-party theme: a warm organic palette, or macOS frosted glass. Recolours the existing components through their own tokens, so nothing is left half-switched.",
-        "zh": "把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」。"
-      },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+DQogIDxwYXRoIGQ9Ik0xMiAzYTkgOSAwIDAgMSAwIDE4Yy0xLjQgMC0yLjItLjktMi4yLTIgMC0uNi4yLTEgLjYtMS40LjQtLjQuNi0uOC42LTEuMyAwLTEtLjgtMS44LTEuOC0xLjhINy42QTQuNiA0LjYgMCAwIDEgMyA5LjlDMyA2LjEgNyAzIDEyIDNaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4NCiAgPGNpcmNsZSBjeD0iOCIgY3k9IjkiIHI9IjEuMyIgZmlsbD0iY3VycmVudENvbG9yIi8+DQogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4NCiAgPGNpcmNsZSBjeD0iMTUuOCIgY3k9IjkuNCIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4NCjwvc3ZnPg0K",
-      "author": "lanxiake",
-      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
-      "repository": {
-        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
-        "directory": "plugins/vyra-theme-styles"
-      },
-      "versions": [
-        {
-          "version": "0.1.0",
-          "publishTimestamp": 1794963600,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "ec3d3abfd7878410695de90798bcfe9a738a436e",
-            "path": "plugins/vyra-theme-styles"
-          }
-        }
-      ],
-      "metadata": {
-        "category": "browser",
-        "keywords": [
-          "theme",
-          "style",
-          "ui"
-        ]
-      }
-    },
-    {
       "name": "vyra-wechat-local",
       "title": {
         "en": "PC WeChat",
@@ -1925,49 +1887,6 @@
         "sortKeys": {
           "stars": 17,
           "downloads": 3064
-        }
-      }
-    },
-    {
-      "name": "@iasiv5/dsh-skins",
-      "title": {
-        "en": "DSH Skins",
-        "zh": "主题皮肤"
-      },
-      "description": {
-        "en": "Hot-switch sidebar skins, wallpapers and transparency, and return to the official look with one click.",
-        "zh": "侧栏多皮肤热切换、壁纸与通透度个性化，一键回到官方界面。"
-      },
-      "icon": "https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-skins/icon.svg",
-      "author": "iasiv5",
-      "homepage": "https://github.com/iasiv5/dsh-skins#readme",
-      "repository": {
-        "url": "https://github.com/iasiv5/dsh-skins"
-      },
-      "versions": [
-        {
-          "version": "1.5.34",
-          "publishTimestamp": 1795341110,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "eb9ad61da2defb708b29d97093999876ff24187f",
-            "path": "plugins/dsh-skins"
-          }
-        }
-      ],
-      "metadata": {
-        "category": "appearance",
-        "keywords": [
-          "skin",
-          "theme",
-          "wallpaper",
-          "sidebar",
-          "personalization"
-        ],
-        "sortKeys": {
-          "stars": 8,
-          "downloads": 9448
         }
       }
     },
