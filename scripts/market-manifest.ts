@@ -2481,6 +2481,19 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-screen-recorder',
           },
         },
+        // 0.4.4 fixes the settings page rendering only the Files card: a stray
+        // closing paren ended the return early, so four cards were never in
+        // the tree. Also repairs the theme tokens (--dsh-color-* never
+        // existed; DSH publishes --dsw-alias-*).
+        '0.4.4': {
+          publishTimestamp: 1796457600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0f0b7564030d964ffd8522dcb9e30668182606b4',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
       },
       metadata: {
         category: 'media',
