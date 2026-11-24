@@ -743,17 +743,6 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-system-selection',
           },
         },
-        // 2.0.1 drops a leftover `lastSources` assignment that crashed the Host on the
-        // drag-trigger path (search was removed in 2.0.0, the assignment was not).
-        '2.0.1': {
-          publishTimestamp: 1795086600,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'ad533f50952ac4249c652d249c4946aa95925499',
-            path: 'plugins/vyra-system-selection',
-          },
-        },
         // 3.0.0 rebuilds the popup as Doubao's selection card: avatar, pin/close, a quoted block
         // of the selection, follow-up chips parsed from `>>` lines, an icon row, and a real EDIT
         // follow-up field (the only part that takes focus). The card grows with its answer to
