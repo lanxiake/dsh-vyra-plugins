@@ -2318,6 +2318,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.6.3 puts 添加接口 and 一键安装插件市场 on the same quiet button as
+        // 刷新积分 / 添加账号; they were primary, which paints a blue fill and
+        // read as unstyled next to the rest of the page.
+        '0.6.3': {
+          publishTimestamp: 1795495140,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '45921c8a0ec7dc11e407bf634ca5ca0cb2e18bdc',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
