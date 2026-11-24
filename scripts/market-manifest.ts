@@ -189,6 +189,10 @@ export interface MarketManifest {
   readonly plugins: readonly MarketPluginSource[]
 }
 
+/** Inline icon for `open-design`: the OpenDesign mark in brand orange. */
+const OPEN_DESIGN_ICON =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJPcGVuRGVzaWduIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib2QtZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNGRjU3MDEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMTExODI3Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCNvZC1nKSIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE1IiBmaWxsPSJub25lIiBzdHJva2U9IiNGNkY2RjEiIHN0cm9rZS13aWR0aD0iMyIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjUiIGZpbGw9IiNGNkY2RjEiLz4KICA8cGF0aCBkPSJNMzIgNnY3TTMyIDUxdjdNNiAzMmg3TTUxIDMyaDciIHN0cm9rZT0iI0Y2RjZGMSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+'
+
 export const manifest: MarketManifest = {
   title: {
     en: 'Veyra Plugins',
@@ -2892,6 +2896,39 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'agent-runtime',
         keywords: ['console', 'harness', 'settings', 'models', 'plugins', 'panel'],
+      },
+    },
+    {
+      name: 'open-design',
+      title: {
+        en: 'OpenDesign Domains',
+        zh: 'OpenDesign 领域包',
+      },
+      description: {
+        en: 'Splits the OpenDesign skill library into nine business domains, each paired with its own agent, so a user loads only the work they actually do. Ships 85 craft skills plus 152 design-system contracts; toggling a domain with the bundled odx CLI adds or removes its skills and agent on the spot, and one director agent coordinates whatever is enabled.',
+        zh: '把 OpenDesign 技能库按业务领域切成九个包，每包配一个同名 Agent，只加载真正用得上的那部分。含 85 个工艺技能与 152 套设计系统契约；用自带的 odx 命令开关领域，技能与 Agent 即时增删，再由一个编排 Agent 统一调度已启用的领域。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/open-design',
+      },
+      icon: OPEN_DESIGN_ICON,
+      versions: {
+        '0.2.0': {
+          publishTimestamp: 1795502400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'cea8adb952ab29a16f5fe01c303a6722b43ed73f',
+            path: 'plugins/open-design',
+          },
+        },
+      },
+      metadata: {
+        category: 'content',
+        keywords: ['skill', 'design', 'open-design', 'frontend-design', 'motion', 'design-system', 'agent'],
       },
     },
   ],
