@@ -358,30 +358,50 @@ test('moves files and folders between workspace directories', async () => {
   }
 })
 
-test('session-changes lists turns from workspace/changes events', async () => {
-  const events = [
-    { type: 'workspace/changes', seq: 3, time: 1_700_000_000_000, data: { turn: 1 } },
-    { type: 'user/message', seq: 4, time: 1_700_000_100_000 },
-  ]
-  const ctx = {
-    get: name => name === 'sessions' ? { get: id => id === 's' ? { snapshotEvents: () => events } : undefined } : undefined,
-    workspaceChanges: {
-      summary: (sessionId, seq) => seq === 3
-        ? { turn: 1, files: [{ path: 'out/a.txt', display: 'out/a.txt', added: 3, deleted: 1 }] }
-        : undefined,
-    },
-  }
-  const response = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes?sessionId=s'), ctx)
-  assert.equal(response.status, 200)
-  const body = await response.json()
-  assert.equal(body.ok, true)
-  assert.equal(body.turns.length, 1)
-  assert.equal(body.turns[0].turn, 1)
-  assert.equal(body.turns[0].files[0].path, 'out/a.txt')
-  assert.equal(body.turns[0].available, true)
+test('session-changes lists one node per user message with its produced files', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-timeline-'))
+  try {
+    await mkdir(join(root, 'docs'), { recursive: true })
+    await writeFile(join(root, 'docs', 'a.txt'), 'hello')
 
-  const missing = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes'), ctx)
-  assert.equal(missing.status, 400)
+    const events = [
+      {
+        type: 'user/message', seq: 1, time: Date.now() - 60_000,
+        data: { role: 'user', content: [{ type: 'text', text: '帮我生成一个封面' }] },
+      },
+      { type: 'assistant/message', seq: 2, time: Date.now() - 50_000, data: {} },
+    ]
+    const ctx = {
+      workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      get: name => name === 'sessions'
+        ? { get: id => id === 's' ? { snapshotEvents: () => events, header: { createdAt: 1 } } : undefined }
+        : undefined,
+      fs: {
+        async resolve(path, opts = {}) {
+          const value = path.startsWith('/') || /^[A-Za-z]:[/\\]/u.test(path) ? path : join(opts.cwd ?? root, path)
+          return { targetKey: value, displayPath: value }
+        },
+        contains(parent, child) {
+          const step = relative(parent.displayPath, child.displayPath)
+          return step === '' || (!step.startsWith('..') && !isAbsolute(step))
+        },
+        processPath(target) { return target.displayPath },
+      },
+    }
+    const response = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes?sessionId=s'), ctx)
+    assert.equal(response.status, 200)
+    const body = await response.json()
+    assert.equal(body.ok, true)
+    assert.equal(body.turns.length, 1)
+    assert.equal(body.turns[0].prompt, '帮我生成一个封面')
+    assert.equal(body.turns[0].files.length, 1)
+    assert.equal(body.turns[0].files[0].path, 'docs/a.txt')
+
+    const missing = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes'), ctx)
+    assert.equal(missing.status, 400)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 test('handleList resolves a session root, scopes folders and returns metadata', async () => {

@@ -576,14 +576,13 @@ export async function batchFiles({ action, paths, toFolder = '', permanent = fal
  */
 export async function revealFile({ path, fs, workspaceRoot, signal }) {
   const resolved = await resolveInside(fs, workspaceRoot, path, signal)
-  await statPath(resolved.processPath)
-  if (process.platform === 'win32') {
-    launch('explorer.exe', [`/select,"${resolved.processPath}"`], { verbatim: true })
-  } else if (process.platform === 'darwin') {
-    launch('open', ['-R', resolved.processPath])
-  } else {
-    launch('xdg-open', [dirname(resolved.processPath)])
-  }
+  const info = await statPath(resolved.processPath)
+  // Open the containing folder in the OS file manager: the folder itself for a
+  // directory, its parent for a file.
+  const directory = info.isDirectory() ? resolved.processPath : dirname(resolved.processPath)
+  if (process.platform === 'win32') launch('explorer.exe', [directory])
+  else if (process.platform === 'darwin') launch('open', [directory])
+  else launch('xdg-open', [directory])
 }
 
 /**

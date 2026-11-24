@@ -93,14 +93,7 @@ export function AddLinkForm({ onSubmit, onClose }) {
 
 /** Library-only menu: adds an in-panel folder jump. */
 function libraryMenuActions(item) {
-  const actions = menuActions(item)
-  if (item.isFolder || item.source === 'url' || item.kind === 'link') return actions
-  const index = actions.findIndex(action => action.key === 'reveal')
-  return [
-    ...actions.slice(0, index),
-    { key: 'locate', label: '定位到文件夹', icon: 'folder' },
-    ...actions.slice(index),
-  ]
+  return menuActions(item)
 }
 
 /** Menu entries for a library item. */
@@ -108,14 +101,12 @@ function menuActions(item) {
   if (item.isFolder) {
     return [
       { key: 'toggleFolder', label: '展开 / 折叠', icon: 'folder' },
-      { key: 'locate', label: '定位到文件夹', icon: 'folderOpen' },
       { key: 'insert', label: '引用到输入框', icon: 'at' },
       { key: 'moveTo', label: '移到文件夹…', icon: 'folderOpen' },
       { key: 'copyTo', label: '复制到…', icon: 'copy' },
       { key: 'copyPath', label: '复制文件夹地址', icon: 'clipboard' },
       { key: 'rename', label: '重命名文件夹', icon: 'pencil' },
-      { key: 'reveal', label: '在资源管理器中显示', icon: 'reveal' },
-      { key: 'open', label: '用系统应用打开', icon: 'app' },
+      { key: 'reveal', label: '在资源管理器中打开', icon: 'reveal' },
       { key: 'delete', label: '删除文件夹', icon: 'trash', danger: true },
     ]
   }
@@ -134,7 +125,7 @@ function menuActions(item) {
     { key: 'copyTo', label: '复制到…', icon: 'copy' },
     { key: 'copyPath', label: '复制文件地址', icon: 'clipboard' },
     { key: 'rename', label: '重命名', icon: 'pencil' },
-    { key: 'reveal', label: '打开所在位置', icon: 'reveal' },
+    { key: 'reveal', label: '在资源管理器中打开', icon: 'reveal' },
     { key: 'open', label: '用系统应用打开', icon: 'app' },
     { key: 'delete', label: '删除', icon: 'trash', danger: true },
   ]
@@ -589,6 +580,8 @@ export function LibraryBody(props) {
       }
     },
     onReference: item => insertReference(item),
+    folders,
+    currentFolder: folder,
   })
 
   const toggleSelect = item => {
@@ -716,7 +709,7 @@ export function LibraryBody(props) {
     if (key === 'reveal' || key === 'open') {
       try {
         await postJson(`api/vyra-media/${key}`, { sessionId, path: item.relativePath })
-        setNotice(key === 'reveal' ? '已打开文件所在位置' : '已用系统应用打开')
+        setNotice(key === 'reveal' ? '已在资源管理器中打开' : '已用系统应用打开')
       } catch (error) {
         setNotice(`操作失败：${error?.message ?? error}`)
       }
@@ -805,9 +798,11 @@ export function LibraryBody(props) {
         h('div', { className: 'vms-actions' },
           h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setAddOpen(value => !value) }, h(Icon, { name: 'plus', size: 13 }), '链接'),
           h(IconButton, { name: 'refresh', label: '重新扫描', onClick: refresh }),
-          h('div', { className: 'vms-seg' },
-            h('button', { type: 'button', className: `vms-seg-btn${view === 'grid' ? ' is-active' : ''}`, 'aria-pressed': view === 'grid', title: '网格视图', onClick: () => setView('grid') }, h(Icon, { name: 'grid', size: 14 })),
-            h('button', { type: 'button', className: `vms-seg-btn${view === 'list' ? ' is-active' : ''}`, 'aria-pressed': view === 'list', title: '列表视图', onClick: () => setView('list') }, h(Icon, { name: 'list', size: 14 }))))),
+          h('button', {
+            type: 'button', className: 'vms-toggle-btn',
+            title: view === 'grid' ? '当前网格视图，点击切换为列表' : '当前列表视图，点击切换为网格',
+            onClick: () => setView(value => value === 'grid' ? 'list' : 'grid'),
+          }, h(Icon, { name: view === 'grid' ? 'grid' : 'list', size: 13 }), view === 'grid' ? '网格' : '列表'))),
       h('div', { className: 'vms-search-row' },
         h('label', { className: 'vms-search' },
           h(Icon, { name: 'search', size: 14 }),
@@ -820,13 +815,21 @@ export function LibraryBody(props) {
             onChange: event => setCardSize(Number(event.target.value)),
           }),
           h(IconButton, { name: 'zoomIn', label: '放大缩略图', onClick: () => setCardSize(value => Math.min(CARD_MAX, value + 16)) })),
-        view === 'list' && h('div', { className: 'vms-seg vms-detail-seg' },
-          h('button', { type: 'button', className: `vms-seg-text${listMode === 'tree' ? ' is-active' : ''}`, 'aria-pressed': listMode === 'tree', onClick: () => setListMode('tree') }, '树形'),
-          h('button', { type: 'button', className: `vms-seg-text${listMode === 'flat' ? ' is-active' : ''}`, 'aria-pressed': listMode === 'flat', onClick: () => setListMode('flat') }, '平铺'),
-          h('button', { type: 'button', className: `vms-seg-text${listMode === 'timeline' ? ' is-active' : ''}`, 'aria-pressed': listMode === 'timeline', onClick: () => setListMode('timeline') }, '时间线')),
-        view === 'list' && h('div', { className: 'vms-seg vms-detail-seg' },
-          h('button', { type: 'button', className: `vms-seg-text${detail === 'compact' ? ' is-active' : ''}`, 'aria-pressed': detail === 'compact', onClick: () => setDetail('compact') }, '简洁'),
-          h('button', { type: 'button', className: `vms-seg-text${detail === 'detailed' ? ' is-active' : ''}`, 'aria-pressed': detail === 'detailed', onClick: () => setDetail('detailed') }, '详细')),
+        view === 'list' && h('button', {
+          type: 'button', className: `vms-toggle-btn${timelineMode ? ' is-active' : ''}`,
+          title: timelineMode ? '当前时间线，点击切换为文件列表' : '点击切换到对话时间线',
+          onClick: () => setListMode(value => value === 'timeline' ? 'tree' : 'timeline'),
+        }, h(Icon, { name: 'clock', size: 13 }), '时间线'),
+        view === 'list' && h('button', {
+          type: 'button', className: 'vms-toggle-btn',
+          title: listMode === 'tree' ? '当前树形，点击切换为平铺' : '当前平铺，点击切换为树形',
+          onClick: () => setListMode(value => value === 'tree' ? 'flat' : 'tree'),
+        }, h(Icon, { name: listMode === 'tree' ? 'folderOpen' : 'list', size: 13 }), listMode === 'tree' ? '树形' : '平铺'),
+        view === 'list' && h('button', {
+          type: 'button', className: 'vms-toggle-btn',
+          title: detail === 'compact' ? '当前简洁，点击切换为详细' : '当前详细，点击切换为简洁',
+          onClick: () => setDetail(value => value === 'compact' ? 'detailed' : 'compact'),
+        }, h(Icon, { name: detail === 'compact' ? 'list' : 'info', size: 13 }), detail === 'compact' ? '简洁' : '详细'),
         h('button', { type: 'button', className: `vms-filter-btn${filterOpen ? ' is-open' : ''}`, 'aria-expanded': filterOpen, onClick: () => setFilterOpen(value => !value) },
           h(Icon, { name: 'filter', size: 14 }), h('span', null, '筛选'),
           activeFilterCount > 0 && h('i', { className: 'vms-filter-count' }, activeFilterCount))),
@@ -837,6 +840,14 @@ export function LibraryBody(props) {
           title: '点击单选，Ctrl / Cmd 点击多选',
           onClick: event => toggleType(kind, event),
         }, h(Icon, { name: kind === 'other' ? 'file' : kind, size: 12 }), TYPE_LABEL[kind], h('b', null, counts[kind] ?? 0)))),
+      h('div', { className: 'vms-session-row' },
+        h('button', {
+          type: 'button',
+          className: `vms-session-btn${sessionOnly ? ' is-active' : ''}`,
+          'aria-pressed': sessionOnly,
+          title: '只显示本会话开始后创建或修改的文件',
+          onClick: toggleSessionOnly,
+        }, h(Icon, { name: 'clock', size: 12 }), '只看本会话文件')),
       h('div', { className: 'vms-folder-row' },
         h('div', { className: 'vms-crumb' },
           h('button', { type: 'button', className: `vms-crumb-seg${folder === '' ? ' is-active' : ''}`, onClick: () => setFolder('') }, '全部文件夹'),
@@ -876,13 +887,6 @@ export function LibraryBody(props) {
           h('select', { value: sort, onChange: event => setSort(event.target.value) },
             h('option', { value: 'name' }, '按名称'), h('option', { value: 'time' }, '按时间'),
             h('option', { value: 'size' }, '按大小'), h('option', { value: 'type' }, '按类型'))),
-        h('label', { className: 'vms-check' },
-          h('input', {
-            type: 'checkbox',
-            checked: sessionOnly,
-            disabled: typeof state.scan?.sessionCreatedAt !== 'number',
-            onChange: toggleSessionOnly,
-          }), '只看本会话文件'),
         h('button', { type: 'button', className: 'vms-dir-btn', 'data-dir': dir, onClick: () => setDir(value => value === 'asc' ? 'desc' : 'asc') },
           h('span', { className: 'vms-mono' }, dir === 'asc' ? '升序' : '降序'), h(Icon, { name: 'chevron', size: 12 })),
         h('label', { className: 'vms-check' }, h('input', { type: 'checkbox', checked: showHidden, onChange: event => setShowHidden(event.target.checked) }), '显示隐藏文件'),
@@ -931,7 +935,7 @@ export function LibraryBody(props) {
         : timelineMode
           ? h('div', { className: 'vms-timeline-wrap' },
             h(SessionTimeline, {
-              turns,
+              nodes: turns,
               items,
               onOpen: entry => setOverlayId(entry.id),
               onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
@@ -1056,7 +1060,7 @@ export function LibraryBody(props) {
         onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
         onOpenItem: handleOverlayTab,
       })),
-    dragDrop.ghost,
+    dragDrop.panel,
     notice !== '' && h('div', { className: 'vms-toast' }, h(Icon, { name: 'check', size: 13 }), notice))
 }
 
@@ -1108,7 +1112,7 @@ export function MediaTab(props) {
     }
     try {
       await postJson(`api/vyra-media/${key}`, { sessionId, path: parsed.path })
-      setNotice(key === 'reveal' ? '已打开文件所在位置' : '已用系统应用打开')
+      setNotice(key === 'reveal' ? '已在资源管理器中打开' : '已用系统应用打开')
     } catch (error) {
       setNotice(`操作失败：${error?.message ?? error}`)
     }

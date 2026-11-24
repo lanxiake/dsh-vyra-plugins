@@ -9,6 +9,7 @@
 import { SCAN_DEFAULTS, invalidateScanCache, scanMediaCached } from './scan.js'
 import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
+import { buildTimeline } from './timeline.js'
 import {
   batchFiles, copyFileInto, deleteFile, moveFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
 } from './file-ops.js'
@@ -485,41 +486,6 @@ async function handleBatch(request, ctx) {
 }
 
 /**
- * Read one Session's `workspace/changes` events and the summaries the Host
- * still holds, so the panel can list per-turn produced files.
- * @param {object} ctx - Host context.
- * @param {string} sessionId - Session identity.
- * @returns {Array<object>} per-turn produced files, newest last.
- */
-function sessionChangesOf(ctx, sessionId) {
-  const service = ctx.workspaceChanges
-  const session = ctx.get?.('sessions')?.get?.(sessionId)
-  if (session === undefined || typeof session.snapshotEvents !== 'function') return []
-  const turns = []
-  for (const event of session.snapshotEvents()) {
-    if (event?.type !== 'workspace/changes') continue
-    const summary = typeof service?.summary === 'function' ? service.summary(sessionId, event.seq) : undefined
-    turns.push({
-      seq: event.seq,
-      time: typeof event.time === 'number' ? event.time : undefined,
-      turn: summary?.turn ?? event.data?.turn,
-      files: Array.isArray(summary?.files)
-        ? summary.files.map(file => ({
-          path: typeof file.path === 'string' ? file.path : '',
-          display: typeof file.display === 'string' ? file.display : (file.path ?? ''),
-          added: file.added ?? 0,
-          deleted: file.deleted ?? 0,
-          binary: file.binary === true,
-          oversized: file.oversized === true,
-        }))
-        : undefined,
-      available: summary !== undefined,
-    })
-  }
-  return turns
-}
-
-/**
  * GET /api/vyra-media/session-changes
  * @param {Request} request - fetch request.
  * @param {object} ctx - Host context.
@@ -531,14 +497,22 @@ async function handleSessionChanges(request, ctx) {
   if (sessionId === null || sessionId === '') {
     return json({ ok: false, code: 'bad-request', error: 'missing sessionId' }, 400)
   }
+  let workspaceRoot
   try {
-    return json({ ok: true, sessionId, turns: sessionChangesOf(ctx, sessionId) })
+    workspaceRoot = await workspaceRootOf(ctx, sessionId, request.signal)
   } catch (error) {
-    return json({
-      ok: false,
-      code: 'changes-failed',
-      error: error?.message ?? String(error),
-    }, 500)
+    return json({ ok: false, code: error.code ?? 'resolve-failed', error: error.message ?? 'cannot resolve workspace' }, error.status ?? 500)
+  }
+  if (workspaceRoot === undefined) {
+    return json({ ok: true, sessionId, turns: [], reason: 'no-workspace-root' })
+  }
+  try {
+    const turns = await buildTimeline({
+      ctx, sessionId, workspaceRoot, fs: ctx.fs, signal: request.signal,
+    })
+    return json({ ok: true, sessionId, turns })
+  } catch (error) {
+    return json({ ok: false, code: 'changes-failed', error: error?.message ?? String(error) }, 500)
   }
 }
 

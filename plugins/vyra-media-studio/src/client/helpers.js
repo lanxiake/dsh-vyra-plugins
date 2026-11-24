@@ -278,14 +278,14 @@ export function writeLinks(root, links) {
 const PREFS_KEY = 'vyra-media-studio.prefs.v1'
 const PREF_DEFAULTS = {
   view: 'grid',
-  listMode: 'tree',
+  listMode: 'timeline',
   cardSize: CARD_DEFAULT,
   detail: 'compact',
   sort: 'name',
   dir: 'asc',
   showHidden: false,
   includeBuild: false,
-  sessionOnly: false,
+  sessionOnly: true,
 }
 
 export function readPrefs() {
@@ -295,7 +295,7 @@ export function readPrefs() {
     const merged = { ...PREF_DEFAULTS, ...parsed }
     return {
       view: merged.view === 'list' ? 'list' : 'grid',
-      listMode: merged.listMode === 'flat' ? 'flat' : 'tree',
+      listMode: merged.listMode === 'flat' || merged.listMode === 'tree' ? merged.listMode : 'timeline',
       cardSize: Number.isFinite(merged.cardSize)
         ? Math.min(CARD_MAX, Math.max(CARD_MIN, merged.cardSize))
         : CARD_DEFAULT,
@@ -304,7 +304,7 @@ export function readPrefs() {
       dir: merged.dir === 'desc' ? 'desc' : 'asc',
       showHidden: merged.showHidden === true,
       includeBuild: merged.includeBuild === true,
-      sessionOnly: merged.sessionOnly === true,
+      sessionOnly: merged.sessionOnly !== false,
     }
   } catch {
     return { ...PREF_DEFAULTS }
