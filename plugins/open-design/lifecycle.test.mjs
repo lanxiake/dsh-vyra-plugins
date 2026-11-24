@@ -68,5 +68,35 @@ check(
 check('orchestrator id', domains.ORCHESTRATOR.id, 'od-director')
 check('orchestrator has Chinese name', /[\u4e00-\u9fa5]/.test(domains.ORCHESTRATOR.name), true)
 
+// ===== Task 2: per-domain rendering =====
+const skillsMod = await import(pathToFileURL(join(pluginRoot, 'skills.mjs')).href)
+const all = skillsMod.listBundledSkills(pluginRoot)
+
+const visual = domains.getDomain('od-visual-design')
+const visualSkill = skillsMod.renderDomainSkill(visual, all, { root: pluginRoot })
+check('visual skill declares its own name', /^name: od-visual-design$/m.test(visualSkill), true)
+check('visual skill has a 中文 display heading', visualSkill.includes('# 视觉设计'), true)
+check(
+  'visual skill lists its 12 craft rows plus 152 systems',
+  visualSkill.split('\n').filter((l) => /^\| `[^`]+` \|.*\|$/.test(l)).length,
+  12 + 152,
+)
+check('visual skill carries no other domain skill', visualSkill.includes('gsap-core'), false)
+
+const motion = domains.getDomain('od-motion')
+const motionSkill = skillsMod.renderDomainSkill(motion, all, { root: pluginRoot })
+check(
+  'motion skill lists 13 rows',
+  motionSkill.split('\n').filter((l) => /^\| `[^`]+` \|.*\|$/.test(l)).length,
+  13,
+)
+check('motion skill excludes design systems', /open-design-apple/.test(motionSkill), false)
+check(
+  'no table row spans lines',
+  motionSkill.split('\n').filter((l) => l.startsWith('| `') && !l.endsWith('|')).length,
+  0,
+)
+check('frontmatter description is the domain name plus description', /^description: 动效设计领域技能包。.*/m.test(motionSkill), true)
+
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)
