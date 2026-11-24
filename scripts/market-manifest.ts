@@ -2412,6 +2412,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-screen-recorder',
           },
         },
+        // 0.4.1 fixes five bugs from real use: the screenshot shortcut was
+        // swallowed while the composer had focus, tooltips never showed, the
+        // text panel covered the confirm buttons, and screenshots captured the
+        // whole screen instead of asking which display/window/region first
+        // (now the same picker recording uses).
+        '0.4.1': {
+          publishTimestamp: 1796198400,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f1cbef1021ad6b4442e4772c30beb962cac2e0d7',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
       },
       metadata: {
         category: 'media',
