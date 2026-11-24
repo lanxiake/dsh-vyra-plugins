@@ -112,6 +112,35 @@ window.__ModuleLoader__.load({
     const PAGE = 40
 
     /**
+     * What an Agent session can do with this market, as prompts a person can
+     * paste into any conversation. They name outcomes, not tool names: the
+     * Agent picks between the Host's `plugin_manager` tool and the
+     * `vyra-market` CLI itself. Only zh and en exist; another language
+     * follows the English edition above.
+     */
+    const AGENT_HINTS = {
+      zh: [
+        { key: 'search', label: '搜索 · 安装', prompt: '帮我在 DSH 插件市场里搜一个能录屏的插件，挑评分高的装上' },
+        { key: 'update', label: '检查更新', prompt: '看下我装的 DSH 插件有哪些能更新，列出来再帮我全部更新' },
+        { key: 'remove', label: '卸载 · 停用', prompt: '把我不再用的 DSH 插件卸掉，太占地方的先停用不卸载' },
+        { key: 'batch', label: '批量多装', prompt: '一次性装好 SSH 终端、OCR 取字和音乐面板这三个插件，装完告诉我哪些需要重启' },
+      ],
+      en: [
+        { key: 'search', label: 'Search · install', prompt: 'Find a screen-recording plugin in the DSH market and install a well-rated one for me' },
+        { key: 'update', label: 'Check updates', prompt: 'Which of my DSH plugins have updates? List them, then update them all' },
+        { key: 'remove', label: 'Uninstall · disable', prompt: 'Uninstall the DSH plugins I no longer use; disable rather than uninstall any I might keep' },
+        { key: 'batch', label: 'Install several', prompt: 'Install the SSH terminal, OCR and music panel plugins in one go, then tell me which need a restart' },
+      ],
+    }
+
+    /**
+     * A queue this long stays collapsed on its own. A collapsed queue is one
+     * line tall, so a bulk run of dozens cannot push the cards out of view;
+     * three items or fewer are short enough to show in place.
+     */
+    const QUEUE_AUTO_OPEN = 3
+
+    /**
      * A small client-side page cache. The Host already caches each index, but
      * a source or query switch still waits for a round trip; this answers the
      * exact page it just showed and makes switching back instant. It is
@@ -1386,7 +1415,7 @@ window.__ModuleLoader__.load({
       sourceFailed: '读取市场源列表失败。',
       all: '全部',
       updateAll: '全部更新 ({n})',
-      onlyInstalled: '仅已安装',
+      onlyInstalled: '仅市场已安装',
       onlyUpdatable: '仅可更新',
       onlyNotInstalled: '未安装',
       sortBy: '排序',
@@ -1434,7 +1463,17 @@ window.__ModuleLoader__.load({
       progress: '{action} {done}/{total}',
       elapsed: '{n} 秒',
       queue: '队列还有 {n} 项',
+      queueShow: '展开队列',
+      queueHide: '收起队列',
       removeQueued: '移出队列',
+      selectedMore: '{n} 项',
+      showMore: '展开',
+      showLess: '收起',
+      agentTitle: '在 AGENT 会话里直接调用插件市场',
+      agentLead: '在任意 AGENT 会话里直接说「搜插件 / 装插件 / 更新 / 卸载」，Agent 会用宿主的 plugin_manager 工具完成；vyra-market 命令行负责跨源搜索、查版本和下载。点下面的用例即可复制原话。',
+      agentCopy: '复制',
+      agentCopied: '已复制用例，粘贴到会话里即可',
+      agentCopyFailed: '复制失败，请手动选中这行文字',
       phase_starting: '准备中',
       phase_installing: '安装中',
       phase_cancelling: '正在取消',
@@ -1548,7 +1587,7 @@ window.__ModuleLoader__.load({
       sourceFailed: 'Could not read the market sources.',
       all: 'All',
       updateAll: 'Update all ({n})',
-      onlyInstalled: 'Installed only',
+      onlyInstalled: 'Installed in market',
       onlyNotInstalled: 'Not installed',
       onlyUpdatable: 'Updatable only',
       sortBy: 'Sort',
@@ -1596,7 +1635,17 @@ window.__ModuleLoader__.load({
       progress: '{action} {done}/{total}',
       elapsed: '{n}s',
       queue: '{n} more queued',
+      queueShow: 'Show queue',
+      queueHide: 'Hide queue',
       removeQueued: 'Remove from queue',
+      selectedMore: '{n} selected',
+      showMore: 'Expand',
+      showLess: 'Collapse',
+      agentTitle: 'Drive the market from an Agent session',
+      agentLead: 'Ask in any Agent session — search, install, update, uninstall — and the Agent uses the Host\'s plugin_manager tool; the vyra-market CLI covers cross-source search, versions and downloads. Press a use case to copy its prompt.',
+      agentCopy: 'Copy',
+      agentCopied: 'Copied — paste it into a session',
+      agentCopyFailed: 'Copy failed; select the line by hand',
       phase_starting: 'Preparing',
       phase_installing: 'Installing',
       phase_cancelling: 'Cancelling',
@@ -1914,7 +1963,30 @@ window.__ModuleLoader__.load({
       .vpm-segment.sm{padding:2px}
       .vpm-segment.sm .vpm-segment-item{height:26px;padding:0 10px;font-size:11.5px}
       .vpm-menu.scroll{max-height:320px;overflow-y:auto}
-      .vpm-queue{display:flex;flex-direction:column;gap:5px;margin-top:4px;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l2)}
+      .vpm-queue{display:flex;flex-direction:column;gap:5px;margin-top:4px;padding-top:8px;border-top:1px solid var(--dsw-alias-border-l2);max-height:180px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l3) transparent}
+      .vpm-caret{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;color:var(--dsw-alias-label-tertiary);transition:transform .18s}
+      .vpm-caret.on{transform:rotate(180deg)}
+      .vpm-bulk-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+      .vpm-summary-toggle{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer;text-align:left}
+      .vpm-summary-toggle:hover{color:var(--dsw-alias-state-business-primary)}
+      .vpm-bulk-names{margin:0;flex-basis:100%;font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-tertiary);word-break:break-word}
+      .vpm-agent{display:flex;flex-direction:column;gap:8px;margin-top:2px;padding:7px 11px;border-radius:13px;border:1px dashed var(--dsw-alias-border-l2);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 5%,transparent)}
+      .vpm-agent-head{display:flex;align-items:center;gap:7px;width:100%;padding:0;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:left}
+      .vpm-agent-head:hover{color:var(--dsw-alias-label-primary)}
+      .vpm-agent-mark{display:inline-flex;color:var(--dsw-alias-brand-primary)}
+      .vpm-agent-title{flex:1;min-width:0}
+      .vpm-agent-body{display:flex;flex-direction:column;gap:8px}
+      .vpm-agent-lead{margin:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}
+      .vpm-agent-uses{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
+      .vpm-agent-use{display:flex;align-items:stretch;gap:4px;min-width:0;border-radius:10px;border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);overflow:hidden}
+      .vpm-agent-use-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:7px 9px;border:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;text-align:left;cursor:pointer}
+      .vpm-agent-use-main:hover{background:var(--dsw-alias-bg-layer-2)}
+      .vpm-agent-use-label{font-size:11px;font-weight:650;letter-spacing:.02em;color:var(--dsw-alias-state-business-primary)}
+      .vpm-agent-use-prompt{font-size:11.5px;line-height:16px;color:var(--dsw-alias-label-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      .vpm-agent-copy{flex:none;align-self:center;margin-right:6px;padding:3px 8px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:11px;cursor:pointer}
+      .vpm-agent-copy:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2)}
+      .vpm-agent-status{margin:0;min-height:0;font-size:11px;line-height:15px;color:var(--dsw-alias-state-success-primary)}
+      .vpm-agent-status:empty{display:none}
       .vpm-queue-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);min-width:0}
       .vpm-queue-item .vpm-queue-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
       .vpm-queue-remove{width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:14px;line-height:22px;cursor:pointer;flex:none}
@@ -2870,6 +2942,13 @@ window.__ModuleLoader__.load({
       const [refreshed, setRefreshed] = useState(false)
       const [view, setView] = useState('market')
       const [showLog, setShowLog] = useState(false)
+      // Collapsing the queue is what keeps a long bulk run from eating the
+      // list; null means "decide from the length" (see QUEUE_AUTO_OPEN).
+      const [queueOpen, setQueueOpen] = useState(null)
+      const [bulkOpen, setBulkOpen] = useState(true)
+      const [agentOpen, setAgentOpen] = useState(false)
+      const [agentCopied, setAgentCopied] = useState(null)
+      const [agentCopyFailed, setAgentCopyFailed] = useState(false)
       const [clock, setClock] = useState(() => Date.now())
       const [installedBusy, setInstalledBusy] = useState(null)
       const [installedNotice, setInstalledNotice] = useState(null)
@@ -2883,6 +2962,7 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         if (running === null) {
           setShowLog(false)
+          setQueueOpen(null)
           return undefined
         }
         setShowLog(false)
@@ -3501,6 +3581,10 @@ window.__ModuleLoader__.load({
         const pct = running.total === 0 ? 0 : Math.min(100, Math.round((running.done / running.total) * 100))
         const elapsed = Math.max(0, Math.round((clock - (running.startedAt ?? clock)) / 1000))
         const phase = running.phase === undefined ? '' : t(`phase_${running.phase}`)
+        // A long queue is collapsed by default (QUEUE_AUTO_OPEN): expanded, its
+        // list would push the whole page — cards included — down and out of
+        // reach, since only the card area scrolls.
+        const queueShown = (queueOpen ?? job.queue.length <= QUEUE_AUTO_OPEN) && job.queue.length > 0
         rows.push(h('div', {
           key: 'running', role: 'status', className: 'vpm-bar',
           style: { flexDirection: 'column', alignItems: 'stretch', gap: '7px' },
@@ -3511,6 +3595,12 @@ window.__ModuleLoader__.load({
               `${t('progress', { action: actionLabel(t, running.action), done: running.done, total: running.total })} — ${running.name}`),
             phase === '' ? null : h('span', { className: 'vpm-tag' }, phase),
             h('span', { className: 'vpm-meta' }, t('elapsed', { n: elapsed })),
+            job.queue.length === 0 ? null : h('button', {
+              className: 'vpm-btn small', 'aria-expanded': queueShown,
+              onClick: () => { setQueueOpen(!queueShown) },
+            },
+              t('queue', { n: job.queue.length }),
+              h('span', { className: `vpm-caret${queueShown ? ' on' : ''}` }, h(ChevronIcon, { size: 11 }))),
             h('button', {
               className: 'vpm-btn small', disabled: job.canceling || job.cancel,
               onClick: () => { runner.requestCancel(remote, t) },
@@ -3522,14 +3612,13 @@ window.__ModuleLoader__.load({
           h('div', { className: 'vpm-progress' },
             h('span', { style: { width: `${pct}%` } })),
           job.cancelNotice ? h('p', { className: 'vpm-meta', style: { margin: 0, color: 'var(--dsw-alias-state-warn-primary)' } }, job.cancelNotice) : null,
-          job.queue.length === 0 ? null : h('div', { className: 'vpm-queue' },
-            h('span', { className: 'vpm-meta' }, t('queue', { n: job.queue.length })),
+          queueShown && job.queue.length > 0 ? h('div', { className: 'vpm-queue' },
             job.queue.map((order, index) => h('div', { key: `${order.entry.name}-${index}`, className: 'vpm-queue-item' },
               h('span', { className: 'vpm-queue-name' }, `${actionLabel(t, order.action)} · ${order.entry.name}`),
               h('button', {
                 className: 'vpm-queue-remove', 'aria-label': t('removeQueued'),
                 onClick: () => { runner.removeQueued(index) },
-              }, '×')))),
+              }, '×')))): null,
           showLog ? h('pre', { className: 'vpm-log' }, running.log === undefined || running.log === '' ? t('logEmpty') : running.log) : null))
       }
       if (picked.size > 0) {
@@ -3556,8 +3645,19 @@ window.__ModuleLoader__.load({
           key: 'clear', className: 'vpm-btn', disabled: busy,
           onClick: () => { setPicked(new Set()) },
         }, t('clear')))
+        // The same guard as the queue: a wide selection keeps one summary line
+        // and the row of actions, and only the full list of names folds away.
         rows.push(h('div', { key: 'bulk', className: 'vpm-bar bulk' },
-          h('span', { className: 'vpm-grow', style: { fontWeight: 600 } }, t('selected', { n: picked.size })), bulk))
+          h('div', { style: { flex: 1, minWidth: '150px', fontWeight: 600, display: 'flex' } },
+            h('button', {
+              className: 'vpm-summary-toggle', 'aria-expanded': bulkOpen,
+              onClick: () => { setBulkOpen((value) => !value) },
+            },
+              t(bulkOpen ? 'selected' : 'selectedMore', { n: picked.size }),
+              picked.size <= 3 ? null : h('span', { className: `vpm-caret${bulkOpen ? ' on' : ''}` }, h(ChevronIcon, { size: 11 })))),
+          h('div', { className: 'vpm-bulk-actions' }, bulk),
+          bulkOpen && picked.size > 3 ? h('p', { className: 'vpm-bulk-names' },
+            selected.map(({ entry }) => entry.name).join(' · ')) : null))
       }
 
       const installedCard = (bundle) => h(InstalledCard, {
@@ -3568,6 +3668,50 @@ window.__ModuleLoader__.load({
         onUninstall: (target) => { setInstalledConfirm(target) },
       })
 
+      // What an Agent session can do with this market. Folded by default: one
+      // line under the description, so the list still starts near the top.
+      const hints = AGENT_HINTS[lang] ?? AGENT_HINTS.en
+      const copyHint = async (hint) => {
+        try {
+          await navigator.clipboard.writeText(hint.prompt)
+          setAgentCopyFailed(false)
+          setAgentCopied(hint.key)
+          setTimeout(() => {
+            if (!alive.current) return
+            setAgentCopied((current) => (current === hint.key ? null : current))
+          }, 2200)
+        } catch {
+          // No clipboard (an insecure origin has none): the prompt is on screen
+          // and can still be selected by hand.
+          setAgentCopied(null)
+          setAgentCopyFailed(true)
+        }
+      }
+      const agentBlock = h('div', { className: 'vpm-agent' },
+        h('button', {
+          className: 'vpm-agent-head', 'aria-expanded': agentOpen,
+          onClick: () => { setAgentOpen((value) => !value) },
+        },
+          h('span', { className: 'vpm-agent-mark' }, h(SlidersIcon, { size: 12 })),
+          h('span', { className: 'vpm-agent-title' }, t('agentTitle')),
+          h('span', { className: `vpm-caret${agentOpen ? ' on' : ''}` }, h(ChevronIcon, { size: 11 }))),
+        agentOpen ? h('div', { className: 'vpm-agent-body' },
+          h('p', { className: 'vpm-agent-lead' }, t('agentLead')),
+          h('div', { className: 'vpm-agent-uses' }, hints.map((hint) => h('div', { key: hint.key, className: 'vpm-agent-use' },
+            h('button', {
+              className: 'vpm-agent-use-main', title: hint.prompt,
+              onClick: () => { void copyHint(hint) },
+            },
+              h('span', { className: 'vpm-agent-use-label' }, hint.label),
+              h('span', { className: 'vpm-agent-use-prompt' }, `“${hint.prompt}”`)),
+            h('button', {
+              className: 'vpm-agent-copy',
+              'aria-label': `${t('agentCopy')} · ${hint.label}`,
+              onClick: () => { void copyHint(hint) },
+              }, agentCopied === hint.key ? t('agentCopied') : t('agentCopy'))))),
+          h('p', { className: 'vpm-agent-status', role: 'status' },
+            agentCopied === null ? (agentCopyFailed ? t('agentCopyFailed') : '') : t('agentCopied'))) : null)
+
       return h('div', { className: 'vpm-page' },
         h('div', { className: 'vpm-page-inner' },
         h('header', { className: 'vpm-hero' },
@@ -3575,6 +3719,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'vpm-eyebrow' }, t('eyebrow')),
             h('h2', { className: 'vpm-title' }, t('title')),
             h('p', { className: 'vpm-subtitle' }, t('subtitle')),
+            agentBlock,
             h('div', { className: 'vpm-summary' },
               view === 'installed'
                 ? t('installedSummary', {
@@ -3589,11 +3734,13 @@ window.__ModuleLoader__.load({
                 role: 'tab', 'aria-selected': view === 'market',
                 onClick: () => { setView('market'); setDraft(query.text); setInstalledNotice(null) },
               }, t('viewMarket')),
+              // The installed list is this tab's whole content now; the count
+              // lives in the summary line above instead of the label.
               h('button', {
                 className: `vpm-segment-item${view === 'installed' ? ' on' : ''}`,
                 role: 'tab', 'aria-selected': view === 'installed',
                 onClick: () => { setView('installed'); setDraft(''); setInstalledNotice(null); void loadBundles() },
-              }, `${t('viewInstalled')} (${installedBundles.length})`))),
+              }, t('viewInstalled')))),
           h('div', { className: 'vpm-hero-actions' },
             h('button', {
               className: `vpm-btn${activeUrl === ALL_SOURCES_SOURCE.url ? ' primary' : ''}`,
@@ -3981,7 +4128,7 @@ window.__ModuleLoader__.load({
         compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
         localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
         pageCacheKey, cachedPage, rememberPage, pageCache,
-        parseRepoRef, specPath, buildBundleIndex,
+        parseRepoRef, specPath, buildBundleIndex, AGENT_HINTS, QUEUE_AUTO_OPEN, ZH, EN,
       },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {

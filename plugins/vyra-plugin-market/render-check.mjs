@@ -475,6 +475,105 @@ await (async () => {
   assert.equal(call[2].enabled, true, 'a batch installs what it added')
 }
 
+// --- a bulk run's queue folds after three items -------------------------------
+{
+  // Four entries install as one batch. While the run is in progress the page
+  // heads it with a live progress line, and that line carries a toggle for the
+  // queue of what is still to come. A queue longer than three folds itself
+  // away, because it would otherwise push the cards off the page; pressing the
+  // toggle lists the queued names, and pressing it again folds them away.
+  const names = ['alpha', 'bravo', 'charlie', 'delta']
+  // Hold every install open so the run is still going when it is drawn.
+  const never = () => new Promise(() => {})
+  const { tree, settle } = await mount({
+    entries: names.map((name) => entry(name)),
+    bundles: [],
+    answers: { installBundle: never() },
+  })
+  const selectAll = findAll(tree, (node) => node.type === 'input' && node.props?.className === 'vpm-check')[0]
+  assert.ok(selectAll !== undefined, 'the page offers a select-all checkbox')
+  selectAll.props.onChange()
+  const selected = await settle()
+  const apply = findAll(selected, (node) => node.type === 'button' && texts(node).join('').includes('bulkApply'))[0]
+  assert.ok(apply !== undefined, 'a multi-selection offers one install/update action')
+  apply.props.onClick()
+  const asked = await settle()
+  const confirm = findAll(asked, (node) => node.type === 'button' && texts(node).join('') === 'ok')[0]
+  assert.ok(confirm !== undefined, 'the bulk install asks for confirmation first')
+  confirm.props.onClick()
+  // The stub renders eagerly, so one press needs two rounds: the first draws
+  // the dialog, the second draws what the dialog started.
+  await settle()
+  const running = await settle()
+
+  const progress = findAll(running, (node) => node.props?.role === 'status' && String(node.props?.className ?? '').includes('vpm-bar'))
+  assert.equal(progress.length, 1, 'a running batch is headed by one progress bar')
+  assert.ok(texts(progress[0]).join(' | ').includes('actInstall'), 'the head names the running install')
+
+  const queueButtons = findAll(progress[0], (node) => node.type === 'button' && texts(node).join('').startsWith('queue'))
+  assert.equal(queueButtons.length, 1, 'the progress bar carries exactly one queue toggle')
+  const toggle = queueButtons[0]
+  const queueRows = (node) => findAll(node, (row) => row.props?.className === 'vpm-queue-item')
+  // A queue this short is drawn in place; the toggle means one row per item,
+  // so the rows it hides are the rows a folded queue does not draw.
+  const items = queueRows(running).length
+  assert.equal(typeof toggle.props['aria-expanded'], 'boolean', 'the toggle reports whether the queue is open')
+  if (toggle.props['aria-expanded'] === true) {
+    toggle.props.onClick()
+    const folded = await settle()
+    assert.equal(queueRows(folded).length, 0, 'collapsing the queue hides every queued name')
+    const reopen = findAll(folded, (node) => node.type === 'button' && texts(node).join('').startsWith('queue'))[0]
+    reopen.props.onClick()
+    const reopened = await settle()
+    assert.equal(queueRows(reopened).length, items, 'expanding the queue lists every queued name again')
+  } else {
+    toggle.props.onClick()
+    const opened = await settle()
+    assert.equal(queueRows(opened).length, 1 + items, 'expanding the queue lists the queued names')
+    const close = findAll(opened, (node) => node.type === 'button' && texts(node).join('').startsWith('queue'))[0]
+    close.props.onClick()
+    const folded = await settle()
+    assert.equal(queueRows(folded).length, 0, 'collapsing the queue hides them again')
+  }
+}
+// --- the hero explains Agent use and copies a prompt --------------------------
+{
+  const copied = []
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { clipboard: { writeText: async (text) => { copied.push(text) } } }, configurable: true,
+  })
+  try {
+    // `t` echoes its key here, so the strings this checks are the keys the page
+    // asks for; the dictionaries themselves are covered elsewhere.
+    const { tree, settle } = await mount({ entries: [entry('alpha')] })
+    const head = findAll(tree, (node) => node.type === 'button' && node.props?.className === 'vpm-agent-head')[0]
+    assert.ok(head !== undefined, 'the hero offers the Agent hint toggle under the description')
+    assert.equal(head.props['aria-expanded'], false, 'the hint is folded until asked for')
+    const foldedText = texts(tree).join(' | ')
+    assert.ok(foldedText.includes('agentTitle'), 'the folded hint still says what it is about')
+    assert.ok(!foldedText.includes('agentLead'), 'the folded hint does not spend room on the explanation')
+
+    head.props.onClick()
+    const opened = await settle()
+    const drawn = texts(opened).join(' | ')
+    assert.ok(drawn.includes('agentLead'), 'opening the hint explains how an Agent session uses the market')
+    assert.equal(findAll(opened, (node) => node.type === 'button' && node.props?.className === 'vpm-agent-head')[0].props['aria-expanded'], true,
+      'the toggle reports that the hint is open')
+
+    const uses = findAll(opened, (node) => node.props?.className === 'vpm-agent-use-main')
+    assert.ok(uses.length >= 4, `search, update, uninstall and batch use cases are offered, got: ${uses.length}`)
+    uses[0].props.onClick()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.equal(copied.length, 1, 'pressing a use case copies its prompt')
+    assert.ok(copied[0].length > 0, 'the copied text is the prompt itself')
+    assert.ok(!copied[0].includes('plugin_manager'), 'the copied text is a request, not tool syntax')
+    assert.ok(texts(await settle()).join(' | ').includes('agentCopied'), 'the copy is confirmed on screen')
+  } finally {
+    Object.defineProperty(globalThis, 'navigator', original)
+  }
+}
+
 // --- Uninstall on a card asks before removing ---------------------------------
 {
   const bundle = { name: 'beta', installed: true, enabled: true, removable: true, rows: [], overrides: [] }

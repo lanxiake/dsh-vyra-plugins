@@ -47,7 +47,63 @@ const {
   localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
   pageCacheKey, cachedPage, rememberPage, pageCache,
   parseRepoRef, specPath, buildBundleIndex,
+  AGENT_HINTS, QUEUE_AUTO_OPEN, ZH, EN,
 } = __internal
+
+// --- the Agent hint is a request, not tool syntax -----------------------------
+{
+  // The hint promises a person can paste what it copies. A copied line that
+  // spells out the Host tool (or the CLI) is a worse prompt than the request
+  // it stands for: the Agent decides the mechanism.
+  assert.equal(QUEUE_AUTO_OPEN, 3, 'a queue longer than three folds itself away')
+  for (const [lang, hints] of Object.entries(AGENT_HINTS)) {
+    assert.ok(hints.length >= 4, `${lang} offers search, update, uninstall and batch use cases`)
+    for (const hint of hints) {
+      assert.ok(hint.prompt.trim().length > 0, `${lang}/${hint.key} has a prompt to copy`)
+      assert.ok(!/plugin_manager|plugin_market|vyra-market|--apply/.test(hint.prompt),
+        `${lang}/${hint.key} names an outcome, not a tool: ${hint.prompt}`)
+      assert.ok(hint.label.trim().length > 0, `${lang}/${hint.key} has a button label`)
+      assert.ok(!/[{}]/.test(hint.prompt), `${lang}/${hint.key} needs no interpolation`)
+    }
+    const keys = hints.map((hint) => hint.key).join(',')
+    assert.equal(new Set(hints.map((hint) => hint.key)).size, hints.length, `${lang} use-case keys are unique`)
+    assert.ok(keys.split(',').includes('search') && keys.split(',').includes('remove'), `${lang} covers both adding and removing`)
+  }
+  assert.deepEqual(Object.keys(AGENT_HINTS.zh).length, Object.keys(AGENT_HINTS.en).length, 'both editions offer the same number of use cases')
+}
+
+// --- the Agent hint names the mechanism it promises --------------------------
+{
+  // The lead sentence is where the tool and CLI belong, since it explains how
+  // the request is served rather than being the request.
+  assert.match(ZH.agentLead, /plugin_manager/, 'the Chinese hint names the Host plugin_manager tool')
+  assert.match(ZH.agentLead, /vyra-market/, 'the Chinese hint names the vyra-market CLI')
+  assert.match(EN.agentLead, /plugin_manager/, 'the English hint names the Host plugin_manager tool')
+  assert.match(EN.agentLead, /vyra-market/, 'the English hint names the vyra-market CLI')
+}
+
+// --- the two views: the installed tab carries no count, the filter says it ----
+{
+  // The header count moved into the summary line when the Installed tab took
+  // over the list, and the market filter now says "installed in this market"
+  // so it is not read as the profile's whole installed list.
+  assert.equal(ZH.viewInstalled, '已安装')
+  assert.equal(EN.viewInstalled, 'Installed')
+  assert.equal(ZH.onlyInstalled, '仅市场已安装', 'the market filter is distinguished from the Installed tab')
+  assert.equal(EN.onlyInstalled, 'Installed in market')
+}
+
+// --- both dictionaries carry every key the new surfaces ask for --------------
+{
+  const keys = (dict) => Object.keys(dict).sort()
+  const missing = keys(ZH).filter((key) => !(key in EN))
+  assert.deepEqual(missing, [], `the English dictionary is missing: ${missing.join(', ')}`)
+  const extra = keys(EN).filter((key) => !(key in ZH))
+  assert.deepEqual(extra, [], `the Chinese dictionary is missing: ${extra.join(', ')}`)
+  for (const key of ['queueShow', 'queueHide', 'selectedMore', 'showMore', 'showLess', 'agentTitle', 'agentLead', 'agentCopy', 'agentCopied', 'agentCopyFailed']) {
+    assert.ok(typeof ZH[key] === 'string' && typeof EN[key] === 'string', `${key} is translated in both editions`)
+  }
+}
 
 // --- README images: a <picture> block must become the Markdown image it wraps --
 {
