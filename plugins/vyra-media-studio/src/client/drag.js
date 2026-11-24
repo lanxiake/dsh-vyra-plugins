@@ -13,6 +13,34 @@ const h = React.createElement
 const LONG_PRESS_MS = 250
 const MOUSE_THRESHOLD = 4
 
+/**
+ * Render a copy of `element` inside React, keeping its classes and markup so
+ * the drag ghost matches the card or row it was lifted from.
+ * @param {Element} element - pressed element.
+ * @returns {React.ReactElement} wrapper with the copied markup.
+ */
+function cloneNode(element) {
+  if (typeof element?.cloneNode !== 'function') return null
+  const copy = element.cloneNode(true)
+  // The copy is inert markup: drop identifiers so CSS/ARIA state does not
+  // double up, freeze any media, and keep videos from playing in the ghost.
+  copy.removeAttribute('id')
+  copy.setAttribute('aria-hidden', 'true')
+  copy.tabIndex = -1
+  for (const node of copy.querySelectorAll('video, audio')) {
+    node.pause?.()
+    node.removeAttribute('autoplay')
+    node.setAttribute('muted', '')
+  }
+  for (const node of copy.querySelectorAll('button, a, input, select, textarea, [tabindex]')) {
+    node.tabIndex = -1
+  }
+  return h('div', {
+    className: 'vms-drag-clone-body',
+    dangerouslySetInnerHTML: { __html: copy.outerHTML },
+  })
+}
+
 /** The composer card, located through the bridge anchor the plugin registers. */
 function composerDropRect() {
   if (typeof document === 'undefined') return undefined
@@ -108,6 +136,17 @@ export function useDragDrop({ onMove, onReference }) {
       // starts dragging as soon as it moves.
       current.touch = event.pointerType === 'touch' || event.pointerType === 'pen'
 
+      // Remember the element that was pressed and where inside it the pointer
+      // sat, so the drag ghost can be a clone of that exact card or row.
+      const sourceElement = event.currentTarget
+      const bounds = typeof sourceElement?.getBoundingClientRect === 'function'
+        ? sourceElement.getBoundingClientRect()
+        : undefined
+      current.grabX = bounds === undefined ? 0 : event.clientX - bounds.left
+      current.grabY = bounds === undefined ? 0 : event.clientY - bounds.top
+      current.width = bounds?.width ?? 0
+      current.grab = sourceElement ?? null
+
       const begin = () => {
         current.timer = 0
         current.active = true
@@ -154,15 +193,32 @@ export function useDragDrop({ onMove, onReference }) {
     if (dragging !== null) state.current.suppress = true
   }, [dragging])
 
-  const ghost = dragging === null ? null : h('div', {
-    className: `vms-drag-ghost${dropKey === 'composer' ? ' is-composer' : ''}`,
-    style: { left: `${point.x + 12}px`, top: `${point.y + 12}px` },
-  },
-  h(Icon, { name: dropKey === 'composer' ? 'at' : 'move', size: 14 }),
-  h('span', { className: 'vms-drag-name' }, dragging.title ?? dragging.name ?? ''),
-  dropKey.startsWith('folder:') && h('span', { className: 'vms-drag-target' },
-    `移到 ${dropKey.slice(7) || '工作区根目录'}`),
-  dropKey === 'composer' && h('span', { className: 'vms-drag-target' }, '插入引用'))
+  const ghost = dragging === null ? null : (() => {
+    const grab = state.current.grab
+    const width = state.current.width
+    const left = point.x - state.current.grabX
+    const top = point.y - state.current.grabY
+    const target = dropKey === 'composer'
+      ? '插入引用'
+      : dropKey.startsWith('folder:') ? `移到 ${dropKey.slice(7) || '工作区根目录'}` : ''
+    // A clone of the pressed card/row keeps the current view's look while it
+    // moves, which reads far better than a generic chip.
+    if (grab !== null && typeof document !== 'undefined') {
+      return h('div', {
+        className: `vms-drag-clone${target === '' ? '' : ' is-targeting'}`,
+        style: { left: `${left}px`, top: `${top}px`, width: width === 0 ? undefined : `${width}px` },
+      },
+      cloneNode(grab),
+      target !== '' && h('span', { className: 'vms-drag-target' }, target))
+    }
+    return h('div', {
+      className: `vms-drag-ghost${dropKey === 'composer' ? ' is-composer' : ''}`,
+      style: { left: `${point.x + 12}px`, top: `${point.y + 12}px` },
+    },
+    h(Icon, { name: dropKey === 'composer' ? 'at' : 'move', size: 14 }),
+    h('span', { className: 'vms-drag-name' }, dragging.title ?? dragging.name ?? ''),
+    target !== '' && h('span', { className: 'vms-drag-target' }, target))
+  })()
 
   return { bind, dragging, suppressNextClick, ghost, dropKey }
 }

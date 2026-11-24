@@ -3624,6 +3624,32 @@ var styles_default2 = `.vms-root {\r
 .vms-tl-tile:focus-visible, .vms-tl-row:focus-visible {
   outline: 2px solid var(--vms-accent); outline-offset: 1px;
 }
+
+/* Drag ghost: a live copy of the pressed card or row follows the pointer, the
+   way the OS file manager lifts an item. Slightly transparent and lifted so it
+   reads as "held", and it never intercepts the pointer. */
+.vms-drag-clone {
+  position: fixed; z-index: 200; pointer-events: none;
+  transform: scale(0.96); transform-origin: center;
+  opacity: .88; border-radius: var(--vms-radius-md, 12px);
+  box-shadow: 0 18px 40px rgba(0,0,0,.34), 0 0 0 1.5px color-mix(in srgb, var(--vms-accent) 70%, transparent);
+  filter: saturate(1.04);
+  transition: opacity 120ms, box-shadow 120ms, transform 120ms;
+}
+.vms-drag-clone.is-targeting {
+  opacity: .95; transform: scale(1);
+  box-shadow: 0 22px 52px rgba(0,0,0,.4), 0 0 0 2px var(--vms-accent);
+}
+.vms-drag-clone-body { border-radius: inherit; overflow: hidden; background: var(--vms-layer); }
+.vms-drag-clone-body * { cursor: grabbing !important; }
+/* Inner media and chrome stay dimmed in the copy so it reads as an object, not a control. */
+.vms-drag-clone-body video, .vms-drag-clone-body img { pointer-events: none; }
+.vms-drag-clone .vms-drag-target {
+  position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%);
+  padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  background: var(--vms-accent); color: #fff; font-size: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+}
 `;
 
 // src/client/library.js
@@ -25177,6 +25203,25 @@ var import_react9 = __toESM(require("react"), 1);
 var h5 = import_react9.default.createElement;
 var LONG_PRESS_MS = 250;
 var MOUSE_THRESHOLD = 4;
+function cloneNode(element) {
+  if (typeof element?.cloneNode !== "function") return null;
+  const copy = element.cloneNode(true);
+  copy.removeAttribute("id");
+  copy.setAttribute("aria-hidden", "true");
+  copy.tabIndex = -1;
+  for (const node of copy.querySelectorAll("video, audio")) {
+    node.pause?.();
+    node.removeAttribute("autoplay");
+    node.setAttribute("muted", "");
+  }
+  for (const node of copy.querySelectorAll("button, a, input, select, textarea, [tabindex]")) {
+    node.tabIndex = -1;
+  }
+  return h5("div", {
+    className: "vms-drag-clone-body",
+    dangerouslySetInnerHTML: { __html: copy.outerHTML }
+  });
+}
 function composerDropRect() {
   if (typeof document === "undefined") return void 0;
   const marker = document.querySelector("[data-vms-dropzone]");
@@ -25253,6 +25298,12 @@ function useDragDrop({ onMove, onReference }) {
       current.startY = event.clientY;
       current.suppress = false;
       current.touch = event.pointerType === "touch" || event.pointerType === "pen";
+      const sourceElement = event.currentTarget;
+      const bounds = typeof sourceElement?.getBoundingClientRect === "function" ? sourceElement.getBoundingClientRect() : void 0;
+      current.grabX = bounds === void 0 ? 0 : event.clientX - bounds.left;
+      current.grabY = bounds === void 0 ? 0 : event.clientY - bounds.top;
+      current.width = bounds?.width ?? 0;
+      current.grab = sourceElement ?? null;
       const begin = () => {
         current.timer = 0;
         current.active = true;
@@ -25294,21 +25345,34 @@ function useDragDrop({ onMove, onReference }) {
   (0, import_react9.useEffect)(() => {
     if (dragging !== null) state.current.suppress = true;
   }, [dragging]);
-  const ghost = dragging === null ? null : h5(
-    "div",
-    {
-      className: `vms-drag-ghost${dropKey === "composer" ? " is-composer" : ""}`,
-      style: { left: `${point.x + 12}px`, top: `${point.y + 12}px` }
-    },
-    h5(Icon2, { name: dropKey === "composer" ? "at" : "move", size: 14 }),
-    h5("span", { className: "vms-drag-name" }, dragging.title ?? dragging.name ?? ""),
-    dropKey.startsWith("folder:") && h5(
-      "span",
-      { className: "vms-drag-target" },
-      `\u79FB\u5230 ${dropKey.slice(7) || "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"}`
-    ),
-    dropKey === "composer" && h5("span", { className: "vms-drag-target" }, "\u63D2\u5165\u5F15\u7528")
-  );
+  const ghost = dragging === null ? null : (() => {
+    const grab = state.current.grab;
+    const width = state.current.width;
+    const left = point.x - state.current.grabX;
+    const top = point.y - state.current.grabY;
+    const target = dropKey === "composer" ? "\u63D2\u5165\u5F15\u7528" : dropKey.startsWith("folder:") ? `\u79FB\u5230 ${dropKey.slice(7) || "\u5DE5\u4F5C\u533A\u6839\u76EE\u5F55"}` : "";
+    if (grab !== null && typeof document !== "undefined") {
+      return h5(
+        "div",
+        {
+          className: `vms-drag-clone${target === "" ? "" : " is-targeting"}`,
+          style: { left: `${left}px`, top: `${top}px`, width: width === 0 ? void 0 : `${width}px` }
+        },
+        cloneNode(grab),
+        target !== "" && h5("span", { className: "vms-drag-target" }, target)
+      );
+    }
+    return h5(
+      "div",
+      {
+        className: `vms-drag-ghost${dropKey === "composer" ? " is-composer" : ""}`,
+        style: { left: `${point.x + 12}px`, top: `${point.y + 12}px` }
+      },
+      h5(Icon2, { name: dropKey === "composer" ? "at" : "move", size: 14 }),
+      h5("span", { className: "vms-drag-name" }, dragging.title ?? dragging.name ?? ""),
+      target !== "" && h5("span", { className: "vms-drag-target" }, target)
+    );
+  })();
   return { bind, dragging, suppressNextClick, ghost, dropKey };
 }
 

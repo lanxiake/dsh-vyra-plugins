@@ -34,3 +34,12 @@ test('timeline entries are drag sources, not buttons', () => {
   assert.ok(timeline.includes("dragBind(target)"))
   assert.ok(timeline.includes('dragBind,'))
 })
+
+test('the drag ghost clones the pressed element', () => {
+  assert.ok(source.includes('vms-drag-clone'))
+  assert.ok(source.includes('cloneNode(true)'))
+  assert.ok(source.includes('grabX'))
+  // Copied media must not keep playing inside the ghost.
+  assert.ok(source.includes("copy.querySelectorAll('video, audio')"))
+  assert.ok(source.includes('aria-hidden'))
+})
