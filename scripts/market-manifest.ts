@@ -2331,8 +2331,8 @@ export const manifest: MarketManifest = {
         zh: 'Vyra 录屏截图',
       },
       description: {
-        en: 'Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM; configure separate video and screenshot folders, format and shortcuts in the settings page; screenshots stay fast with no loading overlay and can hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.',
-        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM；设置页可分别配置视频与截图的存储目录、格式和快捷键；截图走常驻服务、不显示加载提示，单张几十毫秒，也可以隐藏 DSH 截取其他应用；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。',
+        en: 'Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM; configure separate video and screenshot folders, format and shortcuts in the settings page; screenshots stay fast with no loading overlay and can hide DSH to capture other apps. Toolbar buttons show their shortcut on hover, and the screenshot overlay reads text out of the selection (Windows built-in OCR, or any dsh-tool-ocr engine) and copies the text, the image or the file in one click. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.',
+        zh: 'DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM；设置页可分别配置视频与截图的存储目录、格式和快捷键；截图走常驻服务、不显示加载提示，单张几十毫秒，也可以隐藏 DSH 截取其他应用。鼠标悬停在按钮上会显示快捷键；截图拖框即识别文字（Windows 自带 OCR，或读取 dsh-tool-ocr 配置的引擎），一键复制文字 / 图片 / 文件，和 QQ、微信截图一样顺手。同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2373,10 +2373,23 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-screen-recorder',
           },
         },
+        // 0.4.0 adds hover tooltips carrying each button's shortcut, and QQ /
+        // WeChat style text extraction in the screenshot overlay: select, read
+        // the text (Windows OCR or whatever dsh-tool-ocr is configured with),
+        // then copy the text, the image, or the file in one click.
+        '0.4.0': {
+          publishTimestamp: 1796112000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '351b0bb9d67498bad801c96738347565b5f4159e',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
       },
       metadata: {
         category: 'media',
-        keywords: ['screen', 'record', 'screenshot', 'capture', 'video', '录屏', '截图'],
+        keywords: ['screen', 'record', 'screenshot', 'capture', 'video', 'ocr', 'clipboard', '录屏', '截图', '取字'],
       },
     },
     {
@@ -2417,8 +2430,8 @@ export const manifest: MarketManifest = {
         zh: '图像文字识别',
       },
       description: {
-        en: 'Extract text from images and PDFs: read a born-digital text layer, or OCR a scan with any configured engine.',
-        zh: '从图片和 PDF 里取文字：数字版 PDF 直接读文字层，扫描件走 OCR。',
+        en: 'Extract text from images and PDFs: read a born-digital text layer, or OCR a scan with any configured engine — including the OCR engine built into Windows 10/11, which needs nothing installed.',
+        zh: '从图片和 PDF 里取文字：数字版 PDF 直接读文字层，扫描件走 OCR。可以接任意配置的引擎，也可以用 Windows 10/11 自带的 OCR——什么都不用装。',
       },
       author: 'yuehancn',
       homepage: 'https://github.com/yuehancn/dsh-tool-ocr#readme',
@@ -2450,10 +2463,22 @@ export const manifest: MarketManifest = {
             path: 'plugins/dsh-tool-ocr',
           },
         },
+        // 1.1.0 adds the winrt backend: `backend: winrt`, or an engine marked
+        // `mode: winrt`, runs Windows.Media.Ocr through a bundled PowerShell
+        // driver, so ocr_read works with no external OCR installed.
+        '1.1.0': {
+          publishTimestamp: 1796112000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '351b0bb9d67498bad801c96738347565b5f4159e',
+            path: 'plugins/dsh-tool-ocr',
+          },
+        },
       },
       metadata: {
         category: 'input-output',
-        keywords: ['ocr', 'text-extraction', 'pdf', 'image'],
+        keywords: ['ocr', 'text-extraction', 'pdf', 'image', 'windows', '取字', '文字识别'],
       },
     },
     {
