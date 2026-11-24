@@ -14,7 +14,7 @@
  *
  * Nothing here fetches. The repository read is handed in as a parameter for the same reason the
  * link host is: a test must not need the network.
- * @module vyra-agent-cli-manager/cli/skill-install
+ * @module dsh-vyra-agent-cli-manager/cli/skill-install
  */
 /** The library every source installs into, relative to the user's home. */
 export declare const SKILL_LIBRARY_DIR: string;

@@ -1,4 +1,4 @@
-# vyra-wechat-local · 设计文档
+# dsh-vyra-wechat-local · 设计文档
 
 把 [lumii](../../lumii) 项目里的**本机微信能力**集成成一个独立的 DSH 插件。
 
@@ -358,7 +358,7 @@ fail-closed 并报告尝试过的偏移。
 
 ### 方案：`uv run`（已装即用，缺了自动取）
 
-本仓库的 `vyra-xianyu-delivery` 已经把 `uvx` 作为运行外部 CLI 的约定。这里沿用同一
+本仓库的 `dsh-vyra-xianyu-delivery` 已经把 `uvx` 作为运行外部 CLI 的约定。这里沿用同一
 条路：`uv run --with pycryptodome --with zstandard python -u vyra_sidecar.py`。
 
 - 解释器与两个依赖由 uv 在首次运行时取好并缓存，不把 10MB 运行时塞进 Git；

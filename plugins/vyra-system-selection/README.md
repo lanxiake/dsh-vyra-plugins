@@ -1,4 +1,4 @@
-# vyra-system-selection · 系统级划词
+# dsh-vyra-system-selection · 系统级划词
 
 在**任何应用**里选中文字，松手即弹出横向菜单：翻译、复制、解释、总结。
 
@@ -70,7 +70,7 @@ DSH 的插件宿主是一个 **Electron Node 模式子进程**，拿不到 `Brow
 但那个进程里 **koffi FFI 可用**（DSH 自己用它做 Windows ACL 沙箱）。所以：
 
 ```
-Host 进程 (vyra-system-selection)
+Host 进程 (dsh-vyra-system-selection)
 ├── 触发       WH_MOUSE_LL 钩子：拦右键、吞掉、换成自己的菜单
 ├── 预取       左键释放时读一次选区，缓存起来
 ├── 取词       SendInput(Ctrl+C) → 剪贴板 → 还原

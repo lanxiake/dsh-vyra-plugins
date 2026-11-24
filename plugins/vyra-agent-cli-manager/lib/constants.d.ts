@@ -1,6 +1,6 @@
 /**
  * Shared names.
- * @module vyra-agent-cli-manager/constants
+ * @module dsh-vyra-agent-cli-manager/constants
  */
 /**
  * The only tool a CLI session calls in the harness. The name is deliberately not
@@ -34,15 +34,15 @@ export declare function compactDescription(description: string | undefined): str
 /** Model id meaning whatever the CLI itself is set to. */
 export declare const DEFAULT_MODEL_ID = "default";
 /** Path prefix of the 变更 panel's git routes; the browser posts to `<prefix>/<operation>`. */
-export declare const GIT_ROUTE_PREFIX = "/vyra-agent-cli-manager/git";
+export declare const GIT_ROUTE_PREFIX = "/dsh-vyra-agent-cli-manager/git";
 /**
  * The route the composer's mode control posts to. It only lists the modes a CLI reported
  * and sends the chosen id back to that CLI, unchanged.
  */
-export declare const MODE_ROUTE_PREFIX = "/vyra-agent-cli-manager/modes";
+export declare const MODE_ROUTE_PREFIX = "/dsh-vyra-agent-cli-manager/modes";
 /**
  * Path prefix of the Agent CLI 管理 panel's routes; the browser posts to `<prefix>/<operation>`.
  * Distinct from {@link CLI_ROUTE_PREFIX}, which names provider routes: one is a URL prefix for
  * the panel's own API, the other a route id for a CLI acting as a model provider.
  */
-export declare const CLI_MANAGER_ROUTE_PREFIX = "/vyra-agent-cli-manager/cli";
+export declare const CLI_MANAGER_ROUTE_PREFIX = "/dsh-vyra-agent-cli-manager/cli";

@@ -1,4 +1,4 @@
-# vyra-free-theme 个性化
+# dsh-vyra-free-theme 个性化
 
 DSH Web 皮肤插件的个性化语境：三套皮肤（meirenzhi / openbmc / uefi-harness）共用的声明式外观定制体系，以及承载它的交互容器与编辑语义。
 

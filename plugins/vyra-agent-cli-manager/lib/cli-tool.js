@@ -2,7 +2,7 @@
  * The mirror tool. A CLI runs its tools itself, but the harness can only show and
  * log a call that goes through a registered tool. This tool's body runs nothing:
  * it waits for the CLI to report what happened.
- * @module vyra-agent-cli-manager/cli-tool
+ * @module dsh-vyra-agent-cli-manager/cli-tool
  */
 import { HarnessError } from '@deepseek-ai/dsh-llm';
 import { defineTool, TOOL_ABORTED } from '@deepseek-ai/dsh-tools';

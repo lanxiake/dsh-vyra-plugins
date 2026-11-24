@@ -8,7 +8,7 @@
  * person who does not want to configure anything can finish here in three
  * steps.
  *
- * Data comes from this plugin's own same-origin `/api/vyra-free-model/*` routes
+ * Data comes from this plugin's own same-origin `/api/dsh-vyra-free-model/*` routes
  * rather than a typed Remote binding: those routes are served by the host
  * process on every kernel line this plugin targets.
  *
@@ -17,7 +17,7 @@
  * page survives a light/dark switch without a second stylesheet.
  */
 window.__ModuleLoader__.load({
-  id: 'vyra-free-model',
+  id: 'dsh-vyra-free-model',
   factory: require => {
     const module = { exports: {} }
     const exports = module.exports
@@ -402,7 +402,7 @@ window.__ModuleLoader__.load({
 
     /** This plugin's own routes, resolved against the page's base. */
     const API = (() => {
-      try { return new URL('api/vyra-free-model', document.baseURI).pathname } catch { return '/api/vyra-free-model' }
+      try { return new URL('api/dsh-vyra-free-model', document.baseURI).pathname } catch { return '/api/dsh-vyra-free-model' }
     })()
 
     /**
@@ -435,7 +435,7 @@ window.__ModuleLoader__.load({
     // The Host's own remote namespaces do the work; when they are missing the
     // card explains that instead of offering a dead button.
 
-    const VEYRA_MARKET = 'vyra-plugin-market'
+    const VEYRA_MARKET = 'dsh-vyra-plugin-market'
     /**
      * The Veyra index, addressed **by commit**, never by branch.
      *
@@ -1746,7 +1746,7 @@ a.vfm_btn{text-decoration:none}
      * click can open it.
      */
     /**
-     * The "want more" card: one click installs vyra-plugin-market and adds the
+     * The "want more" card: one click installs dsh-vyra-plugin-market and adds the
      * Veyra index source; on a machine that already has the market it brings
      * that copy up to the version the index lists, so the button is never a
      * dead end after the first use.
@@ -2295,15 +2295,15 @@ a.vfm_btn{text-decoration:none}
       // shipped once and looked broken rather than plain.
       ctx.effect(() => {
         const style = document.createElement('style')
-        style.setAttribute('data-plugin', 'vyra-free-model')
+        style.setAttribute('data-plugin', 'dsh-vyra-free-model')
         style.textContent = CSS
         document.head.appendChild(style)
         return () => style.remove()
-      }, 'vyra-free-model: styles')
+      }, 'dsh-vyra-free-model: styles')
 
       ctx.slots.inject('settings.section', () => ctx.slots.register({
         name: 'settings.section',
-        id: 'vyra-free-model',
+        id: 'dsh-vyra-free-model',
         order: 36,
         label: () => t('nav'),
         locale: NS,
@@ -2311,14 +2311,14 @@ a.vfm_btn{text-decoration:none}
 
       ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
         name: 'settings.section.icon',
-        id: 'vyra-free-model',
+        id: 'dsh-vyra-free-model',
         order: 36,
       }, () => h(SectionIcon)))
     }
 
     exports.apply = apply
     exports.inject = inject
-    exports.name = 'vyra-free-model'
+    exports.name = 'dsh-vyra-free-model'
     // Headless seams: the same stub-React renderer the tests use.
     exports.__test = { h, t, formatContext, ModelBlock, AccountsBlock, providerRow, ForwardBlock,
       EndpointsBlock, LoginModal, creditLine, probeLabel, vendorOf, shortName,

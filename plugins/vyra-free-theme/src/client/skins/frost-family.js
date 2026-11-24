@@ -10,7 +10,7 @@
 export function frostFamilyCss(scope, tints) {
   const { frost, menu } = tints;
   return `/* 浮层毛玻璃家族（配方与选择器并集的唯一来源；裁决与修订史见 ADR-0007，单点生成见 ADR-0012）
-   * 宿主 Modal（设置页各弹窗、风险确认）、dsh-m / vyra-free-theme / dsh-context 等
+   * 宿主 Modal（设置页各弹窗、风险确认）、dsh-m / dsh-vyra-free-theme / dsh-context 等
    * 插件弹层、dockkit 悬浮窗壳与宿主对话框兜底、下拉菜单面、右栏内嵌卡与
    * 提示卡的统一配方：86% 不透明皮肤底色 + blur(14px) saturate(1.3) 提饱和
    * （.lc-tip 经主人两轮实测定 96% 特例浓度），下层内容被盖住只余柔光；

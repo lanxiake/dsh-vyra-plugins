@@ -2,7 +2,7 @@
  * The modes a CLI reports for itself, and the one the user picked. The vocabulary is the
  * CLI's own: ids and names are kept and sent back exactly as reported, never translated
  * into a harness preset.
- * @module vyra-agent-cli-manager/session/mode-state
+ * @module dsh-vyra-agent-cli-manager/session/mode-state
  */
 import type { CliModeList } from '../model-options.ts';
 import type { ConfigOptions, ModelTarget } from './model-state.ts';

@@ -1,4 +1,4 @@
-# vyra-skill-mcp-manager · 技能与 MCP 管理
+# dsh-vyra-skill-mcp-manager · 技能与 MCP 管理
 
 **技能和 MCP 的一体化管理界面**——浏览、搜索、安装，不必再手改 profile 的配置行。
 

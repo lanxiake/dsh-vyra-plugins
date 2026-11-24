@@ -1,6 +1,6 @@
 /**
  * Permission requests from the CLI that are still waiting for an answer.
- * @module vyra-agent-cli-manager/session/permission-queue
+ * @module dsh-vyra-agent-cli-manager/session/permission-queue
  */
 import type { PermissionOption, RequestPermissionResponse } from '@agentclientprotocol/sdk';
 import { CANCELLED } from '../permission.ts';

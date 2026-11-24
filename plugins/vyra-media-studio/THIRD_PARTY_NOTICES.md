@@ -1,6 +1,6 @@
 # Third-party notices
 
-`vyra-media-studio` bundles or depends on these permissively licensed projects.
+`dsh-vyra-media-studio` bundles or depends on these permissively licensed projects.
 The full license texts follow the table.
 
 | Package | Version | License | Role |

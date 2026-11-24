@@ -4,7 +4,7 @@
  * its cache half-installed (a skipped optional dependency, an interrupted
  * download). Reinstalling globally does not help there: npx keeps reusing the
  * broken cache until that directory is deleted.
- * @module vyra-agent-cli-manager/session/start-hint
+ * @module dsh-vyra-agent-cli-manager/session/start-hint
  */
 import { fileURLToPath } from 'node:url';
 const INSTALL_HINT = '请确认它已安装并完成登录。';

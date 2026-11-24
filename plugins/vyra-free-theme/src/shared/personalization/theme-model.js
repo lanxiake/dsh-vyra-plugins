@@ -404,7 +404,7 @@ export function bodyAttributeFor(id) {
 }
 
 /** Asset URL prefix: the Host serves `<base>/<themeId>/<path-inside-theme>`. */
-export const THEME_ASSET_BASE = "/vyra-free-theme/theme";
+export const THEME_ASSET_BASE = "/dsh-vyra-free-theme/theme";
 
 /** Extensions a theme may ship, with the MIME the Host must answer with. */
 export const THEME_ASSET_MIME = Object.freeze({

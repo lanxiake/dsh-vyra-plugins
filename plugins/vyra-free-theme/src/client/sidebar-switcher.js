@@ -2,7 +2,7 @@ import { DICTS, NS, formatTemplate } from "./dicts.js";
 import { createPersonalizationPanel, PANEL_CSS } from "./personalization/panel.js";
 import { getSkinSchema } from "../shared/personalization/catalog.js";
 
-const TAG_ID = "vyra-free-theme/sidebar.css";
+const TAG_ID = "dsh-vyra-free-theme/sidebar.css";
 
 /** The shell width/height animation beat (keep in sync with the CSS below). */
 const SWEEP_MS = 200;
@@ -416,8 +416,8 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
 
     react.useEffect(() => {
       const onChange = () => setActiveId(runtime.active());
-      window.addEventListener("vyra-free-theme:active-changed", onChange);
-      return () => window.removeEventListener("vyra-free-theme:active-changed", onChange);
+      window.addEventListener("dsh-vyra-free-theme:active-changed", onChange);
+      return () => window.removeEventListener("dsh-vyra-free-theme:active-changed", onChange);
     }, []);
 
     react.useEffect(() => ctx.on("theme/change", (snapshot) => {
@@ -603,16 +603,16 @@ export function installSidebarSwitcher(ctx, { runtime, jsx, react, reactDom, con
 
   ctx.effect(() => {
     const tag = document.createElement("style");
-    tag.dataset.plugin = "vyra-free-theme";
+    tag.dataset.plugin = "dsh-vyra-free-theme";
     tag.dataset.pluginCss = TAG_ID;
     tag.textContent = CSS;
     document.head.appendChild(tag);
     return () => tag.remove();
-  }, "vyra-free-theme: sidebar switcher style");
+  }, "dsh-vyra-free-theme: sidebar switcher style");
 
   ctx.effect(() => {
     try { return ctx.locale.register(NS, DICTS); } catch { return () => {}; }
-  }, "vyra-free-theme: sidebar switcher dictionary");
+  }, "dsh-vyra-free-theme: sidebar switcher dictionary");
 
   // Shell-takeover sentinel (2026-10-13 ds-bot native foot): the sidebar foot
   // belongs to whoever registers sidebar.workspaces (ui-sidebar doc: "the foot

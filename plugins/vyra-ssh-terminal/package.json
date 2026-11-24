@@ -1,5 +1,5 @@
 {
-  "name": "vyra-ssh-terminal",
+  "name": "dsh-vyra-ssh-terminal",
   "version": "0.1.2",
   "type": "module",
   "exports": {

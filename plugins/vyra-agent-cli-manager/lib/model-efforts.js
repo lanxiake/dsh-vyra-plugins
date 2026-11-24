@@ -3,7 +3,7 @@
  * model, and a CLI only reports those of its active model, so they are learned as models
  * are used: a model not seen yet borrows the levels of the CLI's default model, which the
  * probe saw, rather than switching the CLI through every model to ask.
- * @module vyra-agent-cli-manager/model-efforts
+ * @module dsh-vyra-agent-cli-manager/model-efforts
  */
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import { DEFAULT_MODEL_ID } from "./constants.js";

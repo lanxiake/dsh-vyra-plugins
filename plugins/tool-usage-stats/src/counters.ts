@@ -4,7 +4,7 @@
  * Kept free of any Cordis reference so the logic is testable without booting a
  * context.
  *
- * @module vyra-tool-usage-stats/counters
+ * @module dsh-vyra-tool-usage-stats/counters
  */
 
 /** Day key used by the daily buckets, in local time as `YYYY-MM-DD`. */

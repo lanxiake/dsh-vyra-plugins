@@ -85,7 +85,7 @@
   },
   "plugins": [
     {
-      "name": "vyra-tool-usage-stats",
+      "name": "dsh-vyra-tool-usage-stats",
       "title": {
         "en": "Tool Analysis",
         "zh": "工具分析"
@@ -173,7 +173,7 @@
       }
     },
     {
-      "name": "vyra-agent-manager",
+      "name": "dsh-vyra-agent-manager",
       "title": {
         "en": "Agent Manager",
         "zh": "智能体管理"
@@ -231,7 +231,7 @@
       }
     },
     {
-      "name": "vyra-smart-compaction",
+      "name": "dsh-vyra-smart-compaction",
       "title": {
         "en": "Smart Compaction",
         "zh": "智能压缩"
@@ -269,7 +269,7 @@
       }
     },
     {
-      "name": "vyra-skill-mcp-manager",
+      "name": "dsh-vyra-skill-mcp-manager",
       "title": {
         "en": "Skill and MCP Manager",
         "zh": "技能与 MCP 管理"
@@ -347,7 +347,7 @@
       }
     },
     {
-      "name": "vyra-ssh-terminal",
+      "name": "dsh-vyra-ssh-terminal",
       "title": {
         "en": "SSH Terminal",
         "zh": "SSH 终端"
@@ -406,7 +406,7 @@
       }
     },
     {
-      "name": "vyra-system-selection",
+      "name": "dsh-vyra-system-selection",
       "title": {
         "en": "System Selection",
         "zh": "系统级划词"
@@ -655,7 +655,7 @@
       }
     },
     {
-      "name": "vyra-free-theme",
+      "name": "dsh-vyra-free-theme",
       "title": {
         "en": "Free Theme",
         "zh": "自由主题"
@@ -685,7 +685,7 @@
       ]
     },
     {
-      "name": "vyra-wechat-local",
+      "name": "dsh-vyra-wechat-local",
       "title": {
         "en": "PC WeChat",
         "zh": "PC微信"
@@ -949,7 +949,7 @@
       }
     },
     {
-      "name": "vyra-xianyu-delivery",
+      "name": "dsh-vyra-xianyu-delivery",
       "title": {
         "en": "Xianyu Auto Service",
         "zh": "闲鱼自动客服"
@@ -1468,7 +1468,7 @@
       }
     },
     {
-      "name": "vyra-agent-cli-manager",
+      "name": "dsh-vyra-agent-cli-manager",
       "title": {
         "en": "Agent CLI Manager",
         "zh": "Agent CLI 管理"
@@ -1602,7 +1602,7 @@
       }
     },
     {
-      "name": "vyra-plugin-market",
+      "name": "dsh-vyra-plugin-market",
       "title": {
         "en": "Plugin Market",
         "zh": "插件市场"
@@ -2000,7 +2000,7 @@
       }
     },
     {
-      "name": "vyra-free-model",
+      "name": "dsh-vyra-free-model",
       "title": {
         "en": "Vyra Free Models",
         "zh": "Vyra 免费模型"
@@ -2149,7 +2149,7 @@
       }
     },
     {
-      "name": "vyra-screen-recorder",
+      "name": "dsh-vyra-screen-recorder",
       "title": {
         "en": "Vyra Screen Recorder",
         "zh": "Vyra 录屏截图"
@@ -2487,7 +2487,7 @@
       }
     },
     {
-      "name": "vyra-studymate",
+      "name": "dsh-vyra-studymate",
       "title": {
         "en": "StudyMate Learning",
         "zh": "StudyMate 学习"
@@ -2640,7 +2640,7 @@
       }
     },
     {
-      "name": "vyra-media-studio",
+      "name": "dsh-vyra-media-studio",
       "title": {
         "en": "File Manager",
         "zh": "文件管理"
@@ -2852,7 +2852,7 @@
       }
     },
     {
-      "name": "vyra-dsh-console",
+      "name": "dsh-vyra-dsh-console",
       "title": {
         "en": "DSH Console",
         "zh": "DSH 控制台"

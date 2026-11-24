@@ -15,13 +15,13 @@
   var EXTERNAL_SKINS = /* @__PURE__ */ new Map();
   function registerExternalSkin({ id, fields, builtinAssets = {} }) {
     if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) {
-      throw new Error(`[vyra-free-theme] external skin id "${id}" is malformed`);
+      throw new Error(`[dsh-vyra-free-theme] external skin id "${id}" is malformed`);
     }
     if (Object.hasOwn(SKINS, id)) {
-      throw new Error(`[vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
+      throw new Error(`[dsh-vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
     }
     if (!Array.isArray(fields) || fields.length === 0) {
-      throw new Error(`[vyra-free-theme] external skin "${id}" needs at least one field`);
+      throw new Error(`[dsh-vyra-free-theme] external skin "${id}" needs at least one field`);
     }
     EXTERNAL_SKINS.set(id, { id, fields, builtinAssets });
     return id;
@@ -766,7 +766,7 @@
     const dark = `${scope}[data-ds-dark-theme]`;
     const metrics = spec.metrics;
     const rules = [
-      `/* vyra-free-theme sidebar pack: ${spec.pack} / ${spec.surface} / ${spec.density} */`,
+      `/* dsh-vyra-free-theme sidebar pack: ${spec.pack} / ${spec.surface} / ${spec.density} */`,
       // The column never clips the wallpaper; the fill token decides opacity.
       `${scope} ${HOOK.col}{background:transparent}`,
       `${scope} ${HOOK.col} ${HOOK.root}{border-radius:${spec.radius.card}px}`
@@ -821,13 +821,13 @@
   }
 
   // src/client/runtime.js
-  var SKIN_STORAGE_KEY = "vyra-free-theme:active";
+  var SKIN_STORAGE_KEY = "dsh-vyra-free-theme:active";
   var SKIN_URL_PARAM = "skin";
   var OFFICIAL_SKIN_ID = "official";
   var LEGACY_OFFICIAL_ALIAS = "default";
   var HERO_NS = "conversation";
   var HERO_KEY = "hero.headline";
-  var ACTIVE_EVENT = "vyra-free-theme:active-changed";
+  var ACTIVE_EVENT = "dsh-vyra-free-theme:active-changed";
   function datasetAttribute(key) {
     return `data-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
   }
@@ -844,7 +844,7 @@
     if (match === null) return null;
     const asset = skins.get?.(match[1])?.builtinAssets?.[match[2]];
     const url = asset?.url;
-    return typeof url === "string" && url.startsWith("/vyra-free-theme/assets/") ? url : null;
+    return typeof url === "string" && url.startsWith("/dsh-vyra-free-theme/assets/") ? url : null;
   }
   function parseRgbaChannels(value) {
     const match = /^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\s*\)$/i.exec(value ?? "");
@@ -864,7 +864,7 @@
     const body = `body[${datasetAttribute(bodyAttribute)}]`;
     const scoped = `html[data-windows-titlebar] ${body}`;
     const lines = [
-      "/* vyra-free-theme shell-frame alignment (ADR-0009): solid chrome + wallpaper in the conversation area on Windows desktop */",
+      "/* dsh-vyra-free-theme shell-frame alignment (ADR-0009): solid chrome + wallpaper in the conversation area on Windows desktop */",
       'html[data-windows-titlebar] [class*="_frame"]:has(> [class*="_sidebarCol"])::before{background:0 0}',
       'html[data-windows-titlebar] [class*="_frame"] > [class*="_sidebarCol"]{background:0 0}',
       'html[data-windows-titlebar] [class*="_sidebarCol"] > [class*="_root"]{background:0 0}'
@@ -902,7 +902,7 @@
     const dockPanel = ` [data-sidebar-right-panel="fullscreen"]${openGate}${emptyPaneGuard}`;
     const dockPane = ` [data-sidebar-right-panel="fullscreen"]${openGate} [data-dockkit-pane]${emptyPaneGuard}`;
     return [
-      "/* vyra-free-theme fullscreen base (ADR-0020): solid skin-tone base while data-rightbar-fullscreen is set — the fullscreen dockkit PANE paints a translucent bg token where the official theme paints opaque white (DOM-dump evidence), so the pane is the bleed surface; solid matches the official look. Docked column untouched. Sheet rules gated on data-sidebar-right-open (stale-fullscreen collapse, ADR-0021 amendment 四) */",
+      "/* dsh-vyra-free-theme fullscreen base (ADR-0020): solid skin-tone base while data-rightbar-fullscreen is set — the fullscreen dockkit PANE paints a translucent bg token where the official theme paints opaque white (DOM-dump evidence), so the pane is the bleed surface; solid matches the official look. Docked column untouched. Sheet rules gated on data-sidebar-right-open (stale-fullscreen collapse, ADR-0021 amendment 四) */",
       `${body}${column},${body}${dockPanel},${body}${dockPane}{background-color:${opaqueFills.light}!important}`,
       `${body}[data-ds-dark-theme]${column},${body}[data-ds-dark-theme]${dockPanel},${body}[data-ds-dark-theme]${dockPane}{background-color:${opaqueFills.dark}!important}`
     ].join("\n");
@@ -912,7 +912,7 @@
     const body = `body[${datasetAttribute(bodyAttribute)}]`;
     const panel = ' [data-plugin-panel="true"]';
     return [
-      "/* vyra-free-theme reading base (ADR-0022): solid skin-tone base under the plugin panel route container — the live page paints the whole route transparent over the wallpaper while the official theme paints an opaque bg token (DOM-dump evidence 2026-10-30), so text sits on a translucent token x wallpaper composite; solid matches the official look. Element-bound: the route leaves the DOM with the page, no state gate needed. Layer pin per ADR-0021 amendment doctrine (large-area cover rules always carry the pin). */",
+      "/* dsh-vyra-free-theme reading base (ADR-0022): solid skin-tone base under the plugin panel route container — the live page paints the whole route transparent over the wallpaper while the official theme paints an opaque bg token (DOM-dump evidence 2026-10-30), so text sits on a translucent token x wallpaper composite; solid matches the official look. Element-bound: the route leaves the DOM with the page, no state gate needed. Layer pin per ADR-0021 amendment doctrine (large-area cover rules always carry the pin). */",
       `${body}${panel}{position:relative;z-index:0;background-color:${opaqueFills.light}!important}`,
       `${body}[data-ds-dark-theme]${panel}{position:relative;z-index:0;background-color:${opaqueFills.dark}!important}`
     ].join("\n");
@@ -935,17 +935,17 @@
     let personalization = null;
     function register(skin) {
       if (!skin || typeof skin.id !== "string" || skin.id.length === 0) {
-        throw new Error("[vyra-free-theme] every skin needs a non-empty id");
+        throw new Error("[dsh-vyra-free-theme] every skin needs a non-empty id");
       }
       if (skin.id === OFFICIAL_SKIN_ID || skin.id === LEGACY_OFFICIAL_ALIAS) {
-        throw new Error(`[vyra-free-theme] skin id "${skin.id}" is reserved for the official appearance`);
+        throw new Error(`[dsh-vyra-free-theme] skin id "${skin.id}" is reserved for the official appearance`);
       }
       for (const key of Object.keys(skin)) {
         if (!PRODUCTION_FIELDS.has(key)) {
-          throw new Error(`[vyra-free-theme] unknown skin field "${key}" on "${skin.id}" — the skin interface is exactly PRODUCTION_FIELDS (ADR-0014)`);
+          throw new Error(`[dsh-vyra-free-theme] unknown skin field "${key}" on "${skin.id}" — the skin interface is exactly PRODUCTION_FIELDS (ADR-0014)`);
         }
       }
-      if (skins.has(skin.id)) throw new Error(`[vyra-free-theme] duplicate skin id "${skin.id}"`);
+      if (skins.has(skin.id)) throw new Error(`[dsh-vyra-free-theme] duplicate skin id "${skin.id}"`);
       skins.set(skin.id, skin);
       order.push(skin.id);
     }
@@ -1015,7 +1015,7 @@
       let tag = document.querySelector(`style[data-plugin-css=${JSON.stringify(id)}]`);
       if (tag === null) {
         tag = document.createElement("style");
-        tag.dataset.plugin = "vyra-free-theme";
+        tag.dataset.plugin = "dsh-vyra-free-theme";
         tag.dataset.pluginCss = id;
         document.head.appendChild(tag);
       }
@@ -1090,14 +1090,14 @@ ${darkSelector}{${dark.join(";")}}`;
           return ctx.slots.register({ name, priority }, component);
         } catch (error) {
           if (!/already has a registration/.test(String(error?.message ?? error))) throw error;
-          console.warn(`[vyra-free-theme] brand seat "${name}" priority ${priority} taken; retrying deeper`);
+          console.warn(`[dsh-vyra-free-theme] brand seat "${name}" priority ${priority} taken; retrying deeper`);
         }
       }
-      console.warn(`[vyra-free-theme] brand seat "${name}" stays with its occupant; skin mounts without it`);
+      console.warn(`[dsh-vyra-free-theme] brand seat "${name}" stays with its occupant; skin mounts without it`);
       return () => {
       };
     }
-    const SWEEP_SELECTOR = 'style[data-plugin-css^="vyra-free-theme/"]:not([data-plugin-css="vyra-free-theme/sidebar.css"])';
+    const SWEEP_SELECTOR = 'style[data-plugin-css^="dsh-vyra-free-theme/"]:not([data-plugin-css="dsh-vyra-free-theme/sidebar.css"])';
     function flushStylesForSweep() {
       try {
         void document.body?.offsetHeight;
@@ -1131,7 +1131,7 @@ ${darkSelector}{${dark.join(";")}}`;
           tag.remove();
           requestAnimationFrame(() => requestAnimationFrame(() => {
             const fresh = document.createElement("style");
-            fresh.dataset.plugin = "vyra-free-theme";
+            fresh.dataset.plugin = "dsh-vyra-free-theme";
             fresh.dataset.pluginCss = id;
             fresh.textContent = content;
             document.head.append(fresh);
@@ -1146,7 +1146,7 @@ ${darkSelector}{${dark.join(";")}}`;
       });
     }
     function buildEffects(skin, effects) {
-      if (!ctx) throw new Error("[vyra-free-theme] mount before apply");
+      if (!ctx) throw new Error("[dsh-vyra-free-theme] mount before apply");
       const body = document.body;
       const stops = [];
       const unwind = () => {
@@ -1192,12 +1192,12 @@ ${darkSelector}{${dark.join(";")}}`;
           });
         }
         if (effects.staticCss !== null) {
-          const tag = styleTag(`vyra-free-theme/${skin.id}.css`, effects.staticCss);
+          const tag = styleTag(`dsh-vyra-free-theme/${skin.id}.css`, effects.staticCss);
           stops.push(() => tag.remove());
         }
         {
           const tag = styleTag(
-            `vyra-free-theme/${skin.id}.paintorder.css`,
+            `dsh-vyra-free-theme/${skin.id}.paintorder.css`,
             sidebarPaintOrderCss(effects.bodyAttribute)
           );
           stops.push(() => tag.remove());
@@ -1219,34 +1219,34 @@ ${darkSelector}{${dark.join(";")}}`;
             imageDark: effects.backdrop.imageDark
           };
           const tag = styleTag(
-            `vyra-free-theme/${skin.id}.shell.css`,
+            `dsh-vyra-free-theme/${skin.id}.shell.css`,
             buildShellAlignmentCss(effects.bodyAttribute, opaqueFills, backdrop2)
           );
           stops.push(() => tag.remove());
           const fullscreenCss = buildFullscreenBaseCss(effects.bodyAttribute, opaqueFills);
           if (fullscreenCss !== "") {
-            const fullscreenTag = styleTag(`vyra-free-theme/${skin.id}.fullscreen.css`, fullscreenCss);
+            const fullscreenTag = styleTag(`dsh-vyra-free-theme/${skin.id}.fullscreen.css`, fullscreenCss);
             stops.push(() => fullscreenTag.remove());
           }
           const readingCss = buildReadingBaseCss(effects.bodyAttribute, opaqueFills);
           if (readingCss !== "") {
-            const readingTag = styleTag(`vyra-free-theme/${skin.id}.reading.css`, readingCss);
+            const readingTag = styleTag(`dsh-vyra-free-theme/${skin.id}.reading.css`, readingCss);
             stops.push(() => readingTag.remove());
           }
           const sidebarFadeCss = fills === null ? "" : buildSidebarFadeCss(effects.bodyAttribute);
           if (sidebarFadeCss !== "") {
-            const fadeTag = styleTag(`vyra-free-theme/${skin.id}.sidebarfade.css`, sidebarFadeCss);
+            const fadeTag = styleTag(`dsh-vyra-free-theme/${skin.id}.sidebarfade.css`, sidebarFadeCss);
             stops.push(() => fadeTag.remove());
           }
         }
         const backdrop = backdropCss(effects);
         if (backdrop !== null) {
-          const tag = styleTag(`vyra-free-theme/${skin.id}.backdrop.css`, backdrop);
+          const tag = styleTag(`dsh-vyra-free-theme/${skin.id}.backdrop.css`, backdrop);
           stops.push(() => tag.remove());
         }
         if (effects.sidebar !== null && effects.sidebar !== void 0) {
           const tag = styleTag(
-            `vyra-free-theme/${skin.id}.sidebar.css`,
+            `dsh-vyra-free-theme/${skin.id}.sidebar.css`,
             sidebarCss(effects.sidebar, effects.bodyAttribute)
           );
           stops.push(() => tag.remove());
@@ -1260,17 +1260,17 @@ ${darkSelector}{${dark.join(";")}}`;
         if (wallpaperStop !== null) stops.push(wallpaperStop);
         const variables = variablesCss(effects);
         if (variables !== null) {
-          const tag = styleTag(`vyra-free-theme/${skin.id}.vars.css`, variables);
+          const tag = styleTag(`dsh-vyra-free-theme/${skin.id}.vars.css`, variables);
           stops.push(() => tag.remove());
         }
         if (effects.decorations !== null) {
           for (const decoration of effects.decorations) {
-            const tag = styleTag(`vyra-free-theme/${skin.id}.decor.${decoration.key}.css`, decoration.css);
+            const tag = styleTag(`dsh-vyra-free-theme/${skin.id}.decor.${decoration.key}.css`, decoration.css);
             stops.push(() => tag.remove());
           }
         }
         if (effects.tokenOverrides !== null && typeof ctx.theme?.overrideTokens === "function") {
-          const disposeTokens = ctx.theme.overrideTokens(`vyra-free-theme/${skin.id}`, effects.tokenOverrides);
+          const disposeTokens = ctx.theme.overrideTokens(`dsh-vyra-free-theme/${skin.id}`, effects.tokenOverrides);
           stops.push(disposeTokens);
         }
         const hadAttribute = body.dataset[effects.bodyAttribute] !== void 0;
@@ -1336,7 +1336,7 @@ ${darkSelector}{${dark.join(";")}}`;
       try {
         stop = buildEffects(skin, effects);
       } catch (error) {
-        console.warn(`[vyra-free-theme] mounting "${skin.id}" failed`, error);
+        console.warn(`[dsh-vyra-free-theme] mounting "${skin.id}" failed`, error);
         restorePrevious(previous, error);
         return false;
       }
@@ -1359,7 +1359,7 @@ ${darkSelector}{${dark.join(";")}}`;
             return;
           }
         } catch (restoreError) {
-          console.error("[vyra-free-theme] restoring the previous skin failed; falling back to official", restoreError);
+          console.error("[dsh-vyra-free-theme] restoring the previous skin failed; falling back to official", restoreError);
         }
       }
       void cause;
@@ -1370,14 +1370,14 @@ ${darkSelector}{${dark.join(";")}}`;
       const overrides = overridesFor(skin.id);
       const result = projectSkin(skin, overrides, projectionContext());
       if (result.effects === null) {
-        console.warn(`[vyra-free-theme] skin "${skin.id}" failed to project`);
+        console.warn(`[dsh-vyra-free-theme] skin "${skin.id}" failed to project`);
         if (mounted !== null) return false;
         selectedId = OFFICIAL_SKIN_ID;
         announce(OFFICIAL_SKIN_ID);
         return false;
       }
       if (result.degraded !== "none") {
-        console.warn(`[vyra-free-theme] skin "${skin.id}" projected with degraded defaults (${result.degraded})`);
+        console.warn(`[dsh-vyra-free-theme] skin "${skin.id}" projected with degraded defaults (${result.degraded})`);
       }
       return applyEffects(skin, result.effects, overrides);
     }
@@ -1387,7 +1387,7 @@ ${darkSelector}{${dark.join(";")}}`;
       const overrides = overridesFor(skin.id);
       const result = projectSkin(skin, overrides, projectionContext());
       if (result.effects === null) {
-        console.warn("[vyra-free-theme] config hot-update failed to project; keeping current effects");
+        console.warn("[dsh-vyra-free-theme] config hot-update failed to project; keeping current effects");
         return { applied: false, reason: "projection-failed" };
       }
       const applied = applyEffects(skin, result.effects, overrides);
@@ -1407,7 +1407,7 @@ ${darkSelector}{${dark.join(";")}}`;
       const normalizedId = normalizeChoiceId(id);
       const skin = skins.get(normalizedId);
       if (normalizedId !== OFFICIAL_SKIN_ID && !skin) {
-        throw new Error(`[vyra-free-theme] unknown skin "${id}" — available: ${[OFFICIAL_SKIN_ID, ...order].join(", ")}`);
+        throw new Error(`[dsh-vyra-free-theme] unknown skin "${id}" — available: ${[OFFICIAL_SKIN_ID, ...order].join(", ")}`);
       }
       if (selectedId === normalizedId && mounted !== null) return normalizedId;
       preloadEffectiveWallpaper(normalizedId);
@@ -1427,7 +1427,7 @@ ${darkSelector}{${dark.join(";")}}`;
         } catch {
         }
       } else {
-        console.warn(`[vyra-free-theme] selection of "${normalizedId}" did not take effect`);
+        console.warn(`[dsh-vyra-free-theme] selection of "${normalizedId}" did not take effect`);
       }
       return normalizedId;
     }
@@ -1442,7 +1442,7 @@ ${darkSelector}{${dark.join(";")}}`;
         selectedId = OFFICIAL_SKIN_ID;
       } else {
         const skin = skins.get(id) ?? skins.get(order[0]);
-        if (!skin) throw new Error("[vyra-free-theme] no skins registered");
+        if (!skin) throw new Error("[dsh-vyra-free-theme] no skins registered");
         if (!mountSkin(skin)) selectedId = OFFICIAL_SKIN_ID;
       }
       return () => {
@@ -1470,7 +1470,7 @@ ${darkSelector}{${dark.join(";")}}`;
   }
 
   // src/client/dicts.js
-  var NS = "vyra-free-theme.ui";
+  var NS = "dsh-vyra-free-theme.ui";
   var DICTS = {
     zh: {
       "skins.switch": "主题切换",
@@ -2230,7 +2230,7 @@ ${references.join("\n")}`,
   }
 
   // src/client/sidebar-switcher.js
-  var TAG_ID = "vyra-free-theme/sidebar.css";
+  var TAG_ID = "dsh-vyra-free-theme/sidebar.css";
   var SWEEP_MS = 200;
   function sweepShellHeight(shell, { from, fromWidth, maxHeight, duration = SWEEP_MS } = {}) {
     if (!shell || typeof from !== "number" || !Number.isFinite(from)) return () => {
@@ -2554,8 +2554,8 @@ ${references.join("\n")}`,
       }, [open]);
       react.useEffect(() => {
         const onChange = () => setActiveId(runtime.active());
-        window.addEventListener("vyra-free-theme:active-changed", onChange);
-        return () => window.removeEventListener("vyra-free-theme:active-changed", onChange);
+        window.addEventListener("dsh-vyra-free-theme:active-changed", onChange);
+        return () => window.removeEventListener("dsh-vyra-free-theme:active-changed", onChange);
       }, []);
       react.useEffect(() => ctx.on("theme/change", (snapshot) => {
         if (snapshot?.preference) setThemePreference(snapshot.preference);
@@ -2695,12 +2695,12 @@ ${references.join("\n")}`,
     }
     ctx.effect(() => {
       const tag = document.createElement("style");
-      tag.dataset.plugin = "vyra-free-theme";
+      tag.dataset.plugin = "dsh-vyra-free-theme";
       tag.dataset.pluginCss = TAG_ID;
       tag.textContent = CSS;
       document.head.appendChild(tag);
       return () => tag.remove();
-    }, "vyra-free-theme: sidebar switcher style");
+    }, "dsh-vyra-free-theme: sidebar switcher style");
     ctx.effect(() => {
       try {
         return ctx.locale.register(NS, DICTS);
@@ -2708,7 +2708,7 @@ ${references.join("\n")}`,
         return () => {
         };
       }
-    }, "vyra-free-theme: sidebar switcher dictionary");
+    }, "dsh-vyra-free-theme: sidebar switcher dictionary");
     const shellTakeover = () => {
       try {
         return (ctx.slots.entries?.("sidebar.workspaces") ?? []).some((entry) => (entry.options.priority ?? 0) < 0);
@@ -2739,7 +2739,7 @@ ${references.join("\n")}`,
   }
 
   // src/client/theme-persistence.js
-  var THEME_STORAGE_KEY = "vyra-free-theme:theme-preference";
+  var THEME_STORAGE_KEY = "dsh-vyra-free-theme:theme-preference";
   var PREFERENCES = /* @__PURE__ */ new Set(["light", "dark", "system"]);
   function installRemoteThemePersistence(ctx) {
     if (ctx.connection?.isLoopback === true) return;
@@ -2774,14 +2774,14 @@ ${references.join("\n")}`,
   }
 
   // src/client/personalization/config-client.js
-  var CHANNEL = "vyra-free-theme";
+  var CHANNEL = "dsh-vyra-free-theme";
   var FETCH_TIMEOUT_MS = 3e3;
   var UPLOAD_TIMEOUT_MS = 12e4;
-  var RETRY = /* @__PURE__ */ Symbol("vyra-free-theme:write-dialect-retry");
+  var RETRY = /* @__PURE__ */ Symbol("dsh-vyra-free-theme:write-dialect-retry");
   function cloneSkins(skins) {
     return skins === void 0 || skins === null ? {} : structuredClone(skins);
   }
-  var FIRST_PAINT_HINT_KEY = "vyra-free-theme:first-paint-hint";
+  var FIRST_PAINT_HINT_KEY = "dsh-vyra-free-theme:first-paint-hint";
   var FIRST_PAINT_HINT_MAX_CHARS = 262144;
   var FIRST_PAINT_EXTENSION = /^[a-z0-9]+$/;
   function isPlainObject2(value) {
@@ -2831,7 +2831,7 @@ ${references.join("\n")}`,
   }
   function createConfigClient(options = {}) {
     const fetchImpl = options.fetchImpl ?? (typeof fetch === "function" ? fetch : null);
-    const baseUrl = options.baseUrl ?? "/vyra-free-theme";
+    const baseUrl = options.baseUrl ?? "/dsh-vyra-free-theme";
     const profile = options.profile === "desktop" ? "desktop" : "web";
     const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
     const uploadTimeoutMs = options.uploadTimeoutMs ?? UPLOAD_TIMEOUT_MS;
@@ -3015,7 +3015,7 @@ ${references.join("\n")}`,
               if (code === "STORE_RECOVERY_REQUIRED") {
                 const decision2 = await policy.onRecoveryRequired(errorMessage);
                 if (decision2 === RETRY) {
-                  throw new Error("[vyra-free-theme] onRecoveryRequired must resolve, never RETRY");
+                  throw new Error("[dsh-vyra-free-theme] onRecoveryRequired must resolve, never RETRY");
                 }
                 return decision2;
               }
@@ -3149,7 +3149,7 @@ ${references.join("\n")}`,
     function announce() {
       try {
         if (typeof window !== "undefined" && typeof CustomEvent === "function") {
-          window.dispatchEvent(new CustomEvent("vyra-free-theme:config-changed"));
+          window.dispatchEvent(new CustomEvent("dsh-vyra-free-theme:config-changed"));
         }
       } catch {
       }
@@ -3429,7 +3429,7 @@ ${references.join("\n")}`,
   function bodyAttributeFor(id) {
     return `vft${id.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
   }
-  var THEME_ASSET_BASE = "/vyra-free-theme/theme";
+  var THEME_ASSET_BASE = "/dsh-vyra-free-theme/theme";
   var THEME_ASSET_MIME = Object.freeze({
     ".webp": "image/webp",
     ".png": "image/png",
@@ -3688,7 +3688,7 @@ ${references.join("\n")}`,
   }
 
   // src/client/themes.js
-  var THEMES_ROUTE = "/vyra-free-theme/themes";
+  var THEMES_ROUTE = "/dsh-vyra-free-theme/themes";
   function themeAssetUrl2(id, path) {
     return `${THEME_ASSET_BASE}/${id}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
   }
@@ -3763,8 +3763,8 @@ ${references.join("\n")}`,
   }
 
   // src/client/selection-sync.js
-  var SELECTION_ROUTE = "/vyra-free-theme/selection";
-  var ACTIVE_EVENT2 = "vyra-free-theme:active-changed";
+  var SELECTION_ROUTE = "/dsh-vyra-free-theme/selection";
+  var ACTIVE_EVENT2 = "dsh-vyra-free-theme:active-changed";
   async function adoptHostSelection({ runtime, fetchImpl = fetch }) {
     try {
       const response = await fetchImpl(SELECTION_ROUTE, { cache: "no-store" });
@@ -3811,7 +3811,7 @@ ${references.join("\n")}`,
       throw new RangeError(`builtinAssetUrl: invalid extension ${JSON.stringify(extension)}`);
     }
     const rev = "0.1.0";
-    return `/vyra-free-theme/assets/b_${skinId}_${assetKey}.${extension}?v=${rev}`;
+    return `/dsh-vyra-free-theme/assets/b_${skinId}_${assetKey}.${extension}?v=${rev}`;
   }
 
   // src/client/skins/meirenzhi/wallpapers.js
@@ -3865,7 +3865,7 @@ ${references.join("\n")}`,
   function frostFamilyCss(scope, tints) {
     const { frost, menu } = tints;
     return `/* 浮层毛玻璃家族（配方与选择器并集的唯一来源；裁决与修订史见 ADR-0007，单点生成见 ADR-0012）
-   * 宿主 Modal（设置页各弹窗、风险确认）、dsh-m / vyra-free-theme / dsh-context 等
+   * 宿主 Modal（设置页各弹窗、风险确认）、dsh-m / dsh-vyra-free-theme / dsh-context 等
    * 插件弹层、dockkit 悬浮窗壳与宿主对话框兜底、下拉菜单面、右栏内嵌卡与
    * 提示卡的统一配方：86% 不透明皮肤底色 + blur(14px) saturate(1.3) 提饱和
    * （.lc-tip 经主人两轮实测定 96% 特例浓度），下层内容被盖住只余柔光；
@@ -4291,7 +4291,7 @@ ${references.join("\n")}`,
     // cordis.patch.yml): the boot page emits __DSH_BOOT__ entries keyed by the
     // package name, and dsh-client-modules rejects a bundle whose registration
     // does not match its graph-row id ("loaded without registering …").
-    id: "vyra-free-theme",
+    id: "dsh-vyra-free-theme",
     factory: (require2) => {
       const jsxRuntime = require2("react/jsx-runtime");
       const react = require2("react");
@@ -4335,20 +4335,20 @@ ${references.join("\n")}`,
       let fileThemesStarted = false;
       function apply(ctx) {
         installRemoteThemePersistence(ctx);
-        ctx.effect(() => runtime.apply(ctx), "vyra-free-theme: active skin");
+        ctx.effect(() => runtime.apply(ctx), "dsh-vyra-free-theme: active skin");
         if (configClient !== null) {
-          ctx.effect(() => () => configClient.dispose(), "vyra-free-theme: config client");
+          ctx.effect(() => () => configClient.dispose(), "dsh-vyra-free-theme: config client");
         }
         ctx.effect(() => {
           if (fileThemesStarted) return;
           fileThemesStarted = true;
           publishSelection();
           installFileThemes({ runtime, jsx: jsxRuntime.jsx, profile }).then(({ installed, problems }) => {
-            if (problems.length > 0) console.warn("[vyra-free-theme] theme problems:", problems);
+            if (problems.length > 0) console.warn("[dsh-vyra-free-theme] theme problems:", problems);
             if (installed.length > 0) runtime.refreshSelection();
             return adoptHostSelection({ runtime });
-          }).catch((error) => console.warn("[vyra-free-theme] file themes unavailable:", error));
-        }, "vyra-free-theme: file themes");
+          }).catch((error) => console.warn("[dsh-vyra-free-theme] file themes unavailable:", error));
+        }, "dsh-vyra-free-theme: file themes");
         try {
           installSidebarSwitcher(ctx, {
             runtime,
@@ -4359,7 +4359,7 @@ ${references.join("\n")}`,
             skinsById: (id) => skinById.get(id) ?? null
           });
         } catch (error) {
-          console.warn("[vyra-free-theme] sidebar switcher registration failed:", error);
+          console.warn("[dsh-vyra-free-theme] sidebar switcher registration failed:", error);
         }
       }
       window.__VFT__ = {

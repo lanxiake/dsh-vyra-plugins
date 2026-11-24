@@ -1,7 +1,7 @@
 /**
  * Presents CLIs to the harness as model providers, which puts them in the model
  * menu and lets the agent loop drive them without loop changes.
- * @module vyra-agent-cli-manager/adapter
+ * @module dsh-vyra-agent-cli-manager/adapter
  */
 import { LlmAdapter } from '@deepseek-ai/dsh-llm';
 import type { GenerateOptions, LlmModelInfo, LlmModelReasoningInfo, LlmProviderInfo, LlmResolvedModelInfo, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm';

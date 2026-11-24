@@ -1,9 +1,9 @@
 /**
- * HTTP routes the 变更 panel posts to, under `/vyra-agent-cli-manager/git/<operation>`. The harness's
+ * HTTP routes the 变更 panel posts to, under `/dsh-vyra-agent-cli-manager/git/<operation>`. The harness's
  * web server leaves authentication to each route, so every request first asks the
  * `connection` service for a rejection: its Host/Origin fence stops cross-site and DNS-
  * rebinding callers, and its login-token check stops anyone who is not the signed-in browser.
- * @module vyra-agent-cli-manager/git/git-routes
+ * @module dsh-vyra-agent-cli-manager/git/git-routes
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Spawn } from './git-run.ts';

@@ -1,7 +1,7 @@
 /**
  * Asks a CLI which models it offers. ACP only reports them on a session, so this
  * opens one and removes it again. It sends no prompt, so no model is called.
- * @module vyra-agent-cli-manager/model-probe
+ * @module dsh-vyra-agent-cli-manager/model-probe
  */
 import type { CliModelList } from './model-options.ts';
 import type { AcpTransport, TransportHandlers } from './transport.ts';

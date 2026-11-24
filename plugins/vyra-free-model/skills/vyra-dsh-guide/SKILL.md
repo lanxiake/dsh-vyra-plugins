@@ -1,6 +1,6 @@
 ---
 name: vyra-dsh-guide
-description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件市场怎么配置、该装哪些插件，或不知道用 DSH 做什么、需要推荐插件组合时使用。覆盖 Veyra 索引源、vyra-plugin-market 插件市场、宿主的 plugin_manager 工具与 vyra-market CLI，以及先了解用户需求再推荐、安装插件组合的完整流程。
+description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件市场怎么配置、该装哪些插件，或不知道用 DSH 做什么、需要推荐插件组合时使用。覆盖 Veyra 索引源、dsh-vyra-plugin-market 插件市场、宿主的 plugin_manager 工具与 vyra-market CLI，以及先了解用户需求再推荐、安装插件组合的完整流程。
 ---
 
 # 帮用户搭建自己的 DSH 工作台
@@ -43,7 +43,7 @@ description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件�
 > 仍显示旧版本。用户说「市场里没有新版本」时，先让他把索引源换成国内那条，或换成按
 > commit 固定的地址（`@<完整 commit>`），这类地址是不可变缓存，立刻就是最新。
 
-`vyra-plugin-market` 是更完整的市场插件：卡片式浏览、跨源搜索、批量安装 / 更新 / 卸载 / 启停，并带 `vyra-market` CLI。用户接受时可以优先推荐安装它。
+`dsh-vyra-plugin-market` 是更完整的市场插件：卡片式浏览、跨源搜索、批量安装 / 更新 / 卸载 / 启停，并带 `vyra-market` CLI。用户接受时可以优先推荐安装它。
 
 安装来源与网络：
 
@@ -65,14 +65,14 @@ description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件�
 
 ## 我们维护的插件（优先检索）
 
-- `vyra-free-model`：免费模型，零配置聊天，带账号与积分管理。
-- `vyra-plugin-market`：插件市场，跨源搜索、批量安装，附带 `vyra-market` CLI。
-- `vyra-screen-recorder`：录屏与截图（Windows），系统声音、MP4、标注。
-- `vyra-dsh-console`：DSH 插件控制台 / 清单。
-- `vyra-system-selection`：划词助手（Windows）。
-- `vyra-agent-manager` / `vyra-agent-cli-manager`：Agent 与 CLI 管理。
-- `vyra-wechat-local`：微信本地接入。
-- `vyra-media-studio`：媒体工作台。
+- `dsh-vyra-free-model`：免费模型，零配置聊天，带账号与积分管理。
+- `dsh-vyra-plugin-market`：插件市场，跨源搜索、批量安装，附带 `vyra-market` CLI。
+- `dsh-vyra-screen-recorder`：录屏与截图（Windows），系统声音、MP4、标注。
+- `dsh-vyra-dsh-console`：DSH 插件控制台 / 清单。
+- `dsh-vyra-system-selection`：划词助手（Windows）。
+- `dsh-vyra-agent-manager` / `dsh-vyra-agent-cli-manager`：Agent 与 CLI 管理。
+- `dsh-vyra-wechat-local`：微信本地接入。
+- `dsh-vyra-media-studio`：媒体工作台。
 - 其余按分类在 Veyra 索引里查，不要凭记忆编造插件。
 
 ## 工具与命令
@@ -80,7 +80,7 @@ description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件�
 - 宿主工具：
   - `plugin_market`：搜索市场、读取插件详情与版本。
   - `plugin_manager`：`install_bundle` / `remove_bundle` / `set_bundle_enabled`，走同一条 profile 锁与回滚通道。
-- CLI（装了 `vyra-plugin-market` 后）：
+- CLI（装了 `dsh-vyra-plugin-market` 后）：
   - `vyra-market search <关键词> --json`
   - `vyra-market info <包名> --json`
   - `vyra-market install <包名> --json`（默认只输出计划；`--apply` 才执行）

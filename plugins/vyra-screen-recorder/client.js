@@ -1,11 +1,11 @@
 /**
- * vyra-screen-recorder — 浏览器端：工具条按钮、录制源选择、截图标注与编码。
+ * dsh-vyra-screen-recorder — 浏览器端：工具条按钮、录制源选择、截图标注与编码。
  *
  * 编码全部在浏览器里做：宿主只给 JPEG 帧和 WAV，WebCodecs 编 VP9 + Opus，
  * 再用内置 webm-muxer 封装成单个 .webm。这样不需要 Python / ffmpeg。
  */
 window.__ModuleLoader__.load({
-  id: 'vyra-screen-recorder',
+  id: 'dsh-vyra-screen-recorder',
   factory: (require) => {
     const module = { exports: {} }
     const exports = module.exports
@@ -5900,32 +5900,32 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
         void loadClientSettings()
         ctx.effect(() => ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
           name: 'conversation.input.left',
-          id: 'vyra-screen-recorder.tools',
+          id: 'dsh-vyra-screen-recorder.tools',
           order: 10,
-        }, Toolbar)), 'vyra-screen-recorder: toolbar')
+        }, Toolbar)), 'dsh-vyra-screen-recorder: toolbar')
         ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register({
           name: 'shell.overlay',
-          id: 'vyra-screen-recorder.overlay',
+          id: 'dsh-vyra-screen-recorder.overlay',
           order: 90,
-        }, RootOverlay)), 'vyra-screen-recorder: overlay')
+        }, RootOverlay)), 'dsh-vyra-screen-recorder: overlay')
         ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
-          id: 'vyra-screen-recorder',
+          id: 'dsh-vyra-screen-recorder',
           order: 37,
           label: () => L('录屏截图', 'Screen recorder'),
-        }, SettingsPage)), 'vyra-screen-recorder: settings')
+        }, SettingsPage)), 'dsh-vyra-screen-recorder: settings')
         ctx.effect(() => ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
           name: 'settings.section.icon',
-          id: 'vyra-screen-recorder',
+          id: 'dsh-vyra-screen-recorder',
           order: 37,
-        }, SettingsIcon)), 'vyra-screen-recorder: settings icon')
+        }, SettingsIcon)), 'dsh-vyra-screen-recorder: settings icon')
         // 官方插件管理页也给每个 bundle 一个配置插槽；老宿主没有这个插槽时静默跳过。
         try {
           ctx.effect(() => ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
             name: 'plugins.bundle.config',
-            key: 'vyra-screen-recorder',
+            key: 'dsh-vyra-screen-recorder',
             order: 37,
-          }, SettingsPage)), 'vyra-screen-recorder: plugin page settings')
+          }, SettingsPage)), 'dsh-vyra-screen-recorder: plugin page settings')
         } catch { /* 老宿主没有插件页配置槽 */ }
         const onShortcut = event => {
           if (event.repeat) return
@@ -5950,16 +5950,16 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
           }
         }
         window.addEventListener('keydown', onShortcut, true)
-        ctx.effect(() => () => window.removeEventListener('keydown', onShortcut, true), 'vyra-screen-recorder: shortcuts')
+        ctx.effect(() => () => window.removeEventListener('keydown', onShortcut, true), 'dsh-vyra-screen-recorder: shortcuts')
         const onPageHide = () => {
           if (state.phase === 'recording' || state.phase === 'starting') {
             try { navigator.sendBeacon(PREFIX + '/record/discard', '') } catch { /* ignore */ }
           }
         }
         window.addEventListener('pagehide', onPageHide)
-        ctx.effect(() => () => window.removeEventListener('pagehide', onPageHide), 'vyra-screen-recorder: pagehide')
+        ctx.effect(() => () => window.removeEventListener('pagehide', onPageHide), 'dsh-vyra-screen-recorder: pagehide')
         startAgentWatch()
-        ctx.effect(() => () => stopAgentWatch(), 'vyra-screen-recorder: agent watch')
+        ctx.effect(() => () => stopAgentWatch(), 'dsh-vyra-screen-recorder: agent watch')
         // 插件热更/页面刷新后，宿主可能还挂着上一路录制；主动清掉，避免临时目录泄漏。
         // Agent 队列里的录制不能清：它还要等本页面编码。
         apiJson('/record/status').then(status => {
@@ -5970,7 +5970,7 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
           })
         }).catch(() => {})
       } catch (error) {
-        try { console.warn('[vyra-screen-recorder] apply failed', error) } catch { /* ignore */ }
+        try { console.warn('[dsh-vyra-screen-recorder] apply failed', error) } catch { /* ignore */ }
       }
     }
 

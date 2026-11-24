@@ -1,4 +1,4 @@
 - insert:
     - id: system-selection
-      name: 'vyra-system-selection'
+      name: 'dsh-vyra-system-selection'
       config: {}

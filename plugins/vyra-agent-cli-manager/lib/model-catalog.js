@@ -4,7 +4,7 @@
  * filling the menu never asks: a CLI is only started once someone has chosen it, and
  * the menu refreshes when the answer arrives. Answers are saved, so a restarted plugin
  * can show the last known lists while it asks again.
- * @module vyra-agent-cli-manager/model-catalog
+ * @module dsh-vyra-agent-cli-manager/model-catalog
  */
 import { DEFAULT_MODEL_ID } from "./constants.js";
 import { learnEfforts, reasoningFor } from "./model-efforts.js";
@@ -178,7 +178,7 @@ export class CliModelCatalog {
             .catch((error) => {
             if (!this.answered.has(provider))
                 this.asked = new Set([...this.asked].filter((asked) => asked !== provider));
-            this.deps.warn(`vyra-agent-cli-manager: could not list models for ${provider}: ${String(error)}`);
+            this.deps.warn(`dsh-vyra-agent-cli-manager: could not list models for ${provider}: ${String(error)}`);
         });
     }
     /**
@@ -205,7 +205,7 @@ export class CliModelCatalog {
     }
     persist() {
         this.deps.save(this.lists).catch((error) => {
-            this.deps.warn(`vyra-agent-cli-manager: could not save model lists: ${String(error)}`);
+            this.deps.warn(`dsh-vyra-agent-cli-manager: could not save model lists: ${String(error)}`);
         });
     }
     defaultName(list) {

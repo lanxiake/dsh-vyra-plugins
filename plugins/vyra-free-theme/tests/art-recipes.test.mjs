@@ -52,7 +52,7 @@ test("vft wallpaper art writes the asset, sets the wallpaper and records pixel s
   await vft(home, "theme", "create", "--from", "mono", "--id", "mine");
   const generated = await vft(home, "wallpaper", "art", "mine", "--recipe", "starfield", "--size", "square", "--seed", "11", "--json");
   assert.equal(generated.exitCode, 0, JSON.stringify(generated.payload));
-  const themeDir = join(home, "vyra-free-theme", "themes", "mine");
+  const themeDir = join(home, "dsh-vyra-free-theme", "themes", "mine");
   const asset = join(themeDir, "assets", "starfield-11.png");
   assert.ok(existsSync(asset));
   const raw = JSON.parse(readFileSync(join(themeDir, "theme.json"), "utf8"));

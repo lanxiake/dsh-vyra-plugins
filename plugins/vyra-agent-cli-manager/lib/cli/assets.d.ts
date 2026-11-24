@@ -5,7 +5,7 @@
  * Both are plain files under a path the catalog already records, so nothing here runs a CLI:
  * these are reads of the user's own configuration, and a CLI's own command for listing skills
  * prints a table meant for a terminal rather than a stable contract.
- * @module vyra-agent-cli-manager/cli/assets
+ * @module dsh-vyra-agent-cli-manager/cli/assets
  */
 import type { CliCatalogEntry } from './catalog.ts';
 /** One skill the CLI would load, as the panel lists it. */

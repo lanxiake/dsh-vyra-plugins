@@ -290,7 +290,7 @@ test('a long reason is trimmed with an ellipsis rather than cut mid-word', () =>
 
 test('marketInstallSpec 生成 plugin_manager 接受的 git spec', () => {
   assert.equal(marketInstallSpec({
-    name: 'vyra-plugin-market',
+    name: 'dsh-vyra-plugin-market',
     versions: [{ source: { type: 'git', url: 'https://gitcode.com/a/b.git', commit: 'abc', path: 'plugins/vyra-plugin-market' } }],
   }), 'git+https://gitcode.com/a/b.git#abc&path:/plugins/vyra-plugin-market')
   assert.equal(marketInstallSpec({
@@ -313,7 +313,7 @@ test('marketInstalled 读宿主 bundle 列表', async () => {
   const remote = {
     pluginManager: {
       async listBundles() {
-        return { ok: true, value: [{ name: 'vyra-plugin-market', enabled: true }, { name: 'other' }] }
+        return { ok: true, value: [{ name: 'dsh-vyra-plugin-market', enabled: true }, { name: 'other' }] }
       },
     },
   }
@@ -439,7 +439,7 @@ test('marketEntry 找到市场那一行，并带上它的版本与更新方式',
           ok: true,
           value: [
             { name: 'other', version: '1.0.0' },
-            { name: 'vyra-plugin-market', version: '0.2.12', update: 'git', source: 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market' },
+            { name: 'dsh-vyra-plugin-market', version: '0.2.12', update: 'git', source: 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market' },
           ],
         }
       },
@@ -464,13 +464,13 @@ test('updateMarket 对 git 版本调用 updateBundle 并带上索引里的 spec'
   }
   const outcome = await updateMarket(
     remote,
-    { name: 'vyra-plugin-market', version: '0.2.12', update: 'git', source: 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market' },
+    { name: 'dsh-vyra-plugin-market', version: '0.2.12', update: 'git', source: 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market' },
     { spec: 'git+https://gitcode.com/x#bbb&path:/plugins/vyra-plugin-market', url: 'https://example/index.json' },
   )
   assert.equal(outcome.state, 'updated')
   assert.equal(outcome.to, '0.2.13')
   assert.equal(calls.length, 1)
-  assert.equal(calls[0][0], 'vyra-plugin-market')
+  assert.equal(calls[0][0], 'dsh-vyra-plugin-market')
   assert.equal(calls[0][1], '0.2.12')
   assert.equal(calls[0][2].spec, 'git+https://gitcode.com/x#bbb&path:/plugins/vyra-plugin-market')
 })
@@ -479,7 +479,7 @@ test('updateMarket 已经是同一个 spec 时不发请求', async () => {
   let called = false
   const same = 'git+https://gitcode.com/x#aaa&path:/plugins/vyra-plugin-market'
   const remote = { pluginManager: { async updateBundle() { called = true; return { ok: true, value: {} } } } }
-  const outcome = await updateMarket(remote, { name: 'vyra-plugin-market', version: '0.2.12', update: 'git', source: same }, { spec: same })
+  const outcome = await updateMarket(remote, { name: 'dsh-vyra-plugin-market', version: '0.2.12', update: 'git', source: same }, { spec: same })
   assert.equal(outcome.state, 'current')
   assert.equal(called, false)
 })
@@ -487,7 +487,7 @@ test('updateMarket 已经是同一个 spec 时不发请求', async () => {
 test('updateMarket 对不可更新的副本不报错，只报告跳过', async () => {
   let called = false
   const remote = { pluginManager: { async updateBundle() { called = true; return { ok: true, value: {} } } } }
-  const outcome = await updateMarket(remote, { name: 'vyra-plugin-market', version: '0.2.12' }, { spec: 'x@1' })
+  const outcome = await updateMarket(remote, { name: 'dsh-vyra-plugin-market', version: '0.2.12' }, { spec: 'x@1' })
   assert.equal(outcome.state, 'skipped')
   assert.equal(called, false)
 })
@@ -500,8 +500,8 @@ test('updateMarket 把宿主的失败翻译成一个可显示的状态', async (
   }
   const outcome = await updateMarket(
     remote,
-    { name: 'vyra-plugin-market', version: '0.1.0', update: 'registry' },
-    { spec: 'vyra-plugin-market@1.0.0' },
+    { name: 'dsh-vyra-plugin-market', version: '0.1.0', update: 'registry' },
+    { spec: 'dsh-vyra-plugin-market@1.0.0' },
   )
   assert.equal(outcome.state, 'failed')
   assert.equal(outcome.message, 'pnpm said no')
@@ -529,7 +529,7 @@ test('交流链接用的是页面上同一种按钮，而不是另造一种胶�
 })
 
 test('QQ 二维码指向本插件自己的路由，而不是外网或内联图片', () => {
-  assert.ok(QQ_QR_SRC.startsWith('/api/vyra-free-model/assets/'))
+  assert.ok(QQ_QR_SRC.startsWith('/api/dsh-vyra-free-model/assets/'))
   assert.ok(QQ_QR_SRC.endsWith('.png'))
   assert.equal(QQ_QR_SRC.includes('data:image'), false)
 })

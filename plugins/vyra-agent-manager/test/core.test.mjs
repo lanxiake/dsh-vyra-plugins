@@ -157,4 +157,4 @@ test('previewAgent validates without installing and reports the rows a save woul
   }
 })
 
-console.log('vyra-agent-manager: core checks passed')
+console.log('dsh-vyra-agent-manager: core checks passed')

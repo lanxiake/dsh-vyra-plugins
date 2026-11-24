@@ -15,7 +15,7 @@
 export type LocaleMap = { readonly en: string; readonly zh?: string }
 
 /**
- * Inline icon for `vyra-tool-usage-stats`: three ascending bars.
+ * Inline icon for `dsh-vyra-tool-usage-stats`: three ascending bars.
  *
  * Inline rather than a file because the market card renders it from the index
  * document itself; a relative path would not resolve from the client, and
@@ -56,7 +56,7 @@ const TOOL_USAGE_ICON =
  */
 
 /**
- * Inline icon for `vyra-studymate`.
+ * Inline icon for `dsh-vyra-studymate`.
  *
  * Hand-held, and declared OUTSIDE the generated icon block below on purpose:
  * `sync-manifest-icons.mjs` derives each constant from the plugin's own
@@ -67,43 +67,43 @@ const TOOL_USAGE_ICON =
 const STUDYMATE_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiM0ZjQ2ZTUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMzIgMjB2MjYiLz48cGF0aCBkPSJNMzIgMjBjLTQtMy05LTQtMTQtNHYyNmM1IDAgMTAgMSAxNCA0IDQtMyA5LTQgMTQtNFYxNmMtNSAwLTEwIDEtMTQgNHoiLz48L2c+PHBhdGggZD0iTTI2LjUgMjkuNWwxMCA1LTEwIDV6IiBmaWxsPSIjZmZmIi8+PC9zdmc+'
 
-/** Inline icon for `vyra-agent-manager`. */
+/** Inline icon for `dsh-vyra-agent-manager`. */
 const AGENT_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM0RjQ2RTU7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzdDM0FFRDtzdG9wLW9wYWNpdHk6MSIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjEyIiBmaWxsPSJ1cmwoI2dyYWQpIi8+CiAgPGcgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOTUiPgogICAgPGNpcmNsZSBjeD0iMjIiIGN5PSIyNCIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iNDIiIGN5PSIyNCIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iMzIiIGN5PSI0NCIgcj0iNiIvPgogICAgPHBhdGggZD0iTTIyIDMwIEwzMiAzOCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICAgIDxwYXRoIGQ9Ik00MiAzMCBMMzIgMzgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgb3BhY2l0eT0iMC42Ii8+CiAgPC9nPgo8L3N2Zz4NCg=='
-/** Inline icon for `vyra-smart-compaction`. */
+/** Inline icon for `dsh-vyra-smart-compaction`. */
 const SMART_COMPACTION_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlNtYXJ0IGNvbXBhY3Rpb24iPgogIDx0aXRsZT5TbWFydCBjb21wYWN0aW9uPC90aXRsZT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cmVjdCB4PSI2IiB5PSI5IiB3aWR0aD0iMzYiIGhlaWdodD0iMzAiIHJ4PSI0IiAvPgogICAgPHBhdGggZD0iTTExIDE2aDI2IiAvPgogICAgPHBhdGggZD0iTTExIDIzaDE4IiAvPgogICAgPHBhdGggZD0iTTExIDMwaDEwIiAvPgogICAgPHBhdGggZD0iTTMwIDI3LjUgMzUuNSAzMyAzMCAzOC41IiAvPgogIDwvZz4KICA8Y2lyY2xlIGN4PSIxOC41IiBjeT0iMzMuNSIgcj0iMi40IiBmaWxsPSJjdXJyZW50Q29sb3IiIC8+Cjwvc3ZnPgo='
-/** Inline icon for `vyra-skill-mcp-manager`. */
+/** Inline icon for `dsh-vyra-skill-mcp-manager`. */
 const SKILL_MCP_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICA8cGF0aCBkPSJNMjEgMTZWOGEyIDIgMCAwIDAtMS0xLjczbC03LTRhMiAyIDAgMCAwLTIgMGwtNyA0QTIgMiAwIDAgMCAzIDh2OGEyIDIgMCAwIDAgMSAxLjczbDcgNGEyIDIgMCAwIDAgMiAwbDctNEEyIDIgMCAwIDAgMjEgMTZ6Ii8+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPgogIDxwYXRoIGQ9Ik0xMiA5djYiLz4KICA8cGF0aCBkPSJNOSAxMmg2Ii8+Cjwvc3ZnPgo='
-/** Inline icon for `vyra-ssh-terminal`. */
+/** Inline icon for `dsh-vyra-ssh-terminal`. */
 const SSH_TERMINAL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cmVjdCB4PSI2IiB5PSIxMCIgd2lkdGg9IjUyIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iIzFmMjkzNyIvPgogIDxyZWN0IHg9IjYiIHk9IjEwIiB3aWR0aD0iNTIiIGhlaWdodD0iMTAiIHJ4PSI4IiBmaWxsPSIjMzc0MTUxIi8+CiAgPGNpcmNsZSBjeD0iMTQiIGN5PSIxNSIgcj0iMiIgZmlsbD0iI2Y4NzE3MSIvPgogIDxjaXJjbGUgY3g9IjIxIiBjeT0iMTUiIHI9IjIiIGZpbGw9IiNmYmJmMjQiLz4KICA8Y2lyY2xlIGN4PSIyOCIgY3k9IjE1IiByPSIyIiBmaWxsPSIjMzRkMzk5Ii8+CiAgPHBhdGggZD0iTTE1IDMxbDggNi04IDYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM0ZDM5OSIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yOSA0NGgxNCIgc3Ryb2tlPSIjZTVlN2ViIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo='
-/** Inline icon for `vyra-system-selection`. */
+/** Inline icon for `dsh-vyra-system-selection`. */
 const SYSTEM_SELECTION_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIj4KICA8cGF0aCBkPSJNNCAzaDRNNCAzdjRNMjAgM2gtNE0yMCAzdjRNNCAyMWg0TTQgMjF2LTRNMjAgMjFoLTRNMjAgMjF2LTQiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05IDEyaDdNMTMgOWwzIDMtMyAzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+Cg=='
-/** Inline icon for `vyra-free-theme`. */
+/** Inline icon for `dsh-vyra-free-theme`. */
 const FREE_THEME_ICON =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHZpZXdCb3g9IjAgMCAzNiAzNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ImRzaC1za2lucyI+DQogIDwhLS0gZHNoLXNraW5zIOearuiCpO+8muS4ieW8oOaJh+W9ouiJsuWNoe+8iOe0qy/pnZIv6JOd77yJ57uV5bqV6YOo5p6i6L20IMKxMzDCsCDlsZXlvIAgPSDlpJrlpZflk4HniYznmq7ogqTng63liIfmjaIgLS0+DQogIDxyZWN0IHg9IjExLjUiIHk9IjkuNSIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3LjUiIHJ4PSIzLjIiIGZpbGw9InVybCgjdikiIHRyYW5zZm9ybT0icm90YXRlKC0zMCAxOCAyOSkiLz4NCiAgPHJlY3QgeD0iMTEuNSIgeT0iOS41IiB3aWR0aD0iMTMiIGhlaWdodD0iMTcuNSIgcng9IjMuMiIgZmlsbD0idXJsKCN0KSIvPg0KICA8cmVjdCB4PSIxMS41IiB5PSI5LjUiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNy41IiByeD0iMy4yIiBmaWxsPSJ1cmwoI2IpIiB0cmFuc2Zvcm09InJvdGF0ZSgzMCAxOCAyOSkiLz4NCiAgPGRlZnM+DQogICAgPGxpbmVhckdyYWRpZW50IGlkPSJiIiB4MT0iMTEuNSIgeTE9IjkuNSIgeDI9IjI0LjUiIHkyPSIyNyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPg0KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzY5QjlGRiIvPg0KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzI0REUyIi8+DQogICAgPC9saW5lYXJHcmFkaWVudD4NCiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InQiIHgxPSIxMS41IiB5MT0iOS41IiB4Mj0iMjQuNSIgeTI9IjI3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+DQogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNDVFN0E0Ii8+DQogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwNTkwOUQiLz4NCiAgICA8L2xpbmVhckdyYWRpZW50Pg0KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idiIgeDE9IjExLjUiIHkxPSI5LjUiIHgyPSIyNC41IiB5Mj0iMjciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4NCiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiNCMThDRkYiLz4NCiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzZDNERFMiIvPg0KICAgIDwvbGluZWFyR3JhZGllbnQ+DQogIDwvZGVmcz4NCjwvc3ZnPg0K'
-/** Inline icon for `vyra-agent-cli-manager`. */
+/** Inline icon for `dsh-vyra-agent-cli-manager`. */
 const AGENT_CLI_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkFnZW50IENMSSBNYW5hZ2VyIj4NCiAgPHRpdGxlPkFnZW50IENMSSBNYW5hZ2VyPC90aXRsZT4NCiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz4NCiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+DQogICAgPHJlY3QgeD0iMTQiIHk9IjE2IiB3aWR0aD0iMzYiIGhlaWdodD0iMzIiIHJ4PSI1IiBvcGFjaXR5PSIwLjg1Ii8+DQogICAgPHBhdGggZD0iTTIyIDI3bDUgNS01IDUiLz4NCiAgICA8cGF0aCBkPSJNMzIgMzdoMTAiLz4NCiAgPC9nPg0KPC9zdmc+DQo='
-/** Inline icon for `vyra-plugin-market`. */
+/** Inline icon for `dsh-vyra-plugin-market`. */
 const PLUGIN_MARKET_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTMgOS41IDEyIDRsOSA1LjV2NUwxMiAyMGwtOS01LjV2LTVaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMyA5LjUgMTIgMTVsOS01LjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMiAyMHYtNSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNy42IDYuOSAxNi40IDEyIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K'
-/** Inline icon for `vyra-media-studio`. */
+/** Inline icon for `dsh-vyra-media-studio`. */
 const MEDIA_STUDIO_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4NCiAgPHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMTAiIGZpbGw9IiMxMDE3MjIiLz4NCiAgPHJlY3QgeD0iOSIgeT0iMTIiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiM3QUFBRkYiIGZpbGwtb3BhY2l0eT0iLjkiLz4NCiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPg0KICA8cmVjdCB4PSI5IiB5PSIyNSIgd2lkdGg9IjkiIGhlaWdodD0iMTEiIHJ4PSIzIiBmaWxsPSIjNkZENkI1IiBmaWxsLW9wYWNpdHk9Ii45Ii8+DQogIDxwYXRoIGQ9Ik0yNC41IDMwLjUgMzQgMjUuMmwtOS41IDUuM3oiIGZpbGw9IiNGNEY1RjciLz4NCiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4NCjwvc3ZnPg0K'
-/** Inline icon for `vyra-dsh-console`. */
+/** Inline icon for `dsh-vyra-dsh-console`. */
 const DSH_CONSOLE_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkRTSCBDb25zb2xlIj4KICA8dGl0bGU+RFNIIENvbnNvbGU8L3RpdGxlPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjMGYzZDVjIi8+CiAgPHJlY3QgeD0iOSIgeT0iMTMiIHdpZHRoPSI0NiIgaGVpZ2h0PSIzOCIgcng9IjciIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2VhZjZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPHBhdGggZD0iTTkgMjRoNDYiIHN0cm9rZT0iI2VhZjZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxOC41IiByPSIyIiBmaWxsPSIjN2ZkMWZmIi8+CiAgPGNpcmNsZSBjeD0iMjMiIGN5PSIxOC41IiByPSIyIiBmaWxsPSIjN2ZkMWZmIiBvcGFjaXR5PSIwLjY1Ii8+CiAgPHBhdGggZD0iTTE2IDMxLjVoMTFNMTYgMzhoMTFNMTYgNDQuNWgxMSIgc3Ryb2tlPSIjN2ZkMWZmIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjkiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzOSA0MCkiPgogICAgPGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjkuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZkMjdmIiBzdHJva2Utd2lkdGg9IjIuOCIvPgogICAgPGcgc3Ryb2tlPSIjZmZkMjdmIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgICAgPHBhdGggZD0iTTAgLTE0LjV2LTMuNSIvPgogICAgICA8cGF0aCBkPSJNMCAxNC41djMuNSIvPgogICAgICA8cGF0aCBkPSJNLTE0LjUgMGgtMy41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0xNC41IDBoMy41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0tMTAuMyAtMTAuM2wtMi41IC0yLjUiLz4KICAgICAgPHBhdGggZD0iTTEwLjMgMTAuM2wyLjUgMi41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0xMC4zIC0xMC4zbDIuNSAtMi41Ii8+CiAgICAgIDxwYXRoIGQ9Ik0tMTAuMyAxMC4zbC0yLjUgMi41Ii8+CiAgICA8L2c+CiAgICA8Y2lyY2xlIGN4PSIwIiBjeT0iMCIgcj0iMi42IiBmaWxsPSIjZmZkMjdmIi8+CiAgPC9nPgo8L3N2Zz4K'
-/** Inline icon for `vyra-wechat-local`. */
+/** Inline icon for `dsh-vyra-wechat-local`. */
 const WECHAT_LOCAL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwN2MxNjAiLz48cGF0aCBkPSJNMTggMjBoMjhhNCA0IDAgMCAxIDQgNHYxNGE0IDQgMCAwIDEtNCA0SDMybC05IDd2LTdoLTVhNCA0IDAgMCAxLTQtNFYyNGE0IDQgMCAwIDEgNC00eiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjI1IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjxjaXJjbGUgY3g9IjM5IiBjeT0iMzEiIHI9IjIuNiIgZmlsbD0iIzA3YzE2MCIvPjwvc3ZnPg=='
-/** Inline icon for `vyra-xianyu-delivery`. */
+/** Inline icon for `dsh-vyra-xianyu-delivery`. */
 const XIANYU_DELIVERY_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjlkNmUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTMgMjRsMTktMTAgMTkgMTB2MTlhNSA1IDAgMCAxLTUgNUgxOGE1IDUgMCAwIDEtNS01eiIvPjxwYXRoIGQ9Ik0yNCAzNGgxNk0yNCA0MmgxMCIvPjwvZz48L3N2Zz4K'
-/** Inline icon for `vyra-screen-recorder`. */
+/** Inline icon for `dsh-vyra-screen-recorder`. */
 const VYRA_SCREEN_RECORDER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNSIgZmlsbD0iIzEyMTYxRiIvPgogIDxyZWN0IHg9IjIuNzUiIHk9IjIuNzUiIHdpZHRoPSI1OC41IiBoZWlnaHQ9IjU4LjUiIHJ4PSIxNC4yNSIgc3Ryb2tlPSIjMkIzMjQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxyZWN0IHg9IjEzIiB5PSIxNiIgd2lkdGg9IjM4IiBoZWlnaHQ9IjI2IiByeD0iNiIgc3Ryb2tlPSIjRjRGNUY3IiBzdHJva2Utd2lkdGg9IjMiLz4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjI5IiByPSI1LjUiIGZpbGw9IiNFNTQ4NEQiLz4KICA8cGF0aCBkPSJNMjQgNTBoMTYiIHN0cm9rZT0iI0Y0RjVGNyIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cmVjdCB4PSI0MSIgeT0iMzkiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiMxNjc3RkYiLz4KICA8Y2lyY2xlIGN4PSI0Ny41IiBjeT0iNDQiIHI9IjIuNiIgc3Ryb2tlPSIjRjRGNUY3IiBzdHJva2Utd2lkdGg9IjEuOCIvPgo8L3N2Zz4K'
 
@@ -217,7 +217,7 @@ export const manifest: MarketManifest = {
   },
   plugins: [
     {
-      name: 'vyra-tool-usage-stats',
+      name: 'dsh-vyra-tool-usage-stats',
       title: {
         en: 'Tool Analysis',
         zh: '工具分析',
@@ -309,7 +309,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-agent-manager',
+      name: 'dsh-vyra-agent-manager',
       title: {
         en: 'Agent Manager',
         zh: '智能体管理',
@@ -370,7 +370,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-smart-compaction',
+      name: 'dsh-vyra-smart-compaction',
       title: {
         en: 'Smart Compaction',
         zh: '智能压缩',
@@ -403,7 +403,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-skill-mcp-manager',
+      name: 'dsh-vyra-skill-mcp-manager',
       title: {
         en: 'Skill and MCP Manager',
         zh: '技能与 MCP 管理',
@@ -477,7 +477,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-ssh-terminal',
+      name: 'dsh-vyra-ssh-terminal',
       title: {
         en: 'SSH Terminal',
         zh: 'SSH 终端',
@@ -533,7 +533,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-system-selection',
+      name: 'dsh-vyra-system-selection',
       title: {
         en: 'System Selection',
         zh: '系统级划词',
@@ -841,7 +841,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-free-theme',
+      name: 'dsh-vyra-free-theme',
       title: {
         en: 'Free Theme',
         zh: '自由主题',
@@ -870,7 +870,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-wechat-local',
+      name: 'dsh-vyra-wechat-local',
       title: {
         en: 'PC WeChat',
         zh: 'PC微信',
@@ -1109,7 +1109,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-xianyu-delivery',
+      name: 'dsh-vyra-xianyu-delivery',
       title: {
         en: 'Xianyu Auto Service',
         zh: '闲鱼自动客服',
@@ -1179,7 +1179,7 @@ export const manifest: MarketManifest = {
           },
         },
         // 0.2.2 renames the plugin to 闲鱼自动客服; the package name stays
-        // vyra-xianyu-delivery so installed copies keep their install source.
+        // dsh-vyra-xianyu-delivery so installed copies keep their install source.
         '0.2.2': {
           publishTimestamp: 1795066500,
           source: {
@@ -1679,7 +1679,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-agent-cli-manager',
+      name: 'dsh-vyra-agent-cli-manager',
       title: {
         en: 'Agent CLI Manager',
         zh: 'Agent CLI 管理',
@@ -1792,7 +1792,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-plugin-market',
+      name: 'dsh-vyra-plugin-market',
       title: {
         en: 'Plugin Market',
         zh: '插件市场',
@@ -2205,7 +2205,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-free-model',
+      name: 'dsh-vyra-free-model',
       title: {
         en: 'Vyra Free Models',
         zh: 'Vyra 免费模型',
@@ -2380,7 +2380,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-screen-recorder',
+      name: 'dsh-vyra-screen-recorder',
       title: {
         en: 'Vyra Screen Recorder',
         zh: 'Vyra 录屏截图',
@@ -2673,7 +2673,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-studymate',
+      name: 'dsh-vyra-studymate',
       title: {
         en: 'StudyMate Learning',
         zh: 'StudyMate 学习',
@@ -2796,7 +2796,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-media-studio',
+      name: 'dsh-vyra-media-studio',
       title: {
         en: 'File Manager',
         zh: '文件管理',
@@ -3012,7 +3012,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'vyra-dsh-console',
+      name: 'dsh-vyra-dsh-console',
       title: {
         en: 'DSH Console',
         zh: 'DSH 控制台',

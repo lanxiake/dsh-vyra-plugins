@@ -1,4 +1,4 @@
-# vyra-media-studio 前端原型
+# dsh-vyra-media-studio 前端原型
 
 纯 HTML / CSS / JavaScript，无构建步骤，直接打开 `index.html` 即可。
 

@@ -1,4 +1,4 @@
-# vyra-plugin-market · 插件市场
+# dsh-vyra-plugin-market · 插件市场
 
 **左侧栏里的插件市场，同时也是插件页的一个标签页。** 苹果式卡片、多源聚合、批量安装。
 
@@ -149,7 +149,7 @@ node plugins/vyra-plugin-market/cli.mjs uninstall <package-name> --json # 输出
 - 不 `--apply` 时输出 `installSpec` 和等价的 `plugin_manager` 工具调用，Agent 可以走宿主工具。
 - CLI 使用 10 分钟索引缓存和 `~/.dsh/market-downloads` 下载目录。
 
-配套技能在 `skills/vyra-plugin-market/SKILL.md`，说明 Agent 的推荐流程：
+配套技能在 `skills/dsh-vyra-plugin-market/SKILL.md`，说明 Agent 的推荐流程：
 
 - 搜索/版本：CLI 跨源搜索 + `plugin_market` 工具。
 - 安装/卸载/启停：优先宿主的 `plugin_manager` 工具（同一个 profile 锁、激活与回滚）。
@@ -182,10 +182,10 @@ node plugins/vyra-plugin-market/cli.mjs uninstall <package-name> --json # 输出
 **从 npm 安装（推荐）**——包已发布到 npm，不依赖本仓库的 git 提交：
 
 ```sh
-dsh plugin --profile <profile> add vyra-plugin-market
+dsh plugin --profile <profile> add dsh-vyra-plugin-market
 ```
 
-或让 Agent 用宿主的 `plugin_manager` 安装（`install_bundle`，`target` 传 `vyra-plugin-market`）。也可以直接 `npm i vyra-plugin-market` 装 `vyra-market` 这个 CLI。
+或让 Agent 用宿主的 `plugin_manager` 安装（`install_bundle`，`target` 传 `dsh-vyra-plugin-market`）。也可以直接 `npm i dsh-vyra-plugin-market` 装 `vyra-market` 这个 CLI。
 
 > 首次发布后版本会有一段 **Validating**（npm 自动审核）时间，期间 `npm install` 可能取不到新版本 —— 在 npmjs.com 包页的「Version History」看到状态是 **Published** 才表示可装。
 

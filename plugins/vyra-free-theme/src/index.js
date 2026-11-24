@@ -11,7 +11,7 @@ import { readSelection, writeSelection } from "./host/themes/selection.js";
 import { installSkillAndShims, packageRootFrom } from "./host/install-skill.js";
 import { dataDirForProfile, dshHome, hostProfileFor } from "./host/paths.js";
 
-export const name = "vyra-free-theme";
+export const name = "dsh-vyra-free-theme";
 
 // Kept as re-exports: the delivery and upgrade scripts import these from the
 // package entry, and they are the only supported way to learn where data lives.
@@ -47,7 +47,7 @@ export function apply(ctx) {
 
     hostContext.effect(() => {
       // Builtin artwork delivery (ADR-0023): package assets served over the
-      // same /vyra-free-theme/assets/ prefix as gallery uploads. src/ and lib/ both
+      // same /dsh-vyra-free-theme/assets/ prefix as gallery uploads. src/ and lib/ both
       // sit one level below the package root, so "../assets" resolves in dev
       // and in the built bundle alike. Best-effort mount: a missing manifest
       // simply leaves serveBuiltinAsset undefined and b_ requests 404 —
@@ -75,6 +75,6 @@ export function apply(ctx) {
           write: (skinId) => writeSelection(dataDir, skinId),
         }),
       });
-    }, "vyra-free-theme: personalization routes");
+    }, "dsh-vyra-free-theme: personalization routes");
   });
 }

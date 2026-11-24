@@ -3,7 +3,7 @@
  * main checkout, where worktrees go by default, the branches), and creating one from a new
  * branch, an existing branch, or a pull request. Names and paths always follow `--` or are
  * checked first, so nothing the user types is read as an option.
- * @module vyra-agent-cli-manager/git/git-worktree
+ * @module dsh-vyra-agent-cli-manager/git/git-worktree
  */
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import { readBranches } from "./git-read.js";

@@ -1,6 +1,6 @@
 - insert:
     - id: xianyu-delivery
-      name: 'vyra-xianyu-delivery'
+      name: 'dsh-vyra-xianyu-delivery'
       config:
         pollSeconds: 60
         mode: send_then_confirm

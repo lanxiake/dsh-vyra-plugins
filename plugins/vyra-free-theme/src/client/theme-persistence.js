@@ -1,4 +1,4 @@
-export const THEME_STORAGE_KEY = "vyra-free-theme:theme-preference";
+export const THEME_STORAGE_KEY = "dsh-vyra-free-theme:theme-preference";
 const PREFERENCES = new Set(["light", "dark", "system"]);
 
 /**

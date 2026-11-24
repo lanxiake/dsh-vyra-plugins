@@ -2,7 +2,7 @@
  * Maps harness sessions to their live CLI sessions, and follows each session's log
  * to know where its turns begin and end. It holds no framework state, so `index.ts`
  * can stay plain wiring.
- * @module vyra-agent-cli-manager/session-registry
+ * @module dsh-vyra-agent-cli-manager/session-registry
  */
 import { LlmError } from '@deepseek-ai/dsh-llm';
 import { CLI_TOOL_NAME, cliRoute, DEFAULT_MODEL_ID } from "./constants.js";
@@ -255,7 +255,7 @@ export class CliSessionRegistry {
             return;
         this.sessions = without(this.sessions, sessionId);
         const stoppedSelf = live.session.dispose(false, reason).catch((error) => {
-            this.deps.warn(`vyra-agent-cli-manager: failed to stop ${live.provider}: ${String(error)}`);
+            this.deps.warn(`dsh-vyra-agent-cli-manager: failed to stop ${live.provider}: ${String(error)}`);
         });
         // Chained so that quick replacements still wait for the oldest process, not
         // only the latest one, which may never have started.

@@ -299,7 +299,7 @@ export function createPanel({ React, h, applyOp, services, call, t, localeApi })
     constructor(props) { super(props); this.state = { error: null } }
     static getDerivedStateFromError(error) { return { error } }
     componentDidCatch(error, info) {
-      try { console.error('[vyra-dsh-console] panel render failed', error, info) } catch { /* no console */ }
+      try { console.error('[dsh-vyra-dsh-console] panel render failed', error, info) } catch { /* no console */ }
     }
     render() {
       if (this.state.error === null) return this.props.children

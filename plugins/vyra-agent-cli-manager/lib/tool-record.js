@@ -1,7 +1,7 @@
 /**
  * Immutable fold over ACP tool-call updates, plus the projections the harness
  * needs from it: the durable `cli_tool` arguments and the final outcome.
- * @module vyra-agent-cli-manager/tool-record
+ * @module dsh-vyra-agent-cli-manager/tool-record
  */
 const DEFAULT_TITLE = 'Tool call';
 const NO_OUTPUT = '(no output)';

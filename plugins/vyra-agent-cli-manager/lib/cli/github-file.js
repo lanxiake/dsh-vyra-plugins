@@ -9,7 +9,7 @@
  * button once can spend; adding a token would mean asking every user for a credential so that a
  * rare request could be a little more generous, and a failure here is reported rather than
  * retried.
- * @module vyra-agent-cli-manager/cli/github-file
+ * @module dsh-vyra-agent-cli-manager/cli/github-file
  */
 /** How long one read may take. A panel waiting on a button press, not a background job. */
 const TIMEOUT_MS = 20_000;
@@ -38,7 +38,7 @@ export async function fetchRepositoryFile(repository, path) {
             headers: {
                 // The API refuses a request without one, and names this plugin so a repository owner
                 // can tell where the traffic came from.
-                'user-agent': 'vyra-agent-cli-manager',
+                'user-agent': 'dsh-vyra-agent-cli-manager',
                 accept: 'application/vnd.github+json',
                 'x-github-api-version': '2022-11-28',
             },

@@ -12,7 +12,7 @@
  * carrying the global report — none of which the pure `counters.ts` tests can
  * catch.
  *
- * @module vyra-tool-usage-stats/integration
+ * @module dsh-vyra-tool-usage-stats/integration
  */
 
 import assert from 'node:assert/strict'
@@ -24,7 +24,7 @@ const plugin = await import('../lib/index.js') as {
   apply: (ctx: unknown, config?: unknown) => void
 }
 
-assert.equal(plugin.name, 'vyra-tool-usage-stats')
+assert.equal(plugin.name, 'dsh-vyra-tool-usage-stats')
 assert.deepEqual(plugin.inject, ['sessions'])
 
 const ctx = new Context()

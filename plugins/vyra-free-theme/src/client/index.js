@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
   // cordis.patch.yml): the boot page emits __DSH_BOOT__ entries keyed by the
   // package name, and dsh-client-modules rejects a bundle whose registration
   // does not match its graph-row id ("loaded without registering …").
-  id: "vyra-free-theme",
+  id: "dsh-vyra-free-theme",
   factory: (require) => {
     const jsxRuntime = require("react/jsx-runtime");
     const react = require("react");
@@ -74,9 +74,9 @@ window.__ModuleLoader__.load({
 
     function apply(ctx) {
       installRemoteThemePersistence(ctx);
-      ctx.effect(() => runtime.apply(ctx), "vyra-free-theme: active skin");
+      ctx.effect(() => runtime.apply(ctx), "dsh-vyra-free-theme: active skin");
       if (configClient !== null) {
-        ctx.effect(() => () => configClient.dispose(), "vyra-free-theme: config client");
+        ctx.effect(() => () => configClient.dispose(), "dsh-vyra-free-theme: config client");
       }
       // File-backed themes need one HTTP round-trip, so they land after the
       // first paint. Registering them is additive; refreshSelection() then
@@ -87,14 +87,14 @@ window.__ModuleLoader__.load({
         publishSelection();
         installFileThemes({ runtime, jsx: jsxRuntime.jsx, profile })
           .then(({ installed, problems }) => {
-            if (problems.length > 0) console.warn("[vyra-free-theme] theme problems:", problems);
+            if (problems.length > 0) console.warn("[dsh-vyra-free-theme] theme problems:", problems);
             if (installed.length > 0) runtime.refreshSelection();
             // The Host owns the active theme once it has an opinion; adopting it
             // last means a file-backed id is already registered.
             return adoptHostSelection({ runtime });
           })
-          .catch((error) => console.warn("[vyra-free-theme] file themes unavailable:", error));
-      }, "vyra-free-theme: file themes");
+          .catch((error) => console.warn("[dsh-vyra-free-theme] file themes unavailable:", error));
+      }, "dsh-vyra-free-theme: file themes");
       try {
         installSidebarSwitcher(ctx, {
           runtime,
@@ -105,7 +105,7 @@ window.__ModuleLoader__.load({
           skinsById: (id) => skinById.get(id) ?? null,
         });
       } catch (error) {
-        console.warn("[vyra-free-theme] sidebar switcher registration failed:", error);
+        console.warn("[dsh-vyra-free-theme] sidebar switcher registration failed:", error);
       }
     }
 

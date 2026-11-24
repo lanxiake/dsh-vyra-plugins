@@ -2,7 +2,7 @@
  * The CLI's tool calls as the harness sees them: what each call has reported, which
  * ones were handed to the harness, which have a mirror tool waiting on them, and which
  * the harness is finished with.
- * @module vyra-agent-cli-manager/session/tool-mirror
+ * @module dsh-vyra-agent-cli-manager/session/tool-mirror
  */
 import { commandOf, isFinished, isReadyToPublish, mergeToolUpdate } from "../tool-record.js";
 import { mirroredCallId } from "./ptc-call.js";

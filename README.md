@@ -34,22 +34,22 @@ https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 **插件市场本身也发布在 npm**，不走索引源也能装：
 
 ```sh
-dsh plugin --profile <profile> add vyra-plugin-market
+dsh plugin --profile <profile> add dsh-vyra-plugin-market
 ```
 
 ## 已发布的插件
 
 | 插件 | 名称 | 介绍 |
 |---|---|---|
-| `vyra-tool-usage-stats` | 工具自进化 | 统计每次工具调用、记下每次失败的原因，定时交给 Agent 诊断那些反复出错的工具，给出可一键应用的修复。减少重复报错，也减少为同样错误反复烧掉的 token |
-| `vyra-agent-manager` | 智能体管理 | 用面板而不是配置文件来创建和管理智能体：每个智能体有自己的提示词、能力集、工具限制与优选技能，主智能体也能替你创建它们 |
-| `vyra-smart-compaction` | 智能压缩 | 分层、由智能体决定的高质量上下文压缩：压力阶梯、以「真的回收了多少」为门槛的确定性预剪枝，以及模型可自行调用的压缩工具。让长会话活得下去，又不会反复冲掉提示缓存 |
-| `vyra-skill-mcp-manager` | 技能与 MCP 管理 | 在一个面板里浏览、搜索、安装技能与 MCP 服务器，不必为每一件都手改 profile 配置行 |
-| `vyra-ssh-terminal` | SSH 终端 | 把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密 |
-| `vyra-system-selection` | 系统级划词 | 在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。**仅 Windows** |
-| `vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份。**已发布 npm**：[`vyra-plugin-market`](https://www.npmjs.com/package/vyra-plugin-market) |
-| `vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
-| `vyra-studymate` | StudyMate 学习 | 学习技能与课程引擎：定计划、讲知识、做项目。每门课还能派生音频课、旁白视频和动手工作坊，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。基于 [Cattofu 的 StudyMate](https://github.com/Miaotofu01/Study-Mate)（MIT）
+| `dsh-vyra-tool-usage-stats` | 工具自进化 | 统计每次工具调用、记下每次失败的原因，定时交给 Agent 诊断那些反复出错的工具，给出可一键应用的修复。减少重复报错，也减少为同样错误反复烧掉的 token |
+| `dsh-vyra-agent-manager` | 智能体管理 | 用面板而不是配置文件来创建和管理智能体：每个智能体有自己的提示词、能力集、工具限制与优选技能，主智能体也能替你创建它们 |
+| `dsh-vyra-smart-compaction` | 智能压缩 | 分层、由智能体决定的高质量上下文压缩：压力阶梯、以「真的回收了多少」为门槛的确定性预剪枝，以及模型可自行调用的压缩工具。让长会话活得下去，又不会反复冲掉提示缓存 |
+| `dsh-vyra-skill-mcp-manager` | 技能与 MCP 管理 | 在一个面板里浏览、搜索、安装技能与 MCP 服务器，不必为每一件都手改 profile 配置行 |
+| `dsh-vyra-ssh-terminal` | SSH 终端 | 把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密 |
+| `dsh-vyra-system-selection` | 系统级划词 | 在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。它接管右键，所以应用自带的右键菜单不会再冒出来跟你抢。**仅 Windows** |
+| `dsh-vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份。**已发布 npm**：[`dsh-vyra-plugin-market`](https://www.npmjs.com/package/vyra-plugin-market) |
+| `dsh-vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
+| `dsh-vyra-studymate` | StudyMate 学习 | 学习技能与课程引擎：定计划、讲知识、做项目。每门课还能派生音频课、旁白视频和动手工作坊，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。基于 [Cattofu 的 StudyMate](https://github.com/Miaotofu01/Study-Mate)（MIT）
 
 插件的版本、图标、分类与安装来源以 [`docs/index.json`](docs/index.json) 为准——那份是生成物，改的是 [`scripts/market-manifest.ts`](scripts/market-manifest.ts)。
 
@@ -121,17 +121,17 @@ checkout 不在同级时用 `DSH_SOURCE=/path/to/dsh-Veyra` 覆盖。
 
 ### 发布插件市场到 npm
 
-`vyra-plugin-market` 同时以 npm 包发布，npm 是它的第一条安装通道。发布前先自检并核对包里装的是哪些文件：
+`dsh-vyra-plugin-market` 同时以 npm 包发布，npm 是它的第一条安装通道。发布前先自检并核对包里装的是哪些文件：
 
 ```sh
 pnpm run test:market                       # 纯逻辑自检 + 桩渲染
 cd plugins/vyra-plugin-market
 npm pack --dry-run                         # 确认 11 个文件：index.js / client.js / cli.mjs / locale / icon.svg / cordis.patch.yml / README / LICENSE / assets
 npm publish                                # 需要已 npm login，且当前账号是包的所有者
-npm view vyra-plugin-market version        # 回读 registry 确认版本已入库（npm 入库是异步的，可能要等几分钟）
+npm view dsh-vyra-plugin-market version        # 回读 registry 确认版本已入库（npm 入库是异步的，可能要等几分钟）
 ```
 
-**npm 入库是异步的，`npm publish` 返回 `+ pkg@x.y.z` 不代表已经可安装。** 实测要等约 1 分钟以上 registry 才可见；用 `npm install vyra-plugin-market` 真的装一次，比对 `node_modules/.bin/` 和入口 `import`，才算验完。
+**npm 入库是异步的，`npm publish` 返回 `+ pkg@x.y.z` 不代表已经可安装。** 实测要等约 1 分钟以上 registry 才可见；用 `npm install dsh-vyra-plugin-market` 真的装一次，比对 `node_modules/.bin/` 和入口 `import`，才算验完。
 
 **首次发布会进暂存审核**：npm CLI 11.15+ 用 `npm publish` 发一个尚不存在的包名时，会先建立一个 `0.0.0-stage` 占位版，随后提交的版本进入 **Validating** 状态，审核通过前 `npm install` 装不到。看 npmjs.com 的包页「Version History」确认状态转为 Published 后再对外宣布。想显式走这条路，用 `npm stage publish`，之后 `npm stage list` / `npm stage approve <stage-id>` 管理（批准需要 2FA）。
 

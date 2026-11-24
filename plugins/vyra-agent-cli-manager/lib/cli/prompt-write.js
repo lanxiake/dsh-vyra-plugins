@@ -5,7 +5,7 @@
  * files have no CLI command that sets them, and the measured shape is a single markdown
  * document at a path the catalog records. A CLI whose catalog entry names that path may have
  * it written even when the file does not exist yet, which is the case for the harness itself.
- * @module vyra-agent-cli-manager/cli/prompt-write
+ * @module dsh-vyra-agent-cli-manager/cli/prompt-write
  */
 import { dirname, join } from 'node:path';
 import { BadRequest } from "./errors.js";

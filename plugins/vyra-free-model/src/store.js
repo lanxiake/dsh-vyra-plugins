@@ -108,7 +108,7 @@ export class JsonStore {
       this.dirty = true
       if (!this.writeFailed) {
         this.writeFailed = true
-        this.log?.(`vyra-free-model: could not persist ${path.basename(this.file)} (${error?.message ?? error}); changes are kept in memory only`)
+        this.log?.(`dsh-vyra-free-model: could not persist ${path.basename(this.file)} (${error?.message ?? error}); changes are kept in memory only`)
       }
     }
   }

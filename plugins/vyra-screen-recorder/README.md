@@ -6,7 +6,7 @@
 - **截图**：抓整屏 → 拖框选区域 → 用画笔 / 矩形 / 箭头 / 文字标注 →「用这张」进附件；可以**隐藏 DSH 界面**再截，拍到被它挡住的其他应用。抓屏走常驻服务，**不出加载提示**，抓图本身几十毫秒级，接近系统截图。
 - **截图取字**：拖框松手就识别框里的文字，结果出现在「文字」面板里，**可选中、可一键复制**；还能**一键复制图片**（直接粘进聊天窗口）或**复制文件**（粘进资源管理器）。和 QQ / 微信截图里的取字、复制一样顺手。
 - **悬停显示快捷键**：鼠标移到工具条的录屏 / 截图按钮上，弹出「录制屏幕 + Ctrl+Alt+R」这样的提示（按钮的原生 title 也一直带着快捷键）；截图浮层里的工具按钮只显示名称，不标快捷键。
-- **设置页**：视频/截图存储位置、MP4/WebM、帧率、快捷键、文字识别引擎、隐藏 DSH、文件管理都在「设置 → 录屏截图」里；新版本 DSH 也可以在「设置 → 插件 → vyra-screen-recorder」里打开同一页。
+- **设置页**：视频/截图存储位置、MP4/WebM、帧率、快捷键、文字识别引擎、隐藏 DSH、文件管理都在「设置 → 录屏截图」里；新版本 DSH 也可以在「设置 → 插件 → dsh-vyra-screen-recorder」里打开同一页。
 - **快捷键**：默认 `Ctrl+Alt+S` 截图、`Ctrl+Alt+R` 录屏/停止；截图浮层里 `Ctrl+Alt+C` 取字、`Ctrl` 复制图片、`Ctrl+Shift+C` 复制文件、`Ctrl+S` 用这张（都可以改）。
 - **Agent 也能用**：插件初始化时会把技能和 `vsr` CLI 装进 `~/.dsh`，Agent 可以直接录屏、截图、枚举屏幕/窗口、列出文件。
 - **不需要 Python、ffmpeg、Pillow、虚拟声卡**：抓屏、系统声音、编码全部用 Windows 自带能力和浏览器 WebCodecs 完成；**取字用 Windows 10/11 自带的 OCR**，不用另外装 tesseract。
@@ -18,7 +18,7 @@
 在 DSH 插件市场搜索「录屏」安装，或者：
 
 ```bash
-dsh plugin --profile desktop add vyra-screen-recorder
+dsh plugin --profile desktop add dsh-vyra-screen-recorder
 ```
 
 装完**完整重启 DSH**（宿主侧路由在启动时挂载）。
@@ -113,8 +113,8 @@ dsh plugin --profile desktop add vyra-screen-recorder
 
 | 装什么 | 落点 |
 | --- | --- |
-| 技能 | `~/.dsh/skills/vyra-screen-recorder/SKILL.md` |
-| CLI | `~/.dsh/vyra-screen-recorder/bin/vsr`（sh）和 `vsr.cmd`（Windows） |
+| 技能 | `~/.dsh/skills/dsh-vyra-screen-recorder/SKILL.md` |
+| CLI | `~/.dsh/dsh-vyra-screen-recorder/bin/vsr`（sh）和 `vsr.cmd`（Windows） |
 
 Agent 的命令：
 
@@ -144,7 +144,7 @@ vsr record --duration 8 --out ./demo.mp4 --source region:100,100,800,600 --no-au
 - 默认格式、帧率、质量、系统声音/麦克风都从设置页读取；`--format`、`--fps`、`--no-audio` / `--no-mic` 可临时覆盖。
 - 输出路径解析成绝对路径，父目录会自动创建。
 
-完整的 Agent 使用说明见包内的 [`skills/vyra-screen-recorder/SKILL.md`](skills/vyra-screen-recorder/SKILL.md)。
+完整的 Agent 使用说明见包内的 [`skills/dsh-vyra-screen-recorder/SKILL.md`](skills/dsh-vyra-screen-recorder/SKILL.md)。
 
 ### 产物
 

@@ -1,6 +1,6 @@
 /**
  * Maps a harness approval decision onto the options a CLI offered.
- * @module vyra-agent-cli-manager/permission
+ * @module dsh-vyra-agent-cli-manager/permission
  */
 /** The answer for a request nobody will decide on. */
 export const CANCELLED = { outcome: { outcome: 'cancelled' } };

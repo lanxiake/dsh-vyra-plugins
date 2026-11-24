@@ -13,7 +13,7 @@
  * validator rejects — or a `valueSchema` without `parse` — fails here instead of
  * in a user's installation.
  *
- * @module vyra-tool-usage-stats/storage-test
+ * @module dsh-vyra-tool-usage-stats/storage-test
  */
 
 import assert from 'node:assert/strict'

@@ -75,13 +75,13 @@ const EXTERNAL_SKINS = new Map();
  */
 export function registerExternalSkin({ id, fields, builtinAssets = {} }) {
   if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) {
-    throw new Error(`[vyra-free-theme] external skin id "${id}" is malformed`);
+    throw new Error(`[dsh-vyra-free-theme] external skin id "${id}" is malformed`);
   }
   if (Object.hasOwn(SKINS, id)) {
-    throw new Error(`[vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
+    throw new Error(`[dsh-vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
   }
   if (!Array.isArray(fields) || fields.length === 0) {
-    throw new Error(`[vyra-free-theme] external skin "${id}" needs at least one field`);
+    throw new Error(`[dsh-vyra-free-theme] external skin "${id}" needs at least one field`);
   }
   EXTERNAL_SKINS.set(id, { id, fields, builtinAssets });
   return id;

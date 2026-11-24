@@ -50,7 +50,7 @@ Google 的 Gemini 没有列出来：这台机器访问不到 `accounts.google.co
 - 协议来自 MIT 的 `dsh-codebuddy` 项目，登录走官方 IDE 插件端点
 - 腾讯会拦截 DSH 原文提示词，插件会在发请求前把 system 和历史里已知的触发句
   换成中性文案
-- 账号令牌保存在 `~/.dsh/vyra-free-model/buddy.json`（0600），只在本机
+- 账号令牌保存在 `~/.dsh/dsh-vyra-free-model/buddy.json`（0600），只在本机
 
 ### 第二步之三（可选）：自带 Key 的模型
 
@@ -59,7 +59,7 @@ Google 的 Gemini 没有列出来：这台机器访问不到 `accounts.google.co
 它的模型就会并入同一个「免费模型」组。
 
 - **豆包没有匿名免费接口**，它的免费额度和账号绑定在火山方舟的 API Key 上
-- Key 只保存在 `~/.dsh/vyra-free-model/settings.json`（0600），接口只回传
+- Key 只保存在 `~/.dsh/dsh-vyra-free-model/settings.json`（0600），接口只回传
   「是否已保存」，从不回传 Key 本身
 - 留空 Key 保存时表示保持原来的 Key 不变
 
@@ -76,7 +76,7 @@ Google 的 Gemini 没有列出来：这台机器访问不到 `accounts.google.co
    它会先了解你的场景，再推荐 2–3 档插件组合，并优先检索 Veyra 源。
 2. **设置页底部多一张「还想要更多」卡片**：点「一键安装插件市场」会
    - 把 Veyra 插件源加入「设置 → 插件 → 索引源」（已加则跳过）；
-   - 没装过 `vyra-plugin-market` 就装上，装完重启 DSH 就能在左侧栏或插件页打开；
+   - 没装过 `dsh-vyra-plugin-market` 就装上，装完重启 DSH 就能在左侧栏或插件页打开；
    - **已经装过**则把按钮换成「更新插件市场」，通过宿主的 `updateBundle` 把它更新到
      索引里的最新版本，并显示 `v旧 → v新`；没有新版本时提示「已是最新版本」。
 
@@ -86,7 +86,7 @@ Google 的 Gemini 没有列出来：这台机器访问不到 `accounts.google.co
 
 3. **页面标题行右侧固定着「QQ 交流群」和「GitHub」两个入口**，和标题同一行、
    靠右对齐，不用翻到页面底部。点 QQ 打开二维码浮层（扫一扫加群，也能直接复制群号
-   1121362543）。二维码由插件自己的路由 `/api/vyra-free-model/assets/qq-group.png`
+   1121362543）。二维码由插件自己的路由 `/api/dsh-vyra-free-model/assets/qq-group.png`
    提供，不依赖外网图床，也不塞进页面里当 base64。
 
 这两个入口用的就是页面里「刷新积分」「添加账号」同一种按钮（同样的尺寸、圆角、

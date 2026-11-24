@@ -2,7 +2,7 @@
  * Parse `git status --porcelain=v2 --branch -z` and `git diff --numstat -z` into the shape
  * the 变更 panel draws: one list per group (已暂存, 未暂存, 未跟踪), each entry with a status
  * letter and line counts, plus the branch and how far it is from its upstream.
- * @module vyra-agent-cli-manager/git/git-status
+ * @module dsh-vyra-agent-cli-manager/git/git-status
  */
 /** M modified, A added, D deleted, R renamed, C copied, T type changed, U conflicted, ? untracked. */
 type ChangeStatus = 'M' | 'A' | 'D' | 'R' | 'C' | 'T' | 'U' | '?';

@@ -1,4 +1,4 @@
-window.__ModuleLoader__.load({ id: "vyra-agent-cli-manager", factory: (require) => { var module = { exports: {} }; var exports = module.exports;
+window.__ModuleLoader__.load({ id: "dsh-vyra-agent-cli-manager", factory: (require) => { var module = { exports: {} }; var exports = module.exports;
 "use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -43,7 +43,7 @@ var LABEL = "\u6DFB\u52A0\u5230\u5BF9\u8BDD";
 var FAILURE_LABEL = "\u6CA1\u80FD\u6DFB\u52A0\u5230\u5BF9\u8BDD\uFF1A\u8F93\u5165\u6846\u6B63\u5728\u53D1\u9001\u6216\u5DF2\u5173\u95ED\uFF0C\u8BF7\u7A0D\u540E\u518D\u8BD5";
 var NO_COMPOSER = "\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u8F93\u5165\u6846\u6CA1\u6709\u6253\u5F00";
 var REFUSED = "\u8F93\u5165\u6846\u6682\u65F6\u4E0D\u63A5\u53D7\u8F93\u5165";
-var ICON_KEY = "vyra-agent-cli-manager.add-to-chat";
+var ICON_KEY = "dsh-vyra-agent-cli-manager.add-to-chat";
 var ICON_SLOT = "contextMenu.icon";
 var BRIDGE_SLOT = "conversation.input.left";
 var MENU_ORDER = 50;
@@ -95,18 +95,18 @@ function registerAddToChat(ctx) {
     child.slots.inject(
       BRIDGE_SLOT,
       () => child.slots.register(
-        { name: BRIDGE_SLOT, id: "vyra-agent-cli-manager.composer-bridge", inject: () => ({ attach }) },
+        { name: BRIDGE_SLOT, id: "dsh-vyra-agent-cli-manager.composer-bridge", inject: () => ({ attach }) },
         ComposerBridge
       )
     );
     child.slots.inject(ICON_SLOT, () => child.slots.register({ name: ICON_SLOT, key: ICON_KEY }, PlusIcon));
     child.effect(
       () => child.contextMenus.register(contribution("file", insert)),
-      "vyra-agent-cli-manager: add file to chat"
+      "dsh-vyra-agent-cli-manager: add file to chat"
     );
     child.effect(
       () => child.contextMenus.register(contribution("directory", insert)),
-      "vyra-agent-cli-manager: add folder to chat"
+      "dsh-vyra-agent-cli-manager: add folder to chat"
     );
   });
 }
@@ -123,8 +123,8 @@ function compactDescription(description) {
   return PROSE_PUNCTUATION.test(text) || !/\d/.test(text) ? void 0 : text;
 }
 var DEFAULT_MODEL_ID = "default";
-var GIT_ROUTE_PREFIX = "/vyra-agent-cli-manager/git";
-var MODE_ROUTE_PREFIX = "/vyra-agent-cli-manager/modes";
+var GIT_ROUTE_PREFIX = "/dsh-vyra-agent-cli-manager/git";
+var MODE_ROUTE_PREFIX = "/dsh-vyra-agent-cli-manager/modes";
 
 // src/client/choices.ts
 var OFFICIAL_PROVIDER_ID = "deepseek-official";
@@ -173,7 +173,7 @@ function selectionForChoice({ groups, current }, provider) {
 }
 
 // src/client/cli-prefs.ts
-var CLI_PREFS_STORAGE_KEY = "vyra-agent-cli-manager.cli-prefs";
+var CLI_PREFS_STORAGE_KEY = "dsh-vyra-agent-cli-manager.cli-prefs";
 var isBuiltInChoice = (id) => !id.startsWith(CLI_ROUTE_PREFIX);
 var HIDDEN_BY_DEFAULT = /* @__PURE__ */ new Set([cliRoute("codebuddy")]);
 var EMPTY = { known: [], order: [], hidden: [] };
@@ -1659,7 +1659,7 @@ function registerTerminalEntry(ctx) {
       () => child.slots.register(
         {
           name: SLOT,
-          id: "vyra-agent-cli-manager.terminal-entry",
+          id: "dsh-vyra-agent-cli-manager.terminal-entry",
           order: ENTRY_ORDER,
           inject: () => ({ sidebar: child.sidebarRight })
         },
@@ -1694,10 +1694,10 @@ function registerFilesDefault(ctx) {
         replaceSoleGuide(child.sidebarRight, child.sidebarRightTabs);
       });
     };
-    child.effect(() => child.sidebarRight.openTabs.subscribe(check), "vyra-agent-cli-manager: files by default (tabs)");
+    child.effect(() => child.sidebarRight.openTabs.subscribe(check), "dsh-vyra-agent-cli-manager: files by default (tabs)");
     child.effect(
       () => child.sidebarRight.mounted.subscribe(check),
-      "vyra-agent-cli-manager: files by default (session)"
+      "dsh-vyra-agent-cli-manager: files by default (session)"
     );
   });
 }
@@ -1855,7 +1855,7 @@ ${GROUP} > button {
 `;
 
 // src/client/launch-scripts.ts
-var STORAGE_PREFIX = "vyra-agent-cli-manager.launchScripts:";
+var STORAGE_PREFIX = "dsh-vyra-agent-cli-manager.launchScripts:";
 var NO_DIRECTORY_KEY = `${STORAGE_PREFIX}*`;
 var EMPTY2 = [];
 var MAX_COMMAND_LENGTH = 4e3;
@@ -2270,7 +2270,7 @@ function LaunchScriptDialog(props) {
 
 // src/client/launch-script-entry.tsx
 var import_jsx_runtime13 = require("react/jsx-runtime");
-var MANAGE_ID = "vyra-agent-cli-manager.launch-scripts.manage";
+var MANAGE_ID = "dsh-vyra-agent-cli-manager.launch-scripts.manage";
 var SET_UP = "\u8BBE\u7F6E\u542F\u52A8\u811A\u672C";
 var RUN_PREFIX = "\u8FD0\u884C\uFF1A";
 var MORE = "\u542F\u52A8\u811A\u672C";
@@ -2425,7 +2425,7 @@ function registerLaunchScripts(ctx, list, storage, newId) {
       () => child.slots.register(
         {
           name: SLOT2,
-          id: "vyra-agent-cli-manager.launch-scripts",
+          id: "dsh-vyra-agent-cli-manager.launch-scripts",
           order: ENTRY_ORDER2,
           inject: () => ({ list, book, runner, newId })
         },
@@ -2436,7 +2436,7 @@ function registerLaunchScripts(ctx, list, storage, newId) {
 }
 
 // src/client/feature-settings.ts
-var FEATURES_STORAGE_KEY = "vyra-agent-cli-manager.features";
+var FEATURES_STORAGE_KEY = "dsh-vyra-agent-cli-manager.features";
 var FEATURES = [
   {
     id: "filesDefault",
@@ -2646,7 +2646,7 @@ function createCompactTip(doc) {
 }
 function installCompactTabs(doc) {
   const tag = doc.createElement("style");
-  tag.dataset.plugin = "vyra-agent-cli-manager.compact-tabs";
+  tag.dataset.plugin = "dsh-vyra-agent-cli-manager.compact-tabs";
   tag.textContent = COMPACT_TABS_STYLES;
   doc.head.append(tag);
   const tip = createCompactTip(doc);
@@ -2889,18 +2889,18 @@ function PromptPanel({ state, id }) {
 }
 
 // src/client/cli-api.ts
-var MCP_MATRIX_URL = "/vyra-agent-cli-manager/cli/mcp-matrix";
-var MCP_ADD_URL = "/vyra-agent-cli-manager/cli/mcp-add";
-var MCP_COPY_URL = "/vyra-agent-cli-manager/cli/mcp-copy";
-var MCP_REMOVE_URL = "/vyra-agent-cli-manager/cli/mcp-remove";
-var SKILLS_URL = "/vyra-agent-cli-manager/cli/skills";
-var SKILLS_MATRIX_URL = "/vyra-agent-cli-manager/cli/skills-matrix";
-var SKILL_ENABLE_URL = "/vyra-agent-cli-manager/cli/skill-enable";
-var SKILL_DISABLE_URL = "/vyra-agent-cli-manager/cli/skill-disable";
-var SKILL_INSTALL_URL = "/vyra-agent-cli-manager/cli/skill-install";
-var SKILL_CONSOLIDATE_URL = "/vyra-agent-cli-manager/cli/skill-consolidate";
-var PROMPT_URL = "/vyra-agent-cli-manager/cli/prompt";
-var PROMPT_WRITE_URL = "/vyra-agent-cli-manager/cli/prompt-write";
+var MCP_MATRIX_URL = "/dsh-vyra-agent-cli-manager/cli/mcp-matrix";
+var MCP_ADD_URL = "/dsh-vyra-agent-cli-manager/cli/mcp-add";
+var MCP_COPY_URL = "/dsh-vyra-agent-cli-manager/cli/mcp-copy";
+var MCP_REMOVE_URL = "/dsh-vyra-agent-cli-manager/cli/mcp-remove";
+var SKILLS_URL = "/dsh-vyra-agent-cli-manager/cli/skills";
+var SKILLS_MATRIX_URL = "/dsh-vyra-agent-cli-manager/cli/skills-matrix";
+var SKILL_ENABLE_URL = "/dsh-vyra-agent-cli-manager/cli/skill-enable";
+var SKILL_DISABLE_URL = "/dsh-vyra-agent-cli-manager/cli/skill-disable";
+var SKILL_INSTALL_URL = "/dsh-vyra-agent-cli-manager/cli/skill-install";
+var SKILL_CONSOLIDATE_URL = "/dsh-vyra-agent-cli-manager/cli/skill-consolidate";
+var PROMPT_URL = "/dsh-vyra-agent-cli-manager/cli/prompt";
+var PROMPT_WRITE_URL = "/dsh-vyra-agent-cli-manager/cli/prompt-write";
 async function readJson(response) {
   const text = await response.text();
   try {
@@ -3026,8 +3026,8 @@ async function writePrompt(id, text) {
 
 // src/client/cli-status-section.tsx
 var import_jsx_runtime16 = require("react/jsx-runtime");
-var STATUS_URL = "/vyra-agent-cli-manager/cli/status";
-var UPGRADE_URL = "/vyra-agent-cli-manager/cli/upgrade";
+var STATUS_URL = "/dsh-vyra-agent-cli-manager/cli/status";
+var UPGRADE_URL = "/dsh-vyra-agent-cli-manager/cli/upgrade";
 var SECTION_CLASS2 = "vyra-agent-cli-manager-clis";
 var LABELS2 = {
   intro: "\u8FD9\u91CC\u5217\u51FA\u672C\u63D2\u4EF6\u63A5\u5165\u7684 Agent CLI\u3002\u7248\u672C\u7531 Host \u5728\u672C\u673A\u63A2\u6D4B\uFF0C\u6700\u65B0\u7248\u67E5\u81EA npm\uFF1B\u5347\u7EA7\u4EA4\u7ED9\u5404 CLI \u81EA\u5DF1\u7684\u66F4\u65B0\u547D\u4EE4\uFF0C\u672C\u63D2\u4EF6\u4E0D\u731C\u5B83\u7684\u5B89\u88C5\u65B9\u5F0F\u3002",
@@ -4375,7 +4375,7 @@ function SettingsIcon({ size }) {
 }
 
 // src/client/settings-register.ts
-var SETTINGS_SECTION_ID = "vyra-agent-cli-manager.settings";
+var SETTINGS_SECTION_ID = "dsh-vyra-agent-cli-manager.settings";
 var SETTINGS_ORDER = 50;
 function isDisposable(value) {
   return typeof value === "object" && value !== null && "dispose" in value && typeof value.dispose === "function";
@@ -4410,7 +4410,7 @@ function gateInject(ctx, settings, id, inject2) {
           });
         };
       }),
-      `vyra-agent-cli-manager: ${id} switch`
+      `dsh-vyra-agent-cli-manager: ${id} switch`
     );
     return void 0;
   };
@@ -5057,7 +5057,7 @@ function createCheckouts(fetchFn) {
 }
 
 // src/client/worktree/worktree-expansion.ts
-var EXPANSION_STORAGE_KEY = "vyra-agent-cli-manager.worktree-expansion";
+var EXPANSION_STORAGE_KEY = "dsh-vyra-agent-cli-manager.worktree-expansion";
 var NO_CHOICES = { groups: {}, worktrees: {} };
 function choicesOf(value) {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
@@ -5517,12 +5517,12 @@ function WorktreeTree(props) {
 // src/client/worktree/worktree-register.tsx
 var import_jsx_runtime33 = require("react/jsx-runtime");
 var DEPENDENCIES = ["contextMenus", "workspaces", "sessions", "uiWorkspace", "slots"];
-var MENU_ID = "vyra-agent-cli-manager.worktree";
-var ICON_KEY2 = "vyra-agent-cli-manager.worktree";
+var MENU_ID = "dsh-vyra-agent-cli-manager.worktree";
+var ICON_KEY2 = "dsh-vyra-agent-cli-manager.worktree";
 var ICON_SLOT2 = "contextMenu.icon";
 var HOST_SLOT = "sidebar.footer.action";
-var HOST_ID = "vyra-agent-cli-manager.worktree-dialog";
-var TREE_ID = "vyra-agent-cli-manager.worktree-tree";
+var HOST_ID = "dsh-vyra-agent-cli-manager.worktree-dialog";
+var TREE_ID = "dsh-vyra-agent-cli-manager.worktree-tree";
 var MENU_ORDER2 = 10;
 var LABEL2 = "\u65B0\u5EFA Worktree\u2026";
 var CREATED = "\u5DF2\u521B\u5EFA Worktree\uFF1A";
@@ -5638,9 +5638,9 @@ function registerWorktree(ctx, fetchFn, storage) {
           }
         ]
       }),
-      "vyra-agent-cli-manager: new worktree menu"
+      "dsh-vyra-agent-cli-manager: new worktree menu"
     );
-    child.effect(() => requests.close, "vyra-agent-cli-manager: close worktree dialog");
+    child.effect(() => requests.close, "dsh-vyra-agent-cli-manager: close worktree dialog");
   });
 }
 
@@ -5692,7 +5692,7 @@ var BROWSER_STORAGE = {
 };
 function installStyles() {
   const tag = document.createElement("style");
-  tag.dataset.plugin = "vyra-agent-cli-manager";
+  tag.dataset.plugin = "dsh-vyra-agent-cli-manager";
   tag.textContent = `${STYLES}${MODEL_MENU_STYLES}${TERMINAL_ENTRY_STYLES}${LAUNCH_SCRIPT_STYLES}${SESSION_TREE_STYLES}${SESSION_STATUS_STYLES}${SETTINGS_PAGE_STYLES}${WORKTREE_STYLES}${WORKTREE_GROUP_STYLES}`;
   document.head.append(tag);
   return () => {
@@ -5815,7 +5815,7 @@ function registerSwitchableFeatures(ctx, settings) {
   registerLaunchScripts(scripts, ctx.sessions.list, BROWSER_STORAGE, () => crypto.randomUUID());
   ctx.effect(
     () => whileEnabled(settings, "compactTabs", () => installCompactTabs(document)),
-    "vyra-agent-cli-manager: compact tabs"
+    "dsh-vyra-agent-cli-manager: compact tabs"
   );
 }
 var inject = ["slots", "modelDirectories", "sessions"];
@@ -5825,7 +5825,7 @@ function registerComposerSlots(ctx, cliPrefs) {
     () => ctx.slots.register(
       {
         name: SLOT3,
-        id: "vyra-agent-cli-manager.switcher",
+        id: "dsh-vyra-agent-cli-manager.switcher",
         inject: (sessionId) => ({ ...directoryFace(ctx, sessionId), prefs: cliPrefs })
       },
       CliSwitcher
@@ -5836,7 +5836,7 @@ function registerComposerSlots(ctx, cliPrefs) {
     () => ctx.slots.register(
       {
         name: MODEL_SLOT,
-        id: "vyra-agent-cli-manager.model-menu",
+        id: "dsh-vyra-agent-cli-manager.model-menu",
         order: MODEL_MENU_ORDER,
         inject: (sessionId) => ({
           ...directoryFace(ctx, sessionId),
@@ -5851,7 +5851,7 @@ function registerComposerSlots(ctx, cliPrefs) {
     () => ctx.slots.register(
       {
         name: SESSION_ROW_SLOT,
-        id: "vyra-agent-cli-manager.session-mark",
+        id: "dsh-vyra-agent-cli-manager.session-mark",
         order: SESSION_MARK_ORDER,
         inject: () => ({ list: ctx.sessions.list })
       },
@@ -5865,7 +5865,7 @@ function registerModeSeat(ctx) {
     () => ctx.slots.register(
       {
         name: MODE_SLOT,
-        id: "vyra-agent-cli-manager.mode-seat",
+        id: "dsh-vyra-agent-cli-manager.mode-seat",
         order: MODE_SEAT_ORDER,
         inject: (sessionId) => ({
           ...directoryFace(ctx, sessionId),
@@ -5883,7 +5883,7 @@ function registerSessionMarks(ctx) {
     () => ctx.slots.register(
       {
         name: SESSION_STATUS_SLOT,
-        id: "vyra-agent-cli-manager.session-status-mark",
+        id: "dsh-vyra-agent-cli-manager.session-status-mark",
         inject: () => ({ list: ctx.sessions.list })
       },
       SessionStatusMark
@@ -5891,7 +5891,7 @@ function registerSessionMarks(ctx) {
   );
 }
 function apply(ctx) {
-  ctx.effect(installStyles, "vyra-agent-cli-manager: styles");
+  ctx.effect(installStyles, "dsh-vyra-agent-cli-manager: styles");
   const cliPrefs = createCliPrefs(BROWSER_STORAGE);
   registerComposerSlots(ctx, cliPrefs);
   registerModeSeat(ctx);

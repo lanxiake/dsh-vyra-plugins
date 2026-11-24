@@ -12,7 +12,7 @@
  *
  *   npx tsx <path>/tests/tool-override-probe.ts
  *
- * @module vyra-tool-usage-stats/tool-override-probe
+ * @module dsh-vyra-tool-usage-stats/tool-override-probe
  */
 
 import { Context } from '@deepseek-ai/cordis'

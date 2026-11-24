@@ -2,7 +2,7 @@
  * Validate the JSON the 变更 panel and the 新建 Worktree dialog post, and run the git operation
  * it names. Everything arriving here is untrusted: the directory must be absolute, and every
  * file path must stay inside the repository.
- * @module vyra-agent-cli-manager/git/git-requests
+ * @module dsh-vyra-agent-cli-manager/git/git-requests
  */
 import { isAbsolute } from 'node:path';
 import { isUntracked, readBranches, readDiff, readStatus, repoRoot } from "./git-read.js";

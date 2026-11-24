@@ -13,7 +13,7 @@
  * `tool/result` payload shape is taken from `SessionEventMap` in
  * `packages/core/session/src/types.ts`.
  *
- * @module vyra-tool-usage-stats/session-e2e
+ * @module dsh-vyra-tool-usage-stats/session-e2e
  */
 
 import assert from 'node:assert/strict'

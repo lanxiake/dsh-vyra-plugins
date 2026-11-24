@@ -4,7 +4,7 @@
  * Runs under `node --test` against the TypeScript source through Node's type
  * stripping, so no build step and no test framework.
  *
- * @module vyra-tool-usage-stats/counters.test
+ * @module dsh-vyra-tool-usage-stats/counters.test
  */
 
 import assert from 'node:assert/strict'

@@ -1,6 +1,6 @@
 /**
  * Abortable wait over a promise the caller does not own.
- * @module vyra-agent-cli-manager/abortable
+ * @module dsh-vyra-agent-cli-manager/abortable
  */
 /**
  * Wait for a promise, giving up early when the signal aborts. The underlying

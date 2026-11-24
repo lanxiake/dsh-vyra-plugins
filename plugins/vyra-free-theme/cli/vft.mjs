@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * vft — vyra-free-theme CLI.
+ * vft — dsh-vyra-free-theme CLI.
  *
  * Design contract (spec §11):
  *   - `theme.json` is the single source of truth. The CLI is a careful editor
@@ -73,7 +73,7 @@ function fail(code, message, extra = {}) {
 export function resolvePaths({ dshHome, profile } = {}) {
   const home = resolve(dshHome ?? process.env.DSH_HOME ?? join(homedir(), ".dsh"));
   const resolvedProfile = profile ?? (existsSync(join(home, "vyra-free-theme-desktop")) ? "desktop" : "web");
-  const dataDir = join(home, resolvedProfile === "desktop" ? "vyra-free-theme-desktop" : "vyra-free-theme");
+  const dataDir = join(home, resolvedProfile === "desktop" ? "vyra-free-theme-desktop" : "dsh-vyra-free-theme");
   return {
     home,
     profile: resolvedProfile,
@@ -894,7 +894,7 @@ function cmdThemeCheck(paths, { positionals, flags }) {
 
 function usage() {
   return [
-    "vft — vyra-free-theme CLI",
+    "vft — dsh-vyra-free-theme CLI",
     "",
     "  vft theme list|show|create|rename|delete|apply|reset|export|import",
     "  vft wallpaper list|add|set|gen|video",

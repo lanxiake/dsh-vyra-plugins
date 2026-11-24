@@ -15,7 +15,7 @@ const KIND_BY_EXT = {
 }
 
 const KIND_LABEL = { image: '图片', video: '视频', audio: '音频', document: '文档', archive: '压缩包', code: '代码', other: '其他' }
-const COLLAPSE_KEY = 'vyra-media-studio.timeline.collapsed.v1'
+const COLLAPSE_KEY = 'dsh-vyra-media-studio.timeline.collapsed.v1'
 
 function fileKindOf(name) {
   const dot = name.lastIndexOf('.')

@@ -1,7 +1,7 @@
 /**
  * Reads what the CLI still needs from a harness model request. The CLI holds its
  * own conversation, so only new user input and the native session id matter.
- * @module vyra-agent-cli-manager/request-input
+ * @module dsh-vyra-agent-cli-manager/request-input
  */
 /**
  * Message sources written by a person. The harness also uses the user role for its

@@ -112,7 +112,7 @@ try {
   let skinSettled = true;
   await page
     .waitForFunction(
-      () => document.querySelector('style[data-plugin-css^="vyra-free-theme/"]') !== null
+      () => document.querySelector('style[data-plugin-css^="dsh-vyra-free-theme/"]') !== null
         && Object.keys(document.body.dataset).some((key) => /^dsh/.test(key)),
       undefined,
       { timeout: 20000 },
@@ -129,7 +129,7 @@ try {
   if (state.skinKey === null) {
     // No dsh-prefixed body scope attribute — three causes with different
     // verdicts (impl-review R2/R3/R4):
-    //   partial injection — a vyra-free-theme style tag exists but the scope
+    //   partial injection — a dsh-vyra-free-theme style tag exists but the scope
     //     attribute never appeared (out-of-namespace skin or torn injection)
     //     → fail-closed INVALID, message names the observed signal shape;
     //   settled race — both signals landed at settle time but the attribute
@@ -140,11 +140,11 @@ try {
     //     official chain per the plan's T5 spec. Never a green PASS here —
     //     the reachable verdicts are SKIP/REVIEW/FINGERPRINT-absent only.
     const signals = await page.evaluate(
-      () => ({ skinTags: document.querySelector('style[data-plugin-css^="vyra-free-theme/"]') !== null }),
+      () => ({ skinTags: document.querySelector('style[data-plugin-css^="dsh-vyra-free-theme/"]') !== null }),
     );
     if (!skinSettled && signals.skinTags) {
       await page.screenshot({ path: `repro-reading-${++shotIndex}.png` });
-      verdict(3, "INVALID", `partial skin-bundle injection on ${baseUrl}: vyra-free-theme style tag present but no body scope attribute matching /(^dsh)/ — out-of-namespace skin or torn injection; re-run / extend the detector`);
+      verdict(3, "INVALID", `partial skin-bundle injection on ${baseUrl}: dsh-vyra-free-theme style tag present but no body scope attribute matching /(^dsh)/ — out-of-namespace skin or torn injection; re-run / extend the detector`);
     }
     if (skinSettled && signals.skinTags) {
       await page.screenshot({ path: `repro-reading-${++shotIndex}.png` });

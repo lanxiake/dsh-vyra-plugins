@@ -7,7 +7,7 @@
  * The login shell is asked for its PATH once, in the background, since rc files can take
  * seconds. Until it answers, or when it fails, the usual install places are appended to the
  * inherited PATH, which already covers the common nvm and Homebrew setups.
- * @module vyra-agent-cli-manager/login-path
+ * @module dsh-vyra-agent-cli-manager/login-path
  */
 import { execFile } from 'node:child_process';
 import { readdirSync, statSync } from 'node:fs';
@@ -93,7 +93,7 @@ export class LoginPath {
         }
         catch (error) {
             if (!signal.aborted)
-                warn(`vyra-agent-cli-manager: could not read the login shell's PATH: ${String(error)}`);
+                warn(`dsh-vyra-agent-cli-manager: could not read the login shell's PATH: ${String(error)}`);
         }
     }
     /**

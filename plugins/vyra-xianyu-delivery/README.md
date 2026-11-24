@@ -56,7 +56,7 @@ uvx goofish-cli auth status --format json
 ```yaml
 - insert:
     - id: xianyu-delivery
-      name: 'vyra-xianyu-delivery'
+      name: 'dsh-vyra-xianyu-delivery'
       config:
         pollSeconds: 60           # 订单轮询（发货）
         chatPollSeconds: 15       # 会话轮询（自动回复）

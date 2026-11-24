@@ -1,6 +1,6 @@
 /**
  * Pure conversion from CLI output to the harness's indexed block stream.
- * @module vyra-agent-cli-manager/stream-blocks
+ * @module dsh-vyra-agent-cli-manager/stream-blocks
  */
 /**
  * Text with no letters or digits yet. Some CLIs (OMP on DeepSeek models) answer a

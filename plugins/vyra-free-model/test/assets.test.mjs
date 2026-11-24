@@ -13,7 +13,7 @@ function call(handler, { path, headers = {} } = {}) {
   return new Promise(resolve => {
     const req = {
       method: 'GET',
-      url: `/api/vyra-free-model${path}`,
+      url: `/api/dsh-vyra-free-model${path}`,
       headers,
       on() { return req },
     }

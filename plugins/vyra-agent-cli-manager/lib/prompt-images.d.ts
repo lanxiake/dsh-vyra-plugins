@@ -2,7 +2,7 @@
  * Turns the images in a user message into what the CLI can take. The harness keeps
  * images as references to its attachment store; a CLI only understands inline bytes,
  * so each one is read here, just before the prompt goes out.
- * @module vyra-agent-cli-manager/prompt-images
+ * @module dsh-vyra-agent-cli-manager/prompt-images
  */
 import type { ContentBlock as AcpContentBlock } from '@agentclientprotocol/sdk';
 /**

@@ -44,7 +44,7 @@ function call(handler, { method = 'GET', path = '/', body, headers = {} } = {}) 
     const chunks = []
     const req = {
       method,
-      url: `/api/vyra-free-model${path}`,
+      url: `/api/dsh-vyra-free-model${path}`,
       headers,
       on(event, fn) {
         if (event === 'data' && body !== undefined) fn(Buffer.from(JSON.stringify(body)))
@@ -217,7 +217,7 @@ test('the configure status route rejects a POST', async () => {
 test('a configure write cannot be reached through a proxy', async () => {
   const handler = createApiRoutes(deps({ configure: async () => ({ ok: true }) }))
   const res = await new Promise(resolve => {
-    const req = { method: 'POST', url: '/api/vyra-free-model/configure',
+    const req = { method: 'POST', url: '/api/dsh-vyra-free-model/configure',
       headers: { 'x-forwarded-for': '10.0.0.1' }, on() { return req } }
     const out = { statusCode: 0, writeHead(s) { this.statusCode = s }, end(p) { resolve({ status: this.statusCode, body: JSON.parse(p) }) } }
     void handler(req, out)

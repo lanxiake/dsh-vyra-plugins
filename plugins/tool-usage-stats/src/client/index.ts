@@ -20,7 +20,7 @@
  * out-of-tree plugin cannot rely on the theme being mounted, and a panel that
  * renders invisible text is worse than one that renders plain text.
  *
- * @module vyra-tool-usage-stats/client
+ * @module dsh-vyra-tool-usage-stats/client
  */
 
 declare const require: (specifier: string) => unknown

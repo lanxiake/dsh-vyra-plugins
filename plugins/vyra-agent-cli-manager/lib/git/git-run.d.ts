@@ -1,7 +1,7 @@
 /**
  * Run one git command in a working directory through the harness's subprocess service, so
  * git resolves in the same execution world as the CLIs (a remote or sandboxed host included).
- * @module vyra-agent-cli-manager/git/git-run
+ * @module dsh-vyra-agent-cli-manager/git/git-run
  */
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
 /** Starts a child process; the harness's `ctx.subprocess.spawn` in production. */

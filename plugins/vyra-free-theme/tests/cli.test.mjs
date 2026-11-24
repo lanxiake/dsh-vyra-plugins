@@ -34,7 +34,7 @@ test("paths resolve to the new data directory and infer the profile", () => {
   assert.equal(paths.profile, "desktop");
   assert.equal(paths.dataDir, join(home, "vyra-free-theme-desktop"));
   const webPaths = resolvePaths({ dshHome: home, profile: "web" });
-  assert.equal(webPaths.dataDir, join(home, "vyra-free-theme"));
+  assert.equal(webPaths.dataDir, join(home, "dsh-vyra-free-theme"));
 });
 
 test("list reports bundled themes and presets, with no selection yet", async () => {
@@ -59,7 +59,7 @@ test("create copies a preset into the user directory and validates it", async ()
   const home = sandbox();
   const created = await vft(home, "theme", "create", "--from", "mono", "--id", "mine", "--name", "我的主题", "--name-en", "Mine");
   assert.equal(created.exitCode, 0, JSON.stringify(created.payload));
-  const file = join(home, "vyra-free-theme", "themes", "mine", "theme.json");
+  const file = join(home, "dsh-vyra-free-theme", "themes", "mine", "theme.json");
   assert.ok(existsSync(file));
   const raw = JSON.parse(readFileSync(file, "utf8"));
   assert.equal(raw.id, "mine");
@@ -83,13 +83,13 @@ test("apply writes the host selection the client reads", async () => {
   await vft(home, "theme", "create", "--from", "mono", "--id", "mine");
   const applied = await vft(home, "theme", "apply", "mine");
   assert.equal(applied.exitCode, 0, JSON.stringify(applied.payload));
-  assert.equal(readSelection(join(home, "vyra-free-theme")).skinId, "mine");
+  assert.equal(readSelection(join(home, "dsh-vyra-free-theme")).skinId, "mine");
   const list = await vft(home, "theme", "list", "--json");
   assert.equal(list.payload.active, "mine");
 
   const official = await vft(home, "reset");
   assert.equal(official.exitCode, 0);
-  assert.equal(readSelection(join(home, "vyra-free-theme")).skinId, "official");
+  assert.equal(readSelection(join(home, "dsh-vyra-free-theme")).skinId, "official");
 });
 
 test("apply refuses an unknown id", async () => {
@@ -106,7 +106,7 @@ test("check passes good themes and fails a broken one with the gate exit code", 
   assert.equal(good.exitCode, 0);
   assert.equal(good.payload.results[0].pass, true);
 
-  const broken = join(home, "vyra-free-theme", "themes", "broken");
+  const broken = join(home, "dsh-vyra-free-theme", "themes", "broken");
   mkdirSync(broken, { recursive: true });
   writeFileSync(join(broken, "theme.json"), JSON.stringify({
     schema: 1,
@@ -127,10 +127,10 @@ test("delete needs --force and then removes the directory", async () => {
   await vft(home, "theme", "create", "--from", "mono", "--id", "mine");
   const guarded = await vft(home, "theme", "delete", "mine");
   assert.equal(guarded.exitCode, 3);
-  assert.ok(existsSync(join(home, "vyra-free-theme", "themes", "mine")));
+  assert.ok(existsSync(join(home, "dsh-vyra-free-theme", "themes", "mine")));
   const forced = await vft(home, "theme", "delete", "mine", "--force");
   assert.equal(forced.exitCode, 0);
-  assert.ok(!existsSync(join(home, "vyra-free-theme", "themes", "mine")));
+  assert.ok(!existsSync(join(home, "dsh-vyra-free-theme", "themes", "mine")));
 });
 
 test("wallpaper add copies the file and rewrites the wallpaper block", async () => {
@@ -140,10 +140,10 @@ test("wallpaper add copies the file and rewrites the wallpaper block", async () 
   writeFileSync(source, Buffer.from([1, 2, 3]));
   const added = await vft(home, "wallpaper", "add", "mine", source);
   assert.equal(added.exitCode, 0, JSON.stringify(added.payload));
-  const raw = JSON.parse(readFileSync(join(home, "vyra-free-theme", "themes", "mine", "theme.json"), "utf8"));
+  const raw = JSON.parse(readFileSync(join(home, "dsh-vyra-free-theme", "themes", "mine", "theme.json"), "utf8"));
   assert.equal(raw.wallpaper.kind, "image");
   assert.equal(raw.wallpaper.light.src, "assets/wall.webp");
-  assert.ok(existsSync(join(home, "vyra-free-theme", "themes", "mine", "assets", "wall.webp")));
+  assert.ok(existsSync(join(home, "dsh-vyra-free-theme", "themes", "mine", "assets", "wall.webp")));
 
   const listed = await vft(home, "wallpaper", "list", "mine", "--json");
   assert.deepEqual(listed.payload.files, ["wall.webp"]);
@@ -154,7 +154,7 @@ test("appearance set writes coverage and translucency", async () => {
   await vft(home, "theme", "create", "--from", "mono", "--id", "mine");
   const result = await vft(home, "appearance", "set", "mine", "--coverage-shell", "on", "--scopes", "sidebar,topbar", "--translucency-web", "40");
   assert.equal(result.exitCode, 0, JSON.stringify(result.payload));
-  const raw = JSON.parse(readFileSync(join(home, "vyra-free-theme", "themes", "mine", "theme.json"), "utf8"));
+  const raw = JSON.parse(readFileSync(join(home, "dsh-vyra-free-theme", "themes", "mine", "theme.json"), "utf8"));
   assert.equal(raw.coverage.shell, true);
   assert.deepEqual(raw.coverage.scopes, ["sidebar", "topbar"]);
   assert.equal(raw.translucency.web, 40);
@@ -183,7 +183,7 @@ test("export then import round-trips a theme under a new id", async () => {
   assert.ok(existsSync(join(out, "theme.json")));
   const imported = await vft(home, "theme", "import", out, "--id", "copied");
   assert.equal(imported.exitCode, 0, JSON.stringify(imported.payload));
-  assert.ok(existsSync(join(home, "vyra-free-theme", "themes", "copied", "theme.json")));
+  assert.ok(existsSync(join(home, "dsh-vyra-free-theme", "themes", "copied", "theme.json")));
 });
 
 test("unknown commands, missing prompts and blocked video generation report clearly", async () => {

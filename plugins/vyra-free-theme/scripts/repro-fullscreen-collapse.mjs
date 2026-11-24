@@ -65,7 +65,7 @@ const skinId = argOf("--skin-id") ?? "meirenzhi";
 const fingerprintOnly = has("--fingerprint-only");
 const noFingerprint = has("--no-fingerprint");
 const gate = has("--gate");
-const SKIN_STORAGE_KEY = "vyra-free-theme:active"; // runtime.js persistence key
+const SKIN_STORAGE_KEY = "dsh-vyra-free-theme:active"; // runtime.js persistence key
 const GATE_MARKER = 'data-sidebar-right-open="true"'; // fix marker inside the emitted fullscreen.css
 
 // PNG decode + bright counting come from ./lib/paint-metrics.mjs (shared,

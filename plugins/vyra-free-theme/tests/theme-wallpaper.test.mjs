@@ -134,7 +134,7 @@ test("element layers are emitted for video and code, and suppressed by an image 
     wallpaper: `u_${"a".repeat(32)}`,
     slogan: { zh: "", en: "" },
     panelOpacity: 45,
-  }, { wallpaper: { url: "/vyra-free-theme/assets/abc.webp", mime: "image/webp" } }));
+  }, { wallpaper: { url: "/dsh-vyra-free-theme/assets/abc.webp", mime: "image/webp" } }));
   assert.equal(replaced.backdrop.layers, null);
   assert.match(replaced.backdrop.imageLight, /abc\.webp/);
 

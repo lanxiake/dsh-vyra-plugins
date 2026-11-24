@@ -44,7 +44,7 @@ import {
 } from './src/configure.js'
 
 /** The prefix every route this plugin serves lives under. */
-export const API_PATH = '/api/vyra-free-model'
+export const API_PATH = '/api/dsh-vyra-free-model'
 
 /**
  * The QR code the settings page shows for the community group.
@@ -111,7 +111,7 @@ export function isChannelMethodAllowed(method) {
   return typeof method === 'string' && CHANNEL_METHODS.includes(method)
 }
 
-export const name = 'vyra-free-model'
+export const name = 'dsh-vyra-free-model'
 
 /**
  * The only hard dependency.
@@ -124,7 +124,7 @@ export const name = 'vyra-free-model'
 export const inject = ['llm']
 
 /** Where this plugin keeps its own state. Never the profile's config file. */
-const DATA_DIR_NAME = 'vyra-free-model'
+const DATA_DIR_NAME = 'dsh-vyra-free-model'
 
 /**
  * Sign-in providers the bundled channel pack implements and this machine can
@@ -186,7 +186,7 @@ export function installGuideSkill(logger) {
     text = normaliseNewlines(fs.readFileSync(path.join(import.meta.dirname, 'skills', GUIDE_SKILL, 'SKILL.md'), 'utf8'))
   } catch (error) {
     const reason = String(error?.message ?? error)
-    logger?.warn?.(`vyra-free-model: 使用指南技能缺失（${reason}）`)
+    logger?.warn?.(`dsh-vyra-free-model: 使用指南技能缺失（${reason}）`)
     return { ok: false, reason }
   }
   const dir = path.join(resolveDshHome(), 'skills', GUIDE_SKILL)
@@ -200,7 +200,7 @@ export function installGuideSkill(logger) {
     return { ok: true, file, changed }
   } catch (error) {
     const reason = String(error?.message ?? error)
-    logger?.warn?.(`vyra-free-model: 无法安装使用指南技能（${reason}）`)
+    logger?.warn?.(`dsh-vyra-free-model: 无法安装使用指南技能（${reason}）`)
     return { ok: false, reason }
   }
 }
@@ -574,11 +574,11 @@ export function apply(ctx, _config) {
         buddyStore.edit(value => ({ ...value, accounts }))
         rebuildExtras()
         try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels */ }
-        logger.info?.(`vyra-free-model: ${productId} signed in as ${result.nickname || result.userId || '?'}`)
+        logger.info?.(`dsh-vyra-free-model: ${productId} signed in as ${result.nickname || result.userId || '?'}`)
         void refreshBuddyModels(productId)
       })
       .catch(error => {
-        logger.warn?.(`vyra-free-model: ${productId} sign-in failed (${error?.message ?? error})`)
+        logger.warn?.(`dsh-vyra-free-model: ${productId} sign-in failed (${error?.message ?? error})`)
       })
     return { loginUrl: started.loginUrl, product: productId }
   }
@@ -815,7 +815,7 @@ export function apply(ctx, _config) {
         // An empty answer is a gateway problem, not "there are no free models".
         // Keeping the old roster is the difference between a stale list and none.
         laneOk = false
-        if (log) logger.warn?.('vyra-free-model: the listing came back empty; keeping the cached roster')
+        if (log) logger.warn?.('dsh-vyra-free-model: the listing came back empty; keeping the cached roster')
         return catalog
       }
       catalog = next
@@ -827,12 +827,12 @@ export function apply(ctx, _config) {
         probeStore.update({ at: Date.now(), results: { ...probeStore.get().results, ...results } })
       }
       try { ctx.llm?.emitAdaptersUpdated?.() } catch { /* older kernels have no such method */ }
-      if (log) logger.info?.(`vyra-free-model: ${next.length} models available${probe ? ' (probed)' : ''}`)
+      if (log) logger.info?.(`dsh-vyra-free-model: ${next.length} models available${probe ? ' (probed)' : ''}`)
       return catalog
     } catch (error) {
       if (disposed) return catalog
       laneOk = false
-      if (log) logger.warn?.(`vyra-free-model: listing refresh failed (${error?.message ?? error}); keeping the cached roster`)
+      if (log) logger.warn?.(`dsh-vyra-free-model: listing refresh failed (${error?.message ?? error}); keeping the cached roster`)
       return catalog
     }
   }
@@ -868,9 +868,9 @@ export function apply(ctx, _config) {
       autoStore.dispose()
       buddyStore.dispose()
     }
-  }, 'vyra-free-model: catalog refresh')
+  }, 'dsh-vyra-free-model: catalog refresh')
 
-  logger.info?.(`vyra-free-model: mounted, route "${ROUTE}" with ${catalog.length} cached models`)
+  logger.info?.(`dsh-vyra-free-model: mounted, route "${ROUTE}" with ${catalog.length} cached models`)
 
   /** Whatever the forward switch currently holds. */
   const forwardState = { enabled: false, port: 0, key: '' }
@@ -918,7 +918,7 @@ export function apply(ctx, _config) {
         })
         forwardState.enabled = true
         forwardState.port = forwardServer.port
-        logger.info?.(`vyra-free-model: forward port listening on 127.0.0.1:${forwardState.port}`)
+        logger.info?.(`dsh-vyra-free-model: forward port listening on 127.0.0.1:${forwardState.port}`)
         return forwardState
       } catch (error) {
         if (error?.code !== 'EADDRINUSE') throw error
@@ -1054,7 +1054,7 @@ export function apply(ctx, _config) {
         port: forwardState.port, key: forwardState.key, model: selected,
       }), { mode: 0o755 })
     } catch (error) {
-      logger.warn?.(`vyra-free-model: could not write the ${tool} launcher (${error?.message ?? error})`)
+      logger.warn?.(`dsh-vyra-free-model: could not write the ${tool} launcher (${error?.message ?? error})`)
     }
 
     return {
@@ -1088,7 +1088,7 @@ export function apply(ctx, _config) {
       kind: 'prefix',
       path: API_PATH,
       handler: api,
-    }), 'vyra-free-model: api routes')
+    }), 'dsh-vyra-free-model: api routes')
   })
 
   /**
@@ -1109,7 +1109,7 @@ export function apply(ctx, _config) {
           if (cancelled) return
           if (ctx.get('accountPool') !== undefined) {
             accountsState = 'owned-elsewhere'
-            logger.info?.('vyra-free-model: another plugin already owns the account pool; leaving it alone')
+            logger.info?.('dsh-vyra-free-model: another plugin already owns the account pool; leaving it alone')
             return
           }
           pack.apply(scoped, { disableOpencode: true })
@@ -1118,14 +1118,14 @@ export function apply(ctx, _config) {
           // otherwise miss it and the block would stay empty until the retry.
           await new Promise(resolve => setTimeout(resolve, 50))
           await readProviders()
-          logger.info?.(`vyra-free-model: account pack mounted with ${providers.length} providers`)
+          logger.info?.(`dsh-vyra-free-model: account pack mounted with ${providers.length} providers`)
         } catch (error) {
           accountsState = 'failed'
-          logger.warn?.(`vyra-free-model: could not mount the account pack (${error?.message ?? error})`)
+          logger.warn?.(`dsh-vyra-free-model: could not mount the account pack (${error?.message ?? error})`)
         }
       })()
       return () => { cancelled = true }
-    }, 'vyra-free-model: account pack')
+    }, 'dsh-vyra-free-model: account pack')
   })
 
   // A signed-in Tencent account's catalog is refreshed shortly after boot when
@@ -1161,7 +1161,7 @@ export function apply(ctx, _config) {
     clearTimeout(buddyRefresh)
     clearTimeout(providersRetry)
     clearInterval(dailyClaim)
-  }, 'vyra-free-model: credit claims')
+  }, 'dsh-vyra-free-model: credit claims')
 
   /**
    * The provider rows, read from the pack once it is up.
@@ -1215,7 +1215,7 @@ export function apply(ctx, _config) {
       providersAt = Date.now()
       return providers
     } catch (error) {
-      logger.warn?.(`vyra-free-model: could not read the account providers (${error?.message ?? error})`)
+      logger.warn?.(`dsh-vyra-free-model: could not read the account providers (${error?.message ?? error})`)
       return []
     }
   }
@@ -1290,7 +1290,7 @@ export function apply(ctx, _config) {
       return { duplicate: false }
     } catch (error) {
       // A dedupe check is a courtesy; never lose a usable login over it.
-      logger.warn?.(`vyra-free-model: could not compare the new account (${error?.message ?? error})`)
+      logger.warn?.(`dsh-vyra-free-model: could not compare the new account (${error?.message ?? error})`)
       return { duplicate: false }
     }
   }
@@ -1316,7 +1316,7 @@ export function apply(ctx, _config) {
         await callChannel('credits.claimAll', { provider })
       } catch (error) {
         failures += 1
-        logger.warn?.(`vyra-free-model: automatic credit claim for ${provider} failed (${error?.message ?? error})`)
+        logger.warn?.(`dsh-vyra-free-model: automatic credit claim for ${provider} failed (${error?.message ?? error})`)
       }
     }
     // The Tencent lane keeps its own accounts; claim theirs too.
@@ -1326,7 +1326,7 @@ export function apply(ctx, _config) {
         await claimCreditsFor(productId)
       } catch (error) {
         failures += 1
-        logger.warn?.(`vyra-free-model: automatic credit claim for ${productId} failed (${error?.message ?? error})`)
+        logger.warn?.(`dsh-vyra-free-model: automatic credit claim for ${productId} failed (${error?.message ?? error})`)
       }
     }
     claimFailedAt = failures > 0 ? Date.now() : undefined
@@ -1441,7 +1441,7 @@ function writeCachedCatalog(file, models, logger) {
     fs.writeFileSync(temp, JSON.stringify({ at: Date.now(), models }, undefined, 2), { mode: 0o600 })
     fs.renameSync(temp, file)
   } catch (error) {
-    logger.warn?.(`vyra-free-model: could not cache the model roster (${error?.message ?? error})`)
+    logger.warn?.(`dsh-vyra-free-model: could not cache the model roster (${error?.message ?? error})`)
   }
 }
 

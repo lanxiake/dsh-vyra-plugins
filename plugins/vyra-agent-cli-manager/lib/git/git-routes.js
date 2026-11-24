@@ -1,9 +1,9 @@
 /**
- * HTTP routes the 变更 panel posts to, under `/vyra-agent-cli-manager/git/<operation>`. The harness's
+ * HTTP routes the 变更 panel posts to, under `/dsh-vyra-agent-cli-manager/git/<operation>`. The harness's
  * web server leaves authentication to each route, so every request first asks the
  * `connection` service for a rejection: its Host/Origin fence stops cross-site and DNS-
  * rebinding callers, and its login-token check stops anyone who is not the signed-in browser.
- * @module vyra-agent-cli-manager/git/git-routes
+ * @module dsh-vyra-agent-cli-manager/git/git-routes
  */
 import { GIT_ROUTE_PREFIX } from "../constants.js";
 import { asBody, operationOf, runOperation, statusFor } from "./git-requests.js";
@@ -62,7 +62,7 @@ export function gitHandler(spawn, connection, warn) {
         catch (error) {
             const status = error instanceof BodyTooLarge ? 413 : error instanceof SyntaxError ? 400 : statusFor(error);
             if (status === 500)
-                warn(`vyra-agent-cli-manager: git ${operation} failed: ${messageOf(error)}`);
+                warn(`dsh-vyra-agent-cli-manager: git ${operation} failed: ${messageOf(error)}`);
             sendJson(res, status, { success: false, error: status === 500 ? 'Git 操作失败，请查看日志' : messageOf(error) });
         }
     };

@@ -162,13 +162,13 @@ var BUILTIN_REF_PATTERN = /^builtin:([a-z0-9][a-z0-9-]*):([a-z0-9][a-z0-9-]*)$/;
 var EXTERNAL_SKINS = /* @__PURE__ */ new Map();
 function registerExternalSkin({ id, fields, builtinAssets = {} }) {
   if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) {
-    throw new Error(`[vyra-free-theme] external skin id "${id}" is malformed`);
+    throw new Error(`[dsh-vyra-free-theme] external skin id "${id}" is malformed`);
   }
   if (Object.hasOwn(SKINS, id)) {
-    throw new Error(`[vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
+    throw new Error(`[dsh-vyra-free-theme] external skin "${id}" collides with a compiled-in skin`);
   }
   if (!Array.isArray(fields) || fields.length === 0) {
-    throw new Error(`[vyra-free-theme] external skin "${id}" needs at least one field`);
+    throw new Error(`[dsh-vyra-free-theme] external skin "${id}" needs at least one field`);
   }
   EXTERNAL_SKINS.set(id, { id, fields, builtinAssets });
   return id;
@@ -949,7 +949,7 @@ function createPersonalizationStore(options = {}) {
   function serveAsset(url) {
     init();
     const path = String(url ?? "").split("?")[0];
-    const match = /\/vyra-free-theme\/assets\/([^/]+)$/.exec(path);
+    const match = /\/dsh-vyra-free-theme\/assets\/([^/]+)$/.exec(path);
     if (match === null) return null;
     const name2 = match[1];
     if (!/^u_[0-9a-f]{32}\.(png|jpe?g|webp|gif)$/.test(name2)) return null;
@@ -1174,7 +1174,7 @@ function createOfficialRejection(ctx) {
   };
 }
 function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets, selection } = options;
+  const { store, assetsBasePath = "/dsh-vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets, selection } = options;
   const disposers = [];
   const fence = (request, response) => {
     if (rejection !== void 0 && rejection(request) !== void 0) {
@@ -1188,7 +1188,7 @@ function mountPersonalizationRoutes(host, options) {
   try {
     const configRoute = host.webServer.register({
       kind: "exact",
-      path: "/vyra-free-theme/config",
+      path: "/dsh-vyra-free-theme/config",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (request.method === "GET") return sendJson(response, 200, store.snapshot());
@@ -1206,7 +1206,7 @@ function mountPersonalizationRoutes(host, options) {
     if (typeof themes === "function") {
       const themesRoute = host.webServer.register({
         kind: "exact",
-        path: "/vyra-free-theme/themes",
+        path: "/dsh-vyra-free-theme/themes",
         handler: async (request, response) => {
           if (!fence(request, response)) return;
           if (!method(request, response, "GET")) return;
@@ -1222,12 +1222,12 @@ function mountPersonalizationRoutes(host, options) {
     if (typeof themeAssets === "function") {
       const themeAssetRoute = host.webServer.register({
         kind: "prefix",
-        path: "/vyra-free-theme/theme",
+        path: "/dsh-vyra-free-theme/theme",
         handler: async (request, response) => {
           if (!fence(request, response)) return;
           if (!method(request, response, "GET")) return;
           const path = String(request.url ?? "").split("?")[0];
-          const match = /^\/vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
+          const match = /^\/dsh-vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
           if (match === null) {
             return sendJson(response, 400, { error: "invalid theme asset path", code: "INVALID_THEME_ASSET" });
           }
@@ -1256,7 +1256,7 @@ function mountPersonalizationRoutes(host, options) {
     if (typeof selection === "function") {
       const selectionRoute = host.webServer.register({
         kind: "exact",
-        path: "/vyra-free-theme/selection",
+        path: "/dsh-vyra-free-theme/selection",
         handler: async (request, response) => {
           if (!fence(request, response)) return;
           if (method(request, response, "GET")) {
@@ -1285,7 +1285,7 @@ function mountPersonalizationRoutes(host, options) {
     }
     const recoveryRoute = host.webServer.register({
       kind: "exact",
-      path: "/vyra-free-theme/recovery",
+      path: "/dsh-vyra-free-theme/recovery",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (!method(request, response, "POST")) return;
@@ -1299,7 +1299,7 @@ function mountPersonalizationRoutes(host, options) {
     disposers.push(recoveryRoute);
     const libraryRoute = host.webServer.register({
       kind: "exact",
-      path: "/vyra-free-theme/library",
+      path: "/dsh-vyra-free-theme/library",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (request.method === "GET") return sendJson(response, 200, store.snapshot());
@@ -1320,12 +1320,12 @@ function mountPersonalizationRoutes(host, options) {
     disposers.push(libraryRoute);
     const libraryDeleteRoute = host.webServer.register({
       kind: "prefix",
-      path: "/vyra-free-theme/library",
+      path: "/dsh-vyra-free-theme/library",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (!method(request, response, "DELETE")) return;
         const path = String(request.url ?? "").split("?")[0];
-        const match = /\/vyra-free-theme\/library\/([^/]+)$/.exec(path);
+        const match = /\/dsh-vyra-free-theme\/library\/([^/]+)$/.exec(path);
         const suffix = match?.[1] ?? "";
         if (!ASSET_ID_PATTERN.test(suffix)) {
           return sendJson(response, 400, { error: "invalid asset id", code: "INVALID_ASSET_ID" });
@@ -1383,7 +1383,7 @@ function mountPersonalizationRoutes(host, options) {
 import { readFileSync as readFileSync2 } from "node:fs";
 import { join as join2 } from "node:path";
 var BUILTIN_FILE_PATTERN = /^b_([a-z0-9][a-z0-9-]*)_([a-z0-9][a-z0-9-]*)\.webp$/;
-var ASSETS_PREFIX_PATTERN = /\/vyra-free-theme\/assets\/([^/]+)$/;
+var ASSETS_PREFIX_PATTERN = /\/dsh-vyra-free-theme\/assets\/([^/]+)$/;
 function createBuiltinAssetServer({ assetsDir, manifest }) {
   const byName = /* @__PURE__ */ new Map();
   for (const entry of manifest?.entries ?? []) {
@@ -2021,7 +2021,7 @@ function writeSelection(dataDir, skinId, { now = () => (/* @__PURE__ */ new Date
 import { existsSync as existsSync4, mkdirSync as mkdirSync4, readFileSync as readFileSync6, writeFileSync as writeFileSync4 } from "node:fs";
 import { dirname as dirname2, join as join5 } from "node:path";
 import { fileURLToPath } from "node:url";
-var SKILL_NAME = "vyra-free-theme";
+var SKILL_NAME = "dsh-vyra-free-theme";
 function writeIfChanged(file, content) {
   try {
     if (existsSync4(file) && readFileSync6(file, "utf8") === content) return false;
@@ -2034,13 +2034,13 @@ function writeIfChanged(file, content) {
 }
 function shellShim(nodePath, cliPath) {
   return `#!/bin/sh
-# vyra-free-theme CLI shim (generated by the plugin; do not edit)
+# dsh-vyra-free-theme CLI shim (generated by the plugin; do not edit)
 exec ${JSON.stringify(nodePath)} ${JSON.stringify(cliPath)} "$@"
 `;
 }
 function cmdShim(nodePath, cliPath) {
   return `@echo off\r
-rem vyra-free-theme CLI shim (generated by the plugin; do not edit)\r
+rem dsh-vyra-free-theme CLI shim (generated by the plugin; do not edit)\r
 "${nodePath}" "${cliPath}" %*\r
 `;
 }
@@ -2077,7 +2077,7 @@ import { homedir } from "node:os";
 import { basename, dirname as dirname3, join as join6, resolve as resolve2 } from "node:path";
 import { cpSync, existsSync as existsSync5, mkdtempSync, readdirSync as readdirSync3, renameSync as renameSync4, rmSync, statSync as statSync3 } from "node:fs";
 var DATA_DIRS = {
-  web: "vyra-free-theme",
+  web: "dsh-vyra-free-theme",
   desktop: "vyra-free-theme-desktop"
 };
 var LEGACY_DIRS = {
@@ -2136,7 +2136,7 @@ function dataDirForProfile(root, profile = "web") {
 }
 
 // src/index.js
-var name = "vyra-free-theme";
+var name = "dsh-vyra-free-theme";
 function apply(ctx) {
   ctx.inject(["webServer"], (hostContext) => {
     const root = dshHome();
@@ -2180,7 +2180,7 @@ function apply(ctx) {
           write: (skinId) => writeSelection(dataDir, skinId)
         })
       });
-    }, "vyra-free-theme: personalization routes");
+    }, "dsh-vyra-free-theme: personalization routes");
   });
 }
 export {

@@ -2,7 +2,7 @@
 //
 // 所有读写都走 host 的 /api/xianyu-delivery/rpc，前端不直接碰数据库或子进程。
 window.__ModuleLoader__.load({
-  id: 'vyra-xianyu-delivery',
+  id: 'dsh-vyra-xianyu-delivery',
   factory(require) {
     const React = require('react')
     const h = React.createElement

@@ -50,7 +50,7 @@ function call(handler, { method = 'POST', path = '/channel', body } = {}) {
   return new Promise(resolve => {
     const req = {
       method,
-      url: `/api/vyra-free-model${path}`,
+      url: `/api/dsh-vyra-free-model${path}`,
       headers: {},
       on(event, fn) {
         if (event === 'data' && body !== undefined) fn(Buffer.from(JSON.stringify(body)))

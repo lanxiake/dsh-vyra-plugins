@@ -1,7 +1,7 @@
 /**
  * Host plugin: registers each configured CLI as a model provider and wires the
  * session registry to the harness.
- * @module vyra-agent-cli-manager
+ * @module dsh-vyra-agent-cli-manager
  */
 import { createHash } from 'node:crypto';
 import { cp, lstat, mkdir, readFile, readdir, rename, rm, rmdir, symlink, unlink } from 'node:fs/promises';
@@ -36,8 +36,8 @@ import { LoginPath, diskDirs, runShell } from "./login-path.js";
  * Shown to turns cut off when this plugin stops. Besides shutdown, the harness restarts a
  * plugin whose files changed, which takes every CLI it started down with it.
  */
-const PLUGIN_STOPPED_REASON = 'vyra-agent-cli-manager 插件已停止或重新加载（例如插件更新后），这条回复没有完成，请重新发送。';
-const PLUGIN_HOME = 'vyra-agent-cli-manager';
+const PLUGIN_STOPPED_REASON = 'dsh-vyra-agent-cli-manager 插件已停止或重新加载（例如插件更新后），这条回复没有完成，请重新发送。';
+const PLUGIN_HOME = 'dsh-vyra-agent-cli-manager';
 const MODEL_CACHE_FILE = 'models.json';
 const MODEL_PROBE_DIR = 'model-probe';
 const REVIEW_ROUTE_UNSET = '「EXP 自动审查」需要一个独立的审查模型，插件不会替你挑选：请在插件配置里设置 reviewProvider（以及可选的 reviewModel），或用 /permission 改用其它访问模式。';
@@ -118,7 +118,7 @@ export default class CliBridge extends Service {
                 catalog.restore(lists);
         })
             .catch((error) => {
-            ctx.logger.warn(`vyra-agent-cli-manager: could not read saved model lists: ${String(error)}`);
+            ctx.logger.warn(`dsh-vyra-agent-cli-manager: could not read saved model lists: ${String(error)}`);
         });
     }
     /** The harness's home, or `~/.dsh` when it does not say. */
@@ -134,7 +134,7 @@ export default class CliBridge extends Service {
     serveWebRoutes() {
         this.ctx.inject(['webServer', 'connection'], (child) => {
             const handler = gitHandler((spec) => child.subprocess.spawn(spec), child.connection, (message) => child.logger.warn(message));
-            child.effect(() => registerGitRoutes(child.webServer, handler), 'vyra-agent-cli-manager: git routes');
+            child.effect(() => registerGitRoutes(child.webServer, handler), 'dsh-vyra-agent-cli-manager: git routes');
             // The Agent CLI 管理 panel reads every CLI's installed state. Like the git routes it
             // registers only when the harness has a web server, so a headless run still gets the CLIs.
             const cli = cliHandler({
@@ -147,11 +147,11 @@ export default class CliBridge extends Service {
                 skillInstall: this.cliSkillInstall(),
                 skillConsolidate: this.cliSkillConsolidate(),
             }, child.connection, (message) => child.logger.warn(message));
-            child.effect(() => registerCliRoutes(child.webServer, cli), 'vyra-agent-cli-manager: cli routes');
+            child.effect(() => registerCliRoutes(child.webServer, cli), 'dsh-vyra-agent-cli-manager: cli routes');
             child.effect(() => registerModeRoute(child.webServer, {
                 modeState: (sessionId, provider) => this.modeState(sessionId, provider),
                 switchMode: (sessionId, provider, mode) => this.switchMode(sessionId, provider, mode),
-            }, child.connection, (message) => child.logger.warn(message)), 'vyra-agent-cli-manager: mode route');
+            }, child.connection, (message) => child.logger.warn(message)), 'dsh-vyra-agent-cli-manager: mode route');
         });
     }
     /**
@@ -400,7 +400,7 @@ export default class CliBridge extends Service {
             return models[0]?.id;
         }
         catch (error) {
-            this.ctx.logger.warn(`vyra-agent-cli-manager: could not list models for ${provider}: ${String(error)}`);
+            this.ctx.logger.warn(`dsh-vyra-agent-cli-manager: could not list models for ${provider}: ${String(error)}`);
             return undefined;
         }
     }
@@ -452,7 +452,7 @@ export default class CliBridge extends Service {
                     registry.routeAgent(agent);
                 }
                 catch (error) {
-                    ctx.logger.warn(`vyra-agent-cli-manager: could not select the CLI for ${sessionId}: ${String(error)}`);
+                    ctx.logger.warn(`dsh-vyra-agent-cli-manager: could not select the CLI for ${sessionId}: ${String(error)}`);
                 }
             });
         });
@@ -543,7 +543,7 @@ export default class CliBridge extends Service {
             onEfforts: (model, effort) => this.catalog.learnEfforts(provider, model, effort),
             onModes: (modes) => this.catalog.learnModes(provider, modes),
             readImage: (ref, signal) => this.readImage(ref, signal),
-            onError: (error) => this.ctx.logger.warn(`vyra-agent-cli-manager: ${agent.name}: ${String(error)}`),
+            onError: (error) => this.ctx.logger.warn(`dsh-vyra-agent-cli-manager: ${agent.name}: ${String(error)}`),
             openTransport: (handlers) => this.openTransport(agent, cwd, handlers),
         });
     }

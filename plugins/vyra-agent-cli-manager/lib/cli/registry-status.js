@@ -1,7 +1,7 @@
 /**
  * One row per catalog CLI: whether it is installed, which version it reports, which version
  * npm offers, and whether that is newer. Reads only.
- * @module vyra-agent-cli-manager/cli/registry-status
+ * @module dsh-vyra-agent-cli-manager/cli/registry-status
  */
 import { CLI_CATALOG } from "./catalog.js";
 import { detectCli } from "./detect.js";

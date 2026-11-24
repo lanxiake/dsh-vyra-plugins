@@ -2,7 +2,7 @@
  * Finds whether one CLI is installed and what version it reports. Detection only reads: it
  * never installs, upgrades, or writes, so a failure here costs a row in the list and nothing
  * else.
- * @module vyra-agent-cli-manager/cli/detect
+ * @module dsh-vyra-agent-cli-manager/cli/detect
  */
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
 import type { CliCatalogEntry } from './catalog.ts';

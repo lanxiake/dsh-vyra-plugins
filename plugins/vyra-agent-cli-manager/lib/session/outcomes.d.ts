@@ -1,6 +1,6 @@
 /**
  * How a CLI turn's ending reads to the harness, and the chunks that close a harness step.
- * @module vyra-agent-cli-manager/session/outcomes
+ * @module dsh-vyra-agent-cli-manager/session/outcomes
  */
 import type { StopReason } from '@agentclientprotocol/sdk';
 import { LlmError } from '@deepseek-ai/dsh-llm';

@@ -26,13 +26,13 @@
 // repository directory. An installed copy with no such version offers no update
 // action, exactly as the built-in Discover tab treats it.
 window.__ModuleLoader__.load({
-  id: 'vyra-plugin-market',
+  id: 'dsh-vyra-plugin-market',
   factory(require) {
     const React = require('react')
     const h = React.createElement
     const { useState, useEffect, useMemo, useRef, useCallback } = React
 
-    const NS = 'vyra-plugin-market'
+    const NS = 'dsh-vyra-plugin-market'
 
 
     /** Our own market index: the source this plugin exists to browse. */

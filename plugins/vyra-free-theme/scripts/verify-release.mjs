@@ -28,8 +28,8 @@ function fail(message) {
 if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version)) {
   fail(`package.json version must be strict stable semver (X.Y.Z), got "${version}"`);
 }
-if (manifest.name !== "vyra-free-theme") {
-  fail(`package.json name must be vyra-free-theme, got "${manifest.name}"`);
+if (manifest.name !== "dsh-vyra-free-theme") {
+  fail(`package.json name must be dsh-vyra-free-theme, got "${manifest.name}"`);
 }
 // Repository identity: release provenance pins tag↔version↔repository, so a
 // mismatched identity must fail HERE rather than at publish time.

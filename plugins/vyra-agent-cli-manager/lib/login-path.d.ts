@@ -7,7 +7,7 @@
  * The login shell is asked for its PATH once, in the background, since rc files can take
  * seconds. Until it answers, or when it fails, the usual install places are appended to the
  * inherited PATH, which already covers the common nvm and Homebrew setups.
- * @module vyra-agent-cli-manager/login-path
+ * @module dsh-vyra-agent-cli-manager/login-path
  */
 /** What the lookup needs from the file system; separate so tests need not touch the disk. */
 export interface DirProbe {

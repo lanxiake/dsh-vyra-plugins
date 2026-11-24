@@ -1,4 +1,4 @@
-# vyra-ssh-terminal · SSH 终端
+# dsh-vyra-ssh-terminal · SSH 终端
 
 **把 SSH 终端搬进 DSH**——连接档案、跳板、SFTP、端口转发、主机密钥固定，密码只进 DSH 的凭据服务，档案文件里没有任何秘密。
 

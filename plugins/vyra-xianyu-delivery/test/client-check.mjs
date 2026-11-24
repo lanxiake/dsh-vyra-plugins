@@ -15,7 +15,7 @@ await import('../client.js')
 
 assert.equal(loaded.length, 1, 'client.js 应注册一个模块')
 const def = loaded[0]
-assert.equal(def.id, 'vyra-xianyu-delivery')
+assert.equal(def.id, 'dsh-vyra-xianyu-delivery')
 
 // 最小 React 替身：只检查 factory 能返回插件对象。
 const reactStub = {

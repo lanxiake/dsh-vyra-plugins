@@ -39,7 +39,7 @@ globalThis.window = {
 await import('./client.js')
 
 test('client bundle loads and registers the library plus media tabs', () => {
-  assert.equal(loaded.name, 'vyra-media-studio')
+  assert.equal(loaded.name, 'dsh-vyra-media-studio')
   assert.deepEqual(loaded.inject, ['slots', 'sidebarRightTabs', 'sidebarRight'])
 
   const types = []
@@ -89,10 +89,10 @@ test('client bundle loads and registers the library plus media tabs', () => {
   assert.equal(video.title(sessionAddress), 'a.mp4')
 
   assert.deepEqual(bodies.map(body => body.spec.key ?? body.spec.id).sort(), [
-    'vyra-media-studio.composer-bridge',
-    'vyra-media-studio/audio',
-    'vyra-media-studio/library',
-    'vyra-media-studio/video',
+    'dsh-vyra-media-studio.composer-bridge',
+    'dsh-vyra-media-studio/audio',
+    'dsh-vyra-media-studio/library',
+    'dsh-vyra-media-studio/video',
   ])
   assert.ok(bodies.every(body => typeof body.component === 'function'))
   assert.equal(opened.length, 0)
@@ -107,8 +107,8 @@ test('library and media tab render without undeclared references', () => {
     sidebarRight: { openTab() {} },
   }
   loaded.apply(ctx)
-  const library = bodies.find(body => body.spec.key === 'vyra-media-studio/library').component
-  const media = bodies.find(body => body.spec.key === 'vyra-media-studio/video').component
+  const library = bodies.find(body => body.spec.key === 'dsh-vyra-media-studio/library').component
+  const media = bodies.find(body => body.spec.key === 'dsh-vyra-media-studio/video').component
   const useTabInfo = () => ({
     tab: {
       kind: 'media',

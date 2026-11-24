@@ -44,7 +44,7 @@ import { parseYaml } from './yaml.ts';
 const BEGIN = '# BEGIN STUDYMATE LEARNING PRESET';
 const END = '# END STUDYMATE LEARNING PRESET';
 const PLUGIN = '@deepseek-ai/dsh-agent-preset';
-const BUNDLE = 'vyra-studymate';
+const BUNDLE = 'dsh-vyra-studymate';
 const BUNDLE_ENTRY_ID = 'studymate';
 
 /** 主预设的 id：学习模式。托管块与冲突检查按它 + `extraPresets` 的 id 一起认「我们的预设」。 */

@@ -47,7 +47,7 @@ function loadBundle() {
   const window = {
     __ModuleLoader__: {
       load: ({ id, factory }) => {
-        assert.equal(id, 'vyra-dsh-console', 'the bundle registers under its package name')
+        assert.equal(id, 'dsh-vyra-dsh-console', 'the bundle registers under its package name')
         exports = factory(() => ({}))
       },
     },
@@ -848,7 +848,7 @@ test('apply installs exactly one effect and returns a real disposer', async () =
     exports.apply(ctx)
     await settle(2)
     assert.equal(disposers.length, 1, 'exactly one effect is installed')
-    assert.match(labels[0], /vyra-dsh-console/)
+    assert.match(labels[0], /dsh-vyra-dsh-console/)
     assert.equal(typeof disposers[0], 'function', 'the effect must return a cleanup')
     assert.doesNotThrow(() => disposers[0]())
   })

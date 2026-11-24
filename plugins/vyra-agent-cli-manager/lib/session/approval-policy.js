@@ -4,7 +4,7 @@
  * ask" stance the approval service answers it with a rejection without asking anyone, which
  * turns the CLI's own `Always Ask` into a silent failure. The stance is the user's setting for
  * the session, so it is only lifted while a CLI question is open, then put back.
- * @module vyra-agent-cli-manager/session/approval-policy
+ * @module dsh-vyra-agent-cli-manager/session/approval-policy
  */
 import { setApprovalPolicy } from '@deepseek-ai/dsh-user-approval';
 /** Lifts a session's "never ask" stance for the CLI questions in flight, and restores it. */
@@ -62,7 +62,7 @@ export class CliAskPolicy {
         }
         catch (error) {
             // The answer is already decided; a stance that cannot be written back must not undo it.
-            this.warn(`vyra-agent-cli-manager: could not restore the never-ask stance: ${error instanceof Error ? error.message : String(error)}`);
+            this.warn(`dsh-vyra-agent-cli-manager: could not restore the never-ask stance: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }

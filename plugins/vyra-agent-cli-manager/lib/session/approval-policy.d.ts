@@ -4,7 +4,7 @@
  * ask" stance the approval service answers it with a rejection without asking anyone, which
  * turns the CLI's own `Always Ask` into a silent failure. The stance is the user's setting for
  * the session, so it is only lifted while a CLI question is open, then put back.
- * @module vyra-agent-cli-manager/session/approval-policy
+ * @module dsh-vyra-agent-cli-manager/session/approval-policy
  */
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval';

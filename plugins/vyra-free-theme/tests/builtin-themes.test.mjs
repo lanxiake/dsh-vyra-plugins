@@ -82,7 +82,7 @@ test("element layers derived from bundled themes point at served theme paths", (
         ? [layer.light?.src, layer.light?.poster, layer.dark?.src, layer.dark?.poster].filter(Boolean)
         : [layer.entry];
       for (const url of urls) {
-        assert.match(url, new RegExp(`^/vyra-free-theme/theme/${dir}/`), `${dir}: layer url ${url}`);
+        assert.match(url, new RegExp(`^/dsh-vyra-free-theme/theme/${dir}/`), `${dir}: layer url ${url}`);
       }
     }
   }

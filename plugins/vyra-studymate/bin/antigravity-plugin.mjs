@@ -34,7 +34,7 @@ function assertReplaceable(directory) {
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`输出不是独立目录：${directory}`);
   let metadata;
   try { metadata = JSON.parse(fs.readFileSync(path.join(directory, marker), 'utf8')); } catch { /* Unmanaged output. */ }
-  if (metadata?.generator === 'vyra-studymate') return;
+  if (metadata?.generator === 'dsh-vyra-studymate') return;
   // `--install` targets a plugin directory the host may have created empty; only an empty
   // directory is adoptable, anything else would be silently destroyed.
   if (fs.readdirSync(directory).length === 0) return;

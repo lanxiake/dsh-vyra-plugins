@@ -1,6 +1,6 @@
 /**
  * The ACP operations a CLI session needs, separated from process and SDK details.
- * @module vyra-agent-cli-manager/transport
+ * @module dsh-vyra-agent-cli-manager/transport
  */
 import type { ContentBlock, InitializeResponse, RequestPermissionRequest, RequestPermissionResponse, SessionConfigOption, SessionUpdate, StopReason, Usage } from '@agentclientprotocol/sdk';
 /** Callbacks from the CLI to its session. */

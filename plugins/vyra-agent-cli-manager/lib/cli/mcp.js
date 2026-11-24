@@ -6,7 +6,7 @@
  * Node has no TOML parser and writing one would mean maintaining a second copy of Codex's
  * schema — so for it the CLI's own `mcp list` is run and its text is passed through verbatim
  * rather than parsed by guesswork.
- * @module vyra-agent-cli-manager/cli/mcp
+ * @module dsh-vyra-agent-cli-manager/cli/mcp
  */
 import { join } from 'node:path';
 /** A CLI that may take a while to answer. */

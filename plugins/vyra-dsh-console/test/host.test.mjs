@@ -182,7 +182,7 @@ test('the endpoint route is registered once webServer appears', () => {
 })
 
 test('the route is registered through inject, so a late-binding webServer still gets it', () => {
-  // THE bug this task exists to avoid, documented in vyra-agent-manager: reading
+  // THE bug this task exists to avoid, documented in dsh-vyra-agent-manager: reading
   // `ctx.get('webServer')` once at apply time answers undefined while the server
   // is still binding its port, and returning there leaves the route unregistered
   // for the rest of the process. `inject` is what defers the registration until

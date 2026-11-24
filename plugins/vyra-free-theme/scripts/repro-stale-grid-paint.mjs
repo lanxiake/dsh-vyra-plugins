@@ -6,7 +6,7 @@
 // compositor could paint the center column over the sidebar column — layout
 // and hit-testing stayed correct while the rail (base + icons) went visually
 // missing. The fix pins the sidebar column one explicit stacking step up
-// (style tag `vyra-free-theme/<id>.paintorder.css`, symbol "paintorder").
+// (style tag `dsh-vyra-free-theme/<id>.paintorder.css`, symbol "paintorder").
 //
 // Viewport contract (DSH 0.2.2-rc.1 layout bands, measured on the live host):
 // the gate measures the COLLAPSED RAIL — a 56px sidebar column at x≈0. The rail
@@ -77,7 +77,7 @@ const fingerprintOnly = has("--fingerprint-only");
 const noFingerprint = has("--no-fingerprint");
 const gate = has("--gate");
 const SYMBOL = "paintorder"; // fix marker inside the served client bundle
-const SKIN_STORAGE_KEY = "vyra-free-theme:active"; // runtime.js persistence key
+const SKIN_STORAGE_KEY = "dsh-vyra-free-theme:active"; // runtime.js persistence key
 // Red-baseline fallback: old bundles predate the data-skin-id hook (R21), so
 // card lookup falls back to known label text (current UI language either way).
 const LABEL_FALLBACK = {

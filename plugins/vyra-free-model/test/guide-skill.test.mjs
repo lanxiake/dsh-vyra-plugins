@@ -29,7 +29,7 @@ test('initialize 时安装 vyra-dsh-guide 技能，内容不变不重写', () =>
     const text = fs.readFileSync(file, 'utf8')
     assert.match(text, /^---\nname: vyra-dsh-guide/)
     assert.match(text, /plugin_manager/)
-    assert.match(text, /vyra-plugin-market/)
+    assert.match(text, /dsh-vyra-plugin-market/)
     assert.match(text, /优先/)
 
     const second = installGuideSkill(logger)

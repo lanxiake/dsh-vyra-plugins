@@ -1,8 +1,8 @@
 /** Shared client constants, preferences and pure helpers. */
 
-export const LIBRARY_ID = 'vyra-media-studio/library'
-export const VIDEO_ID = 'vyra-media-studio/video'
-export const AUDIO_ID = 'vyra-media-studio/audio'
+export const LIBRARY_ID = 'dsh-vyra-media-studio/library'
+export const VIDEO_ID = 'dsh-vyra-media-studio/video'
+export const AUDIO_ID = 'dsh-vyra-media-studio/audio'
 export const LIBRARY_KIND = 'media'
 
 export const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'webm', 'ogv', 'mkv', 'avi', 'wmv', 'flv'])
@@ -265,7 +265,7 @@ export function makeLinkItem(url, title) {
 }
 
 function linksKey(root) {
-  return `vyra-media-studio.links.v1:${root}`
+  return `dsh-vyra-media-studio.links.v1:${root}`
 }
 
 export function readLinks(root) {
@@ -285,7 +285,7 @@ export function writeLinks(root, links) {
   try { localStorage.setItem(linksKey(root), JSON.stringify(links)) } catch { /* storage may be unavailable */ }
 }
 
-const PREFS_KEY = 'vyra-media-studio.prefs.v2'
+const PREFS_KEY = 'dsh-vyra-media-studio.prefs.v2'
 const PREF_DEFAULTS = {
   // The panel opens on the tile grid with the current-session filter on; the
   // timeline is one click away through the view button.

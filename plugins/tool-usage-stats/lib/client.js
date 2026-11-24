@@ -1,4 +1,4 @@
-window.__ModuleLoader__.load({ id: "vyra-tool-usage-stats", factory: (require) => {
+window.__ModuleLoader__.load({ id: "dsh-vyra-tool-usage-stats", factory: (require) => {
 var module = { exports: {} }; var exports = module.exports;
 "use strict";
 var __defProp = Object.defineProperty;

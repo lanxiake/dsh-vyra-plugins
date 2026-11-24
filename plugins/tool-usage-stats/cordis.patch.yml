@@ -3,5 +3,5 @@
 # apply, and the plugin degrades to in-memory-only when `storageDomain` is
 # absent from the composition.
 - insert:
-    - id: vyra-tool-usage-stats
-      name: 'vyra-tool-usage-stats'
+    - id: dsh-vyra-tool-usage-stats
+      name: 'dsh-vyra-tool-usage-stats'

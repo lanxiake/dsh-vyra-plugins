@@ -49,7 +49,7 @@ plugin_manager install_bundle plugins/vyra-dsh-console
 ## 结构
 
 ```
-vyra-dsh-console/
+dsh-vyra-dsh-console/
 ├── package.json       # Bundle manifest
 ├── cordis.patch.yml   # Host 插件行
 ├── index.js           # Host 入口
@@ -93,7 +93,7 @@ node plugins/vyra-dsh-console/cli.mjs events
 | `events` | 本机日志目录清单，逐个注明存在与否 |
 
 选项只有 `--profile=<name>`（默认 `DSH_PROFILE` 或 `desktop`）、`--json`、`--help`。
-profile 目录解析与 `vyra-plugin-market` 一致：`$DSH_HOME`（默认 `~/.dsh`）下 `profiles/<name>`。
+profile 目录解析与 `dsh-vyra-plugin-market` 一致：`$DSH_HOME`（默认 `~/.dsh`）下 `profiles/<name>`。
 
 退出码：`0` 成功，`1` 真失败（profile 不存在、清单读不了），`2` 用法错误。
 `--json` 只往 stdout 写一份合法 JSON（诊断信息走 stderr），字段每次相同，因此可以直接管道给 `jq`。

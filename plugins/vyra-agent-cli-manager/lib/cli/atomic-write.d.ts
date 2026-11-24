@@ -5,7 +5,7 @@
  * would present that CLI with a truncated file and lose every server the user configured. The
  * text is written beside the target and renamed over it, which is atomic on the platforms this
  * plugin runs on.
- * @module vyra-agent-cli-manager/cli/atomic-write
+ * @module dsh-vyra-agent-cli-manager/cli/atomic-write
  */
 /**
  * Write `text` to `path`, replacing what was there only once the new text is fully on disk.

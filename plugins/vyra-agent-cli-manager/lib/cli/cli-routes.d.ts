@@ -1,5 +1,5 @@
 /**
- * HTTP routes the 总览 panel posts to, under `/vyra-agent-cli-manager/cli/<operation>`.
+ * HTTP routes the 总览 panel posts to, under `/dsh-vyra-agent-cli-manager/cli/<operation>`.
  * Structured after the git routes: the harness's web server leaves authentication to each
  * route, so every request first asks `connection` for a rejection — its Host/Origin fence
  * stops cross-site and DNS-rebinding callers, and its login-token check stops anyone who is
@@ -9,7 +9,7 @@
  * The two write operations add and remove one MCP server, and each is delegated to the CLI
  * whose configuration it changes. Installing and uninstalling stay off this route so that a
  * mistake in the panel can never change what is installed.
- * @module vyra-agent-cli-manager/cli/cli-routes
+ * @module dsh-vyra-agent-cli-manager/cli/cli-routes
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { SkillConsolidateHost } from './skill-consolidate.ts';

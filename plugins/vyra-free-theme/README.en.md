@@ -1,8 +1,8 @@
-# vyra-free-theme — Skin pack for DSH
+# dsh-vyra-free-theme — Skin pack for DSH
 
-[![CI](https://img.shields.io/github/actions/workflow/status/iasiv5/vyra-free-theme/ci.yml?branch=main&label=CI)](../../actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/vyra-free-theme?label=npm)](https://www.npmjs.com/package/vyra-free-theme)
-[![License](https://img.shields.io/github/license/iasiv5/vyra-free-theme?label=License)](./LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/iasiv5/dsh-vyra-free-theme/ci.yml?branch=main&label=CI)](../../actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/dsh-vyra-free-theme?label=npm)](https://www.npmjs.com/package/dsh-vyra-free-theme)
+[![License](https://img.shields.io/github/license/iasiv5/dsh-vyra-free-theme?label=License)](./LICENSE)
 [![DSH](https://img.shields.io/badge/DSH-0.2.2--rc.5%20verified-2563eb)](#faq)
 
 English · [中文](./README.md)
@@ -16,7 +16,7 @@ Hot-swappable brand skins for DeepSeek Harness — installable on both the Web a
 This section answers: how to install, how to switch skins.
 
 ```sh
-dsh plugin --profile web add vyra-free-theme
+dsh plugin --profile web add dsh-vyra-free-theme
 ```
 
 1. Run the install command above.
@@ -27,17 +27,17 @@ dsh plugin --profile web add vyra-free-theme
 On a fresh install with no saved choice, OpenBMC Studio (the `openbmc` skin) is the factory-default skin (since v1.0.6; meirenzhi before that). For reproducible installs, pin the exact version:
 
 ```sh
-dsh plugin --profile web add vyra-free-theme@1.0.0
+dsh plugin --profile web add dsh-vyra-free-theme@1.0.0
 ```
 
 Update and uninstall:
 
 ```sh
-dsh plugin --profile web update vyra-free-theme    # update
-dsh plugin --profile web remove vyra-free-theme    # uninstall
+dsh plugin --profile web update dsh-vyra-free-theme    # update
+dsh plugin --profile web remove dsh-vyra-free-theme    # uninstall
 ```
 
-**DSH Desktop app**: install from the app's built-in plugin page, or run `dsh plugin --profile desktop add vyra-free-theme`, then restart the app.
+**DSH Desktop app**: install from the app's built-in plugin page, or run `dsh plugin --profile desktop add dsh-vyra-free-theme`, then restart the app.
 
 With the [dsh-m](https://github.com/iasiv5/dsh-m) plugin marketplace installed, you can also install / uninstall this plugin with one click inside the DSH Web UI.
 
@@ -54,8 +54,8 @@ With the [dsh-m](https://github.com/iasiv5/dsh-m) plugin marketplace installed, 
 Copy the whole block below to an Agent inside DSH Web:
 
 ```text
-Install the DSH skin plugin vyra-free-theme for me:
-1. Run: dsh plugin --profile web add vyra-free-theme
+Install the DSH skin plugin dsh-vyra-free-theme for me:
+1. Run: dsh plugin --profile web add dsh-vyra-free-theme
 2. Once it succeeds, restart DSH Web (if it runs under systemd, restart the service).
 3. Remind me to refresh the page afterwards.
 If the install fails, send me the command output verbatim and retry at most once.
@@ -137,7 +137,7 @@ Every skin's key visuals are open to adjustment. Click the gear button on a skin
 
 ### Where settings live, and whether they survive
 
-- Web stores configuration and the library under `$DSH_HOME/vyra-free-theme/`; since v1.5.4 Desktop stores them under `$DSH_HOME/vyra-free-theme-desktop/`. On first launch Desktop copies existing settings and images from the legacy directory once, **without removing or rewriting the old directory**; the two stores then evolve independently. Both are separate from the plugin installation directory, which upgrades replace.
+- Web stores configuration and the library under `$DSH_HOME/dsh-vyra-free-theme/`; since v1.5.4 Desktop stores them under `$DSH_HOME/vyra-free-theme-desktop/`. On first launch Desktop copies existing settings and images from the legacy directory once, **without removing or rewriting the old directory**; the two stores then evolve independently. Both are separate from the plugin installation directory, which upgrades replace.
 - Only overrides are stored: untouched fields automatically follow the new version's defaults, and leftovers of retired skins or fields are cleaned up at load (the v1.4.0 tgcf removal rides this path).
 - A damaged state file triggers recovery mode: indexes are rebuilt and bad files quarantined — your images are never wiped.
 - Uploads pass magic-number validation and size caps; concurrent writes merge per field and never clobber each other.
@@ -170,7 +170,7 @@ The URL switches skins too: `/?skin=official`, `/?skin=openbmc`, `/?skin=uefi-ha
 
 This section answers: how the plugin is updated.
 
-The plugin ships no updater of its own (ADR-0008): update discovery and installation belong to the dsh-m marketplace, or to the DSH CLI — upgrade with `dsh plugin --profile web update vyra-free-theme`; roll back by reinstalling an older exact version with `dsh plugin add --profile web vyra-free-theme@X.Y.Z`. The `latest` exact version of `vyra-free-theme` on npm remains the sole distribution form, and the version policy stays strict `X.Y.Z`.
+The plugin ships no updater of its own (ADR-0008): update discovery and installation belong to the dsh-m marketplace, or to the DSH CLI — upgrade with `dsh plugin --profile web update dsh-vyra-free-theme`; roll back by reinstalling an older exact version with `dsh plugin add --profile web dsh-vyra-free-theme@X.Y.Z`. The `latest` exact version of `dsh-vyra-free-theme` on npm remains the sole distribution form, and the version policy stays strict `X.Y.Z`.
 
 ## FAQ
 
@@ -193,7 +193,7 @@ Yes. The DSH Desktop app and the Web profile are installed independently and do 
 In the browser on the DSH host machine (loopback), the preference is persisted by the DSH Host and shared naturally. Other remote browsers keep the preference in their own `localStorage` — independent per browser, never overwritten.
 
 **Do personalization settings survive upgrades?**
-Yes. Configuration and the library live in the `$DSH_HOME/vyra-free-theme/` data directory; upgrades only replace the plugin install directory (through any channel) and physically cannot touch it — rollbacks preserve it too. Only disk-level damage can lose configuration, and even then recovery mode keeps the library images.
+Yes. Configuration and the library live in the `$DSH_HOME/dsh-vyra-free-theme/` data directory; upgrades only replace the plugin install directory (through any channel) and physically cannot touch it — rollbacks preserve it too. Only disk-level damage can lose configuration, and even then recovery mode keeps the library images.
 
 ## Known limits
 

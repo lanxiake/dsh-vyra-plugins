@@ -1,4 +1,4 @@
-// Host half of vyra-skill-mcp-manager.
+// Host half of dsh-vyra-skill-mcp-manager.
 // The UI reuses the data RPC of dsh-skill-mcp-market. The only thing added here is a route that
 // registers the LobeHub market client. dsh-skill-mcp-market tries to do it itself, but its
 // Windows command quoting splits `--name "DSH Market"` into two arguments, so the CLI rejects it.
@@ -505,7 +505,7 @@ async function writeMcpConfig(raw, content) {
   return { ok: true, path: file }
 }
 
-export const name = 'vyra-skill-mcp-manager'
+export const name = 'dsh-vyra-skill-mcp-manager'
 
 /**
  * Services this plugin needs before `apply` runs.

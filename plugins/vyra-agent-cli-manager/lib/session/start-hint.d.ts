@@ -4,7 +4,7 @@
  * its cache half-installed (a skipped optional dependency, an interrupted
  * download). Reinstalling globally does not help there: npx keeps reusing the
  * broken cache until that directory is deleted.
- * @module vyra-agent-cli-manager/session/start-hint
+ * @module dsh-vyra-agent-cli-manager/session/start-hint
  */
 /**
  * @param message - the startup error's text.

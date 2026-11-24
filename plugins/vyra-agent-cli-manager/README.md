@@ -1,6 +1,6 @@
 > [!IMPORTANT]
 > 这是 [dsh-ccgui](https://github.com/zhukunpenglinyutong/dsh-ccgui) 的**二次开发分支**
-> `vyra-agent-cli-manager`，随 [dsh-vyra-plugins](https://github.com/lanxiake/dsh-vyra-plugins) 维护。
+> `dsh-vyra-agent-cli-manager`，随 [dsh-vyra-plugins](https://github.com/lanxiake/dsh-vyra-plugins) 维护。
 > 下文的功能说明、截图与用法沿用上游；本分支改了什么、为什么改、授权归属，见 [FORK.md](./FORK.md)；
 > 新增的 Agent CLI 管理能力（安装/升级/卸载/配置，以及各 CLI 自己的 MCP、技能、提示词）见
 > [DESIGN.md](./DESIGN.md)。上游文档里的 `dsh-ccgui` 安装命令对本分支不适用。
@@ -13,7 +13,7 @@
 ---
 <div align="center"><a name="readme-top"></a>
 
-<img width="120" alt="vyra-agent-cli-manager logo" src="./assets/logo.png" />
+<img width="120" alt="dsh-vyra-agent-cli-manager logo" src="./assets/logo.png" />
 
 # DSH CCGUI
 
@@ -37,10 +37,10 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/02-install-dark.webp" />
-  <img alt="在 DSH 的插件页点「添加插件」，对话框里输入 vyra-agent-cli-manager 后点「安装」" src="./assets/illustrations/02-install-light.webp" />
+  <img alt="在 DSH 的插件页点「添加插件」，对话框里输入 dsh-vyra-agent-cli-manager 后点「安装」" src="./assets/illustrations/02-install-light.webp" />
 </picture>
 
-1. 点 DSH 左侧栏的「插件」，再点右上角「添加插件」，输入 `vyra-agent-cli-manager`，点「安装」。
+1. 点 DSH 左侧栏的「插件」，再点右上角「添加插件」，输入 `dsh-vyra-agent-cli-manager`，点「安装」。
 2. 提示“请重启 DSH 加载它”时，Cmd+Q 完全退出再打开，不要点“立即启用”，否则新旧代码混在一个进程里会启动失败。
 3. 新建会话，点输入框 `+` 右边的 CLI 按钮选一个 CLI。
 
@@ -49,18 +49,18 @@
 
 ```sh
 # DSH 桌面版：先 Cmd+Q 完全退出，再用应用内置的 dsh 安装
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add vyra-agent-cli-manager@1.0.2
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-vyra-agent-cli-manager@1.0.2
 
 # DSH 命令行版（dsh web）
-dsh plugin --profile web add vyra-agent-cli-manager@1.0.2
+dsh plugin --profile web add dsh-vyra-agent-cli-manager@1.0.2
 ```
 
-卸载把 `add ...` 换成 `remove vyra-agent-cli-manager`。
+卸载把 `add ...` 换成 `remove dsh-vyra-agent-cli-manager`。
 
 </details>
 
 > [!TIP]
-> 从源码安装时先 `pnpm install && pnpm run build`，再在「添加插件」里填仓库的本地路径（命令行则把 `vyra-agent-cli-manager@1.0.2` 换成仓库路径）；pnpm 的 peerDependencies 警告可以忽略。
+> 从源码安装时先 `pnpm install && pnpm run build`，再在「添加插件」里填仓库的本地路径（命令行则把 `dsh-vyra-agent-cli-manager@1.0.2` 换成仓库路径）；pnpm 的 peerDependencies 警告可以忽略。
 
 <div align="right"><a href="#readme-top">返回顶部 ↑</a></div>
 
@@ -212,8 +212,8 @@ OpenCode（项目的 `opencode.json`）：
 在 profile 的 `cordis.patch.yml` 里加一个 agent，它就会出现在 CLI 菜单里。这段 `config` 会整体替换默认配置，所以默认的几个也要写上：
 
 ```yaml
-- id: vyra-agent-cli-manager
-  name: vyra-agent-cli-manager
+- id: dsh-vyra-agent-cli-manager
+  name: dsh-vyra-agent-cli-manager
   config:
     agents:
       - { id: claude, name: Claude Code, command: npx, args: [-y, '@agentclientprotocol/claude-agent-acp@0.101.0'] }
@@ -247,7 +247,7 @@ OpenCode（项目的 `opencode.json`）：
 - `/model` 命令仍会列出所有提供方，包括 CLI。不要用它在同一会话里在 DeepSeek 和 CLI 之间切换：切到 CLI 时它没有之前的上下文，切出时压缩摘要可能失败。同一 CLI 内换模型没问题。
 - 摘要、压缩等带 `purpose` 的辅助模型请求仍被拒绝（自动审查除外），不会被当成用户新输入转发给 CLI：否则会话历史会被当成指令，开启一个真的会执行操作的回合。
 - 自动审查看到的是 CLI 通过 `cli_tool` 镜像上报的调用信息。reviewer 拒绝时，还会拒绝该调用悬着的 ACP 权限请求；若 CLI 是先执行再上报，拒绝无法撤销已经发生的改动。
-- 每次启动 DSH 后第一次用到某个 CLI，会短暂启动它询问模型。临时会话放在 DSH 主目录的 `vyra-agent-cli-manager/model-probe`；能删的会删掉，OMP 只支持关闭，每次会留下约 4KB 记录。
+- 每次启动 DSH 后第一次用到某个 CLI，会短暂启动它询问模型。临时会话放在 DSH 主目录的 `dsh-vyra-agent-cli-manager/model-probe`；能删的会删掉，OMP 只支持关闭，每次会留下约 4KB 记录。
 - CLI 启动的时间上限是 `startTimeoutMs`，默认 120 秒。Claude Code 的适配器连同依赖约 400MB，实测第一次启动约 100 秒，网速慢时要先调大。
 - CodeBuddy CLI 要先登录或配好 API Key，否则提示 `Authentication required`。
 - Kimi CLI 通过 `npx` 拉取 `@moonshot-ai/kimi-code`，需要 Node.js 22.19 或更高版本；要先在终端运行 `npx @moonshot-ai/kimi-code@2.5.2`（或已安装的 `kimi`），在里面用 `/login` 登录。
@@ -370,13 +370,13 @@ git push --follow-tags
 ## 贡献者
 
 <a href="https://github.com/lanxiake/dsh-vyra-plugins/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=zhukunpenglinyutong/vyra-agent-cli-manager" alt="Contributors" />
+  <img src="https://contrib.rocks/image?repo=zhukunpenglinyutong/dsh-vyra-agent-cli-manager" alt="Contributors" />
 </a>
 
 <details>
 <summary><kbd>Star History</kbd></summary>
 
-[![Star History Chart](https://star-history.dera.page/svg?repos=zhukunpenglinyutong/vyra-agent-cli-manager&type=date&legend=top-left)](https://star-history.dera.page/#zhukunpenglinyutong/vyra-agent-cli-manager&type=date&legend=top-left)
+[![Star History Chart](https://star-history.dera.page/svg?repos=zhukunpenglinyutong/dsh-vyra-agent-cli-manager&type=date&legend=top-left)](https://star-history.dera.page/#zhukunpenglinyutong/dsh-vyra-agent-cli-manager&type=date&legend=top-left)
 
 </details>
 
@@ -388,17 +388,17 @@ MIT。`src/stdio-transport.ts` 改编自 DSH 的 `subagent-acp`（同为 MIT）�
 
 <!-- LINK GROUP -->
 
-[ci-shield]: https://img.shields.io/github/actions/workflow/status/zhukunpenglinyutong/vyra-agent-cli-manager/ci.yml?branch=main&label=CI&labelColor=black&style=flat-square
+[ci-shield]: https://img.shields.io/github/actions/workflow/status/zhukunpenglinyutong/dsh-vyra-agent-cli-manager/ci.yml?branch=main&label=CI&labelColor=black&style=flat-square
 [ci-link]: https://github.com/lanxiake/dsh-vyra-plugins/actions/workflows/ci.yml
-[coverage-shield]: https://img.shields.io/codecov/c/github/zhukunpenglinyutong/vyra-agent-cli-manager?label=coverage&labelColor=black&style=flat-square
-[coverage-link]: https://codecov.io/gh/zhukunpenglinyutong/vyra-agent-cli-manager
-[license-shield]: https://img.shields.io/github/license/zhukunpenglinyutong/vyra-agent-cli-manager?color=white&labelColor=black&style=flat-square
+[coverage-shield]: https://img.shields.io/codecov/c/github/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?label=coverage&labelColor=black&style=flat-square
+[coverage-link]: https://codecov.io/gh/zhukunpenglinyutong/dsh-vyra-agent-cli-manager
+[license-shield]: https://img.shields.io/github/license/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=white&labelColor=black&style=flat-square
 [license-link]: ./LICENSE
 [dsh-shield]: https://img.shields.io/badge/DSH-%3E%3D0.2.2--rc.1%20%3C0.3.0-4d6bfe?labelColor=black&style=flat-square
-[stars-shield]: https://img.shields.io/github/stars/zhukunpenglinyutong/vyra-agent-cli-manager?color=ffcb47&labelColor=black&style=flat-square
-[forks-shield]: https://img.shields.io/github/forks/zhukunpenglinyutong/vyra-agent-cli-manager?color=8ae8ff&labelColor=black&style=flat-square
-[issues-shield]: https://img.shields.io/github/issues/zhukunpenglinyutong/vyra-agent-cli-manager?color=ff80eb&labelColor=black&style=flat-square
-[contributors-shield]: https://img.shields.io/github/contributors/zhukunpenglinyutong/vyra-agent-cli-manager?color=c4f042&labelColor=black&style=flat-square
+[stars-shield]: https://img.shields.io/github/stars/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=ffcb47&labelColor=black&style=flat-square
+[forks-shield]: https://img.shields.io/github/forks/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=8ae8ff&labelColor=black&style=flat-square
+[issues-shield]: https://img.shields.io/github/issues/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=ff80eb&labelColor=black&style=flat-square
+[contributors-shield]: https://img.shields.io/github/contributors/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=c4f042&labelColor=black&style=flat-square
 
 ## 交流群
 

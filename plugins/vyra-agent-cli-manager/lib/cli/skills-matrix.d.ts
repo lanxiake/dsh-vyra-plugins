@@ -5,7 +5,7 @@
  * while some CLI's directory offers it. A cell also says whether what that CLI has is a link
  * this plugin made or a real directory of the user's own: the first can be turned off, the
  * second must not be touched, and the difference is invisible from the name alone.
- * @module vyra-agent-cli-manager/cli/skills-matrix
+ * @module dsh-vyra-agent-cli-manager/cli/skills-matrix
  */
 import type { SkillLinkHost } from './skill-links.ts';
 /** One CLI column of the skills matrix. */

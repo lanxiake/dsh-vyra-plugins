@@ -1,20 +1,20 @@
 ---
-name: vyra-free-theme
+name: dsh-vyra-free-theme
 description: 用 vft CLI 或直接编辑 theme.json 管理「自由主题」插件的主题、壁纸（静态/视频/动图/代码）、左侧菜单样式、品牌与覆盖开关，并对配色打分。当用户说「换主题」「做个壁纸」「配一下侧栏」「这套配色行不行」「导入/导出主题」时使用。
 ---
 
-# 自由主题（vyra-free-theme）
+# 自由主题（dsh-vyra-free-theme）
 
 **先记住一句话：`theme.json` 是唯一真相。** CLI 只是对它的谨慎编辑；CLI 不可用时，直接写文件再跑 `vft theme check` 同样成立。
 
 ## 位置
 
-- 数据目录：Web `$DSH_HOME/vyra-free-theme/`　Desktop `$DSH_HOME/vyra-free-theme-desktop/`
+- 数据目录：Web `$DSH_HOME/dsh-vyra-free-theme/`　Desktop `$DSH_HOME/vyra-free-theme-desktop/`
 - 用户主题：`<数据目录>/themes/<id>/theme.json`（内置主题在包的 `themes/`，**只读**）
 - 配色预设：包的 `presets/colors/`（只读，用于 `theme create --from`）
 - 当前选择：`<数据目录>/selection.json`（宿主所有，客户端读它）
 - 个性化覆盖：`<数据目录>/state.json` 的 `skins.<id>`
-- CLI：`~/.dsh/vyra-free-theme/bin/vft`（sh）或 `vft.cmd`（PowerShell）
+- CLI：`~/.dsh/dsh-vyra-free-theme/bin/vft`（sh）或 `vft.cmd`（PowerShell）
 
 不确定路径时先跑 `vft theme list --json`，返回里带 `active` 与每个主题的 `score`。
 

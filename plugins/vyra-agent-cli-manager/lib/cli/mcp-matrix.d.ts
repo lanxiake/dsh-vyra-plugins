@@ -5,7 +5,7 @@
  * ed by this plugin: a server exists for the panel exactly while some CLI's own config says it
  * does. Each cell also carries the reason its checkbox is disabled, which is what keeps the
  * matrix honest — a greyed cell that cannot say why is indistinguishable from a bug.
- * @module vyra-agent-cli-manager/cli/mcp-matrix
+ * @module dsh-vyra-agent-cli-manager/cli/mcp-matrix
  */
 import type { CliCatalogEntry } from './catalog.ts';
 /** One CLI column. A column that could not be read shows every cell as unknown. */

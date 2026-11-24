@@ -1,6 +1,6 @@
 // Client half: browser UI for skill & MCP management
 window.__ModuleLoader__.load({
-  id: 'vyra-skill-mcp-manager',
+  id: 'dsh-vyra-skill-mcp-manager',
   factory(require) {
     const React = require('react');
     const h = React.createElement;

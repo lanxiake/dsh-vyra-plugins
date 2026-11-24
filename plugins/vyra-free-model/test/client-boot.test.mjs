@@ -120,8 +120,8 @@ test('the client bundle registers the settings section and its icon', () => {
   }
   bundle.apply(ctx)
   assert.ok(injected >= 1)
-  assert.ok(registered.some(r => r.name === 'settings.section' && r.id === 'vyra-free-model' && r.order === 36))
-  assert.ok(registered.some(r => r.name === 'settings.section.icon' && r.id === 'vyra-free-model'))
+  assert.ok(registered.some(r => r.name === 'settings.section' && r.id === 'dsh-vyra-free-model' && r.order === 36))
+  assert.ok(registered.some(r => r.name === 'settings.section.icon' && r.id === 'dsh-vyra-free-model'))
 })
 
 test('the section declares a nav label in both languages', () => {
@@ -223,7 +223,7 @@ test('the bundle mounts its stylesheet into document.head and removes it on disp
   assert.ok(style !== undefined, 'apply() must append a <style> to document.head')
   assert.ok(style.textContent.length > 500, 'the stylesheet must carry the real rules')
   assert.ok(style.textContent.includes('.vfm_'), 'the rules must target this page')
-  assert.equal(style.attributes['data-plugin'], 'vyra-free-model')
+  assert.equal(style.attributes['data-plugin'], 'dsh-vyra-free-model')
 
   assert.ok(disposers.length > 0, 'the stylesheet must be registered through ctx.effect')
   for (const dispose of disposers) dispose()

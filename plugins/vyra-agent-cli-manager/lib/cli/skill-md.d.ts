@@ -5,7 +5,7 @@
  * does; the frontmatter's `description` does, and every skill in the wild has one because the
  * skill loader needs it. This reads only that one field: the body is instructions for a model,
  * not a description for a person.
- * @module vyra-agent-cli-manager/cli/skill-md
+ * @module dsh-vyra-agent-cli-manager/cli/skill-md
  */
 /**
  * A skill's `name` and `description` from its frontmatter.

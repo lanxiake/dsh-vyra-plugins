@@ -1,4 +1,4 @@
-# vyra-wechat-local（PC微信）
+# dsh-vyra-wechat-local（PC微信）
 
 让 Agent 读写**用户本人**的本机微信：会话、聊天记录、图片、未读、检索、导出，以及
 以本人身份发送。和 `dsh-im` 的 `weixin` 渠道（Bot）是两件事——那个是别人加你的机器人，

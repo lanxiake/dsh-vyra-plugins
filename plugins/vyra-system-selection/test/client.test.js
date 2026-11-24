@@ -30,7 +30,7 @@ function loadBundle() {
     disconnect() {}
   })
   assert.ok(registered, 'the bundle did not call __ModuleLoader__.load')
-  assert.equal(registered.id, 'vyra-system-selection', 'the registration id must equal the package name')
+  assert.equal(registered.id, 'dsh-vyra-system-selection', 'the registration id must equal the package name')
 
   const require = (name) => (name === 'react' ? { createElement: () => null, useCallback: (f) => f, useEffect() {}, useState: (v) => [v, () => {}] } : {})
   const face = registered.factory(require)

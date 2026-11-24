@@ -1,5 +1,5 @@
 /**
- * HTTP routes the 总览 panel posts to, under `/vyra-agent-cli-manager/cli/<operation>`.
+ * HTTP routes the 总览 panel posts to, under `/dsh-vyra-agent-cli-manager/cli/<operation>`.
  * Structured after the git routes: the harness's web server leaves authentication to each
  * route, so every request first asks `connection` for a rejection — its Host/Origin fence
  * stops cross-site and DNS-rebinding callers, and its login-token check stops anyone who is
@@ -9,7 +9,7 @@
  * The two write operations add and remove one MCP server, and each is delegated to the CLI
  * whose configuration it changes. Installing and uninstalling stay off this route so that a
  * mistake in the panel can never change what is installed.
- * @module vyra-agent-cli-manager/cli/cli-routes
+ * @module dsh-vyra-agent-cli-manager/cli/cli-routes
  */
 import { CLI_MANAGER_ROUTE_PREFIX } from "../constants.js";
 import { listSkills, readPrompt } from "./assets.js";
@@ -234,7 +234,7 @@ export function cliHandler(routes, connection, warn) {
             // rejection here is the request's fault or something unexpected breaking in the upgrade.
             const status = statusOf(error);
             if (status === 500)
-                warn(`vyra-agent-cli-manager: cli ${operation} failed: ${messageOf(error)}`);
+                warn(`dsh-vyra-agent-cli-manager: cli ${operation} failed: ${messageOf(error)}`);
             sendJson(res, status, { success: false, error: errorOf(error, status) });
         }
     };

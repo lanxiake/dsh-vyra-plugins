@@ -2132,7 +2132,7 @@ ${show(c)}`,
     h("path", { d: "M6 8l4 4-4 4M12 16h6" })
   );
   window.__ModuleLoader__.load({
-    id: "vyra-ssh-terminal",
+    id: "dsh-vyra-ssh-terminal",
     factory(require2) {
       setReact(require2("react"));
       return {

@@ -1,5 +1,5 @@
 {
-  "name": "vyra-agent-cli-manager",
+  "name": "dsh-vyra-agent-cli-manager",
   "version": "1.3.1",
   "description": "Agent CLI 管理器：安装、升级、配置 Claude Code / Codex / OpenCode 等 Agent CLI，统一管理它们的 MCP、技能与提示词。",
   "license": "MIT",

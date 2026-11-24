@@ -1,7 +1,7 @@
 // Agent manager panel. All data comes from the Host at runtime: capabilities, global tools and
 // skills are read from the live services, and agents are installed as real presets.
 window.__ModuleLoader__.load({
-  id: 'vyra-agent-manager',
+  id: 'dsh-vyra-agent-manager',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
@@ -740,10 +740,25 @@ window.__ModuleLoader__.load({
       return out;
     }
 
+    /**
+     * Normalize a module list to plain specifier strings.
+     *
+     * The Host reports modules as `{ moduleName, baseUrl?, useHostBase }`
+     * objects while this drawer renders each one as a label, so a raw object
+     * would reach React as an invalid child and throw React #31. Accept either
+     * shape; the chip key and text must always be a string.
+     */
+    function moduleNames(modules) {
+      if (!Array.isArray(modules)) return [];
+      return modules
+        .map((entry) => (typeof entry === 'string' ? entry : entry && typeof entry.moduleName === 'string' ? entry.moduleName : ''))
+        .filter((name) => name !== '');
+    }
+
     /** Capability ids a module list provides, using the live catalog's own rows. */
     function capabilitiesOfModules(modules, meta) {
       if (!modules || modules.length === 0 || !meta) return [];
-      const present = new Set(modules);
+      const present = new Set(moduleNames(modules));
       return meta.capabilities.filter((c) => (c.modules || []).every((m) => present.has(m))).map((c) => c.id);
     }
 
@@ -770,8 +785,9 @@ window.__ModuleLoader__.load({
       const preset = data.preset || {};
       const parsed = parseEntryYaml(data.yaml || '');
       const rows = parsed ? flatRows(parsed) : [];
-      const modules = data.modules && data.modules.length
-        ? data.modules
+      const declared = moduleNames(data.modules);
+      const modules = declared.length
+        ? declared
         : [...new Set(rows.map((row) => row.name).filter((name) => typeof name === 'string' && name !== 'cordis:group'))];
       const persona = rows.find((row) => row.name === '@deepseek-ai/dsh-persona');
       const prefix = persona && persona.config && typeof persona.config === 'object' ? persona.config.prefix : undefined;

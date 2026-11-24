@@ -89,7 +89,7 @@ async function handle(req, res, { key, models, complete, log }) {
     if (req.method !== 'GET') return send(405, { error: { message: 'method not allowed' } })
     return send(200, {
       object: 'list',
-      data: (models ?? []).map(model => ({ id: model.id, object: 'model', owned_by: 'vyra-free-model' })),
+      data: (models ?? []).map(model => ({ id: model.id, object: 'model', owned_by: 'dsh-vyra-free-model' })),
     })
   }
 
@@ -239,7 +239,7 @@ async function chatCompletions(req, res, { complete, log }) {
         try { res.end() } catch { /* already closed */ }
         return
       }
-      log(`vyra-free-model: forward stream failed (${error?.message ?? error})`)
+      log(`dsh-vyra-free-model: forward stream failed (${error?.message ?? error})`)
       write({ error: { message: String(error?.message ?? 'upstream error') } })
       res.write('data: [DONE]\n\n')
       res.end()
@@ -283,7 +283,7 @@ async function chatCompletions(req, res, { complete, log }) {
     }))
   } catch (error) {
     if (controller.signal.aborted) return
-    log(`vyra-free-model: forward completion failed (${error?.message ?? error})`)
+    log(`dsh-vyra-free-model: forward completion failed (${error?.message ?? error})`)
     res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: { message: String(error?.message ?? 'upstream error') } }))
   }
@@ -350,7 +350,7 @@ async function responses(req, res, { complete, log }) {
       res.end(JSON.stringify(responsesJson(chunks, { ...meta, failure })))
     } catch (error) {
       if (controller.signal.aborted) return
-      log(`vyra-free-model: responses call failed (${error?.message ?? error})`)
+      log(`dsh-vyra-free-model: responses call failed (${error?.message ?? error})`)
       res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' })
       res.end(JSON.stringify({ error: { message: String(error?.message ?? 'upstream error') } }))
     }
@@ -397,7 +397,7 @@ async function responses(req, res, { complete, log }) {
       try { res.end() } catch { /* already closed */ }
       return
     }
-    log(`vyra-free-model: responses stream failed (${error?.message ?? error})`)
+    log(`dsh-vyra-free-model: responses stream failed (${error?.message ?? error})`)
     write(emitter.fail({ message: String(error?.message ?? 'upstream error') }))
     res.end()
   }

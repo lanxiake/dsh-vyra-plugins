@@ -11,7 +11,7 @@
  * different versions of the same name. Picking one and linking the rest would silently destroy
  * the other, so a differing copy is renamed aside instead — it stays on disk, keeps its files,
  * and stops being loaded (a directory without the entry file is not a skill).
- * @module vyra-agent-cli-manager/cli/skill-consolidate
+ * @module dsh-vyra-agent-cli-manager/cli/skill-consolidate
  */
 /** The library every skill ends up in, relative to the user's home. */
 export declare const SKILL_LIBRARY_DIR: string;

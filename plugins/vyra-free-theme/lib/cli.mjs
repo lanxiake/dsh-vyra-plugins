@@ -174,7 +174,7 @@ function sidebarCss(spec, bodyAttribute) {
   const dark = `${scope}[data-ds-dark-theme]`;
   const metrics = spec.metrics;
   const rules = [
-    `/* vyra-free-theme sidebar pack: ${spec.pack} / ${spec.surface} / ${spec.density} */`,
+    `/* dsh-vyra-free-theme sidebar pack: ${spec.pack} / ${spec.surface} / ${spec.density} */`,
     // The column never clips the wallpaper; the fill token decides opacity.
     `${scope} ${HOOK.col}{background:transparent}`,
     `${scope} ${HOOK.col} ${HOOK.root}{border-radius:${spec.radius.card}px}`
@@ -1220,7 +1220,7 @@ function createComfyClient(options = {}) {
   return {
     baseUrl,
     /** Queue one API-format workflow; returns its prompt id. */
-    async submit(workflow, { clientId = "vyra-free-theme" } = {}) {
+    async submit(workflow, { clientId = "dsh-vyra-free-theme" } = {}) {
       const response = await call("/prompt", { method: "POST", body: JSON.stringify({ prompt: workflow, client_id: clientId }) });
       const body = await response.json();
       if (body?.error !== void 0) throw new Error(`ComfyUI rejected the workflow: ${JSON.stringify(body.error).slice(0, 300)}`);
@@ -2427,7 +2427,7 @@ function fail(code, message, extra = {}) {
 function resolvePaths({ dshHome, profile } = {}) {
   const home = resolve(dshHome ?? process.env.DSH_HOME ?? join3(homedir(), ".dsh"));
   const resolvedProfile = profile ?? (existsSync2(join3(home, "vyra-free-theme-desktop")) ? "desktop" : "web");
-  const dataDir = join3(home, resolvedProfile === "desktop" ? "vyra-free-theme-desktop" : "vyra-free-theme");
+  const dataDir = join3(home, resolvedProfile === "desktop" ? "vyra-free-theme-desktop" : "dsh-vyra-free-theme");
   return {
     home,
     profile: resolvedProfile,
@@ -3154,7 +3154,7 @@ function cmdThemeCheck(paths, { positionals, flags }) {
 }
 function usage() {
   return [
-    "vft — vyra-free-theme CLI",
+    "vft — dsh-vyra-free-theme CLI",
     "",
     "  vft theme list|show|create|rename|delete|apply|reset|export|import",
     "  vft wallpaper list|add|set|gen|video",

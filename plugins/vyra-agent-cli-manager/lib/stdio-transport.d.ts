@@ -2,7 +2,7 @@
  * ACP over a child process's stdio, using the harness subprocess seam so the CLI
  * gets the shared credential scrub and managed teardown. Process teardown and SDK
  * wiring are adapted from `@deepseek-ai/dsh-subagent-acp`; see THIRD_PARTY_NOTICES.md.
- * @module vyra-agent-cli-manager/stdio-transport
+ * @module dsh-vyra-agent-cli-manager/stdio-transport
  */
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
 import type { AcpTransport, TransportHandlers } from './transport.ts';

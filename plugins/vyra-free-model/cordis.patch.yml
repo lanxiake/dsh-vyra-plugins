@@ -1,4 +1,4 @@
 - insert:
-    - id: vyra-free-model
-      name: 'vyra-free-model'
+    - id: dsh-vyra-free-model
+      name: 'dsh-vyra-free-model'
       config: {}

@@ -9,7 +9,7 @@
  *
  * Everything here rests on npm's cache layout, so whatever is not plainly there goes to `npx`
  * as configured. A change on npm's side can only make a start slower, never wrong.
- * @module vyra-agent-cli-manager/npx-cache
+ * @module dsh-vyra-agent-cli-manager/npx-cache
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';

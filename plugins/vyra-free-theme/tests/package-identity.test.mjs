@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 
 test("package identity is the new plugin", () => {
-  assert.equal(pkg.name, "vyra-free-theme");
+  assert.equal(pkg.name, "dsh-vyra-free-theme");
   assert.equal(pkg.main, "lib/index.js");
   assert.equal(pkg.exports["."], "./lib/index.js");
   assert.equal(pkg.exports["./client"], "./lib/client.js");

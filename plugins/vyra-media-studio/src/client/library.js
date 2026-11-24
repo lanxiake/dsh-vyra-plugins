@@ -27,7 +27,7 @@ const h = React.createElement
 const LIGHTBOX_PLUGINS = [Inline, Video, Zoom, Thumbnails, Counter, Fullscreen]
 const INITIAL_PREFS = readPrefs()
 const MEDIA_KINDS = new Set(['image', 'video', 'audio', 'link'])
-const TREE_STATE_KEY = 'vyra-media-studio.tree.v1'
+const TREE_STATE_KEY = 'dsh-vyra-media-studio.tree.v1'
 
 function readExpandedFolders() {
   try {

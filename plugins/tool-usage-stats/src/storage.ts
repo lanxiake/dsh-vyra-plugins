@@ -12,7 +12,7 @@
  * debounce, and read together by the same request. Splitting them would double
  * the write path to keep one snapshot consistent.
  *
- * @module vyra-tool-usage-stats/storage
+ * @module dsh-vyra-tool-usage-stats/storage
  */
 
 import type { FailureLog, ToolUsageState } from './counters.ts'

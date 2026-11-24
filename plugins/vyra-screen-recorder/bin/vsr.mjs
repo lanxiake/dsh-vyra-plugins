@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * vyra-screen-recorder CLI.
+ * dsh-vyra-screen-recorder CLI.
  *
  * 截图 / 枚举源直接在命令行调 PowerShell 完成，不依赖 DSH 运行。
  * 录屏把请求写进本地队列，由 DSH 宿主开录，DSH Web 界面负责 WebCodecs
@@ -14,9 +14,9 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
-const AGENT_DIR = path.join(HOME, 'vyra-screen-recorder', 'agent')
+const AGENT_DIR = path.join(HOME, 'dsh-vyra-screen-recorder', 'agent')
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version
-const SETTINGS_FILE = path.join(HOME, 'vyra-screen-recorder', 'settings.json')
+const SETTINGS_FILE = path.join(HOME, 'dsh-vyra-screen-recorder', 'settings.json')
 
 const DEFAULT_SETTINGS = {
   dir: '',
@@ -66,7 +66,7 @@ function timestamp() {
     + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds())
 }
 
-const HELP = `vyra-screen-recorder ${VERSION}
+const HELP = `dsh-vyra-screen-recorder ${VERSION}
 
 用法：
   vsr shot    [--out <文件>] [--region x,y,w,h] [--max-edge N] [--quality 1-100] [--no-cursor] [--hide-dsh] [--json]

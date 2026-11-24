@@ -1,7 +1,7 @@
 /**
  * Reading one harness step out of a CLI turn: text and reasoning stream through, and the
  * step ends at the next tool call or at the end of the turn.
- * @module vyra-agent-cli-manager/session/read-step
+ * @module dsh-vyra-agent-cli-manager/session/read-step
  */
 import type { LlmError, StreamChunk } from '@deepseek-ai/dsh-llm';
 import type { ToolRecord } from '../tool-record.ts';

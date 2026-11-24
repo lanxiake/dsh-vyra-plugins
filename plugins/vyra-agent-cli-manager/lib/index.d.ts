@@ -1,7 +1,7 @@
 /**
  * Host plugin: registers each configured CLI as a model provider and wires the
  * session registry to the harness.
- * @module vyra-agent-cli-manager
+ * @module dsh-vyra-agent-cli-manager
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { Service } from '@deepseek-ai/cordis';

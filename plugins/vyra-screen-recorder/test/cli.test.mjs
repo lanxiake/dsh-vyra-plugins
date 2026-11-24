@@ -47,8 +47,8 @@ test('vsr files --json 读取设置目录', async () => {
     const library = path.join(home, 'library')
     await mkdir(path.join(library, 'recordings'), { recursive: true })
     await mkdir(path.join(library, 'screenshots'), { recursive: true })
-    await mkdir(path.join(home, 'vyra-screen-recorder'), { recursive: true })
-    await writeFile(path.join(home, 'vyra-screen-recorder', 'settings.json'), JSON.stringify({ dir: library }))
+    await mkdir(path.join(home, 'dsh-vyra-screen-recorder'), { recursive: true })
+    await writeFile(path.join(home, 'dsh-vyra-screen-recorder', 'settings.json'), JSON.stringify({ dir: library }))
     await writeFile(path.join(library, 'recordings', 'a.mp4'), 'x')
     await writeFile(path.join(library, 'screenshots', 'b.jpg'), 'y')
     const output = execFileSync(process.execPath, [cli, 'files', '--json'], {

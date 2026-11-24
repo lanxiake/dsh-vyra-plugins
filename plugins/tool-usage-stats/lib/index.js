@@ -222,7 +222,7 @@ var toolUsageDomain = {
 };
 
 // src/index.ts
-var name = "vyra-tool-usage-stats";
+var name = "dsh-vyra-tool-usage-stats";
 var inject = ["sessions"];
 var ToolUsageStats = class {
   /**

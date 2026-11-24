@@ -1,7 +1,7 @@
 /**
  * Opening the ACP connection to a CLI and getting a session on it: a new one, or the
  * native session an earlier process left behind.
- * @module vyra-agent-cli-manager/session/connect
+ * @module dsh-vyra-agent-cli-manager/session/connect
  */
 import type { AcpTransport, TransportHandlers } from '../transport.ts';
 import type { ModelState } from './model-state.ts';

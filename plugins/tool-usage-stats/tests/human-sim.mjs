@@ -9,7 +9,7 @@
  *
  *   CHROME_PATH=<chromium> node <path>/tests/human-sim.mjs <base-url-with-token>
  *
- * @module vyra-tool-usage-stats/human-sim
+ * @module dsh-vyra-tool-usage-stats/human-sim
  */
 
 const playwright = await import(

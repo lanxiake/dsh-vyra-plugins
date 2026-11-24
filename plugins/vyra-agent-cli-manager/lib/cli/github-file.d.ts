@@ -9,7 +9,7 @@
  * button once can spend; adding a token would mean asking every user for a credential so that a
  * rare request could be a little more generous, and a failure here is reported rather than
  * retried.
- * @module vyra-agent-cli-manager/cli/github-file
+ * @module dsh-vyra-agent-cli-manager/cli/github-file
  */
 /**
  * Read one file's text from a public repository.

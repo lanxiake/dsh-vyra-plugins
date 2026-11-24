@@ -11,7 +11,7 @@
 #
 # The user's patch layer survives plugin upgrades.
 - insert:
-    - id: vyra-dsh-console
-      name: 'vyra-dsh-console'
+    - id: dsh-vyra-dsh-console
+      name: 'dsh-vyra-dsh-console'
       # config:
       #   confirmDestructive: true

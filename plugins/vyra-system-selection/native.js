@@ -115,7 +115,7 @@ function ownImageName() {
 // Host — would otherwise register POINT and the rest a second time and throw
 // "Duplicate type name". The library handles are cached for the same reason: the FFI
 // table is built from them, and rebuilding it would drop the bound functions.
-const native = globalThis[Symbol.for('vyra-system-selection.native')] ??= (() => {
+const native = globalThis[Symbol.for('dsh-vyra-system-selection.native')] ??= (() => {
   // POINT/RECT must be declared before any signature that names them.
   
   const POINT = koffi.struct('POINT', { x: 'long', y: 'long' })

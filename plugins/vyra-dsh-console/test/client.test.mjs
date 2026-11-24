@@ -53,7 +53,7 @@ let exports
 const window = {
   __ModuleLoader__: {
     load: ({ id, factory }) => {
-      assert.equal(id, 'vyra-dsh-console', 'the bundle registers under its package name')
+      assert.equal(id, 'dsh-vyra-dsh-console', 'the bundle registers under its package name')
       exports = factory((specifier) => {
         if (specifier === 'react') return reactStub
         if (specifier === './panel.js') return loadPanelFactory()
@@ -647,7 +647,7 @@ test('apply registers its cleanup through ctx.effect and calls no service at fac
   assert.deepEqual(calls, [], 'nothing is called before apply()')
   exports.apply(ctx)
   assert.equal(typeof disposer, 'function', 'apply() returns a real cleanup')
-  assert.match(name, /vyra-dsh-console/)
+  assert.match(name, /dsh-vyra-dsh-console/)
   assert.doesNotThrow(() => disposer())
 })
 
@@ -655,7 +655,7 @@ test('the module loads through the loader with no service call and no side effec
   // The factory itself must be inert: it runs at startup, before any service
   // is guaranteed to be mounted.
   const register = source.match(/id: '([^']+)'/)
-  assert.equal(register?.[1], 'vyra-dsh-console')
+  assert.equal(register?.[1], 'dsh-vyra-dsh-console')
   assert.match(source, /__ModuleLoader__\.load\(/)
 })
 
@@ -711,8 +711,8 @@ function applyWithPanel({ services, slots, locale } = {}) {
 test('the client registers a sidebar entry and a main panel under its key', () => {
   const { services } = spyServices()
   const { registrations } = applyWithPanel({ services })
-  assert.ok(registrations.some((r) => r.name === 'sidebar.panellist' && r.id === 'vyra-dsh-console'))
-  assert.ok(registrations.some((r) => r.name === 'main' && r.key === 'vyra-dsh-console'))
+  assert.ok(registrations.some((r) => r.name === 'sidebar.panellist' && r.id === 'dsh-vyra-dsh-console'))
+  assert.ok(registrations.some((r) => r.name === 'main' && r.key === 'dsh-vyra-dsh-console'))
 })
 
 test('the sidebar entry and the main panel carry the same id the package is named by', () => {
@@ -724,7 +724,7 @@ test('the sidebar entry and the main panel carry the same id the package is name
   const entry = registrations.find((r) => r.name === 'sidebar.panellist')
   const main = registrations.find((r) => r.name === 'main')
   assert.equal(entry.id, main.key, 'the entry must open the panel it registered')
-  assert.equal(entry.id, 'vyra-dsh-console')
+  assert.equal(entry.id, 'dsh-vyra-dsh-console')
 })
 
 test("the sidebar order does not collide with the Agent manager's 5", () => {
@@ -734,7 +734,7 @@ test("the sidebar order does not collide with the Agent manager's 5", () => {
   const { registrations } = applyWithPanel({ services })
   const entry = registrations.find((r) => r.name === 'sidebar.panellist')
   assert.equal(typeof entry.order, 'number', 'the sidebar order must be a number, not a string')
-  assert.notEqual(entry.order, 5, 'vyra-agent-manager registers order 5')
+  assert.notEqual(entry.order, 5, 'dsh-vyra-agent-manager registers order 5')
 })
 
 // ---------------------------------------------------------------------------
@@ -971,10 +971,10 @@ test('the zh dictionary is real Chinese, not an English stub', () => {
 
 test('the namespace is the package name, and is not the Agent manager\'s', () => {
   // The locale service throws on a duplicate (namespace, locale) pair, and
-  // `vyra-agent-manager` already owns `dsh-agent-manager`. Sharing a namespace
+  // `dsh-vyra-agent-manager` already owns `dsh-agent-manager`. Sharing a namespace
   // would make whichever registers second fail outright.
   const { ns } = registeredDictionaries()
-  assert.equal(ns, 'vyra-dsh-console')
+  assert.equal(ns, 'dsh-vyra-dsh-console')
   assert.notEqual(ns, 'dsh-agent-manager')
 })
 
@@ -1493,7 +1493,7 @@ test('the boundary reports the failure rather than swallowing it', () => {
     new Boundary({ t: (k) => k }).componentDidCatch(new Error('nope'), {})
   } finally { console.error = realError }
   assert.equal(logged.length, 1, 'a caught render failure must be logged')
-  assert.match(String(logged[0][0]), /vyra-dsh-console/u, 'and named as this plugin\'s')
+  assert.match(String(logged[0][0]), /dsh-vyra-dsh-console/u, 'and named as this plugin\'s')
 })
 
 test('the boundary survives a platform with no console', () => {

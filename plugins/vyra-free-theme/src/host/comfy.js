@@ -46,7 +46,7 @@ export function createComfyClient(options = {}) {
     baseUrl,
 
     /** Queue one API-format workflow; returns its prompt id. */
-    async submit(workflow, { clientId = "vyra-free-theme" } = {}) {
+    async submit(workflow, { clientId = "dsh-vyra-free-theme" } = {}) {
       const response = await call("/prompt", { method: "POST", body: JSON.stringify({ prompt: workflow, client_id: clientId }) });
       const body = await response.json();
       if (body?.error !== undefined) throw new Error(`ComfyUI rejected the workflow: ${JSON.stringify(body.error).slice(0, 300)}`);

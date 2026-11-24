@@ -8,7 +8,7 @@ import { settingsDomain } from './domains/settings.js'
 import { catalogDomain } from './domains/catalog.js'
 import { appearanceDomain } from './domains/appearance.js'
 
-export const name = 'vyra-dsh-console'
+export const name = 'dsh-vyra-dsh-console'
 export const inject = ['tools']
 
 /**
@@ -98,7 +98,7 @@ async function loadSchemastery() {
  * normally (`@deepseek-ai/cordis` `Plugin.Runtime` / `resolveConfig`, which
  * returns the raw config unchanged when there is no schema). The alternative —
  * a hand-rolled stand-in — would misdeclare the Loader's validation protocol,
- * which is why `vyra-smart-compaction` declines to fake one for the same
+ * which is why `dsh-vyra-smart-compaction` declines to fake one for the same
  * reason. Degrading loses the settings form; it must not lose the plugin.
  *
  * `confirmDestructive` is the only option, and it is `false` by default so an
@@ -470,7 +470,7 @@ export function apply(ctx, config) {
     { confirmDestructive: confirmDestructiveFrom(config) },
   )
   ctx.tools.register(createConsoleTool(console_))
-  ctx.logger?.info?.(`vyra-dsh-console: ${console_.listActions().length} actions`)
+  ctx.logger?.info?.(`dsh-vyra-dsh-console: ${console_.listActions().length} actions`)
 
   // The HTTP endpoint that finally connects the two halves: the browser polls
   // `GET` for queued appearance requests and posts each answer back with `POST`.
@@ -483,7 +483,7 @@ export function apply(ctx, config) {
   // of JSON. `inject` is Cordis' "run this once these services exist": the
   // callback pends while the service is absent or merely not provided yet, and
   // re-runs if it is replaced. That pending is the entire point, and it is the
-  // same pattern `vyra-agent-manager`, `dsh-im`, `dsh-skins` and
+  // same pattern `dsh-vyra-agent-manager`, `dsh-im`, `dsh-skins` and
   // `dsh-our-free-model` each arrived at independently.
   //
   // No `webServer` at all is a supported composition, not a failure: the tool
@@ -509,7 +509,7 @@ export function apply(ctx, config) {
         path: RPC_PATH,
         handler: createEndpoint(channel, longPollMsFrom(config), console_),
       }),
-      'vyra-dsh-console: appearance endpoint',
+      'dsh-vyra-dsh-console: appearance endpoint',
     )
   })
 }

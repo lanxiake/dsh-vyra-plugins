@@ -1,7 +1,7 @@
 /**
  * Presents CLIs to the harness as model providers, which puts them in the model
  * menu and lets the agent loop drive them without loop changes.
- * @module vyra-agent-cli-manager/adapter
+ * @module dsh-vyra-agent-cli-manager/adapter
  */
 import { LlmAdapter, LlmError, resolveRetryPolicy } from '@deepseek-ai/dsh-llm';
 export { DEFAULT_MODEL_ID } from "./constants.js";
@@ -12,7 +12,7 @@ export { DEFAULT_MODEL_ID } from "./constants.js";
  */
 const CONTEXT_WINDOW = 1_000_000_000;
 /** A retry would repeat a prompt the CLI may already have acted on. */
-const NO_RETRY = resolveRetryPolicy({ mode: 'normal', maxRetries: 0 }, 'vyra-agent-cli-manager');
+const NO_RETRY = resolveRetryPolicy({ mode: 'normal', maxRetries: 0 }, 'dsh-vyra-agent-cli-manager');
 /** The experimental Auto preset's reviewer, served by an independent stateless route. */
 const AUTO_REVIEW_PURPOSE = 'auto-review';
 /** Routes harness model requests to CLI sessions. */

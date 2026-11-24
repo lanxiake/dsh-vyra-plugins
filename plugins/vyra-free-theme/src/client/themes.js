@@ -12,7 +12,7 @@ import { builtinAssetsFromTheme, fieldsFromTheme, mimeForAssetPath, tableFromThe
 import { registerExternalSkin } from "../shared/personalization/catalog.js";
 import { createProjection } from "./skins/translucency.js";
 
-const THEMES_ROUTE = "/vyra-free-theme/themes";
+const THEMES_ROUTE = "/dsh-vyra-free-theme/themes";
 
 function themeAssetUrl(id, path) {
   return `${THEME_ASSET_BASE}/${id}/${String(path).split("/").map(encodeURIComponent).join("/")}`;

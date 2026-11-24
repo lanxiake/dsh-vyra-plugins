@@ -4,7 +4,7 @@
  * `session/prompt` returns. This class holds a CLI turn open across harness steps:
  * a step ends at every tool call, the mirror tool waits for the CLI's result, and
  * the next step resumes reading the same turn.
- * @module vyra-agent-cli-manager/cli-session
+ * @module dsh-vyra-agent-cli-manager/cli-session
  */
 import type { StreamChunk } from '@deepseek-ai/dsh-llm';
 import type { CliModeList } from './model-options.ts';

@@ -5,7 +5,7 @@
  * The two harness checks need `@deepseek-ai/cordis` and the storage helpers, so
  * they run through `tsx` from the `dsh-Veyra` checkout, located by `DSH_SOURCE`.
  *
- * @module vyra-tool-usage-stats/check
+ * @module dsh-vyra-tool-usage-stats/check
  */
 
 import { spawnSync } from 'node:child_process'

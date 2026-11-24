@@ -14,7 +14,7 @@
  *
  *   npx tsx <path>/tests/boot-timers.ts
  *
- * @module vyra-tool-usage-stats/boot-timers
+ * @module dsh-vyra-tool-usage-stats/boot-timers
  */
 
 import { Context } from '@deepseek-ai/cordis'

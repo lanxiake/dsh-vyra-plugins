@@ -6,7 +6,7 @@
 // The id below MUST equal the package name: the module system matches startup
 // rows by package name, and a mismatch means this half never mounts.
 window.__ModuleLoader__.load({
-  id: 'vyra-dsh-console',
+  id: 'dsh-vyra-dsh-console',
   factory(require) {
     /**
      * The Client services this half reaches for, in the order the Host's
@@ -21,19 +21,19 @@ window.__ModuleLoader__.load({
      * The panel's locale namespace.
      *
      * Distinct from the package name on purpose: the namespace keys the
-     * dictionary table the `locale` service holds, and `vyra-agent-manager`
+     * dictionary table the `locale` service holds, and `dsh-vyra-agent-manager`
      * already owns `dsh-agent-manager`. Two plugins sharing one namespace would
      * make the second `register` throw on the duplicate (ns, locale) pair.
      */
-    const NS = 'vyra-dsh-console'
+    const NS = 'dsh-vyra-dsh-console'
 
     /** The two slot names, and the id/key both are registered under. */
-    const PANEL_ID = 'vyra-dsh-console'
+    const PANEL_ID = 'dsh-vyra-dsh-console'
 
     /**
      * Where the panel sits in the sidebar.
      *
-     * `vyra-agent-manager` registers order 5, and two entries at the same order
+     * `dsh-vyra-agent-manager` registers order 5, and two entries at the same order
      * render in an order that depends on registration timing — which is not
      * stable across reloads. Six follows it and leaves room above.
      */
@@ -601,7 +601,7 @@ window.__ModuleLoader__.load({
      * renderer mounts its registry during its own init, so at this moment
      * `ctx.slots` may not exist yet, and `inject` is Cordis' "run this once the
      * service is here" — the same pattern the Host side uses for `webServer`
-     * and `vyra-agent-manager` uses for both slots.
+     * and `dsh-vyra-agent-manager` uses for both slots.
      */
     function registerPanel(ctx) {
       const slots = ctx.slots
@@ -614,7 +614,7 @@ window.__ModuleLoader__.load({
       // and registering them inside an effect ties their removal to the
       // context's lifetime — the locale service throws on a duplicate
       // (ns, locale), so a second mount would fail if this never released them.
-      ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), 'vyra-dsh-console: dictionaries')
+      ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), 'dsh-vyra-dsh-console: dictionaries')
       localeApi = ctx.locale
       t = ctx.locale.bind(NS)
 
@@ -801,7 +801,7 @@ window.__ModuleLoader__.load({
             if (backoffTimer !== undefined) clearTimeout(backoffTimer)
             if (backoffDone !== undefined) backoffDone()
           }
-        }, 'vyra-dsh-console: appearance bridge')
+        }, 'dsh-vyra-dsh-console: appearance bridge')
 
         // The panel. Registered AFTER the bridge, and that ordering is not
         // cosmetic: everything below is inside the same `try`, and a slot
@@ -814,7 +814,7 @@ window.__ModuleLoader__.load({
           // A panel that cannot register is a lost convenience, not a lost
           // plugin. Reported rather than swallowed, so it is visible in the
           // console instead of as an entry that simply never appears.
-          try { console.warn('[vyra-dsh-console] panel not registered:', err) } catch { /* no console */ }
+          try { console.warn('[dsh-vyra-dsh-console] panel not registered:', err) } catch { /* no console */ }
         }
       },
     }

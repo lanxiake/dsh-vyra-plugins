@@ -121,7 +121,7 @@ test("the hero mark can be a ring, a text wordmark, an image or nothing", async 
       const node = fake.skins.get(id).Mark();
       assert.equal(node.props["data-vft-hero-mark"], entry.expect, JSON.stringify(entry.brand));
       if (entry.expect === "image") {
-        assert.match(node.props.src, new RegExp(`^/vyra-free-theme/theme/${id}/assets/mark\\.png$`));
+        assert.match(node.props.src, new RegExp(`^/dsh-vyra-free-theme/theme/${id}/assets/mark\\.png$`));
       }
       if (entry.expect === "text") {
         assert.equal(node.children[0], "星云");

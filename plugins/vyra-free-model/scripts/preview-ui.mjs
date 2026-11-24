@@ -128,7 +128,7 @@ const body = process.env.PREVIEW_MODAL === '1' ? render(h(LoginModal, { dialog: 
 ))
 
 const html = `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><title>vyra-free-model settings preview</title>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>dsh-vyra-free-model settings preview</title>
 <style>
   :root{
     --dsw-alias-bg-base:#0f1115; --dsw-alias-bg-layer-1:#171a21; --dsw-alias-bg-layer-2:#1e222b;

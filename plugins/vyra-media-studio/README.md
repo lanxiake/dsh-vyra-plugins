@@ -1,4 +1,4 @@
-# vyra-media-studio
+# dsh-vyra-media-studio
 
 DSH 右侧栏的文件管理插件，同时保留音视频预览能力。当前阶段：**文件管理已实现，可直接从 Git/本地目录安装**。
 
@@ -57,10 +57,10 @@ dsh plugin add git+https://github.com/lanxiake/dsh-vyra-plugins.git#path:/plugin
 本地开发时在 profile 的 `package.json` 中把依赖指向本目录：
 
 ```json
-"vyra-media-studio": "link:E:/my-project/dsh-vyra-plugins/plugins/vyra-media-studio"
+"dsh-vyra-media-studio": "link:E:/my-project/dsh-vyra-plugins/plugins/vyra-media-studio"
 ```
 
-安装后在 profile 的 bundles 中启用 `vyra-media-studio`，重启 DSH。
+安装后在 profile 的 bundles 中启用 `dsh-vyra-media-studio`，重启 DSH。
 
 ## 开发
 

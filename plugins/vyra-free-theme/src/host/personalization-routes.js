@@ -183,7 +183,7 @@ export function createOfficialRejection(ctx) {
 }
 
 export function mountPersonalizationRoutes(host, options) {
-  const { store, assetsBasePath = "/vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets, selection } = options;
+  const { store, assetsBasePath = "/dsh-vyra-free-theme/assets", trustedHosts = [], rejection, serveBuiltinAsset, themes, themeAssets, selection } = options;
   const disposers = [];
 
   const fence = (request, response) => {
@@ -206,7 +206,7 @@ export function mountPersonalizationRoutes(host, options) {
 
   const configRoute = host.webServer.register({
     kind: "exact",
-    path: "/vyra-free-theme/config",
+    path: "/dsh-vyra-free-theme/config",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (request.method === "GET") return sendJson(response, 200, store.snapshot());
@@ -230,7 +230,7 @@ export function mountPersonalizationRoutes(host, options) {
   if (typeof themes === "function") {
     const themesRoute = host.webServer.register({
       kind: "exact",
-      path: "/vyra-free-theme/themes",
+      path: "/dsh-vyra-free-theme/themes",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (!method(request, response, "GET")) return;
@@ -249,12 +249,12 @@ export function mountPersonalizationRoutes(host, options) {
   if (typeof themeAssets === "function") {
     const themeAssetRoute = host.webServer.register({
       kind: "prefix",
-      path: "/vyra-free-theme/theme",
+      path: "/dsh-vyra-free-theme/theme",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (!method(request, response, "GET")) return;
         const path = String(request.url ?? "").split("?")[0];
-        const match = /^\/vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
+        const match = /^\/dsh-vyra-free-theme\/theme\/([a-z][a-z0-9-]{1,39})\/(.+)$/.exec(path);
         if (match === null) {
           return sendJson(response, 400, { error: "invalid theme asset path", code: "INVALID_THEME_ASSET" });
         }
@@ -290,7 +290,7 @@ export function mountPersonalizationRoutes(host, options) {
   if (typeof selection === "function") {
     const selectionRoute = host.webServer.register({
       kind: "exact",
-      path: "/vyra-free-theme/selection",
+      path: "/dsh-vyra-free-theme/selection",
       handler: async (request, response) => {
         if (!fence(request, response)) return;
         if (method(request, response, "GET")) {
@@ -322,7 +322,7 @@ export function mountPersonalizationRoutes(host, options) {
 
   const recoveryRoute = host.webServer.register({
     kind: "exact",
-    path: "/vyra-free-theme/recovery",
+    path: "/dsh-vyra-free-theme/recovery",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (!method(request, response, "POST")) return;
@@ -339,7 +339,7 @@ export function mountPersonalizationRoutes(host, options) {
 
   const libraryRoute = host.webServer.register({
     kind: "exact",
-    path: "/vyra-free-theme/library",
+    path: "/dsh-vyra-free-theme/library",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (request.method === "GET") return sendJson(response, 200, store.snapshot());
@@ -363,12 +363,12 @@ export function mountPersonalizationRoutes(host, options) {
 
   const libraryDeleteRoute = host.webServer.register({
     kind: "prefix",
-    path: "/vyra-free-theme/library",
+    path: "/dsh-vyra-free-theme/library",
     handler: async (request, response) => {
       if (!fence(request, response)) return;
       if (!method(request, response, "DELETE")) return;
       const path = String(request.url ?? "").split("?")[0];
-      const match = /\/vyra-free-theme\/library\/([^/]+)$/.exec(path);
+      const match = /\/dsh-vyra-free-theme\/library\/([^/]+)$/.exec(path);
       const suffix = match?.[1] ?? "";
       if (!ASSET_ID_PATTERN.test(suffix)) {
         return sendJson(response, 400, { error: "invalid asset id", code: "INVALID_ASSET_ID" });

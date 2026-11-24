@@ -1,7 +1,7 @@
 /**
  * The body of the mirror tool: wait for the CLI's result of one call, answering the
  * CLI's permission requests along the way.
- * @module vyra-agent-cli-manager/session/drive-tool
+ * @module dsh-vyra-agent-cli-manager/session/drive-tool
  */
 import type { ApprovalOutcome } from '@deepseek-ai/dsh-user-approval';
 import type { ToolOutcome } from '../tool-record.ts';

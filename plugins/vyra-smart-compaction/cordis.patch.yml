@@ -6,7 +6,7 @@
 # row documents its own policy. Delete a key to fall back to the code default.
 - insert:
     - id: smart-compaction
-      name: 'vyra-smart-compaction'
+      name: 'dsh-vyra-smart-compaction'
       config:
         # Lumii's threshold ladder, mapped onto the shipped meter.
         #   pruneRatio 0.48   -> deterministic prune band [0.48, triggerRatio)

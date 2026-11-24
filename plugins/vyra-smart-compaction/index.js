@@ -33,11 +33,11 @@
  * (that backend already does, on its own trigger). It adds the cheaper tiers
  * ahead of that trigger, plus the human and agent decision surfaces.
  *
- * @module vyra-smart-compaction
+ * @module dsh-vyra-smart-compaction
  */
 
 /** Plugin name, as the Loader row declares it. */
-export const name = 'vyra-smart-compaction'
+export const name = 'dsh-vyra-smart-compaction'
 
 /**
  * Services this plugin contributes to or reads positionally: `tools` and

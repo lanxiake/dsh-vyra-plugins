@@ -2,7 +2,7 @@
  * The 变更 panel's writes: stage, unstage, discard, commit the selected files, push, pull,
  * and switch or create branches. Paths are relative to the repository's top level and always
  * follow `--`, so a file named like an option stays a file.
- * @module vyra-agent-cli-manager/git/git-write
+ * @module dsh-vyra-agent-cli-manager/git/git-write
  */
 import { GitError, mustGit, runGit } from "./git-run.js";
 /** Network commands wait on a remote; everything else is local and quick. */

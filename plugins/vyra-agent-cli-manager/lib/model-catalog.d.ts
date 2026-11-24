@@ -4,7 +4,7 @@
  * filling the menu never asks: a CLI is only started once someone has chosen it, and
  * the menu refreshes when the answer arrives. Answers are saved, so a restarted plugin
  * can show the last known lists while it asks again.
- * @module vyra-agent-cli-manager/model-catalog
+ * @module dsh-vyra-agent-cli-manager/model-catalog
  */
 import type { LlmModelInfo, LlmModelReasoningInfo } from '@deepseek-ai/dsh-llm';
 import type { CliEffortList, CliModeList, CliModelList } from './model-options.ts';

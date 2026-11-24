@@ -9,7 +9,7 @@
  *
  * Everything here rests on npm's cache layout, so whatever is not plainly there goes to `npx`
  * as configured. A change on npm's side can only make a start slower, never wrong.
- * @module vyra-agent-cli-manager/npx-cache
+ * @module dsh-vyra-agent-cli-manager/npx-cache
  */
 /** How to start one CLI. */
 export interface CliCommand {

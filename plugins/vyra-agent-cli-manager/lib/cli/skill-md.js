@@ -5,7 +5,7 @@
  * does; the frontmatter's `description` does, and every skill in the wild has one because the
  * skill loader needs it. This reads only that one field: the body is instructions for a model,
  * not a description for a person.
- * @module vyra-agent-cli-manager/cli/skill-md
+ * @module dsh-vyra-agent-cli-manager/cli/skill-md
  */
 /** Long enough for a one-line summary; a pasted paragraph is not a description. */
 const DESCRIPTION_MAX = 300;

@@ -2,7 +2,7 @@
  * Maps harness sessions to their live CLI sessions, and follows each session's log
  * to know where its turns begin and end. It holds no framework state, so `index.ts`
  * can stay plain wiring.
- * @module vyra-agent-cli-manager/session-registry
+ * @module dsh-vyra-agent-cli-manager/session-registry
  */
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { ToolRunContext } from '@deepseek-ai/dsh-tools';

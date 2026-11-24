@@ -19,5 +19,5 @@
 #     maxImageBytes: 8000000
 - insert:
     - id: wechat-local
-      name: 'vyra-wechat-local'
+      name: 'dsh-vyra-wechat-local'
       config: {}

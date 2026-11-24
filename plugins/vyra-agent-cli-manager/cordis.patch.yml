@@ -2,8 +2,8 @@
 # the composer's switcher and the model menu. The names and their order follow
 # desktop-cc-gui, whose experience this plugin brings to DSH.
 - insert:
-    - id: vyra-agent-cli-manager
-      name: vyra-agent-cli-manager
+    - id: dsh-vyra-agent-cli-manager
+      name: dsh-vyra-agent-cli-manager
       config:
         agents:
           - id: claude

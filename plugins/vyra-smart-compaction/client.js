@@ -7,11 +7,11 @@
  * recommendation. It reads the host's pressure endpoint and owns no state of
  * its own beyond the last poll.
  *
- * @module vyra-smart-compaction/client
+ * @module dsh-vyra-smart-compaction/client
  */
 
 window.__ModuleLoader__.load({
-  id: 'vyra-smart-compaction',
+  id: 'dsh-vyra-smart-compaction',
   factory(require) {
     const React = require('react')
     const h = React.createElement

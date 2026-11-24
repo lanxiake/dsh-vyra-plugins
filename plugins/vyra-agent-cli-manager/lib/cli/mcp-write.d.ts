@@ -8,7 +8,7 @@
  * reads. Deleting a key needs no knowledge of the entry's shape, so that path is safe even
  * for a CLI this plugin has never measured, while writing a *new* entry does need it and is
  * therefore refused rather than guessed.
- * @module vyra-agent-cli-manager/cli/mcp-write
+ * @module dsh-vyra-agent-cli-manager/cli/mcp-write
  */
 import type { CliCatalogEntry } from './catalog.ts';
 import type { CliRunner } from './upgrade.ts';

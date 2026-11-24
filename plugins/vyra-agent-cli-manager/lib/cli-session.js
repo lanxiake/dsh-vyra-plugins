@@ -4,7 +4,7 @@
  * `session/prompt` returns. This class holds a CLI turn open across harness steps:
  * a step ends at every tool call, the mirror tool waits for the CLI's result, and
  * the next step resumes reading the same turn.
- * @module vyra-agent-cli-manager/cli-session
+ * @module dsh-vyra-agent-cli-manager/cli-session
  */
 import { randomUUID } from 'node:crypto';
 import { LlmError } from '@deepseek-ai/dsh-llm';
@@ -165,7 +165,7 @@ export class CliSession {
     async waitForTool(callId, ask, signal) {
         const acpId = this.tools.acpIdFor(callId);
         if (acpId === undefined)
-            throw new Error(`vyra-agent-cli-manager: 调用 ${callId} 不是这个 CLI 会话发出的`);
+            throw new Error(`dsh-vyra-agent-cli-manager: 调用 ${callId} 不是这个 CLI 会话发出的`);
         this.tools.startMirror(acpId);
         try {
             const context = {

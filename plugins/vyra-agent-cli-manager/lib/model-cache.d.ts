@@ -2,7 +2,7 @@
  * Keeps each CLI's model list on disk. The harness restarts this plugin when its files
  * change (an update, or a rebuild under a linked install), and a fresh catalog would show
  * a bare menu until the CLI is probed again; with the saved lists it is filled at once.
- * @module vyra-agent-cli-manager/model-cache
+ * @module dsh-vyra-agent-cli-manager/model-cache
  */
 import type { CliModelList } from './model-options.ts';
 /**

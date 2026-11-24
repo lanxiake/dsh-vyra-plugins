@@ -14,7 +14,7 @@
  *
  * Nothing here fetches. The repository read is handed in as a parameter for the same reason the
  * link host is: a test must not need the network.
- * @module vyra-agent-cli-manager/cli/skill-install
+ * @module dsh-vyra-agent-cli-manager/cli/skill-install
  */
 import { join } from 'node:path';
 import { BadRequest } from "./errors.js";

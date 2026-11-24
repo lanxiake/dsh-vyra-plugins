@@ -1,7 +1,7 @@
 /**
  * The 变更 panel's reads: where a directory's repository is, its status with line counts,
  * its branches, and the patch of one file.
- * @module vyra-agent-cli-manager/git/git-read
+ * @module dsh-vyra-agent-cli-manager/git/git-read
  */
 import type { Spawn } from './git-run.ts';
 import type { GitStatus } from './git-status.ts';

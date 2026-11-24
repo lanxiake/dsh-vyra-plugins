@@ -1,5 +1,5 @@
 /**
- * vyra-screen-recorder — 宿主侧：屏幕抓取 / 录屏 / 系统声音。
+ * dsh-vyra-screen-recorder — 宿主侧：屏幕抓取 / 录屏 / 系统声音。
  *
  * 为什么在宿主侧抓屏
  * -----------------
@@ -41,7 +41,7 @@ import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const name = 'vyra-screen-recorder'
+export const name = 'dsh-vyra-screen-recorder'
 export const inject = ['webServer']
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -50,13 +50,13 @@ const LIB = path.join(ROOT, 'lib')
 const POWERSHELL = process.env.VSR_POWERSHELL || 'powershell.exe'
 const SAVE_LIMIT = 512 * 1024 * 1024
 const MAX_SECONDS = 600
-const SESSION_PREFIX = 'vyra-screen-recorder-'
+const SESSION_PREFIX = 'dsh-vyra-screen-recorder-'
 
 let recording = null
 let agentJob = null
 
 function log(...args) {
-  try { console.log('[vyra-screen-recorder]', ...args) } catch { /* ignore */ }
+  try { console.log('[dsh-vyra-screen-recorder]', ...args) } catch { /* ignore */ }
 }
 
 function sendJson(res, status, value) {
@@ -115,7 +115,7 @@ const DEFAULT_SETTINGS = {
 }
 
 function settingsPath() {
-  return path.join(dshHome(), 'vyra-screen-recorder', 'settings.json')
+  return path.join(dshHome(), 'dsh-vyra-screen-recorder', 'settings.json')
 }
 
 const SHORTCUT_MODIFIERS = ['Ctrl', 'Alt', 'Shift', 'Meta']
@@ -793,12 +793,12 @@ function allowedTarget(full) {
     })
   })
 }
-// CLI 录屏：CLI 把 req-<id>.json 写进 ~/.dsh/vyra-screen-recorder/agent，
+// CLI 录屏：CLI 把 req-<id>.json 写进 ~/.dsh/dsh-vyra-screen-recorder/agent，
 // 宿主轮询后开录/停录；状态写 state-<id>.json。编码由 DSH Web 界面完成，
 // 完成后 POST /agent/save 把 WebM 写到请求里的 --out。
 
 function agentDir() {
-  return path.join(dshHome(), 'vyra-screen-recorder', 'agent')
+  return path.join(dshHome(), 'dsh-vyra-screen-recorder', 'agent')
 }
 
 async function writeJsonAtomic(file, value) {
@@ -814,13 +814,13 @@ async function writeAgentState(id, value) {
 
 /** 插件初始化时把技能和 CLI shim 装进 DSH_HOME。 */
 async function installAgentAssets() {
-  const skillSource = path.join(ROOT, 'skills', 'vyra-screen-recorder', 'SKILL.md')
+  const skillSource = path.join(ROOT, 'skills', 'dsh-vyra-screen-recorder', 'SKILL.md')
   const skillText = await readFile(skillSource, 'utf8')
-  const skillDir = path.join(dshHome(), 'skills', 'vyra-screen-recorder')
+  const skillDir = path.join(dshHome(), 'skills', 'dsh-vyra-screen-recorder')
   await mkdir(skillDir, { recursive: true })
   await writeFile(path.join(skillDir, 'SKILL.md'), skillText)
 
-  const binDir = path.join(dshHome(), 'vyra-screen-recorder', 'bin')
+  const binDir = path.join(dshHome(), 'dsh-vyra-screen-recorder', 'bin')
   await mkdir(binDir, { recursive: true })
   const cli = path.join(ROOT, 'bin', 'vsr.mjs')
   // 用 DSH 自己的 Node 运行时（process.execPath），不依赖用户 PATH 上的 node。
@@ -1672,7 +1672,7 @@ export function apply(ctx) {
   // 预热常驻截图服务：PowerShell 冷启动和 C# 加载都放后台，第一次截图就快。
   try { startShotServer() } catch (error) { log('截图服务预热失败：', (error && error.message) || error) }
   try {
-    ctx.effect(() => () => stopShotServer(), 'vyra-screen-recorder: shot server')
+    ctx.effect(() => () => stopShotServer(), 'dsh-vyra-screen-recorder: shot server')
   } catch { /* ignore */ }
   try {
     const agentTimer = setInterval(() => { void agentTick() }, 500)
@@ -1682,7 +1682,7 @@ export function apply(ctx) {
         if (agentJob.timer !== null) clearTimeout(agentJob.timer)
         agentJob = null
       }
-    }, 'vyra-screen-recorder: agent queue')
+    }, 'dsh-vyra-screen-recorder: agent queue')
   } catch (error) {
     log('agent queue 启动失败：', (error && error.message) || error)
   }
@@ -1709,7 +1709,7 @@ export function apply(ctx) {
           }
           discardSession().catch(() => {})
         }
-      }, 'vyra-screen-recorder: capture routes')
+      }, 'dsh-vyra-screen-recorder: capture routes')
     })
   } catch (error) {
     log('apply 失败：', error && error.message)

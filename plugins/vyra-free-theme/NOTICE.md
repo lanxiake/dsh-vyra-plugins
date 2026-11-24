@@ -1,6 +1,6 @@
 # NOTICE
 
-vyra-free-theme — 「自由主题」DSH 插件。
+dsh-vyra-free-theme — 「自由主题」DSH 插件。
 
 ## 非官方声明
 

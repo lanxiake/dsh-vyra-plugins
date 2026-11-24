@@ -26,7 +26,7 @@
  * blocks, delays, or alters a tool call: every failure here is contained and
  * logged.
  *
- * @module vyra-tool-usage-stats
+ * @module dsh-vyra-tool-usage-stats
  */
 
 import {
@@ -36,7 +36,7 @@ import {
 import { SNAPSHOT_KEY, TABLE_NAME, toolUsageDomain, type Snapshot } from './storage.ts'
 
 /** Plugin name. */
-export const name = 'vyra-tool-usage-stats'
+export const name = 'dsh-vyra-tool-usage-stats'
 
 /** `sessions` supplies the event declaration this plugin listens on. */
 export const inject = ['sessions']

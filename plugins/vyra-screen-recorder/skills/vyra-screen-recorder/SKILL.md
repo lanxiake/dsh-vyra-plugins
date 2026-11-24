@@ -1,18 +1,18 @@
 ---
-name: vyra-screen-recorder
-description: Windows 录屏、截图、录制源枚举、文件列表，以及截图取字（Windows 自带 OCR）与剪贴板（vyra-screen-recorder 插件提供的 vsr CLI 与宿主路由）。截图/枚举/文件列表/取字不需要 DSH 运行；录屏需要 DSH Web 界面保持打开以完成 WebCodecs 编码。
+name: dsh-vyra-screen-recorder
+description: Windows 录屏、截图、录制源枚举、文件列表，以及截图取字（Windows 自带 OCR）与剪贴板（dsh-vyra-screen-recorder 插件提供的 vsr CLI 与宿主路由）。截图/枚举/文件列表/取字不需要 DSH 运行；录屏需要 DSH Web 界面保持打开以完成 WebCodecs 编码。
 ---
 
 # 录屏 / 截图 CLI
 
-`vyra-screen-recorder` 插件初始化时会把本技能写入 `~/.dsh/skills/vyra-screen-recorder/`，
+`dsh-vyra-screen-recorder` 插件初始化时会把本技能写入 `~/.dsh/skills/dsh-vyra-screen-recorder/`，
 并安装 CLI shim：
 
-- Git Bash / sh：`~/.dsh/vyra-screen-recorder/bin/vsr`
-- PowerShell / cmd：`%USERPROFILE%\.dsh\vyra-screen-recorder\bin\vsr.cmd`
+- Git Bash / sh：`~/.dsh/dsh-vyra-screen-recorder/bin/vsr`
+- PowerShell / cmd：`%USERPROFILE%\.dsh\dsh-vyra-screen-recorder\bin\vsr.cmd`
 
 如果 `DSH_HOME` 指向别处，把上面的 `~/.dsh` 换成对应目录。
-Git Bash 里如果 `vsr` 没有执行权限，用 `sh ~/.dsh/vyra-screen-recorder/bin/vsr ...`；
+Git Bash 里如果 `vsr` 没有执行权限，用 `sh ~/.dsh/dsh-vyra-screen-recorder/bin/vsr ...`；
 PowerShell / cmd 用 `vsr.cmd`。
 
 ## 截图（不依赖 DSH 运行）
@@ -36,7 +36,7 @@ vsr shot                  # 省略 --out：保存到设置的截图目录
 「复制文件」把保存下来的 PNG 作为文件放进剪贴板（能粘进资源管理器）。
 
 Agent 侧要读图里的字，优先用 `dsh-tool-ocr` 的 `ocr_read` 工具；没有那个插件时
-可以直接调本插件自带的 OCR 脚本（`<插件目录>` 指 `vyra-screen-recorder` 插件所在目录）：
+可以直接调本插件自带的 OCR 脚本（`<插件目录>` 指 `dsh-vyra-screen-recorder` 插件所在目录）：
 
 ```powershell
 # 输出一行 JSON：{"ok":true,"text":"...","lang":"zh-Hans-CN","lines":[...]}

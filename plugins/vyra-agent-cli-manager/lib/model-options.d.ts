@@ -2,7 +2,7 @@
  * Reads a CLI's model list, its reasoning levels, and the native modes it reports, out of
  * the configuration options ACP sends. Every option id and name stays exactly as the CLI
  * gave it; nothing here maps a CLI concept onto a harness one.
- * @module vyra-agent-cli-manager/model-options
+ * @module dsh-vyra-agent-cli-manager/model-options
  */
 import type { SessionConfigOption } from '@agentclientprotocol/sdk';
 /** One model a CLI offers. */

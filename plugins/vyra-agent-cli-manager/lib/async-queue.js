@@ -2,7 +2,7 @@
  * Single-reader async queue. CLI output arrives on notification callbacks while
  * the harness pulls it from an async generator, and a step can stop reading with
  * events still buffered for the next step.
- * @module vyra-agent-cli-manager/async-queue
+ * @module dsh-vyra-agent-cli-manager/async-queue
  */
 /** FIFO buffer with one abortable waiting reader. */
 export class AsyncQueue {

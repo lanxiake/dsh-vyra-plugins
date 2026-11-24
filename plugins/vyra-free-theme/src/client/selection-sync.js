@@ -10,8 +10,8 @@
  *           `?skin=` deep link), persist it back so the Host does not "revert"
  *           the user's choice on the next load.
  */
-const SELECTION_ROUTE = "/vyra-free-theme/selection";
-const ACTIVE_EVENT = "vyra-free-theme:active-changed";
+const SELECTION_ROUTE = "/dsh-vyra-free-theme/selection";
+const ACTIVE_EVENT = "dsh-vyra-free-theme:active-changed";
 
 export async function adoptHostSelection({ runtime, fetchImpl = fetch }) {
   try {

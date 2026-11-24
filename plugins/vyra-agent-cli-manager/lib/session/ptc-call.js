@@ -3,7 +3,7 @@
  * mirrored call goes out as a `run_code` program that calls the mirror tool through
  * its SDK binding. The executor then runs the mirror tool under a nested call id,
  * `<outer call id>:ptc:<n>`, which leads back to the CLI call.
- * @module vyra-agent-cli-manager/session/ptc-call
+ * @module dsh-vyra-agent-cli-manager/session/ptc-call
  */
 import { RUN_CODE_NAME } from '@deepseek-ai/dsh-tools';
 import { CLI_TOOL_NAME } from "../constants.js";

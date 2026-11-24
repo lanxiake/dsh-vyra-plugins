@@ -9,7 +9,7 @@
 // classic scripts, which share one lexical scope, so a top-level `const` here would
 // collide with any other plugin that picked the same name.
 window.__ModuleLoader__.load({
-  id: 'vyra-wechat-local',
+  id: 'dsh-vyra-wechat-local',
   factory(require) {
     const RPC = '/api/wechat-local/rpc'
     const React = require('react')

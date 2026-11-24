@@ -1,9 +1,9 @@
 /**
- * Host path resolution for vyra-free-theme.
+ * Host path resolution for dsh-vyra-free-theme.
  *
  * Two rules decide everything here:
  *
- * 1. The new plugin owns new directory names (`vyra-free-theme`,
+ * 1. The new plugin owns new directory names (`dsh-vyra-free-theme`,
  *    `vyra-free-theme-desktop`). Nothing is ever written back to the
  *    directories used by the plugins this one replaces.
  *
@@ -22,7 +22,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, renameSync, rmSync, statS
 
 /** New store directory per profile. */
 export const DATA_DIRS = {
-  web: "vyra-free-theme",
+  web: "dsh-vyra-free-theme",
   desktop: "vyra-free-theme-desktop",
 };
 

@@ -10,7 +10,7 @@
  * shim is read for the script it starts, and that script is run with the shim's interpreter
  * directly, the way the shim would have run it. The interpreter is often not node: npm writes
  * `bun` into the shim of a package whose bin has a bun shebang, such as OMP CLI.
- * @module vyra-agent-cli-manager/windows-command
+ * @module dsh-vyra-agent-cli-manager/windows-command
  */
 import { readFileSync, statSync } from 'node:fs';
 import { win32 } from 'node:path';

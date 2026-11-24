@@ -2,7 +2,7 @@
  * What each agent CLI is, where it keeps its configuration, and which of its own
  * subcommands manage it. DESIGN.md is the source of these facts, measured on this machine
  * on 2026-11-16; nothing here is inferred from a CLI's name or from habit.
- * @module vyra-agent-cli-manager/cli/catalog
+ * @module dsh-vyra-agent-cli-manager/cli/catalog
  */
 /**
  * How a CLI manages its MCP servers. Every CLI ships its own `mcp` subcommands and they

@@ -1,7 +1,7 @@
 /**
  * Asks a CLI which models it offers. ACP only reports them on a session, so this
  * opens one and removes it again. It sends no prompt, so no model is called.
- * @module vyra-agent-cli-manager/model-probe
+ * @module dsh-vyra-agent-cli-manager/model-probe
  */
 import { setTimeout as delay } from 'node:timers/promises';
 import { abortable } from "./abortable.js";

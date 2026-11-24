@@ -6,7 +6,7 @@
  * in one place. The dangerous half is removal: this module only ever deletes an entry it has
  * just verified is a link, because a real directory there is the user's own work and deleting
  * it would lose files nothing else holds.
- * @module vyra-agent-cli-manager/cli/skill-links
+ * @module dsh-vyra-agent-cli-manager/cli/skill-links
  */
 import { join } from 'node:path';
 import { CLI_CATALOG } from "./catalog.js";

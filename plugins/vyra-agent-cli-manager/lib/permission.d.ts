@@ -1,6 +1,6 @@
 /**
  * Maps a harness approval decision onto the options a CLI offered.
- * @module vyra-agent-cli-manager/permission
+ * @module dsh-vyra-agent-cli-manager/permission
  */
 import type { PermissionOption, RequestPermissionResponse } from '@agentclientprotocol/sdk';
 import type { ApprovalOutcome } from '@deepseek-ai/dsh-user-approval';

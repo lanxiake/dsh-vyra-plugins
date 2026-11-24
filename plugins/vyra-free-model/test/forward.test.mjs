@@ -130,7 +130,7 @@ function call(handler, { method = 'POST', path, body } = {}) {
   return new Promise(resolve => {
     const req = {
       method,
-      url: `/api/vyra-free-model${path}`,
+      url: `/api/dsh-vyra-free-model${path}`,
       headers: {},
       on(event, fn) {
         if (event === 'data' && body !== undefined) fn(Buffer.from(JSON.stringify(body)))
@@ -183,7 +183,7 @@ test('the summary still hides the key even when one exists', async () => {
 test('the key route refuses a proxied request', async () => {
   const handler = createApiRoutes(deps())
   const res = await new Promise(resolve => {
-    const req = { method: 'POST', url: '/api/vyra-free-model/forward/key', headers: { 'x-forwarded-for': '10.0.0.1' },
+    const req = { method: 'POST', url: '/api/dsh-vyra-free-model/forward/key', headers: { 'x-forwarded-for': '10.0.0.1' },
       on() { return req } }
     const res2 = { statusCode: 0, writeHead(status) { this.statusCode = status }, end(p) { resolve({ status: this.statusCode, body: JSON.parse(p) }) } }
     void handler(req, res2)

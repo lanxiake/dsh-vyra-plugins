@@ -117,7 +117,7 @@ test('the route writes a prompt and refuses a malformed request', async () => {
       }
       void handler(req, res)
     })
-    const base = '/vyra-agent-cli-manager/cli/prompt-write'
+    const base = '/dsh-vyra-agent-cli-manager/cli/prompt-write'
 
     const ok = await call(base, { id: 'dsh', text: '设定' })
     assert.equal(ok.status, 200)

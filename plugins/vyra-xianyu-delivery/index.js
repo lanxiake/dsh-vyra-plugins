@@ -14,7 +14,7 @@ import { createAi, stripFrontmatter } from './lib/ai.js'
 import { createDshAgent } from './lib/agent.js'
 import { createXianyuTools } from './lib/tools.js'
 
-export const name = 'vyra-xianyu-delivery'
+export const name = 'dsh-vyra-xianyu-delivery'
 export const inject = ['tools', 'agents']
 
 async function readJson(req) {

@@ -1,4 +1,4 @@
-// Client half of vyra-system-selection: the settings page.
+// Client half of dsh-vyra-system-selection: the settings page.
 //
 // Wrapped in an IIFE: plugin client bundles are concatenated into one classic script per
 // startup batch, so a top-level `const` here would share a lexical scope with every other
@@ -20,7 +20,7 @@
 const SYSTEM_SELECTION_RPC = '/api/system-selection/rpc'
 
 window.__ModuleLoader__.load({
-  id: 'vyra-system-selection',
+  id: 'dsh-vyra-system-selection',
   factory(require) {
     const React = require('react')
     const { useCallback, useEffect, useState } = React

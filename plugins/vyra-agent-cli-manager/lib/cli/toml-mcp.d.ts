@@ -6,7 +6,7 @@
  * `[mcp_servers.<name>]` tables and their scalar or string-array values. Anything outside those
  * tables is ignored; a value this cannot read raises {@link TomlMcpError} so the caller can say
  * the column is unreadable rather than present a half-parsed list.
- * @module vyra-agent-cli-manager/cli/toml-mcp
+ * @module dsh-vyra-agent-cli-manager/cli/toml-mcp
  */
 /** A value this reader does not understand. The caller turns it into a visible "cannot read". */
 export declare class TomlMcpError extends Error {

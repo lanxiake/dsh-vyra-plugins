@@ -2,7 +2,7 @@
  * ACP over a child process's stdio, using the harness subprocess seam so the CLI
  * gets the shared credential scrub and managed teardown. Process teardown and SDK
  * wiring are adapted from `@deepseek-ai/dsh-subagent-acp`; see THIRD_PARTY_NOTICES.md.
- * @module vyra-agent-cli-manager/stdio-transport
+ * @module dsh-vyra-agent-cli-manager/stdio-transport
  */
 import { Readable, Writable } from 'node:stream';
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
@@ -134,7 +134,7 @@ function watchClose(child, handlers) {
     });
 }
 function connectAgent(child, handlers) {
-    return client({ name: 'vyra-agent-cli-manager' })
+    return client({ name: 'dsh-vyra-agent-cli-manager' })
         .onNotification(methods.client.session.update, ({ params }) => {
         handlers.onUpdate(params.update);
         return Promise.resolve();

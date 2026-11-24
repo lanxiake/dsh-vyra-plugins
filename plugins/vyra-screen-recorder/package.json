@@ -1,7 +1,6 @@
 {
-  "name": "vyra-screen-recorder",
+  "name": "dsh-vyra-screen-recorder",
   "version": "0.4.3",
-  "private": true,
   "type": "module",
   "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 MP4 / WebM；截图带选区与标注、一键提取文字与复制图片/文件（Windows 自带 OCR，可接 dsh-tool-ocr 引擎）、悬停显示快捷键、设置页、快捷键和文件管理。",
   "main": "./index.js",

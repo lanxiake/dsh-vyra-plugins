@@ -1,5 +1,5 @@
 {
-  "name": "vyra-media-studio",
+  "name": "dsh-vyra-media-studio",
   "version": "0.3.4",
   "type": "module",
   "description": "右侧栏文件管理：默认本会话时间线、拖动移动、单按钮切换视图、资源管理器打开。",

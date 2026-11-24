@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 
 const RESERVED_IDS = new Set(['standard', 'ptc', 'minimal', 'cordis']);
 const ID_RE = /^[a-z][a-z0-9-]{1,39}$/;
-const POLICY_MODULE = 'vyra-agent-manager/tool-policy';
+const POLICY_MODULE = 'dsh-vyra-agent-manager/tool-policy';
 
 const dshHome = () => process.env.DSH_HOME || join(homedir(), '.dsh');
 export const presetsRoot = () => join(dshHome(), 'agent-manager', 'presets');
@@ -225,10 +225,26 @@ export function createManager(ctx) {
     return JSON.parse(raw);
   }
 
+  /**
+   * Normalize a module list to plain specifier strings.
+   *
+   * `agentPresets.inspectCompositions()` reports modules as
+   * `{ moduleName, baseUrl?, useHostBase }` objects, while every consumer here
+   * (the detail drawer's labels, capability matching, and the wire payload the
+   * client renders) expects strings. Rendering the objects directly throws
+   * React #31, so accept both shapes and keep only usable specifiers.
+   */
+  function moduleNames(modules) {
+    if (!Array.isArray(modules)) return [];
+    return modules
+      .map((entry) => (typeof entry === 'string' ? entry : entry && typeof entry.moduleName === 'string' ? entry.moduleName : ''))
+      .filter((name) => name !== '');
+  }
+
   /** Which capability ids a module list provides, using the same rows the editor offers. */
   function capabilitiesFromModules(modules) {
     if (!modules || modules.length === 0) return [];
-    const present = new Set(modules);
+    const present = new Set(moduleNames(modules));
     return capabilityDefs(environment(ctx))
       .filter((def) => [...flatModules(def.rows)].every((module) => present.has(module)))
       .map((def) => def.id);
@@ -282,7 +298,11 @@ export function createManager(ctx) {
     }
     let modulesById = new Map();
     try {
-      for (const composition of presets?.inspectCompositions?.() ?? []) modulesById.set(composition.id, composition.modules ?? []);
+      // `inspectCompositions()` 的 modules 是 { moduleName, baseUrl?, useHostBase } 对象数组，
+      // 而详情页把它们当作字符串标签渲染。这里归一到 moduleName，否则前端会抛 React #31。
+      for (const composition of presets?.inspectCompositions?.() ?? []) {
+        modulesById.set(composition.id, moduleNames(composition.modules))
+      }
     } catch { /* inventory is a nicety; the YAML view still works */ }
     const managed = [];
     let dirs = [];
@@ -515,7 +535,7 @@ export function createManager(ctx) {
       const capabilities = sys.capabilities && sys.capabilities.length
         ? sys.capabilities
         : yaml ? defs.filter((d) => [...flatModules(d.rows)].every((m) => yaml.includes(m))).map((d) => d.id) : [];
-      return { managed: false, preset: sys, modules: sys.modules || [], yaml, readError, capabilities };
+      return { managed: false, preset: sys, modules: moduleNames(sys.modules), yaml, readError, capabilities };
     }
     throw new Error(`没有找到 Agent「${id}」`);
   }

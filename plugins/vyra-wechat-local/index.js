@@ -1,4 +1,4 @@
-// vyra-wechat-local — 本机微信（用户本人账号）的 DSH 工具。
+// dsh-vyra-wechat-local — 本机微信（用户本人账号）的 DSH 工具。
 //
 // Host 只做协议转发：spawn lumii 的 Python 侧车（vendor/wechat/sidecar.py），
 // 按行写 JSON、按行读 JSON；解密、内存扫描、窗口自动化全在 Python 里。
@@ -14,7 +14,7 @@ import { resolveRuntime } from './lib/runtime.js'
 import { createToolRegistrar, TOOL_WHITELIST } from './lib/tools.js'
 import { createWatcher, isTrustedChannel } from './lib/watch.js'
 
-export const name = 'vyra-wechat-local'
+export const name = 'dsh-vyra-wechat-local'
 // `agents` must be declared: reading `ctx.agents` without it throws cordis's
 // "cannot get property … without inject", and the watch loop retried forever.
 export const inject = ['tools', 'agents']

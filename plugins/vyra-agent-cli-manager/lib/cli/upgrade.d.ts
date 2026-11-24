@@ -5,7 +5,7 @@
  * native package and npm, opencode between curl/npm/pnpm/bun/brew. Reimplementing that here
  * would mean guessing the install layout from the outside and writing into directories this
  * plugin did not create, so the upgrade is delegated instead.
- * @module vyra-agent-cli-manager/cli/upgrade
+ * @module dsh-vyra-agent-cli-manager/cli/upgrade
  */
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
 import type { CliCatalogEntry } from './catalog.ts';

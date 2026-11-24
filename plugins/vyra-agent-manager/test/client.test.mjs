@@ -14,7 +14,7 @@ let exports
 const window = {
   __ModuleLoader__: {
     load: ({ id, factory }) => {
-      assert.equal(id, 'vyra-agent-manager', 'the bundle registers under its package name')
+      assert.equal(id, 'dsh-vyra-agent-manager', 'the bundle registers under its package name')
       exports = factory(() => ({
         createElement: (type, props, ...children) => ({ type, props, children }),
         useState: () => [undefined, () => {}],
@@ -99,4 +99,4 @@ assert.equal(custom.summary, '只读')
 assert.equal(custom.prompt, '你是审查员')
 assert.deepEqual(custom.deniedTools, ['web_search'])
 
-console.log('vyra-agent-manager: client checks passed')
+console.log('dsh-vyra-agent-manager: client checks passed')

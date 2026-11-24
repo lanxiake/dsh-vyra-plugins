@@ -1,6 +1,6 @@
 /**
  * What is known about a CLI session's model, and switching it to the harness's choice.
- * @module vyra-agent-cli-manager/session/model-state
+ * @module dsh-vyra-agent-cli-manager/session/model-state
  */
 import { LlmError } from '@deepseek-ai/dsh-llm';
 import { abortable } from "../abortable.js";

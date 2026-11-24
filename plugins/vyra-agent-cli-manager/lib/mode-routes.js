@@ -1,10 +1,10 @@
 /**
- * The composer's mode route, under `/vyra-agent-cli-manager/modes`. A CLI's modes belong to the CLI:
+ * The composer's mode route, under `/dsh-vyra-agent-cli-manager/modes`. A CLI's modes belong to the CLI:
  * the route only lists what that CLI reported and sends the chosen id back unchanged, so
  * no CLI mode is ever turned into a harness preset. Like the git routes, the harness's web
  * server leaves authentication to each route, so every request first asks `connection` for
  * a rejection.
- * @module vyra-agent-cli-manager/mode-routes
+ * @module dsh-vyra-agent-cli-manager/mode-routes
  */
 import { LlmError } from '@deepseek-ai/dsh-llm';
 import { MODE_ROUTE_PREFIX } from "./constants.js";
@@ -84,7 +84,7 @@ export function modeHandler(routes, connection, warn) {
         catch (error) {
             const known = error instanceof LlmError;
             if (!known)
-                warn(`vyra-agent-cli-manager: mode request failed: ${messageOf(error)}`);
+                warn(`dsh-vyra-agent-cli-manager: mode request failed: ${messageOf(error)}`);
             sendJson(res, known ? 400 : 500, { success: false, error: known ? messageOf(error) : '切换模式失败，请查看日志' });
         }
     };

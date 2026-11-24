@@ -19,7 +19,7 @@ function loadBundle() {
   const window = {
     __ModuleLoader__: {
       load: ({ id, factory }) => {
-        assert.equal(id, 'vyra-plugin-market', 'the bundle registers under its package name')
+        assert.equal(id, 'dsh-vyra-plugin-market', 'the bundle registers under its package name')
         exports = factory((specifier) => {
           assert.equal(specifier, 'react', `the bundle requires only react, got ${specifier}`)
           return {
@@ -527,4 +527,4 @@ assert.equal(region.snapshot().active, 'domestic')
   assert.equal(ambiguous({ name: 'x', versions: [] }), undefined, 'an ambiguous short name is refused instead of guessed')
 }
 
-console.log('vyra-plugin-market: all checks passed')
+console.log('dsh-vyra-plugin-market: all checks passed')

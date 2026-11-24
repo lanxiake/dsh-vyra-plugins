@@ -2,7 +2,7 @@
  * CLI turns for one session: prompts waiting their turn, the turn in flight, and
  * cancelling it. Only one turn runs at a time; steering sent mid-turn waits here and
  * runs as the next turn.
- * @module vyra-agent-cli-manager/session/turn-queue
+ * @module dsh-vyra-agent-cli-manager/session/turn-queue
  */
 import type { ContentBlock as AcpContentBlock } from '@agentclientprotocol/sdk';
 import type { AcpTransport, PromptOutcome } from '../transport.ts';

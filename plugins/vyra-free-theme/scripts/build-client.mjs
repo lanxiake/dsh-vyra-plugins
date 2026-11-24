@@ -68,13 +68,13 @@ async function validateOutputs() {
       `generated client bundle is missing the DSH module wrapper: expected registration id "${name}" (src/client/index.js must register under the package.json name)`,
     );
   }
-  if (!host.includes("/vyra-free-theme/config") || !host.includes("personalization routes")) {
+  if (!host.includes("/dsh-vyra-free-theme/config") || !host.includes("personalization routes")) {
     throw new Error("generated host bundle is missing the personalization routes");
   }
-  if (host.includes("/vyra-free-theme/update") || host.includes("self-update routes")) {
+  if (host.includes("/dsh-vyra-free-theme/update") || host.includes("self-update routes")) {
     throw new Error("generated host bundle still contains self-update remnants");
   }
-  if (!cli.includes("vyra-free-theme CLI") || !cli.includes("vyra-free-theme/selection.json") && !cli.includes("selection.json")) {
+  if (!cli.includes("dsh-vyra-free-theme CLI") || !cli.includes("dsh-vyra-free-theme/selection.json") && !cli.includes("selection.json")) {
     throw new Error("generated CLI bundle is missing its command surface");
   }
   console.log(`built ${clientOptions.outfile} (${Buffer.byteLength(client)} bytes)`);

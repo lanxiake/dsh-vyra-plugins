@@ -54,12 +54,12 @@ test("clearSelection removes the file", () => {
 
 test("skill and launchers are installed once and rewritten on change", () => {
   const home = sandbox();
-  const packageRoot = join(process.cwd(), "plugins", "vyra-free-theme");
+  const packageRoot = join(process.cwd(), "plugins", "dsh-vyra-free-theme");
   const result = installSkillAndShims({ dshHome: home, packageRoot });
   if (result.skill === null) return; // package layout differs (e.g. installed copy without skill/)
-  assert.ok(existsSync(join(home, "skills", "vyra-free-theme", "SKILL.md")));
-  assert.ok(existsSync(join(home, "vyra-free-theme", "bin", "vft")));
-  assert.ok(existsSync(join(home, "vyra-free-theme", "bin", "vft.cmd")));
+  assert.ok(existsSync(join(home, "skills", "dsh-vyra-free-theme", "SKILL.md")));
+  assert.ok(existsSync(join(home, "dsh-vyra-free-theme", "bin", "vft")));
+  assert.ok(existsSync(join(home, "dsh-vyra-free-theme", "bin", "vft.cmd")));
   // idempotent: nothing reported as written the second time
   const again = installSkillAndShims({ dshHome: home, packageRoot });
   assert.equal(again.skill, null);

@@ -13,12 +13,12 @@
  * page's shared module map; bundling it would ship a second React and break
  * hooks in any component the host's own tree renders.
  *
- * @module vyra-tool-usage-stats/build
+ * @module dsh-vyra-tool-usage-stats/build
  */
 
 import { build } from 'esbuild'
 
-const PACKAGE_ID = 'vyra-tool-usage-stats'
+const PACKAGE_ID = 'dsh-vyra-tool-usage-stats'
 
 await build({
   entryPoints: ['src/index.ts'],

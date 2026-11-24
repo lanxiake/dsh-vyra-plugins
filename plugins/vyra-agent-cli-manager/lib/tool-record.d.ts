@@ -1,7 +1,7 @@
 /**
  * Immutable fold over ACP tool-call updates, plus the projections the harness
  * needs from it: the durable `cli_tool` arguments and the final outcome.
- * @module vyra-agent-cli-manager/tool-record
+ * @module dsh-vyra-agent-cli-manager/tool-record
  */
 import type { ToolCallContent, ToolCallUpdate } from '@agentclientprotocol/sdk';
 /** ACP tool-call lifecycle states. */

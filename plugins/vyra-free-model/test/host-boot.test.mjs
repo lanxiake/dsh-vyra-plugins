@@ -30,7 +30,7 @@ async function boot(extra = {}) {
     ...services,
   }
   apply(ctx, {})
-  const route = routes.find(entry => entry.path === '/api/vyra-free-model')
+  const route = routes.find(entry => entry.path === '/api/dsh-vyra-free-model')
   assert.ok(route !== undefined, 'the API route is registered')
   return { handler: route.handler, effects }
 }
@@ -39,7 +39,7 @@ function call(handler, { method = 'GET', path: suffix = '/', body } = {}) {
   return new Promise(resolve => {
     const req = {
       method,
-      url: `/api/vyra-free-model${suffix}`,
+      url: `/api/dsh-vyra-free-model${suffix}`,
       headers: {},
       on(event, fn) {
         if (event === 'data' && body !== undefined) fn(Buffer.from(JSON.stringify(body)))

@@ -125,7 +125,7 @@ export function sidebarCss(spec, bodyAttribute) {
   const dark = `${scope}[data-ds-dark-theme]`;
   const metrics = spec.metrics;
   const rules = [
-    `/* vyra-free-theme sidebar pack: ${spec.pack} / ${spec.surface} / ${spec.density} */`,
+    `/* dsh-vyra-free-theme sidebar pack: ${spec.pack} / ${spec.surface} / ${spec.density} */`,
     // The column never clips the wallpaper; the fill token decides opacity.
     `${scope} ${HOOK.col}{background:transparent}`,
     `${scope} ${HOOK.col} ${HOOK.root}{border-radius:${spec.radius.card}px}`,
