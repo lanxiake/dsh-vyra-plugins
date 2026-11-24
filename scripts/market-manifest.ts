@@ -3008,8 +3008,8 @@ export const manifest: MarketManifest = {
         zh: 'OpenDesign 领域包',
       },
       description: {
-        en: 'Splits the OpenDesign skill library into nine business domains, each paired with its own agent, so a user loads only the work they actually do. Ships 85 craft skills plus 152 design-system contracts; toggling a domain with the bundled odx CLI adds or removes its skills and agent on the spot, and one director agent coordinates whatever is enabled.',
-        zh: '把 OpenDesign 技能库按业务领域切成九个包，每包配一个同名 Agent，只加载真正用得上的那部分。含 85 个工艺技能与 152 套设计系统契约；用自带的 odx 命令开关领域，技能与 Agent 即时增删，再由一个编排 Agent 统一调度已启用的领域。',
+        en: 'Splits the OpenDesign skill library into nine business domains, each paired with its own agent, so a user loads only the work they actually do. A settings panel switches domains on and off and applies the change immediately; the bundled odx CLI does the same from a terminal. Ships 85 craft skills plus 152 design-system contracts, and one director agent coordinates whatever is enabled.',
+        zh: '把 OpenDesign 技能库按业务领域切成九个包，每包配一个同名 Agent，只加载真正用得上的那部分。在设置页里开关领域即写即生效，也可用自带的 odx 命令操作。含 85 个工艺技能与 152 套设计系统契约，再由一个编排 Agent 统一调度已启用的领域。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -3019,6 +3019,15 @@ export const manifest: MarketManifest = {
       },
       icon: OPEN_DESIGN_ICON,
       versions: {
+        '0.2.1': {
+          publishTimestamp: 1795588800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a2328fa8d450b478fc9b1982092d871c9f4793a7',
+            path: 'plugins/open-design',
+          },
+        },
         '0.2.0': {
           publishTimestamp: 1795502400,
           source: {
