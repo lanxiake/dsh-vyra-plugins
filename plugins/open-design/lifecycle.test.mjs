@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * The domain-packaging test, structured so it can exercise each module before
  * the whole plugin composes.
@@ -358,6 +358,141 @@ check('a throwing registry does not fail apply', flaky.error, null)
 check('a throwing registry is logged', flakyLogs.some((l) => l.includes('boom')), true)
 
 for (const dir of [applyHome, applyHome2, applyHome3, applyHome4]) rmSync(dir, { recursive: true, force: true })
+
+
+// ===== Task 8: settings page state =====
+console.log('\n--- Task 8: settings page state ---')
+const stateMod = await load('state.mjs')
+
+const homeSt = mkdtempSync(join(tmpdir(), 'od-state-'))
+const view = stateMod.describe({ dshHome: homeSt, root: pluginRoot })
+check('describe lists nine domains', view.domains.length, 9)
+check('describe marks defaults enabled',
+  view.domains.filter((d) => d.enabled).map((d) => d.id).sort(),
+  [...domains.DEFAULT_ENABLED].sort())
+check('describe carries skill names for a domain',
+  view.domains.find((d) => d.id === 'od-motion').skills.includes('gsap-core'), true)
+check('describe flags the design-system domain',
+  view.domains.filter((d) => d.designSystems).map((d) => d.id), ['od-visual-design'])
+
+// Agents start absent because nothing has been synced yet.
+check('describe reports agents as absent before sync',
+  view.agents.every((a) => a.present === false), true)
+check('describe lists the director', view.agents[0].id, 'od-director')
+
+// Toggling writes config and syncs in one call.
+const toggleOn = stateMod.applyToggle({ enabled: ['od-motion', 'od-video'], dshHome: homeSt, root: pluginRoot })
+check('applyToggle succeeds', toggleOn.ok, true)
+check('applyToggle synced two skill dirs', toggleOn.report.skillsWritten.length, 2)
+check('video skill dir now exists', existsSync(join(homeSt, 'skills', 'od-video', 'SKILL.md')), true)
+const after = stateMod.describe({ dshHome: homeSt, root: pluginRoot })
+check('describe reflects the new set',
+  after.domains.filter((d) => d.enabled).map((d) => d.id).sort(), ['od-motion', 'od-video'])
+check('describe sees the regenerated agents',
+  after.agents.filter((a) => a.present).length, 3)
+
+// Turning everything off is allowed and leaves only the director.
+const toggleOff = stateMod.applyToggle({ enabled: [], dshHome: homeSt, root: pluginRoot })
+check('applyToggle accepts an empty set', toggleOff.ok, true)
+check('empty set leaves no domain skill dirs',
+  domains.DOMAIN_IDS.filter((id) => existsSync(join(homeSt, 'skills', id))), [])
+
+// Unknown ids are rejected whole and change nothing.
+const beforeReject = cfgMod.readConfig(homeSt).enabled
+const rejected = stateMod.applyToggle({ enabled: ['od-motion', 'od-nope'], dshHome: homeSt, root: pluginRoot })
+check('applyToggle rejects unknown ids', rejected.ok, false)
+check('rejection names the culprit', rejected.unknown, ['od-nope'])
+check('rejection writes nothing', cfgMod.readConfig(homeSt).enabled, beforeReject)
+
+// A malformed body is rejected.
+check('applyToggle rejects a non-array', stateMod.applyToggle({ enabled: 'nope', dshHome: homeSt }).ok, false)
+
+// Regenerating agents does not change the enabled set.
+cfgMod.writeConfig(['od-writing'], homeSt)
+const regen = stateMod.regenerateAgents({ dshHome: homeSt, root: pluginRoot })
+check('regenerateAgents succeeds', regen.ok, true)
+check('regenerateAgents keeps the enabled set', cfgMod.readConfig(homeSt).enabled, ['od-writing'])
+check('regenerateAgents wrote the writing agent',
+  existsSync(join(homeSt, 'agent-manager', 'presets', 'od-writing', 'agent.json')), true)
+
+const counts = stateMod.skillCounts(pluginRoot)
+check('skillCounts craft', counts.craft, 85)
+check('skillCounts systems', counts.systems, 152)
+check('skillCounts total', counts.total, 237)
+
+rmSync(homeSt, { recursive: true, force: true })
+
+
+// ===== Task 9: HTTP routes =====
+console.log('\n--- Task 9: HTTP routes ---')
+const routesMod = await load('routes.mjs')
+const homeRt = mkdtempSync(join(tmpdir(), 'od-routes-'))
+const opts = { dshHome: homeRt, root: pluginRoot }
+
+const get0 = routesMod.handle('config', 'GET', undefined, opts)
+check('GET config is 200', get0.status, 200)
+check('GET config lists nine domains', get0.body.domains.length, 9)
+check('GET config carries counts', get0.body.counts.total, 237)
+check('GET config carries agents', Array.isArray(get0.body.agents), true)
+
+const patchOk = routesMod.handle('config', 'PATCH', { enabled: ['od-video'] }, opts)
+check('PATCH config is 200', patchOk.status, 200)
+check('PATCH returns the refreshed view',
+  patchOk.body.domains.filter((d) => d.enabled).map((d) => d.id), ['od-video'])
+check('PATCH reports what it wrote', patchOk.body.applied.skillsWritten, ['od-video'])
+check('PATCH actually synced', existsSync(join(homeRt, 'skills', 'od-video', 'SKILL.md')), true)
+
+const patchBad = routesMod.handle('config', 'PATCH', { enabled: ['od-nope'] }, opts)
+check('PATCH unknown id is 400', patchBad.status, 400)
+check('PATCH unknown id explains', patchBad.body.unknown, ['od-nope'])
+
+check('GET on a wrong route is 404', routesMod.handle('nope', 'GET', undefined, opts).status, 404)
+check('DELETE config is 405', routesMod.handle('config', 'DELETE', undefined, opts).status, 405)
+check('GET agents is 405', routesMod.handle('agents', 'GET', undefined, opts).status, 405)
+
+const regen2 = routesMod.handle('agents', 'POST', {}, opts)
+check('POST agents is 200', regen2.status, 200)
+check('POST agents leaves the director in place',
+  regen2.body.agents.some((a) => a.id === 'od-director' && a.present), true)
+
+// A web server that records registrations.
+const registered = []
+const fakeServer = { register: (spec) => { registered.push(spec); return () => {} } }
+const disposers = routesMod.mountRoutes(fakeServer, opts)
+check('mountRoutes registers two routes', registered.length, 2)
+check('route paths are exact', registered.every((r) => r.kind === 'exact'), true)
+check('route paths are namespaced',
+  registered.map((r) => r.path).sort(), ['/open-design/agents', '/open-design/config'])
+check('mountRoutes returns disposers', disposers.length, 2)
+check('mountRoutes tolerates a missing server', routesMod.mountRoutes(undefined, opts).length, 0)
+
+rmSync(homeRt, { recursive: true, force: true })
+
+
+// ===== Task 10: client bundle =====
+console.log('\n--- Task 10: client bundle ---')
+const clientSource = readFileSync(join(pluginRoot, 'client.js'), 'utf8')
+
+check('client registers through the module loader', clientSource.includes('__ModuleLoader__.load'), true)
+check('client id is the package name', /id: 'open-design'/.test(clientSource), true)
+// dsh-doc forbids requiring Harness Client packages; only React may be required.
+const requires = [...clientSource.matchAll(/require\((['"])(.+?)\1\)/g)].map((m) => m[2])
+check('client requires nothing but react',
+  requires.filter((name) => name !== 'react'), [])
+check('client registers a settings section', clientSource.includes("'settings.section'"), true)
+check('client uses the switch role', clientSource.includes("role: 'switch'"), true)
+check('client sets aria-checked', clientSource.includes("'aria-checked'"), true)
+check('client uses host theme tokens', clientSource.includes('--dsw-alias-'), true)
+// Artwork may be literal; the panel itself must not hard-code colours.
+check('client defines no literal hex colours outside artwork',
+  /#[0-9a-fA-F]{3,8}['"]/.test(clientSource.replace(/background: '#fff'/, '')), false)
+check('client talks to the host routes', clientSource.includes('/open-design'), true)
+check('client mentions the restart caveat', clientSource.includes('新建会话'), true)
+
+const clientPkg = JSON.parse(readFileSync(join(pluginRoot, 'package.json'), 'utf8').replace(/^\uFEFF/u, ''))
+check('package declares dsh.client', clientPkg.dsh.client !== undefined, true)
+check('package exports ./client', clientPkg.exports['./client'], './client.js')
+check('client bundle ships', clientPkg.files.includes('client.js'), true)
 
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)

@@ -33,6 +33,18 @@ dsh plugin --profile web add open-design
 
 ## 开关领域
 
+### 方式一：设置页面（推荐）
+
+安装并重启后，打开 **设置 → OpenDesign 领域**：
+
+- 九个领域逐个开关，每个都能展开看它包含哪些技能；
+- 改动会**当场写入配置并同步磁盘**，关闭的领域技能目录立即移除；
+- 页面底部列出当前的 Agent 预设，并提供「重新生成 Agent」。
+
+> 技能列表与 Agent 选择器在**新建会话**后刷新——这是宿主技能目录的刷新时机，不是插件的问题。
+
+### 方式二：命令行
+
 ```sh
 odx domains list                 # 看九个领域与开关状态
 odx domains enable od-video      # 开启（可一次给多个 id）
@@ -43,9 +55,15 @@ odx agents list                  # 看已生成的 Agent
 odx sync                         # 按当前配置重新同步
 ```
 
-关掉一个领域会**删掉它的技能目录**，模型立刻看不到；重开则恢复。
+没装成全局命令时，直接调脚本：
 
-配置存在 `$DSH_HOME/open-design/domains.json`，也可以手工编辑：
+```powershell
+node "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\open-design\bin\odx" domains list
+```
+
+### 方式三：编辑配置文件
+
+`$DSH_HOME/open-design/domains.json`：
 
 ```json
 {
@@ -87,12 +105,15 @@ odx sync                         # 按当前配置重新同步
 
 ```
 plugins/open-design/
-├── index.js              # 插件入口：挂载时同步并注册 Agent
+├── index.js              # 插件入口：挂载时同步、注册 Agent、挂载设置路由
+├── client.js             # 设置页面（设置 → OpenDesign 领域）
 ├── domains.mjs           # 九个领域定义与技能归属（唯一数据源）
 ├── skills.mjs            # 技能发现 + 单领域 SKILL.md 渲染
 ├── config.mjs            # domains.json 读写与容错
 ├── agents.mjs            # 领域 Agent 与编排 Agent 的规格生成
 ├── sync.mjs              # 磁盘事务：写技能目录、写 Agent、清理
+├── state.mjs             # 设置页的数据层（describe / applyToggle / regenerateAgents）
+├── routes.mjs            # 设置页的 HTTP 接口（GET/PATCH/POST /open-design/*）
 ├── cli.mjs + bin/odx     # odx 命令
 ├── lifecycle.test.mjs    # 测试
 ├── cordis.patch.yml

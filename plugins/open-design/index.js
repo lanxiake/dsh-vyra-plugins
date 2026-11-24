@@ -20,6 +20,7 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { sync } from './sync.mjs'
+import { mountRoutes } from './routes.mjs'
 import { DOMAINS } from './domains.mjs'
 
 /** Plugin name, as the Loader row declares it. */
@@ -39,6 +40,10 @@ export { agentDirFiles, domainAgentSpec, orchestratorSpec } from './agents.mjs'
 
 /** The disk synchroniser. */
 export { sync } from './sync.mjs'
+
+/** The settings page's state layer and HTTP surface. */
+export { applyToggle, describe as describeDomains, regenerateAgents } from './state.mjs'
+export { handle as handleRoute, mountRoutes } from './routes.mjs'
 
 /**
  * Resolve `$DSH_HOME`, falling back to `~/.dsh`.
@@ -103,5 +108,31 @@ export async function apply(ctx, config = {}) {
   }
 
   logger?.info?.(`open-design: ${String(report.enabled.length)} / ${String(DOMAINS.length)} 个领域已启用`)
+
+  // The settings panel talks to these routes. A profile without a web server
+  // keeps the CLI and loses only the panel.
+  const webServer = typeof ctx?.get === 'function' ? ctx.get('webServer') : undefined
+  if (webServer === undefined) {
+    logger?.info?.('open-design: 未检测到 webServer，设置面板不可用（仍可用 odx）')
+  } else {
+    try {
+      const disposers = mountRoutes(webServer, { dshHome: home })
+      if (typeof ctx?.effect === 'function') {
+        ctx.effect(() => () => {
+          for (const dispose of disposers) {
+            try {
+              dispose()
+            } catch {
+              // A route already gone must not break unload.
+            }
+          }
+        })
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      logger?.warn?.(`open-design: 注册设置路由失败：${detail}`)
+    }
+  }
+
   return { installed: report.skillsWritten.length, error: null, report }
 }

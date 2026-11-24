@@ -6,6 +6,7 @@
   "main": "index.js",
   "exports": {
     ".": "./index.js",
+    "./client": "./client.js",
     "./domains": "./domains.mjs",
     "./cli": "./cli.mjs",
     "./package.json": "./package.json"
@@ -15,11 +16,14 @@
   },
   "files": [
     "index.js",
+    "client.js",
     "skills.mjs",
     "domains.mjs",
     "config.mjs",
     "agents.mjs",
     "sync.mjs",
+    "state.mjs",
+    "routes.mjs",
     "cli.mjs",
     "bin",
     "cordis.patch.yml",
@@ -54,6 +58,10 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
     }
   },
   "license": "Apache-2.0"
