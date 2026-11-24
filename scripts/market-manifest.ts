@@ -22,9 +22,9 @@ export type LocaleMap = { readonly en: string; readonly zh?: string }
  * published indexes carry the image this way.
  */
 /**
- * Icon for 免费模型: an infinity mark with a lightning bolt — "unlimited, free",
- * drawn deliberately unlike Our Free Model's aquarium so the two are never
- * mistaken for the same plugin in the market list.
+ * Icon for 免费模型: an infinity mark with a lightning bolt — "unlimited, free".
+ * Deliberately unlike Our Free Model's aquarium: it used to sit beside this
+ * plugin in the market and the two must never be mistaken for one another.
  */
 const VYRA_FREE_MODEL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNSIgZmlsbD0iIzEyMTYxRiIvPgogIDxyZWN0IHg9IjIuNzUiIHk9IjIuNzUiIHdpZHRoPSI1OC41IiBoZWlnaHQ9IjU4LjUiIHJ4PSIxNC4yNSIgc3Ryb2tlPSIjMkIzMjQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxwYXRoIGQ9Ik0xNS41IDM4LjVjLTIuOSAwLTUuMS0yLjYtNS4xLTYuNXMyLjItNi41IDUuMS02LjVjMy42IDAgNi4xIDMuNCA4LjYgNy42IDIuMSAzLjUgNCA2LjQgNi40IDYuNCAyLjEgMCAzLjQtMS42IDMuNC00cy0xLjMtNC0zLjQtNGMtMi40IDAtNC4zIDIuOS02LjQgNi40LTIuNSA0LjItNSA3LjYtOC42IDcuNiIKICAgICAgICBzdHJva2U9IiM0QzhERkYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTQ4LjUgMjUuNWMyLjkgMCA1LjEgMi42IDUuMSA2LjVzLTIuMiA2LjUtNS4xIDYuNWMtMy42IDAtNi4xLTMuNC04LjYtNy42IgogICAgICAgIHN0cm9rZT0iIzRDOERGRiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiLz4KICA8cGF0aCBkPSJNMzUuNiAyMC41IDI5LjggMzFoNS42bC0yLjIgMTIuNUw0MSAzMS40aC01Ljl6IiBmaWxsPSIjRjVDNTQyIi8+Cjwvc3ZnPg=='
@@ -2180,38 +2180,6 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'media',
         keywords: ['music', 'player', 'lyrics', 'equalizer', 'navidrome'],
-      },
-    },
-    {
-      name: 'dsh-our-free-model',
-      title: {
-        en: 'Our Free Model',
-        zh: '免费模型',
-      },
-      description: {
-        en: 'Use frontier models in DSH without sign-up or an API key, with account channels, a local OpenAI gateway and usage dashboards.',
-        zh: '无需登录、注册或 API Key 即可在 DSH 使用前沿模型，并带账号渠道、本地 OpenAI 网关与用量看板。',
-      },
-      author: 'Ebony-Vinyl',
-      homepage: 'https://github.com/Ebony-Vinyl/dsh-our-free-model',
-      repository: {
-        url: 'https://github.com/Ebony-Vinyl/dsh-our-free-model',
-      },
-      icon: 'https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-our-free-model/icon.svg',
-      versions: {
-        '2.8.9': {
-          publishTimestamp: 1795341110,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '10e37aca2deeff162f3d8ef7ff914fa0834ce0a8',
-            path: 'plugins/dsh-our-free-model',
-          },
-        },
-      },
-      metadata: {
-        category: 'model',
-        keywords: ['model', 'llm', 'free', 'provider', 'gateway'],
       },
     },
     {

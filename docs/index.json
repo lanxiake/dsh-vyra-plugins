@@ -1980,48 +1980,6 @@
       }
     },
     {
-      "name": "dsh-our-free-model",
-      "title": {
-        "en": "Our Free Model",
-        "zh": "免费模型"
-      },
-      "description": {
-        "en": "Use frontier models in DSH without sign-up or an API key, with account channels, a local OpenAI gateway and usage dashboards.",
-        "zh": "无需登录、注册或 API Key 即可在 DSH 使用前沿模型，并带账号渠道、本地 OpenAI 网关与用量看板。"
-      },
-      "icon": "https://cdn.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/plugins/dsh-our-free-model/icon.svg",
-      "author": "Ebony-Vinyl",
-      "homepage": "https://github.com/Ebony-Vinyl/dsh-our-free-model",
-      "repository": {
-        "url": "https://github.com/Ebony-Vinyl/dsh-our-free-model"
-      },
-      "versions": [
-        {
-          "version": "2.8.9",
-          "publishTimestamp": 1795341110,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "10e37aca2deeff162f3d8ef7ff914fa0834ce0a8",
-            "path": "plugins/dsh-our-free-model"
-          }
-        }
-      ],
-      "metadata": {
-        "category": "model",
-        "keywords": [
-          "model",
-          "llm",
-          "free",
-          "provider",
-          "gateway"
-        ],
-        "sortKeys": {
-          "stars": 82220
-        }
-      }
-    },
-    {
       "name": "vyra-free-model",
       "title": {
         "en": "Vyra Free Models",
