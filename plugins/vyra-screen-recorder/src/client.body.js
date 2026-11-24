@@ -102,7 +102,8 @@ window.__ModuleLoader__.load({
       maxSeconds: 600,
       includeSystemAudio: true,
       includeMic: true,
-      hideDshOnShot: false,
+      // 截图不再提供「隐藏 DSH 界面」开关：截图浮层本身会遮住界面，
+      // 需要截取全屏就按快捷键直接抓，界面上再挂一个开关只会增加困惑。
       shortcuts: {
         screenshot: 'Ctrl+Alt+S',
         record: 'Ctrl+Alt+R',
@@ -636,12 +637,10 @@ window.__ModuleLoader__.load({
      */
     async function takeScreenshotQuick() {
       if (state.phase !== 'idle' || captureBusy) return
-      const settings = state.settings || DEFAULT_SETTINGS
-      const hideDsh = settings.hideDshOnShot === true
       captureBusy = true
       setState({ toast: null })
       try {
-        const shot = await fetchShot('?ts=' + Date.now() + (hideDsh ? '&hideDsh=1' : ''))
+        const shot = await fetchShot('?ts=' + Date.now())
         const url = URL.createObjectURL(shot.blob)
         const image = await loadImage(url)
         setState({
@@ -654,13 +653,9 @@ window.__ModuleLoader__.load({
             imageH: image.naturalHeight,
             virtual: null,
             crop: null,
-            hiddenDsh: shot.hidden,
             options: null,
           },
         })
-        if (hideDsh && !shot.hidden) {
-          toast(L('没有找到可隐藏的 DSH 窗口，这张图里仍有 DSH 界面', 'No DSH window to hide; the screenshot still contains it'), { kind: 'error' })
-        }
       } catch (error) {
         toast(L('截图失败：', 'Screenshot failed: ') + friendly(error), { kind: 'error' })
       } finally {
@@ -720,8 +715,7 @@ window.__ModuleLoader__.load({
             : choice && choice.type === 'monitor'
               ? (choice.name || L('显示器', 'Display'))
               : L('整个桌面', 'Entire desktop'),
-          hiddenDsh: false,
-          options: options || null,
+        options: options || null,
         },
       })
     }
@@ -1305,6 +1299,22 @@ window.__ModuleLoader__.load({
         }
       }
 
+      // 设置页一出来就把滚动位置拉回顶部：面板的滚动容器是宿主的，
+      // 用户上次滚到底部的「文件」时，下次进来会停在底部，看起来像前几张卡片没了。
+      const topRef = useRef(null)
+      useEffect(() => {
+        if (loading) return
+        const node = topRef.current
+        if (!node) return
+        // 只滚最近的滚动容器，不动整页。
+        const scroller = typeof node.closest === 'function'
+          ? node.closest('.vsr-settings') || node
+          : node
+        if (scroller && typeof scroller.scrollIntoView === 'function') {
+          scroller.scrollIntoView({ block: 'start' })
+        }
+      }, [loading])
+
       const field = (label, control, note) => h('label', { className: 'vsr-field' },
         h('span', { className: 'vsr-field-label' }, label),
         control,
@@ -1315,7 +1325,7 @@ window.__ModuleLoader__.load({
       // 看不到任何设置卡片——截图目录、快捷键全都改不了。现在设置卡片始终
       // 用 draft 的当前值渲染，加载只是把占位换成真实值。
       const files = library.filter(file => filter === 'all' || file.kind === filter)
-      return h('div', { className: 'vsr-settings' },
+      return h('div', { className: 'vsr-settings', ref: topRef },
         h('div', { className: 'vsr-settings-head' },
           h('div', null,
             h('h2', null, L('录屏与截图', 'Screen recorder')),
@@ -1433,13 +1443,6 @@ window.__ModuleLoader__.load({
             ocrInfo.winrt
               ? L('系统 OCR 可用：', 'Windows OCR available: ') + ocrInfo.languages.join(', ') + L('。截图后点「文」取字。', '. Click the text button to read it.')
               : L('系统 OCR 不可用：请在「设置 → 时间和语言 → 语言和区域」里安装语言包。', 'Windows OCR unavailable: install a language pack under Settings → Time & language.')))),
-        h('section', { className: 'vsr-card' },
-          h('h3', null, L('截图', 'Screenshot')),
-          h('label', { className: 'vsr-check' }, h('input', {
-            type: 'checkbox', checked: draft.hideDshOnShot,
-            onChange: event => setDraft({ ...draft, hideDshOnShot: event.target.checked }),
-          }), L('截图时先隐藏 DSH 界面', 'Hide DSH before capturing')),
-          h('div', { className: 'vsr-muted' }, L('用来截取被 DSH 挡住的窗口或其他应用；截图浮层里也可以临时切换。', 'Capture windows behind DSH; the overlay can toggle it too.'))),
         h('div', { className: 'vsr-settings-actions' },
           h('button', { type: 'button', className: 'vsr-btn-primary', disabled: saving, onClick: () => { void save() } },
             saving ? L('保存中…', 'Saving…') : L('保存设置', 'Save settings')),
@@ -1667,7 +1670,6 @@ window.__ModuleLoader__.load({
       const [draft, setDraft] = useState(null)
       const [textInput, setTextInput] = useState(null)
       const [imageUrl, setImageUrl] = useState(shot.url)
-      const [hiddenDsh, setHiddenDsh] = useState(Boolean(shot.hiddenDsh))
       // 取字与复制：和 QQ / 微信截图一样，在标注工具条上一键取字、一键复制。
       const [extract, setExtract] = useState(null) // { status: 'loading'|'ready'|'error', text, lines, engine, error }
       const [panelOpen, setPanelOpen] = useState(true)
@@ -1727,31 +1729,10 @@ window.__ModuleLoader__.load({
       }, [])
       useEffect(() => {
         setImageUrl(shot.url)
-        setHiddenDsh(Boolean(shot.hiddenDsh))
       }, [shot.url])
       useEffect(() => () => {
         for (const url of generatedUrls.current) { try { URL.revokeObjectURL(url) } catch { /* ignore */ } }
       }, [])
-      async function toggleHideDsh() {
-        const next = !hiddenDsh
-        try {
-          // 抓新底图时整个截图浮层必须先隐藏，否则拍到的就是这层标注界面。
-          const shot = await fetchShot('?ts=' + Date.now() + (next ? '&hideDsh=1' : ''))
-          if (next && !shot.hidden) {
-            toast(L('没有找到可隐藏的 DSH 窗口', 'No DSH window to hide'), { kind: 'error' })
-            return
-          }
-          const url = URL.createObjectURL(shot.blob)
-          generatedUrls.current.push(url)
-          setImageUrl(url)
-          setHiddenDsh(shot.hidden)
-          setSel(null); selRef.current = null
-          setStrokes([]); draftRef.current = null; setDraft(null)
-          setPhase('select')
-        } catch (error) {
-          toast(L('切换底图失败：', 'Failed to switch base image: ') + friendly(error), { kind: 'error' })
-        }
-      }
       useEffect(() => {
         const old = document.body.style.overflow
         document.body.style.overflow = 'hidden'
@@ -1808,6 +1789,15 @@ window.__ModuleLoader__.load({
         const ctx = canvas.getContext('2d')
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
         ctx.clearRect(0, 0, disp.w, disp.h)
+        // 先压暗整张图，再把选区抠亮——选区和外面一眼就能分开。
+        // 必须画在最底层：先铺遮罩再画标注，否则标注会被遮罩压暗。
+        if (sel && !isRegion) {
+          ctx.save()
+          ctx.fillStyle = 'rgba(0,0,0,.45)'
+          ctx.fillRect(0, 0, disp.w, disp.h)
+          ctx.clearRect(sel.x, sel.y, sel.w, sel.h)
+          ctx.restore()
+        }
         if (sel && (phase === 'annotate' || isRegion)) {
           ctx.save()
           ctx.beginPath()
@@ -1816,19 +1806,16 @@ window.__ModuleLoader__.load({
           for (const stroke of strokes) drawStroke(ctx, stroke)
           if (draft) drawStroke(ctx, draft)
           ctx.restore()
-          ctx.strokeStyle = 'rgba(255,255,255,.95)'
+        }
+        // 选区的边框：选区阶段用虚线，确定后换成实线（表示已经可以编辑）。
+        if (sel && !isRegion) {
+          ctx.save()
+          ctx.strokeStyle = phase === 'select' ? 'rgba(255,255,255,.95)' : 'rgba(74,163,255,.95)'
           ctx.lineWidth = 1
-          ctx.setLineDash([5, 4])
+          if (phase === 'select') ctx.setLineDash([5, 4])
           ctx.strokeRect(sel.x + 0.5, sel.y + 0.5, sel.w, sel.h)
           ctx.setLineDash([])
-        }
-        if (phase === 'select' && sel && !isRegion) {
-          ctx.fillStyle = 'rgba(0,0,0,.42)'
-          ctx.fillRect(0, 0, disp.w, disp.h)
-          ctx.clearRect(sel.x, sel.y, sel.w, sel.h)
-          ctx.strokeStyle = 'rgba(255,255,255,.95)'
-          ctx.lineWidth = 1
-          ctx.strokeRect(sel.x + 0.5, sel.y + 0.5, sel.w, sel.h)
+          ctx.restore()
         }
         // 取字结果的行框：半透明蓝底 + 细边，和 QQ / 微信截图取字后的选区一致。
         // 坐标来自原图，按当前显示比例缩放。
@@ -2193,11 +2180,7 @@ window.__ModuleLoader__.load({
             }) : null),
           h('div', { className: 'vsr-shot-topbar' },
             h('span', null, isRegion ? S.regionHint : S.shotHint),
-            h('button', {
-              type: 'button',
-              className: 'vsr-shot-hide' + (hiddenDsh ? ' vsr-shot-hide-on' : ''),
-              onClick: toggleHideDsh,
-            }, hiddenDsh ? L('显示 DSH 界面', 'Show DSH') : L('隐藏 DSH 界面', 'Hide DSH'))),
+            ),
           phase === 'annotate' && !isRegion ? h('div', { className: 'vsr-toolbar-floating' },
             h('div', { className: 'vsr-toolgroup' },
               ...[['pen', '✎', S.pen], ['rect', '▭', S.rect], ['arrow', '↗', S.arrow], ['text', 'T', S.text]].map(([key, glyph, label]) =>
@@ -2423,9 +2406,6 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-shot-image { display: block; user-select: none; pointer-events: none; }
 .vsr-shot-canvas { position: absolute; inset: 0; }
 .vsr-shot-topbar { display: flex; align-items: center; gap: 14px; color: #fff; font-size: 12px; opacity: .9; }
-.vsr-shot-hide { border: 1px solid rgba(255,255,255,.35); border-radius: 6px; background: rgba(0,0,0,.25); color: #fff; padding: 4px 9px; font: inherit; cursor: pointer; }
-.vsr-shot-hide:hover { background: rgba(255,255,255,.16); }
-.vsr-shot-hide-on { border-color: #4aa3ff; background: rgba(22,119,255,.35); }
 .vsr-text-input { position: absolute; z-index: 2; min-width: 80px; padding: 2px 4px; border: 1px dashed #fff; background: rgba(0,0,0,.35); color: #fff; font: 600 16px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; outline: none; }
 .vsr-toolbar-floating { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; background: rgba(24,24,27,.94); color: #fff; box-shadow: 0 16px 48px rgba(0,0,0,.45); backdrop-filter: blur(10px); z-index: 2147483200; }
 /* 工具条永远压在文字面板之上：面板再怎么长，也不能盖住按钮的点击区。
