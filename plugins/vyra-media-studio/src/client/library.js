@@ -189,8 +189,9 @@ export function LibraryBody(props) {
   useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly }) },
     [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly])
 
+  const timelineMode = view === 'timeline'
+  const timelineLayout = listMode === 'timelineGrid' ? 'grid' : 'list'
   const treeMode = view === 'list' && listMode === 'tree'
-  const timelineMode = view === 'list' && listMode === 'timeline'
 
   useEffect(() => {
     const controller = new AbortController()
@@ -812,14 +813,15 @@ export function LibraryBody(props) {
           h(IconButton, { name: 'refresh', label: '重新扫描', onClick: refresh }),
           h('button', {
             type: 'button', className: 'vms-toggle-btn',
-            title: view === 'grid' ? '当前网格视图，点击切换为列表' : '当前列表视图，点击切换为网格',
-            onClick: () => setView(value => value === 'grid' ? 'list' : 'grid'),
-          }, h(Icon, { name: view === 'grid' ? 'grid' : 'list', size: 13 }), view === 'grid' ? '网格' : '列表'))),
+            title: '网格 → 列表 → 时间线',
+            onClick: () => setView(value => value === 'grid' ? 'list' : value === 'list' ? 'timeline' : 'grid'),
+          }, h(Icon, { name: view === 'grid' ? 'grid' : view === 'list' ? 'list' : 'clock', size: 13 }),
+          view === 'grid' ? '网格' : view === 'list' ? '列表' : '时间线'))),
       h('div', { className: 'vms-search-row' },
         h('label', { className: 'vms-search' },
           h(Icon, { name: 'search', size: 14 }),
           h('input', { value: query, placeholder: '搜索名称、路径、类型或链接…', onChange: event => setQuery(event.target.value) })),
-        view === 'grid' && h('div', { className: 'vms-zoom' },
+        (view === 'grid' || (timelineMode && timelineLayout === 'grid')) && h('div', { className: 'vms-zoom' },
           h(IconButton, { name: 'zoomOut', label: '缩小缩略图', onClick: () => setCardSize(value => Math.max(CARD_MIN, value - 16)) }),
           h('input', {
             type: 'range', min: CARD_MIN, max: CARD_MAX, step: 4, value: cardSize,
@@ -827,11 +829,11 @@ export function LibraryBody(props) {
             onChange: event => setCardSize(Number(event.target.value)),
           }),
           h(IconButton, { name: 'zoomIn', label: '放大缩略图', onClick: () => setCardSize(value => Math.min(CARD_MAX, value + 16)) })),
-        view === 'list' && h('button', {
-          type: 'button', className: `vms-toggle-btn${timelineMode ? ' is-active' : ''}`,
-          title: timelineMode ? '当前时间线，点击切换为文件列表' : '点击切换到对话时间线',
-          onClick: () => setListMode(value => value === 'timeline' ? 'tree' : 'timeline'),
-        }, h(Icon, { name: 'clock', size: 13 }), '时间线'),
+        timelineMode && h('button', {
+          type: 'button', className: 'vms-toggle-btn',
+          title: timelineLayout === 'grid' ? '当前缩略图网格，点击切换为清单' : '当前清单，点击切换为缩略图网格',
+          onClick: () => setListMode(value => value === 'timelineGrid' ? 'timelineList' : 'timelineGrid'),
+        }, h(Icon, { name: timelineLayout === 'grid' ? 'grid' : 'list', size: 13 }), timelineLayout === 'grid' ? '网格' : '清单'),
         view === 'list' && h('button', {
           type: 'button', className: 'vms-toggle-btn',
           title: listMode === 'tree' ? '当前树形，点击切换为平铺' : '当前平铺，点击切换为树形',
@@ -947,10 +949,11 @@ export function LibraryBody(props) {
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
         })))
         : timelineMode
-          ? h('div', { className: 'vms-timeline-wrap' },
+          ? h('div', { className: 'vms-timeline-wrap', style: { '--vms-card-min': `${cardSize}px` } },
             h(SessionTimeline, {
               nodes: turns,
               items,
+              layout: timelineLayout,
               diagnostics: timelineDiagnostics,
               onOpen: entry => setOverlayId(entry.id),
               onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),

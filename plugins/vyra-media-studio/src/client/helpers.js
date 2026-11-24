@@ -277,8 +277,10 @@ export function writeLinks(root, links) {
 
 const PREFS_KEY = 'vyra-media-studio.prefs.v2'
 const PREF_DEFAULTS = {
-  view: 'list',
-  listMode: 'timeline',
+  // The panel opens on the tile grid with the current-session filter on; the
+  // timeline is one click away through the view button.
+  view: 'grid',
+  listMode: 'timelineGrid',
   cardSize: CARD_DEFAULT,
   detail: 'compact',
   sort: 'name',
@@ -294,8 +296,16 @@ export function readPrefs() {
     if (parsed === null || typeof parsed !== 'object') return { ...PREF_DEFAULTS }
     const merged = { ...PREF_DEFAULTS, ...parsed }
     return {
-      view: merged.view === 'list' ? 'list' : 'grid',
-      listMode: merged.listMode === 'flat' || merged.listMode === 'tree' ? merged.listMode : 'timeline',
+      view: ['grid', 'list', 'timeline'].includes(merged.view) ? merged.view : 'grid',
+      // Older builds stored the timeline as a list sub-mode; map it onto the
+      // new top-level view so a returning user keeps what they were looking at.
+      ...(merged.view !== 'timeline' && merged.listMode === 'timeline'
+        ? { view: 'timeline', listMode: 'timelineGrid' }
+        : {
+          listMode: ['flat', 'tree', 'timelineGrid', 'timelineList'].includes(merged.listMode)
+            ? merged.listMode
+            : 'timelineGrid',
+        }),
       cardSize: Number.isFinite(merged.cardSize)
         ? Math.min(CARD_MAX, Math.max(CARD_MIN, merged.cardSize))
         : CARD_DEFAULT,
