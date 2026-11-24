@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, ClipboardCopy, Clock, Copy, Download, Ellipsis,
   ExternalLink, File, FileArchive, FileCode, FileSpreadsheet, FileText, Folder,
   FolderOpen, Image, ImageOff, Info, LayoutGrid, Link2, List, MapPin, Maximize,
-  Music2, Pause, Pencil, PictureInPicture2, Play, Plus, RefreshCw, Scan, Search,
+  Move, Music2, Pause, Pencil, PictureInPicture2, Play, Plus, RefreshCw, Scan, Search,
   SlidersHorizontal, Trash2, Video, Volume2, VolumeX, X, ZoomIn, ZoomOut,
 } from 'lucide-react'
 import React from 'react'
@@ -41,6 +41,7 @@ const ICONS = {
   link: Link2,
   list: List,
   more: Ellipsis,
+  move: Move,
   mute: VolumeX,
   pause: Pause,
   pencil: Pencil,

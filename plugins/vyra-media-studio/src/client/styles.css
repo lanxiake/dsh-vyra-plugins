@@ -627,7 +627,7 @@
 .vms-drag-target { color: color-mix(in srgb, var(--vms-bg) 72%, transparent); white-space: nowrap; }
 .vms-tree-row[draggable="false"] { user-select: none; -webkit-user-select: none; }
 
-.vms-timeline-wrap { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 24px; }
+.vms-timeline-wrap { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px 26px; }
 .vms-timeline { display: grid; gap: 14px; }
 .vms-tl-section { display: grid; gap: 6px; }
 .vms-tl-section-head {
@@ -665,30 +665,13 @@
 .vms-folder-btn { width: 28px; padding: 0; }
 
 /* Drop panel and timeline axis. */
-.vms-drop-panel {
-  position: absolute; left: 12px; right: 12px; bottom: 42px; z-index: 150;
-  display: grid; gap: 7px; padding: 10px; max-height: 62%;
-  overflow: auto; border: 0.5px solid var(--vms-line2); border-radius: var(--vms-radius-md);
-  background: var(--vms-layer); box-shadow: 0 22px 60px rgba(0,0,0,.30);
-}
-.vms-drop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--vms-ink4); }
-.vms-drop-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vms-ink); }
-.vms-drop-zone {
-  display: flex; align-items: center; gap: 6px; width: 100%; min-height: 30px; padding: 0 10px;
-  border: 0.5px dashed var(--vms-line2); border-radius: 8px; background: transparent;
-  color: var(--vms-ink2); font-size: 10.5px; text-align: left;
-}
-.vms-drop-zone.is-reference { border-style: solid; background: var(--vms-layer2); }
-.vms-drop-zone.is-over, .vms-drop-zone:hover { border-color: var(--vms-accent); background: var(--vms-accent-soft); color: var(--vms-accent); }
-.vms-drop-zone.is-current { opacity: .6; }
-.vms-drop-folders { display: grid; gap: 4px; }
-
 .vms-tl-axis { position: relative; display: grid; gap: 10px; padding-left: 14px; }
 .vms-tl-axis::before {
   content: ""; position: absolute; left: 4px; top: 4px; bottom: 4px;
   width: 1px; background: var(--vms-line2);
 }
 .vms-tl-node { position: relative; display: grid; gap: 5px; padding: 8px 9px; border: 0.5px solid var(--vms-line); border-radius: 10px; background: var(--vms-layer); }
+.vms-tl-body { display: grid; gap: 5px; min-width: 0; }
 .vms-tl-dot { position: absolute; left: -14px; top: 14px; width: 9px; height: 9px; border-radius: 50%; background: var(--vms-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vms-accent) 22%, transparent); }
 .vms-tl-prompt { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vms-ink); }
 .vms-tl-clock { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }

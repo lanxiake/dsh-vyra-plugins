@@ -275,9 +275,9 @@ export function writeLinks(root, links) {
   try { localStorage.setItem(linksKey(root), JSON.stringify(links)) } catch { /* storage may be unavailable */ }
 }
 
-const PREFS_KEY = 'vyra-media-studio.prefs.v1'
+const PREFS_KEY = 'vyra-media-studio.prefs.v2'
 const PREF_DEFAULTS = {
-  view: 'grid',
+  view: 'list',
   listMode: 'timeline',
   cardSize: CARD_DEFAULT,
   detail: 'compact',

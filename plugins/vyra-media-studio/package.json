@@ -1,6 +1,6 @@
 {
   "name": "vyra-media-studio",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "type": "module",
   "description": "右侧栏文件管理：默认本会话时间线、拖动移动、单按钮切换视图、资源管理器打开。",
   "exports": {

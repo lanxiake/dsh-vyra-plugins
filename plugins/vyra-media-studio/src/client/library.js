@@ -580,8 +580,6 @@ export function LibraryBody(props) {
       }
     },
     onReference: item => insertReference(item),
-    folders,
-    currentFolder: folder,
   })
 
   const toggleSelect = item => {
@@ -786,7 +784,7 @@ export function LibraryBody(props) {
   const mediaOverlayItems = useMemo(() => overlayItems.filter(item => MEDIA_KINDS.has(item.kind)), [overlayItems])
   const mediaOverlayIndex = overlayItem === undefined ? 0 : Math.max(0, mediaOverlayItems.findIndex(item => item.id === overlayItem.id))
 
-  return h('div', { className: 'vms-root' },
+  return h('div', { className: `vms-root${dragDrop.dragging === null ? '' : ' vms-dragging'}` },
     h('header', { className: 'vms-head' },
       h('div', { className: 'vms-title-row' },
         h('div', { className: 'vms-title' },
@@ -850,13 +848,14 @@ export function LibraryBody(props) {
         }, h(Icon, { name: 'clock', size: 12 }), '只看本会话文件')),
       h('div', { className: 'vms-folder-row' },
         h('div', { className: 'vms-crumb' },
-          h('button', { type: 'button', className: `vms-crumb-seg${folder === '' ? ' is-active' : ''}`, onClick: () => setFolder('') }, '全部文件夹'),
+          h('button', { type: 'button', className: `vms-crumb-seg${folder === '' ? ' is-active' : ''}`, 'data-vms-drop-folder': '', onClick: () => setFolder('') }, '全部文件夹'),
           segments.map((segment, index) => h(React.Fragment, { key: `${segment}:${index}` },
             h(Icon, { name: 'chevronRight', size: 11, className: 'vms-crumb-sep' }),
             h('button', {
               type: 'button',
               className: `vms-crumb-seg${index === segments.length - 1 ? ' is-active' : ''}`,
               onClick: () => setFolder(segments.slice(0, index + 1).join('/')),
+              'data-vms-drop-folder': segments.slice(0, index + 1).join('/'),
               onContextMenu: event => { event.preventDefault(); setMenu({ item: folderItem(segments.slice(0, index + 1).join('/')), x: event.clientX, y: event.clientY }) },
             }, segment)))),
         h('button', { type: 'button', className: `vms-ghost-btn vms-folder-btn${folderOpen ? ' is-open' : ''}`, 'aria-expanded': folderOpen, onClick: () => setFolderOpen(value => !value) },
@@ -866,6 +865,7 @@ export function LibraryBody(props) {
           folders.map(value => h('button', {
             key: value, type: 'button',
             className: `vms-folder-item${folder === value ? ' is-active' : ''}`,
+            'data-vms-drop-folder': value,
             style: { paddingLeft: `${10 + (value.split('/').length - 1) * 14}px` },
             onClick: () => { setFolder(value); setFolderOpen(false) },
             onContextMenu: event => { event.preventDefault(); setMenu({ item: folderItem(value), x: event.clientX, y: event.clientY }) },
@@ -914,12 +914,12 @@ export function LibraryBody(props) {
         h('p', null, state.error),
         diagnostic !== null && h('pre', { className: 'vms-diagnostic' }, JSON.stringify(diagnostic, null, 2)),
         h('button', { type: 'button', className: 'vms-primary-btn', onClick: refresh }, '重试')),
-      !state.loading && !state.error && filtered.length === 0 && !waitingForMeta && !(treeMode && showEmptyFolders && folders.length > 0) && h('div', { className: 'vms-empty' },
+      !state.loading && !state.error && filtered.length === 0 && !timelineMode && !waitingForMeta && !(treeMode && showEmptyFolders && folders.length > 0) && h('div', { className: 'vms-empty' },
         h('span', { className: 'vms-empty-art' }, h(Icon, { name: 'search', size: 20 })),
         h('b', null, '没有匹配的文件'),
         h('p', null, items.length === 0 ? '这个工作区还没有文件。' : '试试减少筛选条件，或换一个文件夹。'),
         items.length > 0 && h('button', { type: 'button', className: 'vms-primary-btn', onClick: clearFilters }, '清除筛选')),
-      !state.error && (filtered.length > 0 || (treeMode && showEmptyFolders && folders.length > 0)) && (view === 'grid'
+      !state.error && (filtered.length > 0 || timelineMode || (treeMode && showEmptyFolders && folders.length > 0)) && (view === 'grid'
         ? h('div', { ref: gridRef, className: 'vms-grid', style: { '--vms-card-min': `${cardSize}px` } }, shown.map(item => h(GridCard, {
           key: item.id, item, sessionId,
           meta: metaFor(item),
@@ -1060,7 +1060,7 @@ export function LibraryBody(props) {
         onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
         onOpenItem: handleOverlayTab,
       })),
-    dragDrop.panel,
+    dragDrop.ghost,
     notice !== '' && h('div', { className: 'vms-toast' }, h(Icon, { name: 'check', size: 13 }), notice))
 }
 
