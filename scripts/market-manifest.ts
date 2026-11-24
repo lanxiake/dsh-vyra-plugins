@@ -2972,6 +2972,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.3.0 turns the timeline into its own grid-capable, collapsible view.
+        '0.3.0': {
+          publishTimestamp: 1795504475,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '297ffc81890a18eb47b4e5615c53bfcd7a702144',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
