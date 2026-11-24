@@ -2298,6 +2298,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-free-model',
           },
         },
+        // 0.6.1 moves the QQ group and GitHub entries out of a card at the very
+        // bottom into the title row, right-aligned against the page heading, and
+        // dresses them in the same quiet button as 「刷新积分」/「添加账号」 so the
+        // page keeps one hover language. Btn also forwards aria-* to the element
+        // now: the popover trigger used to drop aria-expanded, so assistive tech
+        // never learned it was closed.
+        '0.6.1': {
+          publishTimestamp: 1795490023,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '794dd1436fc643ef173252a2ead93f8e28a98354',
+            path: 'plugins/vyra-free-model',
+          },
+        },
       },
       metadata: {
         category: 'model',
