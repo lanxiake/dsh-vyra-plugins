@@ -951,6 +951,8 @@ export function LibraryBody(props) {
           items,
           layout: timelineLayout,
           diagnostics: timelineDiagnostics,
+          dragBind: dragDrop.bind,
+          suppressClick: dragDrop.suppressNextClick,
           onOpen: entry => setOverlayId(entry.id),
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
           onFallback: () => setSessionOnly(false),

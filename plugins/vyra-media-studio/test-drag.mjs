@@ -25,3 +25,12 @@ test('drop targets are read from the DOM, not a dialog', () => {
   assert.match(source, /data-vms-dropzone/)
   assert.equal(source.includes('vms-drop-panel'), false)
 })
+
+test('timeline entries are drag sources, not buttons', () => {
+  const timeline = fs.readFileSync(new URL('./src/client/timeline.js', import.meta.url), 'utf8')
+  // A <button> swallows the drag gesture, so timeline entries must be plain
+  // elements that receive pointer events and forward them to the drag binding.
+  assert.match(timeline, /role: 'button'/)
+  assert.ok(timeline.includes("dragBind(target)"))
+  assert.ok(timeline.includes('dragBind,'))
+})

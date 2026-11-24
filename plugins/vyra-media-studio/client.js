@@ -3616,6 +3616,14 @@ var styles_default2 = `.vms-root {\r
   color: var(--vms-accent);
 }
 .vms-toggle-btn svg { flex: none; }
+
+/* Timeline entries are divs with role=button so a drag gesture is delivered as
+   pointer events instead of button activation. Restore button affordances. */
+.vms-tl-tile, .vms-tl-row { cursor: pointer; user-select: none; -webkit-user-select: none; }
+.vms-tl-tile.is-missing, .vms-tl-row.is-missing { cursor: default; }
+.vms-tl-tile:focus-visible, .vms-tl-row:focus-visible {
+  outline: 2px solid var(--vms-accent); outline-offset: 1px;
+}
 `;
 
 // src/client/library.js
@@ -24922,7 +24930,7 @@ function writeCollapsed(set) {
   } catch {
   }
 }
-function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
+function FileEntry({ file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }) {
   const name = (file.display ?? file.path).split("/").pop() ?? file.path;
   const [kind, ext] = fileKindOf(name);
   const target = lookup.get(file.path) ?? lookup.get(file.display);
@@ -24933,20 +24941,30 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
       event.preventDefault();
       if (missing) return;
       onMenu(target, event.clientX, event.clientY);
-    }
+    },
+    ...dragBind === void 0 || missing ? {} : dragBind(target)
   };
   const title = `${file.display ?? file.path}${missing ? "\uFF08\u5DF2\u4E0D\u5B58\u5728\uFF09" : ""}`;
-  const open = missing ? void 0 : () => onOpen(target);
+  const open = missing ? void 0 : () => {
+    if (suppressClick !== void 0 && suppressClick()) return;
+    onOpen(target);
+  };
   if (layout === "grid") {
     return h4(
-      "button",
+      "div",
       {
         key: `${file.path}:${file.display}`,
-        type: "button",
+        role: "button",
+        tabIndex: 0,
         className: `vms-tl-tile${missing ? " is-missing" : ""}`,
         "data-kind": kind,
         title,
         onClick: open,
+        onKeyDown: (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          if (open !== void 0) open();
+        },
         ...handlers
       },
       h4("span", { className: "vms-tl-tile-icon" }, h4(Icon2, { name: kindIcon(kind, ext), size: 20 })),
@@ -24960,14 +24978,20 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
     );
   }
   return h4(
-    "button",
+    "div",
     {
       key: `${file.path}:${file.display}`,
-      type: "button",
+      role: "button",
+      tabIndex: 0,
       className: `vms-tl-row${missing ? " is-missing" : ""}`,
       "data-kind": kind,
       title,
       onClick: open,
+      onKeyDown: (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (open !== void 0) open();
+      },
       ...handlers
     },
     h4("span", { className: "vms-tl-row-icon" }, h4(Icon2, { name: kindIcon(kind, ext), size: 16 })),
@@ -24980,7 +25004,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
     )
   );
 }
-function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMenu }) {
+function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMenu, dragBind, suppressClick }) {
   const files = Array.isArray(node.files) ? node.files : [];
   const groups = (0, import_react8.useMemo)(() => {
     const map2 = /* @__PURE__ */ new Map();
@@ -25017,7 +25041,7 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
       open && files.length > 0 && (layout === "grid" ? h4(
         "div",
         { className: "vms-tl-tiles" },
-        files.map((file) => h4(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu }))
+        files.map((file) => h4(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }))
       ) : groups.map(([dir, entries]) => h4(
         "div",
         { key: dir || ".", className: "vms-tl-group" },
@@ -25030,13 +25054,13 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
         h4(
           "div",
           { className: "vms-tl-rows" },
-          entries.map((file) => h4(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu }))
+          entries.map((file) => h4(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }))
         )
       )))
     )
   );
 }
-function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, onMenu, onFallback }) {
+function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, onMenu, onFallback, dragBind, suppressClick }) {
   const [collapsed, setCollapsed] = (0, import_react8.useState)(() => readCollapsed());
   const [sectionsOpen, setSectionsOpen] = (0, import_react8.useState)(() => /* @__PURE__ */ new Set());
   (0, import_react8.useEffect)(() => {
@@ -25138,7 +25162,9 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, o
               return next;
             }),
             onOpen,
-            onMenu
+            onMenu,
+            dragBind,
+            suppressClick
           }))
         )
       );
@@ -26352,6 +26378,8 @@ function LibraryBody(props) {
           items,
           layout: timelineLayout,
           diagnostics: timelineDiagnostics,
+          dragBind: dragDrop.bind,
+          suppressClick: dragDrop.suppressNextClick,
           onOpen: (entry) => setOverlayId(entry.id),
           onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
           onFallback: () => setSessionOnly(false)

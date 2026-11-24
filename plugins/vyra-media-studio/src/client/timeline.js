@@ -48,7 +48,7 @@ function writeCollapsed(set) {
 }
 
 /** One produced file, as a grid tile or a list row. */
-function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
+function FileEntry({ file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }) {
   const name = (file.display ?? file.path).split('/').pop() ?? file.path
   const [kind, ext] = fileKindOf(name)
   const target = lookup.get(file.path) ?? lookup.get(file.display)
@@ -57,24 +57,36 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
     ? '二进制'
     : [file.added > 0 ? `+${file.added}` : '', file.deleted > 0 ? `-${file.deleted}` : ''].filter(Boolean).join(' ')
 
+  // Dragging works from a timeline entry too: the entry resolves to the same
+  // library item, so it is the same drag source as a grid card or list row.
   const handlers = {
     onContextMenu: event => {
       event.preventDefault()
       if (missing) return
       onMenu(target, event.clientX, event.clientY)
     },
+    ...(dragBind === undefined || missing ? {} : dragBind(target)),
   }
   const title = `${file.display ?? file.path}${missing ? '（已不存在）' : ''}`
-  const open = missing ? undefined : () => onOpen(target)
+  const open = missing ? undefined : () => {
+    if (suppressClick !== undefined && suppressClick()) return
+    onOpen(target)
+  }
 
   if (layout === 'grid') {
-    return h('button', {
+    return h('div', {
       key: `${file.path}:${file.display}`,
-      type: 'button',
+      role: 'button',
+      tabIndex: 0,
       className: `vms-tl-tile${missing ? ' is-missing' : ''}`,
       'data-kind': kind,
       title,
       onClick: open,
+      onKeyDown: event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        if (open !== undefined) open()
+      },
       ...handlers,
     },
     h('span', { className: 'vms-tl-tile-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 20 })),
@@ -84,13 +96,19 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
       stats !== '' && h('span', { className: `vms-tl-diff${file.added > 0 ? ' is-added' : ''}${file.deleted > 0 ? ' is-deleted' : ''}` }, stats)))
   }
 
-  return h('button', {
+  return h('div', {
     key: `${file.path}:${file.display}`,
-    type: 'button',
+    role: 'button',
+    tabIndex: 0,
     className: `vms-tl-row${missing ? ' is-missing' : ''}`,
     'data-kind': kind,
     title,
     onClick: open,
+    onKeyDown: event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      if (open !== undefined) open()
+    },
     ...handlers,
   },
   h('span', { className: 'vms-tl-row-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 16 })),
@@ -100,7 +118,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu }) {
     missing ? '已不存在' : (stats || '已修改')))
 }
 
-function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMenu }) {
+function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMenu, dragBind, suppressClick }) {
   const files = Array.isArray(node.files) ? node.files : []
   const groups = useMemo(() => {
     const map = new Map()
@@ -130,20 +148,20 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
       h('span', { className: 'vms-tl-chevron' }, h(Icon, { name: 'chevronRight', size: 15 }))),
       open && files.length > 0 && (layout === 'grid'
         ? h('div', { className: 'vms-tl-tiles' },
-          files.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu })))
+          files.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick })))
         : groups.map(([dir, entries]) => h('div', { key: dir || '.', className: 'vms-tl-group' },
           h('div', { className: 'vms-tl-dir' },
             h(Icon, { name: 'folder', size: 14 }),
             dir === '' ? '工作区根目录' : dir),
           h('div', { className: 'vms-tl-rows' },
-            entries.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu }))))))))
+            entries.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }))))))))
 }
 
 /**
  * The conversation timeline.
  * @param {object} props - timeline inputs.
  */
-export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', onOpen, onMenu, onFallback }) {
+export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', onOpen, onMenu, onFallback, dragBind, suppressClick }) {
   const [collapsed, setCollapsed] = useState(() => readCollapsed())
   const [sectionsOpen, setSectionsOpen] = useState(() => new Set())
 
@@ -232,6 +250,8 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', on
             }),
             onOpen,
             onMenu,
+            dragBind,
+            suppressClick,
           }))))
     }))
 }

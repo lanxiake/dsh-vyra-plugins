@@ -775,3 +775,11 @@
   color: var(--vms-accent);
 }
 .vms-toggle-btn svg { flex: none; }
+
+/* Timeline entries are divs with role=button so a drag gesture is delivered as
+   pointer events instead of button activation. Restore button affordances. */
+.vms-tl-tile, .vms-tl-row { cursor: pointer; user-select: none; -webkit-user-select: none; }
+.vms-tl-tile.is-missing, .vms-tl-row.is-missing { cursor: default; }
+.vms-tl-tile:focus-visible, .vms-tl-row:focus-visible {
+  outline: 2px solid var(--vms-accent); outline-offset: 1px;
+}
