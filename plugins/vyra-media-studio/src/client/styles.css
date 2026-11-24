@@ -675,3 +675,10 @@
 .vms-tl-dot { position: absolute; left: -14px; top: 14px; width: 9px; height: 9px; border-radius: 50%; background: var(--vms-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vms-accent) 22%, transparent); }
 .vms-tl-prompt { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vms-ink); }
 .vms-tl-clock { font-family: var(--dsh-font-family-code, monospace); font-size: 9px; color: var(--vms-ink4); }
+
+/* Timeline probe list: names which Host surface failed to yield events. */
+.vms-tl-probe { margin: 2px 0 6px; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 9.5px; color: var(--vms-ink4); }
+.vms-tl-probe li { display: flex; align-items: center; gap: 6px; }
+.vms-tl-probe code { font-family: var(--dsh-font-family-code, monospace); color: var(--vms-ink3); }
+
+.vms-tl-error { display: block; max-width: 320px; margin: 2px 0 4px; padding: 5px 8px; border-radius: 6px; background: color-mix(in srgb, var(--vms-danger) 10%, transparent); color: var(--vms-danger); font-family: var(--dsh-font-family-code, monospace); font-size: 9.5px; text-align: left; overflow-wrap: anywhere; }

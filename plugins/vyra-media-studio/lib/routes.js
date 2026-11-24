@@ -9,7 +9,7 @@
 import { SCAN_DEFAULTS, invalidateScanCache, scanMediaCached } from './scan.js'
 import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
-import { buildTimeline } from './timeline.js'
+import { buildTimeline, readSessionEvents } from './timeline.js'
 import {
   batchFiles, copyFileInto, deleteFile, moveFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
 } from './file-ops.js'
@@ -503,14 +503,27 @@ async function handleSessionChanges(request, ctx) {
   } catch (error) {
     return json({ ok: false, code: error.code ?? 'resolve-failed', error: error.message ?? 'cannot resolve workspace' }, error.status ?? 500)
   }
-  if (workspaceRoot === undefined) {
-    return json({ ok: true, sessionId, turns: [], reason: 'no-workspace-root' })
-  }
   try {
+    const probe = await readSessionEvents(ctx, sessionId)
+    if (probe.events.length === 0) {
+      // Nothing readable: report which surfaces were tried so the panel can say
+      // why instead of showing an unexplained empty timeline.
+      return json({
+        ok: true,
+        sessionId,
+        turns: [],
+        reason: 'no-session-events',
+        workspaceRootKnown: workspaceRoot !== undefined,
+        probe: probe.sources,
+      })
+    }
+    if (workspaceRoot === undefined) {
+      return json({ ok: true, sessionId, turns: [], reason: 'no-workspace-root', probe: probe.sources })
+    }
     const turns = await buildTimeline({
-      ctx, sessionId, workspaceRoot, fs: ctx.fs, signal: request.signal,
+      ctx, sessionId, workspaceRoot, fs: ctx.fs, events: probe.events, signal: request.signal,
     })
-    return json({ ok: true, sessionId, turns })
+    return json({ ok: true, sessionId, turns, events: probe.events.length, probe: probe.sources })
   } catch (error) {
     return json({ ok: false, code: 'changes-failed', error: error?.message ?? String(error) }, 500)
   }

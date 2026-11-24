@@ -20,7 +20,10 @@ export const inject = ['fs', 'workspaceFiles']
 export function apply(ctx) {
   ctx.inject(['connection'], (scoped) => {
     try {
-      registerMediaRoutes(scoped, scoped.connection)
+      // Pass the root context, not the connection-scoped one: the handlers read
+      // `sessions` / `agents` / `sessionPersistence` through `ctx.get`, and a
+      // scoped context does not necessarily expose sibling services.
+      registerMediaRoutes(ctx, scoped.connection)
     } catch (error) {
       const message = `[vyra-media-studio] cannot register media routes: ${error?.message ?? error}`
       if (typeof scoped.logger?.warn === 'function') scoped.logger.warn(message)

@@ -44,44 +44,85 @@ function promptOf(data) {
  * @returns {Array<object>} session events, oldest first.
  */
 async function sessionEventsOf(ctx, sessionId) {
-  const fromSession = session => Array.isArray(session)
-    ? session
-    : (typeof session?.snapshotEvents === 'function'
-      ? session.snapshotEvents()
-      : (Array.isArray(session?.events) ? session.events : undefined))
+  const { events, sources } = await readSessionEvents(ctx, sessionId)
+  return events
+}
 
-  const candidates = [
-    ctx.get?.('sessions')?.get?.(sessionId),
-    ctx.get?.('agents')?.get?.(sessionId)?.session,
-    ctx.get?.('sessionController')?.sessions?.get?.(sessionId),
+/**
+ * Read a Session's event log and report where it came from, so an empty
+ * timeline can say which Host surface failed instead of looking like a bug.
+ * @param {object} ctx - Host context.
+ * @param {string} sessionId - Session identity.
+ * @returns {Promise<{ events: Array<object>, sources: Array<object> }>} events plus probe facts.
+ */
+export async function readSessionEvents(ctx, sessionId) {
+  const sources = []
+  const record = (name, events, error) => {
+    sources.push({ name, count: Array.isArray(events) ? events.length : 0, ...(error === undefined ? {} : { error: String(error) }) })
+    return Array.isArray(events) && events.length > 0 ? events : undefined
+  }
+
+  /**
+   * Cordis rejects a one-argument ctx.get() when the service is not mounted;
+   * the two-argument form returns undefined instead. Every probe therefore uses
+   * the non-throwing form and its own try/catch so one missing service never
+   * hides the log that another service can serve.
+   */
+  const serviceOf = name => {
+    if (typeof ctx?.get !== 'function') return undefined
+    try { return ctx.get(name, false) } catch { return undefined }
+  }
+
+  const fromSession = session => {
+    if (Array.isArray(session)) return session
+    if (typeof session?.snapshotEvents === 'function') {
+      try { return session.snapshotEvents() } catch { return undefined }
+    }
+    if (Array.isArray(session?.events)) return session.events
+    return undefined
+  }
+
+  const probes = [
+    ['sessions', () => serviceOf('sessions')?.get?.(sessionId)],
+    ['agents', () => serviceOf('agents')?.get?.(sessionId)?.session],
+    ['agentLoop', () => serviceOf('agentLoop')?.sessions?.get?.(sessionId)?.session],
+    ['sessionController', () => serviceOf('sessionController')?.sessions?.get?.(sessionId)],
   ]
-  for (const candidate of candidates) {
-    const events = fromSession(candidate)
-    if (Array.isArray(events) && events.length > 0) return events
+  for (const [name, resolve] of probes) {
+    let candidate
+    try { candidate = resolve() } catch (error) { record(name, undefined, error); continue }
+    const hit = record(name, fromSession(candidate))
+    if (hit !== undefined) return { events: hit, sources }
   }
 
-  const cached = ctx.get?.('sessionProjectionCache')
-  if (typeof cached?.snapshot === 'function') {
-    try {
-      const snapshot = cached.snapshot(sessionId)
-      const events = fromSession(snapshot?.events)
-      if (Array.isArray(events) && events.length > 0) return events
-    } catch { /* fall through */ }
-  }
-  // Persisted log: works for cold Sessions and Hosts that hide the live object.
-  const persistence = ctx.get?.('sessionPersistence')
+  try {
+    const cached = serviceOf('sessionProjectionCache')
+    if (typeof cached?.snapshot === 'function') {
+      const hit = record('sessionProjectionCache', fromSession(cached.snapshot(sessionId)?.events))
+      if (hit !== undefined) return { events: hit, sources }
+    } else {
+      record('sessionProjectionCache', undefined, 'missing')
+    }
+  } catch (error) { record('sessionProjectionCache', undefined, error) }
+
+  const persistence = serviceOf('sessionPersistence')
   if (typeof persistence?.open === 'function') {
     let handle
     try {
       handle = await persistence.open(sessionId, 'read')
       const result = await handle.read()
-      const events = Array.isArray(result?.events) ? result.events : []
-      return events
-    } catch { /* fall through to empty */ } finally {
+      const hit = record('sessionPersistence', Array.isArray(result?.events) ? result.events : [])
+      if (hit !== undefined) return { events: hit, sources }
+    } catch (error) {
+      record('sessionPersistence', undefined, error)
+    } finally {
       try { await handle?.close?.() } catch { /* ignore */ }
     }
+  } else {
+    record('sessionPersistence', undefined, 'missing')
   }
-  return []
+
+  return { events: [], sources }
 }
 
 /**
@@ -91,19 +132,27 @@ async function sessionEventsOf(ctx, sessionId) {
  * @param {string} args.sessionId - Session identity.
  * @param {string} args.workspaceRoot - absolute workspace root.
  * @param {object} args.fs - `ctx.fs`.
+ * @param {Array<object>} [args.events] - pre-read session events.
  * @param {AbortSignal} [args.signal] - cancellation.
  * @returns {Promise<Array<object>>} timeline nodes, newest first.
  */
-export async function buildTimeline({ ctx, sessionId, workspaceRoot, fs, signal }) {
-  const events = await sessionEventsOf(ctx, sessionId)
+export async function buildTimeline({ ctx, sessionId, workspaceRoot, fs, events: given, signal }) {
+  const events = Array.isArray(given) ? given : await sessionEventsOf(ctx, sessionId)
   if (events.length === 0) return []
 
   const prompts = []
   for (const event of events) {
     if (event?.type !== 'user/message') continue
-    if (event.data?.source?.kind === 'subagent') continue
+    // Only messages the user actually sent. The log also carries injected
+    // context (agent instructions, runtime snapshot, skill catalog, time
+    // context); those have their own `source.kind` and must not be nodes.
+    const kind = event.data?.source?.kind
+    if (kind !== undefined && kind !== 'user') continue
     const text = promptOf(event.data)
     if (text === '') continue
+    // Injected reminders can still arrive with `kind: 'user'`; skip pure
+    // system envelopes so the axis lists real prompts only.
+    if (/^<system-reminder>/u.test(text)) continue
     prompts.push({
       seq: event.seq,
       time: typeof event.time === 'number' ? event.time : undefined,

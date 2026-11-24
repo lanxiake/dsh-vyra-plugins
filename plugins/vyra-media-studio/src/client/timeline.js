@@ -90,7 +90,7 @@ function TimelineNode({ node, lookup, onOpen, onMenu }) {
  * The conversation timeline.
  * @param {object} props - timeline inputs.
  */
-export function SessionTimeline({ nodes, items, onOpen, onMenu, onFallback }) {
+export function SessionTimeline({ nodes, items, diagnostics, onOpen, onMenu, onFallback }) {
   const lookup = useMemo(() => {
     const map = new Map()
     for (const item of items) {
@@ -116,10 +116,28 @@ export function SessionTimeline({ nodes, items, onOpen, onMenu, onFallback }) {
   }, [nodes])
 
   if (sections.length === 0) {
+    const probe = Array.isArray(diagnostics?.probe) ? diagnostics.probe : []
+    const reason = diagnostics?.reason
+    const failure = diagnostics?.error
+    const headlines = {
+      'no-session-events': '读不到这条会话的事件日志',
+      'request-failed': '时间线请求失败',
+      'no-workspace-root': '这条会话没有工作区目录',
+    }
+    const hints = {
+      'no-session-events': '宿主没有通过任何服务暴露会话日志，下面是每个数据源的探测结果。',
+      'request-failed': '插件路由返回了错误，括号里是宿主给出的原因。',
+      'no-workspace-root': '没有工作区就无法扫描产出文件；消息本身仍然会列出。',
+    }
     return h('div', { className: 'vms-tl-empty' },
       h(Icon, { name: 'clock', size: 20 }),
-      h('b', null, '这条会话还没有消息'),
-      h('p', null, '发送一条消息后，这里会按时间列出每次对话及其产出的文件。'),
+      h('b', null, headlines[reason] ?? '这条会话还没有消息'),
+      h('p', null, hints[reason] ?? '发送一条消息后，这里会按时间列出每次对话及其产出的文件。'),
+      failure !== undefined && h('code', { className: 'vms-tl-error' }, failure),
+      probe.length > 0 && h('ul', { className: 'vms-tl-probe' },
+        probe.map(source => h('li', { key: source.name },
+          h('code', null, source.name),
+          h('span', null, source.error === undefined ? source.count + ' 条事件' : '不可用：' + source.error)))),
       onFallback !== undefined && h('button', { type: 'button', className: 'vms-ghost-btn', onClick: onFallback }, '改为按文件列表查看'))
   }
 

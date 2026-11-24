@@ -174,6 +174,7 @@ export function LibraryBody(props) {
   const [diagnostic, setDiagnostic] = useState(null)
   const [meta, setMeta] = useState({})
   const [turns, setTurns] = useState([])
+  const [timelineDiagnostics, setTimelineDiagnostics] = useState(null)
   const [metaLoading, setMetaLoading] = useState(false)
   const [menu, setMenu] = useState(null)
   const [renameDialog, setRenameDialog] = useState(null)
@@ -251,9 +252,22 @@ export function LibraryBody(props) {
       signal: controller.signal,
       credentials: 'same-origin',
     })
-      .then(response => response.json())
-      .then(body => { if (body?.ok === true) setTurns(Array.isArray(body.turns) ? body.turns : []) })
-      .catch(() => { /* the timeline falls back to mtime ordering */ })
+      .then(async response => {
+        let body
+        try { body = await response.json() } catch { body = undefined }
+        if (!body?.ok) {
+          const code = body?.code ?? ('http-' + response.status)
+          const detail = body?.error ?? String(response.status)
+          setTimelineDiagnostics({ reason: 'request-failed', error: code + '：' + detail })
+          return
+        }
+        setTurns(Array.isArray(body.turns) ? body.turns : [])
+        setTimelineDiagnostics({ reason: body.reason, probe: body.probe, events: body.events })
+      })
+      .catch(error => {
+        if (error?.name === 'AbortError') return
+        setTimelineDiagnostics({ reason: 'request-failed', error: error?.message ?? String(error) })
+      })
     return () => controller.abort()
   }, [sessionId, reloadKey])
 
@@ -937,6 +951,7 @@ export function LibraryBody(props) {
             h(SessionTimeline, {
               nodes: turns,
               items,
+              diagnostics: timelineDiagnostics,
               onOpen: entry => setOverlayId(entry.id),
               onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
               onFallback: () => setListMode('tree'),
