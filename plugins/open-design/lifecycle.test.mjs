@@ -184,5 +184,72 @@ check('patch row is an agent-preset', patch[0].insert[0].name, '@deepseek-ai/dsh
 check('patch row carries the spec id', patch[0].insert[0].config.id, 'od-motion')
 check('icon is svg', /^<svg/.test(files['icon.svg']), true)
 
+// ===== Task 5: sync =====
+console.log('\n--- Task 5: sync ---')
+const syncMod = await load('sync.mjs')
+
+// Defaults: four skill dirs, four domain agents + director.
+const homeS = mkdtempSync(join(tmpdir(), 'od-sync-'))
+const s1 = syncMod.sync({ dshHome: homeS, root: pluginRoot, installAgents: false })
+check('sync no error', s1.error, null)
+check('sync enabled four', [...s1.enabled].sort(), [...domains.DEFAULT_ENABLED].sort())
+check('four skill dirs written', s1.skillsWritten.length, 4)
+check('visual skill dir exists', existsSync(join(homeS, 'skills', 'od-visual-design', 'SKILL.md')), true)
+check('motion skill dir exists', existsSync(join(homeS, 'skills', 'od-motion', 'SKILL.md')), true)
+check('disabled domain has no skill dir', existsSync(join(homeS, 'skills', 'od-video')), false)
+
+// With agents on: four domain agents + director.
+const s1b = syncMod.sync({ dshHome: homeS, root: pluginRoot })
+check('five agent dirs written', s1b.agentsWritten.length, 5)
+check('report lists five agents for the host to register', s1b.agents.length, 5)
+check('director preset exists', existsSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json')), true)
+const dirSpec = JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8'))
+check('director team is the enabled four', [...dirSpec.team].sort(), [...domains.DEFAULT_ENABLED].sort())
+check('director has delegation', dirSpec.capabilities.includes('delegation'), true)
+const motionAgent = JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-motion', 'agent.json'), 'utf8'))
+check('domain agent has no delegation on disk', motionAgent.capabilities.includes('delegation'), false)
+
+// Idempotent.
+const snap = readFileSync(join(homeS, 'skills', 'od-motion', 'SKILL.md'), 'utf8')
+const s2 = syncMod.sync({ dshHome: homeS, root: pluginRoot })
+check('second sync writes no skills', s2.skillsWritten.length, 0)
+check('second sync writes no agents', s2.agentsWritten.length, 0)
+check('second sync keeps content', readFileSync(join(homeS, 'skills', 'od-motion', 'SKILL.md'), 'utf8') === snap, true)
+
+// Disabling removes the directory and the agent, and shrinks the director.
+cfgMod.writeConfig(['od-writing'], homeS)
+const s3 = syncMod.sync({ dshHome: homeS, root: pluginRoot })
+check('disable removes the motion skill dir', existsSync(join(homeS, 'skills', 'od-motion')), false)
+check('disable removes the motion agent', existsSync(join(homeS, 'agent-manager', 'presets', 'od-motion')), false)
+check(
+  'disable shrinks the director team',
+  JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8')).team,
+  ['od-writing'],
+)
+check('disable reported the removals', s3.removed.includes('od-motion'), true)
+
+// Legacy single-aggregator directory is cleaned up.
+const homeL = mkdtempSync(join(tmpdir(), 'od-legacy-'))
+mkdirSync(join(homeL, 'skills', 'opendesign'), { recursive: true })
+writeFileSync(join(homeL, 'skills', 'opendesign', 'SKILL.md'), 'old')
+syncMod.sync({ dshHome: homeL, root: pluginRoot, installAgents: false })
+check('legacy aggregator removed', existsSync(join(homeL, 'skills', 'opendesign')), false)
+
+// Turning everything off is legal: no skill dirs, only the director.
+cfgMod.writeConfig([], homeL)
+const s4 = syncMod.sync({ dshHome: homeL, root: pluginRoot })
+check('disable-all writes no skill dirs', s4.skillsWritten.length, 0)
+check('disable-all leaves only the director agent', s4.agents.length, 1)
+check('disable-all leaves no domain agent dirs',
+  domains.DOMAIN_IDS.filter((id) => existsSync(join(homeL, 'agent-manager', 'presets', id))), [])
+
+// A skills root that is a file must degrade, not throw.
+const homeBroken = mkdtempSync(join(tmpdir(), 'od-broken-'))
+writeFileSync(join(homeBroken, 'skills'), 'not a directory')
+const s5 = syncMod.sync({ dshHome: homeBroken, root: pluginRoot, installAgents: false })
+check('broken skills root reports an error', typeof s5.error, 'string')
+
+for (const dir of [homeS, homeL, homeBroken]) rmSync(dir, { recursive: true, force: true })
+
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)
