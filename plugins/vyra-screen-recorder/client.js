@@ -3901,8 +3901,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         const encoded = await encodeRecording(manifest, micBlob, recording, format)
         if (encoded.fallback) toast(L('当前环境不支持 H.264/AAC，已保存为 WebM', 'H.264/AAC unavailable; saved as WebM'), { kind: 'error' })
         const name = encoded.name
-        const file = new File([encoded.blob], name, { type: 'video/webm' })
-        const attached = attachFile(file)
         setState({ progress: { stage: L('正在保存…', 'Saving…'), ratio: 0.97 } })
         let saved = null
         try {
@@ -3911,13 +3909,9 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           downloadBlob(encoded.blob, name)
           toast(L('保存到磁盘失败，已改为浏览器下载：', 'Save failed; downloaded instead: ') + friendly(error), { kind: 'error' })
         }
+        // 录屏不再自动挂进输入框：想发给 Agent 再手动拖进去，不想要就直接用文件。
         if (saved) {
-          toast(
-            attached
-              ? L('录屏已完成，已挂进输入框', 'Recording ready and attached')
-              : L('录屏已保存，但没能自动挂进输入框', 'Recording saved, but not attached'),
-            { kind: attached ? 'success' : 'error', path: saved.file, dir: saved.dir },
-          )
+          toast(L('录屏已保存', 'Recording saved'), { kind: 'success', path: saved.file, dir: saved.dir })
         }
         await fetch(PREFIX + '/record/discard', { method: 'POST' }).catch(() => {})
       } catch (error) {
@@ -4004,15 +3998,53 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     }
 
     /**
-     * 截图入口。
+     * 截图入口（工具条按钮）。
      *
-     * 和录屏一样先让用户选「要截哪块」——整个桌面 / 显示器 / 窗口 / 自定义区域，
-     * 选完才进截图浮层拖框。这样和录屏的操作记忆一致，也不会一按快捷键
-     * 就把整屏弹出来（用户往往只想截一个窗口）。
+     * 按钮点击走"先选源"：和录屏一样先让用户决定截哪块。
      */
     async function takeScreenshot() {
       if (state.phase !== 'idle' || captureBusy) return
       await openPicker('shot')
+    }
+
+    /**
+     * 快捷键截图入口：不选源，直接抓整个屏幕进选区，像 QQ / 微信那样。
+     *
+     * 快捷键是"我马上要截"，多一步选源就慢半拍；想截某个窗口的用户
+     * 仍然可以点工具条按钮走选源流程。
+     */
+    async function takeScreenshotQuick() {
+      if (state.phase !== 'idle' || captureBusy) return
+      const settings = state.settings || DEFAULT_SETTINGS
+      const hideDsh = settings.hideDshOnShot === true
+      captureBusy = true
+      setState({ toast: null })
+      try {
+        const shot = await fetchShot('?ts=' + Date.now() + (hideDsh ? '&hideDsh=1' : ''))
+        const url = URL.createObjectURL(shot.blob)
+        const image = await loadImage(url)
+        setState({
+          phase: 'idle',
+          picker: null,
+          shot: {
+            mode: 'shot',
+            url,
+            imageW: image.naturalWidth,
+            imageH: image.naturalHeight,
+            virtual: null,
+            crop: null,
+            hiddenDsh: shot.hidden,
+            options: null,
+          },
+        })
+        if (hideDsh && !shot.hidden) {
+          toast(L('没有找到可隐藏的 DSH 窗口，这张图里仍有 DSH 界面', 'No DSH window to hide; the screenshot still contains it'), { kind: 'error' })
+        }
+      } catch (error) {
+        toast(L('截图失败：', 'Screenshot failed: ') + friendly(error), { kind: 'error' })
+      } finally {
+        captureBusy = false
+      }
     }
 
     function openRegionShot(picker, options) {
@@ -4369,17 +4401,28 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       } catch { /* ignore */ }
     }
 
+    /**
+     * 截图收尾：存盘 + 放进剪贴板，不再自动挂到输入框。
+     *
+     * 自动挂附件会把用户"截个图去别处用"的流程打断（还得手动删掉附件），
+     * 而复制到剪贴板是所有场景都通用的下一步。
+     */
     async function saveScreenshot(blob, name) {
-      const file = new File([blob], name, { type: 'image/jpeg' })
-      const attached = attachFile(file)
       let saved = null
-      try { saved = await uploadBlob(blob, name, 'image') } catch { /* 保存失败时仍以附件为准 */ }
-      toast(
-        attached
-          ? L('截图已挂进输入框', 'Screenshot attached')
-          : (saved ? L('截图已保存', 'Screenshot saved') : L('截图没能保存', 'Screenshot not saved')),
-        { kind: attached || saved ? 'success' : 'error', path: saved ? saved.file : '', dir: saved ? saved.dir : '' },
-      )
+      let copied = false
+      try { saved = await uploadBlob(blob, name, 'image') } catch { /* 保存失败时仍尝试剪贴板 */ }
+      try {
+        await putClipboard('image', { blob })
+        copied = true
+      } catch { /* 剪贴板被占用时不影响存盘 */ }
+      const parts = []
+      if (saved) parts.push(L('已保存', 'Saved'))
+      if (copied) parts.push(L('已复制到剪贴板', 'Copied to the clipboard'))
+      if (parts.length === 0) {
+        toast(L('截图没能保存', 'Screenshot not saved'), { kind: 'error' })
+        return
+      }
+      toast(parts.join(' · '), { kind: 'success', path: saved ? saved.file : '', dir: saved ? saved.dir : '' })
     }
 
     // ------------------------------------------------------------- settings
@@ -4494,8 +4537,14 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       }
 
       async function refreshLibrary() {
-        const data = await apiJson('/library')
-        setLibrary(data.files || [])
+        // 文件列表失败绝不能连累设置页：设置卡片是用户唯一能改配置的入口，
+        // 不能因为读不到截图目录就整页空白。
+        try {
+          const data = await apiJson('/library')
+          setLibrary(data.files || [])
+        } catch {
+          setLibrary([])
+        }
       }
 
       async function load() {
@@ -4511,6 +4560,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           })
           setPaths(data.paths || null)
           setState({ settings, paths: data.paths || null })
+          // 这两项各自吞掉错误，且不再阻塞 loading——设置卡片一拿到就能出。
           await Promise.all([refreshLibrary(), refreshOcr()])
         } catch (failure) {
           setError(friendly(failure))
@@ -4639,18 +4689,18 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         control,
         note ? h('span', { className: 'vsr-field-note' }, note) : null)
 
-      if (loading) {
-        return h('div', { className: 'vsr-settings' },
-          h('div', { className: 'vsr-settings-head' }, h('h2', null, L('录屏与截图', 'Screen recorder'))),
-          h('div', { className: 'vsr-muted' }, L('正在读取设置…', 'Loading settings…')))
-      }
-
+      // 注意：这里不再因为 loading 就整页只显示"正在读取设置…"。
+      // 之前那样写，任何一个接口（/library、/ocr/status）卡住或失败，用户就
+      // 看不到任何设置卡片——截图目录、快捷键全都改不了。现在设置卡片始终
+      // 用 draft 的当前值渲染，加载只是把占位换成真实值。
       const files = library.filter(file => filter === 'all' || file.kind === filter)
       return h('div', { className: 'vsr-settings' },
         h('div', { className: 'vsr-settings-head' },
           h('div', null,
             h('h2', null, L('录屏与截图', 'Screen recorder')),
-            h('div', { className: 'vsr-muted' }, L('存储位置、录制格式、快捷键和文件都在这里管理。', 'Manage storage, format, shortcuts and files.'))),
+            h('div', { className: 'vsr-muted' }, loading
+              ? L('正在读取设置…', 'Loading settings…')
+              : L('存储位置、录制格式、快捷键和文件都在这里管理。', 'Manage storage, format, shortcuts and files.'))),
           h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void load() } }, L('刷新', 'Refresh'))),
         error ? h('div', { className: 'vsr-error' }, error) : null,
         h('section', { className: 'vsr-card' },
@@ -4760,13 +4810,8 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
             ...ocrInfo.languages.map(tag => h('option', { key: tag, value: tag }, tag))))),
           h('div', { className: 'vsr-muted' },
             ocrInfo.winrt
-              ? L('系统 OCR 可用：', 'Windows OCR available: ') + ocrInfo.languages.join(', ') + L('。截图后拖框即自动取字。', '. Text is read as soon as you select.')
-              : L('系统 OCR 不可用：请在「设置 → 时间和语言 → 语言和区域」里安装语言包。', 'Windows OCR unavailable: install a language pack under Settings → Time & language.')),
-          h('label', { className: 'vsr-check' }, h('input', {
-            type: 'checkbox',
-            checked: !(draft.ocr && draft.ocr.auto === false),
-            onChange: event => setDraft({ ...draft, ocr: { ...(draft.ocr || {}), auto: event.target.checked } }),
-          }), L('截图后自动提取文字', 'Extract text automatically after selecting')))),
+              ? L('系统 OCR 可用：', 'Windows OCR available: ') + ocrInfo.languages.join(', ') + L('。截图后点「文」取字。', '. Click the text button to read it.')
+              : L('系统 OCR 不可用：请在「设置 → 时间和语言 → 语言和区域」里安装语言包。', 'Windows OCR unavailable: install a language pack under Settings → Time & language.')))),
         h('section', { className: 'vsr-card' },
           h('h3', null, L('截图', 'Screenshot')),
           h('label', { className: 'vsr-check' }, h('input', {
@@ -5504,13 +5549,8 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
       const settings = (state.settings || DEFAULT_SETTINGS)
       const shortcuts = settings.shortcuts || DEFAULT_SETTINGS.shortcuts
-      // 松手出选区后自动取字（和 QQ / 微信一致）；设置里可以关掉。
-      useEffect(() => {
-        if (phase !== 'annotate' || isRegion || !sel) return
-        if (settings.ocr && settings.ocr.auto === false) return
-        if (extractRef.current !== null) return
-        void extractText()
-      }, [phase, isRegion, sel && sel.x, sel && sel.y, sel && sel.w, sel && sel.h])
+      // 取字不自动触发：截完立刻识别会多一次等待，用户会以为截图卡了。
+      // 要用就点「文」或按取字快捷键。
 
       const colors = ['#e5484d', '#f5a623', '#2ea44f', '#1677ff', '#ffffff', '#111111']
       return h('div', { className: 'vsr-overlay vsr-overlay-shot' },
@@ -5797,7 +5837,9 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 /* 取字结果面板：贴在工具条上方，深色、可选中文字。
    bottom 留出工具条高度（24px 下边距 + 约 44px 工具条 + 12px 间隙），
    max-height 用视口高度减去这段，保证再长也不会压住工具条。 */
-.vsr-text-panel { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 2147483100; display: flex; flex-direction: column; width: min(560px, calc(100vw - 32px)); max-height: min(38vh, calc(100vh - 200px)); border-radius: 12px; background: rgba(24,24,27,.96); color: #f2f2f4; box-shadow: 0 18px 52px rgba(0,0,0,.5); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; overflow: hidden; pointer-events: auto; }
+/* 取字面板贴着工具条上方，宽度收窄并限制高度，避免盖住画布：
+   用户看完字还要继续画圈写字，面板一挡就没法下手了。 */
+.vsr-text-panel { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 2147483100; display: flex; flex-direction: column; width: min(520px, calc(100vw - 32px)); max-height: min(30vh, calc(100vh - 320px)); border-radius: 12px; background: rgba(24,24,27,.96); color: #f2f2f4; box-shadow: 0 18px 52px rgba(0,0,0,.5); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; overflow: hidden; pointer-events: auto; }
 /* 面板本身可点，但不应把它和工具条之间的空隙也变成点击面。 */
 .vsr-panel-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 12px; }
 .vsr-panel-meta { color: #9a9aa3; font-size: 11px; }
@@ -5917,7 +5959,8 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
           if (matchesShortcut(event, settings.shortcuts.screenshot)) {
             if (state.phase !== 'idle') return
             event.preventDefault()
-            void takeScreenshot()
+            // 快捷键直接整屏截图；选源是工具条按钮的路径。
+            void takeScreenshotQuick()
             return
           }
           if (matchesShortcut(event, settings.shortcuts.record)) {
