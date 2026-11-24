@@ -397,7 +397,32 @@ test('session-changes lists one node per user message with its produced files', 
     assert.equal(body.turns[0].files.length, 1)
     assert.equal(body.turns[0].files[0].path, 'docs/a.txt')
 
-    const missing = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes'), ctx)
+    // Persistence-only fallback: a Host that hides the live Session object still
+  // yields a timeline from the stored log.
+  const stored = [
+    {
+      type: 'user/message', seq: 7, time: Date.now() - 30_000,
+      data: { content: [{ type: 'text', text: '整理一下素材' }] },
+    },
+  ]
+  const closed = []
+  const persisted = {
+    workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+    get: name => name === 'sessionPersistence'
+      ? {
+        open: async () => ({ read: async () => ({ events: stored }), close: async () => { closed.push(true) } }),
+      }
+      : undefined,
+    fs: ctx.fs,
+  }
+  const fromLog = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes?sessionId=s'), persisted)
+  const logBody = await fromLog.json()
+  assert.equal(logBody.ok, true)
+  assert.equal(logBody.turns.length, 1)
+  assert.equal(logBody.turns[0].prompt, '整理一下素材')
+  assert.equal(closed.length, 1)
+
+  const missing = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes'), ctx)
     assert.equal(missing.status, 400)
   } finally {
     await rm(root, { recursive: true, force: true })

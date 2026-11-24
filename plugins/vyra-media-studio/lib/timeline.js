@@ -36,20 +36,50 @@ function promptOf(data) {
 }
 
 /**
- * Read the Session's own event log without depending on a live Agent.
+ * Read a Session's event log however this Host exposes it. Order:
+ * the live Session, a live Agent's session, the projection cache, and finally
+ * the Session Controller's event feed.
  * @param {object} ctx - Host context.
  * @param {string} sessionId - Session identity.
  * @returns {Array<object>} session events, oldest first.
  */
-function sessionEventsOf(ctx, sessionId) {
-  const live = ctx.get?.('sessions')?.get?.(sessionId)
-  if (live !== undefined && typeof live.snapshotEvents === 'function') return live.snapshotEvents()
+async function sessionEventsOf(ctx, sessionId) {
+  const fromSession = session => Array.isArray(session)
+    ? session
+    : (typeof session?.snapshotEvents === 'function'
+      ? session.snapshotEvents()
+      : (Array.isArray(session?.events) ? session.events : undefined))
+
+  const candidates = [
+    ctx.get?.('sessions')?.get?.(sessionId),
+    ctx.get?.('agents')?.get?.(sessionId)?.session,
+    ctx.get?.('sessionController')?.sessions?.get?.(sessionId),
+  ]
+  for (const candidate of candidates) {
+    const events = fromSession(candidate)
+    if (Array.isArray(events) && events.length > 0) return events
+  }
+
   const cached = ctx.get?.('sessionProjectionCache')
   if (typeof cached?.snapshot === 'function') {
     try {
       const snapshot = cached.snapshot(sessionId)
-      if (Array.isArray(snapshot?.events)) return snapshot.events
+      const events = fromSession(snapshot?.events)
+      if (Array.isArray(events) && events.length > 0) return events
     } catch { /* fall through */ }
+  }
+  // Persisted log: works for cold Sessions and Hosts that hide the live object.
+  const persistence = ctx.get?.('sessionPersistence')
+  if (typeof persistence?.open === 'function') {
+    let handle
+    try {
+      handle = await persistence.open(sessionId, 'read')
+      const result = await handle.read()
+      const events = Array.isArray(result?.events) ? result.events : []
+      return events
+    } catch { /* fall through to empty */ } finally {
+      try { await handle?.close?.() } catch { /* ignore */ }
+    }
   }
   return []
 }
@@ -65,7 +95,7 @@ function sessionEventsOf(ctx, sessionId) {
  * @returns {Promise<Array<object>>} timeline nodes, newest first.
  */
 export async function buildTimeline({ ctx, sessionId, workspaceRoot, fs, signal }) {
-  const events = sessionEventsOf(ctx, sessionId)
+  const events = await sessionEventsOf(ctx, sessionId)
   if (events.length === 0) return []
 
   const prompts = []
