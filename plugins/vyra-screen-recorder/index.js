@@ -28,6 +28,10 @@
  *   POST /plugins/vyra-screen-recorder/record/save?name=
  *   POST /plugins/vyra-screen-recorder/record/discard
  *   GET  /plugins/vyra-screen-recorder/reveal?path=
+ *   POST /plugins/vyra-screen-recorder/ocr          截图浮层取字（与 dsh-tool-ocr 共用引擎配置）
+ *   GET  /plugins/vyra-screen-recorder/ocr/status   本机可用的 OCR 引擎
+ *   POST /plugins/vyra-screen-recorder/clipboard    图片/文字/文件列表放进剪贴板
+ *   GET  /plugins/vyra-screen-recorder/open?path=   用默认程序打开
  */
 import { spawn } from 'node:child_process'
 import { createReadStream } from 'node:fs'
@@ -99,15 +103,72 @@ const DEFAULT_SETTINGS = {
   includeSystemAudio: true,
   includeMic: true,
   hideDshOnShot: false,
-  shortcuts: { screenshot: 'Ctrl+Alt+S', record: 'Ctrl+Alt+R' },
+  shortcuts: {
+    screenshot: 'Ctrl+Alt+S',
+    record: 'Ctrl+Alt+R',
+    copyImage: 'Ctrl',
+    clipboard: 'Ctrl+Shift+C',
+    text: 'Ctrl+Alt+C',
+    save: 'Ctrl+S',
+  },
+  ocr: { engine: 'auto', lang: 'system', scale: 2 },
 }
 
 function settingsPath() {
   return path.join(dshHome(), 'vyra-screen-recorder', 'settings.json')
 }
 
+const SHORTCUT_MODIFIERS = ['Ctrl', 'Alt', 'Shift', 'Meta']
+
+/**
+ * 解析 "Ctrl+Alt+S" / "ctrlaltS" 这类快捷键串。
+ *
+ * 旧设置里存的是客户端 comboFromEvent 的输出（修饰键大小写敏感、键名可能
+ * 大写），用户手改过的又可能全小写、没分隔符；统一拆成小写原子，
+ * 客户端渲染 "Ctrl+Alt+S"、匹配时按同一套规则比较。纯修饰键（"Ctrl"）是
+ * 合法的——截图浮层里的「复制图片」默认就是单个 Ctrl。
+ *
+ * @param {unknown} value - 配置或设置里的快捷键串。
+ * @returns {{mods: string[], key: string}} 规范化后的按键组合。
+ */
+function parseShortcut(value) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (text === '') return { mods: [], key: '' }
+  const parts = text.split(/[+\s]+/).filter(Boolean)
+  const tokens = parts.length > 1 ? parts : (text.match(/ctrl|alt|shift|meta|[^+]?[A-Za-z0-9]/gi) || [])
+  const mods = []
+  let key = ''
+  for (const token of tokens) {
+    const lower = token.toLowerCase()
+    if (lower === 'control' || lower === 'ctrl') { if (!mods.includes('ctrl')) mods.push('ctrl'); continue }
+    if (lower === 'option' || lower === 'alt') { if (!mods.includes('alt')) mods.push('alt'); continue }
+    if (lower === 'shift') { if (!mods.includes('shift')) mods.push('shift'); continue }
+    if (lower === 'meta' || lower === 'cmd' || lower === 'win' || lower === 'command') { if (!mods.includes('meta')) mods.push('meta'); continue }
+    if (token.length === 1) { key = lower; continue }
+    if (lower === 'space' || lower === 'spacebar') { key = ' '; continue }
+    key = lower
+  }
+  const order = ['ctrl', 'alt', 'shift', 'meta']
+  mods.sort((left, right) => order.indexOf(left) - order.indexOf(right))
+  return { mods, key }
+}
+
+/** 把规范化后的组合渲染成客户端提示用的写法。 */
+function formatShortcut(value) {
+  const { mods, key } = parseShortcut(value)
+  const names = { ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift', meta: 'Meta' }
+  const parts = mods.map(mod => names[mod])
+  if (key === ' ') parts.push('Space')
+  else if (key.length === 1) parts.push(key.toUpperCase())
+  else if (key !== '') parts.push(key.charAt(0).toUpperCase() + key.slice(1))
+  return parts.join('+')
+}
+
+/** 只接受能解析出按键的组合；解析不出（或为空）就用默认值。 */
 function normalizeShortcut(value, fallback) {
-  return typeof value === 'string' && /^([A-Za-z0-9+_-]{1,40})$/.test(value.trim()) ? value.trim() : fallback
+  const parsed = parseShortcut(value)
+  if (parsed.mods.length === 0 && parsed.key === '') return fallback
+  return formatShortcut(value) || fallback
 }
 
 function absoluteDir(value) {
@@ -117,6 +178,8 @@ function absoluteDir(value) {
 function normalizeSettings(raw) {
   const value = raw && typeof raw === 'object' ? raw : {}
   const dir = absoluteDir(value.dir)
+  const shortcuts = value.shortcuts && typeof value.shortcuts === 'object' ? value.shortcuts : {}
+  const ocr = value.ocr && typeof value.ocr === 'object' ? value.ocr : {}
   return {
     dir,
     videoDir: absoluteDir(value.videoDir),
@@ -130,8 +193,17 @@ function normalizeSettings(raw) {
     includeMic: value.includeMic !== false,
     hideDshOnShot: value.hideDshOnShot === true,
     shortcuts: {
-      screenshot: normalizeShortcut(value.shortcuts && value.shortcuts.screenshot, DEFAULT_SETTINGS.shortcuts.screenshot),
-      record: normalizeShortcut(value.shortcuts && value.shortcuts.record, DEFAULT_SETTINGS.shortcuts.record),
+      screenshot: normalizeShortcut(shortcuts.screenshot, DEFAULT_SETTINGS.shortcuts.screenshot),
+      record: normalizeShortcut(shortcuts.record, DEFAULT_SETTINGS.shortcuts.record),
+      copyImage: normalizeShortcut(shortcuts.copyImage, DEFAULT_SETTINGS.shortcuts.copyImage),
+      clipboard: normalizeShortcut(shortcuts.clipboard, DEFAULT_SETTINGS.shortcuts.clipboard),
+      text: normalizeShortcut(shortcuts.text, DEFAULT_SETTINGS.shortcuts.text),
+      save: normalizeShortcut(shortcuts.save, DEFAULT_SETTINGS.shortcuts.save),
+    },
+    ocr: {
+      engine: typeof ocr.engine === 'string' && ocr.engine.trim() ? ocr.engine.trim() : DEFAULT_SETTINGS.ocr.engine,
+      lang: typeof ocr.lang === 'string' && ocr.lang.trim() ? ocr.lang.trim() : DEFAULT_SETTINGS.ocr.lang,
+      scale: clamp(ocr.scale, 1, 4, DEFAULT_SETTINGS.ocr.scale),
     },
   }
 }
@@ -429,7 +501,298 @@ async function countFrames(dir) {
   } catch { return 0 }
 }
 
-// ------------------------------------------------------------- agent queue
+// ------------------------------------------------------------------- OCR
+// 截图浮层的「提取文字」不自己另开一套 OCR 配置：它读 dsh-tool-ocr 在
+// profile patch 里配的引擎（command 型）或直接用系统自带的
+// Windows.Media.Ocr（lib/ocr.ps1），所以用户在设置页配一个引擎，Agent 的
+// ocr_read 和这里的取字走的是同一套。
+
+const OCR_DEFAULT_TIMEOUT = 60000
+const OCR_MAX_TIMEOUT = 120000
+
+/**
+ * 把一条 dsh-tool-ocr 的 `engines` 条目统一成宿主内部形状。
+ *
+ * 兼容两种写法：显式 `mode: winrt`（不写 command），以及老版本只有
+ * `command` + `args` 的外部引擎。既没 command 又没 mode 的条目当成坏配置，
+ * 返回 null，让调用方回退到系统 OCR。
+ *
+ * @param {unknown} raw - 用户写的引擎条目。
+ * @returns {{id: string, label: string, mode: 'command'|'winrt', lang: string, command: string, args: string[], timeoutMs: number}|null}
+ */
+function resolveOcrEngine(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id.trim() : ''
+  if (!id) return null
+  const command = typeof value.command === 'string' ? value.command.trim() : ''
+  const mode = value.mode === 'winrt' || value.mode === 'command' ? value.mode : (command ? 'command' : '')
+  if (!mode) return null
+  if (mode === 'command' && !command) return null
+  return {
+    id,
+    label: typeof value.label === 'string' && value.label.trim() ? value.label.trim() : id,
+    mode,
+    lang: typeof value.lang === 'string' && value.lang.trim() ? value.lang.trim() : 'system',
+    command,
+    args: Array.isArray(value.args) ? value.args.filter(item => typeof item === 'string') : [],
+    isDefault: value.isDefault === true,
+    timeoutMs: clamp(value.timeoutMs, 1000, OCR_MAX_TIMEOUT, OCR_DEFAULT_TIMEOUT),
+  }
+}
+
+/** 把 profile 的 patch 文件切成顶层条目（每行 "- " 开头算一条）。 */
+function splitPatchRows(text) {
+  const rows = []
+  let current = null
+  for (const line of String(text).split(/\r?\n/)) {
+    if (/^-\s/.test(line)) {
+      if (current !== null) rows.push(current)
+      current = line + '\n'
+      continue
+    }
+    if (current !== null) current += line + '\n'
+  }
+  if (current !== null) rows.push(current)
+  return rows
+}
+
+/** 从一行 patch 里取出 `engines:` 下的条目。只认 id/mode/command/args/lang 这几个键。 */
+function parseEngineRows(row) {
+  const lines = row.split(/\r?\n/)
+  const start = lines.findIndex(line => /^\s{0,8}engines:\s*$/.test(line))
+  if (start < 0) return []
+  const engineIndent = (lines.slice(start + 1).find(line => /^\s*-\s/.test(line)) || '').match(/^(\s*)/)[1].length
+  if (engineIndent === 0) return []
+  const entries = []
+  let entry = null
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === '') continue
+    const indent = line.match(/^(\s*)/)[1].length
+    if (indent < engineIndent) break
+    const isItem = /^\s*-\s/.test(line) && indent === engineIndent
+    const body = isItem ? line.replace(/^\s*-\s*/, '') : line
+    if (isItem) {
+      if (entry !== null) entries.push(entry)
+      entry = {}
+    }
+    if (entry === null) continue
+    const match = /^([A-Za-z]+):\s*(.*)$/.exec(body.trim())
+    if (match === null) continue
+    const [, key, rest] = match
+    const raw = rest.replace(/\s+#.*$/, '').trim()
+    if (raw === '') continue
+    if (key === 'id' || key === 'label' || key === 'command' || key === 'mode' || key === 'lang') {
+      entry[key] = raw.replace(/^["']|["']$/g, '')
+    } else if (key === 'args') {
+      // 支持行内数组：args: ["{input}", "{output}"]
+      const inner = raw.replace(/^\[|\]$/g, '')
+      entry.args = (inner.match(/"[^"]*"|'[^']*'|[^,\s]+/g) || []).map(item => item.replace(/^["']|["']$/g, ''))
+    } else if (key === 'isDefault') {
+      entry.isDefault = raw === 'true'
+    } else if (key === 'timeoutMs') {
+      const number = Number(raw)
+      if (Number.isFinite(number)) entry.timeoutMs = number
+    }
+  }
+  if (entry !== null) entries.push(entry)
+  return entries
+}
+
+/**
+ * 找 OCR 插件的配置：优先用 DSH 正在跑的 Loader 条目（configEditor），
+ * 拿不到时退回去读当前 profile 的 patch 文件。两者都没有就返回空数组。
+ *
+ * @returns {Promise<Array<object>>} 原始引擎条目（可能为空）。
+ */
+async function rawOcrEngines(ctx) {
+  try {
+    const editor = ctx && typeof ctx.get === 'function' ? ctx.get('configEditor') : null
+    if (editor && typeof editor.entries === 'function') {
+      const entries = editor.entries()
+      if (Array.isArray(entries)) {
+        const target = entries.find(entry => entry && entry.name === '@yuehancn/dsh-tool-ocr')
+        const config = target && target.config
+        const value = config && typeof config.toJSON === 'function' ? config.toJSON() : config
+        if (value && Array.isArray(value.engines)) return value.engines
+      }
+    }
+  } catch { /* 拿不到就走文件 */ }
+
+  const home = dshHome()
+  const candidates = []
+  for (const name of ['DSH_PROFILE', 'DSH_PROFILE_NAME', 'DSH_PROFILE_ID']) {
+    if (process.env[name]) candidates.push(path.join(home, 'profiles', process.env[name], 'cordis.patch.yml'))
+  }
+  const profilesDir = path.join(home, 'profiles')
+  try {
+    const dirs = await readdir(profilesDir, { withFileTypes: true })
+    for (const entry of dirs.slice().sort((left, right) => left.name.localeCompare(right.name))) {
+      if (!entry.isDirectory()) continue
+      candidates.push(path.join(profilesDir, entry.name, 'cordis.patch.yml'))
+    }
+  } catch { /* 没有 profiles 目录 */ }
+  candidates.push(path.join(home, 'cordis.patch.yml'))
+
+  for (const file of candidates) {
+    let text = ''
+    try { text = await readFile(file, 'utf8') } catch { continue }
+    for (const row of splitPatchRows(text)) {
+      if (!/['"]?@?[a-z-]*\/?dsh-tool-ocr['"]?/.test(row)) continue
+      const engines = parseEngineRows(row)
+      if (engines.length > 0) return engines
+    }
+  }
+  return []
+}
+
+/** 归一化后的引擎列表（过滤坏条目）。 */
+async function ocrEngines(ctx) {
+  const raw = await rawOcrEngines(ctx)
+  return raw.map(resolveOcrEngine).filter(Boolean)
+}
+
+/**
+ * 选这次取字用哪个引擎：设置页指定的 id → 配置里 isDefault 的 → 系统 OCR。
+ *
+ * @param {Array<object>} engines - 归一化后的引擎。
+ * @param {string} preferred - 设置页 ocr.engine（"auto" 表示不指定）。
+ * @returns {object} 引擎描述，mode 为 "winrt" 时用系统 OCR。
+ */
+function pickOcrEngine(engines, preferred) {
+  const wanted = typeof preferred === 'string' && preferred !== 'auto' ? preferred : ''
+  if (wanted) {
+    const found = engines.find(engine => engine.id === wanted)
+    if (found) return found
+  }
+  const fallback = engines.find(engine => engine.isDefault === true) || engines[0]
+  if (fallback) return fallback
+  return { id: 'windows', label: 'Windows OCR', mode: 'winrt', lang: 'system', command: '', args: [], timeoutMs: OCR_DEFAULT_TIMEOUT }
+}
+
+/** 展开 {input}/{output}/{lang} 模板。 */
+function expandOcrArgs(template, values) {
+  return template.map(arg => arg.split('{input}').join(values.input).split('{output}').join(values.output).split('{lang}').join(values.lang))
+}
+
+function runChild(file, args, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(POWERSHELL, [
+      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+      '-File', file, ...args,
+    ], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      try { child.kill() } catch { /* ignore */ }
+      reject(new Error('执行超时（' + Math.round(timeoutMs / 1000) + ' 秒）'))
+    }, timeoutMs)
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
+    child.stdout.on('data', chunk => { stdout += chunk })
+    child.stderr.on('data', chunk => { stderr += chunk })
+    child.once('error', error => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      reject(error)
+    })
+    child.once('exit', code => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (code !== 0) {
+        const detail = (stderr || stdout).trim().split(/\r?\n/).filter(Boolean).pop() || ''
+        reject(new Error(detail || ('退出码 ' + code)))
+        return
+      }
+      resolve({ stdout, stderr })
+    })
+  })
+}
+
+/**
+ * 对一张图片取字，返回文字与每行的位置（客户端用它给识别结果描框）。
+ *
+ * @param {string} imagePath - 要识别的图片。
+ * @param {object} engine - pickOcrEngine 的结果。
+ * @param {{lang: string, scale: number}} options - 语言与放大倍数。
+ * @returns {Promise<{text: string, lines: Array<object>, engine: string, lang: string}>}
+ */
+async function runOcr(imagePath, engine, options) {
+  const lang = options && options.lang && options.lang !== 'system' ? options.lang : (engine.lang !== 'system' ? engine.lang : '')
+  if (engine.mode === 'winrt') {
+    const args = ['-Path', imagePath, '-Scale', String((options && options.scale) || 2)]
+    if (lang) args.push('-Lang', lang)
+    const { stdout } = await runChild(path.join(LIB, 'ocr.ps1'), args, engine.timeoutMs || OCR_DEFAULT_TIMEOUT)
+    const line = stdout.trim().split(/\r?\n/).filter(item => item.trim().startsWith('{')).pop()
+    if (!line) throw new Error('系统 OCR 没有返回结果')
+    let payload = null
+    try { payload = JSON.parse(line) } catch { throw new Error('系统 OCR 返回的不是 JSON') }
+    if (payload.ok !== true) throw new Error(payload.error || '系统 OCR 失败')
+    return {
+      text: String(payload.text || ''),
+      lines: Array.isArray(payload.lines) ? payload.lines : [],
+      engine: engine.id,
+      lang: String(payload.lang || lang || ''),
+    }
+  }
+  const dir = await mkdtemp(path.join(tmpdir(), SESSION_PREFIX + 'ocr-'))
+  const output = path.join(dir, 'text.txt')
+  try {
+    const args = expandOcrArgs(engine.args.length > 0 ? engine.args : ['{input}', '{output}'], { input: imagePath, output, lang })
+    const { stdout } = await runChild(engine.command, args, engine.timeoutMs || OCR_DEFAULT_TIMEOUT)
+    let text = ''
+    try { text = await readFile(output, 'utf8') } catch { text = stdout || '' }
+    return { text: String(text).trim(), lines: [], engine: engine.id, lang }
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {})
+  }
+}
+
+/** 用 Windows OCR 报一下本机装了哪些识别语言。 */
+async function winrtLanguages() {
+  if (process.platform !== 'win32') return []
+  const script = path.join(LIB, 'ocr-langs.ps1')
+  if (!existsSync(script)) return []
+  try {
+    const { stdout } = await runChild(script, [], 20000)
+    return stdout.trim().split(/\r?\n/).map(item => item.trim()).filter(item => /^[A-Za-z-]+$/.test(item))
+  } catch {
+    return []
+  }
+}
+
+// ------------------------------------------------------------- clipboard
+// 剪贴板内容只认宿主自己生成的临时文件，不接受客户端传来的任意路径——
+// 否则任何能打开页面的程序都能让插件把任意文件放进剪贴板/资源管理器。
+
+function clipboardDir() {
+  return path.join(tmpdir(), 'vyra-screen-recorder-clipboard')
+}
+
+async function writeClipboardFile(name, buffer, extension) {
+  const stamp = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
+  const file = path.join(clipboardDir(), safeName(name || ('shot-' + stamp + extension), 'shot' + extension))
+  await mkdir(clipboardDir(), { recursive: true })
+  await writeFile(file, buffer)
+  return file
+}
+
+/** 允许 reveal/open 的路径：录制库、剪贴板临时目录，或调用方刚上传的文件。 */
+function allowedTarget(full) {
+  const settingsPromise = loadSettings()
+  return settingsPromise.then(settings => {
+    const roots = [libraryRoot(settings), recordingsDir(settings), screenshotsDir(settings), clipboardDir()].map(item => path.resolve(item))
+    return roots.some(root => {
+      const relative = path.relative(root, full)
+      return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+    })
+  })
+}
 // CLI 录屏：CLI 把 req-<id>.json 写进 ~/.dsh/vyra-screen-recorder/agent，
 // 宿主轮询后开录/停录；状态写 state-<id>.json。编码由 DSH Web 界面完成，
 // 完成后 POST /agent/save 把 WebM 写到请求里的 --out。
@@ -953,14 +1316,9 @@ async function handleReveal(req, res) {
   if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
   const url = new URL(req.url || PREFIX, 'http://localhost')
   const target = url.searchParams.get('path') || ''
-  const settings = await loadSettings()
-  const roots = [libraryRoot(settings), recordingsDir(settings), screenshotsDir(settings)].map(item => path.resolve(item))
   const full = path.resolve(target)
-  const allowed = roots.some(root => {
-    const relative = path.relative(root, full)
-    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
-  })
-  if (!full || !allowed) {
+  const allowed = Boolean(target) && await allowedTarget(full)
+  if (!allowed) {
     sendJson(res, 400, { ok: false, error: '只能打开录制目录内的路径' })
     return
   }
@@ -972,6 +1330,124 @@ async function handleReveal(req, res) {
     sendJson(res, 200, { ok: true, path: full })
   } catch (error) {
     sendJson(res, 400, { ok: false, error: String(error && error.message || error) })
+  }
+}
+
+// ------------------------------------------------------------ OCR routes
+
+let ocrContext = null
+
+async function handleOcrStatus(req, res) {
+  if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
+  try {
+    const settings = await loadSettings()
+    const engines = await ocrEngines(ocrContext)
+    const languages = await winrtLanguages()
+    const active = pickOcrEngine(engines, settings.ocr.engine)
+    sendJson(res, 200, {
+      ok: true,
+      engines: [
+        ...engines.map(engine => ({
+          id: engine.id,
+          label: engine.label,
+          mode: engine.mode,
+          command: engine.command,
+        })),
+        ...(languages.length > 0
+          ? [{ id: 'windows', label: 'Windows OCR（系统自带）', mode: 'winrt', command: 'Windows.Media.Ocr' }]
+          : []),
+      ],
+      active: active.id,
+      winrt: languages.length > 0,
+      languages,
+      lang: settings.ocr.lang,
+    })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+async function handleOcr(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  try {
+    const body = await readBody(req, 64 * 1024 * 1024)
+    if (body.length === 0) throw new Error('没有收到图片')
+    const settings = await loadSettings()
+    const engines = await ocrEngines(ocrContext)
+    const url = new URL(req.url || PREFIX, 'http://localhost')
+    const requested = url.searchParams.get('engine') || ''
+    const active = pickOcrEngine(engines, requested || settings.ocr.engine)
+    const dir = await mkdtemp(path.join(tmpdir(), SESSION_PREFIX + 'ocrimg-'))
+    try {
+      const image = path.join(dir, 'region.png')
+      await writeFile(image, body)
+      const startedAt = Date.now()
+      const result = await runOcr(image, active, { lang: settings.ocr.lang, scale: settings.ocr.scale })
+      sendJson(res, 200, {
+        ok: true,
+        text: result.text,
+        lines: result.lines,
+        engine: result.engine,
+        engineLabel: active.label,
+        lang: result.lang,
+        ms: Date.now() - startedAt,
+      })
+    } finally {
+      await rm(dir, { recursive: true, force: true }).catch(() => {})
+    }
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+// ------------------------------------------------------ clipboard routes
+
+async function handleClipboard(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  if (process.platform !== 'win32') { sendJson(res, 400, { ok: false, error: '目前只支持 Windows' }); return }
+  const url = new URL(req.url || PREFIX, 'http://localhost')
+  const kind = url.searchParams.get('kind') || 'image'
+  const stored = url.searchParams.get('path') || ''
+  try {
+    let target = ''
+    if (kind === 'image' || kind === 'files') {
+      if (stored) {
+        const full = path.resolve(stored)
+        if (!await allowedTarget(full)) throw new Error('路径不在录制目录内')
+        target = full
+      } else {
+        const body = await readBody(req, SAVE_LIMIT)
+        if (body.length === 0) throw new Error('没有收到文件')
+        target = await writeClipboardFile(url.searchParams.get('name') || '', body, '.png')
+      }
+    } else if (kind === 'text') {
+      const body = await readBody(req, 8 * 1024 * 1024)
+      if (body.length === 0) throw new Error('没有收到文字')
+      target = await writeClipboardFile('ocr-text.txt', body, '.txt')
+    } else {
+      throw new Error('未知的剪贴板类型：' + kind)
+    }
+    await runChild(path.join(LIB, 'clipboard.ps1'), ['-Kind', kind, '-Path', target], 20000)
+    sendJson(res, 200, { ok: true, kind, path: target })
+  } catch (error) {
+    sendJson(res, 400, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+async function handleOpen(req, res) {
+  if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
+  if (process.platform !== 'win32') { sendJson(res, 400, { ok: false, error: '目前只支持 Windows' }); return }
+  const url = new URL(req.url || PREFIX, 'http://localhost')
+  const target = url.searchParams.get('path') || ''
+  try {
+    if (!target) throw new Error('缺少 path')
+    const full = path.resolve(target)
+    if (!await allowedTarget(full)) throw new Error('只能打开录制目录内的文件')
+    await stat(full)
+    await runChild(path.join(LIB, 'clipboard.ps1'), ['-Kind', 'open', '-Path', full], 20000)
+    sendJson(res, 200, { ok: true, path: full })
+  } catch (error) {
+    sendJson(res, 400, { ok: false, error: String((error && error.message) || error) })
   }
 }
 
@@ -1168,6 +1644,10 @@ const ROUTES = [
   { kind: 'prefix', path: PREFIX + '/library/delete', handler: handleLibraryDelete },
   { kind: 'prefix', path: PREFIX + '/library', handler: handleLibrary },
   { kind: 'prefix', path: PREFIX + '/reveal', handler: handleReveal },
+  { kind: 'prefix', path: PREFIX + '/ocr/status', handler: handleOcrStatus },
+  { kind: 'prefix', path: PREFIX + '/ocr', handler: handleOcr },
+  { kind: 'prefix', path: PREFIX + '/clipboard', handler: handleClipboard },
+  { kind: 'prefix', path: PREFIX + '/open', handler: handleOpen },
 ]
 
 function resolveWebServer(scope) {
@@ -1186,6 +1666,7 @@ function resolveWebServer(scope) {
 }
 
 export function apply(ctx) {
+  ocrContext = ctx
   cleanupOldSessions().catch(() => {})
   void installAgentAssets().catch(error => log('安装技能/CLI 失败：', (error && error.message) || error))
   // 预热常驻截图服务：PowerShell 冷启动和 C# 加载都放后台，第一次截图就快。
@@ -1239,4 +1720,7 @@ export const __test = {
   safeName, normalizeSource, clamp, readFrames, countFrames,
   normalizeSettings, recordingsDir, screenshotsDir,
   captureShotFast, startShotServer, stopShotServer,
+  parseShortcut, formatShortcut, resolveOcrEngine, splitPatchRows, parseEngineRows,
+  pickOcrEngine, runOcr, ocrEngines, winrtLanguages, allowedTarget, clipboardDir,
+  handleOcr, handleOcrStatus, handleClipboard,
 }

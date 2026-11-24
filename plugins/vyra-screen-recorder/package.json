@@ -1,9 +1,9 @@
 {
   "name": "vyra-screen-recorder",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 MP4 / WebM；截图带选区与标注、设置页、快捷键和文件管理。",
+  "description": "DSH 录屏与截图：工具栏选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音与麦克风，WebCodecs 编成 MP4 / WebM；截图带选区与标注、一键提取文字与复制图片/文件（Windows 自带 OCR，可接 dsh-tool-ocr 引擎）、悬停显示快捷键、设置页、快捷键和文件管理。",
   "main": "./index.js",
   "bin": {
     "vsr": "bin/vsr.mjs"
@@ -43,7 +43,8 @@
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
     "check:client": "node scripts/build-client.mjs --check",
-    "check": "node scripts/check-syntax.mjs",
+    "fix:bom": "node scripts/fix-bom.mjs",
+    "check": "node scripts/check-syntax.mjs && node scripts/fix-bom.mjs --check",
     "test": "node --test --test-concurrency=1 test/*.test.mjs"
   },
   "engines": {
@@ -56,8 +57,13 @@
     "screen-recorder",
     "screenshot",
     "webcodecs",
+    "ocr",
+    "clipboard",
     "录屏",
-    "截图"
+    "截图",
+    "文字识别",
+    "取字",
+    "剪贴板"
   ],
   "license": "MIT"
 }

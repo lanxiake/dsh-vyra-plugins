@@ -3442,6 +3442,29 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       text: L('文字', 'Text'),
       noFrames: L('没有录到画面', 'No frames were captured'),
       noRoute: L('宿主路由不可用，请完整重启 DSH 后再试', 'Host routes unavailable; fully restart DSH'),
+      // 工具条悬停提示：一行主标题 + 一行可选的快捷键组合（VS Code 风格）。
+      recordTip: L('录制屏幕', 'Record screen'),
+      stopTip: L('停止录制', 'Stop recording'),
+      shotTip: L('截图', 'Screenshot'),
+      // 截图浮层：取字与复制。
+      extractText: L('提取文字', 'Extract text'),
+      extracting: L('正在识别文字…', 'Recognizing text…'),
+      extractingProgress: L('正在识别文字', 'Recognizing text'),
+      copyText: L('复制文字', 'Copy text'),
+      copied: L('已复制', 'Copied'),
+      noText: L('没有识别到文字', 'No text found'),
+      textPanelTitle: L('文字', 'Text'),
+      copyImage: L('复制图片', 'Copy image'),
+      copyImageDone: L('图片已复制', 'Image copied'),
+      copyFile: L('复制文件', 'Copy file'),
+      copyFileDone: L('文件已复制', 'File copied'),
+      pasteHint: L('粘贴到聊天窗口或资源管理器', 'Paste into a chat or Explorer'),
+      textFailed: L('识别文字失败：', 'Text extraction failed: '),
+      copyFailed: L('复制失败：', 'Copy failed: '),
+      ocrUnavailable: L('系统 OCR 不可用，请在设置里检查识别语言包', 'System OCR unavailable; check the OCR language pack'),
+      ocrCharacters: (count) => L('识别出 ' + count + ' 个字符', count + ' characters'),
+      hideTextPanel: L('收起文字面板', 'Hide text panel'),
+      showTextPanel: L('展开文字面板（可以选中复制）', 'Show text panel'),
     }
 
     const DEFAULT_SETTINGS = {
@@ -3456,7 +3479,15 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       includeSystemAudio: true,
       includeMic: true,
       hideDshOnShot: false,
-      shortcuts: { screenshot: 'Ctrl+Alt+S', record: 'Ctrl+Alt+R' },
+      shortcuts: {
+        screenshot: 'Ctrl+Alt+S',
+        record: 'Ctrl+Alt+R',
+        copyImage: 'Ctrl',
+        clipboard: 'Ctrl+Shift+C',
+        text: 'Ctrl+Alt+C',
+        save: 'Ctrl+S',
+      },
+      ocr: { engine: 'auto', lang: 'system', scale: 2 },
     }
 
     // ------------------------------------------------------------------- store
@@ -3544,6 +3575,55 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       } catch { /* 保留默认值 */ }
     }
 
+    // ------------------------------------------------------- OCR 与剪贴板
+    // 截图浮层的「提取文字」把选中的那块图发给宿主，宿主用 dsh-tool-ocr 配的
+    // 引擎（没有配置时用系统自带的 Windows OCR）识别，返回文字和每行位置。
+    async function ocrRegion(blob) {
+      const response = await fetch(PREFIX + '/ocr', { method: 'POST', body: blob })
+      const text = await response.text()
+      let data = {}
+      try { data = text ? JSON.parse(text) : {} } catch { /* ignore */ }
+      if (!response.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + response.status))
+      return data
+    }
+
+    /**
+     * 把图片/文字/文件列表放进系统剪贴板。
+     *
+     * @param {'image'|'text'|'files'} kind - 剪贴板内容类型。
+     * @param {{blob?: Blob, name?: string, text?: string, path?: string}} value - 内容或已保存文件路径。
+     */
+    async function putClipboard(kind, value) {
+      const query = '?kind=' + kind
+        + (value && value.name ? '&name=' + encodeURIComponent(value.name) : '')
+        + (value && value.path ? '&path=' + encodeURIComponent(value.path) : '')
+      let body
+      if (kind === 'text') body = new Blob([(value && value.text) || ''], { type: 'text/plain;charset=utf-8' })
+      else if (value && value.blob) body = value.blob
+      const response = await fetch(PREFIX + '/clipboard' + query, { method: 'POST', body })
+      const text = await response.text()
+      let data = {}
+      try { data = text ? JSON.parse(text) : {} } catch { /* ignore */ }
+      if (!response.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + response.status))
+      return data
+    }
+
+    /** 用系统默认程序打开已保存的图片。 */
+    async function openFile(pathValue) {
+      const response = await fetch(PREFIX + '/open?path=' + encodeURIComponent(pathValue), { cache: 'no-store' })
+      const text = await response.text()
+      let data = {}
+      try { data = text ? JSON.parse(text) : {} } catch { /* ignore */ }
+      if (!response.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + response.status))
+      return data
+    }
+
+    /** 把剪贴板成功的结果写进提示条；失败时说明卡在哪。 */
+    function copiedToast(kind) {
+      const label = kind === 'text' ? S.copyText : kind === 'files' ? S.copyFile : S.copyImage
+      toast(label + L('：', ': ') + L('已放进剪贴板', 'copied to the clipboard') + ' · ' + S.pasteHint, { kind: 'success' })
+    }
+
     // ------------------------------------------------------------- formatting
     function pad(value) { return String(value).padStart(2, '0') }
     function formatDuration(seconds) {
@@ -3569,6 +3649,48 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       if (choice.type === 'region') return 'region'
       if (choice.type === 'monitor') return 'monitor:' + (choice.name || (choice.x + ',' + choice.y))
       return 'desktop'
+    }
+
+    // ------------------------------------------------------------- shortcuts
+    // 快手显示：把宿主解析好的组合渲染成 "Ctrl+Alt+S"，提示里用它。
+    // 只做展示，匹配仍由 matchesShortcut 按事件本身判断。
+    function shortcutParts(combo) {
+      const text = typeof combo === 'string' ? combo.trim() : ''
+      if (!text) return []
+      const parts = text.split(/[+\s]+/).filter(Boolean)
+      const tokens = parts.length > 1 ? parts : (text.match(/ctrl|alt|shift|meta|[^+]?[A-Za-z0-9]/gi) || [])
+      const names = { ctrl: 'Ctrl', control: 'Ctrl', alt: 'Alt', shift: 'Shift', meta: 'Meta', cmd: 'Meta' }
+      const out = []
+      let key = ''
+      for (const token of tokens) {
+        const mapped = names[token.toLowerCase()]
+        if (mapped) { if (!out.includes(mapped)) out.push(mapped); continue }
+        key = token
+      }
+      if (key) out.push(key === ' ' || key.toLowerCase() === 'space' ? 'Space' : key.toUpperCase())
+      return out
+    }
+
+    /** 提示条上的按键帽：一个键一个方框，而不是 "Ctrl+Alt+S" 一串文字。 */
+    function ShortcutKeys(props) {
+      const parts = shortcutParts(props.combo)
+      if (parts.length === 0) return null
+      return h('span', { className: 'vsr-tip-keys' },
+        ...parts.map((part, index) => h('kbd', { key: index, className: 'vsr-kbd' }, part)))
+    }
+
+    /**
+     * 鼠标悬停提示：主标题一行，可选快捷键一行。
+     * 用自绘的提示而不是原生 title——原生提示的延迟、字体、按键帽都没法控制，
+     * 也不好看；这里和 VS Code 的悬停一致：上方居中、深色、带按键帽。
+     */
+    function Tip(props) {
+      if (!props.label) return null
+      return h('span', { className: 'vsr-tip' + (props.align === 'end' ? ' vsr-tip-end' : ''), role: 'tooltip', 'aria-hidden': 'true' },
+        h('span', { className: 'vsr-tip-body' },
+          h('span', { className: 'vsr-tip-label' }, props.label),
+          props.shortcut ? h(ShortcutKeys, { combo: props.shortcut }) : null,
+          props.hint ? h('span', { className: 'vsr-tip-hint' }, props.hint) : null))
     }
 
     // ------------------------------------------------------------- recording
@@ -4295,6 +4417,14 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const [converting, setConverting] = useState(null)
       const [convertProgress, setConvertProgress] = useState(0)
       const [error, setError] = useState('')
+      // OCR 引擎列表：来自 dsh-tool-ocr 的配置 + 系统自带 Windows OCR。
+      const [ocrInfo, setOcrInfo] = useState({ engines: [], languages: [], winrt: false, active: '' })
+
+      async function refreshOcr() {
+        try {
+          setOcrInfo(await apiJson('/ocr/status'))
+        } catch { /* 宿主老版本没有这条路由时保持空列表 */ }
+      }
 
       async function refreshLibrary() {
         const data = await apiJson('/library')
@@ -4314,7 +4444,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           })
           setPaths(data.paths || null)
           setState({ settings, paths: data.paths || null })
-          await refreshLibrary()
+          await Promise.all([refreshLibrary(), refreshOcr()])
         } catch (failure) {
           setError(friendly(failure))
         } finally {
@@ -4335,7 +4465,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           setDraft({ ...DEFAULT_SETTINGS, ...data.settings, shortcuts: { ...DEFAULT_SETTINGS.shortcuts, ...(data.settings.shortcuts || {}) } })
           setPaths(data.paths || null)
           setState({ settings: data.settings, paths: data.paths || null })
-          await refreshLibrary()
+          await Promise.all([refreshLibrary(), refreshOcr()])
           toast(L('设置已保存', 'Settings saved'), { kind: 'success' })
         } catch (failure) {
           toast(L('保存失败：', 'Save failed: ') + friendly(failure), { kind: 'error' })
@@ -4526,8 +4656,50 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
             field(L('录屏 / 停止', 'Record / stop'), h(ShortcutInput, {
               value: draft.shortcuts.record,
               onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, record: value } }),
+            })),
+            field(L('截图浮层 · 提取文字', 'Shot overlay · text'), h(ShortcutInput, {
+              value: draft.shortcuts.text,
+              onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, text: value } }),
+            })),
+            field(L('截图浮层 · 复制图片', 'Shot overlay · copy image'), h(ShortcutInput, {
+              value: draft.shortcuts.copyImage,
+              onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, copyImage: value } }),
+            })),
+            field(L('截图浮层 · 复制文件', 'Shot overlay · copy file'), h(ShortcutInput, {
+              value: draft.shortcuts.clipboard,
+              onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, clipboard: value } }),
+            })),
+            field(L('截图浮层 · 用这张', 'Shot overlay · use this'), h(ShortcutInput, {
+              value: draft.shortcuts.save,
+              onChange: value => setDraft({ ...draft, shortcuts: { ...draft.shortcuts, save: value } }),
             }))),
-          h('div', { className: 'vsr-muted' }, L('在 DSH 窗口内生效；点输入框后直接按组合键。', 'Active while DSH is focused; focus the input and press the combo.'))),
+          h('div', { className: 'vsr-muted' }, L('在 DSH 窗口内生效；点输入框后直接按组合键。工具条按钮上悬停会显示对应快捷键。', 'Active while DSH is focused; hover a toolbar button to see its shortcut.'))),
+        h('section', { className: 'vsr-card' },
+          h('h3', null, L('文字识别', 'Text recognition')),
+          h('div', { className: 'vsr-grid' },
+            field(L('识别引擎', 'Engine'), h('select', {
+              className: 'vsr-select',
+              value: (draft.ocr && draft.ocr.engine) || 'auto',
+              onChange: event => setDraft({ ...draft, ocr: { ...(draft.ocr || {}), engine: event.target.value } }),
+            },
+            h('option', { value: 'auto' }, L('自动（跟随 OCR 插件配置，没有则用系统 OCR）', 'Auto (OCR plugin config, else Windows OCR)')),
+            ...ocrInfo.engines.map(engine => h('option', { key: engine.id, value: engine.id }, engine.label + ' · ' + engine.mode)))),
+            field(L('语言', 'Language'), h('select', {
+              className: 'vsr-select',
+              value: (draft.ocr && draft.ocr.lang) || 'system',
+              onChange: event => setDraft({ ...draft, ocr: { ...(draft.ocr || {}), lang: event.target.value } }),
+            },
+            h('option', { value: 'system' }, L('跟随系统', 'System default')),
+            ...ocrInfo.languages.map(tag => h('option', { key: tag, value: tag }, tag))))),
+          h('div', { className: 'vsr-muted' },
+            ocrInfo.winrt
+              ? L('系统 OCR 可用：', 'Windows OCR available: ') + ocrInfo.languages.join(', ') + L('。截图后拖框即自动取字。', '. Text is read as soon as you select.')
+              : L('系统 OCR 不可用：请在「设置 → 时间和语言 → 语言和区域」里安装语言包。', 'Windows OCR unavailable: install a language pack under Settings → Time & language.')),
+          h('label', { className: 'vsr-check' }, h('input', {
+            type: 'checkbox',
+            checked: !(draft.ocr && draft.ocr.auto === false),
+            onChange: event => setDraft({ ...draft, ocr: { ...(draft.ocr || {}), auto: event.target.checked } }),
+          }), L('截图后自动提取文字', 'Extract text automatically after selecting')))),
         h('section', { className: 'vsr-card' },
           h('h3', null, L('截图', 'Screenshot')),
           h('label', { className: 'vsr-check' }, h('input', {
@@ -4547,7 +4719,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
               h('button', { type: 'button', className: 'vsr-filter' + (filter === 'video' ? ' vsr-filter-on' : ''), onClick: () => setFilter('video') }, L('录屏', 'Videos')),
               h('button', { type: 'button', className: 'vsr-filter' + (filter === 'image' ? ' vsr-filter-on' : ''), onClick: () => setFilter('image') }, L('截图', 'Images')),
               h('button', { type: 'button', className: 'vsr-settings-link', onClick: () => { void refreshLibrary() } }, L('刷新', 'Refresh')),
-              h('button', { type: 'button', className: 'vsr-settings-link', onClick: openLibraryFolder }, L('打开文件夹', 'Open folder')))),
+              h('button', { type: 'button', className: 'vsr-settings-link', onClick: openLibraryFolder }, L('打开文件夹', 'Open folder'))),
           converting !== null ? h('div', { className: 'vsr-convert' },
             h('div', { className: 'vsr-muted' }, L('正在转 MP4：', 'Converting to MP4: ') + converting + '（会实时播放原音频）'),
             h('div', { className: 'vsr-bar' }, h('div', { className: 'vsr-bar-fill', style: { width: Math.round(convertProgress * 100) + '%' } }))) : null,
@@ -4584,28 +4756,34 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const seconds = recording ? Math.max(0, Math.floor((now - recording.startedAt) / 1000)) : 0
       const busy = snapshot.phase === 'starting' || snapshot.phase === 'encoding' || Boolean(snapshot.agentRecording)
       const isRecording = snapshot.phase === 'recording'
+      const settings = snapshot.settings || DEFAULT_SETTINGS
+      const shortcuts = settings.shortcuts || DEFAULT_SETTINGS.shortcuts
       const agentLabel = L('Agent 正在录屏', 'Agent is recording')
+      const recordLabel = snapshot.agentRecording ? agentLabel : (isRecording ? S.stopTip : S.recordTip)
+      const recordShortcut = snapshot.agentRecording ? '' : shortcuts.record
       return h('div', { className: 'vsr-toolbar' },
-        h('button', {
-          type: 'button',
-          className: 'vsr-btn' + (isRecording ? ' vsr-btn-rec' : ''),
-          disabled: busy,
-          title: snapshot.agentRecording ? agentLabel : (isRecording ? S.stop : S.record),
-          'aria-label': snapshot.agentRecording ? agentLabel : (isRecording ? S.stop : S.record),
-          onMouseDown: event => event.preventDefault(),
-          onClick: () => { if (isRecording) void stopRecording(); else void openPicker() },
-        }, isRecording
-          ? h('span', { className: 'vsr-rec-pill' }, h('span', { className: 'vsr-dot' }), formatDuration(seconds), iconStop())
-          : iconRecord()),
-        h('button', {
-          type: 'button',
-          className: 'vsr-btn',
-          disabled: busy || isRecording,
-          title: S.screenshot,
-          'aria-label': S.screenshot,
-          onMouseDown: event => event.preventDefault(),
-          onClick: () => { void takeScreenshot() },
-        }, iconCamera()),
+        h('div', { className: 'vsr-btn-wrap' },
+          h('button', {
+            type: 'button',
+            className: 'vsr-btn' + (isRecording ? ' vsr-btn-rec' : ''),
+            disabled: busy,
+            'aria-label': recordLabel,
+            onMouseDown: event => event.preventDefault(),
+            onClick: () => { if (isRecording) void stopRecording(); else void openPicker() },
+          }, isRecording
+            ? h('span', { className: 'vsr-rec-pill' }, h('span', { className: 'vsr-dot' }), formatDuration(seconds), iconStop())
+            : iconRecord()),
+          h(Tip, { label: recordLabel, shortcut: recordShortcut })),
+        h('div', { className: 'vsr-btn-wrap' },
+          h('button', {
+            type: 'button',
+            className: 'vsr-btn',
+            disabled: busy || isRecording,
+            'aria-label': S.shotTip,
+            onMouseDown: event => event.preventDefault(),
+            onClick: () => { void takeScreenshot() },
+          }, iconCamera()),
+          h(Tip, { label: S.shotTip, shortcut: shortcuts.screenshot })),
       )
     }
 
@@ -4739,6 +4917,13 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const [textInput, setTextInput] = useState(null)
       const [imageUrl, setImageUrl] = useState(shot.url)
       const [hiddenDsh, setHiddenDsh] = useState(Boolean(shot.hiddenDsh))
+      // 取字与复制：和 QQ / 微信截图一样，在标注工具条上一键取字、一键复制。
+      const [extract, setExtract] = useState(null) // { status: 'loading'|'ready'|'error', text, lines, engine, error }
+      const [panelOpen, setPanelOpen] = useState(true)
+      const [copying, setCopying] = useState(null) // 'image' | 'file' | 'text'
+      const [cursorPos, setCursorPos] = useState(null)
+      const extractRef = useRef(null)
+      const selAtExtract = useRef('')
       const generatedUrls = useRef([])
       const wrapRef = useRef(null)
       const canvasRef = useRef(null)
@@ -4867,7 +5052,26 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           ctx.lineWidth = 1
           ctx.strokeRect(sel.x + 0.5, sel.y + 0.5, sel.w, sel.h)
         }
-      }, [sel, strokes, draft, disp, phase, tool, color, lineWidth, viewport])
+        // 取字结果的行框：半透明蓝底 + 细边，和 QQ / 微信截图取字后的选区一致。
+        // 坐标来自原图，按当前显示比例缩放。
+        if (phase === 'annotate' && !isRegion && extract && extract.status === 'ready' && extract.lines.length > 0) {
+          const kx = disp.w / imageW
+          const ky = disp.h / imageH
+          for (const line of extract.lines) {
+            if (!line || !Number.isFinite(line.x) || !Number.isFinite(line.y)) continue
+            const x = line.x * kx
+            const y = line.y * ky
+            const w = Math.max(1, (line.w || 0) * kx)
+            const h = Math.max(1, (line.h || 0) * ky)
+            if (sel && (x + w < sel.x || y + h < sel.y || x > sel.x + sel.w || y > sel.y + sel.h)) continue
+            ctx.fillStyle = 'rgba(22,119,255,.16)'
+            ctx.fillRect(x, y, w, h)
+            ctx.strokeStyle = 'rgba(74,163,255,.9)'
+            ctx.lineWidth = 1
+            ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, w - 1), Math.max(1, h - 1))
+          }
+        }
+      }, [sel, strokes, draft, disp, phase, tool, color, lineWidth, viewport, extract])
 
       function localPoint(event) {
         const rect = wrapRef.current.getBoundingClientRect()
@@ -4950,68 +5154,163 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         setTextInput(null)
       }
 
+      /**
+       * 把当前选区（含标注）合成成一张原分辨率的 canvas。
+       *
+       * 不加标注时直接切原图像素：没有重编码，取字和复制图片都最清晰。
+       * 有标注时才把标注按原图比例画上去。
+       */
+      function renderRegion() {
+        return new Promise((resolve, reject) => {
+          if (!sel) { reject(new Error(L('还没有选区', 'No selection yet'))); return }
+          const image = new Image()
+          image.onerror = () => reject(new Error(L('图片加载失败', 'Image failed to load')))
+          image.onload = () => {
+            const scaleX = imageW / disp.w
+            const scaleY = imageH / disp.h
+            const sx = sel.x * scaleX
+            const sy = sel.y * scaleY
+            const sw = Math.max(1, sel.w * scaleX)
+            const sh = Math.max(1, sel.h * scaleY)
+            const canvas = document.createElement('canvas')
+            canvas.width = Math.max(1, Math.round(sw))
+            canvas.height = Math.max(1, Math.round(sh))
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
+            if (strokes.length > 0) {
+              ctx.save()
+              ctx.translate(-sx, -sy)
+              const scaled = strokes.map(stroke => ({ ...stroke, width: stroke.width * scaleX, size: (stroke.size || 0) * scaleX }))
+              for (const stroke of scaled) {
+                const points = stroke.points
+                ctx.strokeStyle = stroke.color
+                ctx.fillStyle = stroke.color
+                ctx.lineWidth = stroke.width
+                ctx.lineCap = 'round'
+                ctx.lineJoin = 'round'
+                if (stroke.type === 'pen') {
+                  ctx.beginPath()
+                  ctx.moveTo(points[0].x, points[0].y)
+                  for (let index = 1; index < points.length; index++) ctx.lineTo(points[index].x, points[index].y)
+                  ctx.stroke()
+                } else if (stroke.type === 'rect') {
+                  const start = points[0]
+                  const end = points[points.length - 1]
+                  ctx.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y)
+                } else if (stroke.type === 'arrow') {
+                  const start = points[0]
+                  const end = points[points.length - 1]
+                  ctx.beginPath()
+                  ctx.moveTo(start.x, start.y)
+                  ctx.lineTo(end.x, end.y)
+                  ctx.stroke()
+                  const angle = Math.atan2(end.y - start.y, end.x - start.x)
+                  const size = Math.max(9, stroke.width * 3.2)
+                  ctx.beginPath()
+                  ctx.moveTo(end.x, end.y)
+                  ctx.lineTo(end.x - size * Math.cos(angle - Math.PI / 7), end.y - size * Math.sin(angle - Math.PI / 7))
+                  ctx.moveTo(end.x, end.y)
+                  ctx.lineTo(end.x - size * Math.cos(angle + Math.PI / 7), end.y - size * Math.sin(angle + Math.PI / 7))
+                  ctx.stroke()
+                } else if (stroke.type === 'text') {
+                  ctx.font = '600 ' + Math.max(14, stroke.size) + 'px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif'
+                  ctx.textBaseline = 'top'
+                  ctx.fillText(stroke.text, points[0].x, points[0].y)
+                }
+              }
+              ctx.restore()
+            }
+            resolve(canvas)
+          }
+          image.src = imageUrl
+        })
+      }
+
+      /** 导出成 JPEG（挂附件/存盘用）：和以前一样，但复用 renderRegion。 */
       function exportShot() {
         if (!sel) return
-        const image = new Image()
-        image.onload = () => {
-          const scaleX = imageW / disp.w
-          const scaleY = imageH / disp.h
-          const sx = sel.x * scaleX
-          const sy = sel.y * scaleY
-          const sw = Math.max(1, sel.w * scaleX)
-          const sh = Math.max(1, sel.h * scaleY)
-          const canvas = document.createElement('canvas')
-          canvas.width = Math.round(sw)
-          canvas.height = Math.round(sh)
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
-          ctx.save()
-          ctx.translate(-sx, -sy)
-          const scaled = strokes.map(stroke => ({ ...stroke, width: stroke.width * scaleX, size: (stroke.size || 0) * scaleX }))
-          for (const stroke of scaled) {
-            const points = stroke.points
-            ctx.strokeStyle = stroke.color
-            ctx.fillStyle = stroke.color
-            ctx.lineWidth = stroke.width
-            ctx.lineCap = 'round'
-            ctx.lineJoin = 'round'
-            if (stroke.type === 'pen') {
-              ctx.beginPath()
-              ctx.moveTo(points[0].x, points[0].y)
-              for (let index = 1; index < points.length; index++) ctx.lineTo(points[index].x, points[index].y)
-              ctx.stroke()
-            } else if (stroke.type === 'rect') {
-              const start = points[0]
-              const end = points[points.length - 1]
-              ctx.strokeRect(start.x, start.y, end.x - start.x, end.y - start.y)
-            } else if (stroke.type === 'arrow') {
-              const start = points[0]
-              const end = points[points.length - 1]
-              ctx.beginPath()
-              ctx.moveTo(start.x, start.y)
-              ctx.lineTo(end.x, end.y)
-              ctx.stroke()
-              const angle = Math.atan2(end.y - start.y, end.x - start.x)
-              const size = Math.max(9, stroke.width * 3.2)
-              ctx.beginPath()
-              ctx.moveTo(end.x, end.y)
-              ctx.lineTo(end.x - size * Math.cos(angle - Math.PI / 7), end.y - size * Math.sin(angle - Math.PI / 7))
-              ctx.moveTo(end.x, end.y)
-              ctx.lineTo(end.x - size * Math.cos(angle + Math.PI / 7), end.y - size * Math.sin(angle + Math.PI / 7))
-              ctx.stroke()
-            } else if (stroke.type === 'text') {
-              ctx.font = '600 ' + Math.max(14, stroke.size) + 'px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif'
-              ctx.textBaseline = 'top'
-              ctx.fillText(stroke.text, points[0].x, points[0].y)
-            }
-          }
-          ctx.restore()
+        renderRegion().then(canvas => {
           canvas.toBlob(blob => {
             closeShot()
             if (blob) void saveScreenshot(blob, '截图-' + stamp() + '.jpg')
           }, 'image/jpeg', 0.9)
+        }).catch(() => closeShot())
+      }
+
+      /** canvas → PNG Blob，失败时给出可读错误。 */
+      function toPng(canvas) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob(blob => {
+            if (blob) resolve(blob)
+            else reject(new Error(L('生成图片失败', 'Could not render the image')))
+          }, 'image/png')
+        })
+      }
+
+      const selectionKey = () => (sel ? [sel.x, sel.y, sel.w, sel.h].map(value => Math.round(value)).join(',') : '')
+
+      /** 提取选区里的文字：结果进面板，同时提示成功/失败。 */
+      async function extractText() {
+        if (!sel || extractRef.current === 'loading') return
+        extractRef.current = 'loading'
+        selAtExtract.current = selectionKey()
+        setExtract({ status: 'loading', text: '', lines: [], engine: '' })
+        setPanelOpen(true)
+        try {
+          const canvas = await renderRegion()
+          const blob = await toPng(canvas)
+          const result = await ocrRegion(blob)
+          // 识别期间用户又改了选区，这份结果就不是他要的，丢掉。
+          if (selAtExtract.current !== selectionKey()) return
+          extractRef.current = 'ready'
+          setExtract({ status: 'ready', text: result.text || '', lines: result.lines || [], engine: result.engine || '' })
+        } catch (error) {
+          extractRef.current = 'error'
+          setExtract({ status: 'error', text: '', lines: [], engine: '', error: friendly(error) })
+          toast(S.textFailed + friendly(error), { kind: 'error' })
         }
-        image.src = imageUrl
+      }
+
+      /** 没取过字就直接取字并复制；取过了就只复制。 */
+      async function copyText() {
+        if (extract && extract.status === 'ready' && extract.text) {
+          try {
+            await putClipboard('text', { text: extract.text })
+            copiedToast('text')
+          } catch (error) {
+            toast(S.copyFailed + friendly(error), { kind: 'error' })
+          }
+          return
+        }
+        await extractText()
+      }
+
+      /** 复制选区图片：先存成 PNG（取字/复制文件都复用这个文件），再放进剪贴板。 */
+      async function copyImage(as) {
+        if (!sel || copying !== null) return
+        setCopying(as === 'files' ? 'file' : 'image')
+        try {
+          const canvas = await renderRegion()
+          const blob = await toPng(canvas)
+          const name = '截图-' + stamp() + '.png'
+          const uploaded = await uploadBlob(blob, name, 'image')
+          if (as === 'files') {
+            await putClipboard('files', { path: uploaded.file })
+            copiedToast('files')
+          } else {
+            await putClipboard('image', { blob })
+            copiedToast('image')
+          }
+        } catch (error) {
+          toast(S.copyFailed + friendly(error), { kind: 'error' })
+        } finally {
+          setCopying(null)
+        }
+      }
+
+      /** 复制文字后收起面板，露出完整截图看哪里已复制。 */
+      function finishTextPanel() {
+        setPanelOpen(false)
       }
 
       function confirmRegion() {
@@ -5039,15 +5338,46 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       }
 
       useEffect(() => {
+        const shortcuts = (state.settings || DEFAULT_SETTINGS).shortcuts || DEFAULT_SETTINGS.shortcuts
+        // 面板里选中文字按 Ctrl+C 交给浏览器，不能当「复制图片」。
+        const inPanel = event => {
+          const target = event.target
+          return Boolean(target && typeof target.closest === 'function' && target.closest('.vsr-text-panel'))
+        }
         const onKey = event => {
           if (event.key === 'Escape') {
             event.preventDefault()
             if (textInput) { setTextInput(null); return }
             closeShot()
-          } else if (event.key === 'Enter' && !textInput) {
+            return
+          }
+          if (textInput || inPanel(event)) return
+          if (event.key === 'Enter') {
             event.preventDefault()
             confirmCurrent()
-          } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            return
+          }
+          if (matchesShortcut(event, shortcuts.text)) {
+            event.preventDefault()
+            if (phase === 'annotate' && !isRegion && sel) void extractText()
+            return
+          }
+          if (matchesShortcut(event, shortcuts.clipboard)) {
+            event.preventDefault()
+            if (phase === 'annotate' && !isRegion && sel) void copyImage('files')
+            return
+          }
+          if (matchesShortcut(event, shortcuts.copyImage)) {
+            event.preventDefault()
+            if (phase === 'annotate' && !isRegion && sel) void copyImage('image')
+            return
+          }
+          if (matchesShortcut(event, shortcuts.save)) {
+            event.preventDefault()
+            confirmCurrent()
+            return
+          }
+          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
             event.preventDefault()
             setStrokes(current => current.slice(0, -1))
           }
@@ -5055,6 +5385,16 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
         window.addEventListener('keydown', onKey, true)
         return () => window.removeEventListener('keydown', onKey, true)
       })
+
+      const settings = (state.settings || DEFAULT_SETTINGS)
+      const shortcuts = settings.shortcuts || DEFAULT_SETTINGS.shortcuts
+      // 松手出选区后自动取字（和 QQ / 微信一致）；设置里可以关掉。
+      useEffect(() => {
+        if (phase !== 'annotate' || isRegion || !sel) return
+        if (settings.ocr && settings.ocr.auto === false) return
+        if (extractRef.current !== null) return
+        void extractText()
+      }, [phase, isRegion, sel && sel.x, sel && sel.y, sel && sel.w, sel && sel.h])
 
       const colors = ['#e5484d', '#f5a623', '#2ea44f', '#1677ff', '#ffffff', '#111111']
       return h('div', { className: 'vsr-overlay vsr-overlay-shot' },
@@ -5084,22 +5424,112 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           phase === 'annotate' && !isRegion ? h('div', { className: 'vsr-toolbar-floating' },
             h('div', { className: 'vsr-toolgroup' },
               ...[['pen', '✎', S.pen], ['rect', '▭', S.rect], ['arrow', '↗', S.arrow], ['text', 'T', S.text]].map(([key, glyph, label]) =>
-                h('button', { key, type: 'button', className: 'vsr-tool' + (tool === key ? ' vsr-tool-active' : ''), title: label, onClick: () => setTool(key) }, glyph)),
+                h('div', { key, className: 'vsr-tip-host' },
+                  h('button', { type: 'button', className: 'vsr-tool' + (tool === key ? ' vsr-tool-active' : ''), 'aria-label': label, onClick: () => setTool(key) }, glyph),
+                  h(Tip, { label }))),
               h('span', { className: 'vsr-sep' }),
               ...colors.map(value => h('button', { key: value, type: 'button', className: 'vsr-swatch' + (color === value ? ' vsr-swatch-active' : ''), style: { background: value }, title: value, onClick: () => setColor(value) })),
               h('span', { className: 'vsr-sep' }),
               ...[2, 3, 5].map(value => h('button', { key: value, type: 'button', className: 'vsr-tool' + (lineWidth === value ? ' vsr-tool-active' : ''), title: String(value), onClick: () => setLineWidth(value) }, h('span', { className: 'vsr-width-dot', style: { width: value + 2, height: value + 2 } }))),
               h('span', { className: 'vsr-sep' }),
-              h('button', { type: 'button', className: 'vsr-tool', title: S.reselect, onClick: () => { setPhase('select'); setSel(null) } }, '⟲'),
-              h('button', { type: 'button', className: 'vsr-tool', title: S.undo, onClick: () => setStrokes(current => current.slice(0, -1)) }, '↶'),
-              h('button', { type: 'button', className: 'vsr-tool', title: S.clear, onClick: () => setStrokes([]) }, '🗑')),
+              h('div', { className: 'vsr-tip-host' },
+                h('button', { type: 'button', className: 'vsr-tool', 'aria-label': S.reselect, onClick: () => { setPhase('select'); setSel(null) } }, '⟲'),
+                h(Tip, { label: S.reselect })),
+              h('div', { className: 'vsr-tip-host' },
+                h('button', { type: 'button', className: 'vsr-tool', 'aria-label': S.undo, onClick: () => setStrokes(current => current.slice(0, -1)) }, '↶'),
+                h(Tip, { label: S.undo })),
+              h('div', { className: 'vsr-tip-host' },
+                h('button', { type: 'button', className: 'vsr-tool', 'aria-label': S.clear, onClick: () => setStrokes([]) }, '🗑'),
+                h(Tip, { label: S.clear }))),
+            // 取字与复制：和 QQ / 微信截图一样的一排操作，不带「用这张」那么大的视觉权重。
             h('div', { className: 'vsr-toolgroup' },
-              h('button', { type: 'button', className: 'vsr-btn-text', onClick: closeShot }, S.cancel),
-              h('button', { type: 'button', className: 'vsr-btn-primary', onClick: confirmCurrent }, S.useShot))) : null,
+              h('div', { className: 'vsr-tip-host' },
+                h('button', {
+                  type: 'button',
+                  className: 'vsr-tool vsr-tool-text' + (extract && extract.status === 'ready' ? ' vsr-tool-on' : ''),
+                  'aria-label': S.extractText,
+                  onClick: () => { void extractText() },
+                }, '文'),
+                h(Tip, { label: S.extractText, shortcut: shortcuts.text })),
+              h('div', { className: 'vsr-tip-host' },
+                h('button', {
+                  type: 'button',
+                  className: 'vsr-tool vsr-tool-text',
+                  'aria-label': S.copyImage,
+                  disabled: Boolean(copying),
+                  onClick: () => { void copyImage('image') },
+                }, '⧉'),
+                h(Tip, { label: S.copyImage, shortcut: shortcuts.copyImage })),
+              h('div', { className: 'vsr-tip-host' },
+                h('button', {
+                  type: 'button',
+                  className: 'vsr-tool vsr-tool-text',
+                  'aria-label': S.copyFile,
+                  disabled: Boolean(copying),
+                  onClick: () => { void copyImage('files') },
+                }, '⤓'),
+                h(Tip, { label: S.copyFile, shortcut: shortcuts.clipboard }))),
+            h('div', { className: 'vsr-toolgroup' },
+              h('div', { className: 'vsr-tip-host' },
+                h('button', { type: 'button', className: 'vsr-btn-text', onClick: closeShot }, S.cancel),
+                h(Tip, { label: S.cancel })),
+              h('div', { className: 'vsr-tip-host' },
+                h('button', { type: 'button', className: 'vsr-btn-primary', onClick: confirmCurrent }, S.useShot),
+                h(Tip, { label: S.useShot, shortcut: shortcuts.save })))) : null,
           phase === 'select' && isRegion ? h('div', { className: 'vsr-toolbar-floating' },
             h('div', { className: 'vsr-toolgroup' },
               h('button', { type: 'button', className: 'vsr-btn-text', onClick: closeShot }, S.cancel),
-              h('button', { type: 'button', className: 'vsr-btn-primary', disabled: !sel, onClick: confirmCurrent }, S.recordRegion))) : null))
+              h('button', { type: 'button', className: 'vsr-btn-primary', disabled: !sel, onClick: confirmCurrent }, S.recordRegion))) : null,
+          // 文字面板：和 QQ / 微信的取字一样，识别结果直接可选中、可一键复制。
+          phase === 'annotate' && !isRegion && extract && panelOpen
+            ? h(TextPanel, {
+              extract,
+              shortcut: shortcuts.text,
+              onCopy: () => { void copyText() },
+              onClose: finishTextPanel,
+              onRetry: () => { extractRef.current = null; void extractText() },
+            })
+            : null,
+          phase === 'annotate' && !isRegion && extract && extract.status === 'ready' && !panelOpen
+            ? h('button', { type: 'button', className: 'vsr-panel-reopen', onClick: () => setPanelOpen(true) }, '文 ' + S.showTextPanel)
+            : null))
+    }
+
+    /**
+     * 取字结果面板：状态（识别中/有字/没字/失败）+ 可选中文字 + 复制按钮。
+     */
+    function TextPanel(props) {
+      const value = props.extract
+      const chars = (value.text || '').replace(/\s/g, '').length
+      let body
+      if (value.status === 'loading') {
+        body = h('div', { className: 'vsr-panel-status' }, h('span', { className: 'vsr-spinner' }), S.extracting)
+      } else if (value.status === 'error') {
+        body = h('div', { className: 'vsr-panel-status vsr-panel-error' },
+          h('span', null, value.error || S.ocrUnavailable),
+          h('button', { type: 'button', className: 'vsr-panel-link', onClick: props.onRetry }, L('重试', 'Retry')))
+      } else if (!value.text || chars === 0) {
+        body = h('div', { className: 'vsr-panel-status' }, S.noText)
+      } else {
+        // 用 div + user-select:text 而不是 textarea：看得见整段、能按行读，
+        // 选中后 Ctrl+C 由浏览器自己处理（面板里的按键不再当快捷键）。
+        body = h('div', { className: 'vsr-panel-text', tabIndex: 0, onClick: event => event.stopPropagation() }, value.text)
+      }
+      return h('div', { className: 'vsr-text-panel', onClick: event => event.stopPropagation() },
+        h('div', { className: 'vsr-panel-head' },
+          h('strong', null, S.textPanelTitle),
+          value.status === 'ready' && chars > 0 ? h('span', { className: 'vsr-panel-meta' }, S.ocrCharacters(chars)) : null,
+          h('button', {
+            type: 'button',
+            className: 'vsr-panel-copy',
+            disabled: value.status !== 'ready' || chars === 0,
+            onClick: props.onCopy,
+          }, S.copyText),
+          h('button', { type: 'button', className: 'vsr-panel-x', 'aria-label': S.hideTextPanel, onClick: props.onClose }, '×')),
+        body,
+        value.status === 'ready' && chars > 0
+          ? h('div', { className: 'vsr-panel-foot' }, L('拖动选择部分文字，Ctrl+C 复制；点「复制文字」复制全部（', 'Drag to select, Ctrl+C to copy; “Copy text” copies all (') + props.shortcut + ')')
+          : null)
     }
 
     // ------------------------------------------------------------- overlays
@@ -5156,6 +5586,21 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 .vsr-btn:hover:not(:disabled) { background: var(--dsh-color-fill-quaternary, rgba(0,0,0,.06)); color: var(--dsh-color-text-primary, #111827); }
 .vsr-btn:disabled { opacity: .45; cursor: default; }
 .vsr-btn-rec { color: #e5484d; }
+/* 悬停提示：按钮外面套一层定位容器，提示绝对定位在按钮上方居中。
+   用 pointer-events:none 保证提示本身不会抢走 hover/点击。 */
+.vsr-btn-wrap { position: relative; display: inline-flex; }
+.vsr-tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); z-index: 2147483200; pointer-events: none; opacity: 0; transition: opacity .12s ease .28s; }
+.vsr-btn-wrap:hover .vsr-tip,
+.vsr-btn-wrap:focus-within .vsr-tip { opacity: 1; }
+.vsr-tip-end { left: auto; right: 0; transform: none; }
+.vsr-tip-body { display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 7px; background: rgba(28,28,31,.96); color: #f2f2f4; font: 500 12px/1.3 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.3); white-space: nowrap; }
+.vsr-tip-label { white-space: nowrap; }
+.vsr-tip-hint { color: #a9a9b2; font-weight: 400; }
+.vsr-tip-keys { display: inline-flex; align-items: center; gap: 3px; margin-left: 2px; }
+.vsr-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,.22); border-bottom-width: 2px; background: rgba(255,255,255,.1); color: #fff; font: 500 11px/1 ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace; }
+@media (prefers-color-scheme: light) {
+  .vsr-tip-body { background: rgba(32,32,36,.94); }
+}
 .vsr-rec-pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 12px; background: rgba(229,72,77,.12); color: #e5484d; font-size: 12px; font-variant-numeric: tabular-nums; }
 .vsr-rec-pill-floating { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 2147483001; height: 32px; padding: 0 12px; gap: 8px; background: rgba(20,20,22,.88); color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.35); backdrop-filter: blur(8px); }
 .vsr-dot { width: 8px; height: 8px; border-radius: 50%; background: #e5484d; box-shadow: 0 0 0 0 rgba(229,72,77,.6); animation: vsr-pulse 1.4s infinite; }
@@ -5215,6 +5660,32 @@ html.vsr-capturing .vsr-toast { visibility: hidden !important; }
 .vsr-btn-text:hover { color: #fff; }
 .vsr-btn-primary { border: 0; border-radius: 7px; background: #1677ff; color: #fff; cursor: pointer; font: inherit; padding: 6px 12px; }
 .vsr-btn-primary:disabled { opacity: .45; cursor: default; }
+/* 浮层工具条上的悬停提示：和工具条一样是深色底，所以提示反色成浅色。 */
+.vsr-tip-host { position: relative; display: inline-flex; }
+.vsr-tip-host .vsr-tip { bottom: calc(100% + 10px); }
+.vsr-tip-host .vsr-tip-body { background: #f6f6f8; color: #1c1c1f; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+.vsr-tip-host .vsr-tip-hint { color: #6b7280; }
+.vsr-tip-host .vsr-kbd { border-color: rgba(0,0,0,.18); background: rgba(0,0,0,.06); color: #1c1c1f; }
+.vsr-tool-text { font-size: 13px; font-weight: 600; }
+.vsr-tool-on { background: rgba(22,119,255,.85); color: #fff; }
+.vsr-tool:disabled { opacity: .45; cursor: default; }
+/* 取字结果面板：贴在工具条上方，深色、可选中文字。 */
+.vsr-text-panel { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 2147483100; display: flex; flex-direction: column; width: min(560px, calc(100vw - 32px)); max-height: 38vh; border-radius: 12px; background: rgba(24,24,27,.96); color: #f2f2f4; box-shadow: 0 18px 52px rgba(0,0,0,.5); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; overflow: hidden; }
+.vsr-panel-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 12px; }
+.vsr-panel-meta { color: #9a9aa3; font-size: 11px; }
+.vsr-panel-copy { margin-left: auto; border: 0; border-radius: 6px; background: #1677ff; color: #fff; font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer; }
+.vsr-panel-copy:disabled { background: rgba(255,255,255,.12); color: #8e8e97; cursor: default; }
+.vsr-panel-x { border: 0; background: transparent; color: #cfcfd4; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.vsr-panel-x:hover { color: #fff; }
+.vsr-panel-text { flex: 1; min-height: 44px; overflow: auto; padding: 10px 12px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; user-select: text; cursor: text; outline: none; }
+.vsr-panel-text::selection { background: rgba(74,163,255,.45); }
+.vsr-panel-status { display: flex; align-items: center; gap: 8px; padding: 14px 12px; font-size: 12px; color: #cfcfd4; }
+.vsr-panel-error { color: #ff9a9e; flex-wrap: wrap; }
+.vsr-panel-link { border: 0; background: transparent; color: #8fc2ff; font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.vsr-panel-foot { padding: 6px 12px 8px; border-top: 1px solid rgba(255,255,255,.08); color: #8e8e97; font-size: 11px; }
+.vsr-panel-reopen { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 2147483100; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(24,24,27,.94); color: #f2f2f4; font: inherit; font-size: 12px; padding: 5px 12px; cursor: pointer; }
+.vsr-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); border-top-color: #4aa3ff; animation: vsr-spin .8s linear infinite; }
+@keyframes vsr-spin { to { transform: rotate(360deg); } }
 .vsr-progress { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 2147483001; width: 300px; padding: 18px 20px; border-radius: 14px; background: rgba(24,24,27,.94); color: #fff; box-shadow: 0 24px 80px rgba(0,0,0,.45); backdrop-filter: blur(10px); font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
 .vsr-progress-title { font-size: 13px; margin-bottom: 12px; }
 .vsr-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.16); overflow: hidden; }

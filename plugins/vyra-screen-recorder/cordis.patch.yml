@@ -2,7 +2,7 @@
 #
 # 声明本包是组合包，让 DSH 插件管理器能够安装、启停、卸载它。
 # 浏览器半边由 package.json 的 dsh.client 声明加载；宿主半边导出
-# webServer 路由（抓屏 / 录屏 / 系统声音）。
+# webServer 路由（抓屏 / 录屏 / 系统声音 / 截图取字 / 剪贴板）。
 - insert:
     - id: vyra-screen-recorder
       name: vyra-screen-recorder

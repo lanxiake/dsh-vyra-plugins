@@ -1,6 +1,6 @@
 ---
 name: vyra-screen-recorder
-description: Windows 录屏、截图、录制源枚举与文件列表（vyra-screen-recorder 插件提供的 vsr CLI）。截图/枚举/文件列表不需要 DSH 运行；录屏需要 DSH Web 界面保持打开以完成 WebCodecs 编码。
+description: Windows 录屏、截图、录制源枚举、文件列表，以及截图取字（Windows 自带 OCR）与剪贴板（vyra-screen-recorder 插件提供的 vsr CLI 与宿主路由）。截图/枚举/文件列表/取字不需要 DSH 运行；录屏需要 DSH Web 界面保持打开以完成 WebCodecs 编码。
 ---
 
 # 录屏 / 截图 CLI
@@ -28,6 +28,27 @@ vsr shot                  # 省略 --out：保存到设置的截图目录
 - `--region x,y,w,h` 只抓一块；`--max-edge` 缩放长边；`--quality` 是 JPEG 质量。
 - `--hide-dsh` 先隐藏 DSH 窗口再抓，用来截取被 DSH 挡住的其他应用。
 - 输出路径会解析成绝对路径，父目录不存在会自动创建。
+
+## 截图取字（Windows 自带 OCR，不需要 DSH 运行）
+
+截图浮层里拖框松手就会自动取字，并把结果放进「文字」面板（可选中、可一键复制）；
+工具条上还有「复制图片」「复制文件」。「复制图片」把选区放进剪贴板（能直接粘进聊天窗口），
+「复制文件」把保存下来的 PNG 作为文件放进剪贴板（能粘进资源管理器）。
+
+Agent 侧要读图里的字，优先用 `dsh-tool-ocr` 的 `ocr_read` 工具；没有那个插件时
+可以直接调本插件自带的 OCR 脚本（`<插件目录>` 指 `vyra-screen-recorder` 插件所在目录）：
+
+```powershell
+# 输出一行 JSON：{"ok":true,"text":"...","lang":"zh-Hans-CN","lines":[...]}
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File "<插件目录>\lib\ocr.ps1" -Path .\shot.png
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File "<插件目录>\lib\ocr.ps1" -Path .\shot.png -Lang zh-Hans-CN
+```
+
+- `lines` 里每项是 `{ text, x, y, w, h }`，坐标是原图像素，可以用来定位。
+- 小字号截图会先放大再识别；`-Scale 1` 关闭放大。
+- 中文结果默认已去掉逐字空格。
 
 ## 列出可录制源
 

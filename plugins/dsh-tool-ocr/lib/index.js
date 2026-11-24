@@ -9,9 +9,13 @@
  * which is what makes it usable on a machine where Node cannot run PaddleOCR.
  *
  * Design notes
- * - Two backends ship: `native` (pdftotext / a text-layer read for born-digital
- *   PDFs, zero extra install) and `command` (any external OCR binary the user
- *   configures — tesseract, PaddleOCR, RapidOCR, a company API client).
+ * - Three backends ship: `native` (pdftotext / a text-layer read for born-digital
+ *   PDFs, zero extra install), `command` (any external OCR binary the user
+ *   configures — tesseract, PaddleOCR, RapidOCR, a company API client) and
+ *   `winrt` (the OCR engine built into Windows 10/11, so a fresh machine can
+ *   read a screenshot without installing anything). An engine marked
+ *   `mode: winrt` is also reachable from the `command` backend, so a user can
+ *   keep tesseract as the default and still name the Windows engine by id.
  * - Text extraction is a two-step job for scans: rasterize to an image, then
  *   OCR. The plugin detects which step is needed from the file itself rather
  *   than asking the model, and reports which path it took.
@@ -21,8 +25,10 @@
  *
  * @module dsh-tool-ocr
  */
-import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
-import { join, resolve, basename, extname } from "node:path";
+import { copyFile, mkdir, readFile, rm, writeFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve, basename, extname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import z from "@deepseek-ai/schemastery";
 import { defineTool } from "@deepseek-ai/dsh-tools";
@@ -47,11 +53,16 @@ const PDF_EXTENSIONS = new Set([".pdf"]);
 /**
  * One external extractor the model may address by id.
  *
+ * `mode: "winrt"` runs the OCR engine built into Windows instead of spawning
+ * `command`; such an engine needs neither `command` nor `args`.
+ *
  * @typedef {object} EngineConfig
  * @property {string} id - stable id the model uses to pick this engine.
  * @property {string} [label] - human description shown in status output.
+ * @property {"command"|"winrt"} [mode] - how to run it; inferred from `command` when omitted.
  * @property {string} [command] - executable to spawn (tesseract, paddleocr, ...).
  * @property {string[]} [args] - argument template; placeholders below.
+ * @property {string} [lang] - default language hint for a winrt engine, "" or "system" for the OS default.
  * @property {boolean} [isDefault] - use this engine when the model names none.
  * @property {number} [timeoutMs] - per-engine override of the call budget.
  */
@@ -64,19 +75,28 @@ const PDF_EXTENSIONS = new Set([".pdf"]);
  */
 const ARG_PLACEHOLDERS = ["{input}", "{output}", "{lang}"];
 
+/**
+ * Windows engine driver kept next to this plugin's sources. The screen-recorder
+ * bundle ships the identical script for its in-overlay text extraction; this
+ * copy keeps the OCR tool working when that bundle is not installed.
+ */
+const WINRT_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "ocr.ps1");
+
 const Config = z.object({
 	/** External extractors, addressed by id. */
 	engines: z.array(z.object({
 		id: z.string().required(),
 		label: z.string(),
+		mode: z.union([z.const("command"), z.const("winrt")]),
 		command: z.string(),
 		args: z.array(z.string()),
+		lang: z.string(),
 		isDefault: z.boolean(),
 		timeoutMs: z.number()
 	})).default([]),
-	/** Which backend a call uses when no engine is named: "native" or "command". */
-	backend: z.union([z.const("native"), z.const("command")]).default("native"),
-	/** Directory for extracted text and intermediate rasters. */
+	/** Which backend a call uses when no engine is named: "native", "command" or "winrt". */
+	backend: z.union([z.const("native"), z.const("command"), z.const("winrt")]).default("native"),
+	/** Directory for extracted text and intermediate rasters/open. */
 	outputDir: z.string().default("ocr-output"),
 	/** Keep the intermediate raster between steps instead of deleting it. */
 	keepIntermediate: z.boolean().default(false),
@@ -190,20 +210,42 @@ function expandArgs(template, values) {
 
 /* ----------------------------------------------------------------- engines */
 
+/** An engine that does not need `command`: it runs the OS OCR engine. */
+function isWinrtEngine(engine) {
+	return engine.mode === "winrt" || (engine.mode === undefined && engine.command === undefined && engine.command !== null && engine.command !== "");
+}
+
 /**
  * Pick the engine a call uses: the named one, else the flag-default, else the
- * first configured. A call that wants a backend but has no engines configured
- * gets an actionable error naming the config key.
+ * first configured. Calls on the `winrt` backend always get a Windows engine:
+ * an explicitly named winrt engine, else the default one, else an implicit
+ * `windows` engine so `backend: winrt` works with an empty engine list.
  *
  * @param {Array<EngineConfig>} engines - configured engines.
  * @param {string|undefined} requested - the model's `engine` argument.
+ * @param {"native"|"command"|"winrt"} backend - configured backend.
  * @returns {EngineConfig} the chosen engine.
  */
-function resolveEngine(engines, requested) {
-	if (engines.length === 0) {
-		throw new Error('ocr: no OCR engine is configured. Add one under "engines" in the plugin config, e.g. { id: "tesseract", command: "tesseract", args: ["{input}", "{output}", "-l", "{lang}"] }.');
+function resolveEngine(engines, requested, backend = "command") {
+	const named = requested !== undefined && requested.length > 0;
+	const winrt = engines.filter(isWinrtEngine);
+	const implicit = { id: "windows", label: "Windows OCR", mode: "winrt", lang: "system" };
+
+	if (backend === "winrt") {
+		if (named) {
+			const found = engines.find((engine) => engine.id === requested);
+			if (found !== undefined && !isWinrtEngine(found)) {
+				throw new Error(`ocr: engine "${requested}" runs an external command, but the winrt backend only runs the Windows OCR engine.`);
+			}
+			return found ?? implicit;
+		}
+		return winrt.find((engine) => engine.isDefault === true) ?? winrt[0] ?? implicit;
 	}
-	if (requested !== undefined && requested.length > 0) {
+
+	if (engines.length === 0) {
+		throw new Error('ocr: no OCR engine is configured. Add one under "engines" in the plugin config, e.g. { id: "tesseract", command: "tesseract", args: ["{input}", "{output}", "-l", "{lang}"] }, or set backend: winrt to use the engine built into Windows.');
+	}
+	if (named) {
 		const found = engines.find((engine) => engine.id === requested);
 		if (found === undefined) {
 			throw new Error(`ocr: unknown engine "${requested}". Configured engines: ${engines.map((engine) => engine.id).join(", ")}`);
@@ -214,16 +256,111 @@ function resolveEngine(engines, requested) {
 }
 
 /**
+ * Run the Windows OCR engine through the bundled PowerShell driver.
+ *
+ * Windows 10/11 ships `Windows.Media.Ocr`, so this path needs no extra install
+ * — which is what makes "read the screenshot I just took" work on a fresh
+ * machine. PowerShell 5.1 cannot await WinRT, hence the small script.
+ *
+ * @param {string} imagePath - absolute path of the image.
+ * @param {string} lang - language hint ("" or "system" for the OS default).
+ * @param {{timeoutMs: number, signal?: AbortSignal}} options - run options.
+ * @returns {Promise<{text: string, lang: string}>} recognised text.
+ */
+async function ocrWithWinrt(imagePath, lang, options) {
+	if (process.platform !== "win32") {
+		throw new Error("ocr: the winrt backend needs Windows 10/11; configure a command engine on this platform instead.");
+	}
+	if (!existsSync(WINRT_SCRIPT)) {
+		throw new Error(`ocr: the Windows OCR driver is missing (${WINRT_SCRIPT}). Reinstall the plugin.`);
+	}
+	const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", WINRT_SCRIPT, "-Path", imagePath];
+	if (lang !== "" && lang !== "system") args.push("-Lang", lang);
+	const { stdout } = await runCommand(process.env.OCR_POWERSHELL ?? "powershell.exe", args, {
+		timeoutMs: options.timeoutMs,
+		signal: options.signal
+	});
+	const line = stdout.trim().split(/\r?\n/u).filter((entry) => entry.trim().startsWith("{")).pop();
+	if (line === undefined) throw new Error("ocr: the Windows OCR driver printed no result. " + stdout.trim().slice(0, 300));
+	let payload;
+	try {
+		payload = JSON.parse(line);
+	} catch {
+		throw new Error("ocr: the Windows OCR driver returned unparsable output. " + line.slice(0, 300));
+	}
+	if (payload.ok !== true) throw new Error(`ocr: Windows OCR failed: ${payload.error ?? "unknown error"}`);
+	return { text: String(payload.text ?? ""), lang: String(payload.lang ?? "") };
+}
+
+/**
+ * Convert an input raster into the format the chosen engine accepts.
+ *
+ * The Windows OCR engine decodes PNG and BMP natively; a .webp screenshot or a
+ * .tif scan handed to it would fail at the decoder, so those are copied to a
+ * .png sibling first (the encoder takes the extension as the target format). A
+ * command engine gets the original path back untouched.
+ *
+ * @param {string} imagePath - the image the caller wanted to read.
+ * @param {EngineConfig} engine - the engine that will read it.
+ * @param {string} outDir - directory for the converted copy.
+ * @returns {Promise<string>} path of the image to hand to the engine.
+ */
+async function prepareRaster(imagePath, engine, outDir) {
+	const ext = extname(imagePath).toLowerCase();
+	if (!isWinrtEngine(engine) || ext === ".png" || ext === ".bmp") return imagePath;
+	await mkdir(outDir, { recursive: true });
+	const target = join(outDir, `${basename(imagePath, extname(imagePath))}.ocr.png`);
+	try {
+		await copyFile(imagePath, target);
+		return target;
+	} catch (error) {
+		throw new Error(`ocr: cannot stage "${imagePath}" for the Windows OCR engine (${error?.message ?? error}).`);
+	}
+}
+
+/** Probe whether the Windows OCR engine can start and which languages it has. */
+async function probeWinrt() {
+	if (process.platform !== "win32") return { available: false, error: "not Windows" };
+	if (!existsSync(WINRT_SCRIPT)) return { available: false, error: "Windows OCR driver missing" };
+	try {
+		const languages = await runCommand(process.env.OCR_POWERSHELL ?? "powershell.exe", [
+			"-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command",
+			"Add-Type -AssemblyName System.Runtime.WindowsRuntime | Out-Null; [void][Windows.Media.Ocr.OcrEngine, Windows.Media, ContentType = WindowsRuntime]; [Windows.Media.Ocr.OcrEngine]::AvailableRecognizerLanguages | ForEach-Object { $_.LanguageTag }"
+		], { timeoutMs: 20000 });
+		const tags = languages.stdout.trim().split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
+		if (tags.length === 0) return { available: false, error: "no OCR language pack installed" };
+		return { available: true, version: "languages: " + tags.join(", ") };
+	} catch (error) {
+		return { available: false, error: String(error?.message ?? error) };
+	}
+}
+
+/**
  * OCR one image with the chosen engine, returning the text and stderr notes.
  *
  * @param {EngineConfig} engine - engine to run.
  * @param {string} imagePath - absolute path of the image.
  * @param {string} textOutPath - absolute path the engine writes text to.
- * @param {string} lang - language hint, possibly empty.
+ * @param {string} langHint - language hint, possibly empty.
  * @param {{timeoutMs: number, signal?: AbortSignal}} options - run options.
  * @returns {Promise<{text: string, engine: string}>} extracted text.
  */
-async function ocrImage(engine, imagePath, textOutPath, lang, options) {
+async function ocrImage(engine, imagePath, textOutPath, langHint, options) {
+	const lang = langHint !== "" ? langHint : (engine.lang ?? "");
+	if (isWinrtEngine(engine)) {
+		const result = await ocrWithWinrt(imagePath, lang, {
+			timeoutMs: Math.min(engine.timeoutMs ?? options.timeoutMs, options.timeoutMs),
+			signal: options.signal
+		});
+		try {
+			await mkdir(dirname(textOutPath), { recursive: true });
+			await writeFile(textOutPath, result.text, "utf8");
+		} catch { /* the text is already in hand; a missing sidecar file is not fatal */ }
+		return { text: result.text, engine: engine.id };
+	}
+	if (engine.command === undefined || engine.command === "") {
+		throw new Error(`ocr: engine "${engine.id}" has neither a command nor mode: winrt.`);
+	}
 	const args = expandArgs(engine.args ?? ["{input}", "{output}"], {
 		input: imagePath,
 		output: textOutPath,
@@ -316,7 +453,7 @@ function apply(ctx, config) {
 					text: [
 						`OCR backend: ${value.backend}`,
 						value.engines.length === 0
-							? "No external OCR engine configured — only born-digital PDFs (those with a text layer) can be read."
+							? "No external OCR engine configured — set backend: winrt to use the engine built into Windows, or add an engine under \"engines\". Born-digital PDFs (those with a text layer) can always be read."
 							: "Configured engines:",
 						...value.engines.map((engine) => engine.available
 							? `- ${engine.id}${engine.label === undefined ? "" : ` (${engine.label})`}: AVAILABLE ${engine.version ?? ""}`
@@ -327,12 +464,23 @@ function apply(ctx, config) {
 			timeoutMs: 60000,
 			isConcurrencySafe: () => true,
 			async execute(_args, exec) {
-				const probed = await Promise.all(engines.map(async (engine) => {
+				const entries = [...engines];
+				// Show the built-in Windows engine when it is what a call would use.
+				if (config.backend === "winrt" && !entries.some(isWinrtEngine)) {
+					entries.unshift({ id: "windows", label: "Windows OCR (built in)", mode: "winrt" });
+				}
+				const probed = await Promise.all(entries.map(async (engine) => {
 					const base = {
 						id: engine.id,
 						...engine.label === undefined ? {} : { label: engine.label },
-						...engine.command === undefined ? {} : { command: engine.command }
+						...(isWinrtEngine(engine) ? { command: "Windows.Media.Ocr" } : engine.command === undefined ? {} : { command: engine.command })
 					};
+					if (isWinrtEngine(engine)) {
+						const result = await probeWinrt();
+						return result.available
+							? { ...base, available: true, ...result.version.length === 0 ? {} : { version: result.version } }
+							: { ...base, available: false, error: result.error };
+					}
 					if (engine.command === undefined) return { ...base, available: false, error: "no command configured" };
 					const result = await probeCommand(engine.command);
 					return result.available
@@ -401,16 +549,18 @@ function apply(ctx, config) {
 					text = extracted.text;
 					if (extracted.note !== undefined) notes.push(extracted.note);
 					// A PDF whose text layer is empty is a scan: fall through to OCR.
-					if (text.trim().length === 0 && engines.length > 0) {
-						const engine = resolveEngine(engines, args.engine);
-						const out = join(outputDir, `${basename(source, extname(source))}.${engine.id}.txt`);
+					if (text.trim().length === 0 && (engines.length > 0 || config.backend === "winrt")) {
+						const engine = resolveEngine(engines, args.engine, config.backend);
 						await mkdir(outputDir, { recursive: true });
 						const raster = await rasterizePdf(source, range, outputDir, { signal: exec.signal, timeoutMs: budgetMs });
 						notes.push(`no text layer found — rasterized ${raster.images.length} page(s) and ran OCR`);
 						const chunks = [];
 						for (const imagePath of raster.images) {
+							// Each page is converted to the image the engine actually
+							// accepts: tesseract reads the PNG as-is, Windows OCR may not.
+							const prepared = await prepareRaster(imagePath, engine, outputDir);
 							const perPage = join(outputDir, `${basename(imagePath, extname(imagePath))}.${engine.id}.txt`);
-							const result = await ocrImage(engine, imagePath, perPage, args.lang ?? "", {
+							const result = await ocrImage(engine, prepared, perPage, args.lang ?? "", {
 								timeoutMs: budgetMs,
 								signal: exec.signal
 							});
@@ -418,20 +568,22 @@ function apply(ctx, config) {
 						}
 						text = chunks.join("\n\n");
 						engineId = engine.id;
-						void out;
-					} else if (text.trim().length === 0 && engines.length === 0) {
-						notes.push('this PDF has no text layer and no OCR engine is configured — add one under "engines"');
+					} else if (text.trim().length === 0) {
+						notes.push('this PDF has no text layer and no OCR engine is configured — set backend: winrt or add one under "engines"');
 					}
 				} else if (kind === "image") {
-					const engine = resolveEngine(engines, args.engine);
+					const engine = resolveEngine(engines, args.engine, config.backend);
 					await mkdir(outputDir, { recursive: true });
+					const prepared = await prepareRaster(source, engine, outputDir);
 					const outPath = join(outputDir, `${basename(source, extname(source))}.${engine.id}.txt`);
-					const result = await ocrImage(engine, source, outPath, args.lang ?? "", {
+					const result = await ocrImage(engine, prepared, outPath, args.lang ?? "", {
 						timeoutMs: budgetMs,
 						signal: exec.signal
 					});
 					text = result.text;
 					engineId = engine.id;
+					if (prepared !== source) notes.push(`converted to PNG for ${engine.id}`);
+					if (!config.keepIntermediate && prepared !== source) await rm(prepared, { force: true }).catch(() => {});
 				} else {
 					throw new Error(`ocr: unsupported file type "${extname(source)}". Supported: ${[...IMAGE_EXTENSIONS, ...PDF_EXTENSIONS].join(", ")}.`);
 				}

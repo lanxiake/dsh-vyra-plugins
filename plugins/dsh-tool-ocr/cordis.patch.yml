@@ -7,12 +7,18 @@
 #     config:
 #       backend: command
 #       engines:
-#         - id: tesseract
+#         - id: windows            # the OCR engine built into Windows 10/11
+#           label: Windows OCR
+#           mode: winrt
+#           isDefault: true
+#         - id: tesseract          # an external engine, run as a command
 #           label: Tesseract (chi_sim+eng)
 #           command: tesseract
 #           args: ["{input}", "{output}", "-l", "chi_sim+eng"]
-#           isDefault: true
 #       outputDir: C:/Users/<you>/Documents/ocr-output
+#
+# With `backend: winrt` and no engine configured, every call uses the Windows
+# engine — nothing to install.
 
 - insert:
     - id: tool-ocr

@@ -67,7 +67,28 @@ ocr_read(path, engine?, lang?, pages?, saveAs?)
 
 默认 `backend: native` —— 只用 poppler 读 PDF 文字层，不需要装任何 OCR。
 
-要读扫描件，改成 `command` 并在 `engines` 里加一个：
+**不想装东西？用 Windows 自带的 OCR。** Windows 10/11 内置 `Windows.Media.Ocr`，
+识别语言跟着系统语言包走，插件用 `mode: winrt` 调它：
+
+```yaml
+# ~/.dsh/profiles/<profile>/cordis.patch.yml
+- id: tool-ocr
+  name: "@yuehancn/dsh-tool-ocr"
+  config:
+    backend: command      # 或者 winrt：没配任何引擎时也默认用系统 OCR
+    engines:
+      - id: windows
+        label: Windows OCR（系统自带，中英文）
+        mode: winrt
+        lang: system      # 或指定 zh-Hans-CN / en-US
+        isDefault: true
+```
+
+`ocr_status` 会报告系统装了哪些识别语言（`languages: zh-Hans-CN`）。中文系统一般都带
+`zh-Hans-CN`；英文系统想认中文，去「设置 → 时间和语言 → 语言和区域」给中文加装语言包。
+系统 OCR 会自动把中文逐字之间的空格去掉，`ocr.Text` 直接可用。
+
+**要接别的引擎**，改成 `backend: command` 并在 `engines` 里加一个：
 
 ```yaml
 # ~/.dsh/profiles/<profile>/cordis.patch.yml
@@ -101,11 +122,20 @@ ocr_read(path, engine?, lang?, pages?, saveAs?)
         command: tesseract
         args: ["{input}", "{output}", "-l", "chi_sim+eng"]
         isDefault: true
+      - id: windows
+        label: Windows OCR
+        mode: winrt
       - id: paddle
         label: PaddleOCR（表格/版面更好）
         command: python
         args: ["-m", "paddleocr", "--image_dir", "{input}", "--use_angle_cls", "true"]
 ```
+
+`mode: winrt` 的条目不需要 `command` 和 `args`；`backend: command` 时也能按 id 选它
+（`ocr_read(path, engine: "windows")`）。
+
+> **和录屏插件的关系**：`vyra-screen-recorder` 的截图浮层会读这里的 `engines` 配置，
+> 截图里取字和 Agent 的 `ocr_read` 走同一套引擎；没装本插件时它直接用系统 OCR。
 
 ---
 
@@ -115,9 +145,10 @@ ocr_read(path, engine?, lang?, pages?, saveAs?)
 
 | 依赖 | 用途 | 不装会怎样 |
 |---|---|---|
+| `mode: winrt`（Windows 内置） | 图片 / 扫描件取字 | 非 Windows 上不可用 |
 | `pdftotext`（poppler） | 读 PDF 文字层 | 电子 PDF 也读不了，`note` 会告诉你 |
 | `pdftoppm`（poppler） | 把 PDF 页栅格化成图 | 扫描 PDF 无法 OCR |
-| 任一 OCR 引擎 | 识别图里的字 | 图片输入直接报错，提示你配置 |
+| 任一 OCR 引擎 | 识别图里的字 | `backend: native` 且没配引擎时，图片输入直接报错，提示你配置 |
 
 **Windows 装 poppler**：下载 poppler-windows 解压，把 `bin` 加进 PATH，
 或直接把 `pdftotext.exe` 的完整路径写进 config 的 `command`。
