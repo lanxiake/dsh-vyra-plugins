@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { DOMAINS, DOMAIN_IDS } from './domains.mjs'
 import { readConfig, writeConfig } from './config.mjs'
 import { sync } from './sync.mjs'
+import { readMountRecord } from './diagnostics.mjs'
 
 const PACKAGE_ROOT = fileURLToPath(new URL('.', import.meta.url))
 
@@ -28,6 +29,7 @@ const USAGE = `odx — OpenDesign 领域开关
   odx domains disable-all          全部关闭
   odx agents list                  列出已生成的领域 agent 与编排 agent
   odx sync                         按当前配置重新同步磁盘
+  odx doctor                       查看设置页路由是否挂载成功
 
 领域:
 ${DOMAINS.map((d) => `  ${d.id.padEnd(20)} ${d.name}`).join('\n')}
@@ -134,6 +136,27 @@ export function run(argv, options = {}) {
 
   if (group === 'sync') {
     return emit(applyAndReport())
+  }
+
+  if (group === 'doctor') {
+    // The panel can only report a bare 404; this says which of the three
+    // causes produced it.
+    const record = readMountRecord(dshHome)
+    if (record === null) {
+      err.push('没有找到挂载记录。插件要么尚未在本 profile 加载过，要么安装的是没有诊断的旧版本。')
+    } else {
+      out.push(`最近一次挂载：${record.at}`)
+      out.push(`  插件版本：${record.version ?? '未知'}`)
+      out.push(`  路径    ：${record.via}`)
+      if (record.ok === true) {
+        out.push(`  结果    ：成功，已挂载 ${(record.routes ?? []).join('、')}`)
+      } else if (record.pending === true) {
+        out.push('  结果    ：等待 webServer 注入 —— 若设置页仍 404，说明注入从未触发，是宿主组成问题')
+      } else {
+        out.push(`  结果    ：失败 —— ${record.error ?? '未知原因'}`)
+      }
+    }
+    return emit(record?.ok === true ? 0 : 1)
   }
 
   err.push(`未知命令「${[group, action].filter(Boolean).join(' ')}」`)

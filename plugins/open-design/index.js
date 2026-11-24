@@ -17,14 +17,29 @@
  * @module open-design
  */
 
+import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { sync } from './sync.mjs'
 import { mountRoutes } from './routes.mjs'
+import { recordMount } from './diagnostics.mjs'
 import { DOMAINS } from './domains.mjs'
 
 /** Plugin name, as the Loader row declares it. */
 export const name = 'open-design'
+
+/** The directory this module lives in, used to read the build version. */
+const PACKAGE_ROOT = fileURLToPath(new URL('.', import.meta.url))
+
+/** The build that mounted, recorded alongside the mount outcome. */
+const VERSION = (() => {
+  try {
+    return JSON.parse(readFileSync(join(PACKAGE_ROOT, 'package.json'), 'utf8')).version
+  } catch {
+    return 'unknown'
+  }
+})()
 
 /** Skill discovery and per-domain rendering live in their own module. */
 export { BUNDLES, listBundledSkills, readFrontmatter, renderDomainSkill } from './skills.mjs'
@@ -111,22 +126,48 @@ export async function apply(ctx, config = {}) {
 
   // The settings panel talks to these routes.
   //
-  // `ctx.inject([...])` is what makes the service reachable: in Cordis a
-  // service that was not declared as a dependency is not visible to `ctx.get()`,
-  // so probing with `ctx.get('webServer')` silently yields undefined and the
-  // routes never mount. The callback runs only when the service exists, which is
-  // the correct degradation for a profile without a web server.
-  if (typeof ctx?.inject === 'function') {
-    ctx.inject(['webServer'], (hostContext) => {
-      try {
-        mountRoutes(hostContext.webServer, { dshHome: home })
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error)
-        logger?.warn?.(`open-design: 注册设置路由失败：${detail}`)
+  // Two ways reach the web server, and the host decides which one works:
+  //
+  //   ctx.get('webServer')        when the service is already mounted and
+  //                               visible on this context;
+  //   ctx.inject(['webServer'], …) when it is not — in Cordis a service the
+  //                               plugin never declared is not visible to
+  //                               ctx.get(), and the callback fires once the
+  //                               service becomes available.
+  //
+  // Trying the direct read first matters: if the service is already there, it
+  // mounts immediately instead of waiting for an injection that may never fire.
+  // Whichever path succeeds claims the routes; the other is skipped.
+  const mountedPaths = []
+  const mount = (server, via) => {
+    if (mountedPaths.length > 0) return
+    try {
+      const disposers = mountRoutes(server, { dshHome: home })
+      if (disposers.length > 0) {
+        mountedPaths.push(via)
+        logger?.info?.(`open-design: 设置路由已挂载（经 ${via}）`)
+        recordMount(home, { ok: true, via, routes: ['/open-design/config', '/open-design/agents'], version: VERSION })
       }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      logger?.warn?.(`open-design: 注册设置路由失败（经 ${via}）：${detail}`)
+      recordMount(home, { ok: false, via, error: detail, version: VERSION })
+    }
+  }
+
+  const direct = typeof ctx?.get === 'function' ? ctx.get('webServer') : undefined
+  if (direct !== undefined) {
+    mount(direct, 'ctx.get')
+  } else if (typeof ctx?.inject === 'function') {
+    // Record that we are waiting: a 404 with this record means the injection
+    // never fired, which is a host-composition problem, not a route problem.
+    recordMount(home, { ok: false, via: 'ctx.inject', pending: true, version: VERSION })
+    ctx.inject(['webServer'], (hostContext) => {
+      mount(hostContext?.webServer, 'ctx.inject')
     })
   } else {
-    logger?.info?.('open-design: 宿主不支持 ctx.inject，设置面板不可用（仍可用 odx）')
+    logger?.info?.('open-design: 宿主没有 webServer，设置面板不可用（仍可用 odx）')
+    recordMount(home, { ok: false, via: 'none', error: '宿主没有 ctx.get / ctx.inject', version: VERSION })
   }
 
   return { installed: report.skillsWritten.length, error: null, report }
