@@ -2982,6 +2982,16 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-media-studio',
           },
         },
+        // 0.3.1 ties the timeline to the session filter and enlarges the controls.
+        '0.3.1': {
+          publishTimestamp: 1795505673,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '44a3f04bce2eba171f81db0b647bc9bd91187fae',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
       },
       metadata: {
         category: 'content',
