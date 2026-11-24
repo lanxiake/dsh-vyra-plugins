@@ -694,7 +694,7 @@
         "en": "Swap the whole client colour scheme for a third-party theme: a warm organic palette, or macOS frosted glass. Recolours the existing components through their own tokens, so nothing is left half-switched.",
         "zh": "把整个客户端的配色换成第三方主题：暖感有机风，或 macOS 毛玻璃。覆盖的是既有组件自己的主题令牌，不会出现「一半换了另一半没换」。"
       },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTEyIDNhOSA5IDAgMCAxIDAgMThjLTEuNCAwLTIuMi0uOS0yLjItMiAwLS42LjItMSAuNi0xLjQuNC0uNC42LS44LjYtMS4zIDAtMS0uOC0xLjgtMS44LTEuOEg3LjZBNC42IDQuNiAwIDAgMSAzIDkuOUMzIDYuMSA3IDMgMTIgM1oiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjgiIGN5PSI5IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4KICA8Y2lyY2xlIGN4PSIxNS44IiBjeT0iOS40IiByPSIxLjMiIGZpbGw9ImN1cnJlbnRDb2xvciIvPgo8L3N2Zz4K",
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+DQogIDxwYXRoIGQ9Ik0xMiAzYTkgOSAwIDAgMSAwIDE4Yy0xLjQgMC0yLjItLjktMi4yLTIgMC0uNi4yLTEgLjYtMS40LjQtLjQuNi0uOC42LTEuMyAwLTEtLjgtMS44LTEuOC0xLjhINy42QTQuNiA0LjYgMCAwIDEgMyA5LjlDMyA2LjEgNyAzIDEyIDNaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4NCiAgPGNpcmNsZSBjeD0iOCIgY3k9IjkiIHI9IjEuMyIgZmlsbD0iY3VycmVudENvbG9yIi8+DQogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4NCiAgPGNpcmNsZSBjeD0iMTUuOCIgY3k9IjkuNCIgcj0iMS4zIiBmaWxsPSJjdXJyZW50Q29sb3IiLz4NCjwvc3ZnPg0K",
       "author": "lanxiake",
       "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
@@ -2211,7 +2211,7 @@
         "en": "Screen recording and annotated screenshots in the DSH composer: choose the desktop, a display, a window or a region; record system audio and microphone; save MP4 (H.264/AAC) or WebM; configure separate video and screenshot folders, format and shortcuts in the settings page; screenshots stay fast with no loading overlay and can hide DSH to capture other apps. Also installs a vsr CLI and an agent skill. No Python or ffmpeg required.",
         "zh": "DSH 输入框工具条里的录屏与截图：选择整个桌面 / 显示器 / 窗口 / 自定义区域，录系统声音和麦克风，默认保存 MP4（H.264/AAC）或 WebM；设置页可分别配置视频与截图的存储目录、格式和快捷键；截图走常驻服务、不显示加载提示，单张几十毫秒，也可以隐藏 DSH 截取其他应用；同时安装 vsr CLI 和 Agent 技能。不需要 Python 或 ffmpeg。"
       },
-      "icon": "undefined",
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNSIgZmlsbD0iIzEyMTYxRiIvPgogIDxyZWN0IHg9IjIuNzUiIHk9IjIuNzUiIHdpZHRoPSI1OC41IiBoZWlnaHQ9IjU4LjUiIHJ4PSIxNC4yNSIgc3Ryb2tlPSIjMkIzMjQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxyZWN0IHg9IjEzIiB5PSIxNiIgd2lkdGg9IjM4IiBoZWlnaHQ9IjI2IiByeD0iNiIgc3Ryb2tlPSIjRjRGNUY3IiBzdHJva2Utd2lkdGg9IjMiLz4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjI5IiByPSI1LjUiIGZpbGw9IiNFNTQ4NEQiLz4KICA8cGF0aCBkPSJNMjQgNTBoMTYiIHN0cm9rZT0iI0Y0RjVGNyIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cmVjdCB4PSI0MSIgeT0iMzkiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiMxNjc3RkYiLz4KICA8Y2lyY2xlIGN4PSI0Ny41IiBjeT0iNDQiIHI9IjIuNiIgc3Ryb2tlPSIjRjRGNUY3IiBzdHJva2Utd2lkdGg9IjEuOCIvPgo8L3N2Zz4K",
       "author": "lanxiake",
       "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {

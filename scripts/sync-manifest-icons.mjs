@@ -29,6 +29,11 @@ const ICONS = {
   'vyra-skill-mcp-manager': 'SKILL_MCP_ICON',
   'vyra-ssh-terminal': 'SSH_TERMINAL_ICON',
   'vyra-system-selection': 'SYSTEM_SELECTION_ICON',
+  // Declared between the two constants above and below it in the manifest, and
+  // inside the block this script owns. Left out of the map, it sat in the
+  // replaced span with no owner: a run deleted it along with the entries that
+  // follow — see the guard below.
+  'vyra-free-theme': 'FREE_THEME_ICON',
   'vyra-theme-styles': 'THEME_STYLES_ICON',
   'vyra-agent-cli-manager': 'AGENT_CLI_MANAGER_ICON',
   'vyra-plugin-market': 'PLUGIN_MARKET_ICON',
@@ -41,6 +46,11 @@ const ICONS = {
   // generator reads back off it, so listing them here restores them exactly.
   'vyra-wechat-local': 'WECHAT_LOCAL_ICON',
   'vyra-xianyu-delivery': 'XIANYU_DELIVERY_ICON',
+  // Ships an `icon.svg` but was missing from this map, so its constant held the
+  // placeholder `'undefined'` instead of an icon — and that reached the published
+  // index, because nothing fails on an icon that is merely the wrong string.
+  // Listing it here makes the generated block authoritative for this plugin too.
+  'vyra-screen-recorder': 'VYRA_SCREEN_RECORDER_ICON',
 }
 
 const lines = []
@@ -89,6 +99,27 @@ const firstDeclaration = source.indexOf(`const ${firstConstant} =`)
 if (firstDeclaration === -1) throw new Error(`the first owned constant ${firstConstant} is missing`)
 const firstComment = source.lastIndexOf('/** Inline icon for ', firstDeclaration)
 if (firstComment === -1) throw new Error(`the comment above ${firstConstant} is missing`)
+
+// The block does not necessarily START at the first constant this map owns: the
+// manifest also carries hand-written icons above it (a multi-line prose comment,
+// constants with no generated comment at all). Opening the span at
+// `firstComment` therefore BEGINS INSIDE that hand-written region, and the
+// wholesale replace below would delete every constant and entry between that
+// point and the marker — which is how a run once swallowed two whole plugin
+// entries. Refuse rather than destroy: the region about to be replaced must
+// contain only declarations this map owns.
+const owned = new Set(Object.values(ICONS))
+const span = source.slice(firstComment, marker)
+const strays = [...span.matchAll(/^const ([A-Z_]+_ICON) =$/gmu)]
+  .map((m) => m[1])
+  .filter((constant) => !owned.has(constant))
+if (strays.length > 0) {
+  throw new Error(
+    `the icon block would replace ${strays.join(', ')}, which the ICONS map does not own; ` +
+      'add them to ICONS (so they are regenerated) or move them above the block. ' +
+      'Refusing rather than deleting them.',
+  )
+}
 
 // Everything from the first owned comment to the marker is this script's own
 // output, so it is replaced wholesale. The head is trimmed of its trailing blank
