@@ -2064,6 +2064,21 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-plugin-market',
           },
         },
+        // 0.7.1: the queue of a bulk run is a toggle that folds itself past
+        // three items (an open queue scrolls in its own box), the bulk bar
+        // folds its selection the same way, the Installed tab no longer hangs
+        // a count on its label, the market filter says "installed in market",
+        // and the hero explains how an Agent session drives the market with
+        // four paste-ready use cases.
+        '0.7.1': {
+          publishTimestamp: 1795500031,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
       },
       metadata: {
         category: 'integration',
