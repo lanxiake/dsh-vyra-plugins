@@ -126,48 +126,43 @@ export async function apply(ctx, config = {}) {
 
   // The settings panel talks to these routes.
   //
-  // Two ways reach the web server, and the host decides which one works:
-  //
-  //   ctx.get('webServer')        when the service is already mounted and
-  //                               visible on this context;
-  //   ctx.inject(['webServer'], …) when it is not — in Cordis a service the
-  //                               plugin never declared is not visible to
-  //                               ctx.get(), and the callback fires once the
-  //                               service becomes available.
-  //
-  // Trying the direct read first matters: if the service is already there, it
-  // mounts immediately instead of waiting for an injection that may never fire.
-  // Whichever path succeeds claims the routes; the other is skipped.
-  const mountedPaths = []
-  const mount = (server, via) => {
-    if (mountedPaths.length > 0) return
+  // The route row declares `inject: [webServer]` in cordis.patch.yml, which is
+  // what makes the service reachable: the Loader holds activation until the
+  // service exists and then hands it to apply() as `ctx.webServer`. Without
+  // that declaration neither ctx.webServer nor ctx.get('webServer') resolves,
+  // and a runtime ctx.inject([...]) callback never fires.
+  const via = ctx?.webServer !== undefined ? 'ctx.webServer' : 'ctx.get'
+  const server = ctx?.webServer !== undefined ? ctx.webServer : ctx?.get?.('webServer')
+
+  if (server === undefined || typeof server.register !== 'function') {
+    logger?.warn?.('open-design: 没有拿到 webServer，设置面板不可用（仍可用 odx）')
+    recordMount(home, { ok: false, via, error: 'webServer 不可达', version: VERSION })
+  } else {
     try {
       const disposers = mountRoutes(server, { dshHome: home })
-      if (disposers.length > 0) {
-        mountedPaths.push(via)
-        logger?.info?.(`open-design: 设置路由已挂载（经 ${via}）`)
-        recordMount(home, { ok: true, via, routes: ['/open-design/config', '/open-design/agents'], version: VERSION })
+      logger?.info?.(`open-design: 设置路由已挂载（经 ${via}）`)
+      recordMount(home, {
+        ok: true,
+        via,
+        routes: ['/open-design/config', '/open-design/agents'],
+        version: VERSION,
+      })
+      if (typeof ctx?.effect === 'function' && disposers.length > 0) {
+        ctx.effect(() => () => {
+          for (const dispose of disposers) {
+            try {
+              dispose()
+            } catch {
+              // A route already gone must not break unload.
+            }
+          }
+        })
       }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       logger?.warn?.(`open-design: 注册设置路由失败（经 ${via}）：${detail}`)
       recordMount(home, { ok: false, via, error: detail, version: VERSION })
     }
-  }
-
-  const direct = typeof ctx?.get === 'function' ? ctx.get('webServer') : undefined
-  if (direct !== undefined) {
-    mount(direct, 'ctx.get')
-  } else if (typeof ctx?.inject === 'function') {
-    // Record that we are waiting: a 404 with this record means the injection
-    // never fired, which is a host-composition problem, not a route problem.
-    recordMount(home, { ok: false, via: 'ctx.inject', pending: true, version: VERSION })
-    ctx.inject(['webServer'], (hostContext) => {
-      mount(hostContext?.webServer, 'ctx.inject')
-    })
-  } else {
-    logger?.info?.('open-design: 宿主没有 webServer，设置面板不可用（仍可用 odx）')
-    recordMount(home, { ok: false, via: 'none', error: '宿主没有 ctx.get / ctx.inject', version: VERSION })
   }
 
   return { installed: report.skillsWritten.length, error: null, report }

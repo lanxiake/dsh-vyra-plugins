@@ -12,6 +12,12 @@
 - insert:
     - id: open-design
       name: 'open-design'
+      # Declaring the service on the row is what makes it reachable: with no
+      # `inject` here the Loader never waits for the web server, so neither
+      # `ctx.webServer` nor `ctx.get('webServer')` resolves, and the runtime
+      # `ctx.inject([...])` callback never fires. The settings panel then 404s.
+      # This is the same declaration dsh-open-design-preset uses.
+      inject: [webServer]
       config:
         # Write the enabled domains to `$DSH_HOME/skills/od-*/` on mount.
         # Set false to mount the plugin without touching the skills root.

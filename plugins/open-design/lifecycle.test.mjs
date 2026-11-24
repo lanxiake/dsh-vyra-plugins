@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * The domain-packaging test, structured so it can exercise each module before
  * the whole plugin composes.
@@ -495,42 +495,48 @@ check('package exports ./client', clientPkg.exports['./client'], './client.js')
 check('client bundle ships', clientPkg.files.includes('client.js'), true)
 
 
-// ===== Task 11: route mounting uses ctx.inject =====
+// ===== Task 11: route mounting =====
 console.log('\n--- Task 11: route mounting ---')
 
-// A service that is not declared as a dependency is invisible to ctx.get() in
-// Cordis, so grouping it that way mounts nothing and the panel 404s. Assert the
-// dependency is declared, with a fake ctx that records what apply() asks for.
-const injectHome = mkdtempSync(join(tmpdir(), 'od-inject-'))
-const askedFor = []
-let mountedThrough = null
+// The route row declares `inject: [webServer]` in cordis.patch.yml. That is the
+// whole mechanism: with the declaration the Loader hands the service to apply()
+// as ctx.webServer. Without it nothing resolves and the panel 404s — which is
+// how three earlier attempts failed, each fixing one layer and missing this one.
+const patchSource = readFileSync(join(pluginRoot, 'cordis.patch.yml'), 'utf8')
+check('patch row declares inject: [webServer]', /inject:\s*\[\s*webServer\s*\]/u.test(patchSource), true)
 
-const officialCtx = {
+const routesHome = mkdtempSync(join(tmpdir(), 'od-mount-'))
+const registeredPaths = []
+const serverCtx = {
   logger: () => ({ info() {}, warn() {} }),
-  get: () => undefined, // ctx.get must NOT be how webServer is obtained
-  inject(deps, callback) {
-    askedFor.push(...deps)
-    if (deps.includes('webServer')) {
-      mountedThrough = { register: () => () => {} }
-      callback({ webServer: mountedThrough })
-    }
+  webServer: {
+    register(spec) {
+      registeredPaths.push(spec.path)
+      return () => {}
+    },
   },
+  get() {},
   effect() {},
   on() {},
 }
+await m.apply(serverCtx, { dshHome: routesHome, installAgents: false })
+check(
+  'apply mounts both routes from ctx.webServer',
+  registeredPaths.sort(),
+  ['/open-design/agents', '/open-design/config'],
+)
 
-await m.apply(officialCtx, { dshHome: injectHome, installAgents: false })
-check('apply declares webServer as a dependency', askedFor.includes('webServer'), true)
-check('apply mounted routes through the injected context', mountedThrough !== null, true)
+const noServerHome = mkdtempSync(join(tmpdir(), 'od-noserver-'))
+const bare = await m.apply(
+  { logger: () => ({ info() {}, warn() {} }), get() {}, effect() {}, on() {} },
+  { dshHome: noServerHome, installAgents: false },
+)
+check('apply survives a host without webServer', bare.error, null)
+const diag = await import(pathToFileURL(join(pluginRoot, 'diagnostics.mjs')).href)
+check('mount failure is recorded', diag.readMountRecord(noServerHome)?.ok, false)
 
-// A host without ctx.inject must not throw.
-const bare = await m.apply({ logger: () => ({ info() {}, warn() {} }), get() {}, effect() {}, on() {} }, {
-  dshHome: mkdtempSync(join(tmpdir(), 'od-bare-')),
-  installAgents: false,
-})
-check('apply survives a host without ctx.inject', bare.error, null)
-
-rmSync(injectHome, { recursive: true, force: true })
+rmSync(routesHome, { recursive: true, force: true })
+rmSync(noServerHome, { recursive: true, force: true })
 
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)
