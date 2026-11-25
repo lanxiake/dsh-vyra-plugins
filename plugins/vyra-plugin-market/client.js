@@ -1442,6 +1442,10 @@ window.__ModuleLoader__.load({
       selected: '已选 {n} 项',
       selectPage: '全选本页',
       clear: '取消选择',
+      bulkMode: '批量',
+      bulkModeExit: '退出批量',
+      selectAllInstalled: '全选',
+      clearSelection: '取消选择',
       bulkApply: '安装 / 更新 {n}',
       bulkUninstall: '卸载 {n}',
       bulkEnable: '启用 {n}',
@@ -1614,6 +1618,10 @@ window.__ModuleLoader__.load({
       selected: '{n} selected',
       selectPage: 'Select page',
       clear: 'Clear',
+      bulkMode: 'Select',
+      bulkModeExit: 'Done',
+      selectAllInstalled: 'Select all',
+      clearSelection: 'Clear selection',
       bulkApply: 'Install / update {n}',
       bulkUninstall: 'Uninstall {n}',
       bulkEnable: 'Enable {n}',
@@ -2745,7 +2753,7 @@ window.__ModuleLoader__.load({
      * the bundle object carries no index entry, install target or market stats,
      * and every action here is the Host's own bundle control.
      */
-    function InstalledCard({ bundle, lang, t, busy, onDetails, onToggle, onUninstall }) {
+    function InstalledCard({ bundle, lang, t, busy, batch, picked, pickable, onPick, onDetails, onToggle, onUninstall }) {
       const title = bundleTitle(bundle, lang)
       const description = bundleDescription(bundle, lang)
       const official = bundle.official === true || bundle.availability === 'installation'
@@ -2753,6 +2761,13 @@ window.__ModuleLoader__.load({
       const tags = [
         h('span', { key: 'state', className: `vpm-tag${bundle.enabled === true ? ' ok' : ''}` },
           bundle.enabled === true ? t('tagEnabled') : t('tagDisabled')),
+        // The installed version, stated as a tag of its own: the subtitle
+        // already names the package, and a version buried there is the first
+        // thing a person asking "what do I have?" fails to find.
+        bundle.version === undefined || bundle.version === ''
+          ? null
+          : h('span', { key: 'version', className: 'vpm-tag vpm-tag-version', title: `${t('version')} ${bundle.version}` },
+            `v${bundle.version}`),
         official ? h('span', { key: 'official', className: 'vpm-tag' }, t('tagOfficial')) : null,
         bundle.optional === true ? h('span', { key: 'optional', className: 'vpm-tag' }, t('tagOptional')) : null,
         missing ? h('span', { key: 'missing', className: 'vpm-tag bad' }, t('tagMissing')) : null,
@@ -2776,10 +2791,19 @@ window.__ModuleLoader__.load({
         }, t('uninstall')) : null,
       ].filter(Boolean)
       return h('li', {
-        className: 'vpm-card',
+        className: `vpm-card${picked === true ? ' picked' : ''}`,
         onClick: () => { onDetails(bundle) },
       },
         h('div', { className: 'vpm-card-top' },
+          batch === true ? h('input', {
+            type: 'checkbox',
+            className: 'vpm-check',
+            checked: picked === true,
+            disabled: busy || pickable !== true,
+            'aria-label': title,
+            onChange: () => { onPick(bundle) },
+            onClick: (event) => { event?.stopPropagation() },
+          }) : null,
           h('span', { className: 'vpm-icon' }, h(BoxIcon, { size: 20 })),
           h('div', { className: 'vpm-card-head' },
             h('span', { className: 'vpm-card-title', title }, title),
@@ -2953,6 +2977,10 @@ window.__ModuleLoader__.load({
       const [installedBusy, setInstalledBusy] = useState(null)
       const [installedNotice, setInstalledNotice] = useState(null)
       const [installedConfirm, setInstalledConfirm] = useState(null)
+      // Batch selection over the Installed view. Names, like the market view's
+      // `picked`, so a bundle that disappears from the list drops out of it.
+      const [installedBatch, setInstalledBatch] = useState(false)
+      const [installedPicked, setInstalledPicked] = useState(() => new Set())
       const [installedDetail, setInstalledDetail] = useState(null)
       /** The batch, owned outside this component so leaving the page does not stop it. */
       const job = useRunner()
@@ -3102,6 +3130,19 @@ window.__ModuleLoader__.load({
         }
       }, [installedBusy, loadBundles, remote, t])
 
+
+      // A bundle can join a batch only when this profile could actually act on
+      // it: read-only and missing bundles are not its to switch or remove.
+      const installedSelectable = (bundle) => bundle.readOnlyReason === undefined && bundle.availability !== 'missing'
+
+      const toggleInstalledPick = (bundle) => {
+        setInstalledPicked((current) => {
+          const next = new Set(current)
+          if (next.has(bundle.name)) next.delete(bundle.name)
+          else next.add(bundle.name)
+          return next
+        })
+      }
       /**
        * Search every configured source at once. Each source answers its own
        * first page; duplicates collapse to the copy with the best state
@@ -3384,6 +3425,18 @@ window.__ModuleLoader__.load({
           .sort((left, right) => rank(left) - rank(right) || left.name.localeCompare(right.name))
       }, [bundles])
       const installedEnabled = installedBundles.filter((bundle) => bundle.enabled === true).length
+
+      // The Installed view selects profile bundles, which no market listing has
+      // to describe: each becomes an entry already marked installed, so the
+      // shared plan offers enable/disable/uninstall and never an install.
+      const installedPlan = useMemo(() => planBulk(
+        installedBundles
+          .filter((bundle) => installedPicked.has(bundle.name))
+          .map((bundle) => ({
+            entry: { name: bundle.name, title: {}, versions: [], installation: { status: 'installed' } },
+            bundle,
+          })),
+      ), [installedBundles, installedPicked])
       const installedFiltered = useMemo(() => {
         const terms = draft.toLowerCase().trim().split(/\s+/).filter(Boolean)
         if (terms.length === 0) return installedBundles
@@ -3663,10 +3716,49 @@ window.__ModuleLoader__.load({
       const installedCard = (bundle) => h(InstalledCard, {
         key: bundle.name, bundle, lang, t,
         busy: installedBusy === bundle.name,
-        onDetails: setInstalledDetail,
+        batch: installedBatch,
+        picked: installedPicked.has(bundle.name),
+        pickable: installedSelectable(bundle),
+        onPick: toggleInstalledPick,
+        // In batch mode a card click selects instead of opening the dialog:
+        // opening Details is what the person is not doing right now.
+        onDetails: installedBatch ? () => { if (installedSelectable(bundle)) toggleInstalledPick(bundle) } : setInstalledDetail,
         onToggle: toggleInstalled,
         onUninstall: (target) => { setInstalledConfirm(target) },
       })
+
+      // The bar describes the batch before it runs, using the same plan the
+      // market view uses, so both views agree on what an action would touch.
+      const installedSelectableList = installedFiltered.filter(installedSelectable)
+      const installedAllPicked = installedSelectableList.length > 0
+        && installedSelectableList.every((bundle) => installedPicked.has(bundle.name))
+      const installedBar = installedBatch !== true ? null : h('div', { className: 'vpm-bar bulk' },
+        h('span', { className: 'vpm-meta' }, t('selected', { n: installedPicked.size })),
+        h('div', { className: 'vpm-bulk-actions' },
+          h('button', {
+            key: 'all', className: 'vpm-btn small', disabled: busy,
+            onClick: () => {
+              setInstalledPicked(installedAllPicked
+                ? new Set()
+                : new Set(installedSelectableList.map((bundle) => bundle.name)))
+            },
+          }, t('selectAllInstalled')),
+          installedPlan.enable.length === 0 ? null : h('button', {
+            key: 'enable', className: 'vpm-btn', disabled: busy,
+            onClick: () => { start(orders(installedPlan, 'enable')) },
+          }, t('bulkEnable', { n: installedPlan.enable.length })),
+          installedPlan.disable.length === 0 ? null : h('button', {
+            key: 'disable', className: 'vpm-btn', disabled: busy,
+            onClick: () => { start(orders(installedPlan, 'disable')) },
+          }, t('bulkDisable', { n: installedPlan.disable.length })),
+          installedPlan.uninstall.length === 0 ? null : h('button', {
+            key: 'uninstall', className: 'vpm-btn small', disabled: busy,
+            onClick: () => { setInstalledConfirm({ batch: orders(installedPlan, 'uninstall') }) },
+          }, t('bulkUninstall', { n: installedPlan.uninstall.length })),
+          installedPicked.size === 0 ? null : h('button', {
+            key: 'clear', className: 'vpm-btn small', disabled: busy,
+            onClick: () => { setInstalledPicked(new Set()) },
+          }, t('clearSelection'))))
 
       // What an Agent session can do with this market. Folded by default: one
       // line under the description, so the list still starts near the top.
@@ -3927,6 +4019,16 @@ window.__ModuleLoader__.load({
           }, t('updateAll', { n: allUpdatable.length })) : null
           ) : (installedNotice === null ? null : h('p', { className: 'vpm-bar error' }, installedNotice)),
           h('span', { className: 'vpm-grow' }),
+          view === 'installed' && installedFiltered.length > 0 ? h('button', {
+            className: `vpm-btn${installedBatch ? ' primary' : ''}`,
+            'aria-pressed': installedBatch,
+            onClick: () => {
+              setInstalledBatch((value) => {
+                if (value) setInstalledPicked(new Set())
+                return !value
+              })
+            },
+          }, installedBatch ? t('bulkModeExit') : t('bulkMode')) : null,
           view === 'market' ? h('button', {
             className: 'vpm-btn', onClick: () => { setSourcesOpen(true) },
           }, h(SlidersIcon, { size: 13 }), t('manageSources')) : null),
@@ -3939,6 +4041,7 @@ window.__ModuleLoader__.load({
                 h('p', { className: 'vpm-state-title' }, installedBundles.length === 0 ? t('installedEmptyTitle') : t('noMatchTitle')),
                 h('p', { className: 'vpm-state-body' }, installedBundles.length === 0 ? t('installedEmptyBody') : t('noMatchBody')))
               : h('div', null,
+                installedBar,
                 installedGroups.profile.length === 0 ? null : h('section', { className: 'vpm-installed-section' },
                   h('h3', { className: 'vpm-section-title' },
                     t('installedProfileTitle'),

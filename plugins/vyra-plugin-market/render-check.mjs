@@ -686,6 +686,113 @@ await (async () => {
     'the confirmed uninstall reaches removeBundle')
 }
 
+// --- the installed card states which version is installed --------------------
+{
+  const { tree, settle } = await mount({
+    entries: [],
+    bundles: [
+      { name: 'alpha-versioned', version: '3.4.5', installed: true, enabled: true, removable: true, rows: [], overrides: [] },
+      { name: 'beta-unversioned', installed: true, enabled: true, removable: true, rows: [], overrides: [] },
+    ],
+  })
+  const segment = findAll(tree, (node) => node.type === 'button' && texts(node).join('').includes('viewInstalled'))[0]
+  segment.props.onClick()
+  const installed = await settle()
+
+  // Match the card's own title, not a substring of the whole card: one card's
+  // text can contain another card's name.
+  const cardTitled = (title) => findAll(installed, (node) => {
+    if (node.type !== 'li' || !String(node.props?.className ?? '').includes('vpm-card')) return false
+    const heading = findAll(node, (child) => String(child.props?.className ?? '').includes('vpm-card-title'))[0]
+    return heading !== undefined && texts(heading).join('') === title
+  })[0]
+
+  const versioned = cardTitled('alpha-versioned')
+  assert.ok(versioned !== undefined, 'the versioned bundle is drawn')
+  const versionTags = findAll(versioned, (node) => String(node.props?.className ?? '').includes('vpm-tag')
+    && texts(node).join('') === 'v3.4.5')
+  assert.equal(versionTags.length, 1, 'the installed card shows its version as a tag')
+
+  const unversioned = cardTitled('beta-unversioned')
+  assert.ok(unversioned !== undefined, 'the unversioned bundle is drawn')
+  const strayTags = findAll(unversioned, (node) => String(node.props?.className ?? '').includes('vpm-tag')
+    && /^v\d/u.test(texts(node).join('')))
+  assert.equal(strayTags.length, 0, 'a bundle without a version gets no version tag')
+}
+
+// --- the Installed view can act on several bundles at once -------------------
+{
+  // One enabled, one disabled and one read-only bundle: the selection must be
+  // able to enable the disabled one, disable the enabled one, and leave the
+  // read-only bundle alone.
+  const { tree, remote, settle } = await mount({
+    entries: [],
+    bundles: [
+      { name: 'alpha-on', version: '1.0.0', installed: true, enabled: true, removable: true, rows: [], overrides: [] },
+      { name: 'beta-off', version: '1.0.0', installed: true, enabled: false, removable: true, rows: [], overrides: [] },
+      { name: 'gamma-locked', version: '1.0.0', installed: true, enabled: true, removable: false, readOnlyReason: 'managed by the app', rows: [], overrides: [] },
+    ],
+  })
+  const toInstalled = findAll(tree, (node) => node.type === 'button' && texts(node).join('').includes('viewInstalled'))[0]
+  toInstalled.props.onClick()
+  let view = await settle()
+
+  const bulkToggle = findAll(view, (node) => node.type === 'button'
+    && String(node.props?.className ?? '').includes('vpm-btn')
+    && texts(node).join('') === 'bulkMode')[0]
+  assert.ok(bulkToggle !== undefined, 'the Installed view offers a batch mode')
+
+  // No checkboxes until the person asks for them.
+  const beforePick = findAll(view, (node) => String(node.props?.className ?? '').includes('vpm-check'))
+  assert.equal(beforePick.length, 0, 'checkboxes stay hidden until batch mode is on')
+
+  bulkToggle.props.onClick()
+  view = await settle()
+
+  const cardTitled = (title) => findAll(view, (node) => {
+    if (node.type !== 'li' || !String(node.props?.className ?? '').includes('vpm-card')) return false
+    const heading = findAll(node, (child) => String(child.props?.className ?? '').includes('vpm-card-title'))[0]
+    return heading !== undefined && texts(heading).join('') === title
+  })[0]
+
+  const onCard = cardTitled('alpha-on')
+  const offCard = cardTitled('beta-off')
+  const lockedCard = cardTitled('gamma-locked')
+  assert.ok(onCard && offCard && lockedCard, 'all three cards are drawn')
+
+  const checkboxes = findAll(view, (node) => String(node.props?.className ?? '').includes('vpm-check'))
+  assert.equal(checkboxes.length, 3, 'every card gets a checkbox in batch mode')
+  const lockedBox = checkboxes.find((node) => node.props.disabled === true)
+  assert.ok(lockedBox !== undefined, 'the read-only bundle cannot be selected')
+
+  // Select the two selectable ones.
+  for (const title of ['alpha-on', 'beta-off']) {
+    const card = cardTitled(title)
+    const box = findAll(card, (node) => String(node.props?.className ?? '').includes('vpm-check'))[0]
+    box.props.onChange()
+    view = await settle()
+  }
+
+  const textsNow = texts(view).join(' | ')
+  assert.ok(textsNow.includes('bulkDisable2') || textsNow.includes('bulkDisable'), `a batch bar offers Disable, got: ${textsNow}`)
+  assert.ok(textsNow.includes('bulkEnable1') || textsNow.includes('bulkEnable'), 'a batch bar offers Enable for the disabled pick')
+
+  // Disabling runs one Host call per selected enabled bundle.
+  const disableButton = findAll(view, (node) => node.type === 'button'
+    && String(node.props?.className ?? '').includes('vpm-btn')
+    && texts(node).join('').includes('bulkDisable'))[0]
+  assert.ok(disableButton !== undefined, 'the batch bar has a Disable action')
+  disableButton.props.onClick()
+  view = await settle()
+  const confirmRun = findAll(view, (node) => node.type === 'button'
+    && String(node.props.className ?? '').includes('danger'))[0]
+  if (confirmRun !== undefined) { confirmRun.props.onClick(); view = await settle() }
+  assert.ok(remote.calls.some(([name, bundleName, enabled]) => name === 'setBundleEnabled'
+    && bundleName === 'alpha-on' && enabled === false), 'batch Disable reaches setBundleEnabled')
+  assert.ok(!remote.calls.some(([name, bundleName]) => name === 'setBundleEnabled' && bundleName === 'gamma-locked'),
+    'the read-only bundle is never switched')
+}
+
 // --- a Host change re-reads the bundles --------------------------------------
 {
   const { remote } = await mount()
