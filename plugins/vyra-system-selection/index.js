@@ -647,6 +647,7 @@ export function apply(ctx) {
       maxChars: MAX_TEXT_CHARS,
       hookActive: overlay.hookActive,
       keyHookActive: overlay.keyHookActive,
+      rawInput: overlay.rawInputStats,
       stats: { ...stats },
       lastRun,
       overlayVisible: overlay.visible,

@@ -143,13 +143,13 @@ const native = globalThis[Symbol.for('dsh-vyra-system-selection.native')] ??= ((
   const MSLLHOOKSTRUCT = koffi.struct('MSLLHOOKSTRUCT', {
     pt: 'POINT', mouseData: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
   })
-  // Low-level keyboard hook payload: same tail, no cursor point.
-  const KBDLLHOOKSTRUCT = koffi.struct('KBDLLHOOKSTRUCT', {
-    vkCode: 'uint32', scanCode: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
-  })
   // Prefixed: koffi registers type names process-wide, and a plain 'SIZE' is a name any other
   // plugin in this Host could already have taken.
   const SSSIZE = koffi.struct('VYRA_SELECTION_SIZE', { cx: 'long', cy: 'long' })
+  // Raw keyboard input: one device entry for "the keyboard", plus the header GetRawInputData fills.
+  const RAWINPUTDEVICE = koffi.struct('VYRA_RAWINPUTDEVICE', {
+    usUsagePage: 'uint16', usUsage: 'uint16', dwFlags: 'uint32', hwndTarget: 'void*',
+  })
   const HOOKPROC = koffi.proto('intptr_t HOOKPROC(int code, uintptr_t wParam, void *lParam)')
   
   // --- bindings --------------------------------------------------------------------------------
@@ -248,6 +248,9 @@ const native = globalThis[Symbol.for('dsh-vyra-system-selection.native')] ??= ((
     // Themes and the high-contrast flag live in user32 as plain values; no registry read needed.
     GetSysColor: u.func('uint32 __stdcall GetSysColor(int index)'),
     SystemParametersInfoW: u.func('bool __stdcall SystemParametersInfoW(uint32 action, uint32 param, void *data, uint32 winIni)'),
+    // Raw input: the event-driven way for a window that never takes focus to see keystrokes.
+    RegisterRawInputDevices: u.func('bool __stdcall RegisterRawInputDevices(VYRA_RAWINPUTDEVICE *devices, uint32 count, uint32 size)'),
+    GetRawInputData: u.func('uint32 __stdcall GetRawInputData(void *raw, uint32 command, void *data, _Inout_ uint32 *size, uint32 headerSize)'),
   }
   return { u, g, k, advapi, F, POINT, RECT, MONITORINFO, KEYBDINPUT, MOUSEINPUT, HARDWAREINPUT, INPUT, WNDCLASSEXW, WNDPROC, PROCESSENTRY32W, MSLLHOOKSTRUCT, HOOKPROC }
 })()
@@ -328,11 +331,26 @@ const VK_C = 0x43
 const INPUT_KEYBOARD = 1
 const KEYEVENTF_KEYUP = 0x0002
 
-/** WH_KEYBOARD_LL: installed only while the popup is visible (see `installKeyHook`). */
-const WH_KEYBOARD_LL = 13
-/** `KBDLLHOOKSTRUCT.flags`: the event came from an extended key, or from `SendInput`. */
-const LLKHF_EXTENDED = 0x01
-const LLKHF_INJECTED = 0x10
+
+// --- raw input ---------------------------------------------------------------------------------
+//
+// The event-driven alternative to the low-level hook. A hook puts a callback in the system's input
+// path for every key press; raw input asks the window itself to be told about keystrokes instead,
+// and WM_INPUT arrives on the popup's own message loop. RIDEV_INPUTSINK is the flag that keeps it
+// working while another application has focus — which is the entire point, since the popup never
+// takes focus.
+const WM_INPUT = 0x00ff
+const RIDEV_INPUTSINK = 0x00000100
+const RID_INPUT = 0x10000003
+const HID_USAGE_PAGE_GENERIC = 0x01
+const HID_USAGE_KEYBOARD = 0x06
+/** RAWINPUTHEADER is 24 bytes on x64; the keyboard union starts right after it. */
+const RAWINPUTHEADER_SIZE = 24
+/** Offset of `RAWKEYBOARD.VKey` inside that union: MakeCode(2) + Flags(2) + Reserved(2). */
+const RAWKEYBOARD_VKEY_OFFSET = RAWINPUTHEADER_SIZE + 6
+const RAWKEYBOARD_FLAGS_OFFSET = RAWINPUTHEADER_SIZE + 2
+/** `RI_KEY_BREAK`: the key came up. Only presses dismiss. */
+const RI_KEY_BREAK = 0x01
 
 const CF_UNICODETEXT = 13
 
@@ -1459,6 +1477,12 @@ export function createOverlay(handlers = {}) {
         case WM_RBUTTONDOWN:
           if (handlers.onDismiss) handlers.onDismiss()
           return 0
+        case WM_INPUT:
+          // A keystroke arrived for this window without it having focus. Handled here rather than
+          // through a hook: the message is already addressed to us, so nothing sits in the system's
+          // input path. DefWindowProc must still run so the system can clean up the raw buffer.
+          handleRawInput(lParam)
+          return F.DefWindowProcW(hwnd, msg, wParam, lParam)
         case WM_CLOSE:
           if (handlers.onDismiss) handlers.onDismiss()
           return 0
@@ -1540,8 +1564,8 @@ export function createOverlay(handlers = {}) {
     applyRoundedRegion(hwnd, width, height, radius)
     F.SetWindowPos(hwnd, null, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW)
     startPump()
-    // Only while something is on screen: see `installKeyHook`.
-    installKeyHook()
+    // Only while something is on screen: see `installRawInput`.
+    installRawInput()
   }
 
   /** Drain the thread's message queue once. Used before stopping the pump for good. */
@@ -1618,67 +1642,76 @@ export function createOverlay(handlers = {}) {
     timerMs = 0
   }
 
-  // --- low-level keyboard hook ----------------------------------------------------------------
+  // --- keyboard: raw input on the popup's own window -------------------------------------------
 
-  // The popup never takes focus, so it cannot receive a single keystroke: a user who selects text
-  // to delete it, or to type over it, keeps looking at a menu that is now about nothing. Watching
-  // the keyboard is therefore the only way to notice, and a low-level hook is the only way to
-  // watch it system-wide.
+  // The popup never takes focus, so it receives no WM_KEYDOWN: a user who selects text to delete
+  // it, or to type over it, keeps looking at a menu that is now about nothing.
   //
-  // Installed only while the popup is visible, and removed the moment it hides: a keyboard hook
-  // sits in the input path of every key press machine-wide, so it must not outlive the reason for
-  // it. Deciding goes through `isDismissingKey` — a pure function, so the rule is testable — and
-  // the press is never swallowed: whatever the user is typing still reaches their application.
-  let keyHook = null
-  let keyHookProc = null
+  // The event-driven answer is raw input, not a hook. `RIDEV_INPUTSINK` asks the system to deliver
+  // WM_INPUT to this window even while another application is focused, and the message arrives on
+  // the popup's own loop — so nothing is installed in the system's input path, and there is no
+  // callback budget to stay inside. Registered when the popup is shown, removed when it hides.
+  let rawKeyboard = false
+  /** Raw WM_INPUT messages seen, and how many of them decided to dismiss. */
+  const rawStats = { messages: 0, dismissed: 0 }
 
-  function installKeyHook() {
-    if (keyHook) return true
-    keyHookProc = koffi.register((code, wParam, lParam) => {
-      if (code < 0) return F.CallNextHookEx(null, code, wParam, lParam)
-      // Key-up events decide nothing, and they are half of everything this hook sees.
-      if (wParam !== WM_KEYDOWN) return F.CallNextHookEx(null, code, wParam, lParam)
-      // A hidden popup has nothing to dismiss; the hook is being removed and this is the last pass.
-      if (state.mode === 'hidden') return F.CallNextHookEx(null, code, wParam, lParam)
-      const info = koffi.decode(lParam, 'KBDLLHOOKSTRUCT')
-      const flags = info.flags
-      if ((flags & LLKHF_INJECTED) !== 0) return F.CallNextHookEx(null, code, wParam, lParam)
-      const dismissing = isDismissingKey({
-        vk: info.vkCode,
-        control: (F.GetAsyncKeyState(VK_CONTROL) & 0x8000) !== 0,
-        alt: (F.GetAsyncKeyState(VK_MENU) & 0x8000) !== 0,
-        win: (F.GetAsyncKeyState(VK_LWIN) & 0x8000) !== 0 || (F.GetAsyncKeyState(VK_RWIN) & 0x8000) !== 0,
-        extended: (flags & LLKHF_EXTENDED) !== 0,
-      })
-      if (dismissing && handlers.onDismiss) {
-        try {
-          handlers.onDismiss()
-        } catch {
-          // A failing handler must not turn into a lost keystroke.
-        }
-      }
-      // Never swallowed: the key belongs to the application the user is typing into.
-      return F.CallNextHookEx(null, code, wParam, lParam)
-    }, koffi.pointer(HOOKPROC))
+  function installRawInput() {
+    if (rawKeyboard || !state.hwnd) return rawKeyboard
+    const devices = [{
+      usUsagePage: HID_USAGE_PAGE_GENERIC,
+      usUsage: HID_USAGE_KEYBOARD,
+      dwFlags: RIDEV_INPUTSINK,
+      hwndTarget: state.hwnd,
+    }]
+    rawKeyboard = F.RegisterRawInputDevices(devices, 1, koffi.sizeof('VYRA_RAWINPUTDEVICE')) === true
+    if (!rawKeyboard) ctxWarn('键盘输入监听不可用（RegisterRawInputDevices 失败），打字时菜单不会自动关闭')
+    return rawKeyboard
+  }
 
-    keyHook = F.SetWindowsHookExW(WH_KEYBOARD_LL, keyHookProc, null, 0)
-    if (!keyHook) {
-      ctxWarn('键盘钩子安装失败，打字时菜单不会自动关闭')
-      keyHookProc = null
-      return false
+  function removeRawInput() {
+    if (!rawKeyboard) return
+    // Deregister by re-registering with RIDEV_REMOVE (0x1) and a null target.
+    const devices = [{ usUsagePage: HID_USAGE_PAGE_GENERIC, usUsage: HID_USAGE_KEYBOARD, dwFlags: 0x00000001, hwndTarget: null }]
+    F.RegisterRawInputDevices(devices, 1, koffi.sizeof('VYRA_RAWINPUTDEVICE'))
+    rawKeyboard = false
+  }
+
+  /**
+   * Handle one WM_INPUT: dismiss the popup if the key means the selection is no longer wanted.
+   *
+   * WM_INPUT hands over a packet rather than a virtual key, so it is read out of the buffer
+   * `GetRawInputData` fills. A key-up is skipped — only the press counts — and so is input that
+   * arrives while the popup is already gone.
+   */
+  function handleRawInput(lParam) {
+    rawStats.messages++
+    if (state.mode === 'hidden') return
+    const size = Buffer.alloc(8)
+    size.writeUInt32LE(0, 0)
+    F.GetRawInputData(lParam, RID_INPUT, null, size, RAWINPUTHEADER_SIZE)
+    const bytes = size.readUInt32LE(0)
+    if (bytes === 0 || bytes > 256) return
+    const buffer = Buffer.alloc(bytes)
+    const wanted = Buffer.alloc(8)
+    wanted.writeUInt32LE(bytes, 0)
+    if (F.GetRawInputData(lParam, RID_INPUT, buffer, wanted, RAWINPUTHEADER_SIZE) === 0) return
+    if ((buffer.readUInt16LE(RAWKEYBOARD_FLAGS_OFFSET) & RI_KEY_BREAK) !== 0) return
+    const vk = buffer.readUInt16LE(RAWKEYBOARD_VKEY_OFFSET)
+    const dismissing = isDismissingKey({
+      vk,
+      control: (F.GetAsyncKeyState(VK_CONTROL) & 0x8000) !== 0,
+      alt: (F.GetAsyncKeyState(VK_MENU) & 0x8000) !== 0,
+      win: (F.GetAsyncKeyState(VK_LWIN) & 0x8000) !== 0 || (F.GetAsyncKeyState(VK_RWIN) & 0x8000) !== 0,
+    })
+    if (!dismissing || !handlers.onDismiss) return
+    rawStats.dismissed++
+    try {
+      handlers.onDismiss()
+    } catch {
+      // A failing handler must not swallow the keystroke; raw input never consumes it anyway.
     }
-    return true
   }
-
-  function removeKeyHook() {
-    if (!keyHook) return
-    F.UnhookWindowsHookEx(keyHook)
-    keyHook = null
-    // The callback stays registered for the same reason the mouse one does: the system may still
-    // be inside it when Unhook returns.
-  }
-
-  // --- low-level mouse hook -------------------------------------------------------------------
+// --- low-level mouse hook -------------------------------------------------------------------
 
   // A right-click over a selection must open OUR menu, not the application's. There is no way to
   // ask an arbitrary application to stand down, so the click is swallowed before delivery and
@@ -1919,8 +1952,13 @@ export function createOverlay(handlers = {}) {
       return hook !== null
     },
     /** True while the key hook is installed, which is exactly while the popup is visible. */
+    /** True while raw keyboard input is registered, which is exactly while the popup is visible. */
     get keyHookActive() {
-      return keyHook !== null
+      return rawKeyboard
+    },
+    /** Raw keyboard input diagnostics: messages received, and how many closed the popup. */
+    get rawInputStats() {
+      return { ...rawStats }
     },
     get visible() {
       return state.mode !== 'hidden'
@@ -2046,18 +2084,19 @@ export function createOverlay(handlers = {}) {
       }
       if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
       if (state.hwnd) F.ShowWindow(state.hwnd, SW_HIDE)
-      // Nothing left to dismiss by typing, so the keyboard leaves the input path again.
-      removeKeyHook()
+      // Nothing left to dismiss by typing, so stop asking for keystrokes.
+      removeRawInput()
       // The pump keeps running while the hook is installed: it is how the hook's callbacks reach
       // this thread, so stopping it here would silently disable right-click detection.
       if (!hook) stopPump()
     },
     destroy() {
+      removeRawInput()
       // Order matters: unhooking is delivered through the message queue, so the pump has to still
       // be running when the hook is removed. Stopping it first leaves the hook installed, and every
       // later right-click on the machine keeps being swallowed by a destroyed overlay.
       removeHook()
-      removeKeyHook()
+      removeRawInput()
       // Unhooking is asynchronous: the request is posted and the system's hook chain is only
       // updated once it is processed, which is what the pump below drives. A fixed number of
       // drains is a guess and was measurably not enough; drive the queue until the unhook has

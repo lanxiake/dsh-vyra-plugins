@@ -118,10 +118,13 @@ test('the card is told the source language, so the pill cannot claim 自动检�
 // while there is a popup to close.
 test('the keyboard hook is installed with the popup and removed with it', () => {
   const native = readFileSync(join(import.meta.dirname, '..', 'native.js'), 'utf8')
-  const show = native.slice(native.indexOf('function showAt('), native.indexOf('function showAt(') + 700)
-  assert.match(show, /installKeyHook\(\)/, 'showing the popup installs the hook')
+  const show = native.slice(native.indexOf('function showAt('), native.indexOf('function showAt(') + 900)
+  assert.match(show, /installRawInput\(\)/, 'showing the popup registers raw keyboard input')
   const hide = native.slice(native.indexOf('    hide() {'), native.indexOf('    destroy() {'))
-  assert.match(hide, /removeKeyHook\(\)/, 'hiding the popup removes it')
-  assert.doesNotMatch(native.slice(native.indexOf('function installKeyHook('), native.indexOf('function removeKeyHook(')),
-    /return 1/, 'the key press is never swallowed')
+  assert.match(hide, /removeRawInput\(\)/, 'hiding the popup deregisters it')
+  // Raw input is the event-driven choice: the keystroke is addressed to the popup's own window and
+  // never enters the system's input path, so there is no hook to consume it either.
+  assert.doesNotMatch(native, /WH_KEYBOARD_LL/, 'no low-level keyboard hook is installed')
+  assert.match(native, /RIDEV_INPUTSINK/, 'keystrokes arrive while another app holds focus')
+  assert.match(native, /case WM_INPUT:/, 'the window procedure handles the raw input message')
 })
