@@ -207,8 +207,16 @@ export function MarkdownView({ text, sessionId, folder, ext }) {
  */
 const HTML_SANDBOX = 'allow-scripts allow-forms allow-popups allow-modals allow-downloads'
 
-/** Every asset-bearing tag the preview can inline, in source order. */
-const ASSET_TAG = /<(link|script|img)\b[^>]*>/giu
+/**
+ * Every asset-bearing tag the preview can inline, in source order.
+ *
+ * Script and style bodies are blanked first: a script that writes markup would
+ * otherwise open a pseudo-tag closed by the next real tag, and that tag would
+ * silently lose its asset. Attribute values are matched with quote awareness so
+ * a `>` inside one does not end the tag early.
+ */
+const ASSET_TAG = /<(link|script|img)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/giu
+const OPAQUE_REGION = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/giu
 
 function attributeOf(tag, name) {
   const match = new RegExp(`${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'iu').exec(tag)
@@ -217,55 +225,76 @@ function attributeOf(tag, name) {
 
 /** The asset references in a document, as `{ tag, name, url }`. */
 function assetRefsOf(html) {
+  const scanText = html.replace(OPAQUE_REGION, match => {
+    const open = /^(<(?:script|style)\b[^>]*>)/iu.exec(match)
+    return open === null ? '' : open[1]
+  })
   const refs = []
-  for (const match of html.matchAll(ASSET_TAG)) {
+  for (const match of scanText.matchAll(ASSET_TAG)) {
     const tag = match[0]
-    const kind = match[1].toLowerCase()
-    if (kind === 'link') {
+    const tagName = match[1].toLowerCase()
+    if (tagName === 'link') {
       if (!/\bstylesheet\b/iu.test(attributeOf(tag, 'rel') ?? '')) continue
       const url = attributeOf(tag, 'href')
-      if (url !== undefined && url !== '') refs.push({ tag: kind, name: 'href', url })
+      if (url !== undefined && url !== '') refs.push({ tag: tagName, name: 'href', url })
       continue
     }
     const url = attributeOf(tag, 'src')
-    if (url !== undefined && url !== '') refs.push({ tag: kind, name: 'src', url })
+    if (url !== undefined && url !== '') refs.push({ tag: tagName, name: 'src', url })
   }
   return refs
 }
+
+/** How much inlined data one document may carry, matching the Host's budget. */
+const ASSET_BUDGET = 8 * 1024 * 1024
 
 /**
  * Ask the Host to turn each reference into a data URL, then swap it in.
  *
  * The Host is the only party allowed to fetch (it can read workspace files and
  * validate containment); the framing document keeps its references when the
- * Host declines one, so a single missing asset never blanks the page.
+ * Host declines one, so a single missing asset never blanks the page. The
+ * budget counts every occurrence, and the swap uses a replacer function so a
+ * `$` in a data URL cannot splice the document.
  */
 async function inlineDocumentAssets(html, sessionId, folder) {
   const refs = assetRefsOf(html)
   if (refs.length === 0) return html
+  const counts = new Map()
+  for (const ref of refs) counts.set(ref.url, (counts.get(ref.url) ?? 0) + 1)
+
   const resolved = new Map()
-  await Promise.all(refs.map(async ref => {
-    if (resolved.has(ref.url)) return
-    const isRemote = /^https?:\/\//iu.test(ref.url)
-    const target = isRemote ? ref.url : normalizeRelative(folder, ref.url)
-    if (target === undefined) { resolved.set(ref.url, undefined); return }
+  let budget = 0
+  for (const [url, count] of counts) {
+    if (budget >= ASSET_BUDGET) { resolved.set(url, undefined); continue }
+    const isRemote = /^https?:\/\//iu.test(url)
+    const target = isRemote ? url : normalizeRelative(folder, url)
+    if (target === undefined) { resolved.set(url, undefined); continue }
     try {
       const response = await fetch(apiUrl('api/vyra-media/html-asset', { sessionId, url: target }), { credentials: 'same-origin' })
       const body = await response.json()
-      resolved.set(ref.url, body?.ok === true ? body.dataUrl : undefined)
+      const dataUrl = body?.ok === true ? body.dataUrl : undefined
+      if (typeof dataUrl !== 'string' || budget + dataUrl.length * count > ASSET_BUDGET) {
+        resolved.set(url, undefined)
+        continue
+      }
+      budget += dataUrl.length * count
+      resolved.set(url, dataUrl)
     } catch {
-      resolved.set(ref.url, undefined)
+      resolved.set(url, undefined)
     }
-  }))
+  }
+
   let output = html
   for (const ref of refs) {
     const dataUrl = resolved.get(ref.url)
     if (typeof dataUrl !== 'string') continue
-    output = output.replace(new RegExp(`<${ref.tag}\\b[^>]*>`, 'giu'), tag => {
+    const pattern = new RegExp(`<${ref.tag}\\b((?:"[^"]*"|'[^']*'|[^>"'])*)>`, 'giu')
+    output = output.replace(pattern, tag => {
       if (attributeOf(tag, ref.name) !== ref.url) return tag
       return tag.replace(
         new RegExp(`(${ref.name}\\s*=\\s*)(?:"[^"]*"|'[^']*')`, 'iu'),
-        (_, lead) => `${lead}"${dataUrl}"`,
+        (whole, lead) => `${lead}"${dataUrl.split('"').join('&quot;')}"`,
       )
     })
   }

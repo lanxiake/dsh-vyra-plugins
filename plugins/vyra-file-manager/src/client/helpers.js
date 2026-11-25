@@ -125,9 +125,6 @@ export function folderOf(item) {
   return slash === -1 ? '' : item.relativePath.slice(0, slash)
 }
 
-export function domainOf(item) {
-  try { return new URL(item.url || item.src || '').hostname.replace(/^www\./, '') } catch { return '链接' }
-}
 
 export function typeLabel(kind) {
   return TYPE_LABEL[kind] ?? '文件'

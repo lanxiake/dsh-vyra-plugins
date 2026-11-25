@@ -8,8 +8,11 @@
  * A platform with no implementation reports that plainly instead of pretending.
  */
 import { spawnSync } from 'node:child_process'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
+import { containsTarget, isAbsolutePath, joinWorkspacePath, pathContains, targetPathOf } from './paths.js'
 
 /** One clipboard request may carry at most this many entries. */
 export const MAX_CLIPBOARD_ITEMS = 100
@@ -53,6 +56,11 @@ export async function resolveClipboardPaths({ paths, fs, workspaceRoot, signal }
     if (typeof path !== 'string' || path === '' || path.includes('\0')) {
       throw fail(400, 'bad-request', 'every path must be a non-empty string')
     }
+    // The caller names entries inside its workspace; an absolute path is a
+    // different request (and would let a client probe the Host's filesystem).
+    if (isAbsolutePath(path) || /^[A-Za-z]:[/\\]/u.test(path)) {
+      throw fail(400, 'bad-request', 'paths must be workspace-relative')
+    }
     const target = await fs.resolve(joinWorkspacePath(workspaceRoot, path), { signal })
     if (!containsTarget(fs, rootTarget, target)) {
       throw fail(403, 'outside-workspace', `"${path}" is outside the workspace`)
@@ -63,6 +71,35 @@ export async function resolveClipboardPaths({ paths, fs, workspaceRoot, signal }
     absolute.push(resolvedPath)
   }
   return absolute
+}
+
+/**
+ * Hand the paths to the script through a UTF-8 file rather than one argv string.
+ *
+ * A UNC path (`\\server\share\f.txt`) or a name containing `|`, a quote or a
+ * newline is otherwise mangled by Node's argv escaping or by the payload's own
+ * separator.
+ * @param {object} args - run inputs.
+ * @param {string[]} args.absolutePaths - validated absolute paths.
+ * @param {Function} args.spawn - process seam.
+ * @returns {{ status: number, stdout: string, stderr: string }} the child result.
+ */
+function runWithListFile({ absolutePaths, spawn }) {
+  const directory = mkdtempSync(join(tmpdir(), 'vyra-clipboard-'))
+  const listFile = join(directory, 'paths.txt')
+  try {
+    writeFileSync(listFile, `${absolutePaths.join('\n')}\n`, 'utf8')
+    return spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+      '-File', SCRIPT_PATH,
+      '-Kind', 'files',
+      '-ListFile', listFile,
+    ])
+  } finally {
+    // The script has already copied the paths onto the clipboard by now; the
+    // list is only the transport.
+    try { rmSync(directory, { recursive: true, force: true }) } catch { /* best effort */ }
+  }
 }
 
 /** Run one command and translate a non-zero exit into a stable code. */
@@ -110,12 +147,7 @@ export async function copyPathsToClipboard({ absolutePaths, platform = process.p
 
   let result
   if (platform === 'win32') {
-    result = spawn('powershell.exe', [
-      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-      '-File', SCRIPT_PATH,
-      '-Kind', 'files',
-      '-Path', absolutePaths.join('|'),
-    ])
+    result = runWithListFile({ absolutePaths, spawn })
   } else if (platform === 'darwin') {
     result = spawn('osascript', ['-e', osascriptSource(absolutePaths)])
   } else if (platform === 'linux') {
@@ -125,17 +157,22 @@ export async function copyPathsToClipboard({ absolutePaths, platform = process.p
   }
 
   if (result.status === 0) return
-  const detail = String(result.stderr ?? '').trim()
-  // The script tags its own failures; anything else is the shell refusing to run it.
-  if (/CLIPBOARD_BUSY/u.test(detail)) {
+  // The script writes its own markers with Write-Output (stdout), while a
+  // PowerShell parse or runtime failure lands on stderr — read both.
+  const detail = `${result.stdout ?? ''}\n${result.stderr ?? ''}`.trim()
+  const marker = line => line.startsWith('CLIPBOARD_BUSY')
+  const lines = detail.split(/\r?\n/u)
+  if (lines.some(marker)) {
     throw fail(409, 'clipboard-busy', '剪贴板被其他程序占用，请稍后再试')
   }
-  if (/CLIPBOARD_MISSING:(.+)/u.test(detail)) {
-    const missing = /CLIPBOARD_MISSING:(.+)/u.exec(detail)[1].trim()
-    throw fail(404, 'not-found', `文件不存在：${missing}`)
+  const missing = lines.find(line => line.startsWith('CLIPBOARD_MISSING:'))
+  if (missing !== undefined) {
+    throw fail(404, 'not-found', `文件不存在：${missing.slice('CLIPBOARD_MISSING:'.length).trim()}`)
   }
-  if (/CLIPBOARD_EMPTY/u.test(detail)) throw fail(400, 'bad-request', '没有要复制的文件')
-  if (/CLIPBOARD_NO_CMDLET/u.test(detail)) {
+  if (lines.some(line => line.startsWith('CLIPBOARD_EMPTY'))) {
+    throw fail(400, 'bad-request', '没有要复制的文件')
+  }
+  if (lines.some(line => line.startsWith('CLIPBOARD_NO_CMDLET'))) {
     throw fail(501, 'clipboard-unsupported', 'Set-Clipboard 不可用（需要 PowerShell 5.0+）')
   }
   throw fail(500, 'spawn-failed', detail || 'the clipboard writer exited unsuccessfully')

@@ -590,6 +590,26 @@ async function handleClipboard(request, ctx) {
 }
 
 /**
+ * Turn an allowed remote asset response into a `data:` URL.
+ * @param {Response} response - the successful response.
+ * @returns {Promise<Response>} the JSON body.
+ */
+async function assetResponse(response) {
+  const rawType = response.headers.get('content-type') ?? 'application/octet-stream'
+  const type = rawType.split(';')[0].trim()
+  // Only well-formed `type/subtype` values reach a `data:` URL: the value comes
+  // from the remote server and is spliced into a document attribute.
+  if (!/^[\w.+-]+\/[\w.+-]+$/u.test(type)) return json({ ok: false, reason: 'unsupported-type', type })
+  if (!/^(?:text\/css|text\/javascript|application\/javascript|application\/x-javascript|image\/)/iu.test(type)
+    && !type.startsWith('font/')) {
+    return json({ ok: false, reason: 'unsupported-type', type })
+  }
+  const buffer = new Uint8Array(await response.arrayBuffer())
+  if (buffer.byteLength > MAX_ASSET_BYTES) return json({ ok: false, reason: 'too-large' })
+  return json({ ok: true, dataUrl: `data:${type};base64,${Buffer.from(buffer).toString('base64')}` })
+}
+
+/**
  * GET /api/vyra-media/html-asset
  *
  * Resolves one asset a sandboxed HTML preview referred to, as a `data:` URL.
@@ -619,19 +639,28 @@ async function handleHtmlAsset(request, ctx) {
     try {
       const response = await fetch(reference, {
         signal: AbortSignal.timeout(ASSET_TIMEOUT_MS),
-        redirect: 'follow',
+        // One hop is followed, by hand, so a redirect cannot silently move the
+        // fetch somewhere the caller never named.
+        redirect: 'manual',
       })
+      if (response.status >= 300 && response.status < 400) {
+        const target = response.headers.get('location')
+        if (target === null || !/^https?:\/\//iu.test(target)) return json({ ok: false, reason: 'redirect' })
+        const followed = await fetch(new URL(target, reference).href, {
+          signal: AbortSignal.timeout(ASSET_TIMEOUT_MS),
+          redirect: 'error',
+        })
+        if (!followed.ok) return json({ ok: false, reason: 'not-ok', status: followed.status })
+        return await assetResponse(followed)
+      }
       if (!response.ok) return json({ ok: false, reason: 'not-ok', status: response.status })
-      const type = response.headers.get('content-type') ?? 'application/octet-stream'
       // Anything the browser would execute gets a tight allow-list: a remote page
       // must not smuggle in an HTML document that could escape the asset slot.
       if (!/^(?:text\/css|text\/javascript|application\/javascript|application\/x-javascript|image\/)/iu.test(type)
         && !type.startsWith('font/')) {
         return json({ ok: false, reason: 'unsupported-type', type })
       }
-      const buffer = new Uint8Array(await response.arrayBuffer())
-      if (buffer.byteLength > MAX_ASSET_BYTES) return json({ ok: false, reason: 'too-large' })
-      return json({ ok: true, dataUrl: `data:${type.split(';')[0]};base64,${Buffer.from(buffer).toString('base64')}` })
+      return await assetResponse(response)
     } catch (error) {
       return json({ ok: false, reason: 'fetch-failed', error: error?.message ?? String(error) })
     }

@@ -210,71 +210,93 @@ test('copying files uses the clipboard route, not the link menu', async () => {
   assert.doesNotMatch(source, /copyLink/u)
 })
 
-const makeSidebar = (tabs, { expanded = true, sessionId = 's-1' } = {}) => {
+/**
+ * A Sidebar whose behaviour matches the real service: `openTab` reveals the
+ * column (an open behind a collapsed panel is not an open), `tabsIn` is empty
+ * before adoption, and a close leaves the lone guide tab behind.
+ */
+const makeSidebar = ({ adopted = true, sessionId = 's-1', rival = false } = {}) => {
   const opened = []
+  let tabs = adopted ? [{ id: 'guide', kind: 'guide' }] : []
   const sidebar = {
     mounted: { getSnapshot: () => sessionId, subscribe: () => () => {} },
     openTabs: { subscribe: () => () => {} },
-    isExpanded: () => expanded,
+    isExpanded: () => false,
     tabsIn: () => tabs,
-    openTab: (kind, options) => { opened.push({ kind, options }) },
+    openTab: (kind, options) => {
+      opened.push({ kind, options })
+      const replaced = options?.replaceTab === undefined ? undefined : options.replaceTab
+      const kept = tabs.filter(tab => tab.id !== replaced)
+      tabs = [...kept, { id: `tab-${opened.length}`, kind }]
+    },
+    closeAll: () => { tabs = [{ id: 'guide', kind: 'guide' }] },
   }
-  return { sidebar, opened }
+  const kinds = new Map([[ 'media', {}], ...(rival ? [['files', {}]] : [])])
+  return { sidebar, opened, kinds }
 }
 
-test('replaceSoleGuide swaps a lone guide tab for the file manager', async () => {
+test('replaceSoleGuide swaps a lone guide tab even while the column is collapsed', async () => {
   const { replaceSoleGuide } = await import('./src/client/default-tab.js')
-  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }])
-  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media' }), true)
-  assert.deepEqual(opened, [{ kind: 'media', options: { replaceTab: 't1' } }])
+  const { sidebar, opened, kinds } = makeSidebar()
+  assert.equal(replaceSoleGuide({ sidebar, kinds, libraryKind: 'media' }), true)
+  assert.deepEqual(opened, [{ kind: 'media', options: { replaceTab: 'guide' } }])
+})
+
+test('replaceSoleGuide still works when the session store is not adopted yet', async () => {
+  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
+  const { sidebar, opened, kinds } = makeSidebar({ adopted: false })
+  assert.equal(replaceSoleGuide({ sidebar, kinds, libraryKind: 'media' }), true)
+  assert.deepEqual(opened, [{ kind: 'media', options: {} }])
 })
 
 test('replaceSoleGuide yields to the workspace-files tab from another plugin', async () => {
   const { replaceSoleGuide } = await import('./src/client/default-tab.js')
-  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }])
-  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['files', {}], ['media', {}]]), libraryKind: 'media' }), false)
+  const { sidebar, opened, kinds } = makeSidebar({ rival: true })
+  assert.equal(replaceSoleGuide({ sidebar, kinds, libraryKind: 'media' }), false)
   assert.equal(opened.length, 0)
 })
 
 test('replaceSoleGuide does nothing when the session already has other tabs', async () => {
   const { replaceSoleGuide } = await import('./src/client/default-tab.js')
-  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }, { id: 't2', kind: 'media' }])
-  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media' }), false)
-  assert.equal(opened.length, 0)
+  const { sidebar, kinds } = makeSidebar()
+  sidebar.openTab('video', {})
+  const before = { ...sidebar, tabsIn: () => [{ id: 'guide', kind: 'guide' }, { id: 'v', kind: 'video' }] }
+  assert.equal(replaceSoleGuide({ sidebar: before, kinds, libraryKind: 'media' }), false)
 })
 
-test('replaceSoleGuide does nothing while the sidebar is collapsed', async () => {
-  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
-  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }], { expanded: false })
-  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media' }), false)
-  assert.equal(opened.length, 0)
-})
-
-test('installDefaultTab reacts to the sidebar once, after a microtask', async () => {
+test('a closed file-manager tab is not reopened for the same session', async () => {
   const { installDefaultTab } = await import('./src/client/default-tab.js')
+  const { sidebar, opened, kinds } = makeSidebar()
   const listeners = []
-  const opened = []
-  const sidebar = {
-    mounted: { getSnapshot: () => 's-1', subscribe: fn => { listeners.push(fn); return () => {} } },
+  const watched = {
+    ...sidebar,
     openTabs: { subscribe: fn => { listeners.push(fn); return () => {} } },
-    isExpanded: () => true,
-    tabsIn: () => [{ id: 't1', kind: 'guide' }],
-    openTab: (kind, options) => { opened.push({ kind, options }) },
   }
-  let enabled = true
-  const dispose = installDefaultTab({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media', enabled: () => enabled })
-  listeners[0]()
-  assert.equal(opened.length, 0, 'must defer past the synchronous call')
+  installDefaultTab({ sidebar: watched, kinds, libraryKind: 'media', enabled: () => true })
   await Promise.resolve()
-  assert.deepEqual(opened, [{ kind: 'media', options: { replaceTab: 't1' } }])
+  assert.equal(opened.length, 1, 'first expand opens the file manager')
 
-  // The preference being off keeps the swap from happening again.
-  opened.length = 0
-  enabled = false
+  // The person closes it: only the guide tab remains, exactly as before.
+  sidebar.closeAll()
+  listeners[0]()
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(opened.length, 1, 'closing must stick')
+})
+
+test('the preference being off keeps the guide page', async () => {
+  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
+  const { installDefaultTab } = await import('./src/client/default-tab.js')
+  const { sidebar, opened, kinds } = makeSidebar()
+  const listeners = []
+  const watched = { ...sidebar, openTabs: { subscribe: fn => { listeners.push(fn); return () => {} } } }
+  installDefaultTab({ sidebar: watched, kinds, libraryKind: 'media', enabled: () => false })
+  await Promise.resolve()
+  assert.equal(opened.length, 0)
   listeners[0]()
   await Promise.resolve()
   assert.equal(opened.length, 0)
-  dispose()
+  assert.equal(typeof replaceSoleGuide, 'function')
 })
 
 test('only turns that touched files reach the timeline', async () => {
@@ -287,4 +309,17 @@ test('only turns that touched files reach the timeline', async () => {
   ]
   assert.deepEqual(filterNodesWithFiles(nodes).map(node => node.seq), [1])
   assert.deepEqual(filterNodesWithFiles(undefined), [])
+})
+
+test('no source file still mentions the removed link type', async () => {
+  const { readdir } = await import('node:fs/promises')
+  const directory = new URL('./src/client/', import.meta.url)
+  for (const name of await readdir(directory)) {
+    if (!name.endsWith('.js') && !name.endsWith('.css')) continue
+    const source = await readFile(new URL(name, directory), 'utf8')
+    assert.doesNotMatch(source, /vms-link|LinkPoster|LinkSlide|domainOf/u, `${name} still mentions link UI`)
+    // `kind` is compared against the removed type value only when quoted as a value.
+    assert.doesNotMatch(source, /kind\s*[!=]==\s*'link'/u, `${name} still tests the link kind`)
+    assert.doesNotMatch(source, /data-kind="link"/u, `${name} still styles the link kind`)
+  }
 })

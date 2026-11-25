@@ -4,19 +4,22 @@
 # 为什么用 PowerShell 而不是给 Node 加原生模块：插件要能在用户机器上零依赖
 # 跑起来，Set-Clipboard 是 PowerShell 5.0+ 自带的。
 #
-#   -Kind files -Path "C:\a.txt|C:\dir"
+#   -Kind files -ListFile <每行一个绝对路径的 UTF-8 文件>
 #
 # 成功输出一行 OK；失败输出一行 CLIPBOARD_<原因> 并以退出码 1 结束。
+# 路径经文件传入而不是命令行参数：UNC 路径（\\server\share）与含空格、| 、引号的
+# 名字走 Node 的 argv 转义或 PowerShell 的管道分隔都不安全。
 param(
   [Parameter(Mandatory = $true)][ValidateSet('files')][string]$Kind,
-  [Parameter(Mandatory = $true)][string]$Path
+  [Parameter(Mandatory = $true)][string]$ListFile
 )
 
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 try { [Console]::OutputEncoding = $utf8 } catch { }
 
-$items = @($Path -split '\|' | Where-Object { $_ -ne '' })
+if (-not (Test-Path -LiteralPath $ListFile)) { throw 'CLIPBOARD_NO_LIST' }
+$items = @(Get-Content -LiteralPath $ListFile -Encoding UTF8 | Where-Object { $_ -ne '' })
 if ($items.Count -eq 0) { throw 'CLIPBOARD_EMPTY' }
 foreach ($item in $items) {
   if (-not (Test-Path -LiteralPath $item)) { throw ('CLIPBOARD_MISSING:' + $item) }

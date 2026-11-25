@@ -1,7 +1,7 @@
 /** Grid/list cards, thumbnails, dialogs, file menu and preview surfaces. */
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  apiUrl, coverOf, domainOf, folderOf, formatBytes, formatDate, formatTime,
+  apiUrl, coverOf, folderOf, formatBytes, formatDate, formatTime,
   isTextExtension, mediaSrc, slideFor, typeLabel, waveBars,
 } from './helpers.js'
 import { Icon, kindIcon } from './icons.js'
@@ -114,7 +114,6 @@ export function MediaThumb({ item, sessionId, lazy = true }) {
       !visible && h('div', { className: 'vms-thumb-placeholder' }, h(Icon, { name: 'video', size: 18 })))
   }
   if (item.kind === 'audio') return h(AudioPoster, { item })
-  if (item.kind === 'link') return h(LinkPoster, { item })
   if (item.kind === 'document' && isTextExtension(item.ext)) return h(TextDocThumb, { item, sessionId })
   return h(DocPoster, { item })
 }
@@ -122,7 +121,7 @@ export function MediaThumb({ item, sessionId, lazy = true }) {
 export function VideoFallback({ item, icon = 'video' }) {
   return h('div', { className: 'vms-video-fallback' },
     h(Icon, { name: icon, size: 18 }),
-    h('span', null, item.kind === 'link' ? domainOf(item) : (item.ext || item.kind).toUpperCase()))
+    h('span', null, (item.ext || item.kind).toUpperCase()))
 }
 
 export function AudioPoster({ item }) {
@@ -136,15 +135,6 @@ export function AudioPoster({ item }) {
     h('div', { className: 'vms-poster-bottom' }, item.size ? formatBytes(item.size) : '音频'))
 }
 
-export function LinkPoster({ item }) {
-  const direct = item.kind === 'video' || item.kind === 'audio' || item.kind === 'image'
-  return h('div', { className: `vms-link-poster${direct ? ' is-direct' : ''}` },
-    h('div', { className: 'vms-link-bar' }, h('i', null), h('i', null), h('i', null), h('span', null, domainOf(item))),
-    h('div', { className: 'vms-link-body' },
-      h('span', { className: 'vms-link-glyph' }, h(Icon, { name: item.kind === 'link' ? 'link' : item.kind, size: 16 })),
-      h('b', null, item.title),
-      h('span', { className: 'vms-link-tag' }, direct ? 'REMOTE MEDIA' : 'WEB LINK')))
-}
 
 export function KindBadge({ kind }) {
   return h('span', { className: 'vms-kind-badge', 'data-kind': kind },
@@ -158,7 +148,6 @@ export function DurationBadge({ item }) {
   if (item.kind === 'image') {
     return h('span', { className: 'vms-duration' }, item.width && item.height ? `${item.width}×${item.height}` : item.ext.toUpperCase())
   }
-  if (item.kind === 'link') return h('span', { className: 'vms-duration' }, '网页')
   return h('span', { className: 'vms-duration' }, item.ext.toUpperCase() || 'FILE')
 }
 
@@ -221,17 +210,13 @@ export function GridCard({ item, sessionId, active, meta, selected, onOpen, onIn
       type: 'button', className: 'vms-play-btn', 'aria-label': `播放 ${item.title}`,
       onClick: event => { event.stopPropagation(); onInline(item) },
     }, h(Icon, { name: 'play', size: 17 })),
-    !canPlay && item.kind !== 'link' && h('button', {
+    !canPlay && h('button', {
       type: 'button', className: 'vms-play-btn', 'aria-label': `查看 ${item.title}`,
       onClick: event => { event.stopPropagation(); onOpen(item) },
     }, h(Icon, { name: 'full', size: 17 })),
-    item.kind === 'link' && h('button', {
-      type: 'button', className: 'vms-play-btn', 'aria-label': '打开链接',
-      onClick: event => { event.stopPropagation(); onOpen(item) },
-    }, h(Icon, { name: 'external', size: 17 })),
     h('div', { className: 'vms-card-actions' },
       canPlay && h('button', { type: 'button', className: 'vms-mini-action', title: '原地播放', 'aria-label': '原地播放', onClick: event => { event.stopPropagation(); onInline(item) } }, h(Icon, { name: 'play', size: 12 })),
-      h('button', { type: 'button', className: 'vms-mini-action', title: '放大查看', 'aria-label': '放大查看', onClick: event => { event.stopPropagation(); onOpen(item) } }, h(Icon, { name: item.kind === 'link' ? 'external' : 'full', size: 12 })),
+      h('button', { type: 'button', className: 'vms-mini-action', title: '放大查看', 'aria-label': '放大查看', onClick: event => { event.stopPropagation(); onOpen(item) } }, h(Icon, { name: 'full', size: 12 })),
       h(MoreButton, { item, onMenu })),
     active && canPlay && h(InlineMedia, { item, sessionId, onExpand: () => onOpen(item) })),
   h('div', { className: 'vms-card-info' },
@@ -453,9 +438,9 @@ export function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, on
         h('div', { className: 'vms-sheet-actions' },
           h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => onAction('insert', current) }, h(Icon, { name: 'at', size: 13 }), '引用到输入框'),
           h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => onOpenItem(current) },
-            h(Icon, { name: current.kind === 'link' || current.source === 'url' ? 'external' : 'full', size: 12 }),
-            h('span', null, current.kind === 'link' ? '在浏览器打开' : current.source === 'url' ? '新窗口播放' : '在标签页打开')),
-          current.kind !== 'link' && h('a', { className: 'vms-icon-btn', href: src, download: current.fileName || undefined, title: '下载原文件', 'aria-label': '下载原文件' }, h(Icon, { name: 'download', size: 15 })),
+            h(Icon, { name: 'full', size: 12 }),
+            h('span', null, '在标签页打开')),
+          h('a', { className: 'vms-icon-btn', href: src, download: current.fileName || undefined, title: '下载原文件', 'aria-label': '下载原文件' }, h(Icon, { name: 'download', size: 15 })),
           h('button', {
             type: 'button', className: 'vms-icon-btn', title: '更多操作', 'aria-label': '更多操作',
             onClick: event => {
@@ -500,7 +485,6 @@ export function NativeMedia({ item, sessionId, visible = true }) {
   const [failure, setFailure] = useState(null)
 
   useEffect(() => {
-    if (item.source === 'url') { setFailure(null); return undefined }
     const controller = new AbortController()
     fetch(src, { method: 'HEAD', signal: controller.signal, credentials: 'same-origin' })
       .then(response => {
@@ -519,7 +503,7 @@ export function NativeMedia({ item, sessionId, visible = true }) {
   if (failed) {
     return h('div', { className: 'vms-media-error' },
       h(Icon, { name: 'alert', size: 18 }),
-      h('span', null, item.source === 'url' ? '在线媒体加载失败' : '当前浏览器无法播放此媒体'),
+      h('span', null, '当前浏览器无法播放此媒体'),
       failure !== null && h('code', { className: 'vms-error-detail' }, failure),
       h('a', { href: src, download: item.fileName || undefined, className: 'vms-error-download' },
         h(Icon, { name: 'download', size: 13 }), '下载原文件'))
@@ -562,30 +546,11 @@ export function AudioSlide({ slide, offset }) {
   h('audio', { ref: audioRef, src: slide.src, controls: true, preload: 'metadata' }))
 }
 
-export function LinkSlide({ slide, onOpen }) {
-  const [copied, setCopied] = useState(false)
-  return h('div', { className: 'vms-link-slide' },
-    h('span', { className: 'vms-link-slide-glyph' }, h(Icon, { name: 'link', size: 24 })),
-    h('b', null, slide.title),
-    h('code', null, slide.url),
-    h('div', { className: 'vms-link-slide-actions' },
-      h('button', {
-        type: 'button', className: 'vms-primary-btn',
-        onClick: () => onOpen ? onOpen(slide.url) : window.open(slide.url, '_blank', 'noopener,noreferrer'),
-      }, h(Icon, { name: 'external', size: 13 }), '在浏览器中打开'),
-      h('button', {
-        type: 'button', className: 'vms-ghost-btn',
-        onClick: async () => {
-          try { await navigator.clipboard.writeText(slide.url); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard denied */ }
-        },
-      }, h(Icon, { name: copied ? 'check' : 'copy', size: 13 }), copied ? '已复制' : '复制链接')))
-}
 
 /** Custom lightbox slide for audio and links; other slides use the library defaults. */
 export function lightboxRenderSlide(onOpen) {
   return function renderSlide({ slide, offset }) {
     if (slide.type === 'vms-audio') return h(AudioSlide, { slide, offset })
-    if (slide.type === 'vms-link') return h(LinkSlide, { slide, onOpen })
     return undefined
   }
 }
@@ -605,9 +570,6 @@ export function renderLightboxThumbnail({ slide }) {
       className: 'vms-lightbox-thumb-icon',
       style: { '--vms-cover-a': slide['--vms-cover-a'], '--vms-cover-b': slide['--vms-cover-b'] },
     }, h(Icon, { name: 'audio', size: 14 }))
-  }
-  if (slide.type === 'vms-link') {
-    return h('span', { className: 'vms-lightbox-thumb-icon is-link' }, h(Icon, { name: 'link', size: 14 }))
   }
   return undefined
 }

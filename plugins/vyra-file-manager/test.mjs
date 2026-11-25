@@ -813,3 +813,72 @@ test('html is its own kind and css stays code', () => {
   assert.equal(kindOf('htm'), 'html')
   assert.equal(kindOf('css'), 'code')
 })
+
+test('extractAssetRefs ignores fake markup inside script and style bodies', () => {
+  // A script writing markup must not swallow the img that follows it.
+  const refs = extractAssetRefs('<script>var s = "<div>";</script><img src="p.png">')
+  assert.deepEqual(refs.map(ref => ref.url), ['p.png'])
+  // A `>` inside an attribute value must not end the tag early.
+  const angled = extractAssetRefs('<script data-x="a>b"></script><img src="q.png">')
+  assert.deepEqual(angled.map(ref => ref.url), ['q.png'])
+  // A template block is not a real script and must not yield a bogus reference.
+  const template = extractAssetRefs('<script type="text/template"><img src="inside.png"></script><img src="real.png">')
+  assert.deepEqual(template.map(ref => ref.url), ['real.png'])
+})
+
+test('inlineAssets does not splice the document through a $-laden data URL', async () => {
+  const document = '<link rel="stylesheet" href="a.css"><p>tail</p>'
+  const out = await inlineAssets(document, async () => 'data:text/css$&$`$\'')
+  // The data URL lands in the attribute literally; nothing else may be duplicated.
+  assert.equal(out, '<link rel="stylesheet" href="data:text/css$&$`$\'"><p>tail</p>')
+})
+
+test('inlineAssets budgets every occurrence, not just the first', async () => {
+  const { MAX_TOTAL_ASSET_BYTES } = await import('./lib/html-inline.js')
+  // One 1.5 MB payload repeated 8 times would be 12 MB if counted once.
+  const big = `data:image/png;base64,${'A'.repeat(1_500_000)}`
+  const document = Array.from({ length: 8 }, () => "<img src='sprite.png'>").join('')
+  const out = await inlineAssets(document, async () => big)
+  const inlined = out.split(big).length - 1
+  assert.ok(inlined * big.length <= MAX_TOTAL_ASSET_BYTES, `inlined ${inlined} copies`)
+  assert.ok(inlined < 8, 'some occurrences must keep their original reference')
+})
+
+test('clipboard markers are read from stdout and map to stable codes', async () => {
+  const busy = await copyPathsToClipboard({
+    absolutePaths: ['/tmp/a.txt'],
+    platform: 'linux',
+    spawn: () => ({ status: 1, stdout: 'CLIPBOARD_BUSY:occupied\n', stderr: '' }),
+  }).catch(error => error)
+  assert.equal(busy.code, 'clipboard-busy')
+
+  const missing = await copyPathsToClipboard({
+    absolutePaths: ['/tmp/a.txt'],
+    platform: 'linux',
+    spawn: () => ({ status: 1, stdout: '', stderr: 'CLIPBOARD_MISSING:/tmp/gone.txt\n' }),
+  }).catch(error => error)
+  assert.equal(missing.code, 'not-found')
+  assert.match(missing.message, /gone\.txt/u)
+
+  const broken = await copyPathsToClipboard({
+    absolutePaths: ['/tmp/a.txt'],
+    platform: 'linux',
+    spawn: () => ({ status: 1, stdout: '', stderr: 'xclip: cannot open display\n' }),
+  }).catch(error => error)
+  assert.equal(broken.code, 'spawn-failed')
+})
+
+test('resolveClipboardPaths refuses an absolute path', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-clipabs-'))
+  try {
+    const file = join(root, 'a.txt')
+    await writeFile(file, 'x')
+    const fs = makeTestFs(root)
+    await assert.rejects(
+      resolveClipboardPaths({ paths: [file], fs, workspaceRoot: root }),
+      error => error.code === 'bad-request',
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

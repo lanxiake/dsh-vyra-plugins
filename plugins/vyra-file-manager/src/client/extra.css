@@ -57,7 +57,6 @@
   color: rgba(255, 255, 255, 0.82);
   background: linear-gradient(140deg, var(--vms-cover-a, #203047), var(--vms-cover-b, #0d1722));
 }
-.vms-lightbox-thumb-icon.is-link { background: linear-gradient(145deg, #1a1826, #0e0d16); color: #c7b8ff; }
 
 .vms-audio-slide {
   position: absolute;
@@ -104,52 +103,6 @@
   color: rgba(255, 255, 255, 0.52);
 }
 .vms-audio-slide audio { width: min(92%, 520px); margin-top: 4px; }
-
-.vms-link-slide {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  padding: 26px;
-  text-align: center;
-  color: #fff;
-  background: radial-gradient(75% 75% at 50% 40%, #1b182b, #08090c 75%);
-}
-.vms-link-slide-glyph {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  background: rgba(199, 184, 255, 0.12);
-  color: #c7b8ff;
-  border: 0.5px solid rgba(199, 184, 255, 0.28);
-}
-.vms-link-slide b { font-size: 15px; font-weight: 550; max-width: 520px; line-height: 1.45; }
-.vms-link-slide code {
-  max-width: min(520px, 90%);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 6px 9px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.62);
-  font-family: var(--dsh-font-family-code, monospace);
-  font-size: 10px;
-}
-.vms-link-slide-actions { display: flex; gap: 7px; margin-top: 3px; }
-.vms-link-slide-actions .vms-primary-btn,
-.vms-link-slide-actions .vms-ghost-btn {
-  height: 31px;
-  padding: 0 11px;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-.vms-link-slide-actions .vms-primary-btn { background: var(--vms-accent); border-color: transparent; }
 
 /* Media tab */
 .vms-media-tab { height: 100%; }
