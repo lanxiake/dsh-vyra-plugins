@@ -1,8 +1,8 @@
 /** Shared client constants, preferences and pure helpers. */
 
-export const LIBRARY_ID = 'dsh-vyra-media-studio/library'
-export const VIDEO_ID = 'dsh-vyra-media-studio/video'
-export const AUDIO_ID = 'dsh-vyra-media-studio/audio'
+export const LIBRARY_ID = 'dsh-vyra-file-manager/library'
+export const VIDEO_ID = 'dsh-vyra-file-manager/video'
+export const AUDIO_ID = 'dsh-vyra-file-manager/audio'
 export const LIBRARY_KIND = 'media'
 
 export const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'webm', 'ogv', 'mkv', 'avi', 'wmv', 'flv'])

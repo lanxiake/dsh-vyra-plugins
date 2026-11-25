@@ -15,7 +15,7 @@
  */
 import { registerMediaRoutes } from './lib/routes.js'
 
-export const name = 'dsh-vyra-media-studio'
+export const name = 'dsh-vyra-file-manager'
 
 /** The routes need the filesystem seam and the Session workspace resolver. */
 export const inject = ['fs', 'workspaceFiles']
@@ -32,7 +32,7 @@ export function apply(ctx) {
       // necessarily expose them.
       registerMediaRoutes(ctx, scoped.connection)
     } catch (error) {
-      const message = `[dsh-vyra-media-studio] cannot register media routes: ${error?.message ?? error}`
+      const message = `[dsh-vyra-file-manager] cannot register media routes: ${error?.message ?? error}`
       let logger
       try { logger = scoped.get?.('logger', false) } catch { logger = undefined }
       if (typeof logger?.warn === 'function') logger.warn(message)

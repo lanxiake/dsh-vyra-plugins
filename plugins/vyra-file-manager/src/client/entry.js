@@ -55,10 +55,10 @@ function mediaDefinition(id, kind, extensions) {
 }
 
 const plugin = {
-  name: 'dsh-vyra-media-studio',
+  name: 'dsh-vyra-file-manager',
   inject: ['slots', 'sidebarRightTabs', 'sidebarRight'],
   apply(ctx) {
-    ctx.effect(() => installStyles(), 'dsh-vyra-media-studio: styles')
+    ctx.effect(() => installStyles(), 'dsh-vyra-file-manager: styles')
 
     const openBrowser = url => {
       try {
@@ -72,26 +72,26 @@ const plugin = {
     }
     const injectFace = () => ({ openBrowser, openLibrary })
 
-    ctx.effect(() => ctx.sidebarRightTabs.register(libraryDefinition()), 'dsh-vyra-media-studio: library type')
-    ctx.effect(() => ctx.sidebarRightTabs.register(mediaDefinition(VIDEO_ID, 'video', VIDEO_EXT)), 'dsh-vyra-media-studio: video type')
-    ctx.effect(() => ctx.sidebarRightTabs.register(mediaDefinition(AUDIO_ID, 'audio', AUDIO_EXT)), 'dsh-vyra-media-studio: audio type')
+    ctx.effect(() => ctx.sidebarRightTabs.register(libraryDefinition()), 'dsh-vyra-file-manager: library type')
+    ctx.effect(() => ctx.sidebarRightTabs.register(mediaDefinition(VIDEO_ID, 'video', VIDEO_EXT)), 'dsh-vyra-file-manager: video type')
+    ctx.effect(() => ctx.sidebarRightTabs.register(mediaDefinition(AUDIO_ID, 'audio', AUDIO_EXT)), 'dsh-vyra-file-manager: audio type')
 
     ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
       name: 'sidebar.right.pane.tab', key: LIBRARY_ID, inject: injectFace,
-    }, LibraryBody)), 'dsh-vyra-media-studio: library body')
+    }, LibraryBody)), 'dsh-vyra-file-manager: library body')
 
     ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
       name: 'sidebar.right.pane.tab', key: VIDEO_ID, inject: injectFace,
-    }, MediaTab)), 'dsh-vyra-media-studio: video body')
+    }, MediaTab)), 'dsh-vyra-file-manager: video body')
 
     ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
       name: 'sidebar.right.pane.tab', key: AUDIO_ID, inject: injectFace,
-    }, MediaTab)), 'dsh-vyra-media-studio: audio body')
+    }, MediaTab)), 'dsh-vyra-file-manager: audio body')
 
     // Capture the active composer so the panel can insert `@path` mentions.
     ctx.effect(() => ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
-      name: 'conversation.input.left', id: 'dsh-vyra-media-studio.composer-bridge',
-    }, ComposerBridge)), 'dsh-vyra-media-studio: composer bridge')
+      name: 'conversation.input.left', id: 'dsh-vyra-file-manager.composer-bridge',
+    }, ComposerBridge)), 'dsh-vyra-file-manager: composer bridge')
   },
 }
 

@@ -621,7 +621,7 @@ export function registerMediaRoutes(ctx, connection) {
       fetch: request => handler(request, ctx),
     })),
   ]
-  ctx.effect(() => () => { for (const dispose of disposers) void dispose() }, 'dsh-vyra-media-studio: routes')
+  ctx.effect(() => () => { for (const dispose of disposers) void dispose() }, 'dsh-vyra-file-manager: routes')
   return true
 }
 

@@ -91,8 +91,8 @@ const AGENT_CLI_MANAGER_ICON =
 /** Inline icon for `dsh-vyra-plugin-market`. */
 const PLUGIN_MARKET_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTMgOS41IDEyIDRsOSA1LjV2NUwxMiAyMGwtOS01LjV2LTVaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMyA5LjUgMTIgMTVsOS01LjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMiAyMHYtNSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNy42IDYuOSAxNi40IDEyIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K'
-/** Inline icon for `dsh-vyra-media-studio`. */
-const MEDIA_STUDIO_ICON =
+/** Inline icon for `dsh-vyra-file-manager`. */
+const FILE_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4NCiAgPHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMTAiIGZpbGw9IiMxMDE3MjIiLz4NCiAgPHJlY3QgeD0iOSIgeT0iMTIiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiM3QUFBRkYiIGZpbGwtb3BhY2l0eT0iLjkiLz4NCiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPg0KICA8cmVjdCB4PSI5IiB5PSIyNSIgd2lkdGg9IjkiIGhlaWdodD0iMTEiIHJ4PSIzIiBmaWxsPSIjNkZENkI1IiBmaWxsLW9wYWNpdHk9Ii45Ii8+DQogIDxwYXRoIGQ9Ik0yNC41IDMwLjUgMzQgMjUuMmwtOS41IDUuM3oiIGZpbGw9IiNGNEY1RjciLz4NCiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4NCjwvc3ZnPg0K'
 /** Inline icon for `dsh-vyra-dsh-console`. */
 const DSH_CONSOLE_ICON =
@@ -2921,7 +2921,7 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'dsh-vyra-media-studio',
+      name: 'dsh-vyra-file-manager',
       title: {
         en: 'File Manager',
         zh: '文件管理',
@@ -2934,10 +2934,26 @@ export const manifest: MarketManifest = {
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
       repository: {
         url: 'https://github.com/lanxiake/dsh-vyra-plugins',
-        directory: 'plugins/vyra-media-studio',
+        directory: 'plugins/vyra-file-manager',
       },
-      icon: MEDIA_STUDIO_ICON,
+      icon: FILE_MANAGER_ICON,
       versions: {
+        // 0.4.0 renames the package from `dsh-vyra-media-studio` to
+        // `dsh-vyra-file-manager`. Only the identity strings move — the
+        // package name, the cordis row, `export const name` and the client
+        // registration id; by 0.2.0 this had become a file manager and the old
+        // name described a plugin it no longer was. The earlier entries keep
+        // the old path and name: their commits predate the rename and an
+        // install must still resolve what those versions actually contained.
+        '0.4.0': {
+          publishTimestamp: 1796572800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-file-manager',
+          },
+        },
         '0.3.5': {
           publishTimestamp: 1795679987,
           source: {

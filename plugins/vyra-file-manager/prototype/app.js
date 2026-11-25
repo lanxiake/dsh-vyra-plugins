@@ -1,4 +1,4 @@
-/* dsh-vyra-media-studio prototype — no build, no dependencies. */
+/* dsh-vyra-file-manager prototype — no build, no dependencies. */
 (() => {
   'use strict'
 

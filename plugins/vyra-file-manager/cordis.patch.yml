@@ -2,5 +2,5 @@
 # bundle is a real Loader entry and its two authenticated routes are mounted.
 - insert:
     - id: media-studio
-      name: 'dsh-vyra-media-studio'
+      name: 'dsh-vyra-file-manager'
       config: {}

@@ -1,8 +1,8 @@
 {
-  "name": "dsh-vyra-media-studio",
-  "version": "0.3.5",
+  "name": "dsh-vyra-file-manager",
+  "version": "0.4.0",
   "type": "module",
-  "description": "右侧栏文件管理：默认本会话时间线、拖动移动、单按钮切换视图、资源管理器打开。",
+  "description": "文件管理：右侧栏浏览、预览、重命名、复制、删除工作区里的全部文件（图片/视频/音频/文档/压缩包/代码），含本会话时间线、网格缩放、PDF 与文本预览。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -38,18 +38,21 @@
     "dsh",
     "dsh-plugin",
     "deepseek-harness",
+    "file-manager",
+    "files",
+    "gallery",
     "media",
     "video",
     "audio",
-    "files",
-    "file-manager",
-    "gallery"
+    "文件管理",
+    "文件",
+    "预览"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
-    "directory": "plugins/vyra-media-studio"
+    "directory": "plugins/vyra-file-manager"
   },
   "dependencies": {
     "fast-glob": "^3.3.3",
