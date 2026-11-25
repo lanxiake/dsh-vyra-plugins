@@ -2,7 +2,7 @@
   "name": "dsh-vyra-file-manager",
   "version": "0.5.0",
   "type": "module",
-  "description": "文件管理：右侧栏浏览、预览、重命名、复制、删除工作区里的全部文件（图片/视频/音频/文档/压缩包/HTML/代码），含本会话时间线、网格缩放、PDF 与 HTML 沙箱预览、系统剪贴板复制。",
+  "description": "文件管理：右侧栏浏览、预览、重命名、复制、删除工作区里的全部文件（图片/视频/音频/文档/压缩包/HTML/代码），展开即打开，含本会话时间线、网格缩放、PDF 与 HTML 沙箱预览、系统剪贴板文件复制。",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -46,7 +46,10 @@
     "audio",
     "文件管理",
     "文件",
-    "预览"
+    "预览",
+    "html-preview",
+    "clipboard",
+    "系统剪贴板"
   ],
   "license": "MIT",
   "repository": {
