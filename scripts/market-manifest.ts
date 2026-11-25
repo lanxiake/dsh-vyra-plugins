@@ -2463,7 +2463,18 @@ export const manifest: MarketManifest = {
         // still read as plain labels. An earlier attempt at this used
         // --dsw-alias-bg-layer-3, which the theme does not publish, so the whole
         // background declaration was invalid and nothing changed on screen.
-        '0.6.4': {
+                // 0.6.5 adds the repository field the npm tarball was missing, which
+        // left the package unlinked from its source in npm metadata and search.
+        '0.6.5': {
+          publishTimestamp: 1796572800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-free-model',
+          },
+        },
+'0.6.4': {
           publishTimestamp: 1795496197,
           source: {
             type: 'git',
@@ -2588,7 +2599,18 @@ export const manifest: MarketManifest = {
         // closing paren ended the return early, so four cards were never in
         // the tree. Also repairs the theme tokens (--dsh-color-* never
         // existed; DSH publishes --dsw-alias-*).
-        '0.4.4': {
+                // 0.4.5 adds the repository field the npm tarball was missing and the
+        // screenshots the README had none of.
+        '0.4.5': {
+          publishTimestamp: 1796572800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
+'0.4.4': {
           publishTimestamp: 1796457600,
           source: {
             type: 'git',

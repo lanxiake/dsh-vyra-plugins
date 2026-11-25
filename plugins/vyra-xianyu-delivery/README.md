@@ -2,6 +2,11 @@
 
 闲鱼虚拟商品的自动客服：实时监听买家消息，拍下即发卡密，并用 DSH 的 agent + 技能回答买家问题。免挂机：不需要手机、模拟器或浏览器常驻。
 
+```sh
+dsh plugin --profile web add dsh-vyra-xianyu-delivery
+```
+
+
 ## 依赖
 
 - **uv** — 插件通过 `uv run --with goofish-cli --with portalocker` 拉起自带的 worker

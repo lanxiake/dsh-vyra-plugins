@@ -2,6 +2,11 @@
 
 Visual agent creation and management panel for DeepSeek Harness, with agent-facing tools so the main agent can create agents programmatically.
 
+```sh
+dsh plugin --profile web add dsh-vyra-agent-manager
+```
+
+
 ## 功能特性
 
 - ✅ **可视化 Agent 构建器**：通过精致的 UI 创建自定义 Agent，配置系统提示词、能力集、工具限制和优选技能

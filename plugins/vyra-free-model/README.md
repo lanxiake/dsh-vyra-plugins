@@ -3,6 +3,11 @@
 装上就能用的免费模型。不用注册、不用填 key、不用懂「渠道」「适配器」这些词——
 **两步以内就能开始聊天。**
 
+```sh
+dsh plugin --profile web add dsh-vyra-free-model
+```
+
+
 ---
 
 ## 两步上手

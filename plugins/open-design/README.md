@@ -1,6 +1,6 @@
 # open-design — OpenDesign 技能库（按业务领域分包）
 
-把 [OpenDesign](https://github.com/nexu-io/open-design) 的完整技能库接进 DeepSeek Harness，并按**业务领域**切成九个包：只开启你要用的领域，技能与 Agent 一起进来。
+把 [OpenDesign](https://github.com/nexu-io/open-design) 的完整技能库接进 DeepSeek Harness，按**业务领域**切成九个技能包，再配一个能调度本机所有 Agent 的设计总监。
 
 | 类别 | 数量 | 内容 |
 | --- | --- | --- |
@@ -13,7 +13,7 @@
 dsh plugin --profile web add open-design
 ```
 
-重启 DSH 后，启用的领域会出现在技能目录里。
+重启 DSH 后，九个领域的技能索引会出现在技能目录里，并生成 `od-director`（设计总监）这个 Agent。
 
 ## 九个领域
 
@@ -21,15 +21,15 @@ dsh plugin --profile web add open-design
 | --- | --- | --- | --- |
 | `od-visual-design` | 视觉设计 | 12 + 152 套设计系统 | ✅ |
 | `od-motion` | 动效设计 | 13 | ✅ |
-| `od-video` | 视频制作 | 17 | — |
+| `od-video` | 视频制作 | 17 | ✅ |
 | `od-presentation` | 演示汇报 | 10 | ✅ |
-| `od-social-content` | 社媒图文 | 7 | — |
+| `od-social-content` | 社媒图文 | 7 | ✅ |
 | `od-writing` | 内容写作 | 8 | ✅ |
-| `od-brand` | 品牌资产 | 8 | — |
-| `od-frontend` | 前端实现 | 6 | — |
-| `od-review` | 质检审核 | 4 | — |
+| `od-brand` | 品牌资产 | 8 | ✅ |
+| `od-frontend` | 前端实现 | 6 | ✅ |
+| `od-review` | 质检审核 | 4 | ✅ |
 
-默认开 4 个高频领域，其余按需开启。每个技能只属于一个领域，九包合起来恰好覆盖全部 85 个工艺技能。
+**九个领域默认全开。** 一个领域在技能目录里只占一行 `name: description`，正文是你或子 Agent 按需加载时才读的；而关掉的领域对设计总监等于不存在，它没法知道自己缺了什么。每个技能只属于一个领域，九包合起来恰好覆盖全部 85 个工艺技能。
 
 ## 开关领域
 
@@ -68,38 +68,44 @@ node "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\open-design\bin\odx" d
 ```json
 {
   "version": 1,
-  "enabled": ["od-visual-design", "od-motion", "od-presentation", "od-writing"]
+  "enabled": ["od-visual-design", "od-motion", "od-video", "od-presentation", "od-social-content", "od-writing", "od-brand", "od-frontend", "od-review"]
 }
 ```
 
-文件损坏会自动回退到默认四个并留一份 `.bak`；写了不认识的领域 id 会被忽略并提示。
+文件损坏会自动回退到「全部开启」并留一份 `.bak`；写了不认识的领域 id 会被忽略并提示。
 
-## Agent 与调用限制
+## Agent：只有一个设计总监
 
-每个领域配一个同名 Agent；另有一个编排 Agent **`od-director`（设计总监）**。
+插件只生成**一个** Agent：**`od-director`（设计总监）**。
 
 | Agent | 作用 |
 | --- | --- |
-| 九个领域 Agent | 各管一摊，`skills` 只含本领域技能 |
-| `od-director` | 承接复合任务，拆解后派给领域 Agent，汇总验收 |
+| `od-director` | 承接复合任务，拆解后派给本机已安装的合适 Agent，验收汇总；小活自己做 |
 
-### 领域 Agent 不能互相调用
+九个领域 Agent 已经删掉。它们不带 `delegation`，跨领域的活无法转交，只能自己做或干等——每一层都丢一次上下文。领域现在只提供**技能**：总监自己按需加载，或把某个技能指给子 Agent。
 
-九个领域 Agent **不带 `delegation` 能力**，它们既不能互调，也不能再派子 Agent。跨领域的事交给 `od-director`。
+### 花名册：所有预设互相可见
 
-这是刻意的：如果「视觉设计」能把活转给「动效设计」，「动效设计」又能转回来，任务就会在两者之间来回踢皮球。
+总监的 `subagent` 工具的 `agent_preset` 参数只接受 `allowedAgentPresets` 白名单里的 id，这是宿主的静态约束，没有运行时枚举接口。所以「谁可以被委派」必须在同步时写进白名单：
 
-### 别的 Agent 怎么调到它们
+1. `sync` 扫描 `$DSH_HOME/agent-manager/presets/*/agent.json`，读出每个预设的 `id / name / summary`；
+2. 挂载时再从宿主 `agentPresets.list()` 读一遍，补上内置预设（`standard`、`ptc` 等没有磁盘 spec 的那些）；
+3. 合并去重后写进总监的 `team` —— 也就是 `allowedAgentPresets`；
+4. 同一份花名册连同每个人的「能做 / 不能做」写进总监的提示词，它才有依据挑人，而不是按名字猜。
 
-靠 `od-director` 的 `team` 字段。`vyra-agent-manager` 会把 `team` 展开成 `subagent` 工具的 `allowedAgentPresets` 白名单，`od-director` 因此**机制上**获得派发能力——不是靠提示词点名。
+所以：
 
-关掉某个领域时，它会同时从 `od-director` 的 `team` 里移除，编排层就够不到它了。
+- **Agent 管理里自建的 Agent** 装好后，重新生成一次总监就会进花名册；
+- **内置预设** 随宿主注册表自动进入；
+- 哪个都不需要手工登记。关闭某个领域**不再**影响花名册——领域是技能，不是人。
+
+总监的提示词里明确写了：要委派就从花名册挑现成的；没有合适的就自己做，**不要临时创建一个 Agent**；同一个子 Agent 做过这件活，用 `send_message` 让它接着改，不要为每轮修改重派新人。
 
 ### ⚠️ Agent Teams 不支持
 
-`dsh-agent-teams` 的 `spawn_teammate` **不支持 `agentPreset` 参数**，团队成员继承 Lead 的配置。所以**不要**用 `agent_teams_add_member` 挂这些领域 Agent。
+`dsh-agent-teams` 的 `spawn_teammate` **不支持 `agentPreset` 参数**，团队成员继承 Lead 的配置。所以**不要**用 `agent_teams_add_member` 挂这些 Agent。
 
-能用的是：新建会话时直接选某个领域 Agent，或选 `od-director` 让它派发。
+要用子 Agent，走 `subagent` 的 `agent_preset`。
 
 ## 目录结构
 
@@ -110,8 +116,8 @@ plugins/open-design/
 ├── domains.mjs           # 九个领域定义与技能归属（唯一数据源）
 ├── skills.mjs            # 技能发现 + 单领域 SKILL.md 渲染
 ├── config.mjs            # domains.json 读写与容错
-├── agents.mjs            # 领域 Agent 与编排 Agent 的规格生成
-├── sync.mjs              # 磁盘事务：写技能目录、写 Agent、清理
+├── agents.mjs            # 设计总监的规格生成 + 花名册扫描
+├── sync.mjs              # 磁盘事务：写技能目录、写总监、清理旧领域 Agent
 ├── state.mjs             # 设置页的数据层（describe / applyToggle / regenerateAgents）
 ├── routes.mjs            # 设置页的 HTTP 接口（GET/PATCH/POST /open-design/*）
 ├── cli.mjs + bin/odx     # odx 命令
@@ -126,8 +132,7 @@ plugins/open-design/
 
 ```
 $DSH_HOME/skills/od-<领域>/SKILL.md          每个启用领域一个索引页
-$DSH_HOME/agent-manager/presets/od-<领域>/   领域 Agent
-$DSH_HOME/agent-manager/presets/od-director/ 编排 Agent
+$DSH_HOME/agent-manager/presets/od-director/ 唯一生成的 Agent（设计总监）
 $DSH_HOME/open-design/domains.json           开关配置
 ```
 

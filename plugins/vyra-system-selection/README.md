@@ -2,6 +2,11 @@
 
 在**任何应用**里选中文字，松手即弹出横向菜单：翻译、复制、解释、总结。
 
+```sh
+dsh plugin --profile web add dsh-vyra-system-selection
+```
+
+
 ## 用法
 
 选中文字松手 → 菜单出现在光标旁 → 点一个动作。**不用点右键。**

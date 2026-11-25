@@ -4,6 +4,11 @@
 以本人身份发送。和 `dsh-im` 的 `weixin` 渠道（Bot）是两件事——那个是别人加你的机器人，
 这个是你自己的微信账号。
 
+```sh
+dsh plugin --profile web add dsh-vyra-wechat-local
+```
+
+
 仅 Windows。需要本机微信 4.x 已登录。
 
 ## 运行前提
