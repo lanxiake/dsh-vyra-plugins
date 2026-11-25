@@ -209,3 +209,70 @@ test('copying files uses the clipboard route, not the link menu', async () => {
   assert.match(source, /api\/vyra-media\/clipboard/u)
   assert.doesNotMatch(source, /copyLink/u)
 })
+
+const makeSidebar = (tabs, { expanded = true, sessionId = 's-1' } = {}) => {
+  const opened = []
+  const sidebar = {
+    mounted: { getSnapshot: () => sessionId, subscribe: () => () => {} },
+    openTabs: { subscribe: () => () => {} },
+    isExpanded: () => expanded,
+    tabsIn: () => tabs,
+    openTab: (kind, options) => { opened.push({ kind, options }) },
+  }
+  return { sidebar, opened }
+}
+
+test('replaceSoleGuide swaps a lone guide tab for the file manager', async () => {
+  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
+  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }])
+  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media' }), true)
+  assert.deepEqual(opened, [{ kind: 'media', options: { replaceTab: 't1' } }])
+})
+
+test('replaceSoleGuide yields to the workspace-files tab from another plugin', async () => {
+  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
+  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }])
+  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['files', {}], ['media', {}]]), libraryKind: 'media' }), false)
+  assert.equal(opened.length, 0)
+})
+
+test('replaceSoleGuide does nothing when the session already has other tabs', async () => {
+  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
+  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }, { id: 't2', kind: 'media' }])
+  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media' }), false)
+  assert.equal(opened.length, 0)
+})
+
+test('replaceSoleGuide does nothing while the sidebar is collapsed', async () => {
+  const { replaceSoleGuide } = await import('./src/client/default-tab.js')
+  const { sidebar, opened } = makeSidebar([{ id: 't1', kind: 'guide' }], { expanded: false })
+  assert.equal(replaceSoleGuide({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media' }), false)
+  assert.equal(opened.length, 0)
+})
+
+test('installDefaultTab reacts to the sidebar once, after a microtask', async () => {
+  const { installDefaultTab } = await import('./src/client/default-tab.js')
+  const listeners = []
+  const opened = []
+  const sidebar = {
+    mounted: { getSnapshot: () => 's-1', subscribe: fn => { listeners.push(fn); return () => {} } },
+    openTabs: { subscribe: fn => { listeners.push(fn); return () => {} } },
+    isExpanded: () => true,
+    tabsIn: () => [{ id: 't1', kind: 'guide' }],
+    openTab: (kind, options) => { opened.push({ kind, options }) },
+  }
+  let enabled = true
+  const dispose = installDefaultTab({ sidebar, kinds: new Map([['media', {}]]), libraryKind: 'media', enabled: () => enabled })
+  listeners[0]()
+  assert.equal(opened.length, 0, 'must defer past the synchronous call')
+  await Promise.resolve()
+  assert.deepEqual(opened, [{ kind: 'media', options: { replaceTab: 't1' } }])
+
+  // The preference being off keeps the swap from happening again.
+  opened.length = 0
+  enabled = false
+  listeners[0]()
+  await Promise.resolve()
+  assert.equal(opened.length, 0)
+  dispose()
+})

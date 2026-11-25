@@ -6789,7 +6789,9 @@ var PREF_DEFAULTS = {
   dir: "asc",
   showHidden: false,
   includeBuild: false,
-  sessionOnly: true
+  sessionOnly: true,
+  // A fresh right Sidebar opens on the file manager instead of the guide page.
+  openFilesByDefault: true
 };
 function readPrefs() {
   try {
@@ -6809,7 +6811,8 @@ function readPrefs() {
       dir: merged.dir === "desc" ? "desc" : "asc",
       showHidden: merged.showHidden === true,
       includeBuild: merged.includeBuild === true,
-      sessionOnly: merged.sessionOnly !== false
+      sessionOnly: merged.sessionOnly !== false,
+      openFilesByDefault: merged.openFilesByDefault !== false
     };
   } catch {
     return { ...PREF_DEFAULTS };
@@ -25491,6 +25494,7 @@ function LibraryBody(props) {
   const [showHidden, setShowHidden] = (0, import_react10.useState)(INITIAL_PREFS.showHidden);
   const [includeBuild, setIncludeBuild] = (0, import_react10.useState)(INITIAL_PREFS.includeBuild);
   const [sessionOnly, setSessionOnly] = (0, import_react10.useState)(INITIAL_PREFS.sessionOnly);
+  const [openFilesByDefault, setOpenFilesByDefault] = (0, import_react10.useState)(INITIAL_PREFS.openFilesByDefault);
   const [filterOpen, setFilterOpen] = (0, import_react10.useState)(false);
   const [debouncedQuery, setDebouncedQuery] = (0, import_react10.useState)("");
   (0, import_react10.useEffect)(() => {
@@ -25527,9 +25531,9 @@ function LibraryBody(props) {
   const expandedInitialized = (0, import_react10.useRef)(false);
   (0, import_react10.useEffect)(
     () => {
-      writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly });
+      writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly, openFilesByDefault });
     },
-    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly]
+    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly, openFilesByDefault]
   );
   const timelineMode = sessionOnly;
   const timelineLayout = view === "grid" ? "grid" : "list";
@@ -26336,6 +26340,7 @@ function LibraryBody(props) {
           h6("span", { className: "vms-mono" }, dir === "asc" ? "\u5347\u5E8F" : "\u964D\u5E8F"),
           h6(Icon2, { name: "chevron", size: 12 })
         ),
+        h6("label", { className: "vms-check" }, h6("input", { type: "checkbox", checked: openFilesByDefault, onChange: (event) => setOpenFilesByDefault(event.target.checked) }), "\u5C55\u5F00\u53F3\u4FA7\u680F\u65F6\u9ED8\u8BA4\u6253\u5F00\u6587\u4EF6\u7BA1\u7406"),
         h6("label", { className: "vms-check" }, h6("input", { type: "checkbox", checked: showHidden, onChange: (event) => setShowHidden(event.target.checked) }), "\u663E\u793A\u9690\u85CF\u6587\u4EF6"),
         h6("label", { className: "vms-check" }, h6("input", { type: "checkbox", checked: includeBuild, onChange: (event) => setIncludeBuild(event.target.checked) }), "\u5305\u542B\u4F9D\u8D56/\u6784\u5EFA\u76EE\u5F55\uFF08\u6162\uFF09"),
         h6("button", { type: "button", className: "vms-reset-btn", onClick: clearFilters }, "\u6E05\u9664\u5168\u90E8")
@@ -26693,6 +26698,38 @@ function MediaTab(props) {
   );
 }
 
+// src/client/default-tab.js
+var GUIDE_KIND = "guide";
+var RIVAL_KIND = "files";
+function replaceSoleGuide({ sidebar, kinds, libraryKind }) {
+  if (typeof sidebar?.tabsIn !== "function" || typeof sidebar?.openTab !== "function") return false;
+  const sessionId = sidebar.mounted?.getSnapshot?.();
+  if (sessionId === void 0 || sessionId === null) return false;
+  if (sidebar.isExpanded?.() !== true) return false;
+  const tabs = sidebar.tabsIn(sessionId);
+  if (!Array.isArray(tabs) || tabs.length !== 1) return false;
+  const [only] = tabs;
+  if (only?.kind !== GUIDE_KIND) return false;
+  if (kinds?.get?.(RIVAL_KIND) !== void 0) return false;
+  if (kinds?.get?.(libraryKind) === void 0) return false;
+  sidebar.openTab(libraryKind, { replaceTab: only.id });
+  return true;
+}
+function installDefaultTab({ sidebar, kinds, libraryKind, enabled }) {
+  const schedule = () => {
+    queueMicrotask(() => {
+      if (enabled() !== true) return;
+      replaceSoleGuide({ sidebar, kinds, libraryKind });
+    });
+  };
+  const disposers = [];
+  if (typeof sidebar?.openTabs?.subscribe === "function") disposers.push(sidebar.openTabs.subscribe(schedule));
+  if (typeof sidebar?.mounted?.subscribe === "function") disposers.push(sidebar.mounted.subscribe(schedule));
+  return () => {
+    for (const dispose of disposers) dispose?.();
+  };
+}
+
 // src/client/entry.js
 function installStyles() {
   const style = document.createElement("style");
@@ -26736,6 +26773,15 @@ var plugin = {
   inject: ["slots", "sidebarRightTabs", "sidebarRight"],
   apply(ctx) {
     ctx.effect(() => installStyles(), "dsh-vyra-file-manager: styles");
+    const registeredKinds = /* @__PURE__ */ new Map();
+    const registerType = (definition) => {
+      registeredKinds.set(definition.kind, definition);
+      const dispose = ctx.sidebarRightTabs.register(definition);
+      return () => {
+        registeredKinds.delete(definition.kind);
+        if (typeof dispose === "function") dispose();
+      };
+    };
     const openBrowser = (url) => {
       try {
         ctx.sidebarRight.openTab("browser", { params: { url } });
@@ -26750,9 +26796,9 @@ var plugin = {
       }
     };
     const injectFace = () => ({ openBrowser, openLibrary });
-    ctx.effect(() => ctx.sidebarRightTabs.register(libraryDefinition()), "dsh-vyra-file-manager: library type");
-    ctx.effect(() => ctx.sidebarRightTabs.register(mediaDefinition(VIDEO_ID, "video", VIDEO_EXT)), "dsh-vyra-file-manager: video type");
-    ctx.effect(() => ctx.sidebarRightTabs.register(mediaDefinition(AUDIO_ID, "audio", AUDIO_EXT)), "dsh-vyra-file-manager: audio type");
+    ctx.effect(() => registerType(libraryDefinition()), "dsh-vyra-file-manager: library type");
+    ctx.effect(() => registerType(mediaDefinition(VIDEO_ID, "video", VIDEO_EXT)), "dsh-vyra-file-manager: video type");
+    ctx.effect(() => registerType(mediaDefinition(AUDIO_ID, "audio", AUDIO_EXT)), "dsh-vyra-file-manager: audio type");
     ctx.effect(() => ctx.slots.inject("sidebar.right.pane.tab", () => ctx.slots.register({
       name: "sidebar.right.pane.tab",
       key: LIBRARY_ID,
@@ -26772,6 +26818,12 @@ var plugin = {
       name: "conversation.input.left",
       id: "dsh-vyra-file-manager.composer-bridge"
     }, ComposerBridge)), "dsh-vyra-file-manager: composer bridge");
+    ctx.effect(() => installDefaultTab({
+      sidebar: ctx.sidebarRight,
+      kinds: registeredKinds,
+      libraryKind: LIBRARY_KIND,
+      enabled: () => readPrefs().openFilesByDefault !== false
+    }), "dsh-vyra-file-manager: files by default");
   }
 };
 var entry_default = plugin;

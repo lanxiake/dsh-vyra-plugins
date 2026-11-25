@@ -244,6 +244,8 @@ const PREF_DEFAULTS = {
   showHidden: false,
   includeBuild: false,
   sessionOnly: true,
+  // A fresh right Sidebar opens on the file manager instead of the guide page.
+  openFilesByDefault: true,
 }
 
 export function readPrefs() {
@@ -271,6 +273,7 @@ export function readPrefs() {
       showHidden: merged.showHidden === true,
       includeBuild: merged.includeBuild === true,
       sessionOnly: merged.sessionOnly !== false,
+      openFilesByDefault: merged.openFilesByDefault !== false,
     }
   } catch {
     return { ...PREF_DEFAULTS }

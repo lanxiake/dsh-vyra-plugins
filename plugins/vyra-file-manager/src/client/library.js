@@ -121,6 +121,7 @@ export function LibraryBody(props) {
   const [showHidden, setShowHidden] = useState(INITIAL_PREFS.showHidden)
   const [includeBuild, setIncludeBuild] = useState(INITIAL_PREFS.includeBuild)
   const [sessionOnly, setSessionOnly] = useState(INITIAL_PREFS.sessionOnly)
+  const [openFilesByDefault, setOpenFilesByDefault] = useState(INITIAL_PREFS.openFilesByDefault)
   const [filterOpen, setFilterOpen] = useState(false)
   const [debouncedQuery, setDebouncedQuery] = useState('')
 
@@ -154,8 +155,8 @@ export function LibraryBody(props) {
   const gridRef = useRef(null)
   const expandedInitialized = useRef(false)
 
-  useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly }) },
-    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly])
+  useEffect(() => { writePrefs({ view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly, openFilesByDefault }) },
+    [view, listMode, cardSize, detail, sort, dir, showHidden, includeBuild, sessionOnly, openFilesByDefault])
 
   // The timeline is how the current-session filter renders, not a separate
   // view: `view` picks the tile grid or the row list in both modes.
@@ -861,6 +862,7 @@ export function LibraryBody(props) {
             h('option', { value: 'size' }, '按大小'), h('option', { value: 'type' }, '按类型'))),
         h('button', { type: 'button', className: 'vms-dir-btn', 'data-dir': dir, onClick: () => setDir(value => value === 'asc' ? 'desc' : 'asc') },
           h('span', { className: 'vms-mono' }, dir === 'asc' ? '升序' : '降序'), h(Icon, { name: 'chevron', size: 12 })),
+        h('label', { className: 'vms-check' }, h('input', { type: 'checkbox', checked: openFilesByDefault, onChange: event => setOpenFilesByDefault(event.target.checked) }), '展开右侧栏时默认打开文件管理'),
         h('label', { className: 'vms-check' }, h('input', { type: 'checkbox', checked: showHidden, onChange: event => setShowHidden(event.target.checked) }), '显示隐藏文件'),
         h('label', { className: 'vms-check' }, h('input', { type: 'checkbox', checked: includeBuild, onChange: event => setIncludeBuild(event.target.checked) }), '包含依赖/构建目录（慢）'),
         h('button', { type: 'button', className: 'vms-reset-btn', onClick: clearFilters }, '清除全部')),
