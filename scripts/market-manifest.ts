@@ -234,6 +234,15 @@ export const manifest: MarketManifest = {
       },
       icon: TOOL_USAGE_ICON,
       versions: {
+        '0.7.5': {
+          publishTimestamp: 1795680000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
         '0.6.0': {
           // Unix seconds of the commit that published it.
           publishTimestamp: 1794551488,
@@ -326,6 +335,15 @@ export const manifest: MarketManifest = {
       },
       icon: AGENT_MANAGER_ICON,
       versions: {
+        '1.3.1': {
+          publishTimestamp: 1795679999,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-agent-manager',
+          },
+        },
         '1.1.0': {
           publishTimestamp: 1794551488,
           source: {
@@ -387,6 +405,15 @@ export const manifest: MarketManifest = {
       },
       icon: SMART_COMPACTION_ICON,
       versions: {
+        '0.1.1': {
+          publishTimestamp: 1795679998,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-smart-compaction',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1794551488,
           source: {
@@ -420,6 +447,15 @@ export const manifest: MarketManifest = {
       },
       icon: SKILL_MCP_ICON,
       versions: {
+        '1.3.2': {
+          publishTimestamp: 1795679997,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
         // 1.0.0 keeps its original commit: a version whose source moved under
         // users who already resolved it is not a version anymore.
         '1.0.0': {
@@ -494,6 +530,15 @@ export const manifest: MarketManifest = {
       },
       icon: SSH_TERMINAL_ICON,
       versions: {
+        '0.1.3': {
+          publishTimestamp: 1795679996,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-ssh-terminal',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1794551488,
           source: {
@@ -550,6 +595,15 @@ export const manifest: MarketManifest = {
       },
       icon: SYSTEM_SELECTION_ICON,
       versions: {
+        '3.1.3': {
+          publishTimestamp: 1795679995,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         '1.0.0': {
           publishTimestamp: 1794960000,
           source: {
@@ -858,6 +912,15 @@ export const manifest: MarketManifest = {
       },
       icon: FREE_THEME_ICON,
       versions: {
+        '0.1.1': {
+          publishTimestamp: 1795679994,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-free-theme',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795449013,
           source: {
@@ -888,6 +951,15 @@ export const manifest: MarketManifest = {
       icon: WECHAT_LOCAL_ICON,
       engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
       versions: {
+        '0.8.2': {
+          publishTimestamp: 1795679993,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795046400,
           source: {
@@ -1126,6 +1198,15 @@ export const manifest: MarketManifest = {
       },
       icon: XIANYU_DELIVERY_ICON,
       versions: {
+        '0.9.2': {
+          publishTimestamp: 1795679992,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795058652,
           source: {
@@ -1700,6 +1781,15 @@ export const manifest: MarketManifest = {
       // so an older client cannot load it.
       engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
       versions: {
+        '1.3.2': {
+          publishTimestamp: 1795679991,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
         // 1.0.0's package.json carried `prepare: lefthook install`, copied in
         // from the source working copy. A git install runs `prepare`, there is
         // no .git in the fetched tarball, and lefthook exits 128 — so 1.0.0
@@ -1809,6 +1899,15 @@ export const manifest: MarketManifest = {
       },
       icon: PLUGIN_MARKET_ICON,
       versions: {
+        '0.7.3': {
+          publishTimestamp: 1795679990,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
         // 0.1.0 is published: it is what the index already carried, and its
         // source stays pinned where users resolved it.
         '0.1.0': {
@@ -2222,6 +2321,15 @@ export const manifest: MarketManifest = {
       },
       icon: VYRA_FREE_MODEL_ICON,
       versions: {
+        '0.6.5': {
+          publishTimestamp: 1795679989,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-free-model',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795416000,
           source: {
@@ -2703,6 +2811,15 @@ export const manifest: MarketManifest = {
       },
       icon: STUDYMATE_ICON,
       versions: {
+        '2.2.1': {
+          publishTimestamp: 1795679988,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-studymate',
+          },
+        },
         // 2.2.0 asks for a course format at enrollment (reading, audio,
         // video, quiz or a mix) and ships the media generators with the
         // installed package.
@@ -2826,6 +2943,15 @@ export const manifest: MarketManifest = {
       },
       icon: MEDIA_STUDIO_ICON,
       versions: {
+        '0.3.5': {
+          publishTimestamp: 1795679987,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795344299,
           source: {
@@ -3042,6 +3168,15 @@ export const manifest: MarketManifest = {
       },
       icon: DSH_CONSOLE_ICON,
       versions: {
+        '0.1.2': {
+          publishTimestamp: 1795679986,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795472400,
           source: {
