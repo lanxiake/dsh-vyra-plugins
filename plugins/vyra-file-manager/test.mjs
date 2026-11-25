@@ -4,11 +4,73 @@ import { tmpdir } from 'node:os'
 import { isAbsolute, join, posix, relative } from 'node:path'
 import test from 'node:test'
 import { extensionOf, isTextExtension, kindOf, mimeOf } from './lib/media-types.js'
+import { dirnameOf } from './lib/paths.js'
 import { entityTagOf, parseRange } from './lib/range.js'
 import { scanMedia } from './lib/scan.js'
 import { serveMediaFile } from './lib/serve.js'
-import { batchFiles, copyFileInto, deleteFile, moveFile, readTextFile, renameFile, statFiles } from './lib/file-ops.js'
+import { batchFiles, copyFileInto, deleteFile, moveFile, readTextFile, renameFile, revealFile, statFiles } from './lib/file-ops.js'
 import { handleList, handleSessionChanges, registerMediaRoutes } from './lib/routes.js'
+
+/**
+ * The fake filesystem seam the route tests inline, extracted so file-op tests
+ * can share it. `stat` returns the seam's own shape, not Node's Stats.
+ */
+function makeTestFs(root) {
+  return {
+    async resolve(path, opts = {}) {
+      const value = path.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(path) ? path : join(opts.cwd ?? root, path)
+      return { targetKey: value, displayPath: value }
+    },
+    contains(parent, child) {
+      const step = relative(parent.displayPath, child.displayPath)
+      return step === '' || (!step.startsWith('..') && !isAbsolute(step))
+    },
+    processPath(target) { return target.displayPath },
+    async stat(target) {
+      const info = await stat(target.displayPath).catch(() => undefined)
+      return info === undefined
+        ? undefined
+        : {
+          type: info.isFile() ? 'file' : info.isDirectory() ? 'directory' : 'other',
+          size: info.size,
+          version: String(info.mtimeMs),
+        }
+    },
+  }
+}
+
+test('dirnameOf keeps the path flavour of its input', () => {
+  assert.equal(dirnameOf('C:\\work\\project\\a.txt'), 'C:\\work\\project')
+  assert.equal(dirnameOf('\\\\server\\share\\dir\\a.txt'), '\\\\server\\share\\dir')
+  assert.equal(dirnameOf('/srv/work/a.txt'), '/srv/work')
+  // A Windows path must never lose its separators to posix.dirname.
+  assert.doesNotMatch(dirnameOf('C:\\work\\project\\a.txt'), /\//u)
+})
+
+test('revealFile opens the folder for a directory and selects a file', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-reveal-'))
+  try {
+    await mkdir(join(root, 'sub'))
+    await writeFile(join(root, 'sub', 'a.txt'), 'x')
+    const calls = []
+    const launch = (command, args) => { calls.push({ command, args }) }
+    const fs = makeTestFs(root)
+    await revealFile({ path: 'sub', fs, workspaceRoot: root, launch })
+    await revealFile({ path: 'sub/a.txt', fs, workspaceRoot: root, launch })
+    assert.equal(calls.length, 2)
+    if (process.platform === 'win32') {
+      assert.equal(calls[0].command, 'explorer.exe')
+      assert.deepEqual(calls[0].args, [join(root, 'sub')])
+      assert.deepEqual(calls[1].args, [`/select,${join(root, 'sub', 'a.txt')}`])
+    } else {
+      assert.deepEqual(calls[0].args, [join(root, 'sub')])
+      assert.deepEqual(calls[1].args, [join(root, 'sub')])
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 
 test('file vocabulary', () => {
   assert.equal(extensionOf('a/b/c.MP4?x=1'), 'mp4')

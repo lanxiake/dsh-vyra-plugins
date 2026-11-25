@@ -44,6 +44,20 @@ export function targetPathOf(fs, target) {
 }
 
 /**
+ * The parent of a path, using the path's own spelling.
+ *
+ * `node:path`'s default `dirname` follows the host platform, so a POSIX root
+ * joined on a Windows host (or the reverse) produced a mixed-separator value
+ * that `explorer.exe` silently ignored.
+ * @param {string} value - an absolute path in either accepted spelling.
+ * @returns {string} the parent path.
+ */
+export function dirnameOf(value) {
+  return pathApiFor(value).dirname(value)
+}
+
+
+/**
  * Join a workspace-relative path onto a workspace root and normalize it with
  * the root's own spelling, so `a/../b.mp4` becomes `b.mp4` while `../x` stays
  * outside the root and is rejected by the containment check.

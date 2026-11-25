@@ -14,7 +14,7 @@ import { constants } from 'node:fs'
 import { copyFile, cp, mkdir, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { containsTarget, joinWorkspacePath, pathContains, targetPathOf } from './paths.js'
+import { containsTarget, dirnameOf, joinWorkspacePath, pathContains, targetPathOf } from './paths.js'
 import { extensionOf, isTextExtension, kindOf } from './media-types.js'
 import { invalidateScanCache } from './scan.js'
 
@@ -129,20 +129,33 @@ function run(command, args, options = {}) {
   })
 }
 
-/** Fire-and-forget launcher; the route reports only whether spawning failed. */
-function launch(command, args, options = {}) {
-  try {
-    const child = spawn(command, args, {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      windowsVerbatimArguments: options.verbatim === true,
-    })
-    child.on('error', () => {})
-    child.unref()
-  } catch (error) {
-    throw fail(500, 'spawn-failed', error?.message ?? String(error))
-  }
+/**
+ * Launch a detached process and report an immediate spawn failure.
+ *
+ * An `error` event (the executable is missing, the shell refused the argument)
+ * rejects instead of disappearing, so the panel can say why nothing opened.
+ * @param {string} command - executable name.
+ * @param {string[]} args - arguments, passed verbatim as an array (never a shell string).
+ * @param {{ verbatim?: boolean }} [options] - `windowsVerbatimArguments`.
+ * @returns {Promise<void>} resolves once the process has detached.
+ */
+function launchDetached(command, args, options = {}) {
+  return new Promise((resolvePromise, reject) => {
+    let child
+    try {
+      child = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        windowsVerbatimArguments: options.verbatim === true,
+      })
+    } catch (error) {
+      reject(fail(500, 'spawn-failed', error?.message ?? String(error)))
+      return
+    }
+    child.once('error', error => reject(fail(500, 'spawn-failed', error?.message ?? String(error))))
+    child.once('spawn', () => { child.unref(); resolvePromise() })
+  })
 }
 
 /** Stat one path, translating the usual errno codes. */
@@ -571,33 +584,42 @@ export async function batchFiles({ action, paths, toFolder = '', permanent = fal
 
 /**
  * Show a file or folder in the OS file manager.
+ *
+ * On Windows a file is selected inside Explorer (`/select,`); a folder is
+ * opened itself. Every path comes from `console`-independent, flavour-aware
+ * `dirnameOf`, so a Windows workspace never receives a mixed-separator value
+ * that Explorer silently ignores.
  * @param {object} args - request inputs.
+ * @param {(command: string, args: string[]) => Promise<void>} [args.launch] - launcher seam.
  * @returns {Promise<void>}
  */
-export async function revealFile({ path, fs, workspaceRoot, signal }) {
+export async function revealFile({ path, fs, workspaceRoot, signal, launch = launchDetached }) {
   const resolved = await resolveInside(fs, workspaceRoot, path, signal)
   const info = await statPath(resolved.processPath)
-  // Open the containing folder in the OS file manager: the folder itself for a
-  // directory, its parent for a file.
-  const directory = info.isDirectory() ? resolved.processPath : dirname(resolved.processPath)
-  if (process.platform === 'win32') launch('explorer.exe', [directory])
-  else if (process.platform === 'darwin') launch('open', [directory])
-  else launch('xdg-open', [directory])
+  const absolute = resolved.processPath
+  if (process.platform === 'win32') {
+    await launch('explorer.exe', [info.isDirectory() ? absolute : `/select,${absolute}`])
+    return
+  }
+  const directory = info.isDirectory() ? absolute : dirnameOf(absolute)
+  await launch(process.platform === 'darwin' ? 'open' : 'xdg-open', [directory])
 }
 
 /**
  * Open a file or folder with its system default application.
  * @param {object} args - request inputs.
+ * @param {(command: string, args: string[]) => Promise<void>} [args.launch] - launcher seam.
  * @returns {Promise<void>}
  */
-export async function openFileWithSystem({ path, fs, workspaceRoot, signal }) {
+export async function openFileWithSystem({ path, fs, workspaceRoot, signal, launch = launchDetached }) {
   const resolved = await resolveInside(fs, workspaceRoot, path, signal)
   await statPath(resolved.processPath)
   if (process.platform === 'win32') {
-    launch('explorer.exe', [resolved.processPath])
+    await launch('explorer.exe', [resolved.processPath])
   } else if (process.platform === 'darwin') {
-    launch('open', [resolved.processPath])
+    await launch('open', [resolved.processPath])
   } else {
-    launch('xdg-open', [resolved.processPath])
+    await launch('xdg-open', [resolved.processPath])
   }
 }
+
