@@ -593,6 +593,7 @@
 .hljs-emphasis { font-style: italic; }
 .hljs-strong { font-weight: 700; }
 
+.vms-html-note { flex: none; padding: 6px 10px; border-bottom: 0.5px solid var(--vms-line); background: var(--vms-layer2); color: var(--vms-ink3); font-size: 9.5px; }
 .vms-html-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: #fff; }
 .vms-table-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--vms-bg); }
 .vms-table { border-collapse: collapse; min-width: 100%; font-size: 10.5px; }

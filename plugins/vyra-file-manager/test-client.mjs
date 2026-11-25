@@ -166,9 +166,15 @@ test('markdown, csv and sandboxed html previews render', () => {
   const csv = renderToString(React.createElement(CsvView, { text: 'name,size\na,1', ext: 'csv' }))
   assert.match(csv, /<table/u)
   assert.match(csv, /name<\/th>/u)
-  const html = renderToString(React.createElement(HtmlView, { text: '<h1>Hello</h1><script>alert(1)</script>' }))
-  assert.match(html, /sandbox=/u)
+  const html = renderToString(React.createElement(HtmlView, {
+    text: '<h1>Hello</h1><script>alert(1)</script>',
+    sessionId: 's-1',
+    folder: 'docs',
+  }))
+  assert.match(html, /sandbox="allow-scripts allow-forms allow-popups allow-modals allow-downloads"/u)
+  assert.doesNotMatch(html, /allow-same-origin/u)
   assert.match(html, /Content-Security-Policy/u)
+  assert.match(html, /沙箱/u)
 })
 
 test('tree model keeps empty folders and counts matching files', () => {

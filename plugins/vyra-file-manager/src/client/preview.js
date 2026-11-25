@@ -196,14 +196,105 @@ export function MarkdownView({ text, sessionId, folder, ext }) {
     h('div', { className: 'vms-markdown', dangerouslySetInnerHTML: { __html: html } }))
 }
 
-export function HtmlView({ text }) {
+/**
+ * What the preview document may do inside its iframe.
+ *
+ * `allow-scripts` without `allow-same-origin` is the whole point: the document
+ * runs its own script (so a page that needs JavaScript actually renders), but
+ * its origin is opaque, so it cannot read this app's DOM, storage or cookies.
+ * Adding `allow-same-origin` here would hand a workspace HTML file full app
+ * authority — never do that.
+ */
+const HTML_SANDBOX = 'allow-scripts allow-forms allow-popups allow-modals allow-downloads'
+
+/** Every asset-bearing tag the preview can inline, in source order. */
+const ASSET_TAG = /<(link|script|img)\b[^>]*>/giu
+
+function attributeOf(tag, name) {
+  const match = new RegExp(`${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'iu').exec(tag)
+  return match === null ? undefined : (match[1] ?? match[2])
+}
+
+/** The asset references in a document, as `{ tag, name, url }`. */
+function assetRefsOf(html) {
+  const refs = []
+  for (const match of html.matchAll(ASSET_TAG)) {
+    const tag = match[0]
+    const kind = match[1].toLowerCase()
+    if (kind === 'link') {
+      if (!/\bstylesheet\b/iu.test(attributeOf(tag, 'rel') ?? '')) continue
+      const url = attributeOf(tag, 'href')
+      if (url !== undefined && url !== '') refs.push({ tag: kind, name: 'href', url })
+      continue
+    }
+    const url = attributeOf(tag, 'src')
+    if (url !== undefined && url !== '') refs.push({ tag: kind, name: 'src', url })
+  }
+  return refs
+}
+
+/**
+ * Ask the Host to turn each reference into a data URL, then swap it in.
+ *
+ * The Host is the only party allowed to fetch (it can read workspace files and
+ * validate containment); the framing document keeps its references when the
+ * Host declines one, so a single missing asset never blanks the page.
+ */
+async function inlineDocumentAssets(html, sessionId, folder) {
+  const refs = assetRefsOf(html)
+  if (refs.length === 0) return html
+  const resolved = new Map()
+  await Promise.all(refs.map(async ref => {
+    if (resolved.has(ref.url)) return
+    const isRemote = /^https?:\/\//iu.test(ref.url)
+    const target = isRemote ? ref.url : normalizeRelative(folder, ref.url)
+    if (target === undefined) { resolved.set(ref.url, undefined); return }
+    try {
+      const response = await fetch(apiUrl('api/vyra-media/html-asset', { sessionId, url: target }), { credentials: 'same-origin' })
+      const body = await response.json()
+      resolved.set(ref.url, body?.ok === true ? body.dataUrl : undefined)
+    } catch {
+      resolved.set(ref.url, undefined)
+    }
+  }))
+  let output = html
+  for (const ref of refs) {
+    const dataUrl = resolved.get(ref.url)
+    if (typeof dataUrl !== 'string') continue
+    output = output.replace(new RegExp(`<${ref.tag}\\b[^>]*>`, 'giu'), tag => {
+      if (attributeOf(tag, ref.name) !== ref.url) return tag
+      return tag.replace(
+        new RegExp(`(${ref.name}\\s*=\\s*)(?:"[^"]*"|'[^']*')`, 'iu'),
+        (_, lead) => `${lead}"${dataUrl}"`,
+      )
+    })
+  }
+  return output
+}
+
+/**
+ * A workspace HTML document, rendered inside an opaque-origin sandbox.
+ * @param {object} props - the document text and where it lives.
+ */
+export function HtmlView({ text, sessionId, folder }) {
   const [mode, setMode] = useState('render')
-  const document = useMemo(() => {
-    const csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data: blob:; font-src data:;">'
-    if (/<head[\s>]/iu.test(text)) return text.replace(/<head([^>]*)>/iu, `<head$1>${csp}`)
-    if (/<html[\s>]/iu.test(text)) return text.replace(/<html([^>]*)>/iu, `<html$1><head>${csp}</head>`)
-    return `<!doctype html><html><head>${csp}</head><body>${text}</body></html>`
-  }, [text])
+  const [document, setDocument] = useState(text)
+
+  useEffect(() => {
+    let alive = true
+    setDocument(text)
+    inlineDocumentAssets(text, sessionId, folder ?? '')
+      .then(inlined => { if (alive) setDocument(inlined) })
+      .catch(() => { if (alive) setDocument(text) })
+    return () => { alive = false }
+  }, [text, sessionId, folder])
+
+  const framed = useMemo(() => {
+    const csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data: blob:; font-src data:;">'
+    if (/<head[\s>]/iu.test(document)) return document.replace(/<head([^>]*)>/iu, `<head$1>${csp}`)
+    if (/<html[\s>]/iu.test(document)) return document.replace(/<html([^>]*)>/iu, `<html$1><head>${csp}</head>`)
+    return `<!doctype html><html><head>${csp}</head><body>${document}</body></html>`
+  }, [document])
   if (mode === 'source') {
     return h('div', { className: 'vms-rich-view' },
       h(ModeToggle, { mode, onChange: setMode }),
@@ -211,10 +302,11 @@ export function HtmlView({ text }) {
   }
   return h('div', { className: 'vms-rich-view' },
     h(ModeToggle, { mode, onChange: setMode }),
+    h('div', { className: 'vms-html-note' }, '沙箱预览：脚本可运行，但读不到本页数据；外链资源由本机代理加载。'),
     h('iframe', {
       className: 'vms-html-frame',
-      sandbox: '',
-      srcDoc: document,
+      sandbox: HTML_SANDBOX,
+      srcDoc: framed,
       title: 'HTML 预览',
       referrerPolicy: 'no-referrer',
     }))
@@ -295,7 +387,9 @@ export function RichTextPreview({ item, sessionId }) {
     if (['md', 'markdown', 'mdx'].includes(ext)) {
       return h(MarkdownView, { text: state.text, sessionId, folder: folderOf(item), ext })
     }
-    if (['html', 'htm'].includes(ext)) return h(HtmlView, { text: state.text })
+    if (['html', 'htm'].includes(ext)) {
+      return h(HtmlView, { text: state.text, sessionId, folder: folderOf(item) })
+    }
     if (['csv', 'tsv'].includes(ext)) return h(CsvView, { text: state.text, ext })
     if (['json', 'jsonc'].includes(ext)) return h(JsonView, { text: state.text, ext })
     if (isTextExtension(ext)) return h(TextView, { text: state.text, ext })
