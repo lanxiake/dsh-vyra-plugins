@@ -10,9 +10,11 @@ import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
 import {
-  ACTIONS, MAX_TEXT_CHARS, bodyBlocks, buildFollowUpRequest, buildRequest, explainAuthFailure,
-  menuLayout, menuHitTest, panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection,
-  reduceMouse, saneRect, selectionProblem, splitSuggestions, systemPrompt, wrapLines,
+  ACTIONS, DEFAULT_TARGET_LANGUAGE, MAX_TEXT_CHARS, bodyBlocks, buildFollowUpRequest, buildRequest,
+  explainAuthFailure, isChineseText, isDismissingKey, isEnglishText, languageName, menuLayout,
+  menuHitTest, panelSideFor, pickModel, placeMenuAtSelection, placePanelAtSelection, reduceMouse,
+  saneRect, selectionProblem, sourceLanguageLabel, splitSuggestions, systemPrompt, translatePlan,
+  translateTarget, wrapLines,
 } from '../core.js'
 
 test('saneRect accepts a real rectangle and rounds it', () => {
@@ -236,4 +238,142 @@ test('pickModel answers null when no provider offers a model', async () => {
   assert.equal(await pickModel([{ id: 'a' }], async () => []), null)
   // A provider list with no usable id is not a provider.
   assert.equal(await pickModel([{ name: 'no id' }], async () => [{ id: 'x' }]), null)
+})
+
+// --- source language and translation direction -----------------------------------------------
+//
+// The rule the user asked for: a Chinese selection goes to English, everything else goes to the
+// language set on the settings page. Before this nothing detected a language at all — the prompt
+// always named the settings language — so translating Chinese asked the model for Chinese, and the
+// card's "自动检测" pill promised a detection that never happened.
+
+test('isChineseText counts letters, so punctuation and digits cannot outvote the words', () => {
+  assert.equal(isChineseText('你好世界'), true)
+  assert.equal(isChineseText('这是一个 bug 修复'), true, 'a Chinese sentence quoting an English word is still Chinese')
+  assert.equal(isChineseText('你好，世界！'), true, 'full-width punctuation is not a letter')
+  assert.equal(isChineseText('これは日本語です'), false, 'Japanese kana are not Han characters')
+  assert.equal(isChineseText('hello world'), false)
+  assert.equal(isChineseText('12345'), false, 'a number has no language')
+  assert.equal(isChineseText(''), false)
+  assert.equal(isChineseText(null), false)
+})
+
+test('isEnglishText needs mostly Latin letters', () => {
+  assert.equal(isEnglishText('hello'), true)
+  assert.equal(isEnglishText('Hello, world!'), true)
+  assert.equal(isEnglishText('你好'), false)
+  assert.equal(isEnglishText('Привет'), false, 'Cyrillic is not Latin')
+  assert.equal(isEnglishText('42'), false)
+})
+
+test('Chinese translates into English, whatever the settings page says', () => {
+  for (const preferred of ['简体中文', 'English', '日本語']) {
+    assert.equal(translateTarget('这是一段中文', preferred), 'English', `preferred=${preferred}`)
+  }
+})
+
+test('English translates into the language set on the settings page', () => {
+  assert.equal(translateTarget('hello world', '简体中文'), '简体中文')
+  assert.equal(translateTarget('hello world', '日本語'), '日本語')
+})
+
+test('other languages fall back to the settings language rather than being guessed', () => {
+  assert.equal(translateTarget('Привет мир', '简体中文'), '简体中文')
+  assert.equal(translateTarget('こんにちは', '繁體中文'), '繁體中文')
+})
+
+test('English into English is not a translation, so the direction falls back to Chinese', () => {
+  // Offering "English" as a target in the settings page is what makes this reachable: without the
+  // fallback the prompt reads "translate English into English" and the answer is the input.
+  assert.equal(translateTarget('hello world', 'English'), DEFAULT_TARGET_LANGUAGE)
+  assert.equal(translateTarget('这是一段中文', 'English'), 'English', 'Chinese still goes to English')
+})
+
+test('a missing or blank preferred language uses the default', () => {
+  assert.equal(translateTarget('hello', ''), DEFAULT_TARGET_LANGUAGE)
+  assert.equal(translateTarget('hello', undefined), DEFAULT_TARGET_LANGUAGE)
+  assert.equal(translateTarget('hello', '   '), DEFAULT_TARGET_LANGUAGE)
+})
+
+test('sourceLanguageLabel names the two languages that change direction, and nothing else', () => {
+  assert.equal(sourceLanguageLabel('你好'), '中文')
+  assert.equal(sourceLanguageLabel('hello'), '英文')
+  assert.equal(sourceLanguageLabel('Привет'), '其他')
+})
+
+test('translatePlan returns both ends, so the card cannot show a direction it did not use', () => {
+  assert.deepEqual(translatePlan('你好世界', '简体中文'), {
+    target: 'English', source: '中文', sourceLabel: '中文', targetLabel: 'English',
+  })
+  assert.equal(translatePlan('hello', '日本語').target, '日本語')
+})
+
+test('languageName uses 英语 inside a prompt rather than the settings label', () => {
+  assert.equal(languageName('English'), '英语')
+  assert.equal(languageName('日本語'), '日本語')
+})
+
+test('the translate prompt states the direction instead of asking for auto-detection', () => {
+  const prompt = systemPrompt('translate', { targetLanguage: 'English', sourceLanguage: '中文' })
+  assert.match(prompt, /用户给的中文文本/, 'the source language is named')
+  assert.match(prompt, /翻译成英语/, 'the target is named in the language the model reasons in')
+  assert.doesNotMatch(prompt, /English/, 'the settings label itself is not passed through')
+  // Without a source the prompt still names a target, which is all a re-translation needs.
+  assert.match(systemPrompt('translate', { targetLanguage: 'English' }), /翻译成英语/)
+})
+
+test('buildRequest passes the direction through to the prompt', () => {
+  const request = buildRequest('translate', '你好', { targetLanguage: 'English', sourceLanguage: '中文' })
+  assert.match(request.system, /翻译成英语/)
+})
+
+// --- keys that close the popup ---------------------------------------------------------------
+//
+// The popup never takes focus, so this rule is the only thing that notices the user has gone back
+// to typing. Selecting text in order to delete it or type over it used to leave the menu on screen
+// until the pointer was clicked somewhere else.
+
+const key = (vk, extra = {}) => isDismissingKey({ vk, ...extra })
+
+test('typing closes the menu', () => {
+  for (const vk of [0x41, 0x5a, 0x30, 0x39, 0x20, 0xba, 0xdb]) {
+    assert.equal(key(vk), true, `vk 0x${vk.toString(16)} types into the selection`)
+  }
+})
+
+test('editing and navigation keys close the menu', () => {
+  for (const vk of [0x08, 0x09, 0x0d, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2d, 0x2e]) {
+    assert.equal(key(vk), true, `vk 0x${vk.toString(16)} edits or navigates`)
+  }
+})
+
+test('shortcuts and inert keys leave the menu open', () => {
+  // Ctrl+C after selecting is how people copy; closing under it would make them reselect.
+  assert.equal(key(0x43, { control: true }), false, 'Ctrl+C')
+  assert.equal(key(0x56, { control: true }), false, 'Ctrl+V')
+  assert.equal(key(0x41, { alt: true }), false, 'Alt+letter is a menu mnemonic')
+  assert.equal(key(0x44, { win: true }), false, 'Win+D')
+  assert.equal(key(0x1b), false, 'Esc is handled by the card itself when it has focus')
+  assert.equal(key(0x70), false, 'F1')
+  assert.equal(key(0x90), false, 'NumLock')
+  assert.equal(key(0x14), false, 'CapsLock')
+  assert.equal(key(0x10), false, 'a bare Shift')
+})
+
+test('the numpad is read by which key actually produced the press', () => {
+  assert.equal(key(0x25, { numpad: true }), false, 'numpad 4 with NumLock off is not the left arrow')
+  assert.equal(key(0x60, { numpad: true }), true, 'numpad 0 types a digit')
+  assert.equal(key(0x6b), false, 'numpad +')
+  // With NumLock off the keypad sends the navigation codes without the numpad flag, so these are
+  // the editing keys they were before — numpad 2 is Down, numpad 0 is Insert.
+  assert.equal(key(0x28), true, 'down arrow / numpad 2')
+  assert.equal(key(0x2e), true, 'Delete / numpad .')
+  assert.equal(key(0x25, { extended: true }), true, 'the real arrow keys navigate')
+})
+
+test('a key code that means "no key" is ignored', () => {
+  assert.equal(key(0), false)
+  assert.equal(key(0xff), false)
+  assert.equal(isDismissingKey({}), false)
+  assert.equal(isDismissingKey(), false)
 })

@@ -47,6 +47,65 @@ export function findAction(id) {
   return ACTIONS.find((a) => a.id === id) ?? null
 }
 
+/** Navigator and editing keys that mean "I am working in the document now", not "pick an action". */
+const DISMISSING_KEYS = new Set([
+  0x08, // Backspace
+  0x09, // Tab
+  0x0d, // Enter
+  0x21, // PageUp
+  0x22, // PageDown
+  0x23, // End
+  0x24, // Home
+  0x25, // Left
+  0x26, // Up
+  0x27, // Right
+  0x28, // Down
+  0x2d, // Insert
+  0x2e, // Delete
+])
+
+/** Numpad operators: a keypad `+` or `.` is typing, not navigation. */
+const NUMPAD_OPERATORS = new Set([0x6a, 0x6b, 0x6d, 0x6e, 0x6f])
+/** Function keys run the application's own commands; they never type into the selection. */
+const FUNCTION_KEY = (vk) => vk >= 0x70 && vk <= 0x87
+/** Lock toggles change nothing in the document. */
+const LOCK_KEYS = new Set([0x90, 0x91, 0x14]) // NumLock, ScrollLock, CapsLock
+
+/**
+ * Whether a key press means the selection menu is no longer wanted.
+ *
+ * The popup never takes focus, so it cannot see the keyboard at all: a low-level hook sees the
+ * press, and this decides whether the popup closes. The rule is the user's own — they selected the
+ * text to delete it or to replace it — so every key that types or edits counts, and the press is
+ * passed on untouched either way.
+ *
+ * The three cases:
+ *   - a printable key (letters, digits, space, punctuation, and every key an IME drives) → close;
+ *   - an editing/navigation key (Backspace, Delete, Enter, Tab, arrows, Home/End, PageUp/PageDown,
+ *     Insert) → close;
+ *   - everything else — shortcuts with Ctrl/Alt/Win, F-keys, lock toggles, the numpad, a bare
+ *     modifier — stays open. Ctrl+C after selecting is how people copy; closing the menu under
+ *     that press would just make them reselect.
+ *
+ * @param press - `{ vk, control, alt, win, extended, numpad }`: the virtual key, which modifiers
+ *   were down, and the flags a WH_KEYBOARD_LL `KBDLLHOOKSTRUCT` carries.
+ */
+export function isDismissingKey(press = {}) {
+  const vk = Number(press.vk) & 0xff
+  // 0x00 and 0xFF mean "no such key": some IMEs report the first, no mapping reports the second.
+  if (!Number.isFinite(vk) || vk === 0 || vk === 0xff) return false
+  if (press.control || press.alt || press.win) return false
+  if (vk === 0x1b) return false // Esc: the card handles it itself when it has focus
+  // Modifier keys never type: pressing Shift to capitalise does not mean the menu is unwanted.
+  if (vk === 0x10 || vk === 0x11 || vk === 0x12 || (vk >= 0x5b && vk <= 0x5f) || (vk >= 0xa0 && vk <= 0xa5)) return false
+  if (LOCK_KEYS.has(vk) || FUNCTION_KEY(vk)) return false
+  // A numpad digit types into the selection just like the top row does; with NumLock off the same
+  // key is a navigation key and arrives without the numpad flag, so the general rule below covers it.
+  if (press.numpad) return vk >= 0x60 && vk <= 0x69
+  if (NUMPAD_OPERATORS.has(vk)) return false
+  return true
+}
+
 /**
  * Ask for Markdown — the panel renders a subset of it.
  *
@@ -83,7 +142,13 @@ export function splitSuggestions(text) {
 }
 
 const PROMPTS = {
-  translate: (target) => `你是翻译引擎。把用户给的文本翻译成${target}。只输出译文本身，不要解释、不要加引号。${MARKDOWN_RULE}`,
+  // The direction is decided here rather than left to the model: asked to "auto-detect", models
+  // happily "translate" Chinese into Chinese, and the user reads that as the feature not working.
+  translate: (target, source) => (source
+    ? `你是翻译引擎。把用户给的${languageName(source)}文本翻译成${languageName(target)}。` +
+      '只输出译文本身，不要解释、不要加引号、不要保留原文。'
+    : `你是翻译引擎。把用户给的文本翻译成${languageName(target)}。只输出译文本身，不要解释、不要加引号。`) +
+    MARKDOWN_RULE,
   explain: () => `你是讲解助手。用通俗的中文解释用户给出的文本：它是什么意思、涉及什么概念、什么场景下会用到。${MARKDOWN_RULE}`,
   summarize: () => `你是摘要助手。用中文概括用户给出文本的要点。${MARKDOWN_RULE}`,
   followup: () => `用户在追问下面这段文字。结合原文和你之前的回答直接回答追问，不要复述原文。${MARKDOWN_RULE}`,
@@ -92,7 +157,7 @@ const PROMPTS = {
 export function systemPrompt(actionId, options = {}) {
   const build = PROMPTS[actionId]
   if (!build) throw new Error(`unknown action: ${actionId}`)
-  return build(options.targetLanguage || '简体中文')
+  return build(options.targetLanguage || DEFAULT_TARGET_LANGUAGE, options.sourceLanguage || null)
 }
 
 /** True for actions that call a model. `copy` is handled in-process and has no prompt. */
@@ -113,6 +178,112 @@ export function buildRequest(actionId, text, options = {}) {
   return {
     system: systemPrompt(actionId, options),
     messages: [{ role: 'user', content: [{ type: 'text', text: text.trim() }] }],
+  }
+}
+
+/** The language the settings page starts with, and the one every prompt falls back to. */
+export const DEFAULT_TARGET_LANGUAGE = '简体中文'
+
+/**
+ * Every target the settings page and the card's card language row offer.
+ *
+ * One list, used by both halves: the card used to keep its own copy, so adding a language in the
+ * settings page left the picker inside the card unable to choose it.
+ */
+export const TARGET_LANGUAGES = ['简体中文', '繁體中文', 'English', '日本語', '한국어', 'Français', 'Deutsch', 'Español', 'Русский']
+
+/** What the card shows instead of a detected source language. */
+export const UNKNOWN_LANGUAGE = '其他'
+
+const CHINESE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g
+const LATIN_LETTER = /[A-Za-z]/g
+/** Letters of any script, so letters can be compared with letters rather than with punctuation. */
+const ANY_LETTER = /\p{L}/gu
+
+/**
+ * Whether a selection is mostly Chinese.
+ *
+ * Chinese is told apart by its ideographs, everything else by not having them: a text is Chinese
+ * when more than half of its letters are Han characters. Counting letters rather than characters
+ * is what keeps punctuation, digits and emoji from outvoting the words. Half is the threshold
+ * because a Chinese sentence quoting an English term, or the reverse, is still one language — and
+ * a mixed fragment has no right answer anyway.
+ */
+export function isChineseText(text) {
+  const source = String(text ?? '')
+  const letters = (source.match(ANY_LETTER) || []).length
+  if (letters === 0) return false
+  return (source.match(CHINESE) || []).length * 2 > letters
+}
+
+/** True when the text is mostly Latin letters — the only other language this plugin names. */
+export function isEnglishText(text) {
+  const source = String(text ?? '')
+  const letters = (source.match(ANY_LETTER) || []).length
+  if (letters === 0) return false
+  return (source.match(LATIN_LETTER) || []).length * 2 > letters
+}
+
+/**
+ * The language a translation should render into — the rule the user asked for, in one place.
+ *
+ *   - Chinese selection  → English, always.
+ *   - English selection  → the preferred language from the settings page.
+ *   - Anything else      → the preferred language from the settings page.
+ *
+ * One boundary is deliberate: English into English is not a translation, so when the preferred
+ * language *is* English and the selection is English too, the direction falls back to Simplified
+ * Chinese. The alternative is a card whose prompt says "translate English into English", which
+ * returns the input unchanged and reads as the feature being broken.
+ */
+export function translateTarget(text, preferred = DEFAULT_TARGET_LANGUAGE) {
+  const target = typeof preferred === 'string' && preferred.trim() ? preferred.trim() : DEFAULT_TARGET_LANGUAGE
+  if (isChineseText(text)) return 'English'
+  if (isEnglishText(text) && target === 'English') return DEFAULT_TARGET_LANGUAGE
+  return target
+}
+
+/**
+ * The source language as the card labels it, or the neutral label for anything else.
+ *
+ * Only two languages are named here, because only they change the direction; labelling Arabic as
+ * "阿拉伯语" would imply the plugin can tell, and it cannot without a model round-trip.
+ */
+export function sourceLanguageLabel(text) {
+  if (isChineseText(text)) return '中文'
+  if (isEnglishText(text)) return '英文'
+  return UNKNOWN_LANGUAGE
+}
+
+/**
+ * How a language setting is named inside a prompt.
+ *
+ * "English" is what the settings page offers to the user; a model reading "翻译成英语" produces
+ * Chinese output far more reliably than one reading "翻译成 English", because the target name is
+ * the language the model reasons in.
+ */
+export function languageName(name) {
+  return name === 'English' ? '英语' : name
+}
+
+/**
+ * Everything one translation needs: which way it goes and what to call both ends.
+ *
+ * The card draws the direction from this, so the row always says what will actually be produced —
+ * "自动检测" was a promise the plugin never kept.
+ *
+ * @param text - the selection being translated.
+ * @param preferred - the target language from the settings page.
+ * @returns `{ target, source, sourceLabel, targetLabel }`: `target`/`source` are the configured
+ *   language names, the labels are what the pill row shows.
+ */
+export function translatePlan(text, preferred = DEFAULT_TARGET_LANGUAGE) {
+  const target = translateTarget(text, preferred)
+  return {
+    target,
+    source: sourceLanguageLabel(text),
+    sourceLabel: sourceLanguageLabel(text),
+    targetLabel: target,
   }
 }
 

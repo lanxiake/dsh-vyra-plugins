@@ -183,12 +183,17 @@ window.__ModuleLoader__.load({
               h('div', { style: S.label }, '划选后自动弹出'),
               h('div', { style: S.hint }, '选中文字松手即弹出菜单，不必再点右键。关掉后只有右键才弹（右键始终可用）。'),
             ),
-            h(Toggle, { on: Boolean(settings.openOnSelect), onChange: (v) => patch({ openOnSelect: v }), label: '划选后自动弹出' }))),
+            h(Toggle, { on: Boolean(settings.openOnSelect), onChange: (v) => patch({ openOnSelect: v }), label: '划选后自动弹出' })),
+          h('div', { style: S.hint },
+            '菜单不会拦你的输入：弹出后继续打字，或者按退格、删除、回车、方向键，它都会自己收起，按键照常进入原来的程序。' +
+            'Ctrl+C、Ctrl+V 这类组合键不会让它收起。')),
 
         h('div', { style: S.card },
           h('div', null,
             h('div', { style: S.label }, '翻译目标语言'),
-            h('div', { style: S.hint }, '只影响「翻译」动作。')),
+            h('div', { style: S.hint },
+              '只影响「翻译」动作，而且只在选中内容不是中文时生效：选中中文一律翻译成英文；' +
+              '选中英文或其他语言，翻译成这里设置的语言。')),
           h('select', {
             style: S.select, value: settings.targetLanguage || '简体中文', disabled: busy,
             onChange: (e) => patch({ targetLanguage: e.target.value }),

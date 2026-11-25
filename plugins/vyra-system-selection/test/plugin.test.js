@@ -88,3 +88,40 @@ test('the panel anchors to the selection, not to a point', () => {
   assert.ok(pos.y >= rect.bottom)
   assert.equal(pos.x + 210, (rect.left + rect.right) / 2)
 })
+
+// The menu used to close only on a click outside it. Selecting text to delete it, or to type over
+// it, left the card on screen until the pointer was clicked somewhere else — because the card
+// never takes focus and so never saw the keystroke. The keyboard hook is what notices it, and the
+// dismissal it reports must reach the same handler the click path uses.
+test('the dismissal handler is registered on the overlay, not only inside the mouse hook', () => {
+  const source = readFileSync(join(import.meta.dirname, '..', 'index.js'), 'utf8')
+  const call = source.slice(source.indexOf('const overlay = createOverlay('))
+  const body = call.slice(0, call.indexOf('\n  })'))
+  assert.match(body, /onDismiss: \(\) => dismiss\(\)/, 'the handler is part of the overlay call')
+})
+
+test('the translate action carries its direction into the card and the prompt', () => {
+  const source = readFileSync(join(import.meta.dirname, '..', 'index.js'), 'utf8')
+  assert.match(source, /translatePlan\(text, settings\.targetLanguage\)/, 'the direction comes from core, per selection')
+  assert.match(source, /sourceLanguage: plan \? plan\.source : ''/, 'the card is told the detected source')
+  assert.match(source, /targetLanguage: plan \? plan\.target : settings\.targetLanguage/, 'the card is told the computed target')
+  assert.match(source, /lastRequest = \{ action, text, at, question, plan \}/, 'a follow-up reuses the plan it was asked under')
+})
+
+test('the card is told the source language, so the pill cannot claim 自动检测', () => {
+  const native = readFileSync(join(import.meta.dirname, '..', 'native.js'), 'utf8')
+  assert.match(native, /state\.sourceLanguage \|\| '源语言'/, 'the pill draws the detected language')
+  assert.doesNotMatch(native, /'自动检测'/, 'the old unconditional pill is gone')
+})
+
+// A keyboard hook sits in the input path of every key press machine-wide, so it must exist only
+// while there is a popup to close.
+test('the keyboard hook is installed with the popup and removed with it', () => {
+  const native = readFileSync(join(import.meta.dirname, '..', 'native.js'), 'utf8')
+  const show = native.slice(native.indexOf('function showAt('), native.indexOf('function showAt(') + 700)
+  assert.match(show, /installKeyHook\(\)/, 'showing the popup installs the hook')
+  const hide = native.slice(native.indexOf('    hide() {'), native.indexOf('    destroy() {'))
+  assert.match(hide, /removeKeyHook\(\)/, 'hiding the popup removes it')
+  assert.doesNotMatch(native.slice(native.indexOf('function installKeyHook('), native.indexOf('function removeKeyHook(')),
+    /return 1/, 'the key press is never swallowed')
+})
