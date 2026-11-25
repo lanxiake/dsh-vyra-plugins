@@ -2134,22 +2134,12 @@
       },
       "versions": [
         {
-          "version": "0.6.5",
-          "publishTimestamp": 1795679989,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
-            "path": "plugins/vyra-free-model"
-          }
-        },
-        {
           "version": "0.6.4",
           "publishTimestamp": 1795496197,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "b3b94ac82117833a1df72e049c396493719ee812",
+            "commit": "9292d1170cd87d914cff743b9a8811ce0e4b7ba7",
             "path": "plugins/vyra-free-model"
           }
         },

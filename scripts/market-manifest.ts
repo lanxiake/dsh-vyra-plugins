@@ -2321,15 +2321,6 @@ export const manifest: MarketManifest = {
       },
       icon: VYRA_FREE_MODEL_ICON,
       versions: {
-        '0.6.5': {
-          publishTimestamp: 1795679989,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
-            path: 'plugins/vyra-free-model',
-          },
-        },
         '0.1.0': {
           publishTimestamp: 1795416000,
           source: {
@@ -2477,7 +2468,11 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'b3b94ac82117833a1df72e049c396493719ee812',
+            // Repinned from b3b94ac, which predates the rename. 9292d11 changed
+            // nothing in this plugin but the names: package.json, the cordis row
+            // and the client registration id now all read dsh-vyra-free-model,
+            // which is also the name npm published 0.6.4 under.
+            commit: '9292d1170cd87d914cff743b9a8811ce0e4b7ba7',
             path: 'plugins/vyra-free-model',
           },
         },

@@ -1,6 +1,6 @@
 {
   "name": "dsh-vyra-free-model",
-  "version": "0.6.5",
+  "version": "0.6.4",
   "type": "module",
   "description": "装上就能用的免费模型：零配置聊天，多账号与积分管理、自带 Key 端点、真实可用性检测和自动换模型重试；设置页可一键安装插件市场，并自动装好 DSH 使用指南技能。",
   "main": "./index.js",
