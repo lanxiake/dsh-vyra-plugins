@@ -344,8 +344,23 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
+          { style: S.list },
+          h('div', { style: { ...S.agentRow, borderTop: 'none', fontWeight: 600 } }, h('span', null, '设计总监可委派（花名册）'), h('span', null, `${(state.roster ?? []).length} 个`)),
+          (state.roster ?? []).length === 0
+            ? h('div', { ...{ style: S.muted } }, '还没有其他 Agent。用「Agent 管理」新建一个，重新生成后它就会出现在这里。')
+            : state.roster.map((row, index) =>
+                h(
+                  'div',
+                  { key: row.id, style: index === 0 ? { ...S.agentRow, borderTop: 'none' } : S.agentRow },
+                  h('span', null, `${row.name}（${row.id}）`),
+                  h('span', { style: S.muted }, row.description ?? ''),
+                ),
+              ),
+        ),
+        h(
+          'div',
           { style: S.muted },
-          '提示：技能列表在新建会话后刷新；Agent 预设出现在新建会话的 Agent 选择里。命令行等价操作：odx domains enable/disable <领域 id>。',
+          '提示：技能列表在新建会话后刷新；花名册里的 Agent 都能被设计总监通过 subagent 调用。命令行等价操作：odx domains enable/disable <领域 id>、odx agents list。',
         ),
       )
     }

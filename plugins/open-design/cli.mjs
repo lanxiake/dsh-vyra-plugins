@@ -12,10 +12,14 @@
  */
 
 import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
 import { DOMAINS, DOMAIN_IDS } from './domains.mjs'
 import { readConfig, writeConfig } from './config.mjs'
-import { sync } from './sync.mjs'
+import { listOwned, removeStalePresets, sync } from './sync.mjs'
 import { readMountRecord } from './diagnostics.mjs'
+import { readRoster } from './agents.mjs'
+import { ORCHESTRATOR } from './domains.mjs'
 
 const PACKAGE_ROOT = fileURLToPath(new URL('.', import.meta.url))
 
@@ -28,6 +32,8 @@ const USAGE = `odx — OpenDesign 领域开关
   odx domains enable-all           全部启用
   odx domains disable-all          全部关闭
   odx agents list                  列出已生成的领域 agent 与编排 agent
+  odx presets prune                列出旧领域 Agent 的卸载步骤
+  odx presets prune --delete-only  依赖卸载后删除残留目录
   odx sync                         按当前配置重新同步磁盘
   odx doctor                       查看设置页路由是否挂载成功
 
@@ -66,6 +72,9 @@ export function run(argv, options = {}) {
     out.push(`已启用 ${String(report.enabled.length)} / ${String(DOMAINS.length)} 个领域：${report.enabled.join(', ') || '（无）'}`)
     if (report.skillsWritten.length > 0) out.push(`写入技能：${report.skillsWritten.join(', ')}`)
     if (report.agentsWritten.length > 0) out.push(`写入 Agent：${report.agentsWritten.join(', ')}`)
+    if (report.stale.length > 0) {
+      out.push(`待清理的旧领域 Agent：${report.stale.join(', ')}（重启 DSH 后自动卸载；这里没有 pluginManager，只报告不删）`)
+    }
     if (report.removed.length > 0) out.push(`清理：${report.removed.join(', ')}`)
     return 0
   }
@@ -125,12 +134,42 @@ export function run(argv, options = {}) {
     }
   }
 
-  if (group === 'agents' && (action === 'list' || action === undefined)) {
-    const { enabled } = readConfig(dshHome)
-    out.push(`编排 Agent：od-director（可调度 ${String(enabled.length)} 个领域）`)
-    for (const domain of DOMAINS) {
-      out.push(`${enabled.includes(domain.id) ? '✅' : '  '} ${domain.id.padEnd(20)} ${domain.name}`)
+  if (group === 'presets' && action === 'prune' && !rest.includes('--delete-only')) {
+    // Uninstalling a bundle runs `pnpm remove` and reloads the profile, so it
+    // must happen from outside the boot path — and outside this process, whose
+    // caller `bin/odx` reads a synchronous return value. This prints the exact
+    // commands; running them while DSH is closed is the safe order.
+    const presetsRoot = join(dshHome ?? (process.env.DSH_HOME || join(homedir(), '.dsh')), 'agent-manager', 'presets')
+    const stale = listOwned(presetsRoot, [ORCHESTRATOR.id])
+    if (stale.length === 0) {
+      out.push('没有待清理的旧领域 Agent。')
+      return emit(0)
     }
+    out.push(`发现 ${String(stale.length)} 个旧领域 Agent（关闭 DSH 后按顺序执行）：`)
+    out.push('')
+    for (const id of stale) {
+      out.push(`  pnpm remove @local/agent-preset-${id}`)
+    }
+    out.push('')
+    out.push('依赖卸载完成后删除目录：')
+    out.push('  odx presets prune --delete-only')
+    return emit(0)
+  }
+
+  if (group === 'presets' && action === 'prune' && rest.includes('--delete-only')) {
+    const presetsRoot = join(dshHome ?? (process.env.DSH_HOME || join(homedir(), '.dsh')), 'agent-manager', 'presets')
+    const purged = removeStalePresets(presetsRoot, listOwned(presetsRoot, [ORCHESTRATOR.id]))
+    out.push(purged.length === 0 ? '没有可删除的目录。' : `已删除：${purged.join(', ')}`)
+    return emit(0)
+  }
+
+  if (group === 'agents' && (action === 'list' || action === undefined)) {    const { enabled } = readConfig(dshHome)
+    const roster = readRoster(join(dshHome ?? (process.env.DSH_HOME || join(homedir(), '.dsh')), 'agent-manager', 'presets'))
+    out.push(`编排 Agent：od-director（可委派 ${String(roster.length)} 个已安装 Agent，${String(enabled.length)} 个领域技能）`)
+    out.push('')
+    out.push('可委派的 Agent 花名册：')
+    if (roster.length === 0) out.push('  （空——先安装或新建 Agent 预设）')
+    for (const row of roster) out.push(`  ${row.id.padEnd(24)} ${row.name}`)
     return emit(0)
   }
 

@@ -17,6 +17,7 @@ import { DOMAINS, DOMAIN_IDS, DEFAULT_ENABLED, ORCHESTRATOR } from './domains.mj
 import { readConfig, writeConfig } from './config.mjs'
 import { sync } from './sync.mjs'
 import { listBundledSkills } from './skills.mjs'
+import { readRoster } from './agents.mjs'
 
 /**
  * What the settings page renders.
@@ -26,6 +27,7 @@ import { listBundledSkills } from './skills.mjs'
  *   domains: Array<{ id: string, name: string, description: string, enabled: boolean,
  *                    skills: string[], designSystems: boolean }>,
  *   agents: Array<{ id: string, name: string, present: boolean }>,
+ *   roster: Array<{ id: string, name: string, description: string }>,
  *   warnings: string[],
  * }}
  */
@@ -43,17 +45,17 @@ export function describe(options = {}) {
     designSystems: domain.designSystems === true,
   }))
 
-  // The orchestrator plus every domain agent that is currently on disk.
+  // Only the director is generated. Domain agents were removed: a preset that
+  // cannot delegate is a dead end, and skills already carry the capability.
   const agents = [
     { id: ORCHESTRATOR.id, name: ORCHESTRATOR.name, present: existsSync(join(presetsRoot, ORCHESTRATOR.id, 'agent.json')) },
-    ...DOMAINS.filter((domain) => enabled.includes(domain.id)).map((domain) => ({
-      id: domain.id,
-      name: domain.name,
-      present: existsSync(join(presetsRoot, domain.id, 'agent.json')),
-    })),
   ]
 
-  return { domains, agents, warnings }
+  // What the director can actually delegate to. Read from disk rather than from
+  // the host registry: the panel has no ctx, and the disk is what sync wrote.
+  const roster = readRoster(presetsRoot)
+
+  return { domains, agents, roster, warnings }
 }
 
 /**

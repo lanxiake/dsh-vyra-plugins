@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url'
 import { DOMAINS, ORCHESTRATOR } from './domains.mjs'
 import { readConfig } from './config.mjs'
 import { listBundledSkills, renderDomainSkill } from './skills.mjs'
-import { agentDirFiles, domainAgentSpec, orchestratorSpec } from './agents.mjs'
+import { agentDirFiles, orchestratorSpec, readRoster } from './agents.mjs'
 
 /** The prefix every directory this plugin owns carries. */
 const OWNED_PREFIX = 'od-'
@@ -50,6 +50,49 @@ function writeIfChanged(file, content) {
   mkdirSync(dirname(file), { recursive: true })
   writeFileSync(file, content)
   return true
+}
+
+/**
+ * List every owned directory under `root` that is not in `keep`, without
+ * removing it.
+ *
+ * Removal has to go through the plugin manager, so it cannot live here: this
+ * module runs in the CLI too, where there is no host. The caller reads this list,
+ * uninstalls those bundles, then re-runs `sync` to finish the cleanup.
+ *
+ * @returns {string[]}
+ */
+export function listOwned(root, keep = []) {
+  const found = []
+  if (!existsSync(root)) return found
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith(OWNED_PREFIX)) continue
+    if (keep.includes(entry.name)) continue
+    found.push(entry.name)
+  }
+  return found
+}
+
+/**
+ * Delete the preset directories a caller has already uninstalled.
+ *
+ * Split from `sync` on purpose: the bundle has to leave the profile *before*
+ * its directory disappears, otherwise the profile keeps a dependency pointing at
+ * nothing. Only ids the host itself reported as removed are passed in.
+ *
+ * @param {string} presetsRoot
+ * @param {string[]} ids
+ * @returns {string[]} the directories that are gone.
+ */
+export function removeStalePresets(presetsRoot, ids) {
+  const removed = []
+  for (const id of ids) {
+    const dir = join(presetsRoot, id)
+    if (!existsSync(dir)) continue
+    rmSync(dir, { recursive: true, force: true })
+    removed.push(id)
+  }
+  return removed
 }
 
 /**
@@ -84,11 +127,34 @@ function writeAgent(presetsRoot, spec) {
 }
 
 /**
- * @typedef {{ enabled: string[], skillsWritten: string[], agentsWritten: string[], agents: string[], removed: string[], warnings: string[], error: string | null }} SyncReport
+ * Merge the host's preset registry into the on-disk roster.
+ *
+ * The Agent manager writes its presets under `presetsRoot`, but the host's own
+ * shipped presets (`standard`, `ptc`, `minimal`, `cordis`) live only in the
+ * registry, which has no on-disk spec to read. Whatever the caller read from
+ * `ctx.agentPresets.list()` goes in first; a disk row with the same id wins,
+ * because that one carries the fuller `summary`.
+ */
+function mergeRoster(system, fromDisk) {
+  const rows = new Map()
+  for (const row of system ?? []) {
+    if (typeof row?.id !== 'string' || row.id === '' || row.id === ORCHESTRATOR.id) continue
+    rows.set(row.id, {
+      id: row.id,
+      name: typeof row.name === 'string' && row.name !== '' ? row.name : row.id,
+      description: typeof row.description === 'string' ? row.description : '',
+    })
+  }
+  for (const row of fromDisk) rows.set(row.id, row)
+  return [...rows.values()].sort((a, b) => a.id.localeCompare(b.id))
+}
+
+/**
+ * @typedef {{ enabled: string[], skillsWritten: string[], agentsWritten: string[], agents: string[], roster: Array<{ id: string, name: string, description: string }>, stale: string[], removed: string[], warnings: string[], error: string | null }} SyncReport
  */
 
 /**
- * @param {{ dshHome?: string, root?: string, installAgents?: boolean }} [options]
+ * @param {{ dshHome?: string, root?: string, installAgents?: boolean, systemPresets?: Array<{ id: string, name?: string, description?: string }> }} [options]
  * @returns {SyncReport}
  */
 export function sync(options = {}) {
@@ -102,6 +168,8 @@ export function sync(options = {}) {
     skillsWritten: [],
     agentsWritten: [],
     agents: [],
+    roster: [],
+    stale: [],
     removed: [],
     warnings: [],
     error: null,
@@ -133,23 +201,30 @@ export function sync(options = {}) {
       report.removed.push(LEGACY)
     }
 
-    // 3. Agents: one per enabled domain, plus the orchestrator.
+    // 3. The director, and only the director.
+    //
+    // Domain agents are gone: a preset without `delegation` cannot hand work on,
+    // so nine of them produced nine dead ends. What a preset can do now comes
+    // from skills, which the director loads itself or scopes into a child.
+    //
+    // `team` is the whole roster — every preset on disk plus whatever the caller
+    // could read from the host registry. `subagent`'s `agent_preset` accepts only
+    // ids from this static whitelist, so a preset missing here is invisible to
+    // the director no matter what its prompt says.
     if (installAgents) {
-      const keep = []
-      for (const domain of DOMAINS) {
-        if (!config.enabled.includes(domain.id)) continue
-        keep.push(domain.id)
-        report.agents.push(domain.id)
-        if (writeAgent(presetsRoot, domainAgentSpec(domain))) report.agentsWritten.push(domain.id)
-      }
-      keep.push(ORCHESTRATOR.id)
+      // Anything left over from the domain-agent era is about to be uninstalled,
+      // so it must not appear in the roster: telling the director it can delegate
+      // to an agent that is being deleted is worse than an empty roster. The
+      // host uninstalls those bundles (its profile still lists them as
+      // dependencies) and then calls `removeStalePresets` to delete the dirs.
+      const stale = listOwned(presetsRoot, [ORCHESTRATOR.id])
+      report.stale = stale
+      const roster = mergeRoster(options.systemPresets, readRoster(presetsRoot))
+        .filter((row) => !stale.includes(row.id))
+      const spec = orchestratorSpec({ roster, enabledIds: config.enabled })
       report.agents.push(ORCHESTRATOR.id)
-      // The director is rewritten whenever the enabled set changes, because both
-      // its `team` and its prompt carry that set.
-      if (writeAgent(presetsRoot, orchestratorSpec(config.enabled))) {
-        report.agentsWritten.push(ORCHESTRATOR.id)
-      }
-      report.removed.push(...pruneOwned(presetsRoot, keep))
+      if (writeAgent(presetsRoot, spec)) report.agentsWritten.push(ORCHESTRATOR.id)
+      report.roster = roster
     }
   } catch (error) {
     report.error = error instanceof Error ? error.message : String(error)

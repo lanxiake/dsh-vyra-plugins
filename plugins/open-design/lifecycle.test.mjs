@@ -61,10 +61,12 @@ check(
 )
 check('exactly one design-system domain', domains.DOMAINS.filter((d) => d.designSystems === true).length, 1)
 check('design systems belong to visual design', domains.DOMAINS.find((d) => d.designSystems === true).id, 'od-visual-design')
+// Every domain ships on: an index costs one description line, and a disabled
+// domain is invisible to the director rather than merely unused.
 check(
-  'default enabled is the four',
+  'default enabled is all nine',
   [...domains.DEFAULT_ENABLED].sort(),
-  ['od-motion', 'od-presentation', 'od-visual-design', 'od-writing'].sort(),
+  [...domains.DOMAIN_IDS].sort(),
 )
 check(
   'defaults are a subset of domains',
@@ -132,100 +134,166 @@ check('empty enabled is preserved, not healed', cfgMod.readConfig(homeE).enabled
 
 for (const dir of [homeA, homeB, homeC, homeD, homeE]) rmSync(dir, { recursive: true, force: true })
 
-// ===== Task 4: agent specs =====
-console.log('\n--- Task 4: agent specs ---')
+// ===== Task 4: director spec + roster =====
+console.log('\n--- Task 4: director spec + roster ---')
 const agMod = await load('agents.mjs')
 
-const motionSpec = agMod.domainAgentSpec(domains.getDomain('od-motion'))
-check('domain agent id matches domain', motionSpec.id, 'od-motion')
-check('domain agent name is Chinese', /[\u4e00-\u9fa5]/.test(motionSpec.name), true)
-check(
-  'domain agent skills match domain',
-  [...motionSpec.skills].sort(),
-  [...domains.getDomain('od-motion').skills].sort(),
-)
-check('domain agent has no delegation', motionSpec.capabilities.includes('delegation'), false)
-check('domain agent has no team', motionSpec.team, [])
-check('domain agent includes the skills capability', motionSpec.capabilities.includes('skills'), true)
-check('domain agent summary states what it cannot do', /不能做/.test(motionSpec.summary), true)
-check('summary within tool limit', motionSpec.summary.length <= 600, true)
-check('usage within tool limit', motionSpec.usage.length <= 1200, true)
-check('system prompt points at the domain index skill', motionSpec.systemPrompt.includes('od-motion'), true)
+// There is exactly one generated agent. A domain agent cannot delegate, so it
+// was always a dead end: it either does the cross-domain work itself (and the
+// director never had the context) or it stalls waiting for a handoff.
+check('no per-domain agent builder', typeof agMod.domainAgentSpec, 'undefined')
 
-const visualSpec = agMod.domainAgentSpec(domains.getDomain('od-visual-design'))
-check('visual agent omits the 152 design systems from skills', visualSpec.skills.includes('open-design-apple'), false)
-check('visual agent points at the index for design systems', /设计系统/.test(visualSpec.systemPrompt), true)
+// The roster is read from disk, which is the only thing a preset directory has.
+const rosterHome = mkdtempSync(join(tmpdir(), 'od-roster-'))
+const rosterRoot = join(rosterHome, 'agent-manager', 'presets')
+const writeRosterAgent = (id, fields) => {
+  mkdirSync(join(rosterRoot, id), { recursive: true })
+  writeFileSync(join(rosterRoot, id, 'agent.json'), JSON.stringify({ id, ...fields }))
+}
+writeRosterAgent('agent-xhs', { name: '小红书卡片设计师', summary: '能做卡片，不能做长文' })
+writeRosterAgent('agent-raw', { name: '无描述的人' })
+writeRosterAgent('od-director', { name: '设计总监' })
+mkdirSync(join(rosterRoot, 'not-a-preset'), { recursive: true })
 
-const director = agMod.orchestratorSpec(['od-motion', 'od-writing'])
+const roster = agMod.readRoster(rosterRoot)
+check('roster skips the director itself', roster.some((r) => r.id === 'od-director'), false)
+check('roster skips directories without agent.json', roster.some((r) => r.id === 'not-a-preset'), false)
+check('roster prefers summary over description', roster.find((r) => r.id === 'agent-xhs').description, '能做卡片，不能做长文')
+check('roster keeps the name when nothing describes it', roster.find((r) => r.id === 'agent-raw').name, '无描述的人')
+check('roster is sorted and complete', roster.map((r) => r.id), ['agent-raw', 'agent-xhs'])
+check('a missing presets dir is an empty roster', agMod.readRoster(join(rosterHome, 'nope')), [])
+rmSync(rosterHome, { recursive: true, force: true })
+
+// The director names every roster entry in its prompt — that text is how the
+// model knows a preset exists, since the tool only advertises bare ids.
+const sampleRoster = [
+  { id: 'agent-xhs', name: '小红书卡片设计师', description: '能做卡片，不能做长文' },
+  { id: 'recon-worker', name: '仓库调研员', description: '只读本地仓库' },
+]
+const director = agMod.orchestratorSpec({ roster: sampleRoster, enabledIds: ['od-motion', 'od-writing'] })
 check('director id', director.id, 'od-director')
 check('director has delegation', director.capabilities.includes('delegation'), true)
-check('director team is the enabled set', [...director.team].sort(), ['od-motion', 'od-writing'])
+check('director team is the whole roster', director.team, ['agent-xhs', 'recon-worker'])
 check('director never lists itself', director.team.includes('od-director'), false)
+check(
+  'director prompt names each roster id',
+  sampleRoster.every((r) => director.systemPrompt.includes(`\`${r.id}\``)),
+  true,
+)
+check('director prompt carries each roster description', director.systemPrompt.includes('能做卡片，不能做长文'), true)
+check('director prompt forbids improvising an agent', /不要临时创建/.test(director.systemPrompt), true)
+check('director prompt forbids touching the UI', /禁止模拟键鼠/.test(director.systemPrompt), true)
+check('director prompt prefers continuing over re-spawning', /send_message/.test(director.systemPrompt), true)
 check('director summary within tool limit', director.summary.length <= 600, true)
 check('director usage within tool limit', director.usage.length <= 1200, true)
 
-const emptyDirector = agMod.orchestratorSpec([])
-check('director with nothing enabled has an empty team', emptyDirector.team, [])
+// Enabled domains are skills now, listed separately from the people.
+check('director separates skills from agents', /技能领域/.test(director.systemPrompt), true)
+check('director lists the enabled domains', director.systemPrompt.includes('od-motion'), true)
+check('director does not list a disabled domain', director.systemPrompt.includes('od-video'), false)
+
+const emptyDirector = agMod.orchestratorSpec({ roster: [], enabledIds: [] })
+check('director with no roster has an empty team', emptyDirector.team, [])
 check('director with nothing enabled still explains the state', /没有启用/.test(emptyDirector.systemPrompt), true)
+check('director with no roster says so', /还没有任何可委派/.test(emptyDirector.systemPrompt), true)
 
 // Directory layout must match what agent_manager writes (core.js:404).
-const files = agMod.agentDirFiles(motionSpec)
+const files = agMod.agentDirFiles(director)
 for (const required of ['agent.json', 'package.json', 'cordis.patch.yml', 'locale/en.json', 'locale/zh.json', 'icon.svg', 'README.md']) {
   check(`agent dir has ${required}`, Object.keys(files).includes(required), true)
 }
-check('agent.json round-trips', JSON.parse(files['agent.json']).id, 'od-motion')
+check('agent.json round-trips', JSON.parse(files['agent.json']).id, 'od-director')
 const pkg = JSON.parse(files['package.json'])
-check('bundle name is @local/agent-preset-<id>', pkg.name, '@local/agent-preset-od-motion')
+check('bundle name is @local/agent-preset-<id>', pkg.name, '@local/agent-preset-od-director')
 check('package is private', pkg.private, true)
 check('package declares the patch', pkg.dsh.bundle.patch, './cordis.patch.yml')
 const patch = JSON.parse(files['cordis.patch.yml']) // JSON is valid YAML
 check('patch inserts one row', patch.length, 1)
 check('patch row is an agent-preset', patch[0].insert[0].name, '@deepseek-ai/dsh-agent-preset')
-check('patch row carries the spec id', patch[0].insert[0].config.id, 'od-motion')
+check('patch row carries the spec id', patch[0].insert[0].config.id, 'od-director')
 check('icon is svg', /^<svg/.test(files['icon.svg']), true)
 
 // ===== Task 5: sync =====
 console.log('\n--- Task 5: sync ---')
 const syncMod = await load('sync.mjs')
 
-// Defaults: four skill dirs, four domain agents + director.
+// Defaults: four skill dirs.
 const homeS = mkdtempSync(join(tmpdir(), 'od-sync-'))
 const s1 = syncMod.sync({ dshHome: homeS, root: pluginRoot, installAgents: false })
 check('sync no error', s1.error, null)
-check('sync enabled four', [...s1.enabled].sort(), [...domains.DEFAULT_ENABLED].sort())
-check('four skill dirs written', s1.skillsWritten.length, 4)
+check('sync enables every domain by default', [...s1.enabled].sort(), [...domains.DEFAULT_ENABLED].sort())
+check('nine skill dirs written', s1.skillsWritten.length, 9)
 check('visual skill dir exists', existsSync(join(homeS, 'skills', 'od-visual-design', 'SKILL.md')), true)
 check('motion skill dir exists', existsSync(join(homeS, 'skills', 'od-motion', 'SKILL.md')), true)
-check('disabled domain has no skill dir', existsSync(join(homeS, 'skills', 'od-video')), false)
+check('every enabled domain has a skill dir', domains.DOMAIN_IDS.filter((id) => !existsSync(join(homeS, 'skills', id, 'SKILL.md'))), [])
 
-// With agents on: four domain agents + director.
+// With agents on: exactly one — the director.
 const s1b = syncMod.sync({ dshHome: homeS, root: pluginRoot })
-check('five agent dirs written', s1b.agentsWritten.length, 5)
-check('report lists five agents for the host to register', s1b.agents.length, 5)
+check('one agent dir written', s1b.agentsWritten.length, 1)
+check('report lists one agent for the host to register', s1b.agents, ['od-director'])
+check('no domain agent dir exists',
+  domains.DOMAIN_IDS.filter((id) => existsSync(join(homeS, 'agent-manager', 'presets', id))), [])
 check('director preset exists', existsSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json')), true)
 const dirSpec = JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8'))
-check('director team is the enabled four', [...dirSpec.team].sort(), [...domains.DEFAULT_ENABLED].sort())
 check('director has delegation', dirSpec.capabilities.includes('delegation'), true)
-const motionAgent = JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-motion', 'agent.json'), 'utf8'))
-check('domain agent has no delegation on disk', motionAgent.capabilities.includes('delegation'), false)
+// The roster is empty here because nothing else is installed in this home.
+check('empty home means an empty roster', dirSpec.team, [])
+
+// A preset installed by the Agent manager joins the roster and the whitelist,
+// without being listed in the domain config.
+const otherDir = join(homeS, 'agent-manager', 'presets', 'xhs-designer')
+mkdirSync(otherDir, { recursive: true })
+writeFileSync(join(otherDir, 'agent.json'), JSON.stringify({
+  id: 'xhs-designer', name: '小红书卡片设计师', summary: '能做卡片轮播，不能做长文',
+}))
+const s1c = syncMod.sync({ dshHome: homeS, root: pluginRoot })
+check('an installed preset joins the roster', s1c.roster.map((r) => r.id), ['xhs-designer'])
+const withRoster = JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8'))
+check('the installed preset lands on the director team', withRoster.team, ['xhs-designer'])
+check('the director prompt names it', withRoster.systemPrompt.includes('xhs-designer'), true)
+check('a new roster row rewrites the director', s1c.agentsWritten, ['od-director'])
+rmSync(otherDir, { recursive: true, force: true })
+
+// A leftover domain agent from an earlier version is reported for removal and
+// kept OUT of the roster: naming an agent that is about to be deleted is worse
+// than having nobody.
+const staleSibling = join(homeS, 'agent-manager', 'presets', 'od-video')
+mkdirSync(staleSibling, { recursive: true })
+writeFileSync(join(staleSibling, 'agent.json'), JSON.stringify({ id: 'od-video', name: '视频制作' }))
+const s1s = syncMod.sync({ dshHome: homeS, root: pluginRoot })
+check('a leftover domain agent is reported stale', s1s.stale, ['od-video'])
+check('a stale domain agent stays out of the roster', s1s.roster.some((r) => r.id === 'od-video'), false)
+check('a stale domain agent stays out of the team',
+  JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8')).team,
+  [])
+check('the stale directory is untouched by sync', existsSync(staleSibling), true)
+check('removeStalePresets deletes it', syncMod.removeStalePresets(join(homeS, 'agent-manager', 'presets'), ['od-video']), ['od-video'])
+check('the stale directory is gone', existsSync(staleSibling), false)
+check('removing one that is already gone is harmless',
+  syncMod.removeStalePresets(join(homeS, 'agent-manager', 'presets'), ['od-video']), [])
+
+// The host registry contributes presets with no spec on disk (`standard`, ...).
+const s1d = syncMod.sync({
+  dshHome: homeS, root: pluginRoot,
+  systemPresets: [{ id: 'standard', name: '标准', description: '内置通用模式' }],
+})
+check('system presets reach the roster', s1d.roster.map((r) => r.id), ['standard'])
+check('system presets reach the team',
+  JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8')).team,
+  ['standard'])
 
 // Idempotent.
 const snap = readFileSync(join(homeS, 'skills', 'od-motion', 'SKILL.md'), 'utf8')
-const s2 = syncMod.sync({ dshHome: homeS, root: pluginRoot })
+const s2 = syncMod.sync({ dshHome: homeS, root: pluginRoot, systemPresets: [{ id: 'standard', name: '标准', description: '内置通用模式' }] })
 check('second sync writes no skills', s2.skillsWritten.length, 0)
 check('second sync writes no agents', s2.agentsWritten.length, 0)
 check('second sync keeps content', readFileSync(join(homeS, 'skills', 'od-motion', 'SKILL.md'), 'utf8') === snap, true)
 
-// Disabling removes the directory and the agent, and shrinks the director.
+// Disabling a domain no longer touches agents; it only removes the skill dir.
 cfgMod.writeConfig(['od-writing'], homeS)
 const s3 = syncMod.sync({ dshHome: homeS, root: pluginRoot })
 check('disable removes the motion skill dir', existsSync(join(homeS, 'skills', 'od-motion')), false)
-check('disable removes the motion agent', existsSync(join(homeS, 'agent-manager', 'presets', 'od-motion')), false)
-check(
-  'disable shrinks the director team',
-  JSON.parse(readFileSync(join(homeS, 'agent-manager', 'presets', 'od-director', 'agent.json'), 'utf8')).team,
-  ['od-writing'],
-)
+check('disable does not remove the director', existsSync(join(homeS, 'agent-manager', 'presets', 'od-director')), true)
 check('disable reported the removals', s3.removed.includes('od-motion'), true)
 
 // Legacy single-aggregator directory is cleaned up.
@@ -239,7 +307,7 @@ check('legacy aggregator removed', existsSync(join(homeL, 'skills', 'opendesign'
 cfgMod.writeConfig([], homeL)
 const s4 = syncMod.sync({ dshHome: homeL, root: pluginRoot })
 check('disable-all writes no skill dirs', s4.skillsWritten.length, 0)
-check('disable-all leaves only the director agent', s4.agents.length, 1)
+check('disable-all leaves only the director agent', s4.agents, ['od-director'])
 check('disable-all leaves no domain agent dirs',
   domains.DOMAIN_IDS.filter((id) => existsSync(join(homeL, 'agent-manager', 'presets', id))), [])
 
@@ -329,9 +397,39 @@ await m.apply(
   },
   { dshHome: applyHome2 },
 )
-check('apply registers five bundles', installed.length, 5)
+check('apply registers one bundle', installed.length, 1)
 check('registration targets the director too', installed.some((i) => i.dir.includes('od-director')), true)
 check('registration enables the bundle', installed.every((i) => i.opts.enabled === true), true)
+
+// A leftover domain agent from an earlier version is reported, never removed
+// here: `removeBundle` runs `pnpm remove` and reloads the profile, and doing
+// that from inside this plugin's own apply() deadlocks boot. `odx presets
+// prune` removes it from outside the boot path.
+const staleHome = mkdtempSync(join(tmpdir(), 'od-stale-'))
+const staleDir = join(staleHome, 'agent-manager', 'presets', 'od-motion')
+mkdirSync(staleDir, { recursive: true })
+writeFileSync(join(staleDir, 'agent.json'), JSON.stringify({ id: 'od-motion' }))
+const staleLogs = []
+const removedBundles = []
+await m.apply(
+  {
+    logger: () => ({ info: (s) => staleLogs.push(s), warn: (s) => staleLogs.push(s) }),
+    get: (service) =>
+      service === 'pluginManager'
+        ? {
+            installBundle: async () => ({ application: 'applied' }),
+            removeBundle: async (name) => { removedBundles.push(name); return { application: 'applied' } },
+          }
+        : undefined,
+    on() {},
+  },
+  { dshHome: staleHome },
+)
+check('apply never uninstalls a bundle mid-boot', removedBundles, [])
+check('the stale directory is left alone', existsSync(staleDir), true)
+check('the stale agent is named in the log', staleLogs.some((l) => l.includes('od-motion')), true)
+
+rmSync(staleHome, { recursive: true, force: true })
 
 // enabled: false mounts nothing.
 const applyHome3 = mkdtempSync(join(tmpdir(), 'od-apply3-'))
@@ -388,8 +486,8 @@ check('video skill dir now exists', existsSync(join(homeSt, 'skills', 'od-video'
 const after = stateMod.describe({ dshHome: homeSt, root: pluginRoot })
 check('describe reflects the new set',
   after.domains.filter((d) => d.enabled).map((d) => d.id).sort(), ['od-motion', 'od-video'])
-check('describe sees the regenerated agents',
-  after.agents.filter((a) => a.present).length, 3)
+check('describe sees the regenerated agent',
+  after.agents.filter((a) => a.present).length, 1)
 
 // Turning everything off is allowed and leaves only the director.
 const toggleOff = stateMod.applyToggle({ enabled: [], dshHome: homeSt, root: pluginRoot })
@@ -412,8 +510,8 @@ cfgMod.writeConfig(['od-writing'], homeSt)
 const regen = stateMod.regenerateAgents({ dshHome: homeSt, root: pluginRoot })
 check('regenerateAgents succeeds', regen.ok, true)
 check('regenerateAgents keeps the enabled set', cfgMod.readConfig(homeSt).enabled, ['od-writing'])
-check('regenerateAgents wrote the writing agent',
-  existsSync(join(homeSt, 'agent-manager', 'presets', 'od-writing', 'agent.json')), true)
+check('regenerateAgents wrote the director',
+  existsSync(join(homeSt, 'agent-manager', 'presets', 'od-director', 'agent.json')), true)
 
 const counts = stateMod.skillCounts(pluginRoot)
 check('skillCounts craft', counts.craft, 85)
@@ -538,23 +636,25 @@ check('mount failure is recorded', diag.readMountRecord(noServerHome)?.ok, false
 rmSync(routesHome, { recursive: true, force: true })
 rmSync(noServerHome, { recursive: true, force: true })
 
-// ===== Task 12: presets mount real plugins =====
+// ===== Task 12: preset plugin rows =====
 console.log('\n--- Task 12: preset plugin rows ---')
 
 // A preset whose `plugins` array is empty mounts nothing: the agent loses read,
 // shell, skill loading and tools, and can only reach host-global ones. That was
 // the shipped state, and it is why a director with a read-only task ended up
 // unable to open the repository.
-const motionAgentSpec = agMod.domainAgentSpec(domains.getDomain('od-motion'))
-check('domain spec carries rows', Array.isArray(motionAgentSpec.rows), true)
-check('domain rows are not empty', motionAgentSpec.rows.length > 5, true)
+const soleSpec = agMod.orchestratorSpec({
+  roster: [{ id: 'xhs-designer', name: '小红书卡片设计师', description: '能做卡片轮播' }],
+  enabledIds: ['od-visual-design'],
+})
+check('director spec carries rows', Array.isArray(soleSpec.rows), true)
+check('director rows are not empty', soleSpec.rows.length > 5, true)
 
-const motionFiles = agMod.agentDirFiles(motionAgentSpec)
-const motionPatch = JSON.parse(motionFiles['cordis.patch.yml'])
-const motionPlugins = motionPatch[0].insert[0].config.plugins
-check('patch plugins is not empty', motionPlugins.length > 5, true)
+const soleFiles = agMod.agentDirFiles(soleSpec)
+const solePlugins = JSON.parse(soleFiles['cordis.patch.yml'])[0].insert[0].config.plugins
+check('patch plugins is not empty', solePlugins.length > 5, true)
 
-// Every row a preset needs to do work: read files, run commands, load skills.
+// Every row a preset needs to do work, and the one row that lets it delegate.
 const ids = new Set()
 const collect = (rows) => {
   for (const row of rows) {
@@ -562,35 +662,34 @@ const collect = (rows) => {
     if (row.group && Array.isArray(row.config)) collect(row.config)
   }
 }
-collect(motionPlugins)
+collect(solePlugins)
 check('has file tools', ids.has('tool-fs'), true)
 check('has shell tool', ids.has('tool-pwsh'), true)
 check('has skill loader', ids.has('tool-skill'), true)
 check('has todo', ids.has('tool-todo'), true)
 check('has persona', ids.has('persona'), true)
-// A domain agent must not be able to delegate; only the director may.
-check('domain agent has no subagent tool', ids.has('tool-subagent'), false)
+check('has the subagent tool', ids.has('tool-subagent'), true)
 
-const directorSpec2 = agMod.orchestratorSpec(['od-motion'])
-const directorFiles = agMod.agentDirFiles(directorSpec2)
-const directorPlugins = JSON.parse(directorFiles['cordis.patch.yml'])[0].insert[0].config.plugins
-const directorIds = new Set()
-const collectDirector = (rows) => {
-  for (const row of rows) {
-    directorIds.add(row.id)
-    if (row.group && Array.isArray(row.config)) collectDirector(row.config)
-  }
-}
-collectDirector(directorPlugins)
-check('director has the subagent tool', directorIds.has('tool-subagent'), true)
-
-// The delegation whitelist travels with the row.
-const subagentRow = directorPlugins
+// The delegation whitelist travels with the row, and is the whole roster.
+const subagentRow = solePlugins
   .find((row) => row.group && row.id === 'delegation')
   .config.find((row) => row.id === 'tool-subagent')
-check('director binds allowedAgentPresets', subagentRow.config.allowedAgentPresets, ['od-motion'])
+check('director binds allowedAgentPresets to the roster', subagentRow.config.allowedAgentPresets, ['xhs-designer'])
 
-const emptyDirectorSpec = agMod.orchestratorSpec([])
+// Users may install a preset without a delegation capability; the director can
+// still spawn it, because the whitelist is ours and the child's own rows decide
+// what it can do.
+const twoSpec = agMod.orchestratorSpec({
+  roster: [
+    { id: 'standard', name: '标准', description: '内置通用模式' },
+    { id: 'recon-worker', name: '仓库调研员', description: '只读本地仓库' },
+  ],
+  enabledIds: [],
+})
+check('every roster row is reachable', twoSpec.team, ['standard', 'recon-worker'])
+
+// With nobody to delegate to, the delegation group is omitted entirely — a
+// whitelist of zero ids is rejected by the host schema (`min(1)`).
 const emptyIds = new Set()
 const collectEmpty = (rows) => {
   for (const row of rows) {
@@ -598,8 +697,8 @@ const collectEmpty = (rows) => {
     if (row.group && Array.isArray(row.config)) collectEmpty(row.config)
   }
 }
-collectEmpty(agMod.agentDirFiles(emptyDirectorSpec)["cordis.patch.yml"].length === 0 ? [] : JSON.parse(agMod.agentDirFiles(emptyDirectorSpec)["cordis.patch.yml"])[0].insert[0].config.plugins)
-// With nobody to delegate to, the delegation group is omitted entirely.
+collectEmpty(agMod.agentDirFiles(agMod.orchestratorSpec({ roster: [], enabledIds: [] }))['cordis.patch.yml'] === ''
+  ? [] : JSON.parse(agMod.agentDirFiles(agMod.orchestratorSpec({ roster: [], enabledIds: [] }))['cordis.patch.yml'])[0].insert[0].config.plugins)
 check('director without members omits delegation', emptyIds.has('delegation'), false)
 check('director without members still has file tools', emptyIds.has('tool-fs'), true)
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)

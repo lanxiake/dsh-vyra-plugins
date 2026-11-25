@@ -51,10 +51,10 @@ export { DEFAULT_ENABLED, DOMAIN_IDS, DOMAINS, ORCHESTRATOR, getDomain } from '.
 export { configPath, readConfig, writeConfig } from './config.mjs'
 
 /** Agent preset builders. */
-export { agentDirFiles, domainAgentSpec, orchestratorSpec } from './agents.mjs'
+export { agentDirFiles, orchestratorSpec, readRoster } from './agents.mjs'
 
 /** The disk synchroniser. */
-export { sync } from './sync.mjs'
+export { removeStalePresets, sync } from './sync.mjs'
 
 /** The settings page's state layer and HTTP surface. */
 export { applyToggle, describe as describeDomains, regenerateAgents } from './state.mjs'
@@ -89,9 +89,24 @@ export async function apply(ctx, config = {}) {
   const logger = ctx?.logger?.('open-design')
   const home = config.dshHome ?? dshHome()
 
+  // The host's own presets (`standard`, `ptc`, …) have no spec on disk, so the
+  // only way the director can name them is if we read the registry and pass the
+  // rows into the sync. A host without that service loses the shipped presets
+  // from the roster, not the roster itself.
+  let systemPresets = []
+  try {
+    const presets = typeof ctx?.get === 'function' ? ctx.get('agentPresets') : undefined
+    if (presets !== undefined && typeof presets.list === 'function') {
+      systemPresets = await presets.list()
+    }
+  } catch (error) {
+    logger?.warn?.(`open-design: 读取宿主预设失败：${error instanceof Error ? error.message : String(error)}`)
+  }
+
   const report = sync({
     dshHome: home,
     installAgents: config.installAgents !== false,
+    systemPresets,
   })
 
   if (report.error !== null) {
@@ -122,7 +137,20 @@ export async function apply(ctx, config = {}) {
     }
   }
 
-  logger?.info?.(`open-design: ${String(report.enabled.length)} / ${String(DOMAINS.length)} 个领域已启用`)
+  // Old domain agents are reported, not removed here. `removeBundle` runs
+  // `pnpm remove` and reloads the profile, and calling it from inside this
+  // plugin's own apply() deadlocks startup: the reload waits for a profile load
+  // that is waiting for this very apply(). `odx presets prune` does the same
+  // removal from outside the boot path.
+  //
+  // The profile also still lists one `@local/agent-preset-od-<id>` dependency
+  // per stale directory, so deleting the directory here would leave a
+  // dependency pointing at nothing — the next boot's prune. Report only.
+  if (config.installAgents !== false && report.stale.length > 0) {
+    logger?.warn?.(`open-design: 有 ${String(report.stale.length)} 个旧领域 Agent 待清理：${report.stale.join(', ')}（运行 odx presets prune）`)
+  }
+
+  logger?.info?.(`open-design: ${String(report.enabled.length)} / ${String(DOMAINS.length)} 个领域已启用，花名册 ${String(report.roster.length)} 个 Agent`)
 
   // The settings panel talks to these routes.
   //

@@ -200,11 +200,15 @@ export const DOMAINS = [
 export const DOMAIN_IDS = DOMAINS.map((domain) => domain.id)
 
 /**
- * Domains enabled on a fresh install: the four that cover most day-to-day work.
- * Visual design carries the 152 design systems, so it dominates the context
- * cost; the other three are small.
+ * Domains enabled on a fresh install: all nine.
+ *
+ * The four-domain default was wrong. A skill costs its `name: description` line
+ * until something loads it, so enabling the rest is nearly free — while a
+ * disabled domain is invisible to the director, who then cannot tell a missing
+ * capability from a task it should decline. Turning a domain off is still
+ * supported; it just stops being the default.
  */
-export const DEFAULT_ENABLED = ['od-visual-design', 'od-motion', 'od-presentation', 'od-writing']
+export const DEFAULT_ENABLED = [...DOMAIN_IDS]
 
 /** The coordinating agent that can delegate to every enabled domain agent. */
 export const ORCHESTRATOR = {
