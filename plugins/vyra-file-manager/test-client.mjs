@@ -276,3 +276,15 @@ test('installDefaultTab reacts to the sidebar once, after a microtask', async ()
   assert.equal(opened.length, 0)
   dispose()
 })
+
+test('only turns that touched files reach the timeline', async () => {
+  const { filterNodesWithFiles } = await import('./src/client/timeline.js')
+  const nodes = [
+    { seq: 1, time: 1_700_000_000_000, prompt: 'a', files: [{ path: 'x.txt', display: 'x.txt' }] },
+    { seq: 2, time: 1_700_000_100_000, prompt: 'b', files: [] },
+    { seq: 3, time: 1_700_000_200_000, prompt: 'c' },
+    { seq: 4, time: 1_700_000_300_000, prompt: 'd', files: undefined },
+  ]
+  assert.deepEqual(filterNodesWithFiles(nodes).map(node => node.seq), [1])
+  assert.deepEqual(filterNodesWithFiles(undefined), [])
+})

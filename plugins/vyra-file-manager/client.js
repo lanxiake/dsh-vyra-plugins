@@ -25086,7 +25086,7 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
         },
         h4("span", { className: "vms-tl-clock" }, clockOf(node.time)),
         h4("span", { className: "vms-tl-prompt", title: node.prompt }, node.prompt || "\uFF08\u65E0\u63D0\u793A\u8BCD\uFF09"),
-        h4("span", { className: "vms-tl-count" }, files.length === 0 ? "\u65E0\u4EA7\u51FA" : `${files.length} \u4E2A\u6587\u4EF6`),
+        h4("span", { className: "vms-tl-count" }, `${files.length} \u4E2A\u6587\u4EF6`),
         h4("span", { className: "vms-tl-chevron" }, h4(Icon2, { name: "chevronRight", size: 15 }))
       ),
       open && files.length > 0 && (layout === "grid" ? h4(
@@ -25111,6 +25111,9 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
     )
   );
 }
+function filterNodesWithFiles(nodes) {
+  return (Array.isArray(nodes) ? nodes : []).filter((node) => Array.isArray(node.files) && node.files.length > 0);
+}
 function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, onMenu, onFallback, dragBind, suppressClick }) {
   const [collapsed, setCollapsed] = (0, import_react8.useState)(() => readCollapsed());
   const [sectionsOpen, setSectionsOpen] = (0, import_react8.useState)(() => /* @__PURE__ */ new Set());
@@ -25128,7 +25131,7 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, o
     return map2;
   }, [items]);
   const sections = (0, import_react8.useMemo)(() => {
-    const usable = (Array.isArray(nodes) ? nodes : []).filter((node) => typeof node.time === "number");
+    const usable = filterNodesWithFiles(nodes).filter((node) => typeof node.time === "number");
     const grouped = [];
     for (const node of usable) {
       const section = sectionOf(node.time);
@@ -25156,7 +25159,7 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", onOpen, o
       "div",
       { className: "vms-tl-empty" },
       h4(Icon2, { name: "clock", size: 20 }),
-      h4("b", null, headlines[reason] ?? "\u8FD9\u6761\u4F1A\u8BDD\u8FD8\u6CA1\u6709\u6D88\u606F"),
+      h4("b", null, headlines[reason] ?? "\u8FD9\u6761\u4F1A\u8BDD\u8FD8\u6CA1\u6709\u4EA7\u51FA\u6587\u4EF6"),
       h4("p", null, hints[reason] ?? "\u53D1\u9001\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u8FD9\u91CC\u4F1A\u6309\u65F6\u95F4\u5217\u51FA\u6BCF\u6B21\u5BF9\u8BDD\u53CA\u5176\u4EA7\u51FA\u7684\u6587\u4EF6\u3002"),
       failure !== void 0 && h4("code", { className: "vms-tl-error" }, failure),
       probe.length > 0 && h4(

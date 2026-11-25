@@ -145,7 +145,7 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
       },
       h('span', { className: 'vms-tl-clock' }, clockOf(node.time)),
       h('span', { className: 'vms-tl-prompt', title: node.prompt }, node.prompt || '（无提示词）'),
-      h('span', { className: 'vms-tl-count' }, files.length === 0 ? '无产出' : `${files.length} 个文件`),
+      h('span', { className: 'vms-tl-count' }, `${files.length} 个文件`),
       h('span', { className: 'vms-tl-chevron' }, h(Icon, { name: 'chevronRight', size: 15 }))),
       open && files.length > 0 && (layout === 'grid'
         ? h('div', { className: 'vms-tl-tiles' },
@@ -156,6 +156,18 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
             dir === '' ? '工作区根目录' : dir),
           h('div', { className: 'vms-tl-rows' },
             entries.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }))))))))
+}
+
+/**
+ * Drop turns that produced no file change. An empty turn is only noise on an
+ * axis whose job is "what did this conversation change"; a turn whose `files`
+ * is missing counts as empty rather than throwing.
+ * @param {Array<object> | undefined} nodes - turn nodes, newest first.
+ * @returns {Array<object>} the turns that produced at least one file.
+ */
+export function filterNodesWithFiles(nodes) {
+  return (Array.isArray(nodes) ? nodes : [])
+    .filter(node => Array.isArray(node.files) && node.files.length > 0)
 }
 
 /**
@@ -180,7 +192,7 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', on
   }, [items])
 
   const sections = useMemo(() => {
-    const usable = (Array.isArray(nodes) ? nodes : []).filter(node => typeof node.time === 'number')
+    const usable = filterNodesWithFiles(nodes).filter(node => typeof node.time === 'number')
     const grouped = []
     for (const node of usable) {
       const section = sectionOf(node.time)
@@ -207,7 +219,7 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', on
     }
     return h('div', { className: 'vms-tl-empty' },
       h(Icon, { name: 'clock', size: 20 }),
-      h('b', null, headlines[reason] ?? '这条会话还没有消息'),
+      h('b', null, headlines[reason] ?? '这条会话还没有产出文件'),
       h('p', null, hints[reason] ?? '发送一条消息后，这里会按时间列出每次对话及其产出的文件。'),
       failure !== undefined && h('code', { className: 'vms-tl-error' }, failure),
       probe.length > 0 && h('ul', { className: 'vms-tl-probe' },
