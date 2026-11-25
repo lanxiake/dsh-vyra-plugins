@@ -1,29 +1,62 @@
 {
   "notFound": "页面不存在。",
   "nav": {
-    "browse": "插件目录",
+    "browse": "插件市场",
     "docs": "使用说明",
     "github": "GitHub"
   },
   "home": {
-    "title": "DeepSeek Harness 插件目录",
-    "subtitle": "多源聚合、跨源去重。一处查看插件、安装方式与版本。",
+    "title": "Everything is a Plugin.",
+    "subtitle": "聚合 {sources} 个索引源，收录 {total} 个插件。发现、比较、一键安装。",
+    "kicker": "DEEPSEEK HARNESS · 插件市场",
+    "recLegend": "Vyra 推荐 — 对每个插件都是从使用者的角度精心打磨",
     "statTotal": "收录插件",
-    "statInstallable": "可一键安装",
-    "statSources": "数据源",
-    "browse": "浏览目录",
+    "statVyra": "Vyra 自研 · 个人出品",
+    "statSources": "索引源聚合",
+    "statUpkeep": "持续收录",
+    "upkeep": "个人维护 · 每日更新",
+    "installTitle": "把插件市场装进你的 DSH",
+    "installHint": "如果本地没有 dsh 命令，请到 FAQ 查找答案 · 目前插件市场支持 macOS、Linux，Windows 正在适配中",
+    "copy": "复制安装命令",
+    "copied": "已复制 ✓",
+    "browse": "浏览市场",
     "featured": "Vyra 出品",
-    "sources": "数据来源"
+    "featuredNote": "个自研插件 · 按推荐度排序",
+    "viewVyra": "查看Vyra出品",
+    "editorsPick": "编辑精选",
+    "editorsPickNote": "来自 5 个索引源 · 按 Star 排序",
+    "enterMarket": "进入市场",
+    "sources": "数据来源",
+    "footer": "数据由 5 个公开索引源聚合 · 所有插件均可按 GitHub Star 浏览"
   },
   "browse": {
-    "title": "插件目录",
-    "search": "搜索名称、描述或标签",
-    "all": "全部",
+    "title": "插件市场",
+    "search": "搜索 {total} 个插件…",
+    "sortRecommend": "按 Star",
+    "sortUpdated": "最新收录",
+    "sortDownloads": "下载量",
+    "sortName": "名称",
+    "sourceAll": "全部来源",
+    "sourceVyra": "Vyra 自研",
+    "sourceLabels": {
+      "vyra": "Vyra 自研",
+      "market": "DSH Plugin Market",
+      "dshmarket": "dshmarket.com",
+      "dshopen": "DSH Open Market",
+      "dshtui": "DSH Go Market"
+    },
+    "quality": "质量分层",
+    "filterAll": "全部",
+    "filterInstallable": "可一键安装",
+    "filterVyra": "Vyra 出品",
+    "filterEditors": "编辑精选",
+    "filterLatest": "最新收录",
+    "filterMultiSource": "多源收录",
+    "allCategories": "全部分类",
+    "found": "找到",
+    "pluginsFound": "个插件",
+    "sortedBy": "按 ★ Star 降序",
     "empty": "没有匹配的插件",
-    "sortStars": "按 Star",
-    "sortUpdated": "按更新时间",
-    "sortName": "按名称",
-    "top": "推荐",
     "count": "个插件"
   },
   "detail": {
@@ -36,13 +69,14 @@
     "sources": "来源",
     "homepage": "主页",
     "repo": "仓库",
+    "recommend": "Vyra 推荐度",
     "notFound": "没有找到这个插件。",
     "noInstall": "该插件没有可直接执行的安装命令，请查看仓库说明。",
-    "back": "返回目录"
+    "back": "返回市场"
   },
   "docs": {
     "title": "使用说明",
-    "intro": "本站是多源聚合的 DeepSeek Harness 插件目录。数据在构建时从各索引源拉取、去重后生成，页面本身是静态的。",
+    "intro": "本站是多源聚合的 DeepSeek Harness 插件市场。数据在构建时从各索引源拉取、去重后生成，页面本身是静态的。",
     "installTitle": "安装插件",
     "installBody": "在 DSH 客户端里打开「设置 → 插件」，搜索插件名即可安装；也可以直接用命令行：",
     "indexTitle": "添加索引源",
@@ -57,6 +91,6 @@
   },
   "common": {
     "loading": "加载中…",
-    "error": "数据加载失败。请先运行 npm run build:site-data 生成 site.json。"
+    "error": "数据加载失败。请先运行 npm run build:site-data 生成站点数据。"
   }
 }

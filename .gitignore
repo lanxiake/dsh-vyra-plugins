@@ -23,3 +23,6 @@ web/public/site/
 
 # IDE
 .idea/
+
+# WorkBuddy 会话记忆与项目数据
+.workbuddy/

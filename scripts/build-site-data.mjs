@@ -11,7 +11,7 @@
  *
  * 去重模块复制自 losebird/dsh-plugin-market（MIT），见 THIRD_PARTY_NOTICES.md。
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { collapsePackageOwnerDuplicates } from './collapse-package-owner.mjs'
@@ -349,9 +349,12 @@ async function main() {
   // 第二道保险：同 owner 下被改名的仓库（同包名）合并成一行
   let plugins = collapsePackageOwnerDuplicates(mergedList, { preferCurated: true })
 
-  // 展示排序：自有插件置顶，其余按 star、再按名称
+  // star 统一使用索引源里的真实 GitHub star（由 market 等源每日采集）。
+  // 不再为 Vyra 插件注入构建期伪推荐分：伪分（60–99）与真实 star（数万）量级差几千倍，
+  // 混排时会让排序与卡片数字都失去意义。自有源未收录 star 的插件保持 null。
+
+  // 展示排序：真实 star 降序，其次按名称
   plugins.sort((a, b) => {
-    if (a.featured !== b.featured) return a.featured ? -1 : 1
     const s = (b.stats?.stars ?? 0) - (a.stats?.stars ?? 0)
     if (s !== 0) return s
     return String(a.name).localeCompare(String(b.name))
@@ -396,7 +399,17 @@ async function main() {
     'sourceBits', 'flags', 'homepage', 'license', 'tags', 'icon', 'installCommand',
   ]
 
-  rmSync(OUT_DIR, { recursive: true, force: true })
+  // 精确清理上一轮生成的 json：只删除输出目录下的 .json 文件，
+  // 不用递归删整个目录（避免误删同目录下的其它资源，也兼容受限文件系统）。
+  const clearJsonFiles = (dir) => {
+    if (!existsSync(dir)) return
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry)
+      if (statSync(full).isDirectory()) clearJsonFiles(full)
+      else if (entry.endsWith('.json')) rmSync(full, { force: true })
+    }
+  }
+  clearJsonFiles(OUT_DIR)
   mkdirSync(join(OUT_DIR, 'cat'), { recursive: true })
 
   const sizes = {}
@@ -430,6 +443,15 @@ async function main() {
 
   // 自有插件：首页「Vyra 出品」与「推荐」标签共用
   writeFile('featured.json', plugins.filter((p) => p.featured).map(toRow))
+  // 首页「编辑精选」：全站按真实 star 降序的 top，排除已在 Vyra 出品展示的自研插件，
+  // 让这个区块真正来自多个索引源（与它的文案一致）。
+  writeFile(
+    'top.json',
+    plugins
+      .filter((p) => !p.featured && (p.stats?.stars ?? 0) > 0)
+      .slice(0, 12)
+      .map(toRow),
+  )
   // 全局搜索：只放搜索和简单结果需要的字段
   writeFile(
     'search.json',

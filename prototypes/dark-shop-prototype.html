@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vyra Plugins · 深色设计原型</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#0a0c11;color:#e7e9ee;font-size:12px;line-height:1.5}
+.switchbar{position:sticky;top:0;z-index:9;display:flex;align-items:center;gap:8px;padding:10px 20px;background:#1a1e28;border-bottom:1px solid #2a3040}
+.switchbar .lbl{color:#6f788c;font-size:11px;font-family:ui-monospace,monospace;margin-right:6px}
+.switchbar button{background:#12161e;border:1px solid #2a3040;color:#9aa3b5;border-radius:6px;padding:6px 16px;font-size:12px;cursor:pointer}
+.switchbar button.on{background:#3b6ef5;border-color:#3b6ef5;color:#fff}
+.page{display:none}
+.page.on{display:block}
+.nav{display:flex;align-items:center;gap:22px;padding:11px 20px;border-bottom:1px solid #202431;background:#12151c}
+.logo{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;white-space:nowrap}
+.logo b{width:22px;height:22px;border-radius:6px;background:#3b6ef5;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
+.navlinks{display:flex;gap:18px;color:#9aa3b5}
+.navlinks span.on{color:#fff}
+.spacer{flex:1}
+.navsearch{display:flex;align-items:center;gap:7px;border:1px solid #2a3040;border-radius:6px;padding:5px 10px;color:#6f788c;background:#0d1016;min-width:170px}
+.gh{color:#9aa3b5;font-size:11px}
+.hero{padding:38px 24px 30px;border-bottom:1px solid #202431;text-align:center}
+.hero .kicker,.hero h1,.hero .sub{margin-left:auto;margin-right:auto}
+.bigsearch{margin-left:auto;margin-right:auto}
+.hero .legend{justify-content:center}
+.kicker{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em;color:#3b6ef5;margin-bottom:12px}
+h1{font-size:26px;font-weight:500;margin:0 0 9px;letter-spacing:-.02em}
+.sub{color:#98a1b3;font-size:13px;margin:0 0 18px}
+.bigsearch{display:flex;align-items:center;gap:10px;background:#12161e;border:1px solid #2a3040;border-radius:8px;padding:11px 14px;color:#6f788c;max-width:560px}
+.bigsearch em{font-style:normal;color:#5b6478;border:1px solid #2a3040;border-radius:4px;padding:1px 6px;font-family:ui-monospace,monospace;font-size:11px}
+.legend{display:flex;align-items:center;gap:8px;margin-top:14px;color:#8b94a6;font-size:11px}
+.legend .star{color:#5b8cff;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #202431}
+.stat{padding:16px 20px;border-right:1px solid #202431}
+.stat .num{font-family:ui-monospace,monospace;font-size:22px;font-weight:500}
+.stat .lab{color:#8b94a6;font-size:11px;margin-top:3px}
+.stat.hl{background:#111a2e}
+.stat.hl .num{color:#5b8cff}
+.sec{padding:22px 24px 4px}
+.shead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.shead h3{font-size:14px;font-weight:500;margin:0}
+.shead .rule{flex:1;height:1px;background:#202431}
+.shead .more{font-size:11px;color:#5b8cff}
+.shead .note{font-size:11px;color:#697285}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.card{background:#151922;border:1px solid #252b39;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:9px}
+.card.vyra{border-top:2px solid #3b6ef5}
+.chead{display:flex;align-items:center;gap:8px}
+.ico{width:26px;height:26px;border-radius:6px;background:#1d2740;color:#7ea2ff;display:inline-flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:10px;flex-shrink:0}
+.nm{font-weight:500;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bdg{font-size:10px;color:#7ea2ff;border:1px solid #2b487f;border-radius:4px;padding:1px 5px;white-space:nowrap}
+.desc{color:#8b94a6;font-size:11px;line-height:1.45;min-height:32px}
+.cfoot{display:flex;align-items:center;gap:9px;border-top:1px solid #202431;padding-top:9px;font-family:ui-monospace,monospace;font-size:11px}
+.rec{color:#5b8cff;font-weight:500}
+.dl{color:#7d8699}
+.src{color:#5f7fbf}
+.inst{margin-left:auto;background:#3b6ef5;color:#fff;border:0;border-radius:5px;padding:4px 11px;font-size:11px;font-family:inherit;cursor:pointer}
+.foot{padding:16px 24px;color:#697285;font-size:11px;border-top:1px solid #202431;margin-top:18px}
+.tools{display:flex;gap:10px;padding:16px 20px;border-bottom:1px solid #202431;align-items:center;flex-wrap:wrap}
+.sbox{display:flex;align-items:center;gap:8px;background:#12161e;border:1px solid #2a3040;border-radius:7px;padding:9px 12px;color:#6f788c;min-width:240px;flex:1}
+select{background:#12161e;border:1px solid #2a3040;border-radius:7px;padding:9px 12px;color:#c6ccd9;font-family:inherit;font-size:12px}
+.qbar{display:flex;gap:7px;padding:12px 20px;border-bottom:1px solid #202431;flex-wrap:wrap;align-items:center}
+.qbar .t{color:#697285;font-size:11px;margin-right:4px}
+.pill{border:1px solid #252b39;border-radius:20px;padding:5px 13px;color:#9aa3b5;font-size:11px}
+.pill.on{background:#3b6ef5;border-color:#3b6ef5;color:#fff}
+.pill.vyra{color:#7ea2ff;border-color:#2b487f}
+.cat{display:flex;gap:16px;padding:11px 20px;border-bottom:1px solid #202431;color:#8b94a6;font-size:11px;flex-wrap:wrap}
+.cat span.on{color:#fff}
+.count{padding:12px 20px;color:#8b94a6;font-size:11px;font-family:ui-monospace,monospace}
+.count b{color:#fff;font-weight:500}
+.count .star{color:#5b8cff}
+.grid.pad{padding:0 20px 8px}
+.pager{display:flex;gap:6px;justify-content:center;padding:18px;color:#697285;font-size:11px}
+.pager span{border:1px solid #252b39;border-radius:5px;padding:4px 10px}
+.pager span.on{background:#1d2740;color:#7ea2ff;border-color:#2b487f}
+.installwrap{margin:18px 24px 0}
+.installbar{background:#12161e;border:1px solid #2a3040;border-left:3px solid #3b6ef5;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.installbar .ib-icon{width:22px;height:22px;border-radius:5px;background:#1d2740;color:#7ea2ff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.installbar .ib-label{font-size:12px;color:#c6ccd9;white-space:nowrap}
+.installbar .ib-cmd{font-family:ui-monospace,monospace;font-size:11px;color:#7ea2ff;background:#0d1016;border:1px solid #252b39;border-radius:5px;padding:6px 10px;flex:1;min-width:260px;overflow-x:auto;white-space:nowrap}
+.installbar .ib-cmd select{background:#1d2740;color:#7ea2ff;border:1px solid #2b487f;border-radius:4px;padding:2px 6px;font-family:inherit;font-size:11px}
+.installbar .ib-copy{background:#3b6ef5;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:11px;cursor:pointer;white-space:nowrap}
+.installbar .ib-copy.done{background:#1d9e75}
+.ib-hint{font-size:11px;color:#697285;margin:8px 0 0 2px}
+.ib-hint a{color:#5b8cff;text-decoration:none}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="switchbar">
+  <span class="lbl">设计原型 v3 · 深色 / Vyra 推荐度</span>
+  <button id="b1" class="on" onclick="go('home')">01 首页</button>
+  <button id="b2" onclick="go('browse')">02 市场页</button>
+</div>
+
+<div id="home" class="page on">
+  <div class="nav">
+    <div class="logo"><b>V</b>Vyra Plugins</div>
+    <div class="navlinks"><span class="on">首页</span><span>插件市场</span><span>文档</span></div>
+    <div class="spacer"></div>
+    <div class="navsearch">⌕ 搜索插件…</div>
+    <div class="gh">GitHub</div>
+  </div>
+  <div class="hero">
+    <div class="kicker">DEEPSEEK HARNESS · 插件市场</div>
+    <h1>Everything is a Plugin.</h1>
+    <p class="sub">聚合 5 个索引源，收录 17,107 个插件。发现、比较、一键安装。</p>
+    <div class="bigsearch"><span>⌕</span><span>搜索插件名、作者或功能…</span><em>CTRL K</em></div>
+    <div class="legend"><span class="star">★</span> Vyra 推荐 — 对每个插件都是从使用者的角度精心打磨</div>
+  </div>
+  <div class="installwrap">
+    <div class="installbar">
+      <span class="ib-icon">⚡</span>
+      <span class="ib-label">把插件市场装进你的 DSH</span>
+      <span class="ib-cmd">dsh plugin --profile <select id="profileSel"><option>web</option><option>work</option><option>auto</option></select> add dsh-vyra-plugin-market</span>
+      <button class="ib-copy" id="copyBtn" onclick="copyInstall()">复制安装命令</button>
+    </div>
+    <p class="ib-hint">如果本地没有 dsh 命令，请到 <a href="#">FAQ</a> 查找答案 · 目前插件市场支持 macOS、Linux，Windows 正在适配中</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="num">17,107</div><div class="lab">收录插件</div></div>
+    <div class="stat hl"><div class="num">18</div><div class="lab">Vyra 自研 · 个人出品</div></div>
+    <div class="stat"><div class="num">5</div><div class="lab">索引源聚合</div></div>
+    <div class="stat"><div class="num" style="font-size:16px;line-height:1.9">个人维护 · 每日更新</div><div class="lab">持续收录</div></div>
+  </div>
+  <div class="sec">
+    <div class="shead"><h3>Vyra 出品</h3><span class="note">18 个自研插件 · 按推荐度排序</span><div class="rule"></div><span class="more">查看全部 →</span></div>
+    <div class="grid">
+      <div class="card vyra"><div class="chead"><span class="ico">PM</span><span class="nm">dsh-vyra-plugin-market</span><span class="bdg">Vyra</span></div><div class="desc">插件市场，浏览与安装一体化</div><div class="cfoot"><span class="rec">★ 96</span><span class="dl">↓ 2.4k</span><span class="src">2 源</span><button class="inst">安装</button></div></div>
+      <div class="card vyra"><div class="chead"><span class="ico">IM</span><span class="nm">@lanxiake/dsh-im</span><span class="bdg">Vyra</span></div><div class="desc">即时通讯桥接，多渠道消息统一接入</div><div class="cfoot"><span class="rec">★ 93</span><span class="dl">↓ 1.8k</span><span class="src">3 源</span><button class="inst">安装</button></div></div>
+      <div class="card vyra"><div class="chead"><span class="ico">AG</span><span class="nm">dsh-vyra-agent-manager</span><span class="bdg">Vyra</span></div><div class="desc">智能体管理，集中配置与调度</div><div class="cfoot"><span class="rec">★ 89</span><span class="dl">↓ 1.2k</span><span class="src">2 源</span><button class="inst">安装</button></div></div>
+      <div class="card vyra"><div class="chead"><span class="ico">SS</span><span class="nm">dsh-vyra-system-selection</span><span class="bdg">Vyra</span></div><div class="desc">系统级划词，任意界面呼出 AI</div><div class="cfoot"><span class="rec">★ 86</span><span class="dl">↓ 964</span><span class="src">2 源</span><button class="inst">安装</button></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="shead"><h3>编辑精选</h3><span class="note">来自 5 个索引源 · 按推荐度</span><div class="rule"></div><span class="more">进入市场 →</span></div>
+    <div class="grid">
+      <div class="card"><div class="chead"><span class="ico">SC</span><span class="nm">dsh-vyra-screen-recorder</span><span class="bdg">Vyra</span></div><div class="desc">录屏截图，一键捕捉工作流</div><div class="cfoot"><span class="rec">★ 84</span><span class="dl">↓ 812</span><span class="src">4 源</span><button class="inst">安装</button></div></div>
+      <div class="card"><div class="chead"><span class="ico">FM</span><span class="nm">dsh-vyra-free-model</span><span class="bdg">Vyra</span></div><div class="desc">Vyra 免费模型接入</div><div class="cfoot"><span class="rec">★ 81</span><span class="dl">↓ 690</span><span class="src">2 源</span><button class="inst">安装</button></div></div>
+      <div class="card"><div class="chead"><span class="ico">3P</span><span class="nm">community-pick</span></div><div class="desc">第三方插件 · 同样由我打分推荐</div><div class="cfoot"><span class="rec">★ 79</span><span class="dl">↓ 6.6m</span><span class="src">4 源</span><button class="inst">安装</button></div></div>
+      <div class="card"><div class="chead"><span class="ico">TH</span><span class="nm">dsh-vyra-free-theme</span><span class="bdg">Vyra</span></div><div class="desc">自由主题，界面配色随心定制</div><div class="cfoot"><span class="rec">★ 76</span><span class="dl">↓ 402</span><span class="src">2 源</span><button class="inst">安装</button></div></div>
+    </div>
+  </div>
+  <div class="foot">数据由 5 个公开索引源聚合 · 17,107 个插件均可按 Vyra 推荐度浏览</div>
+</div>
+
+<div id="browse" class="page">
+  <div class="nav">
+    <div class="logo"><b>V</b>Vyra Plugins</div>
+    <div class="navlinks"><span>首页</span><span class="on">插件市场</span><span>文档</span></div>
+    <div class="spacer"></div>
+    <div class="gh">GitHub</div>
+  </div>
+  <div class="tools">
+    <div class="sbox">⌕ 搜索 17,107 个插件…</div>
+    <select><option>排序：Vyra 推荐度 ↓</option><option>下载量</option><option>最新收录</option><option>名称</option></select>
+    <select><option>全部来源</option><option>Vyra 自研</option></select>
+  </div>
+  <div class="qbar">
+    <span class="t">质量分层</span>
+    <span class="pill on">全部 17,107</span>
+    <span class="pill">可一键安装</span>
+    <span class="pill vyra">Vyra 出品 18</span>
+    <span class="pill">编辑精选</span>
+    <span class="pill">最新收录</span>
+    <span class="pill">多源收录</span>
+  </div>
+  <div class="cat">
+    <span class="on">全部分类</span><span>智能体</span><span>开发工具</span><span>文件管理</span><span>媒体处理</span><span>主题美化</span><span>MCP 服务</span><span>效率工具</span><span> + 4</span>
+  </div>
+  <div class="count">找到 <b>18</b> 个 Vyra 自研插件 · 按 <span class="star">★ Vyra 推荐度</span> 降序</div>
+  <div class="grid pad">
+    <div class="card vyra"><div class="chead"><span class="ico">PM</span><span class="nm">dsh-vyra-plugin-market</span><span class="bdg">Vyra</span></div><div class="desc">插件市场，浏览与安装一体化</div><div class="cfoot"><span class="rec">★ 96</span><span class="dl">↓ 2.4k</span><span>v0.7.2</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">IM</span><span class="nm">@lanxiake/dsh-im</span><span class="bdg">Vyra</span></div><div class="desc">即时通讯桥接，多渠道消息统一接入</div><div class="cfoot"><span class="rec">★ 93</span><span class="dl">↓ 1.8k</span><span>v5.13.0</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">AG</span><span class="nm">dsh-vyra-agent-manager</span><span class="bdg">Vyra</span></div><div class="desc">智能体管理，集中配置与调度</div><div class="cfoot"><span class="rec">★ 89</span><span class="dl">↓ 1.2k</span><span>v1.3.0</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">SS</span><span class="nm">dsh-vyra-system-selection</span><span class="bdg">Vyra</span></div><div class="desc">系统级划词，任意界面呼出 AI</div><div class="cfoot"><span class="rec">★ 86</span><span class="dl">↓ 964</span><span>v3.1.2</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">SC</span><span class="nm">dsh-vyra-screen-recorder</span><span class="bdg">Vyra</span></div><div class="desc">录屏截图，一键捕捉工作流</div><div class="cfoot"><span class="rec">★ 84</span><span class="dl">↓ 812</span><span>v0.4.4</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">FM</span><span class="nm">dsh-vyra-free-model</span><span class="bdg">Vyra</span></div><div class="desc">Vyra 免费模型接入</div><div class="cfoot"><span class="rec">★ 81</span><span class="dl">↓ 690</span><span>v0.6.4</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">SM</span><span class="nm">dsh-vyra-skill-mcp-manager</span><span class="bdg">Vyra</span></div><div class="desc">技能与 MCP 服务统一管理</div><div class="cfoot"><span class="rec">★ 78</span><span class="dl">↓ 578</span><span>v1.3.1</span><button class="inst">安装</button></div></div>
+    <div class="card vyra"><div class="chead"><span class="ico">ST</span><span class="nm">dsh-vyra-studymate</span><span class="bdg">Vyra</span></div><div class="desc">StudyMate 学习辅助</div><div class="cfoot"><span class="rec">★ 75</span><span class="dl">↓ 452</span><span>v2.2.0</span><button class="inst">安装</button></div></div>
+  </div>
+  <div class="pager"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>›</span></div>
+</div>
+
+<script>
+function go(id){
+  document.getElementById('home').classList.toggle('on', id==='home');
+  document.getElementById('browse').classList.toggle('on', id==='browse');
+  document.getElementById('b1').classList.toggle('on', id==='home');
+  document.getElementById('b2').classList.toggle('on', id==='browse');
+  window.scrollTo(0,0);
+}
+function copyInstall(){
+  var profile=document.getElementById('profileSel').value;
+  var cmd='dsh plugin --profile '+profile+' add dsh-vyra-plugin-market';
+  var done=function(){
+    var b=document.getElementById('copyBtn');
+    b.textContent='已复制 ✓';b.classList.add('done');
+    setTimeout(function(){b.textContent='复制安装命令';b.classList.remove('done')},2000);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(cmd).then(done,function(){fallbackCopy(cmd,done)});
+  }else{fallbackCopy(cmd,done)}
+}
+function fallbackCopy(text,done){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');done()}catch(e){}
+  document.body.removeChild(ta);
+}
+</script>
+</body>
+</html>

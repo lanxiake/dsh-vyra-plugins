@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSH 插件目录 · UI 原型「技术图鉴」v2</title>
+<style>
+/* ============================================================
+   设计方向：Technical Atlas / 技术图鉴
+   —— 暖纸张 + 墨色 + 单一朱红；编辑式编号 + 发丝分隔线；
+      等宽字体承载元数据；大号表格数字分栏。
+   ============================================================ */
+:root{
+  --paper:#f3f1ea;        /* 暖纸张底 */
+  --paper-2:#ebe8dc;
+  --surface:#fbfaf6;      /* 卡片面 */
+  --ink:#17190f;          /* 主墨（偏暖的黑） */
+  --ink-2:#525449;        /* 次墨 */
+  --ink-3:#8b8c7d;        /* 弱墨 */
+  --rule:#d7d3c4;         /* 发丝分隔线 */
+  --rule-soft:#e5e1d5;
+  --accent:#d6402a;       /* 朱红 */
+  --accent-ink:#a52f1c;
+  --accent-soft:#f5e2da;
+  --olive:#4f6b3f;        /* 可用/绿色信号 */
+  --olive-soft:#e7ecdf;
+  --r:4px;                /* 克制的小圆角 */
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,"Songti SC",serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+[data-theme="dark"]{
+  --paper:#141610;
+  --paper-2:#1b1e16;
+  --surface:#1e2119;
+  --ink:#efece0;
+  --ink-2:#b3b4a5;
+  --ink-3:#7d7f70;
+  --rule:#34382b;
+  --rule-soft:#2a2e23;
+  --accent:#ff6b4f;
+  --accent-ink:#ff8a73;
+  --accent-soft:#3a211a;
+  --olive:#9fbe79;
+  --olive-soft:#263021;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .3s var(--ease),color .3s var(--ease);
+}
+a{color:inherit;text-decoration:none}
+code,.mono{font-family:var(--mono)}
+button{font-family:inherit;cursor:pointer}
+::selection{background:var(--accent);color:#fff}
+
+/* 纸张纹理：极淡的网点，强化"印刷图鉴"质感 */
+.paper-grain{
+  position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:radial-gradient(circle at 1px 1px,var(--rule-soft) 1px,transparent 0);
+  background-size:22px 22px;
+  -webkit-mask-image:linear-gradient(180deg,#000 0,transparent 60%);
+  mask-image:linear-gradient(180deg,#000 0,transparent 60%);
+}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 28px}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);
+}
+.eyebrow b{color:var(--accent);font-weight:700}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* ── 原型工具条（设计稿专用） ─────────────────────────── */
+.protobar{
+  position:sticky;top:0;z-index:100;background:var(--ink);color:var(--paper);
+  border-bottom:3px solid var(--accent);
+}
+.protobar-in{
+  max-width:1180px;margin:0 auto;padding:9px 28px;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.protobar .ptag{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  color:var(--paper);opacity:.9;white-space:nowrap;
+}
+.protobar .ptag i{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--accent);margin-right:7px;vertical-align:middle;box-shadow:0 0 0 3px rgba(214,64,42,.25)}
+.pageswitch{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap}
+.pageswitch button{
+  border:1px solid transparent;background:transparent;color:var(--paper);
+  opacity:.6;font-size:12px;padding:5px 12px;border-radius:999px;
+  font-family:var(--mono);letter-spacing:.02em;transition:.18s var(--ease);
+}
+.pageswitch button:hover{opacity:1}
+.pageswitch button.on{
+  opacity:1;background:var(--paper);color:var(--ink);border-color:var(--paper);font-weight:700;
+}
+
+/* ── 站点页眉 ─────────────────────────────────────────── */
+header.site{
+  position:sticky;top:41px;z-index:80;
+  background:color-mix(in srgb,var(--paper) 86%,transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--rule);
+}
+.bar{display:flex;align-items:center;gap:30px;height:68px}
+.logo{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.02em;font-size:16px}
+.logo-mark{
+  width:30px;height:30px;display:grid;place-items:center;background:var(--ink);color:var(--paper);
+  border-radius:var(--r);font-family:var(--mono);font-weight:700;font-size:15px;position:relative;
+}
+.logo-mark::after{content:"";position:absolute;right:-3px;top:-3px;width:8px;height:8px;
+  background:var(--accent);border-radius:50%;border:2px solid var(--paper)}
+.logo small{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-3);font-weight:500}
+nav.mainnav{display:flex;gap:6px;margin-left:14px}
+nav.mainnav a{padding:7px 13px;border-radius:var(--r);color:var(--ink-2);font-size:14px;font-weight:600}
+nav.mainnav a:hover{background:var(--paper-2);color:var(--ink)}
+nav.mainnav a.on{color:var(--ink);background:var(--paper-2);box-shadow:inset 0 -2px 0 var(--accent)}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icon-btn{
+  width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--rule);
+  background:var(--surface);color:var(--ink-2);border-radius:var(--r);font-size:15px;transition:.15s;
+}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-gh{
+  display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;
+  border:1px solid var(--rule);background:var(--surface);border-radius:var(--r);
+  font-size:13px;font-weight:600;color:var(--ink);transition:.15s;
+}
+.btn-gh:hover{border-color:var(--ink)}
+.btn-gh svg{fill:currentColor}
+
+/* ── 页面切换 ─────────────────────────────────────────── */
+.page{display:none}
+.page.on{display:block;animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ── HERO ─────────────────────────────────────────────── */
+.hero{position:relative;padding:76px 0 44px}
+.hero-grid{
+  position:absolute;inset:0 0 auto 0;height:100%;pointer-events:none;opacity:.45;
+  background-image:linear-gradient(90deg,var(--rule-soft) 1px,transparent 1px);
+  background-size:calc(100% / 12) 100%;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);
+  mask-image:linear-gradient(180deg,#000,transparent 85%);
+}
+.hero-in{position:relative;z-index:1}
+.hero .kicker{
+  display:flex;align-items:center;gap:14px;margin-bottom:26px;
+}
+.hero .kicker .no{
+  font-family:var(--mono);font-size:12px;color:var(--accent);border:1px solid var(--accent);
+  border-radius:999px;padding:3px 10px;letter-spacing:.06em;
+}
+.hero h1{
+  font-family:var(--serif);font-weight:700;letter-spacing:-.03em;line-height:1.06;
+  font-size:clamp(40px,6.4vw,76px);margin:0;max-width:15ch;
+}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero .lede{
+  max-width:56ch;margin:26px 0 0;font-size:17px;line-height:1.75;color:var(--ink-2);
+}
+.searchbar{
+  margin-top:38px;max-width:680px;display:flex;align-items:center;gap:12px;
+  background:var(--surface);border:1px solid var(--ink);border-radius:var(--r);
+  padding:6px 6px 6px 18px;box-shadow:5px 5px 0 var(--ink);
+  transition:box-shadow .2s var(--ease),transform .2s var(--ease);
+}
+.searchbar:focus-within{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--accent)}
+.searchbar svg{flex:none;color:var(--ink-3)}
+.searchbar input{
+  flex:1;border:0;outline:0;background:transparent;color:var(--ink);
+  font-size:15px;font-family:inherit;padding:9px 0;
+}
+.searchbar input::placeholder{color:var(--ink-3)}
+.kbd{
+  font-family:var(--mono);font-size:11px;color:var(--ink-2);border:1px solid var(--rule);
+  border-bottom-width:2px;border-radius:5px;padding:2px 7px;background:var(--paper);
+}
+.search-go{
+  border:0;background:var(--ink);color:var(--paper);border-radius:3px;
+  padding:11px 22px;font-weight:700;font-size:14px;letter-spacing:.02em;transition:.15s;
+}
+.search-go:hover{background:var(--accent)}
+.hot{margin-top:16px;font-size:12px;color:var(--ink-3);font-family:var(--mono)}
+.hot b{color:var(--ink-2);font-weight:600}
+.hot span{color:var(--accent);margin-left:10px;cursor:pointer}
+.hot span:hover{text-decoration:underline}
+
+/* ── 数据带（分栏大数字） ─────────────────────────────── */
+.databand{
+  display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--ink);margin-top:26px;
+}
+.datacell{padding:24px 20px 22px;border-right:1px solid var(--rule)}
+.datacell:last-child{border-right:0}
+.datacell .num{
+  display:block;font-family:var(--serif);font-size:clamp(30px,4vw,48px);line-height:1;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+}
+.datacell.a .num{color:var(--accent)}
+.datacell .lbl{
+  display:block;margin-top:10px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;
+}
+
+/* ── 章节通用（编辑式编号） ───────────────────────────── */
+.block{padding:60px 0 8px}
+.block-head{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:20px;
+  padding-bottom:16px;border-bottom:1px solid var(--ink);margin-bottom:28px;
+}
+.block-head .left{display:flex;align-items:baseline;gap:16px}
+.block-head .idx{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.block-head h2{
+  margin:0;font-family:var(--serif);font-size:clamp(24px,3vw,34px);
+  letter-spacing:-.02em;font-weight:700;
+}
+.block-head p{margin:7px 0 0;color:var(--ink-3);font-size:13.5px}
+.block-head .more{font-family:var(--mono);font-size:12px;color:var(--accent);white-space:nowrap}
+.block-head .more:hover{text-decoration:underline}
+
+/* ── 分类索引（编号清单，非卡片） ─────────────────────── */
+.catindex{display:grid;grid-template-columns:repeat(3,1fr);column-gap:0}
+.catrow{
+  display:flex;align-items:center;gap:14px;padding:16px 18px;
+  border-bottom:1px solid var(--rule-soft);border-right:1px solid var(--rule-soft);
+  cursor:pointer;transition:background .15s;
+}
+.catrow:nth-child(3n){border-right:0}
+.catrow:hover{background:var(--surface)}
+.catrow:hover .catname{color:var(--accent)}
+.catrow .cno{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:20px}
+.catrow .cdot{width:9px;height:9px;border-radius:50%;flex:none}
+.catrow .catname{font-size:14px;font-weight:600;transition:.15s}
+.catrow .catcount{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* ── 插件卡片（发丝边框 + 硬阴影，非软阴影堆叠） ──────── */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{
+  position:relative;display:flex;flex-direction:column;gap:12px;
+  padding:20px;background:var(--surface);border:1px solid var(--rule);
+  border-radius:var(--r);cursor:pointer;transition:.22s var(--ease);
+}
+.card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--accent);transform:scaleY(0);transform-origin:top;transition:transform .25s var(--ease);
+}
+.card:hover{transform:translate(-2px,-3px);box-shadow:5px 5px 0 var(--ink);border-color:var(--ink)}
+.card:hover::before{transform:scaleY(1)}
+.c-top{display:flex;align-items:center;gap:12px}
+.c-logo{
+  width:42px;height:42px;flex:none;border-radius:6px;display:grid;place-items:center;
+  color:#fff;font-family:var(--mono);font-weight:700;font-size:17px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.c-title{min-width:0}
+.c-title b{display:block;font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-title code{display:block;font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.c-ver{
+  margin-left:auto;flex:none;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);
+  border:1px solid var(--rule);border-radius:4px;padding:2px 6px;
+}
+.c-desc{
+  margin:0;color:var(--ink-2);font-size:13px;line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.9em;
+}
+.c-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);border:1px solid var(--rule-soft);
+  border-radius:3px;padding:2px 7px;background:var(--paper)}
+.tag.hi{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--rule));background:var(--accent-soft)}
+.c-foot{
+  display:flex;align-items:center;gap:8px;border-top:1px dashed var(--rule);
+  padding-top:11px;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+}
+.c-foot .ok{color:var(--olive)}
+.c-foot .stars{margin-left:auto}
+
+/* ── 来源账本 ─────────────────────────────────────────── */
+.ledger{border:1px solid var(--ink);border-radius:var(--r);overflow:hidden}
+.ledger-head{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  background:var(--ink);color:var(--paper);padding:16px 22px;
+}
+.ledger-head h3{margin:0;font-family:var(--serif);font-size:20px}
+.ledger-head span{font-family:var(--mono);font-size:11px;opacity:.7}
+.ledger-body{display:grid;grid-template-columns:repeat(5,1fr)}
+.ledger-cell{padding:20px;border-right:1px solid var(--rule)}
+.ledger-cell:last-child{border-right:0}
+.ledger-cell b{display:block;font-family:var(--serif);font-size:26px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ledger-cell .sname{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:var(--ink-2)}
+.ledger-cell .sdot{width:8px;height:8px;border-radius:50%;flex:none}
+
+/* ── CTA ──────────────────────────────────────────────── */
+.cta{
+  margin:64px 0 20px;padding:44px;text-align:center;border:1px solid var(--ink);
+  border-radius:var(--r);background:var(--surface);position:relative;overflow:hidden;
+}
+.cta::before,.cta::after{content:"✛";position:absolute;font-family:var(--mono);color:var(--rule);font-size:22px}
+.cta::before{left:18px;top:14px}.cta::after{right:18px;bottom:14px}
+.cta h2{font-family:var(--serif);font-size:30px;letter-spacing:-.02em;margin:0 0 8px}
+.cta p{color:var(--ink-2);margin:0 0 22px}
+.btn-solid{
+  display:inline-flex;align-items:center;gap:10px;padding:13px 24px;background:var(--accent);
+  color:#fff;border-radius:var(--r);font-weight:700;font-size:14px;border:0;transition:.15s;
+}
+.btn-solid:hover{background:var(--accent-ink);transform:translateY(-1px)}
+
+/* ── 页脚 ─────────────────────────────────────────────── */
+footer.site{border-top:1px solid var(--ink);margin-top:60px;padding:26px 0 44px}
+.foot-in{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);letter-spacing:.02em}
+
+/* ── 浏览页 ───────────────────────────────────────────── */
+.page-head{padding:48px 0 26px;border-bottom:1px solid var(--ink);margin-bottom:26px}
+.page-head h1{font-family:var(--serif);font-size:clamp(34px,5vw,52px);letter-spacing:-.03em;margin:8px 0 6px}
+.page-head p{color:var(--ink-2);margin:0;max-width:60ch}
+.page-head .countline{float:right;font-family:var(--mono);font-size:12px;color:var(--ink-3);padding-top:34px}
+.toolbar{display:flex;gap:12px;margin-bottom:18px}
+.toolbar .search{
+  flex:1;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--surface);
+  border:1px solid var(--rule);border-radius:var(--r);
+}
+.toolbar .search:focus-within{border-color:var(--ink)}
+.toolbar .search input{flex:1;border:0;outline:0;background:transparent;color:var(--ink);font-family:inherit;font-size:14px;padding:12px 0}
+.toolbar .search input::placeholder{color:var(--ink-3)}
+.sel{
+  border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  border-radius:var(--r);padding:0 12px;font-family:var(--mono);font-size:12px;
+}
+.tabbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
+.tab{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--rule);
+  background:transparent;color:var(--ink-2);border-radius:999px;font-size:12.5px;transition:.15s;
+}
+.tab:hover{border-color:var(--ink);color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tab .tn{font-family:var(--mono);font-size:10px;opacity:.65}
+.resultbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;
+  font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.04em}
+.empty{padding:60px 20px;text-align:center;color:var(--ink-3);border:1px dashed var(--rule);border-radius:var(--r)}
+.empty b{display:block;font-family:var(--serif);font-size:22px;color:var(--ink-2);margin-bottom:6px}
+
+/* ── 详情页 ───────────────────────────────────────────── */
+.back{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-bottom:26px}
+.back:hover{color:var(--accent)}
+.detail-head{display:flex;gap:20px;align-items:flex-start;padding-bottom:28px;border-bottom:1px solid var(--ink)}
+.detail-icon{width:88px;height:88px;flex:none;border-radius:10px;display:grid;place-items:center;
+  color:#fff;font-family:var(--mono);font-size:34px;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.detail-head h1{font-family:var(--serif);font-size:clamp(30px,4.5vw,44px);letter-spacing:-.03em;margin:2px 0 4px}
+.detail-head .pkg{font-family:var(--mono);font-size:13px;color:var(--ink-3)}
+.badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 9px;border:1px solid var(--rule);
+  border-radius:999px;color:var(--ink-2);background:var(--surface)}
+.badge.brand{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.badge.ok{color:var(--olive);border-color:color-mix(in srgb,var(--olive) 45%,var(--rule));background:var(--olive-soft)}
+.detail-desc{font-size:16px;line-height:1.8;color:var(--ink-2);max-width:74ch;margin:26px 0}
+.dblock{margin:34px 0}
+.dblock>h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.dblock>h3::after{content:"";flex:1;height:1px;background:var(--rule)}
+.terminal{
+  display:flex;align-items:center;gap:14px;background:var(--ink);color:var(--paper);
+  border-radius:var(--r);padding:14px 16px;overflow-x:auto;
+}
+.terminal .dots{display:flex;gap:6px;flex:none}
+.terminal .dots i{width:9px;height:9px;border-radius:50%;background:#6b6b63}
+.terminal .dots i:first-child{background:var(--accent)}
+.terminal code{flex:1;font-size:13px;white-space:nowrap}
+.terminal code .pfx{color:var(--accent);font-weight:700}
+.copybtn{border:1px solid #555;background:transparent;color:var(--paper);border-radius:4px;
+  padding:6px 12px;font-family:var(--mono);font-size:11px;flex:none;transition:.15s}
+.copybtn:hover{border-color:var(--accent);color:var(--accent)}
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.meta-grid div{padding:16px 18px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.meta-grid div:nth-child(3n){border-right:0}
+.meta-grid dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.meta-grid dd{margin:6px 0 0;font-size:14px;font-weight:600}
+.linklist{list-style:none;padding:0;margin:0}
+.linklist li{border-bottom:1px solid var(--rule-soft);padding:12px 0;display:flex;gap:12px;align-items:center;font-size:14px}
+.linklist a{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.linklist a:hover{text-decoration:underline}
+.linklist .arrow{margin-left:auto;color:var(--ink-3)}
+
+/* ── 文档页 ───────────────────────────────────────────── */
+.docsec{padding:30px 0;border-bottom:1px solid var(--rule-soft);display:grid;grid-template-columns:200px 1fr;gap:30px}
+.docsec:last-child{border-bottom:0}
+.docsec .dh h2{font-family:var(--serif);font-size:22px;margin:0}
+.docsec .dh .n{font-family:var(--mono);font-size:11px;color:var(--accent)}
+.docsec .db p{color:var(--ink-2);margin:0 0 14px;max-width:72ch}
+.codebox{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);margin:10px 0}
+.codebox .cl{font-family:var(--mono);font-size:10px;color:var(--ink-3);padding:8px 14px;border-bottom:1px solid var(--rule-soft);letter-spacing:.06em}
+.codebox pre{margin:0;padding:14px 16px;overflow-x:auto}
+.codebox code{font-size:12.5px;color:var(--ink);line-height:1.8;white-space:pre-wrap;word-break:break-all}
+.srcnote{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;
+  color:var(--olive);background:var(--olive-soft);border:1px solid color-mix(in srgb,var(--olive) 35%,var(--rule));
+  padding:4px 10px;border-radius:999px;margin-top:8px}
+
+/* ── 响应式 ───────────────────────────────────────────── */
+@media(max-width:960px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .catindex{grid-template-columns:repeat(2,1fr)}
+  .catrow:nth-child(3n){border-right:1px solid var(--rule-soft)}
+  .catrow:nth-child(2n){border-right:0}
+  .ledger-body{grid-template-columns:repeat(3,1fr)}
+  nav.mainnav{display:none}
+  .databand{grid-template-columns:repeat(2,1fr)}
+  .datacell:nth-child(2){border-right:0}
+  .datacell:nth-child(-n+2){border-bottom:1px solid var(--rule)}
+  .docsec{grid-template-columns:1fr;gap:10px}
+  .meta-grid{grid-template-columns:repeat(2,1fr)}
+  .meta-grid div:nth-child(3n){border-right:1px solid var(--rule)}
+  .meta-grid div:nth-child(2n){border-right:0}
+}
+@media(max-width:640px){
+  .wrap{padding:0 18px}
+  .protobar-in,.bar{padding-left:18px;padding-right:18px}
+  .pageswitch{margin-left:0;width:100%}
+  .hero{padding-top:52px}
+  .cards,.catindex{grid-template-columns:1fr}
+  .catrow,.catrow:nth-child(3n),.catrow:nth-child(2n){border-right:0}
+  .ledger-body{grid-template-columns:repeat(2,1fr)}
+  .detail-head{flex-direction:column}
+  .search-go{padding:11px 16px}
+  .kbd{display:none}
+  .logo small{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="paper-grain"></div>
+
+<!-- 原型工具条 -->
+<div class="protobar">
+  <div class="protobar-in">
+    <span class="ptag"><i></i>UI 原型 · Technical Atlas v2 · 2026-11-25</span>
+    <div class="pageswitch" id="pageswitch">
+      <button data-page="home" class="on">01 首页</button>
+      <button data-page="browse">02 目录</button>
+      <button data-page="detail">03 详情</button>
+      <button data-page="docs">04 说明</button>
+    </div>
+  </div>
+</div>
+
+<!-- 站点页眉 -->
+<header class="site">
+  <div class="wrap bar">
+    <a class="logo" href="#" data-gohome>
+      <span class="logo-mark">V</span>
+      <span>Vyra <small>× DSH</small></span>
+    </a>
+    <nav class="mainnav">
+      <a href="#" data-nav="home" class="on">首页</a>
+      <a href="#" data-nav="browse">插件目录</a>
+      <a href="#" data-nav="docs">使用说明</a>
+    </nav>
+    <div class="bar-right">
+      <button class="icon-btn" id="themeBtn" title="切换主题" aria-label="切换明暗主题">☾</button>
+      <a class="btn-gh" href="https://github.com/lanxiake/dsh-vyra-plugins" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ═══════════════ 01 首页 ═══════════════ -->
+<section class="page on" id="page-home">
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-in">
+      <div class="kicker">
+        <span class="no">VOL. 01</span>
+        <span class="eyebrow">DeepSeek Harness <b>·</b> Plugin Atlas <b>·</b> 多源聚合 / 跨源去重</span>
+      </div>
+      <h1>为你的 Harness<br>找到<em>对的插件</em></h1>
+      <p class="lede">一处浏览、搜索与安装插件。聚合 5 个索引源、自动去重，安装方式、版本与来源一目了然 —— 像查一本工具图鉴那样查插件。</p>
+
+      <form class="searchbar" id="heroSearch">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input id="heroInput" placeholder="搜索插件名称、描述或标签…" autocomplete="off" />
+        <span class="kbd">/</span>
+        <button class="search-go" type="submit">检索 →</button>
+      </form>
+      <p class="hot"><b>热门检索</b><span data-q="智能体">智能体</span><span data-q="主题">主题</span><span data-q="录屏">录屏</span><span data-q="SSH">SSH</span><span data-q="模型">模型</span></p>
+    </div>
+
+    <div class="databand">
+      <div class="datacell a"><b class="num">17,107</b><span class="lbl">收录插件 / Plugins</span></div>
+      <div class="datacell"><b class="num">17,107</b><span class="lbl">可一键安装 / Installable</span></div>
+      <div class="datacell"><b class="num">05</b><span class="lbl">索引源 / Sources</span></div>
+      <div class="datacell"><b class="num">12</b><span class="lbl">分类覆盖 / Categories</span></div>
+    </div>
+  </div>
+
+  <section class="block">
+    <div class="block-head">
+      <div class="left"><span class="idx">§ 01</span><div><h2>按分类检索</h2><p>从智能体运行时到界面外观，快速定位你要的那一类</p></div></div>
+      <a class="more" href="#" data-nav="browse">查看全部 →</a>
+    </div>
+    <div class="catindex" id="catIndex"></div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <div class="left"><span class="idx">§ 02</span><div><h2>Vyra 出品</h2><p>本仓库自研、开箱即用的插件</p></div></div>
+      <a class="more" href="#" data-nav="browse">浏览全部 18 个 →</a>
+    </div>
+    <div class="cards" id="featuredGrid"></div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <div class="left"><span class="idx">§ 03</span><div><h2>数据来源</h2><p>构建时拉取并去重，同名 fork 按「包名 + 仓库所有者」区分</p></div></div>
+    </div>
+    <div class="ledger">
+      <div class="ledger-head"><h3>索引账本 / Sources Ledger</h3><span>5 SOURCES · DEDUPED</span></div>
+      <div class="ledger-body">
+        <div class="ledger-cell"><b>27</b><span class="sname"><i class="sdot" style="background:#d6402a"></i>Vyra</span></div>
+        <div class="ledger-cell"><b>15,657</b><span class="sname"><i class="sdot" style="background:#2f6fd0"></i>DSH Market</span></div>
+        <div class="ledger-cell"><b>6,808</b><span class="sname"><i class="sdot" style="background:#7b52c9"></i>dshmarket</span></div>
+        <div class="ledger-cell"><b>1,481</b><span class="sname"><i class="sdot" style="background:#4f6b3f"></i>DSH Open</span></div>
+        <div class="ledger-cell"><b>63</b><span class="sname"><i class="sdot" style="background:#b9802e"></i>DSH Go</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cta">
+    <h2>准备好扩展你的 Harness 了吗？</h2>
+    <p>复制索引源地址，在客户端「设置 → 插件 → 索引源」中加入即可。</p>
+    <a class="btn-solid" href="#" data-nav="docs">阅读使用说明 <span>→</span></a>
+  </div>
+</section>
+
+<!-- ═══════════════ 02 目录页 ═══════════════ -->
+<section class="page" id="page-browse">
+  <div class="page-head">
+    <span class="countline" id="browseCount">— 个插件</span>
+    <span class="eyebrow"><b>§</b> INDEX / 02</span>
+    <h1>插件目录</h1>
+    <p>在全部索引源中检索。多源聚合、按包名去重，结果按星标或更新时间排序。</p>
+  </div>
+  <div class="toolbar">
+    <label class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <input id="browseInput" placeholder="搜索名称、描述或标签…" autocomplete="off" />
+    </label>
+    <select class="sel" id="sortSel">
+      <option value="stars">按 Star ↓</option>
+      <option value="updated">按更新时间 ↓</option>
+      <option value="name">按名称 A→Z</option>
+    </select>
+  </div>
+  <div class="tabbar" id="tabbar"></div>
+  <div class="resultbar"><span id="resultLabel">RESULTS</span><span>SORTED / FILTERED</span></div>
+  <div class="cards" id="browseGrid"></div>
+  <div class="empty" id="browseEmpty" style="display:none">
+    <b>没有匹配的插件</b>换个关键词，或清除分类筛选再试一次。
+  </div>
+</section>
+
+<!-- ═══════════════ 03 详情页 ═══════════════ -->
+<section class="page" id="page-detail">
+  <a class="back" href="#" data-nav="browse">← 返回目录</a>
+  <div class="detail-head">
+    <div class="detail-icon" id="dIcon">A</div>
+    <div>
+      <span class="eyebrow"><b>§</b> ENTRY / 03</span>
+      <h1 id="dTitle">智能体管理</h1>
+      <span class="pkg" id="dPkg">dsh-vyra-agent-manager</span>
+      <div class="badges" id="dBadges"></div>
+    </div>
+  </div>
+  <p class="detail-desc" id="dDesc"></p>
+
+  <div class="dblock">
+    <h3>安装 / Install</h3>
+    <div class="terminal">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <code><span class="pfx">$</span> <span id="dCmd">dsh plugin --profile web add dsh-vyra-agent-manager</span></code>
+      <button class="copybtn" id="copyBtn">复制命令</button>
+    </div>
+  </div>
+
+  <div class="dblock">
+    <h3>条目信息 / Metadata</h3>
+    <dl class="meta-grid" id="dMeta"></dl>
+  </div>
+
+  <div class="dblock">
+    <h3>链接 / Links</h3>
+    <ul class="linklist" id="dLinks"></ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 04 说明页 ═══════════════ -->
+<section class="page" id="page-docs">
+  <div class="page-head">
+    <span class="eyebrow"><b>§</b> MANUAL / 04</span>
+    <h1>使用说明</h1>
+    <p>本站是多源聚合的 DeepSeek Harness 插件目录。数据在构建时从各索引源拉取、去重后生成，页面本身是静态的。</p>
+  </div>
+
+  <div class="docsec">
+    <div class="dh"><span class="n">01 /</span><h2>安装插件</h2></div>
+    <div class="db">
+      <p>在 DSH 客户端里打开「设置 → 插件」，搜索插件名即可安装；也可以直接用命令行：</p>
+      <div class="codebox"><div class="cl">SHELL</div><pre><code>dsh plugin --profile web add &lt;包名&gt;</code></pre></div>
+    </div>
+  </div>
+
+  <div class="docsec">
+    <div class="dh"><span class="n">02 /</span><h2>添加索引源</h2></div>
+    <div class="db">
+      <p>在「设置 → 插件 → 索引源」里加入下面任意一个地址。国内选 GitCode 源，海外选 GitHub 源。两份索引内容相同，仅安装源不同。</p>
+      <div class="codebox"><div class="cl">国内 · GITCODE</div><pre><code>https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json</code></pre></div>
+      <div class="codebox"><div class="cl">海外 · GITHUB</div><pre><code>https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json</code></pre></div>
+      <span class="srcnote">◈ 索引实时拉取，仓库更新后重新打开插件页即可看到</span>
+    </div>
+  </div>
+
+  <div class="docsec">
+    <div class="dh"><span class="n">03 /</span><h2>数据来源</h2></div>
+    <div class="db">
+      <p>本站聚合 vyra / market / dshmarket / dshopen / dshtui 五个索引源。去重规则以「包名 + 仓库所有者」为键，同名 fork 不会被合并。各源条目数之和大于收录总数，正是因为跨源重复项被合并。</p>
+      <div class="codebox"><div class="cl">DEDUP KEY</div><pre><code>packageName + repoOwner  →  one canonical entry</code></pre></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap foot-in">
+    <span>VYRA × DSH PLUGIN ATLAS · UI 原型 v2（设计稿，非线上页面）</span>
+    <span>DATA SNAPSHOT 2026-11-25 · 17,107 PLUGINS · 5 SOURCES</span>
+  </div>
+</footer>
+
+<script>
+/* ── 真实插件数据（取自 featured.json / manifest.json 快照） ── */
+const CATEGORIES = [
+  {key:'agent-runtime', name:'智能体运行时', count:6042, color:'#6366f1'},
+  {key:'appearance',    name:'界面外观',     count:3708, color:'#ec4899'},
+  {key:'input-output',  name:'输入与输出',   count:1897, color:'#0ea5e9'},
+  {key:'other',         name:'其他',         count:1572, color:'#b9802e'},
+  {key:'observability', name:'可观测性',     count:1041, color:'#14b8a6'},
+  {key:'market',        name:'市场与发现',   count:967,  color:'#7b52c9'},
+  {key:'browser',       name:'浏览器与桌面', count:798,  color:'#2f6fd0'},
+  {key:'integration',   name:'外部集成',     count:716,  color:'#d6402a'},
+  {key:'fun',           name:'趣味与个性',   count:232,  color:'#84a33c'},
+  {key:'model',         name:'模型接入',     count:80,   color:'#0f8a8a'},
+  {key:'content',       name:'内容创作',     count:49,   color:'#c2417a'},
+  {key:'media',         name:'媒体处理',     count:5,    color:'#e0622c'}
+];
+const CAT_NAME = Object.fromEntries(CATEGORIES.map(c=>[c.key,c.name]));
+const CAT_COLOR = Object.fromEntries(CATEGORIES.map(c=>[c.key,c.color]));
+
+const PLUGINS = [
+  {name:'即时通讯桥接', pkg:'@lanxiake/dsh-im', cat:'integration', ver:'5.13.0', stars:0, updated:'2026-11-23', featured:true,
+   desc:'把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix 接入 DSH；Agent 可直接主动发送文字和文件。', tags:['IM','飞书','Telegram']},
+  {name:'Agent CLI 管理', pkg:'dsh-vyra-agent-cli-manager', cat:'agent-runtime', ver:'1.3.1', stars:0, updated:'2026-11-19', featured:true,
+   desc:'在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词。', tags:['agent-cli','Claude Code','MCP']},
+  {name:'智能体管理', pkg:'dsh-vyra-agent-manager', cat:'agent-runtime', ver:'1.3.1', stars:0, updated:'2026-11-18', featured:true,
+   desc:'用面板而不是配置文件来创建和管理智能体：每个智能体有自己的提示词、能力集、工具限制与优选技能。', tags:['agent','preset','panel']},
+  {name:'插件市场', pkg:'dsh-vyra-plugin-market', cat:'market', ver:'0.7.3', stars:0, updated:'2026-11-16', featured:true,
+   desc:'卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用插件。', tags:['market','batch','plugin']},
+  {name:'Vyra 录屏截图', pkg:'dsh-vyra-screen-recorder', cat:'media', ver:'0.4.5', stars:0, updated:'2026-11-14', featured:true,
+   desc:'选择桌面 / 窗口 / 自定义区域录屏与截图，录系统声音和麦克风，默认保存 MP4。', tags:['record','ocr','截图']},
+  {name:'SSH 终端', pkg:'dsh-vyra-ssh-terminal', cat:'integration', ver:'0.1.3', stars:0, updated:'2026-11-12', featured:true,
+   desc:'把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务。', tags:['ssh','sftp','remote']},
+  {name:'智能压缩', pkg:'dsh-vyra-smart-compaction', cat:'agent-runtime', ver:'0.1.1', stars:0, updated:'2026-11-10', featured:true,
+   desc:'分层、由智能体决定的高质量上下文压缩：让长会话活得下去，又不会反复冲掉提示缓存。', tags:['compaction','context','tokens']},
+  {name:'技能与 MCP 管理', pkg:'dsh-vyra-skill-mcp-manager', cat:'agent-runtime', ver:'0.5.2', stars:0, updated:'2026-11-09', featured:true,
+   desc:'在一个面板里浏览、搜索、安装技能与 MCP 服务器，不必为每一件都手改 profile 配置行。', tags:['skill','MCP','panel']},
+  {name:'Vyra 免费模型', pkg:'dsh-vyra-free-model', cat:'model', ver:'0.6.5', stars:0, updated:'2026-11-08', featured:true,
+   desc:'装上就能用的免费模型：不用注册、不用填 key，选一个就能聊。', tags:['model','llm','free']},
+  {name:'文件管理', pkg:'dsh-vyra-file-manager', cat:'input-output', ver:'0.4.0', stars:0, updated:'2026-11-07', featured:false,
+   desc:'浏览工作区的全部文件类型，网格可整体缩放，列表支持简洁 / 详细信息与面板内预览。', tags:['files','media','document']},
+  {name:'系统级划词', pkg:'dsh-vyra-system-selection', cat:'browser', ver:'3.1.3', stars:0, updated:'2026-11-05', featured:false,
+   desc:'在任何应用里划词，弹出原生工具条：AI 搜索、翻译、总结、解释、复制。仅 Windows。', tags:['selection','translate','windows']},
+  {name:'DSH 控制台', pkg:'dsh-vyra-dsh-console', cat:'observability', ver:'0.1.2', stars:0, updated:'2026-11-03', featured:false,
+   desc:'查看与切换模型、读写设置、启停插件与 MCP、调整主题与布局的统一控制台。', tags:['console','settings','models']},
+  {name:'工具自进化', pkg:'dsh-vyra-tool-usage-stats', cat:'observability', ver:'0.9.4', stars:0, updated:'2026-11-02', featured:false,
+   desc:'统计每次工具调用、记下失败原因，定时交给 Agent 诊断反复出错的工具，给出可一键应用的修复。', tags:['stats','diagnose','agent']}
+];
+
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const glyph = p => p.name.slice(0,1);
+
+function cardHTML(p){
+  const tags = p.tags.map((t,i)=>`<span class="tag${i===0?' hi':''}">${t}</span>`).join('');
+  return `<article class="card" data-pkg="${p.pkg}">
+    <div class="c-top">
+      <div class="c-logo" style="background:${CAT_COLOR[p.cat]}">${glyph(p)}</div>
+      <div class="c-title"><b>${p.name}</b><code>${p.pkg}</code></div>
+      <span class="c-ver">v${p.ver}</span>
+    </div>
+    <p class="c-desc">${p.desc}</p>
+    <div class="c-tags">${tags}</div>
+    <div class="c-foot"><span>${CAT_NAME[p.cat]}</span><span class="ok">● 可安装</span><span class="stars">↑ ${p.stars}</span></div>
+  </article>`;
+}
+
+/* 分类索引 */
+$('#catIndex').innerHTML = CATEGORIES.map((c,i)=>`
+  <div class="catrow" data-cat="${c.key}">
+    <span class="cno">${String(i+1).padStart(2,'0')}</span>
+    <i class="cdot" style="background:${c.color}"></i>
+    <span class="catname">${c.name}</span>
+    <span class="catcount">${c.count.toLocaleString()}</span>
+  </div>`).join('');
+
+/* 首页精选 */
+$('#featuredGrid').innerHTML = PLUGINS.filter(p=>p.featured).slice(0,6).map(cardHTML).join('');
+
+/* ── 浏览页 ── */
+let bCategory = 'all', bSort = 'stars', bQuery = '';
+$('#tabbar').innerHTML =
+  `<button class="tab on" data-cat="all">全部 <span class="tn">${PLUGINS.length}</span></button>` +
+  [...new Set(PLUGINS.map(p=>p.cat))].map(c=>`<button class="tab" data-cat="${c}">${CAT_NAME[c]} <span class="tn">${PLUGINS.filter(p=>p.cat===c).length}</span></button>`).join('');
+
+function renderBrowse(){
+  let list = PLUGINS.filter(p=>
+    (bCategory==='all'||p.cat===bCategory) &&
+    (!bQuery || (p.name+p.pkg+p.desc+p.tags.join('')).toLowerCase().includes(bQuery.toLowerCase()))
+  );
+  if(bSort==='name') list.sort((a,b)=>a.name.localeCompare(b.name,'zh'));
+  else if(bSort==='updated') list.sort((a,b)=>b.updated.localeCompare(a.updated));
+  else list.sort((a,b)=>b.stars-a.stars);
+
+  $('#browseGrid').innerHTML = list.map(cardHTML).join('');
+  $('#browseEmpty').style.display = list.length ? 'none':'block';
+  $('#browseGrid').style.display  = list.length ? 'grid':'none';
+  $('#browseCount').textContent = list.length + ' 个插件';
+  $('#resultLabel').textContent = bQuery ? `SEARCH / “${bQuery}”` : (bCategory==='all'?'ALL ENTRIES':CAT_NAME[bCategory]);
+}
+renderBrowse();
+
+$('#browseInput').addEventListener('input',e=>{bQuery=e.target.value.trim();renderBrowse()});
+$('#sortSel').addEventListener('change',e=>{bSort=e.target.value;renderBrowse()});
+$('#tabbar').addEventListener('click',e=>{
+  const t=e.target.closest('.tab'); if(!t)return;
+  $$('.tab',$('#tabbar')).forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); bCategory=t.dataset.cat; renderBrowse();
+});
+
+/* ── 详情页 ── */
+function openDetail(pkg){
+  const p = PLUGINS.find(x=>x.pkg===pkg)||PLUGINS[2];
+  $('#dIcon').textContent = glyph(p);
+  $('#dIcon').style.background = CAT_COLOR[p.cat];
+  $('#dTitle').textContent = p.name;
+  $('#dPkg').textContent = p.pkg;
+  $('#dDesc').textContent = p.desc;
+  $('#dCmd').textContent = `dsh plugin --profile web add ${p.pkg}`;
+  $('#dBadges').innerHTML =
+    `<span class="badge brand">${CAT_NAME[p.cat]}</span>
+     <span class="badge">v${p.ver}</span>
+     ${p.featured?'<span class="badge brand">Vyra 出品</span>':''}
+     <span class="badge ok">● 可一键安装</span>`;
+  $('#dMeta').innerHTML = `
+    <div><dt>版本 / Version</dt><dd>${p.ver}</dd></div>
+    <div><dt>更新于 / Updated</dt><dd>${p.updated}</dd></div>
+    <div><dt>来源 / Sources</dt><dd>vyra, market</dd></div>
+    <div><dt>分类 / Category</dt><dd>${CAT_NAME[p.cat]}</dd></div>
+    <div><dt>安装方式 / Method</dt><dd>dsh-plugin-add</dd></div>
+    <div><dt>许可 / License</dt><dd>MIT</dd></div>`;
+  $('#dLinks').innerHTML = `
+    <li><span>仓库 / Repository</span><a href="#">github.com/lanxiake/dsh-vyra-plugins</a><span class="arrow">↗</span></li>
+    <li><span>首页 / Homepage</span><a href="#">npmjs.com/package/${p.pkg}</a><span class="arrow">↗</span></li>`;
+  go('detail');
+}
+
+$('#copyBtn').addEventListener('click',async()=>{
+  const txt=$('#dCmd').textContent;
+  try{await navigator.clipboard.writeText(txt)}catch{}
+  const b=$('#copyBtn');b.textContent='✓ 已复制';
+  setTimeout(()=>b.textContent='复制命令',1600);
+});
+
+/* 卡片点击 → 详情 */
+document.addEventListener('click',e=>{
+  const card=e.target.closest('.card');
+  if(card){openDetail(card.dataset.pkg);return}
+  const cat=e.target.closest('.catrow');
+  if(cat){bCategory=cat.dataset.cat;bQuery='';$('#browseInput').value='';
+    $$('.tab',$('#tabbar')).forEach(x=>x.classList.toggle('on',x.dataset.cat===bCategory));
+    renderBrowse();go('browse');return}
+  const hot=e.target.closest('.hot span');
+  if(hot){$('#heroInput').value=hot.dataset.q;submitHero(hot.dataset.q)}
+});
+
+/* ── 页面切换 ── */
+function go(page){
+  $$('.page').forEach(p=>p.classList.toggle('on',p.id==='page-'+page));
+  $$('#pageswitch button').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
+  $$('.mainnav a').forEach(a=>a.classList.toggle('on',a.dataset.nav===page));
+  window.scrollTo({top:0,behavior:'instant'});
+}
+$('#pageswitch').addEventListener('click',e=>{const b=e.target.closest('button');if(b)go(b.dataset.page)});
+document.addEventListener('click',e=>{
+  const n=e.target.closest('[data-nav]');if(n){e.preventDefault();go(n.dataset.nav)}
+  if(e.target.closest('[data-gohome]')){e.preventDefault();go('home')}
+});
+
+function submitHero(q){
+  bQuery=q; bCategory='all'; $('#browseInput').value=q;
+  $$('.tab',$('#tabbar')).forEach(x=>x.classList.toggle('on',x.dataset.cat==='all'));
+  renderBrowse(); go('browse');
+}
+$('#heroSearch').addEventListener('submit',e=>{e.preventDefault();submitHero($('#heroInput').value.trim())});
+
+/* ── 主题切换 ── */
+$('#themeBtn').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  $('#themeBtn').textContent=next==='dark'?'☀':'☾';
+});
+
+/* 快捷键 / 聚焦搜索 */
+document.addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement.tagName!=='INPUT'){
+    e.preventDefault();
+    const inp=$('#page-home').classList.contains('on')?$('#heroInput'):$('#browseInput');
+    inp.focus();
+  }
+});
+</script>
+</body>
+</html>

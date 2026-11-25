@@ -60,11 +60,18 @@ export default function PluginDetail({ name }) {
     if (command === '') return
     try {
       await navigator.clipboard.writeText(command)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
     } catch {
-      setCopied(false)
+      const ta = document.createElement('textarea')
+      ta.value = command
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch { /* 忽略 */ }
+      document.body.removeChild(ta)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
   }
 
   return (
@@ -86,6 +93,9 @@ export default function PluginDetail({ name }) {
             <Badge>{categoryLabel(plugin.category, lang)}</Badge>
             {plugin.version && <Badge tone="muted">v{plugin.version}</Badge>}
             {plugin.featured && <Badge tone="brand">Vyra</Badge>}
+            {plugin.stats?.stars != null && (
+              <span className="card-recommend">★ {plugin.stats.stars} {t('detail.recommend')}</span>
+            )}
           </div>
         </div>
       </header>

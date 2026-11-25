@@ -5,7 +5,8 @@ const KEY = 'vyra-site.theme'
 function detect() {
   const saved = localStorage.getItem(KEY)
   if (saved === 'light' || saved === 'dark') return saved
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  // 站点定稿为深色主题，默认 dark；用户可随时切换到浅色。
+  return 'dark'
 }
 
 export function useTheme() {

@@ -1,29 +1,62 @@
 {
   "notFound": "Page not found.",
   "nav": {
-    "browse": "Plugins",
+    "browse": "Plugin Market",
     "docs": "Docs",
     "github": "GitHub"
   },
   "home": {
-    "title": "DeepSeek Harness Plugin Directory",
-    "subtitle": "Aggregated from multiple indexes and deduplicated. Browse plugins, install commands and versions in one place.",
-    "statTotal": "Plugins",
-    "statInstallable": "One-click installable",
-    "statSources": "Sources",
-    "browse": "Browse plugins",
+    "title": "Everything is a Plugin.",
+    "subtitle": "Aggregated from {sources} indexes, {total} plugins. Discover, compare, install in one click.",
+    "kicker": "DEEPSEEK HARNESS · PLUGIN MARKET",
+    "recLegend": "Vyra Picks — each plugin refined from a user's perspective",
+    "statTotal": "Plugins indexed",
+    "statVyra": "By Vyra · personal picks",
+    "statSources": "Indexes merged",
+    "statUpkeep": "Continuously indexed",
+    "upkeep": "Solo-maintained · daily updates",
+    "installTitle": "Install the market into your DSH",
+    "installHint": "No dsh command? Check the FAQ · Available on macOS and Linux, Windows coming soon",
+    "copy": "Copy install command",
+    "copied": "Copied ✓",
+    "browse": "Browse market",
     "featured": "By Vyra",
-    "sources": "Data sources"
+    "featuredNote": "self-built plugins · sorted by recommendation",
+    "viewVyra": "View Vyra plugins",
+    "editorsPick": "Editor's picks",
+    "editorsPickNote": "From 5 indexes · sorted by stars",
+    "enterMarket": "Enter market",
+    "sources": "Data sources",
+    "footer": "Aggregated from 5 public indexes · every plugin browsable by GitHub stars"
   },
   "browse": {
-    "title": "Plugins",
-    "search": "Search name, description or tag",
-    "all": "All",
+    "title": "Plugin Market",
+    "search": "Search {total} plugins…",
+    "sortRecommend": "By stars",
+    "sortUpdated": "Recently added",
+    "sortDownloads": "Downloads",
+    "sortName": "Name",
+    "sourceAll": "All sources",
+    "sourceVyra": "By Vyra",
+    "sourceLabels": {
+      "vyra": "By Vyra",
+      "market": "DSH Plugin Market",
+      "dshmarket": "dshmarket.com",
+      "dshopen": "DSH Open Market",
+      "dshtui": "DSH Go Market"
+    },
+    "quality": "Quality tiers",
+    "filterAll": "All",
+    "filterInstallable": "One-click install",
+    "filterVyra": "By Vyra",
+    "filterEditors": "Editor's picks",
+    "filterLatest": "Recently added",
+    "filterMultiSource": "Multi-index",
+    "allCategories": "All categories",
+    "found": "Found",
+    "pluginsFound": "plugins",
+    "sortedBy": "sorted by ★ stars",
     "empty": "No matching plugins",
-    "sortStars": "By stars",
-    "sortUpdated": "By updated",
-    "sortName": "By name",
-    "top": "Top picks",
     "count": "plugins"
   },
   "detail": {
@@ -36,13 +69,14 @@
     "sources": "Sources",
     "homepage": "Homepage",
     "repo": "Repository",
+    "recommend": "Vyra recommendation",
     "notFound": "Plugin not found.",
     "noInstall": "No runnable install command for this plugin. Check the repository README.",
-    "back": "Back to plugins"
+    "back": "Back to market"
   },
   "docs": {
     "title": "Docs",
-    "intro": "This site is a multi-source directory for DeepSeek Harness plugins. The catalog is fetched, deduplicated and generated at build time; the pages themselves are static.",
+    "intro": "This site is a multi-source plugin market for DeepSeek Harness. The catalog is fetched, deduplicated and generated at build time; the pages themselves are static.",
     "installTitle": "Installing a plugin",
     "installBody": "Open Settings → Plugins in the DSH client and search for the package name, or run:",
     "indexTitle": "Adding an index source",
@@ -57,6 +91,6 @@
   },
   "common": {
     "loading": "Loading…",
-    "error": "Failed to load the catalog. Run npm run build:site-data to generate site.json."
+    "error": "Failed to load the catalog. Run npm run build:site-data to generate site data."
   }
 }
