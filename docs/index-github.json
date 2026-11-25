@@ -2776,7 +2776,7 @@
       }
     },
     {
-      "name": "dsh-vyra-media-studio",
+      "name": "dsh-vyra-file-manager",
       "title": {
         "en": "File Manager",
         "zh": "文件管理"
@@ -2790,9 +2790,19 @@
       "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
         "url": "https://github.com/lanxiake/dsh-vyra-plugins",
-        "directory": "plugins/vyra-media-studio"
+        "directory": "plugins/vyra-file-manager"
       },
       "versions": [
+        {
+          "version": "0.4.0",
+          "publishTimestamp": 1796572800,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "fa69be5879b52a505734c9117b76fa273e787166",
+            "path": "plugins/vyra-file-manager"
+          }
+        },
         {
           "version": "0.3.5",
           "publishTimestamp": 1795679987,
