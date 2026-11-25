@@ -1,0 +1,573 @@
+/*
+ * LUMII boot — "the day starts moving".
+ *
+ * A six-second cold open, closer to a title sequence than a loader. Seven
+ * parallax planes, each moving at its own rate: sky, god rays, the sun, a
+ * bloom ring, three cloud bands, two ridge lines, and three birds. Depth is
+ * what separates "an animation" from "a JPEG that fades in", and staggering
+ * the planes' speeds is what sells the depth.
+ *
+ * Copy arrives with the light: it rises through the glow, letter-spaced open,
+ * then settles. The last line lands as the sun crests.
+ *
+ * No images, no video — everything is CSS plus one small canvas for the dust
+ * motes, so it costs nothing to ship and nothing to load.
+ */
+
+.lm-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  /* Deep warm ink, not black: black would make the hand-off to the light
+     theme feel like a jump cut. */
+  background: #2a2118;
+  transition: opacity var(--lm-boot-fade, 700ms) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lm-boot.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ====================================================================== */
+/* Plane 1 — sky. Warms from ink to full daylight.                       */
+/* ====================================================================== */
+.lm-boot__sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    #211a13 0%,
+    #3a2c1c 34%,
+    #6b4a26 58%,
+    #b8802f 78%,
+    #e8b25a 100%
+  );
+  animation: lm-sky-warm 6200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes lm-sky-warm {
+  0% {
+    filter: brightness(0.55) saturate(0.7);
+  }
+  55% {
+    filter: brightness(1.05) saturate(1.12);
+  }
+  100% {
+    filter: brightness(1.28) saturate(1.02);
+  }
+}
+
+/* ====================================================================== */
+/* Plane 2 — volumetric rays, rotating very slowly.                      */
+/* ====================================================================== */
+.lm-boot__rays {
+  position: absolute;
+  left: 50%;
+  bottom: -30vh;
+  width: 180vmax;
+  height: 180vmax;
+  margin-left: -90vmax;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 214, 140, 0.16) 5deg,
+    transparent 11deg,
+    transparent 22deg,
+    rgba(255, 214, 140, 0.11) 27deg,
+    transparent 33deg,
+    transparent 48deg,
+    rgba(255, 214, 140, 0.14) 53deg,
+    transparent 59deg,
+    transparent 74deg,
+    rgba(255, 214, 140, 0.09) 79deg,
+    transparent 85deg
+  );
+  mask-image: radial-gradient(circle at 50% 50%, #000 8%, rgba(0, 0, 0, 0.55) 34%, transparent 62%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 8%, rgba(0, 0, 0, 0.55) 34%, transparent 62%);
+  animation:
+    lm-rays-in 2600ms cubic-bezier(0, 0, 0.2, 1) 900ms forwards,
+    lm-rays-turn 120s linear 900ms infinite;
+}
+
+@keyframes lm-rays-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lm-rays-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* ====================================================================== */
+/* Plane 3 — the sun. Sits BELOW the type: it first rose through the      */
+/* centre, which put the brightest object on the page between two lines   */
+/* of the title and made the second line hard to read. A light source     */
+/* must never compete with the words it is lighting.                      */
+/* ====================================================================== */
+.lm-boot__sun {
+  position: absolute;
+  left: 50%;
+  bottom: 30%;
+  width: 104px;
+  height: 104px;
+  margin-left: -52px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    #fffdf0 0%,
+    #ffe9a8 26%,
+    #f5c463 48%,
+    rgba(232, 160, 60, 0.55) 68%,
+    transparent 76%
+  );
+  box-shadow:
+    0 0 70px 30px rgba(255, 206, 120, 0.42),
+    0 0 180px 90px rgba(232, 160, 60, 0.22);
+  transform: translateY(22vh) scale(0.5);
+  opacity: 0;
+  animation: lm-sun-rise 5200ms cubic-bezier(0.22, 1, 0.36, 1) 300ms forwards;
+}
+
+@keyframes lm-sun-rise {
+  0% {
+    transform: translateY(22vh) scale(0.5);
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  62% {
+    transform: translateY(-2vh) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-7vh) scale(1.14);
+    opacity: 1;
+  }
+}
+
+/* A bloom ring that expands once, like a camera's aperture. */
+.lm-boot__bloom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40vmax;
+  height: 40vmax;
+  margin: -20vmax 0 0 -20vmax;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1px solid rgba(255, 240, 200, 0.35);
+  opacity: 0;
+  animation: lm-bloom 2400ms cubic-bezier(0, 0, 0.2, 1) 2200ms forwards;
+}
+
+@keyframes lm-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/* ====================================================================== */
+/* Plane 4 — ridge lines. Two depths, drifting a few pixels apart.       */
+/* ====================================================================== */
+.lm-boot__ridge {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  bottom: 0;
+  height: 42%;
+  pointer-events: none;
+  background: #1b1610;
+  clip-path: polygon(
+    0% 100%, 0% 62%, 7% 55%, 14% 61%, 22% 48%, 31% 57%, 39% 44%, 48% 53%,
+    57% 40%, 66% 51%, 75% 42%, 84% 55%, 92% 47%, 100% 58%, 100% 100%
+  );
+  animation: lm-ridge-back 6200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes lm-ridge-back {
+  from {
+    transform: translateY(0);
+    opacity: 0.82;
+  }
+  to {
+    transform: translateY(-1.4%);
+    opacity: 0.92;
+  }
+}
+
+.lm-boot__ridge--near {
+  height: 30%;
+  bottom: -2%;
+  background: #120e0a;
+  clip-path: polygon(
+    0% 100%, 0% 72%, 9% 64%, 18% 71%, 27% 58%, 37% 68%, 47% 56%,
+    58% 66%, 69% 55%, 80% 65%, 90% 58%, 100% 68%, 100% 100%
+  );
+  animation: lm-ridge-near 6200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes lm-ridge-near {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-3.2%);
+  }
+}
+
+/* ====================================================================== */
+/* Plane 5 — drifting clouds. Three bands, three speeds.                 */
+/* ====================================================================== */
+.lm-boot__cloud {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  background: rgba(255, 236, 200, 0.1);
+  filter: blur(26px);
+}
+
+.lm-boot__cloud--a {
+  left: 8%;
+  top: 34%;
+  width: 46%;
+  height: 13%;
+  animation: lm-cloud-a 22s linear infinite;
+}
+
+.lm-boot__cloud--b {
+  right: 4%;
+  top: 24%;
+  width: 38%;
+  height: 10%;
+  background: rgba(255, 222, 170, 0.08);
+  filter: blur(32px);
+  animation: lm-cloud-b 30s linear infinite;
+}
+
+.lm-boot__cloud--c {
+  left: 32%;
+  top: 46%;
+  width: 52%;
+  height: 9%;
+  background: rgba(255, 244, 214, 0.07);
+  filter: blur(20px);
+  animation: lm-cloud-c 38s linear infinite;
+}
+
+@keyframes lm-cloud-a {
+  from {
+    transform: translateX(-14%);
+  }
+  to {
+    transform: translateX(14%);
+  }
+}
+
+@keyframes lm-cloud-b {
+  from {
+    transform: translateX(11%);
+  }
+  to {
+    transform: translateX(-11%);
+  }
+}
+
+@keyframes lm-cloud-c {
+  from {
+    transform: translateX(-8%) scaleY(1);
+  }
+  to {
+    transform: translateX(9%) scaleY(0.92);
+  }
+}
+
+/* ====================================================================== */
+/* Plane 6 — dust motes, drawn on canvas by lumii.js.                    */
+/* ====================================================================== */
+.lm-boot__motes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  animation: lm-motes-in 1600ms ease-out 1100ms forwards;
+}
+
+@keyframes lm-motes-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ====================================================================== */
+/* Plane 7 — three birds, drawn in CSS so they stay crisp.               */
+/* ====================================================================== */
+.lm-boot__bird {
+  position: absolute;
+  width: 15px;
+  height: 7px;
+  pointer-events: none;
+  opacity: 0;
+  border-top: 1.4px solid rgba(30, 22, 14, 0.62);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+}
+
+.lm-boot__bird::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: -1.4px;
+  width: 15px;
+  height: 7px;
+  border-top: 1.4px solid rgba(30, 22, 14, 0.62);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  transform: scaleX(-1);
+}
+
+.lm-boot__bird--1 {
+  top: 30%;
+  animation: lm-bird-cross 9s linear 1500ms infinite;
+}
+
+.lm-boot__bird--2 {
+  top: 36%;
+  scale: 0.72;
+  animation: lm-bird-cross 11s linear 2600ms infinite;
+}
+
+.lm-boot__bird--3 {
+  top: 26%;
+  scale: 0.86;
+  animation: lm-bird-cross 13s linear 3900ms infinite;
+}
+
+@keyframes lm-bird-cross {
+  0% {
+    left: -6%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.75;
+  }
+  88% {
+    opacity: 0.75;
+  }
+  100% {
+    left: 104%;
+    opacity: 0;
+  }
+}
+
+/* ====================================================================== */
+/* The type                                                               */
+/* ====================================================================== */
+.lm-boot__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 0 32px;
+  pointer-events: none;
+}
+
+.lm-boot__beat {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 900ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1100ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.lm-boot__beat.is-live {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lm-boot__kicker {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 240, 205, 0.82);
+  text-shadow: 0 1px 12px rgba(80, 50, 15, 0.6);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1) 140ms;
+}
+
+.lm-boot__beat.is-live .lm-boot__kicker {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lm-boot__title {
+  margin: 0;
+  max-width: 17ch;
+  font-family: var(--lm-font-display);
+  font-size: clamp(30px, 4.8vw, 64px);
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: -0.028em;
+  color: #fffdf5;
+  text-shadow:
+    0 2px 26px rgba(90, 55, 15, 0.55),
+    0 1px 2px rgba(90, 55, 15, 0.35);
+}
+
+.lm-boot__rule {
+  width: 56px;
+  height: 1px;
+  background: rgba(255, 246, 224, 0.85);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1) 220ms;
+}
+
+.lm-boot__beat.is-live .lm-boot__rule {
+  transform: scaleX(1);
+}
+
+/* ====================================================================== */
+/* Chrome                                                                 */
+/* ====================================================================== */
+.lm-boot__mark {
+  position: absolute;
+  left: 50%;
+  top: 9vh;
+  z-index: 6;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--lm-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(255, 246, 224, 0.72);
+  opacity: 0;
+  animation: lm-mark-in 1400ms ease-out 400ms forwards;
+}
+
+.lm-boot__mark svg {
+  width: 15px;
+  height: 15px;
+  color: rgba(255, 226, 160, 0.95);
+}
+
+@keyframes lm-mark-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.lm-boot__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  z-index: 6;
+  background: rgba(255, 246, 224, 0.1);
+}
+
+.lm-boot__progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255, 226, 160, 0.5), #fff4d8);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.lm-boot__skip {
+  position: absolute;
+  right: 26px;
+  bottom: 22px;
+  z-index: 6;
+  padding: 8px 16px;
+  border-radius: var(--lm-radius-full);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255, 246, 224, 0.72);
+  border: 1px solid rgba(255, 246, 224, 0.22);
+  background: rgba(40, 30, 18, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition:
+    color var(--lm-dur-fast) var(--lm-ease-standard),
+    border-color var(--lm-dur-fast) var(--lm-ease-standard),
+    background-color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-boot__skip:hover {
+    color: #fffdf5;
+    border-color: rgba(255, 246, 224, 0.5);
+    background: rgba(40, 30, 18, 0.4);
+  }
+}
+
+/* ====================================================================== */
+/* Reduced motion: one held frame of the finished sunrise.               */
+/* ====================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .lm-boot *,
+  .lm-boot *::before,
+  .lm-boot *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lm-boot__sky {
+    filter: brightness(1.24) saturate(1.02);
+  }
+  .lm-boot__sun {
+    transform: translateY(-7vh) scale(1.14);
+    opacity: 1;
+  }
+  .lm-boot__rays {
+    opacity: 0.9;
+  }
+  .lm-boot__ridge {
+    transform: translateY(-2%);
+  }
+  .lm-boot__motes,
+  .lm-boot__bird,
+  .lm-boot__bloom {
+    display: none;
+  }
+  .lm-boot__mark {
+    opacity: 1;
+  }
+}

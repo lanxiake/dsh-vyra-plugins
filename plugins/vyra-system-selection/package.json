@@ -1,6 +1,6 @@
 {
   "name": "dsh-vyra-system-selection",
-  "version": "3.1.2",
+  "version": "3.2.0",
   "type": "module",
   "description": "系统级划词助手：在任何应用里划词，弹出原生工具条做翻译、复制、解释与总结，结果支持 Markdown 渲染、滚动、展开与划选复制。仅 Windows。",
   "exports": {

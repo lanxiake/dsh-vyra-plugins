@@ -1,0 +1,884 @@
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { isAbsolute, join, posix, relative } from 'node:path'
+import test from 'node:test'
+import { extensionOf, isTextExtension, kindOf, mimeOf } from './lib/media-types.js'
+import { dirnameOf } from './lib/paths.js'
+import { extractAssetRefs, inlineAssets } from './lib/html-inline.js'
+import { entityTagOf, parseRange } from './lib/range.js'
+import { scanMedia } from './lib/scan.js'
+import { serveMediaFile } from './lib/serve.js'
+import { batchFiles, copyFileInto, deleteFile, moveFile, readTextFile, renameFile, revealFile, statFiles } from './lib/file-ops.js'
+import { copyPathsToClipboard, resolveClipboardPaths } from './lib/clipboard.js'
+import { handleList, handleSessionChanges, registerMediaRoutes } from './lib/routes.js'
+
+/**
+ * The fake filesystem seam the route tests inline, extracted so file-op tests
+ * can share it. `stat` returns the seam's own shape, not Node's Stats.
+ */
+function makeTestFs(root) {
+  return {
+    async resolve(path, opts = {}) {
+      const value = path.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(path) ? path : join(opts.cwd ?? root, path)
+      return { targetKey: value, displayPath: value }
+    },
+    contains(parent, child) {
+      const step = relative(parent.displayPath, child.displayPath)
+      return step === '' || (!step.startsWith('..') && !isAbsolute(step))
+    },
+    processPath(target) { return target.displayPath },
+    async stat(target) {
+      const info = await stat(target.displayPath).catch(() => undefined)
+      return info === undefined
+        ? undefined
+        : {
+          type: info.isFile() ? 'file' : info.isDirectory() ? 'directory' : 'other',
+          size: info.size,
+          version: String(info.mtimeMs),
+        }
+    },
+  }
+}
+
+test('dirnameOf keeps the path flavour of its input', () => {
+  assert.equal(dirnameOf('C:\\work\\project\\a.txt'), 'C:\\work\\project')
+  assert.equal(dirnameOf('\\\\server\\share\\dir\\a.txt'), '\\\\server\\share\\dir')
+  assert.equal(dirnameOf('/srv/work/a.txt'), '/srv/work')
+  // A Windows path must never lose its separators to posix.dirname.
+  assert.doesNotMatch(dirnameOf('C:\\work\\project\\a.txt'), /\//u)
+})
+
+test('revealFile opens the folder for a directory and selects a file', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-reveal-'))
+  try {
+    await mkdir(join(root, 'sub'))
+    await writeFile(join(root, 'sub', 'a.txt'), 'x')
+    const calls = []
+    const launch = (command, args) => { calls.push({ command, args }) }
+    const fs = makeTestFs(root)
+    await revealFile({ path: 'sub', fs, workspaceRoot: root, launch })
+    await revealFile({ path: 'sub/a.txt', fs, workspaceRoot: root, launch })
+    assert.equal(calls.length, 2)
+    if (process.platform === 'win32') {
+      assert.equal(calls[0].command, 'explorer.exe')
+      assert.deepEqual(calls[0].args, [join(root, 'sub')])
+      assert.deepEqual(calls[1].args, [`/select,${join(root, 'sub', 'a.txt')}`])
+    } else {
+      assert.deepEqual(calls[0].args, [join(root, 'sub')])
+      assert.deepEqual(calls[1].args, [join(root, 'sub')])
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+
+test('file vocabulary', () => {
+  assert.equal(extensionOf('a/b/c.MP4?x=1'), 'mp4')
+  assert.equal(extensionOf('C:\\work\\clip.MOV'), 'mov')
+  assert.equal(extensionOf('no-extension'), '')
+  assert.equal(kindOf('mp4'), 'video')
+  assert.equal(kindOf('JPG'), 'image')
+  assert.equal(kindOf('mp3'), 'audio')
+  assert.equal(kindOf('pdf'), 'document')
+  assert.equal(kindOf('docx'), 'document')
+  assert.equal(kindOf('zip'), 'archive')
+  assert.equal(kindOf('ts'), 'code')
+  assert.equal(kindOf('unknownext'), 'other')
+  assert.equal(kindOf(''), 'other')
+  assert.equal(isTextExtension('md'), true)
+  assert.equal(isTextExtension('pdf'), false)
+  assert.equal(isTextExtension('cjs'), true)
+  assert.equal(isTextExtension('mjs'), true)
+  assert.equal(isTextExtension('mts'), true)
+  assert.equal(isTextExtension('cts'), true)
+  assert.equal(kindOf('mts'), 'code')
+  assert.equal(isTextExtension('png'), false)
+  assert.equal(mimeOf('mp4'), 'video/mp4')
+  assert.equal(mimeOf('svg'), 'image/svg+xml')
+  assert.equal(mimeOf('unknown'), 'application/octet-stream')
+})
+
+test('range planning', () => {
+  assert.deepEqual(parseRange(null, 1000), { kind: 'none' })
+  assert.deepEqual(parseRange('bytes=0-99', 1000), { kind: 'partial', start: 0, end: 99 })
+  assert.deepEqual(parseRange('bytes=900-', 1000), { kind: 'partial', start: 900, end: 999 })
+  assert.deepEqual(parseRange('bytes=-100', 1000), { kind: 'partial', start: 900, end: 999 })
+  assert.deepEqual(parseRange('bytes=500-2000', 1000), { kind: 'partial', start: 500, end: 999 })
+  assert.deepEqual(parseRange('bytes=1000-', 1000), { kind: 'invalid' })
+  assert.deepEqual(parseRange('bytes=5-4', 1000), { kind: 'invalid' })
+  assert.deepEqual(parseRange('bytes=0-1,3-4', 1000), { kind: 'none' })
+  assert.deepEqual(parseRange('bytes=0-', 0), { kind: 'none' })
+  assert.equal(entityTagOf('v1'), '"v1"')
+  assert.equal(entityTagOf('a"b'), '"ab"')
+})
+
+/** A fake `ctx.fs` over a path→Buffer map, using POSIX paths. */
+function fakeFs(files, root = '/ws') {
+  const content = new Map(Object.entries(files).map(([path, value]) => [path, Buffer.from(value)]))
+  const target = path => ({ targetKey: path, displayPath: path })
+  return {
+    async resolve(path, opts = {}) {
+      const absolute = path.startsWith('/') ? posix.normalize(path) : posix.resolve(opts.cwd ?? root, path)
+      return target(absolute)
+    },
+    async stat(value) {
+      const bytes = content.get(value.displayPath)
+      if (bytes === undefined) return undefined
+      return bytes === 'directory'
+        ? { type: 'directory', version: 'v1' }
+        : { type: 'file', size: bytes.length, version: 'v1' }
+    },
+    contains(parent, child) {
+      const base = parent.displayPath.replace(/\/+$/u, '')
+      return child.displayPath === base || child.displayPath.startsWith(`${base}/`)
+    },
+    processPath(value) { return value.targetKey },
+    async readByteRange(value, { offset, length }) {
+      return new Uint8Array(content.get(value.displayPath).subarray(offset, offset + length))
+    },
+  }
+}
+
+/** A fake `ctx.fs` backed by the real temp directory. */
+function realFs(root) {
+  return {
+    async resolve(path, opts = {}) {
+      const value = path.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(path)
+        ? path
+        : join(opts.cwd ?? root, path)
+      return { targetKey: value, displayPath: value }
+    },
+    contains(parent, child) {
+      const step = relative(parent.displayPath, child.displayPath)
+      return step === '' || (!step.startsWith('..') && !isAbsolute(step))
+    },
+    processPath(target) { return target.targetKey },
+    async readByteRange(target, { offset, length }) {
+      const buffer = await readFile(target.displayPath)
+      return new Uint8Array(buffer.subarray(offset, offset + length))
+    },
+  }
+}
+
+function fileRequest(query, init = {}) {
+  return new Request(`http://host/api/vyra-media/file?${query}`, init)
+}
+
+test('serveMediaFile serves full, partial, HEAD and conditional responses', async () => {
+  const fs = fakeFs({ '/ws/clip.mp4': 'hello' })
+
+  const full = await serveMediaFile({ request: fileRequest('sessionId=s&path=clip.mp4'), fs, workspaceRoot: '/ws' })
+  assert.equal(full.status, 200)
+  assert.equal(await full.text(), 'hello')
+  assert.equal(full.headers.get('content-type'), 'video/mp4')
+  assert.equal(full.headers.get('accept-ranges'), 'bytes')
+  assert.equal(full.headers.get('content-length'), '5')
+  assert.equal(full.headers.get('etag'), '"v1"')
+  assert.match(full.headers.get('content-disposition'), /filename\*=UTF-8''clip\.mp4/u)
+
+  const partial = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4', { headers: { range: 'bytes=1-3' } }),
+    fs, workspaceRoot: '/ws',
+  })
+  assert.equal(partial.status, 206)
+  assert.equal(await partial.text(), 'ell')
+  assert.equal(partial.headers.get('content-range'), 'bytes 1-3/5')
+  assert.equal(partial.headers.get('content-length'), '3')
+
+  const suffix = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4', { headers: { range: 'bytes=-2' } }),
+    fs, workspaceRoot: '/ws',
+  })
+  assert.equal(await suffix.text(), 'lo')
+
+  const invalid = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4', { headers: { range: 'bytes=9-' } }),
+    fs, workspaceRoot: '/ws',
+  })
+  assert.equal(invalid.status, 416)
+  assert.equal(invalid.headers.get('content-range'), 'bytes */5')
+
+  const head = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4', { method: 'HEAD' }),
+    fs, workspaceRoot: '/ws',
+  })
+  assert.equal(head.status, 200)
+  assert.equal(head.body, null)
+  assert.equal(head.headers.get('content-length'), '5')
+
+  const cached = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4', { headers: { 'if-none-match': '"v1"' } }),
+    fs, workspaceRoot: '/ws',
+  })
+  assert.equal(cached.status, 304)
+
+  const ifRangeMiss = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4', { headers: { range: 'bytes=1-3', 'if-range': '"old"' } }),
+    fs, workspaceRoot: '/ws',
+  })
+  assert.equal(ifRangeMiss.status, 200)
+  assert.equal(await ifRangeMiss.text(), 'hello')
+})
+
+test('serveMediaFile lets the PDF viewer render in an iframe', async () => {
+  const fs = fakeFs({ '/ws/report.pdf': '%PDF-1.4' })
+  const response = await serveMediaFile({ request: fileRequest('sessionId=s&path=report.pdf'), fs, workspaceRoot: '/ws' })
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-type'), 'application/pdf')
+  assert.equal(response.headers.get('content-security-policy'), "default-src 'none'")
+})
+
+test('serveMediaFile rejects escapes, missing files and oversized files', async () => {
+  const fs = fakeFs({ '/ws/clip.mp4': 'hello', '/secret.mp4': 'nope' })
+
+  const escaped = await serveMediaFile({ request: fileRequest('sessionId=s&path=../secret.mp4'), fs, workspaceRoot: '/ws' })
+  assert.equal(escaped.status, 403)
+  assert.equal(escaped.headers.get('x-vyra-media-error'), 'outside-workspace')
+
+  // An absolute path is served outside the workspace, matching the platform's
+  // own file route; only workspace-relative paths are confined to it.
+  const absolute = await serveMediaFile({ request: fileRequest('sessionId=s&path=%2Fsecret.mp4'), fs, workspaceRoot: '/ws' })
+  assert.equal(absolute.status, 200)
+  assert.equal(await absolute.text(), 'nope')
+
+  const missing = await serveMediaFile({ request: fileRequest('sessionId=s&path=none.mp4'), fs, workspaceRoot: '/ws' })
+  assert.equal(missing.status, 404)
+
+  const missingParam = await serveMediaFile({ request: fileRequest('sessionId=s'), fs, workspaceRoot: '/ws' })
+  assert.equal(missingParam.status, 400)
+
+  const oversized = await serveMediaFile({
+    request: fileRequest('sessionId=s&path=clip.mp4'), fs, workspaceRoot: '/ws', maxBytes: 3,
+  })
+  assert.equal(oversized.status, 413)
+})
+
+test('scanMedia walks every file type, skips build and hidden directories, and honors caps', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-scan-'))
+  try {
+    await mkdir(join(root, '作品', '开箱'), { recursive: true })
+    await mkdir(join(root, '素材'), { recursive: true })
+    await mkdir(join(root, '空文件夹'), { recursive: true })
+    await mkdir(join(root, 'node_modules'), { recursive: true })
+    await mkdir(join(root, '.hidden'), { recursive: true })
+    await mkdir(join(root, '.git', 'objects'), { recursive: true })
+    await writeFile(join(root, '作品', '开箱', '正片.MP4'), 'video')
+    await writeFile(join(root, '素材', '封面.JPG'), 'image')
+    await writeFile(join(root, '素材', 'bgm.mp3'), 'audio')
+    await writeFile(join(root, '作品', 'notes.txt'), 'text')
+    await writeFile(join(root, '作品', '报告.pdf'), 'pdf')
+    await writeFile(join(root, 'node_modules', 'skip.mp4'), 'skip')
+    await writeFile(join(root, '.hidden', 'skip.mp4'), 'skip')
+    await writeFile(join(root, '.git', 'objects', 'skip.mp4'), 'skip')
+
+    const result = await scanMedia({ root, workspaceRoot: root, maxDepth: 4 })
+    assert.equal(result.truncated, false)
+    assert.deepEqual(
+      result.entries.map(entry => [entry.relativePath, entry.kind]).sort((left, right) => left[0].localeCompare(right[0], 'zh-CN', { numeric: true })),
+      [
+        ['作品/开箱/正片.MP4', 'video'],
+        ['作品/notes.txt', 'document'],
+        ['作品/报告.pdf', 'document'],
+        ['素材/封面.JPG', 'image'],
+        ['素材/bgm.mp3', 'audio'],
+      ].sort((left, right) => left[0].localeCompare(right[0], 'zh-CN', { numeric: true })),
+    )
+    assert.ok(result.entries.every(entry => entry.ext === entry.ext.toLowerCase()))
+    assert.ok(result.entries.every(entry => entry.size === undefined && entry.mtimeMs === undefined))
+    assert.ok(result.folders.includes('作品/开箱'))
+    assert.ok(result.folders.includes('素材'))
+    assert.ok(result.folders.includes('空文件夹'))
+
+    const hidden = await scanMedia({ root, workspaceRoot: root, includeHidden: true })
+    assert.equal(hidden.entries.length, 6)
+
+    const build = await scanMedia({ root, workspaceRoot: root, includeBuild: true })
+    assert.ok(build.entries.some(entry => entry.relativePath === 'node_modules/skip.mp4'))
+    assert.ok(!build.entries.some(entry => entry.relativePath.startsWith('.git/')))
+
+    const capped = await scanMedia({ root, workspaceRoot: root, maxEntries: 1 })
+    assert.equal(capped.entries.length, 1)
+    assert.equal(capped.truncated, true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('file operations rename, copy, stat, read text and delete', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-ops-'))
+  const fs = realFs(root)
+  try {
+    await mkdir(join(root, 'sub'), { recursive: true })
+    await writeFile(join(root, 'a.txt'), 'hello')
+    await writeFile(join(root, 'img.png'), Buffer.from([1, 2, 3, 4]))
+
+    const stats = await statFiles({ paths: ['a.txt', 'img.png', 'missing.txt'], fs, workspaceRoot: root })
+    assert.equal(stats[0].size, 5)
+    assert.equal(stats[1].size, 4)
+    assert.equal(stats[2].error, 'not-found')
+
+    const text = await readTextFile({ path: 'a.txt', fs, workspaceRoot: root })
+    assert.equal(text.text, 'hello')
+    assert.equal(text.truncated, false)
+
+    const renamed = await renameFile({ path: 'a.txt', name: 'b.txt', fs, workspaceRoot: root })
+    assert.equal(renamed.relativePath, 'b.txt')
+    assert.equal(await readFile(join(root, 'b.txt'), 'utf8'), 'hello')
+
+    const copied = await copyFileInto({ path: 'b.txt', toFolder: 'sub', fs, workspaceRoot: root })
+    assert.equal(copied.relativePath, 'sub/b.txt')
+    assert.equal(await readFile(join(root, 'sub', 'b.txt'), 'utf8'), 'hello')
+
+    const copiedAgain = await copyFileInto({ path: 'b.txt', toFolder: 'sub', fs, workspaceRoot: root })
+    assert.equal(copiedAgain.relativePath, 'sub/b (2).txt')
+
+    await deleteFile({ path: 'b.txt', permanent: true, fs, workspaceRoot: root })
+    await assert.rejects(stat(join(root, 'b.txt')), error => error.code === 'ENOENT')
+
+    await assert.rejects(renameFile({ path: 'img.png', name: '../escape.png', fs, workspaceRoot: root }),
+      error => error.code === 'invalid-name')
+    await assert.rejects(copyFileInto({ path: 'img.png', toFolder: '..', fs, workspaceRoot: root }),
+      error => error.code === 'outside-workspace')
+    const outside = await statFiles({ paths: ['../outside.txt'], fs, workspaceRoot: root })
+    assert.equal(outside[0].error, 'outside-workspace')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('folders can be statted, renamed, copied and batch-deleted', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-dirs-'))
+  const fs = realFs(root)
+  try {
+    await mkdir(join(root, 'alpha', 'nested'), { recursive: true })
+    await mkdir(join(root, 'target'), { recursive: true })
+    await writeFile(join(root, 'alpha', 'nested', 'a.txt'), 'hello')
+
+    const stats = await statFiles({ paths: ['alpha', 'target'], fs, workspaceRoot: root })
+    assert.equal(stats[0].type, 'directory')
+    assert.equal(stats[1].type, 'directory')
+
+    const renamed = await renameFile({ path: 'alpha', name: 'beta', fs, workspaceRoot: root })
+    assert.equal(renamed.type, 'directory')
+    assert.equal(renamed.relativePath, 'beta')
+
+    const copied = await copyFileInto({ path: 'beta', toFolder: 'target', fs, workspaceRoot: root })
+    assert.equal(copied.type, 'directory')
+    assert.equal(copied.relativePath, 'target/beta')
+    assert.equal(await readFile(join(root, 'target', 'beta', 'nested', 'a.txt'), 'utf8'), 'hello')
+
+    await assert.rejects(copyFileInto({ path: 'target', toFolder: 'target/beta', fs, workspaceRoot: root }),
+      error => error.code === 'copy-into-self')
+
+    const batch = await batchFiles({
+      action: 'copy', paths: ['beta/nested/a.txt'], toFolder: 'target', fs, workspaceRoot: root,
+    })
+    assert.equal(batch[0].ok, true)
+    assert.equal(await readFile(join(root, 'target', 'a.txt'), 'utf8'), 'hello')
+
+    const removed = await batchFiles({
+      action: 'delete', paths: ['target/beta/nested/a.txt', 'missing.txt'], permanent: true, fs, workspaceRoot: root,
+    })
+    assert.equal(removed[0].ok, true)
+    assert.equal(removed[1].ok, false)
+
+    const deleted = await deleteFile({ path: 'target/beta', permanent: true, fs, workspaceRoot: root })
+    assert.equal(deleted.type, 'directory')
+    await assert.rejects(stat(join(root, 'target', 'beta')), error => error.code === 'ENOENT')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('moves files and folders between workspace directories', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-move-'))
+  const fs = realFs(root)
+  try {
+    await mkdir(join(root, 'from', 'deep'), { recursive: true })
+    await mkdir(join(root, 'to'), { recursive: true })
+    await writeFile(join(root, 'from', 'a.txt'), 'hello')
+    await writeFile(join(root, 'from', 'deep', 'b.txt'), 'deep')
+
+    const movedFile = await moveFile({ path: 'from/a.txt', toFolder: 'to', fs, workspaceRoot: root })
+    assert.equal(movedFile.relativePath, 'to/a.txt')
+    assert.equal(await readFile(join(root, 'to', 'a.txt'), 'utf8'), 'hello')
+    await assert.rejects(stat(join(root, 'from', 'a.txt')), error => error.code === 'ENOENT')
+
+    const movedFolder = await moveFile({ path: 'from/deep', toFolder: 'to', fs, workspaceRoot: root })
+    assert.equal(movedFolder.type, 'directory')
+    assert.equal(movedFolder.relativePath, 'to/deep')
+    assert.equal(await readFile(join(root, 'to', 'deep', 'b.txt'), 'utf8'), 'deep')
+
+    await assert.rejects(moveFile({ path: 'to', toFolder: 'to' , fs, workspaceRoot: root }),
+      error => error.code === 'move-into-self')
+
+    await writeFile(join(root, 'to', 'a.txt'), 'again')
+    await assert.rejects(moveFile({ path: 'from/c.txt', toFolder: 'to', fs, workspaceRoot: root }),
+      error => error.code === 'not-found' || error.code === 'failed')
+
+    const batch = await batchFiles({
+      action: 'move', paths: ['to/a.txt'], toFolder: '', fs, workspaceRoot: root,
+    })
+    assert.equal(batch[0].ok, true)
+    assert.equal(await readFile(join(root, 'a.txt'), 'utf8'), 'again')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('session-changes lists one node per user message with its produced files', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-timeline-'))
+  try {
+    await mkdir(join(root, 'docs'), { recursive: true })
+    await writeFile(join(root, 'docs', 'a.txt'), 'hello')
+
+    const events = [
+      {
+        type: 'user/message', seq: 1, time: Date.now() - 60_000,
+        data: { role: 'user', content: [{ type: 'text', text: '帮我生成一个封面' }] },
+      },
+      { type: 'assistant/message', seq: 2, time: Date.now() - 50_000, data: {} },
+    ]
+    const ctx = {
+      workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      get: name => name === 'sessions'
+        ? { get: id => id === 's' ? { snapshotEvents: () => events, header: { createdAt: 1 } } : undefined }
+        : undefined,
+      fs: {
+        async resolve(path, opts = {}) {
+          const value = path.startsWith('/') || /^[A-Za-z]:[/\\]/u.test(path) ? path : join(opts.cwd ?? root, path)
+          return { targetKey: value, displayPath: value }
+        },
+        contains(parent, child) {
+          const step = relative(parent.displayPath, child.displayPath)
+          return step === '' || (!step.startsWith('..') && !isAbsolute(step))
+        },
+        processPath(target) { return target.displayPath },
+      },
+    }
+    const response = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes?sessionId=s'), ctx)
+    assert.equal(response.status, 200)
+    const body = await response.json()
+    assert.equal(body.ok, true)
+    assert.equal(body.turns.length, 1)
+    assert.equal(body.turns[0].prompt, '帮我生成一个封面')
+    assert.equal(body.turns[0].files.length, 1)
+    assert.equal(body.turns[0].files[0].path, 'docs/a.txt')
+
+    // Persistence-only fallback: a Host that hides the live Session object still
+  // yields a timeline from the stored log.
+  const stored = [
+    {
+      type: 'user/message', seq: 7, time: Date.now() - 30_000,
+      data: { content: [{ type: 'text', text: '整理一下素材' }] },
+    },
+  ]
+  const closed = []
+  const persisted = {
+    workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+    get: name => name === 'sessionPersistence'
+      ? {
+        open: async () => ({ read: async () => ({ events: stored }), close: async () => { closed.push(true) } }),
+      }
+      : undefined,
+    fs: ctx.fs,
+  }
+  const fromLog = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes?sessionId=s'), persisted)
+  const logBody = await fromLog.json()
+  assert.equal(logBody.ok, true)
+  assert.equal(logBody.turns.length, 1)
+  assert.equal(logBody.turns[0].prompt, '整理一下素材')
+  assert.equal(closed.length, 1)
+
+  const missing = await handleSessionChanges(new Request('http://host/api/vyra-media/session-changes'), ctx)
+    assert.equal(missing.status, 400)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('handleList resolves a session root, scopes folders and returns metadata', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-list-'))
+  try {
+    await mkdir(join(root, '作品'), { recursive: true })
+    await writeFile(join(root, '作品', 'a.mp4'), 'hello')
+    await mkdir(join(root, '作品', 'sub'), { recursive: true })
+    await writeFile(join(root, '作品', 'sub', 'b.png'), 'img')
+    await writeFile(join(root, '作品', 'readme.md'), 'text')
+
+    const ctx = {
+      workspaceFiles: { scopeOf: async (sessionId) => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      get: name => name === 'sessions' ? { get: id => id === 's' ? { header: { createdAt: 123456 } } : undefined } : undefined,
+      fs: {
+        async resolve(path, opts = {}) {
+          const value = path.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(path)
+            ? path
+            : join(opts.cwd ?? root, path)
+          return { targetKey: value, displayPath: value }
+        },
+        contains(parent, child) { return child.displayPath === parent.displayPath || child.displayPath.startsWith(`${parent.displayPath}\\`) || child.displayPath.startsWith(`${parent.displayPath}/`) },
+        processPath(target) { return target.displayPath },
+      },
+    }
+
+    const all = await handleList(new Request('http://host/api/vyra-media/list?sessionId=s'), ctx)
+    assert.equal(all.status, 200)
+    const body = await all.json()
+    assert.equal(body.ok, true)
+    assert.equal(body.root, root)
+    assert.equal(body.sessionCreatedAt, 123456)
+    assert.deepEqual(body.entries.map(entry => entry.relativePath).sort(), ['作品/a.mp4', '作品/readme.md', '作品/sub/b.png'])
+    assert.deepEqual(body.folders.sort(), ['作品', '作品/sub'])
+    assert.ok(body.entries.every(entry => entry.size === undefined && entry.mtimeMs === undefined))
+
+    const sub = await handleList(new Request('http://host/api/vyra-media/list?sessionId=s&root=作品/sub'), ctx)
+    const subBody = await sub.json()
+    assert.equal(subBody.entries.length, 1)
+    assert.equal(subBody.entries[0].relativePath, '作品/sub/b.png')
+
+    const unknown = await handleList(new Request('http://host/api/vyra-media/list?sessionId=none'), ctx)
+    assert.equal(unknown.status, 404)
+
+    const outside = await handleList(new Request('http://host/api/vyra-media/list?sessionId=s&root=..'), ctx)
+    assert.equal(outside.status, 403)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('registerMediaRoutes mounts every exact Fetch route', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-routes-'))
+  try {
+    await writeFile(join(root, 'clip.mp4'), 'hello')
+    await writeFile(join(root, 'notes.md'), '# hello')
+    const ctx = {
+      effect(callback) { callback() },
+      workspaceFiles: { scopeOf: async (sessionId) => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      fs: {
+        async resolve(path, opts = {}) {
+          const value = path.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(path) ? path : join(opts.cwd ?? root, path)
+          return { targetKey: value, displayPath: value }
+        },
+        contains(parent, child) { return child.displayPath === parent.displayPath || child.displayPath.startsWith(`${parent.displayPath}/`) || child.displayPath.startsWith(`${parent.displayPath}\\`) },
+        processPath(target) { return target.displayPath },
+        async stat(target) {
+          const info = await import('node:fs/promises').then(fs => fs.stat(target.displayPath).catch(() => undefined))
+          return info === undefined ? undefined : { type: info.isFile() ? 'file' : 'other', size: info.size, version: String(info.mtimeMs) }
+        },
+        async readByteRange(target, { offset, length }) {
+          const buffer = await import('node:fs/promises').then(fs => fs.readFile(target.displayPath))
+          return new Uint8Array(buffer.subarray(offset, offset + length))
+        },
+      },
+    }
+    const routes = []
+    const connection = { fetch: { register(route) { routes.push(route); return async () => {} } } }
+    assert.equal(registerMediaRoutes(ctx, connection), true)
+    assert.deepEqual(routes.map(route => [route.path, route.methods]), [
+      ['/api/vyra-media/list', ['GET']],
+      ['/api/vyra-media/file', ['GET', 'HEAD']],
+      ['/api/vyra-media/diagnose', ['GET']],
+      ['/api/vyra-media/session-changes', ['GET']],
+      ['/api/vyra-media/text', ['GET']],
+      ['/api/vyra-media/html-asset', ['GET']],
+      ['/api/vyra-media/stat', ['POST']],
+      ['/api/vyra-media/rename', ['POST']],
+      ['/api/vyra-media/copy', ['POST']],
+      ['/api/vyra-media/delete', ['POST']],
+      ['/api/vyra-media/reveal', ['POST']],
+      ['/api/vyra-media/open', ['POST']],
+      ['/api/vyra-media/batch', ['POST']],
+      ['/api/vyra-media/move', ['POST']],
+      ['/api/vyra-media/clipboard', ['POST']],
+    ])
+
+    const list = await routes[0].fetch(new Request('http://host/api/vyra-media/list?sessionId=s'))
+    assert.equal(list.status, 200)
+    const body = await list.json()
+    assert.deepEqual(body.entries.map(entry => entry.relativePath).sort(), ['clip.mp4', 'notes.md'])
+
+    // Look routes up by path, not position: inserting a route must not silently
+    // point an assertion at its neighbour.
+    const routeAt = path => {
+      const found = routes.find(entry => entry.path === path)
+      assert.ok(found, `route ${path} must be registered`)
+      return found
+    }
+
+    const bytes = await routeAt('/api/vyra-media/file').fetch(new Request('http://host/api/vyra-media/file?sessionId=s&path=clip.mp4', { headers: { range: 'bytes=1-3' } }))
+    assert.equal(bytes.status, 206)
+    assert.equal(await bytes.text(), 'ell')
+
+    const text = await routeAt('/api/vyra-media/text').fetch(new Request('http://host/api/vyra-media/text?sessionId=s&path=notes.md'))
+    const textBody = await text.json()
+    assert.equal(textBody.ok, true)
+    assert.equal(textBody.text, '# hello')
+
+    const statRoute = await routeAt('/api/vyra-media/stat').fetch(new Request('http://host/api/vyra-media/stat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: 's', paths: ['clip.mp4'] }),
+    }))
+    const statBody = await statRoute.json()
+    assert.equal(statBody.ok, true)
+    assert.equal(statBody.entries[0].size, 5)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('resolveClipboardPaths confines every path to the workspace', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-clip-'))
+  try {
+    await writeFile(join(root, 'a.txt'), 'x')
+    await mkdir(join(root, 'dir'))
+    const fs = makeTestFs(root)
+    const paths = await resolveClipboardPaths({ paths: ['a.txt', 'dir'], fs, workspaceRoot: root })
+    assert.equal(paths.length, 2)
+    assert.deepEqual(paths.map(value => value.split(/[\\/]/u).pop()).sort(), ['a.txt', 'dir'])
+    await assert.rejects(
+      resolveClipboardPaths({ paths: ['../escape.txt'], fs, workspaceRoot: root }),
+      error => error.code === 'outside-workspace',
+    )
+    await assert.rejects(
+      resolveClipboardPaths({ paths: [], fs, workspaceRoot: root }),
+      error => error.code === 'bad-request',
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('copyPathsToClipboard dispatches per platform and refuses unknown ones', async () => {
+  const calls = []
+  const spawn = (command, args) => {
+    calls.push({ command, args })
+    return { status: 0, stdout: 'OK', stderr: '' }
+  }
+  await copyPathsToClipboard({ absolutePaths: ['/tmp/a.txt'], platform: 'linux', spawn })
+  assert.equal(calls[0].command, 'xclip')
+  assert.ok(calls[0].args.includes('text/uri-list'))
+  await assert.rejects(
+    copyPathsToClipboard({ absolutePaths: ['/tmp/a.txt'], platform: 'aix', spawn }),
+    error => error.code === 'clipboard-unsupported',
+  )
+})
+
+test('POST /api/vyra-media/clipboard refuses paths outside the workspace and never writes the clipboard', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-cliproute-'))
+  try {
+    await writeFile(join(root, 'a.txt'), 'x')
+    const ctx = {
+      effect(callback) { callback() },
+      workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      fs: makeTestFs(root),
+    }
+    const routes = []
+    const connection = { fetch: { register(route) { routes.push(route); return async () => {} } } }
+    registerMediaRoutes(ctx, connection)
+    const route = routes.find(entry => entry.path === '/api/vyra-media/clipboard')
+    assert.ok(route, 'clipboard route must be registered')
+
+    const post = body => route.fetch(new Request('http://host/api/vyra-media/clipboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }))
+
+    const escaped = await post({ sessionId: 's', paths: ['../escape.txt'] })
+    assert.equal(escaped.status, 403)
+    const escapedBody = await escaped.json()
+    assert.equal(escapedBody.code, 'outside-workspace')
+
+    const empty = await post({ sessionId: 's', paths: [] })
+    assert.equal(empty.status, 400)
+    assert.equal((await empty.json()).code, 'bad-request')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('copyPathsToClipboard writes a real FileDrop other processes can read', {
+  skip: process.platform !== 'win32',
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-clipreal-'))
+  const previous = readClipboard()
+  try {
+    const file = join(root, 'sample.txt')
+    await writeFile(file, 'x')
+    await copyPathsToClipboard({ absolutePaths: [file] })
+    const after = readClipboard()
+    // The whole point of this route: the paste in Explorer must find a file list,
+    // not a text path. A regression here is invisible to the injected-spawn tests.
+    assert.deepEqual(after.files, [file])
+  } finally {
+    restoreClipboard(previous)
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * Read the system clipboard in a child process, so the value is what a *different*
+ * process sees — the failure mode that made the first implementation look green.
+ */
+function readClipboard() {
+  const script = 'Add-Type -AssemblyName System.Windows.Forms;'
+    + " Write-Output ('FILES=' + (([System.Windows.Forms.Clipboard]::GetFileDropList()) -join '|'));"
+    + " Write-Output ('TEXT=' + [System.Windows.Forms.Clipboard]::GetText())"
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true })
+  const files = /FILES=(.*)/u.exec(result.stdout ?? '')
+  const text = /TEXT=([\s\S]*)/u.exec(result.stdout ?? '')
+  return {
+    files: files === null || files[1] === '' ? [] : files[1].split('|'),
+    text: text === null ? '' : text[1],
+  }
+}
+
+/** Put the clipboard back the way the test found it, so a run does not eat what the user copied. */
+function restoreClipboard(previous) {
+  const quoted = JSON.stringify(previous.text)
+  const script = 'Add-Type -AssemblyName System.Windows.Forms;'
+    + ` [System.Windows.Forms.Clipboard]::SetText(${quoted})`
+  spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true })
+}
+
+test('inlineAssets rewrites local and remote references into data URLs', async () => {
+  const html = '<link rel="stylesheet" href="a.css"><script src="b.js"></script><img src="https://x.test/c.png">'
+  const seen = []
+  const out = await inlineAssets(html, async url => {
+    seen.push(url)
+    return url === 'a.css' ? 'data:text/css;base64,YQ==' : undefined
+  })
+  assert.deepEqual(seen, ['a.css', 'b.js', 'https://x.test/c.png'])
+  assert.match(out, /data:text\/css;base64,YQ==/u)
+  // Unresolved references keep their original URL so the page still renders.
+  assert.match(out, /src="https:\/\/x\.test\/c\.png"/u)
+})
+
+test('inlineAssets leaves untouched markup alone', async () => {
+  const html = '<img src="big.png">'
+  const out = await inlineAssets(html, async () => undefined)
+  assert.equal(out, html)
+})
+
+test('extractAssetRefs finds the three asset tags regardless of attribute order', () => {
+  const refs = extractAssetRefs('<img alt="x" src="p.png"><script defer src=\'q.js\'></script><link href="r.css" rel="stylesheet">')
+  assert.deepEqual(refs.map(ref => [ref.tag, ref.url]), [['img', 'p.png'], ['script', 'q.js'], ['link', 'r.css']])
+})
+
+test('html-asset inlines a workspace asset and refuses an escape', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-asset-'))
+  try {
+    await mkdir(join(root, 'styles'))
+    await writeFile(join(root, 'styles', 'app.css'), 'body{color:red}')
+    const ctx = {
+      effect(callback) { callback() },
+      workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      fs: {
+        ...makeTestFs(root),
+        async readByteRange(target, { offset, length }) {
+          const buffer = await readFile(target.displayPath)
+          return new Uint8Array(buffer.subarray(offset, offset + length))
+        },
+      },
+    }
+    const routes = []
+    registerMediaRoutes(ctx, { fetch: { register(route) { routes.push(route); return async () => {} } } })
+    const route = routes.find(entry => entry.path === '/api/vyra-media/html-asset')
+    assert.ok(route, 'html-asset route must be registered')
+
+    const ok = await route.fetch(new Request('http://host/api/vyra-media/html-asset?sessionId=s&url=styles/app.css'))
+    const okBody = await ok.json()
+    assert.equal(okBody.ok, true)
+    assert.match(okBody.dataUrl, /^data:text\/css;base64,/u)
+    assert.equal(Buffer.from(okBody.dataUrl.split(',')[1], 'base64').toString('utf8'), 'body{color:red}')
+
+    const escaped = await route.fetch(new Request('http://host/api/vyra-media/html-asset?sessionId=s&url=../secret.txt'))
+    const escapedBody = await escaped.json()
+    assert.equal(escapedBody.ok, false)
+    assert.equal(escapedBody.reason, 'outside-workspace')
+
+    const missing = await route.fetch(new Request('http://host/api/vyra-media/html-asset?sessionId=s&url=nope.css'))
+    assert.equal((await missing.json()).reason, 'not-found')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('html is its own kind and css stays code', () => {
+  assert.equal(kindOf('html'), 'html')
+  assert.equal(kindOf('htm'), 'html')
+  assert.equal(kindOf('css'), 'code')
+})
+
+test('extractAssetRefs ignores fake markup inside script and style bodies', () => {
+  // A script writing markup must not swallow the img that follows it.
+  const refs = extractAssetRefs('<script>var s = "<div>";</script><img src="p.png">')
+  assert.deepEqual(refs.map(ref => ref.url), ['p.png'])
+  // A `>` inside an attribute value must not end the tag early.
+  const angled = extractAssetRefs('<script data-x="a>b"></script><img src="q.png">')
+  assert.deepEqual(angled.map(ref => ref.url), ['q.png'])
+  // A template block is not a real script and must not yield a bogus reference.
+  const template = extractAssetRefs('<script type="text/template"><img src="inside.png"></script><img src="real.png">')
+  assert.deepEqual(template.map(ref => ref.url), ['real.png'])
+})
+
+test('inlineAssets does not splice the document through a $-laden data URL', async () => {
+  const document = '<link rel="stylesheet" href="a.css"><p>tail</p>'
+  const out = await inlineAssets(document, async () => 'data:text/css$&$`$\'')
+  // The data URL lands in the attribute literally; nothing else may be duplicated.
+  assert.equal(out, '<link rel="stylesheet" href="data:text/css$&$`$\'"><p>tail</p>')
+})
+
+test('inlineAssets budgets every occurrence, not just the first', async () => {
+  const { MAX_TOTAL_ASSET_BYTES } = await import('./lib/html-inline.js')
+  // One 1.5 MB payload repeated 8 times would be 12 MB if counted once.
+  const big = `data:image/png;base64,${'A'.repeat(1_500_000)}`
+  const document = Array.from({ length: 8 }, () => "<img src='sprite.png'>").join('')
+  const out = await inlineAssets(document, async () => big)
+  const inlined = out.split(big).length - 1
+  assert.ok(inlined * big.length <= MAX_TOTAL_ASSET_BYTES, `inlined ${inlined} copies`)
+  assert.ok(inlined < 8, 'some occurrences must keep their original reference')
+})
+
+test('clipboard markers are read from stdout and map to stable codes', async () => {
+  const busy = await copyPathsToClipboard({
+    absolutePaths: ['/tmp/a.txt'],
+    platform: 'linux',
+    spawn: () => ({ status: 1, stdout: 'CLIPBOARD_BUSY:occupied\n', stderr: '' }),
+  }).catch(error => error)
+  assert.equal(busy.code, 'clipboard-busy')
+
+  const missing = await copyPathsToClipboard({
+    absolutePaths: ['/tmp/a.txt'],
+    platform: 'linux',
+    spawn: () => ({ status: 1, stdout: '', stderr: 'CLIPBOARD_MISSING:/tmp/gone.txt\n' }),
+  }).catch(error => error)
+  assert.equal(missing.code, 'not-found')
+  assert.match(missing.message, /gone\.txt/u)
+
+  const broken = await copyPathsToClipboard({
+    absolutePaths: ['/tmp/a.txt'],
+    platform: 'linux',
+    spawn: () => ({ status: 1, stdout: '', stderr: 'xclip: cannot open display\n' }),
+  }).catch(error => error)
+  assert.equal(broken.code, 'spawn-failed')
+})
+
+test('resolveClipboardPaths refuses an absolute path', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-clipabs-'))
+  try {
+    const file = join(root, 'a.txt')
+    await writeFile(file, 'x')
+    const fs = makeTestFs(root)
+    await assert.rejects(
+      resolveClipboardPaths({ paths: [file], fs, workspaceRoot: root }),
+      error => error.code === 'bad-request',
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

@@ -2,6 +2,11 @@
 
 **技能和 MCP 的一体化管理界面**——浏览、搜索、安装，不必再手改 profile 的配置行。
 
+```sh
+dsh plugin --profile web add dsh-vyra-skill-mcp-manager
+```
+
+
 ## 它解决什么问题
 
 DSH 的技能和 MCP 服务器分别由不同插件管理，装一个技能要改 `cordis.yml`、装一个 MCP 要改另一个地方，还得自己找路径。这个插件把两件事收进一个界面：

@@ -103,6 +103,16 @@
       },
       "versions": [
         {
+          "version": "0.7.5",
+          "publishTimestamp": 1795680000,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/tool-usage-stats"
+          }
+        },
+        {
           "version": "0.7.4",
           "publishTimestamp": 1795080600,
           "source": {
@@ -191,6 +201,16 @@
       },
       "versions": [
         {
+          "version": "1.3.1",
+          "publishTimestamp": 1795679999,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-agent-manager"
+          }
+        },
+        {
           "version": "1.3.0",
           "publishTimestamp": 1795410000,
           "source": {
@@ -249,6 +269,16 @@
       },
       "versions": [
         {
+          "version": "0.1.1",
+          "publishTimestamp": 1795679998,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-smart-compaction"
+          }
+        },
+        {
           "version": "0.1.0",
           "publishTimestamp": 1794551488,
           "source": {
@@ -286,6 +316,16 @@
         "directory": "plugins/vyra-skill-mcp-manager"
       },
       "versions": [
+        {
+          "version": "1.3.2",
+          "publishTimestamp": 1795679997,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-skill-mcp-manager"
+          }
+        },
         {
           "version": "1.3.1",
           "publishTimestamp": 1795067593,
@@ -365,6 +405,16 @@
       },
       "versions": [
         {
+          "version": "0.1.3",
+          "publishTimestamp": 1795679996,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-ssh-terminal"
+          }
+        },
+        {
           "version": "0.1.2",
           "publishTimestamp": 1795074609,
           "source": {
@@ -423,6 +473,16 @@
         "directory": "plugins/vyra-system-selection"
       },
       "versions": [
+        {
+          "version": "3.1.3",
+          "publishTimestamp": 1795679995,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-system-selection"
+          }
+        },
         {
           "version": "3.1.2",
           "publishTimestamp": 1795336200,
@@ -673,6 +733,16 @@
       },
       "versions": [
         {
+          "version": "0.1.1",
+          "publishTimestamp": 1795679994,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-free-theme"
+          }
+        },
+        {
           "version": "0.1.0",
           "publishTimestamp": 1795449013,
           "source": {
@@ -702,6 +772,19 @@
         "directory": "plugins/vyra-wechat-local"
       },
       "versions": [
+        {
+          "version": "0.8.2",
+          "publishTimestamp": 1795679993,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-wechat-local"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
         {
           "version": "0.8.1",
           "publishTimestamp": 1795165435,
@@ -966,6 +1049,16 @@
         "directory": "plugins/vyra-xianyu-delivery"
       },
       "versions": [
+        {
+          "version": "0.9.2",
+          "publishTimestamp": 1795679992,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-xianyu-delivery"
+          }
+        },
         {
           "version": "0.9.1",
           "publishTimestamp": 1795278000,
@@ -1486,6 +1579,32 @@
       },
       "versions": [
         {
+          "version": "1.4.0",
+          "publishTimestamp": 1795723200,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "6e513fb7f4fb9bba771e00fff49d124b474810c7",
+            "path": "plugins/vyra-agent-cli-manager"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
+        {
+          "version": "1.3.2",
+          "publishTimestamp": 1795679991,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-agent-cli-manager"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
+        {
           "version": "1.3.1",
           "publishTimestamp": 1795080000,
           "source": {
@@ -1619,6 +1738,16 @@
         "directory": "plugins/vyra-plugin-market"
       },
       "versions": [
+        {
+          "version": "0.7.3",
+          "publishTimestamp": 1795679990,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-plugin-market"
+          }
+        },
         {
           "version": "0.7.2",
           "publishTimestamp": 1795501546,
@@ -2018,12 +2147,22 @@
       },
       "versions": [
         {
+          "version": "0.6.5",
+          "publishTimestamp": 1796572800,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "3524e6f7b0dee1e91e8645378797a9db3eac5b1f",
+            "path": "plugins/vyra-free-model"
+          }
+        },
+        {
           "version": "0.6.4",
           "publishTimestamp": 1795496197,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "b3b94ac82117833a1df72e049c396493719ee812",
+            "commit": "9292d1170cd87d914cff743b9a8811ce0e4b7ba7",
             "path": "plugins/vyra-free-model"
           }
         },
@@ -2166,6 +2305,16 @@
         "directory": "plugins/vyra-screen-recorder"
       },
       "versions": [
+        {
+          "version": "0.4.5",
+          "publishTimestamp": 1796572800,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "3524e6f7b0dee1e91e8645378797a9db3eac5b1f",
+            "path": "plugins/vyra-screen-recorder"
+          }
+        },
         {
           "version": "0.4.4",
           "publishTimestamp": 1796457600,
@@ -2515,6 +2664,16 @@
       },
       "versions": [
         {
+          "version": "2.2.1",
+          "publishTimestamp": 1795679988,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-studymate"
+          }
+        },
+        {
           "version": "2.2.0",
           "publishTimestamp": 1795360406,
           "source": {
@@ -2650,26 +2809,56 @@
       }
     },
     {
-      "name": "dsh-vyra-media-studio",
+      "name": "dsh-vyra-file-manager",
       "title": {
         "en": "File Manager",
         "zh": "文件管理"
       },
       "description": {
-        "en": "A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and text in the panel, and rename, copy, delete, reveal or insert files into the composer.",
-        "zh": "右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与文本，并支持重命名、复制、删除、打开所在位置及引用到输入框。"
+        "en": "A file manager in the right Sidebar that opens by default: browse every workspace file type (images, video, audio, documents, archives, HTML, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and rich HTML in an opaque-origin sandbox, copy files onto the system clipboard as real file drops, rename, delete, reveal (selected in Explorer) or insert files into the composer, and list only the conversation turns that changed files.",
+        "zh": "右侧栏文件管理（展开即打开）：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、HTML、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与 HTML 富页面（opaque-origin 沙箱），可把文件以真实文件列表复制进系统剪贴板、重命名、删除、在资源管理器中选中打开及引用到输入框，时间线只列出真正改动过文件的对话轮次。"
       },
       "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4NCiAgPHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMTAiIGZpbGw9IiMxMDE3MjIiLz4NCiAgPHJlY3QgeD0iOSIgeT0iMTIiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiM3QUFBRkYiIGZpbGwtb3BhY2l0eT0iLjkiLz4NCiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPg0KICA8cmVjdCB4PSI5IiB5PSIyNSIgd2lkdGg9IjkiIGhlaWdodD0iMTEiIHJ4PSIzIiBmaWxsPSIjNkZENkI1IiBmaWxsLW9wYWNpdHk9Ii45Ii8+DQogIDxwYXRoIGQ9Ik0yNC41IDMwLjUgMzQgMjUuMmwtOS41IDUuM3oiIGZpbGw9IiNGNEY1RjciLz4NCiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4NCjwvc3ZnPg0K",
       "author": "lanxiake",
       "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
       "repository": {
         "url": "https://github.com/lanxiake/dsh-vyra-plugins",
-        "directory": "plugins/vyra-media-studio"
+        "directory": "plugins/vyra-file-manager"
       },
       "versions": [
         {
+          "version": "0.5.0",
+          "publishTimestamp": 1795593512,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "7c46956a474fde2a8875e1370b365b2f8bf3a3ef",
+            "path": "plugins/vyra-file-manager"
+          }
+        },
+        {
+          "version": "0.4.0",
+          "publishTimestamp": 1795585523,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "fa69be5879b52a505734c9117b76fa273e787166",
+            "path": "plugins/vyra-file-manager"
+          }
+        },
+        {
+          "version": "0.3.5",
+          "publishTimestamp": 1795576940,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-media-studio"
+          }
+        },
+        {
           "version": "0.3.4",
-          "publishTimestamp": 1795507029,
+          "publishTimestamp": 1795507015,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2679,7 +2868,7 @@
         },
         {
           "version": "0.3.3",
-          "publishTimestamp": 1795506808,
+          "publishTimestamp": 1795506792,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2689,7 +2878,7 @@
         },
         {
           "version": "0.3.2",
-          "publishTimestamp": 1795506292,
+          "publishTimestamp": 1795506277,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2699,7 +2888,7 @@
         },
         {
           "version": "0.3.1",
-          "publishTimestamp": 1795505673,
+          "publishTimestamp": 1795505657,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2709,7 +2898,7 @@
         },
         {
           "version": "0.3.0",
-          "publishTimestamp": 1795504475,
+          "publishTimestamp": 1795504770,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2719,7 +2908,7 @@
         },
         {
           "version": "0.2.9",
-          "publishTimestamp": 1795503978,
+          "publishTimestamp": 1795503964,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2729,7 +2918,7 @@
         },
         {
           "version": "0.2.8",
-          "publishTimestamp": 1795503460,
+          "publishTimestamp": 1795503452,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2739,7 +2928,7 @@
         },
         {
           "version": "0.2.7",
-          "publishTimestamp": 1795499697,
+          "publishTimestamp": 1795499691,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2749,7 +2938,7 @@
         },
         {
           "version": "0.2.6",
-          "publishTimestamp": 1795495455,
+          "publishTimestamp": 1795495448,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2759,7 +2948,7 @@
         },
         {
           "version": "0.2.5",
-          "publishTimestamp": 1795492049,
+          "publishTimestamp": 1795492040,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2769,7 +2958,7 @@
         },
         {
           "version": "0.2.4",
-          "publishTimestamp": 1795486966,
+          "publishTimestamp": 1795486962,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2779,7 +2968,7 @@
         },
         {
           "version": "0.2.3",
-          "publishTimestamp": 1795426720,
+          "publishTimestamp": 1795426714,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2789,7 +2978,7 @@
         },
         {
           "version": "0.2.2",
-          "publishTimestamp": 1795415426,
+          "publishTimestamp": 1795415421,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2799,7 +2988,7 @@
         },
         {
           "version": "0.2.1",
-          "publishTimestamp": 1795408922,
+          "publishTimestamp": 1795408917,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2809,7 +2998,7 @@
         },
         {
           "version": "0.2.0",
-          "publishTimestamp": 1795407787,
+          "publishTimestamp": 1795407793,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2819,7 +3008,7 @@
         },
         {
           "version": "0.1.2",
-          "publishTimestamp": 1795347000,
+          "publishTimestamp": 1795356930,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2829,7 +3018,7 @@
         },
         {
           "version": "0.1.1",
-          "publishTimestamp": 1795345200,
+          "publishTimestamp": 1795354115,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2839,7 +3028,7 @@
         },
         {
           "version": "0.1.0",
-          "publishTimestamp": 1795344299,
+          "publishTimestamp": 1795344982,
           "source": {
             "type": "git",
             "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
@@ -2880,6 +3069,16 @@
       },
       "versions": [
         {
+          "version": "0.1.2",
+          "publishTimestamp": 1795679986,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "4f4d01ffe5612461d706874dabe66996ad306cda",
+            "path": "plugins/vyra-dsh-console"
+          }
+        },
+        {
           "version": "0.1.1",
           "publishTimestamp": 1795503600,
           "source": {
@@ -2909,98 +3108,6 @@
           "models",
           "plugins",
           "panel"
-        ]
-      }
-    },
-    {
-      "name": "open-design",
-      "title": {
-        "en": "OpenDesign Domains",
-        "zh": "OpenDesign 领域包"
-      },
-      "description": {
-        "en": "Splits the OpenDesign skill library into nine business domains, each paired with its own agent, so a user loads only the work they actually do. A settings panel switches domains on and off and applies the change immediately; the bundled odx CLI does the same from a terminal. Ships 85 craft skills plus 152 design-system contracts, and one director agent coordinates whatever is enabled.",
-        "zh": "把 OpenDesign 技能库按业务领域切成九个包，每包配一个同名 Agent，只加载真正用得上的那部分。在设置页里开关领域即写即生效，也可用自带的 odx 命令操作。含 85 个工艺技能与 152 套设计系统契约，再由一个编排 Agent 统一调度已启用的领域。"
-      },
-      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJPcGVuRGVzaWduIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib2QtZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNGRjU3MDEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMTExODI3Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCNvZC1nKSIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE1IiBmaWxsPSJub25lIiBzdHJva2U9IiNGNkY2RjEiIHN0cm9rZS13aWR0aD0iMyIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjUiIGZpbGw9IiNGNkY2RjEiLz4KICA8cGF0aCBkPSJNMzIgNnY3TTMyIDUxdjdNNiAzMmg3TTUxIDMyaDciIHN0cm9rZT0iI0Y2RjZGMSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+",
-      "author": "lanxiake",
-      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
-      "repository": {
-        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
-        "directory": "plugins/open-design"
-      },
-      "versions": [
-        {
-          "version": "0.2.5",
-          "publishTimestamp": 1795605600,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "fc47fda63e90cf0633b1c5ba234e5da59ddb338c",
-            "path": "plugins/open-design"
-          }
-        },
-        {
-          "version": "0.2.4",
-          "publishTimestamp": 1795602000,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "ae337db1f85bb4d9bb9c8695b6a880018c476278",
-            "path": "plugins/open-design"
-          }
-        },
-        {
-          "version": "0.2.3",
-          "publishTimestamp": 1795596300,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "24dbce2da474794afaaad9c7dcb56b118f3d725c",
-            "path": "plugins/open-design"
-          }
-        },
-        {
-          "version": "0.2.2",
-          "publishTimestamp": 1795592400,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "c497770c4f68b147c3a8443c6d8220608c6fbb10",
-            "path": "plugins/open-design"
-          }
-        },
-        {
-          "version": "0.2.1",
-          "publishTimestamp": 1795588800,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "a2328fa8d450b478fc9b1982092d871c9f4793a7",
-            "path": "plugins/open-design"
-          }
-        },
-        {
-          "version": "0.2.0",
-          "publishTimestamp": 1795502400,
-          "source": {
-            "type": "git",
-            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
-            "commit": "cea8adb952ab29a16f5fe01c303a6722b43ed73f",
-            "path": "plugins/open-design"
-          }
-        }
-      ],
-      "metadata": {
-        "category": "content",
-        "keywords": [
-          "skill",
-          "design",
-          "open-design",
-          "frontend-design",
-          "motion",
-          "design-system",
-          "agent"
         ]
       }
     }

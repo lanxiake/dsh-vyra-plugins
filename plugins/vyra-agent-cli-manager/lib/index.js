@@ -13,11 +13,12 @@ import { LlmError } from '@deepseek-ai/dsh-llm';
 import { CliBridgeAdapter } from "./adapter.js";
 import { CliSession } from "./cli-session.js";
 import { createCliTool } from "./cli-tool.js";
-import { CLI_TOOL_NAME, cliRoute, isCliRoute } from "./constants.js";
+import { CLI_TOOL_NAME, cliRoute, DEFAULT_MODEL_ID, isCliRoute } from "./constants.js";
 import { ModelCacheFile } from "./model-cache.js";
 import { CliModelCatalog } from "./model-catalog.js";
 import { registerModeRoute } from "./mode-routes.js";
 import { probeModels } from "./model-probe.js";
+import { modelRoutesOf } from "./model-source.js";
 import { npxCacheDir, startFromNpxCache } from "./npx-cache.js";
 import { cliHandler, registerCliRoutes } from "./cli/cli-routes.js";
 import { fetchRepositoryFile } from "./cli/github-file.js";
@@ -26,10 +27,11 @@ import { hostOfSubprocess } from "./cli/detect.js";
 import { npmLatestVersion } from "./cli/registry-status.js";
 import { runnerOfSpawn } from "./cli/upgrade.js";
 import { gitHandler, registerGitRoutes } from "./git/git-routes.js";
+import { MODEL_SOURCE_CLI, MODEL_SOURCE_DSH, isModelSource, modelEnvironment, readModelRoutes, resolveRoute } from "./model-source.js";
 import { readPtcWrap } from "./session/ptc-call.js";
 import { CliAskPolicy } from "./session/approval-policy.js";
 import { CliSessionRegistry } from "./session-registry.js";
-import { openStdioTransport } from "./stdio-transport.js";
+import { openStdioTransport, openDeferredStdioTransport } from "./stdio-transport.js";
 import { startOnWindows } from "./windows-command.js";
 import { LoginPath, diskDirs, runShell } from "./login-path.js";
 /**
@@ -43,6 +45,18 @@ const MODEL_PROBE_DIR = 'model-probe';
 const REVIEW_ROUTE_UNSET = '「EXP 自动审查」需要一个独立的审查模型，插件不会替你挑选：请在插件配置里设置 reviewProvider（以及可选的 reviewModel），或用 /permission 改用其它访问模式。';
 const REVIEW_ROUTE_IS_CLI = '「EXP 自动审查」的 reviewProvider 不能是 CLI，请设置为 DeepSeek 等非 CLI 的模型提供方。';
 const REVIEW_MODEL_MISSING = '「EXP 自动审查」读不到 reviewProvider 的模型列表，无法确定审查模型：请在插件配置里设置 reviewModel，或检查该提供方的配置。';
+/** Said when a route points at a provider this harness does not offer, so nothing could be filled in. */
+const UNKNOWN_PROVIDER = 'DSH 里没有这个模型提供方';
+/** Said when the provider configured a credential that is nowhere to be found. */
+const CREDENTIAL_MISSING = 'DSH 里读不到这个提供方配置的凭据';
+/** Said when the provider never configured an endpoint of its own. */
+const ENDPOINT_MISSING = '这个提供方在 DSH 里没有配置接口地址';
+/**
+ * Said when the route names no environment variables. A CLI that follows DSH on its own account
+ * would otherwise be told the variable names of another vendor and break, so the route is only
+ * applied when the names are written down beside it.
+ */
+const VARIABLES_MISSING = '插件配置里没有写这个 CLI 读哪个环境变量';
 /** Service behind `ctx.cliBridge`. */
 export default class CliBridge extends Service {
     config;
@@ -55,6 +69,19 @@ export default class CliBridge extends Service {
             command: z.string().required(),
             args: z.array(z.string()).default([]),
             env: z.dict(z.string()).default({}),
+            // The model this CLI runs on when the user asks it to follow DSH: a provider the
+            // harness already has configured, plus the variable names this CLI reads. Left out,
+            // the CLI keeps its own configuration and the settings page offers no switch.
+            models: z.object({
+                provider: z.string().default(''),
+                model: z.string().default(''),
+                baseURL: z.string().default(''),
+                apiKeyEnv: z.string().default(''),
+                apiKeyEnvs: z.array(z.string()).default([]),
+                baseURLEnv: z.string().default(''),
+                modelEnv: z.string().default(''),
+                defaultModel: z.string().default(''),
+            }),
         }))
             .default([]),
         disposeGraceMs: z.number().min(1).default(3_000),
@@ -70,9 +97,16 @@ export default class CliBridge extends Service {
     probes = new AbortController();
     askPolicy = new CliAskPolicy((message) => this.ctx.logger.warn(message));
     loginPath;
+    /** The model each CLI follows DSH on, by CLI id; absent for a CLI that keeps its own. */
+    modelRoutes = new Map();
+    /** Source picked in the 设置 panel, by CLI id. Empty means nothing was picked this run. */
+    modelSources = new Map();
+    /** Told whenever the panel reports a source, so the catalog can relabel that CLI's menu. */
+    sourceListeners = [];
     constructor(ctx, config) {
         super(ctx, 'cliBridge');
         this.config = config;
+        this.modelRoutes = readModelRoutes(config.agents);
         this.loginPath = new LoginPath({
             platform: process.platform,
             env: process.env,
@@ -91,6 +125,7 @@ export default class CliBridge extends Service {
             ask: (agent, request, signal) => this.ask(agent, request, signal),
             warn: (message) => ctx.logger.warn(message),
             onCliSelected: (provider) => this.catalog.ensureListed(provider),
+            modelSourceOf: (id) => this.modelSourceOf(id),
             createSession: (agent, sessionId, cwd, start) => this.createSession(agent, sessionId, cwd, start),
         });
         const modelCache = new ModelCacheFile(this.homePath(PLUGIN_HOME, MODEL_CACHE_FILE));
@@ -104,9 +139,60 @@ export default class CliBridge extends Service {
             save: (lists) => modelCache.save(lists),
         });
         this.restoreModels(modelCache);
+        this.trackModelSources();
         this.registerRoutes();
         this.followSessions();
         this.serveWebRoutes();
+    }
+    /** Keep the menu and the settings panel in step with the model source the user picked. */
+    trackModelSources() {
+        this.sourceListeners.push((id, source) => {
+            this.modelSources = new Map([...this.modelSources, [id, source]]);
+            this.announceFollowed(id);
+        });
+        for (const id of this.modelRoutes.keys())
+            this.announceFollowed(id);
+    }
+    /**
+     * Tell the catalog which model a CLI is pointed at, so its menu row says so. A CLI that
+     * follows DSH shows the DSH model; one that does not goes back to its own default row.
+     * @param id - the CLI id.
+     */
+    announceFollowed(id) {
+        const provider = cliRoute(id);
+        const declared = this.modelRoutes.get(id);
+        const resolved = declared === undefined ? undefined : this.resolveModelRoute(declared, id);
+        const follows = declared !== undefined &&
+            this.modelSourceOf(id) === MODEL_SOURCE_DSH &&
+            resolved !== undefined &&
+            resolved.problem === undefined;
+        if (!follows) {
+            this.catalog.follow(provider, undefined);
+            return;
+        }
+        this.catalog.follow(provider, resolved.model);
+        // The route id is what the menu can show at once; the provider's own name replaces it
+        // when it answers.
+        void this.modelLabelOf(declared.provider, declared.model).then((name) => {
+            if (name !== declared.model && this.modelSourceOf(id) === MODEL_SOURCE_DSH)
+                this.catalog.follow(provider, name);
+        });
+    }
+    /**
+     * Ask the harness for one provider's display name, so the menu says "DeepSeek V4.1 Flash"
+     * rather than the id a route was written with.
+     * @param provider - the provider route the CLI follows.
+     * @param model - the model id.
+     * @returns the name, or the id when the provider does not answer.
+     */
+    async modelLabelOf(provider, model) {
+        try {
+            const models = await this.ctx.llm.listModels(provider);
+            return models.find((candidate) => candidate.id === model)?.name ?? model;
+        }
+        catch {
+            return model;
+        }
     }
     /** Read in the background: the menu works without it, and fills in once it arrives. */
     restoreModels(modelCache) {
@@ -146,6 +232,7 @@ export default class CliBridge extends Service {
                 skills: this.cliSkillLinks(),
                 skillInstall: this.cliSkillInstall(),
                 skillConsolidate: this.cliSkillConsolidate(),
+                models: this.modelPanel(),
             }, child.connection, (message) => child.logger.warn(message));
             child.effect(() => registerCliRoutes(child.webServer, cli), 'dsh-vyra-agent-cli-manager: cli routes');
             child.effect(() => registerModeRoute(child.webServer, {
@@ -350,6 +437,131 @@ export default class CliBridge extends Service {
         };
     }
     /**
+     * What the settings page needs to show each CLI's model source: the route the patch file
+     * declared, the endpoint and credential it resolves to, and the source in effect now.
+     *
+     * The source is stored by the browser, which is where the user picked it; this side only
+     * remembers what the last report said, so a restart of this plugin does not reset a choice
+     * the page will report again as soon as it opens.
+     */
+    modelPanel() {
+        return {
+            list: () => this.registry.providers.flatMap((route) => {
+                const agent = this.registry.configFor(route);
+                const declared = agent === undefined ? undefined : this.modelRoutes.get(agent.id);
+                if (agent === undefined || declared === undefined)
+                    return [];
+                const resolved = this.resolveModelRoute(declared, agent.id);
+                return [{
+                        id: agent.id,
+                        name: agent.name,
+                        source: this.modelSourceOf(agent.id),
+                        provider: declared.provider,
+                        model: declared.model,
+                        endpoint: resolved.endpoint === undefined ? null : resolved.endpoint,
+                        endpointFromDSH: resolved.endpointFromDSH,
+                        credential: resolved.credential,
+                        problem: resolved.problem ?? null,
+                    }];
+            }),
+            choose: (id, source) => {
+                if (!this.modelRoutes.has(id) || !isModelSource(source))
+                    return false;
+                for (const listener of this.sourceListeners)
+                    listener(id, source);
+                return true;
+            },
+        };
+    }
+    /** The source a CLI runs on now: the one the panel reported, or the one the patch file implies. */
+    modelSourceOf(id) {
+        return this.modelSources.get(id) ?? (this.modelRoutes.has(id) ? MODEL_SOURCE_DSH : MODEL_SOURCE_CLI);
+    }
+    /**
+     * Fill a configured route in from the harness's own provider settings. Both halves are read
+     * per call, because either plugin can be reloaded while this one keeps running.
+     * @param declared - the route the patch file declared.
+     * @param id - the CLI id the route belongs to.
+     * @returns the endpoint in use, whether it came from the harness, and what stops it working.
+     */
+    resolveModelRoute(declared, id) {
+        const entry = this.providerEntry(declared.provider);
+        const resolved = resolveRoute(declared, () => entry?.entry);
+        const endpoint = resolved.baseURL ?? declared.providerBaseURL;
+        const credential = resolved.apiKeyEnv;
+        const variables = modelRoutesOf(this.config.agents, id);
+        const namesWritten = variables !== undefined && variables.baseURLEnv !== '' && variables.modelEnv !== '';
+        const problem = !namesWritten
+            ? VARIABLES_MISSING
+            : endpoint === undefined
+                ? UNKNOWN_PROVIDER
+                : entry?.entry === undefined
+                    ? ENDPOINT_MISSING
+                    : credential === undefined
+                        ? CREDENTIAL_MISSING
+                        : undefined;
+        return {
+            ...resolved,
+            ...(endpoint === undefined ? {} : { endpoint }),
+            endpointFromDSH: entry?.entry?.baseURL === endpoint,
+            ...(credential === undefined ? {} : { credential }),
+            ...(problem === undefined ? {} : { problem }),
+        };
+    }
+    /**
+     * The harness's profile for one provider: its address and the credential name it reads.
+     * Read from the live provider plugin's config, which is where a route the CLI follows
+     * would otherwise have to repeat an address the user already entered once.
+     * @param provider - the provider route a CLI follows.
+     * @returns the profile and its entry, or undefined for a provider this harness does not offer.
+     */
+    providerEntry(provider) {
+        if (isCliRoute(provider) || provider === '')
+            return undefined;
+        const profiles = this.ctx.get('llm')?.listConfigurableProviders?.() ?? [];
+        const chosen = profiles.find((candidate) => candidate.provider === provider);
+        if (chosen === undefined)
+            return undefined;
+        const entry = this.ctx.get('configEditor')?.entries?.().find((candidate) => candidate.options?.id === chosen.settingsNs);
+        const values = entry === undefined ? undefined : this.providerValues(entry);
+        return { entry: chosen, baseURL: values?.baseURL, apiKeyEnv: values?.apiKeyEnv };
+    }
+    /**
+     * Read one provider's fields out of its own plugin config, walking the `settingsPath` the
+     * provider declared, since a provider plugin keeps all its routes in one dictionary.
+     * @param entry - the provider plugin's loader entry.
+     * @returns the address and credential name it would use.
+     */
+    providerValues(entry) {
+        const node = this.ctx.get('configEditor')?.configuration()?.find((row) => row.entry === entry)?.override;
+        const profile = this.providerProfile(node);
+        return profile === undefined ? undefined : { baseURL: profile.baseURL, apiKeyEnv: profile.apiKeyEnv };
+    }
+    /**
+     * Find the profile object inside a provider plugin's config. The shape differs per plugin —
+     * one keeps a `providers` dictionary, another holds the route's fields directly — so the
+     * value is located by the fields it has rather than by where it sits.
+     * @param node - the provider plugin's own config object.
+     * @returns the profile, or undefined when the config holds none.
+     */
+    providerProfile(node) {
+        const seen = new Set();
+        const walk = (value, depth) => {
+            if (typeof value !== 'object' || value === null || depth > 4 || seen.has(value))
+                return undefined;
+            seen.add(value);
+            if (!Array.isArray(value) && typeof value.baseURL === 'string')
+                return value;
+            for (const child of Object.values(value)) {
+                const found = walk(child, depth + 1);
+                if (found !== undefined)
+                    return found;
+            }
+            return undefined;
+        };
+        return walk(node, 0);
+    }
+    /**
      * The native modes to show for a session. A live CLI's own report wins; before it starts,
      * the catalog's last answer for that route fills in.
      */
@@ -480,20 +692,91 @@ export default class CliBridge extends Service {
             ...(callId === undefined ? {} : { callId: callId }),
         }));
     }
-    openTransport(agent, cwd, handlers) {
+    /**
+     * Start one CLI. When the user made it follow DSH, the environment is extended with the
+     * variables that CLI reads, so it talks to the provider the user configured instead of its
+     * own account. A route that cannot be resolved is reported and left out rather than guessed
+     * around: the CLI then starts the way it always did.
+     *
+     * Reading the credential is asynchronous while the ACP client needs its pipes at once, so
+     * the spawn is deferred behind that lookup; a CLI that keeps its own configuration starts
+     * on the ordinary path, with nothing extra waited for.
+     * @param agent - the CLI to start.
+     * @param cwd - its working directory.
+     * @param handlers - the transport's callbacks.
+     * @param modelId - the model selected for this step, or `default` for the CLI's own.
+     */
+    openTransport(agent, cwd, handlers, modelId) {
         const fromCache = startFromNpxCache({ argv: [agent.command, ...agent.args], env: this.loginPath.apply(agent.env) }, {
             npxCache: npxCacheDir(process.env, homedir(), process.platform),
             path: process.env.PATH,
         });
         const { argv, env } = startOnWindows(fromCache, process.platform, process.env);
-        return openStdioTransport({
-            argv,
-            cwd,
-            env,
-            graceMs: this.config.disposeGraceMs,
-            eofGraceMs: this.config.disposeEofGraceMs,
-            spawn: (spec) => this.ctx.subprocess.spawn(spec),
-        }, handlers);
+        const grace = { graceMs: this.config.disposeGraceMs, eofGraceMs: this.config.disposeEofGraceMs };
+        const spawn = (spec) => this.ctx.subprocess.spawn(spec);
+        if (this.modelSourceOf(agent.id) !== MODEL_SOURCE_DSH)
+            return openStdioTransport({ argv, cwd, env, ...grace, spawn }, handlers);
+        return openDeferredStdioTransport({ argv, cwd, env: () => this.modelEnvironmentFor(agent, modelId, env), ...grace, spawn }, handlers);
+    }
+    /**
+     * The environment one CLI should start with, once the model source is applied.
+     * @param agent - the CLI to start.
+     * @param modelId - the model selected for this step, or `default` for the CLI's own.
+     * @param env - the environment resolved so far.
+     * @returns that environment; the CLI starts unchanged when it keeps its own configuration.
+     */
+    async modelEnvironmentFor(agent, modelId, env) {
+        const { variables, problem } = this.adapterVariables(agent);
+        const declared = this.modelRoutes.get(agent.id);
+        if (declared === undefined || problem !== undefined) {
+            this.ctx.logger.warn(`dsh-vyra-agent-cli-manager: ${agent.name} 无法跟随 DSH 的模型（${problem ?? UNKNOWN_PROVIDER}），按它自己的配置启动。`);
+            return env;
+        }
+        const resolved = this.resolveModelRoute(declared, agent.id);
+        if (resolved.problem !== undefined) {
+            this.ctx.logger.warn(`dsh-vyra-agent-cli-manager: ${agent.name} 无法跟随 DSH 的模型（${resolved.problem}），按它自己的配置启动。`);
+            return env;
+        }
+        const apiKey = await this.resolveApiKey(agent, resolved);
+        return { ...env, ...modelEnvironment(resolved, modelId ?? DEFAULT_MODEL_ID, apiKey, variables) };
+    }
+    /**
+     * The variable names this CLI reads, as configured beside its route. A route without names
+     * is one whose CLI is configured some other way (a project config file, say); following DSH
+     * would then only change the model id, so the route is treated as unusable instead.
+     * @param agent - the CLI whose route is being applied.
+     * @returns the names, and why they cannot be used when they cannot.
+     */
+    adapterVariables(agent) {
+        const models = modelRoutesOf(this.config.agents, agent.id);
+        const variables = {
+            ...(models?.baseURLEnv === '' || models?.baseURLEnv === undefined ? {} : { baseURL: { name: models.baseURLEnv } }),
+            ...(models?.apiKeyEnv === '' || models?.apiKeyEnv === undefined ? {} : { apiKeyEnv: { name: models.apiKeyEnv } }),
+            ...(models?.modelEnv === '' || models?.modelEnv === undefined ? {} : { modelEnv: { name: models.modelEnv } }),
+            ...(models === undefined || models.defaultModel === '' ? {} : { defaultModel: models.defaultModel }),
+        };
+        if (models === undefined || variables.baseURL === undefined || variables.modelEnv === undefined) {
+            return { variables, problem: VARIABLES_MISSING };
+        }
+        const apiKeyEnvs = models.apiKeyEnvs.map((name) => ({ name }));
+        return { variables: apiKeyEnvs.length === 0 ? variables : { ...variables, apiKeyEnvs }, problem: undefined };
+    }
+    /**
+     * The credential a route names, through the harness's credential service, so a key the user
+     * stored with DSH is found without being copied anywhere. Looked up per start: a key the user
+     * replaces takes effect on the next CLI, not after a restart.
+     * @param agent - the CLI being started, for the log line only.
+     * @param route - the resolved route.
+     * @returns the secret, or undefined when none is stored.
+     */
+    resolveApiKey(agent, route) {
+        const credentials = this.ctx.get('credentials');
+        if (route.apiKeyEnv === undefined || credentials === undefined)
+            return Promise.resolve(undefined);
+        return credentials.resolve(route.apiKeyEnv).then((resolved) => resolved?.value, (error) => {
+            this.ctx.logger.warn(`dsh-vyra-agent-cli-manager: 读不到 ${agent.name} 需要的凭据 ${route.apiKeyEnv}：${String(error)}`);
+            return undefined;
+        });
     }
     /**
      * The temporary session goes in a directory of its own, away from the user's projects.
@@ -510,7 +793,9 @@ export default class CliBridge extends Service {
         const cwd = this.homePath(PLUGIN_HOME, MODEL_PROBE_DIR);
         await mkdir(cwd, { recursive: true });
         try {
-            return await probeModels((handlers) => this.openTransport(agent, cwd, handlers), cwd, this.config.startTimeoutMs, signal);
+            // A CLI that follows DSH is asked about the model it will actually run, not about
+            // whichever one its own account would pick; the answer fills the menu either way.
+            return await probeModels((handlers) => this.openTransport(agent, cwd, handlers, DEFAULT_MODEL_ID), cwd, this.config.startTimeoutMs, signal);
         }
         catch (error) {
             if (signal.aborted)
@@ -544,7 +829,10 @@ export default class CliBridge extends Service {
             onModes: (modes) => this.catalog.learnModes(provider, modes),
             readImage: (ref, signal) => this.readImage(ref, signal),
             onError: (error) => this.ctx.logger.warn(`dsh-vyra-agent-cli-manager: ${agent.name}: ${String(error)}`),
-            openTransport: (handlers) => this.openTransport(agent, cwd, handlers),
+            // The model this step selected, so a CLI pointed at a DSH provider is told which one
+            // before it starts; a CLI already running is moved with `session/set_config_option`.
+            modelOfStep: () => start.modelId(),
+            openTransport: (handlers) => this.openTransport(agent, cwd, handlers, start.modelId()),
         });
     }
 }

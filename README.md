@@ -4,6 +4,22 @@ DeepSeek Harness 的插件与技能市场，随 [dsh-Veyra](../dsh-Veyra) fork �
 
 上游 `deepseek-ai/deepseek-harness` 不接受外部 PR，因此这里所有内容都是独立于上游仓库独立演进的。
 
+## 30 秒看懂
+
+录屏截图插件在真实 DSH 里的样子（不是效果图）：
+
+| 选录制范围 | 截图标注 | 设置与文件管理 |
+|---|---|---|
+| ![选择录屏来源：整个桌面 / 显示器 / 窗口 / 自定义区域](docs/images/screen-recorder-picker.png) | ![截图标注浮层：箭头、矩形、画笔、文字与隐藏 DSH 界面](docs/images/screen-recorder-annotate.png) | ![设置页：存储位置、格式、帧率、快捷键与文件列表](docs/images/screen-recorder-settings.png) |
+| 每次录制前先选：整个桌面、某块显示器、某个窗口，或拖框自定区域 | 截完直接标：箭头、矩形、椭圆、画笔、文字；「隐藏 DSH 界面」可以截到被挡住的其它应用 | 存储位置、MP4/WebM、帧率、快捷键、文件列表与一键转 MP4 |
+
+```sh
+# 装一个试试（也可以从插件市场里点安装）
+dsh plugin --profile web add dsh-vyra-screen-recorder
+```
+
+英文说明见各插件的 `README.en.md`，没有的话以中文版为准。
+
 ## 安装
 
 在 DSH 客户端里打开 **设置 → 插件 → 索引源**，按网络情况选一个。索引分两份，内容相同、**安装源不同**：
@@ -185,6 +201,10 @@ node scripts/sync-manifest-icons.mjs              # 生成内联图标
 **安装来源只能是 npm 或 Git**（`MarketSource` 类型限定）。本地目录、分支名都不是有效的市场来源。
 
 ### 每个插件的必备项（开发规范）
+
+**命名：包名必须以 `dsh-` 为前缀**，带 scope 的写成 `@scope/dsh-xxx`。前缀放在 scope 之后，因为它区分的是「DSH 插件」而不是归属者——`@lanxiake/dsh-im` 合规，`@lanxiake/im` 不合规。`package.json` 的 `name`、`dsh.bundle` 引用的包名、客户端 bundle 里 `__ModuleLoader__.load({id})` 的 id 三者必须一致，改名时一起改（见上一节）。
+
+包名发布后改不了——npm 上换名就是另一个包，已装用户不会跟过来。所以 `pnpm run check:installable` 会校验这条规则，且当前没有任何豁免：`plugins/` 下每个包都必须带 `dsh-` 前缀。
 
 以下三项**所有插件都必须有**，缺一项 `pnpm run check:installable` 会直接失败：
 

@@ -72,7 +72,7 @@ description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件�
 - `dsh-vyra-system-selection`：划词助手（Windows）。
 - `dsh-vyra-agent-manager` / `dsh-vyra-agent-cli-manager`：Agent 与 CLI 管理。
 - `dsh-vyra-wechat-local`：微信本地接入。
-- `dsh-vyra-media-studio`：媒体工作台。
+- `dsh-vyra-file-manager`：文件管理，浏览与预览工作区文件。
 - 其余按分类在 Veyra 索引里查，不要凭记忆编造插件。
 
 ## 工具与命令

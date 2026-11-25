@@ -1,0 +1,74 @@
+{
+  "name": "dsh-vyra-file-manager",
+  "version": "0.5.0",
+  "type": "module",
+  "description": "文件管理：右侧栏浏览、预览、重命名、复制、删除工作区里的全部文件（图片/视频/音频/文档/压缩包/HTML/代码），展开即打开，含本会话时间线、网格缩放、PDF 与 HTML 沙箱预览、系统剪贴板文件复制。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib/",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "assets/qq-group.png"
+  ],
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "test": "node --test test.mjs test-client.mjs test-timeline-real.mjs test-cordis.mjs test-drag.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "file-manager",
+    "files",
+    "gallery",
+    "media",
+    "video",
+    "audio",
+    "文件管理",
+    "文件",
+    "预览",
+    "html-preview",
+    "clipboard",
+    "系统剪贴板"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-file-manager"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3",
+    "mime-types": "^3.0.2",
+    "range-parser": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "highlight.js": "^11.12.0",
+    "lucide-react": "^0.577.0",
+    "markdown-it": "^15.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "yet-another-react-lightbox": "^3.33.1"
+  }
+}

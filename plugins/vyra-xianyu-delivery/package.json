@@ -1,6 +1,6 @@
 {
   "name": "dsh-vyra-xianyu-delivery",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "icon": "./icon.svg",
   "type": "module",
   "description": "闲鱼虚拟商品自动客服：实时监听买家消息，自动发货，并用 DSH agent + 技能回答买家问题",

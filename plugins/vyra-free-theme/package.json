@@ -2,7 +2,7 @@
   "name": "dsh-vyra-free-theme",
   "description": "自由主题：主题、壁纸（静态/视频/动图/代码）与左侧菜单样式一体化，明暗自适应，Web 与 Desktop 通用。",
   "icon": "./icon.svg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -14,7 +14,6 @@
   "files": [
     "lib",
     "assets",
-    "presets",
     "locale",
     "cli",
     "skill",

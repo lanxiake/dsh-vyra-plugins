@@ -9,10 +9,18 @@ import { readModelList } from "../model-options.js";
 import { errorMessage } from "./outcomes.js";
 /** Used when a CLI reports no model option, as some do when resuming. */
 const CONVENTIONAL_MODEL_OPTION_ID = 'model';
+/**
+ * Rows a CLI reports for "whatever I was started with". Several CLIs use the same word for it,
+ * so both the conventional id and a row named for it stand for the CLI's default.
+ */
+const DEFAULT_ROWS = new Set([DEFAULT_MODEL_ID, 'default', 'cli-default']);
+const isDefaultRow = (value) => DEFAULT_ROWS.has(value);
 /** The model side of one CLI session. */
 export class ModelState {
     knownModels;
     onOptions;
+    /** The model the process was launched with, when DSH named it instead of the CLI. */
+    launchedWith;
     optionId;
     /** The model a new session started on, which the `default` selection stands for. */
     cliDefault;
@@ -26,6 +34,15 @@ export class ModelState {
     constructor(knownModels, onOptions) {
         this.knownModels = knownModels;
         this.onOptions = onOptions;
+    }
+    /**
+     * Remember the model the CLI was launched with. A CLI pointed at a DSH provider is told its
+     * model through an environment variable before it runs, and then says so in a row of its own
+     * (`Default`), so that row now stands for the DSH model rather than for the CLI's own pick.
+     * @param model - the model the harness selected for the step that started this process.
+     */
+    launched(model) {
+        this.launchedWith = model;
     }
     /**
      * Only a new session says what `default` stands for: a resumed one reports the model it
@@ -46,13 +63,21 @@ export class ModelState {
     }
     /**
      * Switch the CLI to the harness's selection, unless it is already there.
-     * @param model - the selected model; omitted or `default` means the CLI's own.
+     * @param model - the selected model; omitted or `default` means whatever the CLI was
+     *   launched with, which is the DSH model when the user made the CLI follow DSH.
      * @param where - the session to switch.
      * @param signal - cancellation for the wait.
      */
     async apply(model, where, signal) {
         const known = this.knownModels?.();
-        const target = model === undefined || model === DEFAULT_MODEL_ID ? (this.cliDefault ?? known?.current) : model;
+        const launchesOnDsh = this.launchedWith !== undefined;
+        const own = isDefaultRow(model === undefined ? DEFAULT_MODEL_ID : model);
+        // A CLI started on the DSH model already runs it, so the `default` row is a no-op: the
+        // CLI's own default row would switch it back to the account this plugin was asked to
+        // leave behind.
+        if (own && launchesOnDsh)
+            return;
+        const target = own ? (this.cliDefault ?? known?.current) : model;
         if (target === undefined || target === this.active)
             return;
         const optionId = this.optionId ?? known?.configId ?? CONVENTIONAL_MODEL_OPTION_ID;

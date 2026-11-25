@@ -176,9 +176,16 @@ function selectionForChoice({ groups, current }, provider) {
 var CLI_PREFS_STORAGE_KEY = "dsh-vyra-agent-cli-manager.cli-prefs";
 var isBuiltInChoice = (id) => !id.startsWith(CLI_ROUTE_PREFIX);
 var HIDDEN_BY_DEFAULT = /* @__PURE__ */ new Set([cliRoute("codebuddy")]);
-var EMPTY = { known: [], order: [], hidden: [] };
+var EMPTY = { known: [], order: [], hidden: [], sources: {} };
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/** Which model source each CLI runs on, by CLI route id. */
+function sourcesOf(value) {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry) => isModelSource(entry[1]))
+  );
 }
 function strings(value) {
   return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
@@ -201,7 +208,8 @@ function parseCliPrefs(raw) {
   return {
     known: choices(value.known),
     order: strings(value.order),
-    hidden: strings(value.hidden).filter((id) => !isBuiltInChoice(id))
+    hidden: strings(value.hidden).filter((id) => !isBuiltInChoice(id)),
+    sources: sourcesOf(value.sources)
   };
 }
 function sortByOrder(items, order) {
@@ -244,6 +252,15 @@ function moveChoice(prefs, id, delta) {
   const other = ids[to] ?? id;
   return { ...prefs, order: ids.map((candidate, index) => index === from ? other : index === to ? id : candidate) };
 }
+/** Which model source each CLI runs on; the host is told the same values, the browser keeps them. */
+function rememberSources(prefs, picks) {
+  if (picks.length === 0) return prefs;
+  let sources = prefs.sources;
+  for (const pick of picks) {
+    if (isModelSource(pick.source) && sources[pick.id] !== pick.source) sources = { ...sources, [pick.id]: pick.source };
+  }
+  return sources === prefs.sources ? prefs : { ...prefs, sources };
+}
 function enableChoice(prefs, id, enabled) {
   if (isBuiltInChoice(id)) return prefs;
   const hidden = prefs.hidden.includes(id);
@@ -285,6 +302,11 @@ function createCliPrefs(storage) {
     },
     setEnabled: (id, enabled) => {
       update(enableChoice(prefs, id, enabled));
+    },
+    /** Every CLI's pick, to tell the host which one this browser holds. */
+    sources: () => Object.entries(prefs.sources).map(([id, source]) => ({ id, source })),
+    rememberSources: (picks) => {
+      update(rememberSources(prefs, picks));
     }
   };
 }
@@ -3331,6 +3353,164 @@ function CliStatusSection() {
   ] });
 }
 
+// src/client/cli-model-source.tsx
+var MODELS_URL = "/dsh-vyra-agent-cli-manager/cli/model-sources";
+var MS_CLASS = "vyra-agent-cli-manager-model-source";
+var SOURCE_OPTIONS = [
+  { id: "dsh", label: "\u8DDF\u968F DSH" },
+  { id: "cli", label: "\u4F7F\u7528 CLI \u81EA\u5DF1\u7684\u914D\u7F6E" }
+];
+var MS_LABELS = {
+  title: "\u6A21\u578B\u6765\u6E90",
+  intro: "\u9009\u201C\u8DDF\u968F DSH\u201D\u65F6\uFF0C\u8FD9\u4E2A CLI \u7528 DSH \u91CC\u914D\u597D\u7684\u63D0\u4F9B\u65B9\u3001\u6A21\u578B\u548C\u51ED\u636E\u8FD0\u884C\uFF0C\u4E0D\u518D\u8981\u6C42\u5B83\u81EA\u5DF1\u767B\u5F55\uFF1B\u9009\u201C\u4F7F\u7528 CLI \u81EA\u5DF1\u7684\u914D\u7F6E\u201D\u65F6\u884C\u4E3A\u4E0D\u53D8\u3002\u6539\u52A8\u5728\u4E0B\u4E00\u4E2A\u542F\u52A8\u7684 CLI \u4E0A\u751F\u6548\uFF0C\u5DF2\u5728\u8FD0\u884C\u7684\u4F1A\u8BDD\u8BF7\u65B0\u5EFA\u3002\u9009\u62E9\u4FDD\u5B58\u5728\u672C\u6D4F\u89C8\u5668\u3002",
+  loading: "\u6B63\u5728\u8BFB\u53D6\u6A21\u578B\u6765\u6E90\u2026",
+  empty: "\u6CA1\u6709 CLI \u914D\u4E86\u53EF\u8DDF\u968F\u7684\u6A21\u578B\u3002\u5728 profile \u7684 cordis.patch.yml \u91CC\u7ED9 agents \u7684\u67D0\u9879\u52A0\u4E0A models\uFF0C\u8FD9\u91CC\u5C31\u4F1A\u51FA\u73B0\u5B83\u3002",
+  failed: "\u8BFB\u53D6\u6A21\u578B\u6765\u6E90\u5931\u8D25",
+  retry: "\u91CD\u8BD5",
+  saveFailed: "\u4FDD\u5B58\u5931\u8D25",
+  endpoint: "\u63A5\u53E3"
+};
+var MODEL_SOURCE_STYLES = `
+.${MS_CLASS} { display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; max-width: 720px; color: var(--dsw-alias-label-primary); }
+.${MS_CLASS}-intro { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 20px; }
+.${MS_CLASS}-list { margin: 0; padding: 0; list-style: none; }
+.${MS_CLASS}-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 0; }
+.${MS_CLASS}-row + .${MS_CLASS}-row { border-top: 0.5px solid var(--dsw-alias-border-l1); }
+.${MS_CLASS}-main { min-width: 0; }
+.${MS_CLASS}-name { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; line-height: 20px; }
+.${MS_CLASS}-hint { margin-top: 3px; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
+.${MS_CLASS}-endpoint { margin-top: 2px; color: var(--dsw-alias-label-tertiary, var(--dsw-alias-label-secondary)); font-size: 11px; line-height: 16px; word-break: break-all; }
+.${MS_CLASS}-problem { margin-top: 4px; color: var(--dsw-alias-state-warning-primary, #e5a03a); font-size: 12px; line-height: 18px; }
+.${MS_CLASS}-error { margin: 0; color: var(--dsw-alias-state-error-primary, #d1383d); font-size: 12px; line-height: 18px; }
+.${MS_CLASS}-pick { display: inline-flex; flex: none; gap: 2px; padding: 2px; border-radius: 10px; background: var(--dsw-alias-bg-layer-3); }
+.${MS_CLASS}-option { height: 26px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; line-height: 18px; white-space: nowrap; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.${MS_CLASS}-option:hover:not([aria-pressed="true"]):not(:disabled) { color: var(--dsw-alias-label-primary); }
+.${MS_CLASS}-option[aria-pressed="true"] { background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); font-weight: 500; box-shadow: 0 1px 2px var(--dsw-elevation-soft, rgb(0 0 0 / 12%)); }
+.${MS_CLASS}-option:disabled { cursor: default; opacity: 0.6; }
+.${MS_CLASS}-option:focus-visible { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, currentColor); outline-offset: 1px; }
+.${MS_CLASS}-button { height: 32px; padding: 0 16px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 10px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; cursor: pointer; }
+.${MS_CLASS}-button:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); }
+`;
+function isModelSource(value) {
+  return value === "dsh" || value === "cli";
+}
+function isModelRow(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const row = value;
+  return typeof row.id === "string" && typeof row.name === "string" && isModelSource(row.source) && typeof row.provider === "string" && typeof row.model === "string";
+}
+function picksOf(rows) {
+  return rows.map((row) => ({ id: row.id, source: row.source }));
+}
+/** Read every CLI's model source, reporting the picks this browser holds so the host agrees. */
+async function fetchModelSources(chosen) {
+  const data = await post(MODELS_URL, { chosen });
+  return { rows: Array.isArray(data.sources) ? data.sources.filter(isModelRow) : [] };
+}
+function describeModelRow(row) {
+  if (row.source !== "dsh") {
+    return { title: "\u4F7F\u7528 CLI \u81EA\u5DF1\u7684\u914D\u7F6E", hint: "\u6309\u8FD9\u4E2A CLI \u81EA\u5DF1\u7684\u8BBE\u7F6E\u548C\u767B\u5F55\u72B6\u6001\u8FD0\u884C\u3002" };
+  }
+  return {
+    title: `\u8DDF\u968F DSH\uFF1A${row.provider} \xB7 ${row.model}`,
+    hint: row.endpointFromDSH ? "\u63A5\u53E3\u5730\u5740\u548C\u51ED\u636E\u90FD\u6765\u81EA DSH \u91CC\u8FD9\u4E2A\u63D0\u4F9B\u65B9\u7684\u914D\u7F6E\u3002" : "\u63A5\u53E3\u5730\u5740\u5199\u5728\u63D2\u4EF6\u914D\u7F6E\u91CC\uFF0C\u51ED\u636E\u6765\u81EA DSH\u3002"
+  };
+}
+function ModelSourceRow({ row, busy, onChoose }) {
+  const { title, hint } = describeModelRow(row);
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("li", { className: `${MS_CLASS}-row`, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: `${MS_CLASS}-main`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: `${MS_CLASS}-name`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(ProviderMark, { provider: cliRoute(row.id), size: 14 }),
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { children: row.name })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: `${MS_CLASS}-hint`, children: `${MS_LABELS.title}\uFF1A${title}` }),
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: `${MS_CLASS}-hint`, children: hint }),
+      row.endpoint === null ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: `${MS_CLASS}-endpoint`, children: `${MS_LABELS.endpoint}\uFF1A${row.endpoint}` }),
+      row.problem === null || row.problem === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: `${MS_CLASS}-problem`, role: "status", children: row.problem })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { role: "group", "aria-label": `${row.name} ${MS_LABELS.title}`, className: `${MS_CLASS}-pick`, children: SOURCE_OPTIONS.map((option) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+      "button",
+      {
+        type: "button",
+        className: `${MS_CLASS}-option`,
+        "aria-pressed": row.source === option.id,
+        disabled: busy,
+        onClick: () => {
+          onChoose(row.id, option.id);
+        },
+        children: option.label
+      },
+      option.id
+    )) })
+  ] });
+}
+function useModelSources(prefs) {
+  const [state, setState] = (0, import_react12.useState)({ rows: [], loading: true });
+  const [saving, setSaving] = (0, import_react12.useState)();
+  const [error, setError] = (0, import_react12.useState)();
+  const load = (0, import_react12.useCallback)(async (chosen) => {
+    setState((previous) => ({ ...previous, loading: true }));
+    try {
+      const next = await fetchModelSources(chosen);
+      // The browser's own picks are what the page started the rows on, and the host now agrees
+      // with them, so what it answered is the truth for this render.
+      prefs.rememberSources(picksOf(next.rows));
+      setState({ rows: next.rows, loading: false });
+      setError(void 0);
+    } catch (reason) {
+      setState((previous) => ({ ...previous, loading: false }));
+      setError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }, [prefs]);
+  (0, import_react12.useEffect)(() => {
+    void load(prefs.sources());
+  }, [load, prefs]);
+  const choose = (id, source) => {
+    const before = state.rows;
+    setState((previous) => ({
+      ...previous,
+      rows: previous.rows.map((row) => row.id === id ? { ...row, source } : row)
+    }));
+    prefs.rememberSources([{ id, source }]);
+    setSaving(id);
+    setError(void 0);
+    fetchModelSources([{ id, source }]).then((next) => {
+      setState({ rows: next.rows, loading: false });
+      prefs.rememberSources(picksOf(next.rows));
+    }, (reason) => {
+      setState({ rows: before, loading: false });
+      prefs.rememberSources(picksOf(before));
+      setError(`${MS_LABELS.saveFailed}\uFF1A${reason instanceof Error ? reason.message : String(reason)}`);
+    }).finally(() => {
+      setSaving(void 0);
+    });
+  };
+  return { state, saving, error, choose, retry: () => void load() };
+}
+function ModelSourceSection({ prefs }) {
+  const panel = useModelSources(prefs);
+  const { rows, loading } = panel.state;
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("section", { className: MS_CLASS, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("p", { className: `${MS_CLASS}-intro`, children: MS_LABELS.intro }),
+    loading && rows.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("p", { className: `${MS_CLASS}-intro`, children: MS_LABELS.loading }) : null,
+    !loading && panel.error === void 0 && rows.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("p", { className: `${MS_CLASS}-intro`, children: MS_LABELS.empty }) : null,
+    panel.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("p", { className: `${MS_CLASS}-error`, role: "alert", children: panel.error }),
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("button", { type: "button", className: `${MS_CLASS}-button`, onClick: panel.retry, children: MS_LABELS.retry })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("ul", { className: `${MS_CLASS}-list`, children: rows.map((row) => /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+      ModelSourceRow,
+      {
+        row,
+        busy: panel.saving === row.id,
+        onChoose: panel.choose
+      },
+      row.id
+    )) })
+  ] });
+}
+
 // src/client/cli-mcp-tab.tsx
 var import_react16 = require("react");
 
@@ -4330,6 +4510,7 @@ function SettingsTabs({
 var import_jsx_runtime26 = require("react/jsx-runtime");
 var SETTINGS_TITLE = "Agent CM";
 var CLI_STATUS_TAB_LABEL = "Agent CLI";
+var MODELS_TAB_LABEL = "\u6A21\u578B\u6765\u6E90";
 var MCP_TAB_LABEL = "MCP";
 var SKILLS_TAB_LABEL = "\u6280\u80FD";
 var CLI_TAB_LABEL = "CLI \u5217\u8868";
@@ -4348,13 +4529,14 @@ var SETTINGS_PAGE_STYLES = `
 .${PAGE_CLASS}-row + .${PAGE_CLASS}-row { border-top: 0.5px solid var(--dsw-alias-border-l1); }
 .${PAGE_CLASS}-title { color: var(--dsw-alias-label-primary); font-size: 14px; font-weight: 500; line-height: 20px; }
 .${PAGE_CLASS}-desc { margin-top: 3px; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
-${SETTINGS_TABS_STYLES}${CLI_STATUS_STYLES}${MCP_TAB_STYLES}${SKILL_TAB_STYLES}${CLI_PREFS_STYLES}${SETTINGS_ABOUT_STYLES}${MODAL_STYLES}`;
+${SETTINGS_TABS_STYLES}${CLI_STATUS_STYLES}${MODEL_SOURCE_STYLES}${MCP_TAB_STYLES}${SKILL_TAB_STYLES}${CLI_PREFS_STYLES}${SETTINGS_ABOUT_STYLES}${MODAL_STYLES}`;
 function SettingsPage({
   settings,
   cliPrefs
 }) {
   const tabs = [
     { id: "clis", label: CLI_STATUS_TAB_LABEL, render: () => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(CliStatusSection, {}) },
+    { id: "models", label: MODELS_TAB_LABEL, render: () => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(ModelSourceSection, { prefs: cliPrefs }) },
     { id: "mcp", label: MCP_TAB_LABEL, render: () => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(McpTab, {}) },
     { id: "skills", label: SKILLS_TAB_LABEL, render: () => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(SkillsTab, {}) },
     { id: "cli", label: CLI_TAB_LABEL, render: () => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(CliPrefsSection, { prefs: cliPrefs }) }

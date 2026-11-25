@@ -94,6 +94,47 @@ CLI 和模型各有一个菜单。CLI 会话里的模型菜单列出当前 CLI �
 
 </details>
 
+### 让 CLI 用 DSH 里配好的模型
+
+Claude Code 这类 CLI 只认自己厂商的环境变量和登录状态，没登录就用不了。设置里「Agent CM → 模型来源」可以逐个 CLI 选 **跟随 DSH** 或 **使用 CLI 自己的配置**：选跟随 DSH 时，插件把这个 CLI 指向你在 DSH 里已经配好的模型提供方（凭据也从 DSH 读，不复制到别处），CLI 就不再需要自己的账号。只有插件配置里给它写了 `models` 的 CLI 才会出现在这一页。
+
+<details>
+<summary>细节</summary>
+
+- 设置保存在浏览器本地，改完对**之后启动**的 CLI 生效；已经在跑的会话要新建才用新设置。模型菜单里 CLI 的默认行会显示成 DSH 的模型名。
+- 端点地址和凭据名可以不写：不写就从 DSH 里这个提供方的配置读（比如 `llm-pi-ai.providers.<名字>` 的 `baseURL` 和 `apiKeyEnv`）。凭据每次启动时现读，换了 key 不用重启。
+- 必须写的是这几种变量名：`baseURLEnv`、`modelEnv`（以及可选的 `apiKeyEnv` / `apiKeyEnvs`）。Claude Code 读 `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_MODEL`，Codex 读 `OPENAI_*`。没写变量名的 CLI 即使选了跟随 DSH 也会按自己的配置启动，并在日志里说明原因——否则插件会把另一家的变量名塞给这个 CLI。
+- `defaultModel` 是菜单选「默认」时写进去的模型 id，用所有 CLI 都认的 `厂商/模型` 形式，例如 `ydy-ds/deepseek-v4.1-flash-1017`。
+- 解析不出来的路由（DSH 里没有这个提供方、提供方没配地址、读不到凭据）不会瞎猜：CLI 按原样启动，日志里写明原因，这一页上也会标出问题。
+- 这一页不显示、也不会上传凭据内容，只显示读了哪个变量名。
+
+</details>
+
+<details>
+<summary>配置示例（profile 的 <code>cordis.patch.yml</code>）</summary>
+
+```yaml
+- id: dsh-vyra-agent-cli-manager
+  name: dsh-vyra-agent-cli-manager
+  config:
+    agents:
+      - id: claude
+        name: Claude Code
+        command: npx
+        args: [-y, '@agentclientprotocol/claude-agent-acp@0.101.0']
+        models:
+          provider: ydy-ds                              # DSH 里配好的提供方
+          model: deepseek-v4.1-flash-1017               # 它下面的模型
+          baseURLEnv: ANTHROPIC_BASE_URL                # Claude Code 读的变量名
+          apiKeyEnv: ANTHROPIC_AUTH_TOKEN                # 凭据写进哪个变量
+          modelEnv: ANTHROPIC_MODEL
+          defaultModel: ydy-ds/deepseek-v4.1-flash-1017 # 选「默认」时写什么
+```
+
+`baseURL` 和 `apiKeyEnv`（提供方那侧的凭据名）不写时从 DSH 读。要覆盖才写，例如 `baseURL: https://your.proxy/v1`。
+
+</details>
+
 ### 变更面板
 
 右侧栏「变更」把改动分成已暂存、未暂存、未跟踪，可以暂存、撤销、提交、推拉、切换分支，点开文件看行内 diff。
@@ -284,7 +325,7 @@ CLI 注册为 DSH 的模型提供方，不需要改 agent loop。一轮 CLI 回�
 
 插件不处理登录、不接触 token，只沿用 CLI 已有的登录状态。各 CLI 的订阅账号能否在第三方工具里使用，以它们自己的条款为准。
 
-DSH 启动 CLI 时会去掉名字含 `KEY`、`PASSWORD`、`SECRET`、`TOKEN` 的环境变量，`ANTHROPIC_API_KEY` 这类变量要写在 agent 配置的 `env` 里。
+DSH 启动 CLI 时会去掉名字含 `KEY`、`PASSWORD`、`SECRET`、`TOKEN` 的环境变量，`ANTHROPIC_API_KEY` 这类变量要写在 agent 配置的 `env` 里。选了[跟随 DSH](#让-cli-用-dsh-里配好的模型)时例外：那时插件按你写的变量名把 DSH 里的凭据现读现传，不落盘。
 
 <details>
 <summary>关于 Claude Code</summary>

@@ -65,7 +65,7 @@ export class CliBridgeAdapter extends LlmAdapter {
         }
         // Read first, so a CLI that cannot run under this PTC runtime is never started.
         const ptc = this.deps.ptcWrapFor(provider, sessionId);
-        const session = this.deps.resolveSession(provider, sessionId);
+        const session = this.deps.resolveSession(provider, sessionId, model);
         yield* session.stream({
             messages,
             signal,

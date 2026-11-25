@@ -32,11 +32,33 @@ export interface CliConnection {
         readonly headers: IncomingMessage['headers'];
     }): 401 | 403 | undefined;
 }
+/** One CLI's model source, as the settings panel shows it. */
+export interface ModelSourceRow {
+    readonly id: string;
+    readonly name: string;
+    readonly source: 'dsh' | 'cli';
+    readonly provider: string;
+    readonly model: string;
+    /** The endpoint the CLI will call; null when the route resolves to none. */
+    readonly endpoint: string | null;
+    readonly endpointFromDSH: boolean;
+    readonly credential?: string;
+    /** What stops the route working, when something does. */
+    readonly problem: string | null;
+}
+/** What the panel asks for, and what the host needs to read back from it. */
+export interface ModelSourcePanel {
+    list(): ModelSourceRow[];
+    /** Record one CLI's pick; false when this CLI has no route to follow. */
+    choose(id: string, source: string): boolean;
+}
 /** Everything the route needs to answer, injected so tests reach no network and no PATH. */
 export interface CliRoutes {
     readonly host: CliHost;
     readonly latest: LatestVersionSource;
     readonly run: CliRunner;
+    /** The model sources the settings panel offers, and the picks it reports. */
+    readonly models?: ModelSourcePanel;
     /** The user's home, which the catalog's config paths are relative to. */
     readonly home: string;
     /** One file's text, or undefined when it cannot be read. */

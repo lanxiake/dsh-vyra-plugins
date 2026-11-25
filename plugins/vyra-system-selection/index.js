@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs'
 
 import {
   ACTIONS, MAX_TEXT_CHARS, buildFollowUpRequest, buildRequest, explainAuthFailure, findAction, pickModel,
-  reduceMouse, saneRect, selectionProblem, splitSuggestions,
+  reduceMouse, saneRect, selectionProblem, splitSuggestions, translatePlan,
 } from './core.js'
 import { CAPTURE_DELAY_MS, POLL_MS, captureSelection, createOverlay, readClipboardText, setWarnSink, writeClipboardText } from './native.js'
 import { loadSettings, saveLastRun, saveSettings } from './store.js'
@@ -67,6 +67,13 @@ export function apply(ctx) {
   let dismissed = ''
   const overlay = createOverlay({
     onAction: (id, anchor) => runAction(id, anchor),
+    /**
+     * The popup goes away. Registered here rather than in the mouse hook because the reason a menu
+     * must close is not always a mouse: the card never takes focus, so typing into the application
+     * behind it — or deleting the selection it is about — can only be noticed by the keyboard hook
+     * (`native.js`), which reports through this same callback whether or not the right-click hook
+     * is installed.
+     */
     onDismiss: () => dismiss(),
     onPanelClose: () => dismiss(),
     onPanelCopy: () => {
@@ -92,6 +99,10 @@ export function apply(ctx) {
       if (typeof language !== 'string' || language === settings.targetLanguage) return
       settings.targetLanguage = language
       persist()
+      // Re-translate with the new direction. `translatePlan` re-reads the selection, so a Chinese
+      // selection still goes to English and the pill row updates with it — an English card left
+      // showing the old direction after a manual choice would be the same lie the old
+      // "自动检测" pill told.
       if (lastRequest && lastRequest.action && lastRequest.action.id === 'translate') {
         void runModel(lastRequest.action, lastRequest.text, lastRequest.at)
       }
@@ -239,6 +250,14 @@ export function apply(ctx) {
     // A click outside a visible popup closes it: the user clicked it open by accident far more
     // often than not, and a menu that cannot be dismissed is worse than one that never opened.
     if (overlay.visible) {
+      // Backstop for typing. The keyboard hook is the real mechanism and this normally does
+      // nothing, but if that hook was refused (security software) a menu that ignores the
+      // keyboard would come back — the one failure this feature exists to fix.
+      if (!overlay.keyHookActive && overlay.anyKeyPressed?.()) {
+        dismiss()
+        mouse = null
+        return
+      }
       const pressed = overlay.leftButtonDown() || overlay.rightButtonDown?.() === true
       if (pressed && !overlay.containsPoint(pt)) {
         dismiss()
@@ -372,7 +391,16 @@ export function apply(ctx) {
       await runModel(action, text, at)
     } catch (error) {
       const message = describe(error)
-      overlay.showPanel({ anchor: at, title: action.label, status: '' })
+      const plan = planFor(action, text)
+      overlay.showPanel({
+        anchor: at,
+        title: action.label,
+        status: '',
+        action,
+        source: text,
+        targetLanguage: plan ? plan.target : settings.targetLanguage,
+        sourceLanguage: plan ? plan.source : '',
+      })
       overlay.setStatus(message, 'error')
       recordRun({ action: actionId, error: message })
     }
@@ -427,14 +455,30 @@ export function apply(ctx) {
   /** What the card is currently about, so 重新生成 and the chips can re-ask or continue it. */
   let lastRequest = null
 
+  /**
+   * The translation direction for one selection, or null for any other action.
+   *
+   * The rule lives in `core.js` (`translatePlan`), not here: it has to hold for the card, the
+   * prompt, and the re-translation after a manual language change alike, and the card labels both
+   * ends from the same answer.
+   */
+  function planFor(action, text) {
+    return action.id === 'translate' ? translatePlan(text, settings.targetLanguage) : null
+  }
+
   async function runModel(action, text, at) {
+    const plan = planFor(action, text)
     await runTurn({
       action,
       text,
       at,
       title: `${action.label} · ${preview(text)}`,
       question: null,
-      request: () => buildRequest(action.id, text, { targetLanguage: settings.targetLanguage }),
+      plan,
+      request: () => buildRequest(action.id, text, {
+        targetLanguage: plan ? plan.target : settings.targetLanguage,
+        sourceLanguage: plan ? plan.source : '',
+      }),
     })
   }
 
@@ -449,7 +493,11 @@ export function apply(ctx) {
       at: base.at,
       title: `追问 · ${preview(question)}`,
       question,
-      request: () => buildFollowUpRequest(base.text, previous, question, { targetLanguage: settings.targetLanguage }),
+      plan: base.plan,
+      request: () => buildFollowUpRequest(base.text, previous, question, {
+        targetLanguage: base.plan ? base.plan.target : settings.targetLanguage,
+        sourceLanguage: base.plan ? base.plan.source : '',
+      }),
     })
   }
 
@@ -460,7 +508,16 @@ export function apply(ctx) {
     else void runModel(lastRequest.action, lastRequest.text, lastRequest.at)
   }
 
-  async function runTurn({ action, text, at, title, question, request }) {
+  /**
+   * One streamed answer into the panel.
+   *
+   * `plan` is the translation direction when the action has one, and is what the card's language
+   * row is drawn from. Everything else about the card — title, quote, status, error reporting — is
+   * independent of the action.
+   */
+  async function runTurn({ action, text, at, title, question, plan = null, request }) {
+    const targetLanguage = plan ? plan.target : settings.targetLanguage
+    const sourceLanguage = plan ? plan.source : ''
     const llm = ctx.get('llm')
     let picked = null
     try {
@@ -469,14 +526,14 @@ export function apply(ctx) {
       // Enumeration can throw (an adapter's catalog fetch); without this the action dies
       // silently before the panel exists.
       const message = `无法选择模型：${describe(error)}`
-      overlay.showPanel({ anchor: at, title: action.label, status: '', action, source: text, targetLanguage: settings.targetLanguage })
+      overlay.showPanel({ anchor: at, title: action.label, status: '', action, source: text, targetLanguage, sourceLanguage })
       overlay.setStatus(message, 'error')
       recordRun({ action: action.id, error: message })
       return
     }
     if (!llm || typeof llm.stream !== 'function' || !picked || !picked.model) {
       const message = !llm ? 'LLM 服务不可用，请检查模型配置' : '没有可用的模型，请先在设置里选择'
-      overlay.showPanel({ anchor: at, title: action.label, status: '', action, source: text, targetLanguage: settings.targetLanguage })
+      overlay.showPanel({ anchor: at, title: action.label, status: '', action, source: text, targetLanguage, sourceLanguage })
       overlay.setStatus(message, 'error')
       recordRun({ action: action.id, error: message })
       return
@@ -484,7 +541,7 @@ export function apply(ctx) {
 
     const mine = ++generation
     lastResult = ''
-    lastRequest = { action, text, at, question }
+    lastRequest = { action, text, at, question, plan }
     overlay.showPanel({
       anchor: at,
       title,
@@ -492,7 +549,8 @@ export function apply(ctx) {
       action,
       // The card quotes the selection it is about, so a follow-up still shows its subject.
       source: text,
-      targetLanguage: settings.targetLanguage,
+      targetLanguage,
+      sourceLanguage,
     })
 
     const startedAt = Date.now()
@@ -588,6 +646,7 @@ export function apply(ctx) {
       platform: process.platform,
       maxChars: MAX_TEXT_CHARS,
       hookActive: overlay.hookActive,
+      keyHookActive: overlay.keyHookActive,
       stats: { ...stats },
       lastRun,
       overlayVisible: overlay.visible,

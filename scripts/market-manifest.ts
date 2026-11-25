@@ -91,8 +91,8 @@ const AGENT_CLI_MANAGER_ICON =
 /** Inline icon for `dsh-vyra-plugin-market`. */
 const PLUGIN_MARKET_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTMgOS41IDEyIDRsOSA1LjV2NUwxMiAyMGwtOS01LjV2LTVaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMyA5LjUgMTIgMTVsOS01LjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuNiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMiAyMHYtNSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNy42IDYuOSAxNi40IDEyIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K'
-/** Inline icon for `dsh-vyra-media-studio`. */
-const MEDIA_STUDIO_ICON =
+/** Inline icon for `dsh-vyra-file-manager`. */
+const FILE_MANAGER_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4NCiAgPHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMTAiIGZpbGw9IiMxMDE3MjIiLz4NCiAgPHJlY3QgeD0iOSIgeT0iMTIiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiM3QUFBRkYiIGZpbGwtb3BhY2l0eT0iLjkiLz4NCiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPg0KICA8cmVjdCB4PSI5IiB5PSIyNSIgd2lkdGg9IjkiIGhlaWdodD0iMTEiIHJ4PSIzIiBmaWxsPSIjNkZENkI1IiBmaWxsLW9wYWNpdHk9Ii45Ii8+DQogIDxwYXRoIGQ9Ik0yNC41IDMwLjUgMzQgMjUuMmwtOS41IDUuM3oiIGZpbGw9IiNGNEY1RjciLz4NCiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4NCjwvc3ZnPg0K'
 /** Inline icon for `dsh-vyra-dsh-console`. */
 const DSH_CONSOLE_ICON =
@@ -189,10 +189,6 @@ export interface MarketManifest {
   readonly plugins: readonly MarketPluginSource[]
 }
 
-/** Inline icon for `open-design`: the OpenDesign mark in brand orange. */
-const OPEN_DESIGN_ICON =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJPcGVuRGVzaWduIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib2QtZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNGRjU3MDEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMTExODI3Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCNvZC1nKSIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE1IiBmaWxsPSJub25lIiBzdHJva2U9IiNGNkY2RjEiIHN0cm9rZS13aWR0aD0iMyIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjUiIGZpbGw9IiNGNkY2RjEiLz4KICA8cGF0aCBkPSJNMzIgNnY3TTMyIDUxdjdNNiAzMmg3TTUxIDMyaDciIHN0cm9rZT0iI0Y2RjZGMSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+'
-
 export const manifest: MarketManifest = {
   title: {
     en: 'Veyra Plugins',
@@ -234,6 +230,15 @@ export const manifest: MarketManifest = {
       },
       icon: TOOL_USAGE_ICON,
       versions: {
+        '0.7.5': {
+          publishTimestamp: 1795680000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/tool-usage-stats',
+          },
+        },
         '0.6.0': {
           // Unix seconds of the commit that published it.
           publishTimestamp: 1794551488,
@@ -326,6 +331,15 @@ export const manifest: MarketManifest = {
       },
       icon: AGENT_MANAGER_ICON,
       versions: {
+        '1.3.1': {
+          publishTimestamp: 1795679999,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-agent-manager',
+          },
+        },
         '1.1.0': {
           publishTimestamp: 1794551488,
           source: {
@@ -387,6 +401,15 @@ export const manifest: MarketManifest = {
       },
       icon: SMART_COMPACTION_ICON,
       versions: {
+        '0.1.1': {
+          publishTimestamp: 1795679998,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-smart-compaction',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1794551488,
           source: {
@@ -420,6 +443,15 @@ export const manifest: MarketManifest = {
       },
       icon: SKILL_MCP_ICON,
       versions: {
+        '1.3.2': {
+          publishTimestamp: 1795679997,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
         // 1.0.0 keeps its original commit: a version whose source moved under
         // users who already resolved it is not a version anymore.
         '1.0.0': {
@@ -494,6 +526,15 @@ export const manifest: MarketManifest = {
       },
       icon: SSH_TERMINAL_ICON,
       versions: {
+        '0.1.3': {
+          publishTimestamp: 1795679996,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-ssh-terminal',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1794551488,
           source: {
@@ -550,6 +591,15 @@ export const manifest: MarketManifest = {
       },
       icon: SYSTEM_SELECTION_ICON,
       versions: {
+        '3.1.3': {
+          publishTimestamp: 1795679995,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         '1.0.0': {
           publishTimestamp: 1794960000,
           source: {
@@ -858,6 +908,15 @@ export const manifest: MarketManifest = {
       },
       icon: FREE_THEME_ICON,
       versions: {
+        '0.1.1': {
+          publishTimestamp: 1795679994,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-free-theme',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795449013,
           source: {
@@ -888,6 +947,15 @@ export const manifest: MarketManifest = {
       icon: WECHAT_LOCAL_ICON,
       engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
       versions: {
+        '0.8.2': {
+          publishTimestamp: 1795679993,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-wechat-local',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795046400,
           source: {
@@ -1126,6 +1194,15 @@ export const manifest: MarketManifest = {
       },
       icon: XIANYU_DELIVERY_ICON,
       versions: {
+        '0.9.2': {
+          publishTimestamp: 1795679992,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795058652,
           source: {
@@ -1700,6 +1777,29 @@ export const manifest: MarketManifest = {
       // so an older client cannot load it.
       engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
       versions: {
+        // 1.4.0 lets a CLI run on a model DSH already has configured. Claude Code only knows
+        // its own login or ANTHROPIC_*, so a machine with neither cannot run it at all; the
+        // new 设置 → Agent CM → 模型来源 page picks that per CLI, and `agents[].models` names the
+        // provider, the model and the variables that CLI reads. The endpoint and credential
+        // come from the provider's own DSH settings, and the secret is read at each start.
+        '1.4.0': {
+          publishTimestamp: 1795723200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6e513fb7f4fb9bba771e00fff49d124b474810c7',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
+        '1.3.2': {
+          publishTimestamp: 1795679991,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
         // 1.0.0's package.json carried `prepare: lefthook install`, copied in
         // from the source working copy. A git install runs `prepare`, there is
         // no .git in the fetched tarball, and lefthook exits 128 — so 1.0.0
@@ -1809,6 +1909,15 @@ export const manifest: MarketManifest = {
       },
       icon: PLUGIN_MARKET_ICON,
       versions: {
+        '0.7.3': {
+          publishTimestamp: 1795679990,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
         // 0.1.0 is published: it is what the index already carried, and its
         // source stays pinned where users resolved it.
         '0.1.0': {
@@ -2364,12 +2473,27 @@ export const manifest: MarketManifest = {
         // still read as plain labels. An earlier attempt at this used
         // --dsw-alias-bg-layer-3, which the theme does not publish, so the whole
         // background declaration was invalid and nothing changed on screen.
-        '0.6.4': {
+                // 0.6.5 adds the repository field the npm tarball was missing, which
+        // left the package unlinked from its source in npm metadata and search.
+        '0.6.5': {
+          publishTimestamp: 1796572800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3524e6f7b0dee1e91e8645378797a9db3eac5b1f',
+            path: 'plugins/vyra-free-model',
+          },
+        },
+'0.6.4': {
           publishTimestamp: 1795496197,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'b3b94ac82117833a1df72e049c396493719ee812',
+            // Repinned from b3b94ac, which predates the rename. 9292d11 changed
+            // nothing in this plugin but the names: package.json, the cordis row
+            // and the client registration id now all read dsh-vyra-free-model,
+            // which is also the name npm published 0.6.4 under.
+            commit: '9292d1170cd87d914cff743b9a8811ce0e4b7ba7',
             path: 'plugins/vyra-free-model',
           },
         },
@@ -2485,7 +2609,18 @@ export const manifest: MarketManifest = {
         // closing paren ended the return early, so four cards were never in
         // the tree. Also repairs the theme tokens (--dsh-color-* never
         // existed; DSH publishes --dsw-alias-*).
-        '0.4.4': {
+                // 0.4.5 adds the repository field the npm tarball was missing and the
+        // screenshots the README had none of.
+        '0.4.5': {
+          publishTimestamp: 1796572800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '3524e6f7b0dee1e91e8645378797a9db3eac5b1f',
+            path: 'plugins/vyra-screen-recorder',
+          },
+        },
+'0.4.4': {
           publishTimestamp: 1796457600,
           source: {
             type: 'git',
@@ -2703,6 +2838,15 @@ export const manifest: MarketManifest = {
       },
       icon: STUDYMATE_ICON,
       versions: {
+        '2.2.1': {
+          publishTimestamp: 1795679988,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-studymate',
+          },
+        },
         // 2.2.0 asks for a course format at enrollment (reading, audio,
         // video, quiz or a mix) and ships the media generators with the
         // installed package.
@@ -2809,25 +2953,70 @@ export const manifest: MarketManifest = {
       },
     },
     {
-      name: 'dsh-vyra-media-studio',
+      name: 'dsh-vyra-file-manager',
       title: {
         en: 'File Manager',
         zh: '文件管理',
       },
       description: {
-        en: 'A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and text in the panel, and rename, copy, delete, reveal or insert files into the composer.',
-        zh: '右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与文本，并支持重命名、复制、删除、打开所在位置及引用到输入框。',
+        en: 'A file manager in the right Sidebar that opens by default: browse every workspace file type (images, video, audio, documents, archives, HTML, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and rich HTML in an opaque-origin sandbox, copy files onto the system clipboard as real file drops, rename, delete, reveal (selected in Explorer) or insert files into the composer, and list only the conversation turns that changed files.',
+        zh: '右侧栏文件管理（展开即打开）：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、HTML、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与 HTML 富页面（opaque-origin 沙箱），可把文件以真实文件列表复制进系统剪贴板、重命名、删除、在资源管理器中选中打开及引用到输入框，时间线只列出真正改动过文件的对话轮次。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
       repository: {
         url: 'https://github.com/lanxiake/dsh-vyra-plugins',
-        directory: 'plugins/vyra-media-studio',
+        directory: 'plugins/vyra-file-manager',
       },
-      icon: MEDIA_STUDIO_ICON,
+      icon: FILE_MANAGER_ICON,
       versions: {
+        // 0.5.0 — BREAKING: the "link" file type is gone. The type row now
+        // offers "HTML" instead, and previously saved link cards are no longer
+        // read or drawn (their localStorage entries are left untouched).
+        // Also: a fresh right Sidebar opens on the file manager (toggle in the
+        // filter panel); HTML previews run in an opaque-origin sandbox with
+        // Host-inlined stylesheets, scripts and images; "copy file" puts a real
+        // file list on the system clipboard; "reveal in file manager" now
+        // selects the file in Explorer instead of silently doing nothing; and
+        // the timeline lists only turns that changed files.
+        '0.5.0': {
+          // 2026-11-25 15:00 UTC — the day this build was cut.
+          publishTimestamp: 1795593512,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '7c46956a474fde2a8875e1370b365b2f8bf3a3ef',
+            path: 'plugins/vyra-file-manager',
+          },
+        },
+        // 0.4.0 renames the package from `dsh-vyra-media-studio` to
+        // `dsh-vyra-file-manager`. Only the identity strings move — the
+        // package name, the cordis row, `export const name` and the client
+        // registration id; by 0.2.0 this had become a file manager and the old
+        // name described a plugin it no longer was. The earlier entries keep
+        // the old path and name: their commits predate the rename and an
+        // install must still resolve what those versions actually contained.
+        '0.4.0': {
+          // 2026-11-25 00:00 UTC — the day this build was cut.
+          publishTimestamp: 1795585523,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'fa69be5879b52a505734c9117b76fa273e787166',
+            path: 'plugins/vyra-file-manager',
+          },
+        },
+        '0.3.5': {
+          publishTimestamp: 1795576940,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-media-studio',
+          },
+        },
         '0.1.0': {
-          publishTimestamp: 1795344299,
+          publishTimestamp: 1795344982,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2841,7 +3030,7 @@ export const manifest: MarketManifest = {
         // workspace. It also reports the route's own reason instead of a bare
         // HTTP status.
         '0.1.1': {
-          publishTimestamp: 1795345200,
+          publishTimestamp: 1795354115,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2853,7 +3042,7 @@ export const manifest: MarketManifest = {
         // `scopeOf`: the workspace root is resolved from the live Session's
         // sandbox policy, then its header, then a stored Session header.
         '0.1.2': {
-          publishTimestamp: 1795347000,
+          publishTimestamp: 1795356930,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2865,7 +3054,7 @@ export const manifest: MarketManifest = {
         // deferred metadata, a zoomable grid, detailed list mode, document
         // previews and rename/copy/delete/reveal/open actions.
         '0.2.0': {
-          publishTimestamp: 1795407787,
+          publishTimestamp: 1795407793,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2876,7 +3065,7 @@ export const manifest: MarketManifest = {
         // 0.2.1 restores the gridRef declaration and the MediaTab mediaSrc
         // import that made the 0.2.0 panel blank, and adds a render smoke test.
         '0.2.1': {
-          publishTimestamp: 1795408922,
+          publishTimestamp: 1795408917,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2887,7 +3076,7 @@ export const manifest: MarketManifest = {
         // 0.2.2 adds the tree view, single/multi type filters, Ctrl batch
         // selection, Markdown/HTML/CSV/JSON/code previews and folder actions.
         '0.2.2': {
-          publishTimestamp: 1795415426,
+          publishTimestamp: 1795415421,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2898,7 +3087,7 @@ export const manifest: MarketManifest = {
         // 0.2.3 adds a current-session file filter backed by the Session header
         // createdAt, sorted newest first.
         '0.2.3': {
-          publishTimestamp: 1795426720,
+          publishTimestamp: 1795426714,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2909,7 +3098,7 @@ export const manifest: MarketManifest = {
         // 0.2.4 adds the produced-files timeline, long-press drag to move or
         // reference, a move route, explorer labels and a faster search.
         '0.2.4': {
-          publishTimestamp: 1795486966,
+          publishTimestamp: 1795486962,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2920,7 +3109,7 @@ export const manifest: MarketManifest = {
         // 0.2.5 makes the timeline a conversation axis, adds an in-panel drop
         // panel for long-press drag, and collapses view toggles.
         '0.2.5': {
-          publishTimestamp: 1795492049,
+          publishTimestamp: 1795492040,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2930,7 +3119,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.6 fixes the invisible timeline and restores native drag.
         '0.2.6': {
-          publishTimestamp: 1795495455,
+          publishTimestamp: 1795495448,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2940,7 +3129,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.7 reads the session log from every Host surface so the timeline fills.
         '0.2.7': {
-          publishTimestamp: 1795499697,
+          publishTimestamp: 1795499691,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2950,7 +3139,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.8 reads the session log through non-throwing service probes.
         '0.2.8': {
-          publishTimestamp: 1795503460,
+          publishTimestamp: 1795503452,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2960,7 +3149,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.9 stops reading undeclared services by property (Cordis throws).
         '0.2.9': {
-          publishTimestamp: 1795503978,
+          publishTimestamp: 1795503964,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2970,7 +3159,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.0 turns the timeline into its own grid-capable, collapsible view.
         '0.3.0': {
-          publishTimestamp: 1795504475,
+          publishTimestamp: 1795504770,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2980,7 +3169,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.1 ties the timeline to the session filter and enlarges the controls.
         '0.3.1': {
-          publishTimestamp: 1795505673,
+          publishTimestamp: 1795505657,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2990,7 +3179,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.2 fixes mouse drag, widens text preview and filters type counts.
         '0.3.2': {
-          publishTimestamp: 1795506292,
+          publishTimestamp: 1795506277,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3000,7 +3189,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.3 makes timeline entries drag sources.
         '0.3.3': {
-          publishTimestamp: 1795506808,
+          publishTimestamp: 1795506792,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3010,7 +3199,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.4 drags a clone of the pressed element as the ghost.
         '0.3.4': {
-          publishTimestamp: 1795507029,
+          publishTimestamp: 1795507015,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3042,6 +3231,15 @@ export const manifest: MarketManifest = {
       },
       icon: DSH_CONSOLE_ICON,
       versions: {
+        '0.1.2': {
+          publishTimestamp: 1795679986,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4f4d01ffe5612461d706874dabe66996ad306cda',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
         '0.1.0': {
           publishTimestamp: 1795472400,
           source: {
@@ -3077,84 +3275,6 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'agent-runtime',
         keywords: ['console', 'harness', 'settings', 'models', 'plugins', 'panel'],
-      },
-    },
-    {
-      name: 'open-design',
-      title: {
-        en: 'OpenDesign Domains',
-        zh: 'OpenDesign 领域包',
-      },
-      description: {
-        en: 'Splits the OpenDesign skill library into nine business domains, each paired with its own agent, so a user loads only the work they actually do. A settings panel switches domains on and off and applies the change immediately; the bundled odx CLI does the same from a terminal. Ships 85 craft skills plus 152 design-system contracts, and one director agent coordinates whatever is enabled.',
-        zh: '把 OpenDesign 技能库按业务领域切成九个包，每包配一个同名 Agent，只加载真正用得上的那部分。在设置页里开关领域即写即生效，也可用自带的 odx 命令操作。含 85 个工艺技能与 152 套设计系统契约，再由一个编排 Agent 统一调度已启用的领域。',
-      },
-      author: 'lanxiake',
-      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
-      repository: {
-        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
-        directory: 'plugins/open-design',
-      },
-      icon: OPEN_DESIGN_ICON,
-      versions: {
-        '0.2.5': {
-          publishTimestamp: 1795605600,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'fc47fda63e90cf0633b1c5ba234e5da59ddb338c',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.4': {
-          publishTimestamp: 1795602000,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'ae337db1f85bb4d9bb9c8695b6a880018c476278',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.3': {
-          publishTimestamp: 1795596300,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '24dbce2da474794afaaad9c7dcb56b118f3d725c',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.2': {
-          publishTimestamp: 1795592400,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'c497770c4f68b147c3a8443c6d8220608c6fbb10',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.1': {
-          publishTimestamp: 1795588800,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'a2328fa8d450b478fc9b1982092d871c9f4793a7',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.0': {
-          publishTimestamp: 1795502400,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'cea8adb952ab29a16f5fe01c303a6722b43ed73f',
-            path: 'plugins/open-design',
-          },
-        },
-      },
-      metadata: {
-        category: 'content',
-        keywords: ['skill', 'design', 'open-design', 'frontend-design', 'motion', 'design-system', 'agent'],
       },
     },
   ],

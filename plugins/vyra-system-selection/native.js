@@ -10,7 +10,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { bodyBlocks, clampScroll, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse, splitSuggestions, wrapLines } from './core.js'
+import { TARGET_LANGUAGES, bodyBlocks, clampScroll, isDismissingKey, maySynthesizeCopy, menuHitTest, menuLayout, panelSideFor, placeMenuAtSelection, placePanelAtSelection, reduceMouse, splitSuggestions, wrapLines } from './core.js'
 
 function loadKoffi() {
   // The Host runs from an asar; koffi's native binary is shipped unpacked beside it. Resolve
@@ -142,6 +142,10 @@ const native = globalThis[Symbol.for('dsh-vyra-system-selection.native')] ??= ((
   // Low-level mouse hook payload. 32 bytes on x64: the trailing uintptr_t pads the struct.
   const MSLLHOOKSTRUCT = koffi.struct('MSLLHOOKSTRUCT', {
     pt: 'POINT', mouseData: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
+  })
+  // Low-level keyboard hook payload: same tail, no cursor point.
+  const KBDLLHOOKSTRUCT = koffi.struct('KBDLLHOOKSTRUCT', {
+    vkCode: 'uint32', scanCode: 'uint32', flags: 'uint32', time: 'uint32', dwExtraInfo: 'uintptr_t',
   })
   // Prefixed: koffi registers type names process-wide, and a plain 'SIZE' is a name any other
   // plugin in this Host could already have taken.
@@ -310,9 +314,6 @@ const IDC_ARROW = 32512
 const IDC_IBEAM = 32513
 const IDC_SIZEALL = 32646
 
-/** Targets offered by the card's language row; the settings page offers the same list. */
-const TARGET_LANGUAGES = ['简体中文', '繁體中文', 'English', '日本語', '한국어', 'Français', 'Deutsch', 'Español', 'Русский']
-
 const MA_ACTIVATE = 1
 
 const VK_CONTROL = 0x11
@@ -320,12 +321,18 @@ const VK_MENU = 0x12
 const VK_SHIFT = 0x10
 const VK_LWIN = 0x5B
 const VK_RWIN = 0x5C
-const VK_C = 0x43
 const VK_INSERT = 0x2D
 const VK_LBUTTON = 0x01
 const VK_RBUTTON = 0x02
+const VK_C = 0x43
 const INPUT_KEYBOARD = 1
 const KEYEVENTF_KEYUP = 0x0002
+
+/** WH_KEYBOARD_LL: installed only while the popup is visible (see `installKeyHook`). */
+const WH_KEYBOARD_LL = 13
+/** `KBDLLHOOKSTRUCT.flags`: the event came from an extended key, or from `SendInput`. */
+const LLKHF_EXTENDED = 0x01
+const LLKHF_INJECTED = 0x10
 
 const CF_UNICODETEXT = 13
 
@@ -645,7 +652,10 @@ export function createOverlay(handlers = {}) {
     source: '',
     suggestions: [],
     langOpen: false,
+    // The language the card is rendering into, and the one it decided the selection is written in.
+    // Both come from the Host, which owns the translation rule; the card only shows them.
     targetLanguage: '',
+    sourceLanguage: '',
     edit: null,
     editProc: null,
     editBrush: null,
@@ -1067,13 +1077,16 @@ export function createOverlay(handlers = {}) {
 
     // --- language row (translate only) --------------------------------------------------------
     if (r.lang) {
-      pill(hdc, r.lang.source, '自动检测', THEME.chip, THEME.chip, THEME.dim)
+      // The left pill names the source the direction was decided from. It used to read
+      // "自动检测" unconditionally — a claim the plugin could not keep, since nothing detected
+      // anything and every translation targeted the settings language.
+      pill(hdc, r.lang.source, state.sourceLanguage || '源语言', THEME.chip, THEME.chip, THEME.dim)
       F.SelectObject(hdc, state.fontUI)
       F.SetTextColor(hdc, THEME.dim)
       F.DrawTextW(hdc, '→', -1,
         { left: r.lang.arrow.left, top: r.lang.source.top, right: r.lang.arrow.right, bottom: r.lang.source.bottom },
         DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX)
-      pill(hdc, r.lang.target, `${state.targetLanguage || '简体中文'}  ▾`, THEME.chip, THEME.border, THEME.text)
+      pill(hdc, r.lang.target, `${state.targetLanguage || TARGET_LANGUAGES[0]}  ▾`, THEME.chip, THEME.border, THEME.text)
     }
 
     // --- body: quote, then the markdown blocks -----------------------------------------------
@@ -1527,6 +1540,8 @@ export function createOverlay(handlers = {}) {
     applyRoundedRegion(hwnd, width, height, radius)
     F.SetWindowPos(hwnd, null, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW)
     startPump()
+    // Only while something is on screen: see `installKeyHook`.
+    installKeyHook()
   }
 
   /** Drain the thread's message queue once. Used before stopping the pump for good. */
@@ -1601,6 +1616,66 @@ export function createOverlay(handlers = {}) {
     clearInterval(timer)
     timer = null
     timerMs = 0
+  }
+
+  // --- low-level keyboard hook ----------------------------------------------------------------
+
+  // The popup never takes focus, so it cannot receive a single keystroke: a user who selects text
+  // to delete it, or to type over it, keeps looking at a menu that is now about nothing. Watching
+  // the keyboard is therefore the only way to notice, and a low-level hook is the only way to
+  // watch it system-wide.
+  //
+  // Installed only while the popup is visible, and removed the moment it hides: a keyboard hook
+  // sits in the input path of every key press machine-wide, so it must not outlive the reason for
+  // it. Deciding goes through `isDismissingKey` — a pure function, so the rule is testable — and
+  // the press is never swallowed: whatever the user is typing still reaches their application.
+  let keyHook = null
+  let keyHookProc = null
+
+  function installKeyHook() {
+    if (keyHook) return true
+    keyHookProc = koffi.register((code, wParam, lParam) => {
+      if (code < 0) return F.CallNextHookEx(null, code, wParam, lParam)
+      // Key-up events decide nothing, and they are half of everything this hook sees.
+      if (wParam !== WM_KEYDOWN) return F.CallNextHookEx(null, code, wParam, lParam)
+      // A hidden popup has nothing to dismiss; the hook is being removed and this is the last pass.
+      if (state.mode === 'hidden') return F.CallNextHookEx(null, code, wParam, lParam)
+      const info = koffi.decode(lParam, 'KBDLLHOOKSTRUCT')
+      const flags = info.flags
+      if ((flags & LLKHF_INJECTED) !== 0) return F.CallNextHookEx(null, code, wParam, lParam)
+      const dismissing = isDismissingKey({
+        vk: info.vkCode,
+        control: (F.GetAsyncKeyState(VK_CONTROL) & 0x8000) !== 0,
+        alt: (F.GetAsyncKeyState(VK_MENU) & 0x8000) !== 0,
+        win: (F.GetAsyncKeyState(VK_LWIN) & 0x8000) !== 0 || (F.GetAsyncKeyState(VK_RWIN) & 0x8000) !== 0,
+        extended: (flags & LLKHF_EXTENDED) !== 0,
+      })
+      if (dismissing && handlers.onDismiss) {
+        try {
+          handlers.onDismiss()
+        } catch {
+          // A failing handler must not turn into a lost keystroke.
+        }
+      }
+      // Never swallowed: the key belongs to the application the user is typing into.
+      return F.CallNextHookEx(null, code, wParam, lParam)
+    }, koffi.pointer(HOOKPROC))
+
+    keyHook = F.SetWindowsHookExW(WH_KEYBOARD_LL, keyHookProc, null, 0)
+    if (!keyHook) {
+      ctxWarn('键盘钩子安装失败，打字时菜单不会自动关闭')
+      keyHookProc = null
+      return false
+    }
+    return true
+  }
+
+  function removeKeyHook() {
+    if (!keyHook) return
+    F.UnhookWindowsHookEx(keyHook)
+    keyHook = null
+    // The callback stays registered for the same reason the mouse one does: the system may still
+    // be inside it when Unhook returns.
   }
 
   // --- low-level mouse hook -------------------------------------------------------------------
@@ -1843,6 +1918,10 @@ export function createOverlay(handlers = {}) {
     get hookActive() {
       return hook !== null
     },
+    /** True while the key hook is installed, which is exactly while the popup is visible. */
+    get keyHookActive() {
+      return keyHook !== null
+    },
     get visible() {
       return state.mode !== 'hidden'
     },
@@ -1892,7 +1971,7 @@ export function createOverlay(handlers = {}) {
       const pos = placeMenuAtSelection(anchor, layout, workAreaAt(anchor.left, anchor.top))
       showAt(layout.width, layout.height, pos.x, pos.y)
     },
-    showPanel({ anchor, title, status, action = null, source = '', targetLanguage = '' }) {
+    showPanel({ anchor, title, status, action = null, source = '', targetLanguage = '', sourceLanguage = '' }) {
       state.mode = 'panel'
       state.title = title
       state.blocks = []
@@ -1901,6 +1980,7 @@ export function createOverlay(handlers = {}) {
       state.source = source
       state.suggestions = []
       state.targetLanguage = targetLanguage
+      state.sourceLanguage = sourceLanguage
       state.langOpen = false
       state.status = status || '正在生成…'
       state.statusKind = 'info'
@@ -1966,6 +2046,8 @@ export function createOverlay(handlers = {}) {
       }
       if (state.edit) F.ShowWindow(state.edit, SW_HIDE)
       if (state.hwnd) F.ShowWindow(state.hwnd, SW_HIDE)
+      // Nothing left to dismiss by typing, so the keyboard leaves the input path again.
+      removeKeyHook()
       // The pump keeps running while the hook is installed: it is how the hook's callbacks reach
       // this thread, so stopping it here would silently disable right-click detection.
       if (!hook) stopPump()
@@ -1975,6 +2057,7 @@ export function createOverlay(handlers = {}) {
       // be running when the hook is removed. Stopping it first leaves the hook installed, and every
       // later right-click on the machine keeps being swallowed by a destroyed overlay.
       removeHook()
+      removeKeyHook()
       // Unhooking is asynchronous: the request is posted and the system's hook chain is only
       // updated once it is processed, which is what the pump below drives. A fixed number of
       // drains is a guess and was measurably not enough; drive the queue until the unhook has
@@ -2021,6 +2104,21 @@ export function createOverlay(handlers = {}) {
     /** True while Ctrl or Alt is held, so the drag trigger can require an explicit modifier. */
     modifierHeld() {
       return (F.GetAsyncKeyState(VK_CONTROL) & 0x8000) !== 0 || (F.GetAsyncKeyState(VK_MENU) & 0x8000) !== 0
+    },
+    /**
+     * Whether the user pressed some dismissing key since the last call.
+     *
+     * The low bit of `GetAsyncKeyState` means "pressed since the previous call", so polling a row
+     * of keys costs one call each and consumes the signal. This is the backstop for the case the
+     * key hook was refused: it cannot report *which* key, so it only looks at keys that always
+     * dismiss — Backspace, Delete, Enter, Space and the arrows — and it runs only while a popup is
+     * on screen (`index.js`'s poll asks, and that poll exists only without the right-click hook).
+     */
+    anyKeyPressed() {
+      for (const vk of [0x08, 0x0d, 0x20, 0x25, 0x26, 0x27, 0x28, 0x2e]) {
+        if ((F.GetAsyncKeyState(vk) & 0x8001) !== 0) return true
+      }
+      return false
     },
   }
 }

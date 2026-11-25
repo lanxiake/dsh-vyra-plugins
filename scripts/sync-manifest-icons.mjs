@@ -36,7 +36,7 @@ const ICONS = {
   'vyra-free-theme': 'FREE_THEME_ICON',
   'vyra-agent-cli-manager': 'AGENT_CLI_MANAGER_ICON',
   'vyra-plugin-market': 'PLUGIN_MARKET_ICON',
-  'vyra-media-studio': 'MEDIA_STUDIO_ICON',
+  'vyra-file-manager': 'FILE_MANAGER_ICON',
   'vyra-dsh-console': 'DSH_CONSOLE_ICON',
   // These two were dropped from this map while the icon block was rewritten, and
   // the manifest kept referencing their constants: it no longer compiled, so the

@@ -2,6 +2,11 @@
 
 Tiered, agent-decided context compaction for DeepSeek Harness.
 
+```sh
+dsh plugin --profile web add dsh-vyra-smart-compaction
+```
+
+
 The design is ported from the **lumii** agent runtime's `compact/` subsystem
 (reverse-engineered in `docs/analysis/lumii-compaction-analysis.md`) and mapped
 onto this harness's own services, so nothing is rebuilt that the harness already

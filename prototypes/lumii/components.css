@@ -1,0 +1,668 @@
+/*
+ * LUMII — components.
+ *
+ * The second half of the skin. lumii.css establishes the palette and the
+ * shell; this file adds the things that actually make an interface feel
+ * finished: a border system, a transcript with real message geometry, cards
+ * that respond to the pointer, and status chips.
+ *
+ * Every mechanism here is ported from Lumii's shipped stylesheet rather than
+ * invented, so the two clients share a vocabulary:
+ *
+ *   --mx / --my / --spot   a spotlight that follows the pointer across a card
+ *   ::before hairline       a 1px accent line across the top 80% of a card
+ *   var(--lm-shine)         the diagonal sheen layered under the spotlight
+ *   spring entrance         translateY(20px) scale(.95) on cubic-bezier(.34,1.56,.64,1)
+ *
+ * The one rule that governs all of it: a *border* states structure, a
+ * *shadow* states elevation, a *glow* states focus. They are never used for
+ * the same job twice, which is what keeps a warm palette from going muddy.
+ */
+
+/* ====================================================================== */
+/* 1. The border system                                                    */
+/* ====================================================================== */
+/*
+ * Four weights, each with exactly one meaning. Lumii's own borders are all
+ * warm-tinted (rgba(93,78,55,…)) rather than neutral grey — a grey line on
+ * cream paper reads as a printing defect, a brown one reads as a rule.
+ */
+.lm-rule {
+  border: 1px solid var(--lm-border-light);
+}
+
+/* Structural: the frame of a panel or card. */
+.lm-card {
+  --mx: 50%;
+  --my: 0%;
+  --spot: 0;
+  position: relative;
+  border: 1px solid var(--lm-border);
+  border-radius: var(--lm-radius-xl);
+  background:
+    radial-gradient(
+      420px circle at var(--mx) var(--my),
+      color-mix(in srgb, var(--lm-accent-500) calc(var(--spot) * 11%), transparent),
+      transparent 62%
+    ),
+    var(--lm-shine),
+    var(--lm-bg-elevated);
+  overflow: hidden;
+  transition:
+    border-color var(--lm-dur-normal) var(--lm-ease-standard),
+    box-shadow var(--lm-dur-normal) var(--lm-ease-standard),
+    --spot var(--lm-dur-slower) var(--lm-ease-standard);
+}
+
+/* The top hairline: not a full-width rule but 80% of it, fading at both ends.
+   This is the single most "designed" detail in the whole system — a complete
+   border reads as a table cell, this reads as a lit edge. */
+.lm-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 10%;
+  left: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--lm-accent-500) 55%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Hover: the spotlight comes up, the border warms, the card lifts 2px. All
+   three at once is what makes it feel like a physical object being noticed. */
+.lm-card--interactive {
+  cursor: pointer;
+  transition:
+    border-color var(--lm-dur-fast) var(--lm-ease-standard),
+    transform var(--lm-dur-fast) var(--lm-ease-spring),
+    box-shadow var(--lm-dur-fast) var(--lm-ease-standard),
+    --spot var(--lm-dur-slower) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-card--interactive:hover {
+    --spot: 1;
+    border-color: var(--lm-accent-500);
+    transform: translateY(-2px);
+    box-shadow: var(--lm-shadow-md);
+  }
+}
+
+/*
+ * Perforation — the dashed border used for "not yet real" surfaces: a draft, a
+ * placeholder, a pending tool call. Distinct enough to read at a glance, and
+ * it costs nothing because it only swaps border-style.
+ */
+.lm-card--pending {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--lm-accent-500) 34%, transparent);
+  background: color-mix(in srgb, var(--lm-accent-300) 7%, var(--lm-bg-elevated));
+}
+
+/* Focus ring: the only place a glow is allowed to appear on a container. */
+.lm-card:focus-visible {
+  outline: none;
+  border-color: var(--lm-accent-500);
+  box-shadow: var(--lm-shadow-glow);
+}
+
+/* ====================================================================== */
+/* 2. The transcript                                                       */
+/* ====================================================================== */
+/*
+ * Messages enter with lumii's spring overshoot. The stagger is 40ms, not 60 —
+ * a transcript is read top-to-bottom, so a long stagger delays the thing the
+ * user actually wants.
+ *
+ * `opacity` and `transform` are restated here rather than relying on
+ * lumii.css: this file loads after it, and a rule that declares a transition
+ * while leaving the animated properties to a later-ordered file is exactly
+ * how the transcript got stuck at its base `opacity: 0`.
+ */
+.lm-msg {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--lm-dur-slower) var(--lm-ease-standard),
+    transform var(--lm-dur-slower) var(--lm-ease-spring);
+  transition-delay: calc(var(--lm-i, 0) * 40ms);
+}
+
+.lm-msg.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* A speaker label with a leading rule — cheaper than an avatar and it keeps
+   the reading edge aligned with the body text. */
+.lm-msg__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lm-msg__who::before {
+  content: "";
+  width: 12px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.lm-msg--user .lm-msg__who::before {
+  display: none;
+}
+
+/* The agent's body gets a left rule in the accent, the user's a raised sheet.
+   Two speakers, two different structures — colour alone would not survive a
+   colourblind check, and structure always reads faster anyway. */
+.lm-msg--agent .lm-msg__body {
+  padding-left: 14px;
+  border-left: 2px solid color-mix(in srgb, var(--lm-accent-500) 30%, transparent);
+}
+
+/* ====================================================================== */
+/* 3. Tool cards — the rendered result of a call                          */
+/* ====================================================================== */
+/*
+ * A tool call is not a sentence, it is an object: it has a name, a state and
+ * often a payload. So it gets a card, not an inline chip. The chip form is
+ * kept for *referencing* a tool (see .lm-chip below).
+ */
+.lm-toolcard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  border-radius: var(--lm-radius-xl);
+  border: 1px solid var(--lm-border);
+  background: var(--lm-bg-secondary);
+  transition:
+    border-color 150ms var(--lm-ease-standard),
+    box-shadow 150ms var(--lm-ease-standard),
+    transform 150ms var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-toolcard:hover {
+    border-color: color-mix(in srgb, var(--lm-accent-600) 35%, transparent);
+    box-shadow: var(--lm-shadow-md);
+    transform: translateY(-1px);
+  }
+}
+
+.lm-toolcard[data-state="running"] {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--lm-accent-500) 34%, transparent);
+}
+
+.lm-toolcard__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* The state lamp: filled disc + one ring, same shape language as the chip. */
+.lm-lamp {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--lm-fg-4);
+}
+
+.lm-lamp[data-state="running"] {
+  background: var(--lm-accent-500);
+}
+
+.lm-lamp[data-state="running"]::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--lm-accent-500);
+  opacity: 0;
+  animation: lm-lamp-ping 1.6s var(--lm-ease-standard) infinite;
+}
+
+.lm-lamp[data-state="done"] {
+  background: var(--lm-success);
+}
+
+.lm-lamp[data-state="failed"] {
+  background: var(--lm-error);
+}
+
+@keyframes lm-lamp-ping {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.7);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-lamp[data-state="running"]::after {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+.lm-toolcard__name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--lm-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lm-fg-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lm-toolcard__dur {
+  flex: none;
+  font-family: var(--lm-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lm-fg-4);
+}
+
+/* The payload: monospaced and clamped, but clamped on a whole line rather
+   than mid-glyph. Two full lines fit exactly (2 × 1.6em line-height), and a
+   1px bottom edge masks the sliver that a fractional line would otherwise
+   leave poking out. */
+/*
+ * Payload clipping.
+ *
+ * Four CSS-only attempts were tried and each failed for a different, real
+ * reason — recorded so nobody repeats them:
+ *   1. max-height on the <pre> (content-box): padding fell outside the limit,
+ *      so the box measured 73px and showed a third line.
+ *   2. max-height with border-box: correct box maths, but the payload's real
+ *      line count varies, so no fixed height always cuts between lines.
+ *   3. -webkit-line-clamp: needs display:-webkit-box, which collapses with
+ *      white-space: pre-wrap, so it silently did nothing.
+ *   4. A clipping wrapper: works, but a fractional line-height (18.4px) means
+ *      the cut lands mid-line, leaving the top half of line three visible.
+ *
+ * The fifth approach is the honest one: the payload is truncated to two lines
+ * in markup (see lumii.js / index.html) and the wrapper only exists to hold
+ * the fade. Nothing is hidden that the text does not already lack, so there is
+ * no partial glyph to leak.
+ */
+.lm-toolcard__clip {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--lm-radius-md);
+  background: rgba(93, 78, 55, 0.06);
+}
+
+.lm-toolcard__clip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(93, 78, 55, 0.09));
+}
+
+.lm-toolcard[data-expanded="true"] .lm-toolcard__clip {
+  max-height: none;
+}
+
+.lm-toolcard[data-expanded="true"] .lm-toolcard__clip::after {
+  display: none;
+}
+
+.lm-toolcard__body {
+  margin: 0;
+  padding: 9px 11px;
+  background: none;
+  font-family: var(--lm-font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--lm-fg-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Sits on its own line, right-aligned to the card edge — the payload is the
+   content, this is the action on it, and mixing them on one row made the
+   button compete with the code. */
+.lm-toolcard__more {
+  align-self: flex-end;
+  padding: 0;
+  margin-top: -2px;
+  font-size: 11.5px;
+  color: var(--lm-accent-600);
+  transition: color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-toolcard__more:hover {
+    color: var(--lm-accent-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+/* ====================================================================== */
+/* 4. Chips — compact references, badges — counters                       */
+/* ====================================================================== */
+.lm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 10px 4px 8px;
+  border-radius: var(--lm-radius-full);
+  background: var(--lm-bg-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--lm-fg-2);
+}
+
+.lm-chip__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--lm-success);
+}
+
+.lm-chip[data-tone="muted"] .lm-chip__dot {
+  background: var(--lm-fg-4);
+}
+
+.lm-chip[data-tone="warn"] .lm-chip__dot {
+  background: var(--lm-warning);
+}
+
+.lm-chip__name {
+  font-weight: 500;
+  color: var(--lm-fg-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A badge rides the top-right corner of its parent and is cut out of the
+   surface behind it by a 2px ring in the page colour — the trick that stops
+   it looking pasted on. */
+.lm-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--lm-radius-full);
+  background: var(--lm-error);
+  color: #fffdf7;
+  font-size: 11px;
+  font-weight: 600;
+  border: 2px solid var(--lm-bg-primary);
+  white-space: nowrap;
+}
+
+.lm-badge--dot {
+  width: 8px;
+  min-width: 8px;
+  height: 8px;
+  padding: 0;
+}
+
+/* ====================================================================== */
+/* 5. Inline code + code blocks inside messages                           */
+/* ====================================================================== */
+.lm-code {
+  padding: 1px 5px;
+  border-radius: var(--lm-radius-sm);
+  background: rgba(93, 78, 55, 0.08);
+  font-family: var(--lm-font-mono);
+  font-size: 0.92em;
+  color: var(--lm-accent-700);
+}
+
+.lm-pre {
+  margin: 12px 0;
+  border-radius: var(--lm-radius-lg);
+  border: 1px solid var(--lm-border-light);
+  background: var(--lm-bg-secondary);
+  overflow: hidden;
+}
+
+.lm-pre__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--lm-border-hairline);
+  font-family: var(--lm-font-mono);
+  font-size: 11px;
+  color: var(--lm-fg-3);
+}
+
+.lm-pre__lang {
+  flex: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.lm-pre__copy {
+  padding: 2px 8px;
+  border-radius: var(--lm-radius-sm);
+  font-size: 11px;
+  color: var(--lm-fg-3);
+  transition:
+    background-color var(--lm-dur-fast) var(--lm-ease-standard),
+    color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-pre__copy:hover {
+    background: var(--lm-bg-tertiary);
+    color: var(--lm-fg-1);
+  }
+}
+
+.lm-pre__code {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: var(--lm-font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--lm-fg-2);
+  tab-size: 2;
+}
+
+/* ====================================================================== */
+/* 6. The quoting of a selected message                                   */
+/* ====================================================================== */
+/* Selecting text inside a message and choosing "quote" drops a compact strip
+   at the composer, not a full copy of the message. */
+.lm-quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 8px;
+  padding: 7px 11px;
+  border-radius: var(--lm-radius-md);
+  border-left: 2px solid var(--lm-accent-500);
+  background: color-mix(in srgb, var(--lm-accent-300) 10%, transparent);
+  font-size: 12.5px;
+  color: var(--lm-fg-2);
+}
+
+.lm-quote__text {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lm-quote__close {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--lm-radius-sm);
+  color: var(--lm-fg-4);
+  transition: color var(--lm-dur-fast) var(--lm-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-quote__close:hover {
+    color: var(--lm-fg-1);
+    background: rgba(93, 78, 55, 0.08);
+  }
+}
+
+/* ====================================================================== */
+/* 7. Empty + loading states                                              */
+/* ====================================================================== */
+.lm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--lm-fg-3);
+}
+
+.lm-empty__mark {
+  width: 30px;
+  height: 30px;
+  color: color-mix(in srgb, var(--lm-accent-500) 60%, transparent);
+}
+
+.lm-empty__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lm-fg-2);
+}
+
+.lm-empty__hint {
+  font-size: 12.5px;
+  max-width: 34ch;
+  line-height: 1.65;
+}
+
+/* A skeleton that respects reduced motion by sitting still rather than
+   pulsing — a pulse is the thing that makes motion-sensitive users ill. */
+.lm-skel {
+  height: 12px;
+  border-radius: var(--lm-radius-sm);
+  background: linear-gradient(
+    90deg,
+    rgba(93, 78, 55, 0.07),
+    rgba(93, 78, 55, 0.13),
+    rgba(93, 78, 55, 0.07)
+  );
+  background-size: 200% 100%;
+  animation: lm-shimmer 1.8s var(--lm-ease-standard) infinite;
+}
+
+@keyframes lm-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lm-skel {
+    animation: none;
+    background: rgba(93, 78, 55, 0.1);
+  }
+}
+
+/* ====================================================================== */
+/* 8. Buttons                                                              */
+/* ====================================================================== */
+/* Three levels, each with a defined job: primary to commit, ghost to act,
+   quiet to dismiss. */
+.lm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--lm-radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  transition:
+    background-color var(--lm-dur-fast) var(--lm-ease-standard),
+    border-color var(--lm-dur-fast) var(--lm-ease-standard),
+    box-shadow var(--lm-dur-fast) var(--lm-ease-standard),
+    transform var(--lm-dur-fast) var(--lm-ease-spring);
+}
+
+.lm-btn:active {
+  transform: scale(0.97);
+}
+
+.lm-btn--primary {
+  color: #fffdf7;
+  background: linear-gradient(145deg, var(--lm-accent-400), var(--lm-accent-600));
+  box-shadow: var(--lm-shadow-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--primary:hover {
+    box-shadow: var(--lm-shadow-glow);
+  }
+}
+
+.lm-btn--ghost {
+  color: var(--lm-fg-2);
+  border: 1px solid var(--lm-border);
+  background: var(--lm-bg-secondary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--ghost:hover {
+    border-color: var(--lm-accent-500);
+    color: var(--lm-accent-700);
+  }
+}
+
+.lm-btn--quiet {
+  color: var(--lm-fg-3);
+  padding: 0 8px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lm-btn--quiet:hover {
+    color: var(--lm-fg-1);
+    background: rgba(93, 78, 55, 0.06);
+  }
+}

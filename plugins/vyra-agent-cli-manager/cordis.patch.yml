@@ -1,6 +1,14 @@
 # Each entry under `agents` becomes a provider named `cli-<id>`, which adds the CLI to
 # the composer's switcher and the model menu. The names and their order follow
 # desktop-cc-gui, whose experience this plugin brings to DSH.
+#
+# `models` is what lets a CLI run on a model DSH already has configured instead of on its
+# own account. Set `provider` and `model` to a provider from this profile's own config
+# (`llm-pi-ai.providers`, `deepseek-account`, …), and name the variables that CLI reads:
+# Claude Code reads ANTHROPIC_*, Codex reads OPENAI_*. `baseURL` and `apiKeyEnv` may be left
+# out — they are then taken from the provider's own DSH settings — but a CLI only gets them
+# when the variable names below are written down too. A CLI with no `models` entry keeps its
+# own configuration, and the 设置 → Agent CM → 模型来源 page offers it no switch.
 - insert:
     - id: dsh-vyra-agent-cli-manager
       name: dsh-vyra-agent-cli-manager
@@ -10,6 +18,15 @@
             name: Claude Code
             command: npx
             args: [-y, '@agentclientprotocol/claude-agent-acp@0.101.0']
+            models:
+              provider: ydy-ds
+              model: deepseek-v4.1-flash-1017
+              baseURLEnv: ANTHROPIC_BASE_URL
+              apiKeyEnv: ANTHROPIC_AUTH_TOKEN
+              modelEnv: ANTHROPIC_MODEL
+              # Written when the harness selects `default`, i.e. "whatever this CLI runs on".
+              # It is the `vendor/id` form every CLI accepts for an OpenAI-compatible endpoint.
+              defaultModel: ydy-ds/deepseek-v4.1-flash-1017
           - id: kimi
             name: Kimi CLI
             command: npx
