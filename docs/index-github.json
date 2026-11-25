@@ -1579,6 +1579,19 @@
       },
       "versions": [
         {
+          "version": "1.4.0",
+          "publishTimestamp": 1795723200,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "6e513fb7f4fb9bba771e00fff49d124b474810c7",
+            "path": "plugins/vyra-agent-cli-manager"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0"
+          }
+        },
+        {
           "version": "1.3.2",
           "publishTimestamp": 1795679991,
           "source": {
@@ -2802,8 +2815,8 @@
         "zh": "文件管理"
       },
       "description": {
-        "en": "A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and text in the panel, and rename, copy, delete, reveal or insert files into the composer.",
-        "zh": "右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与文本，并支持重命名、复制、删除、打开所在位置及引用到输入框。"
+        "en": "A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, HTML, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and HTML in a sandbox, copy files onto the system clipboard, rename, delete, reveal or insert files into the composer, and hide conversation turns that changed no files.",
+        "zh": "右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、HTML、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与 HTML（沙箱），支持把文件复制进系统剪贴板、重命名、删除、打开所在位置及引用到输入框，并隐藏没有文件改动的对话轮次。"
       },
       "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIj4NCiAgPHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMTAiIGZpbGw9IiMxMDE3MjIiLz4NCiAgPHJlY3QgeD0iOSIgeT0iMTIiIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMCIgcng9IjMiIGZpbGw9IiM3QUFBRkYiIGZpbGwtb3BhY2l0eT0iLjkiLz4NCiAgPHJlY3QgeD0iMjQiIHk9IjEyIiB3aWR0aD0iMTUiIGhlaWdodD0iMTAiIHJ4PSIzIiBmaWxsPSIjRTVCNDZBIiBmaWxsLW9wYWNpdHk9Ii45MiIvPg0KICA8cmVjdCB4PSI5IiB5PSIyNSIgd2lkdGg9IjkiIGhlaWdodD0iMTEiIHJ4PSIzIiBmaWxsPSIjNkZENkI1IiBmaWxsLW9wYWNpdHk9Ii45Ii8+DQogIDxwYXRoIGQ9Ik0yNC41IDMwLjUgMzQgMjUuMmwtOS41IDUuM3oiIGZpbGw9IiNGNEY1RjciLz4NCiAgPHBhdGggZD0iTTI0LjUgMzAuNSAzNCAyNS4ydjEwLjZMMjQuNSAzMC41eiIgZmlsbD0iI0Y0RjVGNyIgZmlsbC1vcGFjaXR5PSIuNTUiLz4NCjwvc3ZnPg0K",
       "author": "lanxiake",
@@ -2813,6 +2826,16 @@
         "directory": "plugins/vyra-file-manager"
       },
       "versions": [
+        {
+          "version": "0.5.0",
+          "publishTimestamp": 1796572800,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "9596ecd0685a2f47d2cad0d54ad6669a844cec74",
+            "path": "plugins/vyra-file-manager"
+          }
+        },
         {
           "version": "0.4.0",
           "publishTimestamp": 1796572800,

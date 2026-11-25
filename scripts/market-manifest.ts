@@ -1781,6 +1781,20 @@ export const manifest: MarketManifest = {
       // so an older client cannot load it.
       engines: { dsh: '>=0.2.2-rc.1 <0.3.0' },
       versions: {
+        // 1.4.0 lets a CLI run on a model DSH already has configured. Claude Code only knows
+        // its own login or ANTHROPIC_*, so a machine with neither cannot run it at all; the
+        // new 设置 → Agent CM → 模型来源 page picks that per CLI, and `agents[].models` names the
+        // provider, the model and the variables that CLI reads. The endpoint and credential
+        // come from the provider's own DSH settings, and the secret is read at each start.
+        '1.4.0': {
+          publishTimestamp: 1795723200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '6e513fb7f4fb9bba771e00fff49d124b474810c7',
+            path: 'plugins/vyra-agent-cli-manager',
+          },
+        },
         '1.3.2': {
           publishTimestamp: 1795679991,
           source: {
