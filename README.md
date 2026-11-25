@@ -204,7 +204,7 @@ node scripts/sync-manifest-icons.mjs              # 生成内联图标
 
 **命名：包名必须以 `dsh-` 为前缀**，带 scope 的写成 `@scope/dsh-xxx`。前缀放在 scope 之后，因为它区分的是「DSH 插件」而不是归属者——`@lanxiake/dsh-im` 合规，`@lanxiake/im` 不合规。`package.json` 的 `name`、`dsh.bundle` 引用的包名、客户端 bundle 里 `__ModuleLoader__.load({id})` 的 id 三者必须一致，改名时一起改（见上一节）。
 
-包名发布后改不了——npm 上换名就是另一个包，已装用户不会跟过来。所以 `pnpm run check:installable` 会校验这条规则；唯一豁免是 `open-design`，它在规范确立前就已发布，改名的代价是与既有安装断链。
+包名发布后改不了——npm 上换名就是另一个包，已装用户不会跟过来。所以 `pnpm run check:installable` 会校验这条规则，且当前没有任何豁免：`plugins/` 下每个包都必须带 `dsh-` 前缀。
 
 以下三项**所有插件都必须有**，缺一项 `pnpm run check:installable` 会直接失败：
 

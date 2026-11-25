@@ -30,6 +30,22 @@ import { Script } from 'node:vm'
  */
 const INSTALL_HOOKS = ['prepare', 'prepareModule', 'prepublish', 'prepublishOnly', 'prepack', 'postinstall', 'install']
 
+/**
+ * Package names carry the `dsh-` prefix, scoped names keeping it after the scope
+ * (`@scope/dsh-*`). It is how someone scanning npm tells a DSH plugin apart from
+ * an unrelated package with a similar name, so it is enforced here rather than
+ * trusted to review. Every package in `plugins/` obeys it today, third-party
+ * snapshots included.
+ */
+const NAME_PATTERN = /^(?:@[^/]+\/)?dsh-/u
+
+/**
+ * Packages allowed to keep a name without the prefix. Each needs a reason that
+ * survives a rename; the list is empty, so every plugin under `plugins/` now
+ * follows the `dsh-` convention.
+ */
+const NAME_EXCEPTIONS = new Set([])
+
 const root = resolve(import.meta.dirname, '..')
 
 /** What a manifest resolves its entry point to, accepting either spelling. */
@@ -63,6 +79,14 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8').replace(/^﻿/u, ''))
   const name = manifest.name ?? dir
   const at = (...segments) => join(packageRoot, ...segments)
+
+  // The name is what a consumer reads in npm and in a profile, and it cannot be
+  // fixed after publishing — a rename there is a new package. Third-party
+  // snapshots keep upstream's name, and upstream follows the same rule.
+  if (typeof manifest.name !== 'string') failures(dir, 'package.json has no "name"')
+  else if (!NAME_PATTERN.test(manifest.name) && !NAME_EXCEPTIONS.has(manifest.name)) {
+    failures(manifest.name, 'name lacks the "dsh-" prefix (scoped names: "@scope/dsh-...")')
+  }
 
   for (const hook of INSTALL_HOOKS) {
     const command = manifest.scripts?.[hook]

@@ -189,10 +189,6 @@ export interface MarketManifest {
   readonly plugins: readonly MarketPluginSource[]
 }
 
-/** Inline icon for `open-design`: the OpenDesign mark in brand orange. */
-const OPEN_DESIGN_ICON =
-  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJPcGVuRGVzaWduIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib2QtZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNGRjU3MDEiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMTExODI3Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCNvZC1nKSIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE1IiBmaWxsPSJub25lIiBzdHJva2U9IiNGNkY2RjEiIHN0cm9rZS13aWR0aD0iMyIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjUiIGZpbGw9IiNGNkY2RjEiLz4KICA8cGF0aCBkPSJNMzIgNnY3TTMyIDUxdjdNNiAzMmg3TTUxIDMyaDciIHN0cm9rZT0iI0Y2RjZGMSIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+'
-
 export const manifest: MarketManifest = {
   title: {
     en: 'Veyra Plugins',
@@ -3273,84 +3269,6 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'agent-runtime',
         keywords: ['console', 'harness', 'settings', 'models', 'plugins', 'panel'],
-      },
-    },
-    {
-      name: 'open-design',
-      title: {
-        en: 'OpenDesign Domains',
-        zh: 'OpenDesign 领域包',
-      },
-      description: {
-        en: 'Splits the OpenDesign skill library into nine business domains, each paired with its own agent, so a user loads only the work they actually do. A settings panel switches domains on and off and applies the change immediately; the bundled odx CLI does the same from a terminal. Ships 85 craft skills plus 152 design-system contracts, and one director agent coordinates whatever is enabled.',
-        zh: '把 OpenDesign 技能库按业务领域切成九个包，每包配一个同名 Agent，只加载真正用得上的那部分。在设置页里开关领域即写即生效，也可用自带的 odx 命令操作。含 85 个工艺技能与 152 套设计系统契约，再由一个编排 Agent 统一调度已启用的领域。',
-      },
-      author: 'lanxiake',
-      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
-      repository: {
-        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
-        directory: 'plugins/open-design',
-      },
-      icon: OPEN_DESIGN_ICON,
-      versions: {
-        '0.2.5': {
-          publishTimestamp: 1795605600,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'fc47fda63e90cf0633b1c5ba234e5da59ddb338c',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.4': {
-          publishTimestamp: 1795602000,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'ae337db1f85bb4d9bb9c8695b6a880018c476278',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.3': {
-          publishTimestamp: 1795596300,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '24dbce2da474794afaaad9c7dcb56b118f3d725c',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.2': {
-          publishTimestamp: 1795592400,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'c497770c4f68b147c3a8443c6d8220608c6fbb10',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.1': {
-          publishTimestamp: 1795588800,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'a2328fa8d450b478fc9b1982092d871c9f4793a7',
-            path: 'plugins/open-design',
-          },
-        },
-        '0.2.0': {
-          publishTimestamp: 1795502400,
-          source: {
-            type: 'git',
-            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: 'cea8adb952ab29a16f5fe01c303a6722b43ed73f',
-            path: 'plugins/open-design',
-          },
-        },
-      },
-      metadata: {
-        category: 'content',
-        keywords: ['skill', 'design', 'open-design', 'frontend-design', 'motion', 'design-system', 'agent'],
       },
     },
   ],
