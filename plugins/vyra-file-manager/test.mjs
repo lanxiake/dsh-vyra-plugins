@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join, posix, relative } from 'node:path'
@@ -9,6 +10,7 @@ import { entityTagOf, parseRange } from './lib/range.js'
 import { scanMedia } from './lib/scan.js'
 import { serveMediaFile } from './lib/serve.js'
 import { batchFiles, copyFileInto, deleteFile, moveFile, readTextFile, renameFile, revealFile, statFiles } from './lib/file-ops.js'
+import { copyPathsToClipboard, resolveClipboardPaths } from './lib/clipboard.js'
 import { handleList, handleSessionChanges, registerMediaRoutes } from './lib/routes.js'
 
 /**
@@ -588,6 +590,7 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
       ['/api/vyra-media/open', ['POST']],
       ['/api/vyra-media/batch', ['POST']],
       ['/api/vyra-media/move', ['POST']],
+      ['/api/vyra-media/clipboard', ['POST']],
     ])
 
     const list = await routes[0].fetch(new Request('http://host/api/vyra-media/list?sessionId=s'))
@@ -616,3 +619,118 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('resolveClipboardPaths confines every path to the workspace', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-clip-'))
+  try {
+    await writeFile(join(root, 'a.txt'), 'x')
+    await mkdir(join(root, 'dir'))
+    const fs = makeTestFs(root)
+    const paths = await resolveClipboardPaths({ paths: ['a.txt', 'dir'], fs, workspaceRoot: root })
+    assert.equal(paths.length, 2)
+    assert.deepEqual(paths.map(value => value.split(/[\\/]/u).pop()).sort(), ['a.txt', 'dir'])
+    await assert.rejects(
+      resolveClipboardPaths({ paths: ['../escape.txt'], fs, workspaceRoot: root }),
+      error => error.code === 'outside-workspace',
+    )
+    await assert.rejects(
+      resolveClipboardPaths({ paths: [], fs, workspaceRoot: root }),
+      error => error.code === 'bad-request',
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('copyPathsToClipboard dispatches per platform and refuses unknown ones', async () => {
+  const calls = []
+  const spawn = (command, args) => {
+    calls.push({ command, args })
+    return { status: 0, stdout: 'OK', stderr: '' }
+  }
+  await copyPathsToClipboard({ absolutePaths: ['/tmp/a.txt'], platform: 'linux', spawn })
+  assert.equal(calls[0].command, 'xclip')
+  assert.ok(calls[0].args.includes('text/uri-list'))
+  await assert.rejects(
+    copyPathsToClipboard({ absolutePaths: ['/tmp/a.txt'], platform: 'aix', spawn }),
+    error => error.code === 'clipboard-unsupported',
+  )
+})
+
+test('POST /api/vyra-media/clipboard refuses paths outside the workspace and never writes the clipboard', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-cliproute-'))
+  try {
+    await writeFile(join(root, 'a.txt'), 'x')
+    const ctx = {
+      effect(callback) { callback() },
+      workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      fs: makeTestFs(root),
+    }
+    const routes = []
+    const connection = { fetch: { register(route) { routes.push(route); return async () => {} } } }
+    registerMediaRoutes(ctx, connection)
+    const route = routes.find(entry => entry.path === '/api/vyra-media/clipboard')
+    assert.ok(route, 'clipboard route must be registered')
+
+    const post = body => route.fetch(new Request('http://host/api/vyra-media/clipboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }))
+
+    const escaped = await post({ sessionId: 's', paths: ['../escape.txt'] })
+    assert.equal(escaped.status, 403)
+    const escapedBody = await escaped.json()
+    assert.equal(escapedBody.code, 'outside-workspace')
+
+    const empty = await post({ sessionId: 's', paths: [] })
+    assert.equal(empty.status, 400)
+    assert.equal((await empty.json()).code, 'bad-request')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('copyPathsToClipboard writes a real FileDrop other processes can read', {
+  skip: process.platform !== 'win32',
+}, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-clipreal-'))
+  const previous = readClipboard()
+  try {
+    const file = join(root, 'sample.txt')
+    await writeFile(file, 'x')
+    await copyPathsToClipboard({ absolutePaths: [file] })
+    const after = readClipboard()
+    // The whole point of this route: the paste in Explorer must find a file list,
+    // not a text path. A regression here is invisible to the injected-spawn tests.
+    assert.deepEqual(after.files, [file])
+  } finally {
+    restoreClipboard(previous)
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * Read the system clipboard in a child process, so the value is what a *different*
+ * process sees — the failure mode that made the first implementation look green.
+ */
+function readClipboard() {
+  const script = 'Add-Type -AssemblyName System.Windows.Forms;'
+    + " Write-Output ('FILES=' + (([System.Windows.Forms.Clipboard]::GetFileDropList()) -join '|'));"
+    + " Write-Output ('TEXT=' + [System.Windows.Forms.Clipboard]::GetText())"
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true })
+  const files = /FILES=(.*)/u.exec(result.stdout ?? '')
+  const text = /TEXT=([\s\S]*)/u.exec(result.stdout ?? '')
+  return {
+    files: files === null || files[1] === '' ? [] : files[1].split('|'),
+    text: text === null ? '' : text[1],
+  }
+}
+
+/** Put the clipboard back the way the test found it, so a run does not eat what the user copied. */
+function restoreClipboard(previous) {
+  const quoted = JSON.stringify(previous.text)
+  const script = 'Add-Type -AssemblyName System.Windows.Forms;'
+    + ` [System.Windows.Forms.Clipboard]::SetText(${quoted})`
+  spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true })
+}

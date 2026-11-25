@@ -10,6 +10,7 @@ import { SCAN_DEFAULTS, invalidateScanCache, scanMediaCached } from './scan.js'
 import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
 import { buildTimeline, readSessionEvents } from './timeline.js'
+import { copyPathsToClipboard, resolveClipboardPaths } from './clipboard.js'
 import {
   batchFiles, copyFileInto, deleteFile, moveFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
 } from './file-ops.js'
@@ -27,6 +28,7 @@ const OPEN_PATH = '/api/vyra-media/open'
 const BATCH_PATH = '/api/vyra-media/batch'
 const MOVE_PATH = '/api/vyra-media/move'
 const SESSION_CHANGES_PATH = '/api/vyra-media/session-changes'
+const CLIPBOARD_PATH = '/api/vyra-media/clipboard'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -567,6 +569,24 @@ async function handleText(request, ctx) {
 }
 
 /**
+ * POST /api/vyra-media/clipboard
+ *
+ * Writes workspace files onto the system clipboard as a file list, so pasting
+ * into the OS file manager copies them. Only paths inside the caller's
+ * workspace are accepted.
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} how many entries were copied.
+ */
+async function handleClipboard(request, ctx) {
+  return handleAction(request, ctx, async ({ body, fs, workspaceRoot, signal }) => {
+    const paths = await resolveClipboardPaths({ paths: body?.paths, fs, workspaceRoot, signal })
+    await copyPathsToClipboard({ absolutePaths: paths })
+    return { count: paths.length, paths }
+  })
+}
+
+/**
  * Register every route on the Host connection Fetch registry.
  * @param {object} ctx - Host context.
  * @param {object} connection - `ctx.connection`.
@@ -614,6 +634,7 @@ export function registerMediaRoutes(ctx, connection) {
       [OPEN_PATH, handleOpen],
       [BATCH_PATH, handleBatch],
       [MOVE_PATH, handleMove],
+      [CLIPBOARD_PATH, handleClipboard],
     ].map(([path, handler]) => connection.fetch.register({
       path,
       methods: ['POST'],
@@ -627,7 +648,8 @@ export function registerMediaRoutes(ctx, connection) {
 
 export {
   LIST_PATH, FILE_PATH, DIAGNOSE_PATH, STAT_PATH, TEXT_PATH, RENAME_PATH, COPY_PATH,
-  DELETE_PATH, REVEAL_PATH, OPEN_PATH, BATCH_PATH, MOVE_PATH, SESSION_CHANGES_PATH,
+  DELETE_PATH, REVEAL_PATH, OPEN_PATH, BATCH_PATH, MOVE_PATH, SESSION_CHANGES_PATH, CLIPBOARD_PATH,
   handleDiagnose, handleFile, handleList, handleStat, handleText, handleRename,
   handleCopy, handleDelete, handleReveal, handleOpen, handleBatch, handleMove, handleSessionChanges,
+  handleClipboard,
 }
