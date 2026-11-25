@@ -2470,7 +2470,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '0000000000000000000000000000000000000000',
+            commit: '3524e6f7b0dee1e91e8645378797a9db3eac5b1f',
             path: 'plugins/vyra-free-model',
           },
         },
@@ -2606,7 +2606,7 @@ export const manifest: MarketManifest = {
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '0000000000000000000000000000000000000000',
+            commit: '3524e6f7b0dee1e91e8645378797a9db3eac5b1f',
             path: 'plugins/vyra-screen-recorder',
           },
         },
