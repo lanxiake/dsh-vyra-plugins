@@ -2981,7 +2981,7 @@ export const manifest: MarketManifest = {
         // the timeline lists only turns that changed files.
         '0.5.0': {
           // 2026-11-25 15:00 UTC — the day this build was cut.
-          publishTimestamp: 1795618800,
+          publishTimestamp: 1795593512,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -2997,7 +2997,8 @@ export const manifest: MarketManifest = {
         // the old path and name: their commits predate the rename and an
         // install must still resolve what those versions actually contained.
         '0.4.0': {
-          publishTimestamp: 1796572800,
+          // 2026-11-25 00:00 UTC — the day this build was cut.
+          publishTimestamp: 1795585523,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3006,7 +3007,7 @@ export const manifest: MarketManifest = {
           },
         },
         '0.3.5': {
-          publishTimestamp: 1795679987,
+          publishTimestamp: 1795576940,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3015,7 +3016,7 @@ export const manifest: MarketManifest = {
           },
         },
         '0.1.0': {
-          publishTimestamp: 1795344299,
+          publishTimestamp: 1795344982,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3029,7 +3030,7 @@ export const manifest: MarketManifest = {
         // workspace. It also reports the route's own reason instead of a bare
         // HTTP status.
         '0.1.1': {
-          publishTimestamp: 1795345200,
+          publishTimestamp: 1795354115,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3041,7 +3042,7 @@ export const manifest: MarketManifest = {
         // `scopeOf`: the workspace root is resolved from the live Session's
         // sandbox policy, then its header, then a stored Session header.
         '0.1.2': {
-          publishTimestamp: 1795347000,
+          publishTimestamp: 1795356930,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3053,7 +3054,7 @@ export const manifest: MarketManifest = {
         // deferred metadata, a zoomable grid, detailed list mode, document
         // previews and rename/copy/delete/reveal/open actions.
         '0.2.0': {
-          publishTimestamp: 1795407787,
+          publishTimestamp: 1795407793,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3064,7 +3065,7 @@ export const manifest: MarketManifest = {
         // 0.2.1 restores the gridRef declaration and the MediaTab mediaSrc
         // import that made the 0.2.0 panel blank, and adds a render smoke test.
         '0.2.1': {
-          publishTimestamp: 1795408922,
+          publishTimestamp: 1795408917,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3075,7 +3076,7 @@ export const manifest: MarketManifest = {
         // 0.2.2 adds the tree view, single/multi type filters, Ctrl batch
         // selection, Markdown/HTML/CSV/JSON/code previews and folder actions.
         '0.2.2': {
-          publishTimestamp: 1795415426,
+          publishTimestamp: 1795415421,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3086,7 +3087,7 @@ export const manifest: MarketManifest = {
         // 0.2.3 adds a current-session file filter backed by the Session header
         // createdAt, sorted newest first.
         '0.2.3': {
-          publishTimestamp: 1795426720,
+          publishTimestamp: 1795426714,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3097,7 +3098,7 @@ export const manifest: MarketManifest = {
         // 0.2.4 adds the produced-files timeline, long-press drag to move or
         // reference, a move route, explorer labels and a faster search.
         '0.2.4': {
-          publishTimestamp: 1795486966,
+          publishTimestamp: 1795486962,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3108,7 +3109,7 @@ export const manifest: MarketManifest = {
         // 0.2.5 makes the timeline a conversation axis, adds an in-panel drop
         // panel for long-press drag, and collapses view toggles.
         '0.2.5': {
-          publishTimestamp: 1795492049,
+          publishTimestamp: 1795492040,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3118,7 +3119,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.6 fixes the invisible timeline and restores native drag.
         '0.2.6': {
-          publishTimestamp: 1795495455,
+          publishTimestamp: 1795495448,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3128,7 +3129,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.7 reads the session log from every Host surface so the timeline fills.
         '0.2.7': {
-          publishTimestamp: 1795499697,
+          publishTimestamp: 1795499691,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3138,7 +3139,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.8 reads the session log through non-throwing service probes.
         '0.2.8': {
-          publishTimestamp: 1795503460,
+          publishTimestamp: 1795503452,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3148,7 +3149,7 @@ export const manifest: MarketManifest = {
         },
         // 0.2.9 stops reading undeclared services by property (Cordis throws).
         '0.2.9': {
-          publishTimestamp: 1795503978,
+          publishTimestamp: 1795503964,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3158,7 +3159,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.0 turns the timeline into its own grid-capable, collapsible view.
         '0.3.0': {
-          publishTimestamp: 1795504475,
+          publishTimestamp: 1795504770,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3168,7 +3169,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.1 ties the timeline to the session filter and enlarges the controls.
         '0.3.1': {
-          publishTimestamp: 1795505673,
+          publishTimestamp: 1795505657,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3178,7 +3179,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.2 fixes mouse drag, widens text preview and filters type counts.
         '0.3.2': {
-          publishTimestamp: 1795506292,
+          publishTimestamp: 1795506277,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3188,7 +3189,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.3 makes timeline entries drag sources.
         '0.3.3': {
-          publishTimestamp: 1795506808,
+          publishTimestamp: 1795506792,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
@@ -3198,7 +3199,7 @@ export const manifest: MarketManifest = {
         },
         // 0.3.4 drags a clone of the pressed element as the ghost.
         '0.3.4': {
-          publishTimestamp: 1795507029,
+          publishTimestamp: 1795507015,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
