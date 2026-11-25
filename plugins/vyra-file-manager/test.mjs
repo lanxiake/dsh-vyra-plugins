@@ -6,6 +6,7 @@ import { isAbsolute, join, posix, relative } from 'node:path'
 import test from 'node:test'
 import { extensionOf, isTextExtension, kindOf, mimeOf } from './lib/media-types.js'
 import { dirnameOf } from './lib/paths.js'
+import { extractAssetRefs, inlineAssets } from './lib/html-inline.js'
 import { entityTagOf, parseRange } from './lib/range.js'
 import { scanMedia } from './lib/scan.js'
 import { serveMediaFile } from './lib/serve.js'
@@ -582,6 +583,7 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
       ['/api/vyra-media/diagnose', ['GET']],
       ['/api/vyra-media/session-changes', ['GET']],
       ['/api/vyra-media/text', ['GET']],
+      ['/api/vyra-media/html-asset', ['GET']],
       ['/api/vyra-media/stat', ['POST']],
       ['/api/vyra-media/rename', ['POST']],
       ['/api/vyra-media/copy', ['POST']],
@@ -598,16 +600,24 @@ test('registerMediaRoutes mounts every exact Fetch route', async () => {
     const body = await list.json()
     assert.deepEqual(body.entries.map(entry => entry.relativePath).sort(), ['clip.mp4', 'notes.md'])
 
-    const bytes = await routes[1].fetch(new Request('http://host/api/vyra-media/file?sessionId=s&path=clip.mp4', { headers: { range: 'bytes=1-3' } }))
+    // Look routes up by path, not position: inserting a route must not silently
+    // point an assertion at its neighbour.
+    const routeAt = path => {
+      const found = routes.find(entry => entry.path === path)
+      assert.ok(found, `route ${path} must be registered`)
+      return found
+    }
+
+    const bytes = await routeAt('/api/vyra-media/file').fetch(new Request('http://host/api/vyra-media/file?sessionId=s&path=clip.mp4', { headers: { range: 'bytes=1-3' } }))
     assert.equal(bytes.status, 206)
     assert.equal(await bytes.text(), 'ell')
 
-    const text = await routes[4].fetch(new Request('http://host/api/vyra-media/text?sessionId=s&path=notes.md'))
+    const text = await routeAt('/api/vyra-media/text').fetch(new Request('http://host/api/vyra-media/text?sessionId=s&path=notes.md'))
     const textBody = await text.json()
     assert.equal(textBody.ok, true)
     assert.equal(textBody.text, '# hello')
 
-    const statRoute = await routes[5].fetch(new Request('http://host/api/vyra-media/stat', {
+    const statRoute = await routeAt('/api/vyra-media/stat').fetch(new Request('http://host/api/vyra-media/stat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: 's', paths: ['clip.mp4'] }),
@@ -734,3 +744,66 @@ function restoreClipboard(previous) {
     + ` [System.Windows.Forms.Clipboard]::SetText(${quoted})`
   spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', windowsHide: true })
 }
+
+test('inlineAssets rewrites local and remote references into data URLs', async () => {
+  const html = '<link rel="stylesheet" href="a.css"><script src="b.js"></script><img src="https://x.test/c.png">'
+  const seen = []
+  const out = await inlineAssets(html, async url => {
+    seen.push(url)
+    return url === 'a.css' ? 'data:text/css;base64,YQ==' : undefined
+  })
+  assert.deepEqual(seen, ['a.css', 'b.js', 'https://x.test/c.png'])
+  assert.match(out, /data:text\/css;base64,YQ==/u)
+  // Unresolved references keep their original URL so the page still renders.
+  assert.match(out, /src="https:\/\/x\.test\/c\.png"/u)
+})
+
+test('inlineAssets leaves untouched markup alone', async () => {
+  const html = '<img src="big.png">'
+  const out = await inlineAssets(html, async () => undefined)
+  assert.equal(out, html)
+})
+
+test('extractAssetRefs finds the three asset tags regardless of attribute order', () => {
+  const refs = extractAssetRefs('<img alt="x" src="p.png"><script defer src=\'q.js\'></script><link href="r.css" rel="stylesheet">')
+  assert.deepEqual(refs.map(ref => [ref.tag, ref.url]), [['img', 'p.png'], ['script', 'q.js'], ['link', 'r.css']])
+})
+
+test('html-asset inlines a workspace asset and refuses an escape', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'vms-asset-'))
+  try {
+    await mkdir(join(root, 'styles'))
+    await writeFile(join(root, 'styles', 'app.css'), 'body{color:red}')
+    const ctx = {
+      effect(callback) { callback() },
+      workspaceFiles: { scopeOf: async sessionId => sessionId === 's' ? { sessionId, workspaceRoot: root } : undefined },
+      fs: {
+        ...makeTestFs(root),
+        async readByteRange(target, { offset, length }) {
+          const buffer = await readFile(target.displayPath)
+          return new Uint8Array(buffer.subarray(offset, offset + length))
+        },
+      },
+    }
+    const routes = []
+    registerMediaRoutes(ctx, { fetch: { register(route) { routes.push(route); return async () => {} } } })
+    const route = routes.find(entry => entry.path === '/api/vyra-media/html-asset')
+    assert.ok(route, 'html-asset route must be registered')
+
+    const ok = await route.fetch(new Request('http://host/api/vyra-media/html-asset?sessionId=s&url=styles/app.css'))
+    const okBody = await ok.json()
+    assert.equal(okBody.ok, true)
+    assert.match(okBody.dataUrl, /^data:text\/css;base64,/u)
+    assert.equal(Buffer.from(okBody.dataUrl.split(',')[1], 'base64').toString('utf8'), 'body{color:red}')
+
+    const escaped = await route.fetch(new Request('http://host/api/vyra-media/html-asset?sessionId=s&url=../secret.txt'))
+    const escapedBody = await escaped.json()
+    assert.equal(escapedBody.ok, false)
+    assert.equal(escapedBody.reason, 'outside-workspace')
+
+    const missing = await route.fetch(new Request('http://host/api/vyra-media/html-asset?sessionId=s&url=nope.css'))
+    assert.equal((await missing.json()).reason, 'not-found')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

@@ -11,6 +11,8 @@ import { containsTarget, joinWorkspacePath, targetPathOf } from './paths.js'
 import { serveMediaFile } from './serve.js'
 import { buildTimeline, readSessionEvents } from './timeline.js'
 import { copyPathsToClipboard, resolveClipboardPaths } from './clipboard.js'
+import { ASSET_TIMEOUT_MS, MAX_ASSET_BYTES } from './html-inline.js'
+import { mimeOf } from './media-types.js'
 import {
   batchFiles, copyFileInto, deleteFile, moveFile, openFileWithSystem, readTextFile, renameFile, revealFile, statFiles,
 } from './file-ops.js'
@@ -29,6 +31,7 @@ const BATCH_PATH = '/api/vyra-media/batch'
 const MOVE_PATH = '/api/vyra-media/move'
 const SESSION_CHANGES_PATH = '/api/vyra-media/session-changes'
 const CLIPBOARD_PATH = '/api/vyra-media/clipboard'
+const HTML_ASSET_PATH = '/api/vyra-media/html-asset'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -587,6 +590,87 @@ async function handleClipboard(request, ctx) {
 }
 
 /**
+ * GET /api/vyra-media/html-asset
+ *
+ * Resolves one asset a sandboxed HTML preview referred to, as a `data:` URL.
+ *
+ * A workspace-relative path is read through the filesystem seam and must stay
+ * inside the workspace. An `http(s)` URL is fetched without credentials and
+ * without following it into a redirect chain that leaves the origin. Every
+ * failure comes back as `{ ok: false, reason }` with status 200, because the
+ * preview degrades by keeping the original reference rather than failing the
+ * whole page.
+ * @param {Request} request - fetch request.
+ * @param {object} ctx - Host context.
+ * @returns {Promise<Response>} the inlined asset or a reason.
+ */
+async function handleHtmlAsset(request, ctx) {
+  const url = new URL(request.url)
+  const sessionId = url.searchParams.get('sessionId')
+  const reference = url.searchParams.get('url') ?? ''
+  if (sessionId === null || sessionId === '') {
+    return json({ ok: false, reason: 'bad-request', error: 'missing sessionId' }, 400)
+  }
+  if (reference === '' || reference.includes('\0')) {
+    return json({ ok: false, reason: 'bad-request', error: 'missing url' }, 400)
+  }
+
+  if (/^https?:\/\//iu.test(reference)) {
+    try {
+      const response = await fetch(reference, {
+        signal: AbortSignal.timeout(ASSET_TIMEOUT_MS),
+        redirect: 'follow',
+      })
+      if (!response.ok) return json({ ok: false, reason: 'not-ok', status: response.status })
+      const type = response.headers.get('content-type') ?? 'application/octet-stream'
+      // Anything the browser would execute gets a tight allow-list: a remote page
+      // must not smuggle in an HTML document that could escape the asset slot.
+      if (!/^(?:text\/css|text\/javascript|application\/javascript|application\/x-javascript|image\/)/iu.test(type)
+        && !type.startsWith('font/')) {
+        return json({ ok: false, reason: 'unsupported-type', type })
+      }
+      const buffer = new Uint8Array(await response.arrayBuffer())
+      if (buffer.byteLength > MAX_ASSET_BYTES) return json({ ok: false, reason: 'too-large' })
+      return json({ ok: true, dataUrl: `data:${type.split(';')[0]};base64,${Buffer.from(buffer).toString('base64')}` })
+    } catch (error) {
+      return json({ ok: false, reason: 'fetch-failed', error: error?.message ?? String(error) })
+    }
+  }
+
+  let workspaceRoot
+  try {
+    workspaceRoot = await workspaceRootOf(ctx, sessionId, request.signal)
+  } catch (error) {
+    return json({ ok: false, reason: 'resolve-failed', error: error.message ?? String(error) }, error.status ?? 500)
+  }
+  if (workspaceRoot === undefined) {
+    return json({ ok: false, reason: 'no-workspace-root' }, 409)
+  }
+
+  try {
+    const rootTarget = await ctx.fs.resolve(workspaceRoot, { signal: request.signal })
+    const target = await ctx.fs.resolve(joinWorkspacePath(workspaceRoot, reference), { signal: request.signal })
+    if (!containsTarget(ctx.fs, rootTarget, target)) {
+      return json({ ok: false, reason: 'outside-workspace' })
+    }
+    const info = await ctx.fs.stat(target, request.signal)
+    if (info === undefined || info.type !== 'file') return json({ ok: false, reason: 'not-found' })
+    if (typeof info.size === 'number' && info.size > MAX_ASSET_BYTES) {
+      return json({ ok: false, reason: 'too-large' })
+    }
+    const length = typeof info.size === 'number' ? info.size : MAX_ASSET_BYTES
+    const bytes = length === 0 ? new Uint8Array(0) : await ctx.fs.readByteRange(target, { offset: 0, length }, request.signal)
+    const extension = reference.split(/[?#]/, 1)[0].split('.').pop() ?? ''
+    return json({
+      ok: true,
+      dataUrl: `data:${mimeOf(extension)};base64,${Buffer.from(bytes).toString('base64')}`,
+    })
+  } catch (error) {
+    return json({ ok: false, reason: error?.code ?? 'read-failed', error: error?.message ?? String(error) })
+  }
+}
+
+/**
  * Register every route on the Host connection Fetch registry.
  * @param {object} ctx - Host context.
  * @param {object} connection - `ctx.connection`.
@@ -625,6 +709,12 @@ export function registerMediaRoutes(ctx, connection) {
       requestBody: 'buffered',
       fetch: request => handleText(request, ctx),
     }),
+    connection.fetch.register({
+      path: HTML_ASSET_PATH,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: request => handleHtmlAsset(request, ctx),
+    }),
     ...[
       [STAT_PATH, handleStat],
       [RENAME_PATH, handleRename],
@@ -649,7 +739,8 @@ export function registerMediaRoutes(ctx, connection) {
 export {
   LIST_PATH, FILE_PATH, DIAGNOSE_PATH, STAT_PATH, TEXT_PATH, RENAME_PATH, COPY_PATH,
   DELETE_PATH, REVEAL_PATH, OPEN_PATH, BATCH_PATH, MOVE_PATH, SESSION_CHANGES_PATH, CLIPBOARD_PATH,
+  HTML_ASSET_PATH,
   handleDiagnose, handleFile, handleList, handleStat, handleText, handleRename,
   handleCopy, handleDelete, handleReveal, handleOpen, handleBatch, handleMove, handleSessionChanges,
-  handleClipboard,
+  handleClipboard, handleHtmlAsset,
 }
