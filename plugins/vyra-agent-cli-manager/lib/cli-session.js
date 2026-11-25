@@ -333,7 +333,7 @@ export class CliSession {
         if (this.failure !== undefined)
             throw this.failure;
         const { acpSessionId, reattachFailed, acceptsImages } = await openSession({
-            openTransport: this.options.openTransport,
+            openTransport: (handlers) => this.options.openTransport(handlers, this.options.modelOfStep?.()),
             handlers: {
                 onUpdate: (update) => this.handleUpdate(update),
                 onPermission: (request) => this.handlePermission(request),
@@ -348,6 +348,10 @@ export class CliSession {
             onError: this.options.onError,
         });
         this.acpSessionId = acpSessionId;
+        // After `adopt`: the launch is what any `session/set_config_option` must not undo. Only a
+        // CLI following DSH is launched on a model this side named; any other starts on its own.
+        if (this.options.source === 'dsh')
+            this.model.launched(this.options.modelOfStep?.());
         this.acceptsImages = acceptsImages;
         this.owesFreshNotice = reattachFailed || (nativeSessionId === undefined && startsBlind);
     }

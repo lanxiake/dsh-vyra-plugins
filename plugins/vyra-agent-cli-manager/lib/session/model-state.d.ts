@@ -18,6 +18,8 @@ export interface ModelTarget {
 export declare class ModelState {
     private readonly knownModels?;
     private readonly onOptions?;
+    /** The model the process was launched with, when DSH named it instead of the CLI. */
+    private launchedWith;
     private optionId;
     /** The model a new session started on, which the `default` selection stands for. */
     private cliDefault;
@@ -30,6 +32,11 @@ export declare class ModelState {
      */
     constructor(knownModels?: (() => CliModelList | undefined) | undefined, onOptions?: ((options: ConfigOptions, isNewSession: boolean) => void) | undefined);
     /**
+     * Remember the model the CLI was launched with, when DSH named it through its environment.
+     * @param model - the model the harness selected for the step that started this process.
+     */
+    launched(model: string | undefined): void;
+    /**
      * Only a new session says what `default` stands for: a resumed one reports the model it
      * was left on, which may be one the user chose.
      */
@@ -38,7 +45,8 @@ export declare class ModelState {
     observe(options: ConfigOptions): void;
     /**
      * Switch the CLI to the harness's selection, unless it is already there.
-     * @param model - the selected model; omitted or `default` means the CLI's own.
+     * @param model - the selected model; omitted or `default` means whatever the CLI was
+     *   launched with, which is the DSH model when the user made the CLI follow DSH.
      * @param where - the session to switch.
      * @param signal - cancellation for the wait.
      */

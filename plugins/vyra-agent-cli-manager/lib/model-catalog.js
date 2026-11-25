@@ -62,8 +62,30 @@ export class CliModelCatalog {
     asked = new Set();
     /** Routes this run has a CLI's own answer for, as opposed to a restored list. */
     answered = new Set();
+    /** Models a CLI was pointed at through DSH, by route, carrying the name DSH gave them. */
+    followed = new Map();
     constructor(deps) {
         this.deps = deps;
+    }
+    /**
+     * Record the model a CLI follows DSH on, so the menu says which model that is instead of
+     * showing the CLI's own default row as if it were still in charge.
+     * @param provider - a CLI route.
+     * @param name - the model's name as DSH knows it, or undefined to stop following.
+     */
+    follow(provider, name) {
+        if (name === undefined) {
+            if (!this.followed.has(provider))
+                return;
+            this.followed = new Map([...this.followed].filter(([candidate]) => candidate !== provider));
+        }
+        else if (this.followed.get(provider) !== name) {
+            this.followed = new Map([...this.followed, [provider, name]]);
+        }
+        else {
+            return;
+        }
+        this.deps.onUpdated(provider);
     }
     /**
      * List a CLI's models. The default entry names the model it stands for, so the menu
@@ -72,6 +94,9 @@ export class CliModelCatalog {
      * @returns the default entry, followed by the other models once they are known.
      */
     listModels(provider) {
+        const followed = this.followed.get(provider);
+        if (followed !== undefined)
+            return [{ provider, id: DEFAULT_MODEL_ID, name: followed }];
         const list = this.lists.get(provider);
         if (list === undefined) {
             return [{ provider, id: DEFAULT_MODEL_ID, name: this.deps.labelFor(provider) ?? provider }];

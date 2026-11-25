@@ -17,8 +17,21 @@ export interface CliSessionOptions {
     readonly cwd: string;
     /** CLI display name used in user-facing messages. */
     readonly label: string;
-    /** Opens the connection on first use. */
-    readonly openTransport: (handlers: TransportHandlers) => AcpTransport;
+    /**
+     * Opens the connection on first use. The second argument is the model the starting step
+     * selected, so a CLI pointed at a DSH provider is told which model before it launches.
+     */
+    readonly openTransport: (handlers: TransportHandlers, modelId?: string) => AcpTransport;
+    /**
+     * The model the current step selected, read when the CLI starts: a CLI pointed at a DSH
+     * provider has to be told which model before it launches, not after.
+     */
+    readonly modelOfStep?: () => string | undefined;
+    /**
+     * Which model source the user picked for this CLI. Only when it is `dsh` does the model the
+     * step selected become the model the process runs, so any other CLI keeps its own default row.
+     */
+    readonly source?: 'dsh' | 'cli';
     readonly mintCallId?: () => string;
     /** How long a cancelled CLI may take to finish its turn before it is abandoned. */
     readonly cancelGraceMs?: number;

@@ -46,6 +46,14 @@ export class CliSessionRegistry {
         return this.agentsByProvider.has(provider);
     }
     /**
+     * Which model source the user picked for a CLI route.
+     * @param provider - a provider route.
+     * @returns `dsh` when the CLI follows the harness's model, otherwise `cli`.
+     */
+    modelSourceOf(provider) {
+        return this.deps.modelSourceOf(this.agentsByProvider.get(provider)?.id ?? '');
+    }
+    /**
      * Read the CLI behind a route.
      * @param provider - a provider route.
      * @returns its configuration, if it is a CLI.
@@ -168,9 +176,10 @@ export class CliSessionRegistry {
      * Find or create the CLI session for a harness session.
      * @param provider - the requested CLI route.
      * @param sessionId - the harness session.
+     * @param modelId - the model the step in hand selected, so a CLI that follows DSH starts on it.
      * @returns a CLI session; a dead one is returned until its failure has been read.
      */
-    resolveSession(provider, sessionId) {
+    resolveSession(provider, sessionId, modelId) {
         const config = this.agentsByProvider.get(provider);
         if (config === undefined)
             throw new LlmError(`未知的 CLI 路由：${provider}`, 'CLI_START_FAILED');
@@ -187,6 +196,9 @@ export class CliSessionRegistry {
         const session = this.deps.createSession(config, sessionId, cwd, {
             sentMessageIds: current?.session.sentMessageIds ?? NO_MESSAGES,
             after: this.stopping.get(sessionId) ?? Promise.resolve(),
+            // Read when the CLI starts, not now: the process may launch several steps later.
+            modelId: () => modelId,
+            source: this.modelSourceOf(provider),
             ...this.startMode(sessionId, provider),
         });
         this.sessions = new Map([...this.sessions, [sessionId, { provider, session }]]);

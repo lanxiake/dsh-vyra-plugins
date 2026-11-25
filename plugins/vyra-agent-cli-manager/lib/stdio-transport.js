@@ -215,3 +215,63 @@ export function openStdioTransport(spec, handlers) {
         },
     };
 }
+/**
+ * Spawn a CLI whose environment is only known after a lookup, such as the credential a
+ * provider route names, then speak the protocol to it.
+ *
+ * The SDK's `connect()` reads its stream eagerly, and building that stream is what starts the
+ * process, so the lookup has to finish first: nothing belongs on the wire before there is a
+ * child. The ACP client therefore begins inside `initialize()`, which is the first thing the
+ * transport contract asks for, and every operation waits for the same one-time start.
+ * @param spec - the command and its process settings, with `env` resolved on demand.
+ * @param handlers - callbacks from the CLI.
+ * @returns the transport; its operations start the process on first use, or on dispose.
+ */
+export function openDeferredStdioTransport(spec, handlers) {
+    let starting;
+    let disposal;
+    const start = () => (starting ??= Promise.resolve()
+        .then(() => spec.env())
+        .then((env) => {
+        const child = spawnChild({ ...spec, env });
+        const untilClosed = watchClose(child, handlers);
+        const agent = client({ name: 'dsh-vyra-agent-cli-manager' })
+            .onNotification(methods.client.session.update, ({ params }) => {
+            handlers.onUpdate(params.update);
+            return Promise.resolve();
+        })
+            .onRequest(methods.client.session.requestPermission, ({ params }) => handlers.onPermission(params))
+            .connect(ndJsonStream(Writable.toWeb(child.stdin), Readable.toWeb(child.stdout))).agent;
+        const operations = sessionOperations(agent, untilClosed, turnStderr(child));
+        return { child, agent, untilClosed, operations };
+    }));
+    const withSession = (run) => start().then(run);
+    const transport = {
+        initialize: () => withSession(({ agent, untilClosed }) => untilClosed(agent.request(methods.agent.initialize, {
+            protocolVersion: PROTOCOL_VERSION,
+            clientCapabilities: {},
+        }))),
+        newSession: (cwd) => withSession(({ operations }) => operations.newSession(cwd)),
+        resumeSession: (sessionId, cwd) => withSession(({ operations }) => operations.resumeSession(sessionId, cwd)),
+        loadSession: (sessionId, cwd) => withSession(({ operations }) => operations.loadSession(sessionId, cwd)),
+        setConfigOption: (sessionId, configId, value) => withSession(({ operations }) => operations.setConfigOption(sessionId, configId, value)),
+        deleteSession: (sessionId) => withSession(({ operations }) => operations.deleteSession(sessionId)),
+        closeSession: (sessionId) => withSession(({ operations }) => operations.closeSession(sessionId)),
+        prompt: (sessionId, blocks) => withSession(({ operations }) => operations.prompt(sessionId, blocks)),
+        // Fire and forget, as on the direct path: a gone process is reported by `closed`.
+        cancel: (sessionId) => {
+            void withSession(({ operations }) => {
+                operations.cancel(sessionId);
+            }).catch(() => undefined);
+        },
+        dispose: (force = false) => (disposal ??= start().then(({ child }) => {
+            if (force)
+                child.terminate();
+            return stopChild(child, spec.eofGraceMs);
+        }, () => undefined)),
+    };
+    // A start that fails is reported by whichever operation awaited it; this only keeps the
+    // rejection from being reported as unhandled before one does.
+    starting?.catch(() => undefined);
+    return transport;
+}

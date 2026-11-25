@@ -25,7 +25,16 @@ export declare class CliModelCatalog {
     private asked;
     /** Routes this run has a CLI's own answer for, as opposed to a restored list. */
     private answered;
+    /** Models a CLI was pointed at through DSH, by route, carrying the name DSH gave them. */
+    private followed;
     constructor(deps: ModelCatalogDeps);
+    /**
+     * Record the model a CLI follows DSH on, so the menu says which model that is instead of
+     * showing the CLI's own default row as if it were still in charge.
+     * @param provider - a CLI route.
+     * @param name - the model's name as DSH knows it, or undefined to stop following.
+     */
+    follow(provider: string, name: string | undefined): void;
     /**
      * List a CLI's models. The default entry names the model it stands for, so the menu
      * always shows what is really in use.

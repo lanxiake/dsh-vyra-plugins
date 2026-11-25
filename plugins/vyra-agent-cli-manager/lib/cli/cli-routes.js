@@ -12,6 +12,7 @@
  * @module dsh-vyra-agent-cli-manager/cli/cli-routes
  */
 import { CLI_MANAGER_ROUTE_PREFIX } from "../constants.js";
+import { isModelSource } from "../model-source.js";
 import { listSkills, readPrompt } from "./assets.js";
 import { catalogEntry } from "./catalog.js";
 import { BadRequest, BodyTooLarge } from "./errors.js";
@@ -42,6 +43,7 @@ const CLI_OPERATIONS = [
     'skill-consolidate',
     'prompt',
     'prompt-write',
+    'model-sources',
 ];
 /** `upgrade` names one CLI and nothing else; anything near this size is a caller mistake. */
 const MAX_BODY_BYTES = 8 * 1024;
@@ -145,10 +147,31 @@ async function readAnswer(routes, operation, entry) {
         return await listSkills(entry, assetHost, routes.home);
     return await readPrompt(entry, assetHost, routes.home);
 }
+/**
+ * `model-sources` carries the browser's current picks, because that is where the user made
+ * them, and answers each CLI's route. Nothing is written to disk: the browser is the store.
+ */
+function modelSourceAnswer(routes, body) {
+    const models = routes.models;
+    if (models === undefined)
+        return { sources: [] };
+    if (Array.isArray(body.chosen)) {
+        for (const entry of body.chosen) {
+            if (typeof entry !== 'object' || entry === null)
+                continue;
+            const { id, source } = entry;
+            if (typeof id === 'string' && isModelSource(source))
+                models.choose(id, source);
+        }
+    }
+    return { sources: models.list() };
+}
 /** `status` and the two matrices read nothing and answer every CLI; the rest name one CLI. */
 async function answer(routes, operation, body) {
     if (operation === 'status')
         return { clis: await cliStatuses(routes.host, routes.latest) };
+    if (operation === 'model-sources')
+        return modelSourceAnswer(routes, body);
     // Reading every CLI's config needs no named CLI, and starts no process.
     if (operation === 'mcp-matrix')
         return await mcpMatrix({ readFile: routes.readFile }, routes.home);
