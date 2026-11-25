@@ -1,6 +1,6 @@
 {
   "name": "dsh-vyra-smart-compaction",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "分层、由智能体决定的高质量上下文压缩：压力感知、有回收门槛的确定性预剪枝，以及模型可调用的压缩工具。",
   "keywords": [
     "dsh",
