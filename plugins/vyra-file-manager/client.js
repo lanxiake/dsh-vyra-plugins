@@ -25450,6 +25450,7 @@ function menuActions(item) {
       { key: "toggleFolder", label: "\u5C55\u5F00 / \u6298\u53E0", icon: "folder" },
       { key: "insert", label: "\u5F15\u7528\u5230\u8F93\u5165\u6846", icon: "at" },
       { key: "moveTo", label: "\u79FB\u5230\u6587\u4EF6\u5939\u2026", icon: "folderOpen" },
+      { key: "copyFiles", label: "\u590D\u5236\u6587\u4EF6\u5939", icon: "copy" },
       { key: "copyTo", label: "\u590D\u5236\u5230\u2026", icon: "copy" },
       { key: "copyPath", label: "\u590D\u5236\u6587\u4EF6\u5939\u5730\u5740", icon: "clipboard" },
       { key: "rename", label: "\u91CD\u547D\u540D\u6587\u4EF6\u5939", icon: "pencil" },
@@ -25462,6 +25463,7 @@ function menuActions(item) {
     { key: "insert", label: "\u5F15\u7528\u5230\u8F93\u5165\u6846", icon: "at" },
     { key: "moveTo", label: "\u79FB\u5230\u6587\u4EF6\u5939\u2026", icon: "folderOpen" },
     { key: "copyTo", label: "\u590D\u5236\u5230\u2026", icon: "copy" },
+    { key: "copyFiles", label: "\u590D\u5236\u6587\u4EF6", icon: "copy" },
     { key: "copyPath", label: "\u590D\u5236\u6587\u4EF6\u5730\u5740", icon: "clipboard" },
     { key: "rename", label: "\u91CD\u547D\u540D", icon: "pencil" },
     { key: "reveal", label: "\u5728\u8D44\u6E90\u7BA1\u7406\u5668\u4E2D\u6253\u5F00", icon: "reveal" },
@@ -26004,6 +26006,10 @@ function LibraryBody(props) {
       await copyAddress(item);
       return;
     }
+    if (key === "copyFiles") {
+      await copyToSystemClipboard([item]);
+      return;
+    }
     if (key === "copyTo") {
       setCopyDialog({ item, error: "", action: "copy" });
       return;
@@ -26027,6 +26033,22 @@ function LibraryBody(props) {
       } catch (error2) {
         setNotice(`\u64CD\u4F5C\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
       }
+    }
+  };
+  const copyToSystemClipboard = async (list2) => {
+    const local = list2.filter((item) => item.source !== "url");
+    if (local.length === 0) {
+      setNotice("\u6CA1\u6709\u53EF\u590D\u5236\u7684\u6587\u4EF6");
+      return;
+    }
+    try {
+      const result = await postJson("api/vyra-media/clipboard", {
+        sessionId,
+        paths: local.map((entry) => entry.relativePath)
+      });
+      setNotice(`\u5DF2\u590D\u5236 ${result.count} \u9879\uFF0C\u53EF\u5728\u8D44\u6E90\u7BA1\u7406\u5668\u7C98\u8D34`);
+    } catch (error2) {
+      setNotice(`\u590D\u5236\u5931\u8D25\uFF1A${error2?.message ?? error2}`);
     }
   };
   const submitRename = async (name) => {
@@ -26335,6 +26357,7 @@ function LibraryBody(props) {
       h6("b", null, `\u5DF2\u9009 ${selected.size} \u9879`),
       h6("button", { type: "button", className: "vms-ghost-btn", onClick: insertSelected }, h6(Icon2, { name: "at", size: 12 }), "\u5F15\u7528"),
       h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setBatchCopyDialog({ error: "" }) }, h6(Icon2, { name: "copy", size: 12 }), "\u590D\u5236\u5230\u2026"),
+      h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => copyToSystemClipboard(selectedItems) }, h6(Icon2, { name: "copy", size: 12 }), "\u590D\u5236"),
       h6("button", { type: "button", className: "vms-ghost-btn", onClick: copySelectedAddresses }, h6(Icon2, { name: "clipboard", size: 12 }), "\u590D\u5236\u5730\u5740"),
       h6("button", { type: "button", className: "vms-ghost-btn is-danger", onClick: () => setBatchDeleteDialog({ error: "" }) }, h6(Icon2, { name: "trash", size: 12 }), "\u5220\u9664"),
       h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setSelected(/* @__PURE__ */ new Set()) }, "\u53D6\u6D88\u9009\u62E9")

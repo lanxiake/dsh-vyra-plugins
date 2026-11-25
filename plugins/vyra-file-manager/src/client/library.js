@@ -79,6 +79,7 @@ function menuActions(item) {
       { key: 'toggleFolder', label: '展开 / 折叠', icon: 'folder' },
       { key: 'insert', label: '引用到输入框', icon: 'at' },
       { key: 'moveTo', label: '移到文件夹…', icon: 'folderOpen' },
+      { key: 'copyFiles', label: '复制文件夹', icon: 'copy' },
       { key: 'copyTo', label: '复制到…', icon: 'copy' },
       { key: 'copyPath', label: '复制文件夹地址', icon: 'clipboard' },
       { key: 'rename', label: '重命名文件夹', icon: 'pencil' },
@@ -91,6 +92,7 @@ function menuActions(item) {
     { key: 'insert', label: '引用到输入框', icon: 'at' },
     { key: 'moveTo', label: '移到文件夹…', icon: 'folderOpen' },
     { key: 'copyTo', label: '复制到…', icon: 'copy' },
+    { key: 'copyFiles', label: '复制文件', icon: 'copy' },
     { key: 'copyPath', label: '复制文件地址', icon: 'clipboard' },
     { key: 'rename', label: '重命名', icon: 'pencil' },
     { key: 'reveal', label: '在资源管理器中打开', icon: 'reveal' },
@@ -659,6 +661,7 @@ export function LibraryBody(props) {
     if (key === 'preview') { setOverlayId(item.id); return }
     if (key === 'insert') { insertReference(item); return }
     if (key === 'copyPath') { await copyAddress(item); return }
+    if (key === 'copyFiles') { await copyToSystemClipboard([item]); return }
     if (key === 'copyTo') { setCopyDialog({ item, error: '', action: 'copy' }); return }
     if (key === 'moveTo') { setCopyDialog({ item, error: '', action: 'move' }); return }
     if (key === 'rename') { setRenameDialog({ item, error: '' }); return }
@@ -670,6 +673,21 @@ export function LibraryBody(props) {
       } catch (error) {
         setNotice(`操作失败：${error?.message ?? error}`)
       }
+    }
+  }
+
+  /** Put files on the OS clipboard (a real FileDrop) so Explorer pastes copies. */
+  const copyToSystemClipboard = async list => {
+    const local = list.filter(item => item.source !== 'url')
+    if (local.length === 0) { setNotice('没有可复制的文件'); return }
+    try {
+      const result = await postJson('api/vyra-media/clipboard', {
+        sessionId,
+        paths: local.map(entry => entry.relativePath),
+      })
+      setNotice(`已复制 ${result.count} 项，可在资源管理器粘贴`)
+    } catch (error) {
+      setNotice(`复制失败：${error?.message ?? error}`)
     }
   }
 
@@ -853,6 +871,7 @@ export function LibraryBody(props) {
       h('b', null, `已选 ${selected.size} 项`),
       h('button', { type: 'button', className: 'vms-ghost-btn', onClick: insertSelected }, h(Icon, { name: 'at', size: 12 }), '引用'),
       h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setBatchCopyDialog({ error: '' }) }, h(Icon, { name: 'copy', size: 12 }), '复制到…'),
+      h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => copyToSystemClipboard(selectedItems) }, h(Icon, { name: 'copy', size: 12 }), '复制'),
       h('button', { type: 'button', className: 'vms-ghost-btn', onClick: copySelectedAddresses }, h(Icon, { name: 'clipboard', size: 12 }), '复制地址'),
       h('button', { type: 'button', className: 'vms-ghost-btn is-danger', onClick: () => setBatchDeleteDialog({ error: '' }) }, h(Icon, { name: 'trash', size: 12 }), '删除'),
       h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setSelected(new Set()) }, '取消选择')),

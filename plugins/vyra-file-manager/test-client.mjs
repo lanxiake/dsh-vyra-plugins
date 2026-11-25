@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFile } from 'node:fs/promises'
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { renderToString } from 'react-dom/server'
@@ -200,4 +201,11 @@ test('type chips replace link with html and html has an icon', async () => {
   assert.ok(HTML_EXT.has('html') && HTML_EXT.has('htm'))
   // kindIcon falls back to the raw kind, which must resolve to a real icon.
   assert.equal(kindIcon('html', 'html'), 'html')
+})
+
+test('copying files uses the clipboard route, not the link menu', async () => {
+  const source = await readFile(new URL('./src/client/library.js', import.meta.url), 'utf8')
+  assert.match(source, /'copyFiles'/u)
+  assert.match(source, /api\/vyra-media\/clipboard/u)
+  assert.doesNotMatch(source, /copyLink/u)
 })
