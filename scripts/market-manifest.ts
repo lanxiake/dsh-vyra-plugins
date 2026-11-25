@@ -2949,8 +2949,8 @@ export const manifest: MarketManifest = {
         zh: '文件管理',
       },
       description: {
-        en: 'A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and text in the panel, and rename, copy, delete, reveal or insert files into the composer.',
-        zh: '右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与文本，并支持重命名、复制、删除、打开所在位置及引用到输入框。',
+        en: 'A file manager in the right Sidebar: browse every workspace file type (images, video, audio, documents, archives, HTML, code), zoom the whole grid, switch compact/detailed list views, preview PDFs and HTML in a sandbox, copy files onto the system clipboard, rename, delete, reveal or insert files into the composer, and hide conversation turns that changed no files.',
+        zh: '右侧栏文件管理：浏览工作区的全部文件类型（图片、视频、音频、文档、压缩包、HTML、代码等），网格可整体缩放，列表支持简洁/详细信息，面板内预览 PDF 与 HTML（沙箱），支持把文件复制进系统剪贴板、重命名、删除、打开所在位置及引用到输入框，并隐藏没有文件改动的对话轮次。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -2960,6 +2960,20 @@ export const manifest: MarketManifest = {
       },
       icon: FILE_MANAGER_ICON,
       versions: {
+        // 0.5.0: the "link" type is replaced by "HTML" (saved link cards are no
+        // longer shown), HTML previews run in an opaque-origin sandbox with
+        // Host-inlined assets, files can be copied onto the system clipboard,
+        // "reveal in file manager" now selects the file on Windows, and the
+        // timeline hides turns that changed no files.
+        '0.5.0': {
+          publishTimestamp: 1796572800,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-file-manager',
+          },
+        },
         // 0.4.0 renames the package from `dsh-vyra-media-studio` to
         // `dsh-vyra-file-manager`. Only the identity strings move — the
         // package name, the cordis row, `export const name` and the client
