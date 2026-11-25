@@ -2,8 +2,8 @@
 import {
   AlertTriangle, AppWindow, ArrowLeft, ArrowRight, AtSign, Check, ChevronDown,
   ChevronLeft, ChevronRight, ClipboardCopy, Clock, Copy, Download, Ellipsis,
-  ExternalLink, File, FileArchive, FileCode, FileSpreadsheet, FileText, Folder,
-  FolderOpen, Image, ImageOff, Info, LayoutGrid, Link2, List, MapPin, Maximize,
+  ExternalLink, File, FileArchive, FileCode, FileCode2, FileSpreadsheet, FileText, Folder,
+  FolderOpen, Image, ImageOff, Info, LayoutGrid, List, MapPin, Maximize,
   Move, Music2, Pause, Pencil, PictureInPicture2, Play, Plus, RefreshCw, Scan, Search,
   SlidersHorizontal, Trash2, Video, Volume2, VolumeX, X, ZoomIn, ZoomOut,
 } from 'lucide-react'
@@ -35,10 +35,10 @@ const ICONS = {
   folderOpen: FolderOpen,
   full: Maximize,
   grid: LayoutGrid,
+  html: FileCode2,
   image: Image,
   info: Info,
   left: ArrowLeft,
-  link: Link2,
   list: List,
   more: Ellipsis,
   move: Move,

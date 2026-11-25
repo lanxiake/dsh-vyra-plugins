@@ -18,15 +18,14 @@ import { SessionTimeline } from './timeline.js'
 import { useDragDrop } from './drag.js'
 import {
   CARD_MAX, CARD_MIN, DAY, PAGE_SIZE, TYPE_CHIPS, TYPE_LABEL, apiUrl, compareItems,
-  detectLinkKind, folderOf, folderSegments, formatBytes, makeLinkItem, mediaSrc, mentionToken,
-  parseFileAddress, postJson, readLinks, readPrefs, sessionFileAddress, typeLabel,
-  writeLinks, writePrefs,
+  folderOf, folderSegments, formatBytes, mediaSrc, mentionToken,
+  parseFileAddress, postJson, readPrefs, sessionFileAddress, typeLabel, writePrefs,
 } from './helpers.js'
 
 const h = React.createElement
 const LIGHTBOX_PLUGINS = [Inline, Video, Zoom, Thumbnails, Counter, Fullscreen]
 const INITIAL_PREFS = readPrefs()
-const MEDIA_KINDS = new Set(['image', 'video', 'audio', 'link'])
+const MEDIA_KINDS = new Set(['image', 'video', 'audio'])
 const TREE_STATE_KEY = 'dsh-vyra-media-studio.tree.v1'
 
 function readExpandedFolders() {
@@ -68,29 +67,6 @@ function chunks(values, size) {
   return output
 }
 
-export function AddLinkForm({ onSubmit, onClose }) {
-  const [url, setUrl] = useState('')
-  const [title, setTitle] = useState('')
-  const [error, setError] = useState('')
-  return h('form', {
-    className: 'vms-add-link',
-    onSubmit: event => {
-      event.preventDefault()
-      const value = url.trim()
-      if (detectLinkKind(value) === undefined) { setError('请输入 http(s) 开头的链接'); return }
-      onSubmit(value, title)
-    },
-  },
-  h('div', { className: 'vms-add-head' }, h('b', null, '添加链接'), h(IconButton, { name: 'close', label: '关闭', onClick: onClose })),
-  h('input', { className: 'vms-input', autoFocus: true, value: url, placeholder: 'https://example.com/video.mp4', onChange: event => { setUrl(event.target.value); setError('') } }),
-  h('input', { className: 'vms-input', value: title, placeholder: '标题（可选）', onChange: event => setTitle(event.target.value) }),
-  h('p', { className: 'vms-hint' }, 'mp4 / webm / mp3 / wav 等直链会直接播放；其他链接保存为网页卡片。'),
-  error !== '' && h('p', { className: 'vms-form-error' }, error),
-  h('div', { className: 'vms-add-actions' },
-    h('button', { type: 'button', className: 'vms-ghost-btn', onClick: onClose }, '取消'),
-    h('button', { type: 'submit', className: 'vms-primary-btn' }, '添加')))
-}
-
 /** Library-only menu: adds an in-panel folder jump. */
 function libraryMenuActions(item) {
   return menuActions(item)
@@ -108,14 +84,6 @@ function menuActions(item) {
       { key: 'rename', label: '重命名文件夹', icon: 'pencil' },
       { key: 'reveal', label: '在资源管理器中打开', icon: 'reveal' },
       { key: 'delete', label: '删除文件夹', icon: 'trash', danger: true },
-    ]
-  }
-  if (item.source === 'url' || item.kind === 'link') {
-    return [
-      { key: 'preview', label: '预览 / 打开', icon: 'full' },
-      { key: 'copyLink', label: '复制链接', icon: 'clipboard' },
-      { key: 'openLink', label: '在浏览器打开', icon: 'external' },
-      { key: 'removeLink', label: '移除链接', icon: 'trash', danger: true },
     ]
   }
   return [
@@ -137,7 +105,6 @@ export function LibraryBody(props) {
   const [reloadKey, setReloadKey] = useState(0)
   const forceRefresh = useRef(false)
   const [state, setState] = useState({ items: [], root: '', loading: true, error: null, scan: null })
-  const [links, setLinks] = useState([])
   const [view, setView] = useState(INITIAL_PREFS.view)
   const [listMode, setListMode] = useState(INITIAL_PREFS.listMode)
   const [cardSize, setCardSize] = useState(INITIAL_PREFS.cardSize)
@@ -163,7 +130,6 @@ export function LibraryBody(props) {
   const [folderOpen, setFolderOpen] = useState(false)
   const [inlineId, setInlineId] = useState(null)
   const [overlayId, setOverlayId] = useState(null)
-  const [addOpen, setAddOpen] = useState(false)
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [notice, setNotice] = useState('')
   const [expandedFolders, setExpandedFolders] = useState(() => readExpandedFolders())
@@ -245,9 +211,6 @@ export function LibraryBody(props) {
     return () => { alive = false; controller.abort() }
   }, [sessionId, reloadKey, showHidden, includeBuild])
 
-  useEffect(() => {
-    if (state.root !== '') setLinks(readLinks(state.root))
-  }, [state.root])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -316,19 +279,18 @@ export function LibraryBody(props) {
     setCollapsedFolders(new Set())
   }, [filterKey])
 
-  const items = useMemo(() => [...state.items, ...links], [state.items, links])
+  const items = state.items
 
   // Counts follow every filter that hides files, so "只看本会话" also narrows
   // the type chips. The session window is the one filter applied here; the type
   // and folder filters themselves are excluded (a selected type still shows its
   // full count so the chip can be turned off again).
   const counts = useMemo(() => {
-    const result = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 }
+    const result = { image: 0, video: 0, audio: 0, document: 0, archive: 0, html: 0, code: 0, other: 0 }
     const startedAt = state.scan?.sessionCreatedAt
     for (const item of items) {
       if (sessionOnly) {
-        if (item.source === 'url') continue
-        const info = meta[item.id]
+          const info = meta[item.id]
         if (typeof startedAt !== 'number') continue
         if (info?.mtimeMs === undefined || info.mtimeMs < startedAt) continue
       }
@@ -353,7 +315,6 @@ export function LibraryBody(props) {
   const metaFor = useCallback(item => {
     const values = meta[item.id]
     if (values !== undefined) return values
-    if (item.source === 'url') return { size: item.size, mtimeMs: item.mtimeMs, absolutePath: undefined }
     return undefined
   }, [meta])
 
@@ -432,8 +393,7 @@ export function LibraryBody(props) {
       }
       const info = metaFor(item)
       if (sessionOnly) {
-        if (item.source === 'url') return false
-        const startedAt = state.scan?.sessionCreatedAt
+          const startedAt = state.scan?.sessionCreatedAt
         if (typeof startedAt !== 'number' || info?.mtimeMs === undefined || info.mtimeMs < startedAt) return false
       }
       // Metadata arrives in batches. While a batch is in flight, keep the
@@ -453,7 +413,7 @@ export function LibraryBody(props) {
     }).sort((left, right) => compareItems(left, right, sort, dir, meta))
   }, [items, searchIndex, meta, metaFor, trimmedQuery, types, folder, time, size, sort, dir, treeMode, sessionOnly, state.scan])
 
-  const treeItems = useMemo(() => filtered.map(item => item.source === 'url' ? { ...item, folder: '' } : item), [filtered])
+  const treeItems = filtered
   const filterActive = sessionOnly || types.length > 0 || trimmedQuery !== '' || time !== 'all' || size !== 'all'
   const showEmptyFolders = treeMode && !filterActive
   const forceExpanded = useMemo(() => {
@@ -493,36 +453,11 @@ export function LibraryBody(props) {
     if (item.source === 'local') {
       tab.actions.openResource(sessionFileAddress(sessionId, item.relativePath))
       return
-    }
-    if (item.kind === 'link') openBrowser(item.url)
-    else window.open(item.url, '_blank', 'noopener,noreferrer')
-  }
+    }  }
 
   const handleOverlayTab = item => {
     setOverlayId(null)
     openResource(item)
-  }
-
-  const addLink = (url, title) => {
-    const item = makeLinkItem(url, title)
-    setLinks(previous => {
-      const next = previous.filter(entry => entry.id !== item.id)
-      next.unshift(item)
-      writeLinks(state.root, next)
-      return next
-    })
-    setAddOpen(false)
-    setNotice('已添加链接')
-  }
-
-  const removeLink = item => {
-    setLinks(previous => {
-      const next = previous.filter(entry => entry.id !== item.id)
-      writeLinks(state.root, next)
-      return next
-    })
-    setOverlayId(null)
-    setNotice('已移除链接')
   }
 
   const toggleFolder = path => {
@@ -724,16 +659,10 @@ export function LibraryBody(props) {
     if (key === 'preview') { setOverlayId(item.id); return }
     if (key === 'insert') { insertReference(item); return }
     if (key === 'copyPath') { await copyAddress(item); return }
-    if (key === 'copyLink') {
-      try { await navigator.clipboard.writeText(item.url); setNotice('已复制链接') } catch { setNotice('复制失败') }
-      return
-    }
     if (key === 'copyTo') { setCopyDialog({ item, error: '', action: 'copy' }); return }
     if (key === 'moveTo') { setCopyDialog({ item, error: '', action: 'move' }); return }
     if (key === 'rename') { setRenameDialog({ item, error: '' }); return }
     if (key === 'delete') { setDeleteDialog({ item, step: 0, error: '' }); return }
-    if (key === 'removeLink') { removeLink(item); return }
-    if (key === 'openLink') { openBrowser(item.url); return }
     if (key === 'reveal' || key === 'open') {
       try {
         await postJson(`api/vyra-media/${key}`, { sessionId, path: item.relativePath })
@@ -824,7 +753,6 @@ export function LibraryBody(props) {
             h('span', null, `${folders.length} 个文件夹`), h('span', null, '·'),
             h('span', { className: 'vms-mono' }, sizeReady ? formatBytes(totalSize) : '—'))),
         h('div', { className: 'vms-actions' },
-          h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => setAddOpen(value => !value) }, h(Icon, { name: 'plus', size: 13 }), '链接'),
           h(IconButton, { name: 'refresh', label: '重新扫描', onClick: refresh }),
           h('button', {
             type: 'button', className: 'vms-toggle-btn',
@@ -835,7 +763,7 @@ export function LibraryBody(props) {
       h('div', { className: 'vms-search-row' },
         h('label', { className: 'vms-search' },
           h(Icon, { name: 'search', size: 14 }),
-          h('input', { value: query, placeholder: '搜索名称、路径、类型或链接…', onChange: event => setQuery(event.target.value) })),
+          h('input', { value: query, placeholder: '搜索名称、路径或类型…', onChange: event => setQuery(event.target.value) })),
         view === 'grid' && h('div', { className: 'vms-zoom' },
           h(IconButton, { name: 'zoomOut', label: '缩小缩略图', onClick: () => setCardSize(value => Math.max(CARD_MIN, value - 16)) }),
           h('input', {
@@ -921,7 +849,6 @@ export function LibraryBody(props) {
       chips.length > 0 && h('div', { className: 'vms-chips' },
         chips.map(chip => h('span', { key: chip.key, className: 'vms-chip' }, chip.label,
           h('button', { type: 'button', 'aria-label': '移除筛选', onClick: () => removeChip(chip.key) }, '×'))))),
-    addOpen && h(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
     selected.size > 0 && h('div', { className: 'vms-selection-bar' },
       h('b', null, `已选 ${selected.size} 项`),
       h('button', { type: 'button', className: 'vms-ghost-btn', onClick: insertSelected }, h(Icon, { name: 'at', size: 12 }), '引用'),
@@ -1076,7 +1003,6 @@ export function LibraryBody(props) {
         onClose: () => setOverlayId(null),
         onOpenItem: handleOverlayTab,
         onOpenBrowser: openBrowser,
-        onRemoveLink: removeLink,
         onAction: runAction,
         onMenu: (entry, x, y) => setMenu({ item: entry, x, y }),
       })

@@ -9,7 +9,7 @@
 
 import mime from 'mime-types'
 
-/** @typedef {'video' | 'image' | 'audio' | 'document' | 'archive' | 'code' | 'other'} FileKind */
+/** @typedef {'video' | 'image' | 'audio' | 'document' | 'archive' | 'code' | 'html' | 'other'} FileKind */
 
 const VIDEO = [
   'mp4', 'm4v', 'mov', 'webm', 'ogv', 'mkv', 'avi', 'wmv', 'flv',
@@ -29,9 +29,16 @@ const DOCUMENT = [
 const ARCHIVE = [
   'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'iso',
 ]
+/**
+ * Markup files get their own kind so the filter row can offer one click and so
+ * the preview knows to render them instead of showing source.
+ */
+const HTML = [
+  'html', 'htm',
+]
 const CODE = [
   'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'mts', 'cts', 'json', 'jsonc', 'yaml', 'yml',
-  'toml', 'xml', 'html', 'htm', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
+  'toml', 'xml', 'css', 'scss', 'less', 'py', 'rb', 'go', 'rs',
   'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'php', 'lua',
   'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd', 'sql', 'vue', 'svelte', 'astro',
   'ini', 'conf', 'env', 'gitignore', 'dockerfile', 'makefile',
@@ -46,6 +53,7 @@ export const FILE_KINDS = new Map([
   ...AUDIO.map(extension => [extension, 'audio']),
   ...DOCUMENT.map(extension => [extension, 'document']),
   ...ARCHIVE.map(extension => [extension, 'archive']),
+  ...HTML.map(extension => [extension, 'html']),
   ...CODE.map(extension => [extension, 'code']),
 ])
 

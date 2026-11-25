@@ -183,3 +183,15 @@ test('tree model keeps empty folders and counts matching files', () => {
   const pruned = buildTree(items, ['docs', 'docs/sub', 'empty'], false)
   assert.equal(pruned.folders.has('empty'), false)
 })
+
+test('type chips replace link with html and html has an icon', async () => {
+  const { TYPE_CHIPS, TYPE_LABEL, HTML_EXT } = await import('./src/client/helpers.js')
+  const { kindIcon } = await import('./src/client/icons.js')
+  assert.ok(TYPE_CHIPS.includes('html'))
+  assert.ok(!TYPE_CHIPS.includes('link'))
+  assert.equal(TYPE_LABEL.html, 'HTML')
+  assert.equal(TYPE_LABEL.link, undefined)
+  assert.ok(HTML_EXT.has('html') && HTML_EXT.has('htm'))
+  // kindIcon falls back to the raw kind, which must resolve to a real icon.
+  assert.equal(kindIcon('html', 'html'), 'html')
+})

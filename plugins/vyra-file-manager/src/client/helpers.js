@@ -8,6 +8,7 @@ export const LIBRARY_KIND = 'media'
 export const VIDEO_EXT = new Set(['mp4', 'm4v', 'mov', 'webm', 'ogv', 'mkv', 'avi', 'wmv', 'flv'])
 export const AUDIO_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'wma', 'aiff', 'aif'])
 export const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'bmp', 'ico', 'svg', 'tif', 'tiff'])
+export const HTML_EXT = new Set(['html', 'htm'])
 export const TEXT_EXT = new Set([
   'txt', 'md', 'markdown', 'log', 'csv', 'tsv', 'rtf', 'tex',
   'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'mts', 'cts', 'json', 'jsonc', 'yaml', 'yml',
@@ -21,12 +22,12 @@ export const TEXT_EXT = new Set([
 
 export const TYPE_LABEL = {
   all: '全部', image: '图片', video: '视频', audio: '音频', document: '文档',
-  archive: '压缩包', code: '代码', other: '其他', link: '链接',
+  archive: '压缩包', html: 'HTML', code: '代码', other: '其他',
 }
 export const TYPE_ORDER = {
-  image: 0, video: 1, audio: 2, document: 3, archive: 4, code: 5, other: 6, link: 7,
+  image: 0, video: 1, audio: 2, document: 3, archive: 4, html: 5, code: 6, other: 7,
 }
-export const TYPE_CHIPS = ['image', 'video', 'audio', 'document', 'archive', 'code', 'other', 'link']
+export const TYPE_CHIPS = ['image', 'video', 'audio', 'document', 'archive', 'html', 'code', 'other']
 
 export const COLLATOR = new Intl.Collator('zh-CN', { numeric: true, sensitivity: 'base' })
 export const DAY = 86_400_000
@@ -230,61 +231,6 @@ export function mentionToken(path) {
   return /\s/u.test(slashed) ? `@"${slashed}" ` : `@${slashed} `
 }
 
-export function detectLinkKind(url) {
-  try {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
-    return kindOfExtension(extensionOf(parsed.pathname)) ?? 'link'
-  } catch {
-    return undefined
-  }
-}
-
-export function makeLinkItem(url, title) {
-  const parsed = new URL(url)
-  const extension = extensionOf(parsed.pathname)
-  const kind = kindOfExtension(extension) ?? 'link'
-  const fileName = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() ?? parsed.hostname)
-  return {
-    id: `url:${url}`,
-    kind,
-    title: (title ?? '').trim()
-      || (kind === 'link' ? parsed.hostname.replace(/^www\./, '') : fileName),
-    fileName,
-    folder: '链接',
-    relativePath: '',
-    size: undefined,
-    mtimeMs: Date.now(),
-    duration: 0,
-    width: 0,
-    height: 0,
-    source: 'url',
-    ext: extension || 'html',
-    url,
-  }
-}
-
-function linksKey(root) {
-  return `dsh-vyra-media-studio.links.v1:${root}`
-}
-
-export function readLinks(root) {
-  if (!root) return []
-  try {
-    const parsed = JSON.parse(localStorage.getItem(linksKey(root)) ?? '[]')
-    return Array.isArray(parsed)
-      ? parsed.filter(item => item && typeof item.url === 'string' && typeof item.id === 'string')
-      : []
-  } catch {
-    return []
-  }
-}
-
-export function writeLinks(root, links) {
-  if (!root) return
-  try { localStorage.setItem(linksKey(root), JSON.stringify(links)) } catch { /* storage may be unavailable */ }
-}
-
 const PREFS_KEY = 'dsh-vyra-media-studio.prefs.v2'
 const PREF_DEFAULTS = {
   // The panel opens on the tile grid with the current-session filter on; the
@@ -375,5 +321,5 @@ export function slideFor(item, index, sessionId) {
       ...coverOf(item, index),
     }
   }
-  return { type: 'vms-link', url: item.url, title: item.title, domain: domainOf(item) }
+  return undefined
 }

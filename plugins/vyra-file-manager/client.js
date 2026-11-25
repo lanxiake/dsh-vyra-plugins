@@ -1954,7 +1954,7 @@ var __iconNode15 = [
 ];
 var FileArchive = createLucideIcon("file-archive", __iconNode15);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-code.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-code-corner.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -1965,17 +1965,17 @@ var __iconNode16 = [
   [
     "path",
     {
-      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
-      key: "1oefj6"
+      d: "M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35",
+      key: "1wthlu"
     }
   ],
   ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
-  ["path", { d: "M10 12.5 8 15l2 2.5", key: "1tg20x" }],
-  ["path", { d: "m14 12.5 2 2.5-2 2.5", key: "yinavb" }]
+  ["path", { d: "m5 16-3 3 3 3", key: "331omg" }],
+  ["path", { d: "m9 22 3-3-3-3", key: "lsp7cz" }]
 ];
-var FileCode = createLucideIcon("file-code", __iconNode16);
+var FileCodeCorner = createLucideIcon("file-code-corner", __iconNode16);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-spreadsheet.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-code.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -1991,14 +1991,12 @@ var __iconNode17 = [
     }
   ],
   ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
-  ["path", { d: "M8 13h2", key: "yr2amv" }],
-  ["path", { d: "M14 13h2", key: "un5t4a" }],
-  ["path", { d: "M8 17h2", key: "2yhykz" }],
-  ["path", { d: "M14 17h2", key: "10kma7" }]
+  ["path", { d: "M10 12.5 8 15l2 2.5", key: "1tg20x" }],
+  ["path", { d: "m14 12.5 2 2.5-2 2.5", key: "yinavb" }]
 ];
-var FileSpreadsheet = createLucideIcon("file-spreadsheet", __iconNode17);
+var FileCode = createLucideIcon("file-code", __iconNode17);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-text.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-spreadsheet.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -2014,13 +2012,14 @@ var __iconNode18 = [
     }
   ],
   ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
-  ["path", { d: "M10 9H8", key: "b1mrlr" }],
-  ["path", { d: "M16 13H8", key: "t4e002" }],
-  ["path", { d: "M16 17H8", key: "z1uh3a" }]
+  ["path", { d: "M8 13h2", key: "yr2amv" }],
+  ["path", { d: "M14 13h2", key: "un5t4a" }],
+  ["path", { d: "M8 17h2", key: "2yhykz" }],
+  ["path", { d: "M14 17h2", key: "10kma7" }]
 ];
-var FileText = createLucideIcon("file-text", __iconNode18);
+var FileSpreadsheet = createLucideIcon("file-spreadsheet", __iconNode18);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file-text.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -2035,11 +2034,14 @@ var __iconNode19 = [
       key: "1oefj6"
     }
   ],
-  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }]
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }],
+  ["path", { d: "M10 9H8", key: "b1mrlr" }],
+  ["path", { d: "M16 13H8", key: "t4e002" }],
+  ["path", { d: "M16 17H8", key: "z1uh3a" }]
 ];
-var File = createLucideIcon("file", __iconNode19);
+var FileText = createLucideIcon("file-text", __iconNode19);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder-open.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/file.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -2050,14 +2052,15 @@ var __iconNode20 = [
   [
     "path",
     {
-      d: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2",
-      key: "usdka0"
+      d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+      key: "1oefj6"
     }
-  ]
+  ],
+  ["path", { d: "M14 2v5a1 1 0 0 0 1 1h5", key: "wfsgrz" }]
 ];
-var FolderOpen = createLucideIcon("folder-open", __iconNode20);
+var File = createLucideIcon("file", __iconNode20);
 
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder.js
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder-open.js
 /**
  * @license lucide-react v0.577.0 - ISC
  *
@@ -2068,12 +2071,30 @@ var __iconNode21 = [
   [
     "path",
     {
+      d: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2",
+      key: "usdka0"
+    }
+  ]
+];
+var FolderOpen = createLucideIcon("folder-open", __iconNode21);
+
+// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/folder.js
+/**
+ * @license lucide-react v0.577.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+var __iconNode22 = [
+  [
+    "path",
+    {
       d: "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
       key: "1kt360"
     }
   ]
 ];
-var Folder = createLucideIcon("folder", __iconNode21);
+var Folder = createLucideIcon("folder", __iconNode22);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image-off.js
 /**
@@ -2082,7 +2103,7 @@ var Folder = createLucideIcon("folder", __iconNode21);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode22 = [
+var __iconNode23 = [
   ["line", { x1: "2", x2: "22", y1: "2", y2: "22", key: "a6p6uj" }],
   ["path", { d: "M10.41 10.41a2 2 0 1 1-2.83-2.83", key: "1bzlo9" }],
   ["line", { x1: "13.5", x2: "6", y1: "13.5", y2: "21", key: "1q0aeu" }],
@@ -2096,7 +2117,7 @@ var __iconNode22 = [
   ],
   ["path", { d: "M21 15V5a2 2 0 0 0-2-2H9", key: "43el77" }]
 ];
-var ImageOff = createLucideIcon("image-off", __iconNode22);
+var ImageOff = createLucideIcon("image-off", __iconNode23);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/image.js
 /**
@@ -2105,12 +2126,12 @@ var ImageOff = createLucideIcon("image-off", __iconNode22);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode23 = [
+var __iconNode24 = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2", key: "1m3agn" }],
   ["circle", { cx: "9", cy: "9", r: "2", key: "af1f0g" }],
   ["path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21", key: "1xmnt7" }]
 ];
-var Image = createLucideIcon("image", __iconNode23);
+var Image = createLucideIcon("image", __iconNode24);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/info.js
 /**
@@ -2119,12 +2140,12 @@ var Image = createLucideIcon("image", __iconNode23);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode24 = [
+var __iconNode25 = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
   ["path", { d: "M12 16v-4", key: "1dtifu" }],
   ["path", { d: "M12 8h.01", key: "e9boi3" }]
 ];
-var Info = createLucideIcon("info", __iconNode24);
+var Info = createLucideIcon("info", __iconNode25);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/layout-grid.js
 /**
@@ -2133,27 +2154,13 @@ var Info = createLucideIcon("info", __iconNode24);
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-var __iconNode25 = [
+var __iconNode26 = [
   ["rect", { width: "7", height: "7", x: "3", y: "3", rx: "1", key: "1g98yp" }],
   ["rect", { width: "7", height: "7", x: "14", y: "3", rx: "1", key: "6d4xhi" }],
   ["rect", { width: "7", height: "7", x: "14", y: "14", rx: "1", key: "nxv5o0" }],
   ["rect", { width: "7", height: "7", x: "3", y: "14", rx: "1", key: "1bb6yr" }]
 ];
-var LayoutGrid = createLucideIcon("layout-grid", __iconNode25);
-
-// node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/link-2.js
-/**
- * @license lucide-react v0.577.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-var __iconNode26 = [
-  ["path", { d: "M9 17H7A5 5 0 0 1 7 7h2", key: "8i5ue5" }],
-  ["path", { d: "M15 7h2a5 5 0 1 1 0 10h-2", key: "1b9ql8" }],
-  ["line", { x1: "8", x2: "16", y1: "12", y2: "12", key: "1jonct" }]
-];
-var Link2 = createLucideIcon("link-2", __iconNode26);
+var LayoutGrid = createLucideIcon("layout-grid", __iconNode26);
 
 // node_modules/.pnpm/lucide-react@0.577.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/list.js
 /**
@@ -6497,7 +6504,6 @@ var AUDIO_ID = "dsh-vyra-file-manager/audio";
 var LIBRARY_KIND = "media";
 var VIDEO_EXT = /* @__PURE__ */ new Set(["mp4", "m4v", "mov", "webm", "ogv", "mkv", "avi", "wmv", "flv"]);
 var AUDIO_EXT = /* @__PURE__ */ new Set(["mp3", "wav", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif"]);
-var IMAGE_EXT = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "ico", "svg", "tif", "tiff"]);
 var TEXT_EXT = /* @__PURE__ */ new Set([
   "txt",
   "md",
@@ -6581,9 +6587,9 @@ var TYPE_LABEL = {
   audio: "\u97F3\u9891",
   document: "\u6587\u6863",
   archive: "\u538B\u7F29\u5305",
+  html: "HTML",
   code: "\u4EE3\u7801",
-  other: "\u5176\u4ED6",
-  link: "\u94FE\u63A5"
+  other: "\u5176\u4ED6"
 };
 var TYPE_ORDER = {
   image: 0,
@@ -6591,11 +6597,11 @@ var TYPE_ORDER = {
   audio: 2,
   document: 3,
   archive: 4,
-  code: 5,
-  other: 6,
-  link: 7
+  html: 5,
+  code: 6,
+  other: 7
 };
-var TYPE_CHIPS = ["image", "video", "audio", "document", "archive", "code", "other", "link"];
+var TYPE_CHIPS = ["image", "video", "audio", "document", "archive", "html", "code", "other"];
 var COLLATOR = new Intl.Collator("zh-CN", { numeric: true, sensitivity: "base" });
 var DAY = 864e5;
 var PAGE_SIZE = 120;
@@ -6627,13 +6633,6 @@ function extensionOf(value) {
   const base2 = clean.slice(slash + 1);
   const dot = base2.lastIndexOf(".");
   return dot <= 0 ? "" : base2.slice(dot + 1).toLowerCase();
-}
-function kindOfExtension(extension) {
-  const ext = String(extension ?? "").toLowerCase();
-  if (VIDEO_EXT.has(ext)) return "video";
-  if (IMAGE_EXT.has(ext)) return "image";
-  if (AUDIO_EXT.has(ext)) return "audio";
-  return void 0;
 }
 var TEXT_MIME_FALLBACK = /* @__PURE__ */ new Set([
   "application/json",
@@ -6777,56 +6776,6 @@ function mentionToken(path) {
   const slashed = String(path).trim().replace(/\\/gu, "/");
   return /\s/u.test(slashed) ? `@"${slashed}" ` : `@${slashed} `;
 }
-function detectLinkKind(url) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return void 0;
-    return kindOfExtension(extensionOf(parsed.pathname)) ?? "link";
-  } catch {
-    return void 0;
-  }
-}
-function makeLinkItem(url, title) {
-  const parsed = new URL(url);
-  const extension = extensionOf(parsed.pathname);
-  const kind = kindOfExtension(extension) ?? "link";
-  const fileName = decodeURIComponent(parsed.pathname.split("/").filter(Boolean).pop() ?? parsed.hostname);
-  return {
-    id: `url:${url}`,
-    kind,
-    title: (title ?? "").trim() || (kind === "link" ? parsed.hostname.replace(/^www\./, "") : fileName),
-    fileName,
-    folder: "\u94FE\u63A5",
-    relativePath: "",
-    size: void 0,
-    mtimeMs: Date.now(),
-    duration: 0,
-    width: 0,
-    height: 0,
-    source: "url",
-    ext: extension || "html",
-    url
-  };
-}
-function linksKey(root) {
-  return `dsh-vyra-media-studio.links.v1:${root}`;
-}
-function readLinks(root) {
-  if (!root) return [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(linksKey(root)) ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item.url === "string" && typeof item.id === "string") : [];
-  } catch {
-    return [];
-  }
-}
-function writeLinks(root, links) {
-  if (!root) return;
-  try {
-    localStorage.setItem(linksKey(root), JSON.stringify(links));
-  } catch {
-  }
-}
 var PREFS_KEY = "dsh-vyra-media-studio.prefs.v2";
 var PREF_DEFAULTS = {
   // The panel opens on the tile grid with the current-session filter on; the
@@ -6918,7 +6867,7 @@ function slideFor(item, index, sessionId) {
       ...coverOf(item, index)
     };
   }
-  return { type: "vms-link", url: item.url, title: item.title, domain: domainOf(item) };
+  return void 0;
 }
 
 // src/client/icons.js
@@ -6949,10 +6898,10 @@ var ICONS = {
   folderOpen: FolderOpen,
   full: Maximize,
   grid: LayoutGrid,
+  html: FileCodeCorner,
   image: Image,
   info: Info,
   left: ArrowLeft,
-  link: Link2,
   list: List,
   more: Ellipsis,
   move: Move,
@@ -24354,7 +24303,7 @@ function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, onMenu, 
     )
   );
 }
-function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenItem, onOpenBrowser, onRemoveLink, onAction, onMenu, Lightbox: Lightbox2, plugins }) {
+function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenItem, onOpenBrowser, onAction, onMenu, Lightbox: Lightbox2, plugins }) {
   const [currentIndex, setCurrentIndex] = (0, import_react5.useState)(initialIndex);
   const current = items[currentIndex] ?? items[0];
   const slides = import_react5.default.useMemo(() => items.map((item, index) => slideFor(item, index, sessionId)), [items, sessionId]);
@@ -24391,8 +24340,7 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
         h2(
           "div",
           { className: "vms-sheet-actions" },
-          current.source === "url" && h2("button", { type: "button", className: "vms-icon-btn", title: "\u79FB\u9664\u94FE\u63A5", "aria-label": "\u79FB\u9664\u94FE\u63A5", onClick: () => onRemoveLink(current) }, h2(Icon2, { name: "trash", size: 15 })),
-          current.source !== "url" && h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", current) }, h2(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
+          h2("button", { type: "button", className: "vms-ghost-btn", onClick: () => onAction("insert", current) }, h2(Icon2, { name: "at", size: 13 }), "\u5F15\u7528\u5230\u8F93\u5165\u6846"),
           h2(
             "button",
             { type: "button", className: "vms-ghost-btn", onClick: () => onOpenItem(current) },
@@ -24922,9 +24870,10 @@ var KIND_BY_EXT = {
   video: ["mp4", "m4v", "mov", "webm", "ogv", "mkv", "avi", "wmv", "flv"],
   audio: ["mp3", "wav", "m4a", "aac", "flac", "ogg", "opus", "wma", "aiff", "aif"],
   document: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md", "markdown", "csv", "tsv", "log", "rtf"],
-  archive: ["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz", "iso"]
+  archive: ["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz", "iso"],
+  html: ["html", "htm"]
 };
-var KIND_LABEL = { image: "\u56FE\u7247", video: "\u89C6\u9891", audio: "\u97F3\u9891", document: "\u6587\u6863", archive: "\u538B\u7F29\u5305", code: "\u4EE3\u7801", other: "\u5176\u4ED6" };
+var KIND_LABEL = { image: "\u56FE\u7247", video: "\u89C6\u9891", audio: "\u97F3\u9891", document: "\u6587\u6863", archive: "\u538B\u7F29\u5305", html: "HTML", code: "\u4EE3\u7801", other: "\u5176\u4ED6" };
 var COLLAPSE_KEY = "dsh-vyra-media-studio.timeline.collapsed.v1";
 function fileKindOf(name) {
   const dot = name.lastIndexOf(".");
@@ -25380,7 +25329,7 @@ function useDragDrop({ onMove, onReference }) {
 var h6 = import_react10.default.createElement;
 var LIGHTBOX_PLUGINS = [Inline, Video2, Zoom, Thumbnails, Counter, Fullscreen];
 var INITIAL_PREFS = readPrefs();
-var MEDIA_KINDS = /* @__PURE__ */ new Set(["image", "video", "audio", "link"]);
+var MEDIA_KINDS = /* @__PURE__ */ new Set(["image", "video", "audio"]);
 var TREE_STATE_KEY = "dsh-vyra-media-studio.tree.v1";
 function readExpandedFolders() {
   try {
@@ -25419,40 +25368,6 @@ function chunks(values, size) {
   for (let index = 0; index < values.length; index += size) output.push(values.slice(index, index + size));
   return output;
 }
-function AddLinkForm({ onSubmit, onClose }) {
-  const [url, setUrl] = (0, import_react10.useState)("");
-  const [title, setTitle] = (0, import_react10.useState)("");
-  const [error2, setError] = (0, import_react10.useState)("");
-  return h6(
-    "form",
-    {
-      className: "vms-add-link",
-      onSubmit: (event) => {
-        event.preventDefault();
-        const value = url.trim();
-        if (detectLinkKind(value) === void 0) {
-          setError("\u8BF7\u8F93\u5165 http(s) \u5F00\u5934\u7684\u94FE\u63A5");
-          return;
-        }
-        onSubmit(value, title);
-      }
-    },
-    h6("div", { className: "vms-add-head" }, h6("b", null, "\u6DFB\u52A0\u94FE\u63A5"), h6(IconButton3, { name: "close", label: "\u5173\u95ED", onClick: onClose })),
-    h6("input", { className: "vms-input", autoFocus: true, value: url, placeholder: "https://example.com/video.mp4", onChange: (event) => {
-      setUrl(event.target.value);
-      setError("");
-    } }),
-    h6("input", { className: "vms-input", value: title, placeholder: "\u6807\u9898\uFF08\u53EF\u9009\uFF09", onChange: (event) => setTitle(event.target.value) }),
-    h6("p", { className: "vms-hint" }, "mp4 / webm / mp3 / wav \u7B49\u76F4\u94FE\u4F1A\u76F4\u63A5\u64AD\u653E\uFF1B\u5176\u4ED6\u94FE\u63A5\u4FDD\u5B58\u4E3A\u7F51\u9875\u5361\u7247\u3002"),
-    error2 !== "" && h6("p", { className: "vms-form-error" }, error2),
-    h6(
-      "div",
-      { className: "vms-add-actions" },
-      h6("button", { type: "button", className: "vms-ghost-btn", onClick: onClose }, "\u53D6\u6D88"),
-      h6("button", { type: "submit", className: "vms-primary-btn" }, "\u6DFB\u52A0")
-    )
-  );
-}
 function libraryMenuActions(item) {
   return menuActions(item);
 }
@@ -25467,14 +25382,6 @@ function menuActions(item) {
       { key: "rename", label: "\u91CD\u547D\u540D\u6587\u4EF6\u5939", icon: "pencil" },
       { key: "reveal", label: "\u5728\u8D44\u6E90\u7BA1\u7406\u5668\u4E2D\u6253\u5F00", icon: "reveal" },
       { key: "delete", label: "\u5220\u9664\u6587\u4EF6\u5939", icon: "trash", danger: true }
-    ];
-  }
-  if (item.source === "url" || item.kind === "link") {
-    return [
-      { key: "preview", label: "\u9884\u89C8 / \u6253\u5F00", icon: "full" },
-      { key: "copyLink", label: "\u590D\u5236\u94FE\u63A5", icon: "clipboard" },
-      { key: "openLink", label: "\u5728\u6D4F\u89C8\u5668\u6253\u5F00", icon: "external" },
-      { key: "removeLink", label: "\u79FB\u9664\u94FE\u63A5", icon: "trash", danger: true }
     ];
   }
   return [
@@ -25495,7 +25402,6 @@ function LibraryBody(props) {
   const [reloadKey, setReloadKey] = (0, import_react10.useState)(0);
   const forceRefresh = (0, import_react10.useRef)(false);
   const [state, setState] = (0, import_react10.useState)({ items: [], root: "", loading: true, error: null, scan: null });
-  const [links, setLinks] = (0, import_react10.useState)([]);
   const [view, setView] = (0, import_react10.useState)(INITIAL_PREFS.view);
   const [listMode, setListMode] = (0, import_react10.useState)(INITIAL_PREFS.listMode);
   const [cardSize, setCardSize] = (0, import_react10.useState)(INITIAL_PREFS.cardSize);
@@ -25523,7 +25429,6 @@ function LibraryBody(props) {
   const [folderOpen, setFolderOpen] = (0, import_react10.useState)(false);
   const [inlineId, setInlineId] = (0, import_react10.useState)(null);
   const [overlayId, setOverlayId] = (0, import_react10.useState)(null);
-  const [addOpen, setAddOpen] = (0, import_react10.useState)(false);
   const [limit, setLimit] = (0, import_react10.useState)(PAGE_SIZE);
   const [notice, setNotice] = (0, import_react10.useState)("");
   const [expandedFolders, setExpandedFolders] = (0, import_react10.useState)(() => readExpandedFolders());
@@ -25607,9 +25512,6 @@ function LibraryBody(props) {
     };
   }, [sessionId, reloadKey, showHidden, includeBuild]);
   (0, import_react10.useEffect)(() => {
-    if (state.root !== "") setLinks(readLinks(state.root));
-  }, [state.root]);
-  (0, import_react10.useEffect)(() => {
     const controller = new AbortController();
     fetch(apiUrl("api/vyra-media/session-changes", { sessionId }), {
       signal: controller.signal,
@@ -25671,13 +25573,12 @@ function LibraryBody(props) {
     setLimit(PAGE_SIZE);
     setCollapsedFolders(/* @__PURE__ */ new Set());
   }, [filterKey]);
-  const items = (0, import_react10.useMemo)(() => [...state.items, ...links], [state.items, links]);
+  const items = state.items;
   const counts = (0, import_react10.useMemo)(() => {
-    const result = { image: 0, video: 0, audio: 0, document: 0, archive: 0, code: 0, other: 0, link: 0 };
+    const result = { image: 0, video: 0, audio: 0, document: 0, archive: 0, html: 0, code: 0, other: 0 };
     const startedAt = state.scan?.sessionCreatedAt;
     for (const item of items) {
       if (sessionOnly) {
-        if (item.source === "url") continue;
         const info = meta[item.id];
         if (typeof startedAt !== "number") continue;
         if (info?.mtimeMs === void 0 || info.mtimeMs < startedAt) continue;
@@ -25700,7 +25601,6 @@ function LibraryBody(props) {
   const metaFor = (0, import_react10.useCallback)((item) => {
     const values = meta[item.id];
     if (values !== void 0) return values;
-    if (item.source === "url") return { size: item.size, mtimeMs: item.mtimeMs, absolutePath: void 0 };
     return void 0;
   }, [meta]);
   const needAllMeta = sessionOnly || time !== "all" || size !== "all" || sort === "time" || sort === "size" || treeMode && detail === "detailed";
@@ -25768,7 +25668,6 @@ function LibraryBody(props) {
       }
       const info = metaFor(item);
       if (sessionOnly) {
-        if (item.source === "url") return false;
         const startedAt = state.scan?.sessionCreatedAt;
         if (typeof startedAt !== "number" || info?.mtimeMs === void 0 || info.mtimeMs < startedAt) return false;
       }
@@ -25785,7 +25684,7 @@ function LibraryBody(props) {
       return true;
     }).sort((left, right) => compareItems(left, right, sort, dir, meta));
   }, [items, searchIndex, meta, metaFor, trimmedQuery, types, folder, time, size, sort, dir, treeMode, sessionOnly, state.scan]);
-  const treeItems = (0, import_react10.useMemo)(() => filtered.map((item) => item.source === "url" ? { ...item, folder: "" } : item), [filtered]);
+  const treeItems = filtered;
   const filterActive = sessionOnly || types.length > 0 || trimmedQuery !== "" || time !== "all" || size !== "all";
   const showEmptyFolders = treeMode && !filterActive;
   const forceExpanded = (0, import_react10.useMemo)(() => {
@@ -25821,32 +25720,10 @@ function LibraryBody(props) {
       tab.actions.openResource(sessionFileAddress(sessionId, item.relativePath));
       return;
     }
-    if (item.kind === "link") openBrowser(item.url);
-    else window.open(item.url, "_blank", "noopener,noreferrer");
   };
   const handleOverlayTab = (item) => {
     setOverlayId(null);
     openResource(item);
-  };
-  const addLink = (url, title) => {
-    const item = makeLinkItem(url, title);
-    setLinks((previous) => {
-      const next = previous.filter((entry) => entry.id !== item.id);
-      next.unshift(item);
-      writeLinks(state.root, next);
-      return next;
-    });
-    setAddOpen(false);
-    setNotice("\u5DF2\u6DFB\u52A0\u94FE\u63A5");
-  };
-  const removeLink = (item) => {
-    setLinks((previous) => {
-      const next = previous.filter((entry) => entry.id !== item.id);
-      writeLinks(state.root, next);
-      return next;
-    });
-    setOverlayId(null);
-    setNotice("\u5DF2\u79FB\u9664\u94FE\u63A5");
   };
   const toggleFolder = (path) => {
     const forced = forceExpanded.has(path);
@@ -26054,15 +25931,6 @@ function LibraryBody(props) {
       await copyAddress(item);
       return;
     }
-    if (key === "copyLink") {
-      try {
-        await navigator.clipboard.writeText(item.url);
-        setNotice("\u5DF2\u590D\u5236\u94FE\u63A5");
-      } catch {
-        setNotice("\u590D\u5236\u5931\u8D25");
-      }
-      return;
-    }
     if (key === "copyTo") {
       setCopyDialog({ item, error: "", action: "copy" });
       return;
@@ -26077,14 +25945,6 @@ function LibraryBody(props) {
     }
     if (key === "delete") {
       setDeleteDialog({ item, step: 0, error: "" });
-      return;
-    }
-    if (key === "removeLink") {
-      removeLink(item);
-      return;
-    }
-    if (key === "openLink") {
-      openBrowser(item.url);
       return;
     }
     if (key === "reveal" || key === "open") {
@@ -26186,7 +26046,6 @@ function LibraryBody(props) {
         h6(
           "div",
           { className: "vms-actions" },
-          h6("button", { type: "button", className: "vms-ghost-btn", onClick: () => setAddOpen((value) => !value) }, h6(Icon2, { name: "plus", size: 13 }), "\u94FE\u63A5"),
           h6(IconButton3, { name: "refresh", label: "\u91CD\u65B0\u626B\u63CF", onClick: refresh }),
           h6(
             "button",
@@ -26208,7 +26067,7 @@ function LibraryBody(props) {
           "label",
           { className: "vms-search" },
           h6(Icon2, { name: "search", size: 14 }),
-          h6("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u3001\u7C7B\u578B\u6216\u94FE\u63A5\u2026", onChange: (event) => setQuery(event.target.value) })
+          h6("input", { value: query, placeholder: "\u641C\u7D22\u540D\u79F0\u3001\u8DEF\u5F84\u6216\u7C7B\u578B\u2026", onChange: (event) => setQuery(event.target.value) })
         ),
         view === "grid" && h6(
           "div",
@@ -26397,7 +26256,6 @@ function LibraryBody(props) {
         ))
       )
     ),
-    addOpen && h6(AddLinkForm, { onSubmit: addLink, onClose: () => setAddOpen(false) }),
     selected.size > 0 && h6(
       "div",
       { className: "vms-selection-bar" },
@@ -26587,7 +26445,6 @@ function LibraryBody(props) {
       onClose: () => setOverlayId(null),
       onOpenItem: handleOverlayTab,
       onOpenBrowser: openBrowser,
-      onRemoveLink: removeLink,
       onAction: runAction,
       onMenu: (entry, x, y) => setMenu({ item: entry, x, y })
     }) : h6(FilePreviewOverlay, {

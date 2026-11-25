@@ -12,9 +12,10 @@ const KIND_BY_EXT = {
   audio: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'wma', 'aiff', 'aif'],
   document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'markdown', 'csv', 'tsv', 'log', 'rtf'],
   archive: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'iso'],
+  html: ['html', 'htm'],
 }
 
-const KIND_LABEL = { image: '图片', video: '视频', audio: '音频', document: '文档', archive: '压缩包', code: '代码', other: '其他' }
+const KIND_LABEL = { image: '图片', video: '视频', audio: '音频', document: '文档', archive: '压缩包', html: 'HTML', code: '代码', other: '其他' }
 const COLLAPSE_KEY = 'dsh-vyra-media-studio.timeline.collapsed.v1'
 
 function fileKindOf(name) {

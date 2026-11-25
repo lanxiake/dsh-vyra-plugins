@@ -426,7 +426,7 @@ export function FilePreviewOverlay({ item, meta, sessionId, onClose, onAction, o
           h('button', { type: 'button', className: 'vms-primary-btn', onClick: () => onAction('open', item) }, h(Icon, { name: 'app', size: 13 }), '用系统应用打开')))))
 }
 
-export function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenItem, onOpenBrowser, onRemoveLink, onAction, onMenu, Lightbox, plugins }) {
+export function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenItem, onOpenBrowser, onAction, onMenu, Lightbox, plugins }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const current = items[currentIndex] ?? items[0]
   const slides = React.useMemo(() => items.map((item, index) => slideFor(item, index, sessionId)), [items, sessionId])
@@ -451,8 +451,7 @@ export function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, on
           h('h2', null, current.title),
           h('span', { className: 'vms-sheet-path' }, `${folderOf(current) || '根目录'} · ${typeLabel(current.kind)} · ${formatBytes(size)}`)),
         h('div', { className: 'vms-sheet-actions' },
-          current.source === 'url' && h('button', { type: 'button', className: 'vms-icon-btn', title: '移除链接', 'aria-label': '移除链接', onClick: () => onRemoveLink(current) }, h(Icon, { name: 'trash', size: 15 })),
-          current.source !== 'url' && h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => onAction('insert', current) }, h(Icon, { name: 'at', size: 13 }), '引用到输入框'),
+          h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => onAction('insert', current) }, h(Icon, { name: 'at', size: 13 }), '引用到输入框'),
           h('button', { type: 'button', className: 'vms-ghost-btn', onClick: () => onOpenItem(current) },
             h(Icon, { name: current.kind === 'link' || current.source === 'url' ? 'external' : 'full', size: 12 }),
             h('span', null, current.kind === 'link' ? '在浏览器打开' : current.source === 'url' ? '新窗口播放' : '在标签页打开')),

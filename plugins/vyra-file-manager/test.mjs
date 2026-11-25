@@ -807,3 +807,9 @@ test('html-asset inlines a workspace asset and refuses an escape', async () => {
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('html is its own kind and css stays code', () => {
+  assert.equal(kindOf('html'), 'html')
+  assert.equal(kindOf('htm'), 'html')
+  assert.equal(kindOf('css'), 'code')
+})
