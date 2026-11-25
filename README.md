@@ -25,6 +25,8 @@ https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json
 https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
 ```
 
+站点首页（插件目录浏览页）：https://lanxiake.github.io/dsh-vyra-plugins/
+
 两份索引由同一个 manifest 生成：`docs/index.json` 把所有版本安装源重写成 GitCode，`docs/index-github.json` 重写成 GitHub。同一批 commit 已推送到 GitHub、GitCode、AtomGit，按 SHA 从任一远端都能装。
 
 然后在插件市场里搜索下面的中文名或包名安装。索引是实时拉取的，**这个仓库更新后客户端重新打开插件页就能看到**，不需要改上面的 URL。
@@ -83,8 +85,10 @@ DSH 有两条互不相同的扩展通道，这个仓库分别服务它们：
 
 ```
 dsh-vyra-plugins/
-├── docs/index.json         # 生成物，勿手改（build-index 产出，GitCode 源）；GitHub Pages 从 docs/ 根发布
+├── docs/index.json         # 生成物，勿手改（build-index 产出，GitCode 源）；随站点一起发布，供客户端拉取
 ├── docs/index-github.json  # 同上，安装源重写成 GitHub
+├── web/                    # 站点首页（React + Vite），由 .github/workflows/pages.yml 构建发布
+│   └── public/site/        # 构建产物，勿提交：CI 用 build-site-data 全量生成
 ├── plugins/                # 每个插件一个 npm 包（独立可发布）
 ├── skills/                 # SKILL.md 目录，直接给 customSkillDirs 用
 ├── scripts/
@@ -118,6 +122,21 @@ pnpm run print:skills
 `verify-index.ts` 直接从同级 `dsh-Veyra` checkout 加载已构建的
 `@deepseek-ai/dsh-plugin-market-index`，所以不需要安装任何依赖，校验用的就是 fork 当前的解析规则。
 checkout 不在同级时用 `DSH_SOURCE=/path/to/dsh-Veyra` 覆盖。
+
+### 站点（GitHub Pages）
+
+首页由 `.github/workflows/pages.yml` 在 push 到 `master` 时自动构建发布，无需手动提交数据：
+CI 会拉取全部索引源生成 `web/public/site/`，构建后把 `docs/index.json` 与 `docs/index-github.json`
+一并复制到产物根目录，因此上面两个索引 URL 在站点域名下继续可用。
+
+本地预览需要先生成数据，否则页面会因拿不到 `/site/*.json` 而报加载失败：
+
+```sh
+npm run build:site-data:all   # 全部源；离线可用 npm run build:site-data（仅自有源）
+npm run dev:site              # http://127.0.0.1:7000/
+```
+
+`web/public/site/` 与 `.cache/sources/` 都是构建产物，已加入 `.gitignore`，不要提交。
 
 ### 发布插件市场到 npm
 
