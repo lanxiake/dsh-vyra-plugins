@@ -131,6 +131,7 @@ and rollback path as the web UI.
 
 Commands:
   doctor                   One summary: profile files, bundles, model, appearance, MCP
+  map                      The whole inventory, marking what only the running interface can answer
   state                    The model selection and other config the profile declares
   services                 The services this plugin's actions need, and whether the profile declares them
   events                   Where this DSH installation writes its logs
@@ -1075,6 +1076,12 @@ function run(command, options) {
     writeHuman(eventLines(value))
     return 0
   }
+  if (command === 'map') {
+    const value = buildMap(profile, patchFile)
+    if (options.json) { writeJson(value); return 0 }
+    writeHuman(mapLines(value))
+    return 0
+  }
 
   throw new UsageError(`unknown command "${command}"`)
 }
@@ -1082,6 +1089,63 @@ function run(command, options) {
 /** The one and only write this process makes: the JSON result, to stdout. */
 function writeJson(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`)
+}
+
+/**
+ * The whole map, as far as files can prove it.
+ *
+ * The host half of `console.map` reads live services and the client half reads
+ * the browser's slot ledger; this process has neither. So each surface is
+ * reported with its evidence and, where the answer lives in the running process,
+ * an explicit `unknown` naming the call that would answer it. A map that guessed
+ * would be worse than one that reports its reach — an agent acts on it.
+ *
+ * @param profile - resolved profile.
+ * @param patchFile - the profile's patch layer, or null when unreadable.
+ * @returns the `map` payload.
+ */
+function buildMap(profile, patchFile) {
+  const state = buildState(profile, patchFile)
+  const doctor = buildDoctor(profile, patchFile)
+  const unknown = (reason) => ({ status: 'unknown', reason })
+  return {
+    profile: { name: profile.name, dir: profile.dir, source: profile.source, present: true },
+    host: {
+      bundles: doctor.bundles,
+      model: doctor.model,
+      mcp: doctor.mcp,
+      note: `declared configuration only; running state is reported by ${TOOL_CALL} console.map`,
+    },
+    client: {
+      settings: unknown(`settings pages are browser state; ${TOOL_CALL} ui.list reports them with the plugin that contributed each`),
+      main: unknown(`main panels are browser state; ${TOOL_CALL} ui.list reports them`),
+      rightbar: unknown(`right-drawer tabs are browser state; ${TOOL_CALL} ui.list reports them`),
+      commands: unknown(`the command catalogue is browser state; ${TOOL_CALL} ui.list reports it`),
+    },
+    patches: state,
+  }
+}
+
+/** The human form of {@link buildMap}. */
+function mapLines(value) {
+  const lines = [
+    `vyra-console map — profile "${value.profile.name}"`,
+    `  dir              ${value.profile.dir} (from ${value.profile.source})`,
+    '',
+    'host (from this profile’s files):',
+    `  bundles          ${value.host.bundles.count} installed, ${value.host.bundles.declared.count} declared`,
+  ]
+  if (value.host.model?.status === 'ok') {
+    const selection = value.host.model.selection
+    lines.push(`  default model    ${pair(selection?.provider?.value)} / ${pair(selection?.model?.value)}`)
+  } else {
+    lines.push(`  default model    unknown: ${value.host.model?.reason ?? 'not read'}`)
+  }
+  lines.push('', 'client (browser state this process cannot read):')
+  for (const [name, entry] of Object.entries(value.client)) {
+    lines.push(`  ${name.padEnd(16)} unknown — ${entry.reason}`)
+  }
+  return lines
 }
 
 function writeHuman(lines) {

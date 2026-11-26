@@ -186,6 +186,8 @@ const COMMANDS = [
   ['state', '--json'],
   ['services', '--json'],
   ['events', '--json'],
+  ['map'],
+  ['map', '--json'],
   ['--help'],
   ['doctor', '--profile=desktop'],
 ]
@@ -1015,6 +1017,49 @@ test('a profile directory with no manifest still answers, and says what is missi
     assert.equal(result.json.bundles.count, 0)
     assert.match(result.json.caveats.join(' '), /no package\.json/)
     assert.equal(result.json.files.manifest.present, false)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// map: everything files can prove, and an explicit unknown for the rest.
+// ---------------------------------------------------------------------------
+
+test('map reports the host from files and marks the client unknown with a way to ask', () => {
+  const { home } = makeHome()
+  try {
+    const value = runCli(home, ['map', '--json']).json
+    assert.ok(value.host.bundles, 'the host bundles are read from the profile')
+    for (const surface of ['settings', 'main', 'rightbar', 'commands']) {
+      assert.equal(value.client[surface].status, 'unknown', `${surface} is browser state`)
+      assert.match(value.client[surface].reason, /dsh_console/u,
+        `${surface} must name the call that answers it rather than guess`)
+    }
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('map is read-only: the profile tree is byte-identical afterwards', () => {
+  // Same guarantee the suite already makes for every other command, extended to
+  // the new one — a diagnostic that writes would race the running process.
+  const { home, profile } = makeHome()
+  try {
+    const before = treeDigest(profile)
+    runCli(home, ['map', '--json'])
+    assert.equal(treeDigest(profile), before)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('map --json is stable across runs', () => {
+  const { home } = makeHome()
+  try {
+    const first = runCli(home, ['map', '--json']).stdout
+    const second = runCli(home, ['map', '--json']).stdout
+    assert.equal(first, second)
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
