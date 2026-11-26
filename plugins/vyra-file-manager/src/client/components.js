@@ -151,8 +151,112 @@ export function DurationBadge({ item }) {
   return h('span', { className: 'vms-duration' }, item.ext.toUpperCase() || 'FILE')
 }
 
+/**
+ * What a move of the seek handle should do.
+ *
+ * Dragging updates the label and nothing else; the media is told the new
+ * position once, on release. Seeking on every input event re-buffers per step,
+ * which turns a drag over a long file into a stutter.
+ * @param {object} args - drag state and the handle's value.
+ * @returns {'label-only'|'seek'|'ignore'} what the caller should do.
+ */
+export function seekIntent({ dragging, released, value }) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'ignore'
+  if (dragging === true && released !== true) return 'label-only'
+  return 'seek'
+}
+
+/**
+ * A timeline for a <video>/<audio> element, draggable while it plays.
+ *
+ * The bar tracks the media's own events, but a drag does not seek on every
+ * pixel: moving the handle only updates the label, and the element is told the
+ * new position on release. Seeking on every input event re-buffers on each
+ * step, which on a long file turns a drag into a stutter.
+ *
+ * @param {object} props - the element to drive and where to draw.
+ */
+export function SeekBar({ mediaRef, className }) {
+  const [position, setPosition] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  // React reads this in the handlers below; a ref keeps them stable during a drag.
+  const draggingRef = useRef(false)
+
+  useEffect(() => {
+    const media = mediaRef.current
+    if (media === null || media === undefined) return undefined
+    const sync = () => { if (!draggingRef.current) setPosition(media.currentTime ?? 0) }
+    const syncDuration = () => setDuration(Number.isFinite(media.duration) ? media.duration : 0)
+    const syncAll = () => { syncDuration(); sync() }
+    syncAll()
+    media.addEventListener('timeupdate', sync)
+    media.addEventListener('durationchange', syncDuration)
+    media.addEventListener('loadedmetadata', syncAll)
+    media.addEventListener('seeked', sync)
+    media.addEventListener('ended', sync)
+    // Listeners must come back off: the overlay reuses one element per slide.
+    return () => {
+      media.removeEventListener('timeupdate', sync)
+      media.removeEventListener('durationchange', syncDuration)
+      media.removeEventListener('loadedmetadata', syncAll)
+      media.removeEventListener('seeked', sync)
+      media.removeEventListener('ended', sync)
+    }
+  }, [mediaRef])
+
+  const seekTo = value => {
+    const media = mediaRef.current
+    if (media !== null && media !== undefined) {
+      try { media.currentTime = value } catch { /* metadata may not be loaded yet */ }
+    }
+    setPosition(value)
+  }
+
+  const max = duration > 0 ? duration : 0
+  const shown = dragging ? position : position
+  return h('div', {
+    className: `vms-seekbar${className === undefined ? '' : ` ${className}`}`,
+    // The card underneath opens the preview on click; a drag on the bar is not
+    // a click on the card.
+    onClick: event => event.stopPropagation(),
+  },
+  h('input', {
+    type: 'range',
+    className: 'vms-seek-range',
+    min: 0,
+    max: max === 0 ? 0 : max,
+    step: 'any',
+    value: Math.min(shown, max === 0 ? 0 : max),
+    disabled: max === 0,
+    'aria-label': '播放进度',
+    onPointerDown: () => { draggingRef.current = true; setDragging(true) },
+    onChange: event => {
+      const next = Number(event.target.value)
+      setPosition(next)
+      if (seekIntent({ dragging: draggingRef.current, value: next }) === 'seek') seekTo(next)
+    },
+    onPointerUp: event => {
+      const next = Number(event.currentTarget.value)
+      draggingRef.current = false
+      setDragging(false)
+      if (seekIntent({ dragging: false, released: true, value: next }) === 'seek') seekTo(next)
+    },
+    onPointerCancel: () => { draggingRef.current = false; setDragging(false) },
+    onKeyUp: event => {
+      // Keyboard seeking is a discrete step: apply it immediately.
+      const step = event.key.startsWith('Arrow') || event.key === 'Home' || event.key === 'End'
+      const next = Number(event.currentTarget.value)
+      if (step && seekIntent({ dragging: false, value: next }) === 'seek') seekTo(next)
+    },
+  }),
+  h('span', { className: 'vms-seek-time vms-mono' },
+    `${formatTime(shown)} / ${duration > 0 ? formatTime(duration) : '--:--'}`))
+}
+
 export function InlineMedia({ item, sessionId, onExpand }) {
   const src = mediaSrc(sessionId, item)
+  const mediaRef = useRef(null)
   if (item.kind === 'audio') {
     return h('div', {
       className: 'vms-inline-audio', style: coverOf(item, 0),
@@ -161,11 +265,13 @@ export function InlineMedia({ item, sessionId, onExpand }) {
     h('div', { className: 'vms-inline-audio-head' },
       h('span', { className: 'vms-inline-audio-glyph' }, h(Icon, { name: 'audio', size: 14 })),
       h('b', null, item.title)),
-    h('audio', { className: 'vms-inline-audio-native', src, controls: true, autoPlay: true, preload: 'auto' }),
+    h('audio', { ref: mediaRef, className: 'vms-inline-audio-native', src, controls: true, autoPlay: true, preload: 'auto' }),
+    h(SeekBar, { mediaRef }),
     h('button', { type: 'button', className: 'vms-inline-expand', 'aria-label': '放大', onClick: onExpand }, h(Icon, { name: 'full', size: 12 })))
   }
   return h('div', { className: 'vms-inline-video', onClick: event => event.stopPropagation() },
-    h('video', { src, controls: true, autoPlay: true, playsInline: true, preload: 'auto' }),
+    h('video', { ref: mediaRef, src, controls: true, autoPlay: true, playsInline: true, preload: 'auto' }),
+    h(SeekBar, { mediaRef }),
     h('button', { type: 'button', className: 'vms-inline-expand', 'aria-label': '放大', onClick: onExpand }, h(Icon, { name: 'full', size: 12 })))
 }
 
@@ -481,6 +587,7 @@ export function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, on
 export function NativeMedia({ item, sessionId, visible = true }) {
   const src = mediaSrc(sessionId, item)
   const videoRef = useRef(null)
+  const audioRef = useRef(null)
   const [failed, setFailed] = useState(false)
   const [failure, setFailure] = useState(null)
 
@@ -515,14 +622,16 @@ export function NativeMedia({ item, sessionId, visible = true }) {
       h('div', { className: 'vms-native-audio-title' },
         h('b', null, item.title),
         h('span', null, `${folderOf(item) || '根目录'} · ${item.ext.toUpperCase()}`)),
-      h('audio', { src, controls: true, autoPlay: true, preload: 'metadata', onError: () => setFailed(true) }))
+      h('audio', { ref: audioRef, src, controls: true, autoPlay: true, preload: 'metadata', onError: () => setFailed(true) }),
+      h(SeekBar, { mediaRef: audioRef }))
   }
 
   return h('div', { className: 'vms-native-video' },
     h('video', {
       ref: videoRef, src, controls: true, autoPlay: true, playsInline: true, preload: 'metadata',
       poster: item.poster, onError: () => setFailed(true),
-    }))
+    }),
+    h(SeekBar, { mediaRef: videoRef }))
 }
 
 export function AudioSlide({ slide, offset }) {

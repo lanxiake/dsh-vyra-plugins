@@ -180,7 +180,14 @@
 .vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }
 
 .vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }
-.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vms-seekbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(5,7,10,.72); }
+.vms-seek-range { flex: 1; min-width: 0; height: 4px; margin: 0; accent-color: var(--vms-accent); cursor: pointer; }
+.vms-seek-range:disabled { cursor: default; opacity: .45; }
+.vms-seek-time { flex: none; font-size: 10px; color: rgba(255,255,255,.86); font-variant-numeric: tabular-nums; }
+.vms-inline-video .vms-seekbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; }
+.vms-inline-audio .vms-seekbar { background: transparent; padding: 2px 0; }
+.vms-native-video .vms-seekbar, .vms-native-audio .vms-seekbar { flex: none; }
+.vms-inline-video video { width: 100%; height: 100%; object-fit: contain; display: block; }
 .vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }
 .vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }
 .vms-inline-bar button:hover { background: rgba(255,255,255,.14); }

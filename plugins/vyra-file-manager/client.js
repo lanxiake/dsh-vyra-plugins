@@ -2981,7 +2981,14 @@ var styles_default2 = `.vms-root {\r
 .vms-poster-bottom { font-family: var(--dsh-font-family-code, monospace); font-size: 8px; color: rgba(255,255,255,.7); }\r
 \r
 .vms-inline-video { position: absolute; inset: 0; z-index: 3; background: #05070a; }\r
-.vms-inline-video video { width: 100%; height: 100%; object-fit: cover; display: block; }\r
+.vms-seekbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(5,7,10,.72); }\r
+.vms-seek-range { flex: 1; min-width: 0; height: 4px; margin: 0; accent-color: var(--vms-accent); cursor: pointer; }\r
+.vms-seek-range:disabled { cursor: default; opacity: .45; }\r
+.vms-seek-time { flex: none; font-size: 10px; color: rgba(255,255,255,.86); font-variant-numeric: tabular-nums; }\r
+.vms-inline-video .vms-seekbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; }\r
+.vms-inline-audio .vms-seekbar { background: transparent; padding: 2px 0; }\r
+.vms-native-video .vms-seekbar, .vms-native-audio .vms-seekbar { flex: none; }\r
+.vms-inline-video video { width: 100%; height: 100%; object-fit: contain; display: block; }\r
 .vms-inline-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; display: flex; align-items: center; gap: 5px; padding: 0 6px; color: #fff; background: linear-gradient(to top, rgba(5,7,10,.88), rgba(5,7,10,.3)); }\r
 .vms-inline-bar button { width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: #fff; display: grid; place-items: center; padding: 0; }\r
 .vms-inline-bar button:hover { background: rgba(255,255,255,.14); }\r
@@ -23855,8 +23862,105 @@ function DurationBadge({ item }) {
   }
   return h2("span", { className: "vms-duration" }, item.ext.toUpperCase() || "FILE");
 }
+function seekIntent({ dragging, released, value }) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "ignore";
+  if (dragging === true && released !== true) return "label-only";
+  return "seek";
+}
+function SeekBar({ mediaRef, className }) {
+  const [position, setPosition] = (0, import_react5.useState)(0);
+  const [duration, setDuration] = (0, import_react5.useState)(0);
+  const [dragging, setDragging] = (0, import_react5.useState)(false);
+  const draggingRef = (0, import_react5.useRef)(false);
+  (0, import_react5.useEffect)(() => {
+    const media = mediaRef.current;
+    if (media === null || media === void 0) return void 0;
+    const sync = () => {
+      if (!draggingRef.current) setPosition(media.currentTime ?? 0);
+    };
+    const syncDuration = () => setDuration(Number.isFinite(media.duration) ? media.duration : 0);
+    const syncAll = () => {
+      syncDuration();
+      sync();
+    };
+    syncAll();
+    media.addEventListener("timeupdate", sync);
+    media.addEventListener("durationchange", syncDuration);
+    media.addEventListener("loadedmetadata", syncAll);
+    media.addEventListener("seeked", sync);
+    media.addEventListener("ended", sync);
+    return () => {
+      media.removeEventListener("timeupdate", sync);
+      media.removeEventListener("durationchange", syncDuration);
+      media.removeEventListener("loadedmetadata", syncAll);
+      media.removeEventListener("seeked", sync);
+      media.removeEventListener("ended", sync);
+    };
+  }, [mediaRef]);
+  const seekTo = (value) => {
+    const media = mediaRef.current;
+    if (media !== null && media !== void 0) {
+      try {
+        media.currentTime = value;
+      } catch {
+      }
+    }
+    setPosition(value);
+  };
+  const max = duration > 0 ? duration : 0;
+  const shown = dragging ? position : position;
+  return h2(
+    "div",
+    {
+      className: `vms-seekbar${className === void 0 ? "" : ` ${className}`}`,
+      // The card underneath opens the preview on click; a drag on the bar is not
+      // a click on the card.
+      onClick: (event) => event.stopPropagation()
+    },
+    h2("input", {
+      type: "range",
+      className: "vms-seek-range",
+      min: 0,
+      max: max === 0 ? 0 : max,
+      step: "any",
+      value: Math.min(shown, max === 0 ? 0 : max),
+      disabled: max === 0,
+      "aria-label": "\u64AD\u653E\u8FDB\u5EA6",
+      onPointerDown: () => {
+        draggingRef.current = true;
+        setDragging(true);
+      },
+      onChange: (event) => {
+        const next = Number(event.target.value);
+        setPosition(next);
+        if (seekIntent({ dragging: draggingRef.current, value: next }) === "seek") seekTo(next);
+      },
+      onPointerUp: (event) => {
+        const next = Number(event.currentTarget.value);
+        draggingRef.current = false;
+        setDragging(false);
+        if (seekIntent({ dragging: false, released: true, value: next }) === "seek") seekTo(next);
+      },
+      onPointerCancel: () => {
+        draggingRef.current = false;
+        setDragging(false);
+      },
+      onKeyUp: (event) => {
+        const step = event.key.startsWith("Arrow") || event.key === "Home" || event.key === "End";
+        const next = Number(event.currentTarget.value);
+        if (step && seekIntent({ dragging: false, value: next }) === "seek") seekTo(next);
+      }
+    }),
+    h2(
+      "span",
+      { className: "vms-seek-time vms-mono" },
+      `${formatTime(shown)} / ${duration > 0 ? formatTime(duration) : "--:--"}`
+    )
+  );
+}
 function InlineMedia({ item, sessionId, onExpand }) {
   const src = mediaSrc(sessionId, item);
+  const mediaRef = (0, import_react5.useRef)(null);
   if (item.kind === "audio") {
     return h2(
       "div",
@@ -23871,14 +23975,16 @@ function InlineMedia({ item, sessionId, onExpand }) {
         h2("span", { className: "vms-inline-audio-glyph" }, h2(Icon2, { name: "audio", size: 14 })),
         h2("b", null, item.title)
       ),
-      h2("audio", { className: "vms-inline-audio-native", src, controls: true, autoPlay: true, preload: "auto" }),
+      h2("audio", { ref: mediaRef, className: "vms-inline-audio-native", src, controls: true, autoPlay: true, preload: "auto" }),
+      h2(SeekBar, { mediaRef }),
       h2("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h2(Icon2, { name: "full", size: 12 }))
     );
   }
   return h2(
     "div",
     { className: "vms-inline-video", onClick: (event) => event.stopPropagation() },
-    h2("video", { src, controls: true, autoPlay: true, playsInline: true, preload: "auto" }),
+    h2("video", { ref: mediaRef, src, controls: true, autoPlay: true, playsInline: true, preload: "auto" }),
+    h2(SeekBar, { mediaRef }),
     h2("button", { type: "button", className: "vms-inline-expand", "aria-label": "\u653E\u5927", onClick: onExpand }, h2(Icon2, { name: "full", size: 12 }))
   );
 }
@@ -24398,6 +24504,7 @@ function MediaOverlay({ items, initialIndex, sessionId, meta, onClose, onOpenIte
 function NativeMedia({ item, sessionId, visible = true }) {
   const src = mediaSrc(sessionId, item);
   const videoRef = (0, import_react5.useRef)(null);
+  const audioRef = (0, import_react5.useRef)(null);
   const [failed, setFailed] = (0, import_react5.useState)(false);
   const [failure, setFailure] = (0, import_react5.useState)(null);
   (0, import_react5.useEffect)(() => {
@@ -24442,7 +24549,8 @@ function NativeMedia({ item, sessionId, visible = true }) {
         h2("b", null, item.title),
         h2("span", null, `${folderOf(item) || "\u6839\u76EE\u5F55"} \xB7 ${item.ext.toUpperCase()}`)
       ),
-      h2("audio", { src, controls: true, autoPlay: true, preload: "metadata", onError: () => setFailed(true) })
+      h2("audio", { ref: audioRef, src, controls: true, autoPlay: true, preload: "metadata", onError: () => setFailed(true) }),
+      h2(SeekBar, { mediaRef: audioRef })
     );
   }
   return h2(
@@ -24457,7 +24565,8 @@ function NativeMedia({ item, sessionId, visible = true }) {
       preload: "metadata",
       poster: item.poster,
       onError: () => setFailed(true)
-    })
+    }),
+    h2(SeekBar, { mediaRef: videoRef })
   );
 }
 function AudioSlide({ slide, offset }) {

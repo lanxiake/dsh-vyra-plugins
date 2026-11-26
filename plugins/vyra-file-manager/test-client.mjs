@@ -430,3 +430,43 @@ test('the timeline follows the type filter and says so when nothing matches', as
   assert.match(none, /没有该类型的文件/u)
   assert.doesNotMatch(none, /还没有产出文件/u)
 })
+
+test('the inline player offers a draggable seek bar for video and audio', async () => {
+  const { InlineMedia } = await import('./src/client/components.js')
+  const video = { id: 'v1', relativePath: 'a.mp4', kind: 'video', ext: 'mp4', source: 'local', title: 'a.mp4' }
+  const audio = { id: 'a1', relativePath: 'b.mp3', kind: 'audio', ext: 'mp3', source: 'local', title: 'b.mp3' }
+
+  for (const item of [video, audio]) {
+    const html = renderToString(React.createElement(InlineMedia, { item, sessionId: 's-1', onExpand() {} }))
+    assert.match(html, /vms-seekbar/u, `${item.kind} has a seek bar`)
+    assert.match(html, /type="range"/u, `${item.kind} seek bar is a range input`)
+    // Dragging updates the UI; the element only seeks on release.
+    assert.match(html, /vms-seek-time/u, `${item.kind} shows the time while dragging`)
+  }
+})
+
+test('the preview overlay offers the same seek bar', async () => {
+  const { NativeMedia } = await import('./src/client/components.js')
+  const video = { id: 'v1', relativePath: 'a.mp4', kind: 'video', ext: 'mp4', source: 'local', title: 'a.mp4' }
+  const audio = { id: 'a1', relativePath: 'b.mp3', kind: 'audio', ext: 'mp3', source: 'local', title: 'b.mp3' }
+  for (const item of [video, audio]) {
+    const html = renderToString(React.createElement(NativeMedia, { item, sessionId: 's-1' }))
+    assert.match(html, /vms-seekbar/u, `${item.kind} overlay has a seek bar`)
+    assert.match(html, /type="range"/u, `${item.kind} overlay seek bar is a range input`)
+  }
+  // The native controls stay: volume and fullscreen remain the browser's.
+  assert.match(renderToString(React.createElement(NativeMedia, { item: video, sessionId: 's-1' })), /controls=""/u)
+})
+
+test('a seek is deferred while dragging and applied on release', async () => {
+  const { seekIntent } = await import('./src/client/components.js')
+  // Moving the handle: the label follows, the media must not be touched.
+  assert.equal(seekIntent({ dragging: true, value: 42 }), 'label-only')
+  assert.equal(seekIntent({ dragging: true, value: 77 }), 'label-only')
+  // Release: this is the one write.
+  assert.equal(seekIntent({ dragging: false, value: 77, released: true }), 'seek')
+  // A click or keyboard step on a bar that was never dragged seeks at once.
+  assert.equal(seekIntent({ dragging: false, value: 90 }), 'seek')
+  // A malformed value never seeks.
+  assert.equal(seekIntent({ dragging: false, value: Number.NaN }), 'ignore')
+})
