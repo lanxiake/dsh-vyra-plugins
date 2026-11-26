@@ -947,7 +947,15 @@ test('ui.act clicks the element the ref names', async () => {
   const document = makeDocument()
   let clicked = 0
   const button = uiEl('button', {}, [el('span', { 'data-text': '打开' })])
-  button.onClick = () => { clicked += 1 }
+  // A click that does nothing is now reported as an error, so the fixture has to
+  // do what the real control does: change the page. Adding a row is the smallest
+  // observable effect.
+  button.onClick = () => {
+    clicked += 1
+    const row = uiEl('button', {}, [el('span', { 'data-text': '已打开' })])
+    row.parent = document.body
+    document.body.children.push(row)
+  }
   button.parent = document.body
   document.body.children.push(button)
 
@@ -957,6 +965,22 @@ test('ui.act clicks the element the ref names', async () => {
   assert.equal(result.status, 'ok', JSON.stringify(result))
   assert.equal(result.verified, true)
   assert.equal(clicked, 1)
+})
+
+test('a click that changes nothing is reported, not assumed to have worked', async () => {
+  // The failure that made every real attempt look successful while the dialog
+  // stayed shut: `.click()` returns, `ok` goes out, and nothing happened.
+  const document = makeDocument()
+  const button = uiEl('button', {}, [el('span', { 'data-text': '无反应' })])
+  button.parent = document.body
+  document.body.children.push(button)
+
+  const snap = await run('ui.snapshot', {}, { document })
+  const target = snap.elements.find((element) => element.name === '无反应')
+  const result = await run('ui.act', { action: 'click', ref: target.ref, snapshotId: snap.snapshotId }, { document })
+  assert.equal(result.status, 'error')
+  assert.equal(result.verified, false)
+  assert.match(result.reason, /changed nothing/u)
 })
 
 test('a ref from an older snapshot is refused rather than mis-clicked', async () => {

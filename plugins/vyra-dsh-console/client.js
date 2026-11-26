@@ -799,6 +799,28 @@ window.__ModuleLoader__.load({
     /** The most recent snapshot, so a ref can be resolved and its age checked. */
     let lastSnapshot = { id: '', elements: [] }
 
+    /**
+     * A cheap fingerprint of what the page currently shows.
+     *
+     * Used to decide whether a click DID anything. It counts the interactive
+     * elements and hashes their names, which changes for a menu opening, a
+     * dialog appearing, a list growing or a panel swapping — every effect a
+     * click is supposed to have. It is deliberately not a full snapshot: this
+     * runs on every verification poll.
+     */
+    function snapshotSignature() {
+      const root = doc()
+      if (root === undefined) return ''
+      const nodes = root.querySelectorAll?.(
+        'button, a[href], input, textarea, select, [role="menuitem"], [role="tab"], [role="switch"], [data-shortcut-modal]',
+      ) ?? []
+      const parts = []
+      for (const node of nodes) {
+        parts.push(`${node.tagName}|${(node.textContent ?? '').trim().slice(0, 24)}|${node.getAttribute?.('aria-expanded') ?? ''}`)
+      }
+      return hash(parts.join('\n'))
+    }
+
     /** A small deterministic hash, enough to key a snapshot. */
     function hash(text) {
       let value = 5381
@@ -879,7 +901,76 @@ window.__ModuleLoader__.load({
       }
 
       if (action === 'click') {
+        const root = doc()
+        const view = root?.defaultView
+        const box = node.getBoundingClientRect?.()
+        const x = box === undefined ? 0 : Math.round(box.left + box.width / 2)
+        const y = box === undefined ? 0 : Math.round(box.top + box.height / 2)
+
+        // Capture what the page looked like BEFORE the press. Taking these
+        // afterwards compares the result against itself and can never see a
+        // change — which is how a no-op click would still report success.
+        const before = snapshotSignature()
+        const expandedBefore = node.getAttribute?.('aria-expanded')
+
+        // A real press, not just `.click()`.
+        //
+        // The shell's menus open on `click` but close on a document-level
+        // `pointerdown` from anywhere else, and several controls read
+        // `pointerdown` before `click` to decide what they are. Calling only
+        // `click()` therefore reports success while the UI does nothing — which
+        // is exactly what a real run showed. The sequence below is what a mouse
+        // actually produces, and the coordinates are the element's own centre so
+        // a listener that hit-tests still lands on it.
+        const pointer = (type, Ctor) => {
+          if (typeof view?.[Ctor] !== 'function') return undefined
+          return new view[Ctor](type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            clientX: x,
+            clientY: y,
+            button: 0,
+            buttons: type === 'pointerup' || type === 'mouseup' || type === 'click' ? 0 : 1,
+            pointerId: 1,
+            pointerType: 'mouse',
+            isPrimary: true,
+          })
+        }
+        for (const [type, ctor] of [
+          ['pointerover', 'PointerEvent'],
+          ['pointerenter', 'PointerEvent'],
+          ['pointermove', 'PointerEvent'],
+          ['pointerdown', 'PointerEvent'],
+          ['mousedown', 'MouseEvent'],
+          ['pointerup', 'PointerEvent'],
+          ['mouseup', 'MouseEvent'],
+        ]) {
+          const event = pointer(type, ctor)
+          if (event !== undefined) node.dispatchEvent?.(event)
+        }
+        // `click` last, through the method so a synthetic listener that only
+        // listens for the DOM `click` still runs.
         node.click?.()
+
+        // VERIFY. A click is not a result: wait for something observable to
+        // change and report failure when nothing does.
+        const changed = await waitFor(() => {
+          const expandedNow = node.getAttribute?.('aria-expanded')
+          if (expandedBefore !== expandedNow) return true
+          if (all(ANY_MENU).length > 0) return true
+          if (first(SETTINGS_MODAL) !== null) return true
+          return snapshotSignature() !== before
+        })
+        if (changed !== true) {
+          return {
+            status: 'error',
+            target: 'element',
+            verified: false,
+            reason: `clicking "${element.name}" changed nothing on the page`,
+            resolved: { element: { ref: element.ref, role: element.role, name: element.name } },
+          }
+        }
         return {
           status: 'ok', target: 'element', how: 'dom', verified: true,
           resolved: { element: { ref: element.ref, role: element.role, name: element.name } },
