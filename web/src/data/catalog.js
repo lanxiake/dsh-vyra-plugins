@@ -37,9 +37,18 @@ function loadJson(relative) {
 
 export const loadManifest = () => loadJson('manifest.json')
 export const loadFeatured = () => loadJson('featured.json')
+export const loadTop = () => loadJson('top.json')
 export const loadCategory = (key) => loadJson(`cat/${key}.json`)
 export const loadSearchIndex = () => loadJson('search.json')
 export const loadLookup = () => loadJson('lookup.json')
+
+/** 「全部分类」：按 manifest 中实际有数据的分类并行拉取并合并。 */
+export async function loadAllCategories() {
+  const manifest = await loadManifest()
+  const keys = manifest.categories.filter((entry) => entry.count > 0).map((entry) => entry.key)
+  const lists = await Promise.all(keys.map((key) => loadCategory(key)))
+  return lists.flat()
+}
 
 /** 紧凑行 → 领域对象。 */
 export function decodeRow(row, sources) {
@@ -96,7 +105,8 @@ export function searchEntryToPlugin(entry, sources) {
     repo: null,
     package: null,
     install: method === '' ? { method: 'unknown' } : { method },
-    sources,
+    // search.json 不带来源位图，不能据此声称被多个索引源收录。
+    sources: [],
     featured: false,
     verified: false,
     homepage: null,

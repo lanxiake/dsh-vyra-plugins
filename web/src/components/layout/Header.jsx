@@ -28,8 +28,14 @@ export default function Header({ path }) {
         </nav>
 
         <div className="header-actions">
-          <button className="ghost" type="button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}>
-            {lang === 'zh' ? 'EN' : '中'}
+          <button
+            className="ghost"
+            type="button"
+            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+            title={lang === 'zh' ? 'Switch to English' : '切换到中文'}
+            aria-label={lang === 'zh' ? 'Switch to English' : '切换到中文'}
+          >
+            {lang === 'zh' ? '中' : 'EN'}
           </button>
           <button
             className="ghost"

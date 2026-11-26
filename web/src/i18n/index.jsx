@@ -30,10 +30,13 @@ export function LanguageProvider({ children }) {
         setLang(next)
         localStorage.setItem(KEY, next)
       },
-      /** 界面文案 */
-      t(key) {
-        const hit = lookup(DICTS[lang], key)
-        return hit ?? lookup(DICTS.en, key) ?? key
+      /** 界面文案；vars 用于替换 {name} 占位符（如动态统计数字） */
+      t(key, vars) {
+        const hit = lookup(DICTS[lang], key) ?? lookup(DICTS.en, key) ?? key
+        if (!vars || typeof hit !== 'string') return hit
+        return hit.replace(/\{(\w+)\}/g, (m, name) =>
+          Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : m,
+        )
       },
       /** 插件数据里的 {zh, en} 字段 */
       pick(field, fallback = '') {

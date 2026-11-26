@@ -27,23 +27,53 @@ export function useRoute() {
   return path
 }
 
-export function navigate(to) {
-  const next = BASE + to
-  if (next === window.location.pathname) return
+export function navigate(to, options = {}) {
+  let next = BASE + to
+  const query = options.query
+  if (query && Object.keys(query).length > 0) {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== '' && value != null) params.set(key, String(value))
+    }
+    const qs = params.toString()
+    if (qs !== '') next += '?' + qs
+  }
+  if (next === window.location.pathname + window.location.search) return
   window.history.pushState({}, '', next)
   window.dispatchEvent(new PopStateEvent('popstate'))
   window.scrollTo({ top: 0 })
 }
 
-export function Link({ to, children, className, ...rest }) {
+/** 读取当前 URL 查询参数，随 popstate 更新。 */
+export function useQuery() {
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search))
+  useEffect(() => {
+    const onPop = () => setQuery(new URLSearchParams(window.location.search))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  return query
+}
+
+export function Link({ to, query, children, className, ...rest }) {
+  let href = BASE + to
+  if (query && Object.keys(query).length > 0) {
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== '' && value != null) params.set(key, String(value))
+    }
+    const qs = params.toString()
+    if (qs !== '') href += '?' + qs
+  }
+
   return (
     <a
-      href={BASE + to}
+      href={href}
       className={className}
       {...rest}
       onClick={(event) => {
         event.preventDefault()
-        navigate(to)
+        navigate(to, { query })
       }}
     >
       {children}
