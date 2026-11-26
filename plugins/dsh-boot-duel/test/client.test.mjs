@@ -237,7 +237,10 @@ test('inlined dictionaries match the exported locale files', () => {
   for (const key of ['title', 'subtitle', 'hint.controls', 'hint.skip', 'skip.button',
     'start.button', 'start.hint', 'start.sub', 'roster.you', 'roster.enemy',
     'state.ready', 'state.fight', 'state.ko', 'ko.title', 'ko.subtitle', 'ko.pressAnyKey',
-    'pause.clickToResume', 'mute.on', 'mute.off']) {
+    'pause.clickToResume', 'mute.on', 'mute.off',
+    // The host section and the in-game panel are two surfaces with two names:
+    // calling the section "设置" would read as "设置 → 设置".
+    'settings.sectionName', 'settings.panelTitle']) {
     assert.ok(exportedZh[key], `zh.json missing ${key}`)
     assert.ok(exportedEn[key], `en.json missing ${key}`)
     assert.ok(source.includes(exportedZh[key]), `client zh copy drifted for ${key}`)

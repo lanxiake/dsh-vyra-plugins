@@ -4325,7 +4325,9 @@ window.__ModuleLoader__.load({
         'hint.controls': "A / D 移动 · J 直拳 · H 摆拳 · K 踢击 · F 上勾 · G 扫腿 · N 滑铲 · L 格挡 · S 下蹲 · Shift 后跳 · 空格 跳 · 空中 J/K 空袭 · U 大招 · Esc 跳过",
         'hint.skip': '按 Esc 跳过这一局',
         'skip.button': '跳过',
-        'settings.title': '设置',
+        'settings.title': '开机动画',
+        'settings.sectionName': '开机动画',
+        'settings.panelTitle': '快速设置',
         'settings.enabled': '显示开局决斗',
         'settings.sound': '音效',
         'settings.difficulty': '对手强度',
@@ -4364,7 +4366,9 @@ window.__ModuleLoader__.load({
         'hint.controls': "A / D move · J jab · H hook · K kick · F uppercut · G sweep · N slide · L block · S crouch · Shift back-hop · Space jump · J/K in air · U super · Esc skip",
         'hint.skip': 'Press Esc to skip this round',
         'skip.button': 'Skip',
-        'settings.title': 'Settings',
+        'settings.title': 'Opening duel',
+        'settings.sectionName': 'Opening duel',
+        'settings.panelTitle': 'Quick settings',
         'settings.enabled': 'Show the opening duel',
         'settings.sound': 'Sound',
         'settings.difficulty': 'Opponent',
@@ -5138,10 +5142,10 @@ window.__ModuleLoader__.load({
       return React.createElement('div', {
         className: 'boot-duel-settings',
         role: 'dialog',
-        'aria-label': t('settings.title'),
+        'aria-label': t('settings.panelTitle'),
         onClick: (e) => e.stopPropagation(),
       },
-        React.createElement('h2', { className: 'boot-duel-set-title' }, t('settings.title')),
+        React.createElement('h2', { className: 'boot-duel-set-title' }, t('settings.panelTitle')),
 
         // --- on/off -------------------------------------------------
         React.createElement('label', { className: 'boot-duel-set-row' },
@@ -5365,7 +5369,7 @@ window.__ModuleLoader__.load({
         React.createElement('button', {
           type: 'button',
           className: 'boot-duel-gear',
-          'aria-label': t('settings.title'),
+          'aria-label': t('settings.panelTitle'),
           onClick: (e) => { e.stopPropagation(); setShowSettings((v) => !v) },
         }, '⚙'),
 
@@ -5719,7 +5723,7 @@ window.__ModuleLoader__.load({
         name: SETTINGS_SLOT,
         id: ENTRY_ID,
         order: ENTRY_ORDER,
-        label: () => t('settings.title'),
+        label: () => t('settings.sectionName'),
         locale: NAMESPACE,
       }, () => React.createElement(HostSettingsSection))))
 

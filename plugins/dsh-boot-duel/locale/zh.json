@@ -27,7 +27,7 @@
   "meta.title": "开机决斗",
   "meta.description": "每次打开 DSH Web 界面先按 Enter 开始一局武侠火柴人对决：用键盘把对手血条打空即可进入首页，按 Esc 直接跳过。默认静音、默认简单难度、玩家不会被判定失败，出任何异常都会直接放行进入首页。",
   "meta.detail": "docs/DETAIL.md",
-  "settings.title": "设置",
+  "settings.title": "开机动画",
   "settings.enabled": "显示开局决斗",
   "settings.sound": "音效",
   "settings.difficulty": "对手强度",
@@ -36,5 +36,7 @@
   "settings.binds": "键位",
   "settings.restart": "再来一局",
   "settings.resetBinds": "恢复默认键位",
-  "settings.close": "关闭"
+  "settings.close": "关闭",
+  "settings.sectionName": "开机动画",
+  "settings.panelTitle": "快速设置"
 }
