@@ -104,3 +104,60 @@ test('readFrames 忽略半行和坏行', async () => {
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+// ---------------------------------------------------------------------------
+// /agent/stop — ending an agent recording early.
+//
+// Before this route the only thing that ended a recording was its timer, so a
+// pipeline that finished in four seconds had to sit out the whole duration or
+// encode minutes of dead air. Stopping goes through the same finishAgentJob()
+// the timer uses, so the browser half cannot tell the two apart.
+// ---------------------------------------------------------------------------
+
+/** A response object that records what a handler wrote. */
+function captureRes() {
+  const res = {
+    status: undefined,
+    body: undefined,
+    writeHead(code, headers) { this.status = code; this.headers = headers; return this },
+    end(body) { this.body = body },
+    get json() { return this.body === undefined ? undefined : JSON.parse(this.body) },
+  }
+  return res
+}
+
+/** A request with a URL suffix and an empty body. */
+function captureReq(method, suffix = '') {
+  return {
+    method,
+    url: '/api/dsh-vyra-screen-recorder/agent/stop' + suffix,
+    async *[Symbol.asyncIterator]() {},
+  }
+}
+
+test('/agent/stop rejects a non-POST', async () => {
+  const res = captureRes()
+  await __test.handleAgentStop(captureReq('GET'), res)
+  assert.equal(res.status, 405)
+  assert.equal(res.json.ok, false)
+})
+
+test('/agent/stop with no running job answers stopped:false, not an error', async () => {
+  // A caller that raced the timer must not see a failure: the recording it
+  // wanted stopped is already stopped, which is the outcome it asked for.
+  const res = captureRes()
+  await __test.handleAgentStop(captureReq('POST', '?id=nope'), res)
+  assert.equal(res.status, 200)
+  assert.equal(res.json.ok, true)
+  assert.equal(res.json.stopped, false)
+  assert.match(res.json.reason, /没有这个 Agent 录制/u)
+})
+
+test('/agent/stop does not require an id to be well formed', async () => {
+  // An id-less call is the same "nothing is running" case, and answering it with
+  // a 400 would make the simplest call shape look broken.
+  const res = captureRes()
+  await __test.handleAgentStop(captureReq('POST'), res)
+  assert.equal(res.status, 200)
+  assert.equal(res.json.stopped, false)
+})

@@ -1,4 +1,5 @@
 import { present } from '../core.js'
+import { runRecordedWalkthrough } from './pipeline.js'
 
 /**
  * Interface driving: enumerate the surfaces a running DSH offers, open one, and
@@ -65,7 +66,51 @@ function openProblem(args) {
 }
 
 /** Every action this domain serves. */
-const CLIENT_ACTIONS = new Set(['ui.list', 'ui.state', 'ui.open', 'ui.close', 'ui.invoke', 'ui.snapshot', 'ui.act'])
+const CLIENT_ACTIONS = new Set([
+  'ui.list', 'ui.state', 'ui.open', 'ui.close', 'ui.invoke', 'ui.snapshot', 'ui.act',
+  // `ui.record` is Host-orchestrated: the steps still run in the page, but the
+  // recording around them is started and stopped here.
+  'ui.record',
+])
+
+/**
+ * Run a recorded walkthrough.
+ *
+ * The origin of this host's own web server is what makes the recorder
+ * reachable: the recorder registers its routes on `webServer`, and the pipeline
+ * talks to it over loopback. Read per call, because the server binds its port
+ * during its own init and that port can change across a restart.
+ */
+async function recordWalkthrough(ctx, args) {
+  if (args === null || typeof args !== 'object' || Array.isArray(args)) {
+    return { status: 'error', action: 'ui.record', reason: 'ui.record needs an args object with steps' }
+  }
+  if (typeof args.out !== 'string' || args.out === '') {
+    return { status: 'error', action: 'ui.record', reason: 'ui.record needs an out path for the recording' }
+  }
+  const webServer = typeof ctx?.get === 'function' ? ctx.get('webServer') : undefined
+  let origin
+  try {
+    origin = typeof webServer?.getOrigin === 'function' ? webServer.getOrigin() : undefined
+  } catch (error) {
+    return {
+      status: 'error',
+      action: 'ui.record',
+      reason: `this host's web server has not bound a port yet: ${String(error?.message ?? error)}`,
+    }
+  }
+  const channel = typeof ctx?.__consoleChannel?.request === 'function' ? ctx.__consoleChannel : undefined
+  if (channel === undefined) {
+    return { status: 'unavailable', action: 'ui.record', reason: 'no interface is connected; open the DSH Web UI and retry' }
+  }
+  return present({
+    action: 'ui.record',
+    ...await runRecordedWalkthrough(
+      { recorderBase: origin, channel, console: ctx?.__consoleObject },
+      { out: args.out, fps: args.fps, maxSeconds: args.maxSeconds, format: args.format, steps: args.steps },
+    ),
+  })
+}
 
 /** Why a request is malformed, per action. */
 function problemWith(action, args) {
@@ -112,10 +157,12 @@ function problemWith(action, args) {
   }
 }
 
-export async function uiDomain(ctx, { action, args }) {
-  if (!CLIENT_ACTIONS.has(action)) {
+export async function uiDomain(ctx, { action, args }) {  if (!CLIENT_ACTIONS.has(action)) {
     return { status: 'error', action, reason: `ui domain has no action "${action}"` }
   }
+  // Recording is orchestrated HERE, not forwarded: it starts and stops a
+  // recorder this host owns, and only the steps travel to the page.
+  if (action === 'ui.record') return recordWalkthrough(ctx, args)
   const problem = problemWith(action, args)
   if (problem !== undefined) return present({ status: 'error', action, reason: problem })
 

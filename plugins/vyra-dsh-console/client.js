@@ -1028,6 +1028,190 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Play a recorded-walkthrough step list.
+     *
+     * Every step is resolved by NAME against a fresh snapshot, never by a ref
+     * captured earlier: the whole point of a walkthrough is that the interface
+     * moves between steps, and a ref from three steps ago is exactly the handle
+     * that would be stale. The cost is one snapshot per acting step, which is
+     * tens of milliseconds — invisible in a video and cheap next to clicking the
+     * wrong thing.
+     *
+     * A failed step stops the list and reports which one, so the caller can
+     * discard the recording rather than keep a take that went wrong halfway.
+     *
+     * @param services - the live Client services.
+     * @param args.steps - the normalized steps from the Host.
+     * @param args.stopOnError - whether a failure ends the run.
+     * @returns `{ status, completed, failed? }`.
+     */
+    async function playSteps(services, args) {
+      const steps = Array.isArray(args?.steps) ? args.steps : []
+      if (steps.length === 0) return { status: 'error', reason: 'ui.pipeline needs steps' }
+      let completed = 0
+      for (const step of steps) {
+        const index = Number.isFinite(step?.index) ? step.index : completed
+        const failure = await playOne(services, step)
+        if (failure !== undefined) {
+          return {
+            status: 'error',
+            reason: failure.reason,
+            failed: { index, step, reason: failure.reason, code: failure.code },
+            completed,
+          }
+        }
+        completed += 1
+        // Settle: give the interface (and the codec) a moment to show the change.
+        // The default is one frame at 12 fps plus a beat, which reads as "the
+        // thing happened" without padding the video.
+        const settle = Number.isFinite(step?.settle) ? step.settle : 90
+        if (settle > 0) await new Promise((resolve) => setTimeout(resolve, settle))
+      }
+      return { status: 'ok', completed, total: steps.length }
+    }
+
+    /**
+     * Run one step.
+     *
+     * @returns `undefined` on success, or `{ reason, code? }` naming the failure.
+     */
+    async function playOne(services, step) {
+      const action = step?.action
+      if (action === 'wait') {
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(step.wait) || 0)))
+        return undefined
+      }
+      if (action === 'snapshot') {
+        const options = step.snapshot ?? {}
+        const snap = snapshotElements({
+          limit: options.limit,
+          roles: options.roles,
+          scope: options.scope,
+        })
+        if (snap.elements.length === 0) {
+          return { reason: 'the page offers no interactive elements to capture', code: 'empty_snapshot' }
+        }
+        return undefined
+      }
+      if (action === 'expect') {
+        return checkExpectation(services, step.expect)
+      }
+      if (action === 'close') {
+        const outcome = await closeSettingsDialog()
+        return outcome.status === 'ok' ? undefined : { reason: String(outcome.reason), code: 'close_failed' }
+      }
+      if (action === 'invoke') {
+        const outcome = await invokeCommand(services, step.invoke)
+        return outcome.status === 'ok' ? undefined : { reason: String(outcome.reason), code: String(outcome.status) }
+      }
+      if (action === 'open') {
+        const revealed = await revealWindow()
+        const outcome = await openTarget(services, step.open ?? {}, step.open?.target)
+        if (outcome.status !== 'ok') return { reason: String(outcome.reason), code: String(outcome.status) }
+        // The recording goes on regardless of whether the window came forward,
+        // but a walkthrough shot against an unseen window is worthless, so it is
+        // reported as a failure here rather than silently recorded.
+        if (revealed.visible === false) {
+          return { reason: 'the DSH window is in the background; bring it forward before recording', code: 'not_visible' }
+        }
+        return undefined
+      }
+      if (action === 'scroll') {
+        return scrollToName(services, step.scroll)
+      }
+      if (action === 'act') {
+        return playAct(services, step.act)
+      }
+      return { reason: `unknown step action "${String(action)}"`, code: 'bad_step' }
+    }
+
+    /**
+     * One `act` step, resolved by name at the moment it runs.
+     *
+     * The match is exact on the accessible name and, when given, on the role.
+     * A name that matches several elements is refused rather than resolved to
+     * the first: a walkthrough that clicks "设置" and lands on a different 设置
+     * from the one the author meant is worse than one that stops and says so.
+     */
+    async function playAct(services, act) {
+      const wanted = String(act?.name ?? '')
+      if (wanted === '') return { reason: 'act needs a name', code: 'bad_step' }
+      const snap = snapshotElements({ limit: 300 })
+      const matches = snap.elements.filter((element) => element.name === wanted
+        && (act.role === undefined || element.role === act.role))
+      if (matches.length === 0) {
+        return {
+          reason: `no element named "${wanted}"${act.role === undefined ? '' : ` with role ${String(act.role)}`} is on the page`,
+          code: 'not_found',
+        }
+      }
+      if (matches.length > 1 && act.allowAmbiguous !== true) {
+        return {
+          reason: `${String(matches.length)} elements are named "${wanted}"; add a role or set allowAmbiguous`,
+          code: 'ambiguous',
+          candidates: matches.slice(0, 5).map((element) => ({ ref: element.ref, role: element.role })),
+        }
+      }
+      const target = matches[0]
+      const outcome = await actOn(services, {
+        action: act.action,
+        ref: target.ref,
+        snapshotId: snap.snapshotId,
+        text: act.text,
+        value: act.value,
+        label: act.label,
+      })
+      return outcome.status === 'ok'
+        ? undefined
+        : { reason: String(outcome.reason ?? outcome.status), code: String(outcome.code ?? outcome.status) }
+    }
+
+    /** Check one expectation against the live page. */
+    function checkExpectation(services, expect) {
+      if (expect === null || typeof expect !== 'object') {
+        return { reason: 'expect needs an object', code: 'bad_step' }
+      }
+      const state = readUiState(services)
+      if (expect.modal !== undefined && state.modal !== expect.modal) {
+        return { reason: `expected modal ${String(expect.modal)} but found ${String(state.modal)}`, code: 'expectation_failed' }
+      }
+      if (expect.section !== undefined) {
+        const id = state.settings.section?.id
+        if (id !== expect.section) {
+          return { reason: `expected section ${String(expect.section)} but found ${String(id)}`, code: 'expectation_failed' }
+        }
+      }
+      if (expect.main !== undefined && state.main.active !== expect.main) {
+        return { reason: `expected main panel ${String(expect.main)} but found ${String(state.main.active)}`, code: 'expectation_failed' }
+      }
+      if (expect.visible !== undefined && visibleNow() !== expect.visible) {
+        return { reason: `expected visible=${String(expect.visible)} but the page reports ${String(visibleNow())}`, code: 'expectation_failed' }
+      }
+      if (expect.name !== undefined) {
+        const snap = snapshotElements({ limit: 300 })
+        const found = snap.elements.some((element) => element.name === String(expect.name))
+        if (expect.present === false ? found : !found) {
+          return {
+            reason: `expected "${String(expect.name)}" to be ${expect.present === false ? 'absent' : 'present'}`,
+            code: 'expectation_failed',
+          }
+        }
+      }
+      return undefined
+    }
+
+    /** Scroll a named element into view, or fail naming it. */
+    function scrollToName(services, scroll) {
+      const wanted = String(scroll?.name ?? '')
+      if (wanted === '') return { reason: 'scroll needs a name', code: 'bad_step' }
+      const snap = snapshotElements({ limit: 300 })
+      const target = snap.elements.find((element) => element.name === wanted)
+      if (target === undefined) return { reason: `no element named "${wanted}" is on the page`, code: 'not_found' }
+      target.__node?.scrollIntoView?.({ block: 'center', behavior: 'instant' })
+      return undefined
+    }
+
+    /**
      * Every surface this interface offers, with the plugin that contributed it.
      *
      * `registrant` is the answer to "which plugin owns this page": the renderer
@@ -1308,6 +1492,10 @@ window.__ModuleLoader__.load({
         return { status: 'error', reason: `ui.close cannot close "${String(args.target)}"` }
       },
       'ui.invoke': async (services, args) => invokeCommand(services, args.id),
+      // The step player. The Host's recording pipeline hands a validated list
+      // here and waits; every step runs in THIS realm, because only the page can
+      // see and press the interface.
+      'ui.pipeline': async (services, args) => playSteps(services, args),
     }
 
     /**

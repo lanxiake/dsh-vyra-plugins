@@ -2098,7 +2098,7 @@ test('every ui action is marked as needing the interface', async () => {
   assert.ok(rows.every((row) => row.requiresClient === true))
   assert.deepEqual(
     rows.filter((row) => row.mutating).map((row) => row.name).sort(),
-    ['ui.act', 'ui.close', 'ui.invoke', 'ui.open'],
+    ['ui.act', 'ui.close', 'ui.invoke', 'ui.open', 'ui.record'],
     'the reads are non-mutating; the surface changes and element actions are not',
   )
 })

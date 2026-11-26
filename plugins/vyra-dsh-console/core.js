@@ -76,6 +76,12 @@ export const ACTIONS = Object.freeze({
   // the interface and is what makes it operable without coordinates.
   'ui.snapshot': { domain: 'ui', mutating: false, destructive: false, requiresClient: true },
   'ui.act': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
+  // A recorded walkthrough: the steps run in the page, the recording around them
+  // is started and stopped by the host. Destructive-marked is wrong (nothing is
+  // removed) but it IS irreversible in the sense that matters — it writes a
+  // video file — so it stays out of the confirmation gate and reports the path
+  // it wrote instead.
+  'ui.record': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
   // Invoking a command runs whatever that command was written to do, which for
   // most of them changes something. Still not destructive: a command that is
   // irreversible declares itself so through its own confirmation, and this

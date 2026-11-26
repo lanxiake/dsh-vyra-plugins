@@ -979,6 +979,10 @@ const ACTION_SERVICES = {
   // them can ever be declared by a profile package.
   slots: { package: null, actions: ['ui.list', 'ui.state', 'ui.open', 'ui.close', 'ui.snapshot', 'ui.act'] },
   shortcuts: { package: null, actions: ['ui.invoke'] },
+  // A recorded walkthrough reaches the screen-recorder over this host's own web
+  // server, so that is the service it depends on — and the plugin that has to be
+  // installed is named in the package column.
+  screenRecorder: { package: 'dsh-vyra-screen-recorder', actions: ['ui.record'] },
   im: { package: 'im', actions: [] },
 }
 

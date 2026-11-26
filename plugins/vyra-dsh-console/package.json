@@ -1,6 +1,6 @@
 {
   "name": "dsh-vyra-dsh-console",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "让 Agent 操作 DSH 自身的控制台：读取整机清单、打开设置页/主面板/右栏，切换模型、主题与布局，带明确的权限边界。",
   "main": "index.js",
@@ -54,6 +54,6 @@
     "directory": "plugins/vyra-dsh-console"
   },
   "scripts": {
-    "test": "node --test test/core.test.mjs test/channel.test.mjs test/client.test.mjs test/host.test.mjs test/bridge.test.mjs test/ui-dom.test.mjs test/cli.test.mjs"
+    "test": "node --test test/core.test.mjs test/channel.test.mjs test/client.test.mjs test/host.test.mjs test/bridge.test.mjs test/ui-dom.test.mjs test/pipeline.test.mjs test/cli.test.mjs"
   }
 }

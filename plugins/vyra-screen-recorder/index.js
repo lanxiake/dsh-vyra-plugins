@@ -1548,6 +1548,97 @@ async function handleLibraryDelete(req, res) {
   }
 }
 
+/**
+ * Stop the running agent recording early.
+ *
+ * Until now the only way a recording ended was its timer: `vsr record --duration`
+ * writes a request, `beginAgentJob` arms a timeout, and the job stops when that
+ * timer fires. A caller that finishes its work in four seconds then had to
+ * either wait out the whole duration or encode minutes of dead air.
+ *
+ * Stopping is the same path the timer takes — `finishAgentJob()` — so the
+ * manifest, the encode hand-off and the state file are identical whether the
+ * recording ended by time or by request. That matters: the browser half polls
+ * `status === 'encoding'` and does not care which one happened.
+ *
+ * @param req - POST only.
+ * @param res - `{ ok: true, stopped: boolean }`; `stopped` is false when there was
+ *   nothing in the recording phase, which is not an error (the caller may have
+ *   raced the timer).
+ */
+async function handleAgentStop(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  const url = new URL(req.url || PREFIX, 'http://localhost')
+  const id = url.searchParams.get('id') || ''
+  if (agentJob === null || agentJob.id !== id) {
+    sendJson(res, 200, { ok: true, stopped: false, reason: '没有这个 Agent 录制' })
+    return
+  }
+  if (agentJob.status !== 'recording') {
+    // Already stopping or encoding: the caller wants the same end state, and
+    // reporting failure here would make a harmless race look like a bug.
+    sendJson(res, 200, { ok: true, stopped: false, reason: '录制不在 recording 阶段：' + agentJob.status })
+    return
+  }
+  try {
+    await finishAgentJob()
+    sendJson(res, 200, { ok: true, stopped: true })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
+/**
+ * Start an agent recording over HTTP.
+ *
+ * The existing path is a request FILE (`req-<id>.json`) that `agentTick` picks
+ * up. That works for a CLI that cannot reach this process, but it is a poll wide
+ * and a write deep for a caller already inside it — a pipeline that has to start
+ * capturing now and act on the next frame does not want to lose 250 ms to a
+ * directory scan, nor to depend on the DSH home being writable.
+ *
+ * The job this creates is the same shape `beginAgentJob` builds, so every later
+ * step — status, stop, save, error — is shared with the file path.
+ *
+ * @param req - POST with `{ id, out, fps, maxSeconds, format }`.
+ * @param res - `{ ok: true, id, startedAt }`, or a refusal naming the reason.
+ */
+async function handleAgentStart(req, res) {
+  if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: '只接受 POST' }); return }
+  if (agentJob !== null) {
+    sendJson(res, 409, { ok: false, error: '已经有一路 Agent 录制在进行：' + agentJob.id })
+    return
+  }
+  let data = {}
+  try {
+    const body = await readBody(req, 64 * 1024)
+    data = body.length ? JSON.parse(body.toString('utf8')) : {}
+  } catch (error) {
+    sendJson(res, 400, { ok: false, error: '请求体不是合法 JSON：' + String((error && error.message) || error) })
+    return
+  }
+  const id = typeof data.id === 'string' && data.id !== '' ? data.id : 'agent-' + Date.now().toString(36)
+  const source = normalizeSource(data.source ?? { type: 'window' })
+  const maxSeconds = clamp(data.maxSeconds ?? data.duration, 2, MAX_SECONDS, 120)
+  try {
+    await beginAgentJob({
+      id,
+      source,
+      duration: maxSeconds,
+      format: data.format,
+      fps: data.fps,
+      quality: data.quality,
+      maxEdge: data.maxEdge,
+      includeSystemAudio: data.includeSystemAudio,
+      includeMic: data.includeMic,
+      out: typeof data.out === 'string' ? data.out : '',
+    })
+    sendJson(res, 200, { ok: true, id, startedAt: agentJob.startedAt })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
+  }
+}
+
 async function handleAgentStatus(req, res) {
   if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
   if (agentJob === null) { sendJson(res, 200, { ok: true, job: null }); return }
@@ -1637,7 +1728,9 @@ const ROUTES = [
   { kind: 'prefix', path: PREFIX + '/record/discard', handler: async (req, res) => {
     try { sendJson(res, 200, await discardSession()) } catch (error) { sendJson(res, 500, { ok: false, error: String(error) }) }
   } },
+  { kind: 'prefix', path: PREFIX + '/agent/start', handler: handleAgentStart },
   { kind: 'prefix', path: PREFIX + '/agent/status', handler: handleAgentStatus },
+  { kind: 'prefix', path: PREFIX + '/agent/stop', handler: handleAgentStop },
   { kind: 'prefix', path: PREFIX + '/agent/save', handler: handleAgentSave },
   { kind: 'prefix', path: PREFIX + '/agent/error', handler: handleAgentError },
   { kind: 'prefix', path: PREFIX + '/settings', handler: handleSettings },
@@ -1723,4 +1816,5 @@ export const __test = {
   parseShortcut, formatShortcut, resolveOcrEngine, splitPatchRows, parseEngineRows,
   pickOcrEngine, runOcr, ocrEngines, winrtLanguages, allowedTarget, clipboardDir,
   handleOcr, handleOcrStatus, handleClipboard,
+  handleAgentStop, handleAgentStart,
 }
