@@ -29,6 +29,9 @@ export type LocaleMap = { readonly en: string; readonly zh?: string }
 const VYRA_FREE_MODEL_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSJub25lIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNSIgZmlsbD0iIzEyMTYxRiIvPgogIDxyZWN0IHg9IjIuNzUiIHk9IjIuNzUiIHdpZHRoPSI1OC41IiBoZWlnaHQ9IjU4LjUiIHJ4PSIxNC4yNSIgc3Ryb2tlPSIjMkIzMjQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxwYXRoIGQ9Ik0xNS41IDM4LjVjLTIuOSAwLTUuMS0yLjYtNS4xLTYuNXMyLjItNi41IDUuMS02LjVjMy42IDAgNi4xIDMuNCA4LjYgNy42IDIuMSAzLjUgNCA2LjQgNi40IDYuNCAyLjEgMCAzLjQtMS42IDMuNC00cy0xLjMtNC0zLjQtNGMtMi40IDAtNC4zIDIuOS02LjQgNi40LTIuNSA0LjItNSA3LjYtOC42IDcuNiIKICAgICAgICBzdHJva2U9IiM0QzhERkYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTQ4LjUgMjUuNWMyLjkgMCA1LjEgMi42IDUuMSA2LjVzLTIuMiA2LjUtNS4xIDYuNWMtMy42IDAtNi4xLTMuNC04LjYtNy42IgogICAgICAgIHN0cm9rZT0iIzRDOERGRiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiLz4KICA8cGF0aCBkPSJNMzUuNiAyMC41IDI5LjggMzFoNS42bC0yLjIgMTIuNUw0MSAzMS40aC01Ljl6IiBmaWxsPSIjRjVDNTQyIi8+Cjwvc3ZnPg=='
 
+const BOOT_DUEL_ICON =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IuW8gOW3peWkp+WQiSI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InRpbGUiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMTIxNjJhIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzA1MDcwZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iaW1wYWN0IiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZmZmZmYiIHN0b3Atb3BhY2l0eT0iLjk1Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTUlIiBzdG9wLWNvbG9yPSIjZmZlOWZiIiBzdG9wLW9wYWNpdHk9Ii4zNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNmZjRmZDgiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9Imdsb3ciIHg9Ii02MCUiIHk9Ii02MCUiIHdpZHRoPSIyMjAlIiBoZWlnaHQ9IjIyMCUiPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxLjYiIHJlc3VsdD0iYmx1ciIvPgogICAgICA8ZmVNZXJnZT4KICAgICAgICA8ZmVNZXJnZU5vZGUgaW49ImJsdXIiLz4KICAgICAgICA8ZmVNZXJnZU5vZGUgaW49IlNvdXJjZUdyYXBoaWMiLz4KICAgICAgPC9mZU1lcmdlPgogICAgPC9maWx0ZXI+CiAgPC9kZWZzPgoKICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCN0aWxlKSIvPgogIDxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyYjMzNTAiIHN0cm9rZS13aWR0aD0iMSIvPgoKICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMwIiByPSIxMyIgZmlsbD0idXJsKCNpbXBhY3QpIi8+CgogIDxnIGZpbHRlcj0idXJsKCNnbG93KSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjIuNiI+CiAgICA8IS0tIGxlZnQgZmlnaHRlcjogY3lhbiwgbHVuZ2luZyByaWdodCAtLT4KICAgIDxnIHN0cm9rZT0iIzM1ZTBmZiI+CiAgICAgIDxjaXJjbGUgY3g9IjIxIiBjeT0iMjIuNSIgcj0iMy4xIiBmaWxsPSIjMzVlMGZmIiBzdHJva2U9Im5vbmUiLz4KICAgICAgPHBhdGggZD0iTTIxIDI2djkiLz4KICAgICAgPHBhdGggZD0iTTIxIDI5LjVsNi41IC0xLjUiLz4KICAgICAgPHBhdGggZD0iTTIxIDI5LjVsLTQuNSA0Ii8+CiAgICAgIDxwYXRoIGQ9Ik0yMSAzNWwtMy41IDYuNSIvPgogICAgICA8cGF0aCBkPSJNMjEgMzVsNCA2LjUiLz4KICAgIDwvZz4KICAgIDwhLS0gcmlnaHQgZmlnaHRlcjogbWFnZW50YSwgbHVuZ2luZyBsZWZ0IC0tPgogICAgPGcgc3Ryb2tlPSIjZmY0ZmQ4Ij4KICAgICAgPGNpcmNsZSBjeD0iNDMiIGN5PSIyMy41IiByPSIzLjEiIGZpbGw9IiNmZjRmZDgiIHN0cm9rZT0ibm9uZSIvPgogICAgICA8cGF0aCBkPSJNNDMgMjd2OSIvPgogICAgICA8cGF0aCBkPSJNNDMgMzAuNWwtNi41IC0xLjUiLz4KICAgICAgPHBhdGggZD0iTTQzIDMwLjVsNC41IDQiLz4KICAgICAgPHBhdGggZD0iTTQzIDM2bDMuNSA2LjUiLz4KICAgICAgPHBhdGggZD0iTTQzIDM2bC00IDYuNSIvPgogICAgPC9nPgogIDwvZz4KCiAgPGcgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIuOSI+CiAgICA8cGF0aCBkPSJNMzIgMjQuNXYtNCIvPgogICAgPHBhdGggZD0iTTMyIDM5LjV2NCIvPgogICAgPHBhdGggZD0iTTI2LjUgMjcuNWwtMi44IC0yLjIiLz4KICAgIDxwYXRoIGQ9Ik0zNy41IDI3LjVsMi44IC0yLjIiLz4KICAgIDxwYXRoIGQ9Ik0yNi41IDM2LjVsLTIuOCAyLjIiLz4KICAgIDxwYXRoIGQ9Ik0zNy41IDM2LjVsMi44IDIuMiIvPgogIDwvZz4KCiAgPGxpbmUgeDE9IjEyIiB5MT0iNTIiIHgyPSI1MiIgeTI9IjUyIiBzdHJva2U9IiMyYjMzNTAiIHN0cm9rZS13aWR0aD0iMS40IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg=='
+
 const TOOL_USAGE_ICON =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxZDRlZDgiLz48ZyBmaWxsPSIjZmZmIj48cmVjdCB4PSIxNiIgeT0iMzYiIHdpZHRoPSI3IiBoZWlnaHQ9IjE0IiByeD0iMiIvPjxyZWN0IHg9IjI4LjUiIHk9IjI2IiB3aWR0aD0iNyIgaGVpZ2h0PSIyNCIgcng9IjIiLz48cmVjdCB4PSI0MSIgeT0iMTYiIHdpZHRoPSI3IiBoZWlnaHQ9IjM0IiByeD0iMiIvPjwvZz48L3N2Zz4='
 
@@ -3333,6 +3336,39 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'agent-runtime',
         keywords: ['console', 'harness', 'settings', 'ui', 'panels', 'models', 'plugins'],
+      },
+    },
+    {
+      name: 'dsh-boot-duel',
+      title: {
+        en: 'Clock In',
+        zh: '开工大吉',
+      },
+      description: {
+        en: 'A one-round stick-figure duel over an office desk that covers the Web home page after each load: settle it with your fists, then get back to work. Eleven-point Verlet skeleton, capsule hits, a King-of-fighters impact language, and three office stories told in speech bubbles.',
+        zh: '每次打开 Web 界面先在办公室打一局火柴人：把对手血条打空就能进首页，按 Esc 直接放行，打完接着上班。十一质点 Verlet 骨架、胶囊命中、拳皇式打击感，三套打工人故事用台词气泡讲完。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/dsh-boot-duel',
+      },
+      icon: BOOT_DUEL_ICON,
+      versions: {
+        '0.1.0': {
+          publishTimestamp: 1795700000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '27c10c3f584896bbc8dd458713cb8b7034d632d1',
+            path: 'plugins/dsh-boot-duel',
+          },
+        },
+      },
+      metadata: {
+        category: 'appearance',
+        keywords: ['boot', 'animation', 'fighting-game', 'canvas', 'office', 'game'],
       },
     },
   ],

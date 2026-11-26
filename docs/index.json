@@ -3151,6 +3151,47 @@
           "plugins"
         ]
       }
+    },
+    {
+      "name": "dsh-boot-duel",
+      "title": {
+        "en": "Clock In",
+        "zh": "开工大吉"
+      },
+      "description": {
+        "en": "A one-round stick-figure duel over an office desk that covers the Web home page after each load: settle it with your fists, then get back to work. Eleven-point Verlet skeleton, capsule hits, a King-of-fighters impact language, and three office stories told in speech bubbles.",
+        "zh": "每次打开 Web 界面先在办公室打一局火柴人：把对手血条打空就能进首页，按 Esc 直接放行，打完接着上班。十一质点 Verlet 骨架、胶囊命中、拳皇式打击感，三套打工人故事用台词气泡讲完。"
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IuW8gOW3peWkp+WQiSI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InRpbGUiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMTIxNjJhIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzA1MDcwZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iaW1wYWN0IiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZmZmZmYiIHN0b3Atb3BhY2l0eT0iLjk1Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTUlIiBzdG9wLWNvbG9yPSIjZmZlOWZiIiBzdG9wLW9wYWNpdHk9Ii4zNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNmZjRmZDgiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9Imdsb3ciIHg9Ii02MCUiIHk9Ii02MCUiIHdpZHRoPSIyMjAlIiBoZWlnaHQ9IjIyMCUiPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxLjYiIHJlc3VsdD0iYmx1ciIvPgogICAgICA8ZmVNZXJnZT4KICAgICAgICA8ZmVNZXJnZU5vZGUgaW49ImJsdXIiLz4KICAgICAgICA8ZmVNZXJnZU5vZGUgaW49IlNvdXJjZUdyYXBoaWMiLz4KICAgICAgPC9mZU1lcmdlPgogICAgPC9maWx0ZXI+CiAgPC9kZWZzPgoKICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHJ4PSIxNCIgZmlsbD0idXJsKCN0aWxlKSIvPgogIDxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyYjMzNTAiIHN0cm9rZS13aWR0aD0iMSIvPgoKICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMwIiByPSIxMyIgZmlsbD0idXJsKCNpbXBhY3QpIi8+CgogIDxnIGZpbHRlcj0idXJsKCNnbG93KSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjIuNiI+CiAgICA8IS0tIGxlZnQgZmlnaHRlcjogY3lhbiwgbHVuZ2luZyByaWdodCAtLT4KICAgIDxnIHN0cm9rZT0iIzM1ZTBmZiI+CiAgICAgIDxjaXJjbGUgY3g9IjIxIiBjeT0iMjIuNSIgcj0iMy4xIiBmaWxsPSIjMzVlMGZmIiBzdHJva2U9Im5vbmUiLz4KICAgICAgPHBhdGggZD0iTTIxIDI2djkiLz4KICAgICAgPHBhdGggZD0iTTIxIDI5LjVsNi41IC0xLjUiLz4KICAgICAgPHBhdGggZD0iTTIxIDI5LjVsLTQuNSA0Ii8+CiAgICAgIDxwYXRoIGQ9Ik0yMSAzNWwtMy41IDYuNSIvPgogICAgICA8cGF0aCBkPSJNMjEgMzVsNCA2LjUiLz4KICAgIDwvZz4KICAgIDwhLS0gcmlnaHQgZmlnaHRlcjogbWFnZW50YSwgbHVuZ2luZyBsZWZ0IC0tPgogICAgPGcgc3Ryb2tlPSIjZmY0ZmQ4Ij4KICAgICAgPGNpcmNsZSBjeD0iNDMiIGN5PSIyMy41IiByPSIzLjEiIGZpbGw9IiNmZjRmZDgiIHN0cm9rZT0ibm9uZSIvPgogICAgICA8cGF0aCBkPSJNNDMgMjd2OSIvPgogICAgICA8cGF0aCBkPSJNNDMgMzAuNWwtNi41IC0xLjUiLz4KICAgICAgPHBhdGggZD0iTTQzIDMwLjVsNC41IDQiLz4KICAgICAgPHBhdGggZD0iTTQzIDM2bDMuNSA2LjUiLz4KICAgICAgPHBhdGggZD0iTTQzIDM2bC00IDYuNSIvPgogICAgPC9nPgogIDwvZz4KCiAgPGcgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIuOSI+CiAgICA8cGF0aCBkPSJNMzIgMjQuNXYtNCIvPgogICAgPHBhdGggZD0iTTMyIDM5LjV2NCIvPgogICAgPHBhdGggZD0iTTI2LjUgMjcuNWwtMi44IC0yLjIiLz4KICAgIDxwYXRoIGQ9Ik0zNy41IDI3LjVsMi44IC0yLjIiLz4KICAgIDxwYXRoIGQ9Ik0yNi41IDM2LjVsLTIuOCAyLjIiLz4KICAgIDxwYXRoIGQ9Ik0zNy41IDM2LjVsMi44IDIuMiIvPgogIDwvZz4KCiAgPGxpbmUgeDE9IjEyIiB5MT0iNTIiIHgyPSI1MiIgeTI9IjUyIiBzdHJva2U9IiMyYjMzNTAiIHN0cm9rZS13aWR0aD0iMS40IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg==",
+      "author": "lanxiake",
+      "homepage": "https://github.com/lanxiake/dsh-vyra-plugins#readme",
+      "repository": {
+        "url": "https://github.com/lanxiake/dsh-vyra-plugins",
+        "directory": "plugins/dsh-boot-duel"
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1795700000,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "27c10c3f584896bbc8dd458713cb8b7034d632d1",
+            "path": "plugins/dsh-boot-duel"
+          }
+        }
+      ],
+      "metadata": {
+        "category": "appearance",
+        "keywords": [
+          "boot",
+          "animation",
+          "fighting-game",
+          "canvas",
+          "office",
+          "game"
+        ]
+      }
     }
   ]
 }
