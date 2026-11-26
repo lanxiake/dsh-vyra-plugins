@@ -65,7 +65,7 @@ function openProblem(args) {
 }
 
 /** Every action this domain serves. */
-const CLIENT_ACTIONS = new Set(['ui.list', 'ui.state', 'ui.open', 'ui.close', 'ui.invoke'])
+const CLIENT_ACTIONS = new Set(['ui.list', 'ui.state', 'ui.open', 'ui.close', 'ui.invoke', 'ui.snapshot', 'ui.act'])
 
 /** Why a request is malformed, per action. */
 function problemWith(action, args) {
@@ -84,6 +84,29 @@ function problemWith(action, args) {
       return typeof args?.id === 'string' && args.id !== ''
         ? undefined
         : 'ui.invoke needs a non-empty command id (see ui.list for the ids)'
+    case 'ui.act': {
+      const action = args?.action
+      if (!['click', 'type', 'select', 'key'].includes(String(action))) {
+        return 'ui.act needs action of "click", "type", "select" or "key"'
+      }
+      if (action === 'key') {
+        return typeof args.key === 'string' && args.key !== ''
+          ? undefined
+          : 'ui.act action "key" needs a key'
+      }
+      if (typeof args.ref !== 'string' || args.ref === '') {
+        return 'ui.act needs a ref from ui.list'
+      }
+      if (action === 'type' && typeof args.text !== 'string') {
+        return 'ui.act action "type" needs text'
+      }
+      if (action === 'select' && args.value === undefined && args.label === undefined) {
+        return 'ui.act action "select" needs value or label'
+      }
+      return undefined
+    }
+    case 'ui.snapshot':
+      return undefined
     default:
       return undefined
   }

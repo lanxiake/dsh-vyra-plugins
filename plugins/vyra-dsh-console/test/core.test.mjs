@@ -2092,12 +2092,14 @@ test('the interface answer is relayed, including its verification flag', async (
 test('every ui action is marked as needing the interface', async () => {
   const result = await createConsole(bareCtx(), { console: consoleDomain }).dispatch('console.actions', {})
   const rows = result.actions.filter((entry) => entry.name.startsWith('ui.'))
-  assert.equal(rows.length, 5)
+  // Derived from the table, so adding an action cannot silently skip the
+  // requiresClient contract this test exists to enforce.
+  assert.deepEqual(rows.map((row) => row.name).sort(), Object.keys(ACTIONS).filter((name) => name.startsWith('ui.')).sort())
   assert.ok(rows.every((row) => row.requiresClient === true))
   assert.deepEqual(
     rows.filter((row) => row.mutating).map((row) => row.name).sort(),
-    ['ui.close', 'ui.invoke', 'ui.open'],
-    'the reads are non-mutating and the three surface changes are not',
+    ['ui.act', 'ui.close', 'ui.invoke', 'ui.open'],
+    'the reads are non-mutating; the surface changes and element actions are not',
   )
 })
 

@@ -72,6 +72,10 @@ export const ACTIONS = Object.freeze({
   'ui.state': { domain: 'ui', mutating: false, destructive: false, requiresClient: true },
   'ui.open': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
   'ui.close': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
+  // The element layer. `ui.snapshot` is a read like `ui.list`; `ui.act` changes
+  // the interface and is what makes it operable without coordinates.
+  'ui.snapshot': { domain: 'ui', mutating: false, destructive: false, requiresClient: true },
+  'ui.act': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
   // Invoking a command runs whatever that command was written to do, which for
   // most of them changes something. Still not destructive: a command that is
   // irreversible declares itself so through its own confirmation, and this

@@ -146,7 +146,10 @@ function one(node, selector) {
 function predicate(node, compound) {
   if (compound === '') return true
   let rest = compound
-  const tag = /^[a-z]+/u.exec(rest)?.[0]
+  // `[a-z0-9]`, not `[a-z]`: real tag names carry digits (h1–h6 are the ones
+  // this suite cares about), and a matcher that stopped at `h` silently failed
+  // to match every heading — which hid a snapshot that omitted them.
+  const tag = /^[a-z][a-z0-9]*/u.exec(rest)?.[0]
   if (tag !== undefined) {
     if (node.tag !== tag) return false
     rest = rest.slice(tag.length)
@@ -787,4 +790,258 @@ test('the account menu is found even when other menus come first', async () => {
   assert.equal(result.status, 'ok', `expected the dialog to open: ${JSON.stringify(result)}`)
   assert.equal(result.verified, true)
   assert.equal(result.resolved.section.id, 'dsh-vyra-free-model')
+})
+
+// ---------------------------------------------------------------------------
+// The "more" menu, which is what the sidebar actually shows.
+//
+// The More button is a `panelRow` with `aria-haspopup="menu"`, and its settings
+// row carries NO aria-keyshortcuts: MenuRow only renders that attribute when the
+// shell passes a binding down, and this menu does not. A row matcher that
+// required the mark found nothing, so every attempt clicked More, opened a menu,
+// and gave up — while ALSO leaving that menu open, which then blocked the retry.
+// ---------------------------------------------------------------------------
+
+test('the settings row is found by its label when it carries no keycap', async () => {
+  const document = makeDocument()
+  const more = el('button', { 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': '更多' })
+  more.parent = document.body
+  document.body.children.push(more)
+  more.onClick = () => {
+    // A menu with several unrelated rows and a settings row that has no
+    // aria-keyshortcuts — exactly what MenuRow renders without a binding.
+    const rows = ['新建会话', '设置', '意见反馈', '登录'].map((text) => {
+      const item = el('button', { role: 'menuitem' }, [el('span', { 'data-text': text })])
+      if (text === '设置') {
+        item.onClick = () => {
+          for (const child of [...document.body.children]) {
+            if (child.attrs?.role === 'menu') document.body.children.splice(document.body.children.indexOf(child), 1)
+          }
+          mountedDialog(document)
+        }
+      }
+      return item
+    })
+    const menu = el('div', { role: 'menu' }, rows)
+    menu.parent = document.body
+    document.body.children.push(menu)
+  }
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+    // The catalogue HAS the shortcut, but the row does not carry it — the
+    // mismatch that broke the real run.
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+,', keys: ['Ctrl', '+', ','], label: '打开设置' }] },
+  })
+  assert.equal(result.status, 'ok', `expected the row to be found by label: ${JSON.stringify(result)}`)
+  assert.equal(result.verified, true)
+  assert.equal(result.resolved.section.id, 'dsh-vyra-free-model')
+  assert.equal(more.clicks, 1, 'the More button is the trigger that was clicked')
+})
+
+test('a menu left open does not block the next attempt', async () => {
+  // The failure the courtesy check caused: one attempt opened a menu and gave
+  // up, and every retry then answered "another dialog or menu is open". A
+  // transient popup must never be a lock.
+  const document = makeDocument()
+  const stray = el('div', { role: 'menu' }, [el('button', { role: 'menuitem' }, [el('span', { 'data-text': '新建会话' })])])
+  stray.parent = document.body
+  document.body.children.push(stray)
+  // The page dismisses menus on Escape, as the real Menu surface does.
+  document.onEscape = () => {
+    document.body.children = document.body.children.filter((child) => child.attrs?.role !== 'menu')
+  }
+
+  const more = el('button', { 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': '更多' })
+  more.parent = document.body
+  document.body.children.push(more)
+  more.onClick = () => {
+    const row = el('button', { role: 'menuitem' }, [el('span', { 'data-text': '设置' })])
+    row.onClick = () => mountedDialog(document)
+    const menu = el('div', { role: 'menu' }, [row])
+    menu.parent = document.body
+    document.body.children.push(menu)
+  }
+
+  const result = await run('ui.open', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'ok', `a stray menu must be dismissed, not refused: ${JSON.stringify(result)}`)
+  assert.equal(result.verified, true)
+})
+
+test('a real dialog still blocks, and says so', async () => {
+  // The courtesy rule is not gone: a dialog this plugin did not open is still
+  // the user's, and closing it would be worse than failing.
+  const document = makeDocument()
+  const dialog = el('div', { 'data-shortcut-modal': 'shortcut-edit' })
+  dialog.parent = document.body
+  document.body.children.push(dialog)
+
+  const result = await run('ui.open', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /another dialog/u)
+})
+// ---------------------------------------------------------------------------
+// The element layer: snapshot + act.
+//
+// The problem it solves: driving an unfamiliar interface by coordinates means
+// guessing, and a guess that lands 8px off clicks a different control. The
+// pattern — and this is taken from lumii's app-ui-control, where the same
+// problem was solved for a different shell — is to hand the caller NAMED
+// ELEMENTS with a handle, then act on the handle.
+// ---------------------------------------------------------------------------
+
+/** An element rich enough for the snapshot walk: box, tag and field state. */
+function uiEl(tag, attrs = {}, children = [], box = { left: 10, top: 20, width: 100, height: 30 }) {
+  const node = el(tag, attrs, children)
+  node.tagName = tag.toUpperCase()
+  node.getBoundingClientRect = () => ({
+    left: box.left,
+    top: box.top,
+    width: box.width,
+    height: box.height,
+    right: box.left + box.width,
+    bottom: box.top + box.height,
+  })
+  node.isConnected = true
+  node.dispatchEvent = (event) => {
+    for (const fn of node.listeners?.[event.type] ?? []) fn(event)
+    return true
+  }
+  return node
+}
+
+test('ui.snapshot names the interactive elements and their state', async () => {
+  const document = makeDocument()
+  const button = uiEl('button', {}, [el('span', { 'data-text': '保存' })])
+  const input = uiEl('input', { type: 'text', placeholder: '搜索' })
+  input.value = 'hello'
+  const heading = uiEl('h2', {}, [el('span', { 'data-text': '设置' })])
+  const hidden = uiEl('button', {}, [el('span', { 'data-text': '隐藏' })])
+  hidden.style = { display: 'none' }
+  for (const node of [button, input, heading, hidden]) {
+    node.parent = document.body
+    document.body.children.push(node)
+  }
+
+  const result = await run('ui.snapshot', {}, { document })
+  assert.equal(result.status, 'ok')
+  const byName = Object.fromEntries(result.elements.map((element) => [element.name, element]))
+
+  assert.equal(byName['保存'].role, 'button')
+  assert.equal(byName['搜索'].role, 'textbox')
+  assert.equal(byName['搜索'].value, 'hello', 'a filled field reports its value')
+  assert.equal(byName['搜索'].placeholder, '搜索')
+  assert.equal(byName['设置'].role, 'heading', 'headings are named so sections can be told apart')
+  assert.equal(byName['隐藏'], undefined, 'a display:none element is not offered')
+
+  for (const element of result.elements) {
+    assert.match(element.ref, /^e\d+$/u, 'every element carries a handle')
+    assert.equal(typeof element.x, 'number')
+    assert.equal(typeof element.y, 'number')
+  }
+  assert.match(result.snapshotId, /^s_/u)
+})
+
+test('ui.act clicks the element the ref names', async () => {
+  const document = makeDocument()
+  let clicked = 0
+  const button = uiEl('button', {}, [el('span', { 'data-text': '打开' })])
+  button.onClick = () => { clicked += 1 }
+  button.parent = document.body
+  document.body.children.push(button)
+
+  const snap = await run('ui.snapshot', {}, { document })
+  const target = snap.elements.find((element) => element.name === '打开')
+  const result = await run('ui.act', { action: 'click', ref: target.ref, snapshotId: snap.snapshotId }, { document })
+  assert.equal(result.status, 'ok', JSON.stringify(result))
+  assert.equal(result.verified, true)
+  assert.equal(clicked, 1)
+})
+
+test('a ref from an older snapshot is refused rather than mis-clicked', async () => {
+  const document = makeDocument()
+  const first = uiEl('button', {}, [el('span', { 'data-text': 'A' })])
+  first.parent = document.body
+  document.body.children.push(first)
+  const snapA = await run('ui.snapshot', {}, { document })
+
+  document.body.children = []
+  const second = uiEl('button', {}, [el('span', { 'data-text': 'B' })])
+  second.parent = document.body
+  document.body.children.push(second)
+  const snapB = await run('ui.snapshot', {}, { document })
+  assert.notEqual(snapA.snapshotId, snapB.snapshotId, 'a changed page has a new snapshot id')
+
+  const result = await run('ui.act', { action: 'click', ref: 'e1', snapshotId: snapA.snapshotId }, { document })
+  assert.equal(result.status, 'error')
+  assert.equal(result.code, 'stale_snapshot')
+})
+
+test('ui.act types into a field and reports the value', async () => {
+  const document = makeDocument()
+  const input = uiEl('input', { type: 'text' })
+  input.parent = document.body
+  document.body.children.push(input)
+
+  // A ref must be used with the snapshot it came from. Reporting a DIFFERENT
+  // snapshot id is the case that has to fail: the page may have changed since,
+  // and acting on a stale handle is how a click lands on the wrong control.
+  const snap = await run('ui.snapshot', {}, { document })
+  const stale = await run('ui.act', { action: 'type', ref: 'e1', snapshotId: 's_not-the-current-one', text: 'abc' }, { document })
+  assert.equal(stale.status, 'error')
+  assert.equal(stale.code, 'stale_snapshot')
+
+  const result = await run('ui.act', { action: 'type', ref: 'e1', snapshotId: snap.snapshotId, text: 'abc' }, { document })
+  assert.equal(result.status, 'ok', JSON.stringify(result))
+  assert.equal(result.resolved.value, 'abc')
+})
+
+test('typing into a button is refused with the reason', async () => {
+  const document = makeDocument()
+  const button = uiEl('button', {}, [el('span', { 'data-text': '保存' })])
+  button.parent = document.body
+  document.body.children.push(button)
+  const snap = await run('ui.snapshot', {}, { document })
+
+  const result = await run('ui.act', { action: 'type', ref: 'e1', snapshotId: snap.snapshotId, text: 'x' }, { document })
+  assert.equal(result.status, 'error')
+  assert.equal(result.code, 'not_editable')
+})
+
+test('a locked button is listed but not actionable', async () => {
+  const document = makeDocument()
+  const button = uiEl('button', { disabled: '' })
+  button.disabled = true
+  button.parent = document.body
+  document.body.children.push(button)
+  const snap = await run('ui.snapshot', {}, { document })
+  const disabled = snap.elements.find((element) => element.disabled === true)
+  assert.ok(disabled, 'the element is still listed, marked disabled')
+
+  const result = await run('ui.act', { action: 'click', ref: disabled.ref, snapshotId: snap.snapshotId }, { document })
+  assert.equal(result.status, 'error')
+  assert.equal(result.code, 'not_interactive')
+})
+
+test('ui.list can include the element set in one call', async () => {
+  const document = makeDocument()
+  const button = uiEl('button', {}, [el('span', { 'data-text': '确定' })])
+  button.parent = document.body
+  document.body.children.push(button)
+
+  const plain = await run('ui.list', {}, { document, sections: SECTIONS })
+  assert.equal(plain.elements, undefined, 'the walk is opt-in: most callers want the ledger only')
+
+  const withElements = await run('ui.list', { elements: true }, { document, sections: SECTIONS })
+  assert.ok(Array.isArray(withElements.elements))
+  assert.ok(withElements.elements.some((element) => element.name === '确定'))
+  assert.match(withElements.snapshotId, /^s_/u)
+})
+
+test('a key outside the whitelist is refused', async () => {
+  const document = makeDocument()
+  const result = await run('ui.act', { action: 'key', key: 'F12' }, { document })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /Enter/u)
 })

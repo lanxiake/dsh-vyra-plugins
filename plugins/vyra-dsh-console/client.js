@@ -241,8 +241,19 @@ window.__ModuleLoader__.load({
 
     /** The settings dialog's own marker, set by the shell (`ui-settings-general`). */
     const SETTINGS_MODAL = '[data-shortcut-modal="settings"]'
-    /** Any dialog or menu layer, used to refuse stomping on a foreign one. */
-    const ANY_MODAL = '[data-shortcut-modal], [role="menu"]'
+    /**
+     * A real modal dialog — the only thing this plugin refuses to act around.
+     *
+     * Menus are deliberately NOT included. A popup menu is transient, it belongs
+     * to whatever opened it, and the plugin opens menus itself on the way to the
+     * settings row. Treating one as a foreign dialog blocked every retry after a
+     * single failed attempt left a menu open, which is worse than the thing the
+     * courtesy check was protecting: the caller could not try again until the
+     * user clicked somewhere.
+     */
+    const ANY_DIALOG = '[data-shortcut-modal]'
+    /** True when a menu (or menu-like popup) is currently rendered. */
+    const ANY_MENU = '[role="menu"], [role="menuitem"]'
     /** How long a click may take to show its result before it is called a failure. */
     const VERIFY_TIMEOUT_MS = 900
     /** Poll interval while waiting for a click's result. */
@@ -404,15 +415,19 @@ window.__ModuleLoader__.load({
       const already = first(SETTINGS_MODAL)
       if (already !== null) return { ok: true, how: 'noop' }
 
-      const foreign = all(ANY_MODAL)
+      const foreign = all(ANY_DIALOG)
       const top = foreign[foreign.length - 1]
-      if (top !== undefined) {
-        const id = top.getAttribute?.('data-shortcut-modal') ?? 'a menu'
+      if (top !== undefined && top.getAttribute?.('data-shortcut-modal') !== 'settings') {
+        const id = top.getAttribute?.('data-shortcut-modal') ?? 'a dialog'
         return {
           ok: false,
-          reason: `another dialog or menu ("${id}") is open; the console does not close what it did not open`,
+          reason: `another dialog ("${id}") is open; the console does not close a dialog it did not open`,
         }
       }
+      // A menu left open by an earlier attempt is dismissed rather than treated
+      // as an obstacle: this plugin opens menus on the way to the settings row,
+      // and a transient popup must not lock the caller out of retrying.
+      if (all(ANY_MENU).length > 0) await dismissMenus()
 
       /** Every trigger that could plausibly open the settings dialog, in one place. */
       const aria = settingsShortcutAria(services)
@@ -446,25 +461,18 @@ window.__ModuleLoader__.load({
       //    come first — so trying only the first one missed it entirely, which
       //    is what "the settings dialog did not open" was reporting.
       for (const trigger of all('button[aria-haspopup="menu"]')) {
+        // A menu left open by the previous iteration would make this click close
+        // it again, so the loop would oscillate. Start each trigger from closed.
+        if (all(ANY_MENU).length > 0) await dismissMenus()
         trigger.click()
         const row = await waitFor(() => {
           const items = all('[role="menuitem"]')
-          // Prefer the row the settings shortcut marks; fall back to a row whose
-          // text is the shell's own settings label in either shipped language.
-          return items.find((node) => aria !== undefined && node.getAttribute?.('aria-keyshortcuts') === aria)
-            ?? items.find((node) => /设置|settings/iu.test(node.textContent ?? ''))
+          return items.length === 0 ? undefined : settingsRowIn(items, aria)
         })
         if (row !== undefined && row !== null) {
-          tried.push('account menu row')
+          tried.push('menu row')
           row.click()
           if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
-        } else {
-          // Nothing in this menu: close it so the next trigger is clickable.
-          const root = doc()
-          if (root?.defaultView?.KeyboardEvent !== undefined) {
-            root.dispatchEvent(new root.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-          }
-          await waitFor(() => all('[role="menuitem"]').length === 0)
         }
       }
 
@@ -479,6 +487,44 @@ window.__ModuleLoader__.load({
         reason: `the settings dialog did not open after trying ${tried.length} trigger(s)`,
         tried,
       }
+    }
+
+    /**
+     * Close whatever menu is open, and wait for it to leave the DOM.
+     *
+     * Escape is the one path every menu surface in this shell honours, and the
+     * menus that matter are portalled so a click elsewhere is not guaranteed to
+     * reach them.
+     */
+    async function dismissMenus() {
+      const root = doc()
+      if (root?.defaultView?.KeyboardEvent !== undefined) {
+        root.dispatchEvent(new root.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      }
+      await waitFor(() => all(ANY_MENU).length === 0)
+    }
+
+    /**
+     * The settings row inside an open menu.
+     *
+     * Two signals, in order of reliability:
+     *
+     *   1. the shortcut mark — present only when the shell passes the effective
+     *      binding down to the row, which it does not always;
+     *   2. the label. This is what the shipped composition actually shows: the
+     *      "more" menu lists 设置 / Settings with no keycap beside it, so the
+     *      attribute search finds nothing and only the text matches.
+     *
+     * Both languages are checked because the page's language is the user's.
+     *
+     * @returns the row element, or `undefined`.
+     */
+    function settingsRowIn(items, aria) {
+      const marked = aria === undefined
+        ? undefined
+        : items.find((node) => node.getAttribute?.('aria-keyshortcuts') === aria)
+      if (marked !== undefined) return marked
+      return items.find((node) => /^\s*(设置|settings)\s*$/iu.test(node.textContent ?? ''))
     }
 
     /**
@@ -560,6 +606,337 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Read the interactive elements the page currently shows, each with a stable
+     * handle the caller can act on.
+     *
+     * This is the difference between guessing coordinates and naming a thing.
+     * A screenshot answers "what does it look like"; this answers "what can be
+     * pressed, what is it called, and is it reachable" — which is what an agent
+     * needs to drive an interface it has never seen.
+     *
+     * The shape and the rules follow `app-ui-control/snapshot.ts` in lumii,
+     * where the same problem was solved for a different shell:
+     *
+     *   - `ref` is derived from POSITION in the walk, not from an attribute, so
+     *     it is stable within one snapshot and detectably stale across two;
+     *   - `snapshotId` changes whenever the element list changes, so acting on a
+     *     ref from a previous snapshot is refused rather than mis-clicked;
+     *   - `occluded` marks an element whose centre is covered by a dialog or
+     *     overlay — clicking it would hit the cover instead;
+     *   - `value`/`placeholder` are separated, because reporting a placeholder as
+     *     the current value is how a form silently gets rewritten with the wrong
+     *     text.
+     *
+     * @param options.limit - maximum elements, default 120.
+     * @param options.roles - keep only these roles.
+     * @param options.scope - a CSS selector limiting the walk to one region.
+     * @returns `{ snapshotId, elements, truncated }`.
+     */
+    function snapshotElements(options = {}) {
+      const root = doc()
+      if (root === undefined) return { snapshotId: '', elements: [], truncated: false }
+      const limit = Number.isFinite(options.limit) && options.limit > 0 ? options.limit : 120
+      const wanted = Array.isArray(options.roles) && options.roles.length > 0
+        ? new Set(options.roles.map((role) => String(role).toLowerCase()))
+        : undefined
+      const scope = typeof options.scope === 'string' && options.scope !== ''
+        ? (root.querySelector?.(options.scope) ?? null)
+        : null
+
+      const SELECTOR = [
+        'button', 'a[href]', 'input', 'textarea', 'select',
+        '[role="button"]', '[role="tab"]', '[role="menuitem"]', '[role="switch"]', '[role="option"]',
+        '[contenteditable="true"]', '[tabindex]:not([tabindex="-1"])',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      ].join(',')
+
+      /** Collapse whitespace the way a screen reader would read the label. */
+      const text = (value) => String(value ?? '').replace(/\s+/gu, ' ').trim()
+      const NAME_MAX = 80
+
+      /** The accessible name, in the order the platform resolves it. */
+      function nameOf(node) {
+        const label = node.getAttribute?.('aria-label')
+        if (label) return text(label).slice(0, NAME_MAX)
+        const labelledBy = node.getAttribute?.('aria-labelledby')
+        if (labelledBy) {
+          const ref = root.getElementById?.(labelledBy)
+            ?? root.querySelector?.(`#${String(labelledBy).replace(/["\\]/gu, '\\$&')}`)
+          if (ref?.textContent) return text(ref.textContent).slice(0, NAME_MAX)
+        }
+        const tag = String(node.tagName ?? '').toLowerCase()
+        if (tag === 'input' || tag === 'textarea') {
+          const title = node.getAttribute?.('title')
+          if (title) return text(title).slice(0, NAME_MAX)
+          const placeholder = node.getAttribute?.('placeholder')
+          if (placeholder) return text(placeholder).slice(0, NAME_MAX)
+          const name = node.getAttribute?.('name')
+          if (name) return text(name).slice(0, NAME_MAX)
+          return ''
+        }
+        if (tag === 'select') {
+          const selected = node.options?.[node.selectedIndex]
+          return text(selected?.textContent ?? '').slice(0, NAME_MAX)
+        }
+        return text(node.textContent).slice(0, NAME_MAX)
+      }
+
+      /** The role a caller can branch on. */
+      function roleOf(node) {
+        const explicit = node.getAttribute?.('role')
+        if (explicit) return String(explicit).toLowerCase()
+        const tag = String(node.tagName ?? '').toLowerCase()
+        if (tag === 'select') return 'combobox'
+        if (tag === 'input') {
+          const type = String(node.getAttribute?.('type') ?? 'text').toLowerCase()
+          if (type === 'checkbox') return 'checkbox'
+          if (type === 'radio') return 'radio'
+          if (type === 'submit' || type === 'button') return 'button'
+          return 'textbox'
+        }
+        if (tag === 'textarea') return 'textbox'
+        if (tag === 'a') return 'link'
+        if (tag === 'button') return 'button'
+        if (/^h[1-6]$/u.test(tag)) return 'heading'
+        return 'generic'
+      }
+
+      /** Whether an ancestor hides this node from the user. */
+      function hidden(node) {
+        for (let at = node; at !== undefined && at !== null; at = at.parentElement ?? at.parent) {
+          if (at.getAttribute?.('aria-hidden') === 'true') return true
+          if (at.hidden === true) return true
+          const style = at.style
+          if (style !== undefined && (style.display === 'none' || style.visibility === 'hidden')) return true
+        }
+        return false
+      }
+
+      /**
+       * Whether something else covers the element's centre.
+       *
+       * A click at that point would land on the cover — a dialog mask, a sticky
+       * header, another popup — so the element is reported as unreachable rather
+       * than offered and then missed. `elementFromPoint` is the same hit test the
+       * browser uses to decide what receives the click.
+       */
+      function occluded(node, rect) {
+        const view = root.defaultView
+        if (typeof root.elementFromPoint !== 'function' || view === undefined) return false
+        const x = rect.left + rect.width / 2
+        const y = rect.top + rect.height / 2
+        if (x < 0 || y < 0 || x > (view.innerWidth ?? Infinity) || y > (view.innerHeight ?? Infinity)) return true
+        const top = root.elementFromPoint(x, y)
+        if (top === null || top === undefined) return false
+        // Either the hit is the element itself, or it is a descendant of it
+        // (an icon inside a button), which still means the element receives it.
+        return top !== node && !node.contains?.(top)
+      }
+
+      const candidates = [...(scope ?? root).querySelectorAll(SELECTOR)]
+      const elements = []
+      let truncated = false
+
+      for (const node of candidates) {
+        if (elements.length >= limit) {
+          truncated = true
+          break
+        }
+        if (hidden(node)) continue
+        const role = roleOf(node)
+        if (wanted !== undefined && !wanted.has(role)) continue
+        const box = node.getBoundingClientRect?.()
+        if (box === undefined || box === null) continue
+        if (box.width <= 0 || box.height <= 0) continue
+        if (role === 'generic' && text(node.textContent) === '') continue
+
+        const entry = {
+          ref: `e${elements.length + 1}`,
+          role,
+          name: nameOf(node),
+          x: Math.round(box.left),
+          y: Math.round(box.top),
+          w: Math.round(box.width),
+          h: Math.round(box.height),
+        }
+        if (occluded(node, box)) entry.occluded = true
+        if (node.closest?.('[data-shortcut-modal]') != null) entry.inDialog = true
+
+        const tag = String(node.tagName ?? '').toLowerCase()
+        if (tag === 'input' || tag === 'textarea') {
+          const type = String(node.getAttribute?.('type') ?? '').toLowerCase()
+          // A password field is never read back; the caller needs to know it is
+          // there and that it holds something, not what.
+          entry.value = type === 'password' ? (node.value ? '***' : '') : String(node.value ?? '')
+          const placeholder = node.getAttribute?.('placeholder')
+          if (placeholder) entry.placeholder = text(placeholder)
+          if (node.disabled === true) entry.disabled = true
+        } else if (tag === 'select') {
+          entry.value = String(node.value ?? '')
+          entry.options = [...(node.options ?? [])].slice(0, 50).map((option) => ({
+            value: String(option.value),
+            label: text(option.textContent),
+          }))
+          if (node.disabled === true) entry.disabled = true
+        } else if (node.getAttribute?.('aria-disabled') === 'true' || node.disabled === true) {
+          entry.disabled = true
+        }
+
+        // The live node rides along so `ui.act` can reach it without a second
+        // lookup that might find something else by the time it runs.
+        Object.defineProperty(entry, '__node', { value: node, enumerable: false })
+        elements.push(entry)
+      }
+
+      // A snapshot id derived from what was found: two snapshots that describe
+      // the same elements share it, and any change invalidates stale refs.
+      const signature = elements.map((element) => `${element.role}|${element.name}|${element.x},${element.y}`).join('\n')
+      const snapshotId = `s_${hash(String(signature))}`
+      lastSnapshot = { id: snapshotId, elements }
+      return { snapshotId, elements, truncated }
+    }
+
+    /** The most recent snapshot, so a ref can be resolved and its age checked. */
+    let lastSnapshot = { id: '', elements: [] }
+
+    /** A small deterministic hash, enough to key a snapshot. */
+    function hash(text) {
+      let value = 5381
+      for (let index = 0; index < text.length; index += 1) {
+        value = ((value << 5) + value + text.charCodeAt(index)) | 0
+      }
+      return (value >>> 0).toString(36)
+    }
+
+    /** Resolve one ref against the current snapshot, or say why not. */
+    function resolveRef(ref, snapshotId) {
+      if (typeof ref !== 'string' || ref === '') {
+        return { error: 'missing_ref', reason: 'ui.act needs a ref from ui.list' }
+      }
+      if (lastSnapshot.id === '') {
+        return { error: 'stale_snapshot', reason: 'no snapshot has been taken; call ui.list first' }
+      }
+      if (snapshotId !== undefined && snapshotId !== lastSnapshot.id) {
+        return {
+          error: 'stale_snapshot',
+          reason: `snapshot ${String(snapshotId)} is not the current one (${lastSnapshot.id}); call ui.list again`,
+        }
+      }
+      const entry = lastSnapshot.elements.find((element) => element.ref === ref)
+      if (entry === undefined) {
+        return {
+          error: 'missing_ref',
+          reason: `no element "${ref}" in snapshot ${lastSnapshot.id}`,
+          available: lastSnapshot.elements.slice(0, 10).map((element) => ({ ref: element.ref, role: element.role, name: element.name })),
+        }
+      }
+      if (entry.disabled === true) {
+        return { error: 'not_interactive', reason: `"${entry.name}" is disabled` }
+      }
+      return { entry }
+    }
+
+    /**
+     * Act on one element from the last snapshot.
+     *
+     * Clicking is a real click on the live node rather than a synthesized
+     * pointer event at coordinates: the node is the thing the snapshot named, so
+     * a layout shift between snapshot and action cannot aim at a neighbour. The
+     * scroll-into-view and re-measure lumii does with coordinates is unnecessary
+     * here for the same reason.
+     *
+     * @param args.ref - the element handle from `ui.list`.
+     * @param args.snapshotId - the snapshot the ref came from, for staleness.
+     * @param args.action - `click`, `type`, `select` or `key`.
+     */
+    async function actOn(services, args) {
+      const action = String(args?.action ?? '')
+      if (!['click', 'type', 'select', 'key'].includes(action)) {
+        return { status: 'error', reason: 'ui.act needs action of "click", "type", "select" or "key"' }
+      }
+      if (action === 'key') {
+        const key = String(args.key ?? '')
+        const allowed = ['Enter', 'Escape', 'Tab', 'Backspace', 'Delete', 'ArrowUp', 'ArrowDown',
+          'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'Space']
+        if (!allowed.includes(key)) {
+          return { status: 'error', reason: `key must be one of ${allowed.join(', ')}` }
+        }
+        const root = doc()
+        root?.dispatchEvent?.(new root.defaultView.KeyboardEvent('keydown', { key, bubbles: true }))
+        return { status: 'ok', target: 'key', resolved: { key }, how: 'dom', verified: true }
+      }
+
+      const found = resolveRef(args.ref, args.snapshotId)
+      if (found.error !== undefined) return { status: 'error', reason: found.reason, code: found.error, available: found.available }
+      const element = found.entry
+      const node = element.__node
+      if (node === undefined || node.isConnected === false) {
+        return {
+          status: 'error',
+          code: 'stale_snapshot',
+          reason: `"${element.name}" is no longer in the document; call ui.list again`,
+        }
+      }
+
+      if (action === 'click') {
+        node.click?.()
+        return {
+          status: 'ok', target: 'element', how: 'dom', verified: true,
+          resolved: { element: { ref: element.ref, role: element.role, name: element.name } },
+        }
+      }
+
+      // type / select both need a writable control.
+      const tag = String(node.tagName ?? '').toLowerCase()
+      if (action === 'type') {
+        if (tag !== 'input' && tag !== 'textarea' && node.isContentEditable !== true) {
+          return { status: 'error', code: 'not_editable', reason: `"${element.name}" (${element.role}) is not an editable field` }
+        }
+        const text = String(args.text ?? '')
+        if (node.isContentEditable === true && tag !== 'input' && tag !== 'textarea') {
+          node.textContent = text
+        } else {
+          // React tracks the previous value on the node itself, so a plain
+          // assignment is not seen as an edit. Going through the prototype setter
+          // is what makes its onChange fire — the same trick a test harness uses.
+          // Resolved defensively: a fixture without the DOM constructors must
+          // still get the value written, just without the React notification.
+          const proto = tag === 'textarea'
+            ? globalThis.HTMLTextAreaElement?.prototype
+            : globalThis.HTMLInputElement?.prototype
+          const setter = proto === undefined ? undefined : Object.getOwnPropertyDescriptor(proto, 'value')?.set
+          if (typeof setter === 'function') setter.call(node, text)
+          else node.value = text
+          const view = doc()?.defaultView
+          if (typeof view?.Event === 'function') {
+            node.dispatchEvent?.(new view.Event('input', { bubbles: true }))
+            node.dispatchEvent?.(new view.Event('change', { bubbles: true }))
+          }
+        }
+        return { status: 'ok', target: 'element', how: 'dom', verified: true, resolved: { element: { ref: element.ref, name: element.name }, value: text } }
+      }
+
+      if (tag !== 'select') {
+        return { status: 'error', code: 'not_select', reason: `"${element.name}" (${element.role}) is not a select` }
+      }
+      const wanted = args.value !== undefined ? String(args.value) : undefined
+      const label = args.label !== undefined ? String(args.label) : undefined
+      const option = [...(node.options ?? [])].find((candidate) => (wanted !== undefined && String(candidate.value) === wanted)
+        || (wanted === undefined && label !== undefined && text(candidate.textContent) === label))
+      if (option === undefined) {
+        return {
+          status: 'error', code: 'option_not_found',
+          reason: `no option ${wanted !== undefined ? `with value "${wanted}"` : `labelled "${String(label)}"`}`,
+          options: element.options,
+        }
+      }
+      node.value = option.value
+      const view = doc()?.defaultView
+      if (typeof view?.Event === 'function') node.dispatchEvent?.(new view.Event('change', { bubbles: true }))
+      return { status: 'ok', target: 'element', how: 'dom', verified: true, resolved: { element: { ref: element.ref, name: element.name }, value: option.value } }
+    }
+
+    /**
      * Every surface this interface offers, with the plugin that contributed it.
      *
      * `registrant` is the answer to "which plugin owns this page": the renderer
@@ -567,7 +944,7 @@ window.__ModuleLoader__.load({
      * package name. Nothing here is declared by the plugins themselves, so a new
      * settings page appears in this list the moment it registers.
      */
-    function readUiList(services) {
+    function readUiList(services, args = {}) {
       const state = readUiState(services)
       const tabs = (services?.sidebarRightTabs?.entries?.() ?? []).map((entry) => ({
         kind: entry.kind,
@@ -586,6 +963,7 @@ window.__ModuleLoader__.load({
       const mainKeys = (services?.slots?.entries?.('main') ?? [])
         .map((entry) => entry?.options?.key)
         .filter((key) => typeof key === 'string' && key !== '')
+      const wantedElements = args.elements === true
       return {
         status: 'ok',
         visible: state.visible,
@@ -600,6 +978,24 @@ window.__ModuleLoader__.load({
         },
         rightbar: { ...state.rightbar, tabs },
         commands,
+        // The elements a caller can act on RIGHT NOW. This is the half that
+        // makes the interface operable without coordinates: `ui.act` takes one
+        // of these refs, so the agent never has to guess where anything is.
+        //
+        // Skipped unless asked for, because the walk is the expensive part and
+        // most calls only want the ledger. `ui.list {elements:true}` opts in ;
+        // `ui.snapshot` is the same thing when that is all the caller wants.
+        ...(wantedElements ? elementSection() : {}),
+      }
+    }
+
+    /** The element half of a list or snapshot reply, or a stated reason it is empty. */
+    function elementSection(options = {}) {
+      const snapshot = snapshotElements(options)
+      return {
+        snapshotId: snapshot.snapshotId,
+        elements: snapshot.elements,
+        truncated: snapshot.truncated,
       }
     }
 
@@ -786,8 +1182,22 @@ window.__ModuleLoader__.load({
 
     /** Every ui.* operation, in the same shape as `OPS`. */
     const uiOps = {
-      'ui.list': (services) => readUiList(services),
+      'ui.list': (services, args) => readUiList(services, args),
       'ui.state': (services) => readUiState(services),
+      // The element walk on its own, for a caller that already has the ledger
+      // and only needs the current interactive set.
+      'ui.snapshot': (_services, args) => {
+        const section = elementSection({
+          limit: args?.limit,
+          roles: args?.roles,
+          scope: args?.scope,
+        })
+        return { status: 'ok', ...section, visible: visibleNow() }
+      },
+      // Acting on one of those elements. The ref is the whole contract: no
+      // coordinates are accepted, so a caller cannot aim at a pixel and a layout
+      // shift cannot move the target.
+      'ui.act': async (services, args) => actOn(services, args),
       'ui.open': async (services, args) => {
         const target = args.target
         // Bringing the window forward is an ATTEMPT, not a precondition. The
