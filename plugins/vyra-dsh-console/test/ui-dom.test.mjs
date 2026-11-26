@@ -1,0 +1,667 @@
+// Interface driving, driven through a minimal DOM.
+//
+//   node --test plugins/vyra-dsh-console/test/ui-dom.test.mjs
+//
+// No browser and no React: what these drive is the DOM path the agent's
+// `ui.open` takes when no public service exists — the settings dialog. The
+// elements below implement only what that path touches (`querySelector`,
+// `querySelectorAll`, `getAttribute`, `closest`, `click`, `dispatchEvent`), so a
+// selector this plugin grows without support fails here rather than silently in
+// production.
+import { strict as assert } from 'node:assert'
+import test from 'node:test'
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+
+const root = resolve(import.meta.dirname, '..')
+const source = readFileSync(join(root, 'client.js'), 'utf8')
+
+// ---------------------------------------------------------------------------
+// The minimal DOM.
+// ---------------------------------------------------------------------------
+
+/**
+ * One element.
+ *
+ * `attrs` is what `getAttribute` answers and what the selector matcher reads;
+ * `on` installs a click handler that the test controls, which is how a trigger
+ * is made to open (or fail to open) the dialog.
+ */
+function el(tag, attrs = {}, children = []) {
+  const node = {
+    tag,
+    attrs: { ...attrs },
+    children: [],
+    clicks: 0,
+    textContent: attrs['data-text'] ?? '',
+    parent: undefined,
+    click() {
+      this.clicks += 1
+      this.onClick?.(this)
+    },
+    addEventListener() {},
+    removeEventListener() {},
+    getAttribute(name) {
+      return Object.hasOwn(this.attrs, name) ? this.attrs[name] : null
+    },
+    setAttribute(name, value) {
+      this.attrs[name] = value
+    },
+    closest(selector) {
+      for (let node_ = this; node_ !== undefined; node_ = node_.parent) {
+        if (matches(node_, selector)) return node_
+      }
+      return null
+    },
+    matches(selector) {
+      return matches(this, selector)
+    },
+    contains(other) {
+      return other === this || descendants(this).includes(other)
+    },
+    querySelectorAll(selector) {
+      return descendants(this).filter((candidate) => matches(candidate, selector))
+    },
+    querySelector(selector) {
+      return this.querySelectorAll(selector)[0] ?? null
+    },
+  }
+  for (const child of children) {
+    child.parent = node
+    node.children.push(child)
+  }
+  return node
+}
+
+/** Every descendant, depth first. */
+function descendants(node) {
+  return node.children.flatMap((child) => [child, ...descendants(child)])
+}
+
+/** Split a comma list, honour `:not(…)` per alternative, and test one element. */
+function matches(node, selector) {
+  return splitTopLevel(selector).some((alternative) => one(node, alternative.trim()))
+}
+
+/** Split on commas that are not inside brackets or parentheses. */
+function splitTopLevel(selector) {
+  const parts = []
+  let depth = 0
+  let current = ''
+  for (const char of selector) {
+    if (char === '[' || char === '(') depth += 1
+    if (char === ']' || char === ')') depth -= 1
+    if (char === ',' && depth === 0) {
+      parts.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  parts.push(current)
+  return parts
+}
+
+/**
+ * One compound selector: optional tag, attribute predicates, and `:not(…)`.
+ *
+ * Supported shapes are exactly the ones `client.js` uses plus the simple tag
+ * and descendant forms the fixtures need: `button`, `nav button`,
+ * `[attr]`, `[attr="v"]`, `tag[attr="v"]`, and a trailing `:not([attr])`.
+ */
+function one(node, selector) {
+  if (selector === '') return true
+  const withoutNot = selector.replace(/:not\((\[[^\]]*\])\)/gu, (_match, inner) => {
+    // A `:not` is a veto; record it on the node for this call.
+    if (predicate(node, inner)) node.__vetoed = true
+    return ''
+  })
+  const vetoed = node.__vetoed === true
+  node.__vetoed = undefined
+  if (vetoed) return false
+
+  const parts = withoutNot.trim().split(/\s+/u)
+  if (parts.length > 1) {
+    // Descendant combinator: the last compound must match, and some ancestor
+    // must match the rest.
+    const last = parts.at(-1)
+    if (!one(node, last)) return false
+    const ancestorSelector = parts.slice(0, -1).join(' ')
+    for (let parent = node.parent; parent !== undefined; parent = parent.parent) {
+      if (one(parent, ancestorSelector)) return true
+    }
+    return false
+  }
+
+  return predicate(node, parts[0])
+}
+
+/** Tag, attribute and pseudo predicates of one compound selector. */
+function predicate(node, compound) {
+  if (compound === '') return true
+  let rest = compound
+  const tag = /^[a-z]+/u.exec(rest)?.[0]
+  if (tag !== undefined) {
+    if (node.tag !== tag) return false
+    rest = rest.slice(tag.length)
+  }
+  for (const [, name, value] of rest.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/gu)) {
+    if (!Object.hasOwn(node.attrs, name)) return false
+    if (value !== undefined && node.attrs[name] !== value) return false
+  }
+  return true
+}
+
+/** A document that behaves like `globalThis.document` for this plugin. */
+function makeDocument({ visibility = 'visible' } = {}) {
+  const body = el('body')
+  const document = {
+    visibilityState: visibility,
+    documentElement: body,
+    body,
+    defaultView: {
+      KeyboardEvent: class KeyboardEvent {
+        constructor(type, init = {}) {
+          this.type = type
+          this.key = init.key
+          this.code = init.code
+          this.bubbles = init.bubbles === true
+          this.defaultPrevented = false
+          this.ctrlKey = init.ctrlKey === true
+          this.altKey = init.altKey === true
+          this.shiftKey = init.shiftKey === true
+          this.metaKey = init.metaKey === true
+        }
+        preventDefault() {
+          this.defaultPrevented = true
+        }
+      },
+    },
+    dispatchEvent(event) {
+      // The real modal layer listens on the document and closes its top layer.
+      if (event.key === 'Escape') document.onEscape?.(event)
+      return true
+    },
+    querySelectorAll(selector) {
+      return body.querySelectorAll(selector)
+    },
+    querySelector(selector) {
+      return body.querySelector(selector)
+    },
+  }
+  return document
+}
+
+// ---------------------------------------------------------------------------
+// The bundle, loaded the way the page loads it.
+// ---------------------------------------------------------------------------
+
+const reactStub = {
+  createElement: (type, props, ...children) => ({ type, props, children }),
+  Component: class {
+    constructor(props) { this.props = props || {}; this.state = {} }
+    setState(next) { Object.assign(this.state, next) }
+  },
+  useState: (initial) => [typeof initial === 'function' ? initial() : initial, () => {}],
+  useEffect: () => {},
+  useMemo: (fn) => fn(),
+  useCallback: (fn) => fn,
+  useRef: (initial) => ({ current: initial }),
+}
+
+/** Load the bundle once, with a refusable `require` and a document supplied per test. */
+function loadBundle() {
+  let module
+  const win = {
+    __ModuleLoader__: {
+      load: ({ factory }) => {
+        module = factory((specifier) => {
+          if (specifier === 'react') return reactStub
+          throw new Error(`the single-file bundle must not require(${specifier})`)
+        })
+      },
+    },
+  }
+  // `document` is read at call time by the ops, so it is installed per test.
+  new Function('window', 'document', source)(win, undefined)
+  return module
+}
+
+const bundle = loadBundle()
+
+/**
+ * Run one ui op with a document, a ledger and the given services.
+ *
+ * @param op - the ui action id.
+ * @param args - its arguments.
+ * @param options.document - the fake document.
+ * @param options.sections - `settings.section` ledger rows.
+ * @param options.extra - additional services (`layout`, `sidebarRight`, ...).
+ */
+async function run(op, args, { document, sections = [], extra = {} } = {}) {
+  globalThis.document = document
+  const services = {
+    slots: {
+      entries: (key) => (key === 'settings.section' ? sections.map(toEntry) : []),
+    },
+    shortcuts: { catalog: { getSnapshot: () => extra.commands ?? [] } },
+    ...extra.services,
+  }
+  const outcome = await bundle.__internal.applyOp(services, op, args)
+  return outcome
+}
+
+/** One ledger entry, in the shape the renderer records. */
+function toEntry(row) {
+  return {
+    options: { id: row.id, order: row.order ?? 0, label: row.label ?? row.id },
+    registrant: row.registrant,
+  }
+}
+
+/** A settings section ledger with two rows, the second being the point of this file. */
+const SECTIONS = [
+  { id: 'general', order: 0, label: '常规', registrant: 'ui-settings-general' },
+  { id: 'dsh-vyra-free-model', order: 36, label: '免费模型', registrant: 'dsh-vyra-free-model' },
+]
+
+/**
+ * Build a settings dialog already mounted in the document.
+ * @returns the dialog element and its nav buttons, in ledger order.
+ */
+function mountedDialog(document, { selected = 0 } = {}) {
+  const buttons = SECTIONS.map((row, index) => el('button', { 'aria-current': index === selected ? 'true' : 'false' }, []))
+  const nav = el('nav', {}, buttons)
+  const dialog = el('div', { 'data-shortcut-modal': 'settings' }, [nav])
+  buttons.forEach((button) => {
+    button.onClick = () => {
+      for (const other of buttons) other.setAttribute('aria-current', 'false')
+      button.setAttribute('aria-current', 'true')
+    }
+  })
+  document.body.children.push(dialog)
+  dialog.parent = document.body
+  return { dialog, buttons }
+}
+
+test.afterEach(() => {
+  delete globalThis.document
+})
+
+// ---------------------------------------------------------------------------
+// Opening the dialog.
+// ---------------------------------------------------------------------------
+
+test('a trigger marked with the settings shortcut opens the dialog, and it is verified', async () => {
+  const document = makeDocument()
+  const trigger = el('button', { 'aria-keyshortcuts': 'Control+Comma', 'aria-haspopup': 'dialog' })
+  document.body.children.push(trigger)
+  trigger.parent = document.body
+  trigger.onClick = () => {
+    const { dialog } = mountedDialog(document)
+    // Keep the trigger and the dialog siblings, as the shell renders them.
+    dialog.parent = document.body
+  }
+
+  const result = await run('ui.open', { target: 'settings' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.how, 'dom')
+  assert.equal(result.verified, true)
+  assert.equal(trigger.clicks, 1)
+})
+
+test('the settings entry inside the account menu is reached in two hops', async () => {
+  // The shipped composition gives `settings.launcher` to ui-settings-account,
+  // so the settings entry is a MENU ROW — absent from the document until the
+  // account menu opens. A single-hop implementation finds nothing here.
+  const document = makeDocument()
+  const menuTrigger = el('button', { 'aria-haspopup': 'menu', 'aria-expanded': 'false' })
+  document.body.children.push(menuTrigger)
+  menuTrigger.parent = document.body
+  menuTrigger.onClick = () => {
+    const row = el('button', { role: 'menuitem', 'aria-keyshortcuts': 'Control+Comma' })
+    const menu = el('div', { role: 'menu' }, [row])
+    menu.parent = document.body
+    document.body.children.push(menu)
+    row.onClick = () => {
+      menu.parent = undefined
+      mountedDialog(document)
+    }
+  }
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.verified, true)
+  assert.equal(result.resolved.section.id, 'dsh-vyra-free-model')
+  assert.equal(menuTrigger.clicks, 1)
+})
+
+test('a click that opens nothing is an error, never a success', async () => {
+  const document = makeDocument()
+  const trigger = el('button', { 'aria-keyshortcuts': 'Control+Comma' })
+  document.body.children.push(trigger)
+  trigger.parent = document.body
+  // No onClick: the click happens and nothing follows.
+
+  const result = await run('ui.open', { target: 'settings' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(result.status, 'error')
+  assert.equal(result.verified, false)
+  assert.match(result.reason, /did not open/u)
+})
+
+test('another dialog being open refuses the request instead of closing it', async () => {
+  const document = makeDocument()
+  document.body.children.push(el('div', { 'data-shortcut-modal': 'shortcut-edit' }))
+
+  const result = await run('ui.open', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /another dialog/u)
+})
+
+test('an unknown section is refused before anything is clicked', async () => {
+  const document = makeDocument()
+  const trigger = el('button', { 'aria-keyshortcuts': 'Control+Comma' })
+  document.body.children.push(trigger)
+  trigger.parent = document.body
+
+  const result = await run('ui.open', { target: 'settings', section: 'free-model' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(result.status, 'error')
+  assert.equal(trigger.clicks, 0, 'a typo must not open the dialog on the wrong page')
+  assert.ok(result.candidates.some((candidate) => candidate.id === 'dsh-vyra-free-model'))
+})
+
+// ---------------------------------------------------------------------------
+// Selecting a section.
+// ---------------------------------------------------------------------------
+
+test('a section is selected by its position in the ledger, not by its label', async () => {
+  const document = makeDocument()
+  const { buttons } = mountedDialog(document)
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.how, 'noop', 'the dialog was already open')
+  assert.equal(buttons[1].clicks, 1, 'the second ledger row is the second nav button')
+  assert.equal(result.resolved.section.label, '免费模型')
+  assert.equal(result.resolved.section.registrant, 'dsh-vyra-free-model')
+})
+
+test('a section the dialog does not render is reported rather than assumed selected', async () => {
+  const document = makeDocument()
+  // A dialog with ONE cell while the ledger claims two: the interface is behind
+  // its own registration, which is exactly the case a click-only implementation
+  // would report as success.
+  const nav = el('nav', {}, [el('button', { 'aria-current': 'true' })])
+  const dialog = el('div', { 'data-shortcut-modal': 'settings' }, [nav])
+  dialog.parent = document.body
+  document.body.children.push(dialog)
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+  })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /not rendering/u)
+})
+
+test('re-opening the page it is already on reports noop, not a second click', async () => {
+  const document = makeDocument()
+  const { buttons } = mountedDialog(document, { selected: 1 })
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.how, 'noop')
+  assert.equal(buttons[1].clicks, 0, 'an already-selected section is not clicked again')
+})
+
+// ---------------------------------------------------------------------------
+// Closing.
+// ---------------------------------------------------------------------------
+
+test('closing sends Escape and verifies the dialog is gone', async () => {
+  const document = makeDocument()
+  const { dialog } = mountedDialog(document)
+  document.onEscape = () => {
+    document.body.children = document.body.children.filter((child) => child !== dialog)
+  }
+
+  const result = await run('ui.close', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.verified, true)
+})
+
+test('a dialog that does not close is reported, not assumed closed', async () => {
+  const document = makeDocument()
+  mountedDialog(document)
+
+  const result = await run('ui.close', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /did not close/u)
+})
+
+test('closing an absent dialog is a noop', async () => {
+  const document = makeDocument()
+  const result = await run('ui.close', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.how, 'noop')
+})
+
+// ---------------------------------------------------------------------------
+// Listing and state.
+// ---------------------------------------------------------------------------
+
+test('ui.list reports every surface with the plugin that contributed it', async () => {
+  const document = makeDocument()
+  const result = await run('ui.list', {}, {
+    document,
+    sections: SECTIONS,
+    extra: {
+      services: {
+        layout: { panelInfo: { getSnapshot: () => ({ activePanelId: 'plugins' }) } },
+        sidebarRightTabs: { entries: () => [{ kind: 'browser', id: 'dsh-client-ui-sidebar-browser' }] },
+      },
+      commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置', aliases: [] }],
+    },
+  })
+  assert.equal(result.status, 'ok')
+  assert.deepEqual(result.settings.sections.map((row) => row.id), ['general', 'dsh-vyra-free-model'])
+  assert.equal(result.settings.sections[1].registrant, 'dsh-vyra-free-model')
+  assert.equal(result.main.active, 'plugins')
+  assert.equal(result.rightbar.tabs[0].kind, 'browser')
+  assert.equal(result.commands[0].id, 'settings.open')
+  assert.equal(result.modal, null)
+})
+
+test('ui.state reports what is open right now', async () => {
+  const document = makeDocument()
+  const { dialog } = mountedDialog(document, { selected: 1 })
+  // The shell's nav label is the section's text; the state maps it back to an id.
+  dialog.children[0].children[1].textContent = '免费模型'
+
+  const result = await run('ui.state', {}, {
+    document,
+    sections: SECTIONS,
+    extra: { services: { layout: { panelInfo: { getSnapshot: () => ({ activePanelId: null }) } } } },
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.modal, 'settings')
+  assert.equal(result.settings.open, true)
+  assert.equal(result.settings.section.id, 'dsh-vyra-free-model')
+})
+
+// ---------------------------------------------------------------------------
+// Main panel and right drawer: the service paths.
+// ---------------------------------------------------------------------------
+
+test('a main panel is selected through the layout service', async () => {
+  const document = makeDocument()
+  const selected = []
+  const result = await run('ui.open', { target: 'main', id: 'plugins' }, {
+    document,
+    extra: {
+      services: {
+        layout: { selectPanel: (id) => selected.push(id) },
+        slots: { entries: (key) => (key === 'sidebar.panellist' ? [{ options: { id: 'plugins', order: 0, label: '插件' } }] : []) },
+      },
+    },
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.how, 'service')
+  assert.deepEqual(selected, ['plugins'])
+})
+
+test('an unregistered main panel is refused with candidates and selects nothing', async () => {
+  const document = makeDocument()
+  const selected = []
+  const result = await run('ui.open', { target: 'main', id: 'plugin' }, {
+    document,
+    extra: {
+      services: {
+        layout: { selectPanel: (id) => selected.push(id) },
+        slots: { entries: (key) => (key === 'sidebar.panellist' ? [{ options: { id: 'plugins', order: 0, label: '插件' } }] : []) },
+      },
+    },
+  })
+  assert.equal(result.status, 'error')
+  assert.deepEqual(selected, [])
+  assert.equal(result.candidates[0].id, 'plugins')
+})
+
+test('a right drawer tab with no session is unavailable, with a way forward', async () => {
+  const document = makeDocument()
+  const result = await run('ui.open', { target: 'rightbar', kind: 'browser' }, {
+    document,
+    extra: {
+      services: {
+        sidebarRightTabs: { get: () => ({ id: 'browser' }), entries: () => [{ kind: 'browser', id: 'x' }] },
+        sidebarRight: { openTab: () => { throw new Error('sidebarRight: no session surface is mounted') } },
+      },
+    },
+  })
+  assert.equal(result.status, 'unavailable')
+  assert.match(result.hint, /session/u)
+})
+
+test('an unknown right drawer kind is refused with the kinds that exist', async () => {
+  const document = makeDocument()
+  const result = await run('ui.open', { target: 'rightbar', kind: 'nope' }, {
+    document,
+    extra: {
+      services: {
+        sidebarRightTabs: { get: () => undefined, entries: () => [{ kind: 'browser', id: 'b' }] },
+        sidebarRight: { openTab: () => { throw new Error('should not be called') } },
+      },
+    },
+  })
+  assert.equal(result.status, 'error')
+  assert.equal(result.candidates[0].id, 'browser')
+})
+
+// ---------------------------------------------------------------------------
+// Commands.
+// ---------------------------------------------------------------------------
+
+test('a command is invoked through the service when one is provided', async () => {
+  const document = makeDocument()
+  const invoked = []
+  const result = await run('ui.invoke', { id: 'settings.open' }, {
+    document,
+    extra: {
+      services: { shortcuts: {
+        catalog: { getSnapshot: () => [{ id: 'settings.open', label: '设置', keys: ['Ctrl', ','], aria: 'Control+Comma' }] },
+        invoke: (id) => invoked.push(id),
+      } },
+    },
+  })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.how, 'service')
+  assert.deepEqual(invoked, ['settings.open'])
+})
+
+test('with no service the command is reported unavailable and names the keys', async () => {
+  // The Windows/macOS desktop installs the native keyboard bridge, whose DOM
+  // listener returns before dispatching — so an uninvokable command must SAY so
+  // instead of pretending, and tell the user which keys to press.
+  const document = makeDocument()
+  const result = await run('ui.invoke', { id: 'settings.open' }, {
+    document,
+    extra: {
+      services: { shortcuts: {
+        catalog: { getSnapshot: () => [{ id: 'settings.open', label: '设置', keys: ['Ctrl', ','], aria: 'Control+Comma' }] },
+      } },
+    },
+  })
+  assert.equal(result.status, 'unavailable')
+  assert.match(result.hint, /Ctrl/u)
+  assert.equal(result.resolved.command.id, 'settings.open')
+})
+
+test('an unknown command is refused with the commands that exist', async () => {
+  const document = makeDocument()
+  const result = await run('ui.invoke', { id: 'nope' }, {
+    document,
+    extra: { services: { shortcuts: { catalog: { getSnapshot: () => [{ id: 'settings.open', label: '设置' }] } } } },
+  })
+  assert.equal(result.status, 'error')
+  assert.equal(result.candidates[0].id, 'settings.open')
+})
+
+// ---------------------------------------------------------------------------
+// The background-tab rule.
+// ---------------------------------------------------------------------------
+
+test('every ui op is unavailable while the tab is in the background', async () => {
+  const document = makeDocument({ visibility: 'hidden' })
+  for (const [op, args] of [
+    ['ui.list', {}],
+    ['ui.state', {}],
+    ['ui.open', { target: 'settings' }],
+    ['ui.close', { target: 'settings' }],
+    ['ui.invoke', { id: 'settings.open' }],
+  ]) {
+    const result = await run(op, args, { document, sections: SECTIONS })
+    assert.equal(result.status, 'unavailable', `${op} must refuse a background tab`)
+    assert.match(result.reason, /background/u)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// The dispatch boundary still holds for the new ops.
+// ---------------------------------------------------------------------------
+
+test('an unknown ui-shaped op is refused, never dispatched', async () => {
+  globalThis.document = makeDocument()
+  const result = await bundle.__internal.applyOp({ slots: { entries: () => [] } }, 'ui.nope', {})
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /unknown appearance op/u)
+})
+
+test('an inherited prototype name is not a ui op', async () => {
+  globalThis.document = makeDocument()
+  for (const op of ['toString', 'constructor', 'valueOf']) {
+    const result = await bundle.__internal.applyOp({ slots: { entries: () => [] } }, op, {})
+    assert.equal(result.status, 'error', `${op} must not resolve`)
+  }
+})

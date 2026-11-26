@@ -221,8 +221,489 @@ window.__ModuleLoader__.load({
       },
     }
 
+    // -----------------------------------------------------------------------
+    // Interface driving (ui.*).
+    //
+    // Two kinds of surface, and the difference decides how each is opened:
+    //
+    //   - the MAIN PANEL and the RIGHT DRAWER have public services
+    //     (`ctx.layout.selectPanel`, `ctx.sidebarRight.openTab`), so they are
+    //     opened by calling them;
+    //   - the SETTINGS DIALOG has no service. `openSection` is a private owner
+    //     prop handed to the `settings.launcher` registrant, so the only way in
+    //     from outside is to click what a person would click — and then VERIFY
+    //     the dialog actually opened, because a click is not a promise.
+    //
+    // Every path reports `verified: true` only after reading the result back.
+    // The model turns `status: 'ok'` into "it is open now", so an unverified
+    // success is a lie the user will discover by looking at the screen.
+    // -----------------------------------------------------------------------
+
+    /** The settings dialog's own marker, set by the shell (`ui-settings-general`). */
+    const SETTINGS_MODAL = '[data-shortcut-modal="settings"]'
+    /** Any dialog or menu layer, used to refuse stomping on a foreign one. */
+    const ANY_MODAL = '[data-shortcut-modal], [role="menu"]'
+    /** How long a click may take to show its result before it is called a failure. */
+    const VERIFY_TIMEOUT_MS = 900
+    /** Poll interval while waiting for a click's result. */
+    const VERIFY_POLL_MS = 25
+
+    /** The live document, read per call so a test double can install its own. */
+    function doc() {
+      return globalThis.document
+    }
+
+    /** Every element the current document matches, as an array. */
+    function all(selector) {
+      const root = doc()
+      if (root === undefined || typeof root.querySelectorAll !== 'function') return []
+      return [...root.querySelectorAll(selector)]
+    }
+
+    /** The first element matching `selector`, or null. */
+    function first(selector) {
+      return all(selector)[0] ?? null
+    }
+
+    /** Poll `probe` until it answers something truthy, or the bound expires. */
+    async function waitFor(probe) {
+      const started = Date.now()
+      for (;;) {
+        const answer = probe()
+        if (answer !== undefined && answer !== null && answer !== false) return answer
+        if (Date.now() - started >= VERIFY_TIMEOUT_MS) return undefined
+        await new Promise((resolve) => setTimeout(resolve, VERIFY_POLL_MS))
+      }
+    }
+
     /**
-     * Apply one appearance op against the live Client services.
+     * Whether a request may be served at all.
+     *
+     * A backgrounded tab is REFUSED rather than served. A browser tab that is
+     * not visible still runs this loop, and acting in it would change a page the
+     * user is not looking at while another tab shows the old state — the action
+     * would look like it silently failed. Saying so is the honest answer.
+     */
+    function unserviceable() {
+      const root = doc()
+      if (root === undefined) {
+        return { status: 'unavailable', reason: 'no document is present in this realm' }
+      }
+      if (root.visibilityState !== undefined && root.visibilityState !== 'visible') {
+        return {
+          status: 'unavailable',
+          reason: 'this tab is in the background; bring the DSH window to the front and retry',
+        }
+      }
+      return undefined
+    }
+
+    /** The slot ledger rows for one key, normalized and ordered. */
+    function ledgerRows(services, key) {
+      const entries = services?.slots?.entries?.(key) ?? []
+      return entries.map((entry) => ({
+        id: entry?.options?.id,
+        order: entry?.options?.order ?? 0,
+        label: typeof entry?.options?.label === 'function'
+          ? entry.options.label()
+          : (entry?.options?.label ?? ''),
+        registrant: entry?.registrant,
+      })).filter((row) => typeof row.id === 'string' && row.id !== '')
+        .sort((left, right) => left.order - right.order)
+    }
+
+    /** The five nearest ids to a misspelling, so a caller can correct itself. */
+    function candidatesFor(rows, wanted) {
+      const text = String(wanted ?? '').toLowerCase()
+      const score = (candidate) => {
+        const id = String(candidate.id).toLowerCase()
+        if (id === text) return 100
+        if (id.startsWith(text)) return 50
+        if (id.includes(text)) return 25
+        if (candidate.label?.toLowerCase?.().includes(text)) return 20
+        return 0
+      }
+      return [...rows]
+        .map((row) => ({ row, score: score(row) }))
+        .sort((left, right) => right.score - left.score)
+        .slice(0, 5)
+        .map(({ row }) => ({ id: row.id, label: row.label }))
+    }
+
+    /** The `settings.open` command's effective binding, if the catalogue has it. */
+    function settingsShortcutAria(services) {
+      const catalog = services?.shortcuts?.catalog?.getSnapshot?.() ?? []
+      const row = catalog.find((entry) => entry?.id === 'settings.open')
+      return typeof row?.aria === 'string' && row.aria !== '' ? row.aria : undefined
+    }
+
+    /**
+     * Click the settings entry and wait for the dialog.
+     *
+     * Three routes, tried in the order that fails most honestly:
+     *
+     *   1. the button carrying the settings shortcut's `aria-keyshortcuts`. That
+     *      is the sidebar launcher in a plain composition, and the account menu's
+     *      "Settings" row when `ui-settings-account` owns the launcher seat —
+     *      `MenuRow` renders the same attribute on menu rows;
+     *   2. the account menu itself: open the `aria-haspopup="menu"` trigger, then
+     *      click the row inside the opened menu. Needed because a closed menu is
+     *      not in the document at all, so route 1 finds nothing until it is open;
+     *   3. any `aria-haspopup="dialog"` button outside a modal — the generic
+     *      launcher, which is the fallback for a composition that renames the
+     *      seat.
+     *
+     * Every route ends the same way: wait for the dialog, and report failure if
+     * it does not appear. Returning "opened" because a click happened is the one
+     * thing this must not do.
+     */
+    async function openSettingsDialog(services) {
+      const already = first(SETTINGS_MODAL)
+      if (already !== null) return { ok: true, how: 'noop' }
+
+      const foreign = all(ANY_MODAL)
+      const top = foreign[foreign.length - 1]
+      if (top !== undefined) {
+        const id = top.getAttribute?.('data-shortcut-modal') ?? 'a menu'
+        return {
+          ok: false,
+          reason: `another dialog or menu ("${id}") is open; the console does not close what it did not open`,
+        }
+      }
+
+      const aria = settingsShortcutAria(services)
+      if (aria !== undefined) {
+        const direct = first(`button[aria-keyshortcuts="${aria}"], [aria-keyshortcuts="${aria}"]`)
+        if (direct !== null) {
+          direct.click()
+          if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+        }
+        // The two-hop path: the settings entry may live inside a menu.
+        const menuTrigger = first('button[aria-haspopup="menu"]')
+        if (menuTrigger !== null) {
+          menuTrigger.click()
+          const row = await waitFor(() => all('[role="menuitem"]')
+            .find((node) => node.getAttribute?.('aria-keyshortcuts') === aria))
+          if (row !== undefined && row !== null) {
+            row.click()
+            if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+          }
+        }
+      }
+
+      for (const candidate of all('button[aria-haspopup="dialog"]')) {
+        if (candidate.closest?.('[data-shortcut-modal]') != null) continue
+        candidate.click()
+        if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+      }
+
+      return {
+        ok: false,
+        reason: 'the settings dialog did not open after clicking the available triggers',
+      }
+    }
+
+    /**
+     * Select one section inside the open dialog.
+     *
+     * The nav is rendered from the same `settings.section` ledger this plugin
+     * reads, sorted by `order`, so the POSITION of a section is stable across
+     * languages while its label is not. Position is what is clicked; the label
+     * only travels back in the answer.
+     */
+    async function selectSettingsSection(services, sectionId) {
+      const rows = ledgerRows(services, 'settings.section')
+      const index = rows.findIndex((row) => row.id === sectionId)
+      if (index === -1) {
+        return {
+          ok: false,
+          reason: `no settings section "${sectionId}" is registered in this interface`,
+          candidates: candidatesFor(rows, sectionId),
+        }
+      }
+      const target = rows[index]
+      const dialog = first(SETTINGS_MODAL)
+      const cells = dialog?.querySelectorAll?.('nav button') ?? []
+      const button = cells[index]
+      if (button === undefined || button === null) {
+        return {
+          ok: false,
+          reason: `the settings dialog shows ${cells.length} section(s) but the ledger lists ${rows.length}; the interface is not rendering this registration`,
+        }
+      }
+      if (button.getAttribute?.('aria-current') !== 'true') button.click()
+      const selected = await waitFor(() => button.getAttribute?.('aria-current') === 'true')
+      if (selected !== true) {
+        return { ok: false, reason: `clicking the "${target.label || target.id}" section did not select it` }
+      }
+      return { ok: true, how: 'dom', section: target }
+    }
+
+    /** Close the settings dialog by asking the modal layer to close its top layer. */
+    async function closeSettingsDialog() {
+      const dialog = first(SETTINGS_MODAL)
+      if (dialog === null) return { status: 'ok', target: 'settings', how: 'noop', verified: true }
+      const root = doc()
+      // `useModalLayer` listens for Escape on the document and does not inspect
+      // `isTrusted`, so this is the same path a keystroke takes — and it is the
+      // only path that works whatever the shell's close button looks like.
+      const event = new root.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      root.dispatchEvent(event)
+      const closed = await waitFor(() => first(SETTINGS_MODAL) === null)
+      if (closed !== true) {
+        return { status: 'error', target: 'settings', reason: 'the settings dialog did not close after Escape', verified: false }
+      }
+      return { status: 'ok', target: 'settings', how: 'dom', verified: true }
+    }
+
+    /** The current interface state, as `ui.state` and the panel both read it. */
+    function readUiState(services) {
+      const modal = all('[data-shortcut-modal]').at(-1)
+      const dialog = first(SETTINGS_MODAL)
+      const selected = dialog?.querySelector?.('nav button[aria-current="true"]')
+      const rows = ledgerRows(services, 'settings.section')
+      const selectedLabel = selected?.textContent
+      const section = rows.find((row) => row.label === selectedLabel) ?? null
+      const panelInfo = services?.layout?.panelInfo?.getSnapshot?.()
+      const rightbar = services?.sidebarRight
+      return {
+        status: 'ok',
+        modal: modal === undefined ? null : (modal.getAttribute?.('data-shortcut-modal') ?? 'other'),
+        settings: { open: dialog !== null, section },
+        main: { active: panelInfo?.activePanelId ?? null },
+        rightbar: {
+          expanded: typeof rightbar?.isExpanded === 'function' ? rightbar.isExpanded() : undefined,
+        },
+      }
+    }
+
+    /**
+     * Every surface this interface offers, with the plugin that contributed it.
+     *
+     * `registrant` is the answer to "which plugin owns this page": the renderer
+     * stamps each registration with its entry name, and an entry name is a
+     * package name. Nothing here is declared by the plugins themselves, so a new
+     * settings page appears in this list the moment it registers.
+     */
+    function readUiList(services) {
+      const state = readUiState(services)
+      const tabs = (services?.sidebarRightTabs?.entries?.() ?? []).map((entry) => ({
+        kind: entry.kind,
+        id: entry.id,
+        multiple: entry.multiple === true,
+      }))
+      const commands = (services?.shortcuts?.catalog?.getSnapshot?.() ?? []).map((row) => ({
+        id: row.id,
+        label: row.label,
+        keys: row.keys,
+        aria: row.aria,
+        binding: row.binding,
+        aliases: row.aliases,
+      }))
+      const panels = ledgerRows(services, 'sidebar.panellist')
+      const mainKeys = (services?.slots?.entries?.('main') ?? [])
+        .map((entry) => entry?.options?.key)
+        .filter((key) => typeof key === 'string' && key !== '')
+      return {
+        status: 'ok',
+        modal: state.modal,
+        settings: { open: state.settings.open, section: state.settings.section, sections: ledgerRows(services, 'settings.section') },
+        main: {
+          active: state.main.active,
+          panels,
+          // A sidebar entry without a matching main key selects nothing; naming
+          // both lets a caller tell a real panel from a stale entry.
+          registered: [...new Set(mainKeys)],
+        },
+        rightbar: { ...state.rightbar, tabs },
+        commands,
+      }
+    }
+
+    /** Open a main panel through its public service, translating its throw. */
+    function openMainPanel(services, id) {
+      const layout = services?.layout
+      if (layout === undefined || typeof layout.selectPanel !== 'function') {
+        return { status: 'error', reason: 'the layout service is unavailable' }
+      }
+      const rows = ledgerRows(services, 'sidebar.panellist')
+      const known = rows.some((row) => row.id === id)
+        || (services?.slots?.entries?.('main') ?? []).some((entry) => entry?.options?.key === id)
+      if (!known) {
+        return {
+          status: 'error',
+          reason: `no main panel "${id}" is registered in this interface`,
+          candidates: candidatesFor(rows, id),
+        }
+      }
+      try {
+        layout.selectPanel(id)
+      } catch (err) {
+        return { status: 'error', reason: String(err?.message ?? err) }
+      }
+      return { status: 'ok', target: 'main', resolved: { panel: { id } }, how: 'service', verified: true }
+    }
+
+    /** Open a right-drawer tab through its public service. */
+    function openRightbarTab(services, args) {
+      const right = services?.sidebarRight
+      if (right === undefined) return { status: 'error', reason: 'the sidebarRight service is unavailable' }
+      if (args.address !== undefined) {
+        if (typeof right.openResource !== 'function') return { status: 'error', reason: 'the sidebarRight service cannot open a resource' }
+        try {
+          right.openResource(args.address)
+        } catch (err) {
+          return { status: 'error', reason: String(err?.message ?? err) }
+        }
+        return { status: 'ok', target: 'rightbar', resolved: { address: args.address }, how: 'service', verified: true }
+      }
+      if (typeof right.openTab !== 'function') return { status: 'error', reason: 'the sidebarRight service cannot open a tab' }
+      const kind = args.kind
+      if (typeof services?.sidebarRightTabs?.get === 'function' && services.sidebarRightTabs.get(kind) === undefined) {
+        return {
+          status: 'error',
+          reason: `no right-drawer tab type "${kind}" is registered in this interface`,
+          candidates: (services.sidebarRightTabs.entries?.() ?? []).slice(0, 5).map((entry) => ({ id: entry.kind, label: entry.kind })),
+        }
+      }
+      try {
+        right.openTab(kind, args.url === undefined ? undefined : { params: { url: args.url } })
+      } catch (err) {
+        // `require()` throws "no session surface is mounted" for a global panel
+        // or no session — a real property of the drawer, not a failure of this
+        // request, so it is reported as unavailable with a way forward.
+        const reason = String(err?.message ?? err)
+        return reason.includes('no session')
+          ? { status: 'unavailable', target: 'rightbar', reason, hint: 'open or create a session first' }
+          : { status: 'error', target: 'rightbar', reason }
+      }
+      return { status: 'ok', target: 'rightbar', resolved: { kind }, how: 'service', verified: true }
+    }
+
+    /**
+     * Invoke one command.
+     *
+     * `Shortcuts` deliberately does not expose `invoke`, and on a platform with
+     * the native keyboard bridge installed the DOM route is dead too —
+     * `installKeyboard(…, native = true)` returns before dispatching, because
+     * native input owns the bindings. So this is attempted in order and REPORTED
+     * for what it is:
+     *
+     *   1. a service-level `invoke`, if a future composition provides one;
+     *   2. a synthesized keydown for a Web/Linux binding;
+     *   3. otherwise `unavailable`, naming the keys so the user can press them.
+     */
+    async function invokeCommand(services, id) {
+      const catalog = services?.shortcuts?.catalog?.getSnapshot?.() ?? []
+      const row = catalog.find((entry) => entry?.id === id)
+      if (row === undefined) {
+        return {
+          status: 'error',
+          reason: `no command "${id}" is registered in this interface`,
+          candidates: catalog.slice(0, 5).map((entry) => ({ id: entry.id, label: entry.label })),
+        }
+      }
+      const shortcuts = services?.shortcuts
+      if (typeof shortcuts?.invoke === 'function') {
+        try {
+          shortcuts.invoke(id, { region: 'page', modal: null, target: null })
+        } catch (err) {
+          return { status: 'error', reason: String(err?.message ?? err) }
+        }
+        return { status: 'ok', resolved: { command: { id, label: row.label } }, how: 'service', verified: true }
+      }
+      const binding = row.binding
+      const root = doc()
+      const key = binding?.code
+      if (root?.defaultView?.KeyboardEvent !== undefined && typeof key === 'string' && key !== '') {
+        const modifiers = new Set(binding.modifiers ?? [])
+        const event = new root.defaultView.KeyboardEvent('keydown', {
+          code: key,
+          key: key.startsWith('Key') ? key.slice(3).toLowerCase() : (key.startsWith('Digit') ? key.slice(5) : key),
+          ctrlKey: modifiers.has('control'),
+          altKey: modifiers.has('alt'),
+          shiftKey: modifiers.has('shift'),
+          metaKey: modifiers.has('meta'),
+          bubbles: true,
+        })
+        // `defaultPrevented` is how a consumed gesture reports itself; an
+        // unbound row cannot be dispatched at all.
+        root.dispatchEvent(event)
+        if (event.defaultPrevented === true) {
+          return { status: 'ok', resolved: { command: { id, label: row.label } }, how: 'keyboard', verified: true }
+        }
+      }
+      const keys = Array.isArray(row.keys) && row.keys.length > 0 ? row.keys.join('+') : undefined
+      return {
+        status: 'unavailable',
+        reason: 'this platform routes commands through its native keyboard layer, so the page cannot invoke one',
+        hint: keys === undefined
+          ? 'ask the user to run that command from the interface'
+          : `ask the user to press ${keys}`,
+        resolved: { command: { id, label: row.label, keys: row.keys } },
+      }
+    }
+
+    /** Every ui.* operation, in the same shape as `OPS`. */
+    const uiOps = {
+      'ui.list': (services) => readUiList(services),
+      'ui.state': (services) => readUiState(services),
+      'ui.open': async (services, args) => {
+        const target = args.target
+        if (target === 'main') {
+          if (typeof args.id !== 'string' || args.id === '') {
+            return { status: 'error', target, reason: 'ui.open target "main" needs a non-empty id' }
+          }
+          return openMainPanel(services, args.id)
+        }
+        if (target === 'rightbar') {
+          const hasKind = typeof args.kind === 'string' && args.kind !== ''
+          const hasAddress = typeof args.address === 'string' && args.address !== ''
+          if (!hasKind && !hasAddress) {
+            return { status: 'error', target, reason: 'ui.open target "rightbar" needs either kind or address' }
+          }
+          return openRightbarTab(services, args)
+        }
+        if (target !== 'settings') {
+          return { status: 'error', reason: `unknown ui.open target "${String(target)}"` }
+        }
+        const section = typeof args.section === 'string' && args.section !== '' ? args.section : undefined
+        if (section !== undefined) {
+          const rows = ledgerRows(services, 'settings.section')
+          if (!rows.some((row) => row.id === section)) {
+            // Refused before any click, so a typo cannot open the dialog on the
+            // wrong page and then report a failure the user has to undo.
+            return {
+              status: 'error', target, reason: `no settings section "${section}" is registered in this interface`,
+              candidates: candidatesFor(rows, section),
+            }
+          }
+        }
+        const opened = await openSettingsDialog(services)
+        if (!opened.ok) return { status: 'error', target, reason: opened.reason, verified: false }
+        if (section === undefined) {
+          return { status: 'ok', target, how: opened.how, verified: true }
+        }
+        const selected = await selectSettingsSection(services, section)
+        if (!selected.ok) {
+          return { status: 'error', target, reason: selected.reason, candidates: selected.candidates, verified: false }
+        }
+        return {
+          status: 'ok',
+          target,
+          resolved: { section: selected.section },
+          how: opened.how === 'noop' ? 'noop' : opened.how,
+          verified: true,
+        }
+      },
+      'ui.close': async (_services, args) => {
+        if (args.target === 'modal' || args.target === 'settings') return closeSettingsDialog()
+        return { status: 'error', reason: `ui.close cannot close "${String(args.target)}"` }
+      },
+      'ui.invoke': async (services, args) => invokeCommand(services, args.id),
+    }
+
+    /**
      *
      * The services are a parameter, not something this closes over, so the same
      * implementation serves the panel and the Host bridge and can be driven by
@@ -265,19 +746,34 @@ window.__ModuleLoader__.load({
       // and Task 10's panel post ops in directly, so this function must refuse on
       // its own rather than trust a caller's guard.
       const handler = Object.hasOwn(OPS, op) ? OPS[op] : undefined
-      if (handler === undefined) {
+      if (handler !== undefined) {
+        if (services === null || services === undefined) {
+          return { status: 'error', reason: 'no Client services are available' }
+        }
+        try {
+          return handler(services, args || {})
+        } catch (err) {
+          // The service's own message carries what to fix; a non-Error throw is
+          // stringified so the reason is never the literal "undefined".
+          return { status: 'error', reason: String(err?.message ?? err) }
+        }
+      }
+      // The ui ops are asynchronous (a DOM path has to wait for its own result)
+      // and share this one entry point, so every caller — the drain loop, the
+      // panel, a test — gets the same dispatch without knowing which family an
+      // op belongs to.
+      const ui = Object.hasOwn(uiOps, op) ? uiOps[op] : undefined
+      if (ui === undefined) {
         return { status: 'error', reason: `unknown appearance op "${op}"` }
       }
       if (services === null || services === undefined) {
         return { status: 'error', reason: 'no Client services are available' }
       }
-      try {
-        return handler(services, args || {})
-      } catch (err) {
-        // The service's own message carries what to fix; a non-Error throw is
-        // stringified so the reason is never the literal "undefined".
-        return { status: 'error', reason: String(err?.message ?? err) }
-      }
+      const blocked = unserviceable()
+      if (blocked !== undefined) return present({ ...blocked, op })
+      return Promise.resolve()
+        .then(() => ui(services, args || {}))
+        .catch((err) => ({ status: 'error', reason: String(err?.message ?? err) }))
     }
 
     /**
@@ -1024,14 +1520,14 @@ window.__ModuleLoader__.load({
          * object captured when the panel was built would keep writing into a service
          * that a reload has since replaced.
          */
-        const runAppearance = useCallback((op, args, label) => {
+        const runAppearance = useCallback(async (op, args, label) => {
           setBusy(op)
           // A panel built without the accessor — a test double, or a future caller
           // that forgot it — must report a refusal rather than throw out of a click
           // handler. `applyOp` already answers that way for a missing service, so
           // an empty bag is the honest input rather than a special case here.
           const bag = typeof services === 'function' ? services() : {}
-          const outcome = applyOp(bag, op, args || {})
+          const outcome = await applyOp(bag, op, args || {})
           if (outcome.status === 'ok') notify(translate('toast.done', { action: label || op }), 'ok')
           else notify(translate('toast.failed', { action: label || op, reason: String(outcome.reason || '') }), 'error')
           setBusy(null)
@@ -1505,12 +2001,25 @@ window.__ModuleLoader__.load({
            */
           async function answer(request) {
             // Read at call time, so a remounted service is picked up.
-            const services = { theme: ctx.theme, layout: ctx.layout, locale: ctx.locale }
+            // Read at call time, so a remounted service is picked up. The ui ops
+            // need the ledger, the frame and the command catalogue; any of them
+            // absent makes the affected op report `unavailable` rather than throw,
+            // which is why they are spread from the live context instead of
+            // asserted here.
+            const services = {
+              theme: ctx.theme,
+              layout: ctx.layout,
+              locale: ctx.locale,
+              slots: ctx.get?.('slots') ?? ctx.slots,
+              shortcuts: ctx.get?.('shortcuts') ?? ctx.shortcuts,
+              sidebarRight: ctx.get?.('sidebarRight') ?? ctx.sidebarRight,
+              sidebarRightTabs: ctx.get?.('sidebarRightTabs') ?? ctx.sidebarRightTabs,
+            }
             // `op` is passed through UNTOUCHED. It arrives over HTTP and is
             // untrusted, and `applyOp` refuses a non-string op precisely so that
             // a coerced value cannot reach a handler — stringifying it here
             // would silently disarm that guard.
-            const outcome = applyOp(services, request?.op, request?.args)
+            const outcome = await applyOp(services, request?.op, request?.args)
             const reply = outcome.status === 'ok'
               ? present({ id: request?.id, ok: true, value: outcome.value })
               : present({ id: request?.id, ok: false, error: outcome.reason })
