@@ -47,12 +47,20 @@ Three failure shapes, and they mean different things:
 
 | `status` | meaning | what to tell the user |
 |---|---|---|
-| `unavailable` | no interface is connected, the tab is in the background, or the platform cannot do it | open the DSH window / bring it to the front / press the keys yourself |
+| `unavailable` | no interface is connected, or the platform cannot do it | open the DSH window, or press the keys yourself |
 | `error` | the request is wrong: no such id, another dialog is open | read `candidates` and retry with a real id |
 | `forbidden` | the action changes your own authority | it is refused by design; name the alternative in the reply |
 
 A misspelled id returns `candidates` — the nearest real ids. Retry with one of
 them instead of guessing again.
+
+**A hidden window is not a failure.** `ui.open` works while DSH is in the
+background — the page still renders and the state change is real. The reply
+carries `visible`; when it is `false`, the hint tells the user to switch to DSH.
+That is the normal flow: open the page, then tell the user it is ready. Do NOT
+try to force the window forward with shell commands — on this platform running
+one hands focus back to the terminal, so the retry is refused again for being in
+the background, and that loop never ends.
 
 ## Commands
 
@@ -126,3 +134,9 @@ guessing.
   with `confirm: true` when the action is genuinely what they asked for.
 - **Retrying `unavailable`.** The interface is not there; tell the user to open
   it, or the platform cannot do it and the hint says what to press instead.
+- **Fighting for window focus.** `visible: false` is not a reason to retry or to
+  run a focus command. The page already changed; report `verified: true` and tell
+  the user to switch to DSH.
+- **Concluding it failed because a screenshot is empty.** Capture the DSH window
+  by handle, after the user has brought it forward. A screenshot taken while the
+  terminal is in front shows the terminal, not a broken page.

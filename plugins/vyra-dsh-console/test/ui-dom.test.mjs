@@ -640,22 +640,75 @@ test('an unknown command is refused with the commands that exist', async () => {
 })
 
 // ---------------------------------------------------------------------------
-// The background-tab rule.
+// The background rule, as it actually is.
+//
+// An earlier version REFUSED every ui op while the tab was hidden. On a real
+// desktop that deadlocked the agent: operating DSH needed its window forward,
+// forwarding it needed a shell command, and running the command gave focus back
+// to the terminal — so every retry was refused for being in the background. A
+// page that is hidden still renders and still dispatches clicks, and opening a
+// settings page for the user to switch to is the ordinary use. Visibility is
+// therefore REPORTED, never enforced.
 // ---------------------------------------------------------------------------
 
-test('every ui op is unavailable while the tab is in the background', async () => {
+test('a background page still acts, and says it was not visible', async () => {
   const document = makeDocument({ visibility: 'hidden' })
-  for (const [op, args] of [
-    ['ui.list', {}],
-    ['ui.state', {}],
-    ['ui.open', { target: 'settings' }],
-    ['ui.close', { target: 'settings' }],
-    ['ui.invoke', { id: 'settings.open' }],
-  ]) {
-    const result = await run(op, args, { document, sections: SECTIONS })
-    assert.equal(result.status, 'unavailable', `${op} must refuse a background tab`)
-    assert.match(result.reason, /background/u)
+  // A hidden page has no settings dialog to find yet; the window has no focus
+  // to give. What matters is that the op RUNS and reports its result.
+  document.defaultView.focus = () => {}
+  const result = await run('ui.list', {}, { document, sections: SECTIONS })
+  assert.equal(result.status, 'ok', 'a hidden page must not be refused')
+  assert.equal(result.visible, false, 'and must say the user cannot see it yet')
+  assert.equal(result.settings.sections.length, SECTIONS.length)
+})
+
+test('a visible page reports visible: true', async () => {
+  const document = makeDocument()
+  const result = await run('ui.state', {}, { document, sections: SECTIONS })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.visible, true)
+})
+
+test('ui.open in the background still opens, and points the user at the result', async () => {
+  const document = makeDocument({ visibility: 'hidden' })
+  const trigger = el('button', { 'aria-keyshortcuts': 'Control+Comma', 'aria-haspopup': 'dialog' })
+  document.body.children.push(trigger)
+  trigger.parent = document.body
+  trigger.onClick = () => {
+    mountedDialog(document)
   }
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(result.status, 'ok', 'a background page must still open the dialog')
+  assert.equal(result.verified, true, 'and the state change is real even if unseen')
+  assert.equal(result.visible, false)
+  assert.match(result.hint, /switch to it|background/u, 'and must tell the user to look')
+})
+
+test('ui.open tries to reveal the window when it is hidden', async () => {
+  const document = makeDocument({ visibility: 'hidden' })
+  let focused = 0
+  document.defaultView.focus = () => {
+    focused += 1
+    document.visibilityState = 'visible'
+  }
+  const trigger = el('button', { 'aria-keyshortcuts': 'Control+Comma' })
+  document.body.children.push(trigger)
+  trigger.parent = document.body
+  trigger.onClick = () => mountedDialog(document)
+
+  const result = await run('ui.open', { target: 'settings' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(focused, 1, 'a hidden page must attempt to bring itself forward')
+  assert.equal(result.status, 'ok')
+  assert.equal(result.visible, true, 'and report whether that worked')
 })
 
 // ---------------------------------------------------------------------------

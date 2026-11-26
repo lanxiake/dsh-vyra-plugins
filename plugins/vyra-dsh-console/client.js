@@ -284,18 +284,61 @@ window.__ModuleLoader__.load({
      * user is not looking at while another tab shows the old state — the action
      * would look like it silently failed. Saying so is the honest answer.
      */
+    /**
+     * Whether this realm has a document to act on.
+     *
+     * Deliberately NOT a visibility check. An earlier version refused every ui
+     * op while `document.visibilityState !== 'visible'`, on the theory that
+     * changing a page nobody is looking at is dishonest. It is not: a background
+     * tab still renders, still dispatches clicks, and the state change is real.
+     * What the check actually did was deadlock the agent — operating DSH required
+     * bringing its window forward, bringing it forward required a shell command,
+     * and running that command handed focus back to the terminal, so the next
+     * call was refused again for being in the background.
+     *
+     * Opening a settings page and telling the user to switch to it is ordinary
+     * use. Whether the page was visible when the work happened is reported as
+     * data (`visible`), never used as a gate.
+     */
     function unserviceable() {
-      const root = doc()
-      if (root === undefined) {
+      if (doc() === undefined) {
         return { status: 'unavailable', reason: 'no document is present in this realm' }
       }
-      if (root.visibilityState !== undefined && root.visibilityState !== 'visible') {
-        return {
-          status: 'unavailable',
-          reason: 'this tab is in the background; bring the DSH window to the front and retry',
-        }
-      }
       return undefined
+    }
+
+    /** Whether the page was visible when an op ran; absent where the platform omits it. */
+    function visibleNow() {
+      const state = doc()?.visibilityState
+      return state === undefined ? undefined : state === 'visible'
+    }
+
+    /**
+     * Try to bring the DSH window forward, and report whether it worked.
+     *
+     * Best effort and never a precondition: a background page may call
+     * `window.focus()`, and most browsers ignore it while an Electron window
+     * usually honours it. The result is reported rather than assumed, so the
+     * model can say "switch to DSH" instead of guessing.
+     *
+     * @returns `{ attempted, visible }` — what was tried and what is true after.
+     */
+    async function revealWindow() {
+      const root = doc()
+      if (root === undefined || visibleNow() === true) return { attempted: false, visible: visibleNow() }
+      const view = root.defaultView
+      let attempted = false
+      if (typeof view?.focus === 'function') {
+        attempted = true
+        try {
+          view.focus()
+        } catch {
+          // A refused focus call is not an error; it is the common outcome.
+        }
+        // Give the platform a turn to act on it before reading the result back.
+        await new Promise((resolve) => setTimeout(resolve, 60))
+      }
+      return { attempted, visible: visibleNow() }
     }
 
     /** The slot ledger rows for one key, normalized and ordered. */
@@ -503,6 +546,10 @@ window.__ModuleLoader__.load({
       const rightbar = services?.sidebarRight
       return {
         status: 'ok',
+        // Reported so a caller knows whether a screenshot taken now would show
+        // the result. Never a refusal: the state below is equally true while
+        // hidden, and the user simply has to switch to DSH to see it.
+        visible: visibleNow(),
         modal: modal === undefined ? null : (modal.getAttribute?.('data-shortcut-modal') ?? 'other'),
         settings: { open: dialog !== null, section },
         main: { active: panelInfo?.activePanelId ?? null },
@@ -541,6 +588,7 @@ window.__ModuleLoader__.load({
         .filter((key) => typeof key === 'string' && key !== '')
       return {
         status: 'ok',
+        visible: state.visible,
         modal: state.modal,
         settings: { open: state.settings.open, section: state.settings.section, sections: ledgerRows(services, 'settings.section') },
         main: {
@@ -679,57 +727,80 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * Open one surface. Split from the `ui.open` entry so the entry can try to
+     * reveal the window without wrapping every branch in that concern.
+     *
+     * @param services - the live Client services.
+     * @param args - the action's arguments.
+     * @param target - `settings`, `main` or `rightbar`.
+     * @returns the action's result envelope.
+     */
+    async function openTarget(services, args, target) {
+      if (target === 'main') {
+        if (typeof args.id !== 'string' || args.id === '') {
+          return { status: 'error', target, reason: 'ui.open target "main" needs a non-empty id' }
+        }
+        return openMainPanel(services, args.id)
+      }
+      if (target === 'rightbar') {
+        const hasKind = typeof args.kind === 'string' && args.kind !== ''
+        const hasAddress = typeof args.address === 'string' && args.address !== ''
+        if (!hasKind && !hasAddress) {
+          return { status: 'error', target, reason: 'ui.open target "rightbar" needs either kind or address' }
+        }
+        return openRightbarTab(services, args)
+      }
+      if (target !== 'settings') {
+        return { status: 'error', reason: `unknown ui.open target "${String(target)}"` }
+      }
+      const section = typeof args.section === 'string' && args.section !== '' ? args.section : undefined
+      if (section !== undefined) {
+        const rows = ledgerRows(services, 'settings.section')
+        if (!rows.some((row) => row.id === section)) {
+          // Refused before any click, so a typo cannot open the dialog on the
+          // wrong page and then report a failure the user has to undo.
+          return {
+            status: 'error', target, reason: `no settings section "${section}" is registered in this interface`,
+            candidates: candidatesFor(rows, section),
+          }
+        }
+      }
+      const opened = await openSettingsDialog(services)
+      if (!opened.ok) return { status: 'error', target, reason: opened.reason, verified: false, tried: opened.tried }
+      if (section === undefined) {
+        return { status: 'ok', target, how: opened.how, verified: true }
+      }
+      const selected = await selectSettingsSection(services, section)
+      if (!selected.ok) {
+        return { status: 'error', target, reason: selected.reason, candidates: selected.candidates, verified: false }
+      }
+      return {
+        status: 'ok',
+        target,
+        resolved: { section: selected.section },
+        how: opened.how === 'noop' ? 'noop' : opened.how,
+        verified: true,
+      }
+    }
+
     /** Every ui.* operation, in the same shape as `OPS`. */
     const uiOps = {
       'ui.list': (services) => readUiList(services),
       'ui.state': (services) => readUiState(services),
       'ui.open': async (services, args) => {
         const target = args.target
-        if (target === 'main') {
-          if (typeof args.id !== 'string' || args.id === '') {
-            return { status: 'error', target, reason: 'ui.open target "main" needs a non-empty id' }
-          }
-          return openMainPanel(services, args.id)
+        // Bringing the window forward is an ATTEMPT, not a precondition. The
+        // state change below happens either way; this only improves the odds that
+        // the user sees it without switching manually, and its result is reported
+        // rather than assumed.
+        const revealed = await revealWindow()
+        const outcome = await openTarget(services, args, target)
+        if (outcome.status === 'ok' && revealed.visible !== undefined) outcome.visible = revealed.visible
+        if (outcome.status === 'ok' && revealed.visible === false) {
+          outcome.hint = 'the page changed while DSH was in the background; switch to it to see the result'
         }
-        if (target === 'rightbar') {
-          const hasKind = typeof args.kind === 'string' && args.kind !== ''
-          const hasAddress = typeof args.address === 'string' && args.address !== ''
-          if (!hasKind && !hasAddress) {
-            return { status: 'error', target, reason: 'ui.open target "rightbar" needs either kind or address' }
-          }
-          return openRightbarTab(services, args)
-        }
-        if (target !== 'settings') {
-          return { status: 'error', reason: `unknown ui.open target "${String(target)}"` }
-        }
-        const section = typeof args.section === 'string' && args.section !== '' ? args.section : undefined
-        if (section !== undefined) {
-          const rows = ledgerRows(services, 'settings.section')
-          if (!rows.some((row) => row.id === section)) {
-            // Refused before any click, so a typo cannot open the dialog on the
-            // wrong page and then report a failure the user has to undo.
-            return {
-              status: 'error', target, reason: `no settings section "${section}" is registered in this interface`,
-              candidates: candidatesFor(rows, section),
-            }
-          }
-        }
-        const opened = await openSettingsDialog(services)
-        if (!opened.ok) return { status: 'error', target, reason: opened.reason, verified: false }
-        if (section === undefined) {
-          return { status: 'ok', target, how: opened.how, verified: true }
-        }
-        const selected = await selectSettingsSection(services, section)
-        if (!selected.ok) {
-          return { status: 'error', target, reason: selected.reason, candidates: selected.candidates, verified: false }
-        }
-        return {
-          status: 'ok',
-          target,
-          resolved: { section: selected.section },
-          how: opened.how === 'noop' ? 'noop' : opened.how,
-          verified: true,
-        }
+        return outcome
       },
       'ui.close': async (_services, args) => {
         if (args.target === 'modal' || args.target === 'settings') return closeSettingsDialog()
