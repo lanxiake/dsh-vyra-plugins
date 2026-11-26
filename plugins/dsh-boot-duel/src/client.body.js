@@ -85,10 +85,49 @@ window.__ModuleLoader__.load({
         'settings.lede': '每次打开 Web 界面先打一局火柴人，打完接着上班。',
         'settings.bindsNote': '点键位再按想要的键即可改绑。Esc 取消。',
         'settings.pressKey': '按新键…',
+        // The control rail beside the fight, and the bind names in both panels.
+        // They were hardcoded Chinese, so an English host showed a Chinese rail
+        // under an English settings page.
+        'rail.move': '移动',
+        'rail.jab': '直拳',
+        'rail.hook': '摆拳',
+        'rail.kick': '踢击',
+        'rail.uppercut': '上勾',
+        'rail.sweep': '扫腿',
+        'rail.slide': '滑铲',
+        'rail.block': '格挡',
+        'rail.crouch': '下蹲',
+        'rail.retreat': '后跳',
+        'rail.jump': '跳跃',
+        'rail.air': '空袭',
+        'rail.airKeys': '空中 {a}/{b}',
+        'rail.special': '大招',
+        'rail.skip': '跳过',
+        'bind.left': '左移',
+        'bind.right': '右移',
+        'bind.jump': '跳跃',
+        'bind.jab': '直拳',
+        'bind.hook': '摆拳',
+        'bind.kick': '踢击',
+        'bind.uppercut': '上勾',
+        'bind.sweep': '扫腿',
+        'bind.slide': '滑铲',
+        'bind.block': '格挡',
+        'bind.crouch': '下蹲',
+        'bind.retreat': '后跳',
+        'bind.special': '大招',
+        'key.space': '空格',
+        'key.shiftLeft': '左Shift',
+        'key.shiftRight': '右Shift',
+        'key.enter': '回车',
+        'meter.label': '气',
+        'hud.mid': '对 决',
         'special.name': '破 军',
         'special.ready': '气已满 · 按 U 放大招',
         'special.locked': '气 {n}%',
         'special.hint': 'U',
+        'special.windup': '起势',
+        'special.landed': '命中',
         'start.button': '开始',
         'start.hint': '按 Enter 开始',
         'start.sub': '摆好架势，按下开始再出手',
@@ -127,10 +166,46 @@ window.__ModuleLoader__.load({
         'settings.lede': 'A one-round stick-figure duel before the home page loads, then back to work.',
         'settings.bindsNote': 'Click a key, then press the one you want. Esc cancels.',
         'settings.pressKey': 'Press a key…',
+        'rail.move': 'Move',
+        'rail.jab': 'Jab',
+        'rail.hook': 'Hook',
+        'rail.kick': 'Kick',
+        'rail.uppercut': 'Uppercut',
+        'rail.sweep': 'Sweep',
+        'rail.slide': 'Slide',
+        'rail.block': 'Block',
+        'rail.crouch': 'Crouch',
+        'rail.retreat': 'Back-hop',
+        'rail.jump': 'Jump',
+        'rail.air': 'Air',
+        'rail.airKeys': 'Air {a}/{b}',
+        'rail.special': 'Super',
+        'rail.skip': 'Skip',
+        'bind.left': 'Left',
+        'bind.right': 'Right',
+        'bind.jump': 'Jump',
+        'bind.jab': 'Jab',
+        'bind.hook': 'Hook',
+        'bind.kick': 'Kick',
+        'bind.uppercut': 'Uppercut',
+        'bind.sweep': 'Sweep',
+        'bind.slide': 'Slide',
+        'bind.block': 'Block',
+        'bind.crouch': 'Crouch',
+        'bind.retreat': 'Back-hop',
+        'bind.special': 'Super',
+        'key.space': 'Space',
+        'key.shiftLeft': 'L-Shift',
+        'key.shiftRight': 'R-Shift',
+        'key.enter': 'Enter',
+        'meter.label': 'Qi',
+        'hud.mid': 'Duel',
         'special.name': 'Rend',
         'special.ready': 'Qi full · press U',
         'special.locked': 'Qi {n}%',
         'special.hint': 'U',
+        'special.windup': 'Windup',
+        'special.landed': 'Impact',
         'start.button': 'Begin',
         'start.hint': 'Press Enter to begin',
         'start.sub': 'Take your stance — the fight starts on your word',
@@ -151,8 +226,11 @@ window.__ModuleLoader__.load({
     }
 
     let applyContext = null
-    let activeLocale = 'en'
+    let activeLocale = 'zh'
     let translated = null
+
+    /** Components that must repaint when the host language changes. */
+    const localeListeners = new Set()
 
     function ctxGet(name) {
       try {
@@ -163,32 +241,81 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Pick the dictionary from the host locale; fall back to English.
-     * `LocaleRuntime.getLocale()` returns `{ active, locales, revision }`, so
-     * the language id is `snapshot.active` — reading `id`/`locale` off it is
-     * what silently pinned the UI to English.
+     * Pick the dictionary from the host locale.
+     *
+     * Chinese is the default, and that is deliberate: the plugin is written in
+     * Chinese, its stories are Chinese, and a host that never hands us a
+     * locale service must not turn 「开机动画」into 「Opening duel」for someone
+     * who reads Chinese. English is chosen only when the host or the page says
+     * so — an explicit `en` — never as a fallback for "unknown".
      */
     function pickLocale() {
       try {
         const locale = ctxGet('locale')
-        if (!locale) return 'en'
-        const snapshot = typeof locale.getLocale === 'function' ? locale.getLocale() : null
-        const id = snapshot?.active ?? snapshot?.id ?? snapshot
-        return typeof id === 'string' && id.toLowerCase().startsWith('zh') ? 'zh' : 'en'
-      } catch {
-        return 'en'
+        if (locale) {
+          // `LocaleRuntime.getLocale()` returns `{ active, locales, revision }`;
+          // newer builds also expose `getSnapshot()`. Both carry `active`.
+          const snapshot = typeof locale.getSnapshot === 'function'
+            ? locale.getSnapshot()
+            : typeof locale.getLocale === 'function' ? locale.getLocale() : null
+          const id = snapshot?.active ?? snapshot?.id ?? snapshot
+          if (typeof id === 'string' && id !== '') {
+            return id.toLowerCase().startsWith('en') ? 'en' : 'zh'
+          }
+        }
+      } catch { /* fall through to the page language */ }
+      try {
+        const lang = document?.documentElement?.lang
+        if (typeof lang === 'string' && lang.toLowerCase().startsWith('en')) return 'en'
+      } catch { /* no document: still Chinese */ }
+      return 'zh'
+    }
+
+    /** Repaint every mounted surface after a language switch. */
+    function notifyLocale() {
+      for (const listener of [...localeListeners]) {
+        try { listener() } catch { /* a broken listener must not stop the others */ }
       }
     }
 
-    /** Translate one key; a missing key falls back to English, not to the key. */
-    function t(key) {
+    /** Force a language without a host; the tests use this to check both. */
+    function setLocaleForTest(id) {
+      activeLocale = id === 'en' ? 'en' : 'zh'
+      translated = null
+    }
+
+    /** Swap the host context; the tests drive `pickLocale` through this. */
+    function setContextForTest(ctx) {
+      applyContext = ctx ?? null
+    }
+
+    /** Subscribe a component to language changes for the life of its mount. */
+    function useLocaleTick() {
+      const [, force] = React.useState(0)
+      React.useEffect(() => {
+        const listener = () => force((n) => n + 1)
+        localeListeners.add(listener)
+        return () => { localeListeners.delete(listener) }
+      }, [])
+    }
+
+    /**
+     * Translate one key; a missing key falls back to Chinese, not to the key
+     * and not to English. `{name}` placeholders are filled from `params`.
+     */
+    function t(key, params) {
+      let value = ''
       if (translated) {
         try {
-          const value = translated(key)
-          if (typeof value === 'string' && value !== key) return value
+          const bound = translated(key)
+          if (typeof bound === 'string' && bound !== key) value = bound
         } catch { /* fall through to the bundled dictionary */ }
       }
-      return DICTS[activeLocale]?.[key] ?? DICTS.en[key] ?? ''
+      if (value === '') value = DICTS[activeLocale]?.[key] ?? DICTS.zh[key] ?? ''
+      if (params === undefined) return value
+      return value.replace(/\{(\w+)\}/g, (whole, name) => (
+        params[name] === undefined ? whole : String(params[name])
+      ))
     }
 
     /* --------------------------------------------------------------- styles */
@@ -745,9 +872,11 @@ window.__ModuleLoader__.load({
      * much was just taken off — the read that makes damage feel like damage
      * rather than a width recalculation.
      */
-    function healthBar(kind, label, hp) {
-      const value = Math.max(0, Math.min(100, Math.round(hp)))
-      const low = kind === 'player' && value <= 25 && value > 0
+    function healthBar(kind, label, hp, maxHp) {
+      const max = Number.isFinite(maxHp) && maxHp > 0 ? Math.round(maxHp) : 100
+      const value = Math.max(0, Math.min(max, Math.round(hp)))
+      const low = kind === 'player' && value <= max * 0.25 && value > 0
+      const pct = max === 0 ? 0 : (value / max) * 100
       return React.createElement('div', {
         className: `boot-duel-bar is-${kind}${value <= 0 ? ' is-empty' : ''}${low ? ' is-low' : ''}`,
       },
@@ -755,43 +884,51 @@ window.__ModuleLoader__.load({
           React.createElement('span', {
             className: `boot-duel-bar-label${kind === 'player' ? ' is-player' : ''}`,
           }, label),
-          React.createElement('span', { className: 'boot-duel-bar-hp' }, `${value} / 100`),
+          React.createElement('span', { className: 'boot-duel-bar-hp' }, `${value} / ${max}`),
         ),
         React.createElement('div', {
           className: 'boot-duel-bar-track',
           role: 'progressbar',
           'aria-valuenow': value,
           'aria-valuemin': 0,
-          'aria-valuemax': 100,
+          'aria-valuemax': max,
           'aria-label': label,
         },
-          React.createElement('div', { className: 'boot-duel-bar-ghost', style: { width: `${value}%` } }),
-          React.createElement('div', { className: 'boot-duel-bar-fill', style: { width: `${value}%` } }),
+          React.createElement('div', { className: 'boot-duel-bar-ghost', style: { width: `${pct}%` } }),
+          React.createElement('div', { className: 'boot-duel-bar-fill', style: { width: `${pct}%` } }),
         ),
       )
     }
 
-    /** `[key, label]` rows for the control rail. */
-    const KEY_ROWS = [
-      ['A / D', '移动'],
-      ['J', '直拳'],
-      ['H', '摆拳'],
-      ['K', '踢击'],
-      ['F', '上勾'],
-      ['G', '扫腿'],
-      ['N', '滑铲'],
-      ['L', '格挡'],
-      ['S', '下蹲'],
-      ['Shift', '后跳'],
-      ['空格', '跳跃'],
-      ['空中 J/K', '空袭'],
-      ['U', '大招'],
-      ['Esc', '跳过'],
-    ]
-
-    function controlRail() {
+    /**
+     * `[key, label]` rows for the control rail.
+     *
+     * The key column is whatever the player actually bound, so a rebound jump
+     * does not leave the rail advertising Space. Built at render time for that
+     * reason — a module-level constant would freeze the defaults.
+     */
+    function controlRail(binds) {
+      const list = binds && typeof binds === 'object' ? binds : {}
+      const keyOf = (action) => keyLabel(list[action] || DEFAULT_BINDS[action])
+      const air = t('rail.airKeys', { a: keyOf('jab'), b: keyOf('kick') })
+      const rows = [
+        [`${keyOf('left')} / ${keyOf('right')}`, t('rail.move')],
+        [keyOf('jab'), t('rail.jab')],
+        [keyOf('hook'), t('rail.hook')],
+        [keyOf('kick'), t('rail.kick')],
+        [keyOf('uppercut'), t('rail.uppercut')],
+        [keyOf('sweep'), t('rail.sweep')],
+        [keyOf('slide'), t('rail.slide')],
+        [keyOf('block'), t('rail.block')],
+        [keyOf('crouch'), t('rail.crouch')],
+        [keyOf('retreat'), t('rail.retreat')],
+        [keyOf('jump'), t('rail.jump')],
+        [air, t('rail.air')],
+        [keyOf('special'), t('rail.special')],
+        ['Esc', t('rail.skip')],
+      ]
       return React.createElement('div', { className: 'boot-duel-keys' },
-        KEY_ROWS.map(([key, label]) => React.createElement('span', { key, className: 'boot-duel-key' },
+        rows.map(([key, label]) => React.createElement('span', { key: `${key}-${label}`, className: 'boot-duel-key' },
           React.createElement('b', null, key),
           React.createElement('span', null, label),
         )),
@@ -801,21 +938,22 @@ window.__ModuleLoader__.load({
     /** The qi meter. Full means the finisher is available right now. */
     function qiMeter(meter, specialReady) {
       const value = Math.max(0, Math.min(100, Math.round(meter ?? 0)))
+      const label = t('meter.label')
       return React.createElement('div', {
         className: `boot-duel-meter${specialReady ? ' is-full' : ''}`,
       },
-        React.createElement('span', { className: 'boot-duel-meter-label' }, '气'),
+        React.createElement('span', { className: 'boot-duel-meter-label' }, label),
         React.createElement('div', {
           className: 'boot-duel-meter-track',
           role: 'progressbar',
           'aria-valuenow': value,
           'aria-valuemin': 0,
           'aria-valuemax': 100,
-          'aria-label': '气',
+          'aria-label': label,
         }, React.createElement('div', { className: 'boot-duel-meter-fill', style: { width: `${value}%` } })),
         React.createElement('span', { className: 'boot-duel-meter-key' }, t('special.hint')),
         React.createElement('span', { className: 'boot-duel-meter-tip' },
-          specialReady ? t('special.ready') : t('special.locked').replace('{n}', String(value))),
+          specialReady ? t('special.ready') : t('special.locked', { n: value })),
       )
     }
 
@@ -835,14 +973,28 @@ window.__ModuleLoader__.load({
       block: 'KeyL', crouch: 'KeyS', retreat: 'ShiftLeft', special: 'KeyU',
     }
 
-    /** How a key code is shown on a button. */
+    /**
+     * How a key code is shown. Letter and arrow keys need no translation; the
+     * named ones do, so they are looked up in the dictionary at render time.
+     */
     const KEY_LABEL = {
       KeyA: 'A', KeyB: 'B', KeyC: 'C', KeyD: 'D', KeyE: 'E', KeyF: 'F', KeyG: 'G',
       KeyH: 'H', KeyI: 'I', KeyJ: 'J', KeyK: 'K', KeyL: 'L', KeyM: 'M', KeyN: 'N',
       KeyO: 'O', KeyP: 'P', KeyQ: 'Q', KeyR: 'R', KeyS: 'S', KeyT: 'T', KeyU: 'U',
       KeyV: 'V', KeyW: 'W', KeyX: 'X', KeyY: 'Y', KeyZ: 'Z',
-      Space: '空格', ShiftLeft: '左Shift', ShiftRight: '右Shift',
-      Enter: '回车', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+      ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+    }
+    const KEY_LABEL_KEYS = {
+      Space: 'key.space', ShiftLeft: 'key.shiftLeft', ShiftRight: 'key.shiftRight',
+      Enter: 'key.enter', NumpadEnter: 'key.enter',
+    }
+
+    /** One key code as the player should see it on a button. */
+    function keyLabel(code) {
+      if (typeof code !== 'string' || code === '') return '—'
+      if (KEY_LABEL[code]) return KEY_LABEL[code]
+      if (KEY_LABEL_KEYS[code]) return t(KEY_LABEL_KEYS[code])
+      return code.replace(/^Key/, '')
     }
 
     /**
@@ -861,15 +1013,17 @@ window.__ModuleLoader__.load({
       return null
     }
 
+    /** `[action, dictionary key]` rows for both settings surfaces. */
     const BINDABLE = [
-      ['left', '左移'], ['right', '右移'], ['jump', '跳跃'],
-      ['jab', '直拳'], ['hook', '摆拳'], ['kick', '踢击'],
-      ['uppercut', '上勾'], ['sweep', '扫腿'], ['slide', '滑铲'],
-      ['block', '格挡'], ['crouch', '下蹲'], ['retreat', '后跳'],
-      ['special', '大招'],
+      ['left', 'bind.left'], ['right', 'bind.right'], ['jump', 'bind.jump'],
+      ['jab', 'bind.jab'], ['hook', 'bind.hook'], ['kick', 'bind.kick'],
+      ['uppercut', 'bind.uppercut'], ['sweep', 'bind.sweep'], ['slide', 'bind.slide'],
+      ['block', 'bind.block'], ['crouch', 'bind.crouch'], ['retreat', 'bind.retreat'],
+      ['special', 'bind.special'],
     ]
 
     function SettingsPanel({ onClose, onRestart, audio }) {
+      useLocaleTick()
       const [local, setLocal] = React.useState(settings)
       const [listening, setListening] = React.useState(null)
 
@@ -892,13 +1046,13 @@ window.__ModuleLoader__.load({
 
       const set = (patch) => { const next = { ...local, ...patch }; setLocal(next); updateSettings(patch) }
 
-      const row = (key, label) => React.createElement('label', { key, className: 'boot-duel-set-row' },
-        React.createElement('span', { className: 'boot-duel-set-label' }, label),
+      const row = (key, labelKey) => React.createElement('label', { key, className: 'boot-duel-set-row' },
+        React.createElement('span', { className: 'boot-duel-set-label' }, t(labelKey)),
         React.createElement('button', {
           type: 'button',
           className: `boot-duel-set-bind${listening === key ? ' is-listening' : ''}`,
           onClick: () => setListening(listening === key ? null : key),
-        }, listening === key ? '按下新键…' : (KEY_LABEL[local.binds?.[key]] || KEY_LABEL[DEFAULT_BINDS[key]] || '—')),
+        }, listening === key ? t('settings.pressKey') : keyLabel(local.binds?.[key] || DEFAULT_BINDS[key])),
       )
 
       return React.createElement('div', {
@@ -975,6 +1129,7 @@ window.__ModuleLoader__.load({
      * mounted, because "off" is one of the things it can set.
      */
     function HostSettingsSection() {
+      useLocaleTick()
       const [local, setLocal] = React.useState(settings)
       /** The action waiting for a new key, or null. */
       const [listening, setListening] = React.useState(null)
@@ -1038,18 +1193,18 @@ window.__ModuleLoader__.load({
 
         React.createElement('div', { className: 'boot-duel-host-section-head' }, t('settings.binds')),
         React.createElement('div', { className: 'boot-duel-host-binds' },
-          BINDABLE.map(([key, label]) => React.createElement('label', {
+          BINDABLE.map(([key, labelKey]) => React.createElement('label', {
             key,
             className: 'boot-duel-host-bind',
           },
-            React.createElement('span', { className: 'boot-duel-host-bind-label' }, label),
+            React.createElement('span', { className: 'boot-duel-host-bind-label' }, t(labelKey)),
             React.createElement('button', {
               type: 'button',
               className: `boot-duel-set-bind${listening === key ? ' is-listening' : ''}`,
               onClick: () => setListening(listening === key ? null : key),
             }, listening === key
               ? t('settings.pressKey')
-              : (KEY_LABEL[local.binds?.[key]] || KEY_LABEL[DEFAULT_BINDS[key]] || '—')),
+              : keyLabel(local.binds?.[key] || DEFAULT_BINDS[key])),
           ))),
 
         React.createElement('div', { className: 'boot-duel-host-actions' },
@@ -1073,6 +1228,7 @@ window.__ModuleLoader__.load({
     }
 
     function BootDuel() {
+      useLocaleTick()
       const [snapshot, setSnapshot] = React.useState(null)
       /** Settings panel visibility. */
       const [showSettings, setShowSettings] = React.useState(false)
@@ -1109,6 +1265,8 @@ window.__ModuleLoader__.load({
       const opacity = fading ? 0 : (snapshotValue?.fadeOpacity ?? 1)
       const playerHp = snapshotValue?.player.hp ?? 100
       const enemyHp = snapshotValue?.enemy.hp ?? 100
+      const playerMax = snapshotValue?.player.maxHp ?? 100
+      const enemyMax = snapshotValue?.enemy.maxHp ?? 100
 
       const toggleMute = () => {
         const engine = engineRef.current
@@ -1126,6 +1284,11 @@ window.__ModuleLoader__.load({
       }
 
       const stateLabel = isReady ? t('state.ready') : inOutro ? t('state.ko') : t('state.fight')
+      // The rival's name comes from the round's story, so the health bar and
+      // the speech bubble agree: this round is against 产品 / 后端 / 测试, not
+      // against a generic "opponent".
+      const rivalName = snapshotValue?.cast?.rival || t('roster.enemy')
+      const youName = snapshotValue?.cast?.you || t('roster.you')
 
       return React.createElement('div', {
         className: 'boot-duel-layer',
@@ -1140,18 +1303,18 @@ window.__ModuleLoader__.load({
 
         React.createElement('div', { className: 'boot-duel-hud' },
           React.createElement('div', { className: 'boot-duel-bars' },
-            healthBar('player', t('roster.you'), playerHp),
+            healthBar('player', youName, playerHp, playerMax),
             React.createElement('div', { className: 'boot-duel-mid' },
-              React.createElement('span', { className: 'boot-duel-mid-mark' }, '对 决'),
+              React.createElement('span', { className: 'boot-duel-mid-mark' }, t('hud.mid')),
               React.createElement('span', { className: 'boot-duel-mid-state' }, stateLabel),
             ),
-            healthBar('enemy', t('roster.enemy'), enemyHp),
+            healthBar('enemy', rivalName, enemyHp, enemyMax),
           ),
           qiMeter(snapshotValue?.meter ?? 0, Boolean(snapshotValue?.specialReady)),
         ),
 
         React.createElement('div', { className: 'boot-duel-hints' },
-          controlRail(),
+          controlRail(settings.binds),
           React.createElement('span', { className: 'boot-duel-controls' },
             React.createElement('button', {
               type: 'button',
@@ -1212,7 +1375,7 @@ window.__ModuleLoader__.load({
           ? React.createElement('div', { className: 'boot-duel-special' },
             React.createElement('span', { className: 'boot-duel-special-name' }, t('special.name')),
             React.createElement('span', { className: 'boot-duel-special-sub' },
-              snapshotValue.special.beat === 'landed' ? '命中' : '起势'),
+              snapshotValue.special.beat === 'landed' ? t('special.landed') : t('special.windup')),
           )
           : null,
 
@@ -1490,18 +1653,26 @@ window.__ModuleLoader__.load({
 
     function apply(ctx) {
       applyContext = ctx
-      activeLocale = pickLocale()
-      try {
-        const locale = ctxGet('locale')
-        if (locale && typeof locale.bind === 'function') translated = locale.bind(NAMESPACE)
-      } catch { /* the bundled dictionaries are enough */ }
 
-      // Re-read the language on a switch so the HUD follows the host locale.
+      /** Re-read the language, and repaint every mounted surface. */
+      function syncLocale() {
+        activeLocale = pickLocale()
+        try {
+          const locale = ctxGet('locale')
+          translated = locale && typeof locale.bind === 'function' ? locale.bind(NAMESPACE) : null
+        } catch { /* the bundled dictionaries are enough */ }
+        notifyLocale()
+      }
+      syncLocale()
+
+      // Re-read the language on a switch so the HUD and the settings sections
+      // follow the host locale. `subscribe` is the documented hook; a host
+      // without it keeps the boot-time language.
       try {
         const locale = ctxGet('locale')
         if (locale && typeof locale.subscribe === 'function') {
           ctx.effect(() => {
-            const off = locale.subscribe(() => { activeLocale = pickLocale() })
+            const off = locale.subscribe(syncLocale)
             return () => { try { off?.() } catch { /* ignore */ } }
           }, 'boot-duel: locale changes')
         }
@@ -1564,10 +1735,15 @@ ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
     }
 
     exports.apply = apply
-    exports.inject = ['slots']
+    // `locale` is declared so the settings-page label is translated and the
+    // plugin is told when the user switches language. Without it the host still
+    // mounts the plugin, but every label Freezes at boot time — which is how
+    // the settings section ended up stuck in one language.
+    exports.inject = ['slots', 'locale']
     exports.__test = {
       DICTS, CSS, SLOT, ENTRY_ID, ENTRY_ORDER, DEFAULT_CONFIG, GAME_CODES,
-      CONFIG_URL, STYLE_ID, pickLocale, isTypingTarget,
+      CONFIG_URL, STYLE_ID, pickLocale, isTypingTarget, keyLabel, t,
+      setLocaleForTest, __setContext: setContextForTest,
     }
     return module.exports
   },

@@ -410,7 +410,10 @@ function makeCtx(captured) {
 test('applying the real bundle registers the overlay and injects its own stylesheet', () => {
   const { exports, captured } = runBundle()
   assert.equal(typeof exports.apply, 'function')
-  assert.equal(JSON.stringify(exports.inject), JSON.stringify(['slots']))
+  // `locale` is a declared dependency: the settings-page label is translated by
+  // the host's own binder, and the plugin must be told when the user switches
+  // language. Without it every label freezes at boot time.
+  assert.equal(JSON.stringify(exports.inject), JSON.stringify(['slots', 'locale']))
 
   exports.apply(makeCtx(captured))
 
@@ -483,10 +486,46 @@ test('isTypingTarget recognises inputs, textareas, selects and editable nodes', 
   assert.equal(isTypingTarget(null), false)
 })
 
-test('pickLocale reads the snapshot active language', () => {
+test('pickLocale reads the snapshot active language, and defaults to Chinese', () => {
   const { exports } = runBundle()
-  // The default without a host locale is English.
-  assert.equal(exports.__test.pickLocale(), 'en')
+  // The plugin is written in Chinese, its stories are Chinese, and its readers
+  // are Chinese. "No locale service" must mean Chinese, not English: that
+  // fallback is what turned 「开机动画」into "Opening duel" on the settings page.
+  assert.equal(exports.__test.pickLocale(), 'zh')
+
+  // A host that says `en` gets English; anything else gets Chinese.
+  for (const [active, expected] of [['en', 'en'], ['en-US', 'en'], ['zh', 'zh'], ['zh-CN', 'zh'], ['ja', 'zh']]) {
+    const ctx = {
+      get: (name) => (name === 'locale' ? { getLocale: () => ({ active, revision: 1 }) } : undefined),
+    }
+    exports.__test.__setContext(ctx)
+    assert.equal(exports.__test.pickLocale(), expected, `active=${active}`)
+  }
+  exports.__test.__setContext(null)
+})
+
+test('a missing dictionary entry falls back to Chinese, never to a raw key', () => {
+  const { exports } = runBundle()
+  exports.__test.setLocaleForTest('en')
+  assert.equal(exports.__test.t('rail.jump'), 'Jump')
+  assert.equal(exports.__test.t('not.a.key'), '', 'unknown keys resolve to empty, not the key')
+  exports.__test.setLocaleForTest('zh')
+  assert.equal(exports.__test.t('rail.jump'), '跳跃')
+  // Placeholders are filled rather than left as `{n}`.
+  assert.equal(exports.__test.t('special.locked', { n: 42 }), '气 42%')
+})
+
+test('the key labels follow the language and the player bindings', () => {
+  const { exports } = runBundle()
+  const { keyLabel } = exports.__test
+  exports.__test.setLocaleForTest('zh')
+  assert.equal(keyLabel('KeyJ'), 'J')
+  assert.equal(keyLabel('Space'), '空格')
+  assert.equal(keyLabel('ShiftLeft'), '左Shift')
+  exports.__test.setLocaleForTest('en')
+  assert.equal(keyLabel('Space'), 'Space')
+  assert.equal(keyLabel('ShiftLeft'), 'L-Shift')
+  exports.__test.setLocaleForTest('zh')
 })
 
 test('the bundle exposes the documented contract for tests', () => {

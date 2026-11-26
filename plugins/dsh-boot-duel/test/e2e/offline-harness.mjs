@@ -143,7 +143,7 @@ async function boot({ activeLocale = 'zh-CN' } = {}) {
     } catch (error) {
       applyError = error.message
     }
-    const entry = window.__dshBoot.registrations[0]
+    const entry = window.__dshBoot.registrations.find((e) => e.reg.name === 'shell.overlay') ?? window.__dshBoot.registrations[0]
     if (!entry) return { ok: false, reason: applyError || 'no overlay registered' }
     const seat = document.querySelector('[data-shell-overlay]')
     window.ReactDOM.createRoot(seat).render(window.React.createElement(entry.component))

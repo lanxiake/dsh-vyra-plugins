@@ -1148,17 +1148,22 @@ window.__ModuleLoader__.load({
     /**
      * The two fighters talk.
      *
-     * Two people, one office, an argument that has been building for months. The
+     * Two people, one project, an argument that has been building for weeks. The
      * barks are what make the fight worth watching, and their shape is what makes
      * it read as an ARGUMENT rather than as a collection of quips:
      *
      *   - **every line answers the last one.** Consecutive lines should sound like
-     *     the same conversation: a demand, a refusal, a "你怎么说话的", a retreat.
-     *   - **the opponent is never a villain.** The joke is at the situation's
-     *     expense, not at a person's — the boss believes he is being reasonable,
-     *     the client believes he is being specific, and that is what is funny.
+     *     the same conversation: a demand, a deflection, a "你怎么不说清楚", a
+     *     retreat.
+     *   - **nobody is the villain.** The joke is at the *project's* expense, not at
+     *     a person's — the other side believes it is being helpful, and that is
+     *     what is funny. Both fighters get their turn at being roasted.
      *   - **it escalates, then lands warm.** The opening is polite. The middle is
-     *     the fight. The last line is a truce.
+     *     the fight. The last line is a truce: a fix, a compromise, a cup of tea.
+     *
+     * The three scenes are deliberately generic — 改需求 / 联调 / 上线 — because
+     * every project has all three, and none of them requires a villain. The roles
+     * are "you" and "the other side of the table", whoever that happens to be.
      *
      * Beats fire on game events, not on a timer, so a line arrives on the beat that
      * caused it: a combo line only when there is a combo, a retreat line only when
@@ -1179,248 +1184,296 @@ window.__ModuleLoader__.load({
 
     const STORIES = [
       {
-        id: 'boss',
-        title: '领导',
+        id: 'spec',
+        title: '改需求',
         you: '你',
-        rival: '领导',
+        rival: '产品',
         beats: {
           open: [
-            ['rival', '来我办公室一趟。', 'smooth'],
-            ['you', '……现在？', 'flat'],
-            ['rival', '就现在，坐。', 'smooth'],
-            ['you', '我站着就行。', 'flat'],
-            ['rival', '坐嘛，别紧张。', 'cheery'],
-            ['you', '您先说事。', 'dry'],
-            ['rival', '这个项目，我们得聊聊。', 'smooth'],
-            ['you', '我猜到了。', 'flat'],
+            ['rival', '有个小需求，特别简单。', 'airy'],
+            ['you', '多小？', 'flat'],
+            ['rival', '就加个按钮。', 'cheery'],
+            ['you', '点一下会怎样？', 'flat'],
+            ['rival', '跳到一个页面。', 'airy'],
+            ['you', '那个页面做完了吗？', 'dry'],
+            ['rival', '……这不就是你要做的吗。', 'cheery'],
+            ['you', '所以是小需求，还是小按钮？', 'flat'],
+            ['rival', '先做出来，我们再对。', 'smooth'],
+            ['you', '每次都是先做出来。', 'tired'],
           ],
           chain: [
-            ['you', '我上周说的风险，就是这个。', 'flat'],
-            ['rival', '当时情况不一样。', 'smooth'],
-            ['you', '情况哪儿不一样？', 'dry'],
-            ['rival', '你不要这个态度。', 'hard'],
-            ['you', '我什么态度？', 'flat'],
-            ['rival', '我在跟你讨论问题。', 'hard'],
-            ['you', '我也在跟您讨论问题。', 'dry'],
-            ['rival', '行，你说。', 'hard'],
-            ['you', '我说完了，您没听。', 'flat'],
+            ['you', '这个按钮放哪，你总得说吧。', 'flat'],
+            ['rival', '你先按你的理解做。', 'airy'],
+            ['you', '我的理解是放首页最上面。', 'dry'],
+            ['rival', '不行，太显眼了。', 'hard'],
+            ['you', '那你说放哪。', 'flat'],
+            ['rival', '你觉得呢？', 'cheery'],
+            ['you', '我觉得你应该先说。', 'dry'],
+            ['rival', '我这不是在跟你商量吗。', 'smooth'],
+            ['you', '你这叫让我猜。', 'flat'],
+            ['rival', '大家都是为了把东西做好。', 'cheery'],
+            ['you', '那就先把「做好」定义一下。', 'dry'],
+            ['rival', '……', 'tired'],
+            ['you', '看，又卡住了。', 'flat'],
           ],
           guard: [
-            ['you', '这个锅我不背。', 'flat'],
-            ['rival', '谁跟你说是锅了？', 'hard'],
-            ['you', '您刚才那句就是。', 'dry'],
-            ['rival', '我是说流程上可以优化。', 'smooth'],
-            ['you', '流程没错，是排期错了。', 'flat'],
-            ['rival', '排期是大家一起定的。', 'smooth'],
-            ['you', '定的时候我不在。', 'dry'],
+            ['you', '这个真做不了。', 'flat'],
+            ['rival', '为什么做不了？', 'hard'],
+            ['you', '点一下跳三个页面，逻辑说不通。', 'dry'],
+            ['rival', '那改两个页面。', 'airy'],
+            ['you', '为什么是两个？', 'flat'],
+            ['rival', '感觉差不多。', 'cheery'],
+            ['you', '感觉不是需求文档。', 'dry'],
+            ['rival', '文档可以后补嘛。', 'airy'],
+            ['you', '上线了也能后补吗。', 'flat'],
           ],
           hit: [
-            ['you', '这个需求，两周做不完。', 'flat'],
-            ['rival', '别人都能做完。', 'hard'],
-            ['you', '哪个别人？', 'dry'],
-            ['rival', '你不要总跟别人比。', 'hard'],
-            ['you', '那您也别总拿别人压我。', 'flat'],
-            ['rival', '我这是给你机会。', 'smooth'],
-            ['you', '这机会我谢谢您。', 'dry'],
-            ['rival', '年轻人要有点冲劲。', 'cheery'],
-            ['you', '我冲了，您看见了吗。', 'flat'],
-          ],
-          take: [
-            ['you', '行，我加班。', 'tired'],
-            ['rival', '这就对了嘛。', 'cheery'],
-            ['you', '加班费怎么算？', 'flat'],
-            ['rival', '谈钱就俗了。', 'smooth'],
-            ['you', '那我就俗一点。', 'dry'],
-            ['rival', '年底绩效我给你考虑。', 'smooth'],
-            ['you', '这话我去年也听过。', 'tired'],
-            ['rival', '今年不一样。', 'cheery'],
-          ],
-          super: [
-            ['you', '这个需求，我不接。', 'hard'],
-            ['rival', '你说什么？', 'surprised'],
-            ['you', '我说，我不接。', 'hard'],
-            ['rival', '你想清楚了？', 'shaken'],
-          ],
-          ko: [
-            ['rival', '……坐下说吧。', 'beaten'],
-            ['you', '好，我坐。', 'warm'],
-            ['rival', '你想怎么弄？', 'beaten'],
-            ['you', '先把范围砍一半。', 'warm'],
-          ],
-          taunt: [
-            ['rival', '这不是我一个人的意思。', 'smooth'],
-            ['rival', '上面压下来的。', 'smooth'],
-            ['rival', '我也是为你好。', 'smooth'],
-            ['rival', '你要学会换位思考。', 'smooth'],
-            ['rival', '我们是一个团队。', 'cheery'],
-            ['rival', '这点小事都扛不住？', 'hard'],
-            ['rival', '我以前比你苦多了。', 'smooth'],
-            ['rival', '别把情绪带到工作里。', 'hard'],
-            ['rival', '你先执行，有问题再说。', 'smooth'],
-          ],
-        },
-      },
-
-      {
-        id: 'client',
-        title: '客户',
-        you: '你',
-        rival: '甲方',
-        beats: {
-          open: [
-            ['rival', '在吗？', 'airy'],
-            ['you', '在的。', 'flat'],
-            ['rival', '有个小想法。', 'airy'],
-            ['you', '您说。', 'flat'],
-            ['rival', '感觉还是不太对。', 'airy'],
-            ['you', '……哪里不对？', 'tired'],
-            ['rival', '说不上来，就是不对。', 'airy'],
-            ['you', '那我先改改看。', 'flat'],
-          ],
-          chain: [
-            ['you', '这是第七稿。', 'flat'],
-            ['rival', '辛苦了，但方向还是差一点。', 'airy'],
-            ['you', '您上次说这个方向对的。', 'dry'],
-            ['rival', '我说的是上个版本。', 'airy'],
-            ['you', '上个版本您也说不对。', 'flat'],
-            ['rival', '那是我表达得不清楚。', 'airy'],
-            ['you', '是我理解得不够。', 'dry'],
-            ['rival', '你能这么想就好。', 'cheery'],
-            ['you', '……', 'tired'],
-          ],
-          guard: [
-            ['you', '这个改不了。', 'flat'],
-            ['rival', '为什么改不了？', 'hard'],
-            ['you', '技术上做不到。', 'dry'],
-            ['rival', '别人能做，你做不到？', 'hard'],
-            ['you', '哪个别人？', 'flat'],
-            ['rival', '我看人家网站就是这样。', 'airy'],
-            ['you', '那您找人家做。', 'dry'],
-          ],
-          hit: [
-            ['you', '这个需求加钱。', 'flat'],
-            ['rival', '合同里写了的。', 'hard'],
-            ['you', '合同里没写这个。', 'dry'],
-            ['rival', '合同里写了「等」。', 'airy'],
-            ['you', '那个「等」是指配色。', 'flat'],
-            ['rival', '都一样嘛。', 'cheery'],
-            ['you', '不一样。', 'dry'],
-            ['rival', '你这个人怎么这么较真。', 'hard'],
+            ['you', '这个需求上周刚改过。', 'flat'],
+            ['rival', '用户反馈嘛。', 'airy'],
+            ['you', '哪个用户？', 'dry'],
+            ['rival', '就……用户。', 'cheery'],
+            ['you', '你吧。', 'flat'],
+            ['rival', '我代表用户。', 'smooth'],
+            ['you', '那我代表加班。', 'dry'],
+            ['rival', '就调一下顺序，很快的。', 'airy'],
+            ['you', '上次那个「很快的」用了两周。', 'flat'],
+            ['rival', '这次真的快。', 'cheery'],
+            ['you', '上次你也这么说。', 'tired'],
           ],
           take: [
             ['you', '好，我改。', 'tired'],
-            ['rival', '辛苦你了。', 'cheery'],
-            ['you', '什么时候要？', 'flat'],
-            ['rival', '今天下班前。', 'airy'],
-            ['you', '现在四点半。', 'flat'],
-            ['rival', '那你抓紧嘛。', 'cheery'],
-            ['you', '我尽量。', 'tired'],
-            ['rival', '不是尽量，是必须。', 'hard'],
+            ['rival', '辛苦了辛苦了。', 'cheery'],
+            ['you', '改完要保留旧版吗？', 'flat'],
+            ['rival', '不用。', 'airy'],
+            ['you', '那有人要用旧的怎么办？', 'dry'],
+            ['rival', '应该不会吧。', 'cheery'],
+            ['you', '上线第二天就会出现。', 'tired'],
+            ['rival', '到时候再说。', 'smooth'],
+            ['you', '到时候就是我的周末。', 'dry'],
+            ['rival', '相信你的能力。', 'cheery'],
+            ['you', '我更相信你的嘴。', 'flat'],
           ],
           super: [
-            ['you', '这一版，是最后一版。', 'hard'],
-            ['rival', '你这是什么态度？', 'surprised'],
-            ['you', '正常态度。', 'hard'],
-            ['rival', '我要投诉你。', 'shaken'],
+            ['you', '停，我们先对一遍需求。', 'hard'],
+            ['rival', '现在？', 'surprised'],
+            ['you', '就现在，一条一条来。', 'hard'],
+            ['rival', '……行吧。', 'shaken'],
+            ['you', '第一条就说不清楚。', 'hard'],
+            ['rival', '那先跳过第一条。', 'baffled'],
           ],
           ko: [
-            ['rival', '……行吧，就这版。', 'beaten'],
-            ['you', '谢谢。', 'warm'],
-            ['rival', '下次还找你。', 'beaten'],
-            ['you', '下次涨价。', 'warm'],
+            ['rival', '……行，是我没说清楚。', 'beaten'],
+            ['you', '你现在说清楚就行。', 'warm'],
+            ['rival', '那我重新写一版。', 'beaten'],
+            ['you', '写完我们再打。', 'warm'],
           ],
           taunt: [
-            ['rival', '预算就这么多。', 'airy'],
-            ['rival', '你先做着，钱的事再说。', 'airy'],
-            ['rival', '我朋友说这样不好看。', 'airy'],
-            ['rival', '大气一点，但别太贵。', 'airy'],
-            ['rival', '要有设计感，但看不出来设计。', 'airy'],
-            ['rival', '你们专业的，你看着办。', 'cheery'],
-            ['rival', '我老板明天要看。', 'hard'],
-            ['rival', '这个能不能免费带一下？', 'airy'],
-            ['rival', '别急，我不是催你。', 'smooth'],
+            ['rival', '这很简单的。', 'airy'],
+            ['rival', '参考一下那个网站。', 'smooth'],
+            ['rival', '先做一个版本给我看。', 'cheery'],
+            ['rival', '我要那种感觉，你懂的。', 'airy'],
+            ['rival', '不用太完美，能用就行。', 'smooth'],
+            ['rival', '但细节还是要打磨一下。', 'airy'],
+            ['rival', '什么时候能好？', 'hard'],
+            ['rival', '我不是催你。', 'cheery'],
+            ['rival', '就随便问问。', 'smooth'],
+            ['rival', '你怎么不说话了？', 'confused'],
+            ['rival', '这个应该不花时间吧。', 'airy'],
+            ['rival', '我下午还约了人。', 'smooth'],
           ],
         },
       },
 
       {
-        id: 'ceo',
-        title: '老板',
+        id: 'api',
+        title: '联调',
         you: '你',
-        rival: '老板',
+        rival: '后端',
         beats: {
           open: [
-            ['rival', '来来来，坐。', 'cheery'],
-            ['you', '您找我？', 'flat'],
-            ['rival', '聊聊，随便聊聊。', 'cheery'],
-            ['you', '……好。', 'flat'],
-            ['rival', '你觉得公司现在怎么样？', 'smooth'],
-            ['you', '挺忙的。', 'dry'],
-            ['rival', '忙是好事。', 'cheery'],
-            ['you', '是。', 'flat'],
+            ['rival', '接口给你了，看一下。', 'flat'],
+            ['you', '文档呢？', 'dry'],
+            ['rival', '接口就是文档。', 'smooth'],
+            ['you', '字段没注释。', 'flat'],
+            ['rival', '字段名就是注释。', 'cheery'],
+            ['you', 'data2_new 是什么意思？', 'dry'],
+            ['rival', '……就是第二个 data 的新版。', 'smooth'],
+            ['you', '那 data2_old 呢？', 'flat'],
+            ['rival', '你先接，我在改。', 'airy'],
+            ['you', '改完字段名也会变吗？', 'tired'],
           ],
           chain: [
-            ['you', '人手不够。', 'flat'],
-            ['rival', '我们要有创业精神。', 'smooth'],
-            ['you', '创业精神发不出工资。', 'dry'],
-            ['rival', '格局要大一点。', 'hard'],
-            ['you', '我房租也很实际。', 'flat'],
-            ['rival', '你现在是在跟我谈格局？', 'hard'],
-            ['you', '我在跟您谈合同。', 'dry'],
-            ['rival', '合同是死的，人是活的。', 'smooth'],
-            ['you', '人也是要吃饭的。', 'flat'],
+            ['you', '你这个接口返回 500。', 'flat'],
+            ['rival', '那是你传参不对。', 'hard'],
+            ['you', '文档就是这么写的。', 'dry'],
+            ['rival', '文档我更新了。', 'smooth'],
+            ['you', '什么时候更新的？', 'flat'],
+            ['rival', '刚才。', 'cheery'],
+            ['you', '我照着旧的写完了。', 'dry'],
+            ['rival', '那你照新的再改一下。', 'airy'],
+            ['you', '这就是联调的意义对吧。', 'tired'],
+            ['rival', '对，提前发现问题。', 'cheery'],
+            ['you', '提前发现问题的是我。', 'flat'],
           ],
           guard: [
-            ['you', '这个季度的目标不现实。', 'flat'],
-            ['rival', '我们就是要挑战不可能。', 'smooth'],
-            ['you', '那您先说说怎么做。', 'dry'],
-            ['rival', '这不该我问你吗？', 'hard'],
-            ['you', '我问的就是这个。', 'flat'],
-            ['rival', '你要先有想法。', 'smooth'],
-            ['you', '我有，但您不批预算。', 'dry'],
+            ['you', '这块数据是空的。', 'flat'],
+            ['rival', '本地有啊。', 'hard'],
+            ['you', '我在线上看的。', 'dry'],
+            ['rival', '线上环境不一样。', 'smooth'],
+            ['you', '那到底哪个算对？', 'flat'],
+            ['rival', '以线上为准。', 'hard'],
+            ['you', '线上是空的。', 'dry'],
+            ['rival', '那我看看本地。', 'airy'],
+            ['you', '你看吧。', 'flat'],
           ],
           hit: [
-            ['you', '我要涨薪。', 'flat'],
-            ['rival', '公司现在困难。', 'smooth'],
-            ['you', '去年也这么说。', 'dry'],
-            ['rival', '今年是真困难。', 'smooth'],
-            ['you', '那您换车的时候不困难？', 'flat'],
-            ['rival', '那是公司的车。', 'hard'],
-            ['you', '您家人的名字上的。', 'dry'],
-            ['rival', '你这话什么意思？', 'shaken'],
+            ['you', '这个字段会变。', 'flat'],
+            ['rival', '不会变。', 'hard'],
+            ['you', '上次也是这么说的。', 'dry'],
+            ['rival', '上次是特殊情况。', 'smooth'],
+            ['you', '那这次呢？', 'flat'],
+            ['rival', '这次是正常情况。', 'cheery'],
+            ['you', '正常的定义是「会变」吗。', 'dry'],
+            ['rival', '我会通知你的。', 'airy'],
+            ['you', '什么时候通知？', 'flat'],
+            ['rival', '会变的之前。', 'smooth'],
+            ['you', '……那就是不会通知。', 'tired'],
           ],
           take: [
-            ['you', '好，我做。', 'tired'],
-            ['rival', '这才对。', 'cheery'],
-            ['you', '但我要两个人。', 'flat'],
-            ['rival', '先从内部调。', 'smooth'],
-            ['you', '内部没人了。', 'dry'],
-            ['rival', '那就招。', 'smooth'],
-            ['you', '招了三个月了。', 'tired'],
-            ['rival', '再等等，马上就有。', 'cheery'],
+            ['you', '好，我按你说的改。', 'tired'],
+            ['rival', '对，就这样传。', 'cheery'],
+            ['you', '改完还是 500。', 'flat'],
+            ['rival', '那你看看日志。', 'smooth'],
+            ['you', '日志里是你的报错。', 'dry'],
+            ['rival', '那你先按我的思路排查一下。', 'airy'],
+            ['you', '排查完还是你的报错呢？', 'flat'],
+            ['rival', '那就再排查。', 'cheery'],
+            ['you', '我们是在做项目，还是在互相传话。', 'tired'],
+            ['rival', '这叫协作。', 'smooth'],
           ],
           super: [
-            ['you', '我不干了。', 'hard'],
-            ['rival', '你说什么？', 'surprised'],
-            ['you', '我说，我不干了。', 'hard'],
-            ['rival', '……你冷静一下。', 'shaken'],
+            ['you', '把文档补上，我们从头对。', 'hard'],
+            ['rival', '现在？', 'surprised'],
+            ['you', '就现在，一个字段一个字段。', 'hard'],
+            ['rival', '……好吧。', 'shaken'],
+            ['you', '第一个字段。', 'hard'],
+            ['rival', '……这个我也要查一下。', 'baffled'],
           ],
           ko: [
-            ['rival', '……我们再谈谈。', 'beaten'],
-            ['you', '谈什么？', 'warm'],
-            ['rival', '条件。', 'beaten'],
-            ['you', '好，我们谈条件。', 'warm'],
+            ['rival', '……行，文档我补。', 'beaten'],
+            ['you', '早该补了。', 'warm'],
+            ['rival', '下次你先看文档。', 'beaten'],
+            ['you', '下次你先把文档写完。', 'warm'],
           ],
           taunt: [
-            ['rival', '我们是一家人。', 'cheery'],
-            ['rival', '公司就是你们的平台。', 'smooth'],
-            ['rival', '我当年比你还苦。', 'smooth'],
-            ['rival', '要有主人翁意识。', 'cheery'],
-            ['rival', '钱不是最重要的。', 'smooth'],
-            ['rival', '你要看到长期价值。', 'smooth'],
-            ['rival', '我也是从基层做起的。', 'cheery'],
-            ['rival', '年轻人不要怕吃亏。', 'smooth'],
-            ['rival', '这个我记在心里了。', 'smooth'],
+            ['rival', '接口很简单的。', 'airy'],
+            ['rival', '你那边是不是缓存了？', 'smooth'],
+            ['rival', '我这边测是好的。', 'cheery'],
+            ['rival', '你换个网络试试。', 'airy'],
+            ['rival', '这个问题我复现不了。', 'smooth'],
+            ['rival', '你截图看一下。', 'hard'],
+            ['rival', '截图里看不到报文。', 'airy'],
+            ['rival', '那你把报文发我。', 'smooth'],
+            ['rival', '我看了，一切正常。', 'cheery'],
+            ['rival', '是不是你用错了。', 'airy'],
+            ['rival', '文档上写得很清楚。', 'hard'],
+            ['rival', '哪个文档？就是那个文档。', 'smooth'],
+          ],
+        },
+      },
+
+      {
+        id: 'launch',
+        title: '上线',
+        you: '你',
+        rival: '测试',
+        beats: {
+          open: [
+            ['rival', '这个版本有个问题。', 'airy'],
+            ['you', '什么问题？', 'flat'],
+            ['rival', '偶现。', 'airy'],
+            ['you', '怎么复现？', 'dry'],
+            ['rival', '不知道，就是会出现。', 'smooth'],
+            ['you', '出现的时候什么样？', 'flat'],
+            ['rival', '……反正不对。', 'cheery'],
+            ['you', '那我们怎么修？', 'tired'],
+            ['rival', '你们开发最懂了。', 'airy'],
+            ['you', '我们最懂的是它没问题。', 'dry'],
+          ],
+          chain: [
+            ['you', '我按你说的步骤试了十遍。', 'flat'],
+            ['rival', '那可能是环境。', 'airy'],
+            ['you', '同一个环境。', 'dry'],
+            ['rival', '那就是时机。', 'smooth'],
+            ['you', '什么时机？', 'flat'],
+            ['rival', '你手速快一点。', 'cheery'],
+            ['you', '我手速快它就坏？', 'dry'],
+            ['rival', '有可能。', 'airy'],
+            ['you', '那用户手速快了怎么办。', 'flat'],
+            ['rival', '这就是要修的原因嘛。', 'cheery'],
+            ['you', '所以问题是我的手。', 'tired'],
+          ],
+          guard: [
+            ['you', '这个改动不能上。', 'flat'],
+            ['rival', '为什么不能上？', 'hard'],
+            ['you', '影响面太大。', 'dry'],
+            ['rival', '那我怎么验证？', 'airy'],
+            ['you', '验证不了。', 'flat'],
+            ['rival', '验证不了就是没做。', 'hard'],
+            ['you', '验证不了就应该分批上。', 'dry'],
+            ['rival', '我们流程没有分批。', 'smooth'],
+            ['you', '那我们就加一个。', 'flat'],
+          ],
+          hit: [
+            ['you', '这个 bug 老版本就有。', 'flat'],
+            ['rival', '那更要修了。', 'hard'],
+            ['you', '那它就不是这次引入的。', 'dry'],
+            ['rival', '所以你们一直没修？', 'hard'],
+            ['you', '所以这不是这次的问题。', 'flat'],
+            ['rival', '都是问题。', 'airy'],
+            ['you', '但不是一个问题。', 'dry'],
+            ['rival', '你还分得挺细。', 'cheery'],
+            ['you', '我分得细，你测得细一点。', 'flat'],
+          ],
+          take: [
+            ['you', '好，我先加日志。', 'tired'],
+            ['rival', '加日志能修吗？', 'airy'],
+            ['you', '能知道它在哪坏的。', 'flat'],
+            ['rival', '那多久能修好？', 'hard'],
+            ['you', '先知道，再谈修。', 'dry'],
+            ['rival', '上线前能修好吗？', 'smooth'],
+            ['you', '上线时间是谁定的？', 'flat'],
+            ['rival', '不知道，反正不是我们。', 'cheery'],
+            ['you', '那就把这个也一起问问。', 'tired'],
+            ['rival', '问了也没用。', 'smooth'],
+          ],
+          super: [
+            ['you', '这一版先别上，先把它复现出来。', 'hard'],
+            ['rival', '可是时间到了。', 'surprised'],
+            ['you', '复现出来再上，我负责修。', 'hard'],
+            ['rival', '……行，我盯着看。', 'shaken'],
+            ['you', '我们一起看。', 'hard'],
+            ['rival', '好，我给你倒杯水。', 'warm'],
+          ],
+          ko: [
+            ['rival', '……复现了，是那个空值。', 'beaten'],
+            ['you', '好，我改。', 'warm'],
+            ['rival', '这次是我没说清。', 'beaten'],
+            ['you', '下次直接把日志给我。', 'warm'],
+          ],
+          taunt: [
+            ['rival', '我这边没问题。', 'airy'],
+            ['rival', '你重启一下试试。', 'smooth'],
+            ['rival', '清一下缓存。', 'cheery'],
+            ['rival', '我昨天还是好的。', 'airy'],
+            ['rival', '这个功能本来就没人用。', 'smooth'],
+            ['rival', '要不先上了再说。', 'airy'],
+            ['rival', '出了问题可以回滚。', 'cheery'],
+            ['rival', '回滚过一次了。', 'smooth'],
+            ['rival', '那就再回滚一次。', 'airy'],
+            ['rival', '我提的这些都是为项目好。', 'cheery'],
+            ['rival', '你别往心里去。', 'airy'],
+            ['rival', '我不是针对你。', 'smooth'],
           ],
         },
       },
@@ -1451,7 +1504,7 @@ window.__ModuleLoader__.load({
        *
        * Each story's `open` lines are written as an exchange — a demand, a
        * deflection, a push — so they play back in the order they were written.
-       * The set is still shuffled BETWEEN rounds, so two visits do not start the
+       * The set is still rotated BETWEEN rounds, so two visits do not start the
        * same way.
        */
       const openScript = (() => {
@@ -4340,10 +4393,49 @@ window.__ModuleLoader__.load({
         'settings.lede': '每次打开 Web 界面先打一局火柴人，打完接着上班。',
         'settings.bindsNote': '点键位再按想要的键即可改绑。Esc 取消。',
         'settings.pressKey': '按新键…',
+        // The control rail beside the fight, and the bind names in both panels.
+        // They were hardcoded Chinese, so an English host showed a Chinese rail
+        // under an English settings page.
+        'rail.move': '移动',
+        'rail.jab': '直拳',
+        'rail.hook': '摆拳',
+        'rail.kick': '踢击',
+        'rail.uppercut': '上勾',
+        'rail.sweep': '扫腿',
+        'rail.slide': '滑铲',
+        'rail.block': '格挡',
+        'rail.crouch': '下蹲',
+        'rail.retreat': '后跳',
+        'rail.jump': '跳跃',
+        'rail.air': '空袭',
+        'rail.airKeys': '空中 {a}/{b}',
+        'rail.special': '大招',
+        'rail.skip': '跳过',
+        'bind.left': '左移',
+        'bind.right': '右移',
+        'bind.jump': '跳跃',
+        'bind.jab': '直拳',
+        'bind.hook': '摆拳',
+        'bind.kick': '踢击',
+        'bind.uppercut': '上勾',
+        'bind.sweep': '扫腿',
+        'bind.slide': '滑铲',
+        'bind.block': '格挡',
+        'bind.crouch': '下蹲',
+        'bind.retreat': '后跳',
+        'bind.special': '大招',
+        'key.space': '空格',
+        'key.shiftLeft': '左Shift',
+        'key.shiftRight': '右Shift',
+        'key.enter': '回车',
+        'meter.label': '气',
+        'hud.mid': '对 决',
         'special.name': '破 军',
         'special.ready': '气已满 · 按 U 放大招',
         'special.locked': '气 {n}%',
         'special.hint': 'U',
+        'special.windup': '起势',
+        'special.landed': '命中',
         'start.button': '开始',
         'start.hint': '按 Enter 开始',
         'start.sub': '摆好架势，按下开始再出手',
@@ -4382,10 +4474,46 @@ window.__ModuleLoader__.load({
         'settings.lede': 'A one-round stick-figure duel before the home page loads, then back to work.',
         'settings.bindsNote': 'Click a key, then press the one you want. Esc cancels.',
         'settings.pressKey': 'Press a key…',
+        'rail.move': 'Move',
+        'rail.jab': 'Jab',
+        'rail.hook': 'Hook',
+        'rail.kick': 'Kick',
+        'rail.uppercut': 'Uppercut',
+        'rail.sweep': 'Sweep',
+        'rail.slide': 'Slide',
+        'rail.block': 'Block',
+        'rail.crouch': 'Crouch',
+        'rail.retreat': 'Back-hop',
+        'rail.jump': 'Jump',
+        'rail.air': 'Air',
+        'rail.airKeys': 'Air {a}/{b}',
+        'rail.special': 'Super',
+        'rail.skip': 'Skip',
+        'bind.left': 'Left',
+        'bind.right': 'Right',
+        'bind.jump': 'Jump',
+        'bind.jab': 'Jab',
+        'bind.hook': 'Hook',
+        'bind.kick': 'Kick',
+        'bind.uppercut': 'Uppercut',
+        'bind.sweep': 'Sweep',
+        'bind.slide': 'Slide',
+        'bind.block': 'Block',
+        'bind.crouch': 'Crouch',
+        'bind.retreat': 'Back-hop',
+        'bind.special': 'Super',
+        'key.space': 'Space',
+        'key.shiftLeft': 'L-Shift',
+        'key.shiftRight': 'R-Shift',
+        'key.enter': 'Enter',
+        'meter.label': 'Qi',
+        'hud.mid': 'Duel',
         'special.name': 'Rend',
         'special.ready': 'Qi full · press U',
         'special.locked': 'Qi {n}%',
         'special.hint': 'U',
+        'special.windup': 'Windup',
+        'special.landed': 'Impact',
         'start.button': 'Begin',
         'start.hint': 'Press Enter to begin',
         'start.sub': 'Take your stance — the fight starts on your word',
@@ -4406,8 +4534,11 @@ window.__ModuleLoader__.load({
     }
 
     let applyContext = null
-    let activeLocale = 'en'
+    let activeLocale = 'zh'
     let translated = null
+
+    /** Components that must repaint when the host language changes. */
+    const localeListeners = new Set()
 
     function ctxGet(name) {
       try {
@@ -4418,32 +4549,81 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Pick the dictionary from the host locale; fall back to English.
-     * `LocaleRuntime.getLocale()` returns `{ active, locales, revision }`, so
-     * the language id is `snapshot.active` — reading `id`/`locale` off it is
-     * what silently pinned the UI to English.
+     * Pick the dictionary from the host locale.
+     *
+     * Chinese is the default, and that is deliberate: the plugin is written in
+     * Chinese, its stories are Chinese, and a host that never hands us a
+     * locale service must not turn 「开机动画」into 「Opening duel」for someone
+     * who reads Chinese. English is chosen only when the host or the page says
+     * so — an explicit `en` — never as a fallback for "unknown".
      */
     function pickLocale() {
       try {
         const locale = ctxGet('locale')
-        if (!locale) return 'en'
-        const snapshot = typeof locale.getLocale === 'function' ? locale.getLocale() : null
-        const id = snapshot?.active ?? snapshot?.id ?? snapshot
-        return typeof id === 'string' && id.toLowerCase().startsWith('zh') ? 'zh' : 'en'
-      } catch {
-        return 'en'
+        if (locale) {
+          // `LocaleRuntime.getLocale()` returns `{ active, locales, revision }`;
+          // newer builds also expose `getSnapshot()`. Both carry `active`.
+          const snapshot = typeof locale.getSnapshot === 'function'
+            ? locale.getSnapshot()
+            : typeof locale.getLocale === 'function' ? locale.getLocale() : null
+          const id = snapshot?.active ?? snapshot?.id ?? snapshot
+          if (typeof id === 'string' && id !== '') {
+            return id.toLowerCase().startsWith('en') ? 'en' : 'zh'
+          }
+        }
+      } catch { /* fall through to the page language */ }
+      try {
+        const lang = document?.documentElement?.lang
+        if (typeof lang === 'string' && lang.toLowerCase().startsWith('en')) return 'en'
+      } catch { /* no document: still Chinese */ }
+      return 'zh'
+    }
+
+    /** Repaint every mounted surface after a language switch. */
+    function notifyLocale() {
+      for (const listener of [...localeListeners]) {
+        try { listener() } catch { /* a broken listener must not stop the others */ }
       }
     }
 
-    /** Translate one key; a missing key falls back to English, not to the key. */
-    function t(key) {
+    /** Force a language without a host; the tests use this to check both. */
+    function setLocaleForTest(id) {
+      activeLocale = id === 'en' ? 'en' : 'zh'
+      translated = null
+    }
+
+    /** Swap the host context; the tests drive `pickLocale` through this. */
+    function setContextForTest(ctx) {
+      applyContext = ctx ?? null
+    }
+
+    /** Subscribe a component to language changes for the life of its mount. */
+    function useLocaleTick() {
+      const [, force] = React.useState(0)
+      React.useEffect(() => {
+        const listener = () => force((n) => n + 1)
+        localeListeners.add(listener)
+        return () => { localeListeners.delete(listener) }
+      }, [])
+    }
+
+    /**
+     * Translate one key; a missing key falls back to Chinese, not to the key
+     * and not to English. `{name}` placeholders are filled from `params`.
+     */
+    function t(key, params) {
+      let value = ''
       if (translated) {
         try {
-          const value = translated(key)
-          if (typeof value === 'string' && value !== key) return value
+          const bound = translated(key)
+          if (typeof bound === 'string' && bound !== key) value = bound
         } catch { /* fall through to the bundled dictionary */ }
       }
-      return DICTS[activeLocale]?.[key] ?? DICTS.en[key] ?? ''
+      if (value === '') value = DICTS[activeLocale]?.[key] ?? DICTS.zh[key] ?? ''
+      if (params === undefined) return value
+      return value.replace(/\{(\w+)\}/g, (whole, name) => (
+        params[name] === undefined ? whole : String(params[name])
+      ))
     }
 
     /* --------------------------------------------------------------- styles */
@@ -5000,9 +5180,11 @@ window.__ModuleLoader__.load({
      * much was just taken off — the read that makes damage feel like damage
      * rather than a width recalculation.
      */
-    function healthBar(kind, label, hp) {
-      const value = Math.max(0, Math.min(100, Math.round(hp)))
-      const low = kind === 'player' && value <= 25 && value > 0
+    function healthBar(kind, label, hp, maxHp) {
+      const max = Number.isFinite(maxHp) && maxHp > 0 ? Math.round(maxHp) : 100
+      const value = Math.max(0, Math.min(max, Math.round(hp)))
+      const low = kind === 'player' && value <= max * 0.25 && value > 0
+      const pct = max === 0 ? 0 : (value / max) * 100
       return React.createElement('div', {
         className: `boot-duel-bar is-${kind}${value <= 0 ? ' is-empty' : ''}${low ? ' is-low' : ''}`,
       },
@@ -5010,43 +5192,51 @@ window.__ModuleLoader__.load({
           React.createElement('span', {
             className: `boot-duel-bar-label${kind === 'player' ? ' is-player' : ''}`,
           }, label),
-          React.createElement('span', { className: 'boot-duel-bar-hp' }, `${value} / 100`),
+          React.createElement('span', { className: 'boot-duel-bar-hp' }, `${value} / ${max}`),
         ),
         React.createElement('div', {
           className: 'boot-duel-bar-track',
           role: 'progressbar',
           'aria-valuenow': value,
           'aria-valuemin': 0,
-          'aria-valuemax': 100,
+          'aria-valuemax': max,
           'aria-label': label,
         },
-          React.createElement('div', { className: 'boot-duel-bar-ghost', style: { width: `${value}%` } }),
-          React.createElement('div', { className: 'boot-duel-bar-fill', style: { width: `${value}%` } }),
+          React.createElement('div', { className: 'boot-duel-bar-ghost', style: { width: `${pct}%` } }),
+          React.createElement('div', { className: 'boot-duel-bar-fill', style: { width: `${pct}%` } }),
         ),
       )
     }
 
-    /** `[key, label]` rows for the control rail. */
-    const KEY_ROWS = [
-      ['A / D', '移动'],
-      ['J', '直拳'],
-      ['H', '摆拳'],
-      ['K', '踢击'],
-      ['F', '上勾'],
-      ['G', '扫腿'],
-      ['N', '滑铲'],
-      ['L', '格挡'],
-      ['S', '下蹲'],
-      ['Shift', '后跳'],
-      ['空格', '跳跃'],
-      ['空中 J/K', '空袭'],
-      ['U', '大招'],
-      ['Esc', '跳过'],
-    ]
-
-    function controlRail() {
+    /**
+     * `[key, label]` rows for the control rail.
+     *
+     * The key column is whatever the player actually bound, so a rebound jump
+     * does not leave the rail advertising Space. Built at render time for that
+     * reason — a module-level constant would freeze the defaults.
+     */
+    function controlRail(binds) {
+      const list = binds && typeof binds === 'object' ? binds : {}
+      const keyOf = (action) => keyLabel(list[action] || DEFAULT_BINDS[action])
+      const air = t('rail.airKeys', { a: keyOf('jab'), b: keyOf('kick') })
+      const rows = [
+        [`${keyOf('left')} / ${keyOf('right')}`, t('rail.move')],
+        [keyOf('jab'), t('rail.jab')],
+        [keyOf('hook'), t('rail.hook')],
+        [keyOf('kick'), t('rail.kick')],
+        [keyOf('uppercut'), t('rail.uppercut')],
+        [keyOf('sweep'), t('rail.sweep')],
+        [keyOf('slide'), t('rail.slide')],
+        [keyOf('block'), t('rail.block')],
+        [keyOf('crouch'), t('rail.crouch')],
+        [keyOf('retreat'), t('rail.retreat')],
+        [keyOf('jump'), t('rail.jump')],
+        [air, t('rail.air')],
+        [keyOf('special'), t('rail.special')],
+        ['Esc', t('rail.skip')],
+      ]
       return React.createElement('div', { className: 'boot-duel-keys' },
-        KEY_ROWS.map(([key, label]) => React.createElement('span', { key, className: 'boot-duel-key' },
+        rows.map(([key, label]) => React.createElement('span', { key: `${key}-${label}`, className: 'boot-duel-key' },
           React.createElement('b', null, key),
           React.createElement('span', null, label),
         )),
@@ -5056,21 +5246,22 @@ window.__ModuleLoader__.load({
     /** The qi meter. Full means the finisher is available right now. */
     function qiMeter(meter, specialReady) {
       const value = Math.max(0, Math.min(100, Math.round(meter ?? 0)))
+      const label = t('meter.label')
       return React.createElement('div', {
         className: `boot-duel-meter${specialReady ? ' is-full' : ''}`,
       },
-        React.createElement('span', { className: 'boot-duel-meter-label' }, '气'),
+        React.createElement('span', { className: 'boot-duel-meter-label' }, label),
         React.createElement('div', {
           className: 'boot-duel-meter-track',
           role: 'progressbar',
           'aria-valuenow': value,
           'aria-valuemin': 0,
           'aria-valuemax': 100,
-          'aria-label': '气',
+          'aria-label': label,
         }, React.createElement('div', { className: 'boot-duel-meter-fill', style: { width: `${value}%` } })),
         React.createElement('span', { className: 'boot-duel-meter-key' }, t('special.hint')),
         React.createElement('span', { className: 'boot-duel-meter-tip' },
-          specialReady ? t('special.ready') : t('special.locked').replace('{n}', String(value))),
+          specialReady ? t('special.ready') : t('special.locked', { n: value })),
       )
     }
 
@@ -5090,14 +5281,28 @@ window.__ModuleLoader__.load({
       block: 'KeyL', crouch: 'KeyS', retreat: 'ShiftLeft', special: 'KeyU',
     }
 
-    /** How a key code is shown on a button. */
+    /**
+     * How a key code is shown. Letter and arrow keys need no translation; the
+     * named ones do, so they are looked up in the dictionary at render time.
+     */
     const KEY_LABEL = {
       KeyA: 'A', KeyB: 'B', KeyC: 'C', KeyD: 'D', KeyE: 'E', KeyF: 'F', KeyG: 'G',
       KeyH: 'H', KeyI: 'I', KeyJ: 'J', KeyK: 'K', KeyL: 'L', KeyM: 'M', KeyN: 'N',
       KeyO: 'O', KeyP: 'P', KeyQ: 'Q', KeyR: 'R', KeyS: 'S', KeyT: 'T', KeyU: 'U',
       KeyV: 'V', KeyW: 'W', KeyX: 'X', KeyY: 'Y', KeyZ: 'Z',
-      Space: '空格', ShiftLeft: '左Shift', ShiftRight: '右Shift',
-      Enter: '回车', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+      ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+    }
+    const KEY_LABEL_KEYS = {
+      Space: 'key.space', ShiftLeft: 'key.shiftLeft', ShiftRight: 'key.shiftRight',
+      Enter: 'key.enter', NumpadEnter: 'key.enter',
+    }
+
+    /** One key code as the player should see it on a button. */
+    function keyLabel(code) {
+      if (typeof code !== 'string' || code === '') return '—'
+      if (KEY_LABEL[code]) return KEY_LABEL[code]
+      if (KEY_LABEL_KEYS[code]) return t(KEY_LABEL_KEYS[code])
+      return code.replace(/^Key/, '')
     }
 
     /**
@@ -5116,15 +5321,17 @@ window.__ModuleLoader__.load({
       return null
     }
 
+    /** `[action, dictionary key]` rows for both settings surfaces. */
     const BINDABLE = [
-      ['left', '左移'], ['right', '右移'], ['jump', '跳跃'],
-      ['jab', '直拳'], ['hook', '摆拳'], ['kick', '踢击'],
-      ['uppercut', '上勾'], ['sweep', '扫腿'], ['slide', '滑铲'],
-      ['block', '格挡'], ['crouch', '下蹲'], ['retreat', '后跳'],
-      ['special', '大招'],
+      ['left', 'bind.left'], ['right', 'bind.right'], ['jump', 'bind.jump'],
+      ['jab', 'bind.jab'], ['hook', 'bind.hook'], ['kick', 'bind.kick'],
+      ['uppercut', 'bind.uppercut'], ['sweep', 'bind.sweep'], ['slide', 'bind.slide'],
+      ['block', 'bind.block'], ['crouch', 'bind.crouch'], ['retreat', 'bind.retreat'],
+      ['special', 'bind.special'],
     ]
 
     function SettingsPanel({ onClose, onRestart, audio }) {
+      useLocaleTick()
       const [local, setLocal] = React.useState(settings)
       const [listening, setListening] = React.useState(null)
 
@@ -5147,13 +5354,13 @@ window.__ModuleLoader__.load({
 
       const set = (patch) => { const next = { ...local, ...patch }; setLocal(next); updateSettings(patch) }
 
-      const row = (key, label) => React.createElement('label', { key, className: 'boot-duel-set-row' },
-        React.createElement('span', { className: 'boot-duel-set-label' }, label),
+      const row = (key, labelKey) => React.createElement('label', { key, className: 'boot-duel-set-row' },
+        React.createElement('span', { className: 'boot-duel-set-label' }, t(labelKey)),
         React.createElement('button', {
           type: 'button',
           className: `boot-duel-set-bind${listening === key ? ' is-listening' : ''}`,
           onClick: () => setListening(listening === key ? null : key),
-        }, listening === key ? '按下新键…' : (KEY_LABEL[local.binds?.[key]] || KEY_LABEL[DEFAULT_BINDS[key]] || '—')),
+        }, listening === key ? t('settings.pressKey') : keyLabel(local.binds?.[key] || DEFAULT_BINDS[key])),
       )
 
       return React.createElement('div', {
@@ -5230,6 +5437,7 @@ window.__ModuleLoader__.load({
      * mounted, because "off" is one of the things it can set.
      */
     function HostSettingsSection() {
+      useLocaleTick()
       const [local, setLocal] = React.useState(settings)
       /** The action waiting for a new key, or null. */
       const [listening, setListening] = React.useState(null)
@@ -5293,18 +5501,18 @@ window.__ModuleLoader__.load({
 
         React.createElement('div', { className: 'boot-duel-host-section-head' }, t('settings.binds')),
         React.createElement('div', { className: 'boot-duel-host-binds' },
-          BINDABLE.map(([key, label]) => React.createElement('label', {
+          BINDABLE.map(([key, labelKey]) => React.createElement('label', {
             key,
             className: 'boot-duel-host-bind',
           },
-            React.createElement('span', { className: 'boot-duel-host-bind-label' }, label),
+            React.createElement('span', { className: 'boot-duel-host-bind-label' }, t(labelKey)),
             React.createElement('button', {
               type: 'button',
               className: `boot-duel-set-bind${listening === key ? ' is-listening' : ''}`,
               onClick: () => setListening(listening === key ? null : key),
             }, listening === key
               ? t('settings.pressKey')
-              : (KEY_LABEL[local.binds?.[key]] || KEY_LABEL[DEFAULT_BINDS[key]] || '—')),
+              : keyLabel(local.binds?.[key] || DEFAULT_BINDS[key])),
           ))),
 
         React.createElement('div', { className: 'boot-duel-host-actions' },
@@ -5328,6 +5536,7 @@ window.__ModuleLoader__.load({
     }
 
     function BootDuel() {
+      useLocaleTick()
       const [snapshot, setSnapshot] = React.useState(null)
       /** Settings panel visibility. */
       const [showSettings, setShowSettings] = React.useState(false)
@@ -5364,6 +5573,8 @@ window.__ModuleLoader__.load({
       const opacity = fading ? 0 : (snapshotValue?.fadeOpacity ?? 1)
       const playerHp = snapshotValue?.player.hp ?? 100
       const enemyHp = snapshotValue?.enemy.hp ?? 100
+      const playerMax = snapshotValue?.player.maxHp ?? 100
+      const enemyMax = snapshotValue?.enemy.maxHp ?? 100
 
       const toggleMute = () => {
         const engine = engineRef.current
@@ -5381,6 +5592,11 @@ window.__ModuleLoader__.load({
       }
 
       const stateLabel = isReady ? t('state.ready') : inOutro ? t('state.ko') : t('state.fight')
+      // The rival's name comes from the round's story, so the health bar and
+      // the speech bubble agree: this round is against 产品 / 后端 / 测试, not
+      // against a generic "opponent".
+      const rivalName = snapshotValue?.cast?.rival || t('roster.enemy')
+      const youName = snapshotValue?.cast?.you || t('roster.you')
 
       return React.createElement('div', {
         className: 'boot-duel-layer',
@@ -5395,18 +5611,18 @@ window.__ModuleLoader__.load({
 
         React.createElement('div', { className: 'boot-duel-hud' },
           React.createElement('div', { className: 'boot-duel-bars' },
-            healthBar('player', t('roster.you'), playerHp),
+            healthBar('player', youName, playerHp, playerMax),
             React.createElement('div', { className: 'boot-duel-mid' },
-              React.createElement('span', { className: 'boot-duel-mid-mark' }, '对 决'),
+              React.createElement('span', { className: 'boot-duel-mid-mark' }, t('hud.mid')),
               React.createElement('span', { className: 'boot-duel-mid-state' }, stateLabel),
             ),
-            healthBar('enemy', t('roster.enemy'), enemyHp),
+            healthBar('enemy', rivalName, enemyHp, enemyMax),
           ),
           qiMeter(snapshotValue?.meter ?? 0, Boolean(snapshotValue?.specialReady)),
         ),
 
         React.createElement('div', { className: 'boot-duel-hints' },
-          controlRail(),
+          controlRail(settings.binds),
           React.createElement('span', { className: 'boot-duel-controls' },
             React.createElement('button', {
               type: 'button',
@@ -5467,7 +5683,7 @@ window.__ModuleLoader__.load({
           ? React.createElement('div', { className: 'boot-duel-special' },
             React.createElement('span', { className: 'boot-duel-special-name' }, t('special.name')),
             React.createElement('span', { className: 'boot-duel-special-sub' },
-              snapshotValue.special.beat === 'landed' ? '命中' : '起势'),
+              snapshotValue.special.beat === 'landed' ? t('special.landed') : t('special.windup')),
           )
           : null,
 
@@ -5745,18 +5961,26 @@ window.__ModuleLoader__.load({
 
     function apply(ctx) {
       applyContext = ctx
-      activeLocale = pickLocale()
-      try {
-        const locale = ctxGet('locale')
-        if (locale && typeof locale.bind === 'function') translated = locale.bind(NAMESPACE)
-      } catch { /* the bundled dictionaries are enough */ }
 
-      // Re-read the language on a switch so the HUD follows the host locale.
+      /** Re-read the language, and repaint every mounted surface. */
+      function syncLocale() {
+        activeLocale = pickLocale()
+        try {
+          const locale = ctxGet('locale')
+          translated = locale && typeof locale.bind === 'function' ? locale.bind(NAMESPACE) : null
+        } catch { /* the bundled dictionaries are enough */ }
+        notifyLocale()
+      }
+      syncLocale()
+
+      // Re-read the language on a switch so the HUD and the settings sections
+      // follow the host locale. `subscribe` is the documented hook; a host
+      // without it keeps the boot-time language.
       try {
         const locale = ctxGet('locale')
         if (locale && typeof locale.subscribe === 'function') {
           ctx.effect(() => {
-            const off = locale.subscribe(() => { activeLocale = pickLocale() })
+            const off = locale.subscribe(syncLocale)
             return () => { try { off?.() } catch { /* ignore */ } }
           }, 'boot-duel: locale changes')
         }
@@ -5819,10 +6043,15 @@ ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
     }
 
     exports.apply = apply
-    exports.inject = ['slots']
+    // `locale` is declared so the settings-page label is translated and the
+    // plugin is told when the user switches language. Without it the host still
+    // mounts the plugin, but every label Freezes at boot time — which is how
+    // the settings section ended up stuck in one language.
+    exports.inject = ['slots', 'locale']
     exports.__test = {
       DICTS, CSS, SLOT, ENTRY_ID, ENTRY_ORDER, DEFAULT_CONFIG, GAME_CODES,
-      CONFIG_URL, STYLE_ID, pickLocale, isTypingTarget,
+      CONFIG_URL, STYLE_ID, pickLocale, isTypingTarget, keyLabel, t,
+      setLocaleForTest, __setContext: setContextForTest,
     }
     return module.exports
   },

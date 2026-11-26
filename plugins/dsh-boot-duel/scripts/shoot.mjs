@@ -66,7 +66,7 @@ await page.evaluate(() => {
     effect: (fn) => fn(),
     slots: { inject: (_n, cb) => cb(), register: (reg, component) => { window.__dshBoot.registrations.push({ reg, component }); return () => {} } },
   })
-  const entry = window.__dshBoot.registrations[0]
+  const entry = window.__dshBoot.registrations.find((e) => e.reg.name === 'shell.overlay') ?? window.__dshBoot.registrations[0]
   window.ReactDOM.createRoot(document.querySelector('[data-shell-overlay]')).render(window.React.createElement(entry.component))
 })
 
