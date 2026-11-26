@@ -256,6 +256,15 @@ window.__ModuleLoader__.load({
     const ANY_MENU = '[role="menu"], [role="menuitem"]'
     /** How long a click may take to show its result before it is called a failure. */
     const VERIFY_TIMEOUT_MS = 900
+    /**
+     * The whole settings search must answer inside this, whatever it finds.
+     *
+     * The host's action timeout is 5s (Config.clientTimeoutMs). Exceeding it is
+     * reported as 'no interface is connected', which reads as a closed window
+     * and sends the caller into a retry loop — while the browser keeps working
+     * on the previous attempt. 3.5s leaves room for the trip there and back.
+     */
+    const OPEN_BUDGET_MS = 3500
     /** Poll interval while waiting for a click's result. */
     const VERIFY_POLL_MS = 25
 
@@ -429,57 +438,121 @@ window.__ModuleLoader__.load({
       // and a transient popup must not lock the caller out of retrying.
       if (all(ANY_MENU).length > 0) await dismissMenus()
 
-      /** Every trigger that could plausibly open the settings dialog, in one place. */
-      const aria = settingsShortcutAria(services)
       const tried = []
 
-      /** Click one candidate and report whether the dialog appeared. */
-      const attempt = async (node, label) => {
-        if (node === null || node === undefined) return false
-        tried.push(label)
-        node.click()
-        const opened = await waitFor(() => first(SETTINGS_MODAL))
-        if (opened !== undefined) return true
-        // A click that opened a MENU instead is not a failure yet: the settings
-        // row may be inside it. That is the next branch's job, and closing it
-        // here would race the render that is about to put the row in the DOM.
-        return false
+      /**
+       * A budget for the whole search, not per attempt.
+       *
+       * The host gives an action five seconds before it reports "no interface",
+       * and that answer is indistinguishable from a closed window — so an
+       * overrun does not look like a slow search, it looks like the page is
+       * gone. The search therefore stops itself well inside that budget and
+       * answers with what it tried, which is a fact the caller can act on.
+       */
+      const deadline = Date.now() + OPEN_BUDGET_MS
+
+      /**
+       * Press one element the way a person does, then wait for a result.
+       *
+       * The sequence matters: the shell's menus open on `click` but the anchor
+       * also closes on a document-level `pointerdown` from elsewhere, and a bare
+       * `.click()` reaches neither. Every earlier version that used `.click()`
+       * reported success while the menu stayed shut.
+       */
+      const press = (node) => {
+        const root = doc()
+        const view = root?.defaultView
+        const box = node.getBoundingClientRect?.()
+        const x = box === undefined ? 0 : Math.round(box.left + box.width / 2)
+        const y = box === undefined ? 0 : Math.round(box.top + box.height / 2)
+        for (const [type, Ctor] of [
+          ['pointerover', 'PointerEvent'], ['pointerenter', 'PointerEvent'],
+          ['pointermove', 'PointerEvent'], ['pointerdown', 'PointerEvent'], ['mousedown', 'MouseEvent'],
+          ['pointerup', 'PointerEvent'], ['mouseup', 'MouseEvent'],
+        ]) {
+          if (typeof view?.[Ctor] !== 'function') continue
+          node.dispatchEvent?.(new view[Ctor](type, {
+            bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y,
+            button: 0, buttons: type.endsWith('down') ? 1 : 0, pointerId: 1, pointerType: 'mouse', isPrimary: true,
+          }))
+        }
+        node.click?.()
       }
 
-      // 1. The element carrying the settings shortcut. In a plain composition
-      //    this is the sidebar trigger; in the shipped one the attribute is on a
-      //    row inside the account menu, which is CLOSED — so this usually finds
-      //    nothing, and finding nothing is not an error.
+      /**
+       * Open a menu-shaped control and look for the settings row inside it.
+       *
+       * @returns the row when this menu holds one, otherwise `undefined`.
+       */
+      const menuRowOf = async (trigger, ariaHint) => {
+        if (all(ANY_MENU).length > 0) await dismissMenus()
+        press(trigger)
+        return waitFor(() => {
+          const items = all('[role="menuitem"]')
+          return items.length === 0 ? undefined : settingsRowIn(items, ariaHint)
+        })
+      }
+
+      // Ordering is the whole fix.
+      //
+      // The page has many `aria-haspopup="menu"` buttons — a sidebar panel's
+      // overflow, a transcript's "more actions", the session view menu — and
+      // trying them in DOM order burns a full verification window per miss.
+      // Five misses is five seconds, which is this channel's timeout, so the
+      // caller was told "no interface" while the browser was still walking the
+      // list. The caller then retried, and the retained work made it look like a
+      // settings page that needed several attempts to open.
+      //
+      // Nothing here guesses: a menu is only opened if there is a reason to
+      // believe it holds the settings row.
+      const aria = settingsShortcutAria(services)
+
+      // 1. The element already carrying the settings shortcut, if the shell
+      //    renders one on the page. This is the launcher in a plain composition.
       if (aria !== undefined) {
         for (const node of all(`[aria-keyshortcuts="${aria}"]`)) {
-          if (await attempt(node, 'shortcut mark')) return { ok: true, how: 'dom' }
-        }
-      }
-
-      // 2. Every menu trigger, one at a time. The account menu is not the first
-      //    `aria-haspopup="menu"` on the page — the session and workspace menus
-      //    come first — so trying only the first one missed it entirely, which
-      //    is what "the settings dialog did not open" was reporting.
-      for (const trigger of all('button[aria-haspopup="menu"]')) {
-        // A menu left open by the previous iteration would make this click close
-        // it again, so the loop would oscillate. Start each trigger from closed.
-        if (all(ANY_MENU).length > 0) await dismissMenus()
-        trigger.click()
-        const row = await waitFor(() => {
-          const items = all('[role="menuitem"]')
-          return items.length === 0 ? undefined : settingsRowIn(items, aria)
-        })
-        if (row !== undefined && row !== null) {
-          tried.push('menu row')
-          row.click()
+          tried.push('shortcut mark')
+          press(node)
           if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
         }
       }
 
-      // 3. Any dialog-hinted button outside a modal: the generic launcher.
+      // 2. Menu triggers whose accessible name says they are the account/entry
+      //    menu. The shipped composition puts 设置 inside that one, and naming it
+      //    is the difference between one click and a search.
+      const named = all('button[aria-haspopup="menu"]').filter((node) => {
+        const label = String(node.getAttribute?.('aria-label') ?? node.textContent ?? '')
+        return /账号|账户|account|用户|user|更多|more/iu.test(label)
+      })
+      for (const trigger of named) {
+        tried.push(`named menu:${String(trigger.getAttribute?.('aria-label') ?? '').slice(0, 12)}`)
+        const row = await menuRowOf(trigger, aria)
+        if (row !== undefined && row !== null) {
+          press(row)
+          if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+        }
+      }
+
+      // 3. Every remaining menu trigger, ONE attempt each, but only while the
+      //    shared budget below still has room.
+      for (const trigger of all('button[aria-haspopup="menu"]')) {
+        if (named.includes(trigger)) continue
+        if (Date.now() > deadline) break
+        tried.push('other menu')
+        const row = await menuRowOf(trigger, aria)
+        if (row !== undefined && row !== null) {
+          press(row)
+          if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+        }
+      }
+
+      // 4. Any dialog-hinted button outside a modal: the generic launcher.
       for (const candidate of all('button[aria-haspopup="dialog"]')) {
         if (candidate.closest?.('[data-shortcut-modal]') != null) continue
-        if (await attempt(candidate, 'dialog trigger')) return { ok: true, how: 'dom' }
+        if (Date.now() > deadline) break
+        tried.push('dialog trigger')
+        press(candidate)
+        if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
       }
 
       return {

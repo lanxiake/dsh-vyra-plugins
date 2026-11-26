@@ -1069,3 +1069,45 @@ test('a key outside the whitelist is refused', async () => {
   assert.equal(result.status, 'error')
   assert.match(result.reason, /Enter/u)
 })
+
+// ---------------------------------------------------------------------------
+// The search must not walk every menu.
+//
+// The page has many `aria-haspopup="menu"` buttons — panel overflow, transcript
+// actions, the session view menu. Trying each in DOM order costs a full
+// verification window per miss, and five misses is the channel's whole timeout:
+// the caller is told "no interface is connected" while the browser is still
+// walking the list, retries, and finds the previous attempt had worked. That is
+// the "had to click several times" report.
+// ---------------------------------------------------------------------------
+
+test('the account menu is tried before unrelated menus', async () => {
+  const document = makeDocument()
+  const order = []
+
+  const build = (label, holdsSettings) => {
+    const trigger = el('button', { 'aria-haspopup': 'menu', 'aria-label': label })
+    trigger.onClick = () => {
+      order.push(label)
+      const text = holdsSettings ? '设置' : '新建会话'
+      const item = el('button', { role: 'menuitem' }, [el('span', { 'data-text': text })])
+      if (holdsSettings) item.onClick = () => mountedDialog(document)
+      const menu = el('div', { role: 'menu' }, [item])
+      menu.parent = document.body
+      document.body.children.push(menu)
+    }
+    trigger.parent = document.body
+    document.body.children.push(trigger)
+    return trigger
+  }
+
+  // Three decoys ahead of it in DOM order, exactly as the real page has.
+  build('视图选项', false)
+  build('更多操作', false)
+  build('更多会话视图', false)
+  build('账号菜单', true)
+
+  const result = await run('ui.open', { target: 'settings' }, { document, sections: SECTIONS })
+  assert.equal(result.status, 'ok', JSON.stringify(result))
+  assert.equal(order[order.length - 1], '账号菜单', 'the menu that holds the row is the one that opened it')
+})
