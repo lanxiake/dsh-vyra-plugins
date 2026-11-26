@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { createConsole, present } from './core.js'
 import { createChannel } from './channel.js'
 import { createConsoleTool } from './tool.js'
@@ -518,6 +520,25 @@ function createEndpoint(channel, longPollMs = LONG_POLL_MS, console_ = null, fen
   }
 }
 
+/**
+ * Read the bundled skill document, once, or `undefined` when it is unavailable.
+ *
+ * `node:fs` is already the only non-local dependency this file has, and reading
+ * one file at load is cheaper than shipping a second copy of the same prose as a
+ * string literal — a copy that would drift from `skills/SKILL.md` the first time
+ * somebody edited one and not the other.
+ *
+ * A missing or unreadable file is a LOST SKILL, never a lost plugin: the tools
+ * are the product, the document explains them.
+ */
+function skillBody() {
+  try {
+    return readFileSync(new URL('./skills/SKILL.md', import.meta.url), 'utf8')
+  } catch {
+    return undefined
+  }
+}
+
 export function apply(ctx, config) {
   // The Host side of the Host↔Client channel, mounted before the console is
   // built so the appearance domain has something to read on its very first call.
@@ -562,6 +583,25 @@ export function apply(ctx, config) {
   )
   ctx.tools.register(createConsoleTool(console_))
   ctx.logger?.info?.(`dsh-vyra-dsh-console: ${console_.listActions().length} actions`)
+
+  // The agent skill, contributed at runtime rather than dropped into the user's
+  // DSH home. It lives exactly as long as this plugin, so uninstalling leaves
+  // nothing behind — and a read-only `DSH_HOME` costs nothing, which is the
+  // failure a write-on-boot installer has. `dsh-vyra-agent-manager` established
+  // this pattern (`skills.register`, not a file).
+  //
+  // Optional by construction: a composition without the skills registry still
+  // gets every tool, and only the documentation is absent.
+  const skill = skillBody()
+  if (skill !== undefined && typeof ctx.inject === 'function') {
+    ctx.inject(['skills'], (owner) => {
+      owner.effect(() => owner.skills.register({
+        name: 'vyra-dsh-console',
+        description: 'Operate this DSH installation: read the whole inventory, open settings pages, main panels and right-drawer tabs, and switch theme, layout or language. Use when asked to change or inspect the harness itself.',
+        content: skill,
+      }), 'dsh-vyra-dsh-console: console skill')
+    })
+  }
 
   // The HTTP endpoint that finally connects the two halves: the browser polls
   // `GET` for queued appearance requests and posts each answer back with `POST`.

@@ -27,7 +27,8 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "assets/qq-group.png"
+    "assets/qq-group.png",
+    "skills/SKILL.md"
   ],
   "dsh": {
     "bundle": {

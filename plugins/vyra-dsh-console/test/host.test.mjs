@@ -10,6 +10,7 @@
 // handler does not.
 import { strict as assert } from 'node:assert'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 
 import { apply, fenceProblem } from '../index.js'
 import { ACTIONS, FORBIDDEN } from '../core.js'
@@ -1214,4 +1215,95 @@ test('a same-origin POST still reaches its action', async () => {
   }), res)
   assert.equal(res.statusCode, 200)
   assert.equal(res.json.status, 'ok')
+})
+
+// ---------------------------------------------------------------------------
+// The agent skill: a runtime contribution, not a file dropped into DSH_HOME.
+// ---------------------------------------------------------------------------
+
+/** Mount with a skills service, capturing what `register` receives. */
+function mountWithSkills() {
+  const registered = []
+  const routes = []
+  const ctx = {
+    get: () => undefined,
+    logger: { info() {}, warn() {} },
+    tools: { register() {} },
+    effect: (fn) => fn(),
+    inject: (names, callback) => {
+      if (names.includes('skills')) {
+        callback({
+          effect: (fn) => fn(),
+          skills: {
+            register: (skill) => {
+              registered.push(skill)
+              return () => {}
+            },
+          },
+        })
+        return
+      }
+      if (names.includes('webServer')) {
+        callback({
+          effect: (fn) => fn(),
+          webServer: { host: '127.0.0.1', register: (route) => { routes.push(route); return () => {} } },
+        })
+      }
+    },
+  }
+  apply(ctx, { longPollMs: TEST_LONG_POLL_MS })
+  return { registered, routes }
+}
+
+test('the skill registers through the skills service', () => {
+  const { registered } = mountWithSkills()
+  assert.equal(registered.length, 1, 'exactly one skill is contributed')
+  assert.equal(registered[0].name, 'vyra-dsh-console')
+  assert.match(registered[0].description, /inventory|settings|interface/u)
+})
+
+test('the registered skill body is the shipped document, not a second copy', () => {
+  // A literal in index.js would drift from skills/SKILL.md the first time one
+  // was edited without the other, and the model reads whichever is stale.
+  const { registered } = mountWithSkills()
+  const onDisk = readFileSync(new URL('../skills/SKILL.md', import.meta.url), 'utf8')
+  assert.equal(registered[0].content, onDisk)
+})
+
+test('the skill teaches the ui actions and the verification rule', () => {
+  const { registered } = mountWithSkills()
+  const content = registered[0].content
+  for (const action of ['ui.list', 'ui.open', 'ui.state', 'console.map']) {
+    assert.ok(content.includes(action), `the skill must document ${action}`)
+  }
+  assert.match(content, /verified/u, 'the skill must explain that ok alone is not done')
+  assert.match(content, /candidates/u, 'and that a miss returns candidates to retry with')
+})
+
+test('a profile without the skills service still gets the tool', () => {
+  // `inject` never fires for skills. Registration must not be a precondition.
+  let toolName
+  const ctx = {
+    get: () => undefined,
+    logger: { info() {}, warn() {} },
+    tools: { register: (definition) => { toolName = definition.name } },
+    effect: (fn) => fn(),
+    inject: (names, callback) => {
+      if (names.includes('webServer')) callback({ effect: (fn) => fn(), webServer: { register: () => () => {} } })
+    },
+  }
+  assert.doesNotThrow(() => apply(ctx, { longPollMs: TEST_LONG_POLL_MS }))
+  assert.equal(toolName, 'dsh_console')
+})
+
+test('a context with no inject at all still registers the tool', () => {
+  let toolName
+  const ctx = {
+    get: () => undefined,
+    logger: { info() {}, warn() {} },
+    tools: { register: (definition) => { toolName = definition.name } },
+    effect: (fn) => fn(),
+  }
+  assert.doesNotThrow(() => apply(ctx, {}))
+  assert.equal(toolName, 'dsh_console')
 })
