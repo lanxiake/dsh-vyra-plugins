@@ -3303,6 +3303,20 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-dsh-console',
           },
         },
+        // Found on the first real desktop run: the bridge forwarded only an op's
+        // `value`, so `ui.list` arrived as a bare `{status:'ok'}` and `ui.open`
+        // lost the `verified` flag. Separately, only the first menu trigger was
+        // tried, and the account menu — where the settings row lives — is not the
+        // first menu in the sidebar. Both fixed here.
+        '0.2.1': {
+          publishTimestamp: 1795683600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '4fd1bc95b881204257940d9be43aa76f25b8b3b4',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
