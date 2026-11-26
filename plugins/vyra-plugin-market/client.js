@@ -1119,6 +1119,46 @@ window.__ModuleLoader__.load({
       return state
     }
 
+    /**
+     * The restart request the Desktop shell exposes to this page, or undefined
+     * in a browser and in any Desktop build that does not carry it yet.
+     *
+     * Restarting DSH is the shell's job: `app.relaunch()` lives in the Electron
+     * main process, and this plugin runs in the renderer, so nothing here can
+     * stop the Host or start it again. The shell publishes an optional bridge
+     * for exactly that reason. Until a Desktop build ships it the button below
+     * has to fall back to written steps — never a button that looks live and
+     * then does nothing.
+     *
+     * Read through `globalThis` and type-checked on every use: the bridge is
+     * another product's surface, so a string, an object, or a newer shape that
+     * renamed the method all have to read as "absent" rather than throw inside
+     * a render.
+     */
+    function restartBridge() {
+      const bridge = globalThis?.dshDesktop
+      if (typeof bridge !== 'object' || bridge === null) return undefined
+      const restart = bridge.restartApp
+      return typeof restart === 'function' ? restart.bind(bridge) : undefined
+    }
+
+    /**
+     * Ask the shell to restart DSH.
+     * @returns true when the request reached the shell; false when no bridge
+     * exists, or the call rejected. A restart tears this page down, so a
+     * resolved call is never followed by more work here.
+     */
+    async function requestRestart() {
+      const restart = restartBridge()
+      if (restart === undefined) return false
+      try {
+        await restart()
+        return true
+      } catch {
+        return false
+      }
+    }
+
     /** The running bar's verb for one order action. */
     function actionLabel(t, action) {
       return t(`act${action[0].toUpperCase()}${action.slice(1)}`)
@@ -1128,6 +1168,10 @@ window.__ModuleLoader__.load({
      * The completion toast, mounted in `shell.overlay` so it is visible after
      * the market page or its Plugins tab has been left. It subscribes to the
      * same module-level queue and only shows when a new outcome settles.
+     *
+     * A batch that left something waiting for a restart does not time out. The
+     * whole point of that line is that the user still has to act, and a card
+     * that slides away after six seconds is a notice they cannot act on.
      */
     function MarketToast({ t, onOpen, canOpen }) {
       const job = useRunner()
@@ -1136,16 +1180,33 @@ window.__ModuleLoader__.load({
       // cleanup would clear the very timer that hides the toast.
       const seen = useRef(runner.get().outcome?.seq ?? 0)
       const [visible, setVisible] = useState(false)
+      const [restarting, setRestarting] = useState(false)
+      const [restartFailed, setRestartFailed] = useState(false)
       useEffect(() => {
         if (outcome === null || outcome.seq <= seen.current) return undefined
         seen.current = outcome.seq
         setVisible(true)
+        setRestartFailed(false)
+        setRestarting(false)
+        if ((outcome.restart ?? 0) > 0) return undefined
         const timer = setTimeout(() => setVisible(false), outcome.failed > 0 ? 12_000 : 6_500)
         if (typeof timer?.unref === 'function') timer.unref()
         return () => clearTimeout(timer)
       }, [outcome])
       if (!visible || outcome === null) return null
       const openable = onOpen !== undefined && (canOpen === undefined || canOpen())
+      const needsRestart = (outcome.restart ?? 0) > 0
+      const canRestart = needsRestart && restartBridge() !== undefined
+      const restart = async () => {
+        setRestarting(true)
+        // A resolved request takes this page down with the application; only a
+        // rejection leaves the card on screen to say so.
+        const accepted = await requestRestart()
+        if (!accepted) {
+          setRestarting(false)
+          setRestartFailed(true)
+        }
+      }
       return h('div', { className: 'vpm-toast' },
         h('div', { className: 'vpm-toast-card' },
           h('div', { className: 'vpm-toast-copy' },
@@ -1154,8 +1215,15 @@ window.__ModuleLoader__.load({
               [
                 t('toastBody', { ok: outcome.ok, failed: outcome.failed, restart: outcome.restart }),
                 outcome.canceled ? t('canceled', { n: outcome.skipped }) : null,
-              ].filter(Boolean).join(' · '))),
+              ].filter(Boolean).join(' · ')),
+            needsRestart && !canRestart ? h('p', { className: 'vpm-toast-hint' }, t('restartManualHint')) : null,
+            restartFailed ? h('p', { className: 'vpm-toast-hint' }, t('restartFailed')) : null),
           h('div', { className: 'vpm-toast-actions' },
+            canRestart ? h('button', {
+              className: 'vpm-btn small primary',
+              disabled: restarting,
+              onClick: () => { void restart() },
+            }, t(restarting ? 'restarting' : 'restartNow')) : null,
             openable ? h('button', {
               className: 'vpm-btn small', onClick: () => { setVisible(false); onOpen() },
             }, t('toastOpen')) : null,
@@ -1536,6 +1604,10 @@ window.__ModuleLoader__.load({
       confirmUninstallInstalledBody: '它提供的功能会消失，已装文件会被移除。',
       actionFailed: '操作失败：{reason}',
       restartNeeded: '需要重启客户端生效',
+      restartNow: '立即重启',
+      restarting: '正在重启…',
+      restartFailed: '重启请求没有送达，请手动退出并重新打开 DSH。',
+      restartManualHint: '请退出 DSH 后重新打开，改动才会生效。',
       done: '完成 {ok} 项',
       failed: '失败 {n} 项',
       needRestart: '{n} 项需要重启客户端才生效',
@@ -1712,6 +1784,10 @@ window.__ModuleLoader__.load({
       confirmUninstallInstalledBody: 'What it provides goes away and its installed files are removed.',
       actionFailed: 'Action failed: {reason}',
       restartNeeded: 'Restart the client to apply',
+      restartNow: 'Restart now',
+      restarting: 'Restarting…',
+      restartFailed: 'The restart request did not reach the shell. Quit DSH and open it again.',
+      restartManualHint: 'Quit DSH and open it again to apply the change.',
       done: '{ok} done',
       failed: '{n} failed',
       needRestart: '{n} need a client restart to take effect',
@@ -2005,6 +2081,7 @@ window.__ModuleLoader__.load({
       .vpm-toast-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
       .vpm-toast-title{font-size:13px;line-height:18px;font-weight:650;color:var(--dsw-alias-label-primary);margin:0}
       .vpm-toast-body{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary);margin:0}
+      .vpm-toast-hint{font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary);margin:0}
       .vpm-toast-actions{display:flex;align-items:center;gap:6px;flex:none}
       .vpm-settings{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:8px 14px;border-radius:13px;border:.5px solid var(--dsw-alias-settings-card-stroke,var(--dsw-alias-border-l2));background:var(--dsw-alias-bg-layer-1)}
       .vpm-switch{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--dsw-alias-label-secondary);cursor:pointer;user-select:none}
@@ -2975,7 +3052,16 @@ window.__ModuleLoader__.load({
       const [agentCopyFailed, setAgentCopyFailed] = useState(false)
       const [clock, setClock] = useState(() => Date.now())
       const [installedBusy, setInstalledBusy] = useState(null)
+      /**
+       * The bar under the toolbar: `{ text, restart }`.
+       *
+       * `restart` is what lets the bar offer the one action the Host just said
+       * is still needed. Errors carry it as false, so a failed toggle never
+       * grows a restart button that would not fix anything.
+       */
       const [installedNotice, setInstalledNotice] = useState(null)
+      const [installedRestarting, setInstalledRestarting] = useState(false)
+      const [installedRestartFailed, setInstalledRestartFailed] = useState(false)
       const [installedConfirm, setInstalledConfirm] = useState(null)
       // Batch selection over the Installed view. Names, like the market view's
       // `picked`, so a bundle that disappears from the list drops out of it.
@@ -3097,14 +3183,15 @@ window.__ModuleLoader__.load({
         if (installedBusy !== null) return
         setInstalledBusy(bundle.name)
         setInstalledNotice(null)
+        setInstalledRestartFailed(false)
         try {
           const answer = await remote.pluginManager.setBundleEnabled(bundle.name, bundle.enabled !== true)
           if (!alive.current) return
-          if (!answer.ok) setInstalledNotice(t('actionFailed', { reason: answer.error.message }))
-          else if (answer.value?.application === 'restart-required') setInstalledNotice(t('restartNeeded'))
+          if (!answer.ok) setInstalledNotice({ text: t('actionFailed', { reason: answer.error.message }), restart: false })
+          else if (answer.value?.application === 'restart-required') setInstalledNotice({ text: t('restartNeeded'), restart: true })
           await loadBundles()
         } catch (error) {
-          if (alive.current) setInstalledNotice(t('actionFailed', { reason: String(error?.message ?? error) }))
+          if (alive.current) setInstalledNotice({ text: t('actionFailed', { reason: String(error?.message ?? error) }), restart: false })
         } finally {
           if (alive.current) setInstalledBusy(null)
         }
@@ -3115,16 +3202,17 @@ window.__ModuleLoader__.load({
         if (installedBusy !== null) return
         setInstalledBusy(bundle.name)
         setInstalledNotice(null)
+        setInstalledRestartFailed(false)
         setInstalledConfirm(null)
         try {
           const answer = await remote.pluginManager.removeBundle(bundle.name)
           if (!alive.current) return
-          if (!answer.ok) setInstalledNotice(t('actionFailed', { reason: answer.error.message }))
-          else if (answer.value?.application === 'restart-required') setInstalledNotice(t('restartNeeded'))
+          if (!answer.ok) setInstalledNotice({ text: t('actionFailed', { reason: answer.error.message }), restart: false })
+          else if (answer.value?.application === 'restart-required') setInstalledNotice({ text: t('restartNeeded'), restart: true })
           setInstalledDetail(null)
           await loadBundles()
         } catch (error) {
-          if (alive.current) setInstalledNotice(t('actionFailed', { reason: String(error?.message ?? error) }))
+          if (alive.current) setInstalledNotice({ text: t('actionFailed', { reason: String(error?.message ?? error) }), restart: false })
         } finally {
           if (alive.current) setInstalledBusy(null)
         }
@@ -4017,7 +4105,22 @@ window.__ModuleLoader__.load({
               if (updateOrders.length > 0) setConfirm({ action: 'update', orders: updateOrders })
             },
           }, t('updateAll', { n: allUpdatable.length })) : null
-          ) : (installedNotice === null ? null : h('p', { className: 'vpm-bar error' }, installedNotice)),
+          ) : (installedNotice === null ? null : h('div', { className: 'vpm-bar error', role: 'status' },
+            h('span', { className: 'vpm-grow' }, installedNotice.text),
+            installedNotice.restart && restartBridge() === undefined
+              ? h('span', { className: 'vpm-meta' }, t('restartManualHint')) : null,
+            installedNotice.restart && restartBridge() !== undefined ? h('button', {
+              className: 'vpm-btn small primary', disabled: installedRestarting,
+              onClick: () => {
+                setInstalledRestarting(true)
+                void requestRestart().then((accepted) => {
+                  // A restart tears this page down; only a rejected request
+                  // leaves the bar to report itself.
+                  if (!accepted) { setInstalledRestarting(false); setInstalledRestartFailed(true) }
+                })
+              },
+            }, t(installedRestarting ? 'restarting' : 'restartNow')) : null,
+            installedRestartFailed ? h('span', { className: 'vpm-meta' }, t('restartFailed')) : null)),
           h('span', { className: 'vpm-grow' }),
           view === 'installed' && installedFiltered.length > 0 ? h('button', {
             className: `vpm-btn${installedBatch ? ' primary' : ''}`,
@@ -4228,6 +4331,7 @@ window.__ModuleLoader__.load({
       __internal: {
         marketText, presentedVersion, installable, prerelease, updateTarget, entryState, actionVersion, planBulk, orders, withText,
         TRANSIENT_FAILURE, RETRY_DELAY_MS, htmlImages, resolveAsset, enqueue, pump, newRequestId, runner,
+        restartBridge, requestRestart,
         compactCount, npmSpecName, specVersion, dshSoIndexUrlFrom, normalizeDshSo, dshSoPage, statsOfEntry, normalizeStats, marketSourceLabel,
         localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
         pageCacheKey, cachedPage, rememberPage, pageCache,

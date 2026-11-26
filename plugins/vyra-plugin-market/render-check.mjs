@@ -156,6 +156,9 @@ function makePage(entries) {
   }
 }
 
+/** One successful Host answer, for the `answers` overrides below. */
+const okAnswer = (value) => Promise.resolve({ ok: true, value })
+
 /** A Host Remote that records every call and answers from mutable state.
  *  `state.answers` may override any method's answer, to drive a failure path. */
 function makeRemote(state) {
@@ -801,6 +804,96 @@ await (async () => {
   for (const event of ['plugin-manager/install-state', 'plugin-manager/update-state', 'plugin-manager/install-log']) {
     assert.ok(remote.calls.some(([name, seen]) => name === '$on' && seen === event), `the queue subscribes to ${event}`)
   }
+}
+
+// --- the restart action: offered only where the shell can serve it -----------
+//
+// Restarting DSH is the Electron shell's job, so this plugin can only ask. The
+// two editions of that fact are what these checks pin down: an absent bridge
+// must state the manual steps rather than draw a dead button, and a present one
+// must actually reach it.
+{
+  const react = makeReact()
+  const bundle = loadBundle(react)
+  const { restartBridge, requestRestart } = bundle.__internal
+
+  // A browser has no dshDesktop at all.
+  delete globalThis.dshDesktop
+  assert.equal(restartBridge(), undefined, 'a browser offers no restart bridge')
+
+  // A Desktop build that has not shipped the bridge yet exposes the object but
+  // not the method; a malformed value of any other shape reads the same.
+  for (const value of [{}, { restartApp: 'yes' }, { restartApp: null }, null, 'dsh-desktop', 42]) {
+    globalThis.dshDesktop = value
+    assert.equal(restartBridge(), undefined, `a bridge shaped ${JSON.stringify(value)} is not a restart`)
+    assert.equal(await requestRestart(), false, 'and asking it reports no restart')
+  }
+
+  // The real shape: the method is called on the bridge object itself, and a
+  // rejection is reported instead of looking like a restart that happened.
+  let calls = 0
+  globalThis.dshDesktop = { restartApp() { calls += 1; return Promise.resolve() } }
+  assert.equal(typeof restartBridge(), 'function', 'the shipped bridge is found')
+  assert.equal(await requestRestart(), true, 'a resolving bridge reports the request reached the shell')
+  assert.equal(calls, 1, 'and the method was called exactly once')
+
+  globalThis.dshDesktop = { restartApp() { return Promise.reject(new Error('shell gone')) } }
+  assert.equal(await requestRestart(), false, 'a rejecting bridge reports failure')
+
+  delete globalThis.dshDesktop
+}
+
+// --- a restart-required install keeps its card and offers the restart --------
+{
+  const answers = { setBundleEnabled: okAnswer({ changed: true, application: 'restart-required', restartReason: 'no-hmr' }) }
+  let restartCalls = 0
+  globalThis.dshDesktop = { restartApp() { restartCalls += 1; return Promise.resolve() } }
+  const { tree, settle } = await mount({
+    entries: [],
+    bundles: [{ name: 'alpha-off', version: '1.0.0', installed: true, enabled: false, removable: true, rows: [], overrides: [] }],
+    answers,
+  })
+  const segment = findAll(tree, (node) => node.type === 'button' && texts(node).join('').includes('viewInstalled'))[0]
+  segment.props.onClick()
+  let view = await settle()
+  const enable = findAll(view, (node) => node.type === 'button' && texts(node).join('').trim() === 'enable')[0]
+  assert.ok(enable !== undefined, 'a disabled bundle offers Enable')
+  enable.props.onClick()
+  view = await settle()
+
+  const drawn = texts(view).join(' | ')
+  assert.ok(drawn.includes('restartNeeded'), `the bar says a restart is needed, got: ${drawn}`)
+  assert.ok(drawn.includes('restartNow'), 'with the bridge present the bar offers the restart itself')
+  assert.ok(!drawn.includes('restartManualHint'), 'and does not also tell the user to do it by hand')
+
+  const restart = findAll(view, (node) => node.type === 'button' && texts(node).join('') === 'restartNow')[0]
+  assert.ok(restart !== undefined, 'the restart is a button')
+  restart.props.onClick()
+  await settle()
+  assert.equal(restartCalls, 1, 'pressing it asks the shell to restart exactly once')
+  delete globalThis.dshDesktop
+}
+
+// --- without the bridge the same bar gives the manual steps ------------------
+{
+  const answers = { setBundleEnabled: okAnswer({ changed: true, application: 'restart-required', restartReason: 'no-hmr' }) }
+  delete globalThis.dshDesktop
+  const { tree, settle } = await mount({
+    entries: [],
+    bundles: [{ name: 'beta-off', version: '1.0.0', installed: true, enabled: false, removable: true, rows: [], overrides: [] }],
+    answers,
+  })
+  const segment = findAll(tree, (node) => node.type === 'button' && texts(node).join('').includes('viewInstalled'))[0]
+  segment.props.onClick()
+  let view = await settle()
+  const enable = findAll(view, (node) => node.type === 'button' && texts(node).join('').trim() === 'enable')[0]
+  enable.props.onClick()
+  view = await settle()
+
+  const drawn = texts(view).join(' | ')
+  assert.ok(drawn.includes('restartNeeded'), `the bar still says a restart is needed, got: ${drawn}`)
+  assert.ok(drawn.includes('restartManualHint'), 'and states the manual steps')
+  assert.ok(!drawn.includes('restartNow'), 'without a dead button beside them')
 }
 
 console.log('dsh-vyra-plugin-market: render checks passed')

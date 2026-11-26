@@ -1909,6 +1909,18 @@ export const manifest: MarketManifest = {
       },
       icon: PLUGIN_MARKET_ICON,
       versions: {
+        // 0.7.4 makes a restart-required result actionable: the completion toast
+        // and the Installed-page bar now offer a restart where the Desktop shell
+        // publishes one, and state the manual steps where it does not.
+        '0.7.4': {
+          publishTimestamp: 0,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '0000000000000000000000000000000000000000',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
         '0.7.3': {
           publishTimestamp: 1795679990,
           source: {
