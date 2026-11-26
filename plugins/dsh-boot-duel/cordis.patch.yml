@@ -1,0 +1,10 @@
+# dsh-boot-duel: a one-round stick-figure duel on the Web home page.
+# Every page load replays the duel on purpose: the passed flag lives only in
+# browser memory. Set `enabled: false` to turn the opening animation off.
+# `difficulty` defaults to easy so one round is won without practice.
+- insert:
+    - id: boot-duel
+      name: dsh-boot-duel
+      config:
+        enabled: true
+        difficulty: easy

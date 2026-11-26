@@ -1,0 +1,60 @@
+{
+  "name": "dsh-boot-duel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A one-round office-worker stick-figure duel that covers the DSH Web home page after each load: settle it with your fists, then get back to work. · DSH 开工大吉插件：每次打开 Web 界面先打一局火柴人对决，打完接着上班，按 Esc 直接跳过。",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "boot",
+    "animation",
+    "fighting-game",
+    "canvas",
+    "office"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json",
+    "./sfx/*": "./sfx/*"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "js",
+    "src",
+    "scripts",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "sfx",
+    "assets",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs",
+    "check:client": "node scripts/build-client.mjs --check",
+    "test": "node scripts/build-client.mjs --check && node --test test/*.test.mjs",
+    "test:e2e:offline": "node scripts/build-react-bundle.mjs && node test/e2e/offline-harness.mjs",
+    "test:e2e": "node test/e2e/duel.e2e.mjs"
+  }
+}

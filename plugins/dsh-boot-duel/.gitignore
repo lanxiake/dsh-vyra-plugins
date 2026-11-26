@@ -1,0 +1,10 @@
+# Test output: screenshots and capture sheets from the verification scripts.
+# The scripts regenerate these on every run; they are not source.
+test/e2e/.out/
+test/e2e/shots/
+test/e2e/moves/
+test/e2e/story/
+test/e2e/fx/
+test/e2e/fxframes/
+test/e2e/preview/
+test/e2e/pose-sheet.png
