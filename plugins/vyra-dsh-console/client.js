@@ -810,6 +810,34 @@ window.__ModuleLoader__.load({
       const elements = []
       let truncated = false
 
+      // Order matters more than the limit does.
+      //
+      // A settings dialog is portalled to `document.body`, so it sits at the END
+      // of document order — behind every sidebar row, every transcript bubble,
+      // every occluded button in the main column. On a real page that was 554
+      // elements before the first dialog control, so a 120-element budget never
+      // reached the thing the caller asked to look at, and the answer was a list
+      // of background chrome all marked occluded.
+      //
+      // The pass below walks in two rounds: anything inside a modal layer first,
+      // then the rest. Within each round, an element nobody is covering comes
+      // before one that is. What the user can actually act on sorts to the top.
+      const tierOf = (node) => {
+        const inDialog = node.closest?.('[data-shortcut-modal]') != null ? 0 : 1
+        const box = node.getBoundingClientRect?.()
+        const covered = box !== undefined && box !== null && occluded(node, box) ? 1 : 0
+        return inDialog * 2 + covered
+      }
+      candidates.sort((left, right) => tierOf(left) - tierOf(right))
+
+      // The window into the list. `offset` is what a caller uses after a
+      // `truncated` answer: the ordering is stable for as long as the page is,
+      // so asking for the next slice is well defined and eventually reaches
+      // everything — including the occluded tail of a busy page.
+      const offset = Number.isFinite(options.offset) && options.offset > 0 ? Math.round(options.offset) : 0
+      let skipped = 0
+      let seen = 0
+
       for (const node of candidates) {
         if (elements.length >= limit) {
           truncated = true
@@ -822,9 +850,18 @@ window.__ModuleLoader__.load({
         if (box === undefined || box === null) continue
         if (box.width <= 0 || box.height <= 0) continue
         if (role === 'generic' && text(node.textContent) === '') continue
+        // Count every element this pass ACCEPTS, then take only the window. The
+        // ref stays tied to the position in the whole list, so the same element
+        // has the same ref whichever window it arrives in.
+        if (seen < offset) {
+          seen += 1
+          skipped += 1
+          continue
+        }
+        seen += 1
 
         const entry = {
-          ref: `e${elements.length + 1}`,
+          ref: `e${skipped + elements.length + 1}`,
           role,
           name: nameOf(node),
           x: Math.round(box.left),
@@ -866,7 +903,15 @@ window.__ModuleLoader__.load({
       const signature = elements.map((element) => `${element.role}|${element.name}|${element.x},${element.y}`).join('\n')
       const snapshotId = `s_${hash(String(signature))}`
       lastSnapshot = { id: snapshotId, elements }
-      return { snapshotId, elements, truncated }
+      return {
+        snapshotId,
+        elements,
+        truncated,
+        offset,
+        // How many elements the page has in total, so a caller that got a window
+        // knows how many more there are rather than guessing from `truncated`.
+        total: seen + 1 > candidates.length ? seen : candidates.length,
+      }
     }
 
     /** The most recent snapshot, so a ref can be resolved and its age checked. */
@@ -1333,7 +1378,7 @@ window.__ModuleLoader__.load({
         // Skipped unless asked for, because the walk is the expensive part and
         // most calls only want the ledger. `ui.list {elements:true}` opts in ;
         // `ui.snapshot` is the same thing when that is all the caller wants.
-        ...(wantedElements ? elementSection() : {}),
+        ...(wantedElements ? elementSection({ offset: args.offset, limit: args.limit }) : {}),
       }
     }
 
@@ -1344,6 +1389,13 @@ window.__ModuleLoader__.load({
         snapshotId: snapshot.snapshotId,
         elements: snapshot.elements,
         truncated: snapshot.truncated,
+        // How to ask for the rest. A truncated answer that says only "there is
+        // more" leaves the caller stuck; these two make the next call obvious.
+        offset: snapshot.offset,
+        total: snapshot.total,
+        ...(snapshot.truncated
+          ? { next: { offset: snapshot.offset + snapshot.elements.length } }
+          : {}),
       }
     }
 
@@ -1539,6 +1591,7 @@ window.__ModuleLoader__.load({
           limit: args?.limit,
           roles: args?.roles,
           scope: args?.scope,
+          offset: args?.offset,
         })
         return { status: 'ok', ...section, visible: visibleNow() }
       },

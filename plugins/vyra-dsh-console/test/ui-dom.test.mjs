@@ -1111,3 +1111,73 @@ test('the account menu is tried before unrelated menus', async () => {
   assert.equal(result.status, 'ok', JSON.stringify(result))
   assert.equal(order[order.length - 1], '账号菜单', 'the menu that holds the row is the one that opened it')
 })
+
+// ---------------------------------------------------------------------------
+// The dialog must reach the caller even when the page is crowded.
+//
+// A settings dialog is portalled to document.body, so it sits at the END of
+// document order. On the real page 554 elements preceded the first dialog
+// control, and a 120-element budget stopped long before it — the caller got a
+// list of background chrome, all marked occluded, and no way to reach the thing
+// it had just opened.
+// ---------------------------------------------------------------------------
+
+test('elements inside a dialog sort ahead of the background', async () => {
+  const document = makeDocument()
+  // A crowded background, the way a transcript makes one.
+  for (let index = 0; index < 200; index += 1) {
+    const filler = uiEl('button', {}, [el('span', { 'data-text': `背景 ${index}` })])
+    filler.parent = document.body
+    document.body.children.push(filler)
+  }
+  // The dialog, portalled last.
+  const card = uiEl('button', {}, [el('span', { 'data-text': '模型' })])
+  card.parent = document.body
+  document.body.children.push(card)
+  const dialog = el('div', { 'data-shortcut-modal': 'settings' }, [card])
+  dialog.parent = document.body
+  card.parent = dialog
+  document.body.children.push(dialog)
+
+  const result = await run('ui.snapshot', { limit: 10 }, { document })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.elements[0].name, '模型', 'the dialog control comes first, not after 200 background buttons')
+  assert.equal(result.elements[0].inDialog, true)
+  assert.equal(result.truncated, true)
+  assert.ok(result.total > 10, 'the caller is told how much it did not get')
+})
+
+test('a truncated snapshot says how to ask for the rest', async () => {
+  const document = makeDocument()
+  for (let index = 0; index < 30; index += 1) {
+    const node = uiEl('button', {}, [el('span', { 'data-text': `B${index}` })])
+    node.parent = document.body
+    document.body.children.push(node)
+  }
+
+  const first = await run('ui.snapshot', { limit: 10 }, { document })
+  assert.equal(first.truncated, true)
+  assert.deepEqual(first.next, { offset: 10 }, 'the next call is stated, not inferred')
+
+  const second = await run('ui.snapshot', { limit: 10, offset: first.next.offset }, { document })
+  assert.equal(second.elements[0].name, 'B10', 'the window continues where the first ended')
+  assert.equal(second.offset, 10)
+  // Refs stay tied to the position in the whole list, so an element is addressable
+  // from whichever window it arrives in.
+  assert.equal(second.elements[0].ref, 'e11')
+})
+
+test('a covered element sorts behind a reachable one', async () => {
+  const document = makeDocument()
+  // The fake document has no elementFromPoint, so `occluded` cannot fire here;
+  // what this pins is that the tier function does not throw and that a plain
+  // list keeps its order when nothing is covered.
+  const a = uiEl('button', {}, [el('span', { 'data-text': 'A' })])
+  const b = uiEl('button', {}, [el('span', { 'data-text': 'B' })])
+  for (const node of [a, b]) {
+    node.parent = document.body
+    document.body.children.push(node)
+  }
+  const result = await run('ui.snapshot', {}, { document })
+  assert.deepEqual(result.elements.map((element) => element.name), ['A', 'B'])
+})

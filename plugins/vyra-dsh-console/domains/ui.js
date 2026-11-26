@@ -83,10 +83,40 @@ const CLIENT_ACTIONS = new Set([
  */
 async function recordWalkthrough(ctx, args) {
   if (args === null || typeof args !== 'object' || Array.isArray(args)) {
-    return { status: 'error', action: 'ui.record', reason: 'ui.record needs an args object with steps' }
+    return {
+      status: 'error',
+      action: 'ui.record',
+      reason: 'ui.record needs an args object with out and steps',
+      // The shape is stated where it is refused: a caller that guessed the
+      // fields from the error message should not have to guess twice.
+      expects: {
+        out: 'absolute path for the video, e.g. "C:/Users/me/Desktop/demo.mp4"',
+        steps: 'array of steps; see example',
+        fps: 'optional, 4-12 (default from settings)',
+        maxSeconds: 'optional cap, 2-600 (default 120)',
+        format: 'optional, "mp4" or "webm"',
+      },
+      example: {
+        out: 'C:/Users/me/Desktop/demo.mp4',
+        maxSeconds: 30,
+        steps: [
+          { open: { target: 'settings', section: 'dsh-vyra-free-model' }, settle: 900 },
+          { act: { name: '模型', action: 'click' }, settle: 500 },
+          { wait: 1200 },
+        ],
+      },
+    }
   }
   if (typeof args.out !== 'string' || args.out === '') {
-    return { status: 'error', action: 'ui.record', reason: 'ui.record needs an out path for the recording' }
+    return {
+      status: 'error',
+      action: 'ui.record',
+      reason: 'ui.record needs an out path for the recording',
+      expects: {
+        out: 'absolute path for the video, e.g. "C:/Users/me/Desktop/demo.mp4"',
+      },
+      example: { out: 'C:/Users/me/Desktop/demo.mp4', steps: [{ open: { target: 'settings' }, settle: 900 }] },
+    }
   }
   const webServer = typeof ctx?.get === 'function' ? ctx.get('webServer') : undefined
   let origin

@@ -247,7 +247,9 @@ export async function preflight(recorderBase) {
  */
 export async function runRecordedWalkthrough(deps, request) {
   const normalized = normalizeSteps(request.steps)
-  if (normalized.error !== undefined) return { status: 'error', reason: normalized.error }
+  if (normalized.error !== undefined) {
+    return { status: 'error', reason: normalized.error, expects: { steps: STEP_ACTIONS.join(' | ') } }
+  }
 
   const problems = await preflight(deps.recorderBase)
   if (problems.length > 0) {
@@ -257,6 +259,7 @@ export async function runRecordedWalkthrough(deps, request) {
   // The recorder writes its request file and picks it up on its next tick; the
   // page must already know the id so it can act the moment recording begins.
   const id = request.id ?? `wf-${randomUUID()}`
+  const startedAt = Date.now()
   const maxSeconds = Number.isFinite(request.maxSeconds) && request.maxSeconds > 0
     ? Math.min(Math.round(request.maxSeconds), 600)
     : 120
@@ -346,7 +349,14 @@ export async function runRecordedWalkthrough(deps, request) {
   return {
     status: 'ok',
     target: 'recording',
+    // The receipt a caller needs to talk about the take: which run it was, when
+    // it ran, and how long it actually captured. Without these, two recordings
+    // of the same walkthrough are indistinguishable in a report.
+    recordingId: id,
     out: request.out,
+    startedAt,
+    stoppedAt: Date.now(),
+    durationMs: Date.now() - startedAt,
     steps: normalized.steps.length,
     completed: played.completed ?? normalized.steps.length,
     verified: true,
