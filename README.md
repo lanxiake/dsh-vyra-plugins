@@ -68,6 +68,7 @@ dsh plugin --profile <profile> add dsh-vyra-plugin-market
 | `dsh-vyra-plugin-market` | 插件市场 | 在「已安装」旁边多一个卡片式市场标签页：切换市场源、搜索，并批量安装、更新、卸载、启用或停用。读取与改动都走客户端自己的 Remote 接口，所以源列表就是「设置 → 插件 → 索引源」那一份。**已发布 npm**：[`dsh-vyra-plugin-market`](https://www.npmjs.com/package/vyra-plugin-market) |
 | `dsh-vyra-agent-cli-manager` | Agent CLI 管理 | 在 DSH 里驱动 Claude Code、Codex、OpenCode 等 Agent CLI：安装升级，并统一管理它们的 MCP、技能与提示词 |
 | `dsh-vyra-studymate` | StudyMate 学习 | 学习技能与课程引擎：定计划、讲知识、做项目。每门课还能派生音频课、旁白视频和动手工作坊，支持 DSH、Google Antigravity、Codex 与 ChatGPT Work。基于 [Cattofu 的 StudyMate](https://github.com/Miaotofu01/Study-Mate)（MIT）
+| `dsh-boot-duel` | 开工大吉 | 每次打开 Web 界面先打一局火柴人：按 `Enter` 起势，把对手血条打空即可进入首页，`Esc` 直接放行。十一质点 Verlet 骨架、胶囊命中、拳皇式打击感，三套项目故事（改需求 / 联调 / 上线）用头顶气泡吵完。设置页可关开局、改 13 个键位、换对手强度，也能直接「再来一局」
 
 插件的版本、图标、分类与安装来源以 [`docs/index.json`](docs/index.json) 为准——那份是生成物，改的是 [`scripts/market-manifest.ts`](scripts/market-manifest.ts)。
 

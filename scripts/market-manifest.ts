@@ -3345,8 +3345,8 @@ export const manifest: MarketManifest = {
         zh: '开工大吉',
       },
       description: {
-        en: 'A one-round stick-figure duel over an office desk that covers the Web home page after each load: settle it with your fists, then get back to work. Eleven-point Verlet skeleton, capsule hits, a King-of-fighters impact language, and three office stories told in speech bubbles.',
-        zh: '每次打开 Web 界面先在办公室打一局火柴人：把对手血条打空就能进首页，按 Esc 直接放行，打完接着上班。十一质点 Verlet 骨架、胶囊命中、拳皇式打击感，三套打工人故事用台词气泡讲完。',
+        en: 'A one-round stick-figure fight that covers the Web home page after each load: settle it with your fists, then get back to work. Eleven-point Verlet skeleton, capsule hits, a King-of-Fighters impact language, and three project rows — scope changes, API integration, release day — argued out in speech bubbles.',
+        zh: '每次打开 Web 界面先打一局火柴人：把对手血条打空就能进首页，按 Esc 直接放行，打完接着上班。十一质点 Verlet 骨架、胶囊命中、拳皇式打击感，三套项目故事（改需求 / 联调 / 上线）用台词气泡吵完。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -3362,6 +3362,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: '27c10c3f584896bbc8dd458713cb8b7034d632d1',
+            path: 'plugins/dsh-boot-duel',
+          },
+        },
+        // 0.2.0 is the first version with a LICENSE file and a `repository`
+        // field, which is what an external listing checks. It also carries the
+        // language fix, the project-row stories and the host-page restart.
+        '0.2.0': {
+          publishTimestamp: 1795737600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '443808025758e387601889726e398547ff90ef8e',
             path: 'plugins/dsh-boot-duel',
           },
         },
