@@ -20,6 +20,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Script } from 'node:vm'
+import { unshippedModules, unresolvableImports } from './lib/check-imports.mjs'
 
 /**
  * Package-manager hooks that run on the consumer's machine.
@@ -97,6 +98,21 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
   if (entry === undefined) failures(name, 'declares no entry point (`main` or `exports["."]`)')
   else if (!existsSync(at(entry.replace(/^\.\//, '')))) failures(name, `entry "${entry}" does not exist`)
 
+  // Existence on disk is not publication. dsh-vyra-dsh-console 0.1.2 imported
+  // tool.js and domains/*.js from index.js while `files` named neither, so every
+  // installation failed with ERR_MODULE_NOT_FOUND at load and this script — which
+  // only asked whether the entry file was present — stayed green. These two
+  // checks ask the questions that release actually failed.
+  if (entry !== undefined && existsSync(at(entry.replace(/^\.\//, '')))) {
+    const entryAbs = at(entry.replace(/^\.\//, ''))
+    for (const miss of unresolvableImports(entryAbs)) {
+      failures(name, `entry imports "${miss.specifier}" from ${miss.from.split(/[\\/]plugins[\\/]/u).at(-1)}, which does not exist`)
+    }
+    for (const rel of unshippedModules(entryAbs, packageRoot, manifest.files)) {
+      failures(name, `entry imports "${rel}" but files does not publish it`)
+    }
+  }
+
   const patch = manifest.dsh?.bundle?.patch
   if (patch !== undefined && !existsSync(at(String(patch).replace(/^\.\//, '')))) {
     failures(name, `dsh.bundle.patch "${patch}" does not exist`)
@@ -106,7 +122,18 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
     const client = clientOf(manifest)
     if (client === undefined) failures(name, 'declares dsh.client but exports no "./client"')
     else if (!existsSync(at(client.replace(/^\.\//, '')))) failures(name, `"./client" "${client}" does not exist`)
-    else clientBundles.push({ name, file: client, text: readFileSync(at(client.replace(/^\.\//, '')), 'utf8') })
+    else {
+      const text = readFileSync(at(client.replace(/^\.\//, '')), 'utf8')
+      clientBundles.push({ name, file: client, text })
+      // A package-local `require('./x')` never resolves in the browser: the
+      // client module system's require knows only platform seeds, materialized
+      // modules and registered factories, and only `require.async('./client.*.js')`
+      // reaches a package-local chunk (client/modules/src/client/system.ts).
+      // dsh-vyra-dsh-console shipped one, so its panel could never mount.
+      for (const match of text.matchAll(/\brequire\s*\(\s*['"](\.[^'"]*)['"]\s*\)/gu)) {
+        failures(name, `client bundle requires "${match[1]}" package-locally, which never resolves in the browser; inline it`)
+      }
+    }
   }
 
   // Every literal entry `files` promises. A glob is checked by `npm pack`, not here.
