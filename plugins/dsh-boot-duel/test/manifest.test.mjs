@@ -69,6 +69,9 @@ test('host registers the read-only config route and the sfx route', () => {
   const disposed = []
   const scope = {
     webServer: { register: (route) => { routes.push(route); return () => disposed.push(route) } },
+    // Both routes are gated by the host's own admission check, so the service
+    // is declared alongside `webServer` and must be present here.
+    connection: { requestRejection: () => undefined },
     effect: (fn) => fn(),
   }
   let injected = null
@@ -77,7 +80,7 @@ test('host registers the read-only config route and the sfx route', () => {
     effect: (fn) => fn(),
   }
   host.apply(ctx, { enabled: false, difficulty: 'normal', sound: true })
-  assert.deepEqual(injected, ['webServer'])
+  assert.deepEqual(injected, ['webServer', 'connection'])
   assert.equal(routes.length, 2)
   const config = routes.find((route) => route.path === '/plugins/dsh-boot-duel/config')
   assert.ok(config, 'config route')
@@ -85,6 +88,37 @@ test('host registers the read-only config route and the sfx route', () => {
   const sfx = routes.find((route) => route.path.startsWith('/plugins/dsh-boot-duel/sfx'))
   assert.ok(sfx, 'sfx route')
   assert.equal(sfx.kind, 'prefix')
+})
+
+/** The connection stub every handler test passes in: admission granted. */
+const ADMIT = { requestRejection: () => undefined }
+
+test('both routes refuse a request the host does not admit', async () => {
+  const host = require('../index.js')
+  const { handleConfig, handleSfx } = host.__test
+  const answer = (fn) => {
+    const res = {
+      status: 0,
+      writeHead(status) { this.status = status; return this },
+      end() { return this },
+    }
+    fn(res)
+    return res
+  }
+
+  for (const [name, rejection] of [['401', 401], ['undefined-status 403', 403]]) {
+    const deny = { requestRejection: () => rejection === 403 ? 403 : 401 }
+    assert.equal(answer((res) => handleConfig({ method: 'GET' }, res, deny)).status, rejection,
+      `config route with ${name}`)
+    assert.equal(answer((res) => handleSfx({ method: 'GET' }, res, { pathname: '/plugins/dsh-boot-duel/sfx/cloth1.ogg' }, deny)).status,
+      rejection, `sfx route with ${name}`)
+  }
+
+  // A missing service, and a throwing one, both fail CLOSED: a decorative gate
+  // is worse than none, because it looks like protection.
+  assert.equal(answer((res) => handleConfig({ method: 'GET' }, res, null)).status, 403, 'no connection service')
+  const throwing = { requestRejection: () => { throw new Error('boom') } }
+  assert.equal(answer((res) => handleConfig({ method: 'GET' }, res, throwing)).status, 403, 'a throwing check')
 })
 
 test('the sfx route serves only plain .ogg basenames', async () => {
@@ -96,7 +130,7 @@ test('the sfx route serves only plain .ogg basenames', async () => {
       writeHead(status, headers) { this.status = status; this.headers = headers; return this },
       end(body) { resolve({ status: this.status, body, headers: this.headers }); return this },
     }
-    handleSfx({ method }, res, { pathname })
+    handleSfx({ method }, res, { pathname }, ADMIT)
   })
 
   const ok = await ask('/plugins/dsh-boot-duel/sfx/impactpunch-heavy-000.ogg')
@@ -127,7 +161,7 @@ test('the config route answers JSON and refuses writes', () => {
     writeHead(status, headers) { this.status = status; this.headers = headers; return this },
     end(body) { this.body = body === undefined ? null : body },
   }
-  host_.handleConfig({ method: 'GET' }, res)
+  host_.handleConfig({ method: 'GET' }, res, ADMIT)
   responses.push(res)
   assert.equal(res.status, 200)
   assert.match(res.headers['content-type'], /application\/json/)
@@ -139,7 +173,7 @@ test('the config route answers JSON and refuses writes', () => {
     writeHead(status) { this.status = status; return this },
     end() { this.body = null },
   }
-  host_.handleConfig({ method: 'POST' }, write)
+  host_.handleConfig({ method: 'POST' }, write, ADMIT)
   responses.push(write)
   assert.equal(write.status, 405)
 })

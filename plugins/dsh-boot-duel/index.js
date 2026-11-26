@@ -85,7 +85,49 @@ function resolveWebServer(scope) {
   return null
 }
 
-function handleConfig(req, res) {
+/** The same lookup for the authentication service, tried the same ways. */
+function resolveConnection(scope) {
+  try {
+    if (scope && scope.connection && typeof scope.connection.requestRejection === 'function') return scope.connection
+    if (scope && typeof scope.get === 'function') {
+      const service = scope.get('connection')
+      if (service && typeof service.requestRejection === 'function') return service
+    }
+    if (scope && typeof scope.reflect?.get === 'function') {
+      const service = scope.reflect.get('connection')
+      if (service && typeof service.requestRejection === 'function') return service
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+/**
+ * The request gate for both routes.
+ *
+ * Neither route serves a secret — one is three booleans, the other is a CC0
+ * sound file — but "small" is not "public": a page on any origin could use
+ * them to fingerprint this Host. So the host's own admission check runs first,
+ * exactly as it does for the other plugins in this repository: when it returns
+ * a status, the request is refused with that status.
+ *
+ * If the service is missing or throws, the request is REFUSED. Failing open
+ * would make the gate decorative on a Host that simply does not expose it.
+ */
+function rejectUnadmitted(connection, req, res) {
+  try {
+    if (connection === null) { res.writeHead(403).end(); return true }
+    const rejection = connection.requestRejection(req)
+    if (rejection === undefined || rejection === null || rejection === false) return false
+    res.writeHead(typeof rejection === 'number' ? rejection : 403).end()
+    return true
+  } catch {
+    try { res.writeHead(403).end() } catch { /* the socket may already be gone */ }
+    return true
+  }
+}
+
+function handleConfig(req, res, connection = null) {
+  if (rejectUnadmitted(connection, req, res)) return
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { allow: 'GET, HEAD' }).end()
     return
@@ -108,7 +150,8 @@ function handleConfig(req, res) {
  * no MIME guessing beyond `.ogg` — and a missing sample is a 404 the client
  * already falls back from.
  */
-async function handleSfx(req, res, url) {
+async function handleSfx(req, res, url, connection = null) {
+  if (rejectUnadmitted(connection, req, res)) return
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { allow: 'GET, HEAD' }).end()
     return
@@ -140,19 +183,20 @@ export function apply(ctx, config) {
   // Keeping the resolved snapshot here means the Client reads the same values
   // the patch shipped, not its own guess.
   try {
-    ctx.inject(['webServer'], (scope) => {
+    ctx.inject(['webServer', 'connection'], (scope) => {
       const webServer = resolveWebServer(scope)
       if (webServer === null) return
+      const connection = resolveConnection(scope)
       const effect = typeof scope.effect === 'function' ? scope.effect.bind(scope) : ctx.effect.bind(ctx)
       effect(() => webServer.register({
         kind: 'exact',
         path: CONFIG_PATH,
-        handler: handleConfig,
+        handler: (req, res) => handleConfig(req, res, connection),
       }), 'dsh-boot-duel: config route')
       effect(() => webServer.register({
         kind: 'prefix',
         path: SFX_PREFIX,
-        handler: handleSfx,
+        handler: (req, res) => handleSfx(req, res, new URL(req.url || '/', 'http://dsh.local'), connection),
       }), 'dsh-boot-duel: sfx route')
     })
   } catch (error) {
