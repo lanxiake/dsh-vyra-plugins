@@ -1,14 +1,20 @@
 # DSH Console
 
-让 Agent 操作 DeepSeek Harness 自身的控制台：查看与切换模型、读写设置、管理插件、调整主题与布局。
+让 Agent 操作 DeepSeek Harness 自身：读取整机清单、**打开设置页并切到某个插件的设置节**、
+切换主面板与右栏、调用命令，也查看与切换模型、读写设置、管理插件、调整主题与布局。
 也可以直接在侧栏打开**管理面板**，用点击完成同一批操作。
 
 ```sh
 dsh plugin --profile web add dsh-vyra-dsh-console
 ```
 
+> **0.1.2 是坏的，请不要使用。** 它的 `files` 漏了 `tool.js` 与 `domains/`，
+> Host 半边在每次安装上都会 `ERR_MODULE_NOT_FOUND`：`dsh_console` 工具、RPC 端点、
+> 面板全都不存在。0.2.0 是第一个能用的版本。
 
 这个插件的重点不只是「能做什么」，更是「不能做什么」。Agent 可以改变 harness **长什么样、怎么配置**，但永远不能改变自己**握有多大的权限**——沙箱模式、权限预设、审批应答、凭据写入这四类动作在 `core.js` 的 `FORBIDDEN` 表里被永久拒绝，并附带给用户的操作替代方案。所有动作经由同一张 `ACTIONS` 注册表分派，因此边界只有一处定义、两个调用方（Agent 工具与客户端面板）共用。
+
+**打开界面不等于绕过边界**：Agent 可以把你带到那个设置页，但不能替你按下页面里的权限开关。
 
 ## 安装
 
@@ -19,6 +25,47 @@ plugin_manager install_bundle plugins/vyra-dsh-console
 ```
 
 安装后重载界面；Host 侧改动需要重启 DSH。
+
+## 让 Agent 操作界面
+
+三件套各司其职：
+
+```jsonc
+dsh_console({ "action": "console.map" })   // Host：插件、插件包、MCP、技能、工具
+dsh_console({ "action": "ui.list" })       // Client：设置页、主面板、右栏 tab、命令（含所属插件）
+dsh_console({ "action": "console.actions" }) // 全部动作，以及被永久拒绝的那些
+```
+
+| 动作 | 做什么 |
+|---|---|
+| `ui.list` | 列出设置页（每行带 `registrant`，即贡献它的包名）、主面板、右栏 tab、命令 |
+| `ui.state` | 当前开着哪个弹窗、停在哪个设置节、选中哪个主面板 |
+| `ui.open` | `{target:'settings', section}` / `{target:'main', id}` / `{target:'rightbar', kind\|address}` |
+| `ui.close` | 关闭设置弹窗 |
+| `ui.invoke` | 触发一条命令（Web/Linux 可用；桌面端原生键盘接管，会返回键位让用户按） |
+| `console.map` | 整机清单一次看全，读不到的服务写进 `caveats` 而不是让整张图失败 |
+
+成功结果里**`verified: true` 才代表真的发生了**：每次打开都会回读界面确认
+（弹窗存在、目标节的 `aria-current` 为真），拿不到就报 `error`，绝不默认成功。
+
+三种失败含义不同：`unavailable`（界面没连、标签在后台、平台不支持）、
+`error`（id 不存在 / 另一个弹窗开着，附带 `candidates` 供重试）、
+`forbidden`（改自己的权限，永久拒绝）。
+
+### 设置页为什么只能"点"
+
+主面板和右栏有公开服务（`ctx.layout.selectPanel`、`ctx.sidebarRight.openTab`），
+直接调用即可。设置弹窗没有公开服务——`openSection` 是发给 `settings.launcher`
+这一格的私有 owner prop。所以 Agent 走的是真人同一条路：按快捷键标记找到触发器、
+必要时先展开账户菜单再点其中的"设置"行、最后按 `order` 索引点导航项。
+三条路径**每次都校验**，点不出结果就报错。
+
+## 技能与 CLI
+
+- **技能**随插件在运行时注册（`ctx.inject(['skills'])`），不往 `~/.dsh` 写文件；
+  卸载即消失，`DSH_HOME` 只读也不受影响。
+- **CLI 仍只读**：`doctor` / `map` / `state` / `services` / `events`，全部支持 `--json`。
+  `map` 会明确标注哪些是浏览器状态（`unknown`）以及该用哪个工具去问，而不是猜。
 
 ## 管理面板
 

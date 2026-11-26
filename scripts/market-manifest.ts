@@ -3283,10 +3283,30 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-dsh-console',
           },
         },
+        // 0.1.2 shipped without `tool.js` and `domains/` in `files`, so index.js
+        // threw ERR_MODULE_NOT_FOUND on every installation: no dsh_console tool,
+        // no RPC route, no panel. 0.2.0 is the first working release. It also
+        // adds ui.* (open a settings section, a main panel, a right-drawer tab),
+        // console.map, the exact-route Origin/Host fence the RPC was missing,
+        // and the agent skill registered at runtime instead of living outside
+        // the package.
+        //
+        // 0.1.2 is deliberately NOT repinned: a version users have already
+        // resolved keeps its source, and repinning it would change code under
+        // an installed name.
+        '0.2.0': {
+          publishTimestamp: 1795680000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'PENDING_RELEASE_COMMIT',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',
-        keywords: ['console', 'harness', 'settings', 'models', 'plugins', 'panel'],
+        keywords: ['console', 'harness', 'settings', 'ui', 'panels', 'models', 'plugins'],
       },
     },
   ],
