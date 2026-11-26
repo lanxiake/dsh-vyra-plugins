@@ -258,3 +258,12 @@ QQ 群：1121362543。
   <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
   <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
 </picture>
+
+## 交流群
+
+有问题、想提功能、或者想看看别人怎么用，欢迎加 QQ 群（群号 1121362543）。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/qq-group.png" />
+  <img alt="QQ 交流群二维码，群号 1121362543" src="./assets/qq-group.png" width="220" />
+</picture>
