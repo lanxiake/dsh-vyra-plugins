@@ -1,14 +1,9 @@
 > [!IMPORTANT]
 > 这是 [dsh-ccgui](https://github.com/zhukunpenglinyutong/dsh-ccgui) 的**二次开发分支**
 > `dsh-vyra-agent-cli-manager`，随 [dsh-vyra-plugins](https://github.com/lanxiake/dsh-vyra-plugins) 维护。
-> 下文的功能说明、截图与用法沿用上游；本分支改了什么、为什么改、授权归属，见 [FORK.md](./FORK.md)；
+> 下文的功能说明与用法沿用上游；本分支改了什么、为什么改、授权归属，见本仓库的提交记录；
 > 新增的 Agent CLI 管理能力（安装/升级/卸载/配置，以及各 CLI 自己的 MCP、技能、提示词）见
-> [DESIGN.md](./DESIGN.md)。上游文档里的 `dsh-ccgui` 安装命令对本分支不适用。
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/01-hero-dark.webp" />
-  <img alt="DSH 截图：输入框旁的 CLI 菜单列出 Claude Code、Kimi CLI、Codex CLI、PI CLI、OMP CLI、OpenCode" src="./assets/illustrations/01-hero-light.webp" />
-</picture>
+> 插件页的「设计」一节。上游文档里的 `dsh-ccgui` 安装命令对本分支不适用。
 
 ---
 <div align="center"><a name="readme-top"></a>
@@ -35,11 +30,6 @@
 
 需要 DSH `>=0.2.2-rc.1 <0.3.0`，以及已安装并登录的 CLI。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/02-install-dark.webp" />
-  <img alt="在 DSH 的插件页点「添加插件」，对话框里输入 dsh-vyra-agent-cli-manager 后点「安装」" src="./assets/illustrations/02-install-light.webp" />
-</picture>
-
 1. 点 DSH 左侧栏的「插件」，再点右上角「添加插件」，输入 `dsh-vyra-agent-cli-manager`，点「安装」。
 2. 提示“请重启 DSH 加载它”时，Cmd+Q 完全退出再打开，不要点“立即启用”，否则新旧代码混在一个进程里会启动失败。
 3. 新建会话，点输入框 `+` 右边的 CLI 按钮选一个 CLI。
@@ -64,7 +54,6 @@ dsh plugin --profile web add dsh-vyra-agent-cli-manager@1.0.2
 
 <div align="right"><a href="#readme-top">返回顶部 ↑</a></div>
 
-
 | 功能 | Claude<br>Code | Kimi<br>CLI | Codex<br>CLI | PI<br>CLI | OMP<br>CLI | Open<br>Code |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 | 真实账号验证 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -76,11 +65,6 @@ dsh plugin --profile web add dsh-vyra-agent-cli-manager@1.0.2
 ### 切换 CLI 和模型
 
 CLI 和模型各有一个菜单。CLI 会话里的模型菜单列出当前 CLI 真实可用的模型，第一项是它自己的默认模型，超过 4 项可搜索，中途换模型下一条消息生效；CLI 报出同名的模型时，靠右侧的倍率小字区分，小字区分不了时在名字后面补上 id，旁边是推理等级。模型行前是厂商图标，识别不出厂商的模型用中性的问号图标占位，不借用任何品牌的图标。不在 CLI 上的会话（比如原生 DeepSeek）沿用 DSH 自己的模型选择，包括其中的推理等级和智能体团队协作开关；原生菜单用的是全局模型目录，插件只把里面列的其他 CLI 隐藏掉（这类会话本来也切不过去），DeepSeek 账号自己的模型和开关保持原位。CLI 只能在发第一条消息前切换，要换就新建会话。
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/03-model-menu-dark.webp" />
-  <img alt="Claude Code 和 Codex CLI 各自的模型菜单截图，第一项是 CLI 自己的默认模型，顶部可以搜索" src="./assets/illustrations/03-model-menu-light.webp" />
-</picture>
 
 <details>
 <summary>细节</summary>
@@ -139,19 +123,9 @@ Claude Code 这类 CLI 只认自己厂商的环境变量和登录状态，没登
 
 右侧栏「变更」把改动分成已暂存、未暂存、未跟踪，可以暂存、撤销、提交、推拉、切换分支，点开文件看行内 diff。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/04-changes-dark.webp" />
-  <img alt="变更面板截图：改动按已暂存、未暂存、未跟踪分组，旁边是一个文件的行内 diff" src="./assets/illustrations/04-changes-light.webp" />
-</picture>
-
 ### 启动脚本
 
 在会话标题栏保存常用命令，按工作目录分别记住。点一下在单独的终端标签里运行，再点会先关掉上一次的。
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/05-launch-scripts-dark.webp" />
-  <img alt="启动脚本截图：会话标题栏的脚本菜单，和终端里运行中的 npm run dev" src="./assets/illustrations/05-launch-scripts-light.webp" />
-</picture>
 
 ### 新建 Worktree
 
@@ -174,28 +148,13 @@ worktree 收在所属项目下面的「Worktrees · N」分组里，展开后每
 
 「工作区文件」里右键「添加到对话」，把 `@路径` 插到光标处；标题栏的终端按钮一键开关右侧栏终端。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/06-workspace-tools-dark.webp" />
-  <img alt="截图：文件右键菜单的「添加到对话」、插入输入框的 @路径，以及标题栏的终端按钮" src="./assets/illustrations/06-workspace-tools-light.webp" />
-</picture>
-
 ### 会话状态
 
 会话列表里每个会话前是它所用 CLI 的图标，回合进行中旁边多一个呼吸的蓝点。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/07-session-status-dark.webp" />
-  <img alt="会话列表截图：每个会话前是所用 CLI 的图标，运行中的会话旁有蓝点" src="./assets/illustrations/07-session-status-light.webp" />
-</picture>
-
 ### Agent CLI Manager 设置
 
 DSH 设置里的「Agent CLI Manager 设置」可以调整 CLI 菜单的顺序和开关，插件加的每项界面交互也能单独关掉，恢复 DSH 原样。
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/illustrations/08-settings-dark.webp" />
-  <img alt="Agent CLI Manager 设置截图：CLI 列表（Claude Code、Kimi CLI、Codex CLI 等）的顺序和开关，后面是界面交互的开关" src="./assets/illustrations/08-settings-light.webp" />
-</picture>
 
 <details>
 <summary>细节</summary>
@@ -411,13 +370,13 @@ git push --follow-tags
 ## 贡献者
 
 <a href="https://github.com/lanxiake/dsh-vyra-plugins/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=zhukunpenglinyutong/dsh-vyra-agent-cli-manager" alt="Contributors" />
+  <img src="https://contrib.rocks/image?repo=lanxiake/dsh-vyra-plugins" alt="Contributors" />
 </a>
 
 <details>
 <summary><kbd>Star History</kbd></summary>
 
-[![Star History Chart](https://star-history.dera.page/svg?repos=zhukunpenglinyutong/dsh-vyra-agent-cli-manager&type=date&legend=top-left)](https://star-history.dera.page/#zhukunpenglinyutong/dsh-vyra-agent-cli-manager&type=date&legend=top-left)
+[![Star History Chart](https://star-history.dera.page/svg?repos=lanxiake/dsh-vyra-plugins&type=date&legend=top-left)](https://star-history.dera.page/#lanxiake/dsh-vyra-plugins&type=date&legend=top-left)
 
 </details>
 
@@ -429,17 +388,17 @@ MIT。`src/stdio-transport.ts` 改编自 DSH 的 `subagent-acp`（同为 MIT）�
 
 <!-- LINK GROUP -->
 
-[ci-shield]: https://img.shields.io/github/actions/workflow/status/zhukunpenglinyutong/dsh-vyra-agent-cli-manager/ci.yml?branch=main&label=CI&labelColor=black&style=flat-square
+[ci-shield]: https://img.shields.io/github/actions/workflow/status/lanxiake/dsh-vyra-plugins/ci.yml?branch=main&label=CI&labelColor=black&style=flat-square
 [ci-link]: https://github.com/lanxiake/dsh-vyra-plugins/actions/workflows/ci.yml
-[coverage-shield]: https://img.shields.io/codecov/c/github/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?label=coverage&labelColor=black&style=flat-square
-[coverage-link]: https://codecov.io/gh/zhukunpenglinyutong/dsh-vyra-agent-cli-manager
-[license-shield]: https://img.shields.io/github/license/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=white&labelColor=black&style=flat-square
+[coverage-shield]: https://img.shields.io/codecov/c/github/lanxiake/dsh-vyra-plugins?label=coverage&labelColor=black&style=flat-square
+[coverage-link]: https://codecov.io/gh/lanxiake/dsh-vyra-plugins
+[license-shield]: https://img.shields.io/github/license/lanxiake/dsh-vyra-plugins?color=white&labelColor=black&style=flat-square
 [license-link]: ./LICENSE
 [dsh-shield]: https://img.shields.io/badge/DSH-%3E%3D0.2.2--rc.1%20%3C0.3.0-4d6bfe?labelColor=black&style=flat-square
-[stars-shield]: https://img.shields.io/github/stars/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=ffcb47&labelColor=black&style=flat-square
-[forks-shield]: https://img.shields.io/github/forks/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=8ae8ff&labelColor=black&style=flat-square
-[issues-shield]: https://img.shields.io/github/issues/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=ff80eb&labelColor=black&style=flat-square
-[contributors-shield]: https://img.shields.io/github/contributors/zhukunpenglinyutong/dsh-vyra-agent-cli-manager?color=c4f042&labelColor=black&style=flat-square
+[stars-shield]: https://img.shields.io/github/stars/lanxiake/dsh-vyra-plugins?color=ffcb47&labelColor=black&style=flat-square
+[forks-shield]: https://img.shields.io/github/forks/lanxiake/dsh-vyra-plugins?color=8ae8ff&labelColor=black&style=flat-square
+[issues-shield]: https://img.shields.io/github/issues/lanxiake/dsh-vyra-plugins?color=ff80eb&labelColor=black&style=flat-square
+[contributors-shield]: https://img.shields.io/github/contributors/lanxiake/dsh-vyra-plugins?color=c4f042&labelColor=black&style=flat-square
 
 ## 交流群
 

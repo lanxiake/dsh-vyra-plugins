@@ -9,8 +9,6 @@
 
 为 DeepSeek Harness 换上可热切换的品牌皮肤——Web 与 Desktop 两种 profile 均可安装使用，随时一键回到官方界面。
 
-![凡人修仙传 · 美人志 — 内置默认壁纸「云台雅集」](docs/assets/preview-meirenzhi-1.webp)
-
 ## 30 秒上手
 
 本节回答：怎么装上、怎么换皮肤。
@@ -83,25 +81,19 @@ dsh plugin --profile web remove dsh-vyra-free-theme    # 卸载
 
 ## 界面预览
 
-以下均为浏览器实拍，三套扩展皮肤新旧俱备；图中壁纸随时可在个性化面板里更换（见下一节）。
+三套扩展皮肤新旧俱备，壁纸随时可在个性化面板里更换（见下一节）。
 
 ### 凡人修仙传 · 美人志
 
-| | |
-|---|---|
-| ![云台雅集 · 合照（默认壁纸）](docs/assets/preview-meirenzhi-1.webp) | ![紫灵（亮色）](docs/assets/preview-meirenzhi-2.webp) |
-| ![南宫阙（深色）](docs/assets/preview-meirenzhi-3.webp) | ![银月（亮色）](docs/assets/preview-meirenzhi-4.webp) |
-| ![慕沛灵（亮色）](docs/assets/preview-meirenzhi-5.webp) | ![南宫婉（亮色）](docs/assets/preview-meirenzhi-6.webp) |
-
-单人壁纸依次为：紫灵、南宫阙（深色）、银月、慕沛灵、南宫婉；首张为该皮肤默认「云台雅集 · 合照」。
+内置壁纸「云台雅集」：首张为合照，之后依次为紫灵、南宫阙（深色）、银月、慕沛灵、南宫婉。
 
 ### OpenBMC Studio（出厂默认）
 
-![左风右雷（出厂壁纸 · 深色）](docs/assets/preview-openbmc-1.webp)
+深色出厂壁纸「左风右雷」。
 
 ### UEFI Studio
 
-![集成电路（出厂壁纸）](docs/assets/preview-uefi-1.webp)
+出厂壁纸「集成电路」。
 
 ## 个性化：壁纸、标语与通透度
 
@@ -118,8 +110,6 @@ dsh plugin --profile web remove dsh-vyra-free-theme    # 卸载
 > 美人志在 Web 出厂值（35%）及以下不引入任何壁纸模糊与全局玻璃（ADR-0010），壁纸保持原生锐度；模糊自 35% 以上沿铰链曲线平滑爬升，100% 到顶 12px。
 
 > **Desktop profile**：外壳为实色皮肤本色、壁纸只在会话区显露——详见下方「Desktop profile 上的形态」。
-
-![个性化面板 — 以美人志为例：内置壁纸网格、图库上传、中英标语与通透度旋钮](docs/assets/preview-personalization.webp)
 
 ### 上传自己的壁纸（个人图库）
 
@@ -146,8 +136,6 @@ dsh plugin --profile web remove dsh-vyra-free-theme    # 卸载
 
 **DSH Desktop 应用**中，外壳——侧栏、顶栏条、右栏面板与窗口按钮——为**不透明的皮肤本色**，不随通透度变化；壁纸在会话区（内容列）显露，通透度联动会话区内的表面底色、遮罩与模糊。Web profile 维持全表面透纱的原有形态，两端互不影响。
 
-![Desktop profile — 实色外壳 + 会话区壁纸（美人志 · 深色）](docs/assets/preview-desktop-1.webp)
-
 - 已在 dsh Desktop `0.2.1-rc.2`（Windows）验证；macOS / Linux Desktop 当前跟随 Web 形态，后续版本适配。
 - 右栏面板全屏时为实色皮肤底、不透出壁纸；面板「收起/关闭」后的空轨道行为属宿主布局。
 
@@ -159,8 +147,6 @@ dsh plugin --profile web remove dsh-vyra-free-theme    # 卸载
 
 1. **外观配色**：浅色、深色、跟随系统。调用官方主题服务，与「设置 → 通用 → 外观」保持同步。
 2. **选择皮肤**：第一项为 DeepSeek Harness（官方），其后是扩展皮肤。点击立即切换并持久化，弹层保持打开，方便连续预览。
-
-![皮肤切换器弹层 — 外观配色与皮肤列表](docs/assets/preview-switcher.webp)
 
 侧栏收起时，入口收为圆形调色盘图标；多个 `sidebar.footer.action` 入口会纵向排列、互不遮挡。选择「官方」只撤销扩展皮肤，不动你的明暗偏好。
 
@@ -208,7 +194,8 @@ URL 也能切皮肤：`/?skin=official`、`/?skin=openbmc`、`/?skin=uefi-harnes
 
 ---
 
-想读源码、自制皮肤或参与开发？请看 [docs/developers.md](./docs/developers.md)（工作原理、皮肤开发指南、本地验证与调试 API）。
+想读源码、自制皮肤或参与开发？请直接看 `cli/`、`src/` 与 `tests/`：工作原理、皮肤开发指南、本地验证与调试 API 都在那里，
+`pnpm --filter dsh-vyra-free-theme test` 可以跑通全部用例。
 
 ## 交流群
 
