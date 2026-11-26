@@ -13,24 +13,23 @@ dsh plugin --profile web add dsh-vyra-file-manager
 - 在右侧栏浏览当前工作区内的全部文件：图片、视频、音频、文档、压缩包、代码与其他类型
 - ✅ 网格 / 列表两种视图；列表支持树形（默认）与平铺；网格支持全局缩略图缩放（滑杆 + Ctrl 滚轮）
 - ✅ 列表支持“简洁 / 详细”两档：简洁显示文件名、后缀与路径，详细再加修改日期、类型与大小
-- ✅ “只看本会话文件”筛选：只显示本会话开始后创建/修改的文件，默认按更新时间倒排
-- ✅ 类型筛选默认单选，`Ctrl / Cmd + 点击`可多选；类型含「HTML」
+- ✅ “只看本会话文件”筛选（默认开启）：只显示本会话开始后创建 / 修改的文件
+- ✅ 类型筛选默认单选，`Ctrl / Cmd + 点击`可多选；类型含「HTML」，`.html` / `.htm` 归入该项
 - ✅ 展开右侧栏时默认打开文件管理（可在筛选面板关闭）
 - ✅ 右键「复制文件 / 复制文件夹」把文件放进**系统剪贴板**，可直接在资源管理器粘贴
 - ✅ 「在资源管理器中打开」在 Windows 上会选中该文件，文件夹则直接打开
 - ✅ `Ctrl / Cmd + 点击`文件批量勾选，支持批量引用、复制、删除和复制地址
 - ✅ 文件夹同样支持右键操作：展开/折叠、定位、引用、复制、重命名、打开所在位置、系统打开、删除
 - ✅ 面包屑与文件夹弹层定位；显示隐藏文件、包含依赖/构建目录
-- ✅ 时间线只列出**真正产生文件改动**的轮次，纯问答不再占位
-- ✅ 列表默认展示**对话时间线**：每条用户消息一个节点，附该轮产出的文件，按今天 / 昨天 / 日期分节
-- ✅ 进入面板默认开启“只看本会话文件”
+- ✅ 列表默认展示**对话时间线**：每条用户消息一个节点，附该轮产出的文件，按今天 / 昨天 / 日期分节；**没有产出文件的纯问答轮次自动隐藏**
+- ✅ 时间线支持网格 / 列表两种排布：网格用真实缩略图（图片原图、视频首帧），列表用类型图标
+- ✅ 时间线**跟随类型筛选**：顶部选中「图片」后，网格与列表都只剩图片文件；筛空的轮次整轮隐藏
 - ✅ 网格、列表与预览中都可右键或点“更多”：引用到输入框、复制到文件夹、复制文件地址、重命名、打开所在位置、用系统应用打开、删除
 - ✅ 文本类文档用真实内容缩略图；PDF/Office/压缩包/代码使用按类型配色的图标缩略图
 - ✅ 富预览：Markdown 渲染、代码语法高亮、JSON 格式化、CSV/TSV 表格、HTML 沙箱渲染（可切源码）、纯文本
 - ✅ PDF 在面板内预览；Office/压缩包等交给系统应用
 - ✅ 视频/音频卡片内原地播放；点击卡片打开面板内灯箱；切换 tab 时音频继续播放
 - ✅ 本地大文件通过支持 Range 的 Host 路由流式读取，可拖动进度
-- 文件链接由系统点开：直链媒体在本插件内播放，其余交给浏览器
 
 ## 性能
 
@@ -58,19 +57,21 @@ dsh plugin --profile web add dsh-vyra-file-manager
 
 ## 安装
 
-插件尚未进入本仓库的市场清单，可先从 Git 或本地目录安装：
+已经在本仓库的市场清单里，用插件市场搜索「文件管理」即可安装。
+
+也可以直接从 Git 装（`<commit>` 用市场清单里 pin 住的那个提交）：
 
 ```sh
-dsh plugin add git+https://github.com/lanxiake/dsh-vyra-plugins.git#path:/plugins/vyra-media-studio
+dsh plugin add "git+https://github.com/lanxiake/dsh-vyra-plugins.git#<commit>&path:/plugins/vyra-file-manager"
 ```
 
 本地开发时在 profile 的 `package.json` 中把依赖指向本目录：
 
 ```json
-"dsh-vyra-file-manager": "link:E:/my-project/dsh-vyra-plugins/plugins/vyra-media-studio"
+"dsh-vyra-file-manager": "link:E:/my-project/dsh-vyra-plugins/plugins/vyra-file-manager"
 ```
 
-安装后在 profile 的 bundles 中启用 `dsh-vyra-file-manager`，重启 DSH。
+安装后在 profile 的 bundles 中启用 `dsh-vyra-file-manager`，重启 DSH（Host 侧的 `lib/` 改动不会热更新）。
 
 ## 开发
 
@@ -96,6 +97,7 @@ pnpm test
 - 删除默认走系统回收站：Windows PowerShell 回收站、macOS `~/.Trash`、Linux `gio trash`；失败时才提示永久删除。
 - “引用到输入框”通过 `conversation.input.left` 的 composer bridge 插入 `@相对路径 ` 提及。
 - 文件夹操作同样使用 Host 进程文件系统：复制为递归复制，删除走系统回收站；禁止操作工作区根目录。
+- 时间线缩略图只对**仍在工作区**的图片和视频发起请求；文件已不存在时回退为类型图标，不发空请求。
 - HTML 预览在 opaque-origin 沙箱（`allow-scripts`，但**不含** `allow-same-origin`）中运行：脚本能跑，却读不到本页的 DOM、存储和 Cookie。
 - `<link rel=stylesheet>` / `<script src>` / `<img src>` 三类外链由 `html-asset` 路由代理内联成 `data:` URL，单资源上限 2 MB、总计 8 MB、超时 5 s；内联失败时保留原引用，页面照常渲染。
 
@@ -107,7 +109,7 @@ pnpm test
 
 ## 当前边界
 
-不包含服务端缩略图生成、PDF 首页渲染、Office 内容解析、拖拽上传、远程 SSH 文件写入。
+不包含服务端缩略图生成、PDF 首页渲染、Office 内容解析、拖拽上传、远程 SSH 文件写入、音频波形图（时间线里音频仍显示类型图标）。
 
 ## 交流群
 
