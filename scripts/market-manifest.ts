@@ -1913,11 +1913,11 @@ export const manifest: MarketManifest = {
         // and the Installed-page bar now offer a restart where the Desktop shell
         // publishes one, and state the manual steps where it does not.
         '0.7.4': {
-          publishTimestamp: 0,
+          publishTimestamp: 1795658609,
           source: {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
-            commit: '0000000000000000000000000000000000000000',
+            commit: '065e3b1b6332ad1bfc020777fc68c33664ea75ee',
             path: 'plugins/vyra-plugin-market',
           },
         },
