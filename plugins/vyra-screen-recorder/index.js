@@ -285,6 +285,7 @@ function clamp(value, min, max, fallback) {
   return Math.min(max, Math.max(min, Math.round(number)))
 }
 
+/** Run one of the native helpers that ship beside this file. */
 function runPowerShell(script, args) {
   if (process.platform !== 'win32') {
     throw new Error('目前只支持 Windows')
@@ -295,6 +296,67 @@ function runPowerShell(script, args) {
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
     '-File', file, ...args,
   ], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+}
+
+/**
+ * Where the Windows.Graphics.Capture helper lives, when this install has one.
+ *
+ * `wgcrec` captures a WINDOW's composed surface, so another window covering it
+ * does not appear in the video. The PowerShell path reads screen pixels through
+ * GDI and cannot do that: whatever is on top gets recorded, which is what made
+ * every attempt to film the app while a terminal was in front produce the
+ * terminal.
+ *
+ * It is optional on purpose. The helper is compiled by `scripts/build-wgcrec.mjs`
+ * and may be absent on a machine without the .NET SDK; the recorder then falls
+ * back to the GDI path and says so, rather than failing to record at all.
+ *
+ * @returns the executable path, or undefined when this install has none.
+ */
+function wgcRecorderPath() {
+  const candidates = [
+    path.join(ROOT, 'native', 'wgcrec', 'bin', 'Release', 'net8.0-windows10.0.19041.0', 'wgcrec.exe'),
+    path.join(ROOT, 'native', 'wgcrec', 'bin', 'Release', 'net8.0-windows10.0.19041.0', 'publish', 'wgcrec.exe'),
+  ]
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate
+  }
+  return undefined
+}
+
+/**
+ * Start frame capture for one session.
+ *
+ * A window source goes through `wgcrec` when it is available, because that is
+ * the only path that records the window rather than the screen rectangle it
+ * occupies. Everything else — a region, a monitor, a desktop capture — keeps the
+ * GDI path, which is what those sources mean.
+ *
+ * @returns `{ child, how }` — the process and which path was taken.
+ */
+function startFrames(session, { dir, source, fps, quality, maxEdge, maxSeconds }) {
+  const stopFile = path.join(dir, 'frames.stop')
+  const wgc = source.type === 'window' ? wgcRecorderPath() : undefined
+  if (wgc !== undefined) {
+    return {
+      child: spawn(wgc, [
+        String(source.hwnd), dir, String(fps), String(quality),
+        String(maxEdge), String(maxSeconds), stopFile,
+      ], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }),
+      how: 'wgc',
+    }
+  }
+  const args = [
+    '-OutDir', dir,
+    '-Fps', String(fps),
+    '-Quality', String(quality),
+    '-MaxEdge', String(maxEdge),
+    '-MaxSeconds', String(maxSeconds),
+    '-StopFile', stopFile,
+  ]
+  if (source.type === 'window') args.push('-Hwnd', String(source.hwnd))
+  else if (source.type === 'region') args.push('-Region', [source.x, source.y, source.w, source.h].join(','))
+  return { child: runPowerShell('frames.ps1', args), how: 'gdi' }
 }
 
 /** 收集子进程 stdout 的整行文本。 */
@@ -986,17 +1048,6 @@ async function startSession(payload) {
     manifest: null,
   }
 
-  const framesArgs = [
-    '-OutDir', dir,
-    '-Fps', String(fps),
-    '-Quality', String(quality),
-    '-MaxEdge', String(maxEdge),
-    '-MaxSeconds', String(maxSeconds),
-    '-StopFile', path.join(dir, 'frames.stop'),
-  ]
-  if (source.type === 'window') framesArgs.push('-Hwnd', String(source.hwnd))
-  else if (source.type === 'region') framesArgs.push('-Region', [source.x, source.y, source.w, source.h].join(','))
-
   if (includeSystemAudio) {
     try {
       const audio = runPowerShell('audio.ps1', [
@@ -1017,8 +1068,10 @@ async function startSession(payload) {
   }
 
   try {
-    const frames = runPowerShell('frames.ps1', framesArgs)
+    const started = startFrames(session, { dir, source, fps, quality, maxEdge, maxSeconds })
+    const frames = started.child
     session.framesChild = frames
+    session.capture = started.how
     lineReader(frames, line => { if (line.startsWith('DONE') || line.startsWith('ERROR')) log('frames', line) })
     await waitReady(frames, '录屏', 20000)
   } catch (error) {
@@ -1778,10 +1831,40 @@ function resolveWebServer(scope) {
   return null
 }
 
+/**
+ * Build the Windows.Graphics.Capture helper, in the background.
+ *
+ * Runs the same script an operator would run by hand. A failure is logged and
+ * swallowed: the recorder works without this helper, and an install must not
+ * fail because a machine has no .NET SDK.
+ *
+ * @returns the executable path when it is available afterwards.
+ */
+async function buildWgcHelper() {
+  const script = path.join(ROOT, 'scripts', 'build-wgcrec.mjs')
+  if (!existsSync(script)) return wgcRecorderPath()
+  const child = spawn(process.execPath, [script], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  let output = ''
+  child.stdout?.setEncoding('utf8')
+  child.stderr?.setEncoding('utf8')
+  child.stdout?.on('data', (chunk) => { output += chunk })
+  child.stderr?.on('data', (chunk) => { output += chunk })
+  await new Promise((resolve) => child.on('close', resolve))
+  const built = wgcRecorderPath()
+  log('wgcrec', built === undefined ? 'unavailable; GDI capture will be used' : 'ready at ' + built)
+  if (built === undefined && output.trim() !== '') log('wgcrec output:', output.trim().slice(0, 400))
+  return built
+}
+
 export function apply(ctx) {
   ocrContext = ctx
   cleanupOldSessions().catch(() => {})
   void installAgentAssets().catch(error => log('安装技能/CLI 失败：', (error && error.message) || error))
+  // Build the occlusion-proof capture helper once, in the background. It is
+  // optional: without it the GDI path records the screen rectangle, with it the
+  // window's own surface. Building here rather than at first use means a
+  // recording never waits on a compile.
+  void buildWgcHelper().catch(error => log('wgcrec 构建失败：', (error && error.message) || error))
   // 预热常驻截图服务：PowerShell 冷启动和 C# 加载都放后台，第一次截图就快。
   try { startShotServer() } catch (error) { log('截图服务预热失败：', (error && error.message) || error) }
   try {

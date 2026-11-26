@@ -27,7 +27,8 @@
     "cordis.patch.yml",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
-    "README.md"
+    "README.md",
+    "native"
   ],
   "dsh": {
     "bundle": {
@@ -44,7 +45,8 @@
     "check:client": "node scripts/build-client.mjs --check",
     "fix:bom": "node scripts/fix-bom.mjs",
     "check": "node scripts/check-syntax.mjs && node scripts/fix-bom.mjs --check",
-    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "build:wgcrec": "node scripts/build-wgcrec.mjs"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0"

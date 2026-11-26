@@ -1,0 +1,4 @@
+
+# Build output of the WGC helper; `node scripts/build-wgcrec.mjs` regenerates it.
+native/wgcrec/bin/
+native/wgcrec/obj/
