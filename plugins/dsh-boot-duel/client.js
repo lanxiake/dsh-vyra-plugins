@@ -1148,16 +1148,16 @@ window.__ModuleLoader__.load({
     /**
      * The two fighters talk.
      *
-     * These are two office workers settling something in the corridor, and the
-     * barks are what make the fight worth watching. The tone is the point:
+     * These are two developers settling something in an office, and the barks are
+     * what make the fight worth watching. The tone is the point:
      *
-     *   - **playful, not bitter.** Nobody is a villain. The oppressor is "the
-     *     demand", not this specific manager, and the lines are the jokes you tell
-     *     about work — the ones that make everyone at the table laugh and nod.
-     *   - **the player wins the argument, not the war.** Every story ends with
-     *     something small and warm: a coffee, a nod, a joke shared.
-     *   - **concrete, not abstract.** The comedy is in the specifics — 五彩斑斓的黑,
-     *     "再黑一点，但要有光", the 340 hours of comp time.
+     *   - **playful, not bitter.** Nobody is a villain. The comedy is the jokes
+     *     developers actually tell each other — the ones where everyone winces and
+     *     then laughs, because it happened to them last Tuesday.
+     *   - **concrete, not abstract.** The humour is in the specifics: "在我电脑上
+     *     是好的", the third refactor of a function nobody calls, the comment that
+     *     says what the code did two years ago.
+     *   - **the player wins the argument, not the war.** Every story ends warm.
      *
      * Each STORY is a cast and a line per beat of the fight. Beats fire on game
      * events, not on a timer:
@@ -1177,168 +1177,163 @@ window.__ModuleLoader__.load({
 
     const STORIES = [
       {
-        id: 'crunch',
-        title: '加班',
+        id: 'works-on-my-machine',
+        title: '在我电脑上是好的',
         you: '你',
-        rival: '组长',
+        rival: '同事',
         beats: {
           open: [
-            ['rival', '这个需求，今晚上线哈。', 'cheery'],
-            ['you', '文档呢？', 'flat'],
-            ['rival', '要什么文档，先做出来看看嘛。', 'cheery'],
-            ['you', '……行，那我做着，您泡咖啡。', 'dry'],
+            ['rival', '诶，你这个功能在测试环境挂了。', 'cheery'],
+            ['you', '我本地跑得好好的。', 'flat'],
+            ['rival', '真的，你来看一下。', 'cheery'],
+            ['you', '……行，我看看。', 'tired'],
           ],
           chain: [
-            ['you', '第一版。', 'flat'],
-            ['you', '第二版。', 'flat'],
-            ['you', '这是你上周说的第一版。', 'dry'],
-            ['rival', '诶？我记得是第一版啊。', 'confused'],
+            ['you', '本地过。', 'flat'],
+            ['you', 'CI 也过了。', 'flat'],
+            ['you', '只有你的电脑不行。', 'dry'],
+            ['rival', '那……是不是你少提交了文件？', 'confused'],
           ],
           guard: [
-            ['you', '挡住了。', 'dry'],
-            ['rival', '我说的是「参考一下」，不是「照抄」。', 'cheery'],
-            ['you', '这句话我听了六遍，第六遍是刚才。', 'tired'],
+            ['you', '我加了日志的。', 'dry'],
+            ['rival', '日志里没打出来。', 'cheery'],
+            ['you', '因为那个分支没走到。', 'flat'],
           ],
           hit: [
-            ['you', '这个改动，一行代码。', 'flat'],
-            ['you', '你昨天说不急的。', 'flat'],
-            ['rival', '我说过这话吗？', 'confused'],
-            ['you', '会议纪要里写着呢。', 'dry'],
+            ['you', 'node_modules 删了重装。', 'flat'],
+            ['rival', '啊，好了。', 'surprised'],
+            ['you', '……我就说。', 'dry'],
+            ['rival', '那你早说嘛。', 'cheery'],
           ],
           take: [
-            ['you', '又是我的锅？', 'tired'],
-            ['rival', '能者多劳嘛。', 'cheery'],
-            ['you', '那能者多劳，能不能也多得？', 'dry'],
-            ['rival', '……下次评优，我记着。', 'smooth'],
+            ['you', '我再看看……', 'tired'],
+            ['rival', '要不要我远程连一下？', 'cheery'],
+            ['you', '不用不用。', 'flat'],
+            ['rival', '那我先把这个 bug 指派给你了。', 'smooth'],
           ],
           super: [
-            ['you', '这个方案，我再想想。', 'hard'],
-            ['rival', '你先说说你的想法。', 'surprised'],
+            ['you', '这不是 bug，这是特性。', 'hard'],
+            ['rival', '……你认真的？', 'surprised'],
           ],
           ko: [
-            ['you', '来杯咖啡？我请。', 'warm'],
-            ['rival', '……加个奶。', 'beaten'],
+            ['you', '一起看看？', 'warm'],
+            ['rival', '好啊，我这还有个更离谱的。', 'beaten'],
           ],
           taunt: [
-            ['rival', '明天早上九点前哈。', 'cheery'],
-            ['rival', '你最近是不是没睡好。', 'cheery'],
-            ['rival', '这个也抓一下，那个也抓一下。', 'cheery'],
-            ['rival', '年轻人，多历练历练。', 'cheery'],
+            ['rival', '你那边是什么环境？', 'cheery'],
+            ['rival', '我这边是好的呀。', 'cheery'],
+            ['rival', '是不是缓存的问题？', 'cheery'],
+            ['rival', '你重启一下试试。', 'cheery'],
           ],
         },
       },
 
       {
-        id: 'layoff',
-        title: '优化',
+        id: 'legacy',
+        title: '这段代码谁写的',
         you: '你',
-        rival: 'HR',
+        rival: '前任',
         beats: {
           open: [
-            ['rival', '来，坐。喝点什么？', 'smooth'],
-            ['you', '不渴。', 'flat'],
-            ['rival', '公司最近在做一点组织调整。', 'smooth'],
-            ['you', '调整的是我，对吧。', 'dry'],
+            ['rival', '这块逻辑你别动。', 'smooth'],
+            ['you', '为什么？', 'flat'],
+            ['rival', '没有为什么，动了会出事。', 'smooth'],
+            ['you', '……好吧。', 'tired'],
           ],
           chain: [
-            ['you', 'N+1 算一下。', 'flat'],
-            ['you', '年假还有十二天。', 'flat'],
-            ['you', '调休攒了三百四十小时。', 'dry'],
-            ['rival', '……我让财务再核一下。', 'baffled'],
+            ['you', '这里为什么乘 1.08？', 'flat'],
+            ['you', '这个变量为什么叫 tmp2？', 'flat'],
+            ['you', '为什么注释写的是 2019 年？', 'dry'],
+            ['rival', '年代久远，记不清了。', 'baffled'],
           ],
           guard: [
-            ['you', '这个叫「协商一致」。', 'dry'],
-            ['rival', '签字，对大家都好。', 'smooth'],
-            ['you', '我再看看，不急。', 'flat'],
+            ['you', '这段代码没人调用。', 'dry'],
+            ['rival', '不能删，万一有用呢。', 'smooth'],
+            ['you', '三年了。', 'flat'],
           ],
           hit: [
-            ['you', '去年绩效 B+，你说的。', 'flat'],
-            ['you', '邮件我留着呢。', 'dry'],
-            ['rival', '邮件……那得看具体语境。', 'baffled'],
-            ['you', '语境挺好的。', 'dry'],
+            ['you', '我 grep 过了，零引用。', 'flat'],
+            ['rival', '可能动态调用的。', 'baffled'],
+            ['you', '这是静态语言。', 'dry'],
+            ['rival', '……那也不能删。', 'smooth'],
           ],
           take: [
-            ['you', '工位我自己收拾。', 'tired'],
-            ['rival', '门禁卡下午失效哈。', 'smooth'],
-            ['you', '行。那我把话说完再走。', 'flat'],
+            ['you', '行吧，我加个注释。', 'tired'],
+            ['rival', '注释写清楚点。', 'smooth'],
+            ['you', '「不要动」。', 'dry'],
+            ['rival', '对，就这样。', 'smooth'],
           ],
           super: [
-            ['you', '这个字，我先不签。', 'hard'],
-            ['rival', '诶，我们还可以再聊聊。', 'surprised'],
+            ['you', '这段代码，我今天一定要重构。', 'hard'],
+            ['rival', '你别！真的别！', 'surprised'],
           ],
           ko: [
-            ['you', '谢谢你这几年。', 'warm'],
-            ['rival', '……有事儿随时联系。', 'beaten'],
+            ['you', '重构完了，测试全过。', 'warm'],
+            ['rival', '……居然没炸。', 'beaten'],
           ],
           taunt: [
-            ['rival', '这都是为了你好。', 'smooth'],
-            ['rival', '公司也是一家人嘛。', 'smooth'],
-            ['rival', '你多理解理解公司。', 'smooth'],
-            ['rival', '这个我们之后再沟通。', 'smooth'],
+            ['rival', '这段别动，能用就行。', 'smooth'],
+            ['rival', '线上跑了好几年了。', 'smooth'],
+            ['rival', '你不懂当时的背景。', 'smooth'],
+            ['rival', '这个我加过注释的。', 'smooth'],
           ],
         },
       },
 
       {
-        id: 'deadline',
-        title: '改稿',
+        id: 'review',
+        title: '代码评审',
         you: '你',
-        rival: '甲方',
+        rival: '评审人',
         beats: {
           open: [
-            ['rival', '感觉不太对。', 'airy'],
-            ['you', '哪儿不对？', 'flat'],
-            ['rival', '说不上来，就是不太对。', 'airy'],
-            ['you', '……那您说说，怎么改。', 'tired'],
+            ['rival', '你这个 PR 我看了。', 'cheery'],
+            ['you', '嗯，有问题吗？', 'flat'],
+            ['rival', '有点小意见，不多，就 47 条。', 'cheery'],
+            ['you', '……啊。', 'tired'],
           ],
           chain: [
-            ['you', '第一稿。', 'flat'],
-            ['you', '第七稿。', 'flat'],
-            ['you', '第十八稿。', 'dry'],
-            ['rival', '还是第一稿好。', 'airy'],
+            ['you', '第一条改好了。', 'flat'],
+            ['you', '第十条改好了。', 'flat'],
+            ['you', '第四十七条改好了。', 'dry'],
+            ['rival', '哦对了，这里还有个可以优化的点。', 'cheery'],
           ],
           guard: [
-            ['you', '五彩斑斓的黑，调出来了。', 'dry'],
-            ['rival', '再黑一点，但要有光。', 'airy'],
-            ['you', '（深呼吸）好。', 'tired'],
+            ['you', '这个命名我觉得没问题。', 'dry'],
+            ['rival', '能不能叫得更「业务」一点？', 'cheery'],
+            ['you', '……我改。', 'tired'],
           ],
           hit: [
-            ['you', '这个字，再大一点。', 'flat'],
-            ['you', 'logo 要大，但要显小。', 'dry'],
-            ['rival', '你懂我意思吧。', 'airy'],
-            ['you', '我不懂，但可以做。', 'dry'],
+            ['you', '这行是自动格式化加的。', 'flat'],
+            ['rival', '哦，那不用改。', 'surprised'],
+            ['you', '……', 'dry'],
+            ['rival', '不过你格式能不能统一一下？', 'cheery'],
           ],
           take: [
-            ['you', '今天下班前给您。', 'tired'],
-            ['rival', '我明天一早就要哈。', 'airy'],
-            ['you', '现在是晚上十一点。', 'flat'],
-            ['rival', '那你抓紧嘛。', 'airy'],
+            ['you', '好，我改。', 'tired'],
+            ['rival', '辛苦啦，你这个改完我们就合。', 'cheery'],
+            ['you', '上次也这么说。', 'flat'],
+            ['rival', '这次真的！', 'cheery'],
           ],
           super: [
-            ['you', '这一版，是我能给的最好的一版。', 'hard'],
-            ['rival', '……好像确实还行。', 'surprised'],
+            ['you', '这个 PR，我改完了。全部。', 'hard'],
+            ['rival', '……我看看。哦，可以合了。', 'surprised'],
           ],
           ko: [
-            ['you', '合作愉快。', 'warm'],
-            ['rival', '……下个项目还找你。', 'beaten'],
+            ['you', '合了。', 'warm'],
+            ['rival', '嗯，写得挺干净的。', 'beaten'],
           ],
           taunt: [
-            ['rival', '预算就这么多哈。', 'airy'],
-            ['rival', '你再想想，我相信你。', 'airy'],
-            ['rival', '大气一点，但别太贵。', 'airy'],
-            ['rival', '我朋友说这样不好看。', 'airy'],
+            ['rival', '这个能拆成两个函数吗？', 'cheery'],
+            ['rival', '这里加个注释吧。', 'cheery'],
+            ['rival', '这个变量名能不能再想想？', 'cheery'],
+            ['rival', '我看别的地方都是这么写的。', 'cheery'],
           ],
         },
       },
     ]
 
-    /**
-     * Picks a story.
-     *
-     * A number picks one by index (the tests use this); no argument picks one
-     * at random, and never the one that was just played — a "random" pick that
-     * can repeat is the one thing players notice immediately.
-     */
+    /** Picks a story by index, or at random without repeating the last one. */
     function storyFor(round, { avoid = null, rng = Math.random } = {}) {
       if (Number.isFinite(round)) {
         return STORIES[Math.abs(Math.floor(round)) % STORIES.length]
@@ -4156,6 +4151,10 @@ window.__ModuleLoader__.load({
 
     const NAMESPACE = 'boot-duel'
     const SLOT = 'shell.overlay'
+    /** The host settings page slot. */
+    const SETTINGS_SLOT = 'settings.section'
+    /** The icon beside it in the settings list. */
+    const SETTINGS_ICON_SLOT = 'settings.section.icon'
     const ENTRY_ID = 'boot-duel'
     const ENTRY_ORDER = 1000
     const FADE_MS = 400
@@ -4189,6 +4188,8 @@ window.__ModuleLoader__.load({
         'settings.restart': '再来一局',
         'settings.resetBinds': '恢复默认键位',
         'settings.close': '关闭',
+        'settings.lede': '每次打开 Web 界面先打一局火柴人，打完接着上班。',
+        'settings.bindsNote': '键位在游戏内右上角的齿轮里改，那里能直接按新键试。',
         'special.name': '破 军',
         'special.ready': '气已满 · 按 U 放大招',
         'special.locked': '气 {n}%',
@@ -4226,6 +4227,8 @@ window.__ModuleLoader__.load({
         'settings.restart': 'One more round',
         'settings.resetBinds': 'Reset keys',
         'settings.close': 'Close',
+        'settings.lede': 'A one-round stick-figure duel before the home page loads, then back to work.',
+        'settings.bindsNote': 'Key bindings live behind the in-game gear, where you can press the new key to test it.',
         'special.name': 'Rend',
         'special.ready': 'Qi full · press U',
         'special.locked': 'Qi {n}%',
@@ -4518,6 +4521,27 @@ window.__ModuleLoader__.load({
 }
 .boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 600ms ease 260ms both; }
 .boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 700ms both; }
+
+/* The host settings section. The host owns the surrounding chrome, so this
+   is deliberately plain: a title, a lede, rows, and nothing that fights the
+   host's own typography. */
+.boot-duel-host-section { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.boot-duel-host-title { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .04em; }
+.boot-duel-host-lede { margin: 0; font-size: 12.5px; line-height: 1.6; opacity: .72; }
+.boot-duel-host-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 7px 0; font-size: 13px; cursor: pointer;
+  border-bottom: 1px solid rgba(128, 138, 152, .16);
+}
+.boot-duel-host-label { flex: 1; }
+.boot-duel-host-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.boot-duel-host-row select {
+  font: inherit; padding: 3px 8px; border-radius: 6px;
+  border: 1px solid rgba(128, 138, 152, .3);
+  background: transparent; color: inherit; cursor: pointer;
+}
+.boot-duel-host-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; opacity: .6; }
+.boot-duel-host-icon { display: grid; place-items: center; font-size: 15px; }
 
 .boot-duel-gear {
   position: absolute; top: 12px; right: 14px; z-index: 6;
@@ -5028,6 +5052,71 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /**
+     * The section the host settings page renders.
+     *
+     * It edits the SAME stored preferences as the in-game gear, so the two
+     * panels can never disagree. The difference is presentation: this one sits
+     * in the host's own settings column, which is where a user looks for
+     * "turn this plugin off" — and it has to work while the game layer is not
+     * mounted, because "off" is one of the things it can set.
+     */
+    function HostSettingsSection() {
+      const [local, setLocal] = React.useState(settings)
+
+      // Pick up changes made elsewhere (the in-game gear) while this is open.
+      React.useEffect(() => {
+        const listener = (next) => setLocal({ ...next })
+        settingsListeners.add(listener)
+        return () => settingsListeners.delete(listener)
+      }, [])
+
+      const patch = (next) => { setLocal({ ...local, ...next }); updateSettings(next) }
+
+      const row = (label, control) => React.createElement('label', { className: 'boot-duel-host-row' },
+        React.createElement('span', { className: 'boot-duel-host-label' }, label),
+        control,
+      )
+
+      return React.createElement('div', { className: 'boot-duel-host-section' },
+        React.createElement('h3', { className: 'boot-duel-host-title' }, t('title')),
+        React.createElement('p', { className: 'boot-duel-host-lede' }, t('settings.lede')),
+
+        row(t('settings.enabled'),
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: local.enabled,
+            onChange: (e) => patch({ enabled: e.target.checked }),
+          })),
+
+        row(t('settings.sound'),
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: local.sound,
+            onChange: (e) => patch({ sound: e.target.checked }),
+          })),
+
+        row(t('settings.difficulty'),
+          React.createElement('select', {
+            value: local.difficulty,
+            onChange: (e) => patch({ difficulty: e.target.value }),
+          },
+            React.createElement('option', { value: 'easy' }, t('settings.easy')),
+            React.createElement('option', { value: 'normal' }, t('settings.normal')),
+          )),
+
+        React.createElement('p', { className: 'boot-duel-host-note' }, t('settings.bindsNote')),
+      )
+    }
+
+    /** The mark beside the section in the settings list. */
+    function SettingsSectionIcon() {
+      return React.createElement('span', {
+        className: 'boot-duel-host-icon',
+        'aria-hidden': 'true',
+      }, '⚔')
+    }
+
     function BootDuel() {
       const [snapshot, setSnapshot] = React.useState(null)
       /** Settings panel visibility. */
@@ -5471,7 +5560,29 @@ window.__ModuleLoader__.load({
       fetchConfig().then(applyConfig).catch((error) => logError('config apply failed', error))
 
       try {
-        ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
+        
+      /**
+       * The host settings page.
+       *
+       * Registered as a section, not as part of the overlay: the section is
+       * what "设置 → 插件" lists, and a plugin with user-facing preferences
+       * that does not appear there reads as having none.
+       */
+      ctx.effect(() => ctx.slots.inject(SETTINGS_SLOT, () => ctx.slots.register({
+        name: SETTINGS_SLOT,
+        id: ENTRY_ID,
+        order: ENTRY_ORDER,
+        label: () => t('settings.title'),
+        locale: NAMESPACE,
+      }, () => React.createElement(HostSettingsSection))))
+
+      ctx.effect(() => ctx.slots.inject(SETTINGS_ICON_SLOT, () => ctx.slots.register({
+        name: SETTINGS_ICON_SLOT,
+        id: ENTRY_ID,
+        order: ENTRY_ORDER,
+      }, () => React.createElement(SettingsSectionIcon))))
+
+ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
           name: SLOT,
           id: ENTRY_ID,
           order: ENTRY_ORDER,

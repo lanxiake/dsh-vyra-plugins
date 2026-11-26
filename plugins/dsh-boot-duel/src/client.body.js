@@ -43,6 +43,10 @@ window.__ModuleLoader__.load({
 
     const NAMESPACE = 'boot-duel'
     const SLOT = 'shell.overlay'
+    /** The host settings page slot. */
+    const SETTINGS_SLOT = 'settings.section'
+    /** The icon beside it in the settings list. */
+    const SETTINGS_ICON_SLOT = 'settings.section.icon'
     const ENTRY_ID = 'boot-duel'
     const ENTRY_ORDER = 1000
     const FADE_MS = 400
@@ -76,6 +80,8 @@ window.__ModuleLoader__.load({
         'settings.restart': '再来一局',
         'settings.resetBinds': '恢复默认键位',
         'settings.close': '关闭',
+        'settings.lede': '每次打开 Web 界面先打一局火柴人，打完接着上班。',
+        'settings.bindsNote': '键位在游戏内右上角的齿轮里改，那里能直接按新键试。',
         'special.name': '破 军',
         'special.ready': '气已满 · 按 U 放大招',
         'special.locked': '气 {n}%',
@@ -113,6 +119,8 @@ window.__ModuleLoader__.load({
         'settings.restart': 'One more round',
         'settings.resetBinds': 'Reset keys',
         'settings.close': 'Close',
+        'settings.lede': 'A one-round stick-figure duel before the home page loads, then back to work.',
+        'settings.bindsNote': 'Key bindings live behind the in-game gear, where you can press the new key to test it.',
         'special.name': 'Rend',
         'special.ready': 'Qi full · press U',
         'special.locked': 'Qi {n}%',
@@ -405,6 +413,27 @@ window.__ModuleLoader__.load({
 }
 .boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 600ms ease 260ms both; }
 .boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 700ms both; }
+
+/* The host settings section. The host owns the surrounding chrome, so this
+   is deliberately plain: a title, a lede, rows, and nothing that fights the
+   host's own typography. */
+.boot-duel-host-section { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.boot-duel-host-title { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .04em; }
+.boot-duel-host-lede { margin: 0; font-size: 12.5px; line-height: 1.6; opacity: .72; }
+.boot-duel-host-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 7px 0; font-size: 13px; cursor: pointer;
+  border-bottom: 1px solid rgba(128, 138, 152, .16);
+}
+.boot-duel-host-label { flex: 1; }
+.boot-duel-host-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.boot-duel-host-row select {
+  font: inherit; padding: 3px 8px; border-radius: 6px;
+  border: 1px solid rgba(128, 138, 152, .3);
+  background: transparent; color: inherit; cursor: pointer;
+}
+.boot-duel-host-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; opacity: .6; }
+.boot-duel-host-icon { display: grid; place-items: center; font-size: 15px; }
 
 .boot-duel-gear {
   position: absolute; top: 12px; right: 14px; z-index: 6;
@@ -915,6 +944,71 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /**
+     * The section the host settings page renders.
+     *
+     * It edits the SAME stored preferences as the in-game gear, so the two
+     * panels can never disagree. The difference is presentation: this one sits
+     * in the host's own settings column, which is where a user looks for
+     * "turn this plugin off" — and it has to work while the game layer is not
+     * mounted, because "off" is one of the things it can set.
+     */
+    function HostSettingsSection() {
+      const [local, setLocal] = React.useState(settings)
+
+      // Pick up changes made elsewhere (the in-game gear) while this is open.
+      React.useEffect(() => {
+        const listener = (next) => setLocal({ ...next })
+        settingsListeners.add(listener)
+        return () => settingsListeners.delete(listener)
+      }, [])
+
+      const patch = (next) => { setLocal({ ...local, ...next }); updateSettings(next) }
+
+      const row = (label, control) => React.createElement('label', { className: 'boot-duel-host-row' },
+        React.createElement('span', { className: 'boot-duel-host-label' }, label),
+        control,
+      )
+
+      return React.createElement('div', { className: 'boot-duel-host-section' },
+        React.createElement('h3', { className: 'boot-duel-host-title' }, t('title')),
+        React.createElement('p', { className: 'boot-duel-host-lede' }, t('settings.lede')),
+
+        row(t('settings.enabled'),
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: local.enabled,
+            onChange: (e) => patch({ enabled: e.target.checked }),
+          })),
+
+        row(t('settings.sound'),
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: local.sound,
+            onChange: (e) => patch({ sound: e.target.checked }),
+          })),
+
+        row(t('settings.difficulty'),
+          React.createElement('select', {
+            value: local.difficulty,
+            onChange: (e) => patch({ difficulty: e.target.value }),
+          },
+            React.createElement('option', { value: 'easy' }, t('settings.easy')),
+            React.createElement('option', { value: 'normal' }, t('settings.normal')),
+          )),
+
+        React.createElement('p', { className: 'boot-duel-host-note' }, t('settings.bindsNote')),
+      )
+    }
+
+    /** The mark beside the section in the settings list. */
+    function SettingsSectionIcon() {
+      return React.createElement('span', {
+        className: 'boot-duel-host-icon',
+        'aria-hidden': 'true',
+      }, '⚔')
+    }
+
     function BootDuel() {
       const [snapshot, setSnapshot] = React.useState(null)
       /** Settings panel visibility. */
@@ -1358,7 +1452,29 @@ window.__ModuleLoader__.load({
       fetchConfig().then(applyConfig).catch((error) => logError('config apply failed', error))
 
       try {
-        ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
+        
+      /**
+       * The host settings page.
+       *
+       * Registered as a section, not as part of the overlay: the section is
+       * what "设置 → 插件" lists, and a plugin with user-facing preferences
+       * that does not appear there reads as having none.
+       */
+      ctx.effect(() => ctx.slots.inject(SETTINGS_SLOT, () => ctx.slots.register({
+        name: SETTINGS_SLOT,
+        id: ENTRY_ID,
+        order: ENTRY_ORDER,
+        label: () => t('settings.title'),
+        locale: NAMESPACE,
+      }, () => React.createElement(HostSettingsSection))))
+
+      ctx.effect(() => ctx.slots.inject(SETTINGS_ICON_SLOT, () => ctx.slots.register({
+        name: SETTINGS_ICON_SLOT,
+        id: ENTRY_ID,
+        order: ENTRY_ORDER,
+      }, () => React.createElement(SettingsSectionIcon))))
+
+ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
           name: SLOT,
           id: ENTRY_ID,
           order: ENTRY_ORDER,

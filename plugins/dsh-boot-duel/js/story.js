@@ -1,16 +1,16 @@
 /**
  * The two fighters talk.
  *
- * These are two office workers settling something in the corridor, and the
- * barks are what make the fight worth watching. The tone is the point:
+ * These are two developers settling something in an office, and the barks are
+ * what make the fight worth watching. The tone is the point:
  *
- *   - **playful, not bitter.** Nobody is a villain. The oppressor is "the
- *     demand", not this specific manager, and the lines are the jokes you tell
- *     about work — the ones that make everyone at the table laugh and nod.
- *   - **the player wins the argument, not the war.** Every story ends with
- *     something small and warm: a coffee, a nod, a joke shared.
- *   - **concrete, not abstract.** The comedy is in the specifics — 五彩斑斓的黑,
- *     "再黑一点，但要有光", the 340 hours of comp time.
+ *   - **playful, not bitter.** Nobody is a villain. The comedy is the jokes
+ *     developers actually tell each other — the ones where everyone winces and
+ *     then laughs, because it happened to them last Tuesday.
+ *   - **concrete, not abstract.** The humour is in the specifics: "在我电脑上
+ *     是好的", the third refactor of a function nobody calls, the comment that
+ *     says what the code did two years ago.
+ *   - **the player wins the argument, not the war.** Every story ends warm.
  *
  * Each STORY is a cast and a line per beat of the fight. Beats fire on game
  * events, not on a timer:
@@ -30,168 +30,163 @@
 
 export const STORIES = [
   {
-    id: 'crunch',
-    title: '加班',
+    id: 'works-on-my-machine',
+    title: '在我电脑上是好的',
     you: '你',
-    rival: '组长',
+    rival: '同事',
     beats: {
       open: [
-        ['rival', '这个需求，今晚上线哈。', 'cheery'],
-        ['you', '文档呢？', 'flat'],
-        ['rival', '要什么文档，先做出来看看嘛。', 'cheery'],
-        ['you', '……行，那我做着，您泡咖啡。', 'dry'],
+        ['rival', '诶，你这个功能在测试环境挂了。', 'cheery'],
+        ['you', '我本地跑得好好的。', 'flat'],
+        ['rival', '真的，你来看一下。', 'cheery'],
+        ['you', '……行，我看看。', 'tired'],
       ],
       chain: [
-        ['you', '第一版。', 'flat'],
-        ['you', '第二版。', 'flat'],
-        ['you', '这是你上周说的第一版。', 'dry'],
-        ['rival', '诶？我记得是第一版啊。', 'confused'],
+        ['you', '本地过。', 'flat'],
+        ['you', 'CI 也过了。', 'flat'],
+        ['you', '只有你的电脑不行。', 'dry'],
+        ['rival', '那……是不是你少提交了文件？', 'confused'],
       ],
       guard: [
-        ['you', '挡住了。', 'dry'],
-        ['rival', '我说的是「参考一下」，不是「照抄」。', 'cheery'],
-        ['you', '这句话我听了六遍，第六遍是刚才。', 'tired'],
+        ['you', '我加了日志的。', 'dry'],
+        ['rival', '日志里没打出来。', 'cheery'],
+        ['you', '因为那个分支没走到。', 'flat'],
       ],
       hit: [
-        ['you', '这个改动，一行代码。', 'flat'],
-        ['you', '你昨天说不急的。', 'flat'],
-        ['rival', '我说过这话吗？', 'confused'],
-        ['you', '会议纪要里写着呢。', 'dry'],
+        ['you', 'node_modules 删了重装。', 'flat'],
+        ['rival', '啊，好了。', 'surprised'],
+        ['you', '……我就说。', 'dry'],
+        ['rival', '那你早说嘛。', 'cheery'],
       ],
       take: [
-        ['you', '又是我的锅？', 'tired'],
-        ['rival', '能者多劳嘛。', 'cheery'],
-        ['you', '那能者多劳，能不能也多得？', 'dry'],
-        ['rival', '……下次评优，我记着。', 'smooth'],
+        ['you', '我再看看……', 'tired'],
+        ['rival', '要不要我远程连一下？', 'cheery'],
+        ['you', '不用不用。', 'flat'],
+        ['rival', '那我先把这个 bug 指派给你了。', 'smooth'],
       ],
       super: [
-        ['you', '这个方案，我再想想。', 'hard'],
-        ['rival', '你先说说你的想法。', 'surprised'],
+        ['you', '这不是 bug，这是特性。', 'hard'],
+        ['rival', '……你认真的？', 'surprised'],
       ],
       ko: [
-        ['you', '来杯咖啡？我请。', 'warm'],
-        ['rival', '……加个奶。', 'beaten'],
+        ['you', '一起看看？', 'warm'],
+        ['rival', '好啊，我这还有个更离谱的。', 'beaten'],
       ],
       taunt: [
-        ['rival', '明天早上九点前哈。', 'cheery'],
-        ['rival', '你最近是不是没睡好。', 'cheery'],
-        ['rival', '这个也抓一下，那个也抓一下。', 'cheery'],
-        ['rival', '年轻人，多历练历练。', 'cheery'],
+        ['rival', '你那边是什么环境？', 'cheery'],
+        ['rival', '我这边是好的呀。', 'cheery'],
+        ['rival', '是不是缓存的问题？', 'cheery'],
+        ['rival', '你重启一下试试。', 'cheery'],
       ],
     },
   },
 
   {
-    id: 'layoff',
-    title: '优化',
+    id: 'legacy',
+    title: '这段代码谁写的',
     you: '你',
-    rival: 'HR',
+    rival: '前任',
     beats: {
       open: [
-        ['rival', '来，坐。喝点什么？', 'smooth'],
-        ['you', '不渴。', 'flat'],
-        ['rival', '公司最近在做一点组织调整。', 'smooth'],
-        ['you', '调整的是我，对吧。', 'dry'],
+        ['rival', '这块逻辑你别动。', 'smooth'],
+        ['you', '为什么？', 'flat'],
+        ['rival', '没有为什么，动了会出事。', 'smooth'],
+        ['you', '……好吧。', 'tired'],
       ],
       chain: [
-        ['you', 'N+1 算一下。', 'flat'],
-        ['you', '年假还有十二天。', 'flat'],
-        ['you', '调休攒了三百四十小时。', 'dry'],
-        ['rival', '……我让财务再核一下。', 'baffled'],
+        ['you', '这里为什么乘 1.08？', 'flat'],
+        ['you', '这个变量为什么叫 tmp2？', 'flat'],
+        ['you', '为什么注释写的是 2019 年？', 'dry'],
+        ['rival', '年代久远，记不清了。', 'baffled'],
       ],
       guard: [
-        ['you', '这个叫「协商一致」。', 'dry'],
-        ['rival', '签字，对大家都好。', 'smooth'],
-        ['you', '我再看看，不急。', 'flat'],
+        ['you', '这段代码没人调用。', 'dry'],
+        ['rival', '不能删，万一有用呢。', 'smooth'],
+        ['you', '三年了。', 'flat'],
       ],
       hit: [
-        ['you', '去年绩效 B+，你说的。', 'flat'],
-        ['you', '邮件我留着呢。', 'dry'],
-        ['rival', '邮件……那得看具体语境。', 'baffled'],
-        ['you', '语境挺好的。', 'dry'],
+        ['you', '我 grep 过了，零引用。', 'flat'],
+        ['rival', '可能动态调用的。', 'baffled'],
+        ['you', '这是静态语言。', 'dry'],
+        ['rival', '……那也不能删。', 'smooth'],
       ],
       take: [
-        ['you', '工位我自己收拾。', 'tired'],
-        ['rival', '门禁卡下午失效哈。', 'smooth'],
-        ['you', '行。那我把话说完再走。', 'flat'],
+        ['you', '行吧，我加个注释。', 'tired'],
+        ['rival', '注释写清楚点。', 'smooth'],
+        ['you', '「不要动」。', 'dry'],
+        ['rival', '对，就这样。', 'smooth'],
       ],
       super: [
-        ['you', '这个字，我先不签。', 'hard'],
-        ['rival', '诶，我们还可以再聊聊。', 'surprised'],
+        ['you', '这段代码，我今天一定要重构。', 'hard'],
+        ['rival', '你别！真的别！', 'surprised'],
       ],
       ko: [
-        ['you', '谢谢你这几年。', 'warm'],
-        ['rival', '……有事儿随时联系。', 'beaten'],
+        ['you', '重构完了，测试全过。', 'warm'],
+        ['rival', '……居然没炸。', 'beaten'],
       ],
       taunt: [
-        ['rival', '这都是为了你好。', 'smooth'],
-        ['rival', '公司也是一家人嘛。', 'smooth'],
-        ['rival', '你多理解理解公司。', 'smooth'],
-        ['rival', '这个我们之后再沟通。', 'smooth'],
+        ['rival', '这段别动，能用就行。', 'smooth'],
+        ['rival', '线上跑了好几年了。', 'smooth'],
+        ['rival', '你不懂当时的背景。', 'smooth'],
+        ['rival', '这个我加过注释的。', 'smooth'],
       ],
     },
   },
 
   {
-    id: 'deadline',
-    title: '改稿',
+    id: 'review',
+    title: '代码评审',
     you: '你',
-    rival: '甲方',
+    rival: '评审人',
     beats: {
       open: [
-        ['rival', '感觉不太对。', 'airy'],
-        ['you', '哪儿不对？', 'flat'],
-        ['rival', '说不上来，就是不太对。', 'airy'],
-        ['you', '……那您说说，怎么改。', 'tired'],
+        ['rival', '你这个 PR 我看了。', 'cheery'],
+        ['you', '嗯，有问题吗？', 'flat'],
+        ['rival', '有点小意见，不多，就 47 条。', 'cheery'],
+        ['you', '……啊。', 'tired'],
       ],
       chain: [
-        ['you', '第一稿。', 'flat'],
-        ['you', '第七稿。', 'flat'],
-        ['you', '第十八稿。', 'dry'],
-        ['rival', '还是第一稿好。', 'airy'],
+        ['you', '第一条改好了。', 'flat'],
+        ['you', '第十条改好了。', 'flat'],
+        ['you', '第四十七条改好了。', 'dry'],
+        ['rival', '哦对了，这里还有个可以优化的点。', 'cheery'],
       ],
       guard: [
-        ['you', '五彩斑斓的黑，调出来了。', 'dry'],
-        ['rival', '再黑一点，但要有光。', 'airy'],
-        ['you', '（深呼吸）好。', 'tired'],
+        ['you', '这个命名我觉得没问题。', 'dry'],
+        ['rival', '能不能叫得更「业务」一点？', 'cheery'],
+        ['you', '……我改。', 'tired'],
       ],
       hit: [
-        ['you', '这个字，再大一点。', 'flat'],
-        ['you', 'logo 要大，但要显小。', 'dry'],
-        ['rival', '你懂我意思吧。', 'airy'],
-        ['you', '我不懂，但可以做。', 'dry'],
+        ['you', '这行是自动格式化加的。', 'flat'],
+        ['rival', '哦，那不用改。', 'surprised'],
+        ['you', '……', 'dry'],
+        ['rival', '不过你格式能不能统一一下？', 'cheery'],
       ],
       take: [
-        ['you', '今天下班前给您。', 'tired'],
-        ['rival', '我明天一早就要哈。', 'airy'],
-        ['you', '现在是晚上十一点。', 'flat'],
-        ['rival', '那你抓紧嘛。', 'airy'],
+        ['you', '好，我改。', 'tired'],
+        ['rival', '辛苦啦，你这个改完我们就合。', 'cheery'],
+        ['you', '上次也这么说。', 'flat'],
+        ['rival', '这次真的！', 'cheery'],
       ],
       super: [
-        ['you', '这一版，是我能给的最好的一版。', 'hard'],
-        ['rival', '……好像确实还行。', 'surprised'],
+        ['you', '这个 PR，我改完了。全部。', 'hard'],
+        ['rival', '……我看看。哦，可以合了。', 'surprised'],
       ],
       ko: [
-        ['you', '合作愉快。', 'warm'],
-        ['rival', '……下个项目还找你。', 'beaten'],
+        ['you', '合了。', 'warm'],
+        ['rival', '嗯，写得挺干净的。', 'beaten'],
       ],
       taunt: [
-        ['rival', '预算就这么多哈。', 'airy'],
-        ['rival', '你再想想，我相信你。', 'airy'],
-        ['rival', '大气一点，但别太贵。', 'airy'],
-        ['rival', '我朋友说这样不好看。', 'airy'],
+        ['rival', '这个能拆成两个函数吗？', 'cheery'],
+        ['rival', '这里加个注释吧。', 'cheery'],
+        ['rival', '这个变量名能不能再想想？', 'cheery'],
+        ['rival', '我看别的地方都是这么写的。', 'cheery'],
       ],
     },
   },
 ]
 
-/**
- * Picks a story.
- *
- * A number picks one by index (the tests use this); no argument picks one
- * at random, and never the one that was just played — a "random" pick that
- * can repeat is the one thing players notice immediately.
- */
+/** Picks a story by index, or at random without repeating the last one. */
 export function storyFor(round, { avoid = null, rng = Math.random } = {}) {
   if (Number.isFinite(round)) {
     return STORIES[Math.abs(Math.floor(round)) % STORIES.length]
