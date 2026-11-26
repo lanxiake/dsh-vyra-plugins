@@ -3317,6 +3317,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/vyra-dsh-console',
           },
         },
+        // Refusing ui.* while the window was in the background deadlocked the
+        // agent: forwarding DSH took a shell command, and that command handed
+        // focus back to the terminal. Visibility is now reported, not enforced.
+        '0.2.2': {
+          publishTimestamp: 1795687200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'a60f160a990ad96a325361afa526e1b601632d2d',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
       },
       metadata: {
         category: 'agent-runtime',

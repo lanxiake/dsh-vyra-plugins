@@ -3079,6 +3079,16 @@
       },
       "versions": [
         {
+          "version": "0.2.2",
+          "publishTimestamp": 1795687200,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/lanxiake/dsh-vyra-plugins.git",
+            "commit": "a60f160a990ad96a325361afa526e1b601632d2d",
+            "path": "plugins/vyra-dsh-console"
+          }
+        },
+        {
           "version": "0.2.1",
           "publishTimestamp": 1795683600,
           "source": {
