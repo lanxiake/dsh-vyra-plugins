@@ -594,6 +594,17 @@ export const manifest: MarketManifest = {
       },
       icon: SYSTEM_SELECTION_ICON,
       versions: {
+        // 3.2.1 hears keystrokes through raw input rather than a global hook,
+        // so the toolbar closes on typing without swallowing the keystroke.
+        '3.2.1': {
+          publishTimestamp: 1795741200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '26b55e971cd334256f6fb6faef3364ebeb2e6530',
+            path: 'plugins/vyra-system-selection',
+          },
+        },
         '3.1.3': {
           publishTimestamp: 1795679995,
           source: {
@@ -3329,6 +3340,18 @@ export const manifest: MarketManifest = {
             type: 'git',
             url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
             commit: 'a60f160a990ad96a325361afa526e1b601632d2d',
+            path: 'plugins/vyra-dsh-console',
+          },
+        },
+        // 0.4.0 records a walkthrough from a step list. The package moved to
+        // 0.4.0 before the index did, so anyone on a fresh install was held at
+        // 0.2.2 while the checkout said something else.
+        '0.4.0': {
+          publishTimestamp: 1795741200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'd2324ba2217d442e316e52fc6e05710162ef4933',
             path: 'plugins/vyra-dsh-console',
           },
         },

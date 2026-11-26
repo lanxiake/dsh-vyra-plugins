@@ -474,6 +474,16 @@
       },
       "versions": [
         {
+          "version": "3.2.1",
+          "publishTimestamp": 1795741200,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "26b55e971cd334256f6fb6faef3364ebeb2e6530",
+            "path": "plugins/vyra-system-selection"
+          }
+        },
+        {
           "version": "3.1.3",
           "publishTimestamp": 1795679995,
           "source": {
@@ -3078,6 +3088,16 @@
         "directory": "plugins/vyra-dsh-console"
       },
       "versions": [
+        {
+          "version": "0.4.0",
+          "publishTimestamp": 1795741200,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "d2324ba2217d442e316e52fc6e05710162ef4933",
+            "path": "plugins/vyra-dsh-console"
+          }
+        },
         {
           "version": "0.2.2",
           "publishTimestamp": 1795687200,
