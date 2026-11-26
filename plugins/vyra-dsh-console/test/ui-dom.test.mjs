@@ -33,7 +33,13 @@ function el(tag, attrs = {}, children = []) {
     attrs: { ...attrs },
     children: [],
     clicks: 0,
-    textContent: attrs['data-text'] ?? '',
+    get textContent() {
+      // The real DOM concatenates every descendant's text. The account-menu row
+      // is matched by its label, so a fixture that only carried its own
+      // `data-text` attribute would hide a selector that never matches in the
+      // page — which is exactly how the settings row went unfound.
+      return (attrs['data-text'] ?? '') + this.children.map((child) => child.textContent).join('')
+    },
     parent: undefined,
     click() {
       this.clicks += 1
@@ -498,7 +504,12 @@ test('ui.state reports what is open right now', async () => {
   const document = makeDocument()
   const { dialog } = mountedDialog(document, { selected: 1 })
   // The shell's nav label is the section's text; the state maps it back to an id.
-  dialog.children[0].children[1].textContent = '免费模型'
+  // Appended as a child, because `textContent` is now derived from descendants
+  // exactly as it is in the page.
+  const secondCell = dialog.children[0].children[1]
+  const label = el('span', { 'data-text': '免费模型' })
+  label.parent = secondCell
+  secondCell.children.push(label)
 
   const result = await run('ui.state', {}, {
     document,
@@ -664,4 +675,63 @@ test('an inherited prototype name is not a ui op', async () => {
     const result = await bundle.__internal.applyOp({ slots: { entries: () => [] } }, op, {})
     assert.equal(result.status, 'error', `${op} must not resolve`)
   }
+})
+
+// ---------------------------------------------------------------------------
+// Regressions from the first real run on a desktop profile.
+//
+// Three symptoms were reported, and two were real defects:
+//
+//   - `ui.list` answered `{"status":"ok"}` with no body;
+//   - `ui.open` answered `ok` without `verified`;
+//   - the settings dialog "did not open after clicking the available triggers".
+//
+// The first two were one bug: the browser sent only `outcome.value`, and the ui
+// ops put their payload at the top level. The third was another: only the FIRST
+// `aria-haspopup="menu"` button was tried, and the account menu is not the first
+// menu in the sidebar.
+// ---------------------------------------------------------------------------
+
+test('the account menu is found even when other menus come first', async () => {
+  // What the sidebar actually looks like: session and workspace menus precede the
+  // account menu, and only the last one holds the settings row.
+  const document = makeDocument()
+  const build = (label, rows) => {
+    const trigger = el('button', { 'aria-haspopup': 'menu', 'aria-expanded': 'false' })
+    trigger.onClick = () => {
+      const items = rows.map((row) => {
+        const item = el('button', { role: 'menuitem' }, [el('span', { 'data-text': row.text })])
+        item.onClick = row.run
+        return item
+      })
+      const menu = el('div', { role: 'menu' }, items)
+      menu.parent = document.body
+      document.body.children.push(menu)
+    }
+    trigger.parent = document.body
+    document.body.children.push(trigger)
+    return trigger
+  }
+
+  build('session', [{ text: '重命名' }])
+  build('workspace', [{ text: '新建工作区' }])
+  const account = build('account', [
+    { text: '查看资料' },
+    {
+      text: '设置',
+      run: () => {
+        document.body.children = document.body.children.filter((child) => child.attrs?.role !== 'menu')
+        mountedDialog(document)
+      },
+    },
+  ])
+
+  const result = await run('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' }, {
+    document,
+    sections: SECTIONS,
+    extra: { commands: [{ id: 'settings.open', aria: 'Control+Comma', keys: ['Ctrl', ','], label: '设置' }] },
+  })
+  assert.equal(result.status, 'ok', `expected the dialog to open: ${JSON.stringify(result)}`)
+  assert.equal(result.verified, true)
+  assert.equal(result.resolved.section.id, 'dsh-vyra-free-model')
 })

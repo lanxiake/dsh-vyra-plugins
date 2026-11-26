@@ -169,6 +169,9 @@ test.afterEach(() => {
     }
   }
   globalThis.fetch = realFetch
+  // The ui tests supply a document; leaving it behind would let a later test
+  // reach the DOM path against a stub it never intended.
+  delete globalThis.document
 })
 
 /**
@@ -893,5 +896,94 @@ test('a dispose during a poll stops the loop rather than draining one more batch
     await settle(10)
     assert.deepEqual(calls, [], 'a disposed loop must not apply a batch it had already fetched')
     assert.deepEqual(stub.posts, [], 'nor post answers')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The ui reply envelope.
+//
+// Found on the first real desktop run: `ui.list` answered `{"status":"ok"}` and
+// nothing else. The loop forwarded `outcome.value`, but the appearance ops are
+// the ones shaped `{ status, value? }` — the ui ops answer a whole envelope at
+// the top level, so their payload was discarded on the wire. `ui.open` failed the
+// same way, losing the `verified` flag that is the only evidence it happened.
+// ---------------------------------------------------------------------------
+
+test('a ui op reply carries its whole payload, not just a value field', async () => {
+  // The ui ops refuse to act in a realm with no document; this test is about the
+  // reply envelope, so it supplies the smallest document that passes.
+  globalThis.document = { visibilityState: 'visible', querySelectorAll: () => [], querySelector: () => null };
+  const exports = loadBundle()
+  const { services } = spyServices()
+  const stub = stubFetch([{ ok: true, requests: [{ id: '9', op: 'ui.list', args: {} }] }])
+  await withFetchStub(stub, async () => {
+    const bridge = startBridge({
+      exports,
+      services,
+      stub,
+      servicesAtCall: {
+        slots: {
+          entries: (key) => (key === 'settings.section'
+            ? [
+                { options: { id: 'general', order: 0, label: '常规' }, registrant: 'ui-settings-general' },
+                { options: { id: 'dsh-vyra-free-model', order: 36, label: '免费模型' }, registrant: 'dsh-vyra-free-model' },
+              ]
+            : []),
+        },
+        shortcuts: { catalog: { getSnapshot: () => [{ id: 'settings.open', label: '设置', aria: 'Control+Comma', keys: ['Ctrl', ','] }] } },
+      },
+    })
+    await settle()
+    const [reply] = stub.posts
+    assert.equal(reply.ok, true, JSON.stringify(reply))
+    assert.ok(reply.value, 'the reply must carry the ui payload')
+    assert.equal(reply.value.settings.sections.length, 2, 'the section ledger must survive the trip')
+    assert.equal(reply.value.settings.sections[1].registrant, 'dsh-vyra-free-model')
+    assert.equal(reply.value.commands[0].id, 'settings.open')
+    assert.equal(reply.value.status, undefined, 'status belongs to the envelope, not to its value')
+    bridge.stop()
+  })
+})
+
+test('a ui.open reply carries verified and how, which is what proves it happened', async () => {
+  globalThis.document = { visibilityState: 'visible', querySelectorAll: () => [], querySelector: () => null };
+  const exports = loadBundle()
+  const { services } = spyServices()
+  const stub = stubFetch([{
+    ok: true,
+    requests: [{ id: '4', op: 'ui.open', args: { target: 'rightbar', kind: 'browser' } }],
+  }])
+  await withFetchStub(stub, async () => {
+    const bridge = startBridge({
+      exports,
+      services,
+      stub,
+      servicesAtCall: {
+        sidebarRightTabs: { get: () => ({ id: 'browser' }), entries: () => [{ kind: 'browser', id: 'b' }] },
+        sidebarRight: { openTab: () => {} },
+      },
+    })
+    await settle()
+    const [reply] = stub.posts
+    assert.equal(reply.ok, true)
+    assert.equal(reply.value.verified, true, 'without this flag ok means nothing')
+    assert.equal(reply.value.how, 'service')
+    assert.equal(reply.value.target, 'rightbar')
+    bridge.stop()
+  })
+})
+
+test('an appearance reply keeps its original value shape', async () => {
+  // The fix must not reshape the ops that already worked: `appearance.setTheme`
+  // answers `{ status, value }`, and the wire carries that value, not the whole
+  // envelope.
+  const exports = loadBundle()
+  const { services } = spyServices()
+  const stub = stubFetch([{ ok: true, requests: [{ id: '2', op: 'appearance.setTheme', args: { id: 'dark' } }] }])
+  await withFetchStub(stub, async () => {
+    const bridge = startBridge({ exports, services, stub })
+    await settle()
+    assert.deepEqual(stub.posts[0], { id: '2', ok: true, value: 'dark' })
+    bridge.stop()
   })
 })

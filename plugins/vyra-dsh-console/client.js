@@ -371,35 +371,70 @@ window.__ModuleLoader__.load({
         }
       }
 
+      /** Every trigger that could plausibly open the settings dialog, in one place. */
       const aria = settingsShortcutAria(services)
+      const tried = []
+
+      /** Click one candidate and report whether the dialog appeared. */
+      const attempt = async (node, label) => {
+        if (node === null || node === undefined) return false
+        tried.push(label)
+        node.click()
+        const opened = await waitFor(() => first(SETTINGS_MODAL))
+        if (opened !== undefined) return true
+        // A click that opened a MENU instead is not a failure yet: the settings
+        // row may be inside it. That is the next branch's job, and closing it
+        // here would race the render that is about to put the row in the DOM.
+        return false
+      }
+
+      // 1. The element carrying the settings shortcut. In a plain composition
+      //    this is the sidebar trigger; in the shipped one the attribute is on a
+      //    row inside the account menu, which is CLOSED — so this usually finds
+      //    nothing, and finding nothing is not an error.
       if (aria !== undefined) {
-        const direct = first(`button[aria-keyshortcuts="${aria}"], [aria-keyshortcuts="${aria}"]`)
-        if (direct !== null) {
-          direct.click()
-          if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
-        }
-        // The two-hop path: the settings entry may live inside a menu.
-        const menuTrigger = first('button[aria-haspopup="menu"]')
-        if (menuTrigger !== null) {
-          menuTrigger.click()
-          const row = await waitFor(() => all('[role="menuitem"]')
-            .find((node) => node.getAttribute?.('aria-keyshortcuts') === aria))
-          if (row !== undefined && row !== null) {
-            row.click()
-            if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
-          }
+        for (const node of all(`[aria-keyshortcuts="${aria}"]`)) {
+          if (await attempt(node, 'shortcut mark')) return { ok: true, how: 'dom' }
         }
       }
 
+      // 2. Every menu trigger, one at a time. The account menu is not the first
+      //    `aria-haspopup="menu"` on the page — the session and workspace menus
+      //    come first — so trying only the first one missed it entirely, which
+      //    is what "the settings dialog did not open" was reporting.
+      for (const trigger of all('button[aria-haspopup="menu"]')) {
+        trigger.click()
+        const row = await waitFor(() => {
+          const items = all('[role="menuitem"]')
+          // Prefer the row the settings shortcut marks; fall back to a row whose
+          // text is the shell's own settings label in either shipped language.
+          return items.find((node) => aria !== undefined && node.getAttribute?.('aria-keyshortcuts') === aria)
+            ?? items.find((node) => /设置|settings/iu.test(node.textContent ?? ''))
+        })
+        if (row !== undefined && row !== null) {
+          tried.push('account menu row')
+          row.click()
+          if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+        } else {
+          // Nothing in this menu: close it so the next trigger is clickable.
+          const root = doc()
+          if (root?.defaultView?.KeyboardEvent !== undefined) {
+            root.dispatchEvent(new root.defaultView.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+          }
+          await waitFor(() => all('[role="menuitem"]').length === 0)
+        }
+      }
+
+      // 3. Any dialog-hinted button outside a modal: the generic launcher.
       for (const candidate of all('button[aria-haspopup="dialog"]')) {
         if (candidate.closest?.('[data-shortcut-modal]') != null) continue
-        candidate.click()
-        if (await waitFor(() => first(SETTINGS_MODAL)) !== undefined) return { ok: true, how: 'dom' }
+        if (await attempt(candidate, 'dialog trigger')) return { ok: true, how: 'dom' }
       }
 
       return {
         ok: false,
-        reason: 'the settings dialog did not open after clicking the available triggers',
+        reason: `the settings dialog did not open after trying ${tried.length} trigger(s)`,
+        tried,
       }
     }
 
@@ -774,6 +809,56 @@ window.__ModuleLoader__.load({
       return Promise.resolve()
         .then(() => ui(services, args || {}))
         .catch((err) => ({ status: 'error', reason: String(err?.message ?? err) }))
+    }
+
+    /**
+     * The `value` an op's success reply should carry, or `undefined` for none.
+     *
+     * Two families answer through `applyOp`, and they are shaped differently:
+     *
+     *   - the APPEARANCE ops answer `{ status, value? }`, where `value` is the one
+     *     fact worth reporting (the theme id just set, the snapshot just read) and
+     *     a bare `{ status: 'ok' }` genuinely has nothing to carry;
+     *   - the UI ops answer a whole envelope at the top level — `target`,
+     *     `resolved`, `how`, `verified`, and a read's `settings`/`main`/… — with
+     *     no `value` key at all.
+     *
+     * Forwarding `outcome.value` unconditionally sent `undefined` for every ui op,
+     * which `present` then omitted, so `ui.list` arrived as a bare
+     * `{ status: 'ok' }` and `ui.open` lost the `verified` flag that is the only
+     * evidence it happened. Forwarding the whole outcome unconditionally would be
+     * wrong the other way: `appearance.toggleSidebar` has no value and must not
+     * grow a `value` key.
+     *
+     * The discriminator is the OP's namespace, not the shape of its answer: a ui
+     * read (`ui.list`, `ui.state`) carries neither `target` nor `verified`, so
+     * sniffing fields would send it back to the appearance branch and drop it.
+     * `op` is the thing that actually decides which family ran.
+     *
+     * @param outcome - a successful op result.
+     * @param op - the operation id that produced it.
+     * @returns the appearance `value`, the ui envelope minus `status`, or
+     *   `undefined` when there is nothing to report.
+     */
+    function replyValue(outcome, op) {
+      if (typeof op === 'string' && op.startsWith('ui.')) return withoutStatus(outcome)
+      return Object.hasOwn(outcome, 'value') ? outcome.value : undefined
+    }
+
+    /**
+     * A ui op's envelope without its `status` key.
+     *
+     * The reply already carries success in `ok`, so keeping `status` inside
+     * `value` would leave two places to read the same fact and a caller that
+     * could see them disagree. Every other field rides through untouched, and a
+     * key holding `undefined` is dropped for the reason `present` documents.
+     */
+    function withoutStatus(outcome) {
+      const out = {}
+      for (const [key, entry] of Object.entries(outcome)) {
+        if (key !== 'status' && entry !== undefined) out[key] = entry
+      }
+      return out
     }
 
     /**
@@ -2021,7 +2106,7 @@ window.__ModuleLoader__.load({
             // would silently disarm that guard.
             const outcome = await applyOp(services, request?.op, request?.args)
             const reply = outcome.status === 'ok'
-              ? present({ id: request?.id, ok: true, value: outcome.value })
+              ? present({ id: request?.id, ok: true, value: replyValue(outcome, request?.op) })
               : present({ id: request?.id, ok: false, error: outcome.reason })
             await fetch(RPC, {
               method: 'POST',
