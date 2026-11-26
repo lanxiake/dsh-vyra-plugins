@@ -26,6 +26,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
+import { ACTIONS, FORBIDDEN } from '../core.js'
+
 const CLI = resolve(import.meta.dirname, '..', 'cli.mjs')
 
 /**
@@ -630,10 +632,13 @@ test('doctor reports the console surface and the forbidden boundary from core.js
   try {
     const value = runCli(home, ['doctor', '--json']).json
     assert.equal(value.console.source, 'core.js')
-    assert.equal(value.console.total, 21)
-    assert.equal(value.console.mutating.length, 12)
-    assert.deepEqual(value.console.forbidden.map((f) => f.name),
-      ['sandbox.setMode', 'permission.setPreset', 'approval.answer', 'credentials.set'])
+    // Derived from the shipped table rather than hard-coded: a count that has to
+    // be edited whenever an action is added turns every addition into a failing
+    // test that says nothing about correctness, and the two numbers drifting
+    // apart is exactly what the CLI's own honesty rule forbids.
+    assert.equal(value.console.total, Object.keys(ACTIONS).length)
+    assert.equal(value.console.mutating.length, Object.values(ACTIONS).filter((spec) => spec.mutating).length)
+    assert.deepEqual(value.console.forbidden.map((f) => f.name), Object.keys(FORBIDDEN))
     for (const entry of value.console.forbidden) {
       assert.ok(entry.reason, `${entry.name} must carry its reason`)
       assert.ok(entry.alternative, `${entry.name} must carry its alternative`)

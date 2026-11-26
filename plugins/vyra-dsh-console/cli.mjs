@@ -988,6 +988,17 @@ const ACTION_SERVICES = {
 const SERVICE_FREE_ACTIONS = ['console.actions', 'appearance.state']
 
 /**
+ * Actions that fan out over every inventory service rather than resolving one.
+ *
+ * `console.map` reads `pluginManager`, `mcpManager`, `skills` and `tools` and
+ * reports each independently, so attributing it to any single row would be
+ * false — it appears under none of them because it depends on all of them.
+ * Listed here rather than in `ACTION_SERVICES` so the completeness check still
+ * sees it accounted for, and so the `doctor` surface keeps naming it.
+ */
+const MULTI_SERVICE_ACTIONS = ['console.map']
+
+/**
  * Which registered actions no row above accounts for.
  *
  * The failure this guards against is silence: when `services` covered 13 of the
@@ -999,7 +1010,7 @@ const SERVICE_FREE_ACTIONS = ['console.actions', 'appearance.state']
  * @returns the unexplained action ids, empty when the table is complete.
  */
 function uncoveredActions() {
-  const covered = new Set(SERVICE_FREE_ACTIONS)
+  const covered = new Set([...SERVICE_FREE_ACTIONS, ...MULTI_SERVICE_ACTIONS])
   for (const spec of Object.values(ACTION_SERVICES)) {
     for (const action of spec.actions) covered.add(action)
   }

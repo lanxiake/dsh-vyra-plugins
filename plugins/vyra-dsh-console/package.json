@@ -20,7 +20,6 @@
     "tool.js",
     "domains/*.js",
     "client.js",
-    "panel.js",
     "cli.mjs",
     "cordis.patch.yml",
     "locale/*.json",

@@ -9,7 +9,21 @@ import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const source = readFileSync(join(root, 'client.js'), 'utf8')
-const panelSource = readFileSync(join(root, 'panel.js'), 'utf8')
+
+/**
+ * The panel's own region of the bundle.
+ *
+ * The panel is inlined here, so the source-scanning assertions that used to read
+ * `panel.js` read this slice instead: scanning the WHOLE bundle would flag the
+ * bridge's legitimate `globalThis` reads and the drain loop's service calls,
+ * which are not the mistakes those tests exist to catch.
+ */
+const panelSource = (() => {
+  const start = source.indexOf('function createPanel(')
+  const end = source.indexOf('     * Build the panel, once, on first use.', start)
+  if (start === -1 || end === -1) throw new Error('the panel region moved; update panelSource')
+  return source.slice(start, end)
+})()
 
 /** The real fetch, restored after every test so the drain loop cannot outlive one. */
 const realFetch = globalThis.fetch
@@ -34,21 +48,6 @@ const reactStub = {
   useRef: (initial) => ({ current: initial }),
 }
 
-/**
- * Evaluate `panel.js` the way the bundle's own `require` would.
- *
- * It is a plain module with a single `export function`, so the syntax is read
- * off the real file rather than duplicated here — a copy would keep passing
- * after the real one changed shape.
- */
-function loadPanelFactory() {
-  const body = panelSource
-    .replace(/^export function createPanel/mu, 'function createPanel')
-    .concat('\nreturn { createPanel }\n')
-  // eslint-disable-next-line no-new-func
-  return new Function(body)()
-}
-
 let exports
 const window = {
   __ModuleLoader__: {
@@ -56,7 +55,6 @@ const window = {
       assert.equal(id, 'dsh-vyra-dsh-console', 'the bundle registers under its package name')
       exports = factory((specifier) => {
         if (specifier === 'react') return reactStub
-        if (specifier === './panel.js') return loadPanelFactory()
         // Anything else is a specifier the real bundle would not find either.
         throw new Error(`unexpected require(${specifier})`)
       })
@@ -756,7 +754,6 @@ function mountBundle({ services, slots } = {}) {
       load: ({ factory }) => {
         mod = factory((specifier) => {
           if (specifier === 'react') return reactStub
-          if (specifier === './panel.js') return loadPanelFactory()
           throw new Error(`unexpected require(${specifier})`)
         })
       },
@@ -849,7 +846,7 @@ test('the panel module never reads a services global', () => {
   // The specific mistake, named: a `globalThis.__vcX` lookup is invisible to
   // every assertion above when the value happens to be present, and fatal when
   // it is not — which is how this shipped.
-  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  const text = panelSource
   assert.doesNotMatch(text, /globalThis\.__vc/u, 'the panel must take its services from the bundle')
   assert.doesNotMatch(text, /__vcServices/u, 'and must not name the global that was never assigned')
 })
@@ -859,7 +856,7 @@ test('the theme control is driven by the live state, not by a seeded draft', () 
   // theme until `appearance.state` came back, whichever theme was actually in
   // force — and a controlled `select` reading the draft would keep showing the
   // user's last click even after a refresh reported something else.
-  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  const text = panelSource
   assert.match(text, /value: themeValue/u, 'the select must read a derived value')
   assert.match(text, /draft\.theme \|\| state\?\.theme/u, 'which prefers the live state')
   // The seed itself: no draft field may start as a claim about the environment.
@@ -1007,8 +1004,8 @@ test('every key the panel translates exists in both dictionaries', () => {
   const { dicts } = registeredDictionaries()
   const asked = new Set()
   const prefixes = []
-  for (const match of panelSource.matchAll(/\bt\(\s*'([^']+)'/gu)) asked.add(match[1])
-  for (const match of panelSource.matchAll(/\bt\(\s*'([^']+)'\s*\+/gu)) prefixes.push(match[1])
+  for (const match of source.matchAll(/translate\(\s*'([^']+)'/gu)) asked.add(match[1])
+  for (const match of source.matchAll(/translate\(\s*'([^']+)'\s*\+/gu)) prefixes.push(match[1])
   assert.ok(prefixes.length >= 2, 'the dynamic key prefixes must be found')
   for (const prefix of prefixes) {
     const variants = Object.keys(dicts.zh).filter((k) => k.startsWith(prefix))
@@ -1124,18 +1121,18 @@ test('a slots service whose inject throws synchronously does not take the bridge
 // --- the design rules, asserted on the panel source --------------------------
 
 test('the panel renders no Harness UI package and no literal colour', () => {
-  // The panel is a plain browser module: a Harness client package would not
-  // resolve in the served bundle, since the bundle is loaded through
-  // `window.__ModuleLoader__` with no dependency graph of its own.
-  for (const file of ['panel.js', 'client.js']) {
-    const text = readFileSync(join(root, file), 'utf8')
-    assert.doesNotMatch(text, /require\(\s*'@deepseek-ai\//u, `${file} must not require a Harness package`)
-    assert.doesNotMatch(text, /\bfrom\s+'@deepseek-ai\//u, `${file} must not import a Harness package`)
-    // Only theme tokens, never a literal colour: a hard-coded palette goes
-    // illegible the moment the user switches to the other colour scheme.
-    for (const match of text.matchAll(/var\((--[a-z0-9-]+)\)/gu)) {
-      assert.match(match[1], /^--dsw-alias-|^--dsw-specific-/u, `${file} uses a non-token custom property ${match[1]}`)
-    }
+  // The bundle is a plain browser module: a Harness client package would not
+  // resolve in the served page, since it is loaded through
+  // `window.__ModuleLoader__` with no dependency graph of its own. This used to
+  // check `panel.js` and `client.js` separately; the panel is inlined now, so
+  // the whole bundle is the subject.
+  const text = source
+  assert.doesNotMatch(text, /require\(\s*'@deepseek-ai\//u, 'the bundle must not require a Harness package')
+  assert.doesNotMatch(text, /\bfrom\s+'@deepseek-ai\//u, 'the bundle must not import a Harness package')
+  // Only theme tokens, never a literal colour: a hard-coded palette goes
+  // illegible the moment the user switches to the other colour scheme.
+  for (const match of text.matchAll(/var\((--[a-z0-9-]+)\)/gu)) {
+    assert.match(match[1], /^--dsw-alias-|^--dsw-specific-/u, `non-token custom property ${match[1]}`)
   }
 })
 
@@ -1144,7 +1141,7 @@ test('the panel never calls a Client service directly, so no operation is implem
   // through the SAME `applyOp` the bridge dispatches into; reaching for
   // `theme.setTheme` itself would be a second implementation of the same
   // operation, free to drift from the one the agent tool runs.
-  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  const text = panelSource
   assert.match(text, /applyOp/u, 'the panel must route appearance through applyOp')
   for (const method of ['setTheme', 'setFontSize', 'toggleSidebar', 'openRightbar', 'closeRightbar', 'setLocale']) {
     assert.doesNotMatch(text, new RegExp(`\\.${method}\\s*\\(`, 'u'),
@@ -1157,7 +1154,7 @@ test('the panel reads its action catalogue from console.actions rather than rest
   // not have, and hide new ones it grows. The panel names only the handful of
   // actions it actually drives through a form; the LIST it renders — including
   // every refused row and every reason — comes from the console's own reply.
-  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  const text = panelSource
   assert.match(text, /console\.actions/u, 'the panel must ask the console what exists')
   assert.match(text, /reply\?\.actions|\.actions\b/u, 'and must read the actions from that reply')
   assert.match(text, /forbidden/u, 'and must render the refused table the console sends')
@@ -1172,7 +1169,7 @@ test('the panel drives an action only through the one call, never by naming a Ho
   // The other half of "one operation, two callers": the panel must not reach a
   // Host domain directly. It has exactly one Host transport — the POST to the
   // console endpoint — and the console decides what each action does.
-  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  const text = panelSource
   assert.match(text, /await call\(/u, 'the panel must run Host actions through call()')
   for (const path of ['/api/agent-manager/', '/api/plugin-manager/', 'ctx.get(', 'pluginManager.']) {
     assert.ok(!text.includes(path), `the panel must not reach ${path}`)
@@ -1182,10 +1179,10 @@ test('the panel drives an action only through the one call, never by naming a Ho
 test('the panel is loaded lazily, so a factory-time evaluation cannot reach the DOM', () => {
   // The module factory runs at startup in every realm. Pulling the panel in
   // eagerly would evaluate a DOM-touching module before any panel mounts.
-  const text = readFileSync(join(root, 'panel.js'), 'utf8')
+  const text = panelSource
   assert.doesNotMatch(text, /^[^\n]*document\.(createElement|querySelector)/mu,
-    'no module-level DOM access in panel.js')
-  assert.match(source, /loadPanel/u, 'client.js must reach the panel through a lazy handle')
+    'no module-level DOM access in the panel')
+  assert.match(source, /loadPanel/u, 'the bundle must reach the panel through a lazy handle')
 })
 
 // --- the panel's derivations, driven directly --------------------------------
@@ -1509,3 +1506,66 @@ test('the boundary survives a platform with no console', () => {
 })
 
 
+
+// ---------------------------------------------------------------------------
+// Single-file bundle and the panel's real translator.
+//
+// `require('./panel.js')` never resolved in the browser — the client module
+// system knows only platform seeds, materialized modules and registered
+// factories — so the panel could not mount at all, and the suite's permissive
+// `require` stub hid it. These tests make both failures impossible to ship.
+// ---------------------------------------------------------------------------
+
+test('the client bundle never requires a package-local module', () => {
+  assert.doesNotMatch(source, /\brequire\s*\(\s*['"]\.\//u,
+    'a package-local require never resolves in the browser; inline the module')
+  assert.doesNotMatch(source, /\brequire\.async\b/u,
+    'a chunk require needs a build step this plugin does not have')
+})
+
+test('the bundle declares no top-level lexical name', () => {
+  // Every plugin bundle shares ONE page scope: `const RPC` in two of them throws
+  // "Identifier has already been declared" and the loader reports the later one
+  // as "loaded without registering". Everything belongs inside the factory.
+  const topLevel = [...source.matchAll(/^(?:const|let|class|function)\s+([A-Za-z_$][\w$]*)/gmu)].map((m) => m[1])
+  assert.ok(topLevel.every((name) => name === 'window'), `unexpected top-level declarations: ${topLevel.join(', ')}`)
+})
+
+test('the panel receives the real translator, not a function returning one', () => {
+  const { services } = spyServices()
+  const { mod } = mountBundle({ services })
+  const panel = mod.__internal.createPanel({
+    React: reactStub,
+    h: reactStub.createElement,
+    applyOp: mod.__internal.applyOp,
+    services: () => services,
+    call: async () => ({}),
+    t: (key) => `T:${key}`,
+    localeApi: { subscribe: () => () => {}, register() {} },
+  })
+  // The bug this replaces passed `() => t`, so this answered with a function.
+  assert.equal(panel.__internal.translate('app.title'), 'T:app.title')
+})
+
+test('the panel renders a tree without throwing', () => {
+  const { services } = spyServices()
+  const { mod } = mountBundle({ services })
+  const panel = mod.__internal.createPanel({
+    React: reactStub,
+    h: reactStub.createElement,
+    applyOp: mod.__internal.applyOp,
+    services: () => services,
+    call: async () => ({}),
+    t: (key) => key,
+    localeApi: { subscribe: () => () => {} },
+  })
+  const tree = panel.__internal.renderConsole({})
+  assert.ok(tree !== null && typeof tree === 'object', 'the panel must produce an element')
+})
+
+test('the slot registration builds its element from the panel module', () => {
+  // The registration closure must reach the panel through `loadPanel`, so a
+  // panel that failed to build is a visible error rather than an empty column.
+  assert.match(source, /loadPanel\(/u)
+  assert.doesNotMatch(source, /require\('\.\/panel\.js'\)/u)
+})
