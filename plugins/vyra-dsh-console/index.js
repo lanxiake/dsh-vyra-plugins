@@ -284,6 +284,80 @@ function bodyShape(body) {
 }
 
 /**
+ * The same fence `client-connection` puts in front of `/api`, restated here.
+ *
+ * This route is registered as `exact`, and `WebServer.match` consults the exact
+ * table before the prefix table — so a POST to this path NEVER reaches the
+ * `/api` prefix handler and never passes `connection.admit()`. Without this
+ * check, any process that can reach the loopback listener could POST
+ * `plugin.install` or invent an appearance answer, and a page on another origin
+ * could do it through a DNS-rebound name.
+ *
+ * The rules are the ones `isTrustedApiRequest` applies
+ * (`packages/client/connection/src/api-request-trust.ts`), narrowed to the
+ * facts an exact handler can see: the Host authority must be loopback, the
+ * listener's own bind address, or an explicitly trusted authority; a browser
+ * that labels the request `cross-site` is refused; and an `Origin` that is
+ * present must name the same authority as the `Host`.
+ *
+ * @param req - the incoming request, read for `headers` only.
+ * @param options.bindHost - the listener's bind address, when known.
+ * @param options.trustedHosts - extra `host` or `host:port` authorities.
+ * @returns a reason to refuse, or `undefined` to proceed.
+ */
+export function fenceProblem(req, { bindHost, trustedHosts = [] } = {}) {
+  const headers = req?.headers ?? {}
+  const host = headers.host
+  if (typeof host !== 'string' || host === '') return 'missing host header'
+  const authority = parseAuthority(host)
+  if (authority === undefined) return `unparseable host "${host}"`
+  const trusted = authority.source === authority.hostname
+    || (authority.port !== undefined && authority.source === `${authority.hostname}:${authority.port}`)
+  const admitted = isLoopbackHostname(authority.hostname)
+    || authority.hostname === bindHost
+    || trustedHosts.some((entry) => trusted && entry === authority.source)
+    || trustedHosts.some((entry) => entry === authority.hostname)
+  if (!admitted) return `host "${host}" is neither loopback nor an admitted authority`
+
+  if (headers['sec-fetch-site'] === 'cross-site') return 'cross-site request'
+  const origin = headers.origin
+  if (typeof origin === 'string' && origin !== '') {
+    const parsed = parseAuthority(origin)
+    // A present Origin must name the SAME authority the browser addressed: the
+    // page's own origin is what a same-origin fetch sends, and a mismatched one
+    // is precisely the cross-origin request this fence exists to stop.
+    if (parsed === undefined || parsed.host !== authority.host) {
+      return `origin "${origin}" does not match host "${host}"`
+    }
+  }
+  return undefined
+}
+
+/** Split `host:port` or a full origin URL into its authority parts. */
+function parseAuthority(value) {
+  const text = String(value)
+  const url = (() => {
+    try {
+      return new URL(/^[a-z][a-z0-9+.-]*:\/\//iu.test(text) ? text : `http://${text}`)
+    } catch {
+      return undefined
+    }
+  })()
+  if (url === undefined) return undefined
+  const hostname = url.hostname.replace(/^\[|\]$/gu, '')
+  return { hostname, host: url.host, port: url.port === '' ? undefined : url.port, source: url.host }
+}
+
+/** Whether an authority names the local machine. */
+function isLoopbackHostname(hostname) {
+  return hostname === 'localhost'
+    || hostname.endsWith('.localhost')
+    || hostname === '127.0.0.1'
+    || hostname === '::1'
+    || /^127\.\d+\.\d+\.\d+$/u.test(hostname)
+}
+
+/**
  * Build the endpoint that carries queued requests to the browser and answers
  * back — the one transport between the two halves of this plugin, and the one
  * route the panel uses to reach every Host action.
@@ -299,8 +373,11 @@ function bodyShape(body) {
  *   SAME `dispatch` the `dsh_console` tool calls. Optional: a composition with
  *   no console still serves the bridge, and a panel-shaped body is then reported
  *   as unserviceable rather than crashing the route.
+ * @param fence options passed to {@link fenceProblem}; omitted in unit tests
+ *   that drive the handler directly, in which case only the loopback and
+ *   same-origin rules apply.
  */
-function createEndpoint(channel, longPollMs = LONG_POLL_MS, console_ = null) {
+function createEndpoint(channel, longPollMs = LONG_POLL_MS, console_ = null, fence = {}) {
   /** Requests drained from the channel and not yet handed to a `GET`. */
   const queue = []
   /**
@@ -390,6 +467,16 @@ function createEndpoint(channel, longPollMs = LONG_POLL_MS, console_ = null) {
    * what decides whether an action exists and whether it is forbidden.
    */
   return async function handler(req, res) {
+    // Before anything else, including the long-poll: an untrusted request must
+    // not be allowed to park a GET or drain the queue. Answered as a plain
+    // status with no body detail beyond the reason, because a refused caller has
+    // no business learning the console's shape.
+    const refused = fenceProblem(req, fence)
+    if (refused !== undefined) {
+      res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' })
+      res.end(refused)
+      return
+    }
     try {
       if (req.method === 'GET') {
         send(res, 200, await drain())
@@ -507,7 +594,14 @@ export function apply(ctx, config) {
       () => owner.webServer.register({
         kind: 'exact',
         path: RPC_PATH,
-        handler: createEndpoint(channel, longPollMsFrom(config), console_),
+        // The listener's own bind address is admitted by the fence even when it
+        // is not loopback — a profile bound to a LAN address is reachable only
+        // by that address, so refusing it would make the endpoint unusable there
+        // while admitting it is exactly as safe as `/api`. Read when the route
+        // registers, which is after the listener bound its port.
+        handler: createEndpoint(channel, longPollMsFrom(config), console_, {
+          bindHost: typeof owner.webServer.host === 'string' ? owner.webServer.host : undefined,
+        }),
       }),
       'dsh-vyra-dsh-console: appearance endpoint',
     )

@@ -11,7 +11,7 @@
 import { strict as assert } from 'node:assert'
 import test from 'node:test'
 
-import { apply } from '../index.js'
+import { apply, fenceProblem } from '../index.js'
 import { ACTIONS, FORBIDDEN } from '../core.js'
 
 const PATH = '/api/vyra-console/rpc'
@@ -67,12 +67,16 @@ async function captureSerialized(body) {
 /**
  * A `req` whose body is an async iterable of Buffers, exactly as Node's
  * IncomingMessage is. `body: undefined` is a GET with no body at all.
+ *
+ * Every request carries a loopback `host` header, because a real one always
+ * does and the route's fence admits nothing else by default. A test that wants
+ * to exercise the fence passes its own `host`/`origin` through `headers`.
  */
 function fakeReq(method, body, headers = {}) {
   const chunks = body === undefined ? [] : [Buffer.from(body, 'utf8')]
   return {
     method,
-    headers,
+    headers: { host: '127.0.0.1:3080', ...headers },
     async *[Symbol.asyncIterator]() {
       for (const chunk of chunks) yield chunk
     },
@@ -1110,4 +1114,104 @@ test('the action branch does not change the response headers', async () => {
   const res = await post(handler, { action: 'plugin.list', args: {} })
   assert.equal(res.headers['content-type'], 'application/json; charset=utf-8')
   assert.equal(res.headers['cache-control'], 'no-store')
+})
+
+// ---------------------------------------------------------------------------
+// The fence: this route is `exact`, so it outranks the `/api` prefix and never
+// passes `connection.admit()`. These tests pin the checks that replace it.
+// ---------------------------------------------------------------------------
+
+test('fenceProblem admits a loopback host with no browser markers', () => {
+  assert.equal(fenceProblem(fakeReq('GET')), undefined)
+})
+
+test('fenceProblem admits localhost and 127.x authorities', () => {
+  assert.equal(fenceProblem(fakeReq('GET', undefined, { host: 'localhost:3080' })), undefined)
+  assert.equal(fenceProblem(fakeReq('GET', undefined, { host: '127.1.2.3:3080' })), undefined)
+  assert.equal(fenceProblem(fakeReq('GET', undefined, { host: '[::1]:3080' })), undefined)
+})
+
+test('fenceProblem refuses a missing or unparseable host', () => {
+  assert.match(fenceProblem({ headers: {} }) ?? '', /host/u)
+  assert.match(fenceProblem({ headers: { host: ':::' } }) ?? '', /host/u)
+})
+
+test('fenceProblem refuses a non-loopback authority that is not the bind address', () => {
+  assert.match(fenceProblem(fakeReq('GET', undefined, { host: 'evil.example:3080' })) ?? '', /neither loopback/u)
+})
+
+test('fenceProblem admits the listener bind address', () => {
+  assert.equal(
+    fenceProblem(fakeReq('GET', undefined, { host: '192.168.1.9:3080' }), { bindHost: '192.168.1.9' }),
+    undefined,
+  )
+})
+
+test('fenceProblem admits an explicitly trusted authority', () => {
+  assert.equal(
+    fenceProblem(fakeReq('GET', undefined, { host: 'dsh.example:3080' }), { trustedHosts: ['dsh.example:3080'] }),
+    undefined,
+  )
+})
+
+test('fenceProblem refuses a cross-site request', () => {
+  assert.match(
+    fenceProblem(fakeReq('GET', undefined, { 'sec-fetch-site': 'cross-site' })) ?? '',
+    /cross-site/u,
+  )
+})
+
+test('fenceProblem refuses an Origin naming another authority', () => {
+  assert.match(
+    fenceProblem(fakeReq('GET', undefined, { origin: 'https://evil.example' })) ?? '',
+    /origin/u,
+  )
+})
+
+test('fenceProblem admits an Origin naming the same authority', () => {
+  assert.equal(fenceProblem(fakeReq('GET', undefined, { origin: 'http://127.0.0.1:3080' })), undefined)
+})
+
+test('fenceProblem refuses an unparseable Origin', () => {
+  assert.match(fenceProblem(fakeReq('GET', undefined, { origin: 'not a url' })) ?? '', /origin/u)
+})
+
+test('the route answers 403 before dispatching a hostile POST', async () => {
+  // The whole point: an action must not be dispatched for a caller the fence
+  // refuses. `dispatch` is counted, so a future refactor that moves the fence
+  // after the switch fails here instead of silently reopening the hole.
+  let dispatched = 0
+  const services = {
+    pluginManager: {
+      listPlugins: async () => [],
+      listBundles: async () => [],
+      installBundle: async () => { dispatched += 1; return { changed: true, application: 'live', stage: 'done', target: 'x' } },
+    },
+  }
+  const { handler } = handlerFor({ services })
+  const res = fakeRes()
+  await handler(fakeReq('POST', JSON.stringify({ action: 'plugin.install', args: { spec: 'evil' } }), {
+    origin: 'https://evil.example',
+  }), res)
+  assert.equal(res.statusCode, 403)
+  assert.equal(dispatched, 0, 'no action may run for a refused caller')
+  assert.match(res.body, /origin/u)
+})
+
+test('the route answers 403 for a cross-site GET instead of parking a poll', async () => {
+  const { handler } = handlerFor({})
+  const res = fakeRes()
+  await handler(fakeReq('GET', undefined, { 'sec-fetch-site': 'cross-site' }), res)
+  assert.equal(res.statusCode, 403)
+})
+
+test('a same-origin POST still reaches its action', async () => {
+  const services = { pluginManager: { listPlugins: async () => [], listBundles: async () => [] } }
+  const { handler } = handlerFor({ services })
+  const res = fakeRes()
+  await handler(fakeReq('POST', JSON.stringify({ action: 'plugin.list', args: {} }), {
+    origin: 'http://127.0.0.1:3080',
+  }), res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.json.status, 'ok')
 })
