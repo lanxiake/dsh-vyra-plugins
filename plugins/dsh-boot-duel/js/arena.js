@@ -120,6 +120,8 @@ export class Arena {
     this.lineGap = 0
     /** The player's chain depth, for deciding when a combo line is due. */
     this.playerChain = 0
+    /** Opening lines still to come, once the bubble is clear. */
+    this.openQueue = 0
     /** Seconds left on a buffered super press. */
     this.superBuffer = 0
   }
@@ -127,7 +129,10 @@ export class Arena {
   begin() {
     if (this.phase !== 'ready') return false
     this.phase = 'playing'
-    // The story opens with whoever speaks first.
+    // The story opens with a short exchange rather than a greeting: the player
+    // reads two or three lines before the fight, which is what makes the
+    // first hit land on top of an argument instead of on silence.
+    this.openQueue = 2 + Math.floor(Math.random() * 2)
     this.say('open', true)
     return true
   }
@@ -365,6 +370,8 @@ export class Arena {
    * each other is noise, not dialogue.
    */
   say(beat, force = false) {
+    // A fight bark never interrupts the opening exchange.
+    if (beat !== 'open' && this.openQueue > 0) return
     if (!force && this.lineGap > 0) return
     const line = this.barks.next(beat)
     if (!line) return
@@ -383,6 +390,21 @@ export class Arena {
     if (this.line) {
       this.line.life -= dt * 0.42
       if (this.line.life <= 0) this.line = null
+    }
+    // The opening exchange, drained in the first few seconds of the round.
+    //
+    // It OVERWRITES whatever is on screen rather than waiting for the bubble
+    // to clear: a fight bark that fires during the opening would otherwise
+    // replace the next scripted line, and "……现在？" would be answered by
+    // "年底绩效我给你考虑". The story comes first; the fight's own barks wait
+    // their turn.
+    if (this.openQueue > 0 && this.t < 4.5) {
+      if (this.lineGap <= 0.35) {
+        this.openQueue -= 1
+        this.say('open', true)
+      }
+    } else if (this.openQueue > 0) {
+      this.openQueue = 0
     }
   }
 
