@@ -382,3 +382,51 @@ test('the list layout keeps icons instead of thumbnails', async () => {
   }))
   assert.doesNotMatch(html, /<img/u)
 })
+
+test('filterTurnsByTypes keeps only the chosen file kinds and drops empty turns', async () => {
+  const { filterTurnsByTypes } = await import('./src/client/timeline.js')
+  const nodes = [
+    { seq: 1, time: 1_700_000_000_000, prompt: 'p1', files: [
+      { path: 'a.png', display: 'a.png' }, { path: 'b.md', display: 'b.md' },
+    ] },
+    { seq: 2, time: 1_700_000_100_000, prompt: 'p2', files: [{ path: 'c.md', display: 'c.md' }] },
+    { seq: 3, time: 1_700_000_200_000, prompt: 'p3', files: [{ path: 'd.jpeg', display: 'd.jpeg' }] },
+  ]
+  const images = filterTurnsByTypes(nodes, ['image'])
+  assert.deepEqual(images.map(node => node.seq), [1, 3])
+  assert.deepEqual(images[0].files.map(file => file.path), ['a.png'])
+  assert.deepEqual(images[1].files.map(file => file.path), ['d.jpeg'], 'jpeg must count as an image')
+
+  // No kinds chosen means no filtering: the timeline shows every turn.
+  assert.equal(filterTurnsByTypes(nodes, []).length, 3)
+  // A kind nobody produced leaves nothing to draw.
+  assert.deepEqual(filterTurnsByTypes(nodes, ['video']), [])
+  // The original nodes are never mutated.
+  assert.equal(nodes[0].files.length, 2)
+})
+
+test('the timeline follows the type filter and says so when nothing matches', async () => {
+  const { SessionTimeline } = await import('./src/client/timeline.js')
+  const items = [
+    { id: 'i1', relativePath: 'shots/a.png', kind: 'image', ext: 'png', source: 'local', size: 1, mtimeMs: 1 },
+    { id: 'i2', relativePath: 'notes.md', kind: 'document', ext: 'md', source: 'local', size: 1, mtimeMs: 2 },
+  ]
+  const nodes = [{
+    seq: 1, time: 1_700_000_000_000, prompt: 'p',
+    files: [{ path: 'shots/a.png', display: 'shots/a.png' }, { path: 'notes.md', display: 'notes.md' }],
+  }]
+
+  // Only images: the markdown file is gone from the timeline.
+  const imagesOnly = renderToString(React.createElement(SessionTimeline, {
+    nodes, items, layout: 'grid', sessionId: 's-1', types: ['image'], onOpen() {}, onMenu() {},
+  }))
+  assert.match(imagesOnly, /a\.png/u)
+  assert.doesNotMatch(imagesOnly, /notes\.md/u)
+
+  // A kind nobody produced: an empty timeline that names the reason.
+  const none = renderToString(React.createElement(SessionTimeline, {
+    nodes, items, layout: 'grid', sessionId: 's-1', types: ['video'], onOpen() {}, onMenu() {},
+  }))
+  assert.match(none, /没有该类型的文件/u)
+  assert.doesNotMatch(none, /还没有产出文件/u)
+})

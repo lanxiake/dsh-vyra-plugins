@@ -205,6 +205,33 @@ function TimelineNode({ node, lookup, layout, sessionId, collapsed, onToggle, on
 }
 
 /**
+ * Keep only the files whose kind the person selected, and keep only the turns
+ * that still have a file left.
+ *
+ * The type chips and the market-wide filter both speak in the same kinds this
+ * module derives from an extension, so choosing "images" here means exactly
+ * what it means in the grid behind the timeline. An empty selection is not a
+ * filter: it shows every turn. Nodes and their file arrays are copied, never
+ * mutated, because the caller holds the list it fetched.
+ * @param {Array<object> | undefined} nodes - turn nodes, newest first.
+ * @param {string[]} types - selected kinds; empty means no filtering.
+ * @returns {Array<object>} the turns to draw.
+ */
+export function filterTurnsByTypes(nodes, types) {
+  const list = Array.isArray(nodes) ? nodes : []
+  const kinds = Array.isArray(types) ? types.filter(kind => typeof kind === 'string' && kind !== '') : []
+  if (kinds.length === 0) return list
+  const wanted = new Set(kinds)
+  const kept = []
+  for (const node of list) {
+    const files = Array.isArray(node?.files) ? node.files : []
+    const matching = files.filter(file => wanted.has(fileKindOf(file.display ?? file.path ?? '')[0]))
+    if (matching.length > 0) kept.push({ ...node, files: matching })
+  }
+  return kept
+}
+
+/**
  * Drop turns that produced no file change. An empty turn is only noise on an
  * axis whose job is "what did this conversation change"; a turn whose `files`
  * is missing counts as empty rather than throwing.
@@ -220,7 +247,7 @@ export function filterNodesWithFiles(nodes) {
  * The conversation timeline.
  * @param {object} props - timeline inputs.
  */
-export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', sessionId, onOpen, onMenu, onFallback, dragBind, suppressClick }) {
+export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', sessionId, types, onOpen, onMenu, onFallback, dragBind, suppressClick }) {
   const [collapsed, setCollapsed] = useState(() => readCollapsed())
   const [sectionsOpen, setSectionsOpen] = useState(() => new Set())
 
@@ -238,7 +265,7 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', se
   }, [items])
 
   const sections = useMemo(() => {
-    const usable = filterNodesWithFiles(nodes).filter(node => typeof node.time === 'number')
+    const usable = filterNodesWithFiles(filterTurnsByTypes(nodes, types)).filter(node => typeof node.time === 'number')
     const grouped = []
     for (const node of usable) {
       const section = sectionOf(node.time)
@@ -247,7 +274,7 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', se
       else grouped.push({ section, nodes: [node] })
     }
     return grouped
-  }, [nodes])
+  }, [nodes, types])
 
   if (sections.length === 0) {
     const probe = Array.isArray(diagnostics?.probe) ? diagnostics.probe : []
@@ -263,10 +290,15 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', se
       'request-failed': '插件路由返回了错误，括号里是宿主给出的原因。',
       'no-workspace-root': '没有工作区就无法扫描产出文件；消息本身仍然会列出。',
     }
+    const typed = Array.isArray(types) && types.length > 0
     return h('div', { className: 'vms-tl-empty' },
-      h(Icon, { name: 'clock', size: 20 }),
-      h('b', null, headlines[reason] ?? '这条会话还没有产出文件'),
-      h('p', null, hints[reason] ?? '发送一条消息后，这里会按时间列出每次对话及其产出的文件。'),
+      h(Icon, { name: typed ? 'filter' : 'clock', size: 20 }),
+      h('b', null, headlines[reason]
+        ?? (typed ? '本会话没有该类型的文件' : '这条会话还没有产出文件')),
+      h('p', null, hints[reason]
+        ?? (typed
+          ? '取消上方的类型选择，或换一个类型再看。'
+          : '发送一条消息后，这里会按时间列出每次对话及其产出的文件。')),
       failure !== undefined && h('code', { className: 'vms-tl-error' }, failure),
       probe.length > 0 && h('ul', { className: 'vms-tl-probe' },
         probe.map(source => h('li', { key: source.name },

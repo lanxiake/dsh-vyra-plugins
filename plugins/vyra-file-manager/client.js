@@ -25016,10 +25016,23 @@ function TimelineNode({ node, lookup, layout, sessionId, collapsed, onToggle, on
     )
   );
 }
+function filterTurnsByTypes(nodes, types) {
+  const list2 = Array.isArray(nodes) ? nodes : [];
+  const kinds = Array.isArray(types) ? types.filter((kind) => typeof kind === "string" && kind !== "") : [];
+  if (kinds.length === 0) return list2;
+  const wanted = new Set(kinds);
+  const kept = [];
+  for (const node of list2) {
+    const files = Array.isArray(node?.files) ? node.files : [];
+    const matching = files.filter((file) => wanted.has(fileKindOf(file.display ?? file.path ?? "")[0]));
+    if (matching.length > 0) kept.push({ ...node, files: matching });
+  }
+  return kept;
+}
 function filterNodesWithFiles(nodes) {
   return (Array.isArray(nodes) ? nodes : []).filter((node) => Array.isArray(node.files) && node.files.length > 0);
 }
-function SessionTimeline({ nodes, items, diagnostics, layout = "list", sessionId, onOpen, onMenu, onFallback, dragBind, suppressClick }) {
+function SessionTimeline({ nodes, items, diagnostics, layout = "list", sessionId, types, onOpen, onMenu, onFallback, dragBind, suppressClick }) {
   const [collapsed, setCollapsed] = (0, import_react8.useState)(() => readCollapsed());
   const [sectionsOpen, setSectionsOpen] = (0, import_react8.useState)(() => /* @__PURE__ */ new Set());
   (0, import_react8.useEffect)(() => {
@@ -25036,7 +25049,7 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", sessionId
     return map2;
   }, [items]);
   const sections = (0, import_react8.useMemo)(() => {
-    const usable = filterNodesWithFiles(nodes).filter((node) => typeof node.time === "number");
+    const usable = filterNodesWithFiles(filterTurnsByTypes(nodes, types)).filter((node) => typeof node.time === "number");
     const grouped = [];
     for (const node of usable) {
       const section = sectionOf(node.time);
@@ -25045,7 +25058,7 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", sessionId
       else grouped.push({ section, nodes: [node] });
     }
     return grouped;
-  }, [nodes]);
+  }, [nodes, types]);
   if (sections.length === 0) {
     const probe = Array.isArray(diagnostics?.probe) ? diagnostics.probe : [];
     const reason = diagnostics?.reason;
@@ -25060,12 +25073,13 @@ function SessionTimeline({ nodes, items, diagnostics, layout = "list", sessionId
       "request-failed": "\u63D2\u4EF6\u8DEF\u7531\u8FD4\u56DE\u4E86\u9519\u8BEF\uFF0C\u62EC\u53F7\u91CC\u662F\u5BBF\u4E3B\u7ED9\u51FA\u7684\u539F\u56E0\u3002",
       "no-workspace-root": "\u6CA1\u6709\u5DE5\u4F5C\u533A\u5C31\u65E0\u6CD5\u626B\u63CF\u4EA7\u51FA\u6587\u4EF6\uFF1B\u6D88\u606F\u672C\u8EAB\u4ECD\u7136\u4F1A\u5217\u51FA\u3002"
     };
+    const typed = Array.isArray(types) && types.length > 0;
     return h4(
       "div",
       { className: "vms-tl-empty" },
-      h4(Icon2, { name: "clock", size: 20 }),
-      h4("b", null, headlines[reason] ?? "\u8FD9\u6761\u4F1A\u8BDD\u8FD8\u6CA1\u6709\u4EA7\u51FA\u6587\u4EF6"),
-      h4("p", null, hints[reason] ?? "\u53D1\u9001\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u8FD9\u91CC\u4F1A\u6309\u65F6\u95F4\u5217\u51FA\u6BCF\u6B21\u5BF9\u8BDD\u53CA\u5176\u4EA7\u51FA\u7684\u6587\u4EF6\u3002"),
+      h4(Icon2, { name: typed ? "filter" : "clock", size: 20 }),
+      h4("b", null, headlines[reason] ?? (typed ? "\u672C\u4F1A\u8BDD\u6CA1\u6709\u8BE5\u7C7B\u578B\u7684\u6587\u4EF6" : "\u8FD9\u6761\u4F1A\u8BDD\u8FD8\u6CA1\u6709\u4EA7\u51FA\u6587\u4EF6")),
+      h4("p", null, hints[reason] ?? (typed ? "\u53D6\u6D88\u4E0A\u65B9\u7684\u7C7B\u578B\u9009\u62E9\uFF0C\u6216\u6362\u4E00\u4E2A\u7C7B\u578B\u518D\u770B\u3002" : "\u53D1\u9001\u4E00\u6761\u6D88\u606F\u540E\uFF0C\u8FD9\u91CC\u4F1A\u6309\u65F6\u95F4\u5217\u51FA\u6BCF\u6B21\u5BF9\u8BDD\u53CA\u5176\u4EA7\u51FA\u7684\u6587\u4EF6\u3002")),
       failure !== void 0 && h4("code", { className: "vms-tl-error" }, failure),
       probe.length > 0 && h4(
         "ul",
@@ -26309,6 +26323,7 @@ function LibraryBody(props) {
           nodes: turns,
           items,
           sessionId,
+          types,
           layout: timelineLayout,
           diagnostics: timelineDiagnostics,
           dragBind: dragDrop.bind,
