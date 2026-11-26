@@ -1,10 +1,19 @@
 {
   "name": "dsh-boot-duel",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
   "type": "module",
   "description": "A one-round office-worker stick-figure duel that covers the DSH Web home page after each load: settle it with your fists, then get back to work. · DSH 开工大吉插件：每次打开 Web 界面先打一局火柴人对决，打完接着上班，按 Esc 直接跳过。",
   "license": "MIT",
+  "author": "lanxiake",
+  "homepage": "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/dsh-boot-duel#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/dsh-boot-duel"
+  },
+  "bugs": {
+    "url": "https://github.com/lanxiake/dsh-vyra-plugins/issues"
+  },
   "keywords": [
     "dsh",
     "deepseek-harness",
@@ -37,6 +46,7 @@
     "assets",
     "docs",
     "icon.svg",
+    "LICENSE",
     "README.md",
     "THIRD_PARTY_NOTICES.md"
   ],
