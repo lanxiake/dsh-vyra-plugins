@@ -3377,6 +3377,17 @@ export const manifest: MarketManifest = {
             path: 'plugins/dsh-boot-duel',
           },
         },
+        // 0.2.1 gates both routes with `connection.requestRejection`, which is
+        // what an external listing's security review asks for.
+        '0.2.1': {
+          publishTimestamp: 1795741200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '110a2042a40357d6570b50821eaf8ecd64dbfe72',
+            path: 'plugins/dsh-boot-duel',
+          },
+        },
       },
       metadata: {
         category: 'appearance',
