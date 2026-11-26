@@ -70,8 +70,8 @@ window.__ModuleLoader__.load({
         'hint.controls': "A / D 移动 · J 直拳 · H 摆拳 · K 踢击 · F 上勾 · G 扫腿 · N 滑铲 · L 格挡 · S 下蹲 · Shift 后跳 · 空格 跳 · 空中 J/K 空袭 · U 大招 · Esc 跳过",
         'hint.skip': '按 Esc 跳过这一局',
         'skip.button': '跳过',
-        'settings.title': '开机动画',
-        'settings.sectionName': '开机动画',
+        'settings.title': '火柴人开机动画',
+        'settings.sectionName': '火柴人开机动画',
         'settings.panelTitle': '快速设置',
         'settings.enabled': '显示开局决斗',
         'settings.sound': '音效',
@@ -151,8 +151,8 @@ window.__ModuleLoader__.load({
         'hint.controls': "A / D move · J jab · H hook · K kick · F uppercut · G sweep · N slide · L block · S crouch · Shift back-hop · Space jump · J/K in air · U super · Esc skip",
         'hint.skip': 'Press Esc to skip this round',
         'skip.button': 'Skip',
-        'settings.title': 'Opening duel',
-        'settings.sectionName': 'Opening duel',
+        'settings.title': 'Stick-figure opening',
+        'settings.sectionName': 'Stick-figure opening',
         'settings.panelTitle': 'Quick settings',
         'settings.enabled': 'Show the opening duel',
         'settings.sound': 'Sound',
@@ -282,6 +282,40 @@ window.__ModuleLoader__.load({
     function setLocaleForTest(id) {
       activeLocale = id === 'en' ? 'en' : 'zh'
       translated = null
+    }
+
+    /**
+     * The live round's own "start over", when there is one.
+     *
+     * Set by `mountLayer` and cleared on teardown. It is what lets the in-game
+     * gear start a fresh round in place, and — through `startRound()` below —
+     * what lets the host settings page do the same.
+     */
+    let roundRestart = null
+
+    /**
+     * Start a round from outside the game, e.g. the host settings page.
+     *
+     * Two cases. If the layer is mounted, hand the click to the live engine,
+     * which restarts in place and rings the bell. If it is not (the opening was
+     * finished, skipped, or this is a later visit), mount it first: `store.show`
+     * bumps the generation so the finished round's pending fade cannot tear the
+     * new one down, and the freshly mounted layer starts at the gate.
+     */
+    function startRound() {
+      if (roundRestart) {
+        roundRestart()
+        return true
+      }
+      if (!settings.enabled) return false
+      // Without its stylesheet the layer renders as a bare band over the app —
+      // the same failure the boot-time guard exists to prevent. Do not mount
+      // into that state just because a button was pressed.
+      try {
+        if (document.getElementById(STYLE_ID) === null) return false
+      } catch { return false }
+      store.show()
+      return true
     }
 
     /** Swap the host context; the tests drive `pickLocale` through this. */
@@ -762,17 +796,42 @@ window.__ModuleLoader__.load({
       if (value.enabled === false) store.hide()
     }
 
-    /** Whether the layer is still mounted; flipped by `store.hide()`. */
+    /**
+     * Whether the layer is mounted.
+     *
+     * `hide()` used to be one-way, which was right for the opening animation —
+     * it plays once per load — but wrong for "再来一局" on the host settings
+     * page: there the user is explicitly asking for one more round, long after
+     * the opening has been dismissed. `show()` is that second door.
+     *
+     * `generation` exists because a show can happen DURING the outro's 400 ms
+     * fade, while the layer is still mounted with `pointer-events: none`. The
+     * pending hide from that fade must not tear down the round the user just
+     * asked for, so `hide()` takes the generation it was scheduled under and
+     * ignores itself when a newer `show()` has happened since.
+     */
     const store = {
       visible: true,
+      generation: 0,
       listeners: new Set(),
       subscribe(listener) {
         store.listeners.add(listener)
         return () => store.listeners.delete(listener)
       },
-      hide() {
-        store.visible = false
+      notify() {
         for (const listener of [...store.listeners]) listener()
+      },
+      /** Mount the layer. Also re-arms a round that already ended. */
+      show() {
+        store.generation += 1
+        store.visible = true
+        store.notify()
+      },
+      /** Unmount the layer; `generation` is the show it belonged to. */
+      hide(generation) {
+        if (Number.isFinite(generation) && generation !== store.generation) return
+        store.visible = false
+        store.notify()
       },
     }
 
@@ -1210,6 +1269,17 @@ window.__ModuleLoader__.load({
         React.createElement('div', { className: 'boot-duel-host-actions' },
           React.createElement('button', {
             type: 'button',
+            className: 'boot-duel-set-btn is-primary',
+            onClick: () => {
+              setListening(null)
+              // Turning the opening on is implied: asking for a round while
+              // "show the opening duel" is off would otherwise do nothing.
+              if (!settings.enabled) patch({ enabled: true })
+              startRound()
+            },
+          }, t('settings.restart')),
+          React.createElement('button', {
+            type: 'button',
             className: 'boot-duel-set-btn',
             onClick: () => { patch({ binds: null }) },
           }, t('settings.resetBinds')),
@@ -1436,13 +1506,17 @@ window.__ModuleLoader__.load({
       let settled = false
       let fadeTimer = null
 
-      /** The round is over: remember it, fade, then unmount for good. */
+      /** The round is over: remember it, fade, then unmount. */
       function finish() {
         if (settled) return
         settled = true
         __mod_session.markPassed()
         setFading(true)
-        fadeTimer = window.setTimeout(() => store.hide(), FADE_MS)
+        // The fade belongs to the show that started this round. If the user
+        // asks for another one during those 400 ms, `store.show()` bumps the
+        // generation and this hide is dropped instead of tearing it down.
+        const generation = store.generation
+        fadeTimer = window.setTimeout(() => store.hide(generation), FADE_MS)
       }
 
       function fail(message, error) {
@@ -1594,6 +1668,16 @@ window.__ModuleLoader__.load({
       /** Start a fresh round in place: the panel's "再来一局". */
       function restart() {
         try {
+          // A restart can land DURING the outro's fade, when `settled` is true
+          // and a hide is already scheduled. Both belong to the round being
+          // replaced, so both are cancelled here: leaving `settled` set made
+          // every key a no-op, and leaving the timer let the old fade unmount
+          // the new round 400 ms later.
+          settled = false
+          if (fadeTimer) { window.clearTimeout(fadeTimer); fadeTimer = null }
+          setFading(false)
+          // Re-arming the round invalidates any pending hide from the old one.
+          store.generation += 1
           settings = { ...settings }
           duel.restart?.(null)
           session.setBinds?.(settings.binds)
@@ -1608,6 +1692,8 @@ window.__ModuleLoader__.load({
       }
 
       engineRef.current = { audio, resume, finish, begin, restart }
+      // The host settings page's "再来一局" reaches the live round through this.
+      roundRestart = restart
       setSnapshot(duel.getSnapshot())
       loop.start()
 
@@ -1629,6 +1715,7 @@ window.__ModuleLoader__.load({
         window.removeEventListener('resize', onResize)
         document.removeEventListener('visibilitychange', onVisibility)
         if (engineRef.current?.audio === audio) engineRef.current = null
+        if (roundRestart === restart) roundRestart = null
         // Hand focus back where it came from. Leaving it on a detached node is
         // exactly what makes the next keystroke disappear.
         try {
@@ -1641,11 +1728,18 @@ window.__ModuleLoader__.load({
       }
     }
 
-    /** The `shell.overlay` entry: renders nothing once the round is over. */
+    /**
+     * The `shell.overlay` entry.
+     *
+     * Renders the duel while `store.visible` is true, and nothing after the
+     * round is over. `store.show()` re-mounts it for "再来一局", so `hasPassed`
+     * is no longer a permanent gate — it is only consulted at boot, where it
+     * records that the opening has already played this page load.
+     */
     function OverlayEntry() {
-      const [visible, setVisible] = React.useState(store.visible && !__mod_session.hasPassed() && settings.enabled)
+      const [visible, setVisible] = React.useState(store.visible && settings.enabled)
       React.useEffect(() => store.subscribe(() => setVisible(store.visible)), [])
-      if (!visible || __mod_session.hasPassed()) return null
+      if (!visible || !settings.enabled) return null
       return React.createElement(BootDuel, null)
     }
 
@@ -1743,7 +1837,7 @@ ctx.effect(() => ctx.slots.inject(SLOT, () => ctx.slots.register({
     exports.__test = {
       DICTS, CSS, SLOT, ENTRY_ID, ENTRY_ORDER, DEFAULT_CONFIG, GAME_CODES,
       CONFIG_URL, STYLE_ID, pickLocale, isTypingTarget, keyLabel, t,
-      setLocaleForTest, __setContext: setContextForTest,
+      setLocaleForTest, __setContext: setContextForTest, startRound, store,
     }
     return module.exports
   },
