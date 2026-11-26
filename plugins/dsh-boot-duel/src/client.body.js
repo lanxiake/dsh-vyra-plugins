@@ -83,7 +83,8 @@ window.__ModuleLoader__.load({
         'settings.resetBinds': '恢复默认键位',
         'settings.close': '关闭',
         'settings.lede': '每次打开 Web 界面先打一局火柴人，打完接着上班。',
-        'settings.bindsNote': '键位在游戏内右上角的齿轮里改，那里能直接按新键试。',
+        'settings.bindsNote': '点键位再按想要的键即可改绑。Esc 取消。',
+        'settings.pressKey': '按新键…',
         'special.name': '破 军',
         'special.ready': '气已满 · 按 U 放大招',
         'special.locked': '气 {n}%',
@@ -124,7 +125,8 @@ window.__ModuleLoader__.load({
         'settings.resetBinds': 'Reset keys',
         'settings.close': 'Close',
         'settings.lede': 'A one-round stick-figure duel before the home page loads, then back to work.',
-        'settings.bindsNote': 'Key bindings live behind the in-game gear, where you can press the new key to test it.',
+        'settings.bindsNote': 'Click a key, then press the one you want. Esc cancels.',
+        'settings.pressKey': 'Press a key…',
         'special.name': 'Rend',
         'special.ready': 'Qi full · press U',
         'special.locked': 'Qi {n}%',
@@ -437,6 +439,21 @@ window.__ModuleLoader__.load({
   background: transparent; color: inherit; cursor: pointer;
 }
 .boot-duel-host-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; opacity: .6; }
+.boot-duel-host-section-head {
+  margin: 14px 0 8px; padding-top: 12px; font-size: 12px;
+  letter-spacing: .14em; opacity: .62;
+  border-top: 1px solid rgba(128, 138, 152, .16);
+}
+.boot-duel-host-binds {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 18px;
+}
+.boot-duel-host-bind {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; font-size: 13px; cursor: pointer;
+}
+.boot-duel-host-bind-label { flex: 1; opacity: .82; }
+.boot-duel-host-actions { display: flex; gap: 8px; margin-top: 12px; }
 .boot-duel-host-icon { display: grid; place-items: center; font-size: 15px; }
 
 .boot-duel-gear {
@@ -959,6 +976,8 @@ window.__ModuleLoader__.load({
      */
     function HostSettingsSection() {
       const [local, setLocal] = React.useState(settings)
+      /** The action waiting for a new key, or null. */
+      const [listening, setListening] = React.useState(null)
 
       // Pick up changes made elsewhere (the in-game gear) while this is open.
       React.useEffect(() => {
@@ -968,6 +987,22 @@ window.__ModuleLoader__.load({
       }, [])
 
       const patch = (next) => { setLocal({ ...local, ...next }); updateSettings(next) }
+
+      // While a bind is being captured, the next key becomes that action's key.
+      // Escape cancels; the capture runs in the CAPTURE phase so nothing else
+      // sees the key first.
+      React.useEffect(() => {
+        if (!listening) return undefined
+        function onKey(e) {
+          e.preventDefault()
+          e.stopPropagation()
+          if (e.code === 'Escape') { setListening(null); return }
+          patch({ binds: { ...(local.binds || {}), [listening]: e.code } })
+          setListening(null)
+        }
+        window.addEventListener('keydown', onKey, true)
+        return () => window.removeEventListener('keydown', onKey, true)
+      }, [listening, local])
 
       const row = (label, control) => React.createElement('label', { className: 'boot-duel-host-row' },
         React.createElement('span', { className: 'boot-duel-host-label' }, label),
@@ -1000,6 +1035,30 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'easy' }, t('settings.easy')),
             React.createElement('option', { value: 'normal' }, t('settings.normal')),
           )),
+
+        React.createElement('div', { className: 'boot-duel-host-section-head' }, t('settings.binds')),
+        React.createElement('div', { className: 'boot-duel-host-binds' },
+          BINDABLE.map(([key, label]) => React.createElement('label', {
+            key,
+            className: 'boot-duel-host-bind',
+          },
+            React.createElement('span', { className: 'boot-duel-host-bind-label' }, label),
+            React.createElement('button', {
+              type: 'button',
+              className: `boot-duel-set-bind${listening === key ? ' is-listening' : ''}`,
+              onClick: () => setListening(listening === key ? null : key),
+            }, listening === key
+              ? t('settings.pressKey')
+              : (KEY_LABEL[local.binds?.[key]] || KEY_LABEL[DEFAULT_BINDS[key]] || '—')),
+          ))),
+
+        React.createElement('div', { className: 'boot-duel-host-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'boot-duel-set-btn',
+            onClick: () => { patch({ binds: null }) },
+          }, t('settings.resetBinds')),
+        ),
 
         React.createElement('p', { className: 'boot-duel-host-note' }, t('settings.bindsNote')),
       )
