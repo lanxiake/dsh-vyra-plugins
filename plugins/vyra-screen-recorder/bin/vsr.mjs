@@ -260,7 +260,7 @@ async function record(argv) {
     source,
     duration,
     format,
-    fps: clampInt(options.fps, 4, 12, settings.fps),
+    fps: clampInt(options.fps, 4, 30, settings.fps),
     quality: clampInt(options.quality, 40, 90, settings.quality),
     maxEdge: clampInt(options['max-edge'], 320, 2560, settings.maxEdge),
     includeSystemAudio: options['no-audio'] ? false : settings.includeSystemAudio !== false,

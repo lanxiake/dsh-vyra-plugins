@@ -273,6 +273,14 @@ export async function runRecordedWalkthrough(deps, request) {
         fps: request.fps,
         maxSeconds,
         format: request.format,
+        // A walkthrough is meant to be shown, and the recorder's own "Agent is
+        // recording" pill is drawn in the page — so on a screen-reading capture
+        // it lands in the video. Silent asks the recorder not to draw it.
+        silent: request.silent !== false,
+        // A window source is what a walkthrough wants: desktop captures whatever
+        // else the user has open. The caller may name one; otherwise the recorder
+        // falls back to its configured default.
+        source: request.source,
       },
     })
   } catch (error) {

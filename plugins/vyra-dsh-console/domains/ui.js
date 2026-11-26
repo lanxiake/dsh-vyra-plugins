@@ -137,7 +137,18 @@ async function recordWalkthrough(ctx, args) {
     action: 'ui.record',
     ...await runRecordedWalkthrough(
       { recorderBase: origin, channel, console: ctx?.__consoleObject },
-      { out: args.out, fps: args.fps, maxSeconds: args.maxSeconds, format: args.format, steps: args.steps },
+      {
+        out: args.out,
+        fps: args.fps,
+        maxSeconds: args.maxSeconds,
+        format: args.format,
+        steps: args.steps,
+        // Optional, and worth passing: a window source keeps the user's other
+        // windows out of the video, and `silent` keeps the recorder's own pill
+        // out of it.
+        source: args.source,
+        silent: args.silent,
+      },
     ),
   })
 }

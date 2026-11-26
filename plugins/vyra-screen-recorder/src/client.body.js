@@ -560,7 +560,7 @@ window.__ModuleLoader__.load({
         if (agentRun === null || agentRun.id !== job.id) {
           if (agentRun) await stopMic(agentRun.mic)
           agentRun = { id: job.id, mic: null, micStartedAt: Date.now(), encoding: false, startingMic: true }
-          setState({ agentRecording: { id: job.id, startedAt: job.startedAt || Date.now() } })
+          setState({ agentRecording: { id: job.id, startedAt: job.startedAt || Date.now(), silent: job.silent === true } })
           const mic = job.includeMic === false ? null : await startMic()
           if (agentRun !== null && agentRun.id === job.id) {
             agentRun.mic = mic
@@ -2348,7 +2348,9 @@ window.__ModuleLoader__.load({
       const snapshot = useStore()
       const children = []
       if (snapshot.phase === 'recording' && snapshot.recording) children.push(h(RecordingPill, { key: 'rec', recording: snapshot.recording }))
-      if (snapshot.agentRecording) children.push(h(AgentPill, { key: 'agent', agent: snapshot.agentRecording }))
+      // A silent recording draws no pill: this overlay is in the page, and a
+      // screen-reading capture would put it in the video.
+      if (snapshot.agentRecording && snapshot.agentRecording.silent !== true) children.push(h(AgentPill, { key: 'agent', agent: snapshot.agentRecording }))
       // starting 阶段不出任何浮层：启动抓帧和截图都不能把本插件的提示拍进画面。
       if (snapshot.phase === 'encoding' && snapshot.progress) children.push(h(ProgressCard, { key: 'enc', stage: snapshot.progress.stage, ratio: snapshot.progress.ratio }))
       if (snapshot.picker) children.push(h(Picker, { key: 'picker', picker: snapshot.picker }))

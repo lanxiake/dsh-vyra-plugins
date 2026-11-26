@@ -50,6 +50,15 @@ const LIB = path.join(ROOT, 'lib')
 const POWERSHELL = process.env.VSR_POWERSHELL || 'powershell.exe'
 const SAVE_LIMIT = 512 * 1024 * 1024
 const MAX_SECONDS = 600
+/**
+ * The capture rate ceiling.
+ *
+ * 12 was chosen when the frames were assumed to be a slideshow; a scroll or a
+ * cursor move at 12 fps is visibly choppy. The capture loop paces itself to a
+ * target time, so a rate it cannot sustain degrades into dropped frames rather
+ * than a broken file — the setting is an upper bound, not a promise.
+ */
+const MAX_FPS = 30
 const SESSION_PREFIX = 'dsh-vyra-screen-recorder-'
 
 let recording = null
@@ -185,7 +194,7 @@ function normalizeSettings(raw) {
     videoDir: absoluteDir(value.videoDir),
     shotDir: absoluteDir(value.shotDir),
     format: value.format === 'webm' ? 'webm' : 'mp4',
-    fps: clamp(value.fps, 4, 12, DEFAULT_SETTINGS.fps),
+    fps: clamp(value.fps, 4, MAX_FPS, DEFAULT_SETTINGS.fps),
     quality: clamp(value.quality, 40, 90, DEFAULT_SETTINGS.quality),
     maxEdge: clamp(value.maxEdge, 320, 2560, DEFAULT_SETTINGS.maxEdge),
     maxSeconds: clamp(value.maxSeconds, 10, MAX_SECONDS, DEFAULT_SETTINGS.maxSeconds),
@@ -956,7 +965,7 @@ async function startSession(payload) {
   if (process.platform !== 'win32') throw new Error('目前只支持 Windows')
 
   const source = normalizeSource(payload && payload.source)
-  const fps = clamp(payload && payload.fps, 4, 12, 8)
+  const fps = clamp(payload && payload.fps, 4, MAX_FPS, 8)
   const quality = clamp(payload && payload.quality, 40, 90, 65)
   const maxEdge = clamp(payload && payload.maxEdge, 0, 2560, 1920)
   const maxSeconds = clamp(payload && payload.maxSeconds, 2, MAX_SECONDS, MAX_SECONDS)
@@ -1631,6 +1640,7 @@ async function handleAgentStart(req, res) {
       maxEdge: data.maxEdge,
       includeSystemAudio: data.includeSystemAudio,
       includeMic: data.includeMic,
+      silent: data.silent === true,
       out: typeof data.out === 'string' ? data.out : '',
     })
     sendJson(res, 200, { ok: true, id, startedAt: agentJob.startedAt })
@@ -1650,6 +1660,16 @@ async function handleAgentStatus(req, res) {
       startedAt: agentJob.startedAt,
       format: agentJob.format,
       includeMic: agentJob.request.includeMic !== false,
+      // Silent hides this plugin's own recording pill. The pill is drawn in the
+      // page, so on a capture that reads the screen it lands in the video; a
+      // walkthrough that is going to be published should not carry it.
+      silent: agentJob.request.silent === true,
+      // What the capture was actually pointed at, so a caller can check the
+      // take is of the window it meant rather than of whatever happened to be
+      // in that screen rectangle.
+      source: agentJob.request.source ?? null,
+      title: agentJob.request.source && agentJob.request.source.title ? agentJob.request.source.title : null,
+      frameCount: agentJob.manifest && agentJob.manifest.frames ? agentJob.manifest.frames.length : null,
       out: agentJob.request.out,
       manifest: agentJob.manifest,
     },
