@@ -3079,6 +3079,16 @@
       },
       "versions": [
         {
+          "version": "0.2.0",
+          "publishTimestamp": 1795680000,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "197603579872294d29fec68e076b4a064e2b6990",
+            "path": "plugins/vyra-dsh-console"
+          }
+        },
+        {
           "version": "0.1.2",
           "publishTimestamp": 1795679986,
           "source": {
@@ -3115,9 +3125,10 @@
           "console",
           "harness",
           "settings",
+          "ui",
+          "panels",
           "models",
-          "plugins",
-          "panel"
+          "plugins"
         ]
       }
     }
