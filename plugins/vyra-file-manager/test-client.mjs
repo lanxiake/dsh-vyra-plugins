@@ -323,3 +323,62 @@ test('no source file still mentions the removed link type', async () => {
     assert.doesNotMatch(source, /data-kind="link"/u, `${name} still styles the link kind`)
   }
 })
+
+test('timeline grid tiles show real thumbnails for media files', async () => {
+  const { SessionTimeline } = await import('./src/client/timeline.js')
+  const items = [
+    { id: 'i1', relativePath: 'shots/a.png', kind: 'image', ext: 'png', source: 'local', size: 100, mtimeMs: 1 },
+    { id: 'i2', relativePath: 'clips/b.mp4', kind: 'video', ext: 'mp4', source: 'local', size: 200, mtimeMs: 2 },
+    { id: 'i3', relativePath: 'voice/c.mp3', kind: 'audio', ext: 'mp3', source: 'local', size: 50, mtimeMs: 3 },
+    { id: 'i4', relativePath: 'docs/d.md', kind: 'document', ext: 'md', source: 'local', size: 20, mtimeMs: 4 },
+  ]
+  const nodes = [{
+    seq: 1, time: 1_700_000_000_000, prompt: 'p', files: items.map(item => ({ path: item.relativePath, display: item.relativePath })),
+  }]
+  const html = renderToString(React.createElement(SessionTimeline, {
+    nodes, items, layout: 'grid', sessionId: 's-1', onOpen() {}, onMenu() {},
+  }))
+  // An image tile is a real <img> pointing at the authenticated file route.
+  assert.match(html, /<img[^>]+src="[^"]*vyra-media\/file[^"]*path=shots%2Fa\.png/u)
+  assert.match(html, /loading="lazy"/u)
+  // A video tile uses the first frame the browser renders itself.
+  assert.match(html, /<video[^>]*src="[^"]*vyra-media\/file[^"]*path=clips%2Fb\.mp4/u)
+  // Documents keep their type icon; they have no picture to show.
+  assert.doesNotMatch(html, /<img[^>]+path=docs%2Fd\.md/u)
+})
+
+test('timeline grid falls back to the type icon when the file is gone', async () => {
+  const { SessionTimeline } = await import('./src/client/timeline.js')
+  const nodes = [{
+    seq: 1,
+    time: 1_700_000_000_000,
+    prompt: 'p',
+    files: [{ path: 'gone.png', display: 'gone.png' }],
+  }]
+  // `items` is empty, so the timeline cannot resolve the file: no image request.
+  const html = renderToString(React.createElement(SessionTimeline, {
+    nodes, items: [], layout: 'grid', sessionId: 's-1', onOpen() {}, onMenu() {},
+  }))
+  assert.doesNotMatch(html, /<img/u)
+  assert.match(html, /is-missing/u)
+
+  // An item that resolved but carries no path has nothing to fetch, so the tile
+  // keeps its icon rather than requesting the route with an empty path.
+  const pathless = [{ id: 'i1', kind: 'image', ext: 'png', source: 'local', size: 1, mtimeMs: 1 }]
+  const pathlessHtml = renderToString(React.createElement(SessionTimeline, {
+    nodes, items: pathless, layout: 'grid', sessionId: 's-1', onOpen() {}, onMenu() {},
+  }))
+  assert.doesNotMatch(pathlessHtml, /<img/u)
+})
+
+test('the list layout keeps icons instead of thumbnails', async () => {
+  const { SessionTimeline } = await import('./src/client/timeline.js')
+  const items = [
+    { id: 'i1', relativePath: 'shots/a.png', kind: 'image', ext: 'png', source: 'local', size: 100, mtimeMs: 1 },
+  ]
+  const nodes = [{ seq: 1, time: 1_700_000_000_000, prompt: 'p', files: [{ path: 'shots/a.png', display: 'shots/a.png' }] }]
+  const html = renderToString(React.createElement(SessionTimeline, {
+    nodes, items, layout: 'list', sessionId: 's-1', onOpen() {}, onMenu() {},
+  }))
+  assert.doesNotMatch(html, /<img/u)
+})

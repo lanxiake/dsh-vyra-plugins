@@ -1,6 +1,6 @@
 /** Conversation timeline: one collapsible node per user message, with its produced files. */
 import React, { useEffect, useMemo, useState } from 'react'
-import { COLLATOR } from './helpers.js'
+import { COLLATOR, mediaSrc } from './helpers.js'
 import { sectionOf } from './sections.js'
 import { Icon, kindIcon } from './icons.js'
 
@@ -49,7 +49,53 @@ function writeCollapsed(set) {
 }
 
 /** One produced file, as a grid tile or a list row. */
-function FileEntry({ file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }) {
+/**
+ * The filled part of a tile: the file's own pixels where the browser can draw
+ * them, the type icon everywhere else.
+ *
+ * Only a resolved item has a URL to fetch — a file the timeline can no longer
+ * find in the workspace keeps its icon rather than requesting a 404. Images and
+ * videos load lazily so a long timeline does not download every frame at once.
+ * @param {object} args - tile inputs.
+ * @returns {object} the node to draw.
+ */
+function TileThumb({ kind, ext, item, missing, sessionId }) {
+  const hasFile = missing !== true && item !== undefined && sessionId !== undefined
+    && typeof item.relativePath === 'string' && item.relativePath !== ''
+    && (item.kind === 'image' || item.kind === 'video' || item.kind === 'audio')
+  if (!hasFile) {
+    return h('span', { className: 'vms-tl-tile-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 20 }))
+  }
+  const src = mediaSrc(sessionId, item)
+  if (item.kind === 'image') {
+    return h('img', {
+      className: 'vms-tl-tile-thumb',
+      src,
+      alt: '',
+      loading: 'lazy',
+      decoding: 'async',
+      // A file that will not decode leaves the tile with its icon, not a broken
+      // image: the icon is the honest answer for "cannot be shown".
+      onError: event => {
+        const tile = event?.currentTarget?.parentElement
+        if (tile !== null && tile !== undefined) tile.dataset.thumbFailed = '1'
+      },
+    })
+  }
+  if (item.kind === 'video') {
+    return h('video', {
+      className: 'vms-tl-tile-thumb',
+      src,
+      muted: true,
+      playsInline: true,
+      preload: 'metadata',
+      'aria-hidden': 'true',
+    })
+  }
+  return h('span', { className: 'vms-tl-tile-icon vms-tl-tile-wave' }, h(Icon, { name: 'audio', size: 20 }))
+}
+
+function FileEntry({ file, lookup, layout, sessionId, onOpen, onMenu, dragBind, suppressClick }) {
   const name = (file.display ?? file.path).split('/').pop() ?? file.path
   const [kind, ext] = fileKindOf(name)
   const target = lookup.get(file.path) ?? lookup.get(file.display)
@@ -90,7 +136,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu, dragBind, suppressCli
       },
       ...handlers,
     },
-    h('span', { className: 'vms-tl-tile-icon' }, h(Icon, { name: kindIcon(kind, ext), size: 20 })),
+    h(TileThumb, { kind, ext, item: target, missing, sessionId }),
     h('span', { className: 'vms-tl-tile-name' }, name),
     h('span', { className: 'vms-tl-tile-meta' },
       h('span', { className: 'vms-tl-tag' }, kind === 'other' ? ext || '文件' : KIND_LABEL[kind]),
@@ -119,7 +165,7 @@ function FileEntry({ file, lookup, layout, onOpen, onMenu, dragBind, suppressCli
     missing ? '已不存在' : (stats || '已修改')))
 }
 
-function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMenu, dragBind, suppressClick }) {
+function TimelineNode({ node, lookup, layout, sessionId, collapsed, onToggle, onOpen, onMenu, dragBind, suppressClick }) {
   const files = Array.isArray(node.files) ? node.files : []
   const groups = useMemo(() => {
     const map = new Map()
@@ -149,13 +195,13 @@ function TimelineNode({ node, lookup, layout, collapsed, onToggle, onOpen, onMen
       h('span', { className: 'vms-tl-chevron' }, h(Icon, { name: 'chevronRight', size: 15 }))),
       open && files.length > 0 && (layout === 'grid'
         ? h('div', { className: 'vms-tl-tiles' },
-          files.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick })))
+          files.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, sessionId, onOpen, onMenu, dragBind, suppressClick })))
         : groups.map(([dir, entries]) => h('div', { key: dir || '.', className: 'vms-tl-group' },
           h('div', { className: 'vms-tl-dir' },
             h(Icon, { name: 'folder', size: 14 }),
             dir === '' ? '工作区根目录' : dir),
           h('div', { className: 'vms-tl-rows' },
-            entries.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, onOpen, onMenu, dragBind, suppressClick }))))))))
+            entries.map(file => h(FileEntry, { key: `${file.path}:${file.display}`, file, lookup, layout, sessionId, onOpen, onMenu, dragBind, suppressClick }))))))))
 }
 
 /**
@@ -174,7 +220,7 @@ export function filterNodesWithFiles(nodes) {
  * The conversation timeline.
  * @param {object} props - timeline inputs.
  */
-export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', onOpen, onMenu, onFallback, dragBind, suppressClick }) {
+export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', sessionId, onOpen, onMenu, onFallback, dragBind, suppressClick }) {
   const [collapsed, setCollapsed] = useState(() => readCollapsed())
   const [sectionsOpen, setSectionsOpen] = useState(() => new Set())
 
@@ -250,6 +296,7 @@ export function SessionTimeline({ nodes, items, diagnostics, layout = 'list', on
         h('span', { className: 'vms-tl-section-count' }, `${group.nodes.length} 轮`)),
         open && h('div', { className: 'vms-tl-axis' },
           group.nodes.map(node => h(TimelineNode, {
+            sessionId,
             key: node.seq,
             node,
             lookup,

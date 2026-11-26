@@ -679,6 +679,8 @@
 .vms-tl-tile:hover:not(.is-missing) { border-color: color-mix(in srgb, var(--vms-accent) 45%, transparent); background: var(--vms-layer); transform: translateY(-1px); }
 .vms-tl-tile.is-missing { opacity: .55; cursor: default; }
 .vms-tl-tile-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--vms-layer3); }
+.vms-tl-tile-thumb { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: var(--vms-layer3); }
+.vms-tl-tile-wave { color: var(--vms-accent); }
 .vms-tl-tile-name { font-size: 11.5px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .vms-tl-tile-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 

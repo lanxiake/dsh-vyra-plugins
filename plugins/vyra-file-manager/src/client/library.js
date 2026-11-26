@@ -897,6 +897,7 @@ export function LibraryBody(props) {
         h(SessionTimeline, {
           nodes: turns,
           items,
+          sessionId,
           layout: timelineLayout,
           diagnostics: timelineDiagnostics,
           dragBind: dragDrop.bind,
