@@ -32,6 +32,7 @@ export const FORBIDDEN = Object.freeze({
 /** Actions the console implements. `requiresClient` actions go through the Client half. */
 export const ACTIONS = Object.freeze({
   'console.actions': { domain: 'console', mutating: false, destructive: false, requiresClient: false },
+  'console.map': { domain: 'inventory', mutating: false, destructive: false, requiresClient: false },
   'plugin.list': { domain: 'plugin', mutating: false, destructive: false, requiresClient: false },
   'plugin.setEnabled': { domain: 'plugin', mutating: true, destructive: false, requiresClient: false },
   'plugin.install': { domain: 'plugin', mutating: true, destructive: false, requiresClient: false },

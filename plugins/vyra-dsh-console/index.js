@@ -2,6 +2,7 @@ import { createConsole, present } from './core.js'
 import { createChannel } from './channel.js'
 import { createConsoleTool } from './tool.js'
 import { consoleDomain } from './domains/console.js'
+import { inventoryDomain } from './domains/inventory.js'
 import { pluginDomain } from './domains/plugin.js'
 import { modelDomain } from './domains/model.js'
 import { settingsDomain } from './domains/settings.js'
@@ -548,6 +549,7 @@ export function apply(ctx, config) {
     ctx,
     {
       console: consoleDomain,
+      inventory: inventoryDomain,
       plugin: pluginDomain,
       model: modelDomain,
       settings: settingsDomain,

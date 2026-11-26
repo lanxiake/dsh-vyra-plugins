@@ -10,6 +10,7 @@ import { pluginDomain } from '../domains/plugin.js'
 import { modelDomain } from '../domains/model.js'
 import { settingsDomain } from '../domains/settings.js'
 import { catalogDomain } from '../domains/catalog.js'
+import { inventoryDomain } from '../domains/inventory.js'
 import { consoleDomain } from '../domains/console.js'
 
 /** A ctx with no optional service present, to prove graceful degradation. */
@@ -63,7 +64,7 @@ test('every forbidden action is refused with a reason and an alternative', async
   // Swept rather than spot-checked: the envelope's two explanatory fields are
   // the whole point of the boundary — the model and the panel both read them —
   // so a fifth forbidden action added without them has to fail here.
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   const names = Object.keys(FORBIDDEN)
   assert.ok(names.length >= 4, 'the four authority-changing actions must all be present')
   for (const name of names) {
@@ -83,7 +84,7 @@ test('an inherited Object.prototype name is an unknown action, not a refusal', a
   // the envelope broke the contract the boundary rests on: a refusal must always
   // explain itself. Anything reachable from an HTTP body or a tool call must get
   // the honest "unknown action" here.
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   for (const name of ['toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf']) {
     const result = await console_.dispatch(name, {})
     assert.notEqual(result.status, 'forbidden', `${name} is not an operation and must not be refused as one`)
@@ -95,7 +96,7 @@ test('an inherited Object.prototype name is an unknown action, not a refusal', a
 test('no dispatch result ever lacks a status, whichever name is sent', async () => {
   // The envelope contract, swept over names chosen to land in each branch and
   // over the prototype names that used to escape it.
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   const probes = [
     ...Object.keys(ACTIONS), ...Object.keys(FORBIDDEN),
     'toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf',
@@ -129,7 +130,7 @@ test('a non-mutating action is marked non-mutating and non-destructive', () => {
 })
 
 test('an unknown action fails instead of throwing', async () => {
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   const result = await console_.dispatch('nope.notReal', {})
   assert.equal(result.status, 'error')
   assert.match(result.reason, /unknown action/i)
@@ -166,7 +167,7 @@ test('no dispatch result carries an undefined-valued key, whichever name is sent
   // fix touched: a spread of a non-object put no fields at all in the envelope,
   // which is the shape that fooled the old guard. Every result here is walked at
   // every depth.
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   for (const name of [...Object.keys(ACTIONS), ...Object.keys(FORBIDDEN), 'toString', 'constructor',
     '__proto__', 'valueOf', 'hasOwnProperty', 'isPrototypeOf', 'nope.real', '']) {
     const result = await console_.dispatch(name, {})
@@ -1047,7 +1048,7 @@ test('a forbidden action is refused before the confirmation gate is consulted', 
 })
 
 test('console.actions lists the Task 3 actions with their mutation flags', async () => {
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   const names = console_.listActions().map((a) => a.name)
   for (const name of ['model.list', 'model.select', 'settings.list', 'settings.get', 'settings.set',
     'plugin.setEnabled', 'plugin.install', 'plugin.remove']) {
@@ -1406,7 +1407,7 @@ test('every catalog action degrades to unavailable without its service', async (
 test('the registry declares the catalog actions with their mutation flags', async () => {
   // Table-level only: this never dispatches, so the domain coverage for
   // console.actions lives in the console-domain tests further down.
-  const console_ = createConsole(bareCtx())
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
   const names = console_.listActions().map((a) => a.name)
   for (const name of ['skill.list', 'mcp.list', 'mcp.restart', 'mcp.probe']) {
     assert.ok(names.includes(name), `${name} must be registered`)
@@ -1889,3 +1890,96 @@ test('a forbidden action stays forbidden through apply() even with confirmation 
   assert.equal(result.status, 'forbidden')
 })
 
+
+// ---------------------------------------------------------------------------
+// console.map: the whole host inventory, with each read isolated.
+// ---------------------------------------------------------------------------
+
+/** A ctx whose services are exactly the keys supplied. */
+function inventoryCtx(services) {
+  return { get: (key) => services[key], logger: { warn() {} } }
+}
+
+test('console.map reports every inventory it could read', async () => {
+  const ctx = inventoryCtx({
+    pluginManager: {
+      listPlugins: async () => [{ entryId: 'ui-theme', moduleName: '@deepseek-ai/dsh-client-ui-theme', enabled: true, fiberPhase: 'active' }],
+      listBundles: async () => [{ name: 'dsh-vyra-dsh-console', version: '0.2.0', enabled: true, installed: true, removable: true }],
+    },
+    mcpManager: { list: () => [{ name: 'wechat', configured: true, status: { state: 'connected', toolCount: 7 } }] },
+    skills: {
+      list: async () => [{
+        name: 'vyra-dsh-console',
+        description: 'x',
+        source: 'runtime',
+        provider: 'runtime',
+        invocation: { modelInvocable: true, userInvocable: true },
+      }],
+    },
+    tools: { schemas: () => [{ name: 'dsh_console', description: 'y' }] },
+  })
+  const result = await inventoryDomain(ctx, { action: 'console.map', args: {} })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.host.plugins[0].entryId, 'ui-theme')
+  assert.equal(result.host.bundles[0].version, '0.2.0')
+  assert.equal(result.host.mcp[0].state, 'connected')
+  assert.equal(result.host.mcp[0].toolCount, 7)
+  assert.equal(result.host.skills[0].name, 'vyra-dsh-console')
+  assert.equal(result.host.tools[0].name, 'dsh_console')
+  assert.deepEqual(result.caveats, [], 'a complete profile has nothing to caveat')
+})
+
+test('a missing service is named in caveats instead of failing the map', async () => {
+  const result = await inventoryDomain(inventoryCtx({}), { action: 'console.map', args: {} })
+  assert.equal(result.status, 'ok')
+  for (const key of ['pluginManager', 'mcpManager', 'skills', 'tools']) {
+    assert.ok(result.caveats.some((entry) => entry.startsWith(`${key}:`)), `${key} must be named`)
+  }
+})
+
+test('one unreadable inventory does not hide the others', async () => {
+  const ctx = inventoryCtx({
+    pluginManager: {
+      listPlugins: async () => { throw new Error('loader gone') },
+      listBundles: async () => [],
+    },
+    tools: { schemas: () => [{ name: 'a' }] },
+  })
+  const result = await inventoryDomain(ctx, { action: 'console.map', args: {} })
+  assert.equal(result.status, 'ok')
+  assert.deepEqual(result.host.tools, [{ name: 'a' }])
+  assert.ok(result.caveats.some((entry) => entry.startsWith('pluginManager.listPlugins: loader gone')))
+})
+
+test('a tools service with no schema listing says so rather than inventing one', async () => {
+  const result = await inventoryDomain(inventoryCtx({ tools: {} }), { action: 'console.map', args: {} })
+  assert.equal(result.status, 'ok')
+  assert.equal(result.host.tools, undefined)
+  assert.ok(result.caveats.some((entry) => entry.includes('no schema listing')))
+})
+
+test('console.map carries no undefined-valued key', async () => {
+  const ctx = inventoryCtx({
+    pluginManager: {
+      listPlugins: async () => [{ entryId: 'a', moduleName: undefined, enabled: true }],
+      listBundles: async () => [],
+    },
+  })
+  const result = await inventoryDomain(ctx, { action: 'console.map', args: {} })
+  assert.equal(scanForUndefined(result), 'none')
+})
+
+test('console.map is a non-mutating action in the catalog', async () => {
+  const console_ = createConsole(bareCtx(), { console: consoleDomain })
+  const result = await console_.dispatch('console.actions', {})
+  const row = result.actions.find((entry) => entry.name === 'console.map')
+  assert.ok(row, 'console.map must be in the catalog')
+  assert.equal(row.mutating, false)
+  assert.equal(row.requiresClient, false)
+})
+
+test('an unknown inventory action is reported, not guessed', async () => {
+  const result = await inventoryDomain(inventoryCtx({}), { action: 'console.nope', args: {} })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /no action/u)
+})
