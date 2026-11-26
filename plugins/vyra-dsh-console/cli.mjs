@@ -973,6 +973,11 @@ const ACTION_SERVICES = {
     actions: ['appearance.toggleSidebar', 'appearance.openRightbar', 'appearance.closeRightbar'],
   },
   locale: { package: null, actions: ['appearance.setLocale'] },
+  // The interface's own surfaces: the slot ledger, the frame's panel selection,
+  // the right drawer and the command catalogue. All Client-realm, so none of
+  // them can ever be declared by a profile package.
+  slots: { package: null, actions: ['ui.list', 'ui.state', 'ui.open', 'ui.close'] },
+  shortcuts: { package: null, actions: ['ui.invoke'] },
   im: { package: 'im', actions: [] },
 }
 

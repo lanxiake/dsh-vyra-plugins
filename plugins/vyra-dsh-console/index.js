@@ -6,6 +6,7 @@ import { inventoryDomain } from './domains/inventory.js'
 import { pluginDomain } from './domains/plugin.js'
 import { modelDomain } from './domains/model.js'
 import { settingsDomain } from './domains/settings.js'
+import { uiDomain } from './domains/ui.js'
 import { catalogDomain } from './domains/catalog.js'
 import { appearanceDomain } from './domains/appearance.js'
 
@@ -555,6 +556,7 @@ export function apply(ctx, config) {
       settings: settingsDomain,
       catalog: catalogDomain,
       appearance: appearanceDomain,
+      ui: uiDomain,
     },
     { confirmDestructive: confirmDestructiveFrom(config) },
   )

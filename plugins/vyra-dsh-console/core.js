@@ -63,6 +63,20 @@ export const ACTIONS = Object.freeze({
   'appearance.openRightbar': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
   'appearance.closeRightbar': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
   'appearance.setLocale': { domain: 'appearance', mutating: true, destructive: false, requiresClient: true },
+  // Interface driving. Every action reads or moves a surface that exists only in
+  // the browser, so all of them are `requiresClient`. The reads are not
+  // mutating; opening and closing change what the user sees but change no
+  // configuration, and every one of them is undone by the user's next click —
+  // so none is destructive and none sits behind the confirmation gate.
+  'ui.list': { domain: 'ui', mutating: false, destructive: false, requiresClient: true },
+  'ui.state': { domain: 'ui', mutating: false, destructive: false, requiresClient: true },
+  'ui.open': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
+  'ui.close': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
+  // Invoking a command runs whatever that command was written to do, which for
+  // most of them changes something. Still not destructive: a command that is
+  // irreversible declares itself so through its own confirmation, and this
+  // plugin's gate must not pretend to be that gate.
+  'ui.invoke': { domain: 'ui', mutating: true, destructive: false, requiresClient: true },
 })
 
 /**

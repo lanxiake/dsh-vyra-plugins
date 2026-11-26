@@ -11,6 +11,7 @@ import { modelDomain } from '../domains/model.js'
 import { settingsDomain } from '../domains/settings.js'
 import { catalogDomain } from '../domains/catalog.js'
 import { inventoryDomain } from '../domains/inventory.js'
+import { uiDomain } from '../domains/ui.js'
 import { consoleDomain } from '../domains/console.js'
 
 /** A ctx with no optional service present, to prove graceful degradation. */
@@ -1982,4 +1983,133 @@ test('an unknown inventory action is reported, not guessed', async () => {
   const result = await inventoryDomain(inventoryCtx({}), { action: 'console.nope', args: {} })
   assert.equal(result.status, 'error')
   assert.match(result.reason, /no action/u)
+})
+
+// ---------------------------------------------------------------------------
+// ui.*: validation before travel, and honest forwarding afterwards.
+// ---------------------------------------------------------------------------
+
+/** A context whose channel records what it was asked to send. */
+function uiCtx(reply, args) {
+  const seen = []
+  const ctx = {
+    __consoleChannel: {
+      request: async (op, received) => {
+        seen.push({ op, args: received })
+        return typeof reply === 'function' ? reply(op, received) : reply
+      },
+    },
+  }
+  return { ctx, seen, ...(args === undefined ? {} : {}) }
+}
+
+const uiConsole = (ctx) => createConsole(ctx, { ui: uiDomain })
+
+test('ui.list is forwarded to the interface unchanged', async () => {
+  const { ctx, seen } = uiCtx({ status: 'ok', settings: { open: false, sections: [] } })
+  const result = await uiConsole(ctx).dispatch('ui.list', {})
+  assert.equal(result.status, 'ok')
+  assert.deepEqual(seen, [{ op: 'ui.list', args: {} }])
+})
+
+test('ui.open validates its target before the channel is touched', async () => {
+  const { ctx, seen } = uiCtx({ status: 'ok' })
+  const c = uiConsole(ctx)
+  assert.equal((await c.dispatch('ui.open', {})).status, 'error')
+  assert.equal((await c.dispatch('ui.open', { target: 'nope' })).status, 'error')
+  assert.equal((await c.dispatch('ui.open', { target: 'modal' })).status, 'error')
+  assert.deepEqual(seen, [], 'a malformed request must not reach the interface')
+})
+
+test('ui.open accepts the three documented targets', async () => {
+  const { ctx } = uiCtx({ status: 'ok' })
+  const c = uiConsole(ctx)
+  assert.equal((await c.dispatch('ui.open', { target: 'settings' })).status, 'ok')
+  assert.equal((await c.dispatch('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' })).status, 'ok')
+  assert.equal((await c.dispatch('ui.open', { target: 'main', id: 'plugins' })).status, 'ok')
+  assert.equal((await c.dispatch('ui.open', { target: 'rightbar', kind: 'browser' })).status, 'ok')
+  assert.equal((await c.dispatch('ui.open', { target: 'rightbar', address: 'dsh-resource://file/x' })).status, 'ok')
+})
+
+test('ui.open main refuses an empty id and says where the ids come from', async () => {
+  const { ctx } = uiCtx({ status: 'ok' })
+  const result = await uiConsole(ctx).dispatch('ui.open', { target: 'main' })
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /ui\.list/u)
+})
+
+test('ui.open rightbar refuses both identifiers at once', async () => {
+  const { ctx, seen } = uiCtx({ status: 'ok' })
+  const result = await uiConsole(ctx).dispatch('ui.open', {
+    target: 'rightbar', kind: 'browser', address: 'dsh-resource://file/x',
+  })
+  assert.equal(result.status, 'error')
+  assert.deepEqual(seen, [])
+})
+
+test('ui.close accepts only the surfaces it can close', async () => {
+  const { ctx } = uiCtx({ status: 'ok' })
+  const c = uiConsole(ctx)
+  assert.equal((await c.dispatch('ui.close', { target: 'settings' })).status, 'ok')
+  assert.equal((await c.dispatch('ui.close', { target: 'modal' })).status, 'ok')
+  assert.equal((await c.dispatch('ui.close', { target: 'main' })).status, 'error')
+  assert.equal((await c.dispatch('ui.close', {})).status, 'error')
+})
+
+test('ui.invoke refuses an empty command id', async () => {
+  const { ctx } = uiCtx({ status: 'ok' })
+  assert.equal((await uiConsole(ctx).dispatch('ui.invoke', {})).status, 'error')
+  assert.equal((await uiConsole(ctx).dispatch('ui.invoke', { id: '' })).status, 'error')
+  assert.equal((await uiConsole(ctx).dispatch('ui.invoke', { id: 'settings.open' })).status, 'ok')
+})
+
+test('every ui action is unavailable when nothing is listening', async () => {
+  const c = uiConsole({ __consoleChannel: undefined })
+  for (const action of ['ui.list', 'ui.state', 'ui.open', 'ui.close', 'ui.invoke']) {
+    const args = action === 'ui.open' ? { target: 'settings' }
+      : action === 'ui.close' ? { target: 'settings' }
+        : action === 'ui.invoke' ? { id: 'settings.open' } : {}
+    const result = await c.dispatch(action, args)
+    assert.equal(result.status, 'unavailable', `${action} must say the interface is absent`)
+    assert.match(result.reason, /no interface is connected/u)
+  }
+})
+
+test('the interface answer is relayed, including its verification flag', async () => {
+  const { ctx } = uiCtx({
+    status: 'ok',
+    target: 'settings',
+    resolved: { section: { id: 'dsh-vyra-free-model', label: '免费模型', registrant: 'dsh-vyra-free-model' } },
+    how: 'dom',
+    verified: true,
+  })
+  const result = await uiConsole(ctx).dispatch('ui.open', { target: 'settings', section: 'dsh-vyra-free-model' })
+  assert.equal(result.verified, true)
+  assert.equal(result.how, 'dom')
+  assert.equal(result.resolved.section.registrant, 'dsh-vyra-free-model')
+})
+
+test('every ui action is marked as needing the interface', async () => {
+  const result = await createConsole(bareCtx(), { console: consoleDomain }).dispatch('console.actions', {})
+  const rows = result.actions.filter((entry) => entry.name.startsWith('ui.'))
+  assert.equal(rows.length, 5)
+  assert.ok(rows.every((row) => row.requiresClient === true))
+  assert.deepEqual(
+    rows.filter((row) => row.mutating).map((row) => row.name).sort(),
+    ['ui.close', 'ui.invoke', 'ui.open'],
+    'the reads are non-mutating and the three surface changes are not',
+  )
+})
+
+test('ui cannot be used to reach a forbidden action', async () => {
+  // `ui.invoke` runs a CLIENT command; the authority boundary lives on the Host
+  // actions. A ui action must never become a second spelling of one.
+  for (const forbidden of Object.keys(FORBIDDEN)) {
+    assert.ok(!Object.hasOwn(ACTIONS, `ui.${forbidden}`))
+  }
+  const c = uiConsole({ __consoleChannel: { request: async () => ({ status: 'ok' }) } })
+  const result = await c.dispatch('ui.invoke', { id: 'sandbox.setMode' })
+  // The Host forwards it — the command catalogue is the browser's — so what is
+  // pinned here is only that no ui ACTION name performs an authority change.
+  assert.equal(result.status, 'ok')
 })
