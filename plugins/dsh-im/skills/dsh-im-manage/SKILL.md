@@ -34,7 +34,9 @@ dsh-im settings set --account 工作微信 --key model --value deepseek/deepseek
 dsh-im settings set --account 工作微信 --key agentPreset --value code-reviewer
 ```
 
-允许的 `--key`：`workspace`、`agentPreset`、`model`、`alias`、`busyMessageMode`、`contextEnhancement`。其他键会被拒绝。
+允许的 `--key`：目前只有 `alias` 可以由 CLI 修改。
+
+`workspace`、`agentPreset`、`model`、`busyMessageMode`、`contextEnhancement` **只能读不能改**：改工作区或模型会清除或重塑该机器人的 Session，属于用户自己在设置页里的决定。`settings set` 对这几个 key 会返回 `user-only-action`。
 
 工作区必须是**绝对路径**且目录存在；相对路径会被拒。
 

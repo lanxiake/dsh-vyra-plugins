@@ -258,6 +258,10 @@ export async function createTokenProductionController(ctx, config, internals, de
   }).start();
   return {
     controller,
+    // The workspace store owns alias/workspace/policy reads and guarded writes.
+    // The Host's HTTP query route needs the same instance so an Agent edit goes
+    // through one write queue rather than a second copy of the rules.
+    workspaces,
     ...(supportsDeliveryChannel(channel) ? {
       deliveryAdapter: createDeliveryAdapter({
         dsBot: config.deliveryService?.dsBot,

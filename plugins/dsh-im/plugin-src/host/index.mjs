@@ -53,31 +53,86 @@ function channelConfig(config, name, deliveryService) {
     : { ...channel, rpcAuthority: config.rpcAuthority };
   return name === 'office' ? withAuthority : { ...withAuthority, deliveryService };
 }
-
 /** Group title for the shared IM directory; `off` keeps the old ungrouped behaviour. */
 export const DEFAULT_SESSION_GROUP = 'DSH-IM';
 
 /**
+ * Settings the HTTP query route may read and write on an Agent's behalf.
+ *
+ * Reads are harmless, so every bot setting is exposed. Writes are limited to
+ * the alias: a workspace, preset or model change clears or reshapes a bot's
+ * Sessions, which belongs to the user's own settings page. Access policy,
+ * credentials and bot removal are never reachable here.
+ */
+function createSettingsPort(workspaceStores) {
+  const storeFor = (botId) => {
+    for (const workspaces of workspaceStores.values()) {
+      if (workspaces?.has?.(botId)) return workspaces;
+    }
+    return null;
+  };  return {
+    read(botId) {
+      const workspaces = storeFor(botId);
+      if (!workspaces) throw Object.assign(new Error('unknown-bot'), { code: 'unknown-bot' });
+      return {
+        alias: workspaces.aliasFor(botId),
+        workspace: workspaces.workspaceFor(botId),
+        agentPreset: workspaces.agentPresetFor(botId),
+        model: workspaces.modelFor(botId),
+        busyMessageMode: workspaces.busyMessageModeFor(botId),
+      };
+    },
+    async write(botId, key, value) {
+      const workspaces = storeFor(botId);
+      if (!workspaces) throw Object.assign(new Error('unknown-bot'), { code: 'unknown-bot' });
+      await workspaces.setAlias(botId, typeof value === 'string' ? value : '', {
+        incarnation: workspaces.incarnationFor(botId),
+      });
+      return { key, value: workspaces.aliasFor(botId) };
+    },
+  };
+}
+
+/**
  * Adapt the Host's typert gateway to the three workspace calls the group needs.
  *
- * The envelope and peer come from `modern-harness-api.mjs`, the module that
- * already drives this same gateway for sessions and workspaces, so the group
- * registration adds no new contract. `null` means the Host cannot register a
- * group here, and the caller leaves conversations ungrouped.
+ * `create` and `rename` are plain RPCs, but there is no `workspace.list` RPC:
+ * the only way this codebase reads the workspace table is the `workspace.follow`
+ * stream's first frame (`modern-harness-api.mjs` does exactly that). Asking for
+ * a `list` verb would reject and the group would silently never register.
+ * `null` means the Host cannot register a group here, and the caller leaves
+ * conversations ungrouped.
  */
 function workspacePort(ctx) {
   const gateway = ctx?.typertGateway;
-  if (!gateway || typeof gateway.invoke !== 'function') return null;
+  if (!gateway || typeof gateway.invoke !== 'function' || typeof gateway.stream !== 'function') {
+    return null;
+  }
   const peer = harnessPeer(ctx);
   const call = (method, payload) => gateway.invoke(
     remoteRequest('workspace', method, { request: payload }, undefined, peer),
   );
   return {
     list: async () => {
-      const value = await call('list', {});
-      return Array.isArray(value?.items) ? value.items : [];
+      const controller = new AbortController();
+      let iterator;
+      try {
+        const source = await gateway.stream(
+          remoteRequest('workspace', 'follow', {}, controller.signal, peer),
+        );
+        iterator = source[Symbol.asyncIterator]();
+        const first = await iterator.next();
+        const frame = first.done ? null : first.value;
+        if (frame?.type !== 'baseline' || typeof frame.value !== 'object') {
+          throw new Error('Harness workspace.follow returned no baseline');
+        }
+        return Array.isArray(frame.value.items) ? frame.value.items : [];
+      } finally {
+        controller.abort(new DOMException('Baseline received', 'AbortError'));
+        await Promise.resolve(iterator?.return?.()).catch(() => undefined);
+      }
     },
-    create: async (path) => (await call('create', { path }))?.workspace ?? null,
+    create: async (path) => (await call('create', { path })),
     rename: (workspaceId, title) => call('rename', { workspaceId, title }),
   };
 }
@@ -137,6 +192,9 @@ export function createImHostPlugin(internals = {}) {
         unavailableSessionSyncChannels: unavailableSessionSyncChannels.map((channel) => channel === 'wecomApp' ? 'wecom-app' : channel),
         dsBot: createDsBotClient(ctx),
       });
+      // Filled in as each channel starts; the HTTP settings route reads it
+      // lazily so the route can be registered before the channels exist.
+      const workspaceStores = new Map();
       // The delivery switches are the master for everything that follows a Session
       // through its targets: with both off, `listSessionSyncTargets` answers empty,
       // so neither the coordinator nor a channel's own mirror (Feishu card) sends.
@@ -198,7 +256,7 @@ export function createImHostPlugin(internals = {}) {
         }));
       }
       const activate = async (readyCtx) => {
-        await activateChannels(readyCtx, config, deliveryService);
+        await activateChannels(readyCtx, config, deliveryService, workspaceStores);
       };
       if (typeof ctx?.inject === 'function') {
         await ctx.inject(
@@ -206,18 +264,24 @@ export function createImHostPlugin(internals = {}) {
           activate,
         );
         ctx.inject(['webServer'], (httpCtx) => {
-          startDeliveryHttp(httpCtx, deliveryService, { dshHome: config.dshHome });
+          startDeliveryHttp(httpCtx, deliveryService, {
+            dshHome: config.dshHome,
+            settings: createSettingsPort(workspaceStores),
+          });
         });
         return;
       }
       await activate(ctx);
       if (ctx?.webServer?.register && typeof ctx?.effect === 'function') {
-        startDeliveryHttp(ctx, deliveryService, { dshHome: config.dshHome });
+        startDeliveryHttp(ctx, deliveryService, {
+          dshHome: config.dshHome,
+          settings: createSettingsPort(workspaceStores),
+        });
       }
     },
   });
 
-  async function activateChannels(ctx, config, deliveryService) {
+  async function activateChannels(ctx, config, deliveryService, workspaceStores) {
     // Bind the bot message language before any channel connects, so the first
     // command menu a platform stores is already in the interface language.
     const hostLanguage = startHostLanguage(ctx, config);
@@ -311,7 +375,14 @@ export function createImHostPlugin(internals = {}) {
     // Start them together so a slow channel cannot leave later routes absent.
     await Promise.all(channels.map(async ([channel, start]) => {
       try {
-        await start(ctx, channelConfig(config, channel, deliveryService));
+        await start(ctx, {
+          ...channelConfig(config, channel, deliveryService),
+          // How a started channel hands its workspace store back to the Host,
+          // so the HTTP settings route edits through the same instance.
+          onProduction: (production) => {
+            if (production?.workspaces) workspaceStores.set(channel, production.workspaces);
+          },
+        });
       } catch (error) {
         failures.push(error);
         logger.error?.(`[dsh-im] failed to activate ${channel}; continuing with the remaining channels`, error);

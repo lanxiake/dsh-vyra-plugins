@@ -8,6 +8,8 @@
 //
 // Nothing in this file re-implements a validation the Host already performs.
 
+import { resolveAccount, resolveTarget } from '../../plugin-src/host/agent-api-resolve.mjs';
+
 /** Options these commands accept, so a typo fails instead of being ignored. */
 const OPTIONS = new Set([
   '--account', '--bot', '--target', '--text', '--format', '--file', '--image',
@@ -156,25 +158,29 @@ export async function runAgentCommand(argv, {
       const targetId = single(options, '--target');
       if (targetId === undefined) throw new Error('需要 --target <targetId 或目标名>');
       const idempotencyKey = single(options, '--idempotency-key');
+      const filePath = single(options, '--file');
+      // Validate inputs before resolving, so a bad call reports the real problem
+      // rather than an unrelated "unknown target".
+      if (command === 'send-file' && filePath === undefined) throw new Error('send-file 需要 --file <路径>');
+      if (command === 'send' && filePath !== undefined) throw new Error('发文件请用 dsh-im send-file');
+      const body = command === 'send' ? await textInput(options, flags) : null;
       // Resolve against the offline projection first: a name becomes the
       // registered id here, and an ambiguous or unknown target never reaches
       // the network.
-      const { botId } = await api.targets({ account });
-      const filePath = single(options, '--file');
-      if (command === 'send-file' && filePath === undefined) throw new Error('send-file 需要 --file <路径>');
-      if (command === 'send' && filePath !== undefined) throw new Error('发文件请用 dsh-im send-file');
+      const { botId, targets } = await api.targets({ account });
+      const resolved = resolveTarget(targets, targetId);
 
       const payload = command === 'send'
         ? {
           botId,
-          targetId: await resolveTargetId(api, account, targetId),
-          ...(await textInput(options, flags)),
+          targetId: resolved.targetId,
+          ...body,
           format: single(options, '--format') ?? 'plain',
         }
         : {
           botId,
-          targetId: await resolveTargetId(api, account, targetId),
-          path: single(options, '--file'),
+          targetId: resolved.targetId,
+          path: filePath,
           ...(flags.has('--image') ? { asImage: true } : {}),
         };
       if (idempotencyKey !== undefined) payload.idempotencyKey = idempotencyKey;
@@ -209,15 +215,29 @@ export async function runAgentCommand(argv, {
       const targetId = single(options, '--target');
       if (targetId === undefined) throw new Error(`target ${action} 需要 --target <targetId 或目标名>`);
       const { botId, targets } = await api.targets({ account });
-      const resolved = targets.find((target) => target.targetId === targetId)
-        ?? targets.find((target) => target.targetName === targetId);
-      if (!resolved) throw Object.assign(new Error(`找不到目标「${targetId}」`), { code: 'unknown-target' });
-      const payload = { op: action === 'update' ? 'updateTarget' : 'deleteTarget', botId, targetId: resolved.targetId };
+      const resolved = resolveTarget(targets, targetId);
+      let payload;
       if (action === 'update') {
+        // The Host merges a patch over the stored target, so a rename need not
+        // resend kind and route.
         const name = single(options, '--name');
         const route = parseRoute(single(options, '--route'));
-        if (name === undefined && route === undefined) throw new Error('target update 需要 --name 或 --route');
-        payload.target = { ...(name === undefined ? {} : { name }), ...(route === undefined ? {} : { route }) };
+        const kind = single(options, '--kind');
+        if (name === undefined && route === undefined && kind === undefined) {
+          throw new Error('target update 需要 --name、--route 或 --kind');
+        }
+        payload = {
+          op: 'updateTarget',
+          botId,
+          targetId: resolved.targetId,
+          patch: {
+            ...(name === undefined ? {} : { name }),
+            ...(route === undefined ? {} : { route }),
+            ...(kind === undefined ? {} : { kind }),
+          },
+        };
+      } else {
+        payload = { op: 'deleteTarget', botId, targetId: resolved.targetId };
       }
       const value = await postJson('/api/dsh-im/delivery/query', payload);
       stdout(json ? JSON.stringify(value, null, 2) : `已${action === 'update' ? '更新' : '删除'}目标 ${resolved.targetId}。`);
@@ -227,17 +247,23 @@ export async function runAgentCommand(argv, {
     if (command === 'settings') {
       const account = accountFlag(options);
       if (action === 'get') {
-        const listed = await api.accounts();
-        const account_ = listed.accounts.find((entry) => entry.accountName === account || entry.botId === account);
-        if (!account_) throw Object.assign(new Error(`找不到账号「${account}」`), { code: 'unknown-account' });
-        const value = await postJson('/api/dsh-im/delivery/query', { op: 'settings', botId: account_.botId });
-        stdout(json ? JSON.stringify(value, null, 2) : JSON.stringify(value, null, 2));
+        // Same resolution rule as every other command: duplicates must refuse
+        // rather than silently pick the first account.
+        const { accounts } = await api.accounts();
+        const resolved = resolveAccount(accounts, account);
+        const value = await postJson('/api/dsh-im/delivery/query', { op: 'settingsGet', botId: resolved.botId });
+        const body = JSON.stringify(value, null, 2);
+        stdout(body);
         return 0;
       }
       if (action !== 'set') throw new Error('settings 只支持 get / set');
       const botId = (await api.targets({ account })).botId;
+      const key = single(options, '--key');
+      const settingValue = single(options, '--value');
+      if (key === undefined) throw new Error('settings set 需要 --key');
+      if (settingValue === undefined) throw new Error('settings set 需要 --value');
       const value = await postJson('/api/dsh-im/delivery/query', {
-        op: 'setSetting', botId, key: single(options, '--key'), value: single(options, '--value'),
+        op: 'settingsSet', botId, key, value: settingValue,
       });
       stdout(json ? JSON.stringify(value, null, 2) : '已保存。');
       return 0;
@@ -255,25 +281,6 @@ export async function runAgentCommand(argv, {
     stderr(json ? JSON.stringify(result, null, 2) : `dsh-im: ${result.error.message}`);
     return 1;
   }
-}
-
-/** Turn whatever the user typed into the target id the Host expects. */
-async function resolveTargetId(api, account, query) {
-  const { targets } = await api.targets({ account });
-  const hit = targets.find((target) => target.targetId === query)
-    ?? targets.find((target) => target.targetName === query);
-  if (hit) return hit.targetId;
-  const sameName = targets.filter((target) => target.targetName === query);
-  if (sameName.length > 1) {
-    throw Object.assign(
-      new Error(`目标名「${query}」对应 ${sameName.length} 个目标，请改用 targetId`),
-      { code: 'ambiguous-target', candidates: sameName },
-    );
-  }
-  throw Object.assign(
-    new Error(`找不到目标「${query}」，先运行 dsh-im targets --account <账号>`),
-    { code: 'unknown-target' },
-  );
 }
 
 function parseRoute(value) {

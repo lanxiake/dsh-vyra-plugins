@@ -9,7 +9,7 @@ import { join } from 'node:path';
 
 import { installSessionGroup } from '../plugin-src/host/session-group.mjs';
 
-function fakePort(existing = []) {
+function fakePort(existing = [], createResult = null) {
   const calls = [];
   return {
     calls,
@@ -20,7 +20,7 @@ function fakePort(existing = []) {
       },
       async create(path) {
         calls.push({ op: 'create', path });
-        return { workspaceId: 'w-new', path, title: null };
+        return createResult ?? { workspaceId: 'w-new', path, title: null };
       },
     },
   };
@@ -39,7 +39,7 @@ const created = await installSessionGroup(first.port, {
   logger: quiet,
   rename: async (workspaceId, title) => { renamed.push({ workspaceId, title }); },
 });
-assert.deepEqual(created, { registered: true, path: groupPath, reused: false });
+assert.deepEqual(created, { registered: true, path: groupPath, reused: false, titled: true });
 assert.deepEqual(first.calls.map((call) => call.op), ['list', 'create']);
 assert.deepEqual(renamed, [{ workspaceId: 'w-new', title: 'DSH-IM' }]);
 
@@ -83,5 +83,32 @@ await installSessionGroup(custom.port, {
   rename: async (id, title) => { customRenamed.push(title); },
 });
 assert.deepEqual(customRenamed, ['工作 IM']);
+
+// 8. `create` reporting created:false means the directory is already
+//    registered: adopt it and leave its title alone.
+const adoptedByCreate = fakePort([], { workspaceId: 'w-old', path: groupPath, title: '旧名字', created: false });
+const adoptedRenames = [];
+const adoptedResult = await installSessionGroup(adoptedByCreate.port, {
+  dshHome: home,
+  title: 'DSH-IM',
+  logger: quiet,
+  rename: async (id, title) => { adoptedRenames.push(title); },
+});
+assert.equal(adoptedResult.reused, true, 'created:false is an adoption');
+assert.deepEqual(adoptedRenames, [], 'an adopted group keeps its title');
+
+// 9. A title collision must not lose the registration or throw.
+const warnings = [];
+const colliding = fakePort([], { workspaceId: 'w-new', path: groupPath, title: null });
+const collided = await installSessionGroup(colliding.port, {
+  dshHome: home,
+  title: 'DSH-IM',
+  logger: { warn: (line) => warnings.push(String(line)) },
+  rename: async () => { throw Object.assign(new Error('name-conflict'), { code: 'workspace/name-conflict' }); },
+});
+assert.equal(collided.registered, true, 'the directory stays registered');
+assert.equal(collided.titled, false);
+assert.equal(warnings.length, 1, 'the user is told the title was not applied');
+assert.match(warnings[0], /name-conflict/u);
 
 console.log('verify-session-group: ok');

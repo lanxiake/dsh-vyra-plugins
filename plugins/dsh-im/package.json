@@ -49,9 +49,10 @@
     "verify:cli": "node scripts/verify-cli.mjs",
     "verify:service-file": "node scripts/verify-service-file.mjs",
     "verify:idempotency": "node scripts/verify-idempotency.mjs",
-    "verify": "node scripts/verify-agent-cli.mjs && node scripts/verify-session-group.mjs && node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs && node scripts/verify-package.mjs",
+    "verify": "node scripts/verify-agent-cli.mjs && node scripts/verify-session-group.mjs && node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs && node scripts/verify-delivery-http.mjs && node scripts/verify-package.mjs",
     "verify:agent-cli": "node scripts/verify-agent-cli.mjs",
-    "verify:session-group": "node scripts/verify-session-group.mjs"
+    "verify:session-group": "node scripts/verify-session-group.mjs",
+    "verify:delivery-http": "node scripts/verify-delivery-http.mjs"
   },
   "main": "./lib/index.js",
   "exports": {
@@ -92,7 +93,8 @@
     "scripts/verify-agent-cli.mjs",
     "scripts/verify-session-group.mjs",
     "docs/fork.md",
-    "scripts/fixtures/agent-cli/*"
+    "scripts/fixtures/agent-cli/*",
+    "scripts/verify-delivery-http.mjs"
   ],
   "dsh": {
     "bundle": {

@@ -55,6 +55,11 @@ export async function installProductionChannel(ctx, config, {
   })());
   try {
     production = await createProduction();
+    // Expose the workspace store to the Host's HTTP settings route, which must
+    // write through this same instance rather than a second copy of the rules.
+    // The callback rides on the channel config because `index.mjs` already
+    // forwards that object to every channel.
+    config.onProduction?.(production);
     unregisterDelivery = config.deliveryService && production.deliveryAdapter
       ? config.deliveryService.registerAdapter(production.deliveryAdapter) : undefined;
     const readyHandler = createHandler(production.controller);

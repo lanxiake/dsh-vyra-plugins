@@ -308,4 +308,57 @@ assert.match(hint.out.join('\n'), /设置/u);
 const badOption = capture();
 assert.equal(await runAgentCommand(['accounts', '--nope', 'x'], { api, postJson, ...badOption }), 1);
 assert.match(badOption.err.join('\n'), /无法识别的参数/u);
+
+// Every write the CLI offers must send an op the Host route accepts. These are
+// the commands that shipped broken because only `send` was ever exercised.
+const settingsGet = capture();
+assert.equal(await runAgentCommand(['settings', 'get', '--account', '微信', '--json'], { api, postJson, ...settingsGet }), 0);
+assert.deepEqual(calls.at(-1).payload, { op: 'settingsGet', botId: 'wx_919f259577ca904002bbb196' });
+
+const settingsSet = capture();
+assert.equal(await runAgentCommand(
+  ['settings', 'set', '--account', '微信', '--key', 'alias', '--value', '私号', '--json'],
+  { api, postJson, ...settingsSet },
+), 0);
+assert.deepEqual(calls.at(-1).payload, {
+  op: 'settingsSet', botId: 'wx_919f259577ca904002bbb196', key: 'alias', value: '私号',
+});
+
+const targetCreate = capture();
+assert.equal(await runAgentCommand(
+  ['target', 'create', '--account', '微信', '--target', 't_new', '--name', '新目标', '--kind', 'group', '--route', '{"chatId":"oc_x"}'],
+  { api, postJson, ...targetCreate },
+), 0);
+assert.equal(calls.at(-1).payload.op, 'createTarget');
+
+// A rename alone sends a patch; the Host merges kind and route.
+const targetUpdate = capture();
+assert.equal(await runAgentCommand(
+  ['target', 'update', '--account', '微信', '--target', '发布告警群', '--name', '发布群'],
+  { api, postJson, ...targetUpdate },
+), 0);
+assert.deepEqual(calls.at(-1).payload, {
+  op: 'updateTarget', botId: 'wx_919f259577ca904002bbb196', targetId: 'oc_group_release_1', patch: { name: '发布群' },
+});
+
+const targetDelete = capture();
+assert.equal(await runAgentCommand(
+  ['target', 'delete', '--account', '微信', '--target', '发布告警群'],
+  { api, postJson, ...targetDelete },
+), 0);
+assert.equal(calls.at(-1).payload.op, 'deleteTarget');
+
+// send-file validates its own inputs before resolving anything.
+const sendFile = capture();
+assert.equal(await runAgentCommand(
+  ['send-file', '--account', '微信', '--target', '发布告警群', '--file', './report.pdf', '--json'],
+  { api, postJson, ...sendFile },
+), 0);
+assert.equal(calls.at(-1).path, '/api/dsh-im/delivery/files');
+assert.equal(calls.at(-1).payload.path, './report.pdf');
+
+const missingFile = capture();
+assert.equal(await runAgentCommand(['send-file', '--account', '微信', '--target', 'x'], { api, postJson, ...missingFile }), 1);
+assert.match(missingFile.err.join('\n'), /--file/u);
+console.log('verify-agent-cli-writes: ok');
 console.log('verify-agent-cli-commands: ok');

@@ -61,12 +61,26 @@ export async function installSessionGroup(port, {
     }
 
     const created = await port.create(path);
+    // `create` is idempotent by path and reports `created: false` for a
+    // directory that is already registered. That is an adoption, not a fresh
+    // group, so the existing title is the user's choice and stays.
+    if (created?.created === false) return { registered: true, path, reused: true };
     const workspaceId = created?.workspaceId;
     if (!workspaceId) throw new Error('Harness returned an invalid workspace');
     if (typeof rename === 'function' && created.title !== wanted) {
-      await rename(workspaceId, wanted);
+      try {
+        await rename(workspaceId, wanted);
+      } catch (error) {
+        // A title collision is not fatal: the directory is registered either
+        // way, so keep it and say so instead of leaving an untitled orphan.
+        logger.warn?.(
+          `[dsh-im] registered ${path} but could not title it "${wanted}"`
+            + ` (${error?.code ?? error?.message ?? 'rename-failed'}); it keeps its current title`,
+        );
+        return { registered: true, path, reused: false, titled: false };
+      }
     }
-    return { registered: true, path, reused: false };
+    return { registered: true, path, reused: false, titled: true };
   } catch (error) {
     logger.warn?.('[dsh-im] could not register the DSH-IM session group', error);
     return unregistered(path);
