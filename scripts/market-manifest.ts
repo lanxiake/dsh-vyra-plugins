@@ -3429,5 +3429,112 @@ export const manifest: MarketManifest = {
         keywords: ['boot', 'animation', 'fighting-game', 'canvas', 'office', 'game'],
       },
     },
+    {
+      // Renamed from upstream's `dsh-media-desk`, because this copy is the one
+      // developed further here rather than mirrored. The DATA directory keeps
+      // upstream's name (`$DSH_HOME/media-desk/`, derived from a literal in
+      // `src/store.js`, not from the package name), so moving from the upstream
+      // package to this one keeps ideas, drafts and schedule.
+      name: 'dsh-vyra-media-desk',
+      title: {
+        en: 'Media Desk',
+        zh: '自媒体工作台',
+      },
+      description: {
+        en: 'Capture an idea in one sentence, then generate the spoken script, title, cover, illustrations and line-art storyboards: idea wall, drafts, schedule, insights and reusable style cards. Based on Media Desk by 蜗牛的科技笔记 (MIT), developed further here.',
+        zh: '一句话记灵感，一键做出脚本、封面、配图和黑白线稿分镜：灵感墙、成稿、排期、复盘和专属风格卡。基于蜗牛的科技笔记的 Media Desk（MIT），在本仓库二次开发。',
+      },
+      author: 'lanxiake',
+      homepage: 'https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/vyra-media-desk#readme',
+      repository: {
+        url: 'https://github.com/lanxiake/dsh-vyra-plugins',
+        directory: 'plugins/vyra-media-desk',
+      },
+      engines: { dsh: '>=0.2.1-rc.5 <0.3.0' },
+      versions: {
+        '2.7.2': {
+          publishTimestamp: 1795827600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '707e477f352b36f6b71c1a59945092cdc86d42fb',
+            path: 'plugins/vyra-media-desk',
+          },
+        },
+      },
+      metadata: {
+        category: 'content',
+        keywords: ['content-creation', 'script', 'cover', 'storyboard', 'xiaohongshu', '自媒体', '小红书', '脚本', '封面', '分镜'],
+      },
+    },
+    {
+      // Upstream publishes build output only, so `lib/` is the editable form.
+      // The name stays upstream's: it is the part the baoyu-design plugins share
+      // and each mounts under its own row id, which a rename would break for
+      // plugins installed from upstream.
+      name: 'dsh-claude-artifacts',
+      title: {
+        en: 'Artifacts',
+        zh: '作品',
+      },
+      description: {
+        en: 'The Artifacts page in the sidebar, and comments from the baoyu-design editors reaching the agent: every slide deck, design, dashboard, film or whiteboard an agent opened, one click from its conversation. Installed by itself, or brought along by any baoyu-design plugin. MIT for its own code; NOTICE.md records what stays Anthropic\'s.',
+        zh: '侧栏的「作品」页，以及把 baoyu-design 各编辑器里的评论送到 Agent：Agent 打开过的幻灯片、设计、仪表盘、影片或白板，点一下就回到它的对话。可以单独装，也会随任一 baoyu-design 插件一起装上。自身代码为 MIT，NOTICE.md 注明仍属 Anthropic 的部分。',
+      },
+      author: 'Jim Liu 宝玉',
+      homepage: 'https://github.com/JimLiu/baoyu-design',
+      repository: {
+        url: 'https://github.com/JimLiu/baoyu-design',
+        directory: 'dsh-plugins/dsh-claude-artifacts',
+      },
+      engines: { dsh: '>=0.2.0-0' },
+      versions: {
+        '2.16.0': {
+          publishTimestamp: 1795827600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '707e477f352b36f6b71c1a59945092cdc86d42fb',
+            path: 'plugins/dsh-claude-artifacts',
+          },
+        },
+      },
+      metadata: {
+        category: 'content',
+        keywords: ['artifacts', 'comments', 'slides', 'design', 'whiteboard', '作品'],
+      },
+    },
+    {
+      name: 'dsh-remotion',
+      title: {
+        en: 'Remotion Studio',
+        zh: 'Remotion 视频创作',
+      },
+      description: {
+        en: 'A React video workbench: a multi-track director\'s desk with live monitor and scrubbable timeline, the official Remotion skills, project search, templates, Studio preview and local MP4 export, with 13 bright styles and 8 paired CJK/Latin typefaces.',
+        zh: 'React 视频创作工作台：实体多轨导演台（实时监看屏、可擦洗时间线）、官方 Remotion 技能、工程检索、模板库、Studio 预览与本地 MP4 导出，含 13 套明亮风格与 8 套中英双层字体搭配。',
+      },
+      author: 'stardustlc',
+      homepage: 'https://github.com/STARDUSTLC666/dsh-remotion#readme',
+      repository: {
+        url: 'https://github.com/STARDUSTLC666/dsh-remotion',
+      },
+      engines: { dsh: '>=0.2.2-rc.3' },
+      versions: {
+        '0.13.3': {
+          publishTimestamp: 1795827600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '707e477f352b36f6b71c1a59945092cdc86d42fb',
+            path: 'plugins/dsh-remotion',
+          },
+        },
+      },
+      metadata: {
+        category: 'media',
+        keywords: ['video', 'remotion', 'react', 'animation', 'mp4', '视频', '剪辑'],
+      },
+    },
   ],
 }
