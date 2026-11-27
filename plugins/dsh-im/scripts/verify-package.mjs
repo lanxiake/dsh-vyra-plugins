@@ -271,6 +271,20 @@ if (lock.packages?.['node_modules/protobufjs']?.dev !== true) {
 if (manifest.bin?.['dsh-im'] !== 'bin/dsh-im.mjs') {
   throw new Error('package manifest must publish the dsh-im executable');
 }
+// This fork is independent from now on: the version carries the break.
+if (manifest.version !== '6.0.0') {
+  throw new Error(`package version must be 6.0.0, found ${manifest.version}`);
+}
+for (const entry of [
+  'scripts/verify-agent-cli.mjs',
+  'scripts/verify-session-group.mjs',
+  'docs/fork.md',
+]) {
+  if (!manifest.files?.includes(entry)) throw new Error(`files must include ${entry}`);
+}
+if (!manifest.files?.includes('scripts/fixtures/agent-cli/*')) {
+  throw new Error('files must include the agent-cli fixtures');
+}
 if (/(?:from\s*|import\s*\(|require\s*\()\s*["'](?:@larksuiteoapi\/node-sdk|@whiskeysockets\/baileys|https-proxy-agent|protobufjs)(?:\/[^"']*)?["']/.test(host)) {
   throw new Error('host bundle must not import a bundled SDK, proxy agent, or protobufjs at runtime');
 }

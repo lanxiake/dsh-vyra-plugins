@@ -1,6 +1,6 @@
 {
   "name": "@lanxiake/dsh-im",
-  "version": "5.13.0",
+  "version": "6.0.0",
   "icon": "./assets/logo-plugin-message-link-gradient.webp",
   "description": "把微信、飞书、企微、钉钉、QQ、Telegram、WhatsApp、Slack、Discord、Matrix接入DSH。 Connect Telegram, WhatsApp, Slack, Discord, Matrix, WeChat, Feishu, WeCom, DingTalk, and QQ to DSH.",
   "keywords": [
@@ -86,7 +86,11 @@
     "LICENSE",
     "README.md",
     "README.en.md",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "scripts/verify-agent-cli.mjs",
+    "scripts/verify-session-group.mjs",
+    "docs/fork.md",
+    "scripts/fixtures/agent-cli/*"
   ],
   "dsh": {
     "bundle": {
