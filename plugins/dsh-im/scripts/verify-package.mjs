@@ -310,5 +310,18 @@ await createImHostPlugin().apply({
 if (typeof deliveryApi?.createTarget !== 'function') {
   throw new Error('host bundle must expose dshIm.createTarget; rebuild before publishing');
 }
+// Contract v2 adds target update/delete; every v1 key must survive intact.
+for (const method of [
+  'consumeInbound', 'historyChecked', 'replyChecked', 'describeConversation',
+  'describeConversationSync', 'describeBot', 'sendChecked', 'send', 'sendFile',
+  'listTargets', 'createTarget', 'listBots', 'updateTarget', 'deleteTarget',
+]) {
+  if (typeof deliveryApi?.[method] !== 'function') {
+    throw new Error(`dshIm must expose ${method}`);
+  }
+}
+if (deliveryApi?.contractVersion !== 2) {
+  throw new Error(`dshIm contractVersion must be 2, found ${deliveryApi?.contractVersion}`);
+}
 
 console.log('Verified dsh-im package artifacts.');

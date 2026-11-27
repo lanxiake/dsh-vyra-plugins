@@ -168,8 +168,10 @@ export function createImHostPlugin(internals = {}) {
         return described;
       };
       if (typeof ctx?.provide === 'function') {
+        // v2 adds target update and delete. Every v1 key keeps its meaning, so a
+        // consumer written against v1 (vyra-xianyu-delivery) is unaffected.
         ctx.provide('dshIm', Object.freeze({
-          contractVersion: 1,
+          contractVersion: 2,
           receiptVersion: 1,
           inboundVersion: 1,
           consumeInbound: (botId, options) => deliveryService.consumeInbound(botId, options),
@@ -190,6 +192,8 @@ export function createImHostPlugin(internals = {}) {
           ),
           listTargets: async (botId) => (await deliveryService.listTargets(botId)).targets,
           createTarget: (botId, target) => deliveryService.createTarget(botId, target),
+          updateTarget: (botId, targetId, target) => deliveryService.updateTarget(botId, targetId, target),
+          deleteTarget: (botId, targetId) => deliveryService.deleteTarget(botId, targetId),
           listBots: () => deliveryService.listBots(),
         }));
       }

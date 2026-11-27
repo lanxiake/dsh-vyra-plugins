@@ -9,8 +9,8 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Skill directory name inside the package. */
-const SKILL_NAME = 'dsh-im-delivery';
+/** Directory name whose presence marks the package's skills root. */
+const MARKER_SKILL = 'dsh-im-delivery';
 
 /**
  * Locate the package's `skills/` directory from either the source tree or the
@@ -26,7 +26,7 @@ export function resolveSkillsRoot(start) {
   let dir = start;
   for (let depth = 0; depth < 4; depth += 1) {
     const candidate = join(dir, 'skills');
-    if (existsSync(join(candidate, SKILL_NAME, 'SKILL.md'))) return candidate;
+    if (existsSync(join(candidate, MARKER_SKILL, 'SKILL.md'))) return candidate;
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -36,6 +36,10 @@ export function resolveSkillsRoot(start) {
 
 /**
  * Register the package skills on a context that can load child plugins.
+ *
+ * The provider mounts a skills *root* and discovers every `<name>/SKILL.md`
+ * under it, so a skill added to `skills/` ships with the package without
+ * touching this file.
  * @param ctx - Cordis context with `plugin`.
  * @param options.root - skills root override (tests).
  * @param options.load - SkillFileSystem module loader override (tests).
@@ -52,6 +56,8 @@ export async function installDeliverySkill(ctx, {
   try {
     SkillFileSystem = await load();
   } catch {
+    // The Host's skill provider is a peer: an older Host keeps working, just
+    // without the catalog entries.
     return false;
   }
   ctx.plugin(SkillFileSystem, {

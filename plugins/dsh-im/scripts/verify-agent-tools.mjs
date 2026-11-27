@@ -5,6 +5,7 @@
 // if the target projection starts leaking the platform route.
 
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -65,6 +66,12 @@ assert.deepEqual(sendTool.parameters.required, ['botId', 'targetId', 'text']);
 assert.equal(sendTool.parameters.additionalProperties, false);
 assert.deepEqual(sendTool.parameters.properties.format.enum, ['plain', 'markdown']);
 
+// Descriptions must match reality: six channels send files, and a model needs
+// to be told to check whether it is already in the destination chat.
+assert.equal(/currently Feishu/u.test(fileTool.description), false, 'files are not Feishu-only');
+assert.match(fileTool.description, /Feishu, Weixin, WeCom \(bot and app\), DingTalk and QQ/u);
+assert.match(sendTool.description, /current Session/iu, 'must warn about answering the current chat');
+
 assert.deepEqual(await sendTool.execute({ botId: 'bot_a', targetId: 'release-alerts', text: 'hi' }), { sent: true });
 assert.equal(calls[0].options.format, 'plain');
 await sendTool.execute({ botId: 'bot_a', targetId: 'release-alerts', text: '# hi', format: 'markdown' });
@@ -124,5 +131,33 @@ assert.equal(mounted.config.includeDefaultRoots, false);
 assert.deepEqual(mounted.config.customSkillDirs, [skillsRoot]);
 assert.equal(mounted.config.watch, false);
 assert.equal(await installDeliverySkill({}, { root: skillsRoot }), false);
+
+// Every skill under the root ships; the provider discovers them from one dir.
+const skillNames = readdirSync(skillsRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort();
+assert.deepEqual(skillNames, ['dsh-im-accounts', 'dsh-im-delivery', 'dsh-im-manage']);
+
+for (const name of skillNames) {
+  const body = readFileSync(resolve(skillsRoot, name, 'SKILL.md'), 'utf8');
+  assert.match(body, new RegExp(`name: ${name}`, 'u'), `${name} front matter must match its directory`);
+  assert.match(body, /^description: \S/mu, `${name} needs a description`);
+}
+
+const accountsSkill = readFileSync(resolve(skillsRoot, 'dsh-im-accounts', 'SKILL.md'), 'utf8');
+assert.match(accountsSkill, /dsh-im accounts/u);
+assert.match(accountsSkill, /ambiguous-account/u);
+assert.match(accountsSkill, /目标名与账号名相同/u, 'must cover the target/account name collision');
+assert.match(accountsSkill, /改名/u, 'must tell the Agent to suggest a rename');
+
+const manageSkill = readFileSync(resolve(skillsRoot, 'dsh-im-manage', 'SKILL.md'), 'utf8');
+assert.match(manageSkill, /settings set/u);
+assert.match(manageSkill, /\/workspace/u, 'must document the IM-command route');
+assert.match(manageSkill, /user-only-action/u);
+assert.match(manageSkill, /只影响之后新建的 Session/u, 'must state when a change takes effect');
+
+// A write-capable skill must never present sending as its own job.
+assert.equal(/dsh_im_send_message/u.test(manageSkill), false);
 
 console.log('verify-agent-tools: ok');

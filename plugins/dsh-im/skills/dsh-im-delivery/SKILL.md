@@ -13,7 +13,7 @@ description: Send proactive text through DSH-IM bots (WeChat, Feishu, WeCom, Din
 | --- | --- |
 | 正在 IM 聊天里回答用户 | **正常回复即可**，不要调用发送工具（会重复发一条） |
 | 在 Web / CLI / 定时任务里推给已保存目标 | `dsh_im_send_message` |
-| 不知道该发给谁、ID 是什么 | 先 `dsh_im_delivery_targets` |
+| 不知道该发给谁、ID 是什么 | 先 `dsh-im accounts` → `dsh-im targets`（离线可读，见 `dsh-im-accounts` 技能） |
 | 当前 IM 会话里要回传文件/图片 | `dsh_im_return_file`（只登记，回合结束后渠道发送） |
 | 主动推文件到任意目标 | `dsh_im_send_file`（飞书、微信、企业微信、钉钉、QQ 支持；其他渠道报 `capability-unavailable`） |
 | 外部脚本 / 非 DSH Agent | `dsh-im send` CLI 或 `POST /api/dsh-im/delivery/messages`（文件走 `/files`） |
@@ -55,20 +55,26 @@ dsh_im_send_file {
 
 ## CLI
 
+读取类命令直接读配置文件，**DSH 没在运行时也能用**；发送类命令走 Host 的 HTTP 接口，需要 DSH 在运行。
+
 ```bash
-dsh-im send --bot bot_x --target release-alerts --text "构建已完成" --idempotency-key evt-1
-echo "构建已完成" | dsh-im send --bot bot_x --target release-alerts --stdin
-dsh-im send --bot bot_x --target release-alerts --text "# 日报" --format markdown
-dsh-im send --bot bot_x --target release-alerts --file ./dist/report.pdf
-dsh-im send --bot bot_x --target release-alerts --file ./dist/chart.png --image
-dsh-im bots
-dsh-im targets --bot bot_x
-dsh-im endpoint
+dsh-im accounts                                    # 账号名 + 渠道 + botId
+dsh-im targets --account 我的微信                   # targetId + 目标名
+dsh-im send --account 我的微信 --target 发布告警群 --text "构建已完成" --idempotency-key evt-1
+echo "构建已完成" | dsh-im send --account 我的微信 --target 发布告警群 --stdin
+dsh-im send --account 我的微信 --target 发布告警群 --text "# 日报" --format markdown
+dsh-im send-file --account 我的微信 --target 发布告警群 --file ./dist/report.pdf
+dsh-im send-file --account 我的微信 --target 发布告警群 --file ./dist/chart.png --image
+dsh-im endpoint                                    # 打印 Host 地址（诊断用）
 ```
 
-地址发现顺序：`--url` > `DSH_IM_URL` > `~/.dsh/integrations/dsh-im/delivery-http.json` > `http://127.0.0.1:3080`。CLI 找不到 Host 时先跑 `dsh-im endpoint`，不要猜端口。
+- `--account` 接受账号名或 `botId`；`--bot` 是兼容别名，两者等价。
+- `--target` 接受 `targetId` **或目标显示名**，重名会被拒绝并列出候选。发送时实际用的是 `targetId`。
+- 所有命令都支持 `--json`，输出单个 JSON 文档。
 
-`dsh-im` 不在 PATH 时，用 `<dshHome>/profiles/<profile>/node_modules/.bin/dsh-im` 或 `npx -y @xmanrui/dsh-im`。在 DSH Session 内优先用工具，不要为了发消息去装全局 CLI。
+写入类命令（`send`/`send-file`/`target`/`settings`）的地址发现顺序：`--url` > `DSH_IM_URL` > `~/.dsh/integrations/dsh-im/delivery-http.json` > `http://127.0.0.1:3080`。报 `unreachable` 时先确认 DSH 正在运行，再 `dsh-im endpoint` 看地址，不要猜端口。
+
+`dsh-im` 不在 PATH 时，用 `<dshHome>/profiles/<profile>/node_modules/.bin/dsh-im` 或 `npx -y @lanxiake/dsh-im`。在 DSH Session 内优先用工具，不要为了发消息去装全局 CLI。
 
 ## HTTP（外部进程）
 

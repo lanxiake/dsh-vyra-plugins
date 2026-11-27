@@ -76,7 +76,9 @@ export function createDeliveryTools(service) {
     name: SEND_MESSAGE_TOOL,
     description: 'Send one text message through a connected IM bot to a saved delivery target. '
       + 'Use it only when the user explicitly asks you to notify, push, or send something to a chat, '
-      + 'or when a scheduled task says so. Never use it to answer the conversation you are in. '
+      + 'or when a scheduled task says so. Never use it to answer the conversation you are in: '
+      + 'before sending, check whether the current Session already belongs to that chat, '
+      + 'because answering the conversation you are in does not need this tool. '
       + 'Get botId and targetId from dsh_im_delivery_targets; never guess them. '
       + '`sent: true` means the platform accepted the request, not that it was delivered or read. '
       + 'Do not retry on a timeout: a duplicate message may already have been sent.',
@@ -127,8 +129,8 @@ export function createDeliveryTools(service) {
     name: SEND_FILE_TOOL,
     description: 'Send one local file or image through a connected IM bot to a saved delivery target. '
       + 'The Host reads the path; relative paths resolve against the Session workspace. '
-      + 'Maximum 30 MB. Only channels with a proactive file path can do this (currently Feishu); '
-      + 'others answer capability-unavailable. '
+      + 'Maximum 30 MB. Only channels with a proactive file path can do this: '
+      + 'Feishu, Weixin, WeCom (bot and app), DingTalk and QQ; others answer capability-unavailable. '
       + 'Use it only when the user explicitly asks to send a file to that chat. '
       + '`sent: true` means the platform accepted the upload and message, not that it was read. '
       + 'Do not retry after a timeout or delivery-failed: the file may already be visible.',
