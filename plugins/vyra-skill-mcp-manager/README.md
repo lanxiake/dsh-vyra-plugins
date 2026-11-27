@@ -22,8 +22,16 @@ DSH 的技能和 MCP 服务器分别由不同插件管理，装一个技能要�
 
 | 市场 | 内置来源 |
 |---|---|
-| 技能 | skills.sh、ClawHub、skillsmp、trusttools、browse.sh、LobeHub、SkillHub、ModelScope（SkillNet 可选，默认关闭） |
-| MCP | 官方 Model Context Protocol 注册表、LobeHub |
+| 技能 | skills.sh、ClawHub、skillsmp、trusttools、browse.sh、SkillHub、ModelScope（SkillNet 可选，默认关闭） |
+| MCP | MCP 官方注册表、Smithery、npm（`keywords:mcp-server`）、awesome-mcp-servers |
+
+**每源每页只取 10 条**，各源并发查询；**单源超过 4 秒就记入「不可达」**，不再拖住整页。
+实测同一台机器上：技能首屏 8.0s → 0.46s，翻页 13.8s → 2.3s，搜索 `pdf` 11.4s → 4.0s。
+翻页时带上已渲染的 slug，跨页不会出现重复条目。
+
+**删掉了两个永远没有数据的源。** LobeHub 无论作为技能源还是 MCP 源，每次都返回 0 条
+（技能侧缺凭据、MCP 侧 CLI 直接失败），所以它从两处都移除了——留着只会让页头一直
+显示「1 个源不可达」。
 
 工具栏的来源 pill 现在只是**过滤**已经拿到的结果，不再决定去查哪个源。页头给出
 「命中 N 条 · M 个来源」；某个源挂了会显示「N 个源不可达」并列出具体错误——
@@ -135,6 +143,16 @@ https://lanxiake.github.io/dsh-vyra-plugins/index.json
 `skillnet.mjs`），`cli.mjs` 是 Agent 用的 `vyra-skill`。
 
 ## 变更
+
+### 1.4.1
+
+**分页提速 + MCP 换成 4 个能用的源。**
+
+- 每源每页 10 条、并发查询，单源 4 秒预算，超时的源记入「不可达」而不拖住整页。
+  翻页带上已渲染 slug，跨页不重复。技能首屏 8.0s → 0.46s。
+- MCP 源换成 MCP 官方注册表、Smithery、npm、awesome-mcp-servers，均已实测可用，
+  每源每页 10 条，合计 40 条/页。
+- 移除 LobeHub（技能侧与 MCP 侧都返回 0 条）。
 
 ### 1.4.0
 
