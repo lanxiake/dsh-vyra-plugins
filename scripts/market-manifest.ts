@@ -3423,6 +3423,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/dsh-boot-duel',
           },
         },
+        // 0.4.0 is what the listing ships with: the combo counter moved off
+        // the health bar, and the KO subtitle now speaks the game's own
+        // language (projects, not swords).
+        '0.4.0': {
+          publishTimestamp: 1795831200,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '13f7580cd21168ba0907c3fb0867515af850f29a',
+            path: 'plugins/dsh-boot-duel',
+          },
+        },
       },
       metadata: {
         category: 'appearance',
