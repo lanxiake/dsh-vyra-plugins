@@ -77,5 +77,7 @@
   "meter.label": "Qi",
   "hud.mid": "Duel",
   "special.windup": "Windup",
-  "special.landed": "Impact"
+  "special.landed": "Impact",
+  "settings.easyNote": "Normal damage",
+  "settings.normalNote": "Your damage halved, rival presses harder"
 }

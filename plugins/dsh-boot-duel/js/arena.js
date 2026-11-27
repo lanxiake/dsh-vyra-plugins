@@ -30,6 +30,31 @@ export const WORLD = Object.freeze({
 })
 
 /**
+ * The difficulty knob, in one place.
+ *
+ * `playerDmg` is the handicap and `tempo` is how hard the opponent presses.
+ * These used to be absent entirely: the client read `difficulty` from the
+ * host config and handed it to `createDuel`, which dropped it on the floor —
+ * both settings played the identical fight.
+ *
+ * `normal` halves the player's damage and gives the rival a tighter clock: it
+ * swings sooner, and it answers a landed hit inside `retaliate` seconds
+ * instead of waiting out its own cooldown. The rival's own damage is
+ * deliberately NOT raised — the player asked for a harder fight, not for the
+ * opening animation to start killing them.
+ */
+const DIFFICULTY = Object.freeze({
+  easy: Object.freeze({
+    playerDmg: 1,
+    tempo: Object.freeze({ gap: [0.7, 1.3], gapClose: [0.8, 1.4], retaliate: null }),
+  }),
+  normal: Object.freeze({
+    playerDmg: 0.5,
+    tempo: Object.freeze({ gap: [0.4, 0.8], gapClose: [0.5, 0.9], retaliate: 0.4 }),
+  }),
+})
+
+/**
  * Player input to attack. The mapping is deliberately small: two punches, a
  * kick, a launcher and a slide, which is the vocabulary a hand-keyboard
  * fight needs before it needs more.
@@ -47,13 +72,17 @@ const ATTACK_KEYS = {
 }
 
 export class Arena {
+  /** The difficulty table is public so the client can label the setting. */
+  static get DIFFICULTY() { return DIFFICULTY }
   /**
    * @param {object} opts
    * @param {boolean} [opts.reducedMotion]
    * @param {number} [opts.round] which story to tell this round (0..2 cycling)
+   * @param {'easy'|'normal'} [opts.difficulty] how hard the opponent presses
    */
-  constructor({ reducedMotion = false, round = 0 } = {}) {
+  constructor({ reducedMotion = false, round = 0, difficulty = 'easy' } = {}) {
     this.juice = new Juice({ reducedMotion })
+    this.difficulty = DIFFICULTY[difficulty] ? difficulty : 'easy'
     this.phase = 'ready'
     this.t = 0
     this.koT = 0
@@ -82,8 +111,13 @@ export class Arena {
   }
 
   reset() {
-    this.player = new Fighter('player', WORLD.width / 2 - 110, WORLD.groundY)
-    this.enemy = new Fighter('enemy', WORLD.width / 2 + 110, WORLD.groundY)
+    const tune = DIFFICULTY[this.difficulty] ?? DIFFICULTY.easy
+    this.player = new Fighter('player', WORLD.width / 2 - 110, WORLD.groundY, {
+      dmgScale: tune.playerDmg,
+    })
+    this.enemy = new Fighter('enemy', WORLD.width / 2 + 110, WORLD.groundY, {
+      ai: tune.tempo,
+    })
     this.enemy.ai.cd = 1.2
     this.phase = 'ready'
     this.t = 0
@@ -129,11 +163,23 @@ export class Arena {
   begin() {
     if (this.phase !== 'ready') return false
     this.phase = 'playing'
-    // The story opens with a short exchange rather than a greeting: the player
-    // reads two or three lines before the fight, which is what makes the
-    // first hit land on top of an argument instead of on silence.
-    this.openQueue = 2 + Math.floor(Math.random() * 2)
+    /**
+     * The whole opening exchange, not a sample of it.
+     *
+     * This used to be `2 + random(2)`: the player saw two or three lines and
+     * the rest were dropped on the floor. Worse, the script itself was
+     * ROTATED to a random starting point, so those two or three lines began in
+     * the middle of an argument — one player got 「文档呢？你连文档都没有？」,
+     * the next got 「我这边测是好的。」 as the opening line, which answers
+     * nothing because what it answers was never said.
+     *
+     * The exchange is written as a scene: it has a first line and a last one.
+     * It is played in order, from the top, and the fight's own barks wait for
+     * it to finish (`say` refuses while the queue is draining).
+     */
+    this.openQueue = this.barks.openLineCount
     this.say('open', true)
+    this.openQueue = Math.max(0, this.openQueue - 1)
     return true
   }
 
@@ -164,6 +210,24 @@ export class Arena {
       return
     }
 
+    /**
+     * THE STANDOFF. While the opening exchange is still being spoken, neither
+     * side can move: this is the two of them arguing across the desk, not a
+     * fight that happens to have subtitles. Letting the fight run under the
+     * dialogue produced the worst possible read — by the time the rival got
+     * to 「接口就是文档」 the player was already on the floor, so the line
+     * landed on a knocked-out body.
+     *
+     * `openQueue` is the honest signal: it is non-zero exactly until the last
+     * scripted line has been said. Fight barks are already suppressed while it
+     * drains, so the two halves of the round stay in their own order.
+     */
+    if (this.openQueue > 0) {
+      this.stepBarks(DT)
+      for (const f of this.fighters) { f.time += DT; f.pose(); f.rig.setPose(f.tx, f.ty) }
+      return
+    }
+
     if (this.phase === 'ko') {
       this.koT += DT
       // The four beats of the finish. Each one has to be SEEN, so the beats
@@ -190,6 +254,18 @@ export class Arena {
         for (const f of this.fighters) f.step(w)
       }
       this.stepParticles()
+      /**
+       * The last words, drained like a script.
+       *
+       * `checkKo` fires the first `ko` line; the rest were never spoken,
+       * because nothing advanced the moment script after the bell had already
+       * rung — so a four-line cold cut played one line and the knockout stood
+       * there in silence. The bubble is still stepped here (the playing phase
+       * is over, so its own `stepBarks` no longer runs), and the next line
+       * lands once the previous bubble has had a beat to be read.
+       */
+      this.stepBarks(DT)
+      if (this.koT > 0.95 && this.lineGap <= 0) this.say('ko', true)
       if (this.koT > 2.8) this.phase = 'done'
       return
     }
@@ -432,7 +508,16 @@ export class Arena {
       life: 1,
       side: line.speaker === 'you' ? 'player' : 'enemy',
     }
-    this.lineGap = force ? 0.4 : 2.2
+    /**
+     * How long until the next line may replace this one.
+     *
+     * The opening is a BACK-AND-FORTH, so its lines have to alternate at
+     * speaking pace: `force` used to set a flat 0.4 s for everyone, and with
+     * the drain threshold at 0.35 s that played ten lines in three frames
+     * each — a flicker, not a conversation. A second and a quarter per line
+     * is roughly how fast two people talking over each other go.
+     */
+    this.lineGap = beat === 'open' ? 1.25 : force ? 0.4 : 2.2
   }
 
   /** Advance the bubble and its cooldown. */
@@ -442,20 +527,22 @@ export class Arena {
       this.line.life -= dt * 0.42
       if (this.line.life <= 0) this.line = null
     }
-    // The opening exchange, drained in the first few seconds of the round.
+    // The opening exchange, drained in order.
     //
     // It OVERWRITES whatever is on screen rather than waiting for the bubble
     // to clear: a fight bark that fires during the opening would otherwise
     // replace the next scripted line, and "……现在？" would be answered by
     // "年底绩效我给你考虑". The story comes first; the fight's own barks wait
     // their turn.
-    if (this.openQueue > 0 && this.t < 4.5) {
+    //
+    // Exit condition is the QUEUE, not a clock. The old `this.t < 4.5` cap cut
+    // the last few lines off whenever a bubble ran long, so an opening written
+    // as one argument trailing off stopped mid-sentence.
+    if (this.openQueue > 0) {
       if (this.lineGap <= 0.35) {
         this.openQueue -= 1
         this.say('open', true)
       }
-    } else if (this.openQueue > 0) {
-      this.openQueue = 0
     }
   }
 
@@ -622,6 +709,22 @@ export class Arena {
 
   onHit(hit) {
     const { victim, x, y, power, reaction, kill, juggle, name } = hit
+    /**
+     * The `normal` opponent does not sit through its own cooldown after being
+     * hit: a clean connection arms its next swing for `retaliate` seconds from
+     * now, so trading blows with it is a race instead of a free turn. A guard
+     * or a juggle does not arm it — being shoved or floated is not an opening.
+     */
+    const tempo = this.enemy.aiTempo
+    if (
+      hit.attacker.team === 'p' &&
+      tempo?.retaliate &&
+      !kill &&
+      reaction !== 'guard' &&
+      reaction !== 'juggle'
+    ) {
+      this.enemy.ai.cd = Math.min(this.enemy.ai.cd, tempo.retaliate)
+    }
     // Being knocked down is a beat of the player's story.
     if (hit.attacker.team !== 'p' && (reaction === 'launch' || reaction === 'knockdown')) {
       this.say('take')

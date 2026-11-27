@@ -94,7 +94,7 @@ function ik(ax, ay, tx, ty, l1, l2, bend) {
 }
 
 export class Fighter {
-  constructor(kind, x, groundY) {
+  constructor(kind, x, groundY, { dmgScale = 1, ai = null } = {}) {
     const k = KIND[kind] ?? KIND.enemy
     this.kind = kind
     this.team = kind === 'player' ? 'p' : 'e'
@@ -103,6 +103,19 @@ export class Fighter {
     this.mass = k.mass
     this.maxHp = k.hp
     this.hp = k.hp
+    /**
+     * How hard this fighter hits. The difficulty knob lives here rather than
+     * in the attack table, because the table is the MOVE's shape and this is
+     * the PLAYER's handicap: a normal difficulty halves the player's damage
+     * without making a jab a different move.
+     */
+    this.dmgScale = dmgScale
+    /**
+     * Tempo the AI presses at, in seconds: `[min, max]` between swings, and
+     * how long it waits after being hit before answering. A `null` here means
+     * "easy", which is the behaviour every round had before the knob existed.
+     */
+    this.aiTempo = ai ?? { gap: [0.7, 1.3], gapClose: [0.8, 1.4], retaliate: null }
     this.groundY = groundY
     this.x = x
     this.y = groundY
@@ -628,7 +641,12 @@ export class Fighter {
         return out
       }
       if (r < 0.66) { out.block = true; return out }
-      if (a.cd <= 0) { a.cd = rand(0.8, 1.4); out.move = Math.random() < 0.5 ? 'p1' : 'p2'; return out }
+      if (a.cd <= 0) {
+        const [lo, hi] = this.aiTempo.gapClose
+        a.cd = rand(lo, hi)
+        out.move = Math.random() < 0.5 ? 'p1' : 'p2'
+        return out
+      }
       out.left = dir > 0; out.right = dir < 0
       return out
     }
@@ -637,7 +655,8 @@ export class Fighter {
     if (gap < reach) {
       if (a.patienceT > 0) return out
       if (a.cd <= 0) {
-        a.cd = rand(0.7, 1.3)
+        const [lo, hi] = this.aiTempo.gap
+        a.cd = rand(lo, hi)
         const r = Math.random()
         if (gap < reach * 0.62) out.move = r < 0.5 ? 'p1' : r < 0.8 ? 'p2' : 'p3'
         else out.move = r < 0.55 ? 'k' : r < 0.8 ? 'sweep' : 'p2'

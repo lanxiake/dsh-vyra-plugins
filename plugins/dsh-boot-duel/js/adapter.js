@@ -44,8 +44,8 @@ function toArenaInput(input = {}) {
  * when a swing starts, `thud` when it lands, `clink` on a block, `boom` on a
  * knockout.
  */
-export function createDuel({ reducedMotion = false, round = 0 } = {}) {
-  const arena = new Arena({ reducedMotion, round })
+export function createDuel({ reducedMotion = false, round = 0, difficulty = 'easy' } = {}) {
+  const arena = new Arena({ reducedMotion, round, difficulty })
   let events = []
   let lastPhase = arena.phase
   let clock = 0
@@ -167,7 +167,12 @@ export function createDuel({ reducedMotion = false, round = 0 } = {}) {
       return false
     },
     /** Start a fresh round, for the settings panel's "再来一局". */
-    restart(round) {
+    restart(round, opts = {}) {
+      // The panel may have changed the difficulty since this duel was built;
+      // `再来一局` is a new round, so it should honour the new setting.
+      if (opts.difficulty === 'easy' || opts.difficulty === 'normal') {
+        arena.difficulty = opts.difficulty
+      }
       arena.restart(round)
       events = []
       lastView = null

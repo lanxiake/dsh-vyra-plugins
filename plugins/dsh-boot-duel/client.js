@@ -573,7 +573,7 @@ window.__ModuleLoader__.load({
     }
 
     class Fighter {
-      constructor(kind, x, groundY) {
+      constructor(kind, x, groundY, { dmgScale = 1, ai = null } = {}) {
         const k = KIND[kind] ?? KIND.enemy
         this.kind = kind
         this.team = kind === 'player' ? 'p' : 'e'
@@ -582,6 +582,19 @@ window.__ModuleLoader__.load({
         this.mass = k.mass
         this.maxHp = k.hp
         this.hp = k.hp
+        /**
+         * How hard this fighter hits. The difficulty knob lives here rather than
+         * in the attack table, because the table is the MOVE's shape and this is
+         * the PLAYER's handicap: a normal difficulty halves the player's damage
+         * without making a jab a different move.
+         */
+        this.dmgScale = dmgScale
+        /**
+         * Tempo the AI presses at, in seconds: `[min, max]` between swings, and
+         * how long it waits after being hit before answering. A `null` here means
+         * "easy", which is the behaviour every round had before the knob existed.
+         */
+        this.aiTempo = ai ?? { gap: [0.7, 1.3], gapClose: [0.8, 1.4], retaliate: null }
         this.groundY = groundY
         this.x = x
         this.y = groundY
@@ -1107,7 +1120,12 @@ window.__ModuleLoader__.load({
             return out
           }
           if (r < 0.66) { out.block = true; return out }
-          if (a.cd <= 0) { a.cd = rand(0.8, 1.4); out.move = Math.random() < 0.5 ? 'p1' : 'p2'; return out }
+          if (a.cd <= 0) {
+            const [lo, hi] = this.aiTempo.gapClose
+            a.cd = rand(lo, hi)
+            out.move = Math.random() < 0.5 ? 'p1' : 'p2'
+            return out
+          }
           out.left = dir > 0; out.right = dir < 0
           return out
         }
@@ -1116,7 +1134,8 @@ window.__ModuleLoader__.load({
         if (gap < reach) {
           if (a.patienceT > 0) return out
           if (a.cd <= 0) {
-            a.cd = rand(0.7, 1.3)
+            const [lo, hi] = this.aiTempo.gap
+            a.cd = rand(lo, hi)
             const r = Math.random()
             if (gap < reach * 0.62) out.move = r < 0.5 ? 'p1' : r < 0.8 ? 'p2' : 'p3'
             else out.move = r < 0.55 ? 'k' : r < 0.8 ? 'sweep' : 'p2'
@@ -1148,51 +1167,48 @@ window.__ModuleLoader__.load({
   /* ---- js/story.js ---- */
   const __mod_story = (function () {
     /**
-     * The two fighters talk.
+     * The two fighters talk. Loudly.
      *
-     * Two people, one project, an argument that has been building for weeks. The
-     * barks are what make the fight worth watching, and their shape is what makes
-     * it read as an ARGUMENT rather than as a collection of quips:
+     * Two people, one project, an argument that has been building for weeks and is
+     * finally allowed to land. The shape is the same as it always was — every line
+     * answers the last one, nobody is a villain because the joke is at the
+     * PROJECT's expense, and the exchange escalates before it ends. What changed
+     * is the temperature: this used to be passive-aggressive, and the point of the
+     * opening animation is to let some of the week out before the work starts.
      *
-     *   - **every line answers the last one.** Consecutive lines should sound like
-     *     the same conversation: a demand, a deflection, a "你怎么不说清楚", a
-     *     retreat.
-     *   - **nobody is the villain.** The joke is at the *project's* expense, not at
-     *     a person's — the other side believes it is being helpful, and that is
-     *     what is funny. Both fighters get their turn at being roasted.
-     *   - **it escalates, then lands warm.** The opening is polite. The middle is
-     *     the fight. The last line is a truce: a fix, a compromise, a cup of tea.
+     *   - **somebody draws a line.** The old scripts were a sequence of polite
+     *     deflections; these ones have lines like 「放屁」 and 「滚蛋」 in them. The
+     *     profanity stays at the level a grocery-store quarrel has — 「扯淡」,
+     *     「滚蛋」, 「要你干嘛」 — and never becomes an actual slur or obscenity, so
+     *     the screenshots can go into a plugin listing.
+     *   - **the argument is still about the work.** A loser who is simply wrong is
+     *     not funny; a rival who sincerely believes 「大家都想把东西做好」 while
+     *     moving the deadline is. Both fighters get roasted.
+     *   - **it does NOT end warm.** The knockout is a cold cut: the rival is out of
+     *     words, the player gets the last one, and the layer closes. No truce, no
+     *     cup of tea. That is the "解压" the round is for — the argument ends
+     *     because one side can no longer answer, not because everyone calmed down.
      *
      * ## Continuity: why a line carries a `reply`
      *
-     * This used to be five independent shuffled bags, and it showed: a player's
-     * "这个需求，两周做不完" could be answered by "我这不是在跟你商量吗", which
-     * answers nothing, and the next exchange started from zero. Two people who
-     * keep restarting the conversation do not read as an argument.
-     *
-     * So a line now declares what it answers. `reply: '<id>'` means "this line is
-     * the response to that one", and a beat's bag only offers lines whose `reply`
+     * A line declares what it answers. `reply: '<id>'` means "this line is the
+     * response to that one", and a beat's bag only offers lines whose `reply`
      * names the line currently on screen (or `null`, when any opener will do).
      * The result is a chain, not a shuffle: demand → deflection → counter, in the
      * order they were written.
      *
-     * The player and the rival also carry a `stance` — what they are currently
-     * arguing. Landing a hit moves the player forward, taking one moves them back,
-     * and the lines are tagged with the stances they belong to. That is what makes
-     * a round sound like it has a shape instead of a shuffle.
-     *
-     * Each story keeps its ordered `open` script and a `ko` truce: those two are
-     * scenes, not exchanges.
+     * `open` and `ko` are scripts, not exchanges: the opening scene, and the cold
+     * cut. Everything else is a thread.
      *
      * ## The beats
      *
-     *   open   — the bell rings (an ordered script)
+     *   open   — the bell rings (an ordered script, and it starts angry)
      *   chain  — the player lands three hits in a row
      *   guard  — the player blocks
      *   hit    — a clean heavy lands
      *   take   — the player is knocked down
      *   super  — the finisher
-     *   ko     — the opponent goes down (the truce)
+     *   ko     — the opponent goes down (the last word, not a truce)
      *   taunt  — the opponent's line after it lands something big
      */
 
@@ -1204,125 +1220,122 @@ window.__ModuleLoader__.load({
         rival: '产品',
         beats: {
           open: [
-            ['rival', '有个小需求，特别简单。', 'airy'],
-            ['you', '多小？', 'flat'],
-            ['rival', '就加个按钮。', 'cheery'],
-            ['you', '点一下会怎样？', 'flat'],
-            ['rival', '跳到一个页面。', 'airy'],
-            ['you', '那个页面做完了吗？', 'dry'],
-            ['rival', '……这不就是你要做的吗。', 'cheery'],
-            ['you', '所以是小需求，还是小按钮？', 'flat'],
-            ['rival', '先做出来，我们再对。', 'smooth'],
-            ['you', '每次都是先做出来。', 'tired'],
+            ['rival', '这需求今天必须上。', 'hard'],
+            ['you', '今天？现在几点了你抬头看看。', 'hard'],
+            ['rival', '那是你的问题。', 'smooth'],
+            ['you', '我的问题？行，那你来做。', 'hard'],
+            ['rival', '我要是能做要你干嘛。', 'cheery'],
+            ['you', '要我就是来给你擦屁股的？', 'hard'],
+            ['rival', '话别说这么难听。', 'smooth'],
+            ['you', '我说的是事实，难听的是事实。', 'dry'],
+            ['rival', '项目要紧，别的以后再说。', 'cheery'],
+            ['you', '哪个项目不是被这句「以后再说」拖死的。', 'hard'],
           ],
           /**
            * Each line is `[speaker, text, mood, reply]`. `reply` is the id of the
            * line it answers, or omitted when it can open an exchange.
            */
           chain: [
-            { id: 'c1', speaker: 'you', text: '这个按钮放哪，你总得说吧。', mood: 'flat' },
-            { id: 'c1a', reply: 'c1', speaker: 'rival', text: '你先按你的理解做。', mood: 'airy' },
-            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '我的理解是放首页最上面。', mood: 'dry' },
-            { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '不行，太显眼了。', mood: 'hard' },
-            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '那你说放哪。', mood: 'flat' },
-            { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '你觉得呢？', mood: 'cheery' },
-            // The branch that lands the joke: the player names the evasion.
-            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '你这叫让我猜。', mood: 'flat' },
+            { id: 'c1', speaker: 'you', text: '这个按钮放哪，你今天必须给我一句话。', mood: 'hard' },
+            { id: 'c1a', reply: 'c1', speaker: 'rival', text: '你先按你的理解做。', mood: 'smooth' },
+            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '我的理解是你在甩锅。', mood: 'hard' },
+            { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '这是正常的分工。', mood: 'cheery' },
+            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '分工是各自负责，不是全推给我。', mood: 'dry' },
+            { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '你这话就有点过了。', mood: 'hard' },
+            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '过我？你八点发需求九点要上线，你说我过。', mood: 'hard' },
             { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '大家都是为了把东西做好。', mood: 'cheery' },
-            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '那就先把「做好」定义一下。', mood: 'dry' },
-            { id: 'c1i', reply: 'c1h', speaker: 'rival', text: '……', mood: 'tired' },
-            { id: 'c1j', reply: 'c1i', speaker: 'you', text: '看，又卡住了。', mood: 'flat' },
+            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '少拿这句堵我。你把「做好」定义清楚再说。', mood: 'hard' },
+            { id: 'c1i', reply: 'c1h', speaker: 'rival', text: '……', mood: 'shaken' },
+            { id: 'c1j', reply: 'c1i', speaker: 'you', text: '怎么，又卡住了？', mood: 'dry' },
 
-            { id: 'c2', speaker: 'you', text: '这已经是第三版了。', mood: 'tired' },
+            { id: 'c2', speaker: 'you', text: '这已经是第三版了，你知道吗。', mood: 'hard' },
             { id: 'c2a', reply: 'c2', speaker: 'rival', text: '第三版好，说明在收敛。', mood: 'cheery' },
-            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '收敛到哪儿了？', mood: 'dry' },
-            { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '收敛到需要第四版。', mood: 'airy' },
-            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '那第一版算什么。', mood: 'flat' },
-            { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '算探索。', mood: 'smooth' },
-            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '我两周的探索。', mood: 'tired' },
+            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '收敛？你连要什么都说不出来。', mood: 'hard' },
+            { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '所以要看第四版。', mood: 'smooth' },
+            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '那第一版算什么，算我白干？', mood: 'hard' },
+            { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '算探索，探索是有价值的。', mood: 'airy' },
+            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '我两周的探索，你一句「再改改」就抹了。', mood: 'hard' },
           ],
           guard: [
-            { id: 'g1', speaker: 'you', text: '这个真做不了。', mood: 'flat' },
+            { id: 'g1', speaker: 'you', text: '这个真做不了，你别再问了。', mood: 'hard' },
             { id: 'g1a', reply: 'g1', speaker: 'rival', text: '为什么做不了？', mood: 'hard' },
-            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '点一下跳三个页面，逻辑说不通。', mood: 'dry' },
-            { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '那改两个页面。', mood: 'airy' },
-            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '为什么是两个？', mood: 'flat' },
-            { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '感觉差不多。', mood: 'cheery' },
-            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '感觉不是需求文档。', mood: 'dry' },
+            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '因为你不是在提需求，你是在许愿。', mood: 'dry' },
+            { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '那你说怎么才能做。', mood: 'hard' },
+            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '给我三周，或者给我三个人。', mood: 'flat' },
+            { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '都没有。', mood: 'airy' },
+            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '那就别说「做不了」。', mood: 'hard' },
 
             { id: 'g2', speaker: 'rival', text: '这里能不能先隐藏，后面再放出来？', mood: 'airy' },
-            { id: 'g2a', reply: 'g2', speaker: 'you', text: '隐藏给谁看？', mood: 'flat' },
+            { id: 'g2a', reply: 'g2', speaker: 'you', text: '隐藏给谁看？给鬼看？', mood: 'hard' },
             { id: 'g2b', reply: 'g2a', speaker: 'rival', text: '给用户看。', mood: 'cheery' },
-            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '看不见的东西怎么给用户看。', mood: 'dry' },
+            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '看不见的东西怎么给用户看，你倒是说说。', mood: 'dry' },
             { id: 'g2d', reply: 'g2c', speaker: 'rival', text: '这个以后再讨论。', mood: 'smooth' },
-            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '「以后」是排期里最忙的一天。', mood: 'flat' },
+            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '「以后」是排期里最忙的一天，你比我清楚。', mood: 'hard' },
           ],
           hit: [
-            { id: 'h1', speaker: 'you', text: '这个需求上周刚改过。', mood: 'flat' },
+            { id: 'h1', speaker: 'you', text: '这个需求上周刚改过，你忘了？', mood: 'hard' },
             { id: 'h1a', reply: 'h1', speaker: 'rival', text: '用户反馈嘛。', mood: 'airy' },
-            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '哪个用户？', mood: 'dry' },
+            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '哪个用户？说名字。', mood: 'hard' },
             { id: 'h1c', reply: 'h1b', speaker: 'rival', text: '就……用户。', mood: 'cheery' },
-            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '你吧。', mood: 'flat' },
+            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '就是我吧。你自己想改就说是用户想改。', mood: 'hard' },
             { id: 'h1e', reply: 'h1d', speaker: 'rival', text: '我代表用户。', mood: 'smooth' },
-            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '那我代表加班。', mood: 'dry' },
+            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '你代表不了谁，你只代表你自己的 kpi。', mood: 'dry' },
 
-            { id: 'h2', speaker: 'you', text: '就调一下顺序，很快的。', mood: 'flat' },
-            { id: 'h2a', reply: 'h2', speaker: 'rival', text: '对，很快的。', mood: 'cheery' },
-            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '上次那个「很快的」用了两周。', mood: 'flat' },
-            { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '这次真的快。', mood: 'airy' },
-            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '上次你也这么说。', mood: 'tired' },
+            { id: 'h2', speaker: 'you', text: '「就调一下顺序，很快的」——你上次也这么说。', mood: 'hard' },
+            { id: 'h2a', reply: 'h2', speaker: 'rival', text: '这次真的很快。', mood: 'cheery' },
+            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '上次那个「很快的」用了两周，你记得吗？', mood: 'hard' },
+            { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '情况不一样。', mood: 'smooth' },
+            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '哪次都不一样，每次都一样地烂尾。', mood: 'hard' },
             { id: 'h2e', reply: 'h2d', speaker: 'rival', text: '这次我陪你一起加班。', mood: 'cheery' },
-            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '……这句我记下了。', mood: 'dry' },
+            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '你陪？你十点准时回家，我记着呢。', mood: 'dry' },
           ],
           take: [
-            { id: 't1', speaker: 'you', text: '好，我改。', mood: 'tired' },
-            { id: 't1a', reply: 't1', speaker: 'rival', text: '辛苦了辛苦了。', mood: 'cheery' },
-            { id: 't1b', reply: 't1a', speaker: 'you', text: '改完要保留旧版吗？', mood: 'flat' },
-            { id: 't1c', reply: 't1b', speaker: 'rival', text: '不用。', mood: 'airy' },
-            { id: 't1d', reply: 't1c', speaker: 'you', text: '那有人要用旧的怎么办？', mood: 'dry' },
-            { id: 't1e', reply: 't1d', speaker: 'rival', text: '应该不会吧。', mood: 'cheery' },
-            { id: 't1f', reply: 't1e', speaker: 'you', text: '上线第二天就会出现。', mood: 'tired' },
+            { id: 't1', speaker: 'you', text: '行，我改。但这是最后一版。', mood: 'hard' },
+            { id: 't1a', reply: 't1', speaker: 'rival', text: '改完要保留旧版吗？', mood: 'airy' },
+            { id: 't1b', reply: 't1a', speaker: 'you', text: '你不是说不用吗？', mood: 'hard' },
+            { id: 't1c', reply: 't1b', speaker: 'rival', text: '现在想想还是留着好。', mood: 'cheery' },
+            { id: 't1d', reply: 't1c', speaker: 'you', text: '那你早说啊，我删都删了。', mood: 'hard' },
+            { id: 't1e', reply: 't1d', speaker: 'rival', text: '那就恢复一下。', mood: 'airy' },
+            { id: 't1f', reply: 't1e', speaker: 'you', text: '恢复？你说得跟喝水一样轻松。', mood: 'dry' },
 
             { id: 't2', speaker: 'rival', text: '这个改完，还有几个小地方。', mood: 'smooth' },
-            { id: 't2a', reply: 't2', speaker: 'you', text: '几个？', mood: 'flat' },
+            { id: 't2a', reply: 't2', speaker: 'you', text: '几个？你现在就给我数。', mood: 'hard' },
             { id: 't2b', reply: 't2a', speaker: 'rival', text: '一个清单。', mood: 'cheery' },
-            { id: 't2c', reply: 't2b', speaker: 'you', text: '清单有几条。', mood: 'dry' },
+            { id: 't2c', reply: 't2b', speaker: 'you', text: '清单几条？', mood: 'hard' },
             { id: 't2d', reply: 't2c', speaker: 'rival', text: '没数，都在群里。', mood: 'airy' },
-            { id: 't2e', reply: 't2d', speaker: 'you', text: '群消息也算需求了。', mood: 'tired' },
+            { id: 't2e', reply: 't2d', speaker: 'you', text: '群消息也算需求，那我的加班算不算排期？', mood: 'dry' },
           ],
           super: [
-            { id: 's1', speaker: 'you', text: '停，我们先对一遍需求。', mood: 'hard' },
-            { id: 's1a', reply: 's1', speaker: 'rival', text: '现在？', mood: 'surprised' },
-            { id: 's1b', reply: 's1a', speaker: 'you', text: '就现在，一条一条来。', mood: 'hard' },
-            { id: 's1c', reply: 's1b', speaker: 'rival', text: '……行吧。', mood: 'shaken' },
-            { id: 's1d', reply: 's1c', speaker: 'you', text: '第一条就说不清楚。', mood: 'hard' },
-            { id: 's1e', reply: 's1d', speaker: 'rival', text: '那先跳过第一条。', mood: 'baffled' },
+            { id: 's1', speaker: 'you', text: '停。现在，我们一条一条对需求。', mood: 'hard' },
+            { id: 's1a', reply: 's1', speaker: 'rival', text: '现在？时间来不及……', mood: 'surprised' },
+            { id: 's1b', reply: 's1a', speaker: 'you', text: '来不及的是你。坐下。', mood: 'hard' },
+            { id: 's1c', reply: 's1b', speaker: 'rival', text: '……行。', mood: 'shaken' },
+            { id: 's1d', reply: 's1c', speaker: 'you', text: '第一条，你自己念一遍。', mood: 'hard' },
+            { id: 's1e', reply: 's1d', speaker: 'rival', text: '……这条能不能先跳过。', mood: 'baffled' },
           ],
           ko: [
-            { id: 'k1', speaker: 'rival', text: '……行，是我没说清楚。', mood: 'beaten' },
-            { id: 'k1a', reply: 'k1', speaker: 'you', text: '你现在说清楚就行。', mood: 'warm' },
-            { id: 'k1b', reply: 'k1a', speaker: 'rival', text: '那我重新写一版。', mood: 'beaten' },
-            { id: 'k1c', reply: 'k1b', speaker: 'you', text: '写完我们再打。', mood: 'warm' },
+            { id: 'k1', speaker: 'rival', text: '……', mood: 'beaten' },
+            { id: 'k1a', reply: 'k1', speaker: 'you', text: '说啊，怎么不说了。', mood: 'dry' },
           ],
           taunt: [
             { id: 'x1', speaker: 'rival', text: '这很简单的。', mood: 'airy' },
-            { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你来。', mood: 'dry' },
+            { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你来做啊。', mood: 'hard' },
             { id: 'x1b', reply: 'x1a', speaker: 'rival', text: '我要是会我就自己做了。', mood: 'cheery' },
 
             { id: 'x2', speaker: 'rival', text: '参考一下那个网站。', mood: 'smooth' },
-            { id: 'x2a', reply: 'x2', speaker: 'you', text: '参考哪一部分？', mood: 'flat' },
+            { id: 'x2a', reply: 'x2', speaker: 'you', text: '参考哪一部分？说具体。', mood: 'hard' },
             { id: 'x2b', reply: 'x2a', speaker: 'rival', text: '就那个感觉。', mood: 'airy' },
-            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '「感觉」不能写进代码。', mood: 'dry' },
+            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '感觉不能写进代码，你懂不懂。', mood: 'hard' },
 
             { id: 'x3', speaker: 'rival', text: '先做一个版本给我看。', mood: 'cheery' },
-            { id: 'x3a', reply: 'x3', speaker: 'you', text: '做完你还是会说不对。', mood: 'flat' },
+            { id: 'x3a', reply: 'x3', speaker: 'you', text: '做完你还是会说不对，我赌一包烟。', mood: 'hard' },
             { id: 'x3b', reply: 'x3a', speaker: 'rival', text: '那总得先看。', mood: 'smooth' },
-            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '看完说「还是第一版好」。', mood: 'tired' },
+            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '看完说「还是第一版好」，我等着。', mood: 'dry' },
 
             { id: 'x4', speaker: 'rival', text: '什么时候能好？', mood: 'hard' },
-            { id: 'x4a', reply: 'x4', speaker: 'you', text: '你先说清楚要什么。', mood: 'flat' },
+            { id: 'x4a', reply: 'x4', speaker: 'you', text: '你先说清楚要什么。', mood: 'hard' },
             { id: 'x4b', reply: 'x4a', speaker: 'rival', text: '我不是催你。', mood: 'cheery' },
-            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '你这句话就是催。', mood: 'dry' },
+            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '你这句话就是催，别装了。', mood: 'hard' },
           ],
         },
       },
@@ -1334,119 +1347,116 @@ window.__ModuleLoader__.load({
         rival: '后端',
         beats: {
           open: [
-            ['rival', '接口给你了，看一下。', 'flat'],
-            ['you', '文档呢？', 'dry'],
+            ['rival', '接口给你了，自己看。', 'flat'],
+            ['you', '文档呢？你连文档都没有？', 'hard'],
             ['rival', '接口就是文档。', 'smooth'],
-            ['you', '字段没注释。', 'flat'],
+            ['you', '字段没注释，我猜着接？', 'hard'],
             ['rival', '字段名就是注释。', 'cheery'],
-            ['you', 'data2_new 是什么意思？', 'dry'],
+            ['you', 'data2_new 是什么意思，你倒是说说。', 'hard'],
             ['rival', '……就是第二个 data 的新版。', 'smooth'],
-            ['you', '那 data2_old 呢？', 'flat'],
+            ['you', '那 data2_old 呢？你在拿我练手？', 'hard'],
             ['rival', '你先接，我在改。', 'airy'],
-            ['you', '改完字段名也会变吗？', 'tired'],
+            ['you', '改完字段名也变吧？你敢说不变？', 'hard'],
           ],
           chain: [
-            { id: 'c1', speaker: 'you', text: '你这个接口返回 500。', mood: 'flat' },
+            { id: 'c1', speaker: 'you', text: '你这个接口返回 500，解释一下。', mood: 'hard' },
             { id: 'c1a', reply: 'c1', speaker: 'rival', text: '那是你传参不对。', mood: 'hard' },
-            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '文档就是这么写的。', mood: 'dry' },
+            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '文档就是这么写的，你还想赖？', mood: 'hard' },
             { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '文档我更新了。', mood: 'smooth' },
-            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '什么时候更新的？', mood: 'flat' },
+            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '什么时候更新的？刚才？', mood: 'hard' },
             { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '刚才。', mood: 'cheery' },
-            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '我照着旧的写完了。', mood: 'dry' },
-            { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '那你照新的再改一下。', mood: 'airy' },
-            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '提前发现问题的是我，不是你。', mood: 'flat' },
+            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '我照着旧的写完的，你知道吗？', mood: 'hard' },
+            { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '那你照新的改一下。', mood: 'airy' },
+            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '凭什么每次都是我去改，你一个字不动？', mood: 'hard' },
 
-            { id: 'c2', speaker: 'you', text: '这个字段是必填还是选填？', mood: 'flat' },
+            { id: 'c2', speaker: 'you', text: '这字段必填还是选填，给句准话。', mood: 'hard' },
             { id: 'c2a', reply: 'c2', speaker: 'rival', text: '都行。', mood: 'airy' },
-            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '都行是哪种行？', mood: 'dry' },
+            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '都行是哪种行？你说清楚。', mood: 'hard' },
             { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '不填也行，填了也行。', mood: 'cheery' },
-            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '那你们的校验是干什么的。', mood: 'flat' },
+            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '那你们校验是干嘛的？摆设？', mood: 'hard' },
             { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '校验是防误用的。', mood: 'smooth' },
-            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '现在误用的是我。', mood: 'tired' },
+            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '现在误用的就是我，你说这算不算你的锅。', mood: 'hard' },
           ],
           guard: [
-            { id: 'g1', speaker: 'you', text: '这块数据是空的。', mood: 'flat' },
+            { id: 'g1', speaker: 'you', text: '这块数据是空的，别跟我说本地有。', mood: 'hard' },
             { id: 'g1a', reply: 'g1', speaker: 'rival', text: '本地有啊。', mood: 'hard' },
-            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '我在线上看的。', mood: 'dry' },
+            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '我在线上看的，睁眼说瞎话。', mood: 'hard' },
             { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '线上环境不一样。', mood: 'smooth' },
-            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '那到底哪个算对？', mood: 'flat' },
+            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '那到底哪个算对？给个准数。', mood: 'hard' },
             { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '以线上为准。', mood: 'hard' },
-            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '线上是空的。', mood: 'dry' },
-            { id: 'g1g', reply: 'g1f', speaker: 'rival', text: '那我看看本地。', mood: 'airy' },
+            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '线上是空的。你听见自己说什么了吗？', mood: 'hard' },
 
             { id: 'g2', speaker: 'rival', text: '你那边是不是缓存了？', mood: 'smooth' },
-            { id: 'g2a', reply: 'g2', speaker: 'you', text: '我清过了。', mood: 'flat' },
+            { id: 'g2a', reply: 'g2', speaker: 'you', text: '我清过了，第三次了。', mood: 'hard' },
             { id: 'g2b', reply: 'g2a', speaker: 'rival', text: '再清一次。', mood: 'airy' },
-            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '清第几次才能好？', mood: 'dry' },
+            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '清到第几次你才肯看代码？', mood: 'hard' },
             { id: 'g2d', reply: 'g2c', speaker: 'rival', text: '这不是缓存的问题。', mood: 'cheery' },
-            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '那你刚才让我清什么。', mood: 'flat' },
+            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '那你刚才让我清什么，耍我玩？', mood: 'hard' },
           ],
           hit: [
-            { id: 'h1', speaker: 'you', text: '这个字段会变。', mood: 'flat' },
+            { id: 'h1', speaker: 'you', text: '这个字段会变，你敢说不会？', mood: 'hard' },
             { id: 'h1a', reply: 'h1', speaker: 'rival', text: '不会变。', mood: 'hard' },
-            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '上次也是这么说的。', mood: 'dry' },
+            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '上次也是这么说的，忘了？', mood: 'hard' },
             { id: 'h1c', reply: 'h1b', speaker: 'rival', text: '上次是特殊情况。', mood: 'smooth' },
-            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '那这次呢？', mood: 'flat' },
+            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '那这次呢？又是特殊情况？', mood: 'hard' },
             { id: 'h1e', reply: 'h1d', speaker: 'rival', text: '这次是正常情况。', mood: 'cheery' },
-            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '正常的定义是「会变」吗。', mood: 'dry' },
+            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '正常的意思是「会变」，你这词用得真行。', mood: 'dry' },
 
-            { id: 'h2', speaker: 'you', text: '字段名能不能改一下。', mood: 'flat' },
+            { id: 'h2', speaker: 'you', text: '字段名改一下，就一处。', mood: 'hard' },
             { id: 'h2a', reply: 'h2', speaker: 'rival', text: '不能，前端都在用。', mood: 'hard' },
-            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '前端就我一个。', mood: 'dry' },
+            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '前端就我一个，你拿谁挡？', mood: 'hard' },
             { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '那更不能随便改。', mood: 'smooth' },
-            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '为什么？', mood: 'flat' },
+            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '为什么？说理由，别说「不能」。', mood: 'hard' },
             { id: 'h2e', reply: 'h2d', speaker: 'rival', text: '改了我这边要重发。', mood: 'airy' },
-            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '所以难的是你，不是我。', mood: 'tired' },
+            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '所以难的是你，不是我。早说啊。', mood: 'dry' },
           ],
           take: [
-            { id: 't1', speaker: 'you', text: '好，我按你说的改。', mood: 'tired' },
+            { id: 't1', speaker: 'you', text: '行，我按你说的改。改完还是 500 你负责。', mood: 'hard' },
             { id: 't1a', reply: 't1', speaker: 'rival', text: '对，就这样传。', mood: 'cheery' },
-            { id: 't1b', reply: 't1a', speaker: 'you', text: '改完还是 500。', mood: 'flat' },
+            { id: 't1b', reply: 't1a', speaker: 'you', text: '改完还是 500。', mood: 'hard' },
             { id: 't1c', reply: 't1b', speaker: 'rival', text: '那你看看日志。', mood: 'smooth' },
-            { id: 't1d', reply: 't1c', speaker: 'you', text: '日志里是你的报错。', mood: 'dry' },
+            { id: 't1d', reply: 't1c', speaker: 'you', text: '日志里是你的报错，你倒是看看。', mood: 'hard' },
             { id: 't1e', reply: 't1d', speaker: 'rival', text: '那你先按我的思路排查一下。', mood: 'airy' },
-            { id: 't1f', reply: 't1e', speaker: 'you', text: '我们是在做项目，还是在互相传话。', mood: 'tired' },
+            { id: 't1f', reply: 't1e', speaker: 'you', text: '我们是在做项目，还是在互相传话？', mood: 'hard' },
 
             { id: 't2', speaker: 'rival', text: '我这边测是好的。', mood: 'cheery' },
-            { id: 't2a', reply: 't2', speaker: 'you', text: '你测的是哪个环境？', mood: 'flat' },
+            { id: 't2a', reply: 't2', speaker: 'you', text: '你测的是哪个环境？说。', mood: 'hard' },
             { id: 't2b', reply: 't2a', speaker: 'rival', text: '我本机。', mood: 'airy' },
-            { id: 't2c', reply: 't2b', speaker: 'you', text: '用户的本机不是你的本机。', mood: 'dry' },
+            { id: 't2c', reply: 't2b', speaker: 'you', text: '用户的本机不是你的本机。', mood: 'hard' },
             { id: 't2d', reply: 't2c', speaker: 'rival', text: '那应该差不多。', mood: 'smooth' },
-            { id: 't2e', reply: 't2d', speaker: 'you', text: '「差不多」就是我们现在的状态。', mood: 'tired' },
+            { id: 't2e', reply: 't2d', speaker: 'you', text: '「差不多」就是我们线上那个 500。', mood: 'hard' },
           ],
           super: [
-            { id: 's1', speaker: 'you', text: '把文档补上，我们从头对。', mood: 'hard' },
-            { id: 's1a', reply: 's1', speaker: 'rival', text: '现在？', mood: 'surprised' },
-            { id: 's1b', reply: 's1a', speaker: 'you', text: '就现在，一个字段一个字段。', mood: 'hard' },
+            { id: 's1', speaker: 'you', text: '把文档补上。现在。从头对。', mood: 'hard' },
+            { id: 's1a', reply: 's1', speaker: 'rival', text: '现在？写文档很慢的……', mood: 'surprised' },
+            { id: 's1b', reply: 's1a', speaker: 'you', text: '那就慢。你写，我盯着。', mood: 'hard' },
             { id: 's1c', reply: 's1b', speaker: 'rival', text: '……好吧。', mood: 'shaken' },
-            { id: 's1d', reply: 's1c', speaker: 'you', text: '第一个字段。', mood: 'hard' },
+            { id: 's1d', reply: 's1c', speaker: 'you', text: '第一个字段，写。', mood: 'hard' },
             { id: 's1e', reply: 's1d', speaker: 'rival', text: '……这个我也要查一下。', mood: 'baffled' },
           ],
           ko: [
-            { id: 'k1', speaker: 'rival', text: '……行，文档我补。', mood: 'beaten' },
-            { id: 'k1a', reply: 'k1', speaker: 'you', text: '早该补了。', mood: 'warm' },
-            { id: 'k1b', reply: 'k1a', speaker: 'rival', text: '下次你先看文档。', mood: 'beaten' },
-            { id: 'k1c', reply: 'k1b', speaker: 'you', text: '下次你先把文档写完。', mood: 'warm' },
+            { id: 'k1', speaker: 'rival', text: '……', mood: 'beaten' },
+            { id: 'k1a', reply: 'k1', speaker: 'you', text: '文档呢？写啊。', mood: 'dry' },
           ],
           taunt: [
             { id: 'x1', speaker: 'rival', text: '接口很简单的。', mood: 'airy' },
-            { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你写个例子。', mood: 'dry' },
+            { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你写个例子，现在。', mood: 'hard' },
             { id: 'x1b', reply: 'x1a', speaker: 'rival', text: '例子在你脑子里。', mood: 'cheery' },
 
             { id: 'x2', speaker: 'rival', text: '这个问题我复现不了。', mood: 'smooth' },
-            { id: 'x2a', reply: 'x2', speaker: 'you', text: '我复现了十次。', mood: 'flat' },
+            { id: 'x2a', reply: 'x2', speaker: 'you', text: '我复现了十次，你要不要看记录？', mood: 'hard' },
             { id: 'x2b', reply: 'x2a', speaker: 'rival', text: '那就是你的操作问题。', mood: 'hard' },
-            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '我的操作就是点了你的按钮。', mood: 'dry' },
+            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '我的操作就是点了你的按钮。', mood: 'hard' },
 
             { id: 'x3', speaker: 'rival', text: '你截图看一下。', mood: 'hard' },
-            { id: 'x3a', reply: 'x3', speaker: 'you', text: '截图里看不到报文。', mood: 'flat' },
+            { id: 'x3a', reply: 'x3', speaker: 'you', text: '截图里看不到报文，你自己清楚。', mood: 'hard' },
             { id: 'x3b', reply: 'x3a', speaker: 'rival', text: '那你把报文发我。', mood: 'smooth' },
-            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '报文是你的 500。', mood: 'dry' },
+            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '报文是你的 500，你还要我发给你？', mood: 'hard' },
 
             { id: 'x4', speaker: 'rival', text: '文档上写得很清楚。', mood: 'hard' },
-            { id: 'x4a', reply: 'x4', speaker: 'you', text: '哪个文档？', mood: 'flat' },
+            { id: 'x4a', reply: 'x4', speaker: 'you', text: '哪个文档？你拿出来。', mood: 'hard' },
             { id: 'x4b', reply: 'x4a', speaker: 'rival', text: '就是那个文档。', mood: 'smooth' },
-            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '那个文档根本不存在。', mood: 'dry' },
+            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '那个文档根本不存在，你编吧。', mood: 'hard' },
           ],
         },
       },
@@ -1458,117 +1468,115 @@ window.__ModuleLoader__.load({
         rival: '测试',
         beats: {
           open: [
-            ['rival', '这个版本有个问题。', 'airy'],
-            ['you', '什么问题？', 'flat'],
+            ['rival', '这个版本有个问题。', 'hard'],
+            ['you', '什么问题？说清楚。', 'hard'],
             ['rival', '偶现。', 'airy'],
-            ['you', '怎么复现？', 'dry'],
+            ['you', '偶现是多久一次？给个数。', 'hard'],
             ['rival', '不知道，就是会出现。', 'smooth'],
-            ['you', '出现的时候什么样？', 'flat'],
+            ['you', '出现的时候什么样，你总知道吧？', 'hard'],
             ['rival', '……反正不对。', 'cheery'],
-            ['you', '那我们怎么修？', 'tired'],
+            ['you', '「反正不对」，你让我修什么？', 'hard'],
             ['rival', '你们开发最懂了。', 'airy'],
-            ['you', '我们最懂的是它没问题。', 'dry'],
+            ['you', '我们最懂的是它在你这儿才坏。', 'dry'],
           ],
           chain: [
-            { id: 'c1', speaker: 'you', text: '我按你说的步骤试了十遍。', mood: 'flat' },
+            { id: 'c1', speaker: 'you', text: '我按你说的步骤试了十遍，你先解释。', mood: 'hard' },
             { id: 'c1a', reply: 'c1', speaker: 'rival', text: '那可能是环境。', mood: 'airy' },
-            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '同一个环境。', mood: 'dry' },
+            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '同一个环境，你还能赖到哪去？', mood: 'hard' },
             { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '那就是时机。', mood: 'smooth' },
-            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '什么时机？', mood: 'flat' },
+            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '什么时机？说人话。', mood: 'hard' },
             { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '你手速快一点。', mood: 'cheery' },
-            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '我手速快它就坏？', mood: 'dry' },
+            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '我手速快它就坏？你听听这像话吗。', mood: 'hard' },
             { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '有可能。', mood: 'airy' },
-            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '那用户手速快了怎么办。', mood: 'flat' },
+            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '那用户手速快了怎么办，把锅甩给用户？', mood: 'hard' },
 
-            { id: 'c2', speaker: 'you', text: '这个 bug 是偶现还是必现？', mood: 'flat' },
+            { id: 'c2', speaker: 'you', text: '这个 bug 偶现还是必现，一句话。', mood: 'hard' },
             { id: 'c2a', reply: 'c2', speaker: 'rival', text: '偶现。', mood: 'airy' },
-            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '多久偶现一次。', mood: 'dry' },
+            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '多久一次？别跟我说不清楚。', mood: 'hard' },
             { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '看心情。', mood: 'cheery' },
-            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '代码没有心情。', mood: 'flat' },
+            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '代码没有心情。你是在逗我吗？', mood: 'hard' },
             { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '那就是概率。', mood: 'smooth' },
-            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '概率也得有个数。', mood: 'dry' },
+            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '概率也得有个数，你的数是编的。', mood: 'hard' },
           ],
           guard: [
-            { id: 'g1', speaker: 'you', text: '这个改动不能上。', mood: 'flat' },
+            { id: 'g1', speaker: 'you', text: '这个改动不能上，我说了算。', mood: 'hard' },
             { id: 'g1a', reply: 'g1', speaker: 'rival', text: '为什么不能上？', mood: 'hard' },
-            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '影响面太大。', mood: 'dry' },
+            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '影响面太大，你比我清楚。', mood: 'hard' },
             { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '那我怎么验证？', mood: 'airy' },
-            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '验证不了。', mood: 'flat' },
+            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '验证不了就别证了。', mood: 'hard' },
             { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '验证不了就是没做。', mood: 'hard' },
-            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '验证不了就应该分批上。', mood: 'dry' },
+            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '你这句话说得轻巧，出事谁扛？', mood: 'hard' },
 
             { id: 'g2', speaker: 'rival', text: '你们测试环境为什么这么慢。', mood: 'smooth' },
-            { id: 'g2a', reply: 'g2', speaker: 'you', text: '因为跑在你们的数据上。', mood: 'flat' },
+            { id: 'g2a', reply: 'g2', speaker: 'you', text: '因为跑在你们的数据上。', mood: 'hard' },
             { id: 'g2b', reply: 'g2a', speaker: 'rival', text: '我们数据有什么问题。', mood: 'hard' },
-            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '一百万条脏数据。', mood: 'dry' },
+            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '一百万条脏数据，这叫没问题？', mood: 'hard' },
             { id: 'g2d', reply: 'g2c', speaker: 'rival', text: '那是真实情况。', mood: 'smooth' },
-            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '所以它慢得也很真实。', mood: 'flat' },
+            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '好，那它慢得也很真实。别怪环境。', mood: 'dry' },
           ],
           hit: [
-            { id: 'h1', speaker: 'you', text: '这个 bug 老版本就有。', mood: 'flat' },
+            { id: 'h1', speaker: 'you', text: '这个 bug 老版本就有，别往我身上推。', mood: 'hard' },
             { id: 'h1a', reply: 'h1', speaker: 'rival', text: '那更要修了。', mood: 'hard' },
-            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '那它就不是这次引入的。', mood: 'dry' },
+            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '那就不是这次引入的，你听懂了吗？', mood: 'hard' },
             { id: 'h1c', reply: 'h1b', speaker: 'rival', text: '所以你们一直没修？', mood: 'hard' },
-            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '所以这不是这次的问题。', mood: 'flat' },
+            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '所以这不是这次的问题。别偷换。', mood: 'hard' },
             { id: 'h1e', reply: 'h1d', speaker: 'rival', text: '都是问题。', mood: 'airy' },
-            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '我分得细，你测得细一点。', mood: 'dry' },
+            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '我分得细，你也测得细一点。', mood: 'dry' },
 
-            { id: 'h2', speaker: 'you', text: '这不是我这个改动引起的。', mood: 'flat' },
+            { id: 'h2', speaker: 'you', text: '这不是我这个改动引起的，看日志。', mood: 'hard' },
             { id: 'h2a', reply: 'h2', speaker: 'rival', text: '那就是你上一个改动。', mood: 'hard' },
-            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '上一个改动已经上线两周了。', mood: 'dry' },
+            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '上一个改动已经上线两周了。', mood: 'hard' },
             { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '潜伏期。', mood: 'cheery' },
-            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '代码没有潜伏期，人有。', mood: 'flat' },
+            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '代码没有潜伏期，人有。你听懂了吗？', mood: 'hard' },
             { id: 'h2e', reply: 'h2d', speaker: 'rival', text: '你这话什么意思。', mood: 'shaken' },
-            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '意思是先看日志。', mood: 'dry' },
+            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '意思是先看日志，别猜。', mood: 'dry' },
           ],
           take: [
-            { id: 't1', speaker: 'you', text: '好，我先加日志。', mood: 'tired' },
+            { id: 't1', speaker: 'you', text: '行，我先加日志。但别指望它今晚出结果。', mood: 'hard' },
             { id: 't1a', reply: 't1', speaker: 'rival', text: '加日志能修吗？', mood: 'airy' },
-            { id: 't1b', reply: 't1a', speaker: 'you', text: '能知道它在哪坏的。', mood: 'flat' },
+            { id: 't1b', reply: 't1a', speaker: 'you', text: '能知道它在哪坏的，你急什么。', mood: 'hard' },
             { id: 't1c', reply: 't1b', speaker: 'rival', text: '那多久能修好？', mood: 'hard' },
-            { id: 't1d', reply: 't1c', speaker: 'you', text: '先知道，再谈修。', mood: 'dry' },
+            { id: 't1d', reply: 't1c', speaker: 'you', text: '先知道，再谈修。你别催。', mood: 'hard' },
             { id: 't1e', reply: 't1d', speaker: 'rival', text: '上线前能修好吗？', mood: 'smooth' },
-            { id: 't1f', reply: 't1e', speaker: 'you', text: '上线时间是谁定的？', mood: 'flat' },
+            { id: 't1f', reply: 't1e', speaker: 'you', text: '上线时间是谁定的？你说。', mood: 'hard' },
 
             { id: 't2', speaker: 'rival', text: '要不先上了再说。', mood: 'airy' },
-            { id: 't2a', reply: 't2', speaker: 'you', text: '上了出问题谁扛？', mood: 'flat' },
+            { id: 't2a', reply: 't2', speaker: 'you', text: '上了出问题谁扛？你扛吗？', mood: 'hard' },
             { id: 't2b', reply: 't2a', speaker: 'rival', text: '可以回滚。', mood: 'cheery' },
-            { id: 't2c', reply: 't2b', speaker: 'you', text: '回滚过一次了。', mood: 'dry' },
+            { id: 't2c', reply: 't2b', speaker: 'you', text: '回滚过一次了，忘了？', mood: 'hard' },
             { id: 't2d', reply: 't2c', speaker: 'rival', text: '那就再回滚一次。', mood: 'airy' },
-            { id: 't2e', reply: 't2d', speaker: 'you', text: '回滚不是方案，是缓刑。', mood: 'tired' },
+            { id: 't2e', reply: 't2d', speaker: 'you', text: '回滚不是方案，是缓刑。我们不是赌徒。', mood: 'hard' },
           ],
           super: [
-            { id: 's1', speaker: 'you', text: '这一版先别上，先把它复现出来。', mood: 'hard' },
-            { id: 's1a', reply: 's1', speaker: 'rival', text: '可是时间到了。', mood: 'surprised' },
-            { id: 's1b', reply: 's1a', speaker: 'you', text: '复现出来再上，我负责修。', mood: 'hard' },
+            { id: 's1', speaker: 'you', text: '这一版先别上。现在，把它复现出来。', mood: 'hard' },
+            { id: 's1a', reply: 's1', speaker: 'rival', text: '可是时间到了……', mood: 'surprised' },
+            { id: 's1b', reply: 's1a', speaker: 'you', text: '时间到了就把坏的推上去？坐下。', mood: 'hard' },
             { id: 's1c', reply: 's1b', speaker: 'rival', text: '……行，我盯着看。', mood: 'shaken' },
-            { id: 's1d', reply: 's1c', speaker: 'you', text: '我们一起看。', mood: 'hard' },
-            { id: 's1e', reply: 's1d', speaker: 'rival', text: '好，我给你倒杯水。', mood: 'warm' },
+            { id: 's1d', reply: 's1c', speaker: 'you', text: '我们一起看。看它什么时候坏。', mood: 'hard' },
+            { id: 's1e', reply: 's1d', speaker: 'rival', text: '……我先把日志开开。', mood: 'warm' },
           ],
           ko: [
-            { id: 'k1', speaker: 'rival', text: '……复现了，是那个空值。', mood: 'beaten' },
-            { id: 'k1a', reply: 'k1', speaker: 'you', text: '好，我改。', mood: 'warm' },
-            { id: 'k1b', reply: 'k1a', speaker: 'rival', text: '这次是我没说清。', mood: 'beaten' },
-            { id: 'k1c', reply: 'k1b', speaker: 'you', text: '下次直接把日志给我。', mood: 'warm' },
+            { id: 'k1', speaker: 'rival', text: '……', mood: 'beaten' },
+            { id: 'k1a', reply: 'k1', speaker: 'you', text: '日志呢？现在贴出来。', mood: 'dry' },
           ],
           taunt: [
             { id: 'x1', speaker: 'rival', text: '我这边没问题。', mood: 'airy' },
-            { id: 'x1a', reply: 'x1', speaker: 'you', text: '你这边是哪个这边。', mood: 'dry' },
+            { id: 'x1a', reply: 'x1', speaker: 'you', text: '你这边是哪个这边？说清楚。', mood: 'hard' },
             { id: 'x1b', reply: 'x1a', speaker: 'rival', text: '我电脑这边。', mood: 'cheery' },
-            { id: 'x1c', reply: 'x1b', speaker: 'you', text: '用户不在你电脑里。', mood: 'flat' },
+            { id: 'x1c', reply: 'x1b', speaker: 'you', text: '用户不在你电脑里，懂吗。', mood: 'hard' },
 
             { id: 'x2', speaker: 'rival', text: '你重启一下试试。', mood: 'smooth' },
-            { id: 'x2a', reply: 'x2', speaker: 'you', text: '我重启三次了。', mood: 'flat' },
+            { id: 'x2a', reply: 'x2', speaker: 'you', text: '我重启三次了。', mood: 'hard' },
             { id: 'x2b', reply: 'x2a', speaker: 'rival', text: '那清一下缓存。', mood: 'airy' },
-            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '你说的都是「再试一次」。', mood: 'dry' },
+            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '你说的都是「再试一次」，这叫修 bug？', mood: 'hard' },
 
             { id: 'x3', speaker: 'rival', text: '这个功能本来就没人用。', mood: 'smooth' },
-            { id: 'x3a', reply: 'x3', speaker: 'you', text: '没人用你为什么测它。', mood: 'flat' },
+            { id: 'x3a', reply: 'x3', speaker: 'you', text: '没人用你为什么测它？', mood: 'hard' },
             { id: 'x3b', reply: 'x3a', speaker: 'rival', text: '所以我才测出来。', mood: 'cheery' },
-            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '……这句我认。', mood: 'dry' },
+            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '……这句我认，但你还是得给日志。', mood: 'dry' },
 
             { id: 'x4', speaker: 'rival', text: '我提的这些都是为项目好。', mood: 'cheery' },
-            { id: 'x4a', reply: 'x4', speaker: 'you', text: '我知道。', mood: 'flat' },
+            { id: 'x4a', reply: 'x4', speaker: 'you', text: '我知道，但你别拿这个压我。', mood: 'hard' },
             { id: 'x4b', reply: 'x4a', speaker: 'rival', text: '你别往心里去。', mood: 'airy' },
             { id: 'x4c', reply: 'x4b', speaker: 'you', text: '我没往心里去，我往日志里去了。', mood: 'dry' },
           ],
@@ -1620,10 +1628,10 @@ window.__ModuleLoader__.load({
      *     speaker is taken from the thread, never from the trigger.
      *
      *   - **a MOMENT line** (`super`, `ko`) is a set piece: the player announcing
-     *     the finisher, the truce after a knockout. It must sound like the player
-     *     when the player triggered it, so its speaker comes from the BEAT, and it
-     *     does not advance the thread — after it, the argument picks up exactly
-     *     where it left off.
+     *     the finisher, the last word after a knockout. It must sound like the
+     *     player when the player triggered it, so its speaker comes from the BEAT,
+     *     and it does not advance the thread — after it, the argument picks up
+     *     exactly where it left off.
      *
      * `open` is an ordered script that seeds the thread, so the first fight line
      * answers the last opening line.
@@ -1644,10 +1652,15 @@ window.__ModuleLoader__.load({
       const MOMENT_BEATS = ['super', 'ko']
 
       const openScript = (() => {
-        const lines = (story.beats.open ?? []).map(parseLine)
-        const start = Math.floor(rng() * Math.max(1, lines.length))
-        // A rotation, not a shuffle: any starting point reads as a conversation.
-        return lines.slice(start).concat(lines.slice(0, start))
+        /**
+         * In order, from the top. This used to be rotated to a random start so
+         * consecutive rounds did not feel identical, but the script is a SCENE:
+         * its replies only mean anything after the line they answer. Starting at
+         * 「我这边测是好的。」 leaves the player watching an argument they walked
+         * into halfway, and the promise that "every line answers the last one"
+         * quietly fails on the very first line.
+         */
+        return (story.beats.open ?? []).map(parseLine)
       })()
       let openAt = 0
 
@@ -1746,6 +1759,8 @@ window.__ModuleLoader__.load({
 
       return {
         story,
+        /** How many `open` lines this story has; the arena drains them all. */
+        get openLineCount() { return openScript.length },
         /** The line currently awaiting an answer; the tests assert continuity. */
         get awaiting() { return awaiting },
         get awaitingSpeaker() { return awaitingSpeaker },
@@ -1918,7 +1933,14 @@ window.__ModuleLoader__.load({
       // which is what makes crouching and sweeping worth having.
       const isLow = spec.part === FOOT_F || name === 'sweep' || name === 'slide'
       const guarding = v.block && !isLow && v.state !== 'atk'
-      const dealt = guarding ? Math.max(1, Math.round(spec.dmg * 0.2)) : spec.dmg
+      /**
+       * The attacker's own multiplier, not the move's. `normal` difficulty hands
+       * the player 0.5 here, so the same jab is the same jab and lands the same
+       * way — it just counts for less. A guarded hit is floored at 1 so a block
+       * always reads as "something got through".
+       */
+      const scale = Number.isFinite(a.dmgScale) ? a.dmgScale : 1
+      const dealt = Math.max(1, Math.round(spec.dmg * scale * (guarding ? 0.2 : 1)))
 
       // The PLAYER floors at 1: this is an opening animation, not a game over.
       // An enemy at 0 is a knockout.
@@ -2019,6 +2041,31 @@ window.__ModuleLoader__.load({
     })
 
     /**
+     * The difficulty knob, in one place.
+     *
+     * `playerDmg` is the handicap and `tempo` is how hard the opponent presses.
+     * These used to be absent entirely: the client read `difficulty` from the
+     * host config and handed it to `createDuel`, which dropped it on the floor —
+     * both settings played the identical fight.
+     *
+     * `normal` halves the player's damage and gives the rival a tighter clock: it
+     * swings sooner, and it answers a landed hit inside `retaliate` seconds
+     * instead of waiting out its own cooldown. The rival's own damage is
+     * deliberately NOT raised — the player asked for a harder fight, not for the
+     * opening animation to start killing them.
+     */
+    const DIFFICULTY = Object.freeze({
+      easy: Object.freeze({
+        playerDmg: 1,
+        tempo: Object.freeze({ gap: [0.7, 1.3], gapClose: [0.8, 1.4], retaliate: null }),
+      }),
+      normal: Object.freeze({
+        playerDmg: 0.5,
+        tempo: Object.freeze({ gap: [0.4, 0.8], gapClose: [0.5, 0.9], retaliate: 0.4 }),
+      }),
+    })
+
+    /**
      * Player input to attack. The mapping is deliberately small: two punches, a
      * kick, a launcher and a slide, which is the vocabulary a hand-keyboard
      * fight needs before it needs more.
@@ -2036,13 +2083,17 @@ window.__ModuleLoader__.load({
     }
 
     class Arena {
+      /** The difficulty table is public so the client can label the setting. */
+      static get DIFFICULTY() { return DIFFICULTY }
       /**
        * @param {object} opts
        * @param {boolean} [opts.reducedMotion]
        * @param {number} [opts.round] which story to tell this round (0..2 cycling)
+       * @param {'easy'|'normal'} [opts.difficulty] how hard the opponent presses
        */
-      constructor({ reducedMotion = false, round = 0 } = {}) {
+      constructor({ reducedMotion = false, round = 0, difficulty = 'easy' } = {}) {
         this.juice = new Juice({ reducedMotion })
+        this.difficulty = DIFFICULTY[difficulty] ? difficulty : 'easy'
         this.phase = 'ready'
         this.t = 0
         this.koT = 0
@@ -2071,8 +2122,13 @@ window.__ModuleLoader__.load({
       }
 
       reset() {
-        this.player = new Fighter('player', WORLD.width / 2 - 110, WORLD.groundY)
-        this.enemy = new Fighter('enemy', WORLD.width / 2 + 110, WORLD.groundY)
+        const tune = DIFFICULTY[this.difficulty] ?? DIFFICULTY.easy
+        this.player = new Fighter('player', WORLD.width / 2 - 110, WORLD.groundY, {
+          dmgScale: tune.playerDmg,
+        })
+        this.enemy = new Fighter('enemy', WORLD.width / 2 + 110, WORLD.groundY, {
+          ai: tune.tempo,
+        })
         this.enemy.ai.cd = 1.2
         this.phase = 'ready'
         this.t = 0
@@ -2118,11 +2174,23 @@ window.__ModuleLoader__.load({
       begin() {
         if (this.phase !== 'ready') return false
         this.phase = 'playing'
-        // The story opens with a short exchange rather than a greeting: the player
-        // reads two or three lines before the fight, which is what makes the
-        // first hit land on top of an argument instead of on silence.
-        this.openQueue = 2 + Math.floor(Math.random() * 2)
+        /**
+         * The whole opening exchange, not a sample of it.
+         *
+         * This used to be `2 + random(2)`: the player saw two or three lines and
+         * the rest were dropped on the floor. Worse, the script itself was
+         * ROTATED to a random starting point, so those two or three lines began in
+         * the middle of an argument — one player got 「文档呢？你连文档都没有？」,
+         * the next got 「我这边测是好的。」 as the opening line, which answers
+         * nothing because what it answers was never said.
+         *
+         * The exchange is written as a scene: it has a first line and a last one.
+         * It is played in order, from the top, and the fight's own barks wait for
+         * it to finish (`say` refuses while the queue is draining).
+         */
+        this.openQueue = this.barks.openLineCount
         this.say('open', true)
+        this.openQueue = Math.max(0, this.openQueue - 1)
         return true
       }
 
@@ -2153,6 +2221,24 @@ window.__ModuleLoader__.load({
           return
         }
 
+        /**
+         * THE STANDOFF. While the opening exchange is still being spoken, neither
+         * side can move: this is the two of them arguing across the desk, not a
+         * fight that happens to have subtitles. Letting the fight run under the
+         * dialogue produced the worst possible read — by the time the rival got
+         * to 「接口就是文档」 the player was already on the floor, so the line
+         * landed on a knocked-out body.
+         *
+         * `openQueue` is the honest signal: it is non-zero exactly until the last
+         * scripted line has been said. Fight barks are already suppressed while it
+         * drains, so the two halves of the round stay in their own order.
+         */
+        if (this.openQueue > 0) {
+          this.stepBarks(DT)
+          for (const f of this.fighters) { f.time += DT; f.pose(); f.rig.setPose(f.tx, f.ty) }
+          return
+        }
+
         if (this.phase === 'ko') {
           this.koT += DT
           // The four beats of the finish. Each one has to be SEEN, so the beats
@@ -2179,6 +2265,18 @@ window.__ModuleLoader__.load({
             for (const f of this.fighters) f.step(w)
           }
           this.stepParticles()
+          /**
+           * The last words, drained like a script.
+           *
+           * `checkKo` fires the first `ko` line; the rest were never spoken,
+           * because nothing advanced the moment script after the bell had already
+           * rung — so a four-line cold cut played one line and the knockout stood
+           * there in silence. The bubble is still stepped here (the playing phase
+           * is over, so its own `stepBarks` no longer runs), and the next line
+           * lands once the previous bubble has had a beat to be read.
+           */
+          this.stepBarks(DT)
+          if (this.koT > 0.95 && this.lineGap <= 0) this.say('ko', true)
           if (this.koT > 2.8) this.phase = 'done'
           return
         }
@@ -2421,7 +2519,16 @@ window.__ModuleLoader__.load({
           life: 1,
           side: line.speaker === 'you' ? 'player' : 'enemy',
         }
-        this.lineGap = force ? 0.4 : 2.2
+        /**
+         * How long until the next line may replace this one.
+         *
+         * The opening is a BACK-AND-FORTH, so its lines have to alternate at
+         * speaking pace: `force` used to set a flat 0.4 s for everyone, and with
+         * the drain threshold at 0.35 s that played ten lines in three frames
+         * each — a flicker, not a conversation. A second and a quarter per line
+         * is roughly how fast two people talking over each other go.
+         */
+        this.lineGap = beat === 'open' ? 1.25 : force ? 0.4 : 2.2
       }
 
       /** Advance the bubble and its cooldown. */
@@ -2431,20 +2538,22 @@ window.__ModuleLoader__.load({
           this.line.life -= dt * 0.42
           if (this.line.life <= 0) this.line = null
         }
-        // The opening exchange, drained in the first few seconds of the round.
+        // The opening exchange, drained in order.
         //
         // It OVERWRITES whatever is on screen rather than waiting for the bubble
         // to clear: a fight bark that fires during the opening would otherwise
         // replace the next scripted line, and "……现在？" would be answered by
         // "年底绩效我给你考虑". The story comes first; the fight's own barks wait
         // their turn.
-        if (this.openQueue > 0 && this.t < 4.5) {
+        //
+        // Exit condition is the QUEUE, not a clock. The old `this.t < 4.5` cap cut
+        // the last few lines off whenever a bubble ran long, so an opening written
+        // as one argument trailing off stopped mid-sentence.
+        if (this.openQueue > 0) {
           if (this.lineGap <= 0.35) {
             this.openQueue -= 1
             this.say('open', true)
           }
-        } else if (this.openQueue > 0) {
-          this.openQueue = 0
         }
       }
 
@@ -2611,6 +2720,22 @@ window.__ModuleLoader__.load({
 
       onHit(hit) {
         const { victim, x, y, power, reaction, kill, juggle, name } = hit
+        /**
+         * The `normal` opponent does not sit through its own cooldown after being
+         * hit: a clean connection arms its next swing for `retaliate` seconds from
+         * now, so trading blows with it is a race instead of a free turn. A guard
+         * or a juggle does not arm it — being shoved or floated is not an opening.
+         */
+        const tempo = this.enemy.aiTempo
+        if (
+          hit.attacker.team === 'p' &&
+          tempo?.retaliate &&
+          !kill &&
+          reaction !== 'guard' &&
+          reaction !== 'juggle'
+        ) {
+          this.enemy.ai.cd = Math.min(this.enemy.ai.cd, tempo.retaliate)
+        }
         // Being knocked down is a beat of the player's story.
         if (hit.attacker.team !== 'p' && (reaction === 'launch' || reaction === 'knockdown')) {
           this.say('take')
@@ -2839,8 +2964,8 @@ window.__ModuleLoader__.load({
      * when a swing starts, `thud` when it lands, `clink` on a block, `boom` on a
      * knockout.
      */
-    function createDuel({ reducedMotion = false, round = 0 } = {}) {
-      const arena = new Arena({ reducedMotion, round })
+    function createDuel({ reducedMotion = false, round = 0, difficulty = 'easy' } = {}) {
+      const arena = new Arena({ reducedMotion, round, difficulty })
       let events = []
       let lastPhase = arena.phase
       let clock = 0
@@ -2962,7 +3087,12 @@ window.__ModuleLoader__.load({
           return false
         },
         /** Start a fresh round, for the settings panel's "再来一局". */
-        restart(round) {
+        restart(round, opts = {}) {
+          // The panel may have changed the difficulty since this duel was built;
+          // `再来一局` is a new round, so it should honour the new setting.
+          if (opts.difficulty === 'easy' || opts.difficulty === 'normal') {
+            arena.difficulty = opts.difficulty
+          }
           arena.restart(round)
           events = []
           lastView = null
@@ -5032,6 +5162,8 @@ window.__ModuleLoader__.load({
         'settings.difficulty': '对手强度',
         'settings.easy': '轻松',
         'settings.normal': '认真',
+        'settings.easyNote': '伤害正常',
+        'settings.normalNote': '我方伤害减半，对手更凶',
         'settings.binds': '键位',
         'settings.restart': '再来一局',
         'settings.resetBinds': '恢复默认键位',
@@ -5113,6 +5245,8 @@ window.__ModuleLoader__.load({
         'settings.difficulty': 'Opponent',
         'settings.easy': 'Easy',
         'settings.normal': 'Firm',
+        'settings.easyNote': 'Normal damage',
+        'settings.normalNote': 'Your damage halved, rival presses harder',
         'settings.binds': 'Key bindings',
         'settings.restart': 'One more round',
         'settings.resetBinds': 'Reset keys',
@@ -5318,7 +5452,19 @@ window.__ModuleLoader__.load({
 .boot-duel-layer {
   position: fixed;
   inset: 0;
-  z-index: 2147480000;
+  /**
+   * Above every other overlay in the market. This is not a bid for attention:
+   * the opening is a modal surface the page underneath must not leak through,
+   * and the host's own settings sheet and dialogs are portalled to the body
+   * with fixed positioning of their own. At 2147480000 the layer sat UNDER
+   * them, so a dialog opened on the previous page could still be painted on
+   * top of the fight — and its buttons were clickable through the game.
+   *
+   * 2147483300 clears the highest overlay in the ecosystem (the screen
+   * recorder's 2147483200) without going near the 32-bit ceiling, and the
+   * layer is removed on win/skip, which restores whatever is beneath it.
+   */
+  z-index: 2147483300;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
@@ -5585,6 +5731,9 @@ window.__ModuleLoader__.load({
   background: transparent; color: inherit; cursor: pointer;
 }
 .boot-duel-host-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; opacity: .6; }
+/* The in-game panel's note sits under a row it belongs to, so it is indented
+   to the value column rather than starting at the row's left edge. */
+.boot-duel-set-note { margin: -4px 0 6px; font-size: 11.5px; line-height: 1.55; opacity: .55; }
 .boot-duel-host-section-head {
   margin: 14px 0 8px; padding-top: 12px; font-size: 12px;
   letter-spacing: .14em; opacity: .62;
@@ -6129,6 +6278,8 @@ window.__ModuleLoader__.load({
           }),
         ),
         // --- difficulty ---------------------------------------------
+        // The two difficulties are not obvious from their names, and the
+        // player should not have to lose a round to learn what 「认真」 means.
         React.createElement('label', { className: 'boot-duel-set-row' },
           React.createElement('span', { className: 'boot-duel-set-label' }, t('settings.difficulty')),
           React.createElement('select', {
@@ -6139,6 +6290,8 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'normal' }, t('settings.normal')),
           ),
         ),
+        React.createElement('p', { className: 'boot-duel-set-note' },
+          t(local.difficulty === 'normal' ? 'settings.normalNote' : 'settings.easyNote')),
 
         // --- key binds ----------------------------------------------
         React.createElement('div', { className: 'boot-duel-set-section' }, t('settings.binds')),
@@ -6234,6 +6387,12 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'easy' }, t('settings.easy')),
             React.createElement('option', { value: 'normal' }, t('settings.normal')),
           )),
+
+        // What 「认真」 actually changes. The two difficulties used to be
+        // identical in play, so a label was enough; now one halves the
+        // player's damage and tightens the rival, and that is worth a line.
+        React.createElement('p', { className: 'boot-duel-host-note' },
+          t(local.difficulty === 'normal' ? 'settings.normalNote' : 'settings.easyNote')),
 
         React.createElement('div', { className: 'boot-duel-host-section-head' }, t('settings.binds')),
         React.createElement('div', { className: 'boot-duel-host-binds' },
@@ -6671,7 +6830,7 @@ window.__ModuleLoader__.load({
           // Re-arming the round invalidates any pending hide from the old one.
           store.generation += 1
           settings = { ...settings }
-          duel.restart?.(null)
+          duel.restart?.(null, { difficulty: settings.difficulty })
           session.setBinds?.(settings.binds)
           session.releaseAll()
           setPaused(false)

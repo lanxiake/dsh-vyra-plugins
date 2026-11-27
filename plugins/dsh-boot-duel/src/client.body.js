@@ -78,6 +78,8 @@ window.__ModuleLoader__.load({
         'settings.difficulty': '对手强度',
         'settings.easy': '轻松',
         'settings.normal': '认真',
+        'settings.easyNote': '伤害正常',
+        'settings.normalNote': '我方伤害减半，对手更凶',
         'settings.binds': '键位',
         'settings.restart': '再来一局',
         'settings.resetBinds': '恢复默认键位',
@@ -159,6 +161,8 @@ window.__ModuleLoader__.load({
         'settings.difficulty': 'Opponent',
         'settings.easy': 'Easy',
         'settings.normal': 'Firm',
+        'settings.easyNote': 'Normal damage',
+        'settings.normalNote': 'Your damage halved, rival presses harder',
         'settings.binds': 'Key bindings',
         'settings.restart': 'One more round',
         'settings.resetBinds': 'Reset keys',
@@ -364,7 +368,19 @@ window.__ModuleLoader__.load({
 .boot-duel-layer {
   position: fixed;
   inset: 0;
-  z-index: 2147480000;
+  /**
+   * Above every other overlay in the market. This is not a bid for attention:
+   * the opening is a modal surface the page underneath must not leak through,
+   * and the host's own settings sheet and dialogs are portalled to the body
+   * with fixed positioning of their own. At 2147480000 the layer sat UNDER
+   * them, so a dialog opened on the previous page could still be painted on
+   * top of the fight — and its buttons were clickable through the game.
+   *
+   * 2147483300 clears the highest overlay in the ecosystem (the screen
+   * recorder's 2147483200) without going near the 32-bit ceiling, and the
+   * layer is removed on win/skip, which restores whatever is beneath it.
+   */
+  z-index: 2147483300;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
@@ -631,6 +647,9 @@ window.__ModuleLoader__.load({
   background: transparent; color: inherit; cursor: pointer;
 }
 .boot-duel-host-note { margin: 4px 0 0; font-size: 12px; line-height: 1.6; opacity: .6; }
+/* The in-game panel's note sits under a row it belongs to, so it is indented
+   to the value column rather than starting at the row's left edge. */
+.boot-duel-set-note { margin: -4px 0 6px; font-size: 11.5px; line-height: 1.55; opacity: .55; }
 .boot-duel-host-section-head {
   margin: 14px 0 8px; padding-top: 12px; font-size: 12px;
   letter-spacing: .14em; opacity: .62;
@@ -1175,6 +1194,8 @@ window.__ModuleLoader__.load({
           }),
         ),
         // --- difficulty ---------------------------------------------
+        // The two difficulties are not obvious from their names, and the
+        // player should not have to lose a round to learn what 「认真」 means.
         React.createElement('label', { className: 'boot-duel-set-row' },
           React.createElement('span', { className: 'boot-duel-set-label' }, t('settings.difficulty')),
           React.createElement('select', {
@@ -1185,6 +1206,8 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'normal' }, t('settings.normal')),
           ),
         ),
+        React.createElement('p', { className: 'boot-duel-set-note' },
+          t(local.difficulty === 'normal' ? 'settings.normalNote' : 'settings.easyNote')),
 
         // --- key binds ----------------------------------------------
         React.createElement('div', { className: 'boot-duel-set-section' }, t('settings.binds')),
@@ -1280,6 +1303,12 @@ window.__ModuleLoader__.load({
             React.createElement('option', { value: 'easy' }, t('settings.easy')),
             React.createElement('option', { value: 'normal' }, t('settings.normal')),
           )),
+
+        // What 「认真」 actually changes. The two difficulties used to be
+        // identical in play, so a label was enough; now one halves the
+        // player's damage and tightens the rival, and that is worth a line.
+        React.createElement('p', { className: 'boot-duel-host-note' },
+          t(local.difficulty === 'normal' ? 'settings.normalNote' : 'settings.easyNote')),
 
         React.createElement('div', { className: 'boot-duel-host-section-head' }, t('settings.binds')),
         React.createElement('div', { className: 'boot-duel-host-binds' },
@@ -1717,7 +1746,7 @@ window.__ModuleLoader__.load({
           // Re-arming the round invalidates any pending hide from the old one.
           store.generation += 1
           settings = { ...settings }
-          duel.restart?.(null)
+          duel.restart?.(null, { difficulty: settings.difficulty })
           session.setBinds?.(settings.binds)
           session.releaseAll()
           setPaused(false)

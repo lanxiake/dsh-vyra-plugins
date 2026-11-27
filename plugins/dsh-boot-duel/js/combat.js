@@ -129,7 +129,14 @@ export function applyHit(a, v, name, hx, hy, world, onHit) {
   // which is what makes crouching and sweeping worth having.
   const isLow = spec.part === FOOT_F || name === 'sweep' || name === 'slide'
   const guarding = v.block && !isLow && v.state !== 'atk'
-  const dealt = guarding ? Math.max(1, Math.round(spec.dmg * 0.2)) : spec.dmg
+  /**
+   * The attacker's own multiplier, not the move's. `normal` difficulty hands
+   * the player 0.5 here, so the same jab is the same jab and lands the same
+   * way — it just counts for less. A guarded hit is floored at 1 so a block
+   * always reads as "something got through".
+   */
+  const scale = Number.isFinite(a.dmgScale) ? a.dmgScale : 1
+  const dealt = Math.max(1, Math.round(spec.dmg * scale * (guarding ? 0.2 : 1)))
 
   // The PLAYER floors at 1: this is an opening animation, not a game over.
   // An enemy at 0 is a knockout.
