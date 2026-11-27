@@ -1253,7 +1253,11 @@ window.__ModuleLoader__.load({
      */
     async function playAct(services, act) {
       const wanted = String(act?.name ?? '')
-      if (wanted === '') return { reason: 'act needs a name', code: 'bad_step' }
+      if (wanted === '') {
+        const label = String(act?.wanted ?? act?.text ?? '').trim()
+        if (label === '') return { reason: 'act needs a name', code: 'bad_step' }
+        return playLabelled(services, act, label)
+      }
       const snap = snapshotElements({ limit: 300 })
       const matches = snap.elements.filter((element) => element.name === wanted
         && (act.role === undefined || element.role === act.role))
@@ -1276,6 +1280,60 @@ window.__ModuleLoader__.load({
         ref: target.ref,
         snapshotId: snap.snapshotId,
         text: act.text,
+        value: act.value,
+        label: act.label,
+      })
+      return outcome.status === 'ok'
+        ? undefined
+        : { reason: String(outcome.reason ?? outcome.status), code: String(outcome.code ?? outcome.status) }
+    }
+
+    /**
+     * One `act` step resolved by the element's VISIBLE LABEL.
+     *
+     * `name` matches the whole accessible text, which for a settings nav row is
+     * "icon 免费模型" — the glyph is part of the node. This path matches an element
+     * whose own text, aria-label or title EQUALS the label after collapsing
+     * whitespace, or, for a clickable row, whose text merely CONTAINS it; a
+     * match inside `[data-shortcut-modal]` (the open dialog) always wins over
+     * one in the page's background, because that is what the labeller meant.
+     *
+     * @returns `undefined`, or `{ reason, code }` naming the failure.
+     */
+    async function playLabelled(services, act, label) {
+      const squash = (value) => String(value ?? '').replace(/\s+/gu, ' ').trim()
+      const root = doc()
+      if (root === undefined) return { reason: 'the page is not available', code: 'no_document' }
+      const wanted = squash(label)
+      const selector = 'button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="switch"], input, textarea, select'
+      const inDialog = []
+      const elsewhere = []
+      for (const node of root.querySelectorAll?.(selector) ?? []) {
+        const own = [squash(node.textContent).slice(0, 120), squash(node.getAttribute?.('aria-label')), squash(node.getAttribute?.('title'))]
+        const exact = own.some((value) => value !== '' && value === wanted)
+        const contains = squash(node.textContent).includes(wanted)
+        if (!exact && !contains) continue
+        const box = node.getBoundingClientRect?.()
+        if (box === undefined || box === null || box.width <= 0 || box.height <= 0) continue
+        if (node.disabled === true || node.getAttribute?.('aria-disabled') === 'true') continue
+        const bucket = node.closest?.('[data-shortcut-modal]') != null ? inDialog : elsewhere
+        bucket.push({ node, exact })
+      }
+      const pick = (bucket) => bucket.find((row) => row.exact)?.node ?? bucket[0]?.node
+      const node = pick(inDialog) ?? pick(elsewhere)
+      if (node === undefined) {
+        return { reason: `no element labelled "${wanted}" is on the page`, code: 'not_found' }
+      }
+      const snap = snapshotElements({ limit: 400 })
+      const entry = snap.elements.find((element) => element.__node === node)
+      if (entry === undefined) {
+        return { reason: `"${wanted}" is on the page but offers no handle to act on`, code: 'no_handle' }
+      }
+      const outcome = await actOn(services, {
+        action: act.action ?? 'click',
+        ref: entry.ref,
+        snapshotId: snap.snapshotId,
+        text: act.value === undefined ? act.text : undefined,
         value: act.value,
         label: act.label,
       })

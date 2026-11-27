@@ -1702,6 +1702,48 @@ async function handleAgentStart(req, res) {
   }
 }
 
+/**
+ * Report how one agent recording ended.
+ *
+ * A caller that started a recording needs to know whether the video was WRITTEN
+ * or DISCARDED, and the job cannot say: both outcomes clear it. The verdict is
+ * in `state-<id>.json`, which `handleAgentSave` and `handleAgentError` write.
+ * Exposing it lets a pipeline wait for a real answer instead of inferring one
+ * from the job's disappearance — an inference that reported failed encodes as
+ * saved takes.
+ *
+ * @param req - GET with `?id=`.
+ * @param res - `{ ok: true, status }` where status is `done`, `error` or
+ *   `pending`; `file`/`bytes` travel with `done`, `error` with `error`.
+ */
+async function handleAgentOutcome(req, res) {
+  if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
+  const url = new URL(req.url || PREFIX, 'http://localhost')
+  const id = url.searchParams.get('id') || ''
+  if (id === '') { sendJson(res, 400, { ok: false, error: '需要 id 参数' }); return }
+  // A running job has no file yet, and saying so is more useful than "pending"
+  // alone: the caller learns the recording is alive rather than lost.
+  const live = agentJob !== null && agentJob.id === id ? agentJob.status : null
+  try {
+    const text = await readFile(path.join(agentDir(), 'state-' + id + '.json'), 'utf8')
+    const state = JSON.parse(text)
+    const status = state && typeof state.status === 'string' ? state.status : 'pending'
+    sendJson(res, 200, {
+      ok: true,
+      status,
+      job: live,
+      file: state.file,
+      dir: state.dir,
+      bytes: state.bytes,
+      error: state.error,
+    })
+  } catch {
+    // No state file yet: either the recording is still running or the id is not
+    // this recorder's. Both are "nothing to report", not an error.
+    sendJson(res, 200, { ok: true, status: 'pending', job: live })
+  }
+}
+
 async function handleAgentStatus(req, res) {
   if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: '只接受 GET' }); return }
   if (agentJob === null) { sendJson(res, 200, { ok: true, job: null }); return }
@@ -1803,6 +1845,7 @@ const ROUTES = [
   } },
   { kind: 'prefix', path: PREFIX + '/agent/start', handler: handleAgentStart },
   { kind: 'prefix', path: PREFIX + '/agent/status', handler: handleAgentStatus },
+  { kind: 'prefix', path: PREFIX + '/agent/outcome', handler: handleAgentOutcome },
   { kind: 'prefix', path: PREFIX + '/agent/stop', handler: handleAgentStop },
   { kind: 'prefix', path: PREFIX + '/agent/save', handler: handleAgentSave },
   { kind: 'prefix', path: PREFIX + '/agent/error', handler: handleAgentError },
@@ -1919,5 +1962,5 @@ export const __test = {
   parseShortcut, formatShortcut, resolveOcrEngine, splitPatchRows, parseEngineRows,
   pickOcrEngine, runOcr, ocrEngines, winrtLanguages, allowedTarget, clipboardDir,
   handleOcr, handleOcrStatus, handleClipboard,
-  handleAgentStop, handleAgentStart,
+  handleAgentStop, handleAgentStart, handleAgentOutcome,
 }

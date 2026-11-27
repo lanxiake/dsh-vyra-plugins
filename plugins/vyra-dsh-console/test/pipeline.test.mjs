@@ -88,20 +88,54 @@ test('the step limit is enforced', () => {
  * so a test can assert the ORDER of start/stop/discard, which is the part a
  * pipeline gets wrong.
  */
-function recorderStub({ startFails = false, stopFails = false, encodeHangs = false } = {}) {
+function recorderStub({ startFails = false, stopFails = false, encodeFails = false } = {}) {
   const calls = []
   let job = null
+  /** Per-recording verdicts, the way the recorder keeps `state-<id>.json`. */
+  const outcomes = new Map()
+
+  /**
+   * Finish a recording the way the page would: write the verdict to the state
+   * store and clear the job. Both a success and a failure clear the job, which
+   * is exactly why waiting on the job's absence cannot tell them apart.
+   */
+  const finish = (id) => {
+    if (job === null || job.id !== id || job.status !== 'encoding') return
+    outcomes.set(id, encodeFails
+      ? { status: 'error', error: 'the encoder failed' }
+      : { status: 'done', file: 'demo.mp4', bytes: 1234 })
+    job = null
+  }
+
   const fetch = async (url, options = {}) => {
     const path = new URL(url).pathname.replace('/plugins/vyra-screen-recorder', '')
     const method = options.method ?? 'GET'
+    const id = new URL(url).searchParams.get('id') ?? ''
     calls.push(`${method} ${path.split('?')[0]}`)
     const json = (status, body) => ({
       ok: status < 400,
       status,
       text: async () => JSON.stringify(body),
     })
+    if (path.startsWith('/sources')) {
+      return json(200, {
+        ok: true,
+        // A terminal is deliberately larger than the app's window: on a real
+        // screen it usually is, and picking the biggest window outright chose
+        // the terminal.
+        windows: [
+          { hwnd: 1111, title: '✳ a terminal', process: 'WindowsTerminal', w: 1800, h: 1200 },
+          { hwnd: 4242, title: 'DeepSeek Harness', process: 'DeepSeek Harness', w: 1600, h: 1000 },
+        ],
+        monitors: [],
+      })
+    }
     if (path.startsWith('/agent/status')) {
       return json(200, { ok: true, job })
+    }
+    if (path.startsWith('/agent/outcome')) {
+      const verdict = outcomes.get(id)
+      return json(200, verdict === undefined ? { ok: true, status: 'pending' } : { ok: true, ...verdict })
     }
     if (path.startsWith('/agent/start')) {
       if (startFails) return json(500, { ok: false, error: 'no display' })
@@ -110,7 +144,12 @@ function recorderStub({ startFails = false, stopFails = false, encodeHangs = fal
     }
     if (path.startsWith('/agent/stop')) {
       if (stopFails) return json(500, { ok: false, error: 'stop failed' })
-      if (job !== null) job.status = 'encoding'
+      if (job !== null) {
+        job.status = 'encoding'
+        // The page encodes on its own schedule; a tick is enough to model it.
+        const encodingId = job.id
+        setTimeout(() => finish(encodingId), 10)
+      }
       return json(200, { ok: true, stopped: true })
     }
     if (path.startsWith('/record/discard')) {
@@ -118,19 +157,6 @@ function recorderStub({ startFails = false, stopFails = false, encodeHangs = fal
       return json(200, { ok: true })
     }
     return json(404, { ok: false, error: 'unknown route' })
-  }
-  // The encode completes once the job has entered `encoding`. Polled rather than
-  // scheduled because the transition happens inside another async call: a
-  // self-rescheduling `setImmediate` would spin a timer for the whole test run
-  // and hold the process open.
-  if (!encodeHangs) {
-    const timer = setInterval(() => {
-      if (job !== null && job.status === 'encoding') {
-        job = null
-        clearInterval(timer)
-      }
-    }, 5)
-    timer.unref?.()
   }
   return { fetch, calls, state: () => ({ job }), setJob: (next) => { job = next } }
 }
@@ -164,7 +190,7 @@ test('a successful walkthrough starts, plays, stops and keeps the file', async (
   assert.equal(result.out, 'demo.mp4')
   assert.equal(result.steps, 3)
   assert.deepEqual(
-    stub.calls.filter((call) => !call.includes('status')),
+    stub.calls.filter((call) => !call.includes('status') && !call.includes('sources') && !call.includes('outcome')),
     ['POST /agent/start', 'POST /agent/stop'],
     'start before playing and stop after, with no discard',
   )
@@ -254,4 +280,58 @@ test('a missing recorder is named, with what to do about it', async () => {
 test('no web server is reported as such', async () => {
   const problems = await preflight(undefined)
   assert.match(problems[0], /no web server/u)
+})
+
+test('an encode that fails is reported, not passed off as a saved video', async () => {
+  // Both outcomes clear the job, so a pipeline that watched only for the job's
+  // disappearance reported a discarded take as saved. The verdict lives in the
+  // recorder's state, and this pins that it is what gets read.
+  const stub = recorderStub({ encodeFails: true })
+  const result = await run(stub)
+  assert.equal(result.status, 'error')
+  assert.match(result.reason, /discarded/u)
+  assert.match(result.reason, /encoder failed/u)
+})
+
+test('a window source is discovered when the caller names none', async () => {
+  // A walkthrough is OF this app, so "the DSH window" is the only sensible
+  // default — asking the caller for a handle would be asking it to restate that,
+  // and without one the recorder would record the whole desktop.
+  const stub = recorderStub()
+  const realFetch = globalThis.fetch
+  const bodies = []
+  globalThis.fetch = (url, options = {}) => {
+    if (String(url).includes('/agent/start') && options.body !== undefined) bodies.push(JSON.parse(options.body))
+    return stub.fetch(url, options)
+  }
+  try {
+    await runRecordedWalkthrough(
+      { recorderBase: 'http://127.0.0.1:9999', channel: { request: async () => ({ status: 'ok', completed: 1 }) } },
+      { out: 'demo.mp4', steps: [{ act: { name: '模型', action: 'click' } }] },
+    )
+    assert.equal(bodies.length, 1)
+    assert.equal(bodies[0].source?.type, 'window', JSON.stringify(bodies[0].source))
+    assert.equal(bodies[0].source?.hwnd, 4242, 'the largest window is the main one')
+  } finally {
+    globalThis.fetch = realFetch
+  }
+})
+
+test('silent is on unless the caller turns it off', async () => {
+  const stub = recorderStub()
+  const realFetch = globalThis.fetch
+  const bodies = []
+  globalThis.fetch = (url, options = {}) => {
+    if (String(url).includes('/agent/start') && options.body !== undefined) bodies.push(JSON.parse(options.body))
+    return stub.fetch(url, options)
+  }
+  try {
+    await runRecordedWalkthrough(
+      { recorderBase: 'http://127.0.0.1:9999', channel: { request: async () => ({ status: 'ok', completed: 1 }) } },
+      { out: 'demo.mp4', steps: [{ act: { name: '模型', action: 'click' } }] },
+    )
+    assert.equal(bodies[0].silent, true, 'the recorder pill must not land in the video')
+  } finally {
+    globalThis.fetch = realFetch
+  }
 })

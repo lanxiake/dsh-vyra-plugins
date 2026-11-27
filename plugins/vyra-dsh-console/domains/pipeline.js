@@ -98,6 +98,18 @@ export function normalizeSteps(steps) {
         return { error: `${where}: act must be an object` }
       }
       if (typeof act.name !== 'string' || act.name === '') {
+        // `wanted` (or `text`) resolves the element by its visible LABEL instead,
+        // preferring the one inside an open dialog: a settings row and a plugin
+        // that registers a nav entry under the same word are both "免费模型", and
+        // "the one in the dialog" is what a walkthrough means by it.
+        const label = typeof act.wanted === 'string' && act.wanted !== ''
+          ? act.wanted
+          : (typeof act.text === 'string' ? act.text : '')
+        if (label !== '') {
+          mutating += 1
+          out.push({ index, action, act: { ...act, wanted: label }, settle })
+          continue
+        }
         return { error: `${where}: act needs a name (see ui.snapshot for the names a page offers)` }
       }
       if (!['click', 'type', 'select'].includes(String(act.action))) {
@@ -232,6 +244,57 @@ export async function preflight(recorderBase) {
 }
 
 /**
+ * The window a walkthrough is filming, when the caller did not name one.
+ *
+ * A walkthrough is OF this app, so "the DSH window" is the only sensible default
+ * and the caller should not have to find a handle. The recorder enumerates every
+ * visible window, and the biggest one is NOT necessarily ours — a terminal or an
+ * editor is routinely larger — so the choice is made on the PROCESS NAME and the
+ * size only breaks ties.
+ *
+ * @param base - the host's own origin.
+ * @returns `{ type: 'window', hwnd, title }`, or undefined when the app's own
+ *   window is not among them (a headless composition has none, and the
+ *   recorder's configured default then applies).
+ */
+async function defaultSource(base) {
+  try {
+    const data = await recorderCall(base, '/sources')
+    const windows = Array.isArray(data?.windows) ? data.windows : []
+    const ours = windows.filter((win) => Number.isSafeInteger(win?.hwnd) && win.hwnd > 0
+      && /deepseek\s*harness/iu.test(String(win.process ?? '')))
+    if (ours.length === 0) return undefined
+    let best = ours[0]
+    for (const win of ours) {
+      if ((win.w ?? 0) * (win.h ?? 0) > (best.w ?? 0) * (best.h ?? 0)) best = win
+    }
+    return { type: 'window', hwnd: best.hwnd, title: String(best.title ?? '') }
+  } catch {
+    // Enumerating is best-effort: the recorder's configured default still works.
+    return undefined
+  }
+}
+
+/**
+ * Read one recording's outcome, or undefined while it is still being written.
+ *
+ * The recorder keeps `state-<id>.json` beside the request queue. `done` means
+ * the video was written; `error` means it was discarded. Both clear the job,
+ * which is why the job's absence proves nothing.
+ *
+ * @param base - the host's own origin.
+ * @param id - the recording id handed to `/agent/start`.
+ * @returns `{ status, file? , error? }`, or undefined when there is no verdict yet.
+ */
+async function recorderOutcome(base, id) {
+  const data = await recorderCall(base, `/agent/outcome?id=${encodeURIComponent(id)}`).catch(() => undefined)
+  if (data === undefined || typeof data.status !== 'string') return undefined
+  if (data.status === 'done') return { status: 'done', file: data.file, bytes: data.bytes }
+  if (data.status === 'error') return { status: 'error', error: data.error }
+  return undefined
+}
+
+/**
  * Run one recorded walkthrough.
  *
  * The steps are executed by the PAGE, not here: only the browser can see and
@@ -277,13 +340,17 @@ export async function runRecordedWalkthrough(deps, request) {
         // recording" pill is drawn in the page — so on a screen-reading capture
         // it lands in the video. Silent asks the recorder not to draw it.
         silent: request.silent !== false,
-        // A window source is what a walkthrough wants: desktop captures whatever
-        // else the user has open. The caller may name one; otherwise the recorder
-        // falls back to its configured default.
-        source: request.source,
+        // A window source is what a walkthrough wants: a desktop capture puts
+        // whatever else is open into the video. When the caller names no window,
+        // the main one is used — a walkthrough is of this app, so asking the
+        // caller to find a handle would be asking them to restate that.
+        source: request.source ?? await defaultSource(deps.recorderBase),
       },
     })
   } catch (error) {
+    // The recorder answers a bad request with its own `{ ok: false, error }`,
+    // and that sentence is the only thing that says WHAT was wrong — dropping it
+    // in favour of "answered 400" leaves the caller guessing at its own message.
     return { status: 'error', reason: `the recorder refused to start: ${String(error.message ?? error)}` }
   }
 
@@ -329,31 +396,31 @@ export async function runRecordedWalkthrough(deps, request) {
 
   // Waiting for the file.
   //
-  // Stopping moves the job to `encoding`; the PAGE encodes and POSTs the result
-  // back, and `handleAgentSave` clears the job. So "no job" is the signal that
-  // the encode finished — but it says nothing about success, because a failed
-  // encode also clears it. The recorder writes the outcome to its state file,
-  // which is the only place that distinguishes the two, so that is what is read.
-  const finished = await until(
-    async () => {
-      const job = await recorderJob(deps.recorderBase)
-      return job === null ? { done: true } : undefined
-    },
+  // Stopping moves the job to `encoding`; the PAGE encodes and POSTs the
+  // result back, and `handleAgentSave` writes the file and marks the run
+  // `done`, while `handleAgentError` marks it `error`. A failed encode ALSO
+  // clears the job, so "no job" cannot tell success from failure — an earlier
+  // version of this waited on exactly that and reported discarded takes as
+  // saved. The outcome lives in the recorder's state file, which is what is
+  // read here.
+  const outcome = await until(
+    () => recorderOutcome(deps.recorderBase, id),
     ENCODE_TIMEOUT_MS,
     'the recording to be encoded and saved',
-  ).then(() => ({ done: true }), (error) => ({ done: false, reason: String(error.message ?? error) }))
+  ).catch((error) => ({ status: 'timeout', reason: String(error.message ?? error) }))
 
-  if (finished.done !== true) {
+  if (outcome.status !== 'done') {
     return {
       status: 'error',
-      reason: `the recording was stopped but never saved: ${String(finished.reason)}`,
+      reason: outcome.status === 'error'
+        ? `the recording was discarded: ${String(outcome.error ?? 'the encoder failed')}`
+        : `the recording was stopped but never saved: ${String(outcome.reason ?? 'no outcome was reported')}`,
       // The steps themselves succeeded; only the encode did not. Saying which
       // half failed is what tells the caller whether to re-shoot the walkthrough.
       steps: normalized.steps.length,
       completed: played.completed ?? normalized.steps.length,
     }
   }
-
   return {
     status: 'ok',
     target: 'recording',
