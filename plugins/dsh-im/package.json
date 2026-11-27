@@ -49,7 +49,9 @@
     "verify:cli": "node scripts/verify-cli.mjs",
     "verify:service-file": "node scripts/verify-service-file.mjs",
     "verify:idempotency": "node scripts/verify-idempotency.mjs",
-    "verify": "node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs"
+    "verify": "node scripts/verify-agent-cli.mjs && node scripts/verify-session-group.mjs && node scripts/verify-agent-tools.mjs && node scripts/verify-cli.mjs && node scripts/verify-service-file.mjs && node scripts/verify-idempotency.mjs && node scripts/verify-package.mjs",
+    "verify:agent-cli": "node scripts/verify-agent-cli.mjs",
+    "verify:session-group": "node scripts/verify-session-group.mjs"
   },
   "main": "./lib/index.js",
   "exports": {

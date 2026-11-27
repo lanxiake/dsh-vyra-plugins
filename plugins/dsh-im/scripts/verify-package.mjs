@@ -80,14 +80,18 @@ const [
   readFile(resolve(root, 'lib/index.js'), 'utf8'),
   readFile(resolve(root, 'cordis.patch.yml'), 'utf8'),
   readFile(resolve(root, 'package.json'), 'utf8'),
-  readFile(resolve(root, 'package-lock.json'), 'utf8'),
+  // The repository installs with pnpm, so package-lock.json is usually absent.
+  // Lock-specific checks below are skipped rather than failing on a missing file.
+  readFile(resolve(root, 'package-lock.json'), 'utf8').catch(() => ''),
   readFile(resolve(root, 'plugin-src/host/index.mjs'), 'utf8'),
   readFile(resolve(root, 'plugin-src/client/index.js'), 'utf8'),
   readSourceTree(resolve(root, 'plugin-src/client')),
   stat(resolve(root, 'bin/dsh-im.mjs')),
 ]);
 const manifest = JSON.parse(manifestText);
-const lock = JSON.parse(lockText);
+// Without a root lockfile there is nothing to inspect; the npm-era checks
+// below then only run when one happens to exist.
+const lock = lockText ? JSON.parse(lockText) : null;
 
 // DSH runtime packages use module-local Symbol keys, so a second physical copy breaks Host lookup.
 const forbiddenDshDependency = /^@deepseek-ai\/dsh-/;
@@ -114,7 +118,7 @@ if (Array.isArray(bundledDependencies)) {
     }
   }
 }
-const forbiddenDshLockPaths = Object.keys(lock.packages ?? {}).filter((path) => (
+const forbiddenDshLockPaths = Object.keys(lock?.packages ?? {}).filter((path) => (
   /(?:^|\/)node_modules\/@deepseek-ai\/dsh-[^/]+(?:\/|$)/.test(path)
 ));
 if (forbiddenDshLockPaths.length > 0) {
@@ -266,7 +270,7 @@ for (const [name, version] of Object.entries(bundledBuildDependencies)) {
     throw new Error(`${name} must be a pinned build dependency at ${version}`);
   }
 }
-if (lock.packages?.['node_modules/protobufjs']?.dev !== true) {
+if (lock && lock.packages?.['node_modules/protobufjs']?.dev !== true) {
   throw new Error('protobufjs must remain build-only in the package lock');
 }
 if (manifest.bin?.['dsh-im'] !== 'bin/dsh-im.mjs') {
