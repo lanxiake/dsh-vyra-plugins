@@ -84,8 +84,23 @@ dsh plugin --profile <profile> add dsh-vyra-plugin-market
 | `@xiaoso/dsh-workflow-lite` | 轻量工作流 | 一个工作流就是一份 JSON（React Flow 原生），内联提示词，编译成模型自己执行的分派计划 | [xiaoso456](https://github.com/xiaoso456/dsh-workflow-lite) |
 | `dsh-expert-orchestrator` | 专家编排 | 多智能体任务编排：分诊、PM 规划、专家委派、依赖 DAG 任务板、消息总线与经验池 | [mario841859784](https://github.com/mario841859784/dsh-expert-orchestrator) |
 | `@nanmicoder/dsh-agent-teams` | 智能体团队 | 多智能体团队协作：队长、成员、带依赖的任务与消息，自然语言驱动，带树形监控面板 | [NanmiCoder](https://github.com/NanmiCoder/dsh-agent-teams) |
+| `dsh-ffmpeg` | 音视频处理 | 用本机 FFmpeg/FFprobe 探测、剪辑、转码、烧录字幕、生成分镜总览图与 GIF | [stardustlc](https://github.com/STARDUSTLC666/dsh-ffmpeg) |
+| `dsh-remotion` | Remotion 视频创作 | React 视频工作台：多轨导演台与实时监看、官方 Remotion 技能、Studio 预览与本地 MP4 导出 | [stardustlc](https://github.com/STARDUSTLC666/dsh-remotion) |
+| `dsh-claude-artifacts` | 作品 | 侧栏的「作品」页，以及把 baoyu-design 各编辑器里的评论送到 Agent | [Jim Liu 宝玉](https://github.com/JimLiu/baoyu-design) |
 
 `dsh-h3-video`（[kingcharleslzy-ai](https://github.com/kingcharleslzy-ai/dsh-h3-video)）**没有收录**：它未声明任何许可证，既没有 `license` 字段也没有 LICENSE 文件，默认保留全部权利。要收录得先取得作者授权，或等它补上许可证。
+
+`dsh-claude-artifacts` 的 `LICENSE` 只覆盖作者自己的代码，`NOTICE.md` 里写明仍属 Anthropic 的部分（Artifact 类型的技能文本、参考文档、重建的编辑器、内置引擎与图标字体）。两份文件都要随包发出。
+
+### 在本仓库二次开发的插件
+
+被改名成 `vyra-` 的，说明这份**由本仓库继续开发**，不再只是快照。改名前要确认三处身份一起改：`package.json` 的 `name`、宿主半片里的 `export const name`、客户端 bundle 的 `__ModuleLoader__.load({ id })`，还有 `cordis.patch.yml` 里那一行的 `name`。漏掉最后一处时插件会装上但永远不挂载，`pnpm run check:installable` 会拦下。
+
+| 包 | 上游 | 改名注意 |
+|---|---|---|
+| `dsh-vyra-media-desk` | [`dsh-media-desk`](https://github.com/woniuniuniu/dsh-media-desk) 2.7.2（MIT） | 数据目录是 `$DSH_HOME/media-desk/`，取自常量而非包名，所以改名不影响已装用户的灵感、成稿与排期 |
+
+每个收录或改名的插件都有一份 `SOURCE.md`，写明上游的 tag、commit、哪些目录是可运行的快照、重新收录会覆盖掉什么。
 
 ## 两个入口
 
