@@ -13,6 +13,13 @@ import { Fighter, ATK, DT } from './fighter.js'
 import { Juice, clamp, rand, lerp, ease } from './juice.js'
 import { resolveAttacks } from './combat.js'
 import { storyFor, createBarks } from './story.js'
+// The escalation ladder is shared with the renderer: the engine reacts to the
+// same tier the picture draws, so a hit cannot feel bigger than it looks.
+import { comboLink } from './effects.js'
+// The finisher's furniture timeline. It reacts to the cinematic's own clock,
+// which is why it is imported here rather than only in the renderer: the hit
+// the chair lands has to be a REAL hit, not a picture of one.
+import { RIOT, createRiot, stepRiot, sampleItem } from './riot.js'
 
 /** The last story played, so a random draw never repeats it back to back. */
 let lastStoryId = null
@@ -89,6 +96,8 @@ export class Arena {
     this.particles = []
     this.popups = []
     this.hitFlash = null
+    /** Landing rings, drawn flat on the floor under the fighters. */
+    this.land = []
     /** The most recent connection, for the renderer's impact overlay. */
     this.lastHit = null
     /** Which story this round tells. Set before the first reset. */
@@ -124,6 +133,7 @@ export class Arena {
     this.koT = 0
     this.particles.length = 0
     this.popups.length = 0
+    this.land.length = 0
     this.lastHit = null
     this.juice.reset()
     /** Consecutive hits the player has landed without being interrupted. */
@@ -181,6 +191,33 @@ export class Arena {
     this.say('open', true)
     this.openQueue = Math.max(0, this.openQueue - 1)
     return true
+  }
+
+  /**
+   * Read the player's input without advancing the world.
+   *
+   * This exists for exactly one situation: hit-stop. The picture is frozen and
+   * no simulation step is due, but the player may be cancelling a combo on
+   * this very frame — and a cancel must never wait for the freeze to end. The
+   * arena is advanced by a single input-only pass: the stance can change, the
+   * bodies and the clock do not. `this.prevInput` is updated so the next real
+   * step does not re-fire the same press.
+   */
+  stepFrozen(input) {
+    if (this.phase !== 'playing' || this.superCine) return
+    const p = this.player
+    if (!p.alive) return
+    /**
+     * ORDER IS THE WHOLE POINT.
+     *
+     * `applyPlayerInput` decides what is a PRESS by comparing this frame's
+     * input against `prevInput`. Writing `prevInput` first made every press in
+     * the frozen pass look like a HELD key — the edge compared true against
+     * true and the move was dropped. Read the edges against the OLD prevInput,
+     * then record the new one.
+     */
+    this.applyPlayerInput(p, input)
+    this.prevInput = { ...input }
   }
 
   get fighters() { return [this.player, this.enemy] }
@@ -265,7 +302,7 @@ export class Arena {
        * lands once the previous bubble has had a beat to be read.
        */
       this.stepBarks(DT)
-      if (this.koT > 0.95 && this.lineGap <= 0) this.say('ko', true)
+      if (this.koT > 0.95 && this.lineGap <= 0) this.say(this.loser === 'player' ? 'defeat' : 'ko', true)
       if (this.koT > 2.8) this.phase = 'done'
       return
     }
@@ -319,6 +356,22 @@ export class Arena {
     // --- move -----------------------------------------------------------
     for (const f of this.fighters) f.step(w)
 
+    /**
+     * 震地环 — a heavy landing's ground ring.
+     *
+     * The fighter reports the landing as `evLand` (an impact speed) for exactly
+     * the frame it happens, and nothing was reading it. It is consumed here
+     * and becomes a short-lived ring in `land`, which the renderer draws flat
+     * on the floor. A slow step-down does not qualify: `evLand` is only set
+     * above 380 units/s, so this is a fall, not a shuffle.
+     */
+    for (const f of this.fighters) {
+      if (!f.evLand) continue
+      const power = Math.min(1, f.evLand / 1200)
+      this.pushLand(f.x, w.groundY, power)
+      f.evLand = 0
+    }
+
     // --- resolve --------------------------------------------------------
     resolveAttacks(this.fighters, w, (hit) => this.onHit(hit))
 
@@ -334,6 +387,20 @@ export class Arena {
     if (this.comboT > 1.1) { this.combo = 0; this.comboT = 0 }
     this.comboPop = Math.max(0, this.comboPop - DT * 5)
     if (this.superBanner > 0) this.superBanner = Math.max(0, this.superBanner - DT * 0.62)
+    /**
+     * The wreck settles after the cinematic and then goes.
+     *
+     * It is kept for 0.6 s so the finished pose and the stamp are readable on
+     * their own frame, then dropped — a permanent chair in the middle of the
+     * stage would be walked through for the rest of the round.
+     */
+    if (this.riotFade !== undefined) {
+      if (this.superCine) this.riotFade = 1
+      else {
+        this.riotFade -= DT / 0.6
+        if (this.riotFade <= 0) { this.riotFade = undefined; this.riot = null }
+      }
+    }
   }
 
   /**
@@ -357,7 +424,11 @@ export class Arena {
     // They are read FIRST and they do not consume the frame, so a player can
     // hold guard and still walk out of it.
     p.block = Boolean(input.block) && p.onGround && p.state !== 'atk'
-    p.crouching = Boolean(input.crouch) && p.onGround && p.state !== 'atk'
+    p.crouching = Boolean(input.crouch) && p.onGround
+    // An attack owns the body for its whole duration: crouching has to end the
+    // moment a swing starts, or a move started from a crouch would play its
+    // recovery in a crouched pose.
+    if (p.state === 'atk') p.crouching = false
 
     // --- 1. jump -------------------------------------------------------
     if (input.jump && !this.prevInput?.jump && p.onGround && p.state === 'idle' && !p.crouching) {
@@ -407,11 +478,35 @@ export class Arena {
         if (move === 'jab' || move === 'kick') p.startAttack(move === 'kick' ? 'airStomp' : 'airPunch')
         return
       }
-      if (!p.canAct && !(punch && chainOpen)) continue
+      /**
+       * THE STRING. Inside the cancel window ANY move may cut the tail of the
+       * one playing, and a heavy may be followed by the next heavy — a kick
+       * into an uppercut is a real combo in the genre's sense, and it used to
+       * be impossible because only punches could cancel and only into punches.
+       */
+      if (!p.canAct && !chainOpen) continue
+
+      /**
+       * THE STRING. Inside the cancel window ANY move may cut the tail of the
+       * one playing: a kick into an uppercut is a real combo in the genre's
+       * sense, and it used to be impossible because only punches could cancel
+       * and only into punches.
+       *
+       * TWO-BUTTON SHORTHAND. The adapter resolves `J + direction` and
+       * `K + direction` into the engine's named moves before the game ever
+       * sees them, because only the adapter holds the direction and the press
+       * on the same frame. What remains here is the chain rule: a punch
+       * pressed inside a string alternates straight/hook, and a launcher
+       * pressed inside one becomes the follow-up kick.
+       */
+      let chosen = move
+      if (move === 'p1' && chainOpen) {
+        chosen = p.chainCount % 2 === 0 ? 'p2' : 'p1'
+      }
       // A launcher chained from a punch is the classic juggle starter; the
       // kick follows it up.
-      if (move === 'p3' && chainOpen) { p.startAttack('launchKick'); return }
-      p.startAttack(move)
+      if (chosen === 'p3' && chainOpen) { p.startAttack('launchKick'); return }
+      p.startAttack(chosen)
       return
     }
 
@@ -459,10 +554,35 @@ export class Arena {
 
   checkKo() {
     if (this.phase !== 'playing') return
-    if (this.enemy.hp > 0) return
+    /**
+     * A knockout is symmetric now.
+     *
+     * `loser` names the side that hit zero: 'enemy' is the round the player
+     * wins, 'player' is the round the player LOSES. The player used to be hard
+     * floored at 1 hp so this branch could not exist; they asked for it to
+     * exist (「该被 OK 就 OK」), because a fight you cannot lose is not a fight.
+     *
+     * `result` is what the overlay and the outro read — the stamp says 胜 or
+     * 负, and the closing line is the winner's.
+     */
+    const enemyDown = this.enemy.hp <= 0
+    const playerDown = this.player.hp <= 0
+    if (!enemyDown && !playerDown) return
+    this.loser = playerDown ? 'player' : 'enemy'
+    this.result = playerDown ? 'lose' : 'win'
+    /**
+     * A knockout is FINAL for both sides. The loser's health is pinned at
+     * zero so the round's own beats (the launch physics, the seal) cannot
+     * revive them through some later heal, and the winner is frozen mid
+     * swing — handing control back to a body that is still being hit reads
+     * as a bug.
+     */
+    if (playerDown) this.player.hp = 0
+    else this.enemy.hp = 0
     this.phase = 'ko'
     this.koT = 0
-    this.say('ko', true)
+    // The last word belongs to whoever is still standing.
+    this.say(playerDown ? 'defeat' : 'ko', true)
     /**
      * The finish is its own four-beat sequence, not just a camera push:
      *
@@ -470,8 +590,8 @@ export class Arena {
      *                      slows, so the flight reads
      *   freeze (0.5–1.1 s) everything stops mid-air — the "death frame" the
      *                      genre holds for a beat
-     *   seal   (0.9 s in)  the 胜 stamp lands: a hard white flash, the frame
-     *                      goes still, the stamp slams down off-centre
+     *   seal   (0.9 s in)  the 胜/负 stamp lands: a hard flash, the frame goes
+     *                      still, the stamp slams down off-centre
      *   hold               the stamp sits over the aftermath until the outro
      *
      * `koT` is the round's own real-time clock; `koBeat` names the beat so the
@@ -482,7 +602,10 @@ export class Arena {
     this.juice.slowmo(0.28, 900)
     this.juice.shake(26)
     this.juice.flash(0.5)
-    this.juice.zoomPunch(0.16, 500, WORLD.width / 2, WORLD.groundY - 150)
+    // The camera looks at the body that is going down, not always at the
+    // rival: on a loss the interesting frame is the player's.
+    const fall = this.loser === 'player' ? this.player : this.enemy
+    this.juice.zoomPunch(0.16, 500, fall.x, WORLD.groundY - 150)
     /** Where the seal lands, in screen space, for the renderer. */
     this.koSeal = { t: 0, landed: false }
   }
@@ -556,17 +679,19 @@ export class Arena {
    * five beats, each with its own job:
    *
    *   charge  (0.42 s) the world holds still, the player crouches into the
-   *                    stance, the camera pushes in on THEM, letterbox starts
-   *   name    (0.52 s) 「破军」writes itself on in brush strokes while the
-   *                    letterbox is fully closed; a hard white blink
-   *   strike  (0.30 s) the bars snap open, the player lunges the full screen
-   *   impact  (0.46 s) hit-stop, the ring and the double brush, the victim
-   *                    launches; slow-mo eases back
+   *                    stance, the desk furniture lifts off in a ring
+   *   name    (0.52 s) 「破军」sits over the player while the ring hovers; a
+   *                    hard white blink
+   *   strike  (0.30 s) the bars snap open and the objects leave in order of
+   *                    weight — keyboard, mug, monitor, chair
+   *   impact  (0.46 s) the chair lands, hit-stop, the stamp, the debris
    *   recover (0.34 s) the follow-through, then control returns
    *
    * The beats are timed in real milliseconds (`cineT` in ms) rather than DT
    * counts, so a stutter or a hit-stop cannot make the cinematic skip its own
-   * middle.
+   * middle. The furniture timeline (`riot.js`) is advanced from the same
+   * clock, so the chair can never land on a frame the picture says it has not
+   * reached yet.
    */
   beginSuper() {
     this.superCine = {
@@ -579,6 +704,14 @@ export class Arena {
       /** Did the strike connect? A whiff still plays the full cinematic. */
       landed: false,
     }
+    // The furniture timeline starts from where the two fighters actually are.
+    const [you, rival] = [this.player, this.enemy]
+    this.riot = createRiot({
+      player: { x: you.x, y: you.y },
+      enemy: { x: rival.x, y: rival.y },
+      groundY: WORLD.groundY,
+      face: you.face,
+    })
     this.superBanner = 1
     this.say('super', true)
     // The charge: everything stops. This is the silence before the hit.
@@ -611,6 +744,13 @@ export class Arena {
     const p = this.player
 
     const BEAT = { charge: 420, name: 520, strike: 300, impact: 460, recover: 340 }
+    // The furniture runs on the SAME clock as the beats. Stepping it here, on
+    // every frame of the cinematic — freeze included — is what keeps the thrown
+    // objects in step with the release beat. The DAMAGE is not dealt from this
+    // clock: the player's swing goes through `resolveAttacks` below like every
+    // other attack, and the chair is timed to arrive inside that same window,
+    // so one hit has exactly one damage path.
+    if (this.riot) stepRiot(this.riot, DT)
     // The cumulative start of each beat. A beat's own length is added by its
     // own branch, so `impact` must RUN for `impact` ms before `recover`
     // begins — computing `at('recover')` as the sum before it did exactly
@@ -700,6 +840,10 @@ export class Arena {
     // locked in an attack pose reads as "the game froze".
     this.superCine = null
     this.superBanner = 0
+    // The wreck stays on screen for one beat of settling, then goes with the
+    // cinematic: leaving it permanently would have the fight walk through a
+    // phantom chair for the rest of the round.
+    this.riotFade = 1
     p.atk = null
     p.state = 'idle'
     p.t = 0
@@ -736,6 +880,20 @@ export class Arena {
     if (hit.attacker.team === 'p') {
       this.combo = this.comboT > 1.1 ? 1 : this.combo + 1
       this.playerChain = this.combo
+      /**
+       * THE RIVAL CANNOT MOVE DURING A STRING.
+       *
+       * A stagger only stuns for 0.25 s, and any string needs a couple of
+       * links at ~90 ms each plus the hit-stop on every one of them. Without
+       * this the rival recovered between link two and three and simply blocked
+       * the rest — that is why a combo could never go deeper than two. The
+       * pin lasts as long as the attacker's cancel window is open, which is
+       * the honest definition of "still being hit".
+       */
+      if (hit.string) {
+        this.enemy.stunT = Math.max(this.enemy.stunT, 0.55)
+        this.enemy.state = 'hurt'
+      }
       // The player's barks follow what they just did.
       if (this.combo === 3) this.say('chain')
       else if (reaction === 'launch' || reaction === 'knockdown') this.say('hit')
@@ -756,7 +914,10 @@ export class Arena {
 
     this.juice.hitstop(kill ? 200 : heavy ? 90 : 55)
     this.juice.shake(kill ? 22 : heavy ? 14 : 7)
-    if (reaction === 'launch' || kill) this.juice.flash(0.32)
+    // A held string must not flash white on every link: the flash covers the
+    // frame the combo counter and the pose exist to be read. The launch that
+    // ENDS a string still gets it.
+    if ((reaction === 'launch' && !hit.string) || kill) this.juice.flash(0.32)
     this.juice.zoomPunch(kill ? 0.14 : heavy ? 0.06 : 0.028, kill ? 400 : 220, x, y)
     if (heavy || kill) this.juice.slowmo(0.45, 110)
 
@@ -766,6 +927,14 @@ export class Arena {
     // Direction and angle of the blow, for the ink stroke.
     const dir = hit.attacker.face || 1
     const angle = reaction === 'launch' ? -0.9 : reaction === 'knock' ? 0.5 : -0.45
+    /**
+     * The chain depth AT THIS HIT, so the renderer can escalate its drawing.
+     *
+     * Reading `this.combo` in the renderer instead would drift: the counter
+     * keeps ticking after the hit and resets on a timeout, so the burst would
+     * change tier while it is still on screen. The number is captured here,
+     * with the hit, and never moves again.
+     */
     this.lastHit = {
       x, y,
       dir,
@@ -775,7 +944,21 @@ export class Arena {
       kill,
       juggle,
       name,
+      combo: hit.attacker.team === 'p' ? this.combo : 0,
       fromPlayer: hit.attacker.team === 'p',
+    }
+
+    /**
+     * The frame's reaction scales with the chain. A first jab rattles the
+     * picture; the fourth link stops it. This is the half of the escalation
+     * the player FEELS, and it is driven from the same table the drawing uses
+     * (`comboLink` in effects.js), so the two cannot disagree.
+     */
+    if (hit.attacker.team === 'p') {
+      const link = comboLink(this.combo)
+      if (link.shutters > 0) this.juice.hitstop(Math.min(220, 55 + link.shutters * 35))
+      if (link.flash > 0) this.juice.flash(link.flash)
+      this.juice.zoomPunch(link.push, 220, x, y)
     }
   }
 
@@ -799,6 +982,15 @@ export class Arena {
     this.particles.push({ kind: 'ring', x, y, life: 1, decay: 3.2, size: 8, scale })
   }
 
+  /**
+   * A landing ring. Kept in its OWN list rather than in `particles`, because
+   * the renderer draws it flat on the floor with the ground's perspective and
+   * that pass sits under the fighters, not over them.
+   */
+  pushLand(x, y, power) {
+    this.land.push({ x, y, life: 1, decay: 1.9, scale: 0.7 + power * 0.9 })
+  }
+
   stepParticles() {
     for (const p of this.particles) {
       p.life -= p.decay * DT * 2
@@ -810,6 +1002,10 @@ export class Arena {
       }
     }
     this.particles = this.particles.filter((p) => p.life > 0)
+    // Landing rings age on the same clock as the particles: they are a display
+    // effect, not a simulation fact.
+    for (const r of this.land) r.life -= r.decay * DT
+    this.land = this.land.filter((r) => r.life > 0)
     if (this.lastHit) {
       // Age in REAL time, not simulation time: during a hit-stop the sim is
       // frozen but the overlay must keep moving, or the freeze looks like a
@@ -858,6 +1054,18 @@ export class Arena {
       tele: f.tele,
       points: Array.from({ length: N }, (_, i) => [f.rig.x[i], f.rig.y[i]]),
       lw: f.k.lw,
+      /**
+       * The swordsman costume mark. A boolean, not geometry: the renderer
+       * derives the topknot from the pose, so the snapshot stays a plain
+       * description of the body.
+       */
+      topknot: Boolean(f.k.topknot),
+      /** The fighting stance the body is in. */
+      stance: f.state,
+      /** How far through the current move, 0..1, or 0 when idle. */
+      atkU: f.state === 'atk' && f.atk ? Math.min(1, f.t / f.atk.dur) : 0,
+      /** Vertical speed, for the 踏空涟漪. */
+      vy: f.vy,
     })
     return {
       phase: this.phase,
@@ -865,11 +1073,19 @@ export class Arena {
       player: view(this.player),
       enemy: view(this.enemy),
       particles: this.particles.map((p) => ({ ...p })),
+      /** Landing rings, for the 震地环 under the fighters. */
+      land: this.land.map((r) => ({ ...r })),
       hit: this.lastHit ? { ...this.lastHit } : null,
       cinematic: this.cinematic(),
       /** The finish's beat: launch | freeze | seal, or null while fighting. */
       koBeat: this.phase === 'ko' ? this.koBeat : null,
       koT: this.phase === 'ko' ? this.koT : 0,
+      /**
+       * Who went down, and so whether the round ends in a win or a loss.
+       * Null while fighting. The overlay reads this to choose 胜 or 负.
+       */
+      result: this.phase === 'ko' || this.phase === 'done' ? (this.result ?? 'win') : null,
+      loser: this.loser ?? null,
       /** The qi meter and whether the super can be thrown right now. */
       superMeter: this.player.superMeter,
       /** The line currently on screen, or null. */
@@ -888,6 +1104,14 @@ export class Arena {
        */
       superCine: this.superCine
         ? { phase: this.superCine.phase, bars: this.superCine.bars, landed: this.superCine.landed, t: this.superCine.t }
+        : null,
+      /**
+       * The finisher's furniture, or null. The renderer draws it inside the
+       * world transform; the arena owns the clock. `fade` carries the one-beat
+       * settling after the cinematic hands control back.
+       */
+      riot: this.riot
+        ? { t: this.riot.t, anchors: this.riot.anchors, items: this.riot.items, debris: this.riot.debris, fade: this.riotFade ?? 1 }
         : null,
       block: this.player.block,
       crouching: this.player.crouching,

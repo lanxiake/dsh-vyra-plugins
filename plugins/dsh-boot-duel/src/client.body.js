@@ -67,7 +67,7 @@ window.__ModuleLoader__.load({
       zh: {
         title: '开工大吉',
         subtitle: '工位即江湖',
-        'hint.controls': "A / D 移动 · J 直拳 · H 摆拳 · K 踢击 · F 上勾 · G 扫腿 · N 滑铲 · L 格挡 · S 下蹲 · Shift 后跳 · 空格 跳 · 空中 J/K 空袭 · U 大招 · Esc 跳过",
+        'hint.controls': "A / D 移动 · J 直拳 · J+S 上勾 · K 踢击 · K+S 扫腿 · 连按 J/K 连招 · L 格挡 · Shift 后跳 · 空格 跳 · 空中 J/K 空袭 · U 大招 · Esc 跳过",
         'hint.skip': '按 Esc 跳过这一局',
         'skip.button': '跳过',
         'settings.title': '火柴人开机动画',
@@ -140,6 +140,8 @@ window.__ModuleLoader__.load({
         'state.ko': '胜负已分',
         'ko.title': '胜',
         'ko.subtitle': '这一版，过了',
+        'lose.title': '负',
+        'lose.subtitle': '这版，他先发了',
         'ko.pressAnyKey': '按任意键进入',
         'pause.clickToResume': '点击此处继续',
         'mute.on': '开启音效',
@@ -150,7 +152,7 @@ window.__ModuleLoader__.load({
       en: {
         title: 'Clock In',
         subtitle: 'The desk is the arena',
-        'hint.controls': "A / D move · J jab · H hook · K kick · F uppercut · G sweep · N slide · L block · S crouch · Shift back-hop · Space jump · J/K in air · U super · Esc skip",
+        'hint.controls': "A / D move · J jab · J+S uppercut · K kick · K+S sweep · mash J/K to combo · L block · Shift back-hop · Space jump · J/K in air · U super · Esc skip",
         'hint.skip': 'Press Esc to skip this round',
         'skip.button': 'Skip',
         'settings.title': 'Stick-figure opening',
@@ -220,6 +222,8 @@ window.__ModuleLoader__.load({
         'state.ko': 'Settled',
         'ko.title': 'Victory',
         'ko.subtitle': 'Rival out — this build ships',
+        'lose.title': 'Defeat',
+        'lose.subtitle': 'Rival wins — he ships first',
         'ko.pressAnyKey': 'Press any key to continue',
         'pause.clickToResume': 'Click here to resume',
         'mute.on': 'Turn sound on',
@@ -417,11 +421,11 @@ window.__ModuleLoader__.load({
 .boot-duel-bar-head { display: flex; align-items: baseline; gap: 8px; width: 100%; }
 .boot-duel-bar.is-enemy .boot-duel-bar-head { flex-direction: row-reverse; }
 .boot-duel-bar-label {
-  font-size: 15px; font-weight: 700; letter-spacing: .16em;
+  font-size: 19.5px; font-weight: 700; letter-spacing: .16em;
   color: var(--bd-gold);
 }
 .boot-duel-bar-label.is-player { color: var(--bd-player); }
-.boot-duel-bar-hp { font-size: 12px; opacity: .85; color: #e8effa; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.boot-duel-bar-hp { font-size: 15.6px; opacity: .85; color: #e8effa; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
 .boot-duel-bar-track {
   position: relative; width: 100%; height: 13px; border-radius: 7px; overflow: hidden;
   background: rgba(4, 8, 16, .78);
@@ -456,12 +460,12 @@ window.__ModuleLoader__.load({
 }
 .boot-duel-mid-mark {
   font-family: "STKaiti", "KaiTi", "Kaiti SC", "Songti SC", serif;
-  font-size: 20px; font-weight: 700; letter-spacing: .26em;
+  font-size: 26px; font-weight: 700; letter-spacing: .26em;
   color: var(--bd-gold); opacity: .92;
   text-shadow: 0 0 22px rgba(255, 190, 120, .5);
 }
 .boot-duel-mid-state {
-  font-size: 10px; letter-spacing: .34em; opacity: .82; text-transform: uppercase;
+  font-size: 13px; letter-spacing: .34em; opacity: .82; text-transform: uppercase;
   color: #e8effa;
 }
 
@@ -472,7 +476,7 @@ window.__ModuleLoader__.load({
 }
 .boot-duel-meter-label {
   font-family: "STKaiti", "KaiTi", "Kaiti SC", "Songti SC", serif;
-  font-size: 15px; font-weight: 700; color: var(--bd-gold);
+  font-size: 19.5px; font-weight: 700; color: var(--bd-gold);
   text-shadow: 0 0 14px rgba(255, 180, 100, .55);
   flex: 0 0 auto;
 }
@@ -494,7 +498,7 @@ window.__ModuleLoader__.load({
   animation: boot-duel-meter-glow 1.1s ease-in-out infinite;
 }
 .boot-duel-meter-key {
-  flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  flex: 0 0 auto; font-size: 13px; font-weight: 700; letter-spacing: .12em;
   padding: 2px 7px; border-radius: 5px; color: #1a1206;
   background: linear-gradient(180deg, #ffe6b8, #ffc271);
   opacity: .35;
@@ -503,7 +507,7 @@ window.__ModuleLoader__.load({
   opacity: 1; animation: boot-duel-breathe 1.4s ease-in-out infinite;
 }
 .boot-duel-meter-tip {
-  flex: 0 0 auto; font-size: 11px; letter-spacing: .1em; color: var(--bd-gold);
+  flex: 0 0 auto; font-size: 14.3px; letter-spacing: .1em; color: var(--bd-gold);
   opacity: 0; transition: opacity 220ms ease;
 }
 .boot-duel-meter.is-full .boot-duel-meter-tip { opacity: .95; }
@@ -511,7 +515,7 @@ window.__ModuleLoader__.load({
 /* ---- bottom rail: controls + buttons ------------------------------------ */
 .boot-duel-hints {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
-  font-size: 12px; opacity: 1; padding: 10px 26px 14px; margin-top: auto;
+  font-size: 15.6px; opacity: 1; padding: 10px 26px 14px; margin-top: auto;
   pointer-events: none;
   /* Above the gate (z-index 4): the control rail is how a new player learns
      the keys, and the gate's dark gradient sat on top of it, dimming exactly
@@ -526,14 +530,14 @@ window.__ModuleLoader__.load({
 .boot-duel-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .boot-duel-key b {
   display: inline-block; min-width: 20px; padding: 1px 6px;
-  font: inherit; font-size: 11px; font-weight: 700; text-align: center;
+  font: inherit; font-size: 14.3px; font-weight: 700; text-align: center;
   color: #0b1220; background: linear-gradient(180deg, #fff, #cfe0f0);
   border-radius: 5px; box-shadow: 0 1px 0 rgba(0, 0, 0, .55), inset 0 -1px 0 rgba(0, 0, 0, .18);
 }
-.boot-duel-hint-key { color: #a9dcff; font-size: 12px; letter-spacing: .05em; }
+.boot-duel-hint-key { color: #a9dcff; font-size: 15.6px; letter-spacing: .05em; }
 .boot-duel-controls { pointer-events: auto; display: flex; gap: 8px; align-items: center; }
 .boot-duel-btn {
-  pointer-events: auto; cursor: pointer; font: inherit; font-size: 12px;
+  pointer-events: auto; cursor: pointer; font: inherit; font-size: 15.6px;
   color: #dbe9ff; background: rgba(255, 255, 255, .07);
   border: 1px solid rgba(255, 255, 255, .2); border-radius: 9px; padding: 5px 12px;
   backdrop-filter: blur(6px);
@@ -545,7 +549,7 @@ window.__ModuleLoader__.load({
 .boot-duel-btn[aria-pressed="true"] { background: rgba(94, 231, 255, .2); border-color: rgba(94, 231, 255, .5); }
 .boot-duel-btn:disabled { opacity: .4; cursor: default; }
 .boot-duel-skip {
-  pointer-events: auto; cursor: pointer; font: inherit; font-size: 13px; letter-spacing: .1em;
+  pointer-events: auto; cursor: pointer; font: inherit; font-size: 16.9px; letter-spacing: .1em;
   color: #eef4ff; background: var(--bd-ink); border: 1px solid rgba(255, 255, 255, .26);
   border-radius: 999px; padding: 9px 20px; backdrop-filter: blur(6px);
   white-space: nowrap;
@@ -569,28 +573,28 @@ window.__ModuleLoader__.load({
 }
 .boot-duel-gate-main {
   font-family: "STKaiti", "KaiTi", "Kaiti SC", "Songti SC", serif;
-  font-size: clamp(44px, 7vw, 86px); font-weight: 700; letter-spacing: .18em;
+  font-size: clamp(57px, 9.1vw, 112px); font-weight: 700; letter-spacing: .18em;
   color: #fff6e6; text-shadow: 0 0 34px rgba(255, 190, 120, .55), 0 2px 8px rgba(0, 0, 0, .8);
 }
 .boot-duel-gate-sub {
-  font-size: 13px; letter-spacing: .3em; color: var(--bd-gold); opacity: .85;
+  font-size: 16.9px; letter-spacing: .3em; color: var(--bd-gold); opacity: .85;
 }
 .boot-duel-gate-call {
   pointer-events: auto; cursor: pointer; font: inherit;
   display: inline-flex; align-items: center; gap: 10px;
   padding: 12px 30px; border-radius: 999px;
-  font-size: 16px; letter-spacing: .16em; color: #1a1206;
+  font-size: 20.8px; letter-spacing: .16em; color: #1a1206;
   background: linear-gradient(180deg, #ffe6b8, #ffc271);
   border: 0; box-shadow: 0 6px 26px rgba(255, 176, 94, .35), inset 0 -2px 0 rgba(0, 0, 0, .18);
   animation: boot-duel-breathe 2.4s ease-in-out infinite;
 }
 .boot-duel-gate-call:hover { filter: brightness(1.07); }
 .boot-duel-gate-call kbd {
-  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  font: inherit; font-size: 15.6px; font-weight: 700; letter-spacing: .06em;
   padding: 2px 7px; border-radius: 6px;
   background: rgba(26, 18, 6, .82); color: #ffe6b8;
 }
-.boot-duel-gate-note { font-size: 12px; letter-spacing: .14em; opacity: .6; }
+.boot-duel-gate-note { font-size: 15.6px; letter-spacing: .14em; opacity: .6; }
 
 /* ---- KO: the seal ------------------------------------------------------ */
 .boot-duel-ko {
@@ -603,30 +607,69 @@ window.__ModuleLoader__.load({
 }
 /* The overlay follows the game's beats. Until the seal lands there is only a
    darkened frame — the body in the air is the picture, and covering it with a
-   stamp immediately hides the thing that just happened. */
+   stamp immediately hides the thing that just happened.
+
+   visibility, not opacity. The seal's own boot-duel-seal animation has
+   animation-fill-mode: both, so its "to" opacity:1 keyframe is a FILLED value
+   — and a filled animation value beats a plain rule. opacity:0 here was
+   silently overridden and the stamp was on screen for every beat, including
+   the one where the body is supposed to be the whole picture. visibility is
+   not animated, so it wins. */
 .boot-duel-ko[data-beat="launch"] .boot-duel-ko-seal,
-.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-seal { opacity: 0; }
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-seal { visibility: hidden; }
 .boot-duel-ko[data-beat="launch"] .boot-duel-ko-sub,
 .boot-duel-ko[data-beat="freeze"] .boot-duel-ko-sub,
 .boot-duel-ko[data-beat="launch"] .boot-duel-ko-hint,
-.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-hint { opacity: 0; }
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-hint { visibility: hidden; }
 .boot-duel-ko[data-beat="launch"],
 .boot-duel-ko[data-beat="freeze"] { background: linear-gradient(180deg, rgba(4, 8, 16, .28) 0%, rgba(4, 8, 16, 0) 40%, rgba(4, 8, 16, 0) 55%, rgba(4, 8, 16, .3) 100%); }
 .boot-duel-ko-seal {
   width: clamp(120px, 15vw, 176px); height: clamp(120px, 15vw, 176px);
   display: grid; place-items: center; border-radius: 16px;
   border: 5px solid rgba(255, 244, 232, .94);
-  background: rgba(150, 26, 34, .55);
+  /**
+   * NEARLY OPAQUE. At .55 the fighters read straight through the stamp — the
+   * 负 in the loss frame had a black leg across it, and the character the
+   * whole beat exists to show became unreadable. A seal is a slab of ink on
+   * paper, not a tint.
+   */
+  background: rgba(150, 26, 34, .95);
   box-shadow: 0 0 70px rgba(255, 90, 120, .45), inset 0 0 40px rgba(255, 200, 180, .3);
   animation: boot-duel-seal 400ms cubic-bezier(.16, 1.5, .3, 1) both;
 }
 .boot-duel-ko-char {
   font-family: "STKaiti", "KaiTi", "Kaiti SC", "Songti SC", serif;
-  font-size: clamp(62px, 9vw, 100px); font-weight: 700; line-height: 1;
+  font-size: clamp(80px, 11.7vw, 130px); font-weight: 700; line-height: 1;
   color: #fff8f0; text-shadow: 0 0 30px rgba(255, 110, 130, .9);
 }
-.boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 500ms ease 120ms both; }
-.boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 420ms both; }
+/* A LOSS is cold, not hot. The win stamp is a red seal with a glow; using the
+   same red for 负 would read as another victory with a different character in
+   it. Losses go slate — the colour drains out rather than turning up. */
+.boot-duel-ko.is-lose .boot-duel-ko-seal {
+  border-color: rgba(226, 232, 240, .78);
+  background: rgba(22, 30, 44, .95);
+  box-shadow: 0 0 70px rgba(120, 150, 190, .4), inset 0 0 40px rgba(180, 200, 225, .18);
+}
+.boot-duel-ko.is-lose .boot-duel-ko-char {
+  color: #dbe4f0;
+  text-shadow: 0 0 30px rgba(140, 175, 220, .7);
+}
+/**
+ * The subtitle and the hint sit ON the stage, so they need their own backdrop.
+ * At 14 px over the light office they were lost entirely — 「这版，他先发了」
+ * was legible only where it happened to cross a dark monitor. A plate of ink
+ * behind each line is the same trick the HUD uses.
+ */
+.boot-duel-ko-sub {
+  font-size: 18.2px; letter-spacing: .26em; opacity: .95; animation: boot-duel-fade 500ms ease 120ms both;
+  padding: 6px 18px; border-radius: 8px; background: rgba(6, 10, 18, .78);
+  color: #f2f7ff; text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+.boot-duel-ko-hint {
+  font-size: 15.6px; letter-spacing: .2em; opacity: .72; animation: boot-duel-fade 500ms ease 420ms both;
+  padding: 4px 14px; border-radius: 7px; background: rgba(6, 10, 18, .62);
+  color: #dbe9ff;
+}
 
 /* The host settings section. The host owns the surrounding chrome, so this
    is deliberately plain: a title, a lede, rows, and nothing that fights the
@@ -1020,16 +1063,14 @@ window.__ModuleLoader__.load({
       const list = binds && typeof binds === 'object' ? binds : {}
       const keyOf = (action) => keyLabel(list[action] || DEFAULT_BINDS[action])
       const air = t('rail.airKeys', { a: keyOf('jab'), b: keyOf('kick') })
+      const down = keyOf('crouch')
       const rows = [
         [`${keyOf('left')} / ${keyOf('right')}`, t('rail.move')],
         [keyOf('jab'), t('rail.jab')],
-        [keyOf('hook'), t('rail.hook')],
+        [`${keyOf('jab')} + ${down}`, t('rail.uppercut')],
         [keyOf('kick'), t('rail.kick')],
-        [keyOf('uppercut'), t('rail.uppercut')],
-        [keyOf('sweep'), t('rail.sweep')],
-        [keyOf('slide'), t('rail.slide')],
+        [`${keyOf('kick')} + ${down}`, t('rail.sweep')],
         [keyOf('block'), t('rail.block')],
-        [keyOf('crouch'), t('rail.crouch')],
         [keyOf('retreat'), t('rail.retreat')],
         [keyOf('jump'), t('rail.jump')],
         [air, t('rail.air')],
@@ -1122,11 +1163,18 @@ window.__ModuleLoader__.load({
       return null
     }
 
-    /** `[action, dictionary key]` rows for both settings surfaces. */
+    /**
+     * `[action, dictionary key]` rows for both settings surfaces.
+     *
+     * The six-move list was the reason the panel looked like a keyboard map.
+     * The game plays on two attack buttons plus a direction, so the panel now
+     * shows the four bindings that matter. The old per-move bindings
+     * (hook/sweep/uppercut/slide) still exist on their default keys in the
+     * engine, but they are no longer something the player has to understand.
+     */
     const BINDABLE = [
       ['left', 'bind.left'], ['right', 'bind.right'], ['jump', 'bind.jump'],
-      ['jab', 'bind.jab'], ['hook', 'bind.hook'], ['kick', 'bind.kick'],
-      ['uppercut', 'bind.uppercut'], ['sweep', 'bind.sweep'], ['slide', 'bind.slide'],
+      ['jab', 'bind.jab'], ['kick', 'bind.kick'],
       ['block', 'bind.block'], ['crouch', 'bind.crouch'], ['retreat', 'bind.retreat'],
       ['special', 'bind.special'],
     ]
@@ -1404,7 +1452,16 @@ window.__ModuleLoader__.load({
         const next = !engine.audio.isMuted()
         engine.audio.setMuted(next)
         setMuted(next)
-        if (!next) engine.audio.play('clink')
+        if (!next) {
+          engine.audio.play('clink')
+          // Unmuting mid-round brings the fanfare back: the player asked for
+          // sound, and the music is part of what they asked for.
+          if (engine.duel?.arena?.phase === 'playing') {
+            try { engine.audio.startMusic?.() } catch { /* ignore */ }
+          }
+        } else {
+          try { engine.audio.stopMusic?.() } catch { /* ignore */ }
+        }
       }
 
       const begin = () => {
@@ -1513,15 +1570,21 @@ window.__ModuleLoader__.load({
         // overlay follows `koBeat` instead of running its own CSS clock, so
         // the stamp lands at the same instant the game freezes the frame —
         // otherwise the picture and the typography drift apart by a beat.
+        //
+        // `result` decides WHICH stamp: the rival going down is 胜, the player
+        // going down is 负. The round used to be unloseable, so there was only
+        // one; a loss needs its own word or it reads as a win.
         inOutro
           ? React.createElement('div', {
-            className: 'boot-duel-ko',
+            className: `boot-duel-ko${snapshotValue?.result === 'lose' ? ' is-lose' : ''}`,
             'data-beat': snapshotValue?.koBeat ?? 'seal',
           },
             React.createElement('div', { className: 'boot-duel-ko-seal' },
-              React.createElement('span', { className: 'boot-duel-ko-char' }, t('ko.title')),
+              React.createElement('span', { className: 'boot-duel-ko-char' },
+                t(snapshotValue?.result === 'lose' ? 'lose.title' : 'ko.title')),
             ),
-            React.createElement('div', { className: 'boot-duel-ko-sub' }, t('ko.subtitle')),
+            React.createElement('div', { className: 'boot-duel-ko-sub' },
+              t(snapshotValue?.result === 'lose' ? 'lose.subtitle' : 'ko.subtitle')),
             React.createElement('div', { className: 'boot-duel-ko-hint' }, t('ko.pressAnyKey')),
           )
           : null,
@@ -1577,6 +1640,10 @@ window.__ModuleLoader__.load({
       function finish() {
         if (settled) return
         settled = true
+        // The fanfare goes with the round, on every exit path — finish, skip,
+        // failure — so a muted-then-unmuted layer never leaves a track
+        // playing over the home page.
+        try { audio.stopMusic?.() } catch { /* ignore */ }
         __mod_session.markPassed()
         setFading(true)
         // The fade belongs to the show that started this round. If the user
@@ -1611,6 +1678,9 @@ window.__ModuleLoader__.load({
         const started = session.keyDown('Enter')
         if (started) {
           audio.play('gong')
+          // The fanfare starts with the bell — under the gong, not instead of
+          // it. A duel is one fanfare long, so it is never looped.
+          try { audio.startMusic?.() } catch { /* ignore */ }
           // A gate click is a gesture: it is the honest moment to unmute audio
           // that the player explicitly turned on.
           try { container?.focus({ preventScroll: true }) } catch { /* ignore */ }
@@ -1624,7 +1694,7 @@ window.__ModuleLoader__.load({
           const next = duel.getSnapshot()
           setSnapshot(next)
           try {
-            renderer.draw(next)
+            renderer.draw(next, next.riot ? (ctx) => __mod_riot.drawRiot(ctx, next.riot) : null)
           } catch (error) {
             loop.stop()
             fail('draw failed, letting the user through', error)

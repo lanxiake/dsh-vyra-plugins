@@ -58,10 +58,22 @@ export const ATK = Object.freeze({
   launchKick: { dur: 0.42, a: 0.30, b: 0.62, part: FOOT_F, r: 22, dmg: 10, vx: 300, vy: -820, power: 0.7, launch: true, kb: 0, lunge: 60 },
 })
 
-/** Per-kind constants. `scale` 1 is a ~100-unit body. */
+/**
+ * Per-kind constants. `scale` 1 is a ~100-unit body.
+ *
+ * `topknot` is the one costume mark that turns a plain stick figure into a
+ * wuxia swordsman WITHOUT touching the eleven-point skeleton: it is a drawn
+ * shape derived from the pose, never a simulated point, so the physics, the
+ * hitboxes and the ragdoll are untouched. It is per-kind so a round could give
+ * one fighter a bare head if it ever needs to.
+ *
+ * A waist sash was tried and CUT: trailing cloth off the pelvis reads as a
+ * TAIL on a 100-unit stick figure, whatever shape it is given, and the player
+ * said so plainly. Do not add it back.
+ */
 const KIND = {
-  player: { scale: 1.0, hp: 150, mass: 1.0, speed: 255, lw: 6.4 },
-  enemy: { scale: 1.0, hp: 150, mass: 1.0, speed: 255, lw: 6.4 },
+  player: { scale: 1.0, hp: 150, mass: 1.0, speed: 255, lw: 6.4, topknot: true },
+  enemy: { scale: 1.0, hp: 150, mass: 1.0, speed: 255, lw: 6.4, topknot: true },
 }
 
 /** The pose scratch. Reused every frame to avoid allocating in the loop. */
@@ -154,6 +166,14 @@ export class Fighter {
     this.restT = 0
     this.deadT = 0
     this.credit = false
+    /**
+     * The rig's ground-contact state on the PREVIOUS frame, for detecting the
+     * moment a ragdoll body first hits the floor. Starts TRUE because a
+     * fighter is standing on the ground when the round begins: starting it
+     * false would fire a phantom landing ring on the first ragdoll frame of
+     * every knockout.
+     */
+    this.wasGrounded = true
 
     this.tx = new Float32Array(N)
     this.ty = new Float32Array(N)
@@ -194,8 +214,9 @@ export class Fighter {
   /* ------------------------------------------------------- state ------- */
 
   startAttack(name) {
-    // Depth counts only punches strung together inside the cancel window.
-    this.chainCount = (name[0] === 'p' && this.chainT > 0) ? this.chainCount + 1 : 1
+    // A link counts when it is cancelled into: the string is the sequence of
+    // cancels, not the count of punches.
+    this.chainCount = this.chainT > 0 ? this.chainCount + 1 : 1
     this.atkName = name
     this.atk = ATK[name]
     this.atkHit.clear()
@@ -224,6 +245,10 @@ export class Fighter {
     this.atk = null
     this.tele = false
     this.onGround = false
+    // The body is leaving the floor: the next ground contact is a LANDING, and
+    // it should draw a ring. Leaving this true would swallow that first contact
+    // because the rig's own `grounded` has not cleared yet on this frame.
+    this.wasGrounded = false
     this.ai.engage = false
     this.rig.launch(vx, vy, spin)
   }
@@ -236,16 +261,21 @@ export class Fighter {
   punchChain() { return this.chainT > 0 || (this.state === 'atk' && this.atkName[0] === 'p') }
 
   /**
-   * A landed punch opens the chain window at once.
+   * A landed strike opens the cancel window.
    *
-   * The window used to open only when the move FINISHED, so the next punch
-   * had to be pressed after recovery — which is not a combo, it is two
-   * separate jabs. A cancel means: the hit connected, so the tail of this
-   * move may be replaced by the next link.
+   * The window used to open only for PUNCHES (`atkName[0] === 'p'`), and only
+   * when the move FINISHED — so a combo was jab → jab → jab at best, and any
+   * kick or launcher had to be thrown from neutral. A real string is jab →
+   * hook → kick → launcher, each swing cutting the tail of the last. The
+   * window now opens on ANY landed strike and lasts long enough for the player
+   * to press inside the recovery they can see.
    */
   openChain() {
-    if (this.atkName && this.atkName[0] === 'p') this.chainT = 0.55
+    if (this.atk) this.chainT = 0.55
   }
+
+  /** True while this fighter is inside a cancel window. */
+  get canCancel() { return this.chainT > 0 && this.state === 'atk' }
 
   /* --------------------------------------------------------- step ------ */
 
@@ -292,8 +322,10 @@ export class Fighter {
         this.t = 0
         this.atk = null
         this.tele = false
-        // A punch leaves a short window to chain the next one.
-        if (wasPunch) this.chainT = 0.38
+        // The tail of a swing is still cancellable, whichever limb threw it.
+        // A missed kick that lands nothing closes the window here instead of
+        // leaving it open into the idle stance.
+        this.chainT = Math.min(this.chainT, 0.2)
         // Let the counter linger briefly so the camera can read it.
         this.chainhold = this.chainCount
       }
@@ -311,6 +343,22 @@ export class Fighter {
     r.integrate()
     r.solve(w.groundY, w.minX, w.maxX)
     this.ragT += DT
+    /**
+     * A launched body lands as a RAGDOLL, and the ragdoll path never runs the
+     * kinematic ground test that sets `evLand` — so the 震地环 never fired for
+     * exactly the hits that most deserve one. The rig's own `grounded` flag is
+     * the contact signal: the first frame it goes true is the frame the body
+     * hit the floor.
+     */
+    if (r.grounded && !this.wasGrounded) {
+      // `energy()` is already in units per second, so it is the impact speed
+      // directly. The floor of 380 is the same threshold the kinematic path
+      // uses, so a gentle settle and a hard landing are distinguished the same
+      // way in both code paths.
+      const speed = r.energy()
+      if (speed > 380) this.evLand = Math.min(1600, speed * 1.4)
+    }
+    this.wasGrounded = r.grounded
     this.x = r.x[PELV]
     this.y = w.groundY
     this.vx = 0
@@ -480,66 +528,90 @@ export class Fighter {
     const name = this.atkName
     const u = clamp(this.t / a.dur, 0, 1)
 
-    if (name === 'p1' || name === 'p2') {
-      let e
+    /**
+     * The extension scalar for a one-armed strike. Every straight-line move
+     * shares this shape — coil behind, snap out, settle back — and only the
+     * offsets differ, which is what keeps eleven move poses readable as one
+     * vocabulary rather than as eleven bespoke animations.
+     */
+    const arm = (() => {
       if (u < a.a) {
         const k = u / a.a
-        e = k < 0.4 ? -0.3 * ease.outQuad(k / 0.4) : lerp(-0.3, 1, ease.inOutQuad((k - 0.4) / 0.6))
-      } else if (u < a.b) e = 1
-      else e = 1 - ease.inOutQuad((u - a.b) / (1 - a.b))
-
-      if (name === 'p2') {
-        // The back-hand swing: the far fist comes round, the body turns into it.
-        P.hbx = 12 + e * 62
-        P.hby = -3
-        P.hfx = 18
-        P.hfy = 0
-        P.lean = 0.1 + 0.24 * e
-        P.pdx = e * 12
-        P.ffx = 20 + e * 8
-        P.fbx = -16 - e * 4
-      } else {
-        P.hfx = 18 + e * 54
-        P.hfy = -4 - e * 2
-        P.hbx = 8
-        P.hby = 6
-        P.lean = 0.12 + 0.2 * e
-        P.pdx = e * 9
-        P.ffx = 16 + e * 8
+        return k < 0.4 ? -0.3 * ease.outQuad(k / 0.4) : lerp(-0.3, 1, ease.inOutQuad((k - 0.4) / 0.6))
       }
+      if (u < a.b) return 1
+      return 1 - ease.inOutQuad((u - a.b) / (1 - a.b))
+    })()
+
+    if (name === 'p1') {
+      // THE STRAIGHT. The lead fist drives out, the back fist guards the jaw,
+      // the rear heel pivots: a jab is a whole-body turn even at this speed.
+      P.hfx = 18 + arm * 56
+      P.hfy = lerp(-2, -10, arm)
+      P.hbx = lerp(10, 4, arm)
+      P.hby = lerp(8, -14, arm)
+      P.lean = 0.12 + 0.2 * arm
+      P.pdx = arm * 9
+      P.ffx = 16 + arm * 8
+      P.fbx = -16 - arm * 6
+      P.tilt = -0.05 * arm
+    } else if (name === 'p2') {
+      // THE HOOK. The FAR fist comes round, the body rotates into it and the
+      // lead hand pulls back as a counterweight — two arms in opposite
+      // directions is what makes a hook read as a hook, not a second straight.
+      P.hbx = 12 + arm * 62
+      P.hby = -3 - arm * 6
+      P.hfx = lerp(18, 4, arm)
+      P.hfy = lerp(-2, 10, arm)
+      P.lean = 0.1 + 0.24 * arm
+      P.pdx = arm * 12
+      P.ffx = 20 + arm * 8
+      P.fbx = -16 - arm * 4
+      P.tilt = 0.08 * arm
     } else if (name === 'p3') {
-      // Uppercut: sink, then explode upward.
+      // THE UPPERCUT. Sink, then explode upward: the whole body rises, the
+      // rear foot extends, and the fist ends above the head.
       if (u < a.a) {
         const k = ease.outQuad(u / a.a)
-        P.crouch = 16 * k
-        P.hfx = lerp(20, 12, k); P.hfy = lerp(-2, 28, k)
-        P.lean = lerp(0.12, 0.3, k)
-        P.hbx = 6; P.hby = 12
+        P.crouch = 18 * k
+        P.hfx = lerp(20, 12, k); P.hfy = lerp(-2, 30, k)
+        P.lean = lerp(0.12, 0.34, k)
+        P.hbx = 6; P.hby = 14
         P.ffx = 20; P.fbx = -18
+      } else if (u < a.b) {
+        const q = ease.outCubic((u - a.a) / (a.b - a.a))
+        P.crouch = lerp(18, -10, q)
+        P.hfx = lerp(12, 20, q); P.hfy = lerp(30, -92, q)
+        P.lean = lerp(0.34, -0.14, q)
+        P.pdx = 7 * q
+        P.hbx = 4; P.hby = lerp(14, -8, q)
+        P.ffx = 22; P.ffy = 14 * q; P.fbx = -18; P.fby = q * 10
       } else {
-        const k = u < a.b ? ease.outCubic((u - a.a) / (a.b - a.a)) : 1 - ease.inOutQuad((u - a.b) / (1 - a.b)) * 0.9
-        const q = clamp(k, 0, 1)
-        P.crouch = lerp(16, -7, q)
-        P.hfx = lerp(12, 24, q); P.hfy = lerp(28, -64, q)
-        P.lean = lerp(0.3, -0.06, q)
-        P.pdx = 8 * q
-        P.hbx = 4; P.hby = lerp(12, -10, q)
-        P.ffx = 22; P.ffy = 0; P.fbx = -18; P.fby = q * 8
+        // The follow-through: the fist stays high but the body comes back
+        // down. Without it the next frame snapped to the neutral stance and
+        // the move looked like a jump cut.
+        const k = ease.inOutQuad((u - a.b) / (1 - a.b))
+        P.crouch = lerp(-10, -2, k)
+        P.hfx = lerp(20, 18, k); P.hfy = lerp(-92, -20, k)
+        P.lean = lerp(-0.14, 0.12, k)
+        P.hbx = 6; P.hby = lerp(-8, 8, k)
+        P.ffx = 22; P.ffy = lerp(14, 0, k); P.fbx = -18; P.fby = lerp(10, 0, k)
       }
     } else if (name === 'k') {
-      // The kick: knee leads, shin snaps out, the body leans away.
+      // THE ROUNDHOUSE. The knee leads, the shin snaps out as the hips turn,
+      // and the arms counter-rotate away from the kicking leg.
       let e
       if (u < a.a) e = 0.35 * ease.outQuad(u / a.a)
       else if (u < a.b) e = lerp(0.35, 1, ease.outCubic(Math.min(1, (u - a.a) / ((a.b - a.a) * 0.4))))
       else e = 1 - ease.inOutQuad((u - a.b) / (1 - a.b))
-      P.ffx = lerp(14, 60, e); P.ffy = lerp(0, 42, e)
+      P.ffx = lerp(14, 62, e); P.ffy = lerp(0, 44, e)
       P.pdx = 12 * e
-      P.lean = lerp(0.12, -0.3, e); P.tilt = -0.2 * e
+      P.lean = lerp(0.12, -0.3, e); P.tilt = -0.22 * e
       P.fbx = -16 - 6 * e
-      P.hfx = lerp(20, -4, e); P.hfy = lerp(-2, 12, e)
-      P.hbx = lerp(12, -26, e); P.hby = lerp(8, -14, e)
+      P.hfx = lerp(20, -6, e); P.hfy = lerp(-2, 14, e)
+      P.hbx = lerp(12, -30, e); P.hby = lerp(8, -16, e)
     } else if (name === 'sweep') {
-      // The sweep: drop onto the back leg, the front leg scythes along the floor.
+      // THE SWEEP: drop onto the rear leg, the lead leg scythes along the floor.
       let e
       if (u < a.a) e = 0.4 * ease.outQuad(u / a.a)
       else if (u < a.b) e = lerp(0.4, 1, ease.outCubic(Math.min(1, (u - a.a) / ((a.b - a.a) * 0.45))))
@@ -547,7 +619,6 @@ export class Fighter {
       P.crouch = 30 * e
       P.lean = lerp(0.12, 0.75, e)
       P.tilt = 0.2 * e
-      // The scything foot rides just above the floor and reaches far out.
       P.ffx = lerp(14, 74, e)
       P.ffy = lerp(0, 4, e)
       P.pdx = 14 * e
@@ -555,7 +626,8 @@ export class Fighter {
       P.hfx = lerp(20, 44, e); P.hfy = lerp(-2, 18, e)
       P.hbx = lerp(12, -34, e); P.hby = lerp(8, 20, e)
     } else if (name === 'slide') {
-      // Feet first along the floor: drop in fast, rise out at the end.
+      // THE SLIDE. Feet first along the floor: drop in fast, rise out at the
+      // end, the trailing arm sweeping the floor behind.
       const e = ease.outQuad(clamp(u / 0.14, 0, 1)) * (1 - ease.inOutQuad(clamp((u - 0.76) / 0.24, 0, 1)))
       P.crouch = 30 * e
       P.lean = lerp(0.12, -0.95, e)
@@ -565,7 +637,7 @@ export class Fighter {
       P.hfx = lerp(18, 26, e); P.hfy = lerp(-2, -22, e)
       P.hbx = lerp(8, -28, e); P.hby = lerp(6, 28, e)
     } else if (name === 'air') {
-      // The jumping kick: both legs trail, one drives down and forward.
+      // THE JUMP KICK: both legs trail, one drives down and forward.
       let e
       if (u < a.a) e = 0.3 * ease.outQuad(u / a.a)
       else if (u < a.b) e = lerp(0.3, 1, ease.outCubic(Math.min(1, (u - a.a) / ((a.b - a.a) * 0.5))))
@@ -575,6 +647,81 @@ export class Fighter {
       P.fbx = lerp(-8, -24, e); P.fby = lerp(10, 22, e)
       P.hfx = lerp(24, -14, e); P.hfy = lerp(-28, -6, e)
       P.hbx = lerp(-2, -30, e); P.hby = lerp(-24, -16, e)
+    } else if (name === 'airPunch') {
+      // THE DIVE PUNCH: the front fist leads down at the target, the knees
+      // tuck. It replaced a pose that was literally the idle stance.
+      P.lean = lerp(0.06, 0.55, arm)
+      P.ffx = lerp(20, 30, arm); P.ffy = lerp(18, 30, arm)
+      P.fbx = lerp(-8, -18, arm); P.fby = lerp(10, 26, arm)
+      P.hfx = lerp(24, 58, arm); P.hfy = lerp(-28, 26, arm)
+      P.hbx = lerp(-2, -26, arm); P.hby = lerp(-24, -30, arm)
+      P.crouch = 6 * arm
+    } else if (name === 'airStomp') {
+      // THE STOMP: both feet drive down together, then the body straightens on
+      // the way back up. No kick, no punch — the whole mass comes down.
+      let e
+      if (u < a.a) e = 0.45 * ease.outQuad(u / a.a)
+      else if (u < a.b) e = lerp(0.45, 1, ease.outCubic(Math.min(1, (u - a.a) / ((a.b - a.a) * 0.4))))
+      else e = 1 - ease.inOutQuad((u - a.b) / (1 - a.b))
+      P.lean = lerp(0.06, 0.2, e)
+      P.ffx = lerp(20, 14, e); P.ffy = lerp(18, 52, e)
+      P.fbx = lerp(-8, -6, e); P.fby = lerp(10, 48, e)
+      P.hfx = lerp(24, 44, e); P.hfy = lerp(-28, -44, e)
+      P.hbx = lerp(-2, 30, e); P.hby = lerp(-24, -40, e)
+      P.crouch = 4 * e
+    } else if (name === 'launchKick') {
+      // THE JUGGLE KICK: the rear leg whips straight up, the body arches back,
+      // and the launch's own upward motion carries the attack.
+      let e
+      if (u < a.a) e = 0.3 * ease.outQuad(u / a.a)
+      else if (u < a.b) e = lerp(0.3, 1, ease.outCubic(Math.min(1, (u - a.a) / ((a.b - a.a) * 0.45))))
+      else e = 1 - ease.inOutQuad((u - a.b) / (1 - a.b))
+      P.lean = lerp(0.12, -0.5, e)
+      P.tilt = -0.3 * e
+      P.ffx = lerp(14, 26, e); P.ffy = lerp(0, 62, e)
+      P.fbx = lerp(-16, -28, e); P.fby = lerp(0, 34, e)
+      P.hfx = lerp(20, 30, e); P.hfy = lerp(-2, 30, e)
+      P.hbx = lerp(12, -34, e); P.hby = lerp(8, 26, e)
+      P.crouch = 9 * e
+    } else if (name === 'superMove') {
+      /**
+       * THE FINISHER'S OWN MOTION.
+       *
+       * It used to have no branch at all and fell through to the idle pose —
+       * the "super" was a standing figure with a banner over it. This is a
+       * three-part action so the freeze has something to show: a deep crouch
+       * with both fists gathering, a two-handed overhead hammer, then the
+       * follow-through with the body folded forward.
+       */
+      if (u < 0.22) {
+        // GATHER: sink, both fists draw back behind the shoulder.
+        const k = ease.outQuad(u / 0.22)
+        P.crouch = 24 * k
+        P.lean = lerp(0.12, 0.42, k)
+        P.hfx = lerp(20, -6, k); P.hfy = lerp(-2, 34, k)
+        P.hbx = lerp(12, -16, k); P.hby = lerp(8, 26, k)
+        P.ffx = 22 - 4 * k; P.fbx = -18 - 4 * k
+        P.tilt = -0.18 * k
+      } else if (u < 0.72) {
+        // HAMMER: both arms swing overhead and down onto the target.
+        const q = ease.outCubic(clamp((u - 0.22) / 0.5, 0, 1))
+        P.crouch = lerp(24, 2, q)
+        P.lean = lerp(0.42, 0.62, q)
+        P.pdx = 18 * q
+        P.hfx = lerp(-6, 52, q); P.hfy = lerp(34, -16, q)
+        P.hbx = lerp(-16, 40, q); P.hby = lerp(26, -34, q)
+        P.ffx = 18; P.fbx = -22
+        P.tilt = lerp(-0.18, 0.1, q)
+      } else {
+        // FOLLOW-THROUGH: folded over the hit, then the body comes back up.
+        const k = ease.inOutQuad(clamp((u - 0.72) / 0.28, 0, 1))
+        P.crouch = lerp(2, 0, k)
+        P.lean = lerp(0.62, 0.12, k)
+        P.pdx = lerp(18, 0, k)
+        P.hfx = lerp(52, 20, k); P.hfy = lerp(-16, -2, k)
+        P.hbx = lerp(40, 12, k); P.hby = lerp(-34, 8, k)
+        P.ffx = 18; P.fbx = -22
+      }
     }
     this.tele = this.atk.tele ? u < a.a : false
   }

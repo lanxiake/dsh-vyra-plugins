@@ -1,7 +1,7 @@
 {
   "title": "开工大吉",
   "subtitle": "工位即江湖",
-  "hint.controls": "A / D 移动 · J 直拳 · H 摆拳 · K 踢击 · F 上勾 · G 扫腿 · N 滑铲 · L 格挡 · S 下蹲 · Shift 后跳 · 空格 跳 · 空中 J/K 空袭 · U 大招 · Esc 跳过",
+  "hint.controls": "A / D 移动 · J 直拳 · J+S 上勾 · K 踢击 · K+S 扫腿 · 连按 J/K 连招 · L 格挡 · Shift 后跳 · 空格 跳 · 空中 J/K 空袭 · U 大招 · Esc 跳过",
   "hint.skip": "按 Esc 跳过这一局",
   "skip.button": "跳过",
   "special.name": "破 军",

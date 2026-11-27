@@ -6,3 +6,13 @@ https://creativecommons.org/publicdomain/zero/1.0/
 Sound effects by Kenney (www.kenney.nl), from the "Impact Sounds" and
 "RPG Audio" packs. Licence: CC0 1.0. Free for personal, educational and
 commercial use; credit is optional.
+
+战斗音乐 boss_appears.ogg 来自 Beatscribe 的 "homebrew_vgm"（Sega Genesis 主旋律）。
+许可：Creative Commons Zero (CC0 1.0)
+https://github.com/Beatscribe/homebrew_vgm
+作者注明如需署名可写 "Beatscribe"，非必需。
+
+Battle music (boss_appears.ogg) by Beatscribe, from the "homebrew_vgm" collection
+(Sega Genesis arrangement). Licence: CC0 1.0.
+https://github.com/Beatscribe/homebrew_vgm
+The author suggests crediting "Beatscribe" if you like; it is not required.

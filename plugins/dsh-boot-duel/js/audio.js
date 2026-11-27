@@ -20,6 +20,8 @@ export function createAudio({
   /** name -> AudioBuffer, or null once loading failed. */
   const buffers = new Map()
   let master = null
+  /** The music source while the fanfare is playing, or null. */
+  let music = null
 
   const SAMPLES = {
     hit: ['impactpunch-medium-000.ogg', 'impactpunch-medium-001.ogg'],
@@ -211,9 +213,66 @@ export function createAudio({
       }
     },
 
-    /** Assets are fetched lazily; callers may warm them early. */
+    /**
+     * Assets are fetched lazily; callers may warm them early.
+     */
     warm() {
       if (!muted) { ensureContext(); prefetch() }
+    },
+
+    /**
+     * The fight's music: the CC0 "boss appears" fanfare, looped under the
+     * round.
+     *
+     * A fanfare is not a bed — it climbs and resolves in fifteen seconds.
+     * That is exactly the length of a duel here, so it plays ONCE from the
+     * bell and never loops: a track that resolves while the player is still
+     * fighting reads as the game ending without them.
+     *
+     * Failure is silent, like every other audio path: a missing file leaves
+     * the fight exactly as it was.
+     */
+    startMusic() {
+      if (muted || unavailable) return
+      const ctx = ensureContext()
+      if (!ctx || typeof fetchImpl !== 'function') return
+      if (music) return
+      try {
+        music = ctx.createBufferSource()
+        music.gainNode = ctx.createGain()
+        music.gainNode.gain.value = 0
+        music.connect(music.gainNode).connect(master)
+        fetchImpl(`${sampleBase}boss_appears.ogg`, { cache: 'force-cache' })
+          .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(String(response.status)))))
+          .then((bytes) => ctx.decodeAudioData(bytes))
+          .then((buffer) => {
+            if (!music) return
+            music.buffer = buffer
+            // A short fade in so the bell is heard over it.
+            const at = ctx.currentTime
+            music.gainNode.gain.setValueAtTime(0.0001, at)
+            music.gainNode.gain.exponentialRampToValueAtTime(0.36, at + 0.45)
+            music.onended = () => { music = null }
+            music.start()
+          })
+          .catch(() => { music = null })
+      } catch {
+        music = null
+      }
+    },
+
+    /** Fade the music out and release it. Safe to call more than once. */
+    stopMusic() {
+      const ctx = context
+      if (!music || !ctx) { music = null; return }
+      try {
+        const at = ctx.currentTime
+        music.gainNode.gain.cancelScheduledValues(at)
+        music.gainNode.gain.setValueAtTime(Math.max(0.0001, music.gainNode.gain.value), at)
+        music.gainNode.gain.exponentialRampToValueAtTime(0.0001, at + 0.6)
+        music.stop(at + 0.65)
+      } catch { /* already stopped */ }
+      music = null
     },
 
     /** True once at least one recorded sample decoded. */

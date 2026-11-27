@@ -41,6 +41,7 @@
  *   take   — the player is knocked down
  *   super  — the finisher
  *   ko     — the opponent goes down (the last word, not a truce)
+ *   defeat — the PLAYER goes down (the rival gets the last word instead)
  *   taunt  — the opponent's line after it lands something big
  */
 
@@ -51,17 +52,17 @@ export const STORIES = [
     you: '你',
     rival: '产品',
     beats: {
+      /**
+       * FOUR lines. One exchange: a demand, a refusal, a dodge, the line that
+       * ends the talking. The opening used to run ten lines and made the
+       * player stand there for fifteen seconds — an argument, not a fight.
+       * Whoever is still talking when the fourth line lands gets hit.
+       */
       open: [
         ['rival', '这需求今天必须上。', 'hard'],
         ['you', '今天？现在几点了你抬头看看。', 'hard'],
-        ['rival', '那是你的问题。', 'smooth'],
-        ['you', '我的问题？行，那你来做。', 'hard'],
-        ['rival', '我要是能做要你干嘛。', 'cheery'],
-        ['you', '要我就是来给你擦屁股的？', 'hard'],
-        ['rival', '话别说这么难听。', 'smooth'],
-        ['you', '我说的是事实，难听的是事实。', 'dry'],
-        ['rival', '项目要紧，别的以后再说。', 'cheery'],
-        ['you', '哪个项目不是被这句「以后再说」拖死的。', 'hard'],
+        ['rival', '那是你的问题，不是我的。', 'smooth'],
+        ['you', '行，那现在就谈。', 'hard'],
       ],
       /**
        * Each line is `[speaker, text, mood, reply]`. `reply` is the id of the
@@ -149,6 +150,15 @@ export const STORIES = [
         { id: 'k1', speaker: 'rival', text: '……', mood: 'beaten' },
         { id: 'k1a', reply: 'k1', speaker: 'you', text: '说啊，怎么不说了。', mood: 'dry' },
       ],
+      /**
+       * THE OTHER ENDING. The rival wins, so the rival gets the last word —
+       * and it is worse than the taunt, because it is not a boast. A loss has
+       * to sting a little or the player has no reason to avoid it.
+       */
+      defeat: [
+        { id: 'd1', speaker: 'rival', text: '行了行了，回去改吧。', mood: 'smooth' },
+        { id: 'd1a', reply: 'd1', speaker: 'rival', text: '改完今天发我。', mood: 'hard' },
+      ],
       taunt: [
         { id: 'x1', speaker: 'rival', text: '这很简单的。', mood: 'airy' },
         { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你来做啊。', mood: 'hard' },
@@ -181,14 +191,8 @@ export const STORIES = [
       open: [
         ['rival', '接口给你了，自己看。', 'flat'],
         ['you', '文档呢？你连文档都没有？', 'hard'],
-        ['rival', '接口就是文档。', 'smooth'],
-        ['you', '字段没注释，我猜着接？', 'hard'],
-        ['rival', '字段名就是注释。', 'cheery'],
-        ['you', 'data2_new 是什么意思，你倒是说说。', 'hard'],
-        ['rival', '……就是第二个 data 的新版。', 'smooth'],
-        ['you', '那 data2_old 呢？你在拿我练手？', 'hard'],
-        ['rival', '你先接，我在改。', 'airy'],
-        ['you', '改完字段名也变吧？你敢说不变？', 'hard'],
+        ['rival', '接口就是文档，字段名就是注释。', 'smooth'],
+        ['you', '行，那 data2_new 是什么，你现在给我念。', 'hard'],
       ],
       chain: [
         { id: 'c1', speaker: 'you', text: '你这个接口返回 500，解释一下。', mood: 'hard' },
@@ -270,6 +274,10 @@ export const STORIES = [
         { id: 'k1', speaker: 'rival', text: '……', mood: 'beaten' },
         { id: 'k1a', reply: 'k1', speaker: 'you', text: '文档呢？写啊。', mood: 'dry' },
       ],
+      defeat: [
+        { id: 'd1', speaker: 'rival', text: '就这样吧，能用就行。', mood: 'cheery' },
+        { id: 'd1a', reply: 'd1', speaker: 'rival', text: '我这边先测过了。', mood: 'smooth' },
+      ],
       taunt: [
         { id: 'x1', speaker: 'rival', text: '接口很简单的。', mood: 'airy' },
         { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你写个例子，现在。', mood: 'hard' },
@@ -302,14 +310,8 @@ export const STORIES = [
       open: [
         ['rival', '这个版本有个问题。', 'hard'],
         ['you', '什么问题？说清楚。', 'hard'],
-        ['rival', '偶现。', 'airy'],
-        ['you', '偶现是多久一次？给个数。', 'hard'],
-        ['rival', '不知道，就是会出现。', 'smooth'],
-        ['you', '出现的时候什么样，你总知道吧？', 'hard'],
-        ['rival', '……反正不对。', 'cheery'],
+        ['rival', '偶现，反正不对。', 'airy'],
         ['you', '「反正不对」，你让我修什么？', 'hard'],
-        ['rival', '你们开发最懂了。', 'airy'],
-        ['you', '我们最懂的是它在你这儿才坏。', 'dry'],
       ],
       chain: [
         { id: 'c1', speaker: 'you', text: '我按你说的步骤试了十遍，你先解释。', mood: 'hard' },
@@ -390,6 +392,10 @@ export const STORIES = [
       ko: [
         { id: 'k1', speaker: 'rival', text: '……', mood: 'beaten' },
         { id: 'k1a', reply: 'k1', speaker: 'you', text: '日志呢？现在贴出来。', mood: 'dry' },
+      ],
+      defeat: [
+        { id: 'd1', speaker: 'rival', text: '你先重启一下再说吧。', mood: 'smooth' },
+        { id: 'd1a', reply: 'd1', speaker: 'rival', text: '我这边是好的。', mood: 'airy' },
       ],
       taunt: [
         { id: 'x1', speaker: 'rival', text: '我这边没问题。', mood: 'airy' },
@@ -481,7 +487,7 @@ export function createBarks(story, rng = Math.random) {
   const lastSaid = new Map()
 
   const THREAD_BEATS = ['chain', 'guard', 'hit', 'take', 'taunt']
-  const MOMENT_BEATS = ['super', 'ko']
+  const MOMENT_BEATS = ['super', 'ko', 'defeat']
 
   const openScript = (() => {
     /**

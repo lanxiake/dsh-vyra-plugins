@@ -1,0 +1,16 @@
+{
+  "prompt": "A minimal 2D stick-figure fighting-animation still, on a plain white background. Two pure-black stick figures with thin even line weight, round joints and round heads, no shading, no gradient, no colour, no text, no border, side-on fixed camera, full bodies in frame. An airborne X-collision: the two figures meet in the air with crossing kicks, a ring-shaped shockwave bursting between their feet, speed lines radiating out from the collision point. Frozen at the instant of impact, with smears and speed lines, heavy contact.",
+  "negative": "colour, faces, realistic, 3D, shading, gradient, background detail, text, watermark, extra limbs, distortion, blur, low contrast",
+  "images": [
+    {
+      "filename": "boot-duel-ref_00005_.png",
+      "subfolder": "",
+      "type": "output",
+      "metadata": {
+        "kind": "image",
+        "width": 1280,
+        "height": 720
+      }
+    }
+  ]
+}

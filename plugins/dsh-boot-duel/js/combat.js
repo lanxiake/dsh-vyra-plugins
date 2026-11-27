@@ -35,6 +35,17 @@ const SEGMENTS = [
 ]
 
 /**
+ * How many links a string may hold the body for.
+ *
+ * Without a cap, a player who learns the cancel can stand still and keep the
+ * rival stunned until the health runs out — a faustian combo that is easy to
+ * perform but has nothing to express. The cap means the string has to END on
+ * a decision: keep pressing for damage and give back the spacing, or finish
+ * with something heavy while the body is still in front of you.
+ */
+const STRING_MAX = 4
+
+/**
  * Distance from point (hx, hy) to the segment a-b. Used for the capsule test:
  * a hit is "the strike centre is within `r` plus the limb's own radius of any
  * of the target's bones".
@@ -120,7 +131,6 @@ export function resolveAttacks(fighters, world, onHit) {
  */
 export function applyHit(a, v, name, hx, hy, world, onHit) {
   const spec = ATK[name]
-  const byPlayer = a.team === 'p'
   const dir = a.face || sign(v.x - a.x)
   const juggling = v.ragdolled
 
@@ -137,16 +147,46 @@ export function applyHit(a, v, name, hx, hy, world, onHit) {
    */
   const scale = Number.isFinite(a.dmgScale) ? a.dmgScale : 1
   const dealt = Math.max(1, Math.round(spec.dmg * scale * (guarding ? 0.2 : 1)))
+  /**
+   * IS THIS HIT PART OF A STRING?
+   *
+   * A combo in the genre is not "several hits land consecutively" — it is a
+   * hit landed on a body that has not yet recovered from the last one. So the
+   * chain test is `v.state === 'hurt'`: the victim is already stunned by the
+   * previous link. (`v.ragdolled` is the juggle case and has its own branch.)
+   *
+   * This is also what lets the string HOLD THE BODY: a staggering victim is
+   * not shoved out of reach, because holding them in front of the attacker is
+   * the whole point of learning the cancel window. The first hit shoves (it
+   * is a hit, it should move somebody); every link after it pins.
+   */
+  const inString = v.state === 'hurt' && !juggling
 
-  // The PLAYER floors at 1: this is an opening animation, not a game over.
-  // An enemy at 0 is a knockout.
+  /**
+   * Health floors at ZERO for BOTH fighters.
+   *
+   * The player used to floor at 1: the opening was an animation, not a game
+   * over, so the rival could never actually win. The player called that out —
+   * 「玩家不要锁血，该被 OK 就 OK」 — and they are right: an opponent that cannot
+   * knock you out makes every round a formality, and there is no reason to
+   * block or to keep distance.
+   *
+   * A knockout now belongs to whoever dealt the blow. `kill` is true on the
+   * frame health reaches zero, for either side; `combat.js` decides that, and
+   * the arena decides what a knockout MEANS (the player's is its own outro).
+   */
   const raw = v.hp - dealt
-  v.hp = byPlayer ? Math.max(0, raw) : Math.max(1, raw)
-  const kill = byPlayer && v.hp <= 0 && !guarding
+  v.hp = Math.max(0, raw)
+  const kill = v.hp <= 0 && !guarding
   const I = clamp(spec.power * (kill ? 1.12 : 1), 0, 1.15)
   v.flash = 0.12
   // A connecting swing opens the attacker's chain: that is the cancel.
   a.openChain()
+
+  // A string is capped so a trained player cannot stand still and hold the
+  // rival in place forever: more links than this push the body out.
+  if (inString) a.chainCount += 1
+  const held = inString && a.chainCount <= STRING_MAX
 
   // --- the physical response -----------------------------------------
   let reaction
@@ -166,14 +206,16 @@ export function applyHit(a, v, name, hx, hy, world, onHit) {
     v.rig.kick(dir * spec.vx * 0.8 / m, Math.min(-380, spec.vy / Math.pow(m, 0.7) * 0.9))
     v.restT = 0
     v.ragT = Math.min(v.ragT, 1.6)
-  } else if (spec.launch) {
+  } else if (spec.launch && !held) {
     reaction = 'launch'
     const m = v.mass
     v.launch(dir * spec.vx / m, spec.vy / Math.pow(m, 0.7), dir * rand(2, 6) * (0.6 + I))
   } else {
     reaction = 'stagger'
     const m = v.mass
-    v.stagger(dir * (spec.kb || 120) / m, 0.24 + 0.08 * I)
+    // A held body takes the hit without being shoved out of reach; the last
+    // link past the cap gets the full knockback, which is the combo's ending.
+    v.stagger(held ? dir * 20 / m : dir * (spec.kb || 120) / m, held ? 0.16 : 0.24 + 0.08 * I)
   }
 
   // --- the feedback ---------------------------------------------------
@@ -196,6 +238,7 @@ export function applyHit(a, v, name, hx, hy, world, onHit) {
     reaction,
     power: I,
     juggle: juggling,
+    string: held,
   })
 
   return reaction

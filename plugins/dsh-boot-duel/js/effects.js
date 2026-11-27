@@ -27,29 +27,43 @@ const KOF = {
   blue: '#57d8ff',
 }
 
-/** Draw the impact burst: a hot core, a dark rim, and radial spokes. */
-export function drawImpact(ctx, hit, t) {
+/**
+ * The link's own body: the burst and the sparks.
+ *
+ * Two genre conventions decide this drawing:
+ *
+ *   - **Number of spokes = the weight of the blow.** A jab throws a small cross
+ *     of sparks; a heavy connection throws a starburst. The count lives on the
+ *     ladder, not in the drawing, so the first link and the fifth differ by a
+ *     number rather than by a separate effect.
+ *   - **The core is white and the rim is dark.** A hit spark has to read on
+ *     both a black silhouette and a white one, and on a pale office wall. The
+ *     dark underlay is what makes the bright spokes survive the wall.
+ *
+ * `spread` is the ladder's tier multiplier; everything below scales with it.
+ */
+export function drawImpact(ctx, hit, t, spread = 1) {
   const life = Math.max(0, hit.life)
   const grow = 1 - life
-  const big = (hit.kill ? 1.7 : hit.guarded ? 0.6 : 1.0) * (0.65 + hit.power * 0.55)
+  const big = (hit.kill ? 1.7 : hit.guarded ? 0.6 : 1.0) * (0.65 + hit.power * 0.55) * spread
   ctx.save()
   ctx.translate(hit.x, hit.y)
   ctx.globalAlpha = Math.min(1, life * 2.2)
 
-  // Outer spokes: long, thin, uneven — the KOF starburst.
-  const spokes = hit.kill ? 14 : 9
+  // Outer spokes: long, thin, uneven — the fighting-game starburst.
+  const spokes = hit.kill ? 14 : Math.round((hit.spokes ?? 9) * (hit.hot ? 1.5 : 1))
   ctx.lineCap = 'round'
   for (let i = 0; i < spokes; i++) {
     const a = (i / spokes) * Math.PI * 2 + (i % 3) * 0.31
     const len = (26 + (i % 4) * 11) * (0.45 + life * 0.75) * big
     // A dark rim under a bright spoke makes it read on any background.
-    ctx.strokeStyle = KOF.ink
+    ctx.strokeStyle = hit.hot ? KOF.red : KOF.ink
     ctx.lineWidth = (4.4 + (i % 3)) * life * big
     ctx.beginPath()
     ctx.moveTo(Math.cos(a) * 3, Math.sin(a) * 3)
     ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len)
     ctx.stroke()
-    ctx.strokeStyle = i % 3 === 0 ? KOF.hot : KOF.amber
+    ctx.strokeStyle = i % 3 === 0 ? KOF.hot : hit.hot ? KOF.amber : KOF.white
     ctx.lineWidth = (2.4 + (i % 3) * 0.8) * life * big
     ctx.beginPath()
     ctx.moveTo(Math.cos(a) * 3, Math.sin(a) * 3)
@@ -57,8 +71,10 @@ export function drawImpact(ctx, hit, t) {
     ctx.stroke()
   }
 
-  // The core: amber disc, then a white-hot centre.
-  ctx.fillStyle = KOF.amber
+  // The core: a solid disc, then a white-hot centre. The white core is the
+  // single strongest readability cue a hit has, which is why it never blinks
+  // out until the burst is gone.
+  ctx.fillStyle = hit.hot ? KOF.red : KOF.amber
   ctx.beginPath()
   ctx.arc(0, 0, (10 + grow * 12) * big, 0, Math.PI * 2)
   ctx.fill()
@@ -79,7 +95,7 @@ export function drawImpact(ctx, hit, t) {
 }
 
 /** Radial speed lines converging on (x, y). Two or three frames only. */
-export function drawSpeedLines(ctx, x, y, life, power) {
+export function drawSpeedLines(ctx, x, y, life, power, spread = 1) {
   if (life <= 0.02) return
   const n = 22
   ctx.save()
@@ -88,8 +104,8 @@ export function drawSpeedLines(ctx, x, y, life, power) {
   ctx.lineCap = 'round'
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + i * 0.77
-    const r0 = 26 + (i % 5) * 8
-    const r1 = r0 + (26 + (i % 7) * 14) * (0.4 + power * 0.7)
+    const r0 = (26 + (i % 5) * 8) * spread
+    const r1 = r0 + (26 + (i % 7) * 14) * (0.4 + power * 0.7) * spread
     ctx.strokeStyle = i % 4 === 0 ? KOF.hot : KOF.ink
     ctx.lineWidth = (1 + (i % 3) * 0.9) * life * 2.2
     ctx.beginPath()
@@ -328,7 +344,19 @@ export function drawKoBeat(ctx, w, h, beat, koT, scale, toScreen, snap) {
 export function drawCombo(ctx, w, count, pop) {
   if (count < 2) return
   ctx.save()
-  const size = Math.round(Math.min(w * 0.055, 54)) * (1 + pop * 0.25)
+  /**
+   * The number GROWS with the chain and the plate behind it heats up.
+   *
+   * A counter that is the same size at two hits and at eight is a piece of
+   * UI; one that keeps growing is a score the player is chasing. The growth
+   * is sub-linear (a square root) so the eighth hit is loud without the
+   * thirty-second being off-screen.
+   */
+  const heat = Math.min(1, (count - 2) / 6)
+  // The counter is screen-space text, so it needs the same 1.3 the rest of
+  // the type got; `w * 0.055` capped at 54 px was sized against the old,
+  // smaller stage.
+  const size = Math.round(Math.min(w * 0.071, 70) * (1 + pop * 0.25) * (1 + heat * 0.35))
   ctx.font = `900 ${size}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
@@ -340,17 +368,58 @@ export function drawCombo(ctx, w, count, pop) {
    * plate is ~90 px tall, so the counter starts under it.
    */
   const y = Math.max(104, w * 0.05)
+  // A pop makes the number jump: 3 px at the pop's peak, eased out.
+  const shake = Math.round(pop * 3)
   ctx.fillStyle = KOF.ink
-  ctx.fillText(String(count), x + 3, y + 3)
-  ctx.fillStyle = KOF.hot
-  ctx.fillText(String(count), x, y)
+  ctx.fillText(String(count), x + 3 + shake, y + 3 - shake)
+  // The fill runs from amber to white-hot along the chain: eight hits is a
+  // different thing from two, and the colour is what says so at a glance.
+  ctx.fillStyle = heat > 0.6 ? KOF.white : heat > 0.25 ? KOF.hot : KOF.amber
+  ctx.fillText(String(count), x + shake, y - shake)
   const sub = Math.round(size * 0.42)
   ctx.font = `700 ${sub}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`
   ctx.fillStyle = KOF.ink
   ctx.fillText('连击', x + 3, y + size + 3)
-  ctx.fillStyle = KOF.amber
+  ctx.fillStyle = heat > 0.25 ? KOF.white : KOF.amber
   ctx.fillText('连击', x, y + size)
   ctx.restore()
+}
+
+/**
+ * The ESCALATION LADDER, in one place.
+ *
+ * Every hit in a chain used to draw the identical burst: amber spokes, one ink
+ * slash, a qi ring. The third hit looked exactly like the first, so a combo
+ * was three separate punches rather than a thing being built.
+ *
+ * `comboLink` is the combo counter at the moment of the connection (1 for a
+ * single hit). This returns what that hit should be allowed to draw, and how
+ * hard the frame should react. The numbers are the point: each link doubles
+ * down visibly on the last one and the colour burns from amber to white.
+ */
+export function comboLink(combo) {
+  const n = Math.max(1, Math.floor(combo || 1))
+  if (n <= 1) {
+    return { tier: 1, slashes: 1, cross: false, sparks: 1, spokes: 7, speed: 0, shutters: 0, push: 0.028, flash: 0, hot: 0 }
+  }
+  if (n === 2) {
+    return { tier: 2, slashes: 2, cross: true, sparks: 1.6, spokes: 9, speed: 0.6, shutters: 0, push: 0.045, flash: 0, hot: 0.25 }
+  }
+  if (n === 3) {
+    return { tier: 3, slashes: 2, cross: true, sparks: 2.2, spokes: 11, speed: 1, shutters: 1, push: 0.08, flash: 0.18, hot: 0.6 }
+  }
+  return {
+    tier: Math.min(5, n),
+    slashes: 2,
+    cross: true,
+    sparks: 2.6 + Math.min(1.4, (n - 4) * 0.35),
+    spokes: 13,
+    speed: 1,
+    shutters: Math.min(4, n - 2),
+    push: 0.08 + Math.min(0.05, (n - 4) * 0.012),
+    flash: Math.min(0.42, 0.18 + (n - 4) * 0.06),
+    hot: 1,
+  }
 }
 
 /* ------------------------------------------------------------------ ink --- */
@@ -502,6 +571,114 @@ export function drawQiRing(ctx, hit, scale = 1) {
   ctx.restore()
 }
 
+/* ------------------------------------------------------------ wuxia qi --- */
+
+/**
+ * The 拳锋 — the streak of qi left at the fist or foot as it travels.
+ *
+ * This is the single most "wuxia" mark in the reference frames: a slim white
+ * line that trails a strike and is STRONGER than the limb that made it, so the
+ * eye reads the blow as a cut through the air rather than as a mass on the end
+ * of an arm.
+ *
+ * It is drawn between two joints, along the limb's own direction, tapering to
+ * a point. `from` is the elbow or knee, `to` the hand or foot; `reach` is how
+ * far past the striking point the streak runs, and `alpha` how hard the frame
+ * is committing to it.
+ */
+export function drawQiStreak(ctx, from, to, reach, alpha = 1, width = 3) {
+  if (alpha <= 0.01 || !from || !to) return
+  const dx = to[0] - from[0]
+  const dy = to[1] - from[1]
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len
+  const uy = dy / len
+  // One clean line out past the fist, plus a fainter one curving away: a
+  // single stroke is a stick, two are a speed mark.
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = INK.highlight
+  ctx.lineWidth = width
+  ctx.beginPath()
+  ctx.moveTo(from[0], from[1])
+  ctx.quadraticCurveTo(
+    to[0] - ux * reach * 0.25,
+    to[1] - uy * reach * 0.25,
+    to[0] + ux * reach,
+    to[1] + uy * reach,
+  )
+  ctx.stroke()
+
+  // The echo: same movement, thinner, bowed off to one side by the normal.
+  const nx = -uy
+  const ny = ux
+  ctx.globalAlpha = alpha * 0.55
+  ctx.lineWidth = Math.max(0.8, width * 0.45)
+  ctx.beginPath()
+  ctx.moveTo(to[0] - ux * reach * 0.1 + nx * 2, to[1] - uy * reach * 0.1 + ny * 2)
+  ctx.quadraticCurveTo(
+    to[0] + ux * reach * 0.4 + nx * reach * 0.16,
+    to[1] + uy * reach * 0.4 + ny * reach * 0.16,
+    to[0] + ux * reach * 0.85 + nx * reach * 0.24,
+    to[1] + uy * reach * 0.85 + ny * reach * 0.24,
+  )
+  ctx.stroke()
+  ctx.restore()
+}
+
+/**
+ * The 震地环 — the ring a heavy landing punches into the floor.
+ *
+ * A landing is the one hit the player does NOT make, so it has no burst. What
+ * it has instead is ground: a flat ellipse, low and wide, expanding out from
+ * the feet with the floor's own perspective (squashed vertically) so it reads
+ * as lying on the ground and not as floating in the air.
+ */
+export function drawGroundRing(ctx, x, y, life, scale = 1) {
+  if (life <= 0.02) return
+  const grow = 1 - life
+  ctx.save()
+  ctx.translate(x, y)
+  for (let i = 0; i < 3; i++) {
+    const k = 1 - i * 0.18
+    const rx = (14 + grow * (64 + i * 18)) * scale * k
+    ctx.globalAlpha = Math.max(0, life * (0.5 - i * 0.12))
+    ctx.strokeStyle = i === 0 ? INK.wet : INK.dry
+    ctx.lineWidth = Math.max(0.8, (3 - i * 0.8) * life)
+    ctx.beginPath()
+    // Flattened to 0.26 of the width, so it reads as a circle lying on the
+    // floor seen from the arena's camera height.
+    ctx.ellipse(0, 0, rx, rx * 0.26, 0, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+/**
+ * The 踏空涟漪 — the ripple a foot leaves when it pushes off empty air.
+ *
+ * The move that makes wuxia wuxia: a fighter steps on nothing and uses it. The
+ * mark is a small elliptical ripple UNDER the foot, at the height of the foot,
+ * so the eye reads a surface there.
+ */
+export function drawAirRipple(ctx, x, y, life, scale = 1) {
+  if (life <= 0.02) return
+  const grow = 1 - life
+  ctx.save()
+  ctx.translate(x, y)
+  for (let i = 0; i < 2; i++) {
+    const rx = (10 + grow * (34 + i * 12)) * scale
+    ctx.globalAlpha = Math.max(0, life * (0.55 - i * 0.2))
+    ctx.strokeStyle = INK.highlight
+    ctx.lineWidth = Math.max(0.9, (2.4 - i * 0.9) * life)
+    ctx.beginPath()
+    ctx.ellipse(0, 0, rx, rx * 0.22, 0, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
 /* ------------------------------------------------------------- bubbles --- */
 
 /**
@@ -526,7 +703,14 @@ export function drawBubble(ctx, line, name, headX, headY, scale = 1) {
   const appear = Math.min(inK, outK)
   const alpha = appear
 
-  const fs2 = Math.max(12, 15 * scale)
+  /**
+   * The bubble's type size. This is SCREEN pixels, not world units, so it does
+   * not follow the camera — which is exactly why it needed its own bump when
+   * the fighters were enlarged (「人和字放大30%」). The base is 15 px scaled by
+   * the renderer's own scale; the floor went from 12 to 16 so a small window
+   * still gets a readable line.
+   */
+  const fs2 = Math.max(16, 19.5 * scale)
   ctx.save()
   ctx.font = `600 ${fs2}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`
   const text = line.text ?? ''

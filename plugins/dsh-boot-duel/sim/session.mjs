@@ -48,16 +48,32 @@ export function inputForCode(code) {
     case 'Space':
     case 'KeyW':
       return 'jump'
-    // The attack cluster, laid out as a hand: J poke, K heavy, H hook,
-    // G sweep, F uppercut. That is five distinct moves within reach of each
-    // other, which is what a combo needs.
+    /**
+     * The moves are a TWO-BUTTON game: J punches, K kicks, and the direction
+     * held (or not) selects which.
+     *
+     *   J              jab       (neutral)
+     *   J              again     → the chain: inside the cancel window the
+     *                             second press becomes the hook, then the
+     *                             string keeps climbing. The engine reads the
+     *                             chain; no chord is needed.
+     *   J + S          uppercut  (down)      — the launcher
+     *   K              kick      (neutral)
+     *   K + S          sweep     (down)
+     *   K + D / A      slide     (toward the opponent, low)
+     *   J / K in air   air punch / stomp
+     *
+     * Six separate attack keys made the rail a keyboard chart. Two buttons plus
+     * direction is how a fighting game teaches itself. The extra keys below
+     * (H/G/F/N) stay bound so anyone used to the old layout keeps it; the rail
+     * just stops advertising them.
+     */
     case 'KeyJ':
       return 'jab'
-    // The slide: a low strike that carries the whole body forward.
-    case 'KeyN':
-      return 'slide'
     case 'KeyK':
       return 'kick'
+    case 'KeyN':
+      return 'slide'
     case 'KeyH':
       return 'hook'
     case 'KeyG':

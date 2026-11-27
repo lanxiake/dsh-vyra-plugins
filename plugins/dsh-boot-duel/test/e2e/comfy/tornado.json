@@ -1,0 +1,16 @@
+{
+  "prompt": "A minimal 2D stick-figure fighting-animation still, on a plain white background. Two pure-black stick figures with thin even line weight, round joints and round heads, no shading, no gradient, no colour, no text, no border, side-on fixed camera, full bodies in frame. A spinning kick: the black figure sweeps around on one leg at high speed with three concentric rings of afterimages, and the white opponent is caught at the waist and thrown backwards. Frozen at the instant of impact, with smears and speed lines, heavy contact.",
+  "negative": "colour, faces, realistic, 3D, shading, gradient, background detail, text, watermark, extra limbs, distortion, blur, low contrast",
+  "images": [
+    {
+      "filename": "boot-duel-ref_00004_.png",
+      "subfolder": "",
+      "type": "output",
+      "metadata": {
+        "kind": "image",
+        "width": 1280,
+        "height": 720
+      }
+    }
+  ]
+}

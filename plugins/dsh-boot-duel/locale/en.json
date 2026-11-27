@@ -1,7 +1,7 @@
 {
   "title": "Clock In",
   "subtitle": "The desk is the arena",
-  "hint.controls": "A / D move · J jab · H hook · K kick · F uppercut · G sweep · N slide · L block · S crouch · Shift back-hop · Space jump · J/K in air · U super · Esc skip",
+  "hint.controls": "A / D move · J jab · J+S uppercut · K kick · K+S sweep · mash J/K to combo · L block · Shift back-hop · Space jump · J/K in air · U super · Esc skip",
   "hint.skip": "Press Esc to skip this round",
   "skip.button": "Skip",
   "special.name": "Rend",

@@ -17,6 +17,80 @@
 
 import { Arena, WORLD, DT } from './arena.js'
 
+/**
+ * The buttons that fire on a press, not on a hold.
+ *
+ * Movement, guard and crouch are HELD states: the arena reads them every step.
+ * Everything here is a one-shot action, and it must be delivered exactly once
+ * no matter how the frame timing lands — see the note in `update`.
+ */
+const EDGE_KEYS = ['jump', 'retreat', 'special', 'jab', 'punch2', 'kick', 'upper', 'sweep', 'slide']
+
+/**
+ * The most simulation steps one `update` may run. A long stall (a tab
+ * backgrounded for a second) must not replay the whole missing second in one
+ * frame: the spiral-of-death guard. Five is a third of a second.
+ */
+const MAX_STEPS = 5
+
+/**
+ * The edge input to hand the arena, with the two-button shorthand resolved.
+ *
+ * A press that the shorthand turns into a named move (down + kick → sweep)
+ * replaces the raw button: handing the arena BOTH would let the raw `kick`
+ * fire first in its key order. The direction held on THIS frame is what the
+ * reader uses, so the player never has to hold down a frame early.
+ */
+function edgeFor(pending, held) {
+  const out = {}
+  for (const key of EDGE_KEYS) out[key] = pending.has(key)
+  // Explicit keys (H/G/F/N) win: they are the old layout and mean exactly
+  // one thing each, so a chord never overrides them.
+  const resolved = resolveMove(out, held)
+  if (resolved) {
+    out.jab = false
+    out.kick = false
+    out[resolved === 'p1' ? 'jab' : resolved === 'p3' ? 'upper' : resolved === 'k' ? 'kick' : resolved === 'sweep' ? 'sweep' : 'slide'] = true
+  }
+  return out
+}
+
+/**
+ * Resolve a two-button input into the engine's single-move vocabulary.
+ *
+ * The game advertises J/K plus a direction; the engine's attack table has
+ * one name per move. The READER must happen here, in the adapter, because
+ * this is the layer that knows the HELD direction and the PRESSED button
+ * together on the same frame:
+ *
+ *     J               jab            (p1)
+ *     J + down        uppercut       (p3)   — a launcher
+ *     K               kick           (k)
+ *     K + down        sweep          (sweep)
+ *     K toward foe    slide          (slide)
+ *
+ * Doing it in the engine meant the direction had to be simulated a step
+ * ahead of the button, which is exactly what a two-button fighting game does
+ * NOT require of its player. The engine still accepts the explicit keys
+ * (hook/sweep/uppercut/slide) for anyone on the old layout.
+ */
+function resolveMove(input, held) {
+// `held` is the direction as it stands this frame; `input` is the press.
+if (input.jab) {
+  if (held.crouch) return 'p3'
+  return 'p1'
+}
+if (input.kick) {
+  if (held.crouch) return 'sweep'
+  // Toward the opponent is a slide; left/right is the player's own facing,
+  // which the engine does not know here, so the arena resolves the "toward"
+  // part when it applies the move.
+  if (held.left || held.right) return 'slide'
+  return 'k'
+}
+return null
+}
+
 /** Map one client input field onto the arena's input shape. */
 function toArenaInput(input = {}) {
   return {
@@ -93,6 +167,21 @@ export function createDuel({ reducedMotion = false, round = 0, difficulty = 'eas
       tele: f.tele,
       points: f.points,
       lw: f.lw,
+      /**
+       * The costume mark. The adapter rebuilds the fighter field by field, so
+       * anything the arena adds to its view and this list does not name is
+       * silently dropped — which is how the topknot reached the renderer as
+       * `undefined` and simply never drew.
+       */
+      topknot: f.topknot,
+      /**
+       * Motion state for the qi effects. `atkU` is how far through the current
+       * move the fighter is (0..1), which is what decides when a strike is
+       * committed enough to draw its 拳锋 streak; `vy` is the vertical speed,
+       * which is what decides whether a foot is pushing off empty air.
+       */
+      atkU: f.atkU,
+      vy: f.vy,
     })
     return {
       phase: getState(),
@@ -109,6 +198,8 @@ export function createDuel({ reducedMotion = false, round = 0, difficulty = 'eas
       /** The line on screen, and who is in the round's story. */
       line: s.line ?? null,
       cast: s.cast ?? { you: '你', rival: '对手' },
+      /** The landing rings, for the 震地环. */
+      land: s.land ?? null,
       combo: s.combo ?? 0,
       comboPop: s.comboPop ?? 0,
       superBanner: s.superBanner ?? 0,
@@ -118,6 +209,8 @@ export function createDuel({ reducedMotion = false, round = 0, difficulty = 'eas
       /** The finish's own beats, so the DOM overlay lands on the game's clock. */
       koBeat: s.koBeat ?? null,
       koT: s.koT ?? 0,
+      /** 'win' | 'lose' | null — which stamp the finish shows. */
+      result: s.result ?? null,
       block: s.block ?? false,
       crouching: s.crouching ?? false,
       impact: s.hit,
@@ -125,19 +218,86 @@ export function createDuel({ reducedMotion = false, round = 0, difficulty = 'eas
     }
   }
 
-  function update(dtMs) {
+  /**
+ * The timer that drives the duel, wrapped so the order is explicit.
+ *
+ * `juice.update` returns how much SIMULATION time this real slice buys. When a
+ * hit-stop is running it returns 0 — the screen is frozen — and NO arena step
+ * runs. That is correct for the world, but it means the fixed-step accumulator
+ * inherits a deadline that can be up to one full step away: right after a hit
+ * the very next call can be 100 ms of real input applied to a clock that has
+ * not moved yet. Input must never wait on that.
+ */
+function simStep(dtMs) {
+  return arena.juice.update(dtMs / 1000)
+}
+
+function update(dtMs) {
     // The client calls `update` with real elapsed time; the arena steps at a
     // fixed 60 Hz, so accumulate and drain.
     const step = Math.max(0, Math.min(250, Number.isFinite(dtMs) ? dtMs : 0))
     clock += step
-    const simScale = arena.juice.update(step / 1000)
-    updateAcc += step * simScale
+    const simScale = simStep(step)
+
+    /**
+     * LATCH NEW PRESSES.
+     *
+     * A press is latched only on the RISING EDGE as the client sees it: down
+     * now, up last time. That is what makes a HELD key one press rather than a
+     * press every frame, and what makes a tap that begins and ends between two
+     * updates still fire.
+     *
+     * A latched press stays latched until an arena pass consumes it. That is
+     * what lets it survive a frozen frame (hit-stop) and a sub-frame update
+     * (120 Hz), either of which would otherwise swallow it before a step sees
+     * it — which is exactly how a combo cancel got eaten on the frame the
+     * player's own hit froze the world.
+     */
+    for (const key of EDGE_KEYS) {
+      if (arenaInput[key] && !rawPrev[key]) pressed.add(key)
+    }
+    rawPrev = arenaInput
+
+    const simMs = step * simScale
+    updateAcc += simMs
+
+    /**
+     * The epsilon matters. `DT * 1000` is 16.666… ms; a 120 Hz display adds
+     * 8.333… twice, which can land a fraction under the threshold and leave a
+     * high-refresh player running at half speed forever.
+     */
+    const FRAME_MS = DT * 1000 - 1e-4
     let steps = 0
-    while (updateAcc >= DT * 1000 && steps < 5) {
-      arena.step(arenaInput)
-      updateAcc -= DT * 1000
+    while (updateAcc >= FRAME_MS && steps < MAX_STEPS) {
+      // The presses that are due are the ones latched BEFORE this call. A
+      // press that arrived this call gets its own input pass after the step,
+      // so the arena has already seen the held direction ("down + punch").
+      const due = new Set(pressed)
+      for (const key of due) pressed.delete(key)
+
+      arena.step({ ...heldInput, ...edgeFor(due, heldInput) })
+      updateAcc -= FRAME_MS
       steps++
     }
+
+    /**
+     * THE INPUT PASS.
+     *
+     * A press that has not been consumed yet — because no step ran (hit-stop),
+     * because the accumulator is sub-frame (120 Hz), or because it arrived
+     * after the last step of this call — is delivered through the input-only
+     * path. One press, one move: `pressed` is emptied here, and the held
+     * keys stay held so movement and guard keep working.
+     *
+     * `stepFrozen` does not advance the clock, so this can run every frame
+     * without speeding the fight up.
+     */
+    if (pressed.size > 0) {
+      const due = new Set(pressed)
+      pressed.clear()
+      arena.stepFrozen({ ...heldInput, ...edgeFor(due, heldInput) })
+    }
+
     const view = snapshot()
     lastView = view
     const out = { events, snapshot: view }
@@ -146,8 +306,13 @@ export function createDuel({ reducedMotion = false, round = 0, difficulty = 'eas
     return out
   }
 
-  /** The most recent input the client handed us, applied on the next step. */
   let arenaInput = toArenaInput({})
+  /** What the client said LAST frame, for the rising-edge test. */
+  let rawPrev = toArenaInput({})
+  /** The held states (movement, guard) as of the last update. */
+  let heldInput = toArenaInput({})
+  /** Presses latched and not yet consumed by an arena pass. */
+  const pressed = new Set()
   let updateAcc = 0
   /** The frame the last `update` produced, handed back verbatim. */
   let lastView = null
@@ -187,11 +352,18 @@ export function createDuel({ reducedMotion = false, round = 0, difficulty = 'eas
     counterReady: () => 0,
     update(dtMs, input) {
       arenaInput = toArenaInput(input)
+      heldInput = {
+        ...arenaInput,
+        // The edges are carried by `pendingEdges`; leaving them latched here
+        // as well would re-fire a press on a frozen frame.
+        jump: false, retreat: false, special: false,
+        jab: false, punch2: false, kick: false, upper: false, sweep: false, slide: false,
+      }
       return update(dtMs)
     },
     tick(input) {
-      arenaInput = toArenaInput(input)
-      arena.step(arenaInput)
+      const next = toArenaInput(input)
+      arena.step(next)
       return { events: [], snapshot: snapshot() }
     },
     /** Exposed so a test or the preview can reach the engine directly. */

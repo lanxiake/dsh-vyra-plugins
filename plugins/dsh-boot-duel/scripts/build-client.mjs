@@ -25,16 +25,22 @@ const read = (file) => readFileSync(path.join(root, file), 'utf8')
 /** Modules inlined into the factory, in dependency order. */
 const MODULES = [
   // Dependency order: the rig has no imports, the fighter needs it, combat
-  // needs both, the arena needs all three, and the adapter is the facade.
+  // needs both, and the arena needs all three. `effects` has to come BEFORE
+  // `arena` — the engine reads the combo ladder out of it to decide how hard
+  // the frame reacts, so the module has to exist by the time the arena is
+  // evaluated. The adapter is the facade and comes last.
   { file: 'js/rig.js', name: 'rig' },
   { file: 'js/juice.js', name: 'juice' },
   { file: 'js/fighter.js', name: 'fighter' },
   { file: 'js/story.js', name: 'story' },
   { file: 'js/combat.js', name: 'combat' },
+  { file: 'js/effects.js', name: 'effects' },
+  // The finisher's furniture timeline. Both the arena (for its clock) and the
+  // renderer (for the name) read it, so it has to exist before either.
+  { file: 'js/riot.js', name: 'riot' },
   { file: 'js/arena.js', name: 'arena' },
   { file: 'js/adapter.js', name: 'duel' },
   { file: 'js/backdrop.js', name: 'backdrop' },
-  { file: 'js/effects.js', name: 'effects' },
   { file: 'js/render.js', name: 'render' },
   { file: 'js/audio.js', name: 'audio' },
   { file: 'js/loop.js', name: 'loop' },
