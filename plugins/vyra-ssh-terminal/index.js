@@ -1,4 +1,4 @@
-﻿import { ConnectionManager } from './connections.js'
+import { ConnectionManager } from './connections.js'
 import { SshSessionPool } from './ssh-session.js'
 import { TerminalManager } from './terminals.js'
 import { History } from './history.js'
@@ -232,7 +232,16 @@ export function apply(ctx) {
 
   // HTTP 路由:每个接口单独注册为 exact 路由(webServer 只有 exact / prefix 两种)
   ctx.inject(['webServer'], (owner) => {
-    const handle = createRouter({ connections, terminals, pool, history })
+    // AI 面板要用宿主已经配好的模型：`llm` 是模型服务，`agentDefaultModel` 是
+    // 「当前选中」的那个。两者任一缺席都只影响 AI，不影响 SSH 本身。
+    const harness = {
+      llm: owner.get?.('llm') ?? ctx.get?.('llm') ?? null,
+      currentModel: () => {
+        const service = owner.get?.('agentDefaultModel') ?? ctx.get?.('agentDefaultModel')
+        return typeof service?.currentSelection === 'function' ? service.currentSelection() : null
+      },
+    }
+    const handle = createRouter({ connections, terminals, pool, history, ctx: harness })
     for (const route of ROUTES) {
       owner.effect(() =>
         owner.webServer.register({

@@ -128,6 +128,9 @@ export async function realpath(sftp, remotePath) {
 
 /**
  * stat
+ *
+ * `mode` 取 0o7777 而不是 0o777：setuid / setgid / sticky 位（4755、1777）也算权限，
+ * 只取低 9 位会让「改权限」那个对话框里永远显示 755，用户改完发现 4755 就不见了。
  */
 export async function stat(sftp, remotePath) {
   return new Promise((resolve, reject) => {
@@ -137,8 +140,24 @@ export async function stat(sftp, remotePath) {
         isDir: (attrs.mode & 0o170000) === 0o040000,
         size: attrs.size,
         mtime: attrs.mtime * 1000,
-        mode: attrs.mode & 0o777,
+        mode: attrs.mode & 0o7777,
       })
     })
+  })
+}
+
+/**
+ * 改权限（八进制模式，如 0o644 / 0o755 / 0o4755）。
+ *
+ * 只接受 0..0o7777：更高的位是文件类型（目录、链接、socket），传进去会把文件
+ * 变成一个谁都打不开的东西。
+ */
+export async function chmod(sftp, remotePath, mode) {
+  const m = Number(mode)
+  if (!Number.isInteger(m) || m < 0 || m > 0o7777) {
+    throw Object.assign(new Error(`权限值不合法：${mode}`), { code: 'bad_mode' })
+  }
+  return new Promise((resolve, reject) => {
+    sftp.chmod(remotePath, m, (err) => (err ? reject(err) : resolve()))
   })
 }

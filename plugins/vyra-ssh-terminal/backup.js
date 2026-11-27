@@ -63,9 +63,15 @@ export function exportBundle(state, opts = {}) {
       missing.push(c.name)
       return { ...rest, privateKeyPath: undefined }
     }
-    return { ...rest, privateKeyPath: name }
+    // 连接自己的 privateKeyPath 保留原路径（和 liteshell 的格式一致，导入端不认它也无妨），
+    // 指向备份内那一份的字段单独叫 keyFile——早先这里直接把 privateKeyPath 改成 blob 名，
+    // 于是导出再导入之后所有密钥连接的路径都变成了 "1-id_rsa" 这种不存在的东西。
+    return { ...rest, keyFile: name }
   })
 
+  // 密码按「连接」原样带上：`secrets` 的键就是导出端这一份列表里的 id。导入端会为每条
+  // 连接换新 id，所以它按备份文件里的 id 取密码，而不是按自己新生成的 id——早先那句
+  // 「按签名匹配」的注释从来没有对应的实现，密码于是在导出的那一刻就丢了。
   const byId = {}
   for (const c of picked) if (secrets[c.id]) byId[c.id] = secrets[c.id]
   const payload = { connections: byId, ...(Object.keys(keySecretByName).length ? { keys: keySecretByName } : {}) }
@@ -135,11 +141,15 @@ export function importBundle(bundle, keyDir, passphrase = '') {
   const connections = (bundle.connections ?? [])
     .filter((c) => c && c.host)
     .map((c) => {
-      const { secret: _drop, hasSecret: _drop2, hasKeyPassphrase: _drop3, folder: _drop4, ...rest } = c
+      const { secret: _drop, hasSecret: _drop2, hasKeyPassphrase: _drop3, folder: _drop4, keyFile: _drop5, ...rest } = c
       let keyRef
-      if (rest.privateKeyPath) {
-        const target = keyPaths.get(rest.privateKeyPath)
-        if (target) keyRef = rest.privateKeyPath
+      // 新格式把备份内的名字放在 keyFile；旧备份（以及 liteshell 自己的备份）则是把
+      // privateKeyPath 改写成 blob 名——两种都认，否则对面导出的文件一条密钥都用不上。
+      if (c.keyFile) {
+        if (keyPaths.has(c.keyFile)) keyRef = c.keyFile
+        else missingKeys++
+      } else if (rest.privateKeyPath) {
+        if (keyPaths.has(rest.privateKeyPath)) keyRef = rest.privateKeyPath
         else missingKeys++
       }
       const plain = secrets.connections?.[c.id]
