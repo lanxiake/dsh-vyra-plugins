@@ -77,8 +77,16 @@ export function createChannel({ timeoutMs = 5000 } = {}) {
    * @param op the client operation id, e.g. `appearance.setTheme`.
    * @param args the operation's arguments, already validated by the domain.
    */
-  function request(op, args = {}) {
+  function request(op, args = {}, options = {}) {
     const id = String(nextId++)
+    // Some ops answer quickly because they change one field; others are a
+    // SEQUENCE the page plays out — a recorded walkthrough is several steps with
+    // deliberate pauses, and it would answer "no interface is connected" in the
+    // middle of a perfectly healthy run if it shared the short budget. The
+    // caller that knows how long its op takes passes its own.
+    const budget = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+      ? options.timeoutMs
+      : timeoutMs
     return new Promise((resolve) => {
       const entry = {
         resolve,
@@ -90,7 +98,7 @@ export function createChannel({ timeoutMs = 5000 } = {}) {
       pending.set(id, entry)
       entry.timer = setTimeout(() => {
         settle(id, { status: 'unavailable', op, reason: NO_INTERFACE })
-      }, timeoutMs)
+      }, budget)
       // `unref` where the host has it, so a request that nobody answers does not
       // hold a short-lived process open for the whole timeout. Measured: one
       // unanswered request with `timeoutMs: 1500` delayed exit by ~1570 ms. The

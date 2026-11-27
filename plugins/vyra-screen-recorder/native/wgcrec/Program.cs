@@ -171,6 +171,9 @@ internal static class Program
         var framesPath = Path.Combine(outDir, "frames.jsonl");
         var stopwatch = Stopwatch.StartNew();
         int index = 0;
+        // Set once the first frame is on disk: the recorder waits for READY
+        // before it reports the recording as started.
+        bool announced = false;
         string error = null;
         // The last frame's raw pixels, so a still page can be re-emitted
         // without asking the capture for a new one.
@@ -215,6 +218,7 @@ internal static class Program
                     long repeatTicks = stopwatch.ElapsedMilliseconds - baseTicks;
                     writer.WriteLine("{\"i\":" + index + ",\"t\":" + repeatTicks + ",\"file\":\"" + repeat + "\"}");
                     index++;
+                    if (!announced) { announced = true; Console.WriteLine("READY"); }
                     continue;
                 }
                 try
@@ -228,6 +232,7 @@ internal static class Program
                     long frameTicks = stopwatch.ElapsedMilliseconds - baseTicks;
                     writer.WriteLine("{\"i\":" + index + ",\"t\":" + frameTicks + ",\"file\":\"" + file + "\"}");
                     index++;
+                    if (!announced) { announced = true; Console.WriteLine("READY"); }
                 }
                 finally
                 {

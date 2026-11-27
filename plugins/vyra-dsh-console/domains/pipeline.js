@@ -365,11 +365,21 @@ export async function runRecordedWalkthrough(deps, request) {
   }
 
   // The page executes the steps and reports how each went. It is reached through
-  // the console channel, which is the same transport every ui.* action uses.
+  // the console channel, which is the same transport every ui.* action uses —
+  // but with a budget sized for the WHOLE list, not one field change: a step may
+  // wait two seconds on purpose, and the default five-second action budget would
+  // report "no interface is connected" in the middle of a healthy run.
+  const stepBudget = normalized.steps.reduce((total, step) => {
+    const settle = Number.isFinite(step?.settle) ? step.settle : 90
+    const wait = step?.action === 'wait' ? Number(step.wait) || 0 : 0
+    // Each acting step also spends a snapshot and a click; half a second is a
+    // generous allowance and still far below the time a human notices.
+    return total + settle + wait + 500
+  }, 0)
   const played = await deps.channel.request('ui.pipeline', {
     steps: normalized.steps,
     stopOnError: true,
-  })
+  }, { timeoutMs: Math.max(15000, Math.min(stepBudget * 2, 600000)) })
 
   if (played?.status !== 'ok') {
     // A walkthrough that went wrong is not worth keeping: stop and discard, so a
