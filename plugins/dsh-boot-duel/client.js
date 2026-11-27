@@ -2347,10 +2347,20 @@ window.__ModuleLoader__.load({
         const a = this.player
         const b = this.enemy
         if (a.ragdolled || b.ragdolled) return
-        // Two bodies never overlap. The gap has to stay INSIDE the shortest
-        // attack's reach (46 units) or nothing can ever connect — 54 was above it
-        // and produced rounds where the AI never landed a single blow.
-        const minGap = 30
+        /**
+         * Two bodies never overlap — and the gap has to stay INSIDE the shortest
+         * attack's reach without letting the fist pass THROUGH the opponent.
+         *
+         * 30 was too tight: walking forward parked the pair almost on top of each
+         * other, the jab's fist travelled past the far side of the body, and the
+         * capsule test missed the skeleton it had already crossed. The player
+         * reported it as "我打不到人" at close range, which is exactly what it
+         * looked like.
+         *
+         * 44 keeps the two silhouettes touching but not merged: the front hand
+         * stops inside the opponent's torso instead of beyond it.
+         */
+        const minGap = 44
         const gap = Math.abs(b.x - a.x)
         if (gap < minGap) {
           const push = (minGap - gap) / 2
@@ -3719,7 +3729,13 @@ window.__ModuleLoader__.load({
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
       const x = w * 0.06
-      const y = w * 0.05
+      /**
+       * BELOW the HUD, not in the corner. The counter used to be placed at 5% of
+       * the viewport height, which put it on top of the player's health bar and
+       * the qi gauge — three numbers in one corner, none of them legible. The HUD
+       * plate is ~90 px tall, so the counter starts under it.
+       */
+      const y = Math.max(104, w * 0.05)
       ctx.fillStyle = KOF.ink
       ctx.fillText(String(count), x + 3, y + 3)
       ctx.fillStyle = KOF.hot
@@ -5075,7 +5091,7 @@ window.__ModuleLoader__.load({
         'state.fight': '对决',
         'state.ko': '胜负已分',
         'ko.title': '胜',
-        'ko.subtitle': '对手力竭，剑势已收',
+        'ko.subtitle': '这一版，过了',
         'ko.pressAnyKey': '按任意键进入',
         'pause.clickToResume': '点击此处继续',
         'mute.on': '开启音效',
@@ -5153,7 +5169,7 @@ window.__ModuleLoader__.load({
         'state.fight': 'Duel',
         'state.ko': 'Settled',
         'ko.title': 'Victory',
-        'ko.subtitle': 'Your rival is out of strength',
+        'ko.subtitle': 'Rival out — this build ships',
         'ko.pressAnyKey': 'Press any key to continue',
         'pause.clickToResume': 'Click here to resume',
         'mute.on': 'Turn sound on',
@@ -6670,6 +6686,11 @@ window.__ModuleLoader__.load({
       engineRef.current = { audio, resume, finish, begin, restart }
       // The host settings page's "再来一局" reaches the live round through this.
       roundRestart = restart
+      // The duel rides on the layer element. Nothing in the fight reads it —
+      // it is the handle a browser harness needs to reach the live round,
+      // because the client half has no other global and a screenshot script
+      // cannot otherwise put the opponent on one hit.
+      try { if (layer) layer.__bootDuel = { duel } } catch { /* ignore */ }
       setSnapshot(duel.getSnapshot())
       loop.start()
 

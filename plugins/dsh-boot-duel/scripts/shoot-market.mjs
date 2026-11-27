@@ -1,5 +1,5 @@
 /**
- * The five frames a plugin listing needs, captured from the real bundle.
+ * The frames a plugin listing needs, captured from the real bundle.
  *
  * Written for the external listing form, which asks for 1–6 screenshots of the
  * plugin in use with a caption each. So each frame is chosen to answer a
@@ -7,12 +7,22 @@
  *
  *   01 opening      — what a returning user sees, and the Enter gate
  *   02 exchange     — two fighters mid-swing with a speech bubble
- *   03 combo        — the combo counter and a hit burst
+ *   03 combo        — the combo counter and a landed chain
  *   04 finisher     — the 破军 name card
- *   05 victory      — the end screen and the way out
  *
- * Every frame waits for the layer's fade to finish first: a screenshot taken
- * during the 400 ms fade comes out washed out, which is not what the user sees.
+ * The victory frame (05) is NOT captured here: it needs the round to actually
+ * end, and this script's job is to photograph a fight in progress. Run
+ * `node scripts/shoot-victory.mjs` after this one; it shortens the round and
+ * waits for the seal.
+ *
+ * Two rules the earlier version of this file learned the hard way:
+ *
+ *   - **Walk toward the opponent, reading the position.** Pressing `d` on
+ *     every approach is what left the combo frame showing 150/150: once the
+ *     player had walked past, `d` carried them further away and every swing
+ *     whiffed.
+ *   - **Wait for the layer's fade before every shot.** A screenshot taken
+ *     during the 400 ms fade comes out washed out.
  *
  * Usage: node scripts/shoot-market.mjs [outDir]
  */
@@ -85,6 +95,41 @@ async function shot(name) {
   console.log('shot', name)
 }
 
+/** The live round, reachable through the handle the layer publishes. */
+const arena = () => page.evaluate(() => {
+  const a = document.querySelector('.boot-duel-layer')?.__bootDuel?.duel?.arena
+  if (!a) return null
+  return { px: a.player.x, ex: a.enemy.x, combo: a.combo, ehp: a.enemy.hp, php: a.player.hp }
+})
+
+/**
+ * Throw one move, HOLDING the key for a few frames.
+ *
+ * `keyboard.press` is down+up inside a single browser task. The sim samples the
+ * held set once per animation frame and edge-triggers every move, so a press
+ * that opens and closes between two frames is never seen at all — that is why
+ * earlier runs swung into thin air at point-blank range and the combo counter
+ * stayed at 1. Holding for ~90 ms guarantees at least one frame sees the key
+ * down AND the next one sees it up, which is the edge the engine wants.
+ */
+async function tap(key, hold = 90) {
+  await page.keyboard.down(key)
+  await page.waitForTimeout(hold)
+  await page.keyboard.up(key)
+}
+
+/** Close the distance on whichever side the opponent is actually on. */
+async function walkIn() {
+  for (let i = 0; i < 10; i++) {
+    const s = await arena()
+    if (!s || Math.abs(s.ex - s.px) <= 72) return
+    const key = s.ex > s.px ? 'd' : 'a'
+    await page.keyboard.down(key)
+    await page.waitForTimeout(140)
+    await page.keyboard.up(key)
+  }
+}
+
 await page.waitForSelector('.boot-duel-layer', { timeout: 10000 })
 await page.waitForTimeout(700)
 await shot('01-opening')
@@ -92,62 +137,77 @@ await shot('01-opening')
 // The bell, then close the distance and trade.
 await page.keyboard.press('Enter')
 await page.waitForTimeout(600)
-await page.keyboard.down('d'); await page.waitForTimeout(650); await page.keyboard.up('d')
-await page.waitForTimeout(150)
+await walkIn()
 
-// A bubble lands on the opening beats, so a few frames of trading usually
-// catches one. Take the exchange shot as soon as a bubble is on screen.
-await page.keyboard.press('j')
-await page.waitForTimeout(140)
+// A bubble lands on the opening beats, so a frame of trading usually catches
+// one.
+await tap('j')
+await page.waitForTimeout(160)
 await shot('02-exchange')
 
-// Keep the combo going: three hits in a row is what raises the counter.
-for (let i = 0; i < 3; i++) {
-  await page.keyboard.press('j')
-  await page.waitForTimeout(200)
-  await page.keyboard.down('d'); await page.waitForTimeout(120); await page.keyboard.up('d')
+// The combo counter exists at two connections or more, and the engine drops it
+// 1.1 s after the last hit — so the two swings go out back to back, with no
+// walk-in between them. The chain window (`chainT`) is what lets the second
+// swing cancel the first's recovery.
+//
+// The player is held invulnerable for the setup so an AI swing cannot reset
+// the counter mid-frame. That is a harness affordance, not a change to the
+// game: the frame it produces is one any player who chains two jabs sees.
+let comboSeen = 0
+for (let i = 0; i < 12 && comboSeen < 2; i++) {
+  await page.evaluate(() => {
+    const a = document.querySelector('.boot-duel-layer').__bootDuel.duel.arena
+    if (a) a.player.invuln = 3
+  })
+  await walkIn()
+  await tap('j')
+  await page.waitForTimeout(170)
+  await tap('h')
+  await page.waitForTimeout(150)
+  const s = await arena()
+  comboSeen = Math.max(comboSeen, s?.combo ?? 0)
 }
-await page.keyboard.press('k')
-await page.waitForTimeout(170)
+console.log('combo at capture:', comboSeen)
+if (comboSeen < 2) console.warn('the combo counter never reached 2; 03-combo will not show it')
 await shot('03-combo')
 
 // Fill the meter, then throw the finisher.
 //
-// The meter takes +22 per landed hit (js/arena.js), so it needs five clean
-// connections. Pressing on a 90 ms cadence does NOT get them: a swing is
-// ~0.25 s and the input is consumed by the attack still running, so the round
-// ended with the gauge barely moved and the U press did nothing. Each press
-// here waits out the swing, and the gap is closed before every attempt.
-async function landOne(key = 'j') {
-  await page.keyboard.down('d'); await page.waitForTimeout(140); await page.keyboard.up('d')
-  await page.keyboard.press(key)
-  await page.waitForTimeout(340)
+// The meter takes +22 per landed hit (js/arena.js), so five clean connections
+// fill it. Each swing is given its own recovery gap: a press inside a swing
+// still in flight is consumed, and the gauge never moves.
+const meter = () => page.evaluate(() => {
+  const el = document.querySelector('.boot-duel-meter-track')
+  return el ? Number(el.getAttribute('aria-valuenow') ?? 0) : 0
+})
+for (let i = 0; i < 30 && (await meter()) < 100; i++) {
+  await page.evaluate(() => {
+    const a = document.querySelector('.boot-duel-layer').__bootDuel.duel.arena
+    if (a) a.player.invuln = 3
+  })
+  await walkIn()
+  await page.waitForTimeout(110)
+  await tap(i % 3 === 2 ? 'k' : 'j')
+  await page.waitForTimeout(560)
 }
-for (let i = 0; i < 8; i++) await landOne(i % 3 === 2 ? 'k' : 'j')
+console.log('meter before U:', await meter(), 'full?', await page.evaluate(() => document.querySelector('.boot-duel-meter')?.classList.contains('is-full')))
 await page.waitForTimeout(120)
 // Only press U if the gauge actually filled; otherwise the shot would be of a
 // normal punch and the caption would be a lie.
-const ready = await page.evaluate(() => {
-  const el = document.querySelector('.boot-duel-meter')
-  return Boolean(el && el.classList.contains('is-full'))
-})
+const ready = (await meter()) >= 100
 if (!ready) console.warn('meter never filled; the finisher frame will be stale')
-await page.keyboard.press('u')
-// The banner is a brief freeze; catch it before the 0.55 s cinematic runs out.
-await page.waitForTimeout(200)
+// The same held key as every other move, for the same reason.
+await tap('u', 120)
+// The name beat: wait for the engine to say it is there, then hold one frame
+// so the glyphs are fully on. A fixed delay landed on the strike instead, and
+// the caption promised 「破军」over a picture without it.
+const named = await page.waitForFunction(() => {
+  const a = document.querySelector('.boot-duel-layer')?.__bootDuel?.duel?.arena
+  return a?.superCine?.phase === 'name'
+}, { timeout: 4000 }).then(() => true).catch(() => false)
+if (!named) console.warn('the finisher cinematic never reached its name beat')
+await page.waitForTimeout(260)
 await shot('04-finisher')
-
-// Finish the round and take the victory screen.
-await page.waitForTimeout(1200)
-for (let i = 0; i < 40; i++) {
-  await page.keyboard.press(i % 2 === 0 ? 'j' : 'k')
-  await page.waitForTimeout(80)
-  if (i % 5 === 4) { await page.keyboard.down('d'); await page.waitForTimeout(120); await page.keyboard.up('d') }
-  const phase = await page.evaluate(() => document.querySelector('.boot-duel-layer')?.dataset.phase)
-  if (phase === 'ko' || phase === 'done') break
-}
-await page.waitForTimeout(400)
-await shot('05-victory')
 
 console.log('errors', JSON.stringify(errors.slice(0, 4)))
 await browser.close()

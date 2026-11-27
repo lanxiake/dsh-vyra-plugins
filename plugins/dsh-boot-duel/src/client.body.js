@@ -137,7 +137,7 @@ window.__ModuleLoader__.load({
         'state.fight': '对决',
         'state.ko': '胜负已分',
         'ko.title': '胜',
-        'ko.subtitle': '对手力竭，剑势已收',
+        'ko.subtitle': '这一版，过了',
         'ko.pressAnyKey': '按任意键进入',
         'pause.clickToResume': '点击此处继续',
         'mute.on': '开启音效',
@@ -215,7 +215,7 @@ window.__ModuleLoader__.load({
         'state.fight': 'Duel',
         'state.ko': 'Settled',
         'ko.title': 'Victory',
-        'ko.subtitle': 'Your rival is out of strength',
+        'ko.subtitle': 'Rival out — this build ships',
         'ko.pressAnyKey': 'Press any key to continue',
         'pause.clickToResume': 'Click here to resume',
         'mute.on': 'Turn sound on',
@@ -1732,6 +1732,11 @@ window.__ModuleLoader__.load({
       engineRef.current = { audio, resume, finish, begin, restart }
       // The host settings page's "再来一局" reaches the live round through this.
       roundRestart = restart
+      // The duel rides on the layer element. Nothing in the fight reads it —
+      // it is the handle a browser harness needs to reach the live round,
+      // because the client half has no other global and a screenshot script
+      // cannot otherwise put the opponent on one hit.
+      try { if (layer) layer.__bootDuel = { duel } } catch { /* ignore */ }
       setSnapshot(duel.getSnapshot())
       loop.start()
 

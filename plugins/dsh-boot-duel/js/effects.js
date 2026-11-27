@@ -333,7 +333,13 @@ export function drawCombo(ctx, w, count, pop) {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
   const x = w * 0.06
-  const y = w * 0.05
+  /**
+   * BELOW the HUD, not in the corner. The counter used to be placed at 5% of
+   * the viewport height, which put it on top of the player's health bar and
+   * the qi gauge — three numbers in one corner, none of them legible. The HUD
+   * plate is ~90 px tall, so the counter starts under it.
+   */
+  const y = Math.max(104, w * 0.05)
   ctx.fillStyle = KOF.ink
   ctx.fillText(String(count), x + 3, y + 3)
   ctx.fillStyle = KOF.hot

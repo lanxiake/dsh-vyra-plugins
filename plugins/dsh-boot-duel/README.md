@@ -4,6 +4,9 @@
 
 一个办公室，两个人，一场说不清是改需求、联调还是上线的对峙——做项目嘛，谁还没跟对面吵过。打完，接着上班。
 
+> 仓库：<https://github.com/lanxiake/dsh-vyra-plugins>（插件在 `plugins/dsh-boot-duel`）
+> 交流群：QQ 群 1121362543
+
 ## 这一版做了什么
 
 - **十一质点 Verlet 骨架。** 整副身体由 11 个质点加距离约束构成，站立时是程序化姿势，被打倒时交给 Verlet 积分器——所以击飞是身体真的飞出去，不是换一张图。
@@ -15,6 +18,17 @@
 - **三套项目故事。** 改需求 / 产品、联调 / 后端、上线 / 测试——每个项目都会经历的三个场景，谁来都是同一张嘴。台词按**游戏事件**触发（开局、三连、命中、被击倒、放大招、KO、嘲讽），头顶气泡显示，每句都出场过才会重复。每局随机抽一套，不会连续重复。三套共 220 句，两边都有词，谁也别装无辜。
 - **设置面板。** 右上角齿轮：开关开局动画、音效、对手强度、13 个键位自定义、再来一局、恢复默认键位。设置存 `localStorage`。
 - **真实音效。** 打击 / 金属 / 衣料音来自 Kenney 的 CC0 音效包；路由不可用时回落到 WebAudio 合成音。
+
+## 截图
+
+| | |
+| --- | --- |
+| ![开局](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/01-opening.jpg) | ![交手](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/02-exchange.jpg) |
+| 开局：按 `Enter` 起势，`Esc` 直接放行 | 交手：对话气泡跟着说话的人 |
+| ![连击](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/03-combo.jpg) | ![破军](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/04-finisher.jpg) |
+| 连击：两拳接上才算连段，右上角计数 | 大招「破军」：电影化定格、名字卡、放大的冲击帧 |
+| ![胜负](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/05-victory.jpg) | |
+| 收场：对手倒下，盖「胜」印，按任意键进首页 | |
 
 ## 安装
 

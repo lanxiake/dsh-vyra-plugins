@@ -358,10 +358,20 @@ export class Arena {
     const a = this.player
     const b = this.enemy
     if (a.ragdolled || b.ragdolled) return
-    // Two bodies never overlap. The gap has to stay INSIDE the shortest
-    // attack's reach (46 units) or nothing can ever connect — 54 was above it
-    // and produced rounds where the AI never landed a single blow.
-    const minGap = 30
+    /**
+     * Two bodies never overlap — and the gap has to stay INSIDE the shortest
+     * attack's reach without letting the fist pass THROUGH the opponent.
+     *
+     * 30 was too tight: walking forward parked the pair almost on top of each
+     * other, the jab's fist travelled past the far side of the body, and the
+     * capsule test missed the skeleton it had already crossed. The player
+     * reported it as "我打不到人" at close range, which is exactly what it
+     * looked like.
+     *
+     * 44 keeps the two silhouettes touching but not merged: the front hand
+     * stops inside the opponent's torso instead of beyond it.
+     */
+    const minGap = 44
     const gap = Math.abs(b.x - a.x)
     if (gap < minGap) {
       const push = (minGap - gap) / 2

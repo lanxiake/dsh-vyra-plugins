@@ -17,7 +17,7 @@
   "state.fight": "Duel",
   "state.ko": "Settled",
   "ko.title": "Victory",
-  "ko.subtitle": "Your rival is out of strength",
+  "ko.subtitle": "Rival out — this build ships",
   "ko.pressAnyKey": "Press any key to continue",
   "pause.clickToResume": "Click here to resume",
   "mute.on": "Turn sound on",
