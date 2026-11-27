@@ -92,6 +92,7 @@ window.__ModuleLoader__.load({
       refund: '买家退款中',
       generate_unavailable: '未启用生成型卡券',
       generate_empty: '网盘技能没有返回链接',
+      path_required: '没有配置网盘路径',
     }
     function failText(reason) {
       const key = String(reason || '')
@@ -1176,6 +1177,451 @@ window.__ModuleLoader__.load({
             '配置完成后，买家拍下会自动发货，咨询由客服 Agent 回复。卡券和客服都可以在各自页面继续微调。')))
     }
 
+    // 网盘页：授权 + 商品路径配置 + 配置期测试生成。
+    // 这里的「测试生成」会真的从网盘出一条链接给卖家确认，不发给买家。
+    function NetdiskTab(props) {
+      const { onNotice } = props
+      const [status, setStatus] = useState(null)
+      const [busy, setBusy] = useState('')
+      const [authCode, setAuthCode] = useState('')
+      const [local, setLocal] = useState('')
+      const [shopItems, setShopItems] = useState([])
+      const [sources, setSources] = useState([])
+      const [draft, setDraft] = useState({ itemId: '', specValue: '', path: '', strategy: 'reuse', expireDays: 7 })
+      const [tested, setTested] = useState(null)
+
+      // 三个请求必须分开容错：netdiskStatus 要跑 CLI（可能很慢或失败），
+      // 它一挂就整体 reject，会导致「保存成功但列表不刷新」。
+      const loadSources = useCallback(async () => {
+        try {
+          const src = await rpc({ op: 'cardSources' }, 30000).catch(() => [])
+          setSources(Array.isArray(src) ? src : [])
+        } catch {
+          // 读不到就保留上一次的列表
+        }
+      }, [])
+
+      const load = useCallback(async () => {
+        void loadSources()
+        try {
+          const items = await rpc({ op: 'shopItems', limit: 50 }, 60000).catch(() => ({ items: [] }))
+          setShopItems((items && items.items) || [])
+        } catch {
+          // 商品下拉拉不到不影响下面的表格
+        }
+        try {
+          const st = await rpc({ op: 'netdiskStatus' }, 120000)
+          setStatus(st)
+        } catch (err) {
+          setLocal(String(err.message || err))
+        }
+      }, [loadSources])
+
+      useEffect(() => { void load() }, [load])
+
+      const auth = (status && status.auth) || {}
+      const authorized = auth.state === 'authorized'
+      const panel = { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', padding: '16px 18px', marginBottom: '14px', background: 'rgba(127,127,127,.03)' }
+      const tiny = { fontSize: '12px', opacity: 0.62, lineHeight: 1.6 }
+
+      async function doAuth() {
+        if (!authCode.trim()) { setLocal('请粘贴授权码'); return }
+        setBusy('auth'); setLocal('')
+        try {
+          await rpc({ op: 'netdiskAuth', authCode: authCode.trim() }, 180000)
+          setAuthCode('')
+          await load()
+          if (onNotice) onNotice('授权成功')
+        } catch (err) {
+          setLocal(`授权失败：${err.message || err}`)
+        } finally { setBusy('') }
+      }
+
+      async function testShare() {
+        if (!draft.path.trim()) { setLocal('先填写网盘路径，例如 开源项目资源/产品/wechat/weflow.zip'); return }
+        setBusy('test'); setLocal(''); setTested(null)
+        try {
+          const out = await rpc({ op: 'netdiskTestShare', path: draft.path.trim(), expireDays: Number(draft.expireDays) || 7 }, 180000)
+          setTested(out)
+        } catch (err) {
+          setLocal(`测试失败：${err.message || err}`)
+        } finally { setBusy('') }
+      }
+
+      async function saveSource() {
+        if (!draft.itemId) { setLocal('先选择商品'); return }
+        if (!draft.path.trim()) { setLocal('先填写网盘路径'); return }
+        setBusy('save'); setLocal('')
+        try {
+          await rpc({
+            op: 'setCardSource',
+            itemId: draft.itemId,
+            specValue: draft.specValue,
+            path: draft.path.trim(),
+            strategy: draft.strategy,
+            expireDays: Number(draft.expireDays) || 7,
+          }, 120000)
+          // 先单独重读列表，不等慢接口，保证「保存完立刻能看到」。
+          await loadSources()
+          setDraft({ itemId: '', specValue: '', path: '', strategy: 'reuse', expireDays: 7 })
+          setTested(null)
+          if (onNotice) onNotice('网盘路径已保存，发货时会按它生成链接')
+          void load()
+        } catch (err) {
+          setLocal(`保存失败：${err.message || err}`)
+        } finally { setBusy('') }
+      }
+
+      return h('div', null,
+        h('div', { style: panel },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' } },
+            h('div', { style: { fontWeight: 600, flex: 1 } }, '夸克网盘'),
+            h('span', { style: S.tag(authorized ? 'completed' : (status && status.probe && status.probe.ok ? 'warn' : 'err')) },
+              authorized ? '已授权' : (status && status.probe && status.probe.ok ? '工具就绪，未授权' : '未安装')),
+            status && status.probe && status.probe.version
+              ? h('span', { style: tiny }, `CLI ${status.probe.version}`)
+              : null),
+          status && status.probe && !status.probe.ok
+            ? h('div', { style: { ...tiny, color: '#dc2626' } },
+              /cli_not_installed/.test(String(status.probe.error))
+                ? `没有找到夸克 CLI（找过 ${status.probe.error || ''}）。安装「夸克网盘」Skill 后点「刷新状态」。`
+                : /node_not_found/.test(String(status.probe.error))
+                  ? '找不到 node：设置环境变量 DSH_NODE_BINARY 指向 node.exe 后刷新。'
+                  : `无法调用夸克 CLI：${status.probe.error || ''}`)
+            : null,
+          status && status.probe && status.probe.ok
+            ? h('div', { style: { ...tiny, marginTop: '4px', wordBreak: 'break-all' } },
+              `CLI：${status.probe.version} · ${status.probe.root}`)
+            : null,
+          status && Array.isArray(status.credentials) && status.credentials.length
+            ? h('div', { style: { ...tiny, marginTop: '2px', wordBreak: 'break-all' } },
+              `凭证：${status.credentials.map((c) => `${c.agent}（${c.size} 字节）`).join('、')}`)
+            : (status && status.probe && status.probe.ok
+              ? h('div', { style: { ...tiny, marginTop: '2px', color: '#d97706' } }, '还没找到授权凭证：粘贴授权码即可')
+              : null),
+          authorized
+            ? h('div', { style: tiny }, `账号：${auth.account || '已授权'} · 发货时按下面的路径直查 fid，不会用关键词搜索。`)
+            : h('div', null,
+              h('label', { style: S.label }, '授权码（夸克网盘 Skill 里获取，形如 CAC-…）'),
+              h('div', { style: { display: 'flex', gap: '8px' } },
+                h('input', { style: S.input, value: authCode, placeholder: '粘贴授权码', onChange: (e) => setAuthCode(e.target.value) }),
+                h('button', {
+                  style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600, whiteSpace: 'nowrap' },
+                  disabled: !!busy, onClick: doAuth,
+                }, busy === 'auth' ? '授权中…' : '保存并自检'))),
+          h('div', { style: { display: 'flex', gap: '8px', marginTop: '10px' } },
+            h('button', { style: S.btn, disabled: !!busy, onClick: () => { setBusy('reload'); load().finally(() => setBusy('')) } }, '刷新状态'))),
+
+        h('div', { style: panel },
+          h('div', { style: { fontWeight: 600, marginBottom: '4px' } }, '商品发货路径'),
+          h('div', { style: tiny, marginBottom: '12px' }, '每个商品的发货文件在网盘里的位置。发货时按这里直查，不再让模型去猜。'),
+          h('div', { style: { display: 'flex', gap: '8px', marginBottom: '10px' } },
+            h('div', { style: { flex: 2 } },
+              h('label', { style: S.label }, '商品'),
+              h('select', {
+                style: S.input, value: draft.itemId,
+                onChange: (e) => setDraft({ ...draft, itemId: e.target.value }),
+              },
+                h('option', { value: '' }, shopItems.length ? '选择商品…' : '暂无在售商品'),
+                shopItems.map((it) => h('option', { key: it.item_id, value: it.item_id }, `${it.title || '(无标题)'} · ${it.item_id}`)))),
+            h('div', { style: { flex: 1 } },
+              h('label', { style: S.label }, '规格（可空）'),
+              h('input', { style: S.input, value: draft.specValue, placeholder: '安装包', onChange: (e) => setDraft({ ...draft, specValue: e.target.value }) }))),
+          h('label', { style: S.label }, '网盘路径'),
+          h('input', {
+            style: { ...S.input, marginBottom: '10px' },
+            value: draft.path,
+            placeholder: '开源项目资源/产品/wechat/weflow.zip',
+            onChange: (e) => setDraft({ ...draft, path: e.target.value }),
+          }),
+          h('div', { style: { display: 'flex', gap: '8px', marginBottom: '10px' } },
+            h('div', { style: { flex: 1 } },
+              h('label', { style: S.label }, '链接策略'),
+              h('select', {
+                style: S.input, value: draft.strategy,
+                onChange: (e) => setDraft({ ...draft, strategy: e.target.value }),
+              },
+                h('option', { value: 'reuse' }, '复用链接（推荐：一条反复发，不占网盘空间）'),
+                h('option', { value: 'fresh' }, '每单新链接（每人一条，占网盘空间）'))),
+            h('div', { style: { flex: 1 } },
+              h('label', { style: S.label }, '有效期（天）'),
+              h('input', {
+                style: S.input, type: 'number', value: draft.expireDays,
+                onChange: (e) => setDraft({ ...draft, expireDays: e.target.value }),
+              }))),
+          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' } },
+            h('button', { style: S.btn, disabled: !!busy, onClick: testShare }, busy === 'test' ? '生成中…' : '测试生成'),
+            h('button', {
+              style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 },
+              disabled: !!busy, onClick: saveSource,
+            }, busy === 'save' ? '保存中…' : '保存路径'),
+            h('span', { style: tiny }, '测试会真的生成一条链接，只给你看，不会发给买家')),
+          local ? h('div', { style: { color: '#dc2626', fontSize: '13px', marginBottom: '8px' } }, local) : null,
+          tested
+            ? h('div', { style: { border: '1px solid rgba(15,157,110,.35)', borderRadius: '10px', padding: '12px', background: 'rgba(15,157,110,.06)' } },
+              h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, '测试成功，买家将收到：'),
+              h('div', { style: { whiteSpace: 'pre-wrap', lineHeight: 1.7, fontSize: '13px' } }, tested.text))
+            : null),
+
+        h('div', { style: S.tableWrap },
+          h('div', { style: { ...S.row(6), ...S.th } },
+            h('span', null, '商品'), h('span', null, '规格'), h('span', null, '网盘路径'),
+            h('span', null, '策略'), h('span', null, '有效期'), h('span', null, '状态')),
+          sources.length === 0
+            ? h('div', { style: S.empty }, '还没有配置任何商品的网盘路径')
+            : sources.map((s) => h('div', { key: s.id, style: S.row(6) },
+              h('span', null, s.item_id),
+              h('span', null, s.spec_value || '通用'),
+              h('span', { style: { ...S.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: s.path }, s.path || '（空）'),
+              h('span', null, s.strategy === 'fresh' ? '每单新链接' : '复用链接'),
+              h('span', null, `${s.expire_days} 天`),
+              h('span', { style: S.tag(s.path ? 'completed' : 'err') }, s.path ? '已配置' : '路径为空')))),
+        h('div', { style: { ...tiny, marginTop: '10px' } },
+          '百度网盘暂未接入（当前显示为占位）。同一个商品配了规格路径时，多规格商品按规格精确匹配。'))
+    }
+
+    // 通知页：选 dsh-im 已绑定的机器人 → 选目标 → 保存后收到失败推送。
+    function NotifyTab(props) {
+      const { onNotice } = props
+      const [status, setStatus] = useState(null)
+      const [busy, setBusy] = useState('')
+      const [local, setLocal] = useState('')
+      const [botId, setBotId] = useState('')
+      const [targetId, setTargetId] = useState('')
+
+      const load = useCallback(async () => {
+        try {
+          const st = await rpc({ op: 'notifyStatus' }, 120000)
+          setStatus(st)
+        } catch (err) {
+          setLocal(String(err.message || err))
+        }
+      }, [])
+
+      useEffect(() => { void load() }, [load])
+
+      const bots = (status && status.bots) || []
+      const targets = (status && status.targets) || {}
+      const options = (status && status.options) || {}
+      const channels = (status && status.channels) || []
+      const rules = (status && status.rules) || {}
+      const kinds = (status && status.kinds) || {}
+      // 下拉选项＝已建目标 + 会话推荐 + 历史会话，去重后按来源排序（历史会话最可信）。
+      const list = options[botId] || []
+      const targetList = Array.isArray(list) ? list : []
+      const panel = { border: '1px solid rgba(127,127,127,.22)', borderRadius: '12px', padding: '16px 18px', marginBottom: '14px', background: 'rgba(127,127,127,.03)' }
+      const tiny = { fontSize: '12px', opacity: 0.62, lineHeight: 1.6 }
+      const SOURCE_LABEL = { target: '已建目标', suggestion: '会话推荐', history: '历史会话' }
+
+      // 机器人下拉默认选第一个，目标下拉也默认选第一个，省掉手动点两步。
+      useEffect(() => {
+        if (!botId && bots.length) {
+          setBotId(String(bots[0].botId || bots[0].id || ''))
+          return
+        }
+        if (!targetId && targetList.length) setTargetId(String(targetList[0].targetId || ''))
+      }, [botId, bots.length, targetId, targetList.length])
+
+      // 绑定：优先走 bindTarget（会顺手在 dsh-im 建目标），失败再退回 addChannel。
+      async function addChannel() {
+        if (!botId || !targetId) { setLocal('先选择机器人和目标'); return }
+        setBusy('add'); setLocal('')
+        const picked = targetList.find((t) => String(t.targetId) === String(targetId)) || {}
+        try {
+          const out = await rpc({
+            op: 'bindTarget',
+            botId,
+            targetId,
+            label: picked.label || targetId,
+            kind: picked.kind || 'private',
+            channel: (bots.find((b) => String(b.botId) === botId) || {}).channel || '',
+          }, 120000)
+          if (out && out.warning) setLocal(`已保存，但 dsh-im 建目标时提示：${out.warning}`)
+          else if (onNotice) onNotice('通知目标已绑定')
+          setTargetId('')
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) } finally { setBusy('') }
+      }
+
+      async function toggle(ch) {
+        try {
+          await rpc({ op: 'toggleChannel', id: ch.id, enabled: !ch.enabled })
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) }
+      }
+
+      async function remove(ch) {
+        try {
+          await rpc({ op: 'removeChannel', id: ch.id })
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) }
+      }
+
+      async function test() {
+        setBusy('test'); setLocal('')
+        try {
+          const out = await rpc({ op: 'testNotify' }, 90000)
+          if (!out || out.state !== 'sent') {
+            setLocal(`测试没发出去：${(out && out.error) || '未知原因'}`)
+          } else if (onNotice) onNotice('测试通知已发出，请查看你的 IM')
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) } finally { setBusy('') }
+      }
+
+      async function toggleRule(kind) {
+        try {
+          await rpc({ op: 'setNotifyRule', kind, enabled: !rules[kind] })
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) }
+      }
+
+      return h('div', null,
+        status && !status.available
+          ? h('div', { style: { ...panel, borderColor: 'rgba(220,38,38,.35)' } },
+            h('div', { style: { fontWeight: 600, marginBottom: '6px', color: '#dc2626' } }, 'dsh-im 不可用'),
+            h('div', { style: tiny }, '没检测到 IM 机器人插件（@xmanrui/dsh-im）。装好并连上至少一个机器人后，这里才能选择推送目标。'))
+          : null,
+
+        h('div', { style: panel },
+          h('div', { style: { fontWeight: 600, marginBottom: '4px' } }, '推送出口'),
+          h('div', { style: tiny, marginBottom: '12px' }, '从 dsh-im 已经绑定的机器人里选一个目标。发货失败、待人工、登录失效都会推给它。'),
+          h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' } },
+            h('div', { style: { flex: 1, minWidth: '180px' } },
+              h('label', { style: S.label }, '机器人'),
+              h('select', { style: S.input, value: botId, onChange: (e) => { setBotId(e.target.value); setTargetId('') } },
+                h('option', { value: '' }, bots.length ? '选择机器人…' : '没有已绑定的机器人'),
+                bots.map((b) => {
+                  const id = String(b.botId || b.id || '')
+                  return h('option', { key: id, value: id }, `${b.name || b.channel || b.label || id}（${b.channel || 'im'}）`)
+                }))),
+            h('div', { style: { flex: 1, minWidth: '180px' } },
+              h('label', { style: S.label }, '投递目标'),
+              h('select', { style: S.input, value: targetId, onChange: (e) => setTargetId(e.target.value) },
+                h('option', { value: '' },
+                  targetList.length ? `选择目标…（${targetList.length} 个，默认第一个）` : '这个机器人还没有可用的目标'),
+                targetList.map((t) => {
+                  const id = String(t.targetId || t.id || '')
+                  const tag = SOURCE_LABEL[t.source] ? `［${SOURCE_LABEL[t.source]}］` : ''
+                  return h('option', { key: id, value: id }, `${tag}${t.label || t.name || id}`)
+                })))),
+          targetList.length && !targetId
+            ? h('div', { style: { ...tiny, color: '#0f9d6e', marginBottom: '8px' } },
+              `已自动选中第一个：${(targetList[0] && (targetList[0].label || targetList[0].targetId)) || ''}`)
+            : null,
+          !targetList.length && botId
+            ? h('div', { style: { ...tiny, color: '#d97706', marginBottom: '8px' } },
+              '这个机器人还没有任何会话记录：先在对应的 IM 里和它聊一次，回来刷新就能从「历史会话」里绑定。')
+            : null,
+          h('div', { style: { display: 'flex', gap: '8px' } },
+            h('button', { style: { ...S.btn, background: '#0f9d6e', color: '#fff', border: 'none', fontWeight: 600 }, disabled: !!busy, onClick: addChannel }, '添加'),
+            h('button', { style: S.btn, disabled: !!busy, onClick: test }, busy === 'test' ? '发送中…' : '发送测试通知'),
+            h('button', { style: S.btn, onClick: () => { setBusy('reload'); load().finally(() => setBusy('')) } }, '刷新')),
+          local ? h('div', { style: { color: '#dc2626', fontSize: '13px', marginTop: '8px' } }, local) : null,
+          status && status.unsent > 0
+            ? h('div', { style: { ...tiny, color: '#dc2626', marginTop: '8px' } }, `有 ${status.unsent} 条通知没有送出去（见下方记录）。`)
+            : null,
+          channels.length
+            ? h('div', { style: { marginTop: '12px' } },
+              channels.map((ch) => h('div', { key: ch.id, style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0', borderTop: '1px solid rgba(127,127,127,.12)', fontSize: '13px' } },
+                h('span', { style: S.tag(ch.enabled ? 'completed' : '') }, ch.enabled ? '启用' : '停用'),
+                h('span', { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }, `${ch.label || ''} ${ch.bot_id} / ${ch.target_id}`),
+                ch.last_error ? h('span', { style: { ...tiny, color: '#dc2626' }, title: ch.last_error }, ch.last_error.slice(0, 40)) : null,
+                h('button', { style: { ...S.btn, padding: '2px 8px', fontSize: '12px' }, onClick: () => toggle(ch) }, ch.enabled ? '停用' : '启用'),
+                h('button', { style: { ...S.btn, padding: '2px 8px', fontSize: '12px', color: '#dc2626' }, onClick: () => remove(ch) }, '移除'))))
+            : null),
+
+        h('div', { style: panel },
+          h('div', { style: { fontWeight: 600, marginBottom: '8px' } }, '通知哪些事'),
+          h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+            Object.keys(kinds).map((kind) => h('label', {
+              key: kind,
+              title: kind,
+              style: {
+                display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '4px 10px',
+                borderRadius: '999px', cursor: 'pointer',
+                border: `1px solid ${rules[kind] ? 'rgba(15,157,110,.45)' : 'rgba(127,127,127,.3)'}`,
+                background: rules[kind] ? 'rgba(15,157,110,.1)' : 'transparent',
+              },
+            },
+              h('input', { type: 'checkbox', checked: !!rules[kind], onChange: () => toggleRule(kind) }),
+              kinds[kind]))),
+          h('div', { style: { ...tiny, marginTop: '8px' } }, '同一类事件 10 分钟内合并成一条，避免一单失败刷屏。')),
+
+        h('div', { style: S.tableWrap },
+          h('div', { style: { ...S.row(5), ...S.th } },
+            h('span', null, '时间'), h('span', null, '类型'), h('span', null, '订单'), h('span', null, '状态'), h('span', null, '内容')),
+          !status || !status.recent || status.recent.length === 0
+            ? h('div', { style: S.empty }, '还没有通知记录')
+            : status.recent.map((n) => h('div', { key: n.id, style: S.row(5) },
+              h('span', { style: { fontSize: '12px', opacity: 0.7 } }, n.created_at),
+              h('span', null, kinds[n.kind] || n.kind),
+              h('span', { style: S.mono }, n.ref || '-'),
+              h('span', { style: S.tag(n.state === 'sent' ? 'completed' : n.state === 'failed' ? 'err' : '') }, n.state),
+              h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: n.text }, n.error || n.text))))
+      )
+    }
+
+    // 待人工页：失败订单在这里排队，修好后一键重试，不用去翻日志。
+    function PendingTab(props) {
+      const { onNotice } = props
+      const [tasks, setTasks] = useState([])
+      const [busy, setBusy] = useState('')
+      const [local, setLocal] = useState('')
+
+      const load = useCallback(async () => {
+        try {
+          const list = await rpc({ op: 'pendingTasks' })
+          setTasks(Array.isArray(list) ? list : [])
+        } catch (err) { setLocal(String(err.message || err)) }
+      }, [])
+
+      useEffect(() => { void load() }, [load])
+
+      const KIND_LABEL = {
+        generate_failed: '生成失败', send_failed: '发送失败', resend: '需补发',
+        suspicious: '可疑发货', refund: '退款争议', review_reminder: '待好评提醒',
+      }
+
+      async function retry(task) {
+        setBusy(String(task.id)); setLocal('')
+        try {
+          const out = await rpc({ op: 'retryPending', id: task.id }, 60000)
+          if (onNotice) onNotice((out && out.message) || '已加入重试队列')
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) } finally { setBusy('') }
+      }
+
+      async function resolve(task) {
+        setBusy(String(task.id))
+        try {
+          await rpc({ op: 'resolvePending', id: task.id, state: 'ignored' })
+          await load()
+        } catch (err) { setLocal(String(err.message || err)) } finally { setBusy('') }
+      }
+
+      return h('div', null,
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } },
+          h('span', { style: S.muted }, tasks.length ? `${tasks.length} 条待人工` : '没有待人工的订单'),
+          h('button', { style: S.btn, onClick: load }, '刷新')),
+        local ? h('div', { style: { color: '#dc2626', fontSize: '13px', marginBottom: '8px' } }, local) : null,
+        tasks.length === 0
+          ? h('div', { style: S.empty }, '发货失败、内容被拦下、卡密耗尽的订单会出现在这里')
+          : h('div', { style: S.tableWrap },
+            h('div', { style: { ...S.row(6), ...S.th } },
+              h('span', null, '时间'), h('span', null, '类型'), h('span', null, '订单'),
+              h('span', null, '买家'), h('span', null, '原因'), h('span', null, '操作')),
+            tasks.map((t) => h('div', { key: t.id, style: S.row(6) },
+              h('span', { style: { fontSize: '12px', opacity: 0.7 } }, t.created_at),
+              h('span', { style: S.tag('warn') }, KIND_LABEL[t.kind] || t.kind),
+              h('span', { style: S.mono, title: t.order_no }, t.order_no || '-'),
+              h('span', null, t.buyer_nick || '-'),
+              h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px' }, title: t.detail },
+                failText(t.detail)),
+              h('div', { style: { display: 'flex', gap: '6px' } },
+                h('button', { style: { ...S.btn, padding: '3px 8px', fontSize: '12px', color: '#0f9d6e' }, disabled: busy === String(t.id), onClick: () => retry(t) }, '重新生成链接'),
+                h('button', { style: { ...S.btn, padding: '3px 8px', fontSize: '12px' }, disabled: busy === String(t.id), onClick: () => resolve(t) }, '忽略'))))))
+    }
+
     function XianyuDelivery() {
       const [tab, setTab] = useState('start')
       const autoJumped = useRef(false)
@@ -1216,7 +1662,7 @@ window.__ModuleLoader__.load({
       const [login, setLogin] = useState({ state: 'idle' })
       const [steps, setSteps] = useState(null)
 
-      const refresh = useCallback(async () => {
+      const refresh = useCallback(async (opts = {}) => {
         try {
           // 每项单独容错：auth 拉起 worker 慢或失败时，不能把订单和发货记录一起清空。
           const safe = (p) => p.catch((err) => ({ __error: String(err.message || err) }))
@@ -1226,7 +1672,8 @@ window.__ModuleLoader__.load({
             safe(rpc({ op: 'deliveries', limit: 100 })),
             safe(rpc({ op: 'cards' })),
             safe(rpc({ op: 'itemLinks' })),
-            safe(rpc({ op: 'auth' })),
+            // 只有首次和用户手动刷新才去读登录态；登录态要拉起 worker，很慢。
+            opts.skipAuth ? Promise.resolve(null) : safe(rpc({ op: 'auth' })),
             safe(rpc({ op: 'settings' })),
             safe(rpc({ op: 'accounts' })),
             safe(rpc({ op: 'services' })),
@@ -1258,8 +1705,9 @@ window.__ModuleLoader__.load({
       }, [])
 
       useEffect(() => {
+        // 首屏完整拉一次（含登录态），之后每 5 秒只做轻量刷新：状态/订单/卡券/清单，跳过登录态。
         refresh()
-        const timer = setInterval(refresh, 5000)
+        const timer = setInterval(() => { void refresh({ skipAuth: true }) }, 5000)
         return () => clearInterval(timer)
       }, [refresh])
 
@@ -1516,10 +1964,11 @@ window.__ModuleLoader__.load({
         }
       }
 
-      async function loadChats() {
-        setBusy('chats')
+      // 列表与消息优先读本地库（秒开、不占 IM 连接）；只有 refresh=true 才去打闲鱼接口。
+      async function loadChats({ refresh = false } = {}) {
+        setBusy(refresh ? 'chats' : '')
         try {
-          const data = await rpc({ op: 'chats', fetchNum: 100 }, 60000)
+          const data = await rpc({ op: 'chats', fetchNum: 200, refresh }, refresh ? 120000 : 15000)
           const next = (data && data.sessions) || []
           // 增量合并：没变化的会话复用原对象，避免整表重渲染和闪烁。
           setChats((prev) => {
@@ -1538,12 +1987,19 @@ window.__ModuleLoader__.load({
         }
       }
 
-      async function loadChat(chat, keepMessages = false) {
+      async function loadChat(chat, keepMessages = false, { refresh = false } = {}) {
         setActiveChat(chat)
         if (!keepMessages) setChatMessages([])
         try {
-          const list = await rpc({ op: 'history', cid: chat.session_id, limit: 200 }, 120000)
-          setChatMessages(list || [])
+          const res = await rpc({
+            op: 'history', cid: chat.session_id, limit: 300, refresh,
+          }, refresh ? 120000 : 15000)
+          // 新协议返回 { messages, source }；兼容旧数组返回。
+          const list = Array.isArray(res) ? res : (res && res.messages) || []
+          setChatMessages(list)
+          if (!Array.isArray(res) && res && res.stale && !list.length) {
+            setNotice('这条会话的本地记录还没同步，点「刷新消息」从闲鱼拉一次')
+          }
         } catch (err) {
           setError(String(err.message || err))
         }
@@ -1611,6 +2067,7 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         if (tab !== 'chat') return undefined
+        // 进页面只读库；新消息由后台轮询写库，这里隔 10 秒重读一次库即可（不碰闲鱼接口）。
         void loadChats()
         const timer = setInterval(() => { void loadChats() }, 10000)
         return () => clearInterval(timer)
@@ -1658,10 +2115,12 @@ window.__ModuleLoader__.load({
       }, [auth && auth.unb, chats.length])
 
       async function loadRemoteOrders() {
+        // 库里已有订单时不要先清空列表：先显示库里的，接口回来再替换，避免「先几条再卡一下」。
         setRemoteOrdersLoading(true)
         try {
           const data = await rpc({ op: 'remoteOrders', queryCode: 'ALL' }, 60000)
-          setRemoteOrders((data && data.orders) || [])
+          const list = (data && data.orders) || []
+          if (list.length) setRemoteOrders(list)
         } catch (err) {
           setError(String(err.message || err))
         } finally {
@@ -1670,7 +2129,10 @@ window.__ModuleLoader__.load({
       }
 
       useEffect(() => {
-        if (tab === 'orders' && remoteOrders.length === 0 && !remoteOrdersLoading) void loadRemoteOrders()
+        if (tab !== 'orders') return undefined
+        // 先用本地库秒开（orders 已经是库里的订单），再异步打闲鱼接口补全。
+        if (remoteOrders.length === 0 && !remoteOrdersLoading) void loadRemoteOrders()
+        return undefined
       }, [tab])
 
       useEffect(() => {
@@ -1776,9 +2238,12 @@ window.__ModuleLoader__.load({
         error ? h('div', { style: S.err }, error) : null,
         notice ? h('div', { style: { ...S.muted, marginBottom: '10px' } }, notice) : null,
         h('div', { style: S.tabs },
-          ['start', 'chat', 'orders', 'cards', 'items', 'services', 'deliveries'].map((k) =>
+          ['start', 'chat', 'orders', 'cards', 'items', 'services', 'netdisk', 'notify', 'pending', 'deliveries'].map((k) =>
             h('div', { key: k, style: S.tab(tab === k), onClick: () => setTab(k) },
-              { start: '开始使用', chat: '聊天', orders: '订单', cards: '卡券', items: '商品', services: '客服', deliveries: '发货记录' }[k]))),
+              {
+                start: '开始使用', chat: '聊天', orders: '订单', cards: '卡券', items: '商品',
+                services: '客服', netdisk: '网盘', notify: '通知', pending: '待人工', deliveries: '发货记录',
+              }[k]))),
         tab === 'start' ? h(StartTab, {
           steps, shopItems, busy, notice,
           onLogin: openLogin,
@@ -1787,7 +2252,9 @@ window.__ModuleLoader__.load({
         }) : null,
         tab === 'chat' ? h(ChatTab, {
           chats, activeChat, messages: chatMessages, replyText, setReplyText,
-          onPick: loadChat, onSend: sendReply, onRefresh: loadChats, busy,
+          onPick: loadChat, onSend: sendReply,
+          // 面板「刷新」= 真正去闲鱼拉一次增量；平时切页只读库。
+          onRefresh: () => loadChats({ refresh: true }), busy,
           selfUserId: (auth && auth.unb) || '', avatars, events,
         }) : null,
         tab === 'orders' ? h(OrdersTab, {
@@ -1816,6 +2283,9 @@ window.__ModuleLoader__.load({
           onDelete: removeService,
         }) : null,
         tab === 'deliveries' ? h(DeliveriesTab, { deliveries, onDetail: (o) => setOrderDetailId(o.order_no) }) : null,
+        tab === 'netdisk' ? h(NetdiskTab, { onNotice: setNotice }) : null,
+        tab === 'notify' ? h(NotifyTab, { onNotice: setNotice }) : null,
+        tab === 'pending' ? h(PendingTab, { onNotice: setNotice }) : null,
         loginOpen ? h(LoginDialog, { login, onClose: closeLogin }) : null,
         orderDetailId ? h(OrderDetailDialog, { orderId: orderDetailId, onClose: () => setOrderDetailId(null) }) : null,
         itemDetailItem ? h(ItemDetailDialog, { item: itemDetailItem, onClose: () => setItemDetailItem(null) }) : null,

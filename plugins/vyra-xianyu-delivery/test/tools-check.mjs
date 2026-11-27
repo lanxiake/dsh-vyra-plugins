@@ -10,7 +10,7 @@ const tools = createXianyuTools({
   getAccount: () => 'acc',
 })
 
-assert.equal(tools.length, 10, '工具数量应为 10')
+assert.equal(tools.length, 12, '工具数量应为 12（10 个闲鱼能力 + 绑定客服 + 保存客服）')
 
 const names = new Set()
 for (const tool of tools) {

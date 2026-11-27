@@ -80,6 +80,139 @@ CREATE TABLE IF NOT EXISTS deliveries (
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS ix_deliveries_order ON deliveries(order_no, id);
+
+-- ---- 0.10：会话镜像、去重、待人工、分享台账、通知 ----
+
+-- 会话消息镜像：面板回放、断线补扫、重启后仍能恢复上下文。
+CREATE TABLE IF NOT EXISTS chat_messages (
+  cid            TEXT NOT NULL,
+  message_id     TEXT NOT NULL,
+  account_id     TEXT NOT NULL DEFAULT '',
+  send_user_id   TEXT NOT NULL DEFAULT '',
+  send_user_name TEXT NOT NULL DEFAULT '',
+  content_type   INTEGER NOT NULL DEFAULT 0,
+  text           TEXT NOT NULL DEFAULT '',
+  created_at     INTEGER NOT NULL DEFAULT 0,
+  raw            TEXT NOT NULL DEFAULT '',
+  stored_at      TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  PRIMARY KEY (cid, message_id)
+);
+CREATE INDEX IF NOT EXISTS ix_chat_messages_time ON chat_messages(created_at);
+
+-- 已处理事件：替代内存里的 handledMsg / handledOrders。
+CREATE TABLE IF NOT EXISTS handled_events (
+  kind       TEXT NOT NULL,
+  ref        TEXT NOT NULL,
+  cid        TEXT NOT NULL DEFAULT '',
+  action     TEXT NOT NULL DEFAULT '',
+  handled_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  PRIMARY KEY (kind, ref)
+);
+
+-- 会话水位：轮询基线 + 该会话最近处理过的订单。
+CREATE TABLE IF NOT EXISTS chat_state (
+  cid             TEXT PRIMARY KEY,
+  account_id      TEXT NOT NULL DEFAULT '',
+  last_ts         INTEGER NOT NULL DEFAULT 0,
+  last_order_no   TEXT NOT NULL DEFAULT '',
+  last_message_id TEXT NOT NULL DEFAULT '',
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+-- 会话元信息（昵称、商品、未读、最后一条）。面板列表只读这张表，不再每次开 IM 连接。
+CREATE TABLE IF NOT EXISTS chat_meta (
+  cid          TEXT PRIMARY KEY,
+  account_id   TEXT NOT NULL DEFAULT '',
+  peer_nick    TEXT NOT NULL DEFAULT '',
+  peer_user_id TEXT NOT NULL DEFAULT '',
+  item_id      TEXT NOT NULL DEFAULT '',
+  item_title   TEXT NOT NULL DEFAULT '',
+  session_type INTEGER NOT NULL DEFAULT 0,
+  unread       INTEGER NOT NULL DEFAULT 0,
+  ts           INTEGER NOT NULL DEFAULT 0,
+  last_msg     TEXT NOT NULL DEFAULT '',
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS ix_chat_meta_ts ON chat_meta(ts);
+
+-- 待人工队列：生成失败、发送失败、补发、可疑发货。
+CREATE TABLE IF NOT EXISTS pending_tasks (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id TEXT NOT NULL DEFAULT '',
+  kind       TEXT NOT NULL,
+  order_no   TEXT NOT NULL DEFAULT '',
+  item_id    TEXT NOT NULL DEFAULT '',
+  buyer_nick TEXT NOT NULL DEFAULT '',
+  detail     TEXT NOT NULL DEFAULT '',
+  state      TEXT NOT NULL DEFAULT 'open',
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS ix_pending_state ON pending_tasks(state, created_at);
+
+-- 分享链接台账：每次生成的分享都留痕，可追溯、可校验。
+CREATE TABLE IF NOT EXISTS share_ledger (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id   TEXT NOT NULL DEFAULT '',
+  provider     TEXT NOT NULL DEFAULT 'quark',
+  item_id      TEXT NOT NULL DEFAULT '',
+  spec_value   TEXT NOT NULL DEFAULT '',
+  source_path  TEXT NOT NULL DEFAULT '',
+  fid          TEXT NOT NULL DEFAULT '',
+  share_url    TEXT NOT NULL DEFAULT '',
+  passcode     TEXT NOT NULL DEFAULT '',
+  url_type     INTEGER NOT NULL DEFAULT 2,
+  expired_at   TEXT NOT NULL DEFAULT '',
+  strategy     TEXT NOT NULL DEFAULT 'reuse',
+  order_no     TEXT NOT NULL DEFAULT '',
+  verified     INTEGER NOT NULL DEFAULT 0,
+  verify_error TEXT NOT NULL DEFAULT '',
+  created_at   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS ix_share_item ON share_ledger(item_id, provider);
+
+-- 商品（+规格）到网盘路径的映射。
+CREATE TABLE IF NOT EXISTS card_sources (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id  TEXT NOT NULL DEFAULT '',
+  item_id     TEXT NOT NULL DEFAULT '',
+  spec_value  TEXT NOT NULL DEFAULT '',
+  provider    TEXT NOT NULL DEFAULT 'quark',
+  path        TEXT NOT NULL DEFAULT '',
+  fid         TEXT NOT NULL DEFAULT '',
+  strategy    TEXT NOT NULL DEFAULT 'reuse',
+  expire_days INTEGER NOT NULL DEFAULT 7,
+  last_check  TEXT NOT NULL DEFAULT '',
+  check_error TEXT NOT NULL DEFAULT '',
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  UNIQUE (item_id, spec_value, account_id)
+);
+
+-- 通知出口（dsh-im 的 bot + 目标）。
+CREATE TABLE IF NOT EXISTS im_channels (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  bot_id     TEXT NOT NULL,
+  target_id  TEXT NOT NULL,
+  channel    TEXT NOT NULL DEFAULT '',
+  label      TEXT NOT NULL DEFAULT '',
+  enabled    INTEGER NOT NULL DEFAULT 1,
+  last_ok_at TEXT NOT NULL DEFAULT '',
+  last_error TEXT NOT NULL DEFAULT '',
+  UNIQUE (bot_id, target_id)
+);
+
+-- 通知日志：sent 之外的都要能在面板上看到。
+CREATE TABLE IF NOT EXISTS notify_events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind       TEXT NOT NULL,
+  ref        TEXT NOT NULL DEFAULT '',
+  text       TEXT NOT NULL DEFAULT '',
+  state      TEXT NOT NULL DEFAULT 'pending',
+  error      TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  sent_at    TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_notify_state ON notify_events(state, created_at);
 `
 
 function splitBlocks(content) {
@@ -183,6 +316,13 @@ export function createStore(file) {
   ensureColumn(db, 'customer_services', 'tools', "TEXT NOT NULL DEFAULT ''")
   migrateServices(db)
 
+  // ---- 0.10 迁移：只加列，不动已有数据 ----
+  ensureColumn(db, 'cards', 'source_id', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'cards', 'strategy', "TEXT NOT NULL DEFAULT 'reuse'")
+  ensureColumn(db, 'cards', 'expire_days', 'INTEGER NOT NULL DEFAULT 7')
+  ensureColumn(db, 'items', 'netdisk_path', "TEXT NOT NULL DEFAULT ''")
+  ensureColumn(db, 'items', 'netdisk_provider', "TEXT NOT NULL DEFAULT ''")
+
   // 旧库的时间列是 datetime('now')（UTC），比本地少 8 小时。只迁移一次；
   // 中国无夏令时，固定 +8 是安全的。
   const tzDone = db.prepare("SELECT value FROM settings WHERE key = 'migration.local_time'").get()
@@ -255,19 +395,25 @@ export function createStore(file) {
        AND (account_id = ? OR account_id = '') ORDER BY id`,
     ),
     updateCard: db.prepare(
-      `UPDATE cards SET name = ?, type = ?, content = ?, template = ?, spec_name = ?, spec_value = ?, enabled = ?, mode = ? WHERE id = ?`,
+      `UPDATE cards SET name = ?, type = ?, content = ?, template = ?, spec_name = ?, spec_value = ?,
+         enabled = ?, mode = ?, source_id = ?, strategy = ?, expire_days = ? WHERE id = ?`,
     ),
     deleteCard: db.prepare('DELETE FROM cards WHERE id = ?'),
     updateCardContent: db.prepare(
       'UPDATE cards SET content = ? WHERE id = ? AND content = ?',
     ),
     insertCard: db.prepare(
-      `INSERT INTO cards (account_id, item_id, spec_name, spec_value, name, type, content, template, delay_seconds, mode)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO cards (account_id, item_id, spec_name, spec_value, name, type, content, template,
+         delay_seconds, mode, source_id, strategy, expire_days)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     listCards: db.prepare(
-      `SELECT id, account_id, item_id, spec_name, spec_value, name, type, enabled, delay_seconds, content, template, mode
-       FROM cards WHERE (account_id = ? OR account_id = '') ORDER BY id`,
+      `SELECT c.id, c.account_id, c.item_id, c.spec_name, c.spec_value, c.name, c.type, c.enabled,
+              c.delay_seconds, c.content, c.template, c.mode, c.source_id, c.strategy, c.expire_days,
+              s.path AS source_path, s.provider AS source_provider
+       FROM cards c
+       LEFT JOIN card_sources s ON s.id = c.source_id
+       WHERE (c.account_id = ? OR c.account_id = '') ORDER BY c.id`,
     ),
     getItem: db.prepare(
       `SELECT * FROM items WHERE item_id = ? AND (account_id = ? OR account_id = '')
@@ -318,6 +464,116 @@ export function createStore(file) {
       `SELECT COUNT(*) AS n FROM cards WHERE enabled = 1 AND content <> ''
        AND (account_id = ? OR account_id = '')`,
     ),
+
+    // ---- 0.10 ----
+    upsertMessage: db.prepare(
+      `INSERT INTO chat_messages (cid, message_id, account_id, send_user_id, send_user_name,
+         content_type, text, created_at, raw)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(cid, message_id) DO UPDATE SET
+         text = excluded.text, raw = excluded.raw, content_type = excluded.content_type`,
+    ),
+    messages: db.prepare(
+      'SELECT * FROM chat_messages WHERE cid = ? ORDER BY created_at DESC, message_id DESC LIMIT ?',
+    ),
+    messagesAsc: db.prepare(
+      'SELECT * FROM chat_messages WHERE cid = ? ORDER BY created_at ASC, message_id ASC LIMIT ?',
+    ),
+    hasMessage: db.prepare('SELECT 1 AS hit FROM chat_messages WHERE cid = ? AND message_id = ?'),
+    pruneMessages: db.prepare('DELETE FROM chat_messages WHERE created_at < ?'),
+
+    handled: db.prepare('SELECT 1 AS hit FROM handled_events WHERE kind = ? AND ref = ?'),
+    markHandledStmt: db.prepare(
+      `INSERT INTO handled_events (kind, ref, cid, action) VALUES (?, ?, ?, ?)
+       ON CONFLICT(kind, ref) DO UPDATE SET action = excluded.action`,
+    ),
+    pruneHandled: db.prepare("DELETE FROM handled_events WHERE handled_at < datetime('now','localtime',?)"),
+
+    chatState: db.prepare('SELECT * FROM chat_state WHERE cid = ?'),
+    upsertChatMeta: db.prepare(
+      `INSERT INTO chat_meta (cid, account_id, peer_nick, peer_user_id, item_id, item_title,
+         session_type, unread, ts, last_msg)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(cid) DO UPDATE SET
+         peer_nick = excluded.peer_nick, peer_user_id = excluded.peer_user_id,
+         item_id = excluded.item_id, item_title = excluded.item_title,
+         session_type = excluded.session_type, unread = excluded.unread,
+         ts = excluded.ts, last_msg = excluded.last_msg,
+         updated_at = datetime('now','localtime')`,
+    ),
+    listChatMeta: db.prepare(
+      'SELECT * FROM chat_meta WHERE (account_id = ? OR account_id = \'\') ORDER BY ts DESC LIMIT ?',
+    ),
+    upsertChatState: db.prepare(
+      `INSERT INTO chat_state (cid, account_id, last_ts, last_order_no, last_message_id)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(cid) DO UPDATE SET
+         last_ts = MAX(chat_state.last_ts, excluded.last_ts),
+         last_order_no = CASE WHEN excluded.last_order_no <> '' THEN excluded.last_order_no ELSE chat_state.last_order_no END,
+         last_message_id = CASE WHEN excluded.last_message_id <> '' THEN excluded.last_message_id ELSE chat_state.last_message_id END,
+         updated_at = datetime('now','localtime')`,
+    ),
+
+    insertPending: db.prepare(
+      `INSERT INTO pending_tasks (account_id, kind, order_no, item_id, buyer_nick, detail)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ),
+    listPending: db.prepare('SELECT * FROM pending_tasks WHERE state = ? ORDER BY id DESC LIMIT ?'),
+    resolvePending: db.prepare(
+      "UPDATE pending_tasks SET state = ?, updated_at = datetime('now','localtime') WHERE id = ?",
+    ),
+    openPendingForOrder: db.prepare(
+      "SELECT id FROM pending_tasks WHERE order_no = ? AND state = 'open' LIMIT 1",
+    ),
+
+    insertShare: db.prepare(
+      `INSERT INTO share_ledger (account_id, provider, item_id, spec_value, source_path, fid,
+         share_url, passcode, url_type, expired_at, strategy, order_no, verified, verify_error)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ),
+    lastShare: db.prepare(
+      `SELECT * FROM share_ledger WHERE item_id = ? AND provider = ? AND verified = 1
+       AND expired_at > ? ORDER BY id DESC LIMIT 1`,
+    ),
+
+    insertChannel: db.prepare(
+      `INSERT INTO im_channels (bot_id, target_id, channel, label) VALUES (?, ?, ?, ?)
+       ON CONFLICT(bot_id, target_id) DO UPDATE SET channel = excluded.channel, label = excluded.label`,
+    ),
+    listChannels: db.prepare('SELECT * FROM im_channels ORDER BY id'),
+    toggleChannel: db.prepare('UPDATE im_channels SET enabled = ? WHERE id = ?'),
+    channelOk: db.prepare("UPDATE im_channels SET last_ok_at = datetime('now','localtime'), last_error = '' WHERE id = ?"),
+    channelFail: db.prepare("UPDATE im_channels SET last_error = ? WHERE id = ?"),
+
+    insertNotify: db.prepare(
+      'INSERT INTO notify_events (kind, ref, text, state, error) VALUES (?, ?, ?, ?, ?)',
+    ),
+    recentNotify: db.prepare('SELECT * FROM notify_events ORDER BY id DESC LIMIT ?'),
+    unsentNotify: db.prepare("SELECT COUNT(*) AS n FROM notify_events WHERE state <> 'sent'"),
+    lastSentOfKind: db.prepare(
+      `SELECT sent_at FROM notify_events WHERE kind = ? AND state = 'sent' ORDER BY id DESC LIMIT 1`,
+    ),
+    pruneNotify: db.prepare("DELETE FROM notify_events WHERE created_at < datetime('now','localtime',?)"),
+
+    getSource: db.prepare(
+      `SELECT * FROM card_sources WHERE item_id = ? AND spec_value = ? AND (account_id = ? OR account_id = '')
+       ORDER BY account_id DESC LIMIT 1`,
+    ),
+    upsertSource: db.prepare(
+      `INSERT INTO card_sources (account_id, item_id, spec_value, provider, path, fid, strategy, expire_days)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(item_id, spec_value, account_id) DO UPDATE SET
+         provider = excluded.provider, path = excluded.path, fid = excluded.fid,
+         strategy = excluded.strategy, expire_days = excluded.expire_days,
+         updated_at = datetime('now','localtime')`,
+    ),
+    listSources: db.prepare(
+      `SELECT * FROM card_sources WHERE (account_id = ? OR account_id = '') ORDER BY item_id, spec_value`,
+    ),
+    setSourceCheck: db.prepare(
+      `UPDATE card_sources SET last_check = datetime('now','localtime'), check_error = ?, fid = ?
+       WHERE id = ?`,
+    ),
   }
 
   return {
@@ -359,6 +615,11 @@ export function createStore(file) {
 
     pendingConfirm: (accountId = '') => q.pendingConfirm.all(String(accountId)),
     recentOrders: (limit = 50, accountId = '') => q.recentOrders.all(String(accountId), limit),
+    // 面板「账号级」读取：当前账号还没识别出来（''）时不要返回空表，否则登录态刷新前
+    // 订单/卡券会整片消失。只有明确给了账号才做隔离。
+    recentOrdersFor: (accountId = '', limit = 50) => (accountId
+      ? q.recentOrders.all(String(accountId), limit)
+      : db.prepare('SELECT * FROM orders ORDER BY updated_at DESC LIMIT ?').all(limit)),
     recentDeliveries: (limit = 100, accountId = '') => q.recentDeliveries.all(String(accountId), limit),
 
     // 商品必须唯一匹配一张卡券；0 张或多张都算配置错误，宁可不发。
@@ -393,6 +654,9 @@ export function createStore(file) {
         data.specValue ?? current.spec_value,
         data.enabled === undefined ? current.enabled : (data.enabled ? 1 : 0),
         data.mode ?? current.mode ?? 'pool',
+        data.sourceId === undefined ? (current.source_id ?? 0) : Number(data.sourceId) || 0,
+        data.strategy ?? current.strategy ?? 'reuse',
+        data.expireDays === undefined ? (current.expire_days ?? 7) : Number(data.expireDays) || 7,
         Number(id),
       )
     },
@@ -421,9 +685,11 @@ export function createStore(file) {
     addCard({
       accountId = '', itemId = '', specName = '', specValue = '',
       name, type = 'data', content, template = '', delaySeconds = 0, mode = 'pool',
+      sourceId = 0, strategy = 'reuse', expireDays = 7,
     }) {
       return q.insertCard.run(
         accountId, itemId, specName, specValue, name, type, content, template, delaySeconds, mode,
+        Number(sourceId) || 0, String(strategy || 'reuse'), Number(expireDays) || 7,
       ).lastInsertRowid
     },
 
@@ -446,8 +712,13 @@ export function createStore(file) {
       const row = q.lastItemForBuyer.get(String(buyerId), String(accountId))
       return row ? row.item_id : ''
     },
-    setItem({ itemId, accountId = '', title = '', knowledge = '', skills = '', aiEnabled = 0 }) {
+    setItem({ itemId, accountId = '', title = '', knowledge = '', skills = '', aiEnabled = 0, netdiskPath = null, netdiskProvider = null }) {
       q.upsertItem.run(String(itemId), String(accountId), title, knowledge, skills, aiEnabled ? 1 : 0)
+      // 网盘路径是可选字段：传了才更新，没传保持原值。
+      if (netdiskPath !== null) {
+        db.prepare('UPDATE items SET netdisk_path = ?, netdisk_provider = ? WHERE item_id = ? AND account_id = ?')
+          .run(String(netdiskPath), String(netdiskProvider || 'quark'), String(itemId), String(accountId))
+      }
     },
     listItems: (accountId = '') => q.listItems.all(String(accountId)),
 
@@ -493,6 +764,154 @@ export function createStore(file) {
     },
     setSetting(key, value) {
       q.setSetting.run(String(key), String(value ?? ''))
+    },
+
+    // ---- 0.10：会话镜像与去重 ----
+    upsertMessage(row) {
+      q.upsertMessage.run(
+        String(row.cid), String(row.messageId), String(row.accountId ?? ''),
+        String(row.sendUserId ?? ''), String(row.sendUserName ?? ''),
+        Number(row.contentType ?? 0), String(row.text ?? ''), Number(row.createdAt ?? 0),
+        String(row.raw ?? ''),
+      )
+    },
+    messages: (cid, limit = 50) => q.messages.all(String(cid), Number(limit)),
+    /** 面板从旧到新展示，库里按时间正序返回。 */
+    messagesAscending: (cid, limit = 200) => q.messagesAsc.all(String(cid), Number(limit)),
+    hasMessage: (cid, messageId) => Boolean(q.hasMessage.get(String(cid), String(messageId))),
+
+    // ---- 会话元信息（面板列表读这个，不再每次开 IM 连接）----
+    upsertChatMeta(row) {
+      q.upsertChatMeta.run(
+        String(row.cid), String(row.accountId ?? ''),
+        String(row.peerNick ?? ''), String(row.peerUserId ?? ''),
+        String(row.itemId ?? ''), String(row.itemTitle ?? ''),
+        Number(row.sessionType ?? 0), Number(row.unread ?? 0),
+        Number(row.ts ?? 0), String(row.lastMsg ?? ''),
+      )
+    },
+    listChatsFromDb(accountId = '', limit = 200) {
+      const rows = q.listChatMeta.all(String(accountId), Number(limit))
+      return rows.map((r) => ({
+        session_id: r.cid,
+        peer_nick: r.peer_nick,
+        peer_user_id: r.peer_user_id,
+        item_id: r.item_id,
+        item_title: r.item_title,
+        session_type: r.session_type,
+        unread: r.unread,
+        ts: r.ts,
+        last_msg: r.last_msg,
+        source: 'db',
+      }))
+    },
+    pruneChatMessages(days = 30) {
+      return q.pruneMessages.run(Date.now() - Number(days) * 86400000).changes
+    },
+
+    markHandled(kind, ref, { cid = '', action = '' } = {}) {
+      q.markHandledStmt.run(String(kind), String(ref), String(cid), String(action))
+    },
+    isHandled: (kind, ref) => Boolean(q.handled.get(String(kind), String(ref))),
+    pruneHandled(days = 30) {
+      return q.pruneHandled.run(`-${Number(days)} days`).changes
+    },
+
+    getChatState(cid) {
+      return q.chatState.get(String(cid)) ?? null
+    },
+    setChatState(cid, patch = {}) {
+      const current = q.chatState.get(String(cid)) ?? {
+        account_id: '', last_ts: 0, last_order_no: '', last_message_id: '',
+      }
+      q.upsertChatState.run(
+        String(cid),
+        String(patch.accountId ?? current.account_id ?? ''),
+        Number(patch.lastTs ?? current.last_ts ?? 0),
+        String(patch.lastOrderNo ?? ''),
+        String(patch.lastMessageId ?? ''),
+      )
+    },
+
+    // ---- 待人工 ----
+    addPendingTask({ kind, orderNo = '', itemId = '', buyerNick = '', detail = '', accountId = '' }) {
+      // 同一单同一类失败不重复堆砌，避免每次轮询都新增一条。
+      if (orderNo && q.openPendingForOrder.get(String(orderNo))) return null
+      return Number(q.insertPending.run(
+        String(accountId), String(kind), String(orderNo), String(itemId), String(buyerNick), String(detail),
+      ).lastInsertRowid)
+    },
+    listPendingTasks: (state = 'open', limit = 200) => q.listPending.all(String(state), Number(limit)),
+    resolvePendingTask(id, state = 'resolved') {
+      q.resolvePending.run(String(state), Number(id))
+    },
+
+    // ---- 分享台账 ----
+    addShare(row) {
+      return Number(q.insertShare.run(
+        String(row.accountId ?? ''), String(row.provider ?? 'quark'),
+        String(row.itemId ?? ''), String(row.specValue ?? ''),
+        String(row.sourcePath ?? ''), String(row.fid ?? ''),
+        String(row.shareUrl ?? ''), String(row.passcode ?? ''),
+        Number(row.urlType ?? 2), String(row.expiredAt ?? ''),
+        String(row.strategy ?? 'reuse'), String(row.orderNo ?? ''),
+        row.verified ? 1 : 0, String(row.verifyError ?? ''),
+      ).lastInsertRowid)
+    },
+    lastShare: ({ itemId, provider = 'quark' }) => q.lastShare.get(
+      String(itemId), String(provider), new Date().toISOString(),
+    ) ?? null,
+
+    // ---- 通知出口 ----
+    addChannel({ botId, targetId, channel = '', label = '' }) {
+      q.insertChannel.run(String(botId), String(targetId), String(channel), String(label))
+      return q.listChannels.all().find((c) => c.bot_id === String(botId) && c.target_id === String(targetId)) ?? null
+    },
+    listChannels: () => q.listChannels.all(),
+    setChannelEnabled(id, enabled) {
+      q.toggleChannel.run(enabled ? 1 : 0, Number(id))
+    },
+    removeChannel(id) {
+      db.prepare('DELETE FROM im_channels WHERE id = ?').run(Number(id))
+    },
+    markChannelOk(id) {
+      q.channelOk.run(Number(id))
+    },
+    markChannelError(id, error) {
+      q.channelFail.run(String(error ?? ''), Number(id))
+    },
+
+    recordNotify({ kind, ref = '', text = '', state = 'pending', error = '' }) {
+      q.insertNotify.run(String(kind), String(ref), String(text), String(state), String(error))
+      return Number(db.prepare('SELECT last_insert_rowid() AS id').get().id)
+    },
+    recentNotify: (limit = 100) => q.recentNotify.all(Number(limit)),
+    unsentNotifyCount: () => Number(q.unsentNotify.get().n ?? 0),
+    lastSentAtOfKind(kind) {
+      const row = q.lastSentOfKind.get(String(kind))
+      return row ? String(row.sent_at) : ''
+    },
+
+    // ---- 商品网盘路径 ----
+    getCardSource: (itemId, specValue = '', accountId = '') =>
+      q.getSource.get(String(itemId), String(specValue ?? ''), String(accountId ?? '')) ?? null,
+    upsertCardSource({
+      accountId = '', itemId = '', specValue = '', provider = 'quark',
+      path = '', fid = '', strategy = 'reuse', expireDays = 7,
+    }) {
+      q.upsertSource.run(
+        String(accountId), String(itemId), String(specValue ?? ''), String(provider),
+        String(path), String(fid ?? ''), String(strategy), Number(expireDays) || 7,
+      )
+      return q.getSource.get(String(itemId), String(specValue ?? ''), String(accountId ?? '')) ?? null
+    },
+    listCardSources: (accountId = '') => q.listSources.all(String(accountId)),
+    getCardSourceById(id) {
+      return db.prepare('SELECT * FROM card_sources WHERE id = ?').get(Number(id)) ?? null
+    },
+    recordSourceCheck(id, { error = '', fid = '' } = {}) {
+      const row = db.prepare('SELECT fid FROM card_sources WHERE id = ?').get(Number(id))
+      q.setSourceCheck.run(String(error ?? ''), String(fid || row?.fid || ''), Number(id))
     },
   }
 }

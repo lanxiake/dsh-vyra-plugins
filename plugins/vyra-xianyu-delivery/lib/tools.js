@@ -80,9 +80,18 @@ export function createXianyuTools({ cli, im, store, dispatcher, getAccount = () 
       },
       async run(args) {
         if (!args.toid || !args.text) throw new Error('缺少 toid 或 text')
+        const toid = String(args.toid)
+        let cid = String(args.cid || '0')
+        // 不给 cid 时从会话列表里找这个买家，否则 CLI 会报「未知会话 cid」。
+        if (!cid || cid === '0') {
+          const chats = await im.chats(60)
+          const hit = (chats?.sessions || []).find((s) => String(s.peer_user_id) === toid)
+          if (!hit) throw new Error(`找不到与买家 ${toid} 的会话：请先传 itemId 或先发一条咨询`)
+          cid = String(hit.session_id)
+        }
         return im.send({
-          cid: String(args.cid || '0'),
-          toid: String(args.toid),
+          cid,
+          toid,
           itemId: String(args.itemId || ''),
           text: String(args.text),
         })

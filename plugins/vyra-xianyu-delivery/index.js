@@ -8,8 +8,13 @@ import { createStore } from './lib/db.js'
 import { createCli, defaultPrefix } from './lib/cli.js'
  import { createIm } from './lib/im.js'
 import { findItemId, findOrderId, latestBuyerText } from './lib/conversation.js'
+import { createChatSync } from './lib/chat-sync.js'
+import { mergeTargets, buildTargetPayload } from './lib/im-targets.js'
 import { createGuard } from './lib/guard.js'
 import { createDispatcher } from './lib/dispatch.js'
+import { createLinkService } from './lib/link.js'
+import { createNetdisk } from './lib/netdisk/index.js'
+import { createNotifier, KIND_TEXT } from './lib/notify.js'
 import { createAi, stripFrontmatter } from './lib/ai.js'
 import { createDshAgent } from './lib/agent.js'
 import { createXianyuTools } from './lib/tools.js'
@@ -31,7 +36,9 @@ export function apply(ctx, config = {}) {
     blockRefund: true,
     blockZeroAmount: true,
     sendIntervalMs: 60000,
-    chatPollSeconds: 15,
+    // 实时性靠 worker.py 的长连接推送，轮询只是安全网。
+    // 之前 15 秒一次，一天 5760 次请求，是触发流控的主因之一。
+    chatPollSeconds: 120,
     dataFile: join(homedir(), '.dsh', 'xianyu-delivery', 'data.sqlite'),
     cliCommand: 'uv',
     cliPrefix: undefined, // 默认用 lib/cli.js 里的 worker 路径
@@ -62,12 +69,16 @@ export function apply(ctx, config = {}) {
   }
   const guard = createGuard({ minIntervalMs: cfg.sendIntervalMs })
   const account = () => String(authCache.unb || selfUserId || '')
-  // 生成型卡券的实现在 dshAgent 之后才能确定，这里先留一个间接调用。
-  let generateLinkImpl = null
+  // 网盘只读 CLI 能力；发货内容由它确定性生成，不经过大模型。
+  const netdisk = createNetdisk({ provider: String(cfg.netdisk?.provider || 'quark'), timeoutMs: Number(cfg.netdisk?.timeoutMs) || 60000 })
+  const links = createLinkService({ store, netdisk, account, logger: log })
+  // 通知出口来自 dsh-im（ctx.get('dshIm')）；没装就没出口，事件会留在面板的未送达计数里。
+  const notifier = createNotifier({ store, getDshIm: () => (typeof ctx.get === 'function' ? ctx.get('dshIm') : undefined), logger: log })
   const dispatcher = createDispatcher({
     store, cli, im, guard, config: cfg, logger: log,
     getAccount: account,
-    generateLink: (args) => generateLinkImpl(args),
+    links,
+    notify: (kind, payload) => { void notifier.emit(kind, payload).catch((err) => log(`notify failed: ${err?.message || err}`)) },
   })
   // 把闲鱼能力注册成主 Agent 可调用的工具。
   const xianyuTools = createXianyuTools({ cli, im, store, dispatcher, getAccount: account })
@@ -78,6 +89,28 @@ export function apply(ctx, config = {}) {
 
   // 服务按需现取：apply 时 agents 可能还没注册。
   const getService = (name) => (typeof ctx.get === 'function' ? ctx.get(name) : undefined)
+
+  // 周期性清理：消息镜像 30 天，去重事件 30 天，通知日志 90 天。
+  ctx.effect(() => {
+    let stopped = false
+    const sweep = () => {
+      if (stopped) return
+      try {
+        store.pruneChatMessages(30)
+        store.pruneHandled(30)
+        store.pruneNotify?.(90)
+      } catch (err) {
+        log(`prune failed: ${err?.message || err}`)
+      }
+    }
+    const timer = setInterval(sweep, 60 * 60 * 1000)
+    const first = setTimeout(sweep, 60 * 1000)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      clearTimeout(first)
+    }
+  }, 'xianyu-delivery.prune')
   // 闲鱼客服会话统一落在这个目录：DSH 侧栏按工作区分组，于是有了独立分组。
   const csWorkspace = join(homedir(), '.dsh', '闲鱼客服')
   mkdir(csWorkspace, { recursive: true }).catch(() => {})
@@ -153,32 +186,6 @@ export function apply(ctx, config = {}) {
     },
   })
 
-  // 生成型卡券：让 Agent 按网盘技能当场做一条新分享链接。
-  const QUARK_SKILL = join(fileURLToPath(new URL('.', import.meta.url)), 'builtin-skills', 'quarkclouddrive', 'SKILL.md')
-  generateLinkImpl = async ({ orderNo, buyerNick, card }) => {
-    let skill = ''
-    try {
-      skill = stripFrontmatter(await readFile(QUARK_SKILL, 'utf8'))
-    } catch {
-      skill = ''
-    }
-    const prompt = [
-      skill,
-      `买家下单了（订单 ${orderNo}${buyerNick ? `，买家 ${buyerNick}` : ''}）。`,
-      '请按上面的网盘技能生成一条新的分享链接：有效期 7 天、仅一次有效。',
-      '把最终结果整理成两行：链接：<url> 和 提取码：<code>（没有提取码就只输出链接）。',
-      '调用 send_buyer_reply 交出来，不要解释过程。',
-    ].filter(Boolean).join('\n\n')
-    const result = await dshAgent.ask({
-      prompt,
-      sessionKey: 'gen',
-      title: `[网盘] ${orderNo}`,
-      model: null,
-    })
-    const text = String(result?.text || '')
-    if (!text) throw new Error(result?.error || 'generate empty')
-    return text.trim()
-  }
   const ai = createAi({
     config: cfg,
     store,
@@ -335,8 +342,8 @@ export function apply(ctx, config = {}) {
     // IM token 是按账号缓存的，换账号后必须丢掉，否则会拿旧账号的 token。
     await rm(join(cliHome, 'im_token.json'), { force: true })
     authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
-    handledMsg.clear()
-    handledOrders.clear()
+    // 去重表在 SQLite 里，按账号隔离由 cid/order 自身保证，这里只清内存冷却。
+    eventCooldown.clear()
     await dshAgent.disposeAll()
     void restartIm()
     return { ok: true, unb }
@@ -402,6 +409,8 @@ export function apply(ctx, config = {}) {
           loginState = { state: 'done', unb: msg.unb }
           // 扫码成功后把这个账号归档，之后可以在面板里直接切换回来。
           void authSnapshot().then((a) => archiveCurrent(msg.unb, a.tracknick))
+          // 登录自愈：旧 cookie 的 IM 连接已经作废，必须重连后再补扫一轮。
+          void catchUpAfterLogin(msg.unb)
         } else if (msg.event === 'error') loginState = { state: 'error', message: msg.message }
       } catch {
         // 非 JSON 行（uv 的提示）忽略
@@ -430,9 +439,47 @@ export function apply(ctx, config = {}) {
 
   ctx.effect(() => () => cancelLogin(), 'xianyu-delivery.login')
 
+  /**
+   * 扫码成功后的自愈：重连 IM → 清旧水位 → 补扫未读会话 → 补发待发货订单。
+   * 以前登录后不重连，旧 cookie 的连接形同失效；水位又只在内存里，
+   * 重启后历史消息会被整片跳过（2026-11-27 那次就是这样）。
+   */
+  async function catchUpAfterLogin(unb = '') {
+    const summary = { at: new Date().toLocaleString(), unb: String(unb || ''), sessions: 0, replied: 0, orders: 0, pending: 0 }
+    try {
+      authCache = { loading: true, unb: '', tracknick: '', valid: false, checkedAt: 0 }
+      await restartIm()
+      // 重连成功后再读一次登录态，拿到 unb 用于区分自己发的消息。
+      await authSnapshot()
+      try {
+        const chats = await pollChats({ force: true })
+        summary.sessions = Number(chats?.scanned) || 0
+        summary.replied = Number(chats?.replied) || 0
+      } catch (err) {
+        log(`catch-up chats failed: ${err?.message || err}`)
+      }
+      try {
+        const ticked = await dispatcher.tick()
+        summary.orders = (ticked?.results || []).length
+      } catch (err) {
+        log(`catch-up tick failed: ${err?.message || err}`)
+      }
+      summary.pending = store.listPendingTasks('open').length
+      store.setSetting('last.catchup', JSON.stringify(summary))
+      log(`login catch-up: ${JSON.stringify(summary)}`)
+      if (summary.pending > 0) {
+        void notifier.emit('pending_new', { detail: `登录后补扫发现 ${summary.pending} 条待人工` })
+      }
+    } catch (err) {
+      log(`login catch-up failed: ${err?.message || err}`)
+      summary.error = String(err?.message || err)
+      store.setSetting('last.catchup', JSON.stringify(summary))
+    }
+    return summary
+  }
+
   // 历史解析用纯函数，见 lib/conversation.js（可脱离 DSH 单测）。
-  // 已经处理过的最新买家消息 id（每个会话），避免 new_msg 通知反复触发同一条。
-  const handledMsg = new Map()
+  // 已处理消息改由 SQLite 的 handled_events 记录，重启后不会重答。
   // 插件启动时刻：比它早的消息只当作上下文，不触发自动回复。
   const pluginStartedAt = Date.now()
 
@@ -551,15 +598,33 @@ export function apply(ctx, config = {}) {
 
   // 拉到的历史统一处理：有订单号就发货，否则回复最新一条买家提问。
   // 轮询和 watch 都走这里，保证两条路径行为一致。
-  // 每个会话最近处理过的订单号：历史里那张下单卡片会一直留在后面，
-  // 只要还是同一单就不再重复发货，把后面的买家消息交给 Agent。
-  const handledOrders = new Map()
-
   async function handleConversation(cid, history, meta = {}) {
+    // 消息镜像落库：面板回放、断线补扫都靠它，重启后不丢上下文。
+    try {
+      for (const m of history || []) {
+        const messageId = String(m.message_id || '')
+        if (!messageId) continue
+        store.upsertMessage({
+          cid,
+          messageId,
+          accountId: account(),
+          sendUserId: String(m.send_user_id || ''),
+          sendUserName: String(m.send_user_name || ''),
+          contentType: Number(m?.message?.contentType ?? 0),
+          text: String(m?.message?.text?.text || ''),
+          createdAt: Number(m.created_at) || 0,
+          raw: JSON.stringify(m?.message || {}),
+        })
+      }
+    } catch (err) {
+      log(`mirror messages failed: ${err?.message || err}`)
+    }
+
     const orderNo = findOrderId(history)
-    const lastOrder = handledOrders.get(cid) || ''
+    const state = store.getChatState(cid)
+    const lastOrder = String(state?.last_order_no || '')
     if (orderNo && orderNo !== lastOrder) {
-      handledOrders.set(cid, orderNo)
+      store.setChatState(cid, { lastOrderNo: orderNo })
       const result = await dispatcher.reconcile(orderNo)
       recordEvent({ cid, kind: 'card', orderNo, action: result ? (result.state || result.skip) : 'no-result' })
       if (result) log(`realtime delivery ${orderNo}: ${result.state || result.skip}`)
@@ -567,76 +632,55 @@ export function apply(ctx, config = {}) {
     }
 
     const latest = latestBuyerText(history, { self: selfUserId, notBefore: pluginStartedAt })
-    if (!latest || !latest.text || latest.id === handledMsg.get(cid)) return
+    if (!latest || !latest.text) return
+    // 去重改持久化：同一个 message_id 只处理一次，重启也不会重答。
+    if (latest.id && store.isHandled('message', latest.id)) return
     if (!ai.enabled) {
       recordEvent({ cid, kind: 'text', action: 'skip-ai-disabled', text: latest.text.slice(0, 40) })
       return
     }
-    handledMsg.set(cid, latest.id)
+    if (latest.id) store.markHandled('message', latest.id, { cid, action: 'seen' })
     await replyToBuyer(cid, latest.text, history, {
       ...meta, send_user_id: latest.userId, send_user_name: latest.nick,
     })
   }
 
-  // 轮询会话列表：每个 CLI 调用都会新开一条 IM 连接，常驻 watch 会被踢下线，
-  // 所以主路径靠轮询（watch 只是低延迟补充）。
-  const lastChatTs = new Map()
-  let chatPollBaseline = false
+  // 轮询会话：首次全量、之后增量，全部落库（见 lib/chat-sync.js）。
+  // 以前是「每次拉前 60 条再逐条拉历史」，两个问题：
+  //   1. 买家会被 100 多个公众号未读挤出前 60 条，永远收不到回复；
+  //   2. 面板每次切页都开一条新 IM 连接，和常驻通道互踢（no close frame received or sent）。
+  const chatSync = createChatSync({
+    store, im, cli, account, log,
+    handleConversation,
+  })
 
-  // 会话列表缓存：面板每 10 秒、轮询每 15 秒都会要一次，
-  // 密集请求会被闲鱼流控（400 flow controled），5 秒内直接复用上一次结果。
-  let chatsCache = { at: 0, limit: 0, data: null }
-  async function listChats(limit) {
-    const now = Date.now()
-    if (chatsCache.data && now - chatsCache.at < 5000 && chatsCache.limit >= limit) return chatsCache.data
-    let data
-    try {
-      data = await im.chats(limit)
-    } catch (err) {
-      // 常驻通道没连上（握手被流控）时退回短命令，它自带 HTTP 兜底。
-      log(`IM 会话列表失败，改用短命令：${err?.message || err}`)
-      data = await cli.chats(limit)
-    }
-    chatsCache = { at: now, limit, data }
-    return data
-  }
-
-  async function pollChats() {
+  async function pollChats({ force = false } = {}) {
     // 未登录时不轮询：没有 cookie 时任何 IM 调用都只会报错。
-    if (authCache.loading === false && authCache.valid === false) return
-    let data
+    if (authCache.loading === false && authCache.valid === false) return { scanned: 0, replied: 0, total: 0 }
     try {
-      data = await listChats(60)
+      // 分页保持保守（60）：fetch-num 越大越容易被闲鱼流控。
+      const stats = await chatSync.sync({ reply: true, limit: 60, historyLimit: 30, force })
+      if (stats.flowControlled) log('chat poll: 被流控，本轮跳过，冷却后重试')
+      else if (stats.full) log(`chat full sync: ${stats.total} sessions`)
+      return stats
     } catch (err) {
       log(`chat poll failed: ${err?.message || err}`)
-      return
+      return { scanned: 0, replied: 0, total: 0 }
     }
-    const sessions = (data && data.sessions) || []
-    const first = !chatPollBaseline
-    chatPollBaseline = true
+  }
 
-    for (const s of sessions) {
-      const cid = String(s.session_id || '')
-      if (!cid) continue
-      const ts = Number(s.ts) || 0
-      const seen = lastChatTs.get(cid) || 0
-      if (ts && ts <= seen) continue
-      lastChatTs.set(cid, ts || Date.now())
-      // 启动时只记基线，避免把历史里的旧消息全部回一遍。
-      if (first) continue
-      let history = []
-      try {
-        history = await im.history(cid, 6)
-      } catch (err) {
-        log(`chat poll history failed: ${err?.message || err}`)
-        continue
-      }
-      await handleConversation(cid, history, {
-        itemId: String(s.item_id || ''),
-        send_user_id: String(s.peer_user_id || ''),
-        send_user_name: String(s.peer_nick || ''),
-      })
+  /** 面板读库：会话列表与消息都从 SQLite 拿，秒开且不占 IM 连接。 */  function listChatsFromDb(limit = 200) {
+    return { sessions: store.listChatsFromDb(account(), Number(limit) || 200), source: 'db' }
+  }
+
+  /** 面板「刷新」按钮：触发一次增量同步，把新消息写进库后再读。 */
+  async function refreshChats(limit = 200) {
+    try {
+      await chatSync.sync({ reply: false, limit: 60, historyLimit: 50, force: true })
+    } catch (err) {
+      log(`manual chat refresh failed: ${err?.message || err}`)
     }
+    return listChatsFromDb(limit)
   }
 
   // Windows: uv 启动的 python 是子进程，只 kill 父 PID 会留下孤儿继续占着
@@ -689,24 +733,34 @@ export function apply(ctx, config = {}) {
   }, 'xianyu-delivery.im')
 
   // 会话轮询：不依赖长连接，watch 被踢也能在一轮内补上。
+  // 用 setInterval + 并发锁，不用链式 setTimeout——后者只要有一次卡住，
+  // arm() 就永远不会再被调用，整个轮询会静默停摆（2026-11-27 晚就是这么停了 8 小时）。
   ctx.effect(() => {
-    let timer = null
+    let running = false
     let stopped = false
-    const arm = () => {
-      timer = setTimeout(async () => {
-        if (stopped) return
-        try {
-          await pollChats()
-        } catch (err) {
-          log(`chat poll failed: ${err?.message || err}`)
-        }
-        arm()
-      }, cfg.chatPollSeconds * 1000)
+    const runOnce = async () => {
+      if (stopped || running) return
+      running = true
+      const startedAt = Date.now()
+      try {
+        await Promise.race([
+          pollChats(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('poll timeout')), 90 * 1000)),
+        ])
+      } catch (err) {
+        log(`chat poll failed: ${err?.message || err}`)
+      } finally {
+        running = false
+        // 单轮耗时过长说明在撞限流，把下一轮往后推一点。
+        if (Date.now() - startedAt > 30 * 1000) log(`chat poll slow: ${Math.round((Date.now() - startedAt) / 1000)}s`)
+      }
     }
-    arm()
+    const timer = setInterval(runOnce, cfg.chatPollSeconds * 1000)
+    const first = setTimeout(runOnce, 3000)
     return () => {
       stopped = true
-      if (timer) clearTimeout(timer)
+      clearInterval(timer)
+      clearTimeout(first)
     }
   }, 'xianyu-delivery.chat-poll')
 
@@ -886,15 +940,34 @@ export function apply(ctx, config = {}) {
         }
       }
       case 'chats':
-        return listChats(Number(body.fetchNum) || 200)
+        // 面板列表只读库，秒开；要拉新数据走 refreshChats。
+        return body.refresh ? refreshChats(Number(body.fetchNum) || 200) : listChatsFromDb(Number(body.fetchNum) || 200)
       case 'userInfo':
         return cli.userInfo(String(body.cid || ''), Boolean(body.owner))
       case 'itemDetail':
         return cli.itemDetail(String(body.itemId || ''))
       case 'orderDetail':
         return cli.orderDetail(String(body.orderId || ''))
-      case 'history':
-        return im.history(String(body.cid || ''), Number(body.limit) || 20)
+      case 'history': {
+        const cid = String(body.cid || '')
+        const limit = Number(body.limit) || 200
+        // 打开会话先用库里的；只有库为空或用户点刷新时才去 IM 拉。
+        const cached = store.messagesAscending(cid, limit)
+        if (!body.refresh && cached.length) {
+          return { messages: cached.map((m) => ({ ...m, fromDb: true })), source: 'db' }
+        }
+        let remote = []
+        try {
+          remote = await im.history(cid, limit)
+        } catch (err) {
+          log(`history refresh failed: ${err?.message || err}`)
+        }
+        if (remote.length) {
+          chatSync.saveMessages(cid, remote)
+          return { messages: remote, source: 'im' }
+        }
+        return { messages: cached.map((m) => ({ ...m, fromDb: true })), source: 'db', stale: true }
+      }
       case 'sendMessage':
         await cli.send({
           cid: String(body.cid || '0'),
@@ -1033,6 +1106,244 @@ export function apply(ctx, config = {}) {
       case 'setSetting':
         store.setSetting(String(body.key || ''), String(body.value ?? ''))
         return { ok: true }
+
+      // ---- 网盘 ----
+      case 'netdiskStatus': {
+        const [probe, auth] = await Promise.all([
+          netdisk.probe().catch((err) => ({ ok: false, error: String(err?.message || err) })),
+          netdisk.authState().catch((err) => ({ state: 'unknown', hint: String(err?.message || err) })),
+        ])
+        return {
+          provider: netdisk.id,
+          label: netdisk.label || (netdisk.id === 'quark' ? '夸克网盘' : netdisk.id),
+          unsupported: Boolean(netdisk.unsupported),
+          probe,
+          auth,
+          // 凭证按 CLI 进程的 cwd 解析，面板要把「到底连的是哪个位置」显示清楚。
+          credentials: (() => {
+            try {
+              const info = netdisk.info?.()
+              return info?.credentials || []
+            } catch {
+              return []
+            }
+          })(),
+          sources: store.listCardSources(account()),
+        }
+      }
+      case 'netdiskAuth':
+        return netdisk.login({ authCode: String(body.authCode || '') })
+      case 'netdiskBrowse': {
+        // 目录浏览只用来帮用户填路径；里面的「关键词搜索」结果永远不进发货内容。
+        const parentFid = String(body.parentFid || '0')
+        const entries = await netdisk.list(parentFid)
+        return { parentFid, entries }
+      }
+      case 'netdiskTestShare': {
+        // 配置期测试：真的生成一条链接给用户确认，不写订单、不发给买家。
+        const path = String(body.path || '').trim()
+        if (!path) throw new Error('请先填写网盘路径')
+        const expireDays = Number(body.expireDays) || 7
+        const out = await links.obtain({
+          itemId: `test-${Date.now()}`, path, strategy: 'fresh', expireDays,
+        })
+        return { text: out.text, share: out.share }
+      }
+      case 'cardSources':
+        return store.listCardSources(account())
+      case 'setCardSource': {
+        const itemId = String(body.itemId || '').trim()
+        if (!itemId) throw new Error('请选择商品')
+        const path = String(body.path || '').trim()
+        // 保存前先解析一次：路径不存在就不让存，避免配置期看起来正常、发货时才失败。
+        // 但路径没变时直接复用已解析的 fid，省掉几秒的 CLI 往返。
+        let fid = ''
+        if (path) {
+          const existing = store.getCardSource(itemId, String(body.specValue || ''), account())
+          if (existing && existing.path === path && existing.fid) {
+            fid = existing.fid
+          } else {
+            try {
+              const hit = await netdisk.resolve(path)
+              fid = hit.fid
+            } catch (err) {
+              throw new Error(`网盘路径无法解析：${err?.message || err}`)
+            }
+          }
+        }
+        const row = store.upsertCardSource({
+          accountId: account(),
+          itemId,
+          specValue: String(body.specValue || ''),
+          provider: String(body.provider || 'quark'),
+          path,
+          fid,
+          strategy: body.strategy === 'fresh' ? 'fresh' : 'reuse',
+          expireDays: Number(body.expireDays) || 7,
+        })
+        return row
+      }
+      case 'setItemNetdisk':
+        store.setItem({
+          accountId: account(),
+          itemId: String(body.itemId || ''),
+          title: String(body.title || ''),
+          netdiskPath: String(body.path || ''),
+          netdiskProvider: String(body.provider || 'quark'),
+        })
+        return { ok: true }
+
+      // ---- 通知 ----
+      case 'notifyStatus': {
+        const imApi = typeof ctx.get === 'function' ? ctx.get('dshIm') : undefined
+        let bots = []
+        let accountNames = {}
+        const suggestions = {}
+        const targets = {}
+        if (imApi?.listBots) {
+          try {
+            bots = await imApi.listBots()
+          } catch (err) {
+            log(`listBots failed: ${err?.message || err}`)
+          }
+        }
+        for (const bot of bots || []) {
+          const id = String(bot?.botId || bot?.id || '')
+          if (!id) continue
+          // 机器人只有 botId/channel，去拿一个人类可读的账号名，下拉框才看得懂。
+          try {
+            const desc = imApi?.describeBot ? await imApi.describeBot(id) : null
+            const acc = desc?.account || {}
+            accountNames[id] = String(acc.nickname || acc.name || acc.title || acc.userName || acc.id || '')
+          } catch (err) {
+            log(`describeBot ${id} failed: ${err?.message || err}`)
+          }
+          // 已建好的投递目标
+          try {
+            const list = imApi?.listTargets ? await imApi.listTargets(id) : []
+            targets[id] = Array.isArray(list) ? list : []
+          } catch (err) {
+            targets[id] = []
+            log(`listTargets ${id} failed: ${err?.message || err}`)
+          }
+          // 没建过目标时，从已有会话里推荐（微信 = 最近聊过的人）。
+          if (!targets[id].length) {
+            try {
+              const sug = await imApi?.listSuggestions?.(id)
+              const list = Array.isArray(sug) ? sug : (sug?.suggestions || [])
+              suggestions[id] = list
+                .filter((s) => s && String(s.targetId || s.id || s.address || ''))
+                .map((s) => ({
+                  targetId: String(s.targetId || s.id || s.address || ''),
+                  label: String(s.name || s.label || s.title || s.address || s.targetId || s.id || ''),
+                  kind: String(s.kind || 'private'),
+                  source: 'conversation',
+                }))
+            } catch (err) {
+              log(`listSuggestions ${id} failed: ${err?.message || err}`)
+            }
+          }
+        }
+        const channels = store.listChannels()
+        return {
+          available: Boolean(imApi?.send),
+          canCreateTarget: Boolean(imApi?.createTarget),
+          bots: (bots || []).map((b) => ({
+            ...b,
+            name: accountNames[String(b.botId || b.id || '')] || '',
+          })),
+          targets,
+          suggestions,
+          // 历史会话兜底：没建过目标时的可用选项（含 source: 'history'）。
+          options: mergeTargets({ bots: bots || [], targets, suggestions }),
+          channels,
+          rules: notifier.rules,
+          unsent: store.unsentNotifyCount(),
+          recent: store.recentNotify(50),
+          kinds: KIND_TEXT,
+        }
+      }
+      case 'bindTarget': {
+        // 把一条历史会话/目标建进 dsh-im（如果还不是正式目标），再存成本插件的通知出口。
+        const botId = String(body.botId || '').trim()
+        const targetId = String(body.targetId || '').trim()
+        const label = String(body.label || '').trim()
+        if (!botId || !targetId) throw new Error('请选择机器人和目标')
+        const imApi = typeof ctx.get === 'function' ? ctx.get('dshIm') : undefined
+        let created = false
+        let warning = ''
+        if (imApi?.createTarget) {
+          const channel = String(body.channel || (imApi.listBots
+            ? ((await imApi.listBots()) || []).find((b) => String(b.botId || b.id) === botId)?.channel
+            : '') || '')
+          try {
+            // kind 与 route 字段必须符合该通道的规范，否则 dsh-im 会直接拒绝。
+            await imApi.createTarget(botId, buildTargetPayload({ channel, targetId, label }))
+            created = true
+          } catch (err) {
+            // 建目标失败不阻塞：先存本插件的出口，发送时再报具体错误。
+            warning = String(err?.message || err)
+            log(`createTarget ${botId}/${targetId} failed: ${warning}`)
+          }
+        } else {
+          warning = 'dsh-im 不支持自动创建目标，已直接保存'
+        }
+        const row = store.addChannel({
+          botId, targetId,
+          channel: String(body.channel || ''),
+          label: label || targetId,
+        })
+        return { ok: true, created, warning, channel: row }
+      }
+      case 'addChannel': {
+        const botId = String(body.botId || '').trim()
+        const targetId = String(body.targetId || '').trim()
+        if (!botId || !targetId) throw new Error('请选择机器人和目标')
+        return store.addChannel({
+          botId, targetId,
+          channel: String(body.channel || ''),
+          label: String(body.label || ''),
+        })
+      }
+      case 'toggleChannel':
+        store.setChannelEnabled(Number(body.id), Boolean(body.enabled))
+        return { ok: true }
+      case 'removeChannel':
+        store.removeChannel(Number(body.id))
+        return { ok: true }
+      case 'testNotify':
+        return notifier.test()
+      case 'setNotifyRule':
+        notifier.setRule(String(body.kind || ''), Boolean(body.enabled))
+        store.setSetting(`notify.rule.${String(body.kind || '')}`, body.enabled ? '1' : '0')
+        return { ok: true }
+
+      // ---- 待人工 ----
+      case 'pendingTasks':
+        return store.listPendingTasks(String(body.state || 'open'), Number(body.limit) || 200)
+      case 'resolvePending':
+        store.resolvePendingTask(Number(body.id), String(body.state || 'resolved'))
+        return { ok: true }
+      case 'retryPending': {
+        // 重新生成链接：清掉旧的待人工记录，让下一轮把它当新单处理。
+        const task = store.listPendingTasks('open', 500).find((t) => t.id === Number(body.id))
+        if (!task) throw new Error('待人工记录不存在')
+        if (task.order_no) {
+          store.finishOrder(task.order_no, 'blocked', { failReason: 'generate_retry', delivered: 0 })
+        }
+        store.resolvePendingTask(Number(body.id), 'resolved')
+        return { ok: true, message: '已加入重试队列，下一轮轮询会重新生成' }
+      }
+      case 'catchUp':
+        return catchUpAfterLogin(String(body.unb || ''))
+      case 'lastCatchup': {
+        const raw = store.getSetting('last.catchup')
+        try {
+          return raw ? JSON.parse(raw) : null
+        } catch {
+          return null
+        }
+      }
       default:
         throw new Error(`unknown operation "${body.op}"`)
     }

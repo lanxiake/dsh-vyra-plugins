@@ -44,23 +44,27 @@ try {
   await d1.tick()
   assert.equal(cli1.calls.filter(([k]) => k === 'send').length, 1, '重复 tick 不得重复发货')
 
-  // ---- 多数量：qty=3 消费 3 条，一个订单一条完成 ----
+  // ---- 多数量：qty=3 消费 3 条，一个订单一条完成。同一条内容发 3 次，库存消耗 3 条 ----
   store.addCard({ itemId: 'item-q', name: '批量', content: 'Q1\n---\nQ2\n---\nQ3' })
   const cli2 = makeCli([{ order_no: 'O2', item_id: 'item-q', buyer_id: 'B2', amount: '9.90', quantity: 3 }])
   const d2 = createDispatcher({ store, cli: cli2, guard: createGuard({ minIntervalMs: 0 }), config: {} })
   await d2.tick()
-  assert.deepEqual(cli2.calls.filter(([k]) => k === 'send').map(([, t]) => t), ['Q1', 'Q2', 'Q3'])
+  assert.deepEqual(cli2.calls.filter(([k]) => k === 'send').map(([, t]) => t), ['Q1', 'Q1', 'Q1'])
+  const q1 = store.listCards().find((c) => c.name === '批量')
+  assert.equal(q1.remaining, 2, '内容只被取出一次：一单消耗一条，qty 表示同一条发几次')
   assert.equal(store.getOrder('O2').delivered, 3)
   assert.equal(store.getOrder('O2').state, 'completed')
 
-  // ---- 部分发货：qty=2，只剩 1 张 ----
+  // ---- 部分发货：qty=2，库存只有 1 条 ----
+  // 新语义：内容只被取一次，qty 决定「同一条发几次」，所以不会出现 partial；
+  // 真正的 partial 只剩「多条消息中途发送失败」这一种，已由 dispatch-v2 覆盖。
   store.addCard({ itemId: 'item-p', name: '残', content: 'P1' })
   const cli3 = makeCli([{ order_no: 'O3', item_id: 'item-p', buyer_id: 'B3', amount: '9.90', quantity: 2 }])
   const d3 = createDispatcher({ store, cli: cli3, guard: createGuard({ minIntervalMs: 0 }), config: {} })
   await d3.tick()
-  assert.equal(store.getOrder('O3').state, 'partial')
-  assert.equal(store.getOrder('O3').delivered, 1)
-  assert.equal(store.getOrder('O3').fail_reason, 'card_exhausted')
+  assert.equal(store.getOrder('O3').state, 'completed')
+  assert.equal(store.getOrder('O3').delivered, 2)
+  assert.deepEqual(cli3.calls.filter(([k]) => k === 'send').map(([, t]) => t), ['P1', 'P1'])
 
   // ---- 多规格：精确优先，月卡退回通用 ----
   store.addCard({ itemId: 'item-s', specName: '规格', specValue: '年卡', name: '年卡', content: 'Y1' })

@@ -20,6 +20,7 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -691,13 +692,46 @@ def logger_serve(message: str) -> None:
         pass
 
 
-def _http_chats(limit: int) -> dict[str, Any]:
-    """HTTP 版会话列表（IM 分页被流控时的兜底）。"""
+def _http_chats(limit: int, timeout: float = 15.0) -> dict[str, Any]:
+    """HTTP 版会话列表（IM 分页被流控时的兜底）。
+
+    必须带超时：这里是同步调用，一旦卡住会堵死 serve 的主循环，
+    宿主看到的就是「请求永远不返回」（2026-11-27 晚实测卡了 8 分钟）。
+    """
     from goofish_cli.commands.message.list_chats import list_chats
 
-    data = list_chats(fetch_num=int(limit), watch_secs=0)
+    box: dict[str, Any] = {}
+
+    def _run() -> None:
+        try:
+            box["data"] = list_chats(fetch_num=int(limit), watch_secs=0)
+        except Exception as exc:  # noqa: BLE001 — 交给调用方判断
+            box["error"] = exc
+
+    worker = threading.Thread(target=_run, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        # 线程还活着：不要等它，直接按超时处理（daemon 线程不会阻止退出）。
+        raise GoofishError(f"HTTP 会话列表超时（{int(timeout)}s）")
+    if "error" in box:
+        raise box["error"]
+    data = box.get("data") or {}
     sessions = data.get("sessions") if isinstance(data, dict) else data
     return {"sessions": sessions or [], "total": len(sessions or []), "source": "http"}
+
+
+def _is_flow_control(exc: Any) -> bool:
+    """识别闲鱼流控。IM 与服务端措辞可能不同，统一在这里判断。"""
+    text = str(exc or "")
+    lowered = text.lower()
+    return (
+        "flow control" in lowered
+        or "flowcontroled" in lowered
+        or "流控" in text
+        or "too many request" in lowered
+        or "请求过于频繁" in text
+    )
 
 
 async def _serve() -> None:
@@ -838,7 +872,14 @@ async def _serve() -> None:
                 cursor = nxt
         except Exception as exc:  # noqa: BLE001 — 流控/协议异常都退回 HTTP，别当空列表
             logger_serve(f"IM 会话列表失败，改用 HTTP：{exc}")
-            out = []
+            # 把原因带出去：上层要据此判断是「被流控」还是「真的没会话」，
+            # 否则流控会被当成空列表，水位照样推进，买家消息永远补不回来。
+            return {
+                "sessions": [],
+                "total": 0,
+                "im_error": str(exc),
+                "flow_controlled": _is_flow_control(exc),
+            }
         return {"sessions": out, "total": len(out)}
 
     async def _history(ws: Any, cid: str, limit: int) -> list[dict[str, Any]]:
@@ -939,15 +980,32 @@ async def _serve() -> None:
                 try:
                     if op == "chats":
                         limit = int(args.get("limit") or 60)
+                        flow = False
+                        im_error = ""
                         try:
                             data = await _chats(ws, limit)
+                            flow = bool(data.get("flow_controlled"))
+                            im_error = str(data.get("im_error") or "")
                         except Exception as exc:  # noqa: BLE001
                             logger_serve(f"IM 会话列表失败：{exc}")
+                            flow = _is_flow_control(exc)
+                            im_error = str(exc)
                             im_chats_blocked_until = time.time() + 60
                             data = {"sessions": []}
                         if not data.get("sessions"):
                             # IM 分页被流控时用 HTTP 会话列表兜底（短命令一直是这么做的）。
-                            data = await asyncio.to_thread(_http_chats, limit)
+                            # 兜底必须带超时，否则会堵死主循环。
+                            try:
+                                data = await asyncio.to_thread(_http_chats, limit, 15.0)
+                            except Exception as exc:  # noqa: BLE001
+                                logger_serve(f"HTTP 会话列表兜底失败：{exc}")
+                                data = {"sessions": [], "total": 0}
+                                flow = flow or _is_flow_control(exc)
+                                im_error = im_error or str(exc)
+                        # 把「是否被流控」显式告诉宿主：它决定要不要推进水位。
+                        data["flow_controlled"] = bool(flow) or bool(data.get("flow_controlled"))
+                        if im_error:
+                            data["im_error"] = im_error
                     elif op == "history":
                         data = await _history(ws, str(args.get("cid") or ""), int(args.get("limit") or 30))
                     elif op == "send":
