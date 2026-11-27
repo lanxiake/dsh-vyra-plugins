@@ -636,9 +636,12 @@ window.__ModuleLoader__.load({
       const [searchQuery, setSearchQuery] = useState('');
       const debouncedQuery = useDebounce(searchQuery, 500);
       
-      // skillhub first: measured ~0.3s from CN, while skills.sh takes ~10s here.
-      const [source, setSource] = useState('skillhub');
-      const [mcpSource, setMcpSource] = useState('registry');
+      // Aggregated by default: the market queries every built-in source in one go, so
+      // the user no longer has to pick a market before anything shows up. The pills
+      // below now filter the merged result instead of choosing what to query.
+      const [source, setSource] = useState('all');
+      const [mcpSource, setMcpSource] = useState('all');
+      const [aggregateSummary, setAggregateSummary] = useState(null);
       
       const [category, setCategory] = useState('all');
       const [disabledSkills, setDisabledSkills] = useState([]);
@@ -908,9 +911,8 @@ window.__ModuleLoader__.load({
         setError('');
         
         try {
-          const result = await call('skills.search', {
+          const result = await call('skills.aggregate', {
             query: query || '',
-            source: opts.source || source,
             category: opts.category && opts.category !== 'all' ? opts.category : '',
             page: targetPage,
             pageSize: 24,
@@ -922,6 +924,7 @@ window.__ModuleLoader__.load({
             setSkills(prev => [...prev, ...items]);
           } else {
             setSkills(items);
+            setAggregateSummary((result && result.summary) || null);
           }
           
           setHasMore(Boolean(result && result.hasMore));
@@ -962,7 +965,7 @@ window.__ModuleLoader__.load({
         try {
           const result = await call('mcp.search', {
             query: query || '',
-            source: opts.source || mcpSource,
+            source: 'all',
             category: opts.category && opts.category !== 'all' ? opts.category : '',
             page: targetPage,
             size: 24,
@@ -974,10 +977,10 @@ window.__ModuleLoader__.load({
             setMcps(prev => [...prev, ...items]);
           } else {
             setMcps(items);
+            setAggregateSummary((result && result.summary) || null);
           }
           
-          const lobehub = (opts.source || mcpSource) === 'lobehub';
-          setHasMore(lobehub ? (result && result.page < result.totalPages) : Boolean(result && result.hasMore));
+          setHasMore(Boolean(result && result.hasMore));
           setPage(targetPage);
           
           if (result && result.hint) {
@@ -1309,24 +1312,26 @@ window.__ModuleLoader__.load({
         }
 
         items = items.filter(match);
-        if (category !== 'all') items = items.filter(item => String(item.category || '').trim() === category);
+        if (category !== 'all') items = items.filter(item => String(item.categoryLabel || item.category || '').trim() === category);
 
         return items;
       }, [tab, isMySkills, isMyMcp, isSkillMarket, isMarket, skills, mcps, installed, mounted, customItems, searchQuery, category, disabledSkills, installedSkillSet, installedMcpSet]);
 
-      // skills.search has no top-level categories; build them from the loaded items instead.
+      // Skills and MCP servers are classified with the SkillNet standard on the host;
+      // the label is already Chinese, so the sidebar groups by it directly. Built from
+      // every loaded row so the counts describe the whole list, not the filtered page.
       const categoryList = useMemo(() => {
         const base = isMySkills ? installed : isMyMcp ? mounted : (customItems || (isSkillMarket ? skills : mcps));
         const counts = new Map();
         for (const item of base || []) {
-          const name = String(item.category || '').trim();
+          const name = String(item.categoryLabel || item.category || '').trim();
           if (!name) continue;
           counts.set(name, (counts.get(name) || 0) + 1);
         }
         return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 24);
       }, [tab, isMySkills, isMyMcp, isSkillMarket, installed, mounted, customItems, skills, mcps]);
 
-      const showSidebar = isMarket && !customItems && categoryList.length >= 2;
+      const showSidebar = !customItems && categoryList.length >= 2;
 
       return h('div', { style: S.container },
         h('div', { style: S.header },
@@ -1365,7 +1370,7 @@ window.__ModuleLoader__.load({
                 })
               ),
               isSkillMarket && h('div', { style: S.filterChips },
-                [['skillhub', 'SkillHub'], ['browse.sh', 'browse.sh'], ['clawhub', 'ClawHub'], ['skills.sh', 'skills.sh']].map(([src, label]) =>
+                [['all', '全部来源'], ['skillhub', 'SkillHub'], ['browse.sh', 'browse.sh'], ['clawhub', 'ClawHub'], ['skills.sh', 'skills.sh']].map(([src, label]) =>
                   h('button', {
                     key: src,
                     style: S.chip(source === src && !customItems),
@@ -1374,14 +1379,25 @@ window.__ModuleLoader__.load({
                 )
               ),
               isMcpMarket && h('div', { style: S.filterChips },
-                ['registry', 'lobehub'].map(src =>
+                [['all', '全部来源'], ['registry', 'MCP 官方'], ['lobehub', 'LobeHub']].map(([src, label]) =>
                   h('button', {
                     key: src,
                     style: S.chip(mcpSource === src && !customItems),
                     onClick: () => { setCustomMcpMarket(''); setCustomItems(null); setMcpSource(src) }
-                  }, src === 'registry' ? 'MCP 官方' : 'LobeHub')
+                  }, label)
                 )
               )
+            ),
+
+            // Aggregation summary: how many rows came back, from how many sources, and
+            // which sources failed. Without the failure line a dead upstream looked
+            // exactly like "nothing matched", which is what the old pills hid.
+            isMarket && aggregateSummary && h('div', { style: S.statsBar },
+              h('span', null, `命中 ${aggregateSummary.total} 条 · ${aggregateSummary.sources} 个来源`),
+              aggregateSummary.failed > 0 && h('span', { style: { color: 'var(--dsw-alias-label-secondary)' } },
+                ` · ${aggregateSummary.failed} 个源不可达`,
+                h('span', { style: { marginLeft: '8px', fontSize: '12px', opacity: 0.75 } },
+                  (aggregateSummary.errors || []).join('；')))
             ),
 
             isMarket && h('div', { style: S.toolbar },
@@ -1554,8 +1570,10 @@ window.__ModuleLoader__.load({
                           : (usage.mcp && usage.mcp[item.serverName || item.slug] && usage.mcp[item.serverName || item.slug].total) || 0),
                         ' 次'
                       ),
-                      item.category && h('span', { style: S.usageTag }, item.category),
-                      item.source && h('span', { style: S.usageTag }, item.sourceLabel || item.source)
+                      (item.categoryLabel || item.category) && h('span', { style: S.usageTag }, item.categoryLabel || item.category),
+                      item.source && h('span', { style: S.usageTag },
+                        item.sourceLabel || item.source,
+                        Array.isArray(item.sources) && item.sources.length > 1 ? ` +${item.sources.length - 1}` : '')
                     ),
                     h('div', { style: S.itemActions },
                       (isMySkills || isMyMcp) && h('button', {
@@ -1573,7 +1591,7 @@ window.__ModuleLoader__.load({
                           e.stopPropagation();
                           openDir(item, isSkill ? 'skill' : 'mcp');
                         }
-                      }, '打开目录'),
+                      }, '目录'),
                       isMyMcp && h('button', {
                         style: { ...S.btn('default', false), flex: 1 },
                         onClick: (e) => {
