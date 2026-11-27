@@ -25,8 +25,8 @@ test('技能市场默认调用聚合通道，不再要求先选源', () => {
   assert.ok(!/call\('skills\.search', \{\s*\n\s*query[\s\S]{0,200}?source: opts\.source \|\| source/.test(source))
 })
 
-test('MCP 市场固定走 all，两个目录都查', () => {
-  assert.match(source, /call\('mcp\.search', \{[\s\S]{0,120}?source: 'all'/)
+test('MCP 市场默认走 all，单源只是过滤条件', () => {
+  assert.match(source, /call\('mcp\.search', \{[\s\S]{0,200}?source: opts\.source \|\| 'all'/)
 })
 
 test('分类侧栏在任何标签页都显示，不是只有市场页', () => {

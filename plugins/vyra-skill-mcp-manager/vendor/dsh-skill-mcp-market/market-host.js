@@ -24,7 +24,7 @@ import { skillMetaFromText, kebab } from "./src/frontmatter.js";
 import { createMcpManager, missingEnv, normalizeServerName } from "./src/mcp.js";
 import { REGISTRY_PAGE_SIZE, fallbackCards, registryCatalogueCacheKey, registryDefinitionByName, searchMcpRegistryPage } from "./src/mcp-registry.js";
 import { createMarketSkillProvider, readSkillBody } from "./src/provider.js";
-import { makeCache, lookupSkillShRepo, searchSkills, warmMarketCache } from "./src/sources.js";
+import { makeCache, lookupSkillShRepo, MARKET_SOURCES, searchOneSource, searchSkills, warmMarketCache } from "./src/sources.js";
 import { lobehubManifestDefinition, lobehubRegistered, searchLobeHubMarket } from "./src/lobehub-market.js";
 import { setUserEnvironmentVariable } from "./src/env.js";
 import { inspectSessionLog, repairSessionLog } from "./src/session-repair.js";
@@ -35,6 +35,8 @@ import { readZip } from "./src/zip.js";
 // the owning package's lib/ so the panel, the CLI and the tests classify and merge
 // identically instead of each carrying its own copy.
 import { mergeItems, decorateSkills, summarize } from "../../lib/aggregate.mjs";
+import { pagedMerge } from "../../lib/paging.mjs";
+import { searchExtraMcpSource } from "../../lib/mcp-sources.mjs";
 import { categoryId, classify } from "../../lib/classify.mjs";
 import { searchSkillNet } from "../../lib/skillnet.mjs";
 
@@ -61,43 +63,95 @@ function mcpMarketRow(item) {
   };
 }
 
-/** Which MCP catalogues a request covers. `all` means both, queried independently. */
+/**
+ * Which MCP catalogues a request covers. `all` means every one of them.
+ *
+ * VENDORED PATCH (vyra): LobeHub was dropped because it answered every search with
+ * zero rows through its CLI, which read as "no data"; it is replaced by Smithery,
+ * npm (`keywords:mcp-server`) and the awesome-mcp-servers list, all probed working.
+ */
+const EXTRA_MCP_IDS = ["smithery", "npm", "awesome"];
+
+/**
+ * VENDORED PATCH (vyra): how long one skill source may hold up a page.
+ *
+ * Measured per source on the same query: skillhub ~0.5 s, trusttools ~7.2 s,
+ * skills.sh ~7.3 s. Rendering waits for this budget at most, and a source that
+ * misses it is reported as unreachable for that page rather than silently dropped.
+ */
+const SOURCE_BUDGET_MS = 4000;
+
 function mcpSourcesFor(body) {
   const wanted = String(body?.source || "all");
-  if (wanted === "all") return ["registry", "lobehub"];
-  return [wanted === "lobehub" ? "lobehub" : "registry"];
+  const all = ["registry", ...EXTRA_MCP_IDS];
+  if (wanted === "all") return all;
+  return all.includes(wanted) ? [wanted] : ["registry"];
 }
 
 /**
  * VENDORED PATCH (vyra): the aggregated skill read.
  *
- * `sources.js` has always been able to query every source in parallel and report
- * which ones failed, but the panel only ever called the two-source path — so a
- * dead upstream showed up as an empty market with no explanation. This joins the
- * per-source rows by slug, marks the installed ones, and hands back the failures
- * so the page can say "3 sources unreachable" instead of rendering nothing.
+ * Every source is asked for one small page (ten rows), and each source is awaited
+ * on its own so the batch that arrives first is merged first. skillsmp measured
+ * ~4.8 s against ~0.4 s for skillhub on the same page, so waiting for all of them
+ * was what made opening the market feel frozen.
  */
-async function aggregateSkills({ query = "", category = "", page, pageSize, skillDirs } = {}, deps) {
+async function aggregateSkills({ query = "", category = "", page, pageSize, skillDirs, seen, source } = {}, deps) {
   const wantedCategory = categoryId(category);
-  const result = await deps.searchSkills({ query, source: "all", page: page || 1, pageSize: pageSize || 24 });
-  const degraded = Array.isArray(result?.degraded) ? [...result.degraded] : [];
-  let rows = Array.isArray(result?.items) ? result.items : [];
+  const size = Number(pageSize) || 10;
+  const wantedPage = Number(page) || 1;
+
+  const degraded = [];
+  const batches = [];
+  const sources = source && source !== "all"
+    ? [source]
+    : (typeof deps.marketSources === "function" ? deps.marketSources() : []);
+
+  // Every source is queried at the same time; the page gets whichever finished.
+  // A source slower than SOURCE_BUDGET_MS is dropped into `degraded` instead of
+  // holding the whole page: trusttools and skills.sh measured ~7 s on a search
+  // while skillhub answered in ~0.5 s, and the user should not wait for the tail.
+  const withBudget = (promise) => Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(new Error(`source exceeded ${SOURCE_BUDGET_MS}ms`)), SOURCE_BUDGET_MS);
+      if (typeof timer.unref === "function") timer.unref();
+      promise.finally(() => clearTimeout(timer)).catch(() => {});
+    }),
+  ]);
+
+  const settled = await Promise.allSettled(sources.map((name) => withBudget((async () => ({
+    source: name,
+    result: name === "all"
+      ? await deps.searchSkills({ query, source: "all", page: wantedPage, pageSize: size })
+      : await deps.searchOneSource(name, { query, page: wantedPage, pageSize: size }),
+  }))())));
+
+  settled.forEach((entry, index) => {
+    if (entry.status !== "fulfilled") {
+      degraded.push({ source: sources[index], error: shortError(entry.reason) });
+      return;
+    }
+    const { source: name, result } = entry.value;
+    batches.push({ source: name, items: Array.isArray(result?.items) ? result.items : [], hasMore: Boolean(result?.hasMore) });
+  });
 
   if (deps.skillnetEnabled()) {
     try {
       const extra = await deps.searchSkillNet({
         query,
         category: wantedCategory === null ? "" : wantedCategory.label,
-        page: page || 1,
-        pageSize: pageSize || 24,
+        page: wantedPage,
+        pageSize: size,
       });
-      rows = rows.concat(Array.isArray(extra?.items) ? extra.items : []);
+      batches.push({ source: "skillnet", items: Array.isArray(extra?.items) ? extra.items : [], hasMore: Boolean(extra?.hasMore) });
     } catch (error) {
       degraded.push({ source: "skillnet", error: shortError(error) });
     }
   }
 
-  let merged = mergeItems(rows);
+  const paged = pagedMerge({ page: wantedPage, pageSize: size, batches, failures: degraded, seen });
+  let merged = paged.items;
   if (wantedCategory !== null) {
     merged = merged.filter((item) =>
       classify({ name: item.name, description: item.description, whenToUse: item.whenToUse, category: item.category }).id === wantedCategory.id,
@@ -112,73 +166,79 @@ async function aggregateSkills({ query = "", category = "", page, pageSize, skil
   }
   const taken = new Set(installed.map((item) => item.slug));
   const items = decorated.map((item) => ({ ...item, installed: taken.has(item.slug) }));
-  const hasMore = Boolean(result?.hasMore);
   return {
     items,
-    page: Number(page) || 1,
-    pageSize: Number(pageSize) || 24,
+    page: paged.page,
+    pageSize: paged.pageSize,
     total: items.length,
-    hasMore,
-    canLoadMore: hasMore,
+    hasMore: paged.hasMore,
+    canLoadMore: paged.hasMore,
     degraded,
-    hints: Array.isArray(result?.hints) ? result.hints : [],
-    sourceErrors: Array.isArray(result?.sourceErrors) ? result.sourceErrors : [],
+    hints: batches.flatMap((batch) => (Array.isArray(batch.hints) ? batch.hints : [])),
+    sourceErrors: degraded.map((failure) => `${failure.source}: ${failure.error}`),
     summary: summarize(items, degraded),
   };
 }
 
 /**
- * VENDORED PATCH (vyra): query both MCP catalogues and merge them by slug.
+ * VENDORED PATCH (vyra): query every MCP catalogue and merge them by slug.
  *
- * Each catalogue is queried independently so one being down degrades to a warning
- * instead of an empty market, which is what picking a single source used to give.
+ * The official registry goes through the vendored loader; Smithery, npm and the
+ * awesome list go through `lib/mcp-sources.mjs`. Each is queried independently, so
+ * one being down degrades to a warning instead of an empty market.
  */
 async function aggregateMcp(body, query, deps, cache) {
   const wanted = mcpSourcesFor(body);
-  const settled = await Promise.allSettled(wanted.map((source) =>
-    deps.loadMcpCatalog(cache, query, source, {
-      category: body.category,
-      sort: body.sort,
-      page: body.page,
-      size: body.size,
-    })));
+  const page = Number(body.page) || 1;
+  const size = Number(body.size) || 10;
 
-  const degraded = [];
-  const rows = [];
-  let hasMore = false;
-  let page = 1;
+  const settled = await Promise.allSettled(wanted.map((source) => {
+    if (source === "registry") {
+      return deps.loadMcpCatalog(cache, query, "registry", { category: body.category, sort: body.sort, page, size });
+    }
+    return deps.searchExtraMcpSource(source, { query, page, pageSize: size });
+  }));
+
+  const failures = [];
+  const batches = [];
   settled.forEach((result, index) => {
+    const source = wanted[index];
     if (result.status !== "fulfilled") {
-      degraded.push({ source: wanted[index], error: shortError(result.reason) });
+      failures.push({ source, error: shortError(result.reason) });
       return;
     }
     const catalog = result.value || {};
     const items = Array.isArray(catalog.items) ? catalog.items : [];
-    const filtered = catalog.live
+    const filtered = source !== "registry" || catalog.live
       ? items
       : items.filter((item) => !query || `${item.slug} ${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()));
-    for (const item of filtered) rows.push({ ...mcpMarketRow(item), source: item.source || wanted[index] });
-    if (catalog.hasMore) hasMore = true;
-    page = Math.max(page, Number(catalog.page) || 1);
+    batches.push({
+      source,
+      items: filtered.map((item) => (item.id && String(item.id).startsWith("mcp:") && item.source && item.slug
+        ? { ...item, source }
+        : { ...mcpMarketRow(item), source: item.source || source })),
+      hasMore: Boolean(catalog.hasMore),
+    });
   });
 
-  const items = decorateSkills(mergeItems(rows), query);
+  const paged = pagedMerge({ page, pageSize: size, batches, failures, seen: body.seen });
+  const items = decorateSkills(paged.items, query);
   return {
     items,
-    degraded,
+    degraded: failures,
     hints: [],
     source: "all",
     page,
     total: items.length,
-    hasMore,
-    canLoadMore: hasMore,
-    summary: summarize(items, degraded),
+    hasMore: paged.hasMore,
+    canLoadMore: paged.hasMore,
+    summary: summarize(items, failures),
   };
 }
 
 /** Dependencies the aggregated read paths take, closing over the real modules. */
 function defaultAggregateDeps(skillnetEnabled) {
-  return { searchSkills, searchSkillNet, listInstalledSkills, skillnetEnabled, loadMcpCatalog };
+  return { searchSkills, searchOneSource, marketSources: () => MARKET_SOURCES, searchSkillNet, listInstalledSkills, skillnetEnabled, loadMcpCatalog, searchExtraMcpSource };
 }
 
 /**
@@ -1361,6 +1421,8 @@ export async function apply(ctx, config = {}) {
             page: body.page,
             pageSize: body.pageSize,
             skillDirs: settings.skillDirs,
+            seen: Array.isArray(body.seen) ? body.seen : [],
+            source: body.source,
           }, panelAggregateDeps());
         }
         const wantedSource = String(body.source || "all");
@@ -1389,6 +1451,8 @@ export async function apply(ctx, config = {}) {
           page: body.page,
           pageSize: body.pageSize,
           skillDirs: settings.skillDirs,
+          seen: Array.isArray(body.seen) ? body.seen : [],
+          source: body.source,
         }, panelAggregateDeps());
       case "skills.install": {
         const installed = await installSkill({

@@ -504,7 +504,9 @@ export const ALL_SOURCES = [
   "skillsmp",
   "trusttools",
   "browse.sh",
-  "lobehub",
+  // VENDORED PATCH (vyra): "lobehub" removed — its CLI needs credentials this
+  // plugin never registers, so every query failed with "No credentials found" and
+  // only made the market report an unreachable source on every page.
   "skillhub",
   "modelscope",
 ];
@@ -522,6 +524,17 @@ const SOURCE_HANDLERS = {
   skillhub: searchSkillHub,
   modelscope: searchModelScope,
 };
+
+// VENDORED PATCH (vyra): run ONE source and return its own page, so a caller can
+// render the sources that answered first instead of waiting for the slowest one
+// (skillsmp measured ~4.8 s against ~0.4 s for skillhub on the same page).
+export const MARKET_SOURCES = [...ALL_SOURCES];
+
+export async function searchOneSource(name, { query = "", page = 1, pageSize = 10, cache = fallbackCache } = {}) {
+  const handler = SOURCE_HANDLERS[name];
+  if (!handler) throw new Error(`unknown skill source ${name}`);
+  return handler({ query, page: Math.max(1, Number(page) || 1), pageSize: Math.max(1, Math.min(60, Number(pageSize) || 10)), cache });
+}
 
 export async function searchSkills({ query, source = "all", page = 1, pageSize = 24, cache = fallbackCache }) {
   const wanted = source === "all" ? ALL_SOURCES : [source];

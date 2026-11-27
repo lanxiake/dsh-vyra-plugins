@@ -652,6 +652,15 @@ window.__ModuleLoader__.load({
       
       const [busy, setBusy] = useState('');
       const abortControllerRef = useRef(null);
+      // Latest rendered slugs, so "load more" can tell the host which rows are
+      // already on screen and avoid rendering one twice across pages.
+      const skillsRef = useRef([]);
+      const mcpsRef = useRef([]);
+      skillsRef.current = skills;
+      mcpsRef.current = mcps;
+      const seenSlugs = (isMcp) => (isMcp ? mcpsRef.current : skillsRef.current)
+        .map((item) => item.slug)
+        .filter(Boolean);
       
       const [previewView, setPreviewView] = useState(null);
 
@@ -915,7 +924,12 @@ window.__ModuleLoader__.load({
             query: query || '',
             category: opts.category && opts.category !== 'all' ? opts.category : '',
             page: targetPage,
-            pageSize: 24,
+            // Ten rows per source per page: the first screen no longer waits for a
+            // slow catalogue, and the next page asks each source for its next ten.
+            // `seen` stops a row from reappearing when sources rank differently.
+            pageSize: 10,
+            seen: isLoadMore ? seenSlugs(false) : [],
+            source: opts.source || source,
           }, abortControllerRef.current.signal);
           
           const items = (result && result.items) || [];
@@ -965,10 +979,11 @@ window.__ModuleLoader__.load({
         try {
           const result = await call('mcp.search', {
             query: query || '',
-            source: 'all',
+            source: opts.source || 'all',
             category: opts.category && opts.category !== 'all' ? opts.category : '',
             page: targetPage,
-            size: 24,
+            size: 10,
+            seen: isLoadMore ? seenSlugs(true) : [],
           }, abortControllerRef.current.signal);
           
           const items = (result && result.items) || [];
@@ -1046,12 +1061,12 @@ window.__ModuleLoader__.load({
           setCategory('all');
           setPage(1);
           setHasMore(true);
-          if (!customSkillMarket) searchSkills(debouncedQuery);
+          if (!customSkillMarket) searchSkills(debouncedQuery, { source });
         } else if (isMcpMarket) {
           setCategory('all');
           setPage(1);
           setHasMore(true);
-          if (!customMcpMarket) searchMcps(debouncedQuery);
+          if (!customMcpMarket) searchMcps(debouncedQuery, { source: mcpSource });
         }
       }, [tab, debouncedQuery, source, mcpSource]);
 
@@ -1379,7 +1394,7 @@ window.__ModuleLoader__.load({
                 )
               ),
               isMcpMarket && h('div', { style: S.filterChips },
-                [['all', '全部来源'], ['registry', 'MCP 官方'], ['lobehub', 'LobeHub']].map(([src, label]) =>
+                [['all', '全部来源'], ['registry', 'MCP 官方'], ['smithery', 'Smithery'], ['npm', 'npm'], ['awesome', 'awesome-mcp']].map(([src, label]) =>
                   h('button', {
                     key: src,
                     style: S.chip(mcpSource === src && !customItems),
