@@ -132,9 +132,6 @@
     "qrcode": "1.5.4",
     "undici": "7.30.1"
   },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-skill-filesystem": "^0.2.1"
-  },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-skill-filesystem": {
       "optional": true

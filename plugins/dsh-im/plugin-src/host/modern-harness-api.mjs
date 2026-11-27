@@ -49,6 +49,13 @@ function remoteRequest(namespace, method, args, signal, peer) {
   };
 }
 
+/**
+ * Remote-call helpers for a caller outside this module that drives the same
+ * typert gateway (the session-group registration). Exported rather than copied
+ * so the request envelope and the peer identity stay defined in one place.
+ */
+export { harnessPeer, remoteRequest };
+
 function questionError(message, code) {
   const error = new Error(message);
   error.name = 'UserQuestionError';

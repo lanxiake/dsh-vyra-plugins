@@ -123,7 +123,8 @@ if (forbiddenDshLockPaths.length > 0) {
   );
 }
 
-if (!/\bid\s*:\s*["']@xmanrui\/dsh-im["']/u.test(client)) {
+// This fork publishes as @lanxiake/dsh-im; the loader id follows the package.
+if (!/\bid\s*:\s*["']@lanxiake\/dsh-im["']/u.test(client)) {
   throw new Error('client bundle does not register the dsh-im loader id');
 }
 const sourceSectionMarkers = [

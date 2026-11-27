@@ -31,6 +31,8 @@ import { installSessionSyncCoordinator } from './session-sync-coordinator.mjs';
 import { deliverySwitchesOff } from '../../src/channels/shared/delivery-sync-settings.mjs';
 import { getDeliverySyncSettingsStore } from '../../src/channels/shared/delivery-sync-settings-store.mjs';
 import { installSessionTitlePrefix } from './session-title-prefix.mjs';
+import { installSessionGroup } from './session-group.mjs';
+import { harnessPeer, remoteRequest } from './modern-harness-api.mjs';
 import { installUpdateRpc } from './update-rpc.mjs';
 
 export const name = 'dsh-im-host';
@@ -50,6 +52,34 @@ function channelConfig(config, name, deliveryService) {
     ? channel
     : { ...channel, rpcAuthority: config.rpcAuthority };
   return name === 'office' ? withAuthority : { ...withAuthority, deliveryService };
+}
+
+/** Group title for the shared IM directory; `off` keeps the old ungrouped behaviour. */
+export const DEFAULT_SESSION_GROUP = 'DSH-IM';
+
+/**
+ * Adapt the Host's typert gateway to the three workspace calls the group needs.
+ *
+ * The envelope and peer come from `modern-harness-api.mjs`, the module that
+ * already drives this same gateway for sessions and workspaces, so the group
+ * registration adds no new contract. `null` means the Host cannot register a
+ * group here, and the caller leaves conversations ungrouped.
+ */
+function workspacePort(ctx) {
+  const gateway = ctx?.typertGateway;
+  if (!gateway || typeof gateway.invoke !== 'function') return null;
+  const peer = harnessPeer(ctx);
+  const call = (method, payload) => gateway.invoke(
+    remoteRequest('workspace', method, { request: payload }, undefined, peer),
+  );
+  return {
+    list: async () => {
+      const value = await call('list', {});
+      return Array.isArray(value?.items) ? value.items : [];
+    },
+    create: async (path) => (await call('create', { path }))?.workspace ?? null,
+    rename: (workspaceId, title) => call('rename', { workspaceId, title }),
+  };
 }
 
 export function createImHostPlugin(internals = {}) {
@@ -215,6 +245,18 @@ export function createImHostPlugin(internals = {}) {
     const logger = typeof ctx?.logger === 'function'
       ? ctx.logger(name)
       : (ctx?.logger ?? console);
+    // Register the shared IM directory before any channel creates a Session, so
+    // the first conversation already lands in its group instead of 「未分组」.
+    // Registration is best-effort and never delays a channel.
+    const port = workspacePort(ctx);
+    void installSessionGroup(port, {
+      ...(config.dshHome ? { dshHome: config.dshHome } : {}),
+      title: config.sessionGroup ?? DEFAULT_SESSION_GROUP,
+      logger,
+      ...(port ? { rename: (workspaceId, title) => port.rename(workspaceId, title) } : {}),
+    }).catch((error) => {
+      logger.warn?.('[dsh-im] session group registration failed', error);
+    });
     const mountSkill = (skillCtx) => {
       installDeliverySkill(skillCtx).catch((error) => {
         logger.warn?.('[dsh-im] failed to mount the delivery skill; the tools still work', error);
