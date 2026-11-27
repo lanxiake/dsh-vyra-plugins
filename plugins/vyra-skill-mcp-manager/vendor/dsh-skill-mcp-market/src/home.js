@@ -44,6 +44,10 @@ export function defaultSettings() {
     disabledSkills: [],
     // Extra root that holds the shipped dsh packages (app.asar). Empty means auto-detect.
     shippedRoot: "",
+    // VENDORED PATCH (vyra): SkillNet as a ninth skill source. Off by default — its
+    // public endpoint measured roughly one 504 per two requests while this was built,
+    // so it must never be allowed to slow down or break the first screen.
+    skillnet: false,
     createdAt: new Date().toISOString(),
   };
 }
@@ -65,6 +69,8 @@ function normalize(raw, fallback) {
     ? merged.disabledSkills.map((x) => String(x).trim().toLowerCase()).filter(Boolean)
     : [];
   merged.shippedRoot = typeof merged.shippedRoot === "string" ? expandPath(merged.shippedRoot) : "";
+  // VENDORED PATCH (vyra): an explicitly stored boolean wins; anything else is off.
+  merged.skillnet = merged.skillnet === true;
   return merged;
 }
 

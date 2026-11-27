@@ -31,11 +31,175 @@ import { inspectSessionLog, repairSessionLog } from "./src/session-repair.js";
 import { autoRepairSessions } from "./src/auto-repair.js";
 import { installToolCallGuard } from "./src/toolcall-guard.js";
 import { readZip } from "./src/zip.js";
+// VENDORED PATCH (vyra): local modules shared with the `vyra-skill` CLI. They live in
+// the owning package's lib/ so the panel, the CLI and the tests classify and merge
+// identically instead of each carrying its own copy.
+import { mergeItems, decorateSkills, summarize } from "../../lib/aggregate.mjs";
+import { categoryId, classify } from "../../lib/classify.mjs";
+import { searchSkillNet } from "../../lib/skillnet.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 export const name = "dsh-skill-mcp-market";
 export const inject = ["tools"];
+
+/** One catalogue row, in the shape the market card renders. */
+function mcpMarketRow(item) {
+  return {
+    id: `mcp:${item.slug}`,
+    slug: item.slug,
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    transport: item.transport,
+    envRequired: item.envRequired || [],
+    envHints: item.envHints || {},
+    installable: item.installable !== false,
+    note: item.note,
+    homepage: item.homepage,
+    source: item.source || "registry",
+  };
+}
+
+/** Which MCP catalogues a request covers. `all` means both, queried independently. */
+function mcpSourcesFor(body) {
+  const wanted = String(body?.source || "all");
+  if (wanted === "all") return ["registry", "lobehub"];
+  return [wanted === "lobehub" ? "lobehub" : "registry"];
+}
+
+/**
+ * VENDORED PATCH (vyra): the aggregated skill read.
+ *
+ * `sources.js` has always been able to query every source in parallel and report
+ * which ones failed, but the panel only ever called the two-source path — so a
+ * dead upstream showed up as an empty market with no explanation. This joins the
+ * per-source rows by slug, marks the installed ones, and hands back the failures
+ * so the page can say "3 sources unreachable" instead of rendering nothing.
+ */
+async function aggregateSkills({ query = "", category = "", page, pageSize, skillDirs } = {}, deps) {
+  const wantedCategory = categoryId(category);
+  const result = await deps.searchSkills({ query, source: "all", page: page || 1, pageSize: pageSize || 24 });
+  const degraded = Array.isArray(result?.degraded) ? [...result.degraded] : [];
+  let rows = Array.isArray(result?.items) ? result.items : [];
+
+  if (deps.skillnetEnabled()) {
+    try {
+      const extra = await deps.searchSkillNet({
+        query,
+        category: wantedCategory === null ? "" : wantedCategory.label,
+        page: page || 1,
+        pageSize: pageSize || 24,
+      });
+      rows = rows.concat(Array.isArray(extra?.items) ? extra.items : []);
+    } catch (error) {
+      degraded.push({ source: "skillnet", error: shortError(error) });
+    }
+  }
+
+  let merged = mergeItems(rows);
+  if (wantedCategory !== null) {
+    merged = merged.filter((item) =>
+      classify({ name: item.name, description: item.description, whenToUse: item.whenToUse, category: item.category }).id === wantedCategory.id,
+    );
+  }
+  const decorated = decorateSkills(merged, query);
+  let installed = [];
+  try {
+    installed = await deps.listInstalledSkills(skillDirs || []);
+  } catch {
+    installed = [];
+  }
+  const taken = new Set(installed.map((item) => item.slug));
+  const items = decorated.map((item) => ({ ...item, installed: taken.has(item.slug) }));
+  const hasMore = Boolean(result?.hasMore);
+  return {
+    items,
+    page: Number(page) || 1,
+    pageSize: Number(pageSize) || 24,
+    total: items.length,
+    hasMore,
+    canLoadMore: hasMore,
+    degraded,
+    hints: Array.isArray(result?.hints) ? result.hints : [],
+    sourceErrors: Array.isArray(result?.sourceErrors) ? result.sourceErrors : [],
+    summary: summarize(items, degraded),
+  };
+}
+
+/**
+ * VENDORED PATCH (vyra): query both MCP catalogues and merge them by slug.
+ *
+ * Each catalogue is queried independently so one being down degrades to a warning
+ * instead of an empty market, which is what picking a single source used to give.
+ */
+async function aggregateMcp(body, query, deps, cache) {
+  const wanted = mcpSourcesFor(body);
+  const settled = await Promise.allSettled(wanted.map((source) =>
+    deps.loadMcpCatalog(cache, query, source, {
+      category: body.category,
+      sort: body.sort,
+      page: body.page,
+      size: body.size,
+    })));
+
+  const degraded = [];
+  const rows = [];
+  let hasMore = false;
+  let page = 1;
+  settled.forEach((result, index) => {
+    if (result.status !== "fulfilled") {
+      degraded.push({ source: wanted[index], error: shortError(result.reason) });
+      return;
+    }
+    const catalog = result.value || {};
+    const items = Array.isArray(catalog.items) ? catalog.items : [];
+    const filtered = catalog.live
+      ? items
+      : items.filter((item) => !query || `${item.slug} ${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()));
+    for (const item of filtered) rows.push({ ...mcpMarketRow(item), source: item.source || wanted[index] });
+    if (catalog.hasMore) hasMore = true;
+    page = Math.max(page, Number(catalog.page) || 1);
+  });
+
+  const items = decorateSkills(mergeItems(rows), query);
+  return {
+    items,
+    degraded,
+    hints: [],
+    source: "all",
+    page,
+    total: items.length,
+    hasMore,
+    canLoadMore: hasMore,
+    summary: summarize(items, degraded),
+  };
+}
+
+/** Dependencies the aggregated read paths take, closing over the real modules. */
+function defaultAggregateDeps(skillnetEnabled) {
+  return { searchSkills, searchSkillNet, listInstalledSkills, skillnetEnabled, loadMcpCatalog };
+}
+
+/**
+ * VENDORED PATCH (vyra): invoke one aggregated panel RPC without a cordis context.
+ *
+ * The aggregated reads are what the panel and the `vyra-skill` CLI both rely on, so
+ * they need a test seam that injects their upstreams instead of reaching for the
+ * network or the filesystem. `deps` overrides only the keys it names. `apply` does
+ * not route through this; it exists for tests.
+ */
+export async function dispatchForTest(op, body = {}, deps = {}) {
+  const settings = await loadSettings();
+  const merged = { ...defaultAggregateDeps(() => settings.skillnet === true), ...deps };
+  if (op === "skills.aggregate") {
+    return aggregateSkills({ ...body, skillDirs: body.skillDirs ?? [] }, merged);
+  }
+  if (op === "mcp.search") {
+    return aggregateMcp(body, String(body.query || "").trim(), merged, makeCache(join(tmpdir(), "dsh-market-cache-test")));
+  }
+  throw new Error(`dispatchForTest does not support ${op}`);
+}
 
 function textResult(value) {
   const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -730,6 +894,8 @@ export async function apply(ctx, config = {}) {
     if (Array.isArray(args.skillDirs)) next.skillDirs = args.skillDirs.map(expandPath).filter(Boolean);
     if (Array.isArray(args.mcpDirs)) next.mcpDirs = args.mcpDirs.map(expandPath).filter(Boolean);
     if (typeof args.shippedRoot === "string") next.shippedRoot = expandPath(args.shippedRoot);
+    // VENDORED PATCH (vyra): the SkillNet source switch.
+    if (typeof args.skillnet === "boolean") next.skillnet = args.skillnet;
     if (next.skillDirs.length === 0) throw new Error("skillDirs cannot be empty");
     if (next.mcpDirs.length === 0) throw new Error("mcpDirs cannot be empty");
     settings = await saveSettings(next);
@@ -1160,6 +1326,9 @@ export async function apply(ctx, config = {}) {
   });
 
   // ---------------------------------------------------------------- client panel RPC
+  // VENDORED PATCH (vyra): the aggregated read paths take their upstreams as a
+  // dependency table so the same code serves the panel and the tests.
+  const panelAggregateDeps = () => defaultAggregateDeps(() => settings.skillnet === true);
   async function dispatch(op, body) {
     switch (op) {
       case "settings.get":
@@ -1170,6 +1339,7 @@ export async function apply(ctx, config = {}) {
             shippedRoot: settings.shippedRoot || "(auto-detected)",
             settingsPath: settingsPath(),
             disabledSkills: settings.disabledSkills,
+            skillnet: settings.skillnet === true,
           },
           skillProvider: { mounted: Boolean(disposeProvider), error: skillProviderError || undefined },
       mcp: { error: mcpInitError || undefined },
@@ -1181,6 +1351,18 @@ export async function apply(ctx, config = {}) {
       case "settings.set":
         return applyPaths(body);
       case "skills.search": {
+        // VENDORED PATCH (vyra): `all` is the aggregated channel the panel now uses by
+        // default; the old per-source path stays for "only this source" and for clients
+        // built before aggregation existed.
+        if (String(body.source || "all") === "all") {
+          return aggregateSkills({
+            query: body.query || "",
+            category: body.category || "",
+            page: body.page,
+            pageSize: body.pageSize,
+            skillDirs: settings.skillDirs,
+          }, panelAggregateDeps());
+        }
         const wantedSource = String(body.source || "all");
         const result = await searchSkills({
           query: body.query || "",
@@ -1197,9 +1379,17 @@ export async function apply(ctx, config = {}) {
         return {
           ...result,
           canLoadMore,
-          items: result.items.map((item) => ({ ...item, installed: taken.has(item.slug) })),
+          items: decorateSkills(result.items, body.query || "").map((item) => ({ ...item, installed: taken.has(item.slug) })),
         };
       }
+      case "skills.aggregate":
+        return aggregateSkills({
+          query: body.query || "",
+          category: body.category || "",
+          page: body.page,
+          pageSize: body.pageSize,
+          skillDirs: settings.skillDirs,
+        }, panelAggregateDeps());
       case "skills.install": {
         const installed = await installSkill({
           source: body.source || "github",
@@ -1219,7 +1409,10 @@ export async function apply(ctx, config = {}) {
       }
       case "skills.list": {
         const grouped = await collectInstalledGrouped();
-        return { dirs: await collectDshNativeSkillDirs(), groups: grouped.groups, items: grouped.items };
+        // VENDORED PATCH (vyra): installed skills carry no category of their own, so the
+        // panel's "my skills" filter needs one inferred here.
+        const items = decorateSkills(grouped.items);
+        return { dirs: await collectDshNativeSkillDirs(), groups: grouped.groups, items };
       }
       case "skills.uninstall":
         return uninstallSkill({ slug: body.slug, dirs: settings.skillDirs, trashDir, agentsHomeSkillsDir: join(agentsHome(), "skills") });
@@ -1529,8 +1722,12 @@ export async function apply(ctx, config = {}) {
         return mcp.update(body.serverName, body.patch || {});
       case "mcp.search": {
         const query = String(body.query || "").trim();
-        const wanted = String(body.source || "registry") === "lobehub" ? "lobehub" : "registry";
-        const catalog = await loadMcpCatalog(marketCache, query, wanted, {
+        // VENDORED PATCH (vyra): `all` queries both catalogues and merges them, so the
+        // page no longer makes the user pick a market before it searches one.
+        const wanted = String(body.source || "registry");
+        if (wanted === "all") return aggregateMcp(body, query, panelAggregateDeps(), marketCache);
+        const source = wanted === "lobehub" ? "lobehub" : "registry";
+        const catalog = await loadMcpCatalog(marketCache, query, source, {
           category: body.category,
           sort: body.sort,
           page: body.page,
@@ -1544,20 +1741,7 @@ export async function apply(ctx, config = {}) {
               !query ? true : `${item.slug} ${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase()),
             );
         return {
-          items: rows.map((item) => ({
-            id: `mcp:${item.slug}`,
-            slug: item.slug,
-            name: item.name,
-            description: item.description,
-            category: item.category,
-            transport: item.transport,
-            envRequired: item.envRequired || [],
-            envHints: item.envHints || {},
-            installable: item.installable !== false,
-            note: item.note,
-            homepage: item.homepage,
-            source: item.source || "registry",
-          })),
+          items: rows.map(mcpMarketRow),
           hint: catalog.hint,
           categories: catalog.categories || [],
           source: wanted,
@@ -1643,8 +1827,22 @@ export async function apply(ctx, config = {}) {
         });
         return { opened: target, kind };
       }
-      case "mcp.list":
-        return { mcpDirs: settings.mcpDirs, items: await mcp.list() };
+      case "mcp.list": {
+        const items = await mcp.list();
+        // VENDORED PATCH (vyra): same as skills.list — a manual or market-installed
+        // definition has no category, so infer one from its command and description.
+        const classified = items.map((item) => {
+          const hit = classify({
+            name: item.title || item.serverName,
+            description: item.description,
+            command: item.command,
+            args: item.args,
+            category: item.category,
+          });
+          return { ...item, category: hit.id, categoryLabel: hit.label };
+        });
+        return { mcpDirs: settings.mcpDirs, items: classified };
+      }
       case "mcp.toggle":
         return mcp.setEnabled(body.serverName, body.enabled);
       case "mcp.uninstall":
