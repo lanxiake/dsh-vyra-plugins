@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "workspaces": {
+    "wx_919f259577ca904002bbb196": "/home/user/.dsh/im"
+  },
+  "deliveryTargets": {
+    "wx_919f259577ca904002bbb196": {
+      "o9cq801LCaXHkMjBa_NBR82KYDPY@im.wechat": {
+        "name": "工作微信",
+        "kind": "user",
+        "route": {
+          "toUserId": "o9cq801LCaXHkMjBa_NBR82KYDPY@im.wechat"
+        }
+      },
+      "oc_group_release_1": {
+        "name": "发布告警群",
+        "kind": "group",
+        "route": {
+          "chatId": "oc_group_release_1"
+        }
+      }
+    }
+  }
+}
