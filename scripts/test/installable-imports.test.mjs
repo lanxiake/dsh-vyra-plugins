@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { staticImportsOf, unshippedModules, unresolvableImports } from '../lib/check-imports.mjs'
+import { insertedRowNames, staticImportsOf, unshippedModules, unresolvableImports } from '../lib/check-imports.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -201,4 +201,53 @@ test('a real import still counts next to a template that quotes one', () => {
   const specifiers = staticImportsOf(readFileSync(join(root, 'index.js'), 'utf8'))
   assert.deepEqual(specifiers, ['./a.js'], 'the real import must survive')
   drop(root)
+})
+
+// ---------------------------------------------------------------------------
+// Patch rows: the package a bundle mounts itself under.
+// ---------------------------------------------------------------------------
+
+test('insert rows are read, and a config value is not one', () => {
+  // `vyra-agent-cli-manager` lists its CLIs under `config.agents`, each with an
+  // `id` and a `name` — the same keys a mounted row has, one level deeper.
+  const patch = [
+    '- insert:',
+    '    - id: dsh-vyra-agent-cli-manager',
+    '      name: dsh-vyra-agent-cli-manager',
+    '      config:',
+    '        agents:',
+    '          - id: claude',
+    "            name: Claude Code",
+    '          - id: kimi',
+    "            name: Kimi CLI",
+    '',
+  ].join('\n')
+  assert.deepEqual(insertedRowNames(patch), ['dsh-vyra-agent-cli-manager'])
+})
+
+test('both row indentations in this repository are read', () => {
+  // `dsh-expert-orchestrator` writes `  - id:`; every `vyra-` plugin writes
+  // `    - id:`. A parser that assumes one silently reads nothing from the
+  // other, and "nothing" looks like "no rows to check".
+  const tight = '- insert:\n  - id: a\n    name: dsh-a\n'
+  const loose = '- insert:\n    - id: b\n      name: dsh-b\n'
+  assert.deepEqual(insertedRowNames(tight), ['dsh-a'])
+  assert.deepEqual(insertedRowNames(loose), ['dsh-b'])
+})
+
+test('several rows in one insert are all read, in order', () => {
+  const patch = [
+    '- insert:',
+    '    - id: one',
+    '      name: dsh-one',
+    '    - id: two',
+    "      name: 'dsh-two'",
+    '',
+  ].join('\n')
+  assert.deepEqual(insertedRowNames(patch), ['dsh-one', 'dsh-two'])
+})
+
+test('no insert section means no rows', () => {
+  assert.deepEqual(insertedRowNames('# just a comment\n'), [])
+  assert.deepEqual(insertedRowNames('- remove:\n    - id: x\n      name: dsh-x\n'), [])
 })

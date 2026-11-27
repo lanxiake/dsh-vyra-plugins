@@ -20,7 +20,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Script } from 'node:vm'
-import { unshippedModules, unresolvableImports } from './lib/check-imports.mjs'
+import { insertedRowNames, unshippedModules, unresolvableImports } from './lib/check-imports.mjs'
 
 /**
  * Package-manager hooks that run on the consumer's machine.
@@ -116,6 +116,17 @@ for (const dir of readdirSync(join(root, 'plugins'))) {
   const patch = manifest.dsh?.bundle?.patch
   if (patch !== undefined && !existsSync(at(String(patch).replace(/^\.\//, '')))) {
     failures(name, `dsh.bundle.patch "${patch}" does not exist`)
+  } else if (patch !== undefined) {
+    // A patch mounts this package through its rows' `name:`. Renaming a
+    // package without its patch row leaves a row naming a package that is not
+    // installed: the loader mounts nothing and reports nothing, because to it
+    // the row is a well-formed request for a package that simply is absent.
+    // `vyra-media-desk` was imported with `name: 'vyra-media-desk'` while its
+    // manifest said `dsh-vyra-media-desk`, and every other check stayed green.
+    const rows = insertedRowNames(readFileSync(at(String(patch).replace(/^\.\//, '')), 'utf8'))
+    if (rows.length > 0 && !rows.includes(manifest.name)) {
+      failures(name, `dsh.bundle.patch rows mount ${rows.join(', ')}, none of which is this package`)
+    }
   }
 
   if (manifest.dsh?.client !== undefined) {

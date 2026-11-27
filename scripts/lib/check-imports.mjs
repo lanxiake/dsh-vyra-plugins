@@ -366,3 +366,101 @@ export function unresolvableImports(entry) {
   }
   return missing
 }
+
+/**
+ * Every `insert` row's `name` in a bundle patch, in file order.
+ *
+ * A row names the package the loader mounts. `id` is that row's own identity
+ * and may be anything (`media-studio`, `boot-duel`), but `name` has to be a
+ * real package or the row mounts nothing — and nothing complains, because a
+ * missing package is an ordinary config value to the loader, not a broken file.
+ *
+ * Read line-wise rather than parsed: this repository carries no YAML
+ * dependency, and the rows are written by hand in one shape — a `name:` more
+ * indented than the `- id:` above it. A `name:` that disagrees with its row's
+ * package is the case `check-installable` fails, and it only needs the value.
+ *
+ * @param text - the patch file's contents.
+ * @returns the row names, in file order.
+ */
+export function insertedRowNames(text) {
+  /**
+   * `key: value`, optionally written as a list item.
+   *
+   * The `-` and the key may be separated by any amount of whitespace: these
+   * patches write rows as `    - id: …` with one space, but `insert:` itself
+   * appears as `- insert:`, and a single-space assumption silently matched
+   * neither the padded item nor the unpadded one.
+   */
+  const KEY = /^(\s*)(?:-\s*)?([A-Za-z_][\w-]*)\s*:\s*(.*)$/u
+  const names = []
+  /** Indent of the `insert:` whose list we are inside, or `null` when outside. */
+  let listIndent = null
+  /** A row opened with `- id:` and still waiting for its own `name:`. */
+  let rowIndent = null
+  /** Indent of the `config:` a row opened, while its value is still in scope. */
+  let configIndent = null
+  for (const raw of text.split(/\r?\n/gu)) {
+    const line = raw.replace(/(^|\s)#.*$/u, '')
+    if (line.trim() === '') continue
+    const parsed = KEY.exec(line)
+    if (parsed === null) continue
+    const [, spaces, key, value] = parsed
+    const indent = spaces.length
+    // `insert:` opens the list; each row of it is one further level in.
+    if (key === 'insert' && value.trim() === '') {
+      listIndent = indent
+      rowIndent = null
+      configIndent = null
+      continue
+    }
+    if (listIndent === null) continue
+    // Dedenting to or past `insert:` ends its list.
+    if (indent <= listIndent) {
+      listIndent = null
+      rowIndent = null
+      configIndent = null
+      continue
+    }
+    // Inside a row's `config:`, everything belongs to that value until the
+    // indent returns to the row: the config holds its own `- id:` items and its
+    // own `name:` keys (`agents: [{ id: claude, name: 'Claude Code' }]`), both
+    // of which read exactly like a row while naming nothing installable.
+    if (configIndent !== null) {
+      if (indent > configIndent) continue
+      configIndent = null
+    }
+    if (key === 'config' && rowIndent !== null) {
+      configIndent = rowIndent
+      rowIndent = null
+      continue
+    }
+    // A row is a `- ` item at the list's own level. `KEY` consumes the dash, so
+    // the recorded indent starts where the key does. Patches in this repository
+    // indent their rows two ways — `  - id:` and `    - id:` — so the offset is
+    // measured from the `insert:` rather than fixed: two columns in either,
+    // because the `- ` a row must have is what the two styles disagree on.
+    if (line.trimStart().startsWith('- ')) {
+      if (indent !== listIndent + 2 && indent !== listIndent + 4) continue
+      rowIndent = indent
+      if (key === 'name') {
+        names.push(unquote(value))
+        rowIndent = null
+      }
+      continue
+    }
+    if (rowIndent === null) continue
+    if (key === 'name' && indent === rowIndent + 2) {
+      names.push(unquote(value))
+      rowIndent = null
+    }
+  }
+  return names
+}
+
+/** Strip the quotes and trailing comment a YAML scalar may carry. */
+function unquote(value) {
+  const trimmed = value.trim()
+  const quoted = /^(['"])(.*)\1$/u.exec(trimmed)
+  return quoted === null ? trimmed : quoted[2]
+}
