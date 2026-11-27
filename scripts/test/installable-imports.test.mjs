@@ -152,3 +152,53 @@ test('the shipped console manifest publishes every module the entry reaches', ()
     'files must cover index.js’s whole static import tree',
   )
 })
+
+test('an import written INSIDE a template string is not an edge', () => {
+  // dsh-remotion generates a project's `src/index.jsx` as a template literal,
+  // and the generated text contains `import data from '../data.json'` — a file
+  // it writes into the user's project, never a module this package loads. The
+  // check reported it as missing and failed a package that installs fine.
+  //
+  // The specifier is a string literal either way, so the distinction cannot be
+  // drawn on it: the `import` keyword sits in code for a real edge and inside a
+  // literal for generated text, and that is what is tested.
+  const root = fixture({
+    'index.js': [
+      'export function sources(title) {',
+      '  return {',
+      "    'src/index.jsx': `import React from 'react';",
+      "import data from '../data.json';",
+      'export default () => <h1>{title}</h1>`',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    'media-templates.js': 'export {}\n',
+  })
+  assert.deepEqual(
+    unresolvableImports(join(root, 'index.js')).filter((m) => m.specifier === '../data.json'),
+    [],
+    'generated text must not be followed as an import',
+  )
+  assert.deepEqual(staticImportsOf(readFileSync(join(root, 'index.js'), 'utf8')), [])
+  drop(root)
+})
+
+test('a real import still counts next to a template that quotes one', () => {
+  // The over-correction to guard against: dropping every specifier that appears
+  // anywhere near a backtick, which would hide genuine broken edges.
+  const root = fixture({
+    'index.js': [
+      "import { a } from './a.js'",
+      "const sample = `import x from './nope.js'`",
+      'export { a, sample }',
+      '',
+    ].join('\n'),
+    'a.js': 'export const a = 1\n',
+  })
+  const missing = unresolvableImports(join(root, 'index.js'))
+  assert.deepEqual(missing.map((m) => m.specifier), [], 'the templated example must not be followed')
+  const specifiers = staticImportsOf(readFileSync(join(root, 'index.js'), 'utf8'))
+  assert.deepEqual(specifiers, ['./a.js'], 'the real import must survive')
+  drop(root)
+})

@@ -1,0 +1,57 @@
+{
+  "name": "dsh-vyra-media-desk",
+  "version": "2.7.2",
+  "description": "DeepSeek Harness 插件。一句话记灵感，一键成稿：口播脚本、标题、视频封面、配图和黑白线稿分镜。 · 源自蜗牛的科技笔记的 dsh-media-desk（MIT），在本仓库二次开发。",
+  "type": "module",
+  "main": "src/host.js",
+  "exports": {
+    ".": "./src/host.js",
+    "./client": "./dist/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.5 <0.3.0"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanxiake/dsh-vyra-plugins.git",
+    "directory": "plugins/vyra-media-desk"
+  },
+  "homepage": "https://github.com/lanxiake/dsh-vyra-plugins/tree/master/plugins/vyra-media-desk#readme",
+  "bugs": {
+    "url": "https://github.com/lanxiake/dsh-vyra-plugins/issues"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-plugin-market-index": "^0.2.1-rc.2",
+    "esbuild": "^0.25.10"
+  },
+  "files": [
+    "src",
+    "dist",
+    "assets",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "docs",
+    "SOURCE.md"
+  ]
+}

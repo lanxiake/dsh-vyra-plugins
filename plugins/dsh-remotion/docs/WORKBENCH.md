@@ -1,0 +1,51 @@
+# dsh-remotion 工作台 / Workbench
+
+视频主工作台，内容、真实预览、素材和导出记录重新编排；明确区分已保存修订与尚未导出的修改。
+
+Video workbench with content, real preview, media and exports; distinguishes saved revisions from changes not yet rendered.
+
+## 使用 / Use
+
+更新插件并重启 DSH，在原生左侧栏打开工作台；没有固定时可在“更多”中找到。原有“设置”入口继续可用。侧栏排序和固定由 DSH 管理。
+
+Update the plugin, restart DSH and open its native sidebar panel (or More if it is not pinned). The existing Settings entry remains available. DSH owns sidebar order and pinning.
+
+界面跟随宿主中英文和深浅色，保留用户内容原文。窄窗口中先显示列表，打开详情后可返回；编辑器按可用宽度分栏或顺序排列。危险操作需要明确确认，未保存内容不会因切页而静默丢失。
+
+The UI follows host language and theme without translating user content. Narrow master/detail views have a Back action; editors adapt their columns to available space. Destructive actions require confirmation and edits are protected.
+
+## 任务与冲突 / Jobs and conflicts
+
+预览与导出任务在编辑页顶部就地显示阶段文案、当前步骤（步骤 N / M）、取消按钮和可展开的运行记录。失败时就地提供「重试本次任务」，复用同一已保存修订，无需重新填写；步骤名来自官方 CLI 的真实阶段，进度不虚构百分比。导出按钮先打开导出前检查，列出标题、画幅与时长、素材数、已保存修订、渲染环境和上一份成品对应的修订，确认后才开始渲染。
+
+Jobs render in place above the editor: stage text, a step counter (step N of M), cancel and a collapsible log. A failure offers Retry for the same saved revision instead of discarding input. Steps map to the official CLI stages, so progress is never a fabricated percentage. Export opens a pre-export check listing title, canvas and duration, media count, saved revision, renderer state and which revision the last MP4 used.
+
+同一工程在两个窗口保存时，后保存的一方看到冲突提示，而不是静默覆盖：可重新载入最新版本（放弃当前输入）或保留输入稍后处理；冲突状态下未保存对话框禁用「保存后继续」。
+
+When two windows save the same project, the later one sees a conflict instead of silently overwriting: reload the latest version (discarding input) or keep the input for later. While a conflict is open, the unsaved-changes dialog disables Save and continue.
+
+## 源码 / Source
+
+编辑 templates/client.js、templates/panels/*.js 与 templates/workbench-ui.js，运行 pnpm run build。lib/client.js 是确定性产物，请随源码提交。公共组件的规范源位于 dsh-suite/ui/workbench-ui.js，Suite 的同步脚本显式分发副本；单个仓库可独立构建和安装。
+
+Edit the template sources and run pnpm run build. Commit generated lib/client.js with source changes. The vendored UI has no Suite runtime dependency.
+
+## 验收范围 / Validation boundary
+
+2026-10-25：Windows、官方 DSH 0.2.1-rc.3 Web，后台 Chrome/Playwright 实际点击和输入；覆盖中英文、浅深色、1536px 与 390px、状态读回与控制台。Browser plugin 不可用，因此使用本地 Playwright。
+
+邮件使用受控 AgentMail HTTP 服务，日历使用受控 CalDAV 协议传输；插件处理器、存储、校验和原生宿主均实际运行。未使用真实邮箱、真实日历账号或付费模型。RSS 访问 Node.js 官方公开来源。PPT 实际生成并渲染 PPTX、下载 ZIP；两个视频插件实际运行官方引擎并播放 MP4。
+
+这些是 Web 共用界面的验收结果，不代表已验收 Electron 专属菜单、系统权限、真实账号、全部外部来源或所有可选模型/引擎。Docker、Slack、钉钉继续按用户约定搁置。
+
+## 工程查找 / Find projects
+
+工程列表可按关键词筛选，并按最近更新、最早更新或自然标题顺序排列；多个词需要同时匹配。PPT 只查目录中的标题和工程路径；视频查标题、正文和模板，当前列表与归档列表各自保留筛选条件。清空搜索会恢复完整列表，返回工程库会保留刚才的搜索和排序。筛选只在本机列表中执行，不读取未选工程的完整文件，也不修改工程内容。
+
+Search the local project list and sort by newest update, oldest update or natural title. Multiple terms must all match. PPT searches catalog titles and paths; video searches titles, text and templates, with separate active/archive filters. Clear restores the full list; returning from editing preserves filters. Filtering does not load unselected project files or change project contents.
+
+## 任务与环境 / Jobs and preparation
+
+工具返回项目编号与任务编号。查询进度使用 `action: job`，取消使用 `action: cancel`，两者的 `job` 参数填写返回的任务编号。关闭 DSH 后任务不能续跑，保存的工程仍保留。
+
+Tool text includes project and job ids. Use the returned job id with `action: job` or `action: cancel`. Saved projects survive a restart; running processes do not resume.

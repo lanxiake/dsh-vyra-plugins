@@ -42,20 +42,35 @@ function regexAllowedAfter(previous) {
 }
 
 /**
- * Blank out comments while leaving string, template and regex literals intact,
- * so a documented example (`// import './MyComponent'`) cannot be mistaken for
- * a real edge. Bundled vendor files are full of such examples.
+ * Blank out comments, and report where the string, template and regex literals
+ * sit.
+ *
+ * Comments go so a documented example (`// import './MyComponent'`) cannot be
+ * mistaken for a real edge — bundled vendor files are full of such examples.
+ * The literals themselves are KEPT, because an import's specifier is one.
+ *
+ * The literal spans are what separates code from text that only looks like it.
+ * `dsh-remotion`'s `media-templates.js` builds a project's `src/index.jsx` as a
+ * template string, and that generated text contains `import data from
+ * '../data.json'`: a file it writes INTO a user's project, never a module this
+ * package loads. Matching on the specifier alone cannot tell the two apart —
+ * both are string literals — so the test is positional: an `import` keyword is
+ * code only when it does not sit inside another literal.
  *
  * @param text - module source.
- * @returns the same text with every comment replaced by spaces, so offsets and
- *   line numbers still match the original.
+ * @returns the source with every comment blanked (offsets and line numbers
+ *   unchanged), and the `[start, end)` spans of its literals.
  */
-function withoutComments(text) {
+function scan(text) {
   let out = ''
   let index = 0
   let quote = undefined
   let inCharacterClass = false
   let previousSignificant = ''
+  /** Where the currently open literal began; `-1` while in code. */
+  let literalStart = -1
+  /** `[start, end)` for every literal closed so far. */
+  const literalSpans = []
   while (index < text.length) {
     const char = text[index]
     const next = text[index + 1]
@@ -68,7 +83,11 @@ function withoutComments(text) {
       }
       if (quote === '/' && char === '[') inCharacterClass = true
       else if (quote === '/' && char === ']') inCharacterClass = false
-      else if (char === quote && !(quote === '/' && inCharacterClass)) quote = undefined
+      else if (char === quote && !(quote === '/' && inCharacterClass)) {
+        quote = undefined
+        literalSpans.push([literalStart, index + 1])
+        literalStart = -1
+      }
       if (quote === undefined) previousSignificant = 'value'
       index += 1
       continue
@@ -92,16 +111,31 @@ function withoutComments(text) {
     if (char === '"' || char === "'" || char === '`') {
       quote = char
       inCharacterClass = false
+      literalStart = index
     } else if (char === '/' && regexAllowedAfter(previousSignificant)) {
       quote = '/'
       inCharacterClass = false
+      literalStart = index
     } else if (!/\s/u.test(char)) {
       previousSignificant = char
     }
     out += char
     index += 1
   }
-  return out
+  // An unterminated literal (truncated source) still owns everything to the end.
+  if (literalStart !== -1) literalSpans.push([literalStart, text.length])
+  return { blanked: out, literalSpans }
+}
+
+/**
+ * Blank out comments while leaving string, template and regex literals intact.
+ *
+ * @param text - module source.
+ * @returns the same text with every comment replaced by spaces, so offsets and
+ *   line numbers still match the original.
+ */
+function withoutComments(text) {
+  return scan(text).blanked
 }
 
 /**
@@ -131,16 +165,45 @@ function isMinified(text) {
 }
 
 /**
+ * Whether a match is text inside a literal rather than code that imports.
+ *
+ * The `import` keyword of a real statement sits in code; the same word inside a
+ * template that GENERATES another file's source does not. Its specifier is a
+ * literal either way, so the distinction is drawn on the keyword's position —
+ * that is the only thing that differs.
+ *
+ * @param spans - literal spans from `scan`, ascending and non-overlapping.
+ * @param position - index of the `import`/`export` keyword.
+ * @returns whether the keyword sits inside one of the literals.
+ */
+function insideLiteral(spans, position) {
+  let low = 0
+  let high = spans.length - 1
+  while (low <= high) {
+    const middle = (low + high) >> 1
+    const [start, end] = spans[middle]
+    if (position < start) high = middle - 1
+    else if (position >= end) low = middle + 1
+    else return true
+  }
+  return false
+}
+
+/**
  * Every literal module specifier in one file's text, in source order.
  * @param text - module source.
  * @returns the specifiers, including bare ones.
  */
 export function staticImportsOf(text) {
   if (isMinified(text)) return []
-  const source = withoutComments(text)
+  const { blanked: source, literalSpans } = scan(text)
   const found = []
-  for (const match of source.matchAll(STATIC_IMPORT)) found.push(match[1])
-  for (const match of source.matchAll(DYNAMIC_IMPORT)) found.push(match[1])
+  for (const match of source.matchAll(STATIC_IMPORT)) {
+    if (!insideLiteral(literalSpans, match.index)) found.push(match[1])
+  }
+  for (const match of source.matchAll(DYNAMIC_IMPORT)) {
+    if (!insideLiteral(literalSpans, match.index)) found.push(match[1])
+  }
   // A `.d.ts` specifier is erased at run time; it never has to resolve in a
   // shipped tarball, so it is not an edge this check can fail on.
   return [...new Set(found)].filter((specifier) => !specifier.endsWith('.d.ts'))
