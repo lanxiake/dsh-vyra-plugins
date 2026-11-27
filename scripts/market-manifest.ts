@@ -3411,6 +3411,18 @@ export const manifest: MarketManifest = {
             path: 'plugins/dsh-boot-duel',
           },
         },
+        // 0.3.0 is the version an external listing pins: the finisher's
+        // five-beat cinematic, the finish's own beats, and the dialogue that
+        // tracks instead of shuffling.
+        '0.3.0': {
+          publishTimestamp: 1795827600,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '8073cce2cbf229782d843bc2a4774694b18472c4',
+            path: 'plugins/dsh-boot-duel',
+          },
+        },
       },
       metadata: {
         category: 'appearance',

@@ -3191,6 +3191,16 @@
       },
       "versions": [
         {
+          "version": "0.3.0",
+          "publishTimestamp": 1795827600,
+          "source": {
+            "type": "git",
+            "url": "https://gitcode.com/qq_42997950111111111111111sfq/dsh-vyra-plugins.git",
+            "commit": "8073cce2cbf229782d843bc2a4774694b18472c4",
+            "path": "plugins/dsh-boot-duel"
+          }
+        },
+        {
           "version": "0.2.1",
           "publishTimestamp": 1795741200,
           "source": {
