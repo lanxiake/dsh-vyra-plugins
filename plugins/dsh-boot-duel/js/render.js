@@ -14,7 +14,7 @@
  */
 
 import { B, HAND_F, HAND_B, FOOT_F } from './rig.js'
-import { drawImpact, drawSpeedLines, drawEdgeFlash, drawSuperBanner, drawCombo, drawInkSlash, drawQiRing, drawBubble } from './effects.js'
+import { drawImpact, drawSpeedLines, drawEdgeFlash, drawSuperBanner, drawCombo, drawInkSlash, drawQiRing, drawBubble, drawKoBeat } from './effects.js'
 import { OfficeBackdrop, drawFloorShadow } from './backdrop.js'
 
 const INK = {
@@ -190,9 +190,17 @@ export class Renderer {
       drawEdgeFlash(ctx, this.cssW, this.cssH, (snap.hit.life - 0.5) * 0.9)
     }
 
-    // The super freeze takes over the whole frame.
-    if (snap.superBanner > 0.001) {
-      drawSuperBanner(ctx, this.cssW, this.cssH, snap.superBanner, '破 军')
+    // The super freeze takes over the whole frame. The cinematic's own phase
+    // drives the overlay, so the letterbox, the name and the release each get
+    // their own drawing instead of one banner recycled three ways.
+    if (snap.superCine || snap.superBanner > 0.001) {
+      drawSuperBanner(ctx, this.cssW, this.cssH, snap.superBanner ?? 0, '破 军', snap.superCine ?? null)
+    }
+
+    // The finish's own beats, drawn on the canvas so the picture carries the
+    // impact and the DOM overlay only typesets the words.
+    if (snap.koBeat) {
+      drawKoBeat(ctx, this.cssW, this.cssH, snap.koBeat, snap.koT ?? 0, this.scale, this.project.bind(this), snap)
     }
 
     drawCombo(ctx, this.cssW, snap.combo ?? 0, snap.comboPop ?? 0)

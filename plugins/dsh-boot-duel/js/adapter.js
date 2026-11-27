@@ -112,7 +112,12 @@ export function createDuel({ reducedMotion = false, round = 0 } = {}) {
       combo: s.combo ?? 0,
       comboPop: s.comboPop ?? 0,
       superBanner: s.superBanner ?? 0,
+      /** The finisher's five-beat cinematic, or null when none is playing. */
+      superCine: s.superCine ?? null,
       cinematic: s.cinematic ?? 0,
+      /** The finish's own beats, so the DOM overlay lands on the game's clock. */
+      koBeat: s.koBeat ?? null,
+      koT: s.koT ?? 0,
       block: s.block ?? false,
       crouching: s.crouching ?? false,
       impact: s.hit,

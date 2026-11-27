@@ -417,7 +417,9 @@ window.__ModuleLoader__.load({
         this.oy = (Math.random() * 2 - 1) * this.amp
         this.angle = this.reduced ? 0 : (Math.random() * 2 - 1) * this.amp * 0.0007
 
-        this.flashA = Math.max(0, this.flashA - dt * 3.2)
+        // The flash must be gone before the NEXT beat: at 3.2/s a 0.5 flash was
+        // still laying a white veil over the impact frame half a second later.
+        this.flashA = Math.max(0, this.flashA - dt * 7.5)
 
         if (this.zoomMs > 0) {
           this.zoomMs = Math.max(0, this.zoomMs - dt * 1000)
@@ -1161,25 +1163,37 @@ window.__ModuleLoader__.load({
      *   - **it escalates, then lands warm.** The opening is polite. The middle is
      *     the fight. The last line is a truce: a fix, a compromise, a cup of tea.
      *
-     * The three scenes are deliberately generic — 改需求 / 联调 / 上线 — because
-     * every project has all three, and none of them requires a villain. The roles
-     * are "you" and "the other side of the table", whoever that happens to be.
+     * ## Continuity: why a line carries a `reply`
      *
-     * Beats fire on game events, not on a timer, so a line arrives on the beat that
-     * caused it: a combo line only when there is a combo, a retreat line only when
-     * the player was knocked down.
+     * This used to be five independent shuffled bags, and it showed: a player's
+     * "这个需求，两周做不完" could be answered by "我这不是在跟你商量吗", which
+     * answers nothing, and the next exchange started from zero. Two people who
+     * keep restarting the conversation do not read as an argument.
      *
-     *   open   — the bell rings
+     * So a line now declares what it answers. `reply: '<id>'` means "this line is
+     * the response to that one", and a beat's bag only offers lines whose `reply`
+     * names the line currently on screen (or `null`, when any opener will do).
+     * The result is a chain, not a shuffle: demand → deflection → counter, in the
+     * order they were written.
+     *
+     * The player and the rival also carry a `stance` — what they are currently
+     * arguing. Landing a hit moves the player forward, taking one moves them back,
+     * and the lines are tagged with the stances they belong to. That is what makes
+     * a round sound like it has a shape instead of a shuffle.
+     *
+     * Each story keeps its ordered `open` script and a `ko` truce: those two are
+     * scenes, not exchanges.
+     *
+     * ## The beats
+     *
+     *   open   — the bell rings (an ordered script)
      *   chain  — the player lands three hits in a row
      *   guard  — the player blocks
      *   hit    — a clean heavy lands
      *   take   — the player is knocked down
      *   super  — the finisher
-     *   ko     — the opponent goes down
+     *   ko     — the opponent goes down (the truce)
      *   taunt  — the opponent's line after it lands something big
-     *
-     * A line is `[speaker, text, mood]`, dealt from a shuffled bag per beat so
-     * every line is heard before any repeats.
      */
 
     const STORIES = [
@@ -1201,85 +1215,114 @@ window.__ModuleLoader__.load({
             ['rival', '先做出来，我们再对。', 'smooth'],
             ['you', '每次都是先做出来。', 'tired'],
           ],
+          /**
+           * Each line is `[speaker, text, mood, reply]`. `reply` is the id of the
+           * line it answers, or omitted when it can open an exchange.
+           */
           chain: [
-            ['you', '这个按钮放哪，你总得说吧。', 'flat'],
-            ['rival', '你先按你的理解做。', 'airy'],
-            ['you', '我的理解是放首页最上面。', 'dry'],
-            ['rival', '不行，太显眼了。', 'hard'],
-            ['you', '那你说放哪。', 'flat'],
-            ['rival', '你觉得呢？', 'cheery'],
-            ['you', '我觉得你应该先说。', 'dry'],
-            ['rival', '我这不是在跟你商量吗。', 'smooth'],
-            ['you', '你这叫让我猜。', 'flat'],
-            ['rival', '大家都是为了把东西做好。', 'cheery'],
-            ['you', '那就先把「做好」定义一下。', 'dry'],
-            ['rival', '……', 'tired'],
-            ['you', '看，又卡住了。', 'flat'],
+            { id: 'c1', speaker: 'you', text: '这个按钮放哪，你总得说吧。', mood: 'flat' },
+            { id: 'c1a', reply: 'c1', speaker: 'rival', text: '你先按你的理解做。', mood: 'airy' },
+            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '我的理解是放首页最上面。', mood: 'dry' },
+            { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '不行，太显眼了。', mood: 'hard' },
+            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '那你说放哪。', mood: 'flat' },
+            { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '你觉得呢？', mood: 'cheery' },
+            // The branch that lands the joke: the player names the evasion.
+            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '你这叫让我猜。', mood: 'flat' },
+            { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '大家都是为了把东西做好。', mood: 'cheery' },
+            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '那就先把「做好」定义一下。', mood: 'dry' },
+            { id: 'c1i', reply: 'c1h', speaker: 'rival', text: '……', mood: 'tired' },
+            { id: 'c1j', reply: 'c1i', speaker: 'you', text: '看，又卡住了。', mood: 'flat' },
+
+            { id: 'c2', speaker: 'you', text: '这已经是第三版了。', mood: 'tired' },
+            { id: 'c2a', reply: 'c2', speaker: 'rival', text: '第三版好，说明在收敛。', mood: 'cheery' },
+            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '收敛到哪儿了？', mood: 'dry' },
+            { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '收敛到需要第四版。', mood: 'airy' },
+            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '那第一版算什么。', mood: 'flat' },
+            { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '算探索。', mood: 'smooth' },
+            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '我两周的探索。', mood: 'tired' },
           ],
           guard: [
-            ['you', '这个真做不了。', 'flat'],
-            ['rival', '为什么做不了？', 'hard'],
-            ['you', '点一下跳三个页面，逻辑说不通。', 'dry'],
-            ['rival', '那改两个页面。', 'airy'],
-            ['you', '为什么是两个？', 'flat'],
-            ['rival', '感觉差不多。', 'cheery'],
-            ['you', '感觉不是需求文档。', 'dry'],
-            ['rival', '文档可以后补嘛。', 'airy'],
-            ['you', '上线了也能后补吗。', 'flat'],
+            { id: 'g1', speaker: 'you', text: '这个真做不了。', mood: 'flat' },
+            { id: 'g1a', reply: 'g1', speaker: 'rival', text: '为什么做不了？', mood: 'hard' },
+            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '点一下跳三个页面，逻辑说不通。', mood: 'dry' },
+            { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '那改两个页面。', mood: 'airy' },
+            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '为什么是两个？', mood: 'flat' },
+            { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '感觉差不多。', mood: 'cheery' },
+            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '感觉不是需求文档。', mood: 'dry' },
+
+            { id: 'g2', speaker: 'rival', text: '这里能不能先隐藏，后面再放出来？', mood: 'airy' },
+            { id: 'g2a', reply: 'g2', speaker: 'you', text: '隐藏给谁看？', mood: 'flat' },
+            { id: 'g2b', reply: 'g2a', speaker: 'rival', text: '给用户看。', mood: 'cheery' },
+            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '看不见的东西怎么给用户看。', mood: 'dry' },
+            { id: 'g2d', reply: 'g2c', speaker: 'rival', text: '这个以后再讨论。', mood: 'smooth' },
+            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '「以后」是排期里最忙的一天。', mood: 'flat' },
           ],
           hit: [
-            ['you', '这个需求上周刚改过。', 'flat'],
-            ['rival', '用户反馈嘛。', 'airy'],
-            ['you', '哪个用户？', 'dry'],
-            ['rival', '就……用户。', 'cheery'],
-            ['you', '你吧。', 'flat'],
-            ['rival', '我代表用户。', 'smooth'],
-            ['you', '那我代表加班。', 'dry'],
-            ['rival', '就调一下顺序，很快的。', 'airy'],
-            ['you', '上次那个「很快的」用了两周。', 'flat'],
-            ['rival', '这次真的快。', 'cheery'],
-            ['you', '上次你也这么说。', 'tired'],
+            { id: 'h1', speaker: 'you', text: '这个需求上周刚改过。', mood: 'flat' },
+            { id: 'h1a', reply: 'h1', speaker: 'rival', text: '用户反馈嘛。', mood: 'airy' },
+            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '哪个用户？', mood: 'dry' },
+            { id: 'h1c', reply: 'h1b', speaker: 'rival', text: '就……用户。', mood: 'cheery' },
+            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '你吧。', mood: 'flat' },
+            { id: 'h1e', reply: 'h1d', speaker: 'rival', text: '我代表用户。', mood: 'smooth' },
+            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '那我代表加班。', mood: 'dry' },
+
+            { id: 'h2', speaker: 'you', text: '就调一下顺序，很快的。', mood: 'flat' },
+            { id: 'h2a', reply: 'h2', speaker: 'rival', text: '对，很快的。', mood: 'cheery' },
+            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '上次那个「很快的」用了两周。', mood: 'flat' },
+            { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '这次真的快。', mood: 'airy' },
+            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '上次你也这么说。', mood: 'tired' },
+            { id: 'h2e', reply: 'h2d', speaker: 'rival', text: '这次我陪你一起加班。', mood: 'cheery' },
+            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '……这句我记下了。', mood: 'dry' },
           ],
           take: [
-            ['you', '好，我改。', 'tired'],
-            ['rival', '辛苦了辛苦了。', 'cheery'],
-            ['you', '改完要保留旧版吗？', 'flat'],
-            ['rival', '不用。', 'airy'],
-            ['you', '那有人要用旧的怎么办？', 'dry'],
-            ['rival', '应该不会吧。', 'cheery'],
-            ['you', '上线第二天就会出现。', 'tired'],
-            ['rival', '到时候再说。', 'smooth'],
-            ['you', '到时候就是我的周末。', 'dry'],
-            ['rival', '相信你的能力。', 'cheery'],
-            ['you', '我更相信你的嘴。', 'flat'],
+            { id: 't1', speaker: 'you', text: '好，我改。', mood: 'tired' },
+            { id: 't1a', reply: 't1', speaker: 'rival', text: '辛苦了辛苦了。', mood: 'cheery' },
+            { id: 't1b', reply: 't1a', speaker: 'you', text: '改完要保留旧版吗？', mood: 'flat' },
+            { id: 't1c', reply: 't1b', speaker: 'rival', text: '不用。', mood: 'airy' },
+            { id: 't1d', reply: 't1c', speaker: 'you', text: '那有人要用旧的怎么办？', mood: 'dry' },
+            { id: 't1e', reply: 't1d', speaker: 'rival', text: '应该不会吧。', mood: 'cheery' },
+            { id: 't1f', reply: 't1e', speaker: 'you', text: '上线第二天就会出现。', mood: 'tired' },
+
+            { id: 't2', speaker: 'rival', text: '这个改完，还有几个小地方。', mood: 'smooth' },
+            { id: 't2a', reply: 't2', speaker: 'you', text: '几个？', mood: 'flat' },
+            { id: 't2b', reply: 't2a', speaker: 'rival', text: '一个清单。', mood: 'cheery' },
+            { id: 't2c', reply: 't2b', speaker: 'you', text: '清单有几条。', mood: 'dry' },
+            { id: 't2d', reply: 't2c', speaker: 'rival', text: '没数，都在群里。', mood: 'airy' },
+            { id: 't2e', reply: 't2d', speaker: 'you', text: '群消息也算需求了。', mood: 'tired' },
           ],
           super: [
-            ['you', '停，我们先对一遍需求。', 'hard'],
-            ['rival', '现在？', 'surprised'],
-            ['you', '就现在，一条一条来。', 'hard'],
-            ['rival', '……行吧。', 'shaken'],
-            ['you', '第一条就说不清楚。', 'hard'],
-            ['rival', '那先跳过第一条。', 'baffled'],
+            { id: 's1', speaker: 'you', text: '停，我们先对一遍需求。', mood: 'hard' },
+            { id: 's1a', reply: 's1', speaker: 'rival', text: '现在？', mood: 'surprised' },
+            { id: 's1b', reply: 's1a', speaker: 'you', text: '就现在，一条一条来。', mood: 'hard' },
+            { id: 's1c', reply: 's1b', speaker: 'rival', text: '……行吧。', mood: 'shaken' },
+            { id: 's1d', reply: 's1c', speaker: 'you', text: '第一条就说不清楚。', mood: 'hard' },
+            { id: 's1e', reply: 's1d', speaker: 'rival', text: '那先跳过第一条。', mood: 'baffled' },
           ],
           ko: [
-            ['rival', '……行，是我没说清楚。', 'beaten'],
-            ['you', '你现在说清楚就行。', 'warm'],
-            ['rival', '那我重新写一版。', 'beaten'],
-            ['you', '写完我们再打。', 'warm'],
+            { id: 'k1', speaker: 'rival', text: '……行，是我没说清楚。', mood: 'beaten' },
+            { id: 'k1a', reply: 'k1', speaker: 'you', text: '你现在说清楚就行。', mood: 'warm' },
+            { id: 'k1b', reply: 'k1a', speaker: 'rival', text: '那我重新写一版。', mood: 'beaten' },
+            { id: 'k1c', reply: 'k1b', speaker: 'you', text: '写完我们再打。', mood: 'warm' },
           ],
           taunt: [
-            ['rival', '这很简单的。', 'airy'],
-            ['rival', '参考一下那个网站。', 'smooth'],
-            ['rival', '先做一个版本给我看。', 'cheery'],
-            ['rival', '我要那种感觉，你懂的。', 'airy'],
-            ['rival', '不用太完美，能用就行。', 'smooth'],
-            ['rival', '但细节还是要打磨一下。', 'airy'],
-            ['rival', '什么时候能好？', 'hard'],
-            ['rival', '我不是催你。', 'cheery'],
-            ['rival', '就随便问问。', 'smooth'],
-            ['rival', '你怎么不说话了？', 'confused'],
-            ['rival', '这个应该不花时间吧。', 'airy'],
-            ['rival', '我下午还约了人。', 'smooth'],
+            { id: 'x1', speaker: 'rival', text: '这很简单的。', mood: 'airy' },
+            { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你来。', mood: 'dry' },
+            { id: 'x1b', reply: 'x1a', speaker: 'rival', text: '我要是会我就自己做了。', mood: 'cheery' },
+
+            { id: 'x2', speaker: 'rival', text: '参考一下那个网站。', mood: 'smooth' },
+            { id: 'x2a', reply: 'x2', speaker: 'you', text: '参考哪一部分？', mood: 'flat' },
+            { id: 'x2b', reply: 'x2a', speaker: 'rival', text: '就那个感觉。', mood: 'airy' },
+            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '「感觉」不能写进代码。', mood: 'dry' },
+
+            { id: 'x3', speaker: 'rival', text: '先做一个版本给我看。', mood: 'cheery' },
+            { id: 'x3a', reply: 'x3', speaker: 'you', text: '做完你还是会说不对。', mood: 'flat' },
+            { id: 'x3b', reply: 'x3a', speaker: 'rival', text: '那总得先看。', mood: 'smooth' },
+            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '看完说「还是第一版好」。', mood: 'tired' },
+
+            { id: 'x4', speaker: 'rival', text: '什么时候能好？', mood: 'hard' },
+            { id: 'x4a', reply: 'x4', speaker: 'you', text: '你先说清楚要什么。', mood: 'flat' },
+            { id: 'x4b', reply: 'x4a', speaker: 'rival', text: '我不是催你。', mood: 'cheery' },
+            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '你这句话就是催。', mood: 'dry' },
           ],
         },
       },
@@ -1303,81 +1346,107 @@ window.__ModuleLoader__.load({
             ['you', '改完字段名也会变吗？', 'tired'],
           ],
           chain: [
-            ['you', '你这个接口返回 500。', 'flat'],
-            ['rival', '那是你传参不对。', 'hard'],
-            ['you', '文档就是这么写的。', 'dry'],
-            ['rival', '文档我更新了。', 'smooth'],
-            ['you', '什么时候更新的？', 'flat'],
-            ['rival', '刚才。', 'cheery'],
-            ['you', '我照着旧的写完了。', 'dry'],
-            ['rival', '那你照新的再改一下。', 'airy'],
-            ['you', '这就是联调的意义对吧。', 'tired'],
-            ['rival', '对，提前发现问题。', 'cheery'],
-            ['you', '提前发现问题的是我。', 'flat'],
+            { id: 'c1', speaker: 'you', text: '你这个接口返回 500。', mood: 'flat' },
+            { id: 'c1a', reply: 'c1', speaker: 'rival', text: '那是你传参不对。', mood: 'hard' },
+            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '文档就是这么写的。', mood: 'dry' },
+            { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '文档我更新了。', mood: 'smooth' },
+            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '什么时候更新的？', mood: 'flat' },
+            { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '刚才。', mood: 'cheery' },
+            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '我照着旧的写完了。', mood: 'dry' },
+            { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '那你照新的再改一下。', mood: 'airy' },
+            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '提前发现问题的是我，不是你。', mood: 'flat' },
+
+            { id: 'c2', speaker: 'you', text: '这个字段是必填还是选填？', mood: 'flat' },
+            { id: 'c2a', reply: 'c2', speaker: 'rival', text: '都行。', mood: 'airy' },
+            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '都行是哪种行？', mood: 'dry' },
+            { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '不填也行，填了也行。', mood: 'cheery' },
+            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '那你们的校验是干什么的。', mood: 'flat' },
+            { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '校验是防误用的。', mood: 'smooth' },
+            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '现在误用的是我。', mood: 'tired' },
           ],
           guard: [
-            ['you', '这块数据是空的。', 'flat'],
-            ['rival', '本地有啊。', 'hard'],
-            ['you', '我在线上看的。', 'dry'],
-            ['rival', '线上环境不一样。', 'smooth'],
-            ['you', '那到底哪个算对？', 'flat'],
-            ['rival', '以线上为准。', 'hard'],
-            ['you', '线上是空的。', 'dry'],
-            ['rival', '那我看看本地。', 'airy'],
-            ['you', '你看吧。', 'flat'],
+            { id: 'g1', speaker: 'you', text: '这块数据是空的。', mood: 'flat' },
+            { id: 'g1a', reply: 'g1', speaker: 'rival', text: '本地有啊。', mood: 'hard' },
+            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '我在线上看的。', mood: 'dry' },
+            { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '线上环境不一样。', mood: 'smooth' },
+            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '那到底哪个算对？', mood: 'flat' },
+            { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '以线上为准。', mood: 'hard' },
+            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '线上是空的。', mood: 'dry' },
+            { id: 'g1g', reply: 'g1f', speaker: 'rival', text: '那我看看本地。', mood: 'airy' },
+
+            { id: 'g2', speaker: 'rival', text: '你那边是不是缓存了？', mood: 'smooth' },
+            { id: 'g2a', reply: 'g2', speaker: 'you', text: '我清过了。', mood: 'flat' },
+            { id: 'g2b', reply: 'g2a', speaker: 'rival', text: '再清一次。', mood: 'airy' },
+            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '清第几次才能好？', mood: 'dry' },
+            { id: 'g2d', reply: 'g2c', speaker: 'rival', text: '这不是缓存的问题。', mood: 'cheery' },
+            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '那你刚才让我清什么。', mood: 'flat' },
           ],
           hit: [
-            ['you', '这个字段会变。', 'flat'],
-            ['rival', '不会变。', 'hard'],
-            ['you', '上次也是这么说的。', 'dry'],
-            ['rival', '上次是特殊情况。', 'smooth'],
-            ['you', '那这次呢？', 'flat'],
-            ['rival', '这次是正常情况。', 'cheery'],
-            ['you', '正常的定义是「会变」吗。', 'dry'],
-            ['rival', '我会通知你的。', 'airy'],
-            ['you', '什么时候通知？', 'flat'],
-            ['rival', '会变的之前。', 'smooth'],
-            ['you', '……那就是不会通知。', 'tired'],
+            { id: 'h1', speaker: 'you', text: '这个字段会变。', mood: 'flat' },
+            { id: 'h1a', reply: 'h1', speaker: 'rival', text: '不会变。', mood: 'hard' },
+            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '上次也是这么说的。', mood: 'dry' },
+            { id: 'h1c', reply: 'h1b', speaker: 'rival', text: '上次是特殊情况。', mood: 'smooth' },
+            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '那这次呢？', mood: 'flat' },
+            { id: 'h1e', reply: 'h1d', speaker: 'rival', text: '这次是正常情况。', mood: 'cheery' },
+            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '正常的定义是「会变」吗。', mood: 'dry' },
+
+            { id: 'h2', speaker: 'you', text: '字段名能不能改一下。', mood: 'flat' },
+            { id: 'h2a', reply: 'h2', speaker: 'rival', text: '不能，前端都在用。', mood: 'hard' },
+            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '前端就我一个。', mood: 'dry' },
+            { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '那更不能随便改。', mood: 'smooth' },
+            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '为什么？', mood: 'flat' },
+            { id: 'h2e', reply: 'h2d', speaker: 'rival', text: '改了我这边要重发。', mood: 'airy' },
+            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '所以难的是你，不是我。', mood: 'tired' },
           ],
           take: [
-            ['you', '好，我按你说的改。', 'tired'],
-            ['rival', '对，就这样传。', 'cheery'],
-            ['you', '改完还是 500。', 'flat'],
-            ['rival', '那你看看日志。', 'smooth'],
-            ['you', '日志里是你的报错。', 'dry'],
-            ['rival', '那你先按我的思路排查一下。', 'airy'],
-            ['you', '排查完还是你的报错呢？', 'flat'],
-            ['rival', '那就再排查。', 'cheery'],
-            ['you', '我们是在做项目，还是在互相传话。', 'tired'],
-            ['rival', '这叫协作。', 'smooth'],
+            { id: 't1', speaker: 'you', text: '好，我按你说的改。', mood: 'tired' },
+            { id: 't1a', reply: 't1', speaker: 'rival', text: '对，就这样传。', mood: 'cheery' },
+            { id: 't1b', reply: 't1a', speaker: 'you', text: '改完还是 500。', mood: 'flat' },
+            { id: 't1c', reply: 't1b', speaker: 'rival', text: '那你看看日志。', mood: 'smooth' },
+            { id: 't1d', reply: 't1c', speaker: 'you', text: '日志里是你的报错。', mood: 'dry' },
+            { id: 't1e', reply: 't1d', speaker: 'rival', text: '那你先按我的思路排查一下。', mood: 'airy' },
+            { id: 't1f', reply: 't1e', speaker: 'you', text: '我们是在做项目，还是在互相传话。', mood: 'tired' },
+
+            { id: 't2', speaker: 'rival', text: '我这边测是好的。', mood: 'cheery' },
+            { id: 't2a', reply: 't2', speaker: 'you', text: '你测的是哪个环境？', mood: 'flat' },
+            { id: 't2b', reply: 't2a', speaker: 'rival', text: '我本机。', mood: 'airy' },
+            { id: 't2c', reply: 't2b', speaker: 'you', text: '用户的本机不是你的本机。', mood: 'dry' },
+            { id: 't2d', reply: 't2c', speaker: 'rival', text: '那应该差不多。', mood: 'smooth' },
+            { id: 't2e', reply: 't2d', speaker: 'you', text: '「差不多」就是我们现在的状态。', mood: 'tired' },
           ],
           super: [
-            ['you', '把文档补上，我们从头对。', 'hard'],
-            ['rival', '现在？', 'surprised'],
-            ['you', '就现在，一个字段一个字段。', 'hard'],
-            ['rival', '……好吧。', 'shaken'],
-            ['you', '第一个字段。', 'hard'],
-            ['rival', '……这个我也要查一下。', 'baffled'],
+            { id: 's1', speaker: 'you', text: '把文档补上，我们从头对。', mood: 'hard' },
+            { id: 's1a', reply: 's1', speaker: 'rival', text: '现在？', mood: 'surprised' },
+            { id: 's1b', reply: 's1a', speaker: 'you', text: '就现在，一个字段一个字段。', mood: 'hard' },
+            { id: 's1c', reply: 's1b', speaker: 'rival', text: '……好吧。', mood: 'shaken' },
+            { id: 's1d', reply: 's1c', speaker: 'you', text: '第一个字段。', mood: 'hard' },
+            { id: 's1e', reply: 's1d', speaker: 'rival', text: '……这个我也要查一下。', mood: 'baffled' },
           ],
           ko: [
-            ['rival', '……行，文档我补。', 'beaten'],
-            ['you', '早该补了。', 'warm'],
-            ['rival', '下次你先看文档。', 'beaten'],
-            ['you', '下次你先把文档写完。', 'warm'],
+            { id: 'k1', speaker: 'rival', text: '……行，文档我补。', mood: 'beaten' },
+            { id: 'k1a', reply: 'k1', speaker: 'you', text: '早该补了。', mood: 'warm' },
+            { id: 'k1b', reply: 'k1a', speaker: 'rival', text: '下次你先看文档。', mood: 'beaten' },
+            { id: 'k1c', reply: 'k1b', speaker: 'you', text: '下次你先把文档写完。', mood: 'warm' },
           ],
           taunt: [
-            ['rival', '接口很简单的。', 'airy'],
-            ['rival', '你那边是不是缓存了？', 'smooth'],
-            ['rival', '我这边测是好的。', 'cheery'],
-            ['rival', '你换个网络试试。', 'airy'],
-            ['rival', '这个问题我复现不了。', 'smooth'],
-            ['rival', '你截图看一下。', 'hard'],
-            ['rival', '截图里看不到报文。', 'airy'],
-            ['rival', '那你把报文发我。', 'smooth'],
-            ['rival', '我看了，一切正常。', 'cheery'],
-            ['rival', '是不是你用错了。', 'airy'],
-            ['rival', '文档上写得很清楚。', 'hard'],
-            ['rival', '哪个文档？就是那个文档。', 'smooth'],
+            { id: 'x1', speaker: 'rival', text: '接口很简单的。', mood: 'airy' },
+            { id: 'x1a', reply: 'x1', speaker: 'you', text: '简单你写个例子。', mood: 'dry' },
+            { id: 'x1b', reply: 'x1a', speaker: 'rival', text: '例子在你脑子里。', mood: 'cheery' },
+
+            { id: 'x2', speaker: 'rival', text: '这个问题我复现不了。', mood: 'smooth' },
+            { id: 'x2a', reply: 'x2', speaker: 'you', text: '我复现了十次。', mood: 'flat' },
+            { id: 'x2b', reply: 'x2a', speaker: 'rival', text: '那就是你的操作问题。', mood: 'hard' },
+            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '我的操作就是点了你的按钮。', mood: 'dry' },
+
+            { id: 'x3', speaker: 'rival', text: '你截图看一下。', mood: 'hard' },
+            { id: 'x3a', reply: 'x3', speaker: 'you', text: '截图里看不到报文。', mood: 'flat' },
+            { id: 'x3b', reply: 'x3a', speaker: 'rival', text: '那你把报文发我。', mood: 'smooth' },
+            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '报文是你的 500。', mood: 'dry' },
+
+            { id: 'x4', speaker: 'rival', text: '文档上写得很清楚。', mood: 'hard' },
+            { id: 'x4a', reply: 'x4', speaker: 'you', text: '哪个文档？', mood: 'flat' },
+            { id: 'x4b', reply: 'x4a', speaker: 'rival', text: '就是那个文档。', mood: 'smooth' },
+            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '那个文档根本不存在。', mood: 'dry' },
           ],
         },
       },
@@ -1401,79 +1470,107 @@ window.__ModuleLoader__.load({
             ['you', '我们最懂的是它没问题。', 'dry'],
           ],
           chain: [
-            ['you', '我按你说的步骤试了十遍。', 'flat'],
-            ['rival', '那可能是环境。', 'airy'],
-            ['you', '同一个环境。', 'dry'],
-            ['rival', '那就是时机。', 'smooth'],
-            ['you', '什么时机？', 'flat'],
-            ['rival', '你手速快一点。', 'cheery'],
-            ['you', '我手速快它就坏？', 'dry'],
-            ['rival', '有可能。', 'airy'],
-            ['you', '那用户手速快了怎么办。', 'flat'],
-            ['rival', '这就是要修的原因嘛。', 'cheery'],
-            ['you', '所以问题是我的手。', 'tired'],
+            { id: 'c1', speaker: 'you', text: '我按你说的步骤试了十遍。', mood: 'flat' },
+            { id: 'c1a', reply: 'c1', speaker: 'rival', text: '那可能是环境。', mood: 'airy' },
+            { id: 'c1b', reply: 'c1a', speaker: 'you', text: '同一个环境。', mood: 'dry' },
+            { id: 'c1c', reply: 'c1b', speaker: 'rival', text: '那就是时机。', mood: 'smooth' },
+            { id: 'c1d', reply: 'c1c', speaker: 'you', text: '什么时机？', mood: 'flat' },
+            { id: 'c1e', reply: 'c1d', speaker: 'rival', text: '你手速快一点。', mood: 'cheery' },
+            { id: 'c1f', reply: 'c1e', speaker: 'you', text: '我手速快它就坏？', mood: 'dry' },
+            { id: 'c1g', reply: 'c1f', speaker: 'rival', text: '有可能。', mood: 'airy' },
+            { id: 'c1h', reply: 'c1g', speaker: 'you', text: '那用户手速快了怎么办。', mood: 'flat' },
+
+            { id: 'c2', speaker: 'you', text: '这个 bug 是偶现还是必现？', mood: 'flat' },
+            { id: 'c2a', reply: 'c2', speaker: 'rival', text: '偶现。', mood: 'airy' },
+            { id: 'c2b', reply: 'c2a', speaker: 'you', text: '多久偶现一次。', mood: 'dry' },
+            { id: 'c2c', reply: 'c2b', speaker: 'rival', text: '看心情。', mood: 'cheery' },
+            { id: 'c2d', reply: 'c2c', speaker: 'you', text: '代码没有心情。', mood: 'flat' },
+            { id: 'c2e', reply: 'c2d', speaker: 'rival', text: '那就是概率。', mood: 'smooth' },
+            { id: 'c2f', reply: 'c2e', speaker: 'you', text: '概率也得有个数。', mood: 'dry' },
           ],
           guard: [
-            ['you', '这个改动不能上。', 'flat'],
-            ['rival', '为什么不能上？', 'hard'],
-            ['you', '影响面太大。', 'dry'],
-            ['rival', '那我怎么验证？', 'airy'],
-            ['you', '验证不了。', 'flat'],
-            ['rival', '验证不了就是没做。', 'hard'],
-            ['you', '验证不了就应该分批上。', 'dry'],
-            ['rival', '我们流程没有分批。', 'smooth'],
-            ['you', '那我们就加一个。', 'flat'],
+            { id: 'g1', speaker: 'you', text: '这个改动不能上。', mood: 'flat' },
+            { id: 'g1a', reply: 'g1', speaker: 'rival', text: '为什么不能上？', mood: 'hard' },
+            { id: 'g1b', reply: 'g1a', speaker: 'you', text: '影响面太大。', mood: 'dry' },
+            { id: 'g1c', reply: 'g1b', speaker: 'rival', text: '那我怎么验证？', mood: 'airy' },
+            { id: 'g1d', reply: 'g1c', speaker: 'you', text: '验证不了。', mood: 'flat' },
+            { id: 'g1e', reply: 'g1d', speaker: 'rival', text: '验证不了就是没做。', mood: 'hard' },
+            { id: 'g1f', reply: 'g1e', speaker: 'you', text: '验证不了就应该分批上。', mood: 'dry' },
+
+            { id: 'g2', speaker: 'rival', text: '你们测试环境为什么这么慢。', mood: 'smooth' },
+            { id: 'g2a', reply: 'g2', speaker: 'you', text: '因为跑在你们的数据上。', mood: 'flat' },
+            { id: 'g2b', reply: 'g2a', speaker: 'rival', text: '我们数据有什么问题。', mood: 'hard' },
+            { id: 'g2c', reply: 'g2b', speaker: 'you', text: '一百万条脏数据。', mood: 'dry' },
+            { id: 'g2d', reply: 'g2c', speaker: 'rival', text: '那是真实情况。', mood: 'smooth' },
+            { id: 'g2e', reply: 'g2d', speaker: 'you', text: '所以它慢得也很真实。', mood: 'flat' },
           ],
           hit: [
-            ['you', '这个 bug 老版本就有。', 'flat'],
-            ['rival', '那更要修了。', 'hard'],
-            ['you', '那它就不是这次引入的。', 'dry'],
-            ['rival', '所以你们一直没修？', 'hard'],
-            ['you', '所以这不是这次的问题。', 'flat'],
-            ['rival', '都是问题。', 'airy'],
-            ['you', '但不是一个问题。', 'dry'],
-            ['rival', '你还分得挺细。', 'cheery'],
-            ['you', '我分得细，你测得细一点。', 'flat'],
+            { id: 'h1', speaker: 'you', text: '这个 bug 老版本就有。', mood: 'flat' },
+            { id: 'h1a', reply: 'h1', speaker: 'rival', text: '那更要修了。', mood: 'hard' },
+            { id: 'h1b', reply: 'h1a', speaker: 'you', text: '那它就不是这次引入的。', mood: 'dry' },
+            { id: 'h1c', reply: 'h1b', speaker: 'rival', text: '所以你们一直没修？', mood: 'hard' },
+            { id: 'h1d', reply: 'h1c', speaker: 'you', text: '所以这不是这次的问题。', mood: 'flat' },
+            { id: 'h1e', reply: 'h1d', speaker: 'rival', text: '都是问题。', mood: 'airy' },
+            { id: 'h1f', reply: 'h1e', speaker: 'you', text: '我分得细，你测得细一点。', mood: 'dry' },
+
+            { id: 'h2', speaker: 'you', text: '这不是我这个改动引起的。', mood: 'flat' },
+            { id: 'h2a', reply: 'h2', speaker: 'rival', text: '那就是你上一个改动。', mood: 'hard' },
+            { id: 'h2b', reply: 'h2a', speaker: 'you', text: '上一个改动已经上线两周了。', mood: 'dry' },
+            { id: 'h2c', reply: 'h2b', speaker: 'rival', text: '潜伏期。', mood: 'cheery' },
+            { id: 'h2d', reply: 'h2c', speaker: 'you', text: '代码没有潜伏期，人有。', mood: 'flat' },
+            { id: 'h2e', reply: 'h2d', speaker: 'rival', text: '你这话什么意思。', mood: 'shaken' },
+            { id: 'h2f', reply: 'h2e', speaker: 'you', text: '意思是先看日志。', mood: 'dry' },
           ],
           take: [
-            ['you', '好，我先加日志。', 'tired'],
-            ['rival', '加日志能修吗？', 'airy'],
-            ['you', '能知道它在哪坏的。', 'flat'],
-            ['rival', '那多久能修好？', 'hard'],
-            ['you', '先知道，再谈修。', 'dry'],
-            ['rival', '上线前能修好吗？', 'smooth'],
-            ['you', '上线时间是谁定的？', 'flat'],
-            ['rival', '不知道，反正不是我们。', 'cheery'],
-            ['you', '那就把这个也一起问问。', 'tired'],
-            ['rival', '问了也没用。', 'smooth'],
+            { id: 't1', speaker: 'you', text: '好，我先加日志。', mood: 'tired' },
+            { id: 't1a', reply: 't1', speaker: 'rival', text: '加日志能修吗？', mood: 'airy' },
+            { id: 't1b', reply: 't1a', speaker: 'you', text: '能知道它在哪坏的。', mood: 'flat' },
+            { id: 't1c', reply: 't1b', speaker: 'rival', text: '那多久能修好？', mood: 'hard' },
+            { id: 't1d', reply: 't1c', speaker: 'you', text: '先知道，再谈修。', mood: 'dry' },
+            { id: 't1e', reply: 't1d', speaker: 'rival', text: '上线前能修好吗？', mood: 'smooth' },
+            { id: 't1f', reply: 't1e', speaker: 'you', text: '上线时间是谁定的？', mood: 'flat' },
+
+            { id: 't2', speaker: 'rival', text: '要不先上了再说。', mood: 'airy' },
+            { id: 't2a', reply: 't2', speaker: 'you', text: '上了出问题谁扛？', mood: 'flat' },
+            { id: 't2b', reply: 't2a', speaker: 'rival', text: '可以回滚。', mood: 'cheery' },
+            { id: 't2c', reply: 't2b', speaker: 'you', text: '回滚过一次了。', mood: 'dry' },
+            { id: 't2d', reply: 't2c', speaker: 'rival', text: '那就再回滚一次。', mood: 'airy' },
+            { id: 't2e', reply: 't2d', speaker: 'you', text: '回滚不是方案，是缓刑。', mood: 'tired' },
           ],
           super: [
-            ['you', '这一版先别上，先把它复现出来。', 'hard'],
-            ['rival', '可是时间到了。', 'surprised'],
-            ['you', '复现出来再上，我负责修。', 'hard'],
-            ['rival', '……行，我盯着看。', 'shaken'],
-            ['you', '我们一起看。', 'hard'],
-            ['rival', '好，我给你倒杯水。', 'warm'],
+            { id: 's1', speaker: 'you', text: '这一版先别上，先把它复现出来。', mood: 'hard' },
+            { id: 's1a', reply: 's1', speaker: 'rival', text: '可是时间到了。', mood: 'surprised' },
+            { id: 's1b', reply: 's1a', speaker: 'you', text: '复现出来再上，我负责修。', mood: 'hard' },
+            { id: 's1c', reply: 's1b', speaker: 'rival', text: '……行，我盯着看。', mood: 'shaken' },
+            { id: 's1d', reply: 's1c', speaker: 'you', text: '我们一起看。', mood: 'hard' },
+            { id: 's1e', reply: 's1d', speaker: 'rival', text: '好，我给你倒杯水。', mood: 'warm' },
           ],
           ko: [
-            ['rival', '……复现了，是那个空值。', 'beaten'],
-            ['you', '好，我改。', 'warm'],
-            ['rival', '这次是我没说清。', 'beaten'],
-            ['you', '下次直接把日志给我。', 'warm'],
+            { id: 'k1', speaker: 'rival', text: '……复现了，是那个空值。', mood: 'beaten' },
+            { id: 'k1a', reply: 'k1', speaker: 'you', text: '好，我改。', mood: 'warm' },
+            { id: 'k1b', reply: 'k1a', speaker: 'rival', text: '这次是我没说清。', mood: 'beaten' },
+            { id: 'k1c', reply: 'k1b', speaker: 'you', text: '下次直接把日志给我。', mood: 'warm' },
           ],
           taunt: [
-            ['rival', '我这边没问题。', 'airy'],
-            ['rival', '你重启一下试试。', 'smooth'],
-            ['rival', '清一下缓存。', 'cheery'],
-            ['rival', '我昨天还是好的。', 'airy'],
-            ['rival', '这个功能本来就没人用。', 'smooth'],
-            ['rival', '要不先上了再说。', 'airy'],
-            ['rival', '出了问题可以回滚。', 'cheery'],
-            ['rival', '回滚过一次了。', 'smooth'],
-            ['rival', '那就再回滚一次。', 'airy'],
-            ['rival', '我提的这些都是为项目好。', 'cheery'],
-            ['rival', '你别往心里去。', 'airy'],
-            ['rival', '我不是针对你。', 'smooth'],
+            { id: 'x1', speaker: 'rival', text: '我这边没问题。', mood: 'airy' },
+            { id: 'x1a', reply: 'x1', speaker: 'you', text: '你这边是哪个这边。', mood: 'dry' },
+            { id: 'x1b', reply: 'x1a', speaker: 'rival', text: '我电脑这边。', mood: 'cheery' },
+            { id: 'x1c', reply: 'x1b', speaker: 'you', text: '用户不在你电脑里。', mood: 'flat' },
+
+            { id: 'x2', speaker: 'rival', text: '你重启一下试试。', mood: 'smooth' },
+            { id: 'x2a', reply: 'x2', speaker: 'you', text: '我重启三次了。', mood: 'flat' },
+            { id: 'x2b', reply: 'x2a', speaker: 'rival', text: '那清一下缓存。', mood: 'airy' },
+            { id: 'x2c', reply: 'x2b', speaker: 'you', text: '你说的都是「再试一次」。', mood: 'dry' },
+
+            { id: 'x3', speaker: 'rival', text: '这个功能本来就没人用。', mood: 'smooth' },
+            { id: 'x3a', reply: 'x3', speaker: 'you', text: '没人用你为什么测它。', mood: 'flat' },
+            { id: 'x3b', reply: 'x3a', speaker: 'rival', text: '所以我才测出来。', mood: 'cheery' },
+            { id: 'x3c', reply: 'x3b', speaker: 'you', text: '……这句我认。', mood: 'dry' },
+
+            { id: 'x4', speaker: 'rival', text: '我提的这些都是为项目好。', mood: 'cheery' },
+            { id: 'x4a', reply: 'x4', speaker: 'you', text: '我知道。', mood: 'flat' },
+            { id: 'x4b', reply: 'x4a', speaker: 'rival', text: '你别往心里去。', mood: 'airy' },
+            { id: 'x4c', reply: 'x4b', speaker: 'you', text: '我没往心里去，我往日志里去了。', mood: 'dry' },
           ],
         },
       },
@@ -1489,64 +1586,199 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * Normalise one authored line into the shape the chooser deals out.
+     *
+     * Two forms are accepted, because both are readable in source:
+     *
+     *   `['you', '文本', 'flat']`                 — an opener, no reply target
+     *   `{ id, speaker, text, mood, reply }`      — a line that answers `reply`
+     */
+    function parseLine(raw) {
+      if (Array.isArray(raw)) {
+        const [speaker, text, mood] = raw
+        return { id: null, speaker, text, mood, reply: null }
+      }
+      return {
+        id: raw.id ?? null,
+        speaker: raw.speaker,
+        text: raw.text,
+        mood: raw.mood ?? 'flat',
+        reply: raw.reply ?? null,
+      }
+    }
+
+    /**
      * A bark chooser. One per round.
      *
-     * Lines are dealt from a shuffled bag per beat, so every line is heard before
-     * any repeats. The bag is refilled when empty, and the refill refuses to lead
-     * with the line just spoken — otherwise the one repeat nobody notices is
-     * always the one that matters.
+     * A line is one of two kinds, and the difference is what keeps the argument
+     * readable:
+     *
+     *   - **a THREAD line** (`chain`, `guard`, `hit`, `take`, `taunt`) continues
+     *     the argument. It is only offered when its `reply` names the line on
+     *     screen, whoever spoke it and whatever beat fired it — so a taunt can
+     *     answer the player's chain line, which is what a real argument does. The
+     *     speaker is taken from the thread, never from the trigger.
+     *
+     *   - **a MOMENT line** (`super`, `ko`) is a set piece: the player announcing
+     *     the finisher, the truce after a knockout. It must sound like the player
+     *     when the player triggered it, so its speaker comes from the BEAT, and it
+     *     does not advance the thread — after it, the argument picks up exactly
+     *     where it left off.
+     *
+     * `open` is an ordered script that seeds the thread, so the first fight line
+     * answers the last opening line.
+     *
+     * Every thread line is heard before any repeats: a group that runs out of new
+     * lines recycles its own, refusing to lead with the one just spoken.
      */
     function createBarks(story, rng = Math.random) {
-      const bags = {}
-      const lastSaid = {}
-      /**
-       * The opening is a script, not a bag.
-       *
-       * Each story's `open` lines are written as an exchange — a demand, a
-       * deflection, a push — so they play back in the order they were written.
-       * The set is still rotated BETWEEN rounds, so two visits do not start the
-       * same way.
-       */
+      /** The line the next line must answer, or null when an opener is wanted. */
+      let awaiting = null
+      /** Who spoke `awaiting`; a reply alternates away from this. */
+      let awaitingSpeaker = null
+      /** Per-group bag state, so a group can recycle without starving another. */
+      const bags = new Map()
+      const lastSaid = new Map()
+
+      const THREAD_BEATS = ['chain', 'guard', 'hit', 'take', 'taunt']
+      const MOMENT_BEATS = ['super', 'ko']
+
       const openScript = (() => {
-        const lines = story.beats.open ?? []
+        const lines = (story.beats.open ?? []).map(parseLine)
         const start = Math.floor(rng() * Math.max(1, lines.length))
         // A rotation, not a shuffle: any starting point reads as a conversation.
         return lines.slice(start).concat(lines.slice(0, start))
       })()
       let openAt = 0
 
+      /**
+       * A moment beat is a script too: each `super` line is one beat of the
+       * announcement, in the order written, so the finisher says the same thing
+       * every time it matters. A fresh bag per entry is fine here because a round
+       * fires each of these at most a few times.
+       */
+      const momentAt = new Map(MOMENT_BEATS.map((beat) => [beat, 0]))
+
+      /** Every thread line in the story, parsed once, each tagged with its beat. */
+      const threadLines = THREAD_BEATS.flatMap((beat) =>
+        (story.beats[beat] ?? []).map((raw) => ({ ...parseLine(raw), beat })))
+      /** Index by what each line answers. */
+      const byTarget = new Map()
+      for (const line of threadLines) {
+        const key = line.reply ?? '__open__'
+        if (!byTarget.has(key)) byTarget.set(key, [])
+        byTarget.get(key).push(line)
+      }
+
+      /** Shuffle a copy; the bag's tail is what gets popped next. */
+      function shuffled(list) {
+        const bag = list.slice()
+        for (let i = bag.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1))
+          ;[bag[i], bag[j]] = [bag[j], bag[i]]
+        }
+        return bag
+      }
+
+      /** One line from `list`, shuffled per bag key, never repeating the last. */
+      function deal(bagKey, list) {
+        if (list.length === 0) return null
+        let bag = bags.get(bagKey)
+        if (!bag || bag.length === 0) {
+          // Prefer lines not yet heard this round; recycle only when they run out.
+          const heard = lastSaid.get(`${bagKey}:heard`) ?? new Set()
+          const fresh = list.filter((line) => !heard.has(line.id))
+          bag = shuffled(fresh.length > 0 ? fresh : list)
+          for (const line of bag) heard.add(line.id)
+          lastSaid.set(`${bagKey}:heard`, heard)
+          const recent = lastSaid.get(bagKey)
+          if (recent !== undefined && bag.length > 1 && bag[bag.length - 1].id === recent) {
+            ;[bag[bag.length - 1], bag[0]] = [bag[0], bag[bag.length - 1]]
+          }
+          bags.set(bagKey, bag)
+        }
+        const line = bag.pop()
+        lastSaid.set(bagKey, line.id)
+        return line
+      }
+
+      /**
+       * The thread line that answers `awaiting`, preferring `beat`.
+       *
+       * Order of preference:
+       *   1. an answer to the thread, in the beat that fired (the scene's own
+       *      voice: a combo lands and the player answers the taunt with a `chain`
+       *      line);
+       *   2. an answer to the thread in any beat (the argument continues even when
+       *      the trigger is something else);
+       *   3. an opener in the firing beat (the thread is finished; start one).
+       *
+       * Two filters keep it readable: a line never directly follows the same
+       * speaker twice in a row, and a line is not repeated until its group has
+       * been heard through.
+       */
+      function nextThreadLine(beat) {
+        /** @type {Array<{list: Array<object>, key: string}>} */
+        const tries = []
+        if (awaiting !== null) {
+          const answerHere = (byTarget.get(awaiting) ?? []).filter((line) => line.beat === beat)
+          if (answerHere.length > 0) tries.push({ list: answerHere, key: `${beat}:${awaiting}` })
+          const answers = (byTarget.get(awaiting) ?? []).filter((line) => line.beat !== beat)
+          if (answers.length > 0) tries.push({ list: answers, key: `any:${awaiting}` })
+        }
+        const openHere = (byTarget.get('__open__') ?? []).filter((line) => line.beat === beat)
+        if (openHere.length > 0) tries.push({ list: openHere, key: `${beat}:__open__` })
+        const openAny = byTarget.get('__open__') ?? []
+        if (openAny.length > 0) tries.push({ list: openAny, key: 'any:__open__' })
+        // Last resort: any line in the beat at all, so a beat is never silent.
+        const anyHere = threadLines.filter((line) => line.beat === beat)
+        if (anyHere.length > 0) tries.push({ list: anyHere, key: `${beat}:*` })
+
+        for (const { list, key } of tries) {
+          // Prefer a speaker other than the one who spoke last; fall back only if
+          // every candidate is the same voice.
+          const alternates = list.filter((line) => line.speaker !== awaitingSpeaker)
+          const line = deal(key, alternates.length > 0 ? alternates : list)
+          if (line) return line
+        }
+        return null
+      }
+
       return {
         story,
+        /** The line currently awaiting an answer; the tests assert continuity. */
+        get awaiting() { return awaiting },
+        get awaitingSpeaker() { return awaitingSpeaker },
         /**
          * The next line for `beat`, or null when the story has nothing to say
-         * there. Returns `{ speaker, text, mood }`.
+         * there. Returns `{ speaker, text, mood, id }`.
          */
         next(beat) {
           if (beat === 'open') {
             if (openAt >= openScript.length) return null
-            const [speaker, text, mood] = openScript[openAt]
+            const line = openScript[openAt]
             openAt += 1
-            return { speaker, text, mood }
+            awaiting = line.id
+            awaitingSpeaker = line.speaker
+            return { speaker: line.speaker, text: line.text, mood: line.mood, id: line.id }
           }
-          const pool = story.beats[beat]
-          if (!pool || pool.length === 0) return null
-          if (!bags[beat] || bags[beat].length === 0) {
-            const bag = pool.slice()
-            for (let i = bag.length - 1; i > 0; i--) {
-              const j = Math.floor(rng() * (i + 1))
-              ;[bag[i], bag[j]] = [bag[j], bag[i]]
-            }
-            // A refill must not start with what just played.
-            const recent = lastSaid[beat]
-            if (recent !== undefined && bag[bag.length - 1] === recent && bag.length > 1) {
-              ;[bag[bag.length - 1], bag[0]] = [bag[0], bag[bag.length - 1]]
-            }
-            bags[beat] = bag
+
+          if (MOMENT_BEATS.includes(beat)) {
+            const lines = (story.beats[beat] ?? []).map(parseLine)
+            const at = momentAt.get(beat) ?? 0
+            if (at >= lines.length) return null
+            momentAt.set(beat, at + 1)
+            const line = lines[at]
+            // A moment does not touch `awaiting`: the argument resumes after it.
+            return { speaker: line.speaker, text: line.text, mood: line.mood, id: line.id }
           }
-          const line = bags[beat].pop()
-          lastSaid[beat] = line
-          const [speaker, text, mood] = line
-          return { speaker, text, mood }
+
+          if (!THREAD_BEATS.includes(beat)) return null
+          const line = nextThreadLine(beat)
+          if (!line) return null
+          awaiting = line.id
+          awaitingSpeaker = line.speaker
+          return { speaker: line.speaker, text: line.text, mood: line.mood, id: line.id }
         },
       }
     }
@@ -1908,6 +2140,13 @@ window.__ModuleLoader__.load({
         this.t += DT
         const w = { groundY: WORLD.groundY, minX: WORLD.minX, maxX: WORLD.maxX }
 
+        // The finisher's cinematic owns the world while it plays. Its phases run in
+        // real time, not simulation time, so hit-stop and slow-mo cannot stall it.
+        if (this.superCine) {
+          this.stepSuperCine(input)
+          return
+        }
+
         if (this.phase === 'ready') {
           // Idle breathing only: nobody can be hurt before the player starts.
           for (const f of this.fighters) { f.time += DT; f.pose(); f.rig.setPose(f.tx, f.ty) }
@@ -1916,9 +2155,31 @@ window.__ModuleLoader__.load({
 
         if (this.phase === 'ko') {
           this.koT += DT
-          for (const f of this.fighters) f.step(w)
+          // The four beats of the finish. Each one has to be SEEN, so the beats
+          // are stepped here rather than left to the DOM overlay's own CSS: the
+          // game and the stamp must be on the same clock.
+          if (this.koT < 0.5) {
+            this.koBeat = 'launch'
+            for (const f of this.fighters) f.step(w)
+          } else if (this.koT < 1.1) {
+            this.koBeat = 'freeze'
+            // The freeze: the world holds, the eye reads the pose in the air.
+            for (const f of this.fighters) { f.time += DT * 0.12; f.pose(); f.rig.setPose(f.tx, f.ty) }
+          } else {
+            this.koBeat = 'seal'
+            if (this.koSeal && !this.koSeal.landed) {
+              this.koSeal.landed = true
+              // The seal lands with a DARK slam, not a white flash. The stage is a
+              // pale office: adding white washes the frame out instead of striking
+              // it, and it hides the body the beat exists to show.
+              this.juice.flash(0.34, '#3a0a10')
+              this.juice.shake(16)
+              this.juice.hitstop(90)
+            }
+            for (const f of this.fighters) f.step(w)
+          }
           this.stepParticles()
-          if (this.koT > 2.4) this.phase = 'done'
+          if (this.koT > 2.8) this.phase = 'done'
           return
         }
 
@@ -2041,12 +2302,7 @@ window.__ModuleLoader__.load({
           this.superBuffer = 0
           p.superReady = false
           p.superMeter = 0
-          p.startAttack('superMove')
-          this.superBanner = 1
-          this.say('super', true)
-          this.juice.hitstop(180)
-          this.juice.slowmo(0.2, 420)
-          this.juice.zoomPunch(0.2, 420, 480, 200)
+          this.beginSuper()
           return
         }
 
@@ -2110,11 +2366,28 @@ window.__ModuleLoader__.load({
         this.phase = 'ko'
         this.koT = 0
         this.say('ko', true)
+        /**
+         * The finish is its own four-beat sequence, not just a camera push:
+         *
+         *   launch (0.0–0.5 s) the body leaves the floor; the frame shakes and
+         *                      slows, so the flight reads
+         *   freeze (0.5–1.1 s) everything stops mid-air — the "death frame" the
+         *                      genre holds for a beat
+         *   seal   (0.9 s in)  the 胜 stamp lands: a hard white flash, the frame
+         *                      goes still, the stamp slams down off-centre
+         *   hold               the stamp sits over the aftermath until the outro
+         *
+         * `koT` is the round's own real-time clock; `koBeat` names the beat so the
+         * renderer can key its overlay off it.
+         */
+        this.koBeat = 'launch'
         this.juice.hitstop(240)
         this.juice.slowmo(0.28, 900)
-        this.juice.shake(24)
-        this.juice.flash(0.8)
+        this.juice.shake(26)
+        this.juice.flash(0.5)
         this.juice.zoomPunch(0.16, 500, WORLD.width / 2, WORLD.groundY - 150)
+        /** Where the seal lands, in screen space, for the renderer. */
+        this.koSeal = { t: 0, landed: false }
       }
 
       /* ----------------------------------------------------------- barks --- */
@@ -2165,7 +2438,166 @@ window.__ModuleLoader__.load({
         }
       }
 
-      /* ------------------------------------------------------- reactions --- */
+      /* ------------------------------------------------------- the finisher --- */
+
+      /**
+       * Start the finisher's five-beat cinematic.
+       *
+       * A super that is only "a big punch with a banner over it" wastes the one
+       * moment a fighting game is allowed to stop time for. This one is built as
+       * five beats, each with its own job:
+       *
+       *   charge  (0.42 s) the world holds still, the player crouches into the
+       *                    stance, the camera pushes in on THEM, letterbox starts
+       *   name    (0.52 s) 「破军」writes itself on in brush strokes while the
+       *                    letterbox is fully closed; a hard white blink
+       *   strike  (0.30 s) the bars snap open, the player lunges the full screen
+       *   impact  (0.46 s) hit-stop, the ring and the double brush, the victim
+       *                    launches; slow-mo eases back
+       *   recover (0.34 s) the follow-through, then control returns
+       *
+       * The beats are timed in real milliseconds (`cineT` in ms) rather than DT
+       * counts, so a stutter or a hit-stop cannot make the cinematic skip its own
+       * middle.
+       */
+      beginSuper() {
+        this.superCine = {
+          /** Milliseconds into the cinematic. */
+          t: 0,
+          /** Which beat is playing; the renderer keys its overlay off this. */
+          phase: 'charge',
+          /** 1 -> 0 while the letterbox is closed. */
+          bars: 0,
+          /** Did the strike connect? A whiff still plays the full cinematic. */
+          landed: false,
+        }
+        this.superBanner = 1
+        this.say('super', true)
+        // The charge: everything stops. This is the silence before the hit.
+        this.juice.hitstop(140)
+        this.juice.slowmo(0.35, 380)
+        // The move is armed but does NOT advance on its own clock: the cinematic
+        // releases it on the strike beat. Starting the swing here would let its
+        // active window pass during the freeze, and the finisher would whiff on a
+        // target standing still.
+        this.armSuperSwing()
+      }
+
+      /** Arm the finisher's swing without advancing it. */
+      armSuperSwing() {
+        const p = this.player
+        p.atkName = 'superMove'
+        p.atk = ATK.superMove
+        p.atkHit.clear()
+        p.state = 'atk'
+        p.t = 0
+      }
+
+      /** One real-time step of the finisher's cinematic. */
+      stepSuperCine(input) {
+        const cine = this.superCine
+        const stepMs = DT * 1000
+        cine.t += stepMs
+        const t = cine.t
+        const w = { groundY: WORLD.groundY, minX: WORLD.minX, maxX: WORLD.maxX }
+        const p = this.player
+
+        const BEAT = { charge: 420, name: 520, strike: 300, impact: 460, recover: 340 }
+        // The cumulative start of each beat. A beat's own length is added by its
+        // own branch, so `impact` must RUN for `impact` ms before `recover`
+        // begins — computing `at('recover')` as the sum before it did exactly
+        // that, and the impact beat swallowed the whole tail.
+        const order = Object.keys(BEAT)
+        const startOf = (key) => order.slice(0, order.indexOf(key)).reduce((sum, k) => sum + BEAT[k], 0)
+        const at = (key) => startOf(key)
+
+        if (t < at('name')) {
+          cine.phase = 'charge'
+          // Hold: the fighters breathe but nothing advances. The freeze is the beat.
+          for (const f of this.fighters) f.time += DT * 0.15
+          p.pose()
+          p.rig.setPose(p.tx, p.ty)
+          this.enemy.pose()
+          this.enemy.rig.setPose(this.enemy.tx, this.enemy.ty)
+          cine.bars = Math.min(1, t / 260)
+          return
+        }
+
+        if (t < at('strike')) {
+          cine.phase = 'name'
+          cine.bars = 1
+          // The name slams on with a camera push, but NOT a white flash: a flash
+          // here covered the name itself. The blink belongs on the release.
+          if (!cine.named && t > at('name') + 120) {
+            cine.named = true
+            this.juice.zoomPunch(0.2, 320, 480, 190)
+            this.juice.shake(7)
+          }
+          for (const f of this.fighters) { f.time += DT * 0.2; f.pose(); f.rig.setPose(f.tx, f.ty) }
+          return
+        }
+
+        // The first frame of `strike` releases the swing. `superMove` is ~0.95 s
+        // with its active window at 0.56–0.72, so the hit lands inside this beat
+        // and the remaining swing plays out under the impact slow-mo.
+        if (!cine.released) {
+          cine.released = true
+          p.t = 0
+          p.atkHit.clear()
+          p.vx = p.face * 640
+          // A super that the opponent can WALK OUT OF during a freeze is not a
+        // super. The charge is the contract: the strike lands on the body that was
+        // frozen for it. The player is placed just outside the victim and the
+        // victim is held there — the lunge then closes the last few pixels, and
+        // the player can no longer overshoot through the opponent.
+        const reach = 78 * p.s
+        p.x = this.enemy.x - p.face * reach
+        p.vx = 0
+        this.enemy.vx = 0
+        this.enemy.ai.cd = 1.4
+          // The release blink: the frame goes white for ONE beat as the player
+          // commits, then comes back in time to see the hit.
+          this.juice.flash(0.5, '#ffffff')
+          this.juice.zoomPunch(0.16, 300, 640, 210)
+        }
+        cine.phase = 'strike'
+        cine.bars = Math.max(0, 1 - (t - at('strike')) / 140)
+        p.step(w)
+        this.enemy.step(w)
+        resolveAttacks(this.fighters, w, (hit) => {
+          cine.landed = true
+          this.onHit(hit)
+        })
+        this.stepParticles()
+        // No clock rewrite: the beat boundaries come from `cine.t`. Jumping it
+        // forward made the impact beat start at the same timestamp every frame and
+        // the cinematic never reached its own tail.
+        if (cine.landed) cine.phase = 'impact'
+        // No `return` here: falling through runs the impact beat whether or not
+        // the strike connected, and moves on to `recover` after it.
+
+      if (t < at('recover')) {
+        cine.bars = 0
+        // Slow motion: the body leaves the floor at a third speed while the
+        // effects run at full rate.
+        for (const f of this.fighters) { f.time += DT * 0.3; f.step(w) }
+        this.stepParticles()
+        this.checkKo()
+        return
+      }
+
+      cine.phase = 'recover'
+      if (t >= at('recover') + BEAT.recover) {
+        // Done: hand control back. A finisher that ends with the player still
+        // locked in an attack pose reads as "the game froze".
+        this.superCine = null
+        this.superBanner = 0
+        p.atk = null
+        p.state = 'idle'
+        p.t = 0
+        this.juice.slowmo(0.55, 160)
+      }
+    }
 
       onHit(hit) {
         const { victim, x, y, power, reaction, kill, juggle, name } = hit
@@ -2311,6 +2743,9 @@ window.__ModuleLoader__.load({
           particles: this.particles.map((p) => ({ ...p })),
           hit: this.lastHit ? { ...this.lastHit } : null,
           cinematic: this.cinematic(),
+          /** The finish's beat: launch | freeze | seal, or null while fighting. */
+          koBeat: this.phase === 'ko' ? this.koBeat : null,
+          koT: this.phase === 'ko' ? this.koT : 0,
           /** The qi meter and whether the super can be thrown right now. */
           superMeter: this.player.superMeter,
           /** The line currently on screen, or null. */
@@ -2322,6 +2757,14 @@ window.__ModuleLoader__.load({
           comboPop: this.comboPop,
           /** 1 -> 0 while the super's freeze-frame banner is on screen. */
           superBanner: this.superBanner,
+          /**
+           * The finisher cinematic's own state, for the overlay: which beat it is
+           * on, how closed the letterbox is, and whether the strike landed. Null
+           * when no finisher is playing.
+           */
+          superCine: this.superCine
+            ? { phase: this.superCine.phase, bars: this.superCine.bars, landed: this.superCine.landed, t: this.superCine.t }
+            : null,
           block: this.player.block,
           crouching: this.player.crouching,
           juice: {
@@ -2454,7 +2897,12 @@ window.__ModuleLoader__.load({
           combo: s.combo ?? 0,
           comboPop: s.comboPop ?? 0,
           superBanner: s.superBanner ?? 0,
+          /** The finisher's five-beat cinematic, or null when none is playing. */
+          superCine: s.superCine ?? null,
           cinematic: s.cinematic ?? 0,
+          /** The finish's own beats, so the DOM overlay lands on the game's clock. */
+          koBeat: s.koBeat ?? null,
+          koT: s.koT ?? 0,
           block: s.block ?? false,
           crouching: s.crouching ?? false,
           impact: s.hit,
@@ -3054,9 +3502,33 @@ window.__ModuleLoader__.load({
      * The super freeze: a hard-edged banner with the move's name, a dark bar, and
      * the fighter's silhouette glowing at the centre.
      */
-    function drawSuperBanner(ctx, w, h, progress, label = '破 军') {
+    /**
+     * The finisher's overlay, one drawing per beat.
+     *
+     * A single "big text over a dark bar" does not sell a super: the reason the
+     * genre's supers land is that the game STOPS, names the move, then releases.
+     * So the overlay is keyed to the cinematic's own phase (`snap.superCine`):
+     *
+     *   charge — letterbox closes from top and bottom, the frame darkens, a red
+     *            edge burns in; the name has not arrived yet
+     *   name   — 「破军」in one brush stroke, hard-shadowed, with a white flash and
+     *            radial speed lines converging behind it
+     *   strike — the bars snap open (no text: the eye is on the hit)
+     *   impact — a full ring shockwave from the strike point, brief white
+     *   recover — nothing; the fight is back
+     *
+     * `progress` is kept for the old call site (a plain banner), but the phase is
+     * what the visual actually follows.
+     */
+    function drawSuperBanner(ctx, w, h, progress, label = '破 军', cine = null) {
       const life = Math.max(0, Math.min(1, progress))
-      if (life <= 0) return
+      if (life <= 0 && !cine) return
+
+      if (cine) {
+        drawSuperCinematic(ctx, w, h, label, cine)
+        return
+      }
+
       const inK = Math.min(1, (1 - life) * 5)
       const outK = Math.min(1, life * 3.2)
       const bar = Math.min(inK, outK)
@@ -3079,7 +3551,6 @@ window.__ModuleLoader__.load({
         ctx.textBaseline = 'middle'
         const size = Math.round(Math.min(w, h) * 0.13)
         ctx.font = `900 ${size}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`
-        // A dark offset under the glyphs is what gives the hard KOF edge.
         ctx.fillStyle = KOF.ink
         ctx.fillText(label, w / 2 + size * 0.05, h * 0.5 + size * 0.05)
         ctx.fillStyle = KOF.hot
@@ -3088,7 +3559,158 @@ window.__ModuleLoader__.load({
       ctx.restore()
     }
 
-    /** The combo counter: climbs with each hit in a string. */
+    /** The five-beat overlay, drawn in screen space. */
+    function drawSuperCinematic(ctx, w, h, label, cine) {
+      const { phase, bars, t } = cine
+      const barH = h * 0.115
+      ctx.save()
+
+      // --- the letterbox: closes on `charge`, opens on `strike` ---------------
+      const closed = Math.max(0, Math.min(1, bars))
+      if (closed > 0.001) {
+        ctx.fillStyle = 'rgba(4, 5, 10, 0.96)'
+        ctx.fillRect(0, 0, w, barH * closed)
+        ctx.fillRect(0, h - barH * closed, w, barH * closed)
+        // A hot rim on the inner edge of each bar: gold while charging, white-hot
+        // on the release.
+        const rim = phase === 'charge' ? '#ffc400' : '#fff3c4'
+        ctx.fillStyle = rim
+        ctx.globalAlpha = 0.9 * closed
+        ctx.fillRect(0, barH * closed - 2, w, 2)
+        ctx.fillRect(0, h - barH * closed, w, 2)
+        ctx.globalAlpha = 1
+      }
+
+      // --- the darkening: the world loses 55% of its light -------------------
+      if (phase === 'charge' || phase === 'name') {
+        const k = phase === 'charge' ? Math.min(1, closed) : 1
+        ctx.fillStyle = `rgba(3, 4, 9, ${0.55 * k})`
+        ctx.fillRect(0, barH * closed, w, h - barH * closed * 2)
+      }
+
+      // --- the name ----------------------------------------------------------
+      if (phase === 'name') {
+        // The name sits ABOVE the fighters, not on them: a title printed across a
+        // face hides the pose the whole freeze exists to show.
+        const nameY = h * 0.32
+
+        // Speed lines converging ON the name, from the frame edges inward.
+        ctx.save()
+        ctx.translate(w / 2, nameY)
+        ctx.strokeStyle = 'rgba(255, 246, 200, 0.55)'
+        for (let i = 0; i < 54; i++) {
+          const a = (i / 54) * Math.PI * 2 + t * 0.0004
+          const r0 = Math.min(w, h) * 0.16
+          const r1 = Math.min(w, h) * (0.42 + ((i * 37) % 23) / 55)
+          ctx.globalAlpha = 0.22 + ((i * 13) % 10) / 20
+          ctx.lineWidth = i % 5 === 0 ? 3 : 1
+          ctx.beginPath()
+          ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0)
+          ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1)
+          ctx.stroke()
+        }
+        ctx.restore()
+
+        ctx.save()
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const size = Math.round(Math.min(w, h) * 0.155)
+        ctx.font = `900 ${size}px "STKaiti","KaiTi","PingFang SC","Microsoft YaHei",serif`
+        // Scale in over the first 120 ms: the name slams on, it does not fade in.
+        const pop = Math.min(1, Math.max(0, t - 940) / 120)
+        const k = 0.7 + 0.3 * (pop * pop * (3 - 2 * pop))
+        ctx.translate(w / 2, nameY)
+        ctx.scale(k, k)
+        // A stack of dark offsets is the hard KOF edge.
+        ctx.fillStyle = 'rgba(0,0,0,0.85)'
+        for (const [ox, oy] of [[7, 8], [4, 5], [2, 2]]) ctx.fillText(label, ox, oy)
+        ctx.fillStyle = KOF.hot
+        ctx.fillText(label, 0, 0)
+        // A thin amber outline keeps the white off a white flash frame.
+        ctx.lineWidth = 2
+        ctx.strokeStyle = 'rgba(255, 122, 26, 0.9)'
+        ctx.strokeText(label, 0, 0)
+        ctx.restore()
+      }
+
+      // --- the release: a white edge and a ring from the centre --------------
+      if (phase === 'strike') {
+        const k = Math.max(0, 1 - (t - 950) / 300)
+        ctx.globalAlpha = k * 0.7
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 6
+        ctx.strokeRect(3, 3, w - 6, h - 6)
+        ctx.globalAlpha = 1
+      }
+
+      ctx.restore()
+    }
+
+    /**
+     * The finish's four beats, drawn in screen space.
+     *
+     * `koBeat` comes from the game (`launch` → `freeze` → `seal`), so the picture
+     * and the DOM stamp share one clock. Each beat answers a different question:
+     *
+     *   launch — where did the body go?  radial speed lines from the point that
+     *            was hit, and a short white edge
+     *   freeze — hold it.  the lines fade, the frame narrows to the body
+     *   seal   — the verdict.  a hard vignette slams in from the edges, a red
+     *            wash behind the stamp
+     *
+     * `toScreen(x, y)` projects world coordinates; `snap` carries the fighters so
+     * the effect starts where the hit actually landed.
+     */
+    function drawKoBeat(ctx, w, h, beat, koT, scale, toScreen, snap) {
+      if (beat === 'launch') {
+        // Speed lines from the victim's body, back along the direction of travel.
+        const v = snap.enemy ?? snap.player
+        const [sx, sy] = toScreen(v.x, v.y - 120)
+        ctx.save()
+        ctx.translate(sx, sy)
+        const k = Math.max(0, 1 - koT / 0.5)
+        for (let i = 0; i < 34; i++) {
+          const a = (i / 34) * Math.PI * 2 + koT * 6
+          const r0 = 40 * scale
+          const r1 = (90 + ((i * 29) % 70)) * scale * (1 + koT * 2)
+          ctx.globalAlpha = k * (0.35 + ((i * 11) % 10) / 22)
+          ctx.strokeStyle = i % 4 === 0 ? KOF.hot : KOF.ink
+          ctx.lineWidth = i % 4 === 0 ? 2.4 : 1.2
+          ctx.beginPath()
+          ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0)
+          ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1)
+          ctx.stroke()
+        }
+        ctx.restore()
+        return
+      }
+
+      if (beat === 'freeze') {
+        // Two thin dark bars close in from the left and right: the frame narrows
+        // to the body, which is what "hold on this" looks like in the genre.
+        const k = Math.min(1, Math.max(0, (koT - 0.5) / 0.3))
+        const bw = w * 0.09 * k
+        ctx.save()
+        ctx.fillStyle = `rgba(4, 5, 10, ${0.55 * k})`
+        ctx.fillRect(0, 0, bw, h)
+        ctx.fillRect(w - bw, 0, bw, h)
+        ctx.restore()
+        return
+      }
+
+      // seal: a red varnish over the whole frame, then a hard vignette.
+      const k = Math.min(1, Math.max(0, (koT - 1.05) / 0.22))
+      if (k <= 0) return
+      ctx.save()
+      ctx.fillStyle = `rgba(120, 12, 20, ${0.2 * k})`
+      ctx.fillRect(0, 0, w, h)
+      const g = ctx.createRadialGradient(w / 2, h * 0.42, Math.min(w, h) * 0.22, w / 2, h * 0.5, Math.max(w, h) * 0.72)
+      g.addColorStop(0, 'rgba(8, 4, 10, 0)')
+      g.addColorStop(1, `rgba(8, 4, 10, ${0.72 * k})`)
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, w, h)
+      ctx.restore()
+    }
     function drawCombo(ctx, w, count, pop) {
       if (count < 2) return
       ctx.save()
@@ -3383,7 +4005,7 @@ window.__ModuleLoader__.load({
       ctx.quadraticCurveTo(x, y, x + rr, y)
       ctx.closePath()
     }
-    return { drawImpact, drawSpeedLines, drawEdgeFlash, drawSuperBanner, drawCombo, drawInkSlash, drawQiRing, drawBubble };
+    return { drawImpact, drawSpeedLines, drawEdgeFlash, drawSuperBanner, drawKoBeat, drawCombo, drawInkSlash, drawQiRing, drawBubble };
   })();
 
   /* ---- js/render.js ---- */
@@ -3404,7 +4026,7 @@ window.__ModuleLoader__.load({
      */
 
     const { B, HAND_F, HAND_B, FOOT_F } = __mod_rig;
-    const { drawImpact, drawSpeedLines, drawEdgeFlash, drawSuperBanner, drawCombo, drawInkSlash, drawQiRing, drawBubble } = __mod_effects;
+    const { drawImpact, drawSpeedLines, drawEdgeFlash, drawSuperBanner, drawCombo, drawInkSlash, drawQiRing, drawBubble, drawKoBeat } = __mod_effects;
     const { OfficeBackdrop, drawFloorShadow } = __mod_backdrop;
 
     const INK = {
@@ -3580,9 +4202,17 @@ window.__ModuleLoader__.load({
           drawEdgeFlash(ctx, this.cssW, this.cssH, (snap.hit.life - 0.5) * 0.9)
         }
 
-        // The super freeze takes over the whole frame.
-        if (snap.superBanner > 0.001) {
-          drawSuperBanner(ctx, this.cssW, this.cssH, snap.superBanner, '破 军')
+        // The super freeze takes over the whole frame. The cinematic's own phase
+        // drives the overlay, so the letterbox, the name and the release each get
+        // their own drawing instead of one banner recycled three ways.
+        if (snap.superCine || snap.superBanner > 0.001) {
+          drawSuperBanner(ctx, this.cssW, this.cssH, snap.superBanner ?? 0, '破 军', snap.superCine ?? null)
+        }
+
+        // The finish's own beats, drawn on the canvas so the picture carries the
+        // impact and the DOM overlay only typesets the words.
+        if (snap.koBeat) {
+          drawKoBeat(ctx, this.cssW, this.cssH, snap.koBeat, snap.koT ?? 0, this.scale, this.project.bind(this), snap)
         }
 
         drawCombo(ctx, this.cssW, snap.combo ?? 0, snap.comboPop ?? 0)
@@ -4691,10 +5321,17 @@ window.__ModuleLoader__.load({
 
 /* ---- top plaque: names, bars, state ------------------------------------- */
 .boot-duel-hud {
-  position: relative; z-index: 3;
+  /* Above the gate (z-index 4): names and bars must stay readable while the
+     Enter gate is up, and the gate's gradient was washing them out. The plate
+     below is what makes the cyan and gold labels work on a pale office stage —
+     they were legible only over the old dark background. */
+  position: relative; z-index: 5;
   display: flex; flex-direction: column; gap: 10px;
-  padding: 20px 26px 0; pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+  /* The right inset clears the gear (30 px at right: 14), which was sitting on
+     top of the rival's health readout. */
+  padding: 14px 60px 14px 26px; pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .85);
+  background: linear-gradient(180deg, rgba(8, 13, 24, .84) 0%, rgba(8, 13, 24, .58) 64%, rgba(8, 13, 24, 0) 100%);
 }
 .boot-duel-bars { display: flex; align-items: center; gap: 22px; }
 .boot-duel-bar { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -4706,7 +5343,7 @@ window.__ModuleLoader__.load({
   color: var(--bd-gold);
 }
 .boot-duel-bar-label.is-player { color: var(--bd-player); }
-.boot-duel-bar-hp { font-size: 12px; opacity: .72; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.boot-duel-bar-hp { font-size: 12px; opacity: .85; color: #e8effa; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
 .boot-duel-bar-track {
   position: relative; width: 100%; height: 13px; border-radius: 7px; overflow: hidden;
   background: rgba(4, 8, 16, .78);
@@ -4746,7 +5383,8 @@ window.__ModuleLoader__.load({
   text-shadow: 0 0 22px rgba(255, 190, 120, .5);
 }
 .boot-duel-mid-state {
-  font-size: 10px; letter-spacing: .34em; opacity: .55; text-transform: uppercase;
+  font-size: 10px; letter-spacing: .34em; opacity: .82; text-transform: uppercase;
+  color: #e8effa;
 }
 
 /* ---- qi meter + finisher call ------------------------------------------ */
@@ -4795,8 +5433,16 @@ window.__ModuleLoader__.load({
 /* ---- bottom rail: controls + buttons ------------------------------------ */
 .boot-duel-hints {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
-  font-size: 12px; opacity: .8; padding: 0 26px 18px; margin-top: auto;
-  pointer-events: none; position: relative; z-index: 3;
+  font-size: 12px; opacity: 1; padding: 10px 26px 14px; margin-top: auto;
+  pointer-events: none;
+  /* Above the gate (z-index 4): the control rail is how a new player learns
+     the keys, and the gate's dark gradient sat on top of it, dimming exactly
+     the labels that needed reading. The plate is its own backdrop, because the
+     office stage underneath is pale. */
+  position: relative; z-index: 5;
+  color: #f2f7ff;
+  text-shadow: 0 1px 3px rgba(6, 12, 22, .85);
+  background: linear-gradient(0deg, rgba(8, 13, 24, .84) 0%, rgba(8, 13, 24, .5) 72%, rgba(8, 13, 24, 0) 100%);
 }
 .boot-duel-keys { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
 .boot-duel-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -4813,6 +5459,9 @@ window.__ModuleLoader__.load({
   color: #dbe9ff; background: rgba(255, 255, 255, .07);
   border: 1px solid rgba(255, 255, 255, .2); border-radius: 9px; padding: 5px 12px;
   backdrop-filter: blur(6px);
+  /* The rail is a fixed-width row; without this the label wraps to two lines
+     at 1280 px and the button turns into a tall pill. */
+  white-space: nowrap;
 }
 .boot-duel-btn:hover { background: rgba(255, 255, 255, .16); }
 .boot-duel-btn[aria-pressed="true"] { background: rgba(94, 231, 255, .2); border-color: rgba(94, 231, 255, .5); }
@@ -4821,6 +5470,7 @@ window.__ModuleLoader__.load({
   pointer-events: auto; cursor: pointer; font: inherit; font-size: 13px; letter-spacing: .1em;
   color: #eef4ff; background: var(--bd-ink); border: 1px solid rgba(255, 255, 255, .26);
   border-radius: 999px; padding: 9px 20px; backdrop-filter: blur(6px);
+  white-space: nowrap;
 }
 .boot-duel-skip:hover { background: rgba(255, 255, 255, .18); }
 
@@ -4873,21 +5523,32 @@ window.__ModuleLoader__.load({
   padding-bottom: 26vh;
   background: linear-gradient(180deg, rgba(4, 8, 16, .62) 0%, rgba(4, 8, 16, .1) 36%, rgba(4, 8, 16, .1) 58%, rgba(4, 8, 16, .66) 100%);
 }
+/* The overlay follows the game's beats. Until the seal lands there is only a
+   darkened frame — the body in the air is the picture, and covering it with a
+   stamp immediately hides the thing that just happened. */
+.boot-duel-ko[data-beat="launch"] .boot-duel-ko-seal,
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-seal { opacity: 0; }
+.boot-duel-ko[data-beat="launch"] .boot-duel-ko-sub,
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-sub,
+.boot-duel-ko[data-beat="launch"] .boot-duel-ko-hint,
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-hint { opacity: 0; }
+.boot-duel-ko[data-beat="launch"],
+.boot-duel-ko[data-beat="freeze"] { background: linear-gradient(180deg, rgba(4, 8, 16, .28) 0%, rgba(4, 8, 16, 0) 40%, rgba(4, 8, 16, 0) 55%, rgba(4, 8, 16, .3) 100%); }
 .boot-duel-ko-seal {
   width: clamp(120px, 15vw, 176px); height: clamp(120px, 15vw, 176px);
   display: grid; place-items: center; border-radius: 16px;
   border: 5px solid rgba(255, 244, 232, .94);
   background: rgba(150, 26, 34, .55);
   box-shadow: 0 0 70px rgba(255, 90, 120, .45), inset 0 0 40px rgba(255, 200, 180, .3);
-  animation: boot-duel-seal 520ms cubic-bezier(.16, 1.5, .3, 1) both;
+  animation: boot-duel-seal 400ms cubic-bezier(.16, 1.5, .3, 1) both;
 }
 .boot-duel-ko-char {
   font-family: "STKaiti", "KaiTi", "Kaiti SC", "Songti SC", serif;
   font-size: clamp(62px, 9vw, 100px); font-weight: 700; line-height: 1;
   color: #fff8f0; text-shadow: 0 0 30px rgba(255, 110, 130, .9);
 }
-.boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 600ms ease 260ms both; }
-.boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 700ms both; }
+.boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 500ms ease 120ms both; }
+.boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 420ms both; }
 
 /* The host settings section. The host owns the surrounding chrome, so this
    is deliberately plain: a title, a lede, rows, and nothing that fights the
@@ -5757,8 +6418,15 @@ window.__ModuleLoader__.load({
           )
           : null,
 
+        // The finish is four game beats (launch / freeze / seal / hold). The
+        // overlay follows `koBeat` instead of running its own CSS clock, so
+        // the stamp lands at the same instant the game freezes the frame —
+        // otherwise the picture and the typography drift apart by a beat.
         inOutro
-          ? React.createElement('div', { className: 'boot-duel-ko' },
+          ? React.createElement('div', {
+            className: 'boot-duel-ko',
+            'data-beat': snapshotValue?.koBeat ?? 'seal',
+          },
             React.createElement('div', { className: 'boot-duel-ko-seal' },
               React.createElement('span', { className: 'boot-duel-ko-char' }, t('ko.title')),
             ),

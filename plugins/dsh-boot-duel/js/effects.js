@@ -116,9 +116,33 @@ export function drawEdgeFlash(ctx, w, h, amount) {
  * The super freeze: a hard-edged banner with the move's name, a dark bar, and
  * the fighter's silhouette glowing at the centre.
  */
-export function drawSuperBanner(ctx, w, h, progress, label = '破 军') {
+/**
+ * The finisher's overlay, one drawing per beat.
+ *
+ * A single "big text over a dark bar" does not sell a super: the reason the
+ * genre's supers land is that the game STOPS, names the move, then releases.
+ * So the overlay is keyed to the cinematic's own phase (`snap.superCine`):
+ *
+ *   charge — letterbox closes from top and bottom, the frame darkens, a red
+ *            edge burns in; the name has not arrived yet
+ *   name   — 「破军」in one brush stroke, hard-shadowed, with a white flash and
+ *            radial speed lines converging behind it
+ *   strike — the bars snap open (no text: the eye is on the hit)
+ *   impact — a full ring shockwave from the strike point, brief white
+ *   recover — nothing; the fight is back
+ *
+ * `progress` is kept for the old call site (a plain banner), but the phase is
+ * what the visual actually follows.
+ */
+export function drawSuperBanner(ctx, w, h, progress, label = '破 军', cine = null) {
   const life = Math.max(0, Math.min(1, progress))
-  if (life <= 0) return
+  if (life <= 0 && !cine) return
+
+  if (cine) {
+    drawSuperCinematic(ctx, w, h, label, cine)
+    return
+  }
+
   const inK = Math.min(1, (1 - life) * 5)
   const outK = Math.min(1, life * 3.2)
   const bar = Math.min(inK, outK)
@@ -141,7 +165,6 @@ export function drawSuperBanner(ctx, w, h, progress, label = '破 军') {
     ctx.textBaseline = 'middle'
     const size = Math.round(Math.min(w, h) * 0.13)
     ctx.font = `900 ${size}px "PingFang SC","Microsoft YaHei",system-ui,sans-serif`
-    // A dark offset under the glyphs is what gives the hard KOF edge.
     ctx.fillStyle = KOF.ink
     ctx.fillText(label, w / 2 + size * 0.05, h * 0.5 + size * 0.05)
     ctx.fillStyle = KOF.hot
@@ -150,7 +173,158 @@ export function drawSuperBanner(ctx, w, h, progress, label = '破 军') {
   ctx.restore()
 }
 
-/** The combo counter: climbs with each hit in a string. */
+/** The five-beat overlay, drawn in screen space. */
+function drawSuperCinematic(ctx, w, h, label, cine) {
+  const { phase, bars, t } = cine
+  const barH = h * 0.115
+  ctx.save()
+
+  // --- the letterbox: closes on `charge`, opens on `strike` ---------------
+  const closed = Math.max(0, Math.min(1, bars))
+  if (closed > 0.001) {
+    ctx.fillStyle = 'rgba(4, 5, 10, 0.96)'
+    ctx.fillRect(0, 0, w, barH * closed)
+    ctx.fillRect(0, h - barH * closed, w, barH * closed)
+    // A hot rim on the inner edge of each bar: gold while charging, white-hot
+    // on the release.
+    const rim = phase === 'charge' ? '#ffc400' : '#fff3c4'
+    ctx.fillStyle = rim
+    ctx.globalAlpha = 0.9 * closed
+    ctx.fillRect(0, barH * closed - 2, w, 2)
+    ctx.fillRect(0, h - barH * closed, w, 2)
+    ctx.globalAlpha = 1
+  }
+
+  // --- the darkening: the world loses 55% of its light -------------------
+  if (phase === 'charge' || phase === 'name') {
+    const k = phase === 'charge' ? Math.min(1, closed) : 1
+    ctx.fillStyle = `rgba(3, 4, 9, ${0.55 * k})`
+    ctx.fillRect(0, barH * closed, w, h - barH * closed * 2)
+  }
+
+  // --- the name ----------------------------------------------------------
+  if (phase === 'name') {
+    // The name sits ABOVE the fighters, not on them: a title printed across a
+    // face hides the pose the whole freeze exists to show.
+    const nameY = h * 0.32
+
+    // Speed lines converging ON the name, from the frame edges inward.
+    ctx.save()
+    ctx.translate(w / 2, nameY)
+    ctx.strokeStyle = 'rgba(255, 246, 200, 0.55)'
+    for (let i = 0; i < 54; i++) {
+      const a = (i / 54) * Math.PI * 2 + t * 0.0004
+      const r0 = Math.min(w, h) * 0.16
+      const r1 = Math.min(w, h) * (0.42 + ((i * 37) % 23) / 55)
+      ctx.globalAlpha = 0.22 + ((i * 13) % 10) / 20
+      ctx.lineWidth = i % 5 === 0 ? 3 : 1
+      ctx.beginPath()
+      ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0)
+      ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1)
+      ctx.stroke()
+    }
+    ctx.restore()
+
+    ctx.save()
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const size = Math.round(Math.min(w, h) * 0.155)
+    ctx.font = `900 ${size}px "STKaiti","KaiTi","PingFang SC","Microsoft YaHei",serif`
+    // Scale in over the first 120 ms: the name slams on, it does not fade in.
+    const pop = Math.min(1, Math.max(0, t - 940) / 120)
+    const k = 0.7 + 0.3 * (pop * pop * (3 - 2 * pop))
+    ctx.translate(w / 2, nameY)
+    ctx.scale(k, k)
+    // A stack of dark offsets is the hard KOF edge.
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'
+    for (const [ox, oy] of [[7, 8], [4, 5], [2, 2]]) ctx.fillText(label, ox, oy)
+    ctx.fillStyle = KOF.hot
+    ctx.fillText(label, 0, 0)
+    // A thin amber outline keeps the white off a white flash frame.
+    ctx.lineWidth = 2
+    ctx.strokeStyle = 'rgba(255, 122, 26, 0.9)'
+    ctx.strokeText(label, 0, 0)
+    ctx.restore()
+  }
+
+  // --- the release: a white edge and a ring from the centre --------------
+  if (phase === 'strike') {
+    const k = Math.max(0, 1 - (t - 950) / 300)
+    ctx.globalAlpha = k * 0.7
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 6
+    ctx.strokeRect(3, 3, w - 6, h - 6)
+    ctx.globalAlpha = 1
+  }
+
+  ctx.restore()
+}
+
+/**
+ * The finish's four beats, drawn in screen space.
+ *
+ * `koBeat` comes from the game (`launch` → `freeze` → `seal`), so the picture
+ * and the DOM stamp share one clock. Each beat answers a different question:
+ *
+ *   launch — where did the body go?  radial speed lines from the point that
+ *            was hit, and a short white edge
+ *   freeze — hold it.  the lines fade, the frame narrows to the body
+ *   seal   — the verdict.  a hard vignette slams in from the edges, a red
+ *            wash behind the stamp
+ *
+ * `toScreen(x, y)` projects world coordinates; `snap` carries the fighters so
+ * the effect starts where the hit actually landed.
+ */
+export function drawKoBeat(ctx, w, h, beat, koT, scale, toScreen, snap) {
+  if (beat === 'launch') {
+    // Speed lines from the victim's body, back along the direction of travel.
+    const v = snap.enemy ?? snap.player
+    const [sx, sy] = toScreen(v.x, v.y - 120)
+    ctx.save()
+    ctx.translate(sx, sy)
+    const k = Math.max(0, 1 - koT / 0.5)
+    for (let i = 0; i < 34; i++) {
+      const a = (i / 34) * Math.PI * 2 + koT * 6
+      const r0 = 40 * scale
+      const r1 = (90 + ((i * 29) % 70)) * scale * (1 + koT * 2)
+      ctx.globalAlpha = k * (0.35 + ((i * 11) % 10) / 22)
+      ctx.strokeStyle = i % 4 === 0 ? KOF.hot : KOF.ink
+      ctx.lineWidth = i % 4 === 0 ? 2.4 : 1.2
+      ctx.beginPath()
+      ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0)
+      ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1)
+      ctx.stroke()
+    }
+    ctx.restore()
+    return
+  }
+
+  if (beat === 'freeze') {
+    // Two thin dark bars close in from the left and right: the frame narrows
+    // to the body, which is what "hold on this" looks like in the genre.
+    const k = Math.min(1, Math.max(0, (koT - 0.5) / 0.3))
+    const bw = w * 0.09 * k
+    ctx.save()
+    ctx.fillStyle = `rgba(4, 5, 10, ${0.55 * k})`
+    ctx.fillRect(0, 0, bw, h)
+    ctx.fillRect(w - bw, 0, bw, h)
+    ctx.restore()
+    return
+  }
+
+  // seal: a red varnish over the whole frame, then a hard vignette.
+  const k = Math.min(1, Math.max(0, (koT - 1.05) / 0.22))
+  if (k <= 0) return
+  ctx.save()
+  ctx.fillStyle = `rgba(120, 12, 20, ${0.2 * k})`
+  ctx.fillRect(0, 0, w, h)
+  const g = ctx.createRadialGradient(w / 2, h * 0.42, Math.min(w, h) * 0.22, w / 2, h * 0.5, Math.max(w, h) * 0.72)
+  g.addColorStop(0, 'rgba(8, 4, 10, 0)')
+  g.addColorStop(1, `rgba(8, 4, 10, ${0.72 * k})`)
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, w, h)
+  ctx.restore()
+}
 export function drawCombo(ctx, w, count, pop) {
   if (count < 2) return
   ctx.save()

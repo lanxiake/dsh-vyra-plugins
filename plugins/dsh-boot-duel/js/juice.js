@@ -101,7 +101,9 @@ export class Juice {
     this.oy = (Math.random() * 2 - 1) * this.amp
     this.angle = this.reduced ? 0 : (Math.random() * 2 - 1) * this.amp * 0.0007
 
-    this.flashA = Math.max(0, this.flashA - dt * 3.2)
+    // The flash must be gone before the NEXT beat: at 3.2/s a 0.5 flash was
+    // still laying a white veil over the impact frame half a second later.
+    this.flashA = Math.max(0, this.flashA - dt * 7.5)
 
     if (this.zoomMs > 0) {
       this.zoomMs = Math.max(0, this.zoomMs - dt * 1000)

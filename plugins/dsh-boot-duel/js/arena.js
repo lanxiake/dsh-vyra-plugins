@@ -151,6 +151,13 @@ export class Arena {
     this.t += DT
     const w = { groundY: WORLD.groundY, minX: WORLD.minX, maxX: WORLD.maxX }
 
+    // The finisher's cinematic owns the world while it plays. Its phases run in
+    // real time, not simulation time, so hit-stop and slow-mo cannot stall it.
+    if (this.superCine) {
+      this.stepSuperCine(input)
+      return
+    }
+
     if (this.phase === 'ready') {
       // Idle breathing only: nobody can be hurt before the player starts.
       for (const f of this.fighters) { f.time += DT; f.pose(); f.rig.setPose(f.tx, f.ty) }
@@ -159,9 +166,31 @@ export class Arena {
 
     if (this.phase === 'ko') {
       this.koT += DT
-      for (const f of this.fighters) f.step(w)
+      // The four beats of the finish. Each one has to be SEEN, so the beats
+      // are stepped here rather than left to the DOM overlay's own CSS: the
+      // game and the stamp must be on the same clock.
+      if (this.koT < 0.5) {
+        this.koBeat = 'launch'
+        for (const f of this.fighters) f.step(w)
+      } else if (this.koT < 1.1) {
+        this.koBeat = 'freeze'
+        // The freeze: the world holds, the eye reads the pose in the air.
+        for (const f of this.fighters) { f.time += DT * 0.12; f.pose(); f.rig.setPose(f.tx, f.ty) }
+      } else {
+        this.koBeat = 'seal'
+        if (this.koSeal && !this.koSeal.landed) {
+          this.koSeal.landed = true
+          // The seal lands with a DARK slam, not a white flash. The stage is a
+          // pale office: adding white washes the frame out instead of striking
+          // it, and it hides the body the beat exists to show.
+          this.juice.flash(0.34, '#3a0a10')
+          this.juice.shake(16)
+          this.juice.hitstop(90)
+        }
+        for (const f of this.fighters) f.step(w)
+      }
       this.stepParticles()
-      if (this.koT > 2.4) this.phase = 'done'
+      if (this.koT > 2.8) this.phase = 'done'
       return
     }
 
@@ -284,12 +313,7 @@ export class Arena {
       this.superBuffer = 0
       p.superReady = false
       p.superMeter = 0
-      p.startAttack('superMove')
-      this.superBanner = 1
-      this.say('super', true)
-      this.juice.hitstop(180)
-      this.juice.slowmo(0.2, 420)
-      this.juice.zoomPunch(0.2, 420, 480, 200)
+      this.beginSuper()
       return
     }
 
@@ -353,11 +377,28 @@ export class Arena {
     this.phase = 'ko'
     this.koT = 0
     this.say('ko', true)
+    /**
+     * The finish is its own four-beat sequence, not just a camera push:
+     *
+     *   launch (0.0–0.5 s) the body leaves the floor; the frame shakes and
+     *                      slows, so the flight reads
+     *   freeze (0.5–1.1 s) everything stops mid-air — the "death frame" the
+     *                      genre holds for a beat
+     *   seal   (0.9 s in)  the 胜 stamp lands: a hard white flash, the frame
+     *                      goes still, the stamp slams down off-centre
+     *   hold               the stamp sits over the aftermath until the outro
+     *
+     * `koT` is the round's own real-time clock; `koBeat` names the beat so the
+     * renderer can key its overlay off it.
+     */
+    this.koBeat = 'launch'
     this.juice.hitstop(240)
     this.juice.slowmo(0.28, 900)
-    this.juice.shake(24)
-    this.juice.flash(0.8)
+    this.juice.shake(26)
+    this.juice.flash(0.5)
     this.juice.zoomPunch(0.16, 500, WORLD.width / 2, WORLD.groundY - 150)
+    /** Where the seal lands, in screen space, for the renderer. */
+    this.koSeal = { t: 0, landed: false }
   }
 
   /* ----------------------------------------------------------- barks --- */
@@ -408,7 +449,166 @@ export class Arena {
     }
   }
 
-  /* ------------------------------------------------------- reactions --- */
+  /* ------------------------------------------------------- the finisher --- */
+
+  /**
+   * Start the finisher's five-beat cinematic.
+   *
+   * A super that is only "a big punch with a banner over it" wastes the one
+   * moment a fighting game is allowed to stop time for. This one is built as
+   * five beats, each with its own job:
+   *
+   *   charge  (0.42 s) the world holds still, the player crouches into the
+   *                    stance, the camera pushes in on THEM, letterbox starts
+   *   name    (0.52 s) 「破军」writes itself on in brush strokes while the
+   *                    letterbox is fully closed; a hard white blink
+   *   strike  (0.30 s) the bars snap open, the player lunges the full screen
+   *   impact  (0.46 s) hit-stop, the ring and the double brush, the victim
+   *                    launches; slow-mo eases back
+   *   recover (0.34 s) the follow-through, then control returns
+   *
+   * The beats are timed in real milliseconds (`cineT` in ms) rather than DT
+   * counts, so a stutter or a hit-stop cannot make the cinematic skip its own
+   * middle.
+   */
+  beginSuper() {
+    this.superCine = {
+      /** Milliseconds into the cinematic. */
+      t: 0,
+      /** Which beat is playing; the renderer keys its overlay off this. */
+      phase: 'charge',
+      /** 1 -> 0 while the letterbox is closed. */
+      bars: 0,
+      /** Did the strike connect? A whiff still plays the full cinematic. */
+      landed: false,
+    }
+    this.superBanner = 1
+    this.say('super', true)
+    // The charge: everything stops. This is the silence before the hit.
+    this.juice.hitstop(140)
+    this.juice.slowmo(0.35, 380)
+    // The move is armed but does NOT advance on its own clock: the cinematic
+    // releases it on the strike beat. Starting the swing here would let its
+    // active window pass during the freeze, and the finisher would whiff on a
+    // target standing still.
+    this.armSuperSwing()
+  }
+
+  /** Arm the finisher's swing without advancing it. */
+  armSuperSwing() {
+    const p = this.player
+    p.atkName = 'superMove'
+    p.atk = ATK.superMove
+    p.atkHit.clear()
+    p.state = 'atk'
+    p.t = 0
+  }
+
+  /** One real-time step of the finisher's cinematic. */
+  stepSuperCine(input) {
+    const cine = this.superCine
+    const stepMs = DT * 1000
+    cine.t += stepMs
+    const t = cine.t
+    const w = { groundY: WORLD.groundY, minX: WORLD.minX, maxX: WORLD.maxX }
+    const p = this.player
+
+    const BEAT = { charge: 420, name: 520, strike: 300, impact: 460, recover: 340 }
+    // The cumulative start of each beat. A beat's own length is added by its
+    // own branch, so `impact` must RUN for `impact` ms before `recover`
+    // begins — computing `at('recover')` as the sum before it did exactly
+    // that, and the impact beat swallowed the whole tail.
+    const order = Object.keys(BEAT)
+    const startOf = (key) => order.slice(0, order.indexOf(key)).reduce((sum, k) => sum + BEAT[k], 0)
+    const at = (key) => startOf(key)
+
+    if (t < at('name')) {
+      cine.phase = 'charge'
+      // Hold: the fighters breathe but nothing advances. The freeze is the beat.
+      for (const f of this.fighters) f.time += DT * 0.15
+      p.pose()
+      p.rig.setPose(p.tx, p.ty)
+      this.enemy.pose()
+      this.enemy.rig.setPose(this.enemy.tx, this.enemy.ty)
+      cine.bars = Math.min(1, t / 260)
+      return
+    }
+
+    if (t < at('strike')) {
+      cine.phase = 'name'
+      cine.bars = 1
+      // The name slams on with a camera push, but NOT a white flash: a flash
+      // here covered the name itself. The blink belongs on the release.
+      if (!cine.named && t > at('name') + 120) {
+        cine.named = true
+        this.juice.zoomPunch(0.2, 320, 480, 190)
+        this.juice.shake(7)
+      }
+      for (const f of this.fighters) { f.time += DT * 0.2; f.pose(); f.rig.setPose(f.tx, f.ty) }
+      return
+    }
+
+    // The first frame of `strike` releases the swing. `superMove` is ~0.95 s
+    // with its active window at 0.56–0.72, so the hit lands inside this beat
+    // and the remaining swing plays out under the impact slow-mo.
+    if (!cine.released) {
+      cine.released = true
+      p.t = 0
+      p.atkHit.clear()
+      p.vx = p.face * 640
+      // A super that the opponent can WALK OUT OF during a freeze is not a
+    // super. The charge is the contract: the strike lands on the body that was
+    // frozen for it. The player is placed just outside the victim and the
+    // victim is held there — the lunge then closes the last few pixels, and
+    // the player can no longer overshoot through the opponent.
+    const reach = 78 * p.s
+    p.x = this.enemy.x - p.face * reach
+    p.vx = 0
+    this.enemy.vx = 0
+    this.enemy.ai.cd = 1.4
+      // The release blink: the frame goes white for ONE beat as the player
+      // commits, then comes back in time to see the hit.
+      this.juice.flash(0.5, '#ffffff')
+      this.juice.zoomPunch(0.16, 300, 640, 210)
+    }
+    cine.phase = 'strike'
+    cine.bars = Math.max(0, 1 - (t - at('strike')) / 140)
+    p.step(w)
+    this.enemy.step(w)
+    resolveAttacks(this.fighters, w, (hit) => {
+      cine.landed = true
+      this.onHit(hit)
+    })
+    this.stepParticles()
+    // No clock rewrite: the beat boundaries come from `cine.t`. Jumping it
+    // forward made the impact beat start at the same timestamp every frame and
+    // the cinematic never reached its own tail.
+    if (cine.landed) cine.phase = 'impact'
+    // No `return` here: falling through runs the impact beat whether or not
+    // the strike connected, and moves on to `recover` after it.
+
+  if (t < at('recover')) {
+    cine.bars = 0
+    // Slow motion: the body leaves the floor at a third speed while the
+    // effects run at full rate.
+    for (const f of this.fighters) { f.time += DT * 0.3; f.step(w) }
+    this.stepParticles()
+    this.checkKo()
+    return
+  }
+
+  cine.phase = 'recover'
+  if (t >= at('recover') + BEAT.recover) {
+    // Done: hand control back. A finisher that ends with the player still
+    // locked in an attack pose reads as "the game froze".
+    this.superCine = null
+    this.superBanner = 0
+    p.atk = null
+    p.state = 'idle'
+    p.t = 0
+    this.juice.slowmo(0.55, 160)
+  }
+}
 
   onHit(hit) {
     const { victim, x, y, power, reaction, kill, juggle, name } = hit
@@ -554,6 +754,9 @@ export class Arena {
       particles: this.particles.map((p) => ({ ...p })),
       hit: this.lastHit ? { ...this.lastHit } : null,
       cinematic: this.cinematic(),
+      /** The finish's beat: launch | freeze | seal, or null while fighting. */
+      koBeat: this.phase === 'ko' ? this.koBeat : null,
+      koT: this.phase === 'ko' ? this.koT : 0,
       /** The qi meter and whether the super can be thrown right now. */
       superMeter: this.player.superMeter,
       /** The line currently on screen, or null. */
@@ -565,6 +768,14 @@ export class Arena {
       comboPop: this.comboPop,
       /** 1 -> 0 while the super's freeze-frame banner is on screen. */
       superBanner: this.superBanner,
+      /**
+       * The finisher cinematic's own state, for the overlay: which beat it is
+       * on, how closed the letterbox is, and whether the strike landed. Null
+       * when no finisher is playing.
+       */
+      superCine: this.superCine
+        ? { phase: this.superCine.phase, bars: this.superCine.bars, landed: this.superCine.landed, t: this.superCine.t }
+        : null,
       block: this.player.block,
       crouching: this.player.crouching,
       juice: {

@@ -383,10 +383,17 @@ window.__ModuleLoader__.load({
 
 /* ---- top plaque: names, bars, state ------------------------------------- */
 .boot-duel-hud {
-  position: relative; z-index: 3;
+  /* Above the gate (z-index 4): names and bars must stay readable while the
+     Enter gate is up, and the gate's gradient was washing them out. The plate
+     below is what makes the cyan and gold labels work on a pale office stage —
+     they were legible only over the old dark background. */
+  position: relative; z-index: 5;
   display: flex; flex-direction: column; gap: 10px;
-  padding: 20px 26px 0; pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+  /* The right inset clears the gear (30 px at right: 14), which was sitting on
+     top of the rival's health readout. */
+  padding: 14px 60px 14px 26px; pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .85);
+  background: linear-gradient(180deg, rgba(8, 13, 24, .84) 0%, rgba(8, 13, 24, .58) 64%, rgba(8, 13, 24, 0) 100%);
 }
 .boot-duel-bars { display: flex; align-items: center; gap: 22px; }
 .boot-duel-bar { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -398,7 +405,7 @@ window.__ModuleLoader__.load({
   color: var(--bd-gold);
 }
 .boot-duel-bar-label.is-player { color: var(--bd-player); }
-.boot-duel-bar-hp { font-size: 12px; opacity: .72; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.boot-duel-bar-hp { font-size: 12px; opacity: .85; color: #e8effa; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
 .boot-duel-bar-track {
   position: relative; width: 100%; height: 13px; border-radius: 7px; overflow: hidden;
   background: rgba(4, 8, 16, .78);
@@ -438,7 +445,8 @@ window.__ModuleLoader__.load({
   text-shadow: 0 0 22px rgba(255, 190, 120, .5);
 }
 .boot-duel-mid-state {
-  font-size: 10px; letter-spacing: .34em; opacity: .55; text-transform: uppercase;
+  font-size: 10px; letter-spacing: .34em; opacity: .82; text-transform: uppercase;
+  color: #e8effa;
 }
 
 /* ---- qi meter + finisher call ------------------------------------------ */
@@ -487,8 +495,16 @@ window.__ModuleLoader__.load({
 /* ---- bottom rail: controls + buttons ------------------------------------ */
 .boot-duel-hints {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
-  font-size: 12px; opacity: .8; padding: 0 26px 18px; margin-top: auto;
-  pointer-events: none; position: relative; z-index: 3;
+  font-size: 12px; opacity: 1; padding: 10px 26px 14px; margin-top: auto;
+  pointer-events: none;
+  /* Above the gate (z-index 4): the control rail is how a new player learns
+     the keys, and the gate's dark gradient sat on top of it, dimming exactly
+     the labels that needed reading. The plate is its own backdrop, because the
+     office stage underneath is pale. */
+  position: relative; z-index: 5;
+  color: #f2f7ff;
+  text-shadow: 0 1px 3px rgba(6, 12, 22, .85);
+  background: linear-gradient(0deg, rgba(8, 13, 24, .84) 0%, rgba(8, 13, 24, .5) 72%, rgba(8, 13, 24, 0) 100%);
 }
 .boot-duel-keys { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
 .boot-duel-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -505,6 +521,9 @@ window.__ModuleLoader__.load({
   color: #dbe9ff; background: rgba(255, 255, 255, .07);
   border: 1px solid rgba(255, 255, 255, .2); border-radius: 9px; padding: 5px 12px;
   backdrop-filter: blur(6px);
+  /* The rail is a fixed-width row; without this the label wraps to two lines
+     at 1280 px and the button turns into a tall pill. */
+  white-space: nowrap;
 }
 .boot-duel-btn:hover { background: rgba(255, 255, 255, .16); }
 .boot-duel-btn[aria-pressed="true"] { background: rgba(94, 231, 255, .2); border-color: rgba(94, 231, 255, .5); }
@@ -513,6 +532,7 @@ window.__ModuleLoader__.load({
   pointer-events: auto; cursor: pointer; font: inherit; font-size: 13px; letter-spacing: .1em;
   color: #eef4ff; background: var(--bd-ink); border: 1px solid rgba(255, 255, 255, .26);
   border-radius: 999px; padding: 9px 20px; backdrop-filter: blur(6px);
+  white-space: nowrap;
 }
 .boot-duel-skip:hover { background: rgba(255, 255, 255, .18); }
 
@@ -565,21 +585,32 @@ window.__ModuleLoader__.load({
   padding-bottom: 26vh;
   background: linear-gradient(180deg, rgba(4, 8, 16, .62) 0%, rgba(4, 8, 16, .1) 36%, rgba(4, 8, 16, .1) 58%, rgba(4, 8, 16, .66) 100%);
 }
+/* The overlay follows the game's beats. Until the seal lands there is only a
+   darkened frame — the body in the air is the picture, and covering it with a
+   stamp immediately hides the thing that just happened. */
+.boot-duel-ko[data-beat="launch"] .boot-duel-ko-seal,
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-seal { opacity: 0; }
+.boot-duel-ko[data-beat="launch"] .boot-duel-ko-sub,
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-sub,
+.boot-duel-ko[data-beat="launch"] .boot-duel-ko-hint,
+.boot-duel-ko[data-beat="freeze"] .boot-duel-ko-hint { opacity: 0; }
+.boot-duel-ko[data-beat="launch"],
+.boot-duel-ko[data-beat="freeze"] { background: linear-gradient(180deg, rgba(4, 8, 16, .28) 0%, rgba(4, 8, 16, 0) 40%, rgba(4, 8, 16, 0) 55%, rgba(4, 8, 16, .3) 100%); }
 .boot-duel-ko-seal {
   width: clamp(120px, 15vw, 176px); height: clamp(120px, 15vw, 176px);
   display: grid; place-items: center; border-radius: 16px;
   border: 5px solid rgba(255, 244, 232, .94);
   background: rgba(150, 26, 34, .55);
   box-shadow: 0 0 70px rgba(255, 90, 120, .45), inset 0 0 40px rgba(255, 200, 180, .3);
-  animation: boot-duel-seal 520ms cubic-bezier(.16, 1.5, .3, 1) both;
+  animation: boot-duel-seal 400ms cubic-bezier(.16, 1.5, .3, 1) both;
 }
 .boot-duel-ko-char {
   font-family: "STKaiti", "KaiTi", "Kaiti SC", "Songti SC", serif;
   font-size: clamp(62px, 9vw, 100px); font-weight: 700; line-height: 1;
   color: #fff8f0; text-shadow: 0 0 30px rgba(255, 110, 130, .9);
 }
-.boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 600ms ease 260ms both; }
-.boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 700ms both; }
+.boot-duel-ko-sub { font-size: 14px; letter-spacing: .26em; opacity: .85; animation: boot-duel-fade 500ms ease 120ms both; }
+.boot-duel-ko-hint { font-size: 12px; letter-spacing: .2em; opacity: .62; animation: boot-duel-fade 500ms ease 420ms both; }
 
 /* The host settings section. The host owns the surrounding chrome, so this
    is deliberately plain: a title, a lede, rows, and nothing that fights the
@@ -1449,8 +1480,15 @@ window.__ModuleLoader__.load({
           )
           : null,
 
+        // The finish is four game beats (launch / freeze / seal / hold). The
+        // overlay follows `koBeat` instead of running its own CSS clock, so
+        // the stamp lands at the same instant the game freezes the frame —
+        // otherwise the picture and the typography drift apart by a beat.
         inOutro
-          ? React.createElement('div', { className: 'boot-duel-ko' },
+          ? React.createElement('div', {
+            className: 'boot-duel-ko',
+            'data-beat': snapshotValue?.koBeat ?? 'seal',
+          },
             React.createElement('div', { className: 'boot-duel-ko-seal' },
               React.createElement('span', { className: 'boot-duel-ko-char' }, t('ko.title')),
             ),

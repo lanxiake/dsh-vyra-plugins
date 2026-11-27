@@ -8,3 +8,6 @@ test/e2e/fx/
 test/e2e/fxframes/
 test/e2e/preview/
 test/e2e/pose-sheet.png
+test/e2e/super/
+test/e2e/ko/
+test/e2e/market/
