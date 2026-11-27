@@ -323,5 +323,16 @@ for (const method of [
 if (deliveryApi?.contractVersion !== 2) {
   throw new Error(`dshIm contractVersion must be 2, found ${deliveryApi?.contractVersion}`);
 }
+// The docs must describe the DSH-IM group; they used to promise its absence.
+for (const file of ['README.md', 'README.en.md']) {
+  const body = await readFile(resolve(root, file), 'utf8');
+  if (body.includes('插件不会为该目录创建工作区分组')) {
+    throw new Error(`${file} still claims no workspace group is created`);
+  }
+  if (/creates no workspace group/iu.test(body)) {
+    throw new Error(`${file} still claims no workspace group is created`);
+  }
+  if (!body.includes('DSH-IM')) throw new Error(`${file} must mention the DSH-IM group`);
+}
 
 console.log('Verified dsh-im package artifacts.');
