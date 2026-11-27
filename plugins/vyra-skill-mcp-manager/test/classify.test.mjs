@@ -45,3 +45,17 @@ test('categoryId 接受中文名、SkillNet 原值与小写 id', () => {
   assert.equal(categoryId('productivity').id, 'productivity')
   assert.equal(categoryId('不存在的分类'), null)
 })
+
+test('关键词按词边界匹配：@latest 里的 test 不算测试', () => {
+  const hit = classify({ name: 'comfyui', command: 'npx', args: ['-y', 'comfyui-mcp@latest'] })
+  assert.equal(hit.label, 'AI 与生成')
+})
+
+test('关键词按词边界匹配：latest 单词不会命中 test', () => {
+  assert.equal(classify({ name: 'x', description: 'the latest of everything' }).matched, 'fallback')
+})
+
+test('测试类关键词仍要求完整词', () => {
+  assert.equal(classify({ name: 'x', description: 'pytest fixtures' }).label, '测试质量')
+  assert.equal(classify({ name: 'x', description: 'our test suite' }).label, '测试质量')
+})

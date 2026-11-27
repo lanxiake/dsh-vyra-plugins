@@ -182,10 +182,25 @@ function haystackOf(fields) {
     .toLowerCase()
 }
 
+/**
+ * Keyword match that respects word edges for plain ASCII words.
+ *
+ * A bare `includes` reads `comfyui-mcp@latest` as containing `test`, which put an
+ * image-generation server under 测试质量. ASCII keywords therefore have to sit on a
+ * boundary; keywords containing a space stay substring matches, and CJK keywords are
+ * matched as substrings because Chinese script has no word separators to anchor on.
+ */
+function matchesWord(haystack, word) {
+  if (/[^\x20-\x7e]/.test(word)) return haystack.includes(word)
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  if (word.includes(' ')) return new RegExp(escaped).test(haystack)
+  return new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`).test(haystack)
+}
+
 function firstHit(haystack, domain) {
   for (const row of SORTED) {
     if (row.entry.domain !== domain || row.keywords.length === 0) continue
-    if (row.keywords.some((word) => haystack.includes(word))) return row.entry
+    if (row.keywords.some((word) => matchesWord(haystack, word))) return row.entry
   }
   return null
 }
