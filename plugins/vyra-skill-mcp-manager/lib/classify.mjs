@@ -48,6 +48,7 @@ export const CATEGORIES = [
     keywords: [
       'test', 'testing', 'pytest', 'jest', 'vitest', 'playwright', 'cypress', 'qa', 'coverage',
       'e2e', 'regression', 'assert', 'mock', 'snapshot', 'benchmark', 'selenium',
+      'unit test', 'smoke test', 'integration test', 'test suite', 'test case',
       '测试', '单元测试', '回归', '用例', '质量', '覆盖率', '断言',
     ],
   },
@@ -111,7 +112,7 @@ export const CATEGORIES = [
       'chemistry', 'molecule', 'protein', 'bioinformatic', 'genomic', 'dna', 'rna',
       'physics', 'simulation', 'math', 'mathematic', 'statistic', 'algebra', 'calculus',
       'medical', 'clinical', 'drug', 'astronomy', 'climate', 'geospatial', 'gis',
-      'lab', 'microscopy', 'material', 'quantum',
+      'laboratory', 'microscopy', 'material', 'quantum',
       '化学', '分子', '生物', '基因', '物理', '数学', '统计', '医学', '药物', '天文', '气象',
     ],
   },
@@ -174,9 +175,18 @@ const SORTED = CATEGORIES.map((entry) => ({
   keywords: [...entry.keywords].sort(byKeywordLength),
 }))
 
-function haystackOf(fields) {
+/** The name, slug and command: what the thing IS. */
+function nameHaystack(fields) {
   const args = Array.isArray(fields.args) ? fields.args.join(' ') : String(fields.args ?? '')
-  return [fields.name, fields.description, fields.whenToUse, fields.command, args]
+  return [fields.name, fields.slug, fields.command, args]
+    .filter((value) => typeof value === 'string' && value !== '')
+    .join(' ')
+    .toLowerCase()
+}
+
+/** The prose: what the thing DOES. Consulted only when the name was inconclusive. */
+function bodyHaystack(fields) {
+  return [fields.description, fields.whenToUse]
     .filter((value) => typeof value === 'string' && value !== '')
     .join(' ')
     .toLowerCase()
@@ -208,19 +218,27 @@ function firstHit(haystack, domain) {
 /**
  * Classify one skill or MCP server.
  *
- * A category declared in `SKILL.md` frontmatter wins. Otherwise domain words
- * are tried before tool words, and a miss falls through to 其他.
+ * Resolution order, and why it is this order:
+ *
+ * 1. A category declared in `SKILL.md` frontmatter wins outright.
+ * 2. The **name** is scored before the description. A skill called `motion-lab` is
+ *    about motion whatever its description says; letting description text vote first
+ *    put it under 科学计算 because the word `lab` happened to appear in its slug.
+ * 3. Within one field, domain words beat tool words.
+ * 4. Nothing matched falls through to 其他.
  */
 export function classify(fields = {}) {
   const declared = categoryId(fields.category)
   if (declared !== null) {
     return { id: declared.id, label: declared.label, matched: 'declared' }
   }
-  const haystack = haystackOf(fields)
-  if (haystack === '') return { id: OTHER.id, label: OTHER.label, matched: 'fallback' }
-  const domainHit = firstHit(haystack, true)
-  if (domainHit !== null) return { id: domainHit.id, label: domainHit.label, matched: 'domain' }
-  const toolHit = firstHit(haystack, false)
-  if (toolHit !== null) return { id: toolHit.id, label: toolHit.label, matched: 'tool' }
+  const stages = [nameHaystack(fields), bodyHaystack(fields)]
+  for (const haystack of stages) {
+    if (haystack === '') continue
+    const domainHit = firstHit(haystack, true)
+    if (domainHit !== null) return { id: domainHit.id, label: domainHit.label, matched: 'domain' }
+    const toolHit = firstHit(haystack, false)
+    if (toolHit !== null) return { id: toolHit.id, label: toolHit.label, matched: 'tool' }
+  }
   return { id: OTHER.id, label: OTHER.label, matched: 'fallback' }
 }

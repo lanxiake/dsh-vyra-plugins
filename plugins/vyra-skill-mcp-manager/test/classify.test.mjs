@@ -59,3 +59,16 @@ test('测试类关键词仍要求完整词', () => {
   assert.equal(classify({ name: 'x', description: 'pytest fixtures' }).label, '测试质量')
   assert.equal(classify({ name: 'x', description: 'our test suite' }).label, '测试质量')
 })
+
+test('名字本身的权重高于描述：游戏技能不因描述提到 lab 就进科学计算', () => {
+  const hit = classify({ name: 'motion-lab', description: '为当前网页或组件查找、选型和改造动效。' })
+  assert.notEqual(hit.label, '科学计算')
+})
+
+test('描述里的 test 不能让一个游戏技能变成测试质量', () => {
+  const hit = classify({
+    name: 'game-studio',
+    description: 'Build playable 2D Canvas games, verify with headless Chrome playtests, export a Mini Game',
+  })
+  assert.equal(hit.label, '生活娱乐')
+})
