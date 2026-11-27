@@ -1,9 +1,12 @@
 {
   "version": 2,
-  "bots": [
+  "accounts": [
     {
-      "id": "wx_919f259577ca904002bbb196",
-      "botName": "工作微信"
+      "botId": "wx_919f259577ca904002bbb196",
+      "accountId": "9759446ca8da@im.bot",
+      "tokenRef": "DSH_WEIXIN_BOT_TOKEN_919F259577CA904002BBB196",
+      "ownerUserId": "o9cq801LCaXHkMjBa_NBR82KYDPY@im.wechat",
+      "baseUrl": "https://ilinkai.weixin.qq.com/"
     }
   ]
 }

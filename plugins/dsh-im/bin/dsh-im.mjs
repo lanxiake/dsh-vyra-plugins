@@ -12,6 +12,8 @@ import {
   sendFile,
   sendMessage,
 } from '../src/cli/delivery-client.mjs';
+import { runAgentCommand } from '../src/cli/agent-client.mjs';
+import { createAgentApi } from '../plugin-src/host/agent-api.mjs';
 
 const PACKAGE_NAME = '@lanxiake/dsh-im';
 const DEFAULT_SOURCE = 'github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im';
@@ -22,14 +24,22 @@ const LEGACY_PACKAGES = [
   '@xmanrui/dsh-dingtalk',
 ];
 
+const AGENT_COMMANDS = new Set([
+  'accounts', 'bots', 'targets', 'send', 'send-file', 'target', 'settings', 'login-hint',
+]);
+
 const ERROR_HINTS = Object.freeze({
-  'unknown-bot': '先运行 dsh-im bots 获取当前机器人 ID',
-  'unknown-target': '先运行 dsh-im targets --bot <botId>；目标要在设置页创建',
+  'unknown-bot': '先运行 dsh-im accounts 获取当前账号与 botId',
+  'unknown-account': '先运行 dsh-im accounts 查看账号名与 botId',
+  'ambiguous-account': '账号名重复，改用 botId：dsh-im accounts --json',
+  'unknown-target': '先运行 dsh-im targets --account <账号>；目标要在设置页创建',
+  'ambiguous-target': '目标名重复，改用 targetId：dsh-im targets --account <账号> --json',
+  'user-only-action': '改访问策略、凭据或删除机器人请在设置页操作',
   'bot-not-connected': '机器人离线，恢复连接后再发；不要循环重试',
   'target-rejected': '平台拒绝了目标：检查机器人权限和目标 ID',
   'invalid-target': '目标类型和平台 ID 不匹配，回设置页重选',
-  'capability-unavailable': '该渠道暂不支持主动发文件；目前只有飞书支持',
-  unreachable: '确认 DSH 正在运行；也可以用 --url 指定地址',
+  'capability-unavailable': '该渠道暂不支持主动发文件：飞书、微信、企业微信（机器人/应用）、钉钉、QQ 支持',
+  unreachable: '发送与修改配置需要 DSH 正在运行；也可以用 --url 指定地址',
   timeout: 'Host 没有在时限内响应；先 dsh-im endpoint 核对地址',
 });
 
@@ -37,18 +47,32 @@ function usage() {
   console.log(`Usage:
   dsh-im install [--profile web] [--source <package-spec>]
   dsh-im uninstall [--profile web]
-  dsh-im send --bot <botId> --target <targetId> (--text <text> | --stdin | --file <path>)
-              [--format plain|markdown] [--image] [--idempotency-key <key>] [--url <origin>]
-  dsh-im bots [--url <origin>]
-  dsh-im targets --bot <botId> [--url <origin>]
+
+  读取（DSH 未运行也可用）
+  dsh-im accounts [--json]
+  dsh-im targets  --account <账号名|botId> [--with-routes] [--json]
+  dsh-im login-hint
   dsh-im endpoint
+
+  写入（需要 DSH 正在运行）
+  dsh-im send      --account <账号名|botId> --target <targetId|目标名>
+                   (--text <text> | --stdin) [--format plain|markdown] [--idempotency-key <key>]
+  dsh-im send-file --account <账号名|botId> --target <targetId|目标名> --file <path> [--image]
+  dsh-im target create --account <账号名|botId> --target <targetId> --name <显示名> --kind <kind> [--route <json>]
+  dsh-im target update --account <账号名|botId> --target <targetId|目标名> [--name <显示名>] [--route <json>]
+  dsh-im target delete --account <账号名|botId> --target <targetId|目标名>
+  dsh-im settings get --account <账号名|botId>
+  dsh-im settings set --account <账号名|botId> --key <key> --value <value>
+
+  --bot <botId> 是 --account 的兼容别名。所有命令都接受 --json。
 
 Examples:
   dsh plugin --profile desktop add -w "github:lanxiake/dsh-vyra-plugins#path:/plugins/dsh-im"
-  dsh-im send --bot bot_x --target release-alerts --text "构建已完成"
-  echo "构建已完成" | dsh-im send --bot bot_x --target release-alerts --stdin
-  dsh-im send --bot bot_x --target release-alerts --file ./report.pdf
-  dsh-im targets --bot bot_x`);
+  dsh-im accounts
+  dsh-im targets --account 我的微信
+  dsh-im send --account 我的微信 --target 发布告警群 --text "构建已完成"
+  echo "构建已完成" | dsh-im send --account 我的微信 --target 发布告警群 --stdin
+  dsh-im send-file --account 我的微信 --target 发布告警群 --file ./report.pdf`);
 }
 
 function takeOption(args, name, fallback) {
@@ -193,7 +217,29 @@ try {
       runDsh(['plugin', '--profile', profile, 'remove', PACKAGE_NAME]);
       console.log('\nIM 机器人插件已卸载。请重启 dsh web。');
     }
-  } else if (['send', 'bots', 'targets', 'endpoint'].includes(command)) {
+  } else if (AGENT_COMMANDS.has(command)) {
+    // Reads come from the offline projection; writes go over the Host's HTTP
+    // route. `--url` still overrides the origin for the write half, and it is
+    // only resolved here so the offline reads never depend on it.
+    const explicitUrl = takeOption(args, '--url', undefined);
+    const baseUrl = await resolveBaseUrl(explicitUrl);
+    const api = createAgentApi({ dshHome: process.env.DSH_HOME || join(homedir(), '.dsh') });
+    const transport = async (path, payload) => {
+      if (path === '/api/dsh-im/delivery/query') return queryDelivery(baseUrl, payload);
+      if (path === '/api/dsh-im/delivery/messages') return sendMessage(baseUrl, payload);
+      if (path === '/api/dsh-im/delivery/files') {
+        // The Host reads the file; a relative path means "relative to me".
+        return sendFile(baseUrl, { ...payload, path: resolve(process.cwd(), payload.path) });
+      }
+      throw new Error(`未知的投递路由：${path}`);
+    };
+    process.exitCode = await runAgentCommand([command, ...args], {
+      api,
+      postJson: transport,
+      stdout: (line) => console.log(line),
+      stderr: (line) => console.error(line),
+    });
+  } else if (command === 'endpoint') {
     await runDelivery(command, args);
   } else {
     throw new Error(`无法识别的命令：${command}`);

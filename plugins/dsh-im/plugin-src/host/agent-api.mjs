@@ -65,9 +65,39 @@ async function readJson(readFile, path) {
   }
 }
 
+/**
+ * Read a bot id out of one stored entry.
+ *
+ * The channels disagree on both the array key and the id field: Feishu writes
+ * `bots[]` entries whose id is `id`, while Weixin writes `accounts[]` entries
+ * whose id is `botId`. Both are real shapes on disk, so both are accepted.
+ */
+function botIdOf(entry) {
+  if (typeof entry?.id === 'string' && entry.id) return entry.id;
+  if (typeof entry?.botId === 'string' && entry.botId) return entry.botId;
+  return '';
+}
+
+/** The stored display name, if this channel records one at all. */
+function botNameOf(entry) {
+  return typeof entry?.botName === 'string' ? entry.botName : '';
+}
+
+/**
+ * Every bot a channel's `config.json` records, whichever key it used.
+ *
+ * A channel that never recorded a name (Weixin, whose QR login returns none)
+ * falls back to the channel label later, which is exactly why the CLI reports
+ * `accountNameSource`.
+ */
 function configuredBots(config) {
-  if (!Array.isArray(config?.bots)) return [];
-  return config.bots.filter((bot) => isRecord(bot) && typeof bot.id === 'string' && bot.id);
+  if (!config) return [];
+  const list = Array.isArray(config.bots) ? config.bots
+    : Array.isArray(config.accounts) ? config.accounts
+      : [];
+  return list
+    .filter((entry) => isRecord(entry) && botIdOf(entry))
+    .map((entry) => ({ id: botIdOf(entry), botName: botNameOf(entry) }));
 }
 
 function aliasesOf(workspaces) {

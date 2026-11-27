@@ -139,7 +139,7 @@ Host 门面 (lib/live/data.js)
 
 `live_contacts` 同时服务 §5.2 的群成员面板与 §5.5 的 5 类通讯录，不另开工具。
 
-**并恢复 `transcribe_voice`**（见 §3.5）。
+**并复用已接好的 `transcribe_voice`**（见 §3.5）。
 
 朋友圈的 XML 解析**必须移植而非重写**：WeFlow 已处理的是
 `SnsTimeLine.content` 的 `TimelineObject/ContentObject/mediaList`，点赞与评论来自
@@ -175,15 +175,21 @@ Host 门面 (lib/live/data.js)
 
 ### 3.5 语音转写
 
-`wechat_asr.py` **代码完整存在**（模型自动下载、`pilk` 解 SILK、sherpa-onnx Paraformer），
-但没有被暴露：`sidecar.py` 把 `transcribe_voice` 放进了 `_UNAVAILABLE_TOOLS`，
-理由是「`pilk` / `sherpa-onnx` 没随侧车打包，留着就是给 Agent 一个点了必炸的工具」。
+`wechat_asr.py` 代码完整存在（模型自动下载、`pilk` 解 SILK、sherpa-onnx Paraformer）。
+`sidecar.py` 把 `transcribe_voice` 放进了 `_UNAVAILABLE_TOOLS`，但**本插件早已绕过**：
 
-本设计：
-1. `lib/runtime.js` 的 uv 参数追加 `--with pilk --with sherpa-onnx --with numpy`（首次约 80MB）；
-2. `vyra_live.py` 重新注册 `transcribe_voice`，**仅供页面**，不进 Agent 白名单；
-3. 首次转写触发模型下载（约 82MB，`wechat_asr.download_model` 支持断点续传与双源回退），
-   页面显示下载进度；失败时显示 `wechat_asr.available()` 给出的原因。
+- `lib/runtime.js` 的 uv 参数已含 `--with pilk --with sherpa-onnx --with numpy`；
+- `vyra_sidecar.py` 已把 `transcribe_voice` 重新挂回 `DISPATCH`，并纳入 `_ACCOUNT_SCOPED`；
+- `vyra_voice.py` 提供 `wechat_voice_model {action: 'status'|'download'}`，在后台线程下载模型，
+  不阻塞侧车请求循环。
+
+所以 Live 要做的是**接线，不是重造**：
+
+1. 页面调 `wechat_voice_model {action:'status'}` 判断模型是否就绪；
+2. 未就绪则 `{action:'download'}` 并在页面轮询 `status` 显示下载进度（约 82MB）；
+3. 就绪后调 `transcribe_voice` 取文字。
+
+`transcribe_voice` 仍**不进 Agent 白名单**（`lib/tools.js` 不变），只给页面与监听批次使用。
 
 ---
 
@@ -474,8 +480,10 @@ plugins/vyra-wechat-local/
 │   ├── components/           共用：头像、空态、骨架、图表、图片预览、日期选择、对话框
 │   └── styles.css            只用 DSH 令牌
 ├── test/live/                stats / cache / backup / export 的 node:test
-└── vendor/wechat/
-    └── vyra_live.py          只读包装 + 重新暴露 transcribe_voice
+├── vendor/wechat/
+│   ├── vyra_sidecar.py       已在：包装 + 挂回 transcribe_voice（不改）
+│   ├── vyra_voice.py         已在：语音模型状态 / 下载（不改）
+│   └── vyra_live.py          新增：7 个页面专用只读工具
 ```
 
 **构建**：`src/live/` 由 `scripts/build-client.mjs` 打包成 `client.js`（沿用仓库里
@@ -503,8 +511,8 @@ plugins/vyra-wechat-local/
 - `cache.js`：`schemaVersion` 不匹配时重建；按账号隔离；LRU 上限
 - `backup.js`：打包 → 载入 → 新增/已存在/跳过的计数
 - `export.js`：5 种格式各出一次文件，目录结构符合 §5.10
-- `vyra_live.py`：用现有 `test/fake-sidecar.mjs` 的模式，断言新工具注册、`transcribe_voice` 恢复、
-  且**未进 Agent 白名单**
+- `vyra_live.py`：用现有 `test/fake-sidecar.mjs` 的模式，断言 7 个新工具注册且**未进 `TOOLS`**、
+  `vyra_sidecar.py` 仍 import 它
 - 客户端注册：`main` 与 `sidebar.panellist` 两个座位的登记参数（沿用 `test/client-check.mjs` 模式）
 
 ### 9.2 真机验收（本机微信已登录）
@@ -533,7 +541,7 @@ plugins/vyra-wechat-local/
 | 期 | 内容 | 判据 |
 |---|---|---|
 | **P0 骨架** | 座位登记、顶/底导航、路由持久化、RPC 与媒体路由、`live-cache` | 能打开面板并切页 |
-| **P1 数据** | `vyra_live.py` 7 个工具 + `transcribe_voice` 恢复；联系人、媒体索引、统计 | 工具层单测过 |
+| **P1 数据** | `vyra_live.py` 7 个工具；联系人、媒体索引、统计（语音转写已接好，本阶段只接线） | 工具层单测过 |
 | **P2 看微信** | 聊天、通讯录、资源浏览、朋友圈 | 验收 2–7 |
 | **P3 算数据** | 聊天分析、年度报告、我的足迹、导出、备份 | 验收 8–12 |
 | **P4 AI** | AI Agent（DSH 会话前端）、画像生成、群聊总结 | 验收 13 |
