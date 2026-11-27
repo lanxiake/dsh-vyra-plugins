@@ -15,6 +15,78 @@ DSH 的技能和 MCP 服务器分别由不同插件管理，装一个技能要�
 - **MCP**：列出已配置的服务器，看连接状态，新建/编辑配置
 - **一体浏览**：一个列表里同时看两边的状态，缺什么一目了然
 
+## 聚合市场
+
+技能市场和 MCP 市场**不用再先选市场源**。一次搜索会并行查所有内置来源，结果按 `slug`
+去重，卡片上标出来自哪几个源：
+
+| 市场 | 内置来源 |
+|---|---|
+| 技能 | skills.sh、ClawHub、skillsmp、trusttools、browse.sh、LobeHub、SkillHub、ModelScope（SkillNet 可选，默认关闭） |
+| MCP | 官方 Model Context Protocol 注册表、LobeHub |
+
+工具栏的来源 pill 现在只是**过滤**已经拿到的结果，不再决定去查哪个源。页头给出
+「命中 N 条 · M 个来源」；某个源挂了会显示「N 个源不可达」并列出具体错误——
+以前这种情况看起来和「没有找到」一模一样。
+
+**SkillNet 默认关闭。** 它的公开接口在实测中约有一半请求返回 504，让它参与首屏搜索
+会把市场拖慢或拖垮。在设置里（`settings.json` 的 `skillnet: true`）可以打开。
+
+## 分类
+
+「我的技能」「我的 MCP」和两个市场页都有分类侧栏，用的是 **SkillNet 的十个分类**，
+中文名与上游原值一一对应：
+
+| 中文名 | SkillNet 原值 |
+|---|---|
+| 软件开发 | Development |
+| 测试质量 | Testing |
+| AI 与生成 | AIGC |
+| 效率办公 | Productivity |
+| 商业运营 | Business |
+| 学术研究 | Research |
+| 科学计算 | Science |
+| 安全合规 | Security |
+| 生活娱乐 | Lifestyle |
+| 其他 | Other |
+
+判定顺序是**领域词优先于工具词**：先看用途（文档、研究、医疗、营销……），再看实现
+（python、git、docker……），都没命中落「其他」。这样 `pdf` 归效率办公，而不会被描述里
+的 `python` 拖进软件开发。`SKILL.md` frontmatter 里声明了 `category` 的技能以声明为准。
+
+两条已知的粒度限制，写在这里免得当成 bug：
+
+- **上游本来就粗。** `pdf / docx / pptx / excel` 都在效率办公，`git / shell / sql /
+  docker` 都在软件开发。筛选到这一级为止。
+- **已装技能没有分类字段。** 分类是关键词推断出来的，偶尔会偏。
+
+关键词按词边界匹配——`@latest` 里的 `test` 不算测试词，否则一个生图服务器会被分到
+「测试质量」。
+
+## Agent 可用：`vyra-skill` CLI
+
+包里附带 `cli.mjs`，安装后作为 `vyra-skill` 命令可用。**默认只读**，写操作要 `--apply`：
+
+```sh
+vyra-skill search "pdf" --json
+vyra-skill search "视频" --category="AI 与生成" --json
+vyra-skill info <slug> --json
+vyra-skill list --json
+vyra-skill categories --json
+vyra-skill open-dir <slug>
+vyra-skill install <slug|url> --json        # 出计划，不写盘
+vyra-skill install <slug|url> --apply
+vyra-skill uninstall <slug> --apply
+vyra-skill enable|disable <slug> --apply
+vyra-skill mcp search|list|install|uninstall|enable|disable|open-dir …
+```
+
+配套技能在 `skills/vyra-skill-market/SKILL.md`，说明 Agent 的推荐流程：优先用宿主的
+`skill_market_*` / `mcp_market_*` 工具，跨源搜索和分类筛选用 CLI，先搜后装、说清来源。
+
+**没有升级命令。** 技能和 MCP 都只有安装与卸载；用户要「升级」时，Agent 应当说明
+这需要卸载后重装，而不是假装有原地升级。
+
 ## 用法
 
 设置里打开「技能与 MCP」面板。面板直接读写 profile 下的技能目录和 MCP 配置，改完不需要重启。
@@ -55,12 +127,30 @@ https://lanxiake.github.io/dsh-vyra-plugins/index.json
 | 组件 | 作用 |
 |---|---|
 | 技能提供者 | 挂载 `skills` provider，让已装技能真正出现在模型面前 |
-| `/api/dsh-market/rpc` | 面板读列表、搜索、安装的数据接口 |
-| 12 个 `skill_market_*` / `mcp_market_*` 工具 | 让模型自己也能搜和装 |
+| `/api/dsh-market/rpc` | 面板读列表、搜索、安装的数据接口（含聚合通道 `skills.aggregate`） |
+| 10 个 `skill_market_*` / `mcp_market_*` 工具 | 让模型自己也能搜和装 |
 
-本包自己的 `index.js` 提供面板其余 9 个路由（预览、导入 zip、用量统计、工具开关等）。
+本包自己的 `index.js` 提供面板其余 9 个路由（预览、导入 zip、用量统计、工具开关等），
+`lib/` 提供面板与 CLI 共用的分类与聚合逻辑（`classify.mjs`、`aggregate.mjs`、
+`skillnet.mjs`），`cli.mjs` 是 Agent 用的 `vyra-skill`。
 
 ## 变更
+
+### 1.4.0
+
+**市场改成聚合并加上分类。**
+
+- 技能市场与 MCP 市场默认走聚合通道，用户不再需要先点一个来源。来源 pill 改为过滤
+  已拿到的结果，页头显示命中数、来源数与不可达来源的明细。
+- 新增 SkillNet 作为可选第九个技能源，默认关闭。
+- 「我的技能」「我的 MCP」和两个市场页都有 SkillNet 十类的中文分类侧栏；卡片显示
+  分类标签，多来源显示 `+N`。
+- 技能卡片上的「打开目录」改为「目录」。
+- 新增 `vyra-skill` CLI 与配套技能 `skills/vyra-skill-market`，覆盖搜索、安装、卸载、
+  启停、打开目录；不提供升级。
+
+顺带修掉一个分类误判：关键词原先用裸子串匹配，`comfyui-mcp@latest` 因为
+`latest` 里含 `test` 被分到「测试质量」。ASCII 关键词现在按词边界匹配。
 
 ### 1.2.0
 
