@@ -1,6 +1,6 @@
 {
   "name": "dsh-boot-duel",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "type": "module",
   "description": "A one-round office-worker stick-figure duel that covers the DSH Web home page after each load: settle it with your fists, then get back to work. · DSH 开工大吉插件：每次打开 Web 界面先打一局火柴人对决，打完接着上班，按 Esc 直接跳过。",
   "license": "MIT",
