@@ -26,7 +26,7 @@
 | ![开局](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/01-opening.jpg) | ![交手](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/02-exchange.jpg) |
 | 开局：按 `Enter` 起势，`Esc` 直接放行 | 交手：对话气泡跟着说话的人 |
 | ![连击](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/03-combo.jpg) | ![破军](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/04-finisher.jpg) |
-| 连击：两拳接上才算连段，右上角计数 | 大招「破军」：电影化定格、名字卡、放大的冲击帧 |
+| 连击：两拳接上才算连段，左上角计数 | 大招「破军」：电影化定格、名字卡、放大的冲击帧 |
 | ![胜负](https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/images/boot-duel/05-victory.jpg) | |
 | 收场：对手倒下，盖「胜」印，按任意键进首页 | |
 
