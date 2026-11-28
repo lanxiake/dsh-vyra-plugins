@@ -26,26 +26,28 @@ dsh plugin --profile web add dsh-vyra-screen-recorder
 
 | 用途 | 索引内容里的 git 源 | URL |
 |---|---|---|
-| 国内 | GitCode | `https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json` |
-| 海外 | GitHub | `https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json` |
+| 首选（国内） | GitCode | `https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json` |
+| 首选（海外） | GitHub | `https://lanxiake.github.io/dsh-vyra-plugins/index-github.json` |
 
-国内备用源（jsDelivr CDN，可能有几小时缓存）：
+这两个是**发布后立刻生效**的：前者转发 GitHub 上的原始文件，后者由 GitHub Actions 在每次索引更新后自动重新部署。
+
+不推荐作首选（jsDelivr CDN；`@master` 这类**分支引用**会缓存 12 小时到 7 天，索引更新后可能仍显示旧版本号）：
 
 ```
 https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json
 ```
 
-海外也可以用 GitHub Pages：
+确实要用 jsDelivr 又想立刻看到新版本，把 `@master` 换成具体 commit——按 commit 取文件不走分支缓存：
 
 ```
-https://lanxiake.github.io/dsh-vyra-plugins/index-github.json
+https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@<commit-sha>/docs/index.json
 ```
 
 站点首页（插件目录浏览页）：https://lanxiake.github.io/dsh-vyra-plugins/
 
 两份索引由同一个 manifest 生成：`docs/index.json` 把所有版本安装源重写成 GitCode，`docs/index-github.json` 重写成 GitHub。同一批 commit 已推送到 GitHub、GitCode、AtomGit，按 SHA 从任一远端都能装。
 
-然后在插件市场里搜索下面的中文名或包名安装。索引是实时拉取的，**这个仓库更新后客户端重新打开插件页就能看到**，不需要改上面的 URL。
+然后在插件市场里搜索下面的中文名或包名安装。用上面两个首选源时，这个仓库更新后**客户端重新打开插件页就能看到**，不需要改 URL；用 jsDelivr 分支引用的话要等缓存过期（或按上面说的换 commit）。
 
 想只用某一个插件也可以，每个插件都是独立的 npm 包，按包名从 Git 安装即可（安装源见各条目的 `version.source`）。
 

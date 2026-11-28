@@ -15,9 +15,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+// 默认源用「发布后即时生效」的那两个。jsDelivr 对 `@master` 这类分支引用会缓存
+// 12 小时到 7 天，索引一更新，命令行反而报旧版本号——排查版本问题时最容易被它误导。
 const VEYRA = {
-  domestic: 'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
-  overseas: 'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json',
+  domestic: 'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
+  overseas: 'https://lanxiake.github.io/dsh-vyra-plugins/index-github.json',
 }
 const SOURCES = [
   { id: 'veyra', label: 'Veyra', url: (region) => VEYRA[region] },

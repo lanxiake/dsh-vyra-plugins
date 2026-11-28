@@ -46,13 +46,18 @@ window.__ModuleLoader__.load({
      */
     const VEYRA_DOMESTIC = [
       'https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json',
-      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
       HOME_SOURCE,
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json',
     ]
+    // 顺序按「发布后多快能看到新版本」排，而不是按速度：
+    // jsDelivr 对 `@master` 这种**分支引用**有 12 小时到 7 天的缓存，索引一更新
+    // 用户反而看到旧版本号（市场里显示的版本会停在昨天）。所以即时生效的两个
+    // 排在前面——GitHub Pages 由 Actions 在索引变更后自动重新部署，raw 是直连。
+    // jsDelivr 留作最后的兜底：它快，只是可能旧。
     const VEYRA_OVERSEAS = [
-      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json',
-      'https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json',
       'https://lanxiake.github.io/dsh-vyra-plugins/index-github.json',
+      'https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index-github.json',
+      'https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json',
     ]
     const VEYRA_SOURCES = [...VEYRA_DOMESTIC, ...VEYRA_OVERSEAS]
 

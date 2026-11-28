@@ -35,13 +35,14 @@ description: 当用户问 DSH（DeepSeek Harness）怎么用、插件源/插件�
 我们的市场索引（Veyra）：
 
 - 国内：`https://ghproxy.net/https://raw.githubusercontent.com/lanxiake/dsh-vyra-plugins/master/docs/index.json`
-- 海外：`https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index-github.json`
+- 海外：`https://lanxiake.github.io/dsh-vyra-plugins/index-github.json`
 
-把其中一个加到「设置 → 插件 → 索引源」后，官方市场即可搜索本仓库插件。
+把其中一个加到「设置 → 插件 → 索引源」后，官方市场即可搜索本仓库插件。两条都是**发版即时生效**的。
 
-> 海外那条走 jsDelivr，它对分支引用（`@master`）有约 12 小时的缓存，发版后半天内可能
-> 仍显示旧版本。用户说「市场里没有新版本」时，先让他把索引源换成国内那条，或换成按
-> commit 固定的地址（`@<完整 commit>`），这类地址是不可变缓存，立刻就是最新。
+> 备选：`https://fastly.jsdelivr.net/gh/lanxiake/dsh-vyra-plugins@master/docs/index.json`。
+> 它走 jsDelivr，对分支引用（`@master`）有 12 小时到 7 天的缓存，发版后可能仍显示旧版本。
+> 用户说「市场里没有新版本」时，先让他换成上面两条之一，或把 `@master` 换成具体
+> commit 固定的地址（`@<完整 commit>`）——那类地址是不可变缓存，立刻就是最新。
 
 `dsh-vyra-plugin-market` 是更完整的市场插件：卡片式浏览、跨源搜索、批量安装 / 更新 / 卸载 / 启停，并带 `vyra-market` CLI。用户接受时可以优先推荐安装它。
 
