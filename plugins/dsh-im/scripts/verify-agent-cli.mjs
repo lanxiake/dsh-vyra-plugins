@@ -225,7 +225,8 @@ console.log('verify-agent-api: ok');
 
 // --- Task 5: command dispatch ------------------------------------------------
 
-const { runAgentCommand } = await import('../src/cli/agent-client.mjs');
+const { readStdin, runAgentCommand } = await import('../src/cli/agent-client.mjs');
+const { isValidTargetId } = await import('../plugin-src/host/agent-api-resolve.mjs');
 
 function capture() {
   const out = [];
@@ -360,5 +361,44 @@ assert.equal(calls.at(-1).payload.path, './report.pdf');
 const missingFile = capture();
 assert.equal(await runAgentCommand(['send-file', '--account', '微信', '--target', 'x'], { api, postJson, ...missingFile }), 1);
 assert.match(missingFile.err.join('\n'), /--file/u);
+
+// --- target id grammar (I-5) ------------------------------------------------
+
+// A display name typed into `target create` is refused here, with the real
+// reason, instead of surfacing as a bad-request from the Host.
+const badId = capture();
+const beforeBadId = calls.length;
+assert.equal(await runAgentCommand(
+  ['target', 'create', '--account', '微信', '--target', '发布告警群', '--name', '发布告警群', '--kind', 'group', '--route', '{"chatId":"oc_x"}'],
+  { api, postJson, ...badId },
+), 1);
+assert.match(badId.err.join('\n'), /targetId/u);
+assert.match(badId.err.join('\n'), /字母、数字/u);
+assert.equal(calls.length, beforeBadId, 'nothing was sent for an invalid id');
+
+assert.equal(isValidTargetId('release-alerts'), true);
+assert.equal(isValidTargetId('o9cq801@im.wechat'), true);
+assert.equal(isValidTargetId('发布告警群'), false);
+assert.equal(isValidTargetId('has space'), false);
+assert.equal(isValidTargetId(''), false);
+
+// --- stdin trailing newline (I-6) -------------------------------------------
+
+/** A minimal async-iterable standing in for a piped stdin. */
+function fakeStdin(text) {
+  return {
+    isTTY: false,
+    async *[Symbol.asyncIterator]() { yield Buffer.from(text); },
+  };
+}
+
+assert.equal(await readStdin(fakeStdin('构建已完成\n')), '构建已完成', 'echo leaves one newline');
+assert.equal(await readStdin(fakeStdin('构建已完成\r\n')), '构建已完成', 'CRLF too');
+assert.equal(await readStdin(fakeStdin('第一段\n\n')), '第一段\n', 'a deliberate blank line is kept');
+assert.equal(await readStdin(fakeStdin('没有换行')), '没有换行');
+await assert.rejects(
+  () => readStdin({ isTTY: true }),
+  (error) => /管道/u.test(error.message),
+);
 console.log('verify-agent-cli-writes: ok');
 console.log('verify-agent-cli-commands: ok');

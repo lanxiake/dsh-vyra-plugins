@@ -12,7 +12,7 @@ import {
   sendFile,
   sendMessage,
 } from '../src/cli/delivery-client.mjs';
-import { runAgentCommand } from '../src/cli/agent-client.mjs';
+import { readStdin, runAgentCommand } from '../src/cli/agent-client.mjs';
 import { createAgentApi } from '../plugin-src/host/agent-api.mjs';
 
 const PACKAGE_NAME = '@lanxiake/dsh-im';
@@ -116,13 +116,6 @@ async function directProfilePackages(profile) {
     if (error?.code === 'ENOENT') return new Set();
     throw new Error(`无法读取 Harness 配置 ${profilePackage}：${error.message}`);
   }
-}
-
-async function readStdin() {
-  if (process.stdin.isTTY) throw new Error('--stdin 需要从管道读取内容');
-  const chunks = [];
-  for await (const chunk of process.stdin) chunks.push(chunk);
-  return Buffer.concat(chunks).toString('utf8');
 }
 
 function printJson(value) {

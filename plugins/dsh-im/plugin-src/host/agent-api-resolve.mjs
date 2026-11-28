@@ -24,6 +24,18 @@ function displayText(value) {
 }
 
 /**
+ * The grammar the Host enforces for a target id (`targetIdOf` in the workspace
+ * store). A caller that types a display name into `target create` gets a clear
+ * error here instead of a `bad-request` from the far end.
+ */
+export const TARGET_ID_PATTERN = /^[A-Za-z0-9._:@-]{1,128}$/;
+
+/** True when `value` can be a target id at all. */
+export function isValidTargetId(value) {
+  return typeof value === 'string' && TARGET_ID_PATTERN.test(value);
+}
+
+/**
  * Decide what a bot is called, and say where the name came from so the Agent
  * can tell a deliberate alias from a best-effort platform label.
  * @param value.alias - the user's alias from `workspaces.json`.

@@ -8,7 +8,7 @@
 //
 // Nothing in this file re-implements a validation the Host already performs.
 
-import { resolveAccount, resolveTarget } from '../../plugin-src/host/agent-api-resolve.mjs';
+import { isValidTargetId, resolveAccount, resolveTarget } from '../../plugin-src/host/agent-api-resolve.mjs';
 
 /** Options these commands accept, so a typo fails instead of being ignored. */
 const OPTIONS = new Set([
@@ -98,11 +98,20 @@ function summary(command, value) {
   return JSON.stringify(value);
 }
 
-async function readStdin() {
-  if (process.stdin.isTTY) throw new Error('--stdin 需要从管道读取内容');
+/**
+ * Read piped stdin.
+ *
+ * A trailing newline is dropped exactly once: `echo "hi" | dsh-im send --stdin`
+ * is the common case, and shipping the newline renders as a trailing blank
+ * line in every chat. A double newline is left alone, since that is a
+ * deliberate paragraph break.
+ * @param stream - readable stream, default `process.stdin`.
+ */
+export async function readStdin(stream = process.stdin) {
+  if (stream.isTTY) throw new Error('--stdin 需要从管道读取内容');
   const chunks = [];
-  for await (const chunk of process.stdin) chunks.push(chunk);
-  return Buffer.concat(chunks).toString('utf8');
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks).toString('utf8').replace(/\r?\n$/u, '');
 }
 
 async function textInput(options, flags) {
@@ -198,6 +207,12 @@ export async function runAgentCommand(argv, {
         // A create names the id itself; it must never be resolved by name.
         const targetId = single(options, '--target');
         if (targetId === undefined) throw new Error('target create 需要 --target <新 targetId>');
+        if (!isValidTargetId(targetId)) {
+          // The Host would answer bad-request; say what is actually wrong.
+          throw new Error(
+            `targetId「${targetId}」不能用：只能是字母、数字和 . _ : @ -，最长 128 位`,
+          );
+        }
         const name = single(options, '--name');
         const kind = single(options, '--kind');
         if (name === undefined) throw new Error('target create 需要 --name <显示名>');
@@ -216,8 +231,7 @@ export async function runAgentCommand(argv, {
       if (targetId === undefined) throw new Error(`target ${action} 需要 --target <targetId 或目标名>`);
       const { botId, targets } = await api.targets({ account });
       const resolved = resolveTarget(targets, targetId);
-      let payload;
-      if (action === 'update') {
+      let payload;      if (action === 'update') {
         // The Host merges a patch over the stored target, so a rename need not
         // resend kind and route.
         const name = single(options, '--name');
