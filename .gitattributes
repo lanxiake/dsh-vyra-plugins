@@ -1,0 +1,21 @@
+# 生成产物必须逐字节可复现，所以统一用 LF，且**不做换行转换**。
+#
+# 背景：Windows 上 core.autocrlf=true 会把检出内容转成 CRLF。像 client.js 这种
+# 由 esbuild 生成的单文件产物，一旦检出时被转成 CRLF，再构建一次就会和仓库里
+# 的内容对不上——git status 永远挂着"已修改"，diff 里全是没有意义的行尾差异，
+# 很容易被误判成"推送失败/代码不一致"。
+#
+# 打包产物
+plugins/vyra-ssh-terminal/client.js -text
+plugins/*/client.js -text
+
+# 其它代码统一 LF 入库（检出时的转换交给 core.autocrlf，但仓库里始终是 LF）
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.jsx  text eol=lf
+*.ts   text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf

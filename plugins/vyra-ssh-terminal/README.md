@@ -87,6 +87,7 @@ routes.js       HTTP 接口（每个接口一条 exact 路由）
 
 ```sh
 node scripts/build.mjs             # 打包 client.js
+node scripts/check-build-sync.mjs  # 重新构建后必须与已提交的 client.js 一致
 node scripts/headless-check.mjs    # 产物能在浏览器里加载并注册插槽
 node scripts/render-check.mjs      # 用真实 React 渲染，能抓白屏
 node scripts/render-check-data.mjs # 有数据时的监控/AI 面板
@@ -95,6 +96,12 @@ node scripts/check-import-ext.mjs  # 防 import 指错扩展名
 ```
 
 **改完 UI 请务必在真实 DSH 里看一遍**——单元测试全绿而界面白屏，在这个插件上真实发生过两次（React 注入被打包器改名、xterm 自带 `#000` 背景）。
+
+### 关于 client.js 的换行
+
+`client.js` 由 esbuild 生成，CSS 会原样内联，所以它的字节必须只由源码决定。构建脚本会把 CSS 换行归一成 LF，仓库根目录的 `.gitattributes` 也把这个文件标成 `-text`（不做换行转换）。
+
+改了源码或样式后，请重新构建并**一起提交 client.js**——否则用户装到的是旧界面。`check-build-sync.mjs` 就是守这条的。
 
 ## 交流群
 
