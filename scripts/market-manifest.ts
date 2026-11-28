@@ -518,8 +518,8 @@ export const manifest: MarketManifest = {
         zh: 'SSH 终端',
       },
       description: {
-        en: 'An SSH terminal inside DSH: connection profiles, jump hosts, SFTP, port forwarding and host-key pinning. Passwords go to the credentials service, never into the profile file.',
-        zh: '把 SSH 终端搬进 DSH：连接档案、跳板、SFTP、端口转发与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密。',
+        en: 'An SSH terminal inside DSH with an AI assistant that runs commands in the terminal you can see: connection profiles, jump hosts, SFTP with transfer progress, resource monitoring and host-key pinning. Passwords go to the credentials service, never into the profile file.',
+        zh: '把 SSH 终端搬进 DSH，自带 AI 助手：它的命令就打在你眼前那个终端里。连接档案、跳板、带进度的 SFTP、资源监控与主机密钥固定。密码只进凭据服务，档案文件里没有任何秘密。',
       },
       author: 'lanxiake',
       homepage: 'https://github.com/lanxiake/dsh-vyra-plugins#readme',
@@ -529,6 +529,15 @@ export const manifest: MarketManifest = {
       },
       icon: SSH_TERMINAL_ICON,
       versions: {
+        '0.2.0': {
+          publishTimestamp: 1795833104,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '772cc73feef6f1d1686201c3205e9e6c287c177e',
+            path: 'plugins/vyra-ssh-terminal',
+          },
+        },
         '0.1.3': {
           publishTimestamp: 1795679996,
           source: {
