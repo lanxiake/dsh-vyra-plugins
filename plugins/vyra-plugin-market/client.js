@@ -1576,6 +1576,7 @@ window.__ModuleLoader__.load({
       regionHint: '自动模式按延迟选择；切换后 Veyra 索引会换成对应区域，国内从 GitCode 安装，海外从 GitHub 安装。',
       crossSource: '跨源搜索',
       aggregateNote: '跨源结果：每源前 {n} 条',
+      aggregateStreaming: '正在汇总各源结果（{done}/{total}）…',
       sourceFailures: '{n} 个源读取失败',
       switchToDomestic: '切换到国内线路',
       switchToOverseas: '切换到海外线路',
@@ -1756,6 +1757,7 @@ window.__ModuleLoader__.load({
       regionHint: 'Auto picks by latency. Switching swaps the Veyra index edition: domestic installs from GitCode, overseas from GitHub.',
       crossSource: 'Search all',
       aggregateNote: 'All sources: first {n} per source',
+      aggregateStreaming: 'Collecting results from sources ({done}/{total})…',
       sourceFailures: '{n} source(s) failed',
       switchToDomestic: 'Switch to domestic',
       switchToOverseas: 'Switch to overseas',
@@ -3238,40 +3240,15 @@ window.__ModuleLoader__.load({
        * label that offered it. This is the "all sources" view, not a full
        * paginated merge.
        */
-      const loadAggregate = useCallback(async (query, signal) => {
+      /**
+       * Merge the per-source answers of one "all sources" query. Both the
+       * grow-in partial snapshots and the finished page go through this, so an
+       * entry that arrives late lands exactly where a single pass would have
+       * put it.
+       */
+      const buildAggregatePage = useCallback((query, results, perSource) => {
         const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
-        const perSource = words.length === 0 ? 20 : 60
-        const hostSources = sources ?? []
-        const tasks = hostSources.map(async (source) => {
-          const label = marketSourceLabel(source, text, lang)
-          try {
-            const answer = await remote.pluginMarket.search(source.url, {
-              ...query.text.trim() === '' ? {} : { text: query.text },
-              sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
-              offset: 0, limit: perSource,
-            })
-            return answer.ok
-              ? { source, label, page: answer.value }
-              : { source, label, error: answer.error.message }
-          } catch (error) {
-            return { source, label, error: String(error?.message ?? error) }
-          }
-        })
-        tasks.push((async () => ({
-          source: DSH_SO_SOURCE,
-          label: marketSourceLabel(DSH_SO_SOURCE, text, lang),
-          page: dshSoPage(await loadDshSoData(false, signal), {
-            text: query.text,
-            sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
-            offset: 0, limit: perSource,
-          }, 0, perSource),
-        }))().catch((error) => ({ source: DSH_SO_SOURCE, label: 'dsh.so', error: String(error?.message ?? error) })))
-        const results = await Promise.all(tasks)
-        if (signal?.aborted) throw new Error('aborted')
         const failures = results.filter((result) => result.error !== undefined)
-        if (failures.length === results.length) {
-          throw new Error(failures[0]?.error ?? 'all sources failed')
-        }
         const merged = new Map()
         const stateWeight = (entry) => {
           const state = entryState(entry)
@@ -3327,6 +3304,68 @@ window.__ModuleLoader__.load({
           perSource,
           entries,
         }
+      }, [])
+
+      const loadAggregate = useCallback(async (query, signal, onPartial) => {
+        const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
+        const perSource = words.length === 0 ? 20 : 60
+        const hostSources = sources ?? []
+        // Every source answers on its own; onPartial receives the results that
+        // have landed so far so the list can fill in as sources reply instead
+        // of waiting for the slowest one.
+        const settled = []
+        const publishPartial = () => {
+          if (onPartial === undefined || signal?.aborted) return
+          onPartial(settled.slice())
+        }
+        const tasks = hostSources.map(async (source) => {
+          const label = marketSourceLabel(source, text, lang)
+          try {
+            const answer = await remote.pluginMarket.search(source.url, {
+              ...query.text.trim() === '' ? {} : { text: query.text },
+              sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
+              offset: 0, limit: perSource,
+            })
+            const result = answer.ok
+              ? { source, label, page: answer.value }
+              : { source, label, error: answer.error.message }
+            settled.push(result)
+            publishPartial()
+            return result
+          } catch (error) {
+            const result = { source, label, error: String(error?.message ?? error) }
+            settled.push(result)
+            publishPartial()
+            return result
+          }
+        })
+        const dshSoTask = (async () => {
+          const result = {
+            source: DSH_SO_SOURCE,
+            label: marketSourceLabel(DSH_SO_SOURCE, text, lang),
+            page: dshSoPage(await loadDshSoData(false, signal), {
+              text: query.text,
+              sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
+              offset: 0, limit: perSource,
+            }, 0, perSource),
+          }
+          settled.push(result)
+          publishPartial()
+          return result
+        })().catch((error) => {
+          const result = { source: DSH_SO_SOURCE, label: 'dsh.so', error: String(error?.message ?? error) }
+          settled.push(result)
+          publishPartial()
+          return result
+        })
+        tasks.push(dshSoTask)
+        const results = await Promise.all(tasks)
+        if (signal?.aborted) throw new Error('aborted')
+        const failures = results.filter((result) => result.error !== undefined)
+        if (failures.length === results.length) {
+          throw new Error(failures[0]?.error ?? 'all sources failed')
+        }
+        return buildAggregatePage(query, results, perSource)
       }, [sources, remote, text, lang])
 
       /** Load one page of a source, replacing the results it answers. */
@@ -3369,7 +3408,27 @@ window.__ModuleLoader__.load({
         try {
           let page
           if (url === ALL_SOURCES_SOURCE.url) {
-            page = await loadAggregate(next, signal)
+            // Show each source's hits the moment it answers; the final sweep
+            // below replaces the same list with the complete, merged answer.
+            page = await loadAggregate(next, signal, (partial) => {
+              if (signal.aborted || !alive.current) return
+              const ready = partial.filter((result) => result.error === undefined)
+              if (ready.length === 0) return
+              setListing((current) => {
+                // Keep the newest snapshot: a slower callback that lands after
+                // a fuller one must not shrink the list back down.
+                if (current !== null && current.url === url && current.status === 'ready'
+                  && current.value !== null
+                  && (current.value.sourcesDone ?? 0) >= ready.length) return current
+                return {
+                  url, query: next, status: 'ready', failure: null,
+                  value: {
+                    ...buildAggregatePage(next, partial, String(next.text ?? '').trim() === '' ? 20 : 60),
+                    streamed: true, sourcesDone: ready.length,
+                  },
+                }
+              })
+            })
             if (signal.aborted || !alive.current) return
           } else if (url === DSH_SO_SOURCE.url) {
             // A built-in aggregator: its index is fetched and filtered here,
@@ -3412,7 +3471,7 @@ window.__ModuleLoader__.load({
           if (!alive.current) return
           setListing({ url, query: next, status: 'error', value: null, failure: error.message || '请求失败' })
         }
-      }, [remote, listing, loadAggregate, sources])
+      }, [remote, listing, loadAggregate, buildAggregatePage, sources])
       loadRef.current = load
 
       useEffect(() => { void loadSources(true) }, [loadSources])
@@ -3473,7 +3532,12 @@ window.__ModuleLoader__.load({
           const next = withText(live.query, draft)
           setQuery(next)
           rememberQuery(next.text)
-          if (live.listing !== null) void live.load(live.listing.url, next, 0, PAGE, undefined)
+          if (live.listing === null) return
+          // A typed query is answered by every source at once: the user never
+          // has to notice that the current source came back empty and switch.
+          // Browsing an empty query stays on the source the user picked.
+          const target = String(draft).trim() === '' ? live.listing.url : ALL_SOURCES_SOURCE.url
+          void live.load(target, next, 0, PAGE, undefined)
         }, TEXT_DELAY_MS)
         return () => { clearTimeout(timer) }
       }, [draft, query.text, rememberQuery, view])
@@ -3567,6 +3631,14 @@ window.__ModuleLoader__.load({
       const aggregateNote = listing === null || listing.value === null || listing.value.perSource === undefined
         ? null
         : t('aggregateNote', { n: listing.value.perSource })
+      // Every source the aggregate asks: the configured ones plus dsh.so.
+      const sourceCount = (sources ?? []).length + 1
+      // A streamed aggregate shows its first hits as soon as one source
+      // answers; this says the rest are still arriving.
+      const aggregateStreaming = listing === null || listing.value === null
+        || listing.value.streamed !== true || listing.status !== 'ready'
+        ? false
+        : (listing.value.sourcesDone ?? 0) < sourceCount
       const aggregateFailures = listing === null || listing.value === null ? [] : (listing.value.sourceFailures ?? [])
       const categories = useMemo(() => {
         if (declarations === undefined) return []
@@ -4207,6 +4279,10 @@ window.__ModuleLoader__.load({
                       t('selectPage')),
                     h('span', { className: 'vpm-meta' }, t('total', { n: filteredEntries.length }))),
                   aggregateNote === null ? null : h('p', { className: 'vpm-meta', style: { margin: '0 0 6px' } }, aggregateNote),
+                  aggregateStreaming ? h('p', {
+                    className: 'vpm-meta', role: 'status',
+                    style: { margin: '0 0 6px' },
+                  }, t('aggregateStreaming', { done: listing.value.sourcesDone ?? 0, total: sourceCount })) : null,
                   aggregateFailures.length === 0 ? null : h('p', {
                     className: 'vpm-meta', title: aggregateFailures.join('\n'),
                     style: { margin: '0 0 8px', color: 'var(--dsw-alias-state-warn-primary)' },
