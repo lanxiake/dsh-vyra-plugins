@@ -3045,6 +3045,20 @@ export const manifest: MarketManifest = {
       },
       icon: FILE_MANAGER_ICON,
       versions: {
+        // 0.5.1 carries three features that landed after 0.5.0 was cut without a
+        // version bump, so no install could reach them: media thumbnails in the
+        // timeline grid, filtering the timeline by file type, and a draggable
+        // seek bar for video and audio playback.
+        '0.5.1': {
+          // 2026-11-28 — the day this build was cut.
+          publishTimestamp: 1795844829,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'bb8d752344e7e51e83e228ef132b99acd1cd9136',
+            path: 'plugins/vyra-file-manager',
+          },
+        },
         // 0.5.0 — BREAKING: the "link" file type is gone. The type row now
         // offers "HTML" instead, and previously saved link cards are no longer
         // read or drawn (their localStorage entries are left untouched).
