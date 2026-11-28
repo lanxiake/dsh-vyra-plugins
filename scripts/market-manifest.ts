@@ -45,8 +45,10 @@ const TOOL_USAGE_ICON =
  * repinning it would make an install source change under a version that users
  * have already resolved.
  *
- * `scripts/publish-plugins.mjs` runs those steps in that order, deriving each
- * SHA from the commit that actually holds the plugin's files.
+ * `pnpm run verify` runs the whole chain and will tell you if anything is off
+ * (`verify-index-fresh` compares every plugin's package.json version against the
+ * version registered here, so bumping a plugin without adding an entry fails
+ * loudly instead of leaving the market showing the old version).
  *
  * The one exception is a repin that changes nothing a client reads: the commit
  * the market's detail page fetches (README and its images) is the pinned one,
