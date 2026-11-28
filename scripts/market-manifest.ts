@@ -1950,6 +1950,17 @@ export const manifest: MarketManifest = {
       },
       icon: PLUGIN_MARKET_ICON,
       versions: {
+        // 0.7.5 fills the "all sources" result in as each source answers, so a
+        // slow or dead source no longer blanks the page until it times out.
+        '0.7.5': {
+          publishTimestamp: 1795835554,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '8911a1e911eb3515abe33243aa337111613301c6',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
         // 0.7.4 makes a restart-required result actionable: the completion toast
         // and the Installed-page bar now offer a restart where the Desktop shell
         // publishes one, and state the manual steps where it does not.
