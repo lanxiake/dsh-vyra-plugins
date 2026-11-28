@@ -95,6 +95,7 @@ function plugin(entry: MarketPluginSource): Record<string, unknown> {
     entry.metadata.category !== undefined
     || (entry.metadata.keywords?.length ?? 0) > 0
     || (entry.metadata.labels?.length ?? 0) > 0
+    || (entry.metadata.aliases?.length ?? 0) > 0
   )) || sortKeys !== undefined
 
   return {
@@ -121,6 +122,7 @@ function plugin(entry: MarketPluginSource): Record<string, unknown> {
           ...(entry.metadata?.category === undefined ? {} : { category: entry.metadata.category }),
           ...((entry.metadata?.keywords?.length ?? 0) > 0 ? { keywords: entry.metadata?.keywords } : {}),
           ...((entry.metadata?.labels?.length ?? 0) > 0 ? { labels: entry.metadata?.labels } : {}),
+          ...((entry.metadata?.aliases?.length ?? 0) > 0 ? { aliases: entry.metadata?.aliases } : {}),
           ...(sortKeys === undefined ? {} : { sortKeys }),
         },
       }

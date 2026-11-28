@@ -45,3 +45,17 @@ test('技能卡片按钮文案是「目录」', () => {
   assert.match(source, /\}, '目录'\)/)
   assert.ok(!source.includes("'打开目录'"))
 })
+
+test('搜索用中英混合分词，不再只做整串 includes', () => {
+  assert.match(source, /function searchTerms\(/, '有分词函数')
+  assert.match(source, /function matchesAllTerms\(/, '有逐词项匹配函数')
+  assert.match(source, /matchesAllTerms\(/, 'displayItems 用新匹配')
+})
+
+test('一键翻译：按钮 + 缓存 + 免费接口', () => {
+  assert.match(source, /一键翻译/, '工具栏有一键翻译按钮')
+  assert.match(source, /vyra-skill-mcp\.translations/, '翻译结果本地缓存')
+  assert.match(source, /translate\.googleapis\.com|api\.mymemory\.translated\.net/, '使用免费公共翻译接口')
+  assert.match(source, /translations\[descriptionSource\(item\)\]/, '描述渲染优先用译文')
+})
+

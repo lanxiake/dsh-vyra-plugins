@@ -154,6 +154,14 @@ export interface MarketPluginSource {
     readonly category?: string
     readonly keywords?: readonly string[]
     readonly labels?: readonly string[]
+    /**
+     * 曾用名：插件改名换目录后，旧的 npm 包名 / 仓库子目录。
+     *
+     * 用户在改名之前装的旧名 bundle 在市场里会认不出新名条目——显示"未安装"、
+     * 「仅更新」漏掉它、点更新也按新名找不到包。登记别名后，客户端会把这些旧名
+     * 也当作匹配 key，旧名 bundle 自动认出新条目并按旧名卸载升级。
+     */
+    readonly aliases?: readonly string[]
   }
 }
 
@@ -2961,6 +2969,10 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'agent-runtime',
         keywords: ['study', 'learning', 'skills', 'lessons', 'audio', 'video', 'workshop'],
+        // 曾用名：早期以 `@yunmiao/studymate` 装于 plugins/studymate 目录，
+        // 后改名 dsh-vyra-studymate / plugins/vyra-studymate。登记旧名让旧装
+        // 能认出并升级。
+        aliases: ['studymate', '@yunmiao/studymate', 'vyra-studymate'],
       },
     },
     {
@@ -3314,6 +3326,9 @@ export const manifest: MarketManifest = {
       metadata: {
         category: 'content',
         keywords: ['files', 'file-manager', 'media', 'document', 'video', 'audio', 'gallery'],
+        // 0.3.5 及以前叫 `vyra-media-studio`、装在 plugins/vyra-media-studio。
+        // 登记曾用名，旧名 bundle 才能被市场认出并原地升级。
+        aliases: ['vyra-media-studio', 'dsh-vyra-media-studio'],
       },
     },
     {

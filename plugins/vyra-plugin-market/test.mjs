@@ -47,6 +47,7 @@ const {
   localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
   pageCacheKey, cachedPage, rememberPage, pageCache,
   parseRepoRef, specPath, buildBundleIndex,
+  searchTerms, hasCjk, descriptionSource, dshSoScore, compareVersions,
   AGENT_HINTS, QUEUE_AUTO_OPEN, ZH, EN,
 } = __internal
 
@@ -338,6 +339,33 @@ async function waitIdle() {
   assert.equal(runner.get().outcome.ok, 3)
 }
 
+// --- queue: a second click on an already-queued install is dropped ----------
+{
+  const performed = []
+  const { enqueue, runner } = __internal
+  const applied = { ok: true, value: { application: 'applied' } }
+  let release
+  const first = new Promise((resolve) => { release = resolve })
+  const remote = {
+    pluginManager: {
+      installBundle: async (spec) => { performed.push(spec); if (spec === 'a') await first; return applied },
+      listBundles: async () => ({ ok: true, value: performed.map((name) => ({ name, enabled: true, removable: true })) }),
+      setBundleEnabled: async () => applied,
+      removeBundle: async () => applied,
+    },
+  }
+  const order = (name) => ({ action: 'install', entry: { name }, version: { install: { spec: name } } })
+  enqueue([order('a')], remote, (key) => key)
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  // 同一个插件再次点安装：已在运行/排队，应被去重丢弃，不叠加。
+  enqueue([order('a')], remote, (key) => key)
+  enqueue([order('b'), order('b')], remote, (key) => key)
+  assert.equal(runner.get().queue.length, 1, '只有 b 入队，重复的 a 和 b 被去重')
+  release()
+  await waitIdle()
+  assert.deepEqual(performed, ['a', 'b'], '重复安装只运行一次')
+}
+
 // --- dsh.so adapter: npm specs, versions and compact counts -------------------
 assert.equal(npmSpecName('@scope/name@1.2.3'), '@scope/name', 'a scoped package keeps its scope')
 assert.equal(npmSpecName('@scope/name'), '@scope/name', 'a bare scoped package is itself')
@@ -525,6 +553,71 @@ assert.equal(region.snapshot().active, 'domestic')
     ['b', { name: '@s/x', installed: true, source: 'github:o/b' }],
   ]))
   assert.equal(ambiguous({ name: 'x', versions: [] }), undefined, 'an ambiguous short name is refused instead of guessed')
+}
+
+// --- 改名根治：旧名 bundle 经别名识别新名条目并按旧名升级 -------------------
+{
+  // 用户装的旧名 bundle：包名 vyra-media-studio、旧目录。
+  const oldBundle = {
+    name: 'vyra-media-studio', version: '0.3.4', installed: true,
+    source: 'github:o/r#abc&path:/plugins/vyra-media-studio',
+  }
+  const resolve = buildBundleIndex(new Map([['vyra-media-studio', oldBundle]]))
+  // 市场新名条目，靠 metadata.aliases 把旧名登记进来，目录已换到 file-manager。
+  const entry = {
+    name: 'dsh-vyra-file-manager',
+    repository: { url: 'https://github.com/o/r', directory: 'plugins/vyra-file-manager' },
+    versions: [
+      { version: '0.5.0', update: false, compatibility: { compatible: true }, install: { spec: 'github:o/r#new&path:/plugins/vyra-file-manager' } },
+    ],
+    metadata: { aliases: ['vyra-media-studio'] },
+  }
+  assert.equal(resolve(entry), oldBundle, '旧名 bundle 通过别名匹配到新名条目')
+
+  // 宿主对改名插件不标 update，客户端用已装版本兜底判定可更新。
+  assert.equal(updateTarget(entry, '0.3.4')?.version, '0.5.0', '低于条目版本时判为可更新')
+  assert.equal(updateTarget(entry, '0.5.0'), undefined, '已是最新则无更新目标')
+  assert.equal(compareVersions('0.5.1', '0.5.0') > 0, true, '版本比较：0.5.1 高于 0.5.0')
+  assert.equal(compareVersions('0.5.0', '0.5.0'), 0, '相等版本')
+  assert.equal(compareVersions('0.4.0', '0.5.0') < 0, true, '版本比较：0.4.0 低于 0.5.0')
+
+  // entryState 带已装版本时应为 updatable。
+  const installedEntry = { ...entry, installation: { status: 'installed', installedVersion: '0.3.4' } }
+  assert.equal(entryState(installedEntry), 'updatable', '已装旧版本 + 有条目新版本 => 可更新')
+}
+
+// --- 需求4：中英混合搜索分词 + 一键翻译辅助 --------------------------------
+{
+  // 纯英文按空白分词，不做子串切分（避免 a/b 噪声）。
+  assert.deepEqual(searchTerms('voice tts').map((t) => t.raw), ['voice', 'tts'])
+  assert.deepEqual(searchTerms('voice')[0].words, ['voice'])
+  // 中文：整串 + 双字进候选（不补单字，避免虚字噪声）。
+  const zh = searchTerms('语音合成')[0]
+  assert.ok(zh.words.includes('语音合成'), '整串是一个候选')
+  assert.ok(zh.words.includes('语音') && zh.words.includes('音合') && zh.words.includes('合成'), '双字都被切出')
+  assert.ok(!zh.words.includes('的'), '不把虚字塞进候选')
+  // 单字查询保留原样。
+  assert.deepEqual(searchTerms('语')[0].words, ['语'])
+  // 中英混排：各自成词项。
+  assert.deepEqual(searchTerms('语音 TTS').map((t) => t.raw), ['语音', 'tts'])
+  // hasCjk 判定。
+  assert.equal(hasCjk('语音识别'), true)
+  assert.equal(hasCjk('speech recognition'), false)
+  assert.equal(hasCjk('支持 TTS 合成'), true)
+  // descriptionSource 处理字符串与本地化对象。
+  assert.equal(descriptionSource({ description: 'plain text' }), 'plain text')
+  assert.equal(descriptionSource({ description: { en: 'en text', zh: '中文' } }), 'en text')
+  assert.equal(descriptionSource({ description: { zh: '只有中文' } }), '只有中文')
+  assert.equal(descriptionSource({}), '')
+
+  // 中文分词让"只按空白切"会失败的查询命中：一个描述里含"语音合成"的条目，
+  // 查询"语音"应命中（整串/双字/单字里含"语音"）。
+  const entry = {
+    name: 'tts-plugin', title: 'TTS', description: '支持语音合成的插件',
+    marketSearchText: 'tts tts-plugin 支持语音合成的插件',
+  }
+  assert.ok(dshSoScore(entry, searchTerms('语音')) >= 0, '中文查询命中含中文的描述')
+  assert.equal(dshSoScore(entry, searchTerms('不存在的词')), -1, '完全不相关的查询被排除')
 }
 
 console.log('dsh-vyra-plugin-market: all checks passed')

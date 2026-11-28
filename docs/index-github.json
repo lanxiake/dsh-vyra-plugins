@@ -2784,6 +2784,11 @@
           "audio",
           "video",
           "workshop"
+        ],
+        "aliases": [
+          "studymate",
+          "@yunmiao/studymate",
+          "vyra-studymate"
         ]
       }
     },
@@ -3137,6 +3142,10 @@
           "video",
           "audio",
           "gallery"
+        ],
+        "aliases": [
+          "vyra-media-studio",
+          "dsh-vyra-media-studio"
         ]
       }
     },

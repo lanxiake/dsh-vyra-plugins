@@ -346,6 +346,79 @@ window.__ModuleLoader__.load({
       return text[lang] ?? text.en ?? Object.values(text)[0] ?? ''
     }
 
+    // ---------------------------------------------------------------------------
+    // 需求4：一键翻译英文描述
+    // ---------------------------------------------------------------------------
+    const TRANSLATE_CACHE_KEY = 'vyra-market.translations'
+    const TRANSLATE_CACHE_MAX = 2000
+
+    /** 是否含中日韩表意文字——用来判断一段描述是否已经是中文。 */
+    function hasCjk(text) {
+      return /[㐀-鿿豈-﫿]/.test(String(text ?? ''))
+    }
+
+    /** 一段描述的英文原文；描述可能是字符串或本地化对象。 */
+    function descriptionSource(entry) {
+      const description = entry?.description
+      if (description === undefined || description === null) return ''
+      if (typeof description === 'string') return description
+      return description.en ?? description[Object.keys(description)[0]] ?? ''
+    }
+
+    /** 读本地翻译缓存（英文原文 -> 中文）。 */
+    function readTranslationCache() {
+      try {
+        const value = JSON.parse(storeGet(TRANSLATE_CACHE_KEY) ?? '{}')
+        return value !== null && typeof value === 'object' ? value : {}
+      } catch {
+        return {}
+      }
+    }
+
+    /** 写翻译缓存，超出上限时按插入顺序丢弃最早的条目。 */
+    function writeTranslationCache(cache) {
+      const keys = Object.keys(cache)
+      const trimmed = keys.length <= TRANSLATE_CACHE_MAX
+        ? cache
+        : Object.fromEntries(keys.slice(keys.length - TRANSLATE_CACHE_MAX).map((key) => [key, cache[key]]))
+      storeSet(TRANSLATE_CACHE_KEY, JSON.stringify(trimmed))
+    }
+
+    /**
+     * 调用免费公共翻译接口把一段英文译成中文。先试 Google 的 gtx 端点，失败
+     * 再退回 MyMemory；两者都失败就返回空串（调用方保留英文）。无需 key，
+     * 直接浏览器请求。
+     */
+    async function translateText(text) {
+      const trimmed = String(text ?? '').trim()
+      if (trimmed === '' || hasCjk(trimmed)) return trimmed
+      try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=${encodeURIComponent(trimmed)}`
+        const response = await fetch(url, { signal: AbortSignal.timeout(12000) })
+        if (response.ok) {
+          const data = await response.json()
+          const out = Array.isArray(data?.[0])
+            ? data[0].map((segment) => (Array.isArray(segment) ? segment[0] ?? '' : '')).join('')
+            : ''
+          if (out.trim() !== '') return out
+        }
+      } catch {
+        // 落到下一个镜像
+      }
+      try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=en|zh-CN`
+        const response = await fetch(url, { signal: AbortSignal.timeout(12000) })
+        if (response.ok) {
+          const data = await response.json()
+          const out = data?.responseData?.translatedText
+          if (typeof out === 'string' && out.trim() !== '' && !/MYMEMORY WARNING/i.test(out)) return out
+        }
+      } catch {
+        // 两个镜像都不可用，保留英文
+      }
+      return ''
+    }
+
     /**
      * The version a card presents: the index's default when it names one,
      * otherwise the newest it lists.
@@ -374,40 +447,86 @@ window.__ModuleLoader__.load({
       return String(version).split('+')[0].includes('-')
     }
 
+    /** Parse a version string into comparable numeric/标签 parts (SemVer-ish). */
+    function parseVersion(value) {
+      const text = String(value ?? '').trim().replace(/^v/i, '').split('+')[0]
+      const [core, pre = ''] = text.split('-')
+      return {
+        parts: core.split('.').map((part) => Number.parseInt(part, 10) || 0),
+        pre: pre === '' ? null : pre.split('.'),
+      }
+    }
+
+    /** Compare two version strings: >0 when a is newer, <0 when b is newer. */
+    function compareVersions(a, b) {
+      const left = parseVersion(a)
+      const right = parseVersion(b)
+      for (let i = 0; i < Math.max(left.parts.length, right.parts.length); i += 1) {
+        const diff = (left.parts[i] ?? 0) - (right.parts[i] ?? 0)
+        if (diff !== 0) return diff
+      }
+      // A release outranks its prereleases; otherwise compare pre tags lexically.
+      if (left.pre === null && right.pre !== null) return 1
+      if (left.pre !== null && right.pre === null) return -1
+      if (left.pre === null && right.pre === null) return 0
+      return String(left.pre).localeCompare(String(right.pre))
+    }
+
     /**
-     * The version an update would install: the Host accepts `updateBundle` only
-     * for a version it flags `update`, so that flag is the whole test.
+     * The version an update would install.
+     *
+     * The Host flags `update` only for "another commit in the same repository
+     * directory", so a plugin renamed to a new directory (or listed by another
+     * source at a higher version) never gets that flag — the entry reads as
+     * merely installed and "Only updatable" misses it. So this first trusts the
+     * Host's flag, then falls back to a version comparison against what is
+     * actually installed: the newest installable version above the installed one
+     * becomes the update target. A same-or-lower version yields nothing.
+     *
      * @param {object} entry - a market listing entry.
+     * @param {string} [installed] - the installed version, when known.
      * @returns {object|undefined} the update target.
      */
-    function updateTarget(entry) {
-      return entry.versions.find((version) => version.update && installable(version))
+    function updateTarget(entry, installed) {
+      const flagged = entry.versions.find((version) => version.update && installable(version))
+      if (flagged !== undefined) return flagged
+      if (installed === undefined || installed === '') return undefined
+      let best
+      for (const version of entry.versions) {
+        if (!installable(version)) continue
+        if (compareVersions(version.version, installed) <= 0) continue
+        if (best === undefined || compareVersions(version.version, best.version) > 0) best = version
+      }
+      return best
     }
 
     /**
      * How one entry stands next to the profile.
      * @param {object} entry - a market listing entry.
+     * @param {string} [installedVersion] - the installed version, from the matched bundle.
      * @returns {'provided'|'available'|'updatable'|'installed'} the state.
      */
-    function entryState(entry) {
+    function entryState(entry, installedVersion) {
       const status = entry.installation.status
       if (status === 'provided') return 'provided'
       if (status === 'not-installed') return 'available'
-      return updateTarget(entry) === undefined ? 'installed' : 'updatable'
+      const installed = installedVersion ?? entry.installation?.installedVersion
+      return updateTarget(entry, installed) === undefined ? 'installed' : 'updatable'
     }
 
     /**
      * The version a card's single install-or-update button acts on.
      * @param {object} entry - a market listing entry.
+     * @param {string} [installedVersion] - the installed version, from the matched bundle.
      * @returns {object|undefined} the version, absent when there is no action.
      */
-    function actionVersion(entry) {
-      const state = entryState(entry)
+    function actionVersion(entry, installedVersion) {
+      const state = entryState(entry, installedVersion)
       if (state === 'available') {
         const version = presentedVersion(entry)
         return version !== undefined && installable(version) ? version : undefined
       }
-      return state === 'updatable' ? updateTarget(entry) : undefined
+      return state === 'updatable' ? updateTarget(entry, installedVersion ?? entry.installation?.installedVersion) : undefined
     }
 
     /**
@@ -423,13 +542,15 @@ window.__ModuleLoader__.load({
     function planBulk(selected) {
       const plan = { install: [], update: [], uninstall: [], enable: [], disable: [] }
       for (const { entry, bundle } of selected) {
-        const state = entryState(entry)
+        const state = entryState(entry, bundle?.version)
         if (state === 'available') {
           const version = presentedVersion(entry)
           if (version !== undefined && installable(version)) plan.install.push({ entry, version })
         } else if (state === 'updatable') {
-          const version = updateTarget(entry)
-          if (version !== undefined) plan.update.push({ entry, version })
+          const version = updateTarget(entry, bundle?.version)
+          // 把 bundle 一并带上：改名后的插件（旧名 bundle、新名条目）要按旧名
+          // 卸载再按新 spec 安装，perform 需要知道旧名。
+          if (version !== undefined) plan.update.push({ entry, version, bundle })
         }
         if (state !== 'provided' && bundle !== undefined && bundle.removable !== false) {
           plan.uninstall.push({ entry, bundle })
@@ -485,7 +606,7 @@ window.__ModuleLoader__.load({
       if (action === 'uninstall') return plan.uninstall.map(({ entry, bundle }) => ({ action, entry, bundle }))
       if (action === 'enable' || action === 'disable') return plan[action].map(({ entry, bundle }) => ({ action, entry, bundle }))
       const installing = plan.install.map(({ entry, version }) => ({ action: 'install', entry, version }))
-      const updating = plan.update.map(({ entry, version }) => ({ action: 'update', entry, version }))
+      const updating = plan.update.map(({ entry, version, bundle }) => ({ action: 'update', entry, version, bundle }))
       // An update replaces an installed copy, so it runs after the installs
       // that add new ones — never before a removal that would take its target.
       return action === 'update' ? updating : installing.concat(updating)
@@ -598,6 +719,13 @@ window.__ModuleLoader__.load({
           keys.push(`path:${directory}`)
         }
         if (name !== '') keys.push(`short:${shortBundleName(name).toLowerCase()}`)
+        // 曾用名（改名前的包名/目录）：让改名之前装的旧名 bundle 也命中新条目。
+        for (const alias of Array.isArray(entry.metadata?.aliases) ? entry.metadata.aliases : []) {
+          const key = String(alias ?? '').trim().toLowerCase()
+          if (key === '') continue
+          keys.push(`name:${key}`)
+          keys.push(`short:${shortBundleName(key).toLowerCase()}`)
+        }
         const seen = new Set()
         for (const key of keys) {
           if (seen.has(key)) continue
@@ -779,9 +907,35 @@ window.__ModuleLoader__.load({
       }
     }
 
-    /** Match one dsh.so entry against a query and score it. */
-    function dshSoScore(entry, words) {
-      if (words.length === 0) return 0
+    /**
+     * 需求4：把查询拆成"词项"，英文按空白/标点分词，中文按整串+双字+单字。
+     *
+     * 中英混排很常见（"语音 TTS" "翻译 translate"），而中文没有空格、宿主
+     * 的空白分词会把整句当一个词，几乎匹配不到。每个词项带一组
+     * `words`：命中其中任意一个就算该词项命中，取最高分。英文原样分词（不再
+     * 额外切子串，避免噪声）；中文额外补齐双字与单字，双字匹配一个插件名比
+     * 单字更准，所以给双字更高权重（见 dshSoScore）。
+     *
+     * @param {string} text - the raw query text.
+     * @returns {Array<{raw: string, words: string[]}>} one entry per query term.
+     */
+    function searchTerms(text) {
+      const terms = []
+      for (const raw of String(text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)) {
+        const words = [raw]
+        // 含中日韩表意文字时补双字（"语音"→"语音""音合""合成"式的滑窗）；单字
+        // 不补，否则"的""了"这类虚字会让任何描述都命中。纯英文词不切子串。
+        if (/[㐀-鿿豈-﫿]/.test(raw)) {
+          if (raw.length >= 2) for (let i = 0; i + 1 < raw.length; i += 1) words.push(raw.slice(i, i + 2))
+        }
+        terms.push({ raw, words: [...new Set(words)] })
+      }
+      return terms
+    }
+
+    /** Match one dsh.so entry against a query's terms and score it. */
+    function dshSoScore(entry, terms) {
+      if (terms.length === 0) return 0
       const name = String(entry.name ?? '').toLowerCase()
       const title = String(entry.title ?? '').toLowerCase()
       const author = String(entry.author ?? '').toLowerCase()
@@ -789,29 +943,36 @@ window.__ModuleLoader__.load({
         ?? [name, title, String(entry.description ?? ''), author, repoOfEntry(entry),
           ...(entry.marketExtra?.categories ?? []), ...(entry.metadata?.keywords ?? [])].join(' ').toLowerCase()
       let score = 0
-      for (const word of words) {
-        if (name === word) score += 12
-        else if (name.startsWith(word)) score += 8
-        else if (name.includes(word)) score += 5
-        else if (title.includes(word)) score += 4
-        else if (author.includes(word)) score += 3
-        else if (haystack.includes(word)) score += 2
-        else return -1
+      for (const term of terms) {
+        // 一个词项取它所有候选词里的最高分；全不命中则整条排除。
+        let best = -1
+        for (const word of term.words) {
+          const hit = name === word ? 12
+            : name.startsWith(word) ? 8
+              : name.includes(word) ? 5
+                : title.includes(word) ? 4
+                  : author.includes(word) ? 3
+                    : haystack.includes(word) ? 2
+                      : -1
+          if (hit > best) best = hit
+        }
+        if (best < 0) return -1
+        score += best
       }
       return score
     }
 
     /** One page of the dsh.so index, in the shape the Host's search returns. */
     function dshSoPage(data, query, offset, limit) {
-      const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
+      const terms = searchTerms(query.text)
       const scored = []
       for (const entry of data.entries) {
         if (query.category !== undefined && query.category !== null && entry.metadata.category !== query.category) continue
-        const score = dshSoScore(entry, words)
+        const score = dshSoScore(entry, terms)
         if (score >= 0) scored.push({ entry, score })
       }
       const sort = query.sort ?? { kind: 'index' }
-      if (sort.kind === 'relevance' && words.length > 0) {
+      if (sort.kind === 'relevance' && terms.length > 0) {
         scored.sort((left, right) => right.score - left.score || left.entry.name.localeCompare(right.entry.name))
       } else if (sort.kind === 'published') {
         const sign = sort.direction === 'asc' ? 1 : -1
@@ -1269,6 +1430,27 @@ window.__ModuleLoader__.load({
             ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
           })
         } else if (order.action === 'update') {
+          // 改名陷阱：本地 bundle 的包名与市场条目的包名不同（旧名 vs 新名），
+          // 或安装源是旧目录。宿主 updateBundle 按包名在同一目录找替换目标，
+          // 找不到就会失败，所以这种情况改为"卸载旧包 + 安装新 spec"。
+          if (order.bundle !== undefined && order.bundle.name !== order.entry.name) {
+            const removed = await remote.pluginManager.removeBundle(order.bundle.name)
+            if (!removed.ok) return { pass: false, reason: removed.error.message }
+            answer = await remote.pluginManager.installBundle(order.version.install.spec, {
+              enabled: true, saveExact: true, requestId,
+              ...order.version.install.registry === undefined ? {} : { registry: order.version.install.registry },
+            })
+            // installBundle 的回答没有 update 那层 { result } 包装，走 install 的收尾。
+            if (!answer.ok) return { pass: false, canceled: /cancel/i.test(answer.error.message), reason: answer.error.message }
+            const installed = answer.value
+            if (installed === undefined || installed.application === 'cancelled') {
+              return { pass: false, canceled: true, reason: installed?.error?.diagnostic ?? '', result: installed }
+            }
+            if (installed.application === 'failed') {
+              return { pass: false, reason: [installed?.error?.diagnostic, installed?.packageResult?.output].filter(Boolean).join('\n'), result: installed }
+            }
+            return { pass: true, result: installed }
+          }
           answer = await remote.pluginManager.updateBundle(order.entry.name, order.version.version, {
             spec: order.version.install.spec,
             requestId,
@@ -1355,9 +1537,24 @@ window.__ModuleLoader__.load({
       if (list.length === 0) return
       const state = runner.get()
       const fresh = state.running === null && state.queue.length === 0 && !pumping
+      // 需求1：允许安装进行中继续排队。同一插件的"安装/更新"若已在运行或排队，
+      // 就不再重复入队——否则连点会叠加多条相同的安装，浪费等待。
+      const key = (order) => order.entry.name
+      const busyInstall = new Set([
+        ...(state.current === null ? [] : [state.current.order]),
+        ...(state.running === null ? [] : [{ entry: state.running }]),
+        ...state.queue,
+      ].filter((order) => order?.action === 'install' || order?.action === 'update').map((order) => order.entry?.name))
+      const deduped = fresh ? list : list.filter((order) => {
+        if (order.action !== 'install' && order.action !== 'update') return true
+        if (busyInstall.has(key(order))) return false
+        busyInstall.add(key(order))
+        return true
+      })
+      if (deduped.length === 0) return
       runner.update({
-        queue: fresh ? [...list] : [...state.queue, ...list],
-        total: fresh ? list.length : state.total + list.length,
+        queue: fresh ? [...deduped] : [...state.queue, ...deduped],
+        total: fresh ? deduped.length : state.total + deduped.length,
         completed: fresh ? 0 : state.completed,
         outcome: fresh ? null : state.outcome,
         failures: fresh ? new Map() : new Map(state.failures),
@@ -1496,7 +1693,10 @@ window.__ModuleLoader__.load({
       allCategories: '全部分类',
       sortIndex: '默认',
       sortPublished: '发布时间',
-      sortRelevance: '相关度',
+      sortRelevance: '综合匹配',
+      translate: '一键翻译',
+      translating: '翻译中',
+      translateHint: '把当前页的英文描述翻译成中文（结果会缓存）',
       switchDirection: '改为{dir}',
       ascending: '降序',
       descending: '升序',
@@ -1677,7 +1877,10 @@ window.__ModuleLoader__.load({
       allCategories: 'All categories',
       sortIndex: 'Default',
       sortPublished: 'Publish date',
-      sortRelevance: 'Relevance',
+      sortRelevance: 'Best match',
+      translate: 'Translate',
+      translating: 'Translating',
+      translateHint: 'Translate the English descriptions on this page to Chinese (results are cached)',
       switchDirection: 'Switch to {dir}',
       ascending: 'descending',
       descending: 'ascending',
@@ -2463,11 +2666,11 @@ window.__ModuleLoader__.load({
      * apply; the whole card opens this market's detail view. A failure this session left stays as
      * a tag whose tooltip holds the whole reason and whose press copies it.
      */
-    function Card({ entry, bundle, lang, t, text, busy, picked, failure, copied, stats, onPick, onRun, onConfirm, onDetails, onCopyFailure, onClearFailure }) {
+    function Card({ entry, bundle, lang, t, text, blocked = false, picked, failure, copied, stats, translation, onPick, onRun, onConfirm, onDetails, onCopyFailure, onClearFailure }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
-      const state = entryState(entry)
+      const state = entryState(entry, bundle?.version)
       const shown = presentedVersion(entry)
-      const version = actionVersion(entry)
+      const version = actionVersion(entry, bundle?.version)
       const date = shown === undefined || !shown.publishTimestamp ? '' : formatDate(shown.publishTimestamp, lang)
       const incompatible = state === 'available' && version === undefined
       const installed = state === 'installed' || state === 'updatable'
@@ -2486,13 +2689,13 @@ window.__ModuleLoader__.load({
       ].filter(Boolean).join(' · ')
 
       const currentVersion = bundle?.version
-      const nextVersion = state === 'updatable' ? updateTarget(entry)?.version : undefined
+      const nextVersion = state === 'updatable' ? updateTarget(entry, bundle?.version)?.version : undefined
 
       const actions = []
       if (version !== undefined) {
         const update = state === 'updatable'
         actions.push(h('button', {
-          key: 'act', className: 'vpm-btn small primary', disabled: busy,
+          key: 'act', className: 'vpm-btn small primary', disabled: blocked,
           onClick: (event) => { event?.stopPropagation(); onRun([{ action: update ? 'update' : 'install', entry, version }]) },
         }, t(update ? 'update' : 'install')))
       }
@@ -2503,14 +2706,14 @@ window.__ModuleLoader__.load({
         const removable = bundle !== undefined && bundle.removable !== false
         if (removable) {
           actions.push(h('button', {
-            key: 'remove', className: 'vpm-btn small', disabled: busy,
+            key: 'remove', className: 'vpm-btn small', disabled: blocked,
             onClick: (event) => { event?.stopPropagation(); onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
           }, t('uninstall')))
         }
         if (bundle !== undefined && bundle.readOnlyReason === undefined) {
           const disable = bundle.enabled
           actions.push(h('button', {
-            key: 'toggle', className: 'vpm-btn small', disabled: busy,
+            key: 'toggle', className: 'vpm-btn small', disabled: blocked,
             onClick: (event) => { event?.stopPropagation(); onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
           }, t(disable ? 'disable' : 'enable')))
         }
@@ -2573,7 +2776,7 @@ window.__ModuleLoader__.load({
       },
         h('div', { className: 'vpm-card-top' },
           h('input', {
-            type: 'checkbox', className: 'vpm-check', checked: picked, disabled: busy,
+            type: 'checkbox', className: 'vpm-check', checked: picked, disabled: false,
             'aria-label': title, onChange: onPick,
             onClick: (event) => { event?.stopPropagation() },
           }),
@@ -2585,7 +2788,7 @@ window.__ModuleLoader__.load({
             className: 'vpm-card-actions',
             onClick: (event) => { event?.stopPropagation() },
           }, actions)),
-        entry.description === undefined ? null : h('p', { className: 'vpm-desc' }, text(entry.description)),
+        entry.description === undefined ? null : h('p', { className: 'vpm-desc' }, translation ?? text(entry.description)),
         h('div', { className: 'vpm-card-footer' },
           tags.length === 0 ? null : h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } }, tags),
           metricNodes))
@@ -2710,7 +2913,7 @@ window.__ModuleLoader__.load({
         .trim()
     }
 
-    function DetailDialog({ entry, bundle, lang, t, text, busy, stats, onRun, onConfirm, onClose }) {
+    function DetailDialog({ entry, bundle, lang, t, text, blocked = false, stats, onRun, onConfirm, onClose }) {
       const title = entry.title === undefined ? entry.name : text(entry.title)
       const statistic = statsOfEntry(entry, stats)
       const urls = readmeUrls(entry)
@@ -2745,12 +2948,12 @@ window.__ModuleLoader__.load({
         return () => { alive = false }
       }, [entry.name, lang])
 
-      const state = entryState(entry)
+      const state = entryState(entry, bundle?.version)
       const shown = presentedVersion(entry)
-      const version = actionVersion(entry)
+      const version = actionVersion(entry, bundle?.version)
       const installed = state === 'installed' || state === 'updatable'
       const removable = bundle !== undefined && bundle.removable !== false
-      const nextVersion = state === 'updatable' ? updateTarget(entry)?.version : undefined
+      const nextVersion = state === 'updatable' ? updateTarget(entry, bundle?.version)?.version : undefined
       const facts = [
         shown === undefined ? null : `${lang === 'zh' ? '版本' : 'version'} ${shown.version}`,
         entry.author === undefined ? null : `${lang === 'zh' ? '作者' : 'author'} ${entry.author}`,
@@ -2765,20 +2968,20 @@ window.__ModuleLoader__.load({
       if (version !== undefined) {
         const update = state === 'updatable'
         actions.push(h('button', {
-          key: 'act', style: { ...S.btn(true, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+          key: 'act', style: { ...S.btn(true, blocked), padding: '2px 9px', fontSize: '11.5px' }, disabled: blocked,
           onClick: () => { onRun([{ action: update ? 'update' : 'install', entry, version }]) },
         }, t(update ? 'update' : 'install')))
       }
       if (installed && removable && onConfirm !== undefined) {
         actions.push(h('button', {
-          key: 'remove', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+          key: 'remove', style: { ...S.btn(false, blocked), padding: '2px 9px', fontSize: '11.5px' }, disabled: blocked,
           onClick: () => { onConfirm({ action: 'uninstall', orders: [{ action: 'uninstall', entry, bundle }] }) },
         }, t('uninstall')))
       }
       if (installed && bundle !== undefined && bundle.readOnlyReason === undefined) {
         const disable = bundle.enabled
         actions.push(h('button', {
-          key: 'toggle', style: { ...S.btn(false, busy), padding: '2px 9px', fontSize: '11.5px' }, disabled: busy,
+          key: 'toggle', style: { ...S.btn(false, blocked), padding: '2px 9px', fontSize: '11.5px' }, disabled: blocked,
           onClick: () => { onRun([{ action: disable ? 'disable' : 'enable', entry, bundle }]) },
         }, t(disable ? 'disable' : 'enable')))
       }
@@ -2883,7 +3086,7 @@ window.__ModuleLoader__.load({
             type: 'checkbox',
             className: 'vpm-check',
             checked: picked === true,
-            disabled: busy || pickable !== true,
+            disabled: pickable !== true,
             'aria-label': title,
             onChange: () => { onPick(bundle) },
             onClick: (event) => { event?.stopPropagation() },
@@ -3009,7 +3212,10 @@ window.__ModuleLoader__.load({
         if (!page.ok || !bundles.ok) return
         const resolveBundle = buildBundleIndex(new Map(bundles.value.map((bundle) => [bundle.name, bundle])))
         const updatable = page.value.entries
-          .filter((entry) => resolveBundle(entry) !== undefined && updateTarget(entry) !== undefined).length
+          .filter((entry) => {
+            const bundle = resolveBundle(entry)
+            return bundle !== undefined && updateTarget(entry, bundle.version) !== undefined
+          }).length
         if (updatable === 0) return
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           new Notification('插件市场 · Plugin market', { body: `发现 ${updatable} 个插件可更新 / ${updatable} update(s) available` })
@@ -3048,6 +3254,9 @@ window.__ModuleLoader__.load({
       const [detailEntry, setDetailEntry] = useState(null)
       const [statsIndex, setStatsIndex] = useState(null)
       const [refreshed, setRefreshed] = useState(false)
+      // 需求4：一键翻译当前页英文描述，结果进 localStorage 缓存（英文原文作 key）。
+      const [translations, setTranslations] = useState(() => readTranslationCache())
+      const [translating, setTranslating] = useState(false)
       const [view, setView] = useState('market')
       const [showLog, setShowLog] = useState(false)
       // Collapsing the queue is what keeps a long bulk run from eating the
@@ -3251,8 +3460,8 @@ window.__ModuleLoader__.load({
        * entry that arrives late lands exactly where a single pass would have
        * put it.
        */
-      const buildAggregatePage = useCallback((query, results, perSource) => {
-        const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
+      const buildAggregatePage = useCallback((query, results, perSource, overlay) => {
+        const terms = searchTerms(query.text)
         const failures = results.filter((result) => result.error !== undefined)
         const merged = new Map()
         const stateWeight = (entry) => {
@@ -3289,19 +3498,41 @@ window.__ModuleLoader__.load({
           }
         }
         const entries = [...merged.values()]
-        if (words.length > 0) {
-          entries.sort((left, right) => dshSoScore(right, words) - dshSoScore(left, words)
+        const metric = (entry, kind) => {
+          const statistic = statsOfEntry(entry, overlay)
+          return statistic === null ? undefined : statistic[kind]
+        }
+        if (terms.length > 0) {
+          entries.sort((left, right) => dshSoScore(right, terms) - dshSoScore(left, terms)
             || stateWeight(right) - stateWeight(left)
             || (betterVersion(left, right) ? -1 : betterVersion(right, left) ? 1 : 0)
             || left.name.localeCompare(right.name))
         } else if (query.sort?.kind === 'published') {
           const sign = query.sort.direction === 'asc' ? 1 : -1
           entries.sort((left, right) => sign * ((presentedVersion(left)?.publishTimestamp ?? 0) - (presentedVersion(right)?.publishTimestamp ?? 0)))
+        } else if (query.sort?.kind === 'key' && (query.sort.id === 'stars' || query.sort.id === 'downloads')) {
+          // 需求3：聚合页也能按星标/下载量排序。数值来自条目自带或共享的
+          // stats 叠加层；没有该指标的条目排在最后，不让它们抢占开头。
+          const sign = query.sort.direction === 'asc' ? 1 : -1
+          const id = query.sort.id
+          entries.sort((left, right) => {
+            const a = metric(left, id)
+            const b = metric(right, id)
+            if (a === undefined || b === undefined) return a === b ? 0 : a === undefined ? 1 : -1
+            return sign * (a - b) || left.name.localeCompare(right.name)
+          })
         }
         return {
           url: ALL_SOURCES_SOURCE.url,
           title: ALL_SOURCES_SOURCE.title,
-          metadata: { categories: {}, labels: {}, sortKeys: {} },
+          // 需求3：聚合视图自带这两个排序键，避免它只能按默认/相关度排序。
+          metadata: {
+            categories: {}, labels: {},
+            sortKeys: {
+              stars: { title: { en: 'Stars', zh: '星标' }, order: 'desc' },
+              downloads: { title: { en: 'Downloads', zh: '下载量' }, order: 'desc' },
+            },
+          },
           fetchedAt: Date.now(),
           total: entries.length,
           nextOffset: null,
@@ -3312,8 +3543,8 @@ window.__ModuleLoader__.load({
       }, [])
 
       const loadAggregate = useCallback(async (query, signal, onPartial) => {
-        const words = String(query.text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)
-        const perSource = words.length === 0 ? 20 : 60
+        const hasQuery = String(query.text ?? '').trim() !== ''
+        const perSource = hasQuery ? 60 : 20
         const hostSources = sources ?? []
         // Every source answers on its own; onPartial receives the results that
         // have landed so far so the list can fill in as sources reply instead
@@ -3328,7 +3559,7 @@ window.__ModuleLoader__.load({
           try {
             const answer = await remote.pluginMarket.search(source.url, {
               ...query.text.trim() === '' ? {} : { text: query.text },
-              sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
+              sort: hasQuery ? { kind: 'relevance' } : { kind: 'index' },
               offset: 0, limit: perSource,
             })
             const result = answer.ok
@@ -3350,7 +3581,7 @@ window.__ModuleLoader__.load({
             label: marketSourceLabel(DSH_SO_SOURCE, text, lang),
             page: dshSoPage(await loadDshSoData(false, signal), {
               text: query.text,
-              sort: words.length > 0 ? { kind: 'relevance' } : { kind: 'index' },
+              sort: hasQuery ? { kind: 'relevance' } : { kind: 'index' },
               offset: 0, limit: perSource,
             }, 0, perSource),
           }
@@ -3370,8 +3601,8 @@ window.__ModuleLoader__.load({
         if (failures.length === results.length) {
           throw new Error(failures[0]?.error ?? 'all sources failed')
         }
-        return buildAggregatePage(query, results, perSource)
-      }, [sources, remote, text, lang])
+        return buildAggregatePage(query, results, perSource, statsIndex)
+      }, [sources, remote, text, lang, statsIndex])
 
       /** Load one page of a source, replacing the results it answers. */
       const loadRef = useRef(null)
@@ -3476,7 +3707,7 @@ window.__ModuleLoader__.load({
           if (!alive.current) return
           setListing({ url, query: next, status: 'error', value: null, failure: error.message || '请求失败' })
         }
-      }, [remote, listing, loadAggregate, buildAggregatePage, sources])
+      }, [remote, listing, loadAggregate, buildAggregatePage, sources, statsIndex])
       loadRef.current = load
 
       useEffect(() => { void loadSources(true) }, [loadSources])
@@ -3503,23 +3734,43 @@ window.__ModuleLoader__.load({
         return () => { live = false }
       }, [])
 
+      /**
+       * 需求2：批量运行期间，宿主每完成一个子操作都会广播
+       * `plugin-manager/changed`。逐个刷新列表既打断阅读又浪费请求，所以在
+       * 队列运行中只记一个"脏"标记，等整批结束（见下方 effect）再统一刷新一次。
+       * 单个操作（不在批量里）仍然即时刷新，行为不变。
+       */
+      const refreshPending = useRef(false)
+      const reloadMarket = useCallback(() => {
+        pageCache.clear()
+        void loadBundles()
+        if (view === 'installed') return
+        setListing((current) => {
+          if (current === null || current.status !== 'ready' || current.value === null) return current
+          void load(current.url, current.query, 0, Math.max(current.value.entries.length, PAGE), undefined)
+          return current
+        })
+      }, [view, loadBundles, load])
+
       // The Host announces every completed change, so a change made anywhere —
       // this tab, the Installed tab, or an agent — lands here too.
       useEffect(() => {
         const off = remote.$on('plugin-manager/changed', () => {
-          // Every page carries the profile's install state; do not answer a
+          // Every page carries the profile's install state; never answer a
           // change from a page cached before it.
-          pageCache.clear()
-          void loadBundles()
-          if (view === 'installed') return
-          setListing((current) => {
-            if (current === null || current.status !== 'ready' || current.value === null) return current
-            void load(current.url, current.query, 0, Math.max(current.value.entries.length, PAGE), undefined)
-            return current
-          })
+          if (pumping || runner.get().running !== null) { refreshPending.current = true; return }
+          reloadMarket()
         })
         return off
-      }, [remote, loadBundles, load, view])
+      }, [remote, reloadMarket])
+
+      // 需求2：整批结束后统一刷新一次市场和已安装列表（若期间有变更被推迟）。
+      useEffect(() => {
+        if (running === null && job.queue.length === 0 && refreshPending.current) {
+          refreshPending.current = false
+          reloadMarket()
+        }
+      }, [running, job.queue.length, reloadMarket])
 
       useEffect(() => {
         if (activeUrl !== null) void load(activeUrl, query, 0, PAGE, undefined)
@@ -3553,13 +3804,22 @@ window.__ModuleLoader__.load({
       // whose package name happens to equal the bundle name. This is what
       // stops an entry from another source offering Install for a plugin that
       // is already on disk under a scoped or mirrored name.
+      //
+      // 根治改名问题：无论宿主报的是 installed / update-available / 其它状态，
+      // 只要这条目匹配到了本地 bundle，就把 bundle 的真实版本写进 installedVersion。
+      // entryState/updateTarget 才能用版本比对兜底（宿主对改名插件永远不标
+      // update）。同时保留 bundle 的包名，让"旧名 bundle、新名条目"能按旧名卸载。
       const bundleOf = useMemo(() => buildBundleIndex(bundles), [bundles])
       const liveEntries = useMemo(() => entries.map((entry) => {
         const bundle = bundleOf(entry)
         if (bundle === undefined || bundle.installed === false) return entry
         const status = entry.installation?.status
-        if (status !== undefined && status !== 'not-installed') return entry
-        return { ...entry, installation: { status: 'installed', installedVersion: bundle.version } }
+        const installation = {
+          ...(status !== undefined && status !== 'not-installed' ? entry.installation : { status: 'installed' }),
+          installedVersion: bundle.version,
+          installedName: bundle.name,
+        }
+        return { ...entry, installation }
       }), [entries, bundleOf])
 
       // The installed view is independent of any market source: every bundle
@@ -3632,6 +3892,25 @@ window.__ModuleLoader__.load({
         return liveEntries
       }, [liveEntries, quickFilter])
 
+      // 需求4：一键翻译当前页的英文描述。跳过已是中文的；命中缓存的直接用；
+      // 只对未缓存的英文原文发请求，译完一次性写回缓存与状态。
+      const translatePage = useCallback(async () => {
+        if (translating) return
+        const cache = readTranslationCache()
+        const pending = [...new Set(filteredEntries
+          .map((entry) => descriptionSource(entry))
+          .filter((original) => original !== '' && !hasCjk(original) && cache[original] === undefined))]
+        if (pending.length === 0) { setTranslations(cache); return }
+        setTranslating(true)
+        const next = { ...cache }
+        for (const original of pending) {
+          const translated = await translateText(original)
+          if (translated !== '') next[original] = translated
+        }
+        writeTranslationCache(next)
+        if (alive.current) { setTranslations(next); setTranslating(false) }
+      }, [translating, filteredEntries])
+
       const declarations = listing === null || listing.value === null ? undefined : listing.value.metadata
       const aggregateNote = listing === null || listing.value === null || listing.value.perSource === undefined
         ? null
@@ -3677,8 +3956,12 @@ window.__ModuleLoader__.load({
         setQuery((current) => ({
           ...current,
           category: null,
-          // Numeric sort keys are source-local; the aggregate has no shared key.
-          ...(url === ALL_SOURCES_SOURCE.url && current.sort.kind === 'key' ? { sort: { kind: 'index' } } : {}),
+          // Numeric sort keys are mostly source-local. The aggregate now knows
+          // stars and downloads (需求3), so only those survive the switch; any
+          // other key the previous source declared falls back to default.
+          ...(url === ALL_SOURCES_SOURCE.url && current.sort.kind === 'key'
+            && current.sort.id !== 'stars' && current.sort.id !== 'downloads'
+            ? { sort: { kind: 'index' } } : {}),
         }))
         setActiveUrl(url)
       }, [])
@@ -3720,16 +4003,19 @@ window.__ModuleLoader__.load({
       }, [remote, t])
 
       // The selection exists to describe what the one batch would touch, so it clears
-      // when the batch ends — whichever page is on screen at the time.
-      const wasRunning = useRef(false)
+      // when the batch ends — whichever page is on screen at the time. A pause
+      // between queued items (running is null while the next starts) is not the
+      // end: only a finished queue with nothing left running clears the picks,
+      // so adding more while a batch runs never wipes the selection.
+      const wasBusy = useRef(false)
       useEffect(() => {
-        if (wasRunning.current && running === null) setPicked(new Set())
-        wasRunning.current = running !== null
-      }, [running])
+        const busyNow = running !== null || job.queue.length > 0
+        if (wasBusy.current && !busyNow) setPicked(new Set())
+        wasBusy.current = busyNow
+      }, [running, job.queue.length])
 
       // Every hook runs before any early return, so the count never changes
       // between the first render and the loaded one (React error #310).
-      const busy = running !== null
       const loadingPage = listing !== null && listing.status === 'loading'
 
       useEffect(() => {
@@ -3842,25 +4128,25 @@ window.__ModuleLoader__.load({
       if (picked.size > 0) {
         const bulk = []
         if (buildable > 0) bulk.push(h('button', {
-          key: 'apply', className: 'vpm-btn primary', disabled: busy,
+          key: 'apply', className: 'vpm-btn primary',
           // An update is confirmed as one, so the dialog names the versions
           // being replaced rather than only what will be installed.
           onClick: () => { setConfirm({ action: plan.install.length === 0 ? 'update' : 'install', orders: orders(plan, plan.install.length === 0 ? 'update' : 'install') }) },
         }, t('bulkApply', { n: buildable })))
         if (plan.uninstall.length > 0) bulk.push(h('button', {
-          key: 'remove', className: 'vpm-btn small', disabled: busy,
+          key: 'remove', className: 'vpm-btn small',
           onClick: () => { setConfirm({ action: 'uninstall', orders: orders(plan, 'uninstall') }) },
         }, t('bulkUninstall', { n: plan.uninstall.length })))
         if (plan.enable.length > 0) bulk.push(h('button', {
-          key: 'enable', className: 'vpm-btn', disabled: busy,
+          key: 'enable', className: 'vpm-btn',
           onClick: () => { start(orders(plan, 'enable')) },
         }, t('bulkEnable', { n: plan.enable.length })))
         if (plan.disable.length > 0) bulk.push(h('button', {
-          key: 'disable', className: 'vpm-btn', disabled: busy,
+          key: 'disable', className: 'vpm-btn',
           onClick: () => { start(orders(plan, 'disable')) },
         }, t('bulkDisable', { n: plan.disable.length })))
         bulk.push(h('button', {
-          key: 'clear', className: 'vpm-btn', disabled: busy,
+          key: 'clear', className: 'vpm-btn',
           onClick: () => { setPicked(new Set()) },
         }, t('clear')))
         // The same guard as the queue: a wide selection keeps one summary line
@@ -3881,8 +4167,7 @@ window.__ModuleLoader__.load({
       const installedCard = (bundle) => h(InstalledCard, {
         key: bundle.name, bundle, lang, t,
         busy: installedBusy === bundle.name,
-        batch: installedBatch,
-        picked: installedPicked.has(bundle.name),
+        batch: installedBatch,        picked: installedPicked.has(bundle.name),
         pickable: installedSelectable(bundle),
         onPick: toggleInstalledPick,
         // In batch mode a card click selects instead of opening the dialog:
@@ -3901,7 +4186,7 @@ window.__ModuleLoader__.load({
         h('span', { className: 'vpm-meta' }, t('selected', { n: installedPicked.size })),
         h('div', { className: 'vpm-bulk-actions' },
           h('button', {
-            key: 'all', className: 'vpm-btn small', disabled: busy,
+            key: 'all', className: 'vpm-btn small',
             onClick: () => {
               setInstalledPicked(installedAllPicked
                 ? new Set()
@@ -3909,19 +4194,19 @@ window.__ModuleLoader__.load({
             },
           }, t('selectAllInstalled')),
           installedPlan.enable.length === 0 ? null : h('button', {
-            key: 'enable', className: 'vpm-btn', disabled: busy,
+            key: 'enable', className: 'vpm-btn',
             onClick: () => { start(orders(installedPlan, 'enable')) },
           }, t('bulkEnable', { n: installedPlan.enable.length })),
           installedPlan.disable.length === 0 ? null : h('button', {
-            key: 'disable', className: 'vpm-btn', disabled: busy,
+            key: 'disable', className: 'vpm-btn',
             onClick: () => { start(orders(installedPlan, 'disable')) },
           }, t('bulkDisable', { n: installedPlan.disable.length })),
           installedPlan.uninstall.length === 0 ? null : h('button', {
-            key: 'uninstall', className: 'vpm-btn small', disabled: busy,
+            key: 'uninstall', className: 'vpm-btn small',
             onClick: () => { setInstalledConfirm({ batch: orders(installedPlan, 'uninstall') }) },
           }, t('bulkUninstall', { n: installedPlan.uninstall.length })),
           installedPicked.size === 0 ? null : h('button', {
-            key: 'clear', className: 'vpm-btn small', disabled: busy,
+            key: 'clear', className: 'vpm-btn small',
             onClick: () => { setInstalledPicked(new Set()) },
           }, t('clearSelection'))))
 
@@ -4008,6 +4293,11 @@ window.__ModuleLoader__.load({
                   : ALL_SOURCES_SOURCE.url)
               },
             }, t('crossSource')),
+            view === 'market' ? h('button', {
+              className: 'vpm-btn', disabled: translating || filteredEntries.length === 0,
+              title: t('translateHint'),
+              onClick: () => { void translatePage() },
+            }, translating ? `${t('translating')}…` : t('translate')) : null,
             h('div', { className: 'vpm-search' },
               h('span', { className: 'vpm-search-icon' }, h(SearchIcon, {})),
               h('input', {
@@ -4023,7 +4313,7 @@ window.__ModuleLoader__.load({
                 recent.map((term) => h('option', { key: term, value: term }))),
               h('button', {
                 className: 'vpm-icon-btn', title: t('refresh'), 'aria-label': t('refresh'),
-                disabled: busy || (view === 'market' && (listing === null || loadingPage)),
+                disabled: view === 'market' && (listing === null || loadingPage),
                 onClick: async () => {
                   if (view === 'installed') {
                     await loadBundles()
@@ -4170,12 +4460,12 @@ window.__ModuleLoader__.load({
                 },
               }, option.label)))),
           directed ? h('button', {
-            className: 'vpm-btn', disabled: busy,
+            className: 'vpm-btn',
             onClick: () => { search({ ...query, sort: { ...query.sort, direction: query.sort.direction === 'asc' ? 'desc' : 'asc' } }) },
           }, t('switchDirection', { dir: t(query.sort.direction === 'asc' ? 'ascending' : 'descending') })) : null,
           // ponytail: "全部更新"按钮 - 一键更新所有可更新插件
           allUpdatable.length > 0 && quickFilter !== 'updatable' ? h('button', {
-            className: 'vpm-btn primary', disabled: busy,
+            className: 'vpm-btn primary',
             onClick: () => {
               const updatePlan = planBulk(allUpdatable)
               const updateOrders = orders(updatePlan, 'update')
@@ -4278,7 +4568,7 @@ window.__ModuleLoader__.load({
                   h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 10px' } },
                     h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }, className: 'vpm-meta' },
                       h('input', {
-                        type: 'checkbox', className: 'vpm-check', checked: pagePicked, disabled: busy,
+                        type: 'checkbox', className: 'vpm-check', checked: pagePicked, disabled: false,
                         onChange: () => { setPicked(pagePicked ? new Set() : new Set(filteredEntries.map((entry) => entry.name))) },
                       }),
                       t('selectPage')),
@@ -4294,7 +4584,8 @@ window.__ModuleLoader__.load({
                   }, t('sourceFailures', { n: aggregateFailures.length })),
                   h('ul', { className: 'vpm-grid' },
                     filteredEntries.map((entry) => h(Card, {
-                      key: entry.name, entry, bundle: bundleOf(entry), lang, t, text, busy, stats: statsIndex,
+                      key: entry.name, entry, bundle: bundleOf(entry), lang, t, text, stats: statsIndex,
+                      translation: translations[descriptionSource(entry)],
                       picked: picked.has(entry.name),
                       failure: job.failures.get(entry.name),
                       copied,
@@ -4315,7 +4606,7 @@ window.__ModuleLoader__.load({
                   listing.value.nextOffset === null ? null : h('div', { style: { display: 'flex', justifyContent: 'center', margin: '12px 0' } },
                     h('button', {
                       className: 'vpm-btn',
-                      disabled: busy || listing.status !== 'ready',
+                      disabled: listing.status !== 'ready',
                       onClick: () => { void load(listing.url, listing.query, entries.length, PAGE, listing.value.fetchedAt) },
                     }, t('more')))))),
         h('div', { style: { height: '14px', flex: 'none' } }),
@@ -4325,7 +4616,7 @@ window.__ModuleLoader__.load({
           onRun: () => { start(confirm.orders) },
         }),
         detailEntry === null ? null : h(DetailDialog, {
-          entry: detailEntry, bundle: bundleOf(detailEntry), lang, t, text, busy, stats: statsIndex,
+          entry: detailEntry, bundle: bundleOf(detailEntry), lang, t, text, stats: statsIndex,
           onRun: start,
           onConfirm: setConfirm,
           onClose: () => { setDetailEntry(null) },
@@ -4417,6 +4708,7 @@ window.__ModuleLoader__.load({
         localizedValue, shortBundleName, bundleTitle, bundleDescription, visibility, region,
         pageCacheKey, cachedPage, rememberPage, pageCache,
         parseRepoRef, specPath, buildBundleIndex, AGENT_HINTS, QUEUE_AUTO_OPEN, ZH, EN,
+        searchTerms, hasCjk, descriptionSource, dshSoScore, compareVersions, parseVersion,
       },
       inject: ['slots', 'locale', 'remote', 'remote.pluginMarket', 'remote.pluginManager'],
       apply(ctx) {

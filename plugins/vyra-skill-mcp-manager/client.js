@@ -72,7 +72,94 @@ window.__ModuleLoader__.load({
       return data;
     }
 
-    // SVG Icons
+    // ---------------------------------------------------------------------------
+    // 中英混合搜索 + 一键翻译（与插件市场一致的思路）
+    // ---------------------------------------------------------------------------
+
+    /** 是否含中日韩表意文字。 */
+    function hasCjk(text) {
+      return /[㐀-鿿豈-﫿]/.test(String(text ?? ''));
+    }
+
+    /**
+     * 把查询拆成词项：英文按空白分词，中文补滑窗双字（"语音"→"语音""音合""合成"），
+     * 单字不补（避免"的""了"等虚字噪声）。每个词项内的候选命中任一即可。
+     */
+    function searchTerms(text) {
+      const terms = [];
+      for (const raw of String(text ?? '').toLowerCase().trim().split(/\s+/).filter(Boolean)) {
+        const words = [raw];
+        if (hasCjk(raw) && raw.length >= 2) {
+          for (let i = 0; i + 1 < raw.length; i += 1) words.push(raw.slice(i, i + 2));
+        }
+        terms.push({ raw, words: [...new Set(words)] });
+      }
+      return terms;
+    }
+
+    /** 每个词项都必须在 haystack 中命中（任意候选）。 */
+    function matchesAllTerms(haystack, terms) {
+      if (terms.length === 0) return true;
+      const text = String(haystack ?? '').toLowerCase();
+      return terms.every((term) => term.words.some((word) => text.includes(word)));
+    }
+
+    /** 一段英文描述原文。 */
+    function descriptionSource(item) {
+      const description = item?.description;
+      return description === undefined || description === null ? '' : String(description);
+    }
+
+    const TRANSLATE_CACHE_KEY = 'vyra-skill-mcp.translations';
+    const TRANSLATE_CACHE_MAX = 2000;
+
+    function getStore(key) {
+      try { return typeof localStorage === 'undefined' ? null : localStorage.getItem(key); } catch { return null; }
+    }
+    function setStore(key, value) {
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem(key, value); } catch { /* 存储满或被拒 */ }
+    }
+
+    function readTranslationCache() {
+      try {
+        const value = JSON.parse(getStore(TRANSLATE_CACHE_KEY) ?? '{}');
+        return value !== null && typeof value === 'object' ? value : {};
+      } catch { return {}; }
+    }
+    function writeTranslationCache(cache) {
+      const keys = Object.keys(cache);
+      const trimmed = keys.length <= TRANSLATE_CACHE_MAX
+        ? cache
+        : Object.fromEntries(keys.slice(keys.length - TRANSLATE_CACHE_MAX).map((key) => [key, cache[key]]));
+      setStore(TRANSLATE_CACHE_KEY, JSON.stringify(trimmed));
+    }
+
+    /** 免费公共接口把英文译成中文；Google gtx 优先，MyMemory 兜底，失败返回空串。 */
+    async function translateText(text) {
+      const trimmed = String(text ?? '').trim();
+      if (trimmed === '' || hasCjk(trimmed)) return trimmed;
+      try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=${encodeURIComponent(trimmed)}`;
+        const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
+        if (response.ok) {
+          const data = await response.json();
+          const out = Array.isArray(data?.[0])
+            ? data[0].map((segment) => (Array.isArray(segment) ? segment[0] ?? '' : '')).join('')
+            : '';
+          if (out.trim() !== '') return out;
+        }
+      } catch { /* 下一个镜像 */ }
+      try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=en|zh-CN`;
+        const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
+        if (response.ok) {
+          const data = await response.json();
+          const out = data?.responseData?.translatedText;
+          if (typeof out === 'string' && out.trim() !== '' && !/MYMEMORY WARNING/i.test(out)) return out;
+        }
+      } catch { /* 两镜像都不可用，保留英文 */ }
+      return '';
+    }
     const CheckIcon = ({ size = 12 }) => h('svg', { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
       h('polyline', { points: '20 6 9 17 4 12' })
     );
@@ -635,6 +722,9 @@ window.__ModuleLoader__.load({
       
       const [searchQuery, setSearchQuery] = useState('');
       const debouncedQuery = useDebounce(searchQuery, 500);
+      // 一键翻译：结果按英文原文缓存，跨页复用。
+      const [translations, setTranslations] = useState(() => readTranslationCache());
+      const [translating, setTranslating] = useState(false);
       
       // Aggregated by default: the market queries every built-in source in one go, so
       // the user no longer has to pick a market before anything shows up. The pills
@@ -1310,8 +1400,13 @@ window.__ModuleLoader__.load({
       }, [installedSkillSet]);
 
       const displayItems = useMemo(() => {
-        const q = searchQuery.trim().toLowerCase();
-        const match = (item) => !q || `${item.name || ''} ${item.slug || ''} ${item.serverName || ''} ${item.description || ''}`.toLowerCase().includes(q);
+        // 中英混合分词：中文按双字滑窗、英文按词，各词项都要命中。既处理"我的"
+        // 页的本地全量过滤，也优化市场已加载结果里宿主可能漏掉的中文描述命中。
+        const terms = searchTerms(searchQuery.trim());
+        const match = (item) => matchesAllTerms(
+          `${item.name || ''} ${item.slug || ''} ${item.serverName || ''} ${item.description || ''}`,
+          terms,
+        );
         let items;
 
         if (isMySkills) {
@@ -1331,6 +1426,25 @@ window.__ModuleLoader__.load({
 
         return items;
       }, [tab, isMySkills, isMyMcp, isSkillMarket, isMarket, skills, mcps, installed, mounted, customItems, searchQuery, category, disabledSkills, installedSkillSet, installedMcpSet]);
+
+      // 一键翻译当前列表的英文描述：跳过中文、命中缓存直接用、只翻未缓存的，译完写回缓存。
+      const translatePage = useCallback(async () => {
+        if (translating) return;
+        const cache = readTranslationCache();
+        const pending = [...new Set(displayItems
+          .map((item) => descriptionSource(item))
+          .filter((original) => original !== '' && !hasCjk(original) && cache[original] === undefined))];
+        if (pending.length === 0) { setTranslations(cache); return; }
+        setTranslating(true);
+        const next = { ...cache };
+        for (const original of pending) {
+          const translated = await translateText(original);
+          if (translated !== '') next[original] = translated;
+        }
+        writeTranslationCache(next);
+        setTranslations(next);
+        setTranslating(false);
+      }, [translating, displayItems]);
 
       // Skills and MCP servers are classified with the SkillNet standard on the host;
       // the label is already Chinese, so the sidebar groups by it directly. Built from
@@ -1384,6 +1498,12 @@ window.__ModuleLoader__.load({
                   style: S.searchInput,
                 })
               ),
+              h('button', {
+                style: S.chip(false),
+                disabled: translating || displayItems.length === 0,
+                title: '把列表里的英文描述翻译成中文（结果会缓存）',
+                onClick: () => { void translatePage(); },
+              }, translating ? '翻译中…' : '一键翻译'),
               isSkillMarket && h('div', { style: S.filterChips },
                 [['all', '全部来源'], ['skillhub', 'SkillHub'], ['browse.sh', 'browse.sh'], ['clawhub', 'ClawHub'], ['skills.sh', 'skills.sh']].map(([src, label]) =>
                   h('button', {
@@ -1576,7 +1696,7 @@ window.__ModuleLoader__.load({
                         '已装'
                       )
                     ),
-                    h('div', { style: S.itemDesc }, item.description || '暂无描述'),
+                    h('div', { style: S.itemDesc }, translations[descriptionSource(item)] || item.description || '暂无描述'),
                     h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', marginTop: 'auto' } },
                       h('span', { style: S.usageTag },
                         '调用 ',
