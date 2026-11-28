@@ -446,6 +446,15 @@ export const manifest: MarketManifest = {
       },
       icon: SKILL_MCP_ICON,
       versions: {
+        '1.4.1': {
+          publishTimestamp: 1795789021,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: 'f2cf715a4235662ccc7e1a76ea0e49bea37e03b4',
+            path: 'plugins/vyra-skill-mcp-manager',
+          },
+        },
         '1.3.2': {
           publishTimestamp: 1795679997,
           source: {
@@ -1217,6 +1226,15 @@ export const manifest: MarketManifest = {
       },
       icon: XIANYU_DELIVERY_ICON,
       versions: {
+        '0.10.0': {
+          publishTimestamp: 1795789655,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '56a30636300a2bc9005872bdd8a227cc265a8536',
+            path: 'plugins/vyra-xianyu-delivery',
+          },
+        },
         '0.9.2': {
           publishTimestamp: 1795679992,
           source: {
@@ -2686,6 +2704,15 @@ export const manifest: MarketManifest = {
         url: 'https://github.com/lanxiake/dsh-vyra-plugins',
       },
       versions: {
+        '6.0.0': {
+          publishTimestamp: 1795791604,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '2c276842ba6dfc38206087e827d739e8caba0004',
+            path: 'plugins/dsh-im',
+          },
+        },
         '5.13.0': {
           publishTimestamp: 1795446358,
           source: {
