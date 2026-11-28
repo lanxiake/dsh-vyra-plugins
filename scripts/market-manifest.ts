@@ -1952,6 +1952,20 @@ export const manifest: MarketManifest = {
       },
       icon: PLUGIN_MARKET_ICON,
       versions: {
+        // 0.7.6 makes the built-in index-source order favour the two endpoints
+        // that update the moment an index is published (GitHub Pages, which
+        // redeploys on every index change, then raw), and demotes jsDelivr to a
+        // last-resort fallback: its `@master` branch reference is cached for
+        // 12 hours to 7 days, so a fresh index could still show old versions.
+        '0.7.6': {
+          publishTimestamp: 1795845000,
+          source: {
+            type: 'git',
+            url: 'https://github.com/lanxiake/dsh-vyra-plugins.git',
+            commit: '41d703578b31d4a9d67331aa4de33b13de8d01e4',
+            path: 'plugins/vyra-plugin-market',
+          },
+        },
         // 0.7.5 fills the "all sources" result in as each source answers, so a
         // slow or dead source no longer blanks the page until it times out.
         '0.7.5': {
