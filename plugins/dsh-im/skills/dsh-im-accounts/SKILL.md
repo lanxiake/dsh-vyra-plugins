@@ -58,7 +58,7 @@ dsh-im send --account 某某微信 --target 发布告警群 --text "..."   # ③
 - 让用户在**设置 → IM机器人 → 机器人卡片 → 新建目标**里从最近会话里选一个；
 - 或者用 `dsh-im target create` 新建（需要 `targetId`、显示名、类型，以及平台路由 JSON）。
 
-`target create` 的 `--target` 是你**指定**的新 ID，不会被按名字解析。
+`target create` 的 `--target` 是你**指定**的新 ID，不会被按名字解析。ID 只能用字母、数字和 `._:@-`，最长 128 位；写成中文名会在本地就被拒，并告诉你格式要求。
 
 ## 平台路由
 
